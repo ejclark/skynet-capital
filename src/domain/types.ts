@@ -352,6 +352,9 @@ export interface OptionLegFill {
   readonly filledQuantity: number;
   /** Per share, as the broker reported the leg. */
   readonly filledPrice?: number;
+  /** A spread leg's own broker order id — the id the account's fill for this leg carries, never
+   *  the parent's. Absent on a one-leg order, whose fill carries the result's own `orderId`. */
+  readonly orderId?: string;
 }
 
 /** The outcome of submitting a single order to a broker. */

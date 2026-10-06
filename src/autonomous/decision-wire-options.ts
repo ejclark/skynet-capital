@@ -98,10 +98,13 @@ export function parseLegFills(value: unknown): readonly OptionLegFill[] | undefi
     if (!isRecord(entry)) continue;
     const occSymbol = boundedString(entry.occSymbol, MAX_OCC_LENGTH);
     if (!(occSymbol && finite(entry.filledQuantity))) continue;
+    // A spread leg's own order id — optional, so a malformed one costs only the join.
+    const orderId = boundedString(entry.orderId);
     fills.push({
       occSymbol,
       filledQuantity: entry.filledQuantity,
       ...(finite(entry.filledPrice) ? { filledPrice: entry.filledPrice } : {}),
+      ...(orderId ? { orderId } : {}),
     });
   }
   return fills;

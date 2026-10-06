@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
@@ -52,6 +53,11 @@ export interface DecisionDb {
   /** The exact `orderId` join `playbook-attribution.ts` wants — O(1) via the `intents.order_id`
    *  index, never `decision-context.ts`'s fuzzy symbol+side+time match. */
   findByOrderId(orderId: string): { record: DecisionRecord; intent: OrderIntent } | undefined;
+  /** A spread leg's own broker order id → the spread order it belongs to. The account
+   *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
+   *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
+   *  scores fills per order (`playbook-performance.ts`) must not count a spread once per leg. */
+  findSpreadLeg(legOrderId: string): OptionOrderLeg | undefined;
   /** Writes every entry with `record()`'s own idempotency guarantee, wrapped in one transaction —
    *  the app-side replication listener's insert path (PR 4). */
   recordBatch(entries: readonly DecisionRecord[]): void;
@@ -606,6 +612,8 @@ export function openDecisionDb(path: string): DecisionDb {
       const matched = record.outcomes.find((o) => o.result?.orderId === orderId);
       return matched ? { record, intent: matched.intent } : undefined;
     },
+
+    findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
 
     close() {
       db.close();

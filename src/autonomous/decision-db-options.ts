@@ -7,6 +7,7 @@ import type {
   OrderIntent,
   Side,
 } from "../domain/types.js";
+import { type OptionOrderLeg, openLegOrders } from "./decision-db-leg-orders.js";
 import type { StoredOption } from "./decision-db-rows.js";
 import type { IntentOutcome } from "./decision-record.js";
 
@@ -15,7 +16,8 @@ import type { IntentOutcome } from "./decision-record.js";
  * per leg, beside an `intents` row whose `symbol` is the underlying. Side tables, never
  * `ALTER TABLE` — the house precedent `decision-db.ts` set for `playbook_verdicts`: CREATE IF NOT
  * EXISTS reaches a database that already exists, an added column would not. Created on both the
- * bots and the app side, because both open their store through `openDecisionDb`.
+ * bots and the app side, because both open their store through `openDecisionDb`. A spread's leg
+ * order ids live in a third, `option_order_legs` (`decision-db-leg-orders.ts`).
  *
  * `limit_price` is nullable on purpose: a write must never throw (the intent row is already in),
  * so a non-finite limit is stored as NULL and read back as NaN rather than costing the record.
@@ -52,6 +54,8 @@ export interface OptionTables {
   write(intentId: number, raw: OrderIntent, outcome: IntentOutcome | undefined): void;
   /** Intent id → its stored option, for every option intent of one decision. */
   forDecision(decisionId: number): ReadonlyMap<number, StoredOption>;
+  /** The spread a leg order belongs to, by the leg's own broker id (`decision-db-leg-orders.ts`). */
+  findLeg(legOrderId: string): OptionOrderLeg | undefined;
 }
 
 interface OptionRow {
@@ -79,14 +83,22 @@ interface LegRow {
 const finiteOrNull = (n: number | undefined): number | null =>
   n !== undefined && Number.isFinite(n) ? n : null;
 
-function optionFrom(row: OptionRow, legs: readonly LegRow[]): StoredOption {
+function optionFrom(
+  row: OptionRow,
+  legs: readonly LegRow[],
+  legOrderIds: ReadonlyMap<string, string> | undefined,
+): StoredOption {
   const legFills: OptionLegFill[] = legs
     .filter((l) => l.filled_quantity !== null)
-    .map((l) => ({
-      occSymbol: l.occ_symbol,
-      filledQuantity: l.filled_quantity as number,
-      ...(l.filled_price !== null ? { filledPrice: l.filled_price } : {}),
-    }));
+    .map((l) => {
+      const orderId = legOrderIds?.get(l.occ_symbol);
+      return {
+        occSymbol: l.occ_symbol,
+        filledQuantity: l.filled_quantity as number,
+        ...(l.filled_price !== null ? { filledPrice: l.filled_price } : {}),
+        ...(orderId ? { orderId } : {}),
+      };
+    });
   const option: OptionOrderIntent = {
     effect: row.effect,
     structure: row.structure,
@@ -140,6 +152,7 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
     SELECT l.* FROM intent_option_legs l JOIN intents i ON i.id = l.intent_id
     WHERE i.decision_id = ? ORDER BY l.intent_id, l.leg_index
   `);
+  const legOrders = openLegOrders(db);
 
   return {
     write(intentId, raw, outcome) {
@@ -175,6 +188,8 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
             finiteOrNull(fill?.filledPrice),
           );
         }
+        // A spread's legs are reported under their own order ids; map each back to the order.
+        legOrders.write(outcome?.result, legs);
       } catch {
         // The intent row is the audit trail and is already written; a failed option detail must
         // never cost the decision itself, the same posture as the retrospective trigger.
@@ -188,11 +203,15 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
         list.push(leg);
         legsByIntent.set(leg.intent_id, list);
       }
+      const legOrderIds = legOrders.forDecision(decisionId);
       const out = new Map<number, StoredOption>();
       for (const row of selectOptions.all(decisionId) as unknown as OptionRow[]) {
-        out.set(row.intent_id, optionFrom(row, legsByIntent.get(row.intent_id) ?? []));
+        const legs = legsByIntent.get(row.intent_id) ?? [];
+        out.set(row.intent_id, optionFrom(row, legs, legOrderIds.get(row.intent_id)));
       }
       return out;
     },
+
+    findLeg: (legOrderId) => legOrders.find(legOrderId),
   };
 }
