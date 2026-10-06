@@ -113,6 +113,22 @@ describe("decisionCyclesView", () => {
     });
   });
 
+  // #4642 slice 10: an open no subscribed playbook placed reads in plain words, no rule name.
+  it("says a refused open was not from a subscribed playbook, and that a paused one opens nothing", () => {
+    const buy = intent({ symbol: "AAPL", reason: "Imposing order: panic -0.80 exhausting" });
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [buy],
+        guardedIntents: [],
+        outcomes: [],
+        refusals: [{ intent: buy, reason: "unsubscribed" }],
+      }),
+    ]);
+    const said = view[0]?.refusedIntents?.[0]?.guardReason ?? "";
+    expect(said).toMatch(/^not from a subscribed playbook — /);
+    expect(said).toContain("has not paused");
+  });
+
   /** #3961 — a round that placed something also refused ideas, and those showed nowhere: the view
    *  gated `refusedIntents` to a total refusal, and Heartbeat hid every traded round outright. */
   it("carries the refused ideas of a round that ALSO placed, once the guards were attributed", () => {
