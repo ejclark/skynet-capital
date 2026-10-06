@@ -190,7 +190,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
         AT,
       );
 
-      expect(empty).toEqual({ state: {}, markers: EMPTY_SEED_MARKERS, seeded: [] });
+      expect(empty).toEqual({ state: {}, markers: EMPTY_SEED_MARKERS, seeded: [], added: [] });
     });
   });
 
@@ -211,10 +211,10 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
     });
 
     it("seeds on the first report and is a no-op on every poll after", () => {
-      expect(seeder.seed(report, AT)).toEqual([BOT]);
+      expect(seeder.seed(report, AT)).toEqual({ added: [BOT], markedOnly: [] });
       const afterFirst = store.load();
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()).toEqual(afterFirst);
     });
 
@@ -222,7 +222,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
       seeder.seed(report, AT);
       store.unsubscribe(BOT, "S1-NVDA");
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()[BOT]?.map((s) => s.playbookId)).toEqual(["G1-GOOG", "TACO-DJT"]);
     });
 
@@ -230,7 +230,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
       seeder.seed(report, AT);
       for (const entry of house) store.unsubscribe(BOT, entry.playbook.id);
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()[BOT]).toBeUndefined();
     });
 
