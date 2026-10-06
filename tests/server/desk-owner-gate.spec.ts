@@ -1,8 +1,8 @@
-import { withoutReasoningPlaybook } from "../../src/observatory/wire-reasoning.js";
+import { withoutOwnerReasoning } from "../../src/observatory/wire-reasoning.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import {
   ownsDesk,
-  withoutCyclePlaybooks,
+  withoutCycleOwnerFields,
   withoutHeartbeatPlaybookIds,
 } from "../../src/server/desk-owner-gate.js";
 
@@ -58,7 +58,7 @@ describe("the playbook strips", () => {
   });
 
   it("drops each outcome's playbook chip and keeps the trade", () => {
-    const [cycle] = withoutCyclePlaybooks([
+    const [cycle] = withoutCycleOwnerFields([
       {
         at: "2026-09-22T15:00:00Z",
         mode: "live",
@@ -86,7 +86,7 @@ describe("the playbook strips", () => {
 
   it("drops a decision's playbook and keeps who decided and why", () => {
     expect(
-      withoutReasoningPlaybook({
+      withoutOwnerReasoning({
         reason: "fade",
         personaId: "sauron",
         playbookId: "S1-NVDA",

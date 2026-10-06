@@ -2,7 +2,7 @@ import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartb
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
-import { withoutReasoningPlaybook } from "../observatory/wire-reasoning.js";
+import { withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
@@ -15,6 +15,9 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  * that does not own the account. Verdicts, modes, reasons and fills still ride — only the name of
  * the playbook is withheld. The league Wire (`/api/wire`) lists every account's fills with the same
  * decisions attached, so it asks `ownsDesk` per row (`attachWireReasoning`'s `ownsAccount`).
+ *
+ * The same strips withhold what the broker said about an order's result (#4650): a broker's message
+ * can name the account's specifics, so it is the owner's alone wherever a bot's order is read.
  *
  * Ownership is the rule every other per-account gate uses (`trade-orders-routes.ts`,
  * `desk-events-route.ts`): with no OAuth configured there is no one to withhold from (the local,
@@ -56,36 +59,39 @@ export function withoutLadderPlaybookIds(
 
 type Outcome = DecisionCycleView["outcomes"][number];
 
-/** Decision cycles with each outcome's `playbook · mode` chip removed. */
-export function withoutCyclePlaybooks(cycles: readonly DecisionCycleView[]): (Omit<
+/** Decision cycles with each outcome's `playbook · mode` chip and the broker's words removed. */
+export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
   "outcomes"
 > & {
-  readonly outcomes: readonly Omit<Outcome, "playbook" | "playbookMode">[];
+  readonly outcomes: readonly Omit<Outcome, "playbook" | "playbookMode" | "brokerReason">[];
 })[] {
   return cycles.map((cycle) => ({
     ...cycle,
-    outcomes: cycle.outcomes.map(({ playbook: _p, playbookMode: _m, ...outcome }) => outcome),
+    outcomes: cycle.outcomes.map(
+      ({ playbook: _p, playbookMode: _m, brokerReason: _b, ...outcome }) => outcome,
+    ),
   }));
 }
 
 type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {
-  readonly reasoning?: ReturnType<typeof withoutReasoningPlaybook>;
+  readonly reasoning?: ReturnType<typeof withoutOwnerReasoning>;
 };
 
 /**
- * The thesis view with each fill marker's decision stripped of its playbook. `/thesis` joins the
+ * The thesis view with each fill marker's decision stripped of its playbook and the broker's words
+ * (`withoutOwnerReasoning`). `/thesis` joins the
  * SAME audit rows `/activity` does (both through `config.findByOrderId`), so it was handing a
  * non-owner the one key `/activity` already withheld — found by #3194 slice 6a's own gate spec,
  * which asked the thesis payload the question this block had only ever asked the other three.
  */
-export function withoutThesisPlaybooks(
+export function withoutThesisOwnerFields(
   thesis: ThesisView,
 ): Omit<ThesisView, "markers"> & { readonly markers: readonly WithheldMarker[] } {
   return {
     ...thesis,
     markers: thesis.markers.map(({ reasoning, ...marker }) =>
-      reasoning ? { ...marker, reasoning: withoutReasoningPlaybook(reasoning) } : marker,
+      reasoning ? { ...marker, reasoning: withoutOwnerReasoning(reasoning) } : marker,
     ),
   };
 }

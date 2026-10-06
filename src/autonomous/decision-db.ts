@@ -7,6 +7,7 @@ import type { GuardRefusalReason } from "../engine/guards.js";
 import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
+import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import {
   openSettlements,
@@ -50,7 +51,8 @@ export type { DecisionFunnel } from "./decision-funnel.js";
  * `live-cycle.ts` built, so a refusal matches its raw intent by reference; on the app side the
  * record crossed the wire, so it matches structurally. An approved one matches on symbol + side +
  * instrument (see `decision-db-rows.ts`'s `fateOf`). An option order's legs and limit live in the
- * side tables `decision-db-options.ts` owns.
+ * side tables `decision-db-options.ts` owns; what the broker said about a result, in
+ * `decision-db-results.ts`'s.
  */
 
 export interface DecisionDb {
@@ -252,6 +254,7 @@ export function openDecisionDb(path: string): DecisionDb {
   // Before any read below is prepared: they join it (`SETTLED_JOIN`).
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
+  const results = openIntentResults(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -447,10 +450,16 @@ export function openDecisionDb(path: string): DecisionDb {
   function intentRowsFor(decisionId: number) {
     const options = optionTables.forDecision(decisionId);
     const settled = settlements.forDecision(decisionId);
+    const words = results.forDecision(decisionId);
     return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map((row) => {
-      const settlement = settled.get(row.id as number);
-      const stored = intentRowToStored(row, options.get(row.id as number));
-      return settlement ? { ...stored, settlement } : stored;
+      const id = row.id as number;
+      const settlement = settled.get(id);
+      const resultReason = words.get(id);
+      return {
+        ...intentRowToStored(row, options.get(id)),
+        ...(resultReason ? { resultReason } : {}),
+        ...(settlement ? { settlement } : {}),
+      };
     });
   }
 
@@ -465,13 +474,15 @@ export function openDecisionDb(path: string): DecisionDb {
   }
 
   /** One `intents` row per raw intent, each matched to its fate first (`fateOf`), plus an option
-   *  order's side-table rows. */
+   *  order's side-table rows and the broker's words on its result. */
   function insertIntents(decisionId: number, entry: DecisionRecord): void {
     const used = { outcomes: new Set<number>(), refusals: new Set<number>() };
     for (const raw of entry.rawIntents) {
       const fate = fateOf(raw, entry, used);
       const { lastInsertRowid } = insertIntent.run(decisionId, ...intentParams(raw, entry, fate));
-      if (raw.option) optionTables.write(Number(lastInsertRowid), raw, fate.outcome);
+      const intentId = Number(lastInsertRowid);
+      if (raw.option) optionTables.write(intentId, raw, fate.outcome);
+      results.write(intentId, fate.outcome?.result);
     }
   }
 

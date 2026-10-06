@@ -55,6 +55,8 @@ export interface StoredIntentRow {
   readonly filledPrice?: number;
   /** Present only on an option order. */
   readonly option?: StoredOption;
+  /** What the broker said about the result, when it said anything (`decision-db-results.ts`). */
+  readonly resultReason?: string;
   /** What a `working` order became once the broker ended it (`decision-db-settlements.ts`) — read
    *  in place of the stored result, which stays as it was written. */
   readonly settlement?: OrderSettlement;
@@ -269,13 +271,15 @@ function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome 
           ...(row.orderId ? { orderId: row.orderId } : {}),
           ...(row.filledQuantity !== undefined ? { filledQuantity: row.filledQuantity } : {}),
           ...(row.filledPrice !== undefined ? { filledPrice: row.filledPrice } : {}),
+          ...(row.resultReason ? { reason: row.resultReason } : {}),
           ...legParts(row.option),
         }
       : undefined;
   return {
     intent,
     action: (row.action ?? "observed") as IntentOutcome["action"],
-    // A late settlement is read in place of a `working` result; any other result is as written.
+    // A late settlement is read in place of a `working` result, and without the words the submit
+    // came back with — they describe the order as it stood then. Any other result is as written.
     ...(stored ? { result: settledResult(stored, row.settlement) } : {}),
   };
 }

@@ -176,6 +176,44 @@ describe("ActivityTable — a bot's option fill", () => {
     expect(screen.queryByText("Cost")).not.toBeInTheDocument();
     expect(screen.queryByText("Proves it wrong")).not.toBeInTheDocument();
   });
+
+  // #4650: what the broker said about an order that never traded (the server sends the words only
+  // then, `brokerWordsFor`) — the owner's alone, never a placeholder.
+  const canceled = event({
+    ...sold,
+    filled: 0,
+    price: "—",
+    status: "canceled",
+    reasoning: {
+      reason: "sell a put a month out, below support",
+      personaId: "sauron",
+      contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+      brokerReason: "limit $2.10 not reached in 15s; canceled",
+    },
+  });
+
+  it("says what the broker said about an order that never traded to its owner", () => {
+    render(<ActivityTable events={[canceled]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
+    expect(screen.getByText("Broker said")).toBeInTheDocument();
+    expect(screen.getByText("limit $2.10 not reached in 15s; canceled")).toBeInTheDocument();
+  });
+
+  it("draws no broker line on a page the viewer does not own, or when the broker said nothing", () => {
+    render(
+      <ActivityTable events={[canceled, { ...sold, orderId: "ord-9" }]} showPlaybook={false} />,
+    );
+    for (const why of screen.getAllByRole("button")) fireEvent.click(why);
+    expect(screen.getAllByText(/sell a put a month out, below support/)).toHaveLength(2);
+    expect(screen.queryByText("Broker said")).not.toBeInTheDocument();
+    expect(screen.queryByText(/not reached in 15s/)).not.toBeInTheDocument();
+  });
+
+  it("draws no broker line for a decision that carries no words", () => {
+    render(<ActivityTable events={[sold]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
+    expect(screen.queryByText("Broker said")).not.toBeInTheDocument();
+  });
 });
 
 /** #4650 — a bot's spread is one broker order whose fills arrive one per leg. Activity shows the

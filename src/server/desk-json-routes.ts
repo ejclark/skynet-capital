@@ -22,7 +22,7 @@ import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
-import { reasoningForOrder, withoutReasoningPlaybook } from "../observatory/wire-reasoning.js";
+import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
@@ -30,16 +30,17 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisionsPage } from "./decision-account-view.js";
 import {
   ownsDesk,
-  withoutCyclePlaybooks,
+  withoutCycleOwnerFields,
   withoutHeartbeatPlaybookIds,
   withoutLadderPlaybookIds,
-  withoutThesisPlaybooks,
+  withoutThesisOwnerFields,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
 /** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
  *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched.
- *  A non-owner's copy carries the decision without its playbook (#885, `desk-owner-gate.ts`). */
+ *  A non-owner's copy carries the decision without its playbook (#885) or the broker's words
+ *  (`desk-owner-gate.ts`). */
 function withDecisions<V extends { readonly activity: readonly { readonly orderId: string }[] }>(
   kind: string,
   view: V,
@@ -52,7 +53,7 @@ function withDecisions<V extends { readonly activity: readonly { readonly orderI
     activity: view.activity.map((event) => {
       const reasoning = reasoningForOrder(event.orderId, config);
       if (!reasoning) return event;
-      return { ...event, reasoning: owner ? reasoning : withoutReasoningPlaybook(reasoning) };
+      return { ...event, reasoning: owner ? reasoning : withoutOwnerReasoning(reasoning) };
     }),
   };
 }
@@ -130,7 +131,7 @@ async function decisionsPayload(
   /** `?trades=none` (#3687 slice 4): only the passes that placed nothing — idle, refused, halted,
    *  rejected — which now live on the Heartbeat tab while trades carry their own decisions. */
   noTrades: boolean,
-  /** False strips each outcome's playbook chip — a non-owner's copy (#885). */
+  /** False strips each outcome's playbook chip and the broker's words — a non-owner's copy. */
   owner: boolean,
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind, cycles: [] };
@@ -155,7 +156,7 @@ async function decisionsPayload(
   return {
     available: true,
     kind: "bot",
-    cycles: owner ? view.cycles : withoutCyclePlaybooks(view.cycles),
+    cycles: owner ? view.cycles : withoutCycleOwnerFields(view.cycles),
     ...(nextCursor !== undefined ? { nextCursor } : {}),
     ...(funnel ? { funnel: funnelView(funnel) } : {}),
     ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
@@ -328,7 +329,7 @@ export async function serveDeskJson(
       JSON.stringify({
         available: true,
         kind: "bot",
-        thesis: owner ? view : withoutThesisPlaybooks(view),
+        thesis: owner ? view : withoutThesisOwnerFields(view),
         ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
         // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
         // as current (the same reason `playbookLines` carries `since`).

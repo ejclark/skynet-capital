@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { brokerWordsFor } from "./broker-words.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
@@ -23,7 +24,9 @@ import type { WireTradeRow } from "./wire-data.js";
  * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time —
  * and an option order's dollar cost, which is read only off a `filled` result: written once the
  * broker has ended the order (`alpaca-option-result.ts`, or a late settlement), so it can never
- * move again.
+ * move again. What the broker said about the result rides only where the order never traded
+ * (`brokerWordsFor`): that answer is written once the order has ended, and a fill's or a working
+ * order's words would only restate the row's own status.
  */
 
 export interface WireTradeReasoning {
@@ -55,6 +58,10 @@ export interface WireTradeReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words (`OrderForecast.invalidator`). */
   readonly invalidator?: string;
+  /** What the broker said about an order that never traded, as the decision stored it — "limit
+   *  $2.10 not reached in 15s; canceled", a rejection's cause (`brokerWordsFor`). The owner's alone
+   *  (`withoutOwnerReasoning`). */
+  readonly brokerReason?: string;
 }
 
 export interface WireTradeWithReasoning extends WireTradeRow {
@@ -76,13 +83,14 @@ export interface WireReasoningDeps {
   readonly ownsAccount?: (participantId: string) => boolean;
 }
 
-/** A fill's attached decision without its `playbookId`/`playbookMode` — what a viewer who does not
- *  own the account reads (#885: "we do not show what playbooks others are using"). The why, the
+/** A fill's attached decision as a viewer who does not own the account reads it: without its
+ *  `playbookId`/`playbookMode` (#885: "we do not show what playbooks others are using"), and without
+ *  what the broker said about the order, which can name the account's specifics. The why, the
  *  persona and the order's own words all stay. */
-export function withoutReasoningPlaybook(
+export function withoutOwnerReasoning(
   reasoning: WireTradeReasoning,
-): Omit<WireTradeReasoning, "playbookId" | "playbookMode"> {
-  const { playbookId: _p, playbookMode: _m, ...rest } = reasoning;
+): Omit<WireTradeReasoning, "playbookId" | "playbookMode" | "brokerReason"> {
+  const { playbookId: _p, playbookMode: _m, brokerReason: _b, ...rest } = reasoning;
   return rest;
 }
 
@@ -101,7 +109,9 @@ export function reasoningForOrder(
   const guardDelta = guardDeltaFor(record, intent);
   const contract = optionContractLine(intent);
   // The store hands back the outcome's own intent, so its result is found by identity.
-  const cost = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
+  const result = record.outcomes.find((o) => o.intent === intent)?.result;
+  const cost = optionFillCost(intent, result);
+  const brokerReason = brokerWordsFor(result);
   const invalidator = intent.forecast?.invalidator;
   // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
   // the two must match character for character or the link from a fill lands on no row.
@@ -120,13 +130,14 @@ export function reasoningForOrder(
     ...(contract ? { contract } : {}),
     ...(cost ? { cost: optionFillCostWords(cost) } : {}),
     ...(invalidator ? { invalidator } : {}),
+    ...(brokerReason ? { brokerReason } : {}),
   };
 }
 
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
- *  never a placeholder object). The Wire lists every account's fills, so a row's playbook rides
- *  only to that account's owner (`ownsAccount`). */
+ *  never a placeholder object). The Wire lists every account's fills, so a row's playbook and the
+ *  broker's words ride only to that account's owner (`ownsAccount`). */
 export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
@@ -140,7 +151,7 @@ export function attachWireReasoning(
       ...row,
       reasoning: deps.ownsAccount?.(row.participantId)
         ? reasoning
-        : withoutReasoningPlaybook(reasoning),
+        : withoutOwnerReasoning(reasoning),
       ...(samples ? { vitals: wireTradeVitals(samples, row.at) } : {}),
     };
   });

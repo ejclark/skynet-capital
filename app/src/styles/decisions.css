@@ -141,6 +141,13 @@
   color: var(--text);
   font-size: 11.5px;
 }
+/* An order that never traded, told in the broker's words (#4650) in place of the muted status:
+   full text strength like `.cycle-guard`, since it answers "why didn't it fill". Led by "not filled —
+   broker:", never by hue. */
+.cycle-broker {
+  color: var(--text);
+  font-size: 11.5px;
+}
 .cycle-reason {
   flex-basis: 100%;
   color: var(--muted);
