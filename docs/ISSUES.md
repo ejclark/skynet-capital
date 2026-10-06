@@ -123,8 +123,9 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
-11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready · In
-   Progress · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`), then a `·`
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready ·
+   Building now · Waiting · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`;
+   Building now was "In Progress" until #4393 slice 4, and still reads as it), then a `·`
    and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
    after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
    `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels

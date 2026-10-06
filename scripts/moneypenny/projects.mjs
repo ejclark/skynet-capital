@@ -18,7 +18,23 @@ export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
 // Board view: one column per Status, WIP limits set per-column in the Projects UI itself (native
 // feature, no code). Order matters — it's the column order gh CLI creates the option list in.
-export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+//
+// #4393 slice 4 (criteria 5 and 9): "In Progress" is renamed **Building now** — the column means a
+// session is building it this minute, and "in progress" also described every plan half-done and
+// idle for days — and those idle plans get their own column, **Waiting**, so started-but-idle work
+// stops hiding in Ready or Backlog. Stop starting, start finishing: the admission gate counts the
+// Waiting column against `startedPlanCap` (admission.mjs).
+export const STATUS_OPTIONS = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
+
+/** The building column's name, and the one it had before #4393 slice 4. */
+export const BUILDING = "Building now";
+export const WAITING = "Waiting";
+
+// Renamed options, old name → new. `statusFieldUpdate` carries the OLD option's id onto the new
+// name, so GitHub renames the column in place — every card in it stays put and Eric's WIP limit on
+// it (set in the UI, keyed to the option) survives. Without the id, `updateProjectV2Field` replaces
+// the option list wholesale and every card loses its Status until the sweep rewrites it.
+export const RENAMED_STATUS_OPTIONS = { "In Progress": BUILDING };
 
 // Every new GitHub Project ships with its own default Status field (Todo/In Progress/Done) — the
 // setup script's "field already exists, skip" check meant our 5-value set was never actually
@@ -32,14 +48,19 @@ export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Do
 export const STATUS_FIELD_OPTIONS = [
   { name: "Backlog", color: "GRAY", description: "" },
   { name: "Ready", color: "BLUE", description: "" },
-  { name: "In Progress", color: "YELLOW", description: "" },
+  { name: BUILDING, color: "YELLOW", description: "A session is building it right now" },
+  {
+    name: WAITING,
+    color: "ORANGE",
+    description: "A plan started and idle — finish before starting",
+  },
   { name: "Blocked", color: "RED", description: "" },
   { name: "Done", color: "GREEN", description: "" },
 ];
 
 /**
  * Does an existing Status field (its current option names, in whatever order the API returned)
- * already carry our 5-value set? Order-insensitive — GitHub may not preserve the order we sent.
+ * already carry our option set? Order-insensitive — GitHub may not preserve the order we sent.
  * Pure so the setup script's "skip if already correct" decision is unit-tested without a network
  * call.
  */
@@ -47,6 +68,55 @@ export function statusOptionsMatch(currentNames = []) {
   const want = new Set(STATUS_OPTIONS);
   const have = new Set(currentNames);
   return want.size === have.size && [...want].every((n) => have.has(n));
+}
+
+/**
+ * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field becomes
+ * `STATUS_FIELD_OPTIONS`, or null when it already is. `current` is the field's options as gh's
+ * `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by its
+ * old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
+ * instead of replacing the list (which would strip every card's Status). Pure; specced.
+ */
+export function statusFieldUpdate(current = []) {
+  if (statusOptionsMatch(current.map((o) => o?.name))) return null;
+  const idOf = new Map();
+  for (const o of current) {
+    if (!(o?.id && o?.name)) continue;
+    const name = RENAMED_STATUS_OPTIONS[o.name] ?? o.name;
+    if (!idOf.has(name) || o.name === name) idOf.set(name, o.id);
+  }
+  return STATUS_FIELD_OPTIONS.map((o) => (idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o));
+}
+
+// ── started plans (#4393 slice 4, criteria 5–6) ─────────────────────────────────────────────────
+
+/** `{total, completed}` sub-issue counts from a REST row or webhook payload; zeros when absent. */
+export function subIssueCounts(issue) {
+  const s = issue?.sub_issues_summary ?? issue?.subIssues ?? {};
+  return { total: Number(s.total) || 0, completed: Number(s.completed) || 0 };
+}
+
+/**
+ * HAS THIS PLAN STARTED? Criterion 6's "a plan with zero closed sub-issues" is the fresh plan; one
+ * with a closed sub-issue has started. `next-slice` counts as started too — the plan lane labels a
+ * plan it shipped a slice of and left unfinished, and most plans here slice by PR and a state block,
+ * not by sub-issue (of 85 open plans on 2026-10-05, 66 had no sub-issues; #4393 itself had three
+ * slices merged and zero sub-issues). Reading sub-issues alone would call #4393 fresh and refuse
+ * its own slice 5 the day this landed.
+ */
+export function isStartedPlan({ labels = [], subIssues = {} } = {}) {
+  if (!labels.includes("plan")) return false;
+  return (Number(subIssues.completed) || 0) >= 1 || labels.includes("next-slice");
+}
+
+/**
+ * Started, and with work left: an open sub-issue, or `next-slice` (the lane's "more remains").
+ * A plan whose sub-issues are all closed and that carries no `next-slice` is finished-but-open —
+ * slice 5's auto-close, never the Waiting column.
+ */
+function hasWorkLeft({ labels = [], subIssues = {} } = {}) {
+  const open = (Number(subIssues.total) || 0) - (Number(subIssues.completed) || 0);
+  return open > 0 || labels.includes("next-slice");
 }
 
 // Backlog view: table sorted by Priority. Deliberately not derived from anything below — priority
@@ -82,7 +152,7 @@ export const FIELDS = [
 //      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
 //      a dropped close event, which is the only thing the built-in would have covered.
 //   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
-//      derives Backlog/Ready/Blocked/In Progress from the labels a reopened issue still carries, so
+//      derives Backlog/Ready/Blocked/Building now from the labels a reopened issue still carries, so
 //      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
 //      overwrote it. "Auto-add to project" filters on creation and cannot express
 //      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
@@ -109,24 +179,45 @@ export const FIELDS = [
  * PR happens to be open against it; then `in-progress` (or an open linked PR); then ready; else
  * it sits in Backlog.
  *
- * #3960 (2026-09-30): the `in-progress` label is what fills "In Progress" now. The column keyed
- * only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions auto-merge
- * within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit to 3 and
- * it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in for a
- * caller that can see one.
+ * #3960 (2026-09-30): the `in-progress` label is what fills the building column now. The column
+ * keyed only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions
+ * auto-merge within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit
+ * to 3 and it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in
+ * for a caller that can see one.
+ *
+ * #4393 slice 4: a started plan with work left and nobody building it reads **Waiting** — after
+ * Blocked (a plan waiting on Eric is blocked, not idle) and after Building now, ahead of Ready.
+ * `subIssues` is `subIssueCounts(issue)`.
+ *
+ * `columns` is the option names the live board carries, for the one window where it lags this
+ * file: between this rule merging and the sweep renaming the field (projects-reconcile.mjs
+ * `ensureStatusColumns`). Without it a sync would ask for a column the board does not have yet
+ * and go red. So the building column falls back to its old name, and Waiting to whatever the
+ * issue would read without it. Left out, it is this file's own `STATUS_OPTIONS`.
  */
 export function statusForIssue({
   state = "open",
   labels = [],
   hasOpenLinkedPr = false,
   decisionCalloutMissing = false,
+  subIssues = {},
+  columns = STATUS_OPTIONS,
 } = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
   // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
   // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
   if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
-  if (has("in-progress") || hasOpenLinkedPr) return "In Progress";
+  if (has("in-progress") || hasOpenLinkedPr) {
+    const legacy = Object.keys(RENAMED_STATUS_OPTIONS).find((k) => columns.includes(k));
+    return columns.includes(BUILDING) || !legacy ? BUILDING : legacy;
+  }
+  if (
+    columns.includes(WAITING) &&
+    isStartedPlan({ labels, subIssues }) &&
+    hasWorkLeft({ labels, subIssues })
+  )
+    return WAITING;
   if (has("ready")) return "Ready";
   return "Backlog";
 }

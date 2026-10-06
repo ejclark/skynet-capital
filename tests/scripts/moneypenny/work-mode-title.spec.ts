@@ -16,6 +16,7 @@ const caps = {
   governorDispatches: 4,
   grindWidth: 200,
   continuationsPerDay: 3,
+  startedPlanCap: 4,
 };
 const mode = (over: Partial<WorkMode> = {}): WorkMode => ({
   position: "normal",

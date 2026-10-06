@@ -144,9 +144,10 @@ export const LABELS = {
       "Urgent (a user-harming bug or CVE): builds even when the work spigot is on conserve",
     managed: true,
   },
-  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's "In Progress" column could
-  // never fill: it keyed on an open linked PR nobody read, and live sessions auto-merge within
-  // minutes, so an open PR is rarely there to see. Every build path applies this when it starts
+  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's building column (named
+  // "In Progress" until #4393 slice 4 renamed it "Building now") could never fill: it keyed on an
+  // open linked PR nobody read, and live sessions auto-merge within minutes, so an open PR is
+  // rarely there to see. Every build path applies this when it starts
   // (the claim lanes in index.mjs, `/work-issues`), takes it off at its terminal state, and the
   // stall audit clears one left behind after 6h quiet. Managed: an unprovisioned label would 404 on
   // the very `--add-label` that marks work started.

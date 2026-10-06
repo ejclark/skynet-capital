@@ -444,11 +444,17 @@ describe("issue lint — the Status row against the labels", () => {
     expect(drift(run(withStatus("Ready · plan"), "plan,ready").notes)).toEqual([]);
     expect(drift(run(withStatus("Blocked · a decision"), "needs-info").notes)).toEqual([]);
     expect(drift(run(withStatus("In Progress · slice 2"), "in-progress").notes)).toEqual([]);
+    expect(drift(run(withStatus("Building now · slice 4"), "in-progress").notes)).toEqual([]);
     expect(drift(run(withStatus("Backlog · proposed"), "idea").notes)).toEqual([]);
   });
 
+  it("reads a row typed before the rename as the building column (#4393 slice 4)", () => {
+    const { notes } = run(withStatus("In Progress · slice 2"), "plan,ready");
+    expect(drift(notes)[0]).toContain("Status row says Building now");
+  });
+
   it("treats a Ready row on an issue being built as behind, not wrong", () => {
-    // The row is typed once; In Progress is transient. A note on every in-flight issue is noise.
+    // The row is typed once; Building now is transient. A note on every in-flight issue is noise.
     expect(drift(run(withStatus("Ready · plan"), "plan,ready,in-progress").notes)).toEqual([]);
   });
 

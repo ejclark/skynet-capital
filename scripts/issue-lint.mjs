@@ -26,7 +26,7 @@ import { readBaseline } from "./bottleneck-baseline.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
-import { STATUS_OPTIONS } from "./moneypenny/projects.mjs";
+import { BUILDING, STATUS_OPTIONS } from "./moneypenny/projects.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
 /** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
@@ -319,11 +319,13 @@ function checkStateBlockTop(text, notes) {
 }
 
 /** The words a Status row may lead with, mapped to the board column they claim. The board's own
- *  five (projects.mjs STATUS_OPTIONS — the skeleton's vocabulary, docs/ISSUES.md) plus the label
- *  spellings older rows used in their place (#3407's row said "needs-eric"). */
+ *  columns (projects.mjs STATUS_OPTIONS — the skeleton's vocabulary, docs/ISSUES.md) plus the label
+ *  spellings older rows used in their place (#3407's row said "needs-eric"). "In Progress" was the
+ *  building column's name until #4393 slice 4, so rows typed before the rename still claim it. */
 const STATUS_WORDS = new Map([
   ...STATUS_OPTIONS.map((s) => [s.toLowerCase(), s]),
-  ["in-progress", "In Progress"],
+  ["building", BUILDING],
+  ["in-progress", BUILDING],
   ["needs-eric", "Blocked"],
   ["needs-info", "Blocked"],
 ]);
@@ -333,11 +335,11 @@ const STATUS_WORDS = new Map([
  *  stale, only behind, and a note on every in-flight issue would be noise, not signal. The note is
  *  for the row that is WRONG — Ready with no `ready`, Blocked with nothing blocking, Backlog after
  *  the flip. Done is left alone: an open-state check needs the issue's state, which a body lint
- *  never has. */
+ *  never has — and Waiting likewise, which needs the plan's sub-issue counts. */
 const STATUS_HOLDS = {
   Backlog: (has) => !(has("ready") || has("needs-eric") || has("needs-info")),
   Ready: (has) => has("ready"),
-  "In Progress": (has) => has("in-progress"),
+  [BUILDING]: (has) => has("in-progress"),
   Blocked: (has) => has("needs-eric") || has("needs-info"),
 };
 
@@ -347,7 +349,7 @@ export function statusRowClaim(body = "") {
   const row = /^\|\s*\*\*Status\*\*\s*\|\s*(.+?)\s*\|\s*$/m.exec(aboveFold(body));
   if (!row) return null;
   const lead = row[1].replace(/[*_`]/g, "").trim().toLowerCase();
-  if (/^in[ -]progress\b/.test(lead)) return "In Progress";
+  if (/^(?:in[ -]progress|building now)\b/.test(lead)) return BUILDING;
   const word = /^[a-z-]+/.exec(lead)?.[0] ?? "";
   return STATUS_WORDS.get(word) ?? null;
 }

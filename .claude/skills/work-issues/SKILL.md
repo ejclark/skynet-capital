@@ -52,7 +52,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    The CLI only reads: it never comments and never labels.
 
    On admit, label it `in-progress` right away (`gh issue edit <n> --add-label in-progress`) —
-   that label is what the Orchestration board's In Progress column and the cap count (#3960).
+   that label is what the Orchestration board's Building now column and the cap count (#3960).
+   A fresh plan can also be refused because the board's Waiting column (started plans nobody is
+   building) is at `startedPlanCap` — the CLI says so; finish one of those instead (#4393).
    Every terminal outcome in LAND takes it back off.
 
    **The expedite class (#4393 criterion 12).** A session Eric starts by hand to build something
