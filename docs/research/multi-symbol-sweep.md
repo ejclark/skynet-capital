@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **ISM Services Employment sub-50 as a survey-internal reading that persists against positive
+  payrolls (FT-ism-services-2026-10-05-1)** — added 2026-10-06 from the
+  [ism-services-2026-10-05 close-out](events/ism-services-2026-10-05.md). Registered as a joint
+  prediction (positive September payrolls **and** Employment < 50, base rate ≈52%). Payrolls held
+  (+29k) but Employment printed **50.1**, so the registered "Employment ≥ 50" kill clause fired. A
+  0.1pt crossing on the cycle's largest payroll miss: the disagreement streak (13 of 18 months) ended,
+  but this does not show the sub-index re-coupled to labor. Do not re-propose the joint test without a
+  stated margin around 50 — a threshold that a one-tenth rounding step flips is not a test of the
+  relationship.
+
 - **The disappearing index effect, tested at a single-name threshold set before the additions were
   known (FT-sp-rebalance-proforma-2026-09-04-1)** — added 2026-09-22 from the
   [sp-rebalance-proforma-2026-09-04 close-out](events/sp-rebalance-proforma-2026-09-04.md). All
