@@ -110,7 +110,7 @@ function closeBody(issue) {
   return [
     `🏁 **Every slice is done** — all ${total} sub-issues are closed, and nothing on this plan says more remains (no \`next-slice\`, no open decision, no unchecked criterion). Closing it.`,
     "",
-    "If something is still missing, reopen it and say what — the sweep will not close it again over a `next-slice` label.",
+    "If something is still missing, reopen it and add `next-slice` — the sweep leaves a plan carrying that label open, and closes it again on its own once the label is gone.",
     "",
     "— Moneypenny",
     "",

@@ -78,6 +78,10 @@ describe("plan close — what the sweep writes", () => {
     expect(intent.body).toContain("— Moneypenny");
   });
 
+  it("tells a reopener the one thing that keeps the plan open", () => {
+    expect(only(routePlanClose({ openPlans: [plan()] })).body).toContain("add `next-slice`");
+  });
+
   it("tells a held plan why, once — and not again once the marker is on the thread", () => {
     const labels = ["plan", "next-slice"];
 
