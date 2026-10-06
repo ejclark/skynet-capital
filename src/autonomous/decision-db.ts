@@ -12,6 +12,7 @@ import {
   openSettlements,
   SETTLED_JOIN,
   SETTLEMENTS_SQL,
+  type SequencedSettlement,
   type SettledIntent,
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
@@ -107,6 +108,9 @@ export interface DecisionDb {
   /** The newest settlements, newest first, bounded to `[1, MAX_PAGE]` — the bots' resend to the
    *  dashboard's copy (`decision-replication-client.ts`). */
   recentSettlements(limit?: number): OrderSettlement[];
+  /** Every settlement stored after `afterSeq`, oldest first, bounded to `[1, MAX_PAGE]` — the
+   *  bots' backlog leg, so none is ever left behind on the dashboard's copy. */
+  settlementsSince(afterSeq: number, limit?: number): SequencedSettlement[];
   /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
    *  what a restart hands back to the settle loop. */
   unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
@@ -684,6 +688,10 @@ export function openDecisionDb(path: string): DecisionDb {
 
     recentSettlements(limit = DEFAULT_PAGE) {
       return settlements.recent(Math.max(1, Math.min(limit, MAX_PAGE)));
+    },
+
+    settlementsSince(afterSeq, limit = MAX_PAGE) {
+      return settlements.since(afterSeq, Math.max(1, Math.min(limit, MAX_PAGE)));
     },
 
     unsettledOrders: (personaId, sinceAt) => settlements.unsettled(personaId, sinceAt),

@@ -16,8 +16,10 @@ import type { OptionLegIntent, OptionLegOrder, OrderResult } from "../domain/typ
  * time and linked again when the decision lands.
  */
 export const SETTLEMENTS_SQL = `
+  -- \`seq\` is the order settlements were stored in — the replication cursor's key.
   CREATE TABLE IF NOT EXISTS order_settlements (
-    order_id TEXT PRIMARY KEY,
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id TEXT NOT NULL UNIQUE,
     client_order_id TEXT,
     status TEXT NOT NULL,
     filled_quantity REAL NOT NULL,
@@ -84,7 +86,15 @@ export interface Settlements {
   forDecision(decisionId: number): ReadonlyMap<number, OrderSettlement>;
   /** The newest first, bounded — what the bots resend to the dashboard each poll. */
   recent(limit: number): OrderSettlement[];
+  /** Strictly after `afterSeq`, in the order stored, bounded — the backlog the bots drain. */
+  since(afterSeq: number, limit: number): SequencedSettlement[];
   unsettled(personaId: string, sinceAt: number): UnsettledOrder[];
+}
+
+/** A settlement and its place in the order the store kept them. */
+export interface SequencedSettlement {
+  readonly seq: number;
+  readonly settlement: OrderSettlement;
 }
 
 interface SettlementRow {
@@ -155,7 +165,10 @@ export function openSettlements(db: DatabaseSync, deps: SettlementsDeps): Settle
     WHERE i.decision_id = ? AND s.order_id IS NOT NULL
   `);
   const selectRecent = db.prepare(
-    `SELECT ${SETTLEMENT_COLUMNS} FROM order_settlements s ORDER BY s.settled_at DESC, s.rowid DESC LIMIT ?`,
+    `SELECT ${SETTLEMENT_COLUMNS} FROM order_settlements s ORDER BY s.settled_at DESC, s.seq DESC LIMIT ?`,
+  );
+  const selectSince = db.prepare(
+    `SELECT s.seq AS seq, ${SETTLEMENT_COLUMNS} FROM order_settlements s WHERE s.seq > ? ORDER BY s.seq LIMIT ?`,
   );
   // The `working` intents one order settles: by its broker id, or by the bot's stamp when the
   // decision never learned that id.
@@ -254,6 +267,12 @@ export function openSettlements(db: DatabaseSync, deps: SettlementsDeps): Settle
 
     recent(limit) {
       return (selectRecent.all(limit) as unknown as SettlementRow[]).map(read);
+    },
+
+    since(afterSeq, limit) {
+      return (
+        selectSince.all(afterSeq, limit) as unknown as (SettlementRow & { seq: number })[]
+      ).map((row) => ({ seq: row.seq, settlement: read(row) }));
     },
 
     unsettled(personaId, sinceAt) {

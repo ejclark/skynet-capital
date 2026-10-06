@@ -41,7 +41,9 @@ import { parseSettlements } from "./decision-wire-settlements.js";
  * Late settlements (#4650) ride either kind as an additive envelope field, `settlements`
  * (`decision-wire-settlements.ts`): what an order a record left `working` became, which the record
  * itself can never carry — it was sent long before, and the receiver keeps the first copy of each
- * record it stores. A dashboard that predates the field ignores it and keeps the batch.
+ * record it stores. A dashboard that predates the field ignores it and keeps the batch. The bots'
+ * settlement backlog also posts settlements alone, with no records — a batch an older dashboard
+ * refuses, which costs it nothing, and is sent again until a dashboard accepts it.
  */
 
 export const DECISION_BATCH_KIND = "decision.v1";
@@ -168,8 +170,11 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   const { personaId, records } = value;
   if (typeof personaId !== "string" || personaId.length === 0) return undefined;
   if (personaId.length > MAX_PERSONA_ID_LENGTH) return undefined;
-  if (!Array.isArray(records) || records.length === 0 || records.length > MAX_DECISION_BATCH) {
-    return undefined;
+  if (!Array.isArray(records) || records.length > MAX_DECISION_BATCH) return undefined;
+  if (records.length === 0) {
+    // The settlement backlog's own POST: settlements alone, which a batch is never otherwise.
+    const settlements = parseSettlements(value.settlements);
+    return settlements.length > 0 ? { personaId, records: [], settlements } : undefined;
   }
   const parsed = records.map(parseDecisionRecord);
   // A record naming another persona is an identity fault on the bridge: refuse the whole batch.

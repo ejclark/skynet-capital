@@ -96,6 +96,18 @@ describe("parseDecisionBatch — the settlements field", () => {
     }
     expect(without).not.toHaveProperty("settlements");
   });
+
+  it("takes the backlog's settlements on their own, but never an empty batch", () => {
+    expect(parseDecisionBatch(wire({ ...batch, records: [], settlements: [settlement] }))).toEqual({
+      personaId: "sauron",
+      records: [],
+      settlements: [settlement],
+    });
+    expect(parseDecisionBatch(wire({ ...batch, records: [] }))).toBeUndefined();
+    expect(
+      parseDecisionBatch(wire({ ...batch, records: [], settlements: [{ orderId: "junk" }] })),
+    ).toBeUndefined();
+  });
 });
 
 describe("a late fill reaching the dashboard's copy", () => {
@@ -153,14 +165,64 @@ describe("a late fill reaching the dashboard's copy", () => {
         filledQuantity: 1,
         filledPrice: 2.05,
       });
-      // Once per poll, on its first batch only — never once per persona or per leg.
+      // On the poll's first record batch, and once on the backlog's own — never once per persona.
       const carrying = bridge.batches.filter((b) => b.settlements !== undefined);
-      expect(carrying.map((b) => b.settlements)).toEqual([[settlement]]);
-      // And a resend on every later poll stores nothing twice.
+      expect(carrying.map((b) => [b.records.length > 0, b.settlements])).toEqual([
+        [true, [settlement]],
+        [false, [settlement]],
+      ]);
+      // A later poll resends only the newest few, and stores nothing twice.
       await client.replicate({});
+      expect(bridge.batches.filter((b) => b.records.length === 0)).toHaveLength(1);
       expect(app.recentSettlements()).toHaveLength(1);
     } finally {
       await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
+    }
+  });
+
+  it("delivers every settlement however many there are, sends a refused page again, and resends all after a restart", async () => {
+    const bots = botsDb;
+    const app = appDb;
+    bots.record(workingRecord);
+    const many = Array.from({ length: 130 }, (_, n) => ({
+      ...settlement,
+      orderId: `o${n}`,
+      clientOrderId: `c${n}`,
+      settledAt: new Date(Date.parse(settlement.settledAt) + n).toISOString(),
+    }));
+    bots.recordSettlements(many);
+    let refuseNextBacklog = true;
+    const server = createInsightsListener({
+      record: () => Promise.resolve(),
+      decisions: {
+        recordBatch: (batch) => {
+          if (batch.records.length === 0 && refuseNextBacklog) {
+            refuseNextBacklog = false;
+            throw new Error("disk full"); // the dashboard answers 502
+          }
+          storeDecisionBatch(app, batch);
+        },
+      },
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    const stored = () => {
+      const first = app.settlementsSince(0, 100);
+      return [...first, ...app.settlementsSince(first.at(-1)?.seq ?? 0, 100)].map(
+        (s) => s.settlement.orderId,
+      );
+    };
+    try {
+      const env = { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` };
+      const client = resolveDecisionReplication(env, () => bots);
+      for (let poll = 0; poll < 3; poll++) await client.replicate({});
+      expect(new Set(stored())).toEqual(new Set(many.map((s) => s.orderId)));
+
+      // A restarted bots process starts its cursor over; every settlement lands once.
+      await resolveDecisionReplication(env, () => bots).replicate({});
+      expect(stored()).toHaveLength(130);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
 });
