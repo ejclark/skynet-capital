@@ -29,11 +29,13 @@ import {
  * Write order is the crash-safety: subscriptions first, markers second. A crash between the two
  * leaves the subscriptions seeded and the account unmarked, and the next poll then finds every
  * playbook already held, adds nothing, and writes the marker. The reverse order could mark an
- * account that was never seeded.
+ * account that was never seeded. A pass that only marks — every account already held what the
+ * seed would add — writes the marker alone and leaves the subscriptions file byte for byte.
  *
- * Unattended, so it never writes over a file it could not read: an unreadable subscriptions file
- * would be replaced by the seed alone, and an unreadable marker file would re-seed what an owner
- * unsubscribed. Either one skips the seed, reported, until the file reads again. Every read and
+ * Unattended, so it never writes over a file it could not read whole (`loadIfReadable`): an
+ * unreadable subscriptions file would be replaced by the seed alone, one with a record the parser
+ * dropped would lose that record for good, and an unreadable marker file would re-seed what an
+ * owner unsubscribed. Each skips the seed, reported, until the file reads whole again. Every read and
  * write is synchronous, so nothing — a Store click, the other seed, a second poll — lands between
  * this read and its write.
  *
@@ -41,14 +43,24 @@ import {
  * the dashboard's `/data` volume wherever `SKYNET_SUBSCRIPTIONS_FILE` points) — derived, never a
  * new env var — so one seed's marker on an account never stops the other.
  */
+/** What one seed call wrote — both empty on almost every poll. */
+export interface SeedWrite {
+  /** Accounts that gained a subscription (and were marked). */
+  readonly added: readonly string[];
+  /** Accounts only marked: they already held everything this seed would add. */
+  readonly markedOnly: readonly string[];
+}
+
+const NOTHING: SeedWrite = { added: [], markedOnly: [] };
+
 export interface SubscriptionSeeder {
-  /** Seed what the report says; returns the accounts seeded by this call (usually none). */
-  seed(report: HouseRosterReport, at?: Date): readonly string[];
+  /** Seed what the report says. */
+  seed(report: HouseRosterReport, at?: Date): SeedWrite;
 }
 
 /** The own-rules seed: `accounts` are the bots the bots app reports running (persona ids). */
 export interface OwnRulesSeeder {
-  seed(accounts: readonly string[], at?: Date): readonly string[];
+  seed(accounts: readonly string[], at?: Date): SeedWrite;
 }
 
 export function seedMarkersPathFrom(subscriptionsPath: string): string {
@@ -59,15 +71,16 @@ export function ownRulesSeedMarkersPathFrom(subscriptionsPath: string): string {
   return join(dirname(subscriptionsPath), "playbook-own-rules-seeds.json");
 }
 
-/** Read markers, skip when settled, read subscriptions, plan purely, write subscriptions then
- *  markers. `pending` is the cheap pre-check that spares the subscriptions read on most polls. */
+/** Read markers, skip when settled, read subscriptions, plan purely, write subscriptions (only when
+ *  an account gained one) then markers. `pending` is the cheap pre-check that spares the
+ *  subscriptions read on most polls. */
 function markedSeed<Input>(
   subscriptions: SubscriptionStore,
   markersPath: string,
   pending: (markers: SeedMarkers, input: Input) => boolean,
   plan: (state: SubscriptionsState, markers: SeedMarkers, input: Input, at: Date) => SeedResult,
   onReadError?: (message: string) => void,
-): (input: Input, at?: Date) => readonly string[] {
+): (input: Input, at?: Date) => SeedWrite {
   const markers = new JsonFileStore<SeedMarkers>({
     path: markersPath,
     parse: (raw) => parseSeedMarkers(raw) ?? undefined,
@@ -77,14 +90,17 @@ function markedSeed<Input>(
   });
   return (input, at = new Date()) => {
     const current = markers.loadIfReadable();
-    if (!(current && pending(current, input))) return [];
+    if (!(current && pending(current, input))) return NOTHING;
     const state = subscriptions.loadIfReadable();
-    if (!state) return [];
+    if (!state) return NOTHING;
     const result = plan(state, current, input, at);
-    if (result.seeded.length === 0) return [];
-    subscriptions.replace(result.state);
+    if (result.seeded.length === 0) return NOTHING;
+    if (result.added.length > 0) subscriptions.replace(result.state);
     markers.write(result.markers);
-    return result.seeded;
+    return {
+      added: result.added,
+      markedOnly: result.seeded.filter((id) => !result.added.includes(id)),
+    };
   };
 }
 
@@ -144,20 +160,28 @@ export function pollSeedsFromEnv(
     onReadError,
   );
   return (report, at = new Date()) => {
-    const lines: string[] = [];
-    const fromRoster = report.houseRoster ? roster.seed(report.houseRoster, at) : [];
-    if (fromRoster.length > 0) {
-      lines.push(
-        `[subscriptions] seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped): ${fromRoster.join(", ")}`,
-      );
-    }
     const bots = report.gate?.map((v) => v.id) ?? [];
-    const fromOwnRules = bots.length > 0 ? ownRules.seed(bots, at) : [];
-    if (fromOwnRules.length > 0) {
-      lines.push(
-        `[subscriptions] seeded each bot's own-rules playbook once (standard, uncapped; an existing one kept as is): ${fromOwnRules.join(", ")}`,
-      );
-    }
-    return lines;
+    return [
+      ...logLines(
+        report.houseRoster ? roster.seed(report.houseRoster, at) : NOTHING,
+        "seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped)",
+        "marked as seeded from SKYNET_PLAYBOOKS, nothing added (already held)",
+      ),
+      ...logLines(
+        bots.length > 0 ? ownRules.seed(bots, at) : NOTHING,
+        "seeded each bot's own-rules playbook (standard, uncapped)",
+        "marked for the own-rules seed, nothing added (already held)",
+      ),
+    ];
   };
+}
+
+/** One line per kind of write, so a mark-only pass never reads as a seed. */
+function logLines(write: SeedWrite, addedLabel: string, markedLabel: string): string[] {
+  return [
+    ...(write.added.length > 0 ? [`[subscriptions] ${addedLabel}: ${write.added.join(", ")}`] : []),
+    ...(write.markedOnly.length > 0
+      ? [`[subscriptions] ${markedLabel}: ${write.markedOnly.join(", ")}`]
+      : []),
+  ];
 }

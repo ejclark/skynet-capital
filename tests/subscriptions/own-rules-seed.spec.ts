@@ -34,9 +34,10 @@ import { aContext, aPortfolio } from "../support/builders.js";
 /**
  * #4642 slice 9b (design on #4651) — the cutover. The dashboard subscribes the `sauron` bot account
  * to `SAURON` (his own rules as a playbook) once: standard, uncapped, enabled, no symbol filter, on a
- * marker of its own. After it his share orders carry `playbookId: "SAURON"`, so a Store pause acts
- * on them; nothing else he trades or holds changes, and an owner who unsubscribes or pauses it
- * stays that way.
+ * marker of its own. After it his share orders carry `playbookId: "SAURON"`, so a cap or filter set
+ * in the Store's Edit acts on his buys; nothing else he trades or holds changes. Pausing it takes the
+ * label off again and his rules keep trading unlabelled until slice 10. An owner who unsubscribes or
+ * pauses it stays that way.
  */
 
 const AT = new Date("2026-10-06T14:00:00.000Z");
@@ -78,6 +79,9 @@ const SEEDED_SAURON: PlaybookSubscription = {
 const verdict = (id: string): PersonaGateVerdict => ({ id, ready: true, reason: "ready" });
 /** An env-roster entry, for the specs that run both seeds on one store. */
 const TACO = { playbookId: "TACO-DJT", mode: "standard" } as const;
+/** What a store-level seed call reports writing. */
+const NOTHING = { added: [], markedOnly: [] };
+const ADDED_SAURON = { added: ["sauron"], markedOnly: [] };
 
 describe("seeding Sauron's own rules as his subscription", () => {
   describe("the seed itself", () => {
@@ -111,15 +115,11 @@ describe("seeding Sauron's own rules as his subscription", () => {
 
     it("an account already holding SAURON — paused and capped — is marked, and nothing is added or changed", () => {
       const paused = [...ERICS_LIVE, sub("SAURON", { enabled: false, capitalAllocated: 5_000 })];
-      const result = seedOwnRules(
-        { sauron: paused },
-        EMPTY_SEED_MARKERS,
-        ["sauron"],
-        OWN_RULES,
-        AT,
-      );
+      const state = { sauron: paused };
+      const result = seedOwnRules(state, EMPTY_SEED_MARKERS, ["sauron"], OWN_RULES, AT);
 
-      expect(result.state.sauron).toBe(paused);
+      expect(result.state).toBe(state);
+      expect(result.added).toEqual([]);
       expect(result.markers.sauron).toEqual({
         seededFrom: SEEDED_FROM_OWN_RULES,
         at: AT.toISOString(),
@@ -132,7 +132,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       const unsubscribed = { ...once.state, sauron: ERICS_LIVE };
       const twice = seedOwnRules(unsubscribed, once.markers, ["sauron"], OWN_RULES, LATER);
 
-      expect(twice).toEqual({ state: unsubscribed, markers: once.markers, seeded: [] });
+      expect(twice).toEqual({ state: unsubscribed, markers: once.markers, seeded: [], added: [] });
     });
 
     it("a bot whose persona has no own-rules playbook is neither seeded nor marked", () => {
@@ -142,7 +142,12 @@ describe("seeding Sauron's own rules as his subscription", () => {
       const result = seedOwnRules(LIVE_STATE, EMPTY_SEED_MARKERS, others, OWN_RULES, AT);
 
       expect(others.length).toBeGreaterThan(0);
-      expect(result).toEqual({ state: LIVE_STATE, markers: EMPTY_SEED_MARKERS, seeded: [] });
+      expect(result).toEqual({
+        state: LIVE_STATE,
+        markers: EMPTY_SEED_MARKERS,
+        seeded: [],
+        added: [],
+      });
     });
 
     it("a human account is never seeded, even reported, and holds what it held", () => {
@@ -155,7 +160,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
         AT,
       );
 
-      expect(result).toEqual({ state: human, markers: EMPTY_SEED_MARKERS, seeded: [] });
+      expect(result).toEqual({ state: human, markers: EMPTY_SEED_MARKERS, seeded: [], added: [] });
     });
 
     it("today names exactly one account and playbook — sauron → SAURON — and that account is a bot", () => {
@@ -186,10 +191,10 @@ describe("seeding Sauron's own rules as his subscription", () => {
     });
 
     it("seeds on the first poll that reports sauron, and is a no-op on every poll after", () => {
-      expect(seeder.seed(["futurist", "sauron"], AT)).toEqual(["sauron"]);
+      expect(seeder.seed(["futurist", "sauron"], AT)).toEqual(ADDED_SAURON);
       const afterFirst = readFileSync(path, "utf8");
 
-      expect(seeder.seed(["futurist", "sauron"], LATER)).toEqual([]);
+      expect(seeder.seed(["futurist", "sauron"], LATER)).toEqual(NOTHING);
       expect(readFileSync(path, "utf8")).toBe(afterFirst);
       expect(store.load()).toEqual({ ...LIVE_STATE, sauron: [...ERICS_LIVE, SEEDED_SAURON] });
     });
@@ -198,7 +203,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       seeder.seed(["sauron"], AT);
       store.unsubscribe("sauron", "SAURON");
 
-      expect(seeder.seed(["sauron"], LATER)).toEqual([]);
+      expect(seeder.seed(["sauron"], LATER)).toEqual(NOTHING);
       expect(store.load().sauron).toEqual(ERICS_LIVE);
     });
 
@@ -207,7 +212,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       store.setEnabled("sauron", "SAURON", false, LATER);
       const paused = store.load();
 
-      expect(seeder.seed(["sauron"], LATER)).toEqual([]);
+      expect(seeder.seed(["sauron"], LATER)).toEqual(NOTHING);
       expect(store.load()).toEqual(paused);
       expect(paused.sauron?.filter((s) => s.playbookId === "SAURON")).toEqual([
         { ...SEEDED_SAURON, enabled: false, updatedAt: LATER.toISOString() },
@@ -216,9 +221,10 @@ describe("seeding Sauron's own rules as his subscription", () => {
 
     it("keeps its own marker file, so the env roster's marker on sauron never stops it", () => {
       const envRoster = createSubscriptionSeeder(store, seedMarkersPathFrom(path));
-      expect(envRoster.seed({ accounts: ["sauron"], roster: [TACO] }, AT)).toEqual(["sauron"]);
+      const envSeeded = envRoster.seed({ accounts: ["sauron"], roster: [TACO] }, AT);
+      expect(envSeeded).toEqual(ADDED_SAURON);
 
-      expect(seeder.seed(["sauron"], LATER)).toEqual(["sauron"]);
+      expect(seeder.seed(["sauron"], LATER)).toEqual(ADDED_SAURON);
       expect(store.load().sauron?.map((s) => s.playbookId)).toEqual([
         "TACO-DJT",
         "CRWV-WHEEL",
@@ -237,7 +243,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
     it("writes nothing at all for a poll that reports no own-rules bot", () => {
       const before = readFileSync(path, "utf8");
 
-      expect(seeder.seed(["futurist", "day-trader"], AT)).toEqual([]);
+      expect(seeder.seed(["futurist", "day-trader"], AT)).toEqual(NOTHING);
       expect(readFileSync(path, "utf8")).toBe(before);
       expect(existsSync(ownRulesSeedMarkersPathFrom(path))).toBe(false);
     });
@@ -281,9 +287,43 @@ describe("seeding Sauron's own rules as his subscription", () => {
       for (const { seed, markersPath } of bothSeeds(new SubscriptionStore(path))) {
         writeFileSync(path, torn, "utf8");
 
-        expect(seed()).toEqual([]);
+        expect(seed()).toEqual(NOTHING);
         expect(readFileSync(path, "utf8")).toBe(torn);
         expect(existsSync(markersPath)).toBe(false);
+      }
+    });
+
+    it("a subscriptions file with one record the parser drops is left byte for byte, and no marker is written", () => {
+      const broken = [
+        { ...sub("S1-NVDA"), capitalAllocated: "50000" },
+        { ...sub("S1-NVDA"), mode: "custom" },
+        { ...sub("S1-NVDA"), addedByANewerBuild: true },
+      ];
+      for (const record of broken) {
+        const file = `${JSON.stringify({ sauron: [sub("CRWV-WHEEL"), record] }, null, 2)}\n`;
+        const errors: string[] = [];
+        const store = new SubscriptionStore(path, (message) => errors.push(message));
+        for (const { seed, markersPath } of bothSeeds(store)) {
+          writeFileSync(path, file, "utf8");
+
+          expect(seed()).toEqual(NOTHING);
+          expect(readFileSync(path, "utf8")).toBe(file);
+          expect(existsSync(markersPath)).toBe(false);
+        }
+        expect(errors.at(-1)).toContain("left untouched");
+      }
+    });
+
+    it("a mark-only pass — the account already holds it all — writes the marker and leaves the subscriptions file byte for byte", () => {
+      const held = [...ERICS_LIVE, sub("SAURON", { enabled: false }), sub("TACO-DJT")];
+      // Compact on purpose: any rewrite by the store (two-space indent) would change the bytes.
+      const file = JSON.stringify({ sauron: held });
+      for (const { seed, markersPath } of bothSeeds(new SubscriptionStore(path))) {
+        writeFileSync(path, file, "utf8");
+
+        expect(seed()).toEqual({ added: [], markedOnly: ["sauron"] });
+        expect(readFileSync(path, "utf8")).toBe(file);
+        expect(JSON.parse(readFileSync(markersPath, "utf8")).sauron.playbookIds).toEqual([]);
       }
     });
 
@@ -293,7 +333,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       for (const { seed, markersPath } of bothSeeds(store)) {
         writeFileSync(markersPath, "not json", "utf8");
 
-        expect(seed()).toEqual([]);
+        expect(seed()).toEqual(NOTHING);
         expect(store.load()).toEqual(LIVE_STATE);
       }
     });
@@ -342,7 +382,12 @@ describe("seeding Sauron's own rules as his subscription", () => {
     });
 
     it("a SAURON the env roster names keeps the env roster's mode — that seed runs first", () => {
-      seed(poll([verdict("sauron")], "SAURON:aggressive"), AT);
+      const lines = seed(poll([verdict("sauron")], "SAURON:aggressive"), AT);
+
+      expect(lines).toEqual([
+        "[subscriptions] seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped): sauron",
+        "[subscriptions] marked for the own-rules seed, nothing added (already held): sauron",
+      ]);
 
       expect(store.load().sauron?.filter((s) => s.playbookId === "SAURON")).toEqual([
         { ...SEEDED_SAURON, mode: "aggressive" },

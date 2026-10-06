@@ -63,6 +63,27 @@ describe("json file store — the plain-JSON durable-state primitive", () => {
     expect(store(errors).loadIfReadable()).toEqual({ items: ["a"] });
   });
 
+  it("loadIfReadable: a parse that silently drops part of the file is unreadable too — load still degrades", () => {
+    const errors: string[] = [];
+    const lenient = new JsonFileStore<Demo>({
+      path,
+      // Keeps the string items, drops the rest — a total parser's usual posture.
+      parse: (raw) => ({
+        items: ((raw as Demo).items ?? []).filter((i): i is string => typeof i === "string"),
+      }),
+      empty: { items: [] },
+      label: "demo",
+      onReadError: (m) => errors.push(m),
+    });
+    writeFileSync(path, JSON.stringify({ items: ["a", 7] }), "utf8");
+
+    expect(lenient.load()).toEqual({ items: ["a"] });
+    expect(lenient.loadIfReadable()).toBeUndefined();
+    expect(errors).toEqual([expect.stringContaining("parsed only in part")]);
+    writeFileSync(path, JSON.stringify({ items: ["a", "b"] }), "utf8");
+    expect(lenient.loadIfReadable()).toEqual({ items: ["a", "b"] });
+  });
+
   it("writes atomically — the file on disk is always whole JSON, and creates parent dirs", () => {
     const nested = new JsonFileStore<Demo>({
       path: join(dir, "deep/down/state.json"),

@@ -48,8 +48,12 @@ export const EMPTY_SEED_MARKERS: SeedMarkers = {};
 export interface SeedResult {
   readonly state: SubscriptionsState;
   readonly markers: SeedMarkers;
-  /** The accounts this call seeded — empty means nothing to write. */
+  /** The accounts this call marked — empty means nothing to write. */
   readonly seeded: readonly string[];
+  /** Those of them that gained a subscription. The rest already held everything the seed would add
+   *  and are only marked; when this is empty `state` is the very object passed in, so a caller
+   *  writes the marker alone and never rewrites the subscriptions file for nothing. */
+  readonly added: readonly string[];
 }
 
 /** One account's seed: the playbooks to add if it does not hold them yet, in order. */
@@ -61,7 +65,8 @@ interface AccountSeed {
 /**
  * The one loop both seeds run. Per account with no marker: add (uncapped, enabled) each entry it
  * does not already hold, placed by `place`, and mark the account — even when nothing was added,
- * because the owner already held it all. An account already marked is never touched again.
+ * because the owner already held it all (then its subscriptions are not even copied). An account
+ * already marked is never touched again.
  */
 function seedAccounts(
   state: SubscriptionsState,
@@ -78,6 +83,7 @@ function seedAccounts(
   const nextState: Record<string, readonly PlaybookSubscription[]> = { ...state };
   const nextMarkers: Record<string, SeedMarker> = { ...markers };
   const seeded: string[] = [];
+  const gained: string[] = [];
   for (const { accountId, entries } of seeds) {
     if (nextMarkers[accountId]) continue;
     const existing = state[accountId] ?? [];
@@ -95,7 +101,10 @@ function seedAccounts(
         updatedAt: stamp,
       });
     }
-    if (added.length > 0) nextState[accountId] = place(added, existing);
+    if (added.length > 0) {
+      nextState[accountId] = place(added, existing);
+      gained.push(accountId);
+    }
     nextMarkers[accountId] = {
       seededFrom,
       at: stamp,
@@ -103,9 +112,12 @@ function seedAccounts(
     };
     seeded.push(accountId);
   }
-  return seeded.length > 0
-    ? { state: nextState, markers: nextMarkers, seeded }
-    : { state, markers, seeded };
+  return {
+    state: gained.length > 0 ? nextState : state,
+    markers: seeded.length > 0 ? nextMarkers : markers,
+    seeded,
+    added: gained,
+  };
 }
 
 /** Pure: what seeding `report` onto `state` produces. Idempotent by construction. */
@@ -115,7 +127,7 @@ export function seedFromHouseRoster(
   report: HouseRosterReport,
   at: Date,
 ): SeedResult {
-  if (report.roster.length === 0) return { state, markers, seeded: [] };
+  if (report.roster.length === 0) return { state, markers, seeded: [], added: [] };
   const seeds = report.accounts.map((accountId) => ({ accountId, entries: report.roster }));
   return seedAccounts(state, markers, seeds, SEEDED_FROM_ENV_ROSTER, at, (added, existing) => [
     ...added,
@@ -134,7 +146,9 @@ export interface OwnRulesPlaybook {
  *
  * A playbook with `rulesOf` IS a persona's own rules (`SAURON` → `"sauron"`). Subscribed on that
  * persona's own account, it changes nothing he trades, only labels his orders with the playbook's
- * id, which is what lets a Store pause act on them. So each reported bot whose persona has such a
+ * id. The label is what lets a capital cap or symbol filter set in the Store's Edit act on his buys.
+ * Pausing it today only takes the label (and any such limit) off again — his rules keep trading,
+ * unlabelled, until slice 10 refuses unlabelled orders. So each reported bot whose persona has such a
  * playbook is subscribed to it once — standard, uncapped, enabled, no symbol filter: the shape that
  * changes only the label (`docs/BOTS-SAURON.md`'s 2026-10-06 correction row). `accounts` is the
  * bots app's own list of the bots it runs (persona ids), so a human account is never a candidate.
