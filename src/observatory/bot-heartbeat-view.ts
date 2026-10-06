@@ -169,8 +169,8 @@ const ARMED_REASON = "Checked on every pass; it trades when its own condition ho
  *  `playbook-subscription-row.tsx`), cut to what a roll-call line has room for. */
 const PAUSED_REASON =
   "Paused: it opens nothing new and keeps managing what it holds — it sells on its own exit " +
-  "rules and closes any option before it expires (a wheel still sells covered calls on shares " +
-  "it was assigned).";
+  "rules and closes any option before it expires, except a covered call, kept so the shares can " +
+  "be called away (a wheel still sells covered calls on shares it was assigned).";
 /** Subscribed and on, no pass yet: the poll (30s) picks it up, a pass (15s) runs it, and the
  *  pass reaches this dashboard on a later poll — about two minutes, and only while passes run. */
 const STARTING_REASON =

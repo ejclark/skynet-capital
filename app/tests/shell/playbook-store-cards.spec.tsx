@@ -191,7 +191,7 @@ describe("a subscribed card", () => {
   it("says paused with a hollow glyph, and names the whole basket when unfiltered", () => {
     mount(card(BASKET, { mode: "conservative", enabled: false }));
     expect(screen.getByText("Paused").closest("p")).toHaveTextContent(
-      "○ Paused · conservative · uncapped · all 3 symbols",
+      "‖ Paused · conservative · uncapped · all 3 symbols",
     );
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });

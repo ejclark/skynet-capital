@@ -14,7 +14,7 @@ import { SubscribeForm } from "./playbook-subscribe-form";
  * #4642's phone order: on or paused · mode · capital · symbols · Pause and Edit, then the rules.
  * An owner who opens a bot's playbooks is asking "what is it running?", so the answer leads.
  *
- * The state is a glyph AND a word: ● On, ○ Paused, ◌ Saved, never trades. Never hue alone, because
+ * The state is a glyph AND a word: ● On, ‖ Paused, ◌ Saved, never trades. Never hue alone, because
  * a standing reader is red/green colourblind.
  *
  * A human account's subscription saved before #4610 is listed honestly. It never traded, because
@@ -63,7 +63,7 @@ function stateOf(sub: SubscriptionView, human: boolean) {
   if (human) return { glyph: "◌", word: "Saved, never trades", key: "idle" };
   return sub.enabled
     ? { glyph: "●", word: "On", key: "on" }
-    : { glyph: "○", word: "Paused", key: "paused" };
+    : { glyph: "‖", word: "Paused", key: "paused" };
 }
 
 export function SubscriptionRow({
