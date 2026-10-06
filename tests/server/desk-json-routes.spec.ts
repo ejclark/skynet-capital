@@ -558,3 +558,71 @@ describe("serveDeskJson", () => {
     expect(Array.isArray(pulse.tiles)).toBe(true); // the live snapshot still speaks
   });
 });
+
+/** #4777 AC7: a lot priced by the stream but sold by nothing reaches the bot's owner on the roll
+ *  call — judged from the hub's broker read and the Store's subscriptions, paused ones included. */
+describe("/heartbeat — a held lot nothing on the bot will sell", () => {
+  const holdsGoog = {
+    ...bot,
+    positions: [
+      { symbol: "NVDA", quantity: 10, avgPrice: 150, marketValue: 1_760 },
+      { symbol: "GOOG", quantity: 5, avgPrice: 170, marketValue: 900 },
+    ],
+  };
+  const subscriptionsWith = (rows: { playbookId: string; enabled: boolean }[]) =>
+    ({
+      loadIfReadable: () => ({ sauron: rows.map((r) => ({ ...r, accountId: "sauron" })) }),
+    }) as unknown as DashboardServerConfig["subscriptions"];
+  const heartbeatFor = async (over: Partial<DashboardServerConfig>, participant = holdsGoog) => {
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith({
+        hub: {
+          getState: () => ({ generatedAt: "t", participants: [participant], collisions: [] }),
+        } as never,
+        readDecisions: () => Promise.resolve([]),
+        ...over,
+      }),
+    );
+    return answered(out).heartbeat as Record<string, unknown>;
+  };
+
+  it("names GOOG once G1-GOOG is unsubscribed, and not while it is only paused", async () => {
+    expect((await heartbeatFor({ subscriptions: subscriptionsWith([]) })).unmanaged).toEqual([
+      "GOOG",
+    ]);
+    const paused = subscriptionsWith([{ playbookId: "G1-GOOG", enabled: false }]);
+    expect((await heartbeatFor({ subscriptions: paused })).unmanaged).toEqual([]);
+  });
+
+  it("makes no claim when the subscriptions or the broker read are unavailable", async () => {
+    expect(await heartbeatFor({})).not.toHaveProperty("unmanaged");
+    const failed = { ...holdsGoog, error: "401" };
+    expect(await heartbeatFor({ subscriptions: subscriptionsWith([]) }, failed)).not.toHaveProperty(
+      "unmanaged",
+    );
+  });
+
+  it("withholds the list from a member who does not own the bot", async () => {
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith({
+        auth: {} as never,
+        resolveOwnerIds: () => ["human-eric"],
+        hub: {
+          getState: () => ({ generatedAt: "t", participants: [holdsGoog], collisions: [] }),
+        } as never,
+        readDecisions: () => Promise.resolve([]),
+        subscriptions: subscriptionsWith([]),
+      }),
+      { email: "guest@x", provider: "google", exp: 0 },
+    );
+    expect(answered(out).heartbeat).not.toHaveProperty("unmanaged");
+  });
+});

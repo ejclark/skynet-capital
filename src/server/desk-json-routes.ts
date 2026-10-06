@@ -1,7 +1,11 @@
 import type { ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
-import { botHeartbeatView, latestVerdictPass } from "../observatory/bot-heartbeat-view.js";
+import {
+  type BotHoldings,
+  botHeartbeatView,
+  latestVerdictPass,
+} from "../observatory/bot-heartbeat-view.js";
 import {
   decisionCyclesView,
   expectancyView,
@@ -10,6 +14,7 @@ import {
 import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
+import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
@@ -107,16 +112,37 @@ async function decisionsPayload(
   };
 }
 
+/** The bot's book (the hub's broker read) and its Store subscriptions, enabled or paused — what the
+ *  roll call's unmanaged-lot line judges from (#4777). Undefined, so no claim is made, when either
+ *  is unreadable: a failed broker read carries no positions, and an unwired or unreadable
+ *  subscriptions file would hide a paused playbook that still exits. */
+function botHoldings(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+): BotHoldings | undefined {
+  const subscriptions = config.subscriptions?.loadIfReadable();
+  if (found.error || !subscriptions) return undefined;
+  return {
+    positions: found.positions,
+    subscribedIds: (subscriptions[found.id] ?? []).map((s) => s.playbookId),
+  };
+}
+
 /** `/api/desk/:id/heartbeat` (#3687) — from the bot's OWN passes, not the pooled account view:
  *  beta-scout runs after every bot, so its records would make a dead loop look alive. */
 async function heartbeatPayload(
-  found: { readonly id: string; readonly kind: string },
+  found: ParticipantSnapshot,
   config: DashboardServerConfig,
   owner: boolean,
 ): Promise<unknown> {
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
   if (!records) return { available: false, kind: found.kind };
-  const heartbeat = botHeartbeatView(records, new Date(), regularSessionOpen());
+  const heartbeat = botHeartbeatView(
+    records,
+    new Date(),
+    regularSessionOpen(),
+    botHoldings(found, config),
+  );
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
 

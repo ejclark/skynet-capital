@@ -27,6 +27,9 @@ export interface Heartbeat {
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
   /** Every house playbook, armed · off · blocked (#4450). Absent for a non-owner. */
   readonly rollCall?: readonly RollCallLine[];
+  /** Share tickers held that nothing on this bot will sell (#4777). Absent for a non-owner, and
+   *  when the server could not read the bot's book or subscriptions. */
+  readonly unmanaged?: readonly string[];
 }
 
 export type RollCallStatus = "armed" | "off" | "blocked";
@@ -60,6 +63,17 @@ export const ROLL_CALL_WORDS: Record<
   off: { glyph: "○", word: "Off" },
   blocked: { glyph: "⊘", word: "Can't fire" },
 };
+
+/** A held lot no rule on this bot will exit — said with a glyph and a word like every status. */
+export const UNMANAGED_WORDS = {
+  glyph: "◇",
+  word: "Nothing sells it",
+  reason:
+    "Held, but no playbook this bot runs trades it, and the bot's own rules only trade the ten " +
+    "names every bot watches. It keeps a live price; nothing here will sell it. Subscribe this " +
+    "bot to a playbook that trades it — then pause that playbook if you want no new buys; its " +
+    "exit rule still sells.",
+} as const;
 
 export type DeskHeartbeat =
   | { readonly available: true; readonly heartbeat: Heartbeat }

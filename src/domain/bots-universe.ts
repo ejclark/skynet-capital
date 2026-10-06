@@ -23,3 +23,20 @@ export const BOTS_UNIVERSE: readonly string[] = [
   "CRWV",
   "MRVL",
 ];
+
+/**
+ * The held share tickers nothing on a bot will ever sell (#4777): outside the ten names, which are
+ * all its base persona sees, and outside every basket `managed` holds — the symbols its playbooks
+ * trade, running or paused (a paused playbook still exits). G1-GOOG unsubscribed while its bot
+ * holds GOOG is the case: priced by the stream, sold by nothing. ONE rule, so the bots' `UNMANAGED`
+ * log (`autonomous/bots-stream.ts`) and the owner's roll call (`observatory/bot-heartbeat-view.ts`)
+ * can never disagree about which lot is orphaned. Callers pass share tickers only: an option
+ * contract is looked after by expiry hygiene whatever the roster.
+ */
+export function unmanagedTickers(
+  held: Iterable<string>,
+  managed: ReadonlySet<string>,
+  universe: readonly string[] = BOTS_UNIVERSE,
+): string[] {
+  return [...new Set(held)].filter((s) => !(universe.includes(s) || managed.has(s)));
+}

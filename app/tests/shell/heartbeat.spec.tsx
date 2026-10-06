@@ -192,6 +192,22 @@ describe("RollCallList — an On line says what it is waiting for", () => {
     expect(screen.getAllByText(/^Next window: /)).toHaveLength(1);
   });
 
+  // #4777 AC7: a lot the stream keeps priced but nothing on the bot will sell is said out loud.
+  it("lists a held ticker nothing on this bot will sell, with a glyph and a word", async () => {
+    next = { available: true, heartbeat: { ...staleHeartbeat, unmanaged: ["GOOG"] } };
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(await screen.findByText("GOOG shares")).toBeInTheDocument();
+    expect(screen.getByText("Nothing sells it")).toBeInTheDocument();
+    expect(screen.getByText(/no playbook this bot runs trades it/)).toBeInTheDocument();
+  });
+
+  it("adds no line when every holding is managed", async () => {
+    next = { available: true, heartbeat: { ...staleHeartbeat, unmanaged: [] } };
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(await screen.findByText("Which playbooks this bot runs")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing sells it")).toBeNull();
+  });
+
   it("keeps the whole roll call off a bot the viewer does not own", async () => {
     // The wire shape a non-owner receives (`desk-owner-gate.ts`): the key is absent entirely.
     const { rollCall: _withheld, ...withoutRollCall } = staleHeartbeat;
