@@ -152,7 +152,10 @@ export type GuardRefusalReason =
   /** Selling these shares would leave a sold call uncovered. */
   | "uncovers-short-call"
   /** The cash this buy needs is set aside to secure a sold put. */
-  | "collateral-reserved";
+  | "collateral-reserved"
+  /** An order that would open a position, from no playbook the bot is subscribed to and has on
+   *  (#4642 slice 10). Taught to the dashboard first; no guard names it until the rule lands. */
+  | "unsubscribed";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -178,6 +181,7 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "call-not-covered",
   "uncovers-short-call",
   "collateral-reserved",
+  "unsubscribed",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
