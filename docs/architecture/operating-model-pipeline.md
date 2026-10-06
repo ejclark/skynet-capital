@@ -4,7 +4,7 @@
 
 **Responsibility:** verify (PR title commitlint, typecheck, lint, test in parallel; docs-only PRs skip heavy steps), integration tests (Playwright on PR and on push main), arm-auto-merge (App token, live hold-merge re-read, envelope check), release · deploy (semantic-release, flyctl deploy, smoke.sh, rollback), release · deploy bots (bot-relevant preflight, image reuse, smoke-bots.sh, rollback)
 
-**Code roots:** `.github/workflows/pipeline.yml` · `scripts/smoke.sh` · `scripts/smoke-bots.sh` · `scripts/bot-relevant.mjs` · `scripts/bots-deploy-preflight.mjs` · `scripts/fly-image-ref.mjs` · `.releaserc.json` · `playwright.config.ts` · `e2e/`
+**Code roots:** `.github/workflows/pipeline.yml` · `scripts/smoke.sh` · `scripts/smoke-bots.sh` · `scripts/bot-relevant.mjs` · `scripts/bots-deploy-preflight.mjs` · `scripts/fly-image-ref.mjs` · `.releaserc.json` · `scripts/release-lease-tags.mjs` · `playwright.config.ts` · `e2e/`
 
 **Entrypoints:** `.github/workflows/pipeline.yml`
 

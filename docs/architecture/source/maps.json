@@ -862,6 +862,7 @@
           "scripts/bots-deploy-preflight.mjs",
           "scripts/fly-image-ref.mjs",
           ".releaserc.json",
+          "scripts/release-lease-tags.mjs",
           "playwright.config.ts",
           "e2e/"
         ],
