@@ -165,7 +165,7 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+      - uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — so a PR this session opens actually triggers `verify`.

@@ -154,7 +154,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
           # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
@@ -553,7 +553,7 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So each PR this session opens
@@ -698,7 +698,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
@@ -790,7 +790,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
