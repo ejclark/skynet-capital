@@ -6,7 +6,7 @@ import { type LiveBot, LiveCycleRunner } from "../../src/autonomous/live-cycle.j
 import { SafetyController } from "../../src/autonomous/safety.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { aContext } from "../support/builders.js";
+import { aContext, aSubscription } from "../support/builders.js";
 
 /** Persona that always wants to buy a fixed symbol — isolates the orchestration from persona
  *  judgment, exactly like `AlwaysBuys` in autonomous-trader.spec.ts. */
@@ -30,6 +30,9 @@ class NeverBuys implements Persona {
 }
 
 const RISK = { maxPositionPct: 0.5 };
+/** The scout's host bot subscribed to it, uncapped, in the mode its picks always carried — the
+ *  scout exactly as it ran before only subscribed playbooks could open (#4642 slice 10). */
+const SCOUT_ON = () => [aSubscription("host", "BETA-SCOUT", { mode: "conservative" })];
 
 /** One bot: an AlwaysBuys or NeverBuys persona wired to its own AutonomousTrader on a broker. */
 function aBot(
@@ -106,6 +109,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => scoutDecisions.push(r),
     });
@@ -155,6 +159,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => decisions.push(r),
     });
@@ -188,6 +193,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => decisions.push(r),
     });
@@ -240,6 +246,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: store,
       onDecision: (r) => decisions.push(r),
@@ -264,6 +271,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: { load: () => undefined, save: (s) => fresh.push(s) },
     });
@@ -293,6 +301,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => scoutDecisions.push(r),
     });
@@ -338,6 +347,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onScoutHalted: (reason) => scoutHaltedReasons.push(reason),
     });
@@ -409,6 +419,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: {
         load: () => ({
@@ -454,6 +465,7 @@ describe("LiveCycleRunner", () => {
           managedSymbols: new Set(),
           risk: RISK,
           mode: "live",
+          subscriptions: SCOUT_ON,
         },
         scoutState: { load: () => undefined, save: (state) => saved.push(state) },
         onDecision: (r) => decisions.push(r),

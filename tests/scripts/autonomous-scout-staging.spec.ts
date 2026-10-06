@@ -90,7 +90,7 @@ describe("after-close scout staging", () => {
     announceScout({ maxPicks: 2, stageAfterClose: true }, "Sauron", sink);
     expect(lines).toEqual([
       "warn [beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
-      "log [beta-scout] armed: up to 2 forced pick(s)/day when nothing organic fires, on Sauron's account; after the close, picks stage for Alpaca's next open.",
+      "log [beta-scout] armed: up to 2 forced pick(s)/day when nothing organic fires, on Sauron's account while it is subscribed to BETA-SCOUT; after the close, picks stage for Alpaca's next open.",
     ]);
   });
 

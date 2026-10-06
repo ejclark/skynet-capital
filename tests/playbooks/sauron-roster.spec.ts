@@ -412,10 +412,11 @@ describe("Pause stops new opens; ownership and exits are unchanged", () => {
   });
 });
 
-/** The Pause row says pausing lifts the limits set in the Store along with the label: once his
- *  orders carry no SAURON id, the guards find no subscription to cap or filter them. */
-describe("round-3 check: what the Pause row says about limits is what the guards do", () => {
-  it("subscribed with a cap and a filter his buys are clamped and refused; paused, neither applies", () => {
+/** The Pause row says what pausing does to his buys: once his orders carry no SAURON id, no subscribed
+ *  playbook placed them, so the guards refuse every buy (#4642 slice 10) — before slice 10 they ran
+ *  unlabelled and unlimited. */
+describe("what the Pause row says about his buys is what the guards do", () => {
+  it("subscribed with a cap and a filter his buys are clamped and refused; paused, every buy is refused", () => {
     const panic = aContext({
       AAPL: { sentiment: -0.8, momentum: 0.01 },
       MSFT: { sentiment: -0.8, momentum: 0.01 },
@@ -428,16 +429,17 @@ describe("round-3 check: what the Pause row says about limits is what the guards
       );
       const trading = tradingRoster(roster, { ...DEFAULT_RISK_CONFIG, maxPositionPct: 1 });
       const raw = trading.persona.decide(panic, aPortfolio());
-      return applyGuardsWithVerdicts(raw, aPortfolio(), panic, trading.risk).approved.map(
-        (i) => `${i.side} ${i.quantity} ${i.symbol} ${i.playbookId ?? "-"}`,
-      );
+      const { approved, refused } = applyGuardsWithVerdicts(raw, aPortfolio(), panic, trading.risk);
+      return [
+        ...approved.map((i) => `${i.side} ${i.quantity} ${i.symbol} ${i.playbookId ?? "-"}`),
+        ...refused.map((r) => `refused ${r.intent.symbol} ${r.reason}`),
+      ];
     };
     const ask = panic.quotes.AAPL?.ask ?? 0;
-    expect(run(true)).toEqual([`buy ${Math.floor(10_000 / ask)} AAPL SAURON`]);
-    expect(run(false)).toEqual(
-      new SauronPersona()
-        .decide(panic, aPortfolio())
-        .map((i) => `${i.side} ${i.quantity} ${i.symbol} -`),
-    );
+    expect(run(true)).toEqual([
+      `buy ${Math.floor(10_000 / ask)} AAPL SAURON`,
+      "refused MSFT subscription-filter",
+    ]);
+    expect(run(false)).toEqual(["refused AAPL unsubscribed", "refused MSFT unsubscribed"]);
   });
 });

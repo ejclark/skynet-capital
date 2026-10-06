@@ -8,21 +8,60 @@
  * per pick) and force a small, minimum-size, honestly-labeled trade on the best few candidates.
  *
  * THE LINE THIS MUST NEVER BLUR: a scout pick is not a conviction signal. It NEVER shares a
- * playbookId with an evidence-gated play (`BETA_SCOUT_ID`, reserved, checked against the real
- * roster in registry.spec.ts), it is sized far below even the softest playbook mode, and its
- * `reason` states plainly that no organic trade fired and exactly what thin signal ranked it —
- * so the metrics layer (docs/plans/metrics-layer.md) can and must bucket scout performance
- * separately from a playbook's evidence-backed track record. Conflating the two would make every
- * future "does S1-NVDA actually work" question unanswerable.
+ * playbookId with an evidence-gated play (`BETA_SCOUT_ID` is its own registry id), it is sized far
+ * below even the softest playbook mode, and its `reason` states plainly that no organic trade
+ * fired and exactly what thin signal ranked it — so the metrics layer (docs/plans/metrics-layer.md)
+ * can and must bucket scout performance separately from a playbook's evidence-backed track record.
+ * Conflating the two would make every future "does S1-NVDA actually work" question unanswerable.
+ *
+ * SUBSCRIBABLE (#4642 slice 10). The scout is a registry playbook (`BETA_SCOUT` below), so it opens
+ * only where it is subscribed: the live cycle (`live-cycle.ts`) runs it on its one host bot while
+ * `SKYNET_BETA_FORCING` is armed (ops, Eric's) AND that bot is subscribed to it with the
+ * subscription on — armed and subscribed, both. Paused, it picks nothing new; unsubscribed, its
+ * picks are refused `unsubscribed` and recorded once a day. Either way its exits still run.
  */
 import { heldQuantity } from "../domain/portfolio.js";
-import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import type { MarketContext, OrderIntent, PlaybookMode, Portfolio } from "../domain/types.js";
+import type { Playbook } from "./playbook.js";
 
 export const BETA_SCOUT_ID = "BETA-SCOUT";
 
 /** Equity fraction per pick — deliberately below every playbook's `conservative` size (0.01+).
  *  This is a mechanics probe, not a position; "small monetary experiment" means small. */
 const BETA_SCOUT_SIZE_PCT = 0.005;
+
+/**
+ * The scout as a registry playbook — what makes it subscribable in the Store, listed on the roll
+ * call and given a pair-table row. It places nothing through a bot's playbook roster (`decide`
+ * returns nothing): its picks and exits come from the live cycle, which owns its day-state.
+ *
+ * - **No names of its own** (`symbols: []`). It picks among the bots' ten names on the day, minus
+ *   any another playbook trades, so it must never take a name from a bot's own rules or from
+ *   another playbook — an empty basket claims nothing anywhere a basket is read.
+ * - **No window** (`keyedOn: "event"`): what opens it is a day nothing else traded, which no date
+ *   predicts. Its verdict is always "no window", and the roll call says it watches for its signal.
+ * - **Mode never changes its size** (every mode is the same 0.5% of cash per pick); the mode an
+ *   owner picks is stamped on its orders, as for any playbook.
+ */
+export const BETA_SCOUT: Playbook = {
+  id: BETA_SCOUT_ID,
+  symbols: [],
+  thesis:
+    "on a day nothing else traded, a few small forced picks ranked on whatever signal exists — a " +
+    "test of the order path, not a conviction call",
+  evidence:
+    "Eric's beta-phase directive (2026-08-13): exercise the machinery rather than wait for a " +
+    "signal. No docs/research/ study stands behind its picks; they are kept apart from every " +
+    "playbook's record.",
+  size: {
+    conservative: BETA_SCOUT_SIZE_PCT,
+    standard: BETA_SCOUT_SIZE_PCT,
+    aggressive: BETA_SCOUT_SIZE_PCT,
+  },
+  keyedOn: "event",
+  desiredState: () => "no-window",
+  decide: () => [],
+};
 
 /**
  * `SKYNET_BETA_FORCING` as set by the autonomy-ops `set-beta-forcing` button: a pick count,
@@ -47,6 +86,8 @@ export interface BetaScoutConfig {
   /** How many picks to force when nothing organic fired (Eric: "2-3"). */
   readonly maxPicks?: number;
   readonly sizePct?: number;
+  /** The mode stamped on each pick: its subscription's. Default `conservative` (no subscription). */
+  readonly mode?: PlaybookMode;
 }
 
 /** |sentiment| + |momentum| — the cheapest signal already computed elsewhere, nothing new
@@ -116,7 +157,7 @@ export function betaScoutIntents(
       quantity,
       type: "market",
       playbookId: BETA_SCOUT_ID,
-      playbookMode: "conservative",
+      playbookMode: config.mode ?? "conservative",
       reason:
         `BETA-PHASE FORCED PICK — no organic trade fired today, so this was chosen from ` +
         `whatever signal already existed, not a conviction call: sentiment=${sentiment} ` +

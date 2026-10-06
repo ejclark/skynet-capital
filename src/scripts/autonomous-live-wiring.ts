@@ -37,6 +37,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import { withQuoteUniverse } from "../personas/universe-view.js";
+import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
@@ -212,7 +213,9 @@ function logHardcore(roster: ReturnType<typeof applyHardcore>): void {
   }
 }
 
-/** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet. */
+/** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet.
+ *  `subscriptions` reads its host bot's subscriptions as they stand now (a Store change swaps them
+ *  in place), so its picks open only while that bot is subscribed to it (#4642 slice 10). */
 export function buildScoutDeps(
   betaForcingMaxPicks: number,
   scoutBroker: BrokerPort | undefined,
@@ -221,6 +224,7 @@ export function buildScoutDeps(
     managedSymbols: ReadonlySet<string>;
     risk: RiskConfig;
     mode: TraderMode;
+    subscriptions: () => readonly PlaybookSubscription[];
   },
 ): BetaScoutDeps | undefined {
   if (betaForcingMaxPicks <= 0 || !scoutBroker) {
@@ -286,6 +290,15 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
     );
   }
+  // An env-roster playbook with no subscription still runs its exits, but opens nothing (#4642
+  // slice 10) — said once per roster, so a quiet playbook never reads as a quiet market.
+  const held = new Set(subscriptions.map((s) => s.playbookId));
+  const ungranted = houseEnabled.filter((e) => !held.has(e.playbook.id));
+  if (ungranted.length > 0) {
+    console.warn(
+      `[playbooks] ${bot.persona.id} is not subscribed to ${ungranted.map((e) => e.playbook.id).join(", ")} (named in SKYNET_PLAYBOOKS) — they open nothing on it, exits still run; subscribe in the Store`,
+    );
+  }
   const merged = mergeRosters(houseEnabled, [...acctRoster.enabled, ...paused]);
   return { bot, subscriptions, enabled: ownedRoster(bot.persona.id, merged) };
 }
@@ -303,12 +316,23 @@ export interface TradingRoster {
  * What one bot trades under, for a resolved roster. Like `resolveBotRoster`, ONE definition shared
  * by boot (`buildLiveBot` below) and by the live swap (`AutonomousTrader.swapRoster`), so a
  * subscription change applied without a restart produces byte-for-byte what a restart would.
+ *
+ * Only a subscribed playbook opens a position (#4642 slice 10): the guards refuse any open whose
+ * playbook this bot holds no enabled subscription to (`subscribedOnly`), and every exit still runs.
+ *
+ * The forced daily pick (`BETA-SCOUT`) is placed by the live cycle, never by this roster, so it
+ * stays off it — except on the one bot the scout runs on while it is armed (`runsScout`), where it
+ * rides along for its verdict alone (it decides nothing here) so the roll call can say it is on.
  */
 export function tradingRoster(
-  roster: BotRoster,
+  full: BotRoster,
   baseRisk: RiskConfig,
   realizedPlForPlaybook?: (playbookId: string) => number,
+  { runsScout = false }: { readonly runsScout?: boolean } = {},
 ): TradingRoster {
+  const roster = runsScout
+    ? full
+    : { ...full, enabled: full.enabled.filter((e) => e.playbook.id !== BETA_SCOUT_ID) };
   return {
     // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
     // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
@@ -335,6 +359,7 @@ export function tradingRoster(
       subscriptions: roster.subscriptions,
       playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
       ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
+      subscribedOnly: true,
     },
   };
 }

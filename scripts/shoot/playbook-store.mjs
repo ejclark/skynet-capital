@@ -14,6 +14,8 @@
 //                account behind the bots-only door; the bot's roll call linking here.
 //   · `options` — the two option plays' cards (#4642 slices 5–6).
 //   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
+//   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
+//                playbooks open (#4642 slice 10, #4652).
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -315,6 +317,46 @@ groups["sauron-rules"] = [
   sauronFrame("phone-3-sauron-subscribed-fixture", { view: views.sauronRules, path: undefined }),
   sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
   sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),
+];
+
+// #4642 slice 10 (#4652): only a subscribed playbook opens a position. The forced daily pick's new
+// card (catalog, then its two-switches rows), SAURON paused on Sauron's account (the Pause row now
+// says his buys stop, and the note under the state names the rule), and the pick as his account
+// would show it subscribed. The paused and subscribed frames are FIXTURES: this slice seeds nothing.
+views.scoutSubscribed = withCounts(
+  playbookStoreView([
+    subscription("SAURON"),
+    subscription("BETA-SCOUT", { mode: "conservative", capitalAllocated: 10_000 }),
+  ]),
+  { ...COUNTS, SAURON: 1, "BETA-SCOUT": 1 },
+);
+const SCOUT_CARD = "The forced daily pick";
+const toScoutCard = (page) =>
+  page.locator(".pb-card").filter({ hasText: SCOUT_CARD }).first().evaluate(underHeader);
+groups["subscribed-only"] = [
+  sauronFrame("phone-1-scout-card", { expect: SCOUT_CARD, act: toScoutCard }),
+  sauronFrame("phone-2-scout-switches", {
+    expect: SCOUT_CARD,
+    act: undefined,
+    scrollTo: "Exit — take profit",
+  }),
+  sauronFrame("phone-3-scout-subscribed-fixture", {
+    view: views.scoutSubscribed,
+    expect: SCOUT_CARD,
+    path: undefined,
+    act: toScoutCard,
+  }),
+  sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
+  sauronFrame("phone-5-sauron-pause-row", {
+    act: undefined,
+    scrollTo: "Research settings",
+  }),
+  sauronFrame("desktop-scout-card", {
+    expect: SCOUT_CARD,
+    act: toScoutCard,
+    viewport: undefined,
+    quality: 48,
+  }),
 ];
 
 const only = process.env.FRAMES;

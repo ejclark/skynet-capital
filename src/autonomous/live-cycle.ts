@@ -1,7 +1,14 @@
-import type { MarketContext, OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
+import type {
+  MarketContext,
+  OrderIntent,
+  OrderResult,
+  PlaybookMode,
+  PlaybookSubscription,
+  Portfolio,
+} from "../domain/types.js";
 import type { GuardRefusal, RiskConfig } from "../engine/guards.js";
-import { applyGuards, applyGuardsWithVerdicts } from "../engine/guards.js";
-import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
+import { applyGuardsWithVerdicts } from "../engine/guards.js";
+import { BETA_SCOUT_ID, betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { AutonomousTrader, TraderMode } from "./autonomous-trader.js";
 import type { ScoutState } from "./bots-state-db.js";
@@ -39,6 +46,30 @@ export interface BetaScoutDeps {
   readonly managedSymbols: ReadonlySet<string>;
   readonly risk: RiskConfig;
   readonly mode: TraderMode;
+  /**
+   * The host bot's subscriptions as they stand now (#4642 slice 10). The scout opens only while
+   * that bot is subscribed to `BETA-SCOUT` with the subscription on — armed (`maxPicks`) AND
+   * subscribed. Paused, it picks nothing new; unsubscribed, its picks are refused `unsubscribed`
+   * and recorded once a day. Its exits run in every case.
+   */
+  readonly subscriptions: () => readonly PlaybookSubscription[];
+}
+
+/** Where the scout's host bot stands on its subscription, and the mode its picks are stamped with. */
+function hostSubscription(scout: BetaScoutDeps): {
+  readonly state: "on" | "paused" | "none";
+  readonly mode?: PlaybookMode;
+} {
+  const mine = scout.subscriptions().filter((s) => s.playbookId === BETA_SCOUT_ID);
+  const on = mine.find((s) => s.enabled);
+  if (on) return { state: "on", mode: on.mode };
+  return { state: mine.length > 0 ? "paused" : "none" };
+}
+
+/** The guards the scout's orders clear: the host's risk, plus its subscriptions under the
+ *  subscribed-only rule — so an unsubscribed pick is refused by name and every exit still passes. */
+function scoutRisk(scout: BetaScoutDeps): RiskConfig {
+  return { ...scout.risk, subscriptions: scout.subscriptions(), subscribedOnly: true };
 }
 
 export interface LiveCycleDeps {
@@ -90,6 +121,9 @@ export class LiveCycleRunner {
   private scoutRanToday = false;
   private scoutFiredOrganicallyToday = false;
   private readonly scoutOwnedSymbols = new Set<string>();
+  /** The day an unsubscribed scan was last recorded — once a day, never every cycle. In memory: a
+   *  restart records it once more, which costs one record, never an order. */
+  private unsubscribedNotedDay = "";
 
   constructor(deps: LiveCycleDeps) {
     this.deps = deps;
@@ -189,31 +223,7 @@ export class LiveCycleRunner {
       return 0;
     }
     const today = sessionDay ?? context.asOf.slice(0, 10);
-    // Symbols exited in THIS rollover never re-enter in the same scan: live, a queued exit still
-    // shows as held (so the scan skips it anyway); an instant-fill broker would otherwise let the
-    // scout sell and re-buy the same name in one breath. Churn is not a signal.
-    const exited = new Set<string>();
-    if (today !== this.scoutDay) {
-      this.scoutDay = today;
-      this.scoutRanToday = false;
-      this.scoutFiredOrganicallyToday = false;
-      if (this.scoutOwnedSymbols.size > 0) {
-        const portfolio = await scout.broker.getPortfolio();
-        const exits = betaScoutExitIntents(portfolio, this.scoutOwnedSymbols);
-        // Exits pass the guards too: a scout lot is never sold out from under a sold call written on
-        // the same shares (`uncovers-short-call`). Sells skip every entry rule, so a plain exit is
-        // approved exactly as before. Ownership is released only for an exit the guards let
-        // through — a refused one keeps the lot the scout's, so the next rollover tries again
-        // rather than orphaning it.
-        const verdict = applyGuardsWithVerdicts(exits, portfolio, context, scout.risk);
-        for (const exit of verdict.approved) {
-          this.scoutOwnedSymbols.delete(exit.symbol);
-          exited.add(exit.symbol);
-        }
-        await this.submitScoutIntents(exits, scout, verdict);
-      }
-      this.persistScoutState();
-    }
+    const exited = today !== this.scoutDay ? await this.rollScoutDay(today, context, scout) : [];
     if (firedOrganicallyThisCycle && !this.scoutFiredOrganicallyToday) {
       this.scoutFiredOrganicallyToday = true;
       this.persistScoutState();
@@ -221,20 +231,29 @@ export class LiveCycleRunner {
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
       return 0;
     }
+    // Armed AND subscribed (#4642 slice 10). Paused, it opens nothing new — the exits above already
+    // ran. Unsubscribed, the scan runs once to record what it would have bought, refused by name.
+    const host = hostSubscription(scout);
+    if (host.state === "paused" || (host.state === "none" && this.unsubscribedNotedDay === today)) {
+      return 0;
+    }
     const portfolio = await scout.broker.getPortfolio();
-    const guarded = applyGuards(
-      betaScoutIntents(
-        context,
-        portfolio,
-        scout.universe,
-        exited.size > 0 ? new Set([...scout.managedSymbols, ...exited]) : scout.managedSymbols,
-        false,
-        { maxPicks: scout.maxPicks },
-      ),
-      portfolio,
+    const picks = betaScoutIntents(
       context,
-      scout.risk,
+      portfolio,
+      scout.universe,
+      exited.length > 0 ? new Set([...scout.managedSymbols, ...exited]) : scout.managedSymbols,
+      false,
+      { maxPicks: scout.maxPicks, ...(host.mode ? { mode: host.mode } : {}) },
     );
+    const verdict = applyGuardsWithVerdicts(picks, portfolio, context, scoutRisk(scout));
+    if (host.state === "none") {
+      if (picks.length === 0) return 0; // nothing to record yet — look again next cycle
+      this.unsubscribedNotedDay = today;
+      await this.submitScoutIntents(picks, scout, verdict);
+      return 0;
+    }
+    const guarded = verdict.approved;
     // An EMPTY scan must not spend the day. Confirmed live 2026-09-04: the first cycle after a
     // restart runs on the first price tick, when the sentiment window is still empty (the first
     // news poll lands ≥60s later) and momentum has a single tick — every candidate reads "skip",
@@ -252,6 +271,41 @@ export class LiveCycleRunner {
     this.persistScoutState(); // before the submit, for the same reason the latch is
     await this.submitScoutIntents(guarded, scout);
     return guarded.length;
+  }
+
+  /**
+   * A new scout day: reset the day's latches and sell every lot the scout still owns — whatever its
+   * subscription now says, so a pause or an unsubscribe never strands one. Returns the symbols it
+   * exited: they never re-enter in the same scan. Live, a queued exit still shows as held (so the
+   * scan skips it anyway); an instant-fill broker would otherwise let the scout sell and re-buy the
+   * same name in one breath. Churn is not a signal.
+   */
+  private async rollScoutDay(
+    today: string,
+    context: MarketContext,
+    scout: BetaScoutDeps,
+  ): Promise<readonly string[]> {
+    this.scoutDay = today;
+    this.scoutRanToday = false;
+    this.scoutFiredOrganicallyToday = false;
+    const exited: string[] = [];
+    if (this.scoutOwnedSymbols.size > 0) {
+      const portfolio = await scout.broker.getPortfolio();
+      const exits = betaScoutExitIntents(portfolio, this.scoutOwnedSymbols);
+      // Exits pass the guards too: a scout lot is never sold out from under a sold call written on
+      // the same shares (`uncovers-short-call`). Sells skip every entry rule — the subscribed-only
+      // rule included — so a plain exit is approved exactly as before. Ownership is released only
+      // for an exit the guards let through — a refused one keeps the lot the scout's, so the next
+      // rollover tries again rather than orphaning it.
+      const verdict = applyGuardsWithVerdicts(exits, portfolio, context, scoutRisk(scout));
+      for (const exit of verdict.approved) {
+        this.scoutOwnedSymbols.delete(exit.symbol);
+        exited.push(exit.symbol);
+      }
+      await this.submitScoutIntents(exits, scout, verdict);
+    }
+    this.persistScoutState();
+    return exited;
   }
 
   /** Submit the scout's guarded intents and record the cycle. `verdict` is the guards' split when the

@@ -21,6 +21,7 @@ import {
   worsens,
 } from "./guard-batch.js";
 import { clampOption, type OptionBatch } from "./option-guards.js";
+import { refusedAsUnsubscribed } from "./subscribed-only.js";
 
 /**
  * Risk guardrails, applied by the engine to every persona's raw intents.
@@ -99,6 +100,13 @@ export interface RiskConfig {
   readonly optionsLevel?: number;
   /** Oldest feed stamp an option quote may carry. Default `QUOTE_STALE_MS` (15 min). */
   readonly optionQuoteMaxAgeMs?: number;
+  /**
+   * Only a subscribed playbook may open a position (#4642 slice 10, `subscribed-only.ts`): an
+   * opening intent whose `playbookId` names no enabled subscription in `subscriptions` is refused
+   * `unsubscribed`. Exits always pass. Set by the live bots' roster (`tradingRoster`) and the forced
+   * daily pick; absent everywhere else (evals, the readiness gate), which behave exactly as before.
+   */
+  readonly subscribedOnly?: true;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -154,7 +162,7 @@ export type GuardRefusalReason =
   /** The cash this buy needs is set aside to secure a sold put. */
   | "collateral-reserved"
   /** An order that would open a position, from no playbook the bot is subscribed to and has on
-   *  (#4642 slice 10). Taught to the dashboard first; no guard names it until the rule lands. */
+   *  (#4642 slice 10, `subscribed-only.ts`). Never an exit. */
   | "unsubscribed";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
@@ -432,13 +440,24 @@ export function applyGuardsWithVerdicts(
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   const book = bookNeeds(portfolio);
-  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio, openSells), book };
+  // An open no subscribed playbook placed is refused before anything sizes it, so the batch ledger
+  // never counts it either. With the rule off, or every open subscribed, this is exactly the batch
+  // as handed in.
+  const unsubscribed = (intent: OrderIntent) => refusedAsUnsubscribed(intent, portfolio, config);
+  const sized = intents.filter((intent) => !unsubscribed(intent));
+  const batch: OptionBatch = { ledger: openLedger(sized, book, portfolio, openSells), book };
   for (const intent of intents) {
     // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
     // (a contract only trades as a priced limit through `option`), and a malformed option order is
     // never sized at all — the same rule the builder and the wire parser use.
     if (isBareContractOrder(intent) || (intent.option && optionOrderProblems(intent).length > 0)) {
       refused.push({ intent, reason: "option-shape" });
+      continue;
+    }
+    // Then who may open at all (#4642 slice 10): only a playbook the account is subscribed to.
+    // Exits never reach this refusal (`subscribed-only.ts`).
+    if (unsubscribed(intent)) {
+      refused.push({ intent, reason: "unsubscribed" });
       continue;
     }
     // Whether this order ADDS risk: a share buy, or any option open (a sold put is a sell that opens

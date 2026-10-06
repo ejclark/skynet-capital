@@ -14,13 +14,17 @@
  *   SKYNET_MAX_POSITION_PCT  per-position cap as a fraction of equity (default: 0.03)
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
  *   SKYNET_PLAYBOOKS         playbook roster, "id:mode" pairs (e.g. "S1-NVDA:standard,G1-GOOG:conservative").
- *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only.
+ *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only. Since
+ *                            #4642 slice 10 it opens nothing on its own: a bot opens a position only
+ *                            through a playbook it is subscribed to in the Store (exits always run).
  *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts. "3+stage" also lets the scout stage
- *                            its picks after the close for Alpaca's next open (holiday-aware) —
- *                            see autonomous-scout-staging.ts. Flip via autonomy-ops only.
+ *                            see src/playbooks/beta-scout.ts — and only while the first bot is
+ *                            subscribed to BETA-SCOUT in the Store: armed AND subscribed. "3+stage"
+ *                            also lets the scout stage its picks after the close for Alpaca's next
+ *                            open (holiday-aware) — see autonomous-scout-staging.ts. Flip via
+ *                            autonomy-ops only.
  *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
@@ -275,6 +279,9 @@ async function runLive(): Promise<void> {
       playbookRoster.enabled,
     ),
   );
+  // The forced daily pick's arming (ops, Eric's) — read here because the bot it runs on, the first,
+  // carries it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -283,6 +290,7 @@ async function runLive(): Promise<void> {
       optionLevels.risk(r.bot.persona.id, risk),
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
+      { runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id },
     );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {
@@ -337,8 +345,8 @@ async function runLive(): Promise<void> {
   // Persona (which the contract requires to be pure — "same inputs, same intents"); this is
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
-  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
-  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off). Armed, it still opens only
+  // while its host bot is subscribed to BETA-SCOUT (#4642 slice 10).
   const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
@@ -387,6 +395,7 @@ async function runLive(): Promise<void> {
       managedSymbols,
       risk,
       mode,
+      subscriptions: () => botRosters[0]?.subscriptions ?? [],
     }),
     onResult: logResult,
     onDecision,

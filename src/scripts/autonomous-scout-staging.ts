@@ -78,7 +78,8 @@ export function armScoutStaging(
 
 /** The boot announcement for the scout — armed loudly (with the staging mode when on), a set
  *  knob with no account to run on warned, dark silently. Lives here, not in run-autonomous.ts,
- *  to keep that file under its line cap. */
+ *  to keep that file under its line cap. Armed is half of it since #4642 slice 10: the line says
+ *  the other half, the BETA-SCOUT subscription, so the log never reads as "it will trade". */
 export function announceScout(
   betaForcing: { readonly maxPicks: number; readonly stageAfterClose: boolean },
   accountName: string | undefined,
@@ -90,7 +91,7 @@ export function announceScout(
     return;
   }
   log.log(
-    `[beta-scout] armed: up to ${betaForcing.maxPicks} forced pick(s)/day when nothing organic fires, on ${accountName}'s account${betaForcing.stageAfterClose ? "; after the close, picks stage for Alpaca's next open" : ""}.`,
+    `[beta-scout] armed: up to ${betaForcing.maxPicks} forced pick(s)/day when nothing organic fires, on ${accountName}'s account while it is subscribed to BETA-SCOUT${betaForcing.stageAfterClose ? "; after the close, picks stage for Alpaca's next open" : ""}.`,
   );
 }
 

@@ -147,8 +147,8 @@ export interface OwnRulesPlaybook {
  * A playbook with `rulesOf` IS a persona's own rules (`SAURON` → `"sauron"`). Subscribed on that
  * persona's own account, it changes nothing he trades, only labels his orders with the playbook's
  * id. The label is what lets a capital cap or symbol filter set in the Store's Edit act on his buys.
- * Pausing it today only takes the label (and any such limit) off again — his rules keep trading,
- * unlabelled, until slice 10 refuses unlabelled orders. So each reported bot whose persona has such a
+ * Since slice 10 only a subscribed playbook opens a position, so this subscription is also what lets
+ * his rules buy at all: paused or unsubscribed, they only sell. So each reported bot whose persona has such a
  * playbook is subscribed to it once — standard, uncapped, enabled, no symbol filter: the shape that
  * changes only the label (`docs/BOTS-SAURON.md`'s 2026-10-06 correction row). `accounts` is the
  * bots app's own list of the bots it runs (persona ids), so a human account is never a candidate.

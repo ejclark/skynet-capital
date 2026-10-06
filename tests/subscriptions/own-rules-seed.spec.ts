@@ -36,8 +36,8 @@ import { aContext, aPortfolio } from "../support/builders.js";
  * to `SAURON` (his own rules as a playbook) once: standard, uncapped, enabled, no symbol filter, on a
  * marker of its own. After it his share orders carry `playbookId: "SAURON"`, so a cap or filter set
  * in the Store's Edit acts on his buys; nothing else he trades or holds changes. Pausing it takes the
- * label off again and his rules keep trading unlabelled until slice 10. An owner who unsubscribes or
- * pauses it stays that way.
+ * label off again, and since slice 10 his unlabelled buys are refused while his sells still run. An
+ * owner who unsubscribes or pauses it stays that way.
  */
 
 const AT = new Date("2026-10-06T14:00:00.000Z");
@@ -463,23 +463,40 @@ describe("seeding Sauron's own rules as his subscription", () => {
       expect(intentsUnder(paused)).toEqual(intentsUnder(ERICS_LIVE));
     });
 
+    /** The guards his live roster trades under; `subscribedOnly: false` is how they sized his
+     *  unlabelled buys before only subscribed playbooks could open (#4642 slice 10). */
+    const guarded = (subs: readonly PlaybookSubscription[], subscribedOnly = true) => {
+      const { persona, risk } = tradingRoster(resolveBotRoster(bot, [], subs), {
+        ...DEFAULT_RISK_CONFIG,
+        maxPositionPct: 1,
+      });
+      const { subscribedOnly: _rule, ...ruleOff } = risk;
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+      return applyGuardsWithVerdicts(
+        persona.decide(panic, portfolio),
+        portfolio,
+        panic,
+        subscribedOnly ? risk : ruleOff,
+      );
+    };
+
     it("the guards size his labelled buys exactly as they sized them unlabelled — uncapped means no new limit", () => {
-      const sized = (subs: readonly PlaybookSubscription[]) => {
-        const { persona, risk } = tradingRoster(resolveBotRoster(bot, [], subs), {
-          ...DEFAULT_RISK_CONFIG,
-          maxPositionPct: 1,
-        });
-        const portfolio = aPortfolio({ cash: 1_000_000 });
-        return applyGuardsWithVerdicts(persona.decide(panic, portfolio), portfolio, panic, risk)
-          .approved;
-      };
-      const before = sized(ERICS_LIVE).filter((i) => i.playbookId === undefined);
-      const after = sized(seededSubs).filter((i) => i.playbookId === "SAURON");
+      const before = guarded(ERICS_LIVE, false).approved.filter((i) => i.playbookId === undefined);
+      const after = guarded(seededSubs).approved.filter((i) => i.playbookId === "SAURON");
 
       expect(before.map((i) => `${i.side} ${i.symbol}`).sort()).toEqual(["buy AAPL", "buy MSFT"]);
       expect(after).toEqual(
         before.map((i) => ({ ...i, playbookId: "SAURON", playbookMode: "standard" })),
       );
+    });
+
+    // Slice 10: the seed is what lets his rules buy at all — before it, his buys are refused.
+    it("before the seed his buys are refused as not from a subscribed playbook", () => {
+      const refused = guarded(ERICS_LIVE).refused.filter((r) => r.intent.playbookId === undefined);
+      expect(refused.map((r) => `${r.intent.symbol} ${r.reason}`).sort()).toEqual([
+        "AAPL unsubscribed",
+        "MSFT unsubscribed",
+      ]);
     });
   });
 });

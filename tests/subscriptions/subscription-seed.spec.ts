@@ -148,27 +148,40 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
     const baseRisk = { maxPositionPct: 0.03 };
     const context = aContext({ NVDA: { last: 100 } });
     const portfolio = aPortfolio({ cash: 1_000_000 });
-    const sized = (subs: readonly PlaybookSubscription[]) =>
-      applyGuardsWithVerdicts(
+    /** The guards a bot trades under. `subscribedOnly: false` is the env roster as it sized before
+     *  only subscribed playbooks could open (#4642 slice 10). */
+    const sized = (subs: readonly PlaybookSubscription[], subscribedOnly = true) => {
+      const { subscribedOnly: _rule, ...ruleOff } = tradingRoster(
+        resolveBotRoster(bot, house, subs),
+        baseRisk,
+      ).risk;
+      return applyGuardsWithVerdicts(
         [intent],
         portfolio,
         context,
-        tradingRoster(resolveBotRoster(bot, house, subs), baseRisk).risk,
+        subscribedOnly ? { ...ruleOff, subscribedOnly: true } : ruleOff,
       );
+    };
+    const seeded = () => seedFromHouseRoster({}, EMPTY_SEED_MARKERS, report, AT).state[BOT] ?? [];
 
-    it("equals today's env-roster sizing exactly", () => {
-      const before = sized([]);
-      const after = sized(seedFromHouseRoster({}, EMPTY_SEED_MARKERS, report, AT).state[BOT] ?? []);
+    it("equals the env roster's sizing exactly", () => {
+      const before = sized([], false);
+      const after = sized(seeded());
 
       expect(after).toEqual(before);
       expect(after.approved[0]?.quantity).toBeGreaterThan(0);
+    });
+
+    // #4642 slice 10: the subscription is the grant. Unseeded, the env roster alone opens nothing.
+    it("is what lets the env roster's playbook open at all", () => {
+      expect(sized([]).refused).toEqual([{ intent, reason: "unsubscribed" }]);
     });
 
     it("is genuinely uncapped — a capped subscription to the same playbook would clamp harder", () => {
       const capped = sized([ownSub({ playbookId: "S1-NVDA", capitalAllocated: 500 })]);
 
       expect(capped.approved[0]?.quantity).toBeLessThanOrEqual(5); // $500 at an ask just over $100
-      expect(sized([]).approved[0]?.quantity).toBeGreaterThan(5);
+      expect(sized(seeded()).approved[0]?.quantity).toBeGreaterThan(5);
     });
   });
 

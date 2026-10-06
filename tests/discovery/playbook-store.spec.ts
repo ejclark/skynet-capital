@@ -1,12 +1,17 @@
 import { readFileSync } from "node:fs";
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
+import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
+import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
-import { aContext, aPortfolio, aPosition } from "../support/builders.js";
+import { betaScoutIntents } from "../../src/playbooks/beta-scout.js";
+import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
+import { aContext, aPortfolio, aPosition, aSubscription } from "../support/builders.js";
 
 describe("playbookStoreCatalog", () => {
   it("returns one entry per house playbook, keyed by id and symbol", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
+      "BETA-SCOUT",
       "CRWV-WHEEL",
       "G1-GOOG",
       "HC-SAURON",
@@ -15,7 +20,8 @@ describe("playbookStoreCatalog", () => {
       "SAURON",
       "TACO-DJT",
     ]);
-    for (const entry of entries) {
+    // The forced daily pick names no ticker: it picks among the bots' ten names on the day.
+    for (const entry of entries.filter((e) => e.id !== "BETA-SCOUT")) {
       expect(entry.symbol.length).toBeGreaterThan(0);
     }
   });
@@ -126,6 +132,64 @@ describe("playbookStoreCatalog", () => {
     );
   });
 
+  describe("BETA-SCOUT — the forced daily pick, subscribable (#4642 slice 10)", () => {
+    const card = () => {
+      const entry = byId("BETA-SCOUT");
+      if (!entry) throw new Error("BETA-SCOUT is not in the catalog");
+      return entry;
+    };
+    const note = (label: string) => card().notes?.find((n) => n.label === label)?.text ?? "";
+
+    it("names no ticker, and shows no invented window, size or study link", () => {
+      expect(card().symbols).toEqual([]);
+      expect(card().window).toBeUndefined();
+      expect(card().size).toBeUndefined();
+      expect(card().traits).toEqual([]);
+      expect(card().evidenceHref).toBeUndefined();
+    });
+
+    it("says plainly it is a test of the order path, kept apart from every playbook's results", () => {
+      expect(card().description).toContain(
+        "a test that the order path works, not a call on any name",
+      );
+      expect(card().description).toContain("kept apart from every other playbook's");
+    });
+
+    // The size the card quotes is the size the scout places, for every mode.
+    it("quotes the size its picks are placed at: 0.5% of the bot's cash each", () => {
+      expect(card().enter).toContain("0.5% of the bot's cash each");
+      const cash = 1_000_000;
+      const context = aContext({ AAPL: { last: 100, sentiment: 0.9 } });
+      const ask = context.quotes.AAPL?.ask ?? 0;
+      for (const mode of ["conservative", "standard", "aggressive"] as const) {
+        const [pick] = betaScoutIntents(context, aPortfolio({ cash }), ["AAPL"], new Set(), false, {
+          mode,
+        });
+        expect(pick?.quantity).toBe(Math.floor((0.005 * cash) / ask));
+        expect(pick?.playbookMode).toBe(mode);
+      }
+    });
+
+    it("says it needs both the operations setting and the subscription, on one bot", () => {
+      expect(note("Two switches")).toContain(
+        "It buys only while both are on: the forced-pick setting in operations, and this subscription",
+      );
+      expect(note("Two switches")).toContain("subscribed on any other bot, it places nothing");
+    });
+
+    // The refusal it records reads the way the dashboard words it (REFUSAL_LABEL).
+    it("says an unsubscribed scout records its picks as refused, and still sells what it holds", () => {
+      expect(note("Not subscribed")).toContain(
+        "recorded as refused, not from a subscribed playbook",
+      );
+      expect(REFUSAL_LABEL.unsubscribed).toMatch(/^not from a subscribed playbook/);
+      expect(note("Not subscribed")).toContain("Picks it already holds are still sold");
+      expect(card().hold).toContain(
+        "Paused, it buys nothing new and still sells yesterday's picks",
+      );
+    });
+  });
+
   describe("SAURON — Sauron's own rules (#4651)", () => {
     const card = () => {
       const entry = byId("SAURON");
@@ -227,25 +291,48 @@ describe("playbookStoreCatalog", () => {
       expect(card().enter).toContain("counts against that playbook, never against both");
     });
 
-    // Until slice 10 refuses unlabelled orders, pausing on his own account only removes the label —
-    // the card must not claim it stops his trades there.
-    it("says what pausing does today: option playbooks keep running, his rules keep trading unlabelled", () => {
+    // #4642 slice 10: only a subscribed playbook that is on opens a position, so pausing (or
+    // unsubscribing) SAURON on his own account stops his buys; his sells still run, unlabelled. The
+    // copy is checked against what his live roster and the guards actually do.
+    it("says pausing on his own account stops his buys and keeps his sells — as the guards do", () => {
       expect(note("Pause")).toContain("Pausing it never stops an option playbook");
-      // "Paused", never "or unsubscribed": an env roster naming SAURON keeps his label unsubscribed.
       expect(note("Pause")).toContain(
-        "Paused on Sauron's own account, his rules still trade it as they did before",
+        "Paused on Sauron's own account — or unsubscribed there — his rules stop buying",
       );
-      expect(note("Pause")).not.toContain("unsubscribed");
-      expect(copy()).not.toMatch(/paus\w* (it )?stops his/i);
+      expect(note("Pause")).toContain(
+        "his rules stop buying: a bot opens positions only through a playbook it is subscribed to " +
+          "and has on. They still sell a holding in his names when euphoria rolls over.",
+      );
+      const panicAndEuphoria = aContext({
+        AAPL: { sentiment: -0.8, momentum: 0.01 },
+        MSFT: { sentiment: 0.8, momentum: -0.01 },
+      });
+      const book = aPortfolio({ positions: [aPosition({ symbol: "MSFT", quantity: 7 })] });
+      const run = (subs: ReturnType<typeof aSubscription>[]) => {
+        const roster = resolveBotRoster(
+          { persona: new SauronPersona(), credentials: { apiKey: "k", apiSecret: "s" } },
+          [],
+          subs,
+        );
+        const { persona, risk } = tradingRoster(roster, DEFAULT_RISK_CONFIG);
+        const raw = persona.decide(panicAndEuphoria, book);
+        const { approved, refused } = applyGuardsWithVerdicts(raw, book, panicAndEuphoria, risk);
+        return [
+          ...approved.map((i) => `${i.side} ${i.symbol} ${i.playbookId ?? "-"}`),
+          ...refused.map((r) => `refused ${r.intent.side} ${r.intent.symbol} ${r.reason}`),
+        ].sort();
+      };
+      const on = run([aSubscription("sauron", "SAURON")]);
+      expect(on).toEqual(["buy AAPL SAURON", "sell MSFT SAURON"]);
+      const paused = ["refused buy AAPL unsubscribed", "sell MSFT -"];
+      expect(run([aSubscription("sauron", "SAURON", { enabled: false })])).toEqual(paused);
+      expect(run([])).toEqual(paused);
     });
 
-    // A paused subscription no longer stamps his orders, so the guards find no subscription for
-    // them: the cap and the symbol filter set here lift with the label (round-3 check of 89e58dcc).
-    it("says pausing lifts the limits set here along with the label", () => {
-      expect(note("Pause")).toContain(
-        "without its label and without any capital or symbol limit you set here",
-      );
-      expect(note("Pause")).not.toContain("just without its label");
+    // The pre-slice-10 row said his rules kept trading, unlabelled and unlimited, when paused.
+    it("never says a paused SAURON leaves his rules buying", () => {
+      expect(note("Pause")).not.toContain("still trade it as they did before");
+      expect(note("Pause")).not.toContain("without any capital or symbol limit you set here");
     });
     // Pause opens nothing new; ownership and exits unchanged (round 5): his names stay his.
     // Pause = exits only (round 4): on another bot it opens nothing and still sells to flat.

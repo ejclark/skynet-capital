@@ -69,6 +69,42 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
 }
 
 const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
+  // The forced daily pick (#4642 slice 10). Every fact below is the live cycle's
+  // (`src/autonomous/live-cycle.ts`, `src/playbooks/beta-scout.ts`), pinned by
+  // tests/discovery/playbook-store.spec.ts.
+  "BETA-SCOUT": {
+    description:
+      "The forced daily pick: on a day no bot placed a trade, it buys a few small picks ranked " +
+      "on whatever news and price signal already exists — a test that the order path works, " +
+      "not a call on any name. Its results are kept apart from every other playbook's.",
+    enter:
+      "Once a day, after every bot has had its turn, if none placed a trade that day: it ranks the " +
+      "bots' ten names by the strength of their news sentiment and price momentum together, " +
+      "skips a name the bot already holds or another playbook on it trades, and buys the " +
+      "strongest few that point up — 0.5% of the bot's cash each. The mode you pick does not " +
+      "change that size; the capital you allocate caps a day's picks together.",
+    exitTakeProfit: "No price target: every pick is sold on the next trading day, up or down.",
+    exitCutLosses: "No stop: a pick is held for one trading day, then sold, up or down.",
+    hold:
+      "On a day anything else traded, or when no name points up, it buys nothing. Paused, it " +
+      "buys nothing new and still sells yesterday's picks.",
+    notes: [
+      {
+        label: "Two switches",
+        text:
+          "It buys only while both are on: the forced-pick setting in operations, and this " +
+          "subscription. It runs on one bot, the first one the bots app runs (Sauron today); " +
+          "subscribed on any other bot, it places nothing.",
+      },
+      {
+        label: "Not subscribed",
+        text:
+          "With the setting on and no subscription, it buys nothing: once a day its picks are " +
+          "recorded as refused, not from a subscribed playbook, so you can see what it would " +
+          "have bought. Picks it already holds are still sold on the next trading day.",
+      },
+    ],
+  },
   "S1-NVDA": {
     description:
       "Pre-print positioning bid, NVDA only — long the run-up, out before the dead final week.",
@@ -116,8 +152,8 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
   },
   // Every number below is pinned to the persona's own behavior by
   // tests/discovery/playbook-store.spec.ts ("quotes only numbers his persona actually trades on").
-  // The Pause row says what pausing does TODAY: until unlabelled orders are refused (#4642 slice
-  // 10), his rules keep trading his own account without the label. Slice 10 rewrites it.
+  // The Pause row says what the guards do since #4642 slice 10: an order no subscribed playbook
+  // placed may not open a position, so with SAURON paused his rules only sell.
   SAURON: {
     description:
       "Sauron's own trading rules as a playbook: he trades only at the crowd's extremes, selling " +
@@ -165,11 +201,13 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       {
         label: "Pause",
         text:
-          "Pausing it never stops an option playbook. Paused on Sauron's own account, his rules " +
-          "still trade it as they did before this playbook existed — without its label and without " +
-          "any capital or symbol limit you set here. Paused on any other bot, it buys nothing new " +
-          "and still sells a holding in his names when euphoria rolls over; his names stay his, so " +
-          "the bot's own rules stay off them, stop-losses included, until you unsubscribe.",
+          "Pausing it never stops an option playbook. Paused on Sauron's own account — or " +
+          "unsubscribed there — his rules stop buying: a bot opens positions only through a " +
+          "playbook it is subscribed to and has on. They still sell a holding in his names when " +
+          "euphoria rolls over. Paused on any other bot, it buys nothing new and still sells a " +
+          "holding in his names when euphoria rolls over; his names " +
+          "stay his, so the bot's own rules stay off them, stop-losses included, until you " +
+          "unsubscribe.",
       },
     ],
   },
@@ -252,8 +290,12 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
   // An option play is sized by its allocation one contract at a time and opens on its own option
   // rules, so the probe's session window and percent-of-equity size would describe it falsely
   // — it shows its rules as copy, the way a playbook reading live signals (a tactic chain, a
-  // persona's own rules) does.
-  const probe = readsLiveSignals(playbook) || playbook.options ? undefined : probeWindow(playbook);
+  // persona's own rules) does. A playbook naming no ticker (the forced daily pick) has no window
+  // to walk.
+  const probe =
+    readsLiveSignals(playbook) || playbook.options || playbook.symbols.length === 0
+      ? undefined
+      : probeWindow(playbook);
   return {
     id: playbook.id,
     symbol: playbook.symbols[0] ?? "",

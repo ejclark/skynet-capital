@@ -6,6 +6,7 @@ import {
 } from "../../src/discovery/playbook-probe.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 import {
+  BETA_SCOUT,
   CRWV_WHEEL,
   G1_GOOG,
   HC_SAURON,
@@ -32,6 +33,7 @@ describe("housePlaybooks", () => {
   it("reads the roster off what the registry exports, id-sorted", () => {
     expect(housePlaybooks().map((p) => p.id)).toEqual(
       [
+        BETA_SCOUT.id,
         CRWV_WHEEL.id,
         G1_GOOG.id,
         HC_SAURON.id,
