@@ -228,7 +228,7 @@ describe("LiveCycleRunner", () => {
         day: today,
         ranToday: true,
         firedOrganicallyToday: false,
-        ownedSymbols: ["AVGO"],
+        ownedLots: [{ symbol: "AVGO", quantity: 3, day: today }],
       }),
       save: (state: ScoutState) => {
         saved.push(state);
@@ -276,7 +276,11 @@ describe("LiveCycleRunner", () => {
       scoutState: { load: () => undefined, save: (s) => fresh.push(s) },
     });
     await runner2.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
-    expect(fresh.at(-1)).toMatchObject({ day: today, ranToday: true, ownedSymbols: ["MSFT"] });
+    expect(fresh.at(-1)).toMatchObject({
+      day: today,
+      ranToday: true,
+      ownedLots: [{ symbol: "MSFT", quantity: 49, day: today }], // 0.5% of $1M at the $100.05 ask
+    });
   });
 
   // Regression for the exact bug class caught and fixed before this extraction: applying
@@ -426,7 +430,7 @@ describe("LiveCycleRunner", () => {
           day: "2026-07-23",
           ranToday: true,
           firedOrganicallyToday: false,
-          ownedSymbols: ["MSFT"],
+          ownedLots: [{ symbol: "MSFT", quantity: 50, day: "2026-07-23" }],
         }),
         save: (state) => saved.push(state),
       },
@@ -437,7 +441,7 @@ describe("LiveCycleRunner", () => {
 
     expect(submitted).toEqual([]);
     // A refused exit never orphans the lot: the next rollover tries the exit again.
-    expect(saved.at(-1)?.ownedSymbols).toEqual(["MSFT"]);
+    expect(saved.at(-1)?.ownedLots).toEqual([{ symbol: "MSFT", quantity: 50, day: "2026-07-23" }]);
     expect(decisions).toHaveLength(1);
     expect(decisions[0]).toMatchObject({
       personaId: "beta-scout",
@@ -505,7 +509,7 @@ describe("LiveCycleRunner", () => {
       expect(saved[saved.length - 1]).toMatchObject({
         day: "2026-09-08",
         ranToday: true,
-        ownedSymbols: ["NVDA"],
+        ownedLots: [expect.objectContaining({ symbol: "NVDA", day: "2026-09-08" })],
       });
 
       // Saturday: another staging poll is a no-op — the session is already spent.

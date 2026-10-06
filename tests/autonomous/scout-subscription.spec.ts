@@ -199,7 +199,7 @@ describe("review of slice 10: the forced daily pick", () => {
         day: "2026-07-24",
         ranToday: true,
         firedOrganicallyToday: false,
-        ownedSymbols: ["MSFT"],
+        ownedLots: [{ symbol: "MSFT", quantity: 10, day: "2026-07-24" }],
       },
     });
     await broker.submit({

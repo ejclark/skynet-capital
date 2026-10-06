@@ -173,28 +173,28 @@ export function betaScoutIntents(
 }
 
 /**
- * Flatten every scout-owned position the caller is still tracking as open. A `Position` carries
- * no record of which playbook opened it, so the caller (run-autonomous.ts) is the source of
- * truth for "which symbols are open because the scout, not a conviction signal, put them
- * there" — a small tracked Set, mirroring how `AutonomousTrader` already tracks per-symbol
- * cooldowns. Called once per new trading day, BEFORE any new picks are considered, so a scout
- * position is never held longer than one day: it is a mechanics probe, not a position to manage.
- * `mode` is the host subscription's, so the sell carries the mode the buy did (`conservative` with
- * no subscription on).
+ * Sell the scout's own lots: per symbol, the shares the scout's own buys took (`owned`, from its
+ * lots — `src/autonomous/scout-lots.ts`), never more than the account holds and never the whole
+ * holding when the scout's lot is smaller — the rest may be another playbook's. A `Position` carries
+ * no record of which playbook opened it, so the caller (the live cycle) is the source of truth for
+ * what is the scout's. Called at the first session after a pick's own, BEFORE any new pick is
+ * considered, so a scout position is never held longer than one day: it is a mechanics probe, not a
+ * position to manage. `mode` is the host subscription's, so the sell carries the mode the buy did
+ * (`conservative` with no subscription on).
  */
 export function betaScoutExitIntents(
   portfolio: Portfolio,
-  scoutOwnedSymbols: ReadonlySet<string>,
+  owned: ReadonlyMap<string, number>,
   mode: PlaybookMode = "conservative",
 ): OrderIntent[] {
   const intents: OrderIntent[] = [];
-  for (const symbol of scoutOwnedSymbols) {
-    const held = heldQuantity(portfolio, symbol);
-    if (held > 0) {
+  for (const [symbol, shares] of owned) {
+    const quantity = Math.min(shares, heldQuantity(portfolio, symbol));
+    if (quantity > 0) {
       intents.push({
         symbol,
         side: "sell",
-        quantity: held,
+        quantity,
         type: "market",
         playbookId: BETA_SCOUT_ID,
         playbookMode: mode,

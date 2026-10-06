@@ -1,3 +1,4 @@
+import { heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
   OrderIntent,
@@ -16,6 +17,7 @@ import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { fleetEquity } from "./equity-watch.js";
 import { actionFor } from "./option-cycle.js";
 import type { SafetyController } from "./safety.js";
+import { afterExit, lotFromOutcome, lotShares, type ScoutLot } from "./scout-lots.js";
 
 /**
  * The live per-cycle orchestration core (`docs/GAPS-2026-08.md` item 7) — the reusable half of
@@ -61,6 +63,9 @@ export interface BetaScoutDeps {
    *  never the host's), so a compounding BETA-SCOUT subscription grows or shrinks its cap. Absent =
    *  0, the flat cap. */
   readonly realizedPlForPlaybook?: (playbookId: string) => number;
+  /** The bot account the scout trades on (its persona id). Each lot records it, and the scout sells
+   *  only lots bought on the account it trades now. */
+  readonly hostId?: string;
 }
 
 /**
@@ -123,21 +128,31 @@ export interface LiveCycleDeps {
   readonly onBetaScoutError?: (error: unknown) => void;
   readonly onScoutHalted?: (reason: string) => void;
   readonly onScoutObserve?: (intent: OrderIntent) => void;
+  /** A plain line about the scout's lots worth an operator's eye (never per cycle). */
+  readonly onScoutWarn?: (line: string) => void;
 }
 
 /**
  * Runs the live decision loop cycle by cycle. A class (not a bare function) because the beta
  * scout is stateful ACROSS cycles — which day it last ran, whether it already fired today, and
- * which symbols it still owns — the same reason `AutonomousTrader` is a class rather than a
- * function (its per-symbol cooldown map). Construct once per process; call `runCycle` on every
- * throttled tick.
+ * which lots (placed buys and their shares, `scout-lots.ts`) it still owns — the same reason
+ * `AutonomousTrader` is a class rather than a function (its per-symbol cooldown map). Construct
+ * once per process; call `runCycle` on every throttled tick.
  */
 export class LiveCycleRunner {
   private readonly deps: LiveCycleDeps;
   private scoutDay = "";
   private scoutRanToday = false;
   private scoutFiredOrganicallyToday = false;
-  private readonly scoutOwnedSymbols = new Set<string>();
+  /** The scout's own lots (`scout-lots.ts`): only placed buys, with their shares. */
+  private scoutLots: ScoutLot[] = [];
+  /** The session day whose due lots were last offered for sale (placed, refused or observed). A
+   *  blocked attempt does not count: the exits are tried again next cycle, never lost. */
+  private exitsTriedDay = "";
+  /** The day a halted cycle last told the operator the scout skipped — once a day, not per cycle. */
+  private haltNotedDay = "";
+  /** Lots bought on another account than the scout's host now are said once per process. */
+  private foreignLotsNoted = false;
   /** The day an unsubscribed scan was last recorded — once a day, never every cycle. In memory: a
    *  restart records it once more, which costs one record, never an order. */
   private unsubscribedNotedDay = "";
@@ -153,7 +168,12 @@ export class LiveCycleRunner {
       this.scoutDay = restored.day;
       this.scoutRanToday = restored.ranToday;
       this.scoutFiredOrganicallyToday = restored.firedOrganicallyToday;
-      for (const symbol of restored.ownedSymbols) this.scoutOwnedSymbols.add(symbol);
+      this.scoutLots = [...restored.ownedLots];
+      if (restored.legacySymbols?.length) {
+        deps.onScoutWarn?.(
+          `[beta-scout] no longer tracking ${restored.legacySymbols.join(", ")}: saved before picks carried their share count, so the scout will not sell them — whatever holds them now manages them`,
+        );
+      }
     }
   }
 
@@ -163,7 +183,7 @@ export class LiveCycleRunner {
       day: this.scoutDay,
       ranToday: this.scoutRanToday,
       firedOrganicallyToday: this.scoutFiredOrganicallyToday,
-      ownedSymbols: [...this.scoutOwnedSymbols],
+      ownedLots: this.scoutLots,
     });
   }
 
@@ -245,9 +265,10 @@ export class LiveCycleRunner {
     }
     const today = sessionDay ?? context.asOf.slice(0, 10);
     const host = readHost(scout); // the one read of the host's subscriptions for this scan
+    if (today !== this.scoutDay) this.rollScoutDay(today);
     const exited =
-      today !== this.scoutDay ? await this.rollScoutDay(today, context, scout, host) : [];
-    // Disarmed (`SKYNET_BETA_FORCING` off): yesterday's picks were still sold above; nothing new.
+      this.exitsTriedDay === today ? [] : await this.exitDueLots(today, context, scout, host);
+    // Disarmed (`SKYNET_BETA_FORCING` off): its due lots were still offered for sale above.
     if (scout.maxPicks <= 0) {
       return 0;
     }
@@ -273,6 +294,8 @@ export class LiveCycleRunner {
     if (host.state === "paused" || (host.state === "none" && this.unsubscribedNotedDay === today)) {
       return 0;
     }
+    // Halted: leave the day as it is — no scan, no latch — and look again once the halt lifts.
+    if (this.haltedToday(today)) return 0;
     const portfolio = await scout.broker.getPortfolio();
     const picks = betaScoutIntents(
       context,
@@ -306,12 +329,27 @@ export class LiveCycleRunner {
       return 0;
     }
     this.scoutRanToday = true; // set BEFORE submitting — a failed submit must not retry every cycle
-    for (const intent of guarded) {
-      this.scoutOwnedSymbols.add(intent.symbol);
-    }
     this.persistScoutState(); // before the submit, for the same reason the latch is
-    await this.submitScoutIntents(guarded, scout);
+    // A lot only from a buy the broker actually took, recorded the moment it was — never before the
+    // submit, never for a pick observed, blocked or rejected.
+    await this.submitScoutIntents(guarded, scout, undefined, (outcome) => {
+      const lot = lotFromOutcome(outcome, today, scout.hostId);
+      if (!lot) return;
+      this.scoutLots = [...this.scoutLots, lot];
+      this.persistScoutState();
+    });
     return guarded.length;
+  }
+
+  /** Whether the kill switch or a breaker holds the scout now; said once a day, never per cycle. */
+  private haltedToday(today: string): boolean {
+    const blocked = this.deps.blockedReason();
+    if (!blocked) return false;
+    if (this.haltNotedDay !== today) {
+      this.haltNotedDay = today;
+      this.deps.onScoutHalted?.(blocked);
+    }
+    return true;
   }
 
   /** Record a scan none of whose picks may be placed — record-only BY CONSTRUCTION: it hands the
@@ -320,49 +358,85 @@ export class LiveCycleRunner {
     picks: readonly OrderIntent[],
     scout: BetaScoutDeps,
     refused: readonly GuardRefusal[],
-  ): Promise<void> {
+  ): Promise<boolean> {
     return this.submitScoutIntents(picks, scout, { approved: [], refused });
   }
 
+  /** A new scout day: the day's latches reset. Selling the lots due is `exitDueLots`. */
+  private rollScoutDay(today: string): void {
+    this.scoutDay = today;
+    this.scoutRanToday = false;
+    this.scoutFiredOrganicallyToday = false;
+    this.persistScoutState();
+  }
+
+  /** A lot this host may sell today: bought for an earlier session, on this account. */
+  private isDue(lot: ScoutLot, today: string, scout: BetaScoutDeps): boolean {
+    return lot.day < today && (!(lot.host && scout.hostId) || lot.host === scout.hostId);
+  }
+
   /**
-   * A new scout day: reset the day's latches and sell every lot the scout still owns — whatever its
-   * subscription now says and whether or not it is still armed, so a pause, an unsubscribe or
-   * switching the setting off never strands one. The sell carries the subscription's mode, as the
-   * buy did. Returns the symbols it exited: they never re-enter in the same scan. Live, a queued
-   * exit still shows as held (so the scan skips it anyway); an instant-fill broker would otherwise
-   * let the scout sell and re-buy the same name in one breath. Churn is not a signal.
+   * Offer every due lot for sale — whatever the subscription now says and whether or not the scout
+   * is still armed, so a pause, an unsubscribe or switching the setting off never strands one. Each
+   * sells at most its own shares and never more than the account holds; a lot the account no longer
+   * holds is dropped. A lot is released only once its sell was placed: a halted cycle tries again
+   * next cycle, and a refused, rejected or observed sell keeps the lot for the next session. The sell
+   * carries the subscription's mode, as the buy did. Returns the symbols whose sells the guards let
+   * through: they never re-enter in the same scan (an instant-fill broker would otherwise let the
+   * scout sell and re-buy a name in one breath; churn is not a signal).
    */
-  private async rollScoutDay(
+  private async exitDueLots(
     today: string,
     context: MarketContext,
     scout: BetaScoutDeps,
     host: ScoutHost,
   ): Promise<readonly string[]> {
-    this.scoutDay = today;
-    this.scoutRanToday = false;
-    this.scoutFiredOrganicallyToday = false;
-    const exited: string[] = [];
-    if (this.scoutOwnedSymbols.size > 0) {
-      const portfolio = await scout.broker.getPortfolio();
-      const exits = betaScoutExitIntents(portfolio, this.scoutOwnedSymbols, host.mode);
-      // Exits pass the guards too: a scout lot is never sold out from under a sold call written on
-      // the same shares (`uncovers-short-call`). Sells skip every entry rule — the subscribed-only
-      // rule included — so a plain exit is approved exactly as before. Ownership is released only
-      // for an exit the guards let through — a refused one keeps the lot the scout's, so the next
-      // rollover tries again rather than orphaning it.
-      const verdict = applyGuardsWithVerdicts(exits, portfolio, context, host.risk);
-      for (const exit of verdict.approved) {
-        this.scoutOwnedSymbols.delete(exit.symbol);
-        exited.push(exit.symbol);
-      }
-      await this.submitScoutIntents(exits, scout, verdict);
+    this.noteForeignLots(today, scout);
+    const due = this.scoutLots.filter((lot) => this.isDue(lot, today, scout));
+    if (due.length === 0 || this.haltedToday(today)) {
+      if (due.length === 0) this.exitsTriedDay = today;
+      return [];
     }
+    const portfolio = await scout.broker.getPortfolio();
+    const gone = due.filter((lot) => heldQuantity(portfolio, lot.symbol) <= 0);
+    this.scoutLots = this.scoutLots.filter((lot) => !gone.includes(lot));
+    const exits = betaScoutExitIntents(
+      portfolio,
+      lotShares(due.filter((lot) => !gone.includes(lot))),
+      host.mode,
+    );
+    // Exits pass the guards too: a scout lot is never sold out from under a sold call written on the
+    // same shares (`uncovers-short-call`). Sells skip every entry rule — the subscribed-only rule
+    // included — so a plain exit is approved exactly as before.
+    const verdict = applyGuardsWithVerdicts(exits, portfolio, context, host.risk);
+    const offered = await this.submitScoutIntents(exits, scout, verdict, (outcome) => {
+      this.scoutLots = afterExit(this.scoutLots, outcome, (lot) => this.isDue(lot, today, scout));
+      this.persistScoutState();
+    });
+    if (offered) this.exitsTriedDay = today;
     this.persistScoutState();
-    return exited;
+    return offered ? verdict.approved.map((exit) => exit.symbol) : [];
+  }
+
+  /** Lots bought on another account than the one the scout trades now are never sold here (that
+   *  broker is not this one); said once per process so an operator can move them by hand. */
+  private noteForeignLots(today: string, scout: BetaScoutDeps): void {
+    if (this.foreignLotsNoted) return;
+    const foreign = this.scoutLots.filter(
+      (lot) => lot.day < today && lot.host && scout.hostId && lot.host !== scout.hostId,
+    );
+    if (foreign.length === 0) return;
+    this.foreignLotsNoted = true;
+    this.deps.onScoutWarn?.(
+      `[beta-scout] not selling ${foreign.map((l) => `${l.quantity} ${l.symbol} (bought on ${l.host})`).join(", ")}: the scout now trades on ${scout.hostId}`,
+    );
   }
 
   /** Submit the scout's guarded intents and record the cycle. `verdict` is the guards' split when the
-   *  caller guarded `raw` itself with refusals worth recording; absent, `raw` was already approved. */
+   *  caller guarded `raw` itself with refusals worth recording; absent, `raw` was already approved.
+   *  `onOutcome` hears each intent's outcome the moment it lands, so what a placed order changed is
+   *  kept even if a later submit throws. Returns false when a halt stopped it before anything was
+   *  submitted or recorded. */
   private async submitScoutIntents(
     raw: readonly OrderIntent[],
     scout: BetaScoutDeps,
@@ -370,15 +444,16 @@ export class LiveCycleRunner {
       readonly approved: readonly OrderIntent[];
       readonly refused: readonly GuardRefusal[];
     },
-  ): Promise<void> {
+    onOutcome?: (outcome: IntentOutcome) => void,
+  ): Promise<boolean> {
     if (raw.length === 0) {
-      return;
+      return true;
     }
     const intents = verdict?.approved ?? raw;
     const blocked = this.deps.blockedReason();
     if (blocked) {
       this.deps.onScoutHalted?.(blocked);
-      return;
+      return false;
     }
     const now = this.deps.now ?? Date.now;
     const outcomes: IntentOutcome[] = [];
@@ -391,7 +466,9 @@ export class LiveCycleRunner {
       const result = await scout.broker.submit(intent);
       this.deps.safety.recordOrder();
       this.deps.onResult?.(result);
-      outcomes.push({ intent, action: actionFor(result), result });
+      const outcome: IntentOutcome = { intent, action: actionFor(result), result };
+      outcomes.push(outcome);
+      onOutcome?.(outcome);
     }
     const refusals = verdict?.refused ?? [];
     this.deps.onDecision?.({
@@ -403,5 +480,6 @@ export class LiveCycleRunner {
       outcomes,
       ...(refusals.length > 0 ? { refusals } : {}),
     });
+    return true;
   }
 }

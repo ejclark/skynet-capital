@@ -407,6 +407,7 @@ async function runLive(): Promise<void> {
       risk,
       mode,
       subscriptions: () => botRosters[0]?.subscriptions ?? [],
+      ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
       // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
       // under its own persona id, never the host's.
       ...(decisionDb
@@ -423,6 +424,7 @@ async function runLive(): Promise<void> {
     onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
     onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
     onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
+    onScoutWarn: (line) => console.warn(line),
     onScoutObserve: (intent) =>
       console.log(
         `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,

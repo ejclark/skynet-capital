@@ -228,6 +228,7 @@ export function buildScoutDeps(
     mode: TraderMode;
     subscriptions: () => readonly PlaybookSubscription[];
     realizedPlForPlaybook?: (playbookId: string) => number;
+    hostId?: string;
   },
 ): BetaScoutDeps | undefined {
   if (!scoutBroker) {

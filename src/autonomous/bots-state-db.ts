@@ -4,6 +4,7 @@ import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond
 import type { ProbeRetro } from "../playbooks/cond-scout-retro.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
+import { parseOwned, type ScoutLot } from "./scout-lots.js";
 
 /**
  * Durable current-state storage for the bots process, on the dedicated volume
@@ -63,8 +64,12 @@ export interface ScoutState {
   readonly day: string;
   readonly ranToday: boolean;
   readonly firedOrganicallyToday: boolean;
-  /** Symbols the scout opened and still owns — exited at the next day rollover. */
-  readonly ownedSymbols: readonly string[];
+  /** The scout's own lots — a placed buy and its shares — each sold on the first session after its
+   *  own (`scout-lots.ts`). */
+  readonly ownedLots: readonly ScoutLot[];
+  /** Read only: bare symbols a state saved before lots carried a quantity still names. Never sold
+   *  by the scout; the runner says so once and drops them. */
+  readonly legacySymbols?: readonly string[];
 }
 
 export function openBotsStateDb(path: string): BotsStateDb {
@@ -230,11 +235,13 @@ export function openBotsStateDb(path: string): BotsStateDb {
         | { day: string; ran_today: number; fired_organically_today: number; owned_json: string }
         | undefined;
       if (!row) return undefined;
+      const { lots, legacySymbols } = parseOwned(JSON.parse(row.owned_json));
       return {
         day: row.day,
         ranToday: row.ran_today === 1,
         firedOrganicallyToday: row.fired_organically_today === 1,
-        ownedSymbols: JSON.parse(row.owned_json),
+        ownedLots: lots,
+        ...(legacySymbols.length > 0 ? { legacySymbols } : {}),
       };
     },
     loadSubscriptions(): unknown {
@@ -251,7 +258,7 @@ export function openBotsStateDb(path: string): BotsStateDb {
         state.day,
         state.ranToday ? 1 : 0,
         state.firedOrganicallyToday ? 1 : 0,
-        JSON.stringify(state.ownedSymbols),
+        JSON.stringify(state.ownedLots),
       );
     },
     close() {
