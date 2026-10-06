@@ -136,7 +136,7 @@
     "@types/node": "26.6.4",
     "@types/three": "0.184.1",
     "acorn": "8.18.0",
-    "dependency-cruiser": "18.4.0",
+    "dependency-cruiser": "18.5.0",
     "esbuild": "0.28.2",
     "fast-check": "4.10.2",
     "husky": "9.1.7",
