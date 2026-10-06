@@ -1,4 +1,4 @@
-import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { HouseRosterEntry, HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import { isRecord } from "../storage/parse-guards.js";
 import type { SubscriptionsState } from "./subscription-state.js";
@@ -21,12 +21,19 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * never seeded again — so an owner who later unsubscribes from a seeded playbook stays
  * unsubscribed. The markers live in their own file (`subscription-seed-store.ts`), not in the
  * subscriptions file, whose content fingerprint (`subscriptionsVersion`) is the wire's contract.
+ *
+ * A second seed, a bot's own rules as its subscription (#4642 slice 9b), runs the same loop on its
+ * own marker — `seedOwnRules` below.
  */
 
 export const SEEDED_FROM_ENV_ROSTER = "SKYNET_PLAYBOOKS";
 
+/** The second seed: a bot subscribed to the playbook that IS its persona's own rules (#4651 9b). */
+export const SEEDED_FROM_OWN_RULES = "own-rules";
+
 export interface SeedMarker {
-  /** Where the seed came from — today only the bots app's env roster. */
+  /** Where the seed came from — the bots app's env roster, or the bot's own rules. Each seed keeps
+   *  its markers in its own file, so one seed's marker never stops the other. */
   readonly seededFrom: string;
   /** ISO-8601. */
   readonly at: string;
@@ -41,28 +48,48 @@ export const EMPTY_SEED_MARKERS: SeedMarkers = {};
 export interface SeedResult {
   readonly state: SubscriptionsState;
   readonly markers: SeedMarkers;
-  /** The accounts this call seeded — empty means nothing to write. */
+  /** The accounts this call marked — empty means nothing to write. */
   readonly seeded: readonly string[];
+  /** Those of them that gained a subscription. The rest already held everything the seed would add
+   *  and are only marked; when this is empty `state` is the very object passed in, so a caller
+   *  writes the marker alone and never rewrites the subscriptions file for nothing. */
+  readonly added: readonly string[];
 }
 
-/** Pure: what seeding `report` onto `state` produces. Idempotent by construction. */
-export function seedFromHouseRoster(
+/** One account's seed: the playbooks to add if it does not hold them yet, in order. */
+interface AccountSeed {
+  readonly accountId: string;
+  readonly entries: readonly HouseRosterEntry[];
+}
+
+/**
+ * The one loop both seeds run. Per account with no marker: add (uncapped, enabled) each entry it
+ * does not already hold, placed by `place`, and mark the account — even when nothing was added,
+ * because the owner already held it all (then its subscriptions are not even copied). An account
+ * already marked is never touched again.
+ */
+function seedAccounts(
   state: SubscriptionsState,
   markers: SeedMarkers,
-  report: HouseRosterReport,
+  seeds: readonly AccountSeed[],
+  seededFrom: string,
   at: Date,
+  place: (
+    added: readonly PlaybookSubscription[],
+    existing: readonly PlaybookSubscription[],
+  ) => readonly PlaybookSubscription[],
 ): SeedResult {
-  if (report.roster.length === 0) return { state, markers, seeded: [] };
   const stamp = at.toISOString();
   const nextState: Record<string, readonly PlaybookSubscription[]> = { ...state };
   const nextMarkers: Record<string, SeedMarker> = { ...markers };
   const seeded: string[] = [];
-  for (const accountId of report.accounts) {
-    if (markers[accountId]) continue;
+  const gained: string[] = [];
+  for (const { accountId, entries } of seeds) {
+    if (nextMarkers[accountId]) continue;
     const existing = state[accountId] ?? [];
     const held = new Set(existing.map((s) => s.playbookId));
     const added: PlaybookSubscription[] = [];
-    for (const entry of report.roster) {
+    for (const entry of entries) {
       if (held.has(entry.playbookId)) continue;
       held.add(entry.playbookId);
       added.push({
@@ -74,17 +101,83 @@ export function seedFromHouseRoster(
         updatedAt: stamp,
       });
     }
-    if (added.length > 0) nextState[accountId] = [...added, ...existing];
+    if (added.length > 0) {
+      nextState[accountId] = place(added, existing);
+      gained.push(accountId);
+    }
     nextMarkers[accountId] = {
-      seededFrom: SEEDED_FROM_ENV_ROSTER,
+      seededFrom,
       at: stamp,
       playbookIds: added.map((s) => s.playbookId),
     };
     seeded.push(accountId);
   }
-  return seeded.length > 0
-    ? { state: nextState, markers: nextMarkers, seeded }
-    : { state, markers, seeded };
+  return {
+    state: gained.length > 0 ? nextState : state,
+    markers: seeded.length > 0 ? nextMarkers : markers,
+    seeded,
+    added: gained,
+  };
+}
+
+/** Pure: what seeding `report` onto `state` produces. Idempotent by construction. */
+export function seedFromHouseRoster(
+  state: SubscriptionsState,
+  markers: SeedMarkers,
+  report: HouseRosterReport,
+  at: Date,
+): SeedResult {
+  if (report.roster.length === 0) return { state, markers, seeded: [], added: [] };
+  const seeds = report.accounts.map((accountId) => ({ accountId, entries: report.roster }));
+  return seedAccounts(state, markers, seeds, SEEDED_FROM_ENV_ROSTER, at, (added, existing) => [
+    ...added,
+    ...existing,
+  ]);
+}
+
+/** What the own-rules seed reads off a playbook: its id, and whose persona's rules it is. */
+export interface OwnRulesPlaybook {
+  readonly id: string;
+  readonly rulesOf?: string;
+}
+
+/**
+ * SEEDING A BOT'S OWN RULES AS ITS SUBSCRIPTION (#4642 slice 9b, design on #4651) — the cutover.
+ *
+ * A playbook with `rulesOf` IS a persona's own rules (`SAURON` → `"sauron"`). Subscribed on that
+ * persona's own account, it changes nothing he trades, only labels his orders with the playbook's
+ * id. The label is what lets a capital cap or symbol filter set in the Store's Edit act on his buys.
+ * Pausing it today only takes the label (and any such limit) off again — his rules keep trading,
+ * unlabelled, until slice 10 refuses unlabelled orders. So each reported bot whose persona has such a
+ * playbook is subscribed to it once — standard, uncapped, enabled, no symbol filter: the shape that
+ * changes only the label (`docs/BOTS-SAURON.md`'s 2026-10-06 correction row). `accounts` is the
+ * bots app's own list of the bots it runs (persona ids), so a human account is never a candidate.
+ *
+ * - **Every other subscription is untouched.** The new entry is appended, where a Store subscribe
+ *   puts it; nothing on the account is reordered, re-moded or re-allocated.
+ * - **An account that already holds the playbook is marked, not changed** — subscribed by hand,
+ *   paused, capped or seeded from the env roster, the owner's entry wins.
+ * - **Once only, on its own marker.** The marker (`SEEDED_FROM_OWN_RULES`) lives apart from the
+ *   env roster's, so a bot already seeded from `SKYNET_PLAYBOOKS` is still seeded here once, and an
+ *   owner who later unsubscribes or pauses it stays that way.
+ * - **A bot with no own-rules playbook gets no marker**, so it is still seeded if one is added.
+ */
+export function seedOwnRules(
+  state: SubscriptionsState,
+  markers: SeedMarkers,
+  accounts: readonly string[],
+  playbooks: readonly OwnRulesPlaybook[],
+  at: Date,
+): SeedResult {
+  const seeds = accounts.flatMap((accountId): AccountSeed[] => {
+    const own = playbooks.filter((p) => p.rulesOf === accountId);
+    if (own.length === 0) return [];
+    return [{ accountId, entries: own.map((p) => ({ playbookId: p.id, mode: "standard" })) }];
+  });
+  return seedAccounts(state, markers, seeds, SEEDED_FROM_OWN_RULES, at, (added, existing) => [
+    ...existing,
+    ...added,
+  ]);
 }
 
 function parseMarker(raw: unknown): SeedMarker | null {
