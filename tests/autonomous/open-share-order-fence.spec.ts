@@ -32,6 +32,19 @@ function wants(...intents: OrderIntent[]): Persona {
   return { id: "wants", name: "Wants", thesis: "test", decide: () => intents };
 }
 
+/** A persona that buys only while it holds none of the symbol, and sells all of it once it does. */
+function roundTrip(symbol: string, quantity: number): Persona {
+  return {
+    id: "round-trip",
+    name: "Round trip",
+    thesis: "test",
+    decide: (_context, portfolio) => {
+      const held = portfolio.positions.find((p) => p.symbol === symbol)?.quantity ?? 0;
+      return [held > 0 ? shares("sell", symbol, held) : shares("buy", symbol, quantity)];
+    },
+  };
+}
+
 const marketOf = (...symbols: string[]): MarketContext =>
   aContext(Object.fromEntries(symbols.map((s) => [s, { last: 100, momentum: 0.05 }])));
 
@@ -42,7 +55,14 @@ const marketOf = (...symbols: string[]): MarketContext =>
 class QueuingAlpaca implements AlpacaTradingTransport {
   readonly placed: string[] = [];
   readonly open: { id: string; symbol: string; qty: string; side: string }[] = [];
-  private readonly held = new Map<string, number>();
+  private readonly held: Map<string, number>;
+  /** Set to fill the queue at the next open-order list read — after that cycle's positions read,
+   *  the way fills land at the opening auction while a cycle is mid-flight. */
+  fillAtNextOrderList = false;
+
+  constructor(held: Record<string, number> = {}) {
+    this.held = new Map(Object.entries(held));
+  }
 
   /** The open: every queued order fills and leaves the open-order list. */
   fill(): void {
@@ -58,14 +78,20 @@ class QueuingAlpaca implements AlpacaTradingTransport {
     }
     if (path === "/v2/positions") {
       return ok(
-        [...this.held].map(([symbol, qty]) => ({
-          symbol,
-          qty: String(qty),
-          avg_entry_price: "100",
-        })),
+        [...this.held]
+          .filter(([, qty]) => qty !== 0)
+          .map(([symbol, qty]) => ({
+            symbol,
+            qty: String(qty),
+            avg_entry_price: "100",
+          })),
       );
     }
     if (path.startsWith("/v2/orders?")) {
+      if (this.fillAtNextOrderList) {
+        this.fillAtNextOrderList = false;
+        this.fill();
+      }
       return ok(this.open.map((o) => ({ ...o, status: "accepted", filled_qty: "0" })));
     }
     const id = path.replace("/v2/orders/", "");
@@ -193,6 +219,63 @@ describe("a buy still queued at the broker (#4678)", () => {
     await trader.evaluate(marketOf("NVDA"));
 
     expect(broker.submitted).toEqual(["buy 5 NVDA"]);
+  });
+});
+
+describe("an order that fills while a cycle is deciding (#4678)", () => {
+  it("a buy that fills between the positions read and the open-order read is not bought again", async () => {
+    const alpaca = new QueuingAlpaca();
+    const broker = new AlpacaBrokerAdapter(new AlpacaTradingClient(alpaca), {
+      sleep: () => Promise.resolve(),
+    });
+    let clock = 1_000;
+    const { trader, decisions } = traderOn(broker, roundTrip("NVDA", 10), { clock: () => clock });
+
+    await trader.evaluate(marketOf("NVDA")); // queued after the close
+    clock += 2 * COOLDOWN_MS;
+    await trader.evaluate(marketOf("NVDA")); // still queued: the open buy holds it
+    clock += 2 * COOLDOWN_MS;
+    alpaca.fillAtNextOrderList = true; // the open: it fills mid-cycle
+    await trader.evaluate(marketOf("NVDA"));
+
+    expect(alpaca.placed).toEqual(["buy 10 NVDA"]);
+    expect(decisions[2]?.outcomes.map((o) => `${o.intent.side} ${o.action}`)).toEqual([
+      "buy cooldown-skipped",
+    ]);
+  });
+
+  it("a sell that fills mid-cycle is not sold again on shares already gone", async () => {
+    const alpaca = new QueuingAlpaca({ NVDA: 10 });
+    const broker = new AlpacaBrokerAdapter(new AlpacaTradingClient(alpaca), {
+      sleep: () => Promise.resolve(),
+    });
+    let clock = 1_000;
+    const { trader } = traderOn(broker, roundTrip("NVDA", 10), { clock: () => clock });
+
+    await trader.evaluate(marketOf("NVDA")); // the sell queues
+    clock += 2 * COOLDOWN_MS;
+    alpaca.fillAtNextOrderList = true;
+    await trader.evaluate(marketOf("NVDA"));
+
+    expect(alpaca.placed).toEqual(["sell 10 NVDA"]);
+  });
+
+  it("the next cycle decides on the filled position, as before", async () => {
+    const alpaca = new QueuingAlpaca();
+    const broker = new AlpacaBrokerAdapter(new AlpacaTradingClient(alpaca), {
+      sleep: () => Promise.resolve(),
+    });
+    let clock = 1_000;
+    const { trader } = traderOn(broker, roundTrip("NVDA", 10), { clock: () => clock });
+
+    await trader.evaluate(marketOf("NVDA"));
+    clock += 2 * COOLDOWN_MS;
+    alpaca.fillAtNextOrderList = true;
+    await trader.evaluate(marketOf("NVDA"));
+    clock += 2 * COOLDOWN_MS;
+    await trader.evaluate(marketOf("NVDA"));
+
+    expect(alpaca.placed).toEqual(["buy 10 NVDA", "sell 10 NVDA"]);
   });
 });
 
