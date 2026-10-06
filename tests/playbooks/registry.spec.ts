@@ -1,7 +1,6 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { nextSession } from "../../src/domain/market-calendar.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
-import { spreadWindow } from "../../src/playbooks/nvda-call-spread.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
 import {
   CRWV_WHEEL,
@@ -21,6 +20,8 @@ import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 const cal = (symbol: string, date: string, status: EarningsPrint["status"]): EarningsPrint[] => [
   { symbol, date, status, source: "test" },
 ];
+
+const spreadWindow = NVDA_CALL_SPREAD.desiredState;
 
 describe("S1-NVDA window", () => {
   // D-numbers are TRADING SESSIONS (#4776). Before an 08-26 print: D-20 is 07-29, D-6 is 08-18,

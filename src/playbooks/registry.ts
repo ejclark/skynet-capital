@@ -13,8 +13,8 @@ import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { BETA_SCOUT } from "./beta-scout.js";
+import { callSpread } from "./call-spread.js";
 import { CRWV_WHEEL } from "./crwv-wheel.js";
-import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
@@ -176,11 +176,30 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
+/**
+ * NVDA-CALL-SPREAD (#4642 slice 6) — S1-NVDA's pre-earnings run-up as a call debit spread, the
+ * loss capped at the debit paid. The window is the run-up's own, in trading sessions: long from
+ * D-20, out from D-5 (`docs/research/nvda-earnings-cycle.md` F1–F2). "NVIDIA" is the company's
+ * own styling, kept so the copy its orders carry reads as it always has.
+ */
+export const NVDA_CALL_SPREAD: Playbook = callSpread({
+  symbol: "NVDA",
+  company: "NVIDIA",
+  enter: 20,
+  exit: 5,
+  thesis:
+    "S1-NVDA's pre-earnings run-up as a call debit spread — the loss capped at the debit paid; " +
+    "opens only on a confirmed print date, out five sessions before it.",
+  evidence:
+    "docs/research/nvda-earnings-cycle.md F1-F2 — the run-up into a print, 15 of 15 positive " +
+    "since 2023 (P=0.0032, docs/research/events/nvda-2026-11-18-print.md); D-5→D a coin flip",
+});
+
 /** The option plays, Sauron's own rules and the forced daily pick live in their own files
- *  (`crwv-wheel.ts`, `nvda-call-spread.ts`, `sauron-rules.ts`, `beta-scout.ts`); re-exported here
+ *  (`crwv-wheel.ts`, `call-spread.ts`, `sauron-rules.ts`, `beta-scout.ts`); re-exported here
  *  because the Store catalog and the roll call read the house roster off what this module exports.
  *  None is on any default roster: an owner subscribes their own bot to one in the Store. */
-export { BETA_SCOUT, CRWV_WHEEL, NVDA_CALL_SPREAD, SAURON };
+export { BETA_SCOUT, CRWV_WHEEL, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,

@@ -9,13 +9,8 @@ import {
   type Portfolio,
   type Position,
 } from "../../src/domain/types.js";
-import {
-  NVDA_CALL_SPREAD,
-  SPREAD_SHORT_DELTA,
-  spreadShape,
-  spreadWindow,
-} from "../../src/playbooks/nvda-call-spread.js";
-import { S1_NVDA } from "../../src/playbooks/registry.js";
+import { SPREAD_SHORT_DELTA, spreadShape } from "../../src/playbooks/call-spread.js";
+import { NVDA_CALL_SPREAD, S1_NVDA } from "../../src/playbooks/registry.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
@@ -39,6 +34,8 @@ const ESTIMATED: readonly EarningsPrint[] = [
     window: { start: "2026-11-17", end: "2026-11-25" },
   },
 ];
+
+const spreadWindow = NVDA_CALL_SPREAD.desiredState;
 
 const OCT_28 = "2026-10-28T15:00:00Z"; // Wed 11:00 ET — the day NVIDIA's notice is due
 const NOV_13 = "2026-11-13";

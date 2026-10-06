@@ -14,6 +14,7 @@ import {
   optionBook,
   quoteBand,
 } from "../domain/option-book.js";
+import { TICKER_DIRECTORY } from "../domain/ticker-directory/index.js";
 import {
   type ListedExpirations,
   type MarketContext,
@@ -35,30 +36,36 @@ import {
 import { DAYS_PER_YEAR, impliedVolatility } from "../options/pricing.js";
 import { OPTION_MULTIPLIER, occExpiryLabel, occStrikeLabel } from "../trading/option-symbols.js";
 import { type OptionLegSpec, optionCloseIntent, optionOpenIntent } from "./option-intent.js";
+import { pairFor } from "./pair-table.js";
 import { type Playbook, POST_PRINT_FLAT_DAYS } from "./playbook.js";
 
 /**
- * NVDA-CALL-SPREAD (#4642 slice 6) — S1-NVDA's pre-earnings run-up as a call debit spread: buy one
- * NVDA call near the money (delta 0.50), sell one higher call on the same expiry, and pay the
- * difference. The most it can lose is that debit; the most it can make is the gap between the
- * strikes, less the debit. `docs/research/nvda-earnings-cycle.md` F1–F2: the 20 sessions into a
- * print rise, and the last five are a coin flip — so it is long from D-20 to D-6 and out at D-5.
+ * THE CALL SPREAD (#4642 slice 6; a template on a ticker since #4469 slice 2d) — a pre-earnings
+ * run-up as a call debit spread: buy one call near the money (delta 0.50), sell one higher call on
+ * the same expiry, and pay the difference. The most it can lose is that debit; the most it can make
+ * is the gap between the strikes, less the debit. NVDA's study (`docs/research/nvda-earnings-cycle.md`
+ * F1–F2): the 20 sessions into a print rise, and the last five are a coin flip — so it is long from
+ * D-20 to D-6 and out at D-5. `NVDA-CALL-SPREAD` (registry.ts) is one call of `callSpread`.
  *
  * The window counts TRADING SESSIONS back from the print (D-20 = 2026-10-21 for an 11-18 print;
  * D-5 = 11-11, Veterans Day trades), and opens only on a CONFIRMED date — the same date policy as
- * S1-NVDA. An estimate opens nothing, and a spread held when the date stops being confirmed closes.
+ * the run-up. An estimate opens nothing, and a spread held when the date stops being confirmed
+ * closes.
  *
- * The expiry is the latest listed one after D-5 and before the print blackout, so the spread
- * outlives the exit day and never spans the print (11-13 for an 11-18 print); with none, no trade.
+ * The expiry is the latest listed one after the exit day and before the print blackout, so the
+ * spread outlives the exit day and never spans the print (11-13 for an 11-18 print); with none, no
+ * trade. That is why a ticker whose run-up is measured to the print-day close (GOOG) CANNOT run
+ * here: no expiry can sit after print day and before the blackout that starts on it. The setting's
+ * type has no way to say "hold to the print", so the impossible pair cannot be written — code, not
+ * copy, enforces what a ticker needs (the plan's call 4).
  * The close goes out as one two-leg order whose price walks from mid toward the natural side over
- * the sessions since D-5 (`closeAggression`) — at once at natural after a print. Expiry hygiene's
- * T-2 close is the backstop, and for an 11-13 expiry it falls on D-5 itself.
+ * the sessions since the exit day (`closeAggression`) — at once at natural after a print. Expiry
+ * hygiene's T-2 close is the backstop, and for an 11-13 expiry it falls on D-5 itself.
  *
- * It is the one playbook that declares `derivesFrom`: its edge IS S1-NVDA's, and while it is
- * subscribed it owns NVDA on that bot, so S1-NVDA stops trading NVDA shares there.
+ * It declares `derivesFrom` the ticker's own run-up pair: its edge IS that run-up's, and while it
+ * is subscribed it owns the ticker on that bot, so the run-up stops trading its shares there.
  */
 
-const SPREAD_SYMBOL = "NVDA";
 /** The long leg sits at the money: it carries the run-up's direction. It may sit up to
  *  `LONG_DELTA_MISS` either side — a deep in-the-money long is a costlier stock substitute, not the
  *  spread the Store card describes, so with none that close the play opens nothing. */
@@ -73,13 +80,56 @@ export const SPREAD_SHORT_DELTA: Readonly<Record<PlaybookMode, number>> = {
   standard: 0.25,
   aggressive: 0.2,
 };
-/** Sessions before the print the window opens (D-20) and closes (D-5). */
-const ENTRY_SESSIONS = 20;
-const EXIT_SESSIONS = 5;
 /** A close after the print goes straight to the natural side: there is no window left to wait in. */
 const AFTER_PRINT_LATENESS = 2;
 /** A vertical's net prices in cents. */
 const NET_TICK = 0.01;
+
+/**
+ * One ticker's call spread. The window is in trading sessions and the exit is always "out from
+ * D-`exit`": a spread cannot be held to the print (see the header), so there is no print-day-close
+ * option here, unlike the run-up's `RunUpExit`.
+ */
+export interface CallSpreadSetting {
+  readonly symbol: string;
+  /** The company as its own copy styles it ("NVIDIA"); defaults to the ticker directory's name,
+   *  which is a search-ranking list ("Nvidia"), so a pair that must keep its copy states it. */
+  readonly company?: string;
+  /** The window opens when the print is this many sessions away (D-`enter`). */
+  readonly enter: number;
+  /** The spread is sold from D-`exit` on, the run-up's measured exit. */
+  readonly exit: number;
+  readonly thesis: string;
+  /** Citation into docs/research/ — the record of why this pair exists. */
+  readonly evidence: string;
+}
+
+/** What the helpers below read: the setting, with the name and the run-up it derives from settled. */
+interface Spread {
+  readonly symbol: string;
+  readonly company: string;
+  readonly enter: number;
+  readonly exit: number;
+  /** The id of the run-up pair on this ticker — the pair this spread derives its edge from. */
+  readonly runUp?: string;
+}
+
+const NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+];
+const inWords = (n: number): string => NUMBER_WORDS[n] ?? String(n);
+
+const companyOf = (symbol: string): string =>
+  TICKER_DIRECTORY.find((entry) => entry.symbol === symbol)?.name ?? symbol;
 
 /** Why the window is where it is — a close prices off the why. */
 type WindowCause = "open" | "dead-week" | "after-print" | "before-window" | "unconfirmed";
@@ -91,37 +141,38 @@ interface SpreadRead {
   readonly print?: EarningsPrint;
 }
 
-function readWindow(asOfIso: string, calendar: readonly EarningsPrint[]): SpreadRead {
-  if (recentPrint(SPREAD_SYMBOL, asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
+function readWindow(
+  spread: Spread,
+  asOfIso: string,
+  calendar: readonly EarningsPrint[],
+): SpreadRead {
+  if (recentPrint(spread.symbol, asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
     return { state: "flat", cause: "after-print" };
   }
-  const print = nextPrintRisk(SPREAD_SYMBOL, asOfIso, calendar);
+  const print = nextPrintRisk(spread.symbol, asOfIso, calendar);
   // Date policy: an estimate never keys an entry, and a spread already held exits.
   if (print?.status !== "confirmed") return { state: "no-window", cause: "unconfirmed" };
   const today = marketDayKey(asOfIso);
-  if (today >= sessionsBefore(print.date, EXIT_SESSIONS)) {
+  if (today >= sessionsBefore(print.date, spread.exit)) {
     return { state: "flat", cause: "dead-week", print };
   }
-  if (today >= sessionsBefore(print.date, ENTRY_SESSIONS)) {
+  if (today >= sessionsBefore(print.date, spread.enter)) {
     return { state: "long", cause: "open", print };
   }
   return { state: "no-window", cause: "before-window", print };
 }
 
-/** The window in trading sessions: long D-20..D-6 on a confirmed date, flat from D-5 and for a few
- *  days after a print, otherwise no window. */
-export function spreadWindow(
-  asOfIso: string,
-  calendar: readonly EarningsPrint[],
-): "long" | "flat" | "no-window" {
-  return readWindow(asOfIso, calendar).state;
+/** The window in trading sessions: long D-enter..D-(exit+1) on a confirmed date, flat from D-exit
+ *  and for a few days after a print, otherwise no window. */
+function spreadWindow(spread: Spread): Playbook["desiredState"] {
+  return (asOfIso, calendar) => readWindow(spread, asOfIso, calendar).state;
 }
 
-/** What NVDA contracts the bot holds: none; exactly one debit call spread (the long call below the
+/** What contracts on the ticker the bot holds: none; exactly one debit call spread (the long call below the
  *  short, same expiry, equal size); or anything else, which this playbook leaves alone.
  *
  *  A vertical is read as the play's own whoever placed it — positions carry no record of their
- *  opener, and narrowing by expiry would drop the play's own spread when NVIDIA moves its date
+ *  opener, and narrowing by expiry would drop the play's own spread when the company moves its date
  *  earlier (it must still sell that one back). The Store card says so. */
 export type SpreadShape =
   | { readonly kind: "none" }
@@ -157,17 +208,18 @@ interface SpreadEntry {
   readonly expiration: string;
 }
 
-/** Where a new spread would go — the latest expiry after D-5 and before the print blackout — or
+/** Where a new spread would go — the latest expiry after the exit day and before the print blackout — or
  *  `undefined` when the window is shut or no listed expiry fits. */
 function entryFor(
+  spread: Spread,
   asOfIso: string,
   read: SpreadRead,
   listed: readonly string[],
   calendar: readonly EarningsPrint[],
 ): SpreadEntry | undefined {
-  const blackout = optionPrintBlackout(SPREAD_SYMBOL, asOfIso, calendar);
+  const blackout = optionPrintBlackout(spread.symbol, asOfIso, calendar);
   if (!(read.state === "long" && read.print && blackout)) return undefined;
-  const exitDay = sessionsBefore(read.print.date, EXIT_SESSIONS);
+  const exitDay = sessionsBefore(read.print.date, spread.exit);
   const expiration = eligibleExpirations(listed, marketDayKey(asOfIso), {
     after: exitDay,
     before: blackout.start,
@@ -197,14 +249,20 @@ function netQuote(
   return { low: band.low, high: band.high, ...(band.at || read ? { at: band.at ?? read } : {}) };
 }
 
-const spreadName = (expiration: string, low: number, high: number): string =>
-  `NVDA ${occStrikeLabel(low)}/${occStrikeLabel(high)} call spread · ${occExpiryLabel(expiration)}`;
+const spreadName = (symbol: string, expiration: string, low: number, high: number): string =>
+  `${symbol} ${occStrikeLabel(low)}/${occStrikeLabel(high)} call spread · ${occExpiryLabel(expiration)}`;
 
 /** One debit spread at the mode's short delta, priced inside the net quote — or nothing. */
-function openIntent(context: MarketContext, entry: SpreadEntry, mode: PlaybookMode): OrderIntent[] {
-  const spot = context.quotes[SPREAD_SYMBOL]?.last;
+function openIntent(
+  spread: Spread,
+  context: MarketContext,
+  entry: SpreadEntry,
+  mode: PlaybookMode,
+): OrderIntent[] {
+  const { symbol } = spread;
+  const spot = context.quotes[symbol]?.last;
   if (!(spot !== undefined && spot > 0)) return [];
-  const calls = chainQuotes(context.options, SPREAD_SYMBOL, entry.expiration, "call");
+  const calls = chainQuotes(context.options, symbol, entry.expiration, "call");
   const long = pickByDelta(calls, LONG_DELTA, spot, context.asOf, {
     otm: false,
     maxDeltaMiss: LONG_DELTA_MISS,
@@ -233,7 +291,7 @@ function openIntent(context: MarketContext, entry: SpreadEntry, mode: PlaybookMo
   const dte = Math.max(1, daysBetween(today, entry.expiration));
   const k1 = long.quote.strike;
   const k2 = short.quote.strike;
-  const name = spreadName(entry.expiration, k1, k2);
+  const name = spreadName(symbol, entry.expiration, k1, k2);
   const debit = Math.round(limitPrice * OPTION_MULTIPLIER);
   const width = Math.round((k2 - k1) * OPTION_MULTIPLIER);
   // The +1σ cross-check: how far a one-standard-deviation rise reaches by expiry, priced off the
@@ -254,24 +312,25 @@ function openIntent(context: MarketContext, entry: SpreadEntry, mode: PlaybookMo
       : " A one-standard-deviation rise by expiry, priced off the long call's implied " +
         `volatility, reaches about ${dollars(reach)}.`;
   const intent = optionOpenIntent({
-    underlying: SPREAD_SYMBOL,
+    underlying: symbol,
     structure: "call-debit-spread",
     legs,
     limitPrice,
     band,
-    strategy: "nvda-spread-open",
+    strategy: `${symbol.toLowerCase()}-spread-open`,
     reason:
       `Buying one ${name} for about ${dollars(limitPrice)} a share — the options form of ` +
-      `S1-NVDA's pre-earnings run-up. The most it can lose is that $${debit} debit. NVIDIA ` +
-      `confirmed its ${entry.print.date} print; the spread is sold back by ${entry.exitDay}, five ` +
-      "sessions before.",
+      `${spread.runUp ?? symbol}'s pre-earnings run-up. The most it can lose is that $${debit} ` +
+      `debit. ${spread.company} confirmed its ${entry.print.date} print; the spread is sold back ` +
+      `by ${entry.exitDay}, ${inWords(spread.exit)} sessions before.`,
     expectation:
-      `NVDA keeps rising into the print: above ${occStrikeLabel(k2)} at expiry the spread is worth ` +
+      `${symbol} keeps rising into the print: above ${occStrikeLabel(k2)} at expiry the spread is worth ` +
       `$${width.toLocaleString("en-US")}. It is sold back by ${entry.exitDay} whatever it is worth then.${oneSigma}`,
     forecast: {
       direction: "up",
       invalidator:
-        "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost",
+        `${symbol}'s D-${spread.enter}→D-${spread.exit} return ≤ 0 on 2 of the next 3 prints, or ` +
+        "this spread exits below its cost",
     },
     selection: {
       rule: "spread-by-delta",
@@ -289,34 +348,38 @@ function openIntent(context: MarketContext, entry: SpreadEntry, mode: PlaybookMo
   return intent ? [intent] : [];
 }
 
-const CLOSE_WHY: Readonly<Record<Exclude<WindowCause, "open">, string>> = {
-  "dead-week":
-    "it is within five sessions of the print, when the run-up has historically been spent",
-  "after-print": "NVIDIA has reported, and this spread is never meant to hold a print",
-  unconfirmed:
-    "NVDA's next print date is not confirmed, so the run-up window it trades has no date",
-  "before-window": "its D-20 to D-6 window is not open on the confirmed date",
-};
+const closeWhy = (spread: Spread): Readonly<Record<Exclude<WindowCause, "open">, string>> => ({
+  "dead-week": `it is within ${inWords(spread.exit)} sessions of the print, when the run-up has historically been spent`,
+  "after-print": `${spread.company} has reported, and this spread is never meant to hold a print`,
+  unconfirmed: `${spread.symbol}'s next print date is not confirmed, so the run-up window it trades has no date`,
+  "before-window": `its D-${spread.enter} to D-${spread.exit + 1} window is not open on the confirmed date`,
+});
 
-/** Sessions late, for the close's aggression: from D-5 in the dead week, natural after a print,
- *  mid when the window shut for any other reason. */
-function lateness(read: SpreadRead, today: string): number {
+/** Sessions late, for the close's aggression: from the exit day in the dead week, natural after a
+ *  print, mid when the window shut for any other reason. */
+function lateness(spread: Spread, read: SpreadRead, today: string): number {
   if (read.cause === "after-print") return AFTER_PRINT_LATENESS;
   if (read.cause === "dead-week" && read.print) {
-    return sessionsBetween(sessionsBefore(read.print.date, EXIT_SESSIONS), today);
+    return sessionsBetween(sessionsBefore(read.print.date, spread.exit), today);
   }
   return 0;
 }
 
 /** How the close is priced, and what happens to that price if it does not fill. */
-function closeExpectation(cause: Exclude<WindowCause, "open">, towardNatural: number): string {
+function closeExpectation(
+  spread: Spread,
+  cause: Exclude<WindowCause, "open">,
+  towardNatural: number,
+): string {
   const priced =
     towardNatural === 0
       ? "Priced at mid"
       : towardNatural === 1
         ? "Priced at the natural side"
         : `Priced ${Math.round(towardNatural * 100)}% of the way from mid to the natural side`;
-  if (cause === "dead-week") return `${priced}; each session past D-5 moves it closer to natural.`;
+  if (cause === "dead-week") {
+    return `${priced}; each session past D-${spread.exit} moves it closer to natural.`;
+  }
   if (cause === "after-print") return `${priced}: the print has passed, so it waits for nothing.`;
   return (
     `${priced}, leaning toward natural through the afternoon; expiry hygiene closes it two ` +
@@ -327,6 +390,7 @@ function closeExpectation(cause: Exclude<WindowCause, "open">, towardNatural: nu
 /** The held spread back as one two-leg order, priced inside the net quote — or nothing without one
  *  (hygiene's T-2 close is the backstop). */
 function closeIntent(
+  spread: Spread,
   context: MarketContext,
   read: SpreadRead,
   held: Extract<SpreadShape, { kind: "vertical" }>,
@@ -341,7 +405,7 @@ function closeIntent(
   const quoted = netQuote(legs, "close", context);
   if (!quoted?.at) return [];
   const towardNatural = closeAggression(
-    lateness(read, marketDayKey(context.asOf)),
+    lateness(spread, read, marketDayKey(context.asOf)),
     etTimeOf(context.asOf),
   );
   // In Alpaca's signed net a lower number is better for the bot, so a close prices as a "buy".
@@ -349,69 +413,84 @@ function closeIntent(
   // A net of exactly 0 is no order a broker takes: one cent toward natural, or nothing.
   if (limitPrice === 0) limitPrice = NET_TICK <= quoted.high + 1e-9 ? NET_TICK : undefined;
   if (limitPrice === undefined) return [];
-  const name = spreadName(held.long.expiration, held.long.strike, held.short.strike);
+  const name = spreadName(spread.symbol, held.long.expiration, held.long.strike, held.short.strike);
   const intent = optionCloseIntent({
-    underlying: SPREAD_SYMBOL,
+    underlying: spread.symbol,
     legs,
     quantity: held.quantity,
     limitPrice,
     band: { low: quoted.low, high: quoted.high, at: quoted.at },
-    strategy: "nvda-spread-close",
-    reason: `Selling the ${name} back: ${CLOSE_WHY[cause]}.`,
-    expectation: closeExpectation(cause, towardNatural),
+    strategy: `${spread.symbol.toLowerCase()}-spread-close`,
+    reason: `Selling the ${name} back: ${closeWhy(spread)[cause]}.`,
+    expectation: closeExpectation(spread, cause, towardNatural),
     selection: { rule: "spread-close", phase: cause, towardNatural },
   });
   return intent ? [intent] : [];
 }
 
-export const NVDA_CALL_SPREAD: Playbook = {
-  id: "NVDA-CALL-SPREAD",
-  symbols: [SPREAD_SYMBOL],
-  thesis:
-    "S1-NVDA's pre-earnings run-up as a call debit spread — the loss capped at the debit paid; " +
-    "opens only on a confirmed print date, out five sessions before it.",
-  evidence:
-    "docs/research/nvda-earnings-cycle.md F1-F2 — the run-up into a print, 15 of 15 positive " +
-    "since 2023 (P=0.0032, docs/research/events/nvda-2026-11-18-print.md); D-5→D a coin flip",
-  // Unused, as on HC-SAURON: one spread at a time, sized by its Store allocation.
-  size: { conservative: 0, standard: 0, aggressive: 0 },
-  keyedOn: "earnings",
-  derivesFrom: "S1-NVDA",
-  options: { underlyings: [SPREAD_SYMBOL], holdsShortToExpiry: [], requiredLevel: 3 },
-  desiredState: spreadWindow,
-  optionDemand(
-    asOfIso: string,
-    portfolio: Portfolio,
-    listed: ListedExpirations,
-    calendar: readonly EarningsPrint[],
-  ): OptionDemand {
-    const shape = spreadShape(optionBook(portfolio, SPREAD_SYMBOL));
-    const read = readWindow(asOfIso, calendar);
-    if (shape.kind === "vertical" && read.state !== "long") {
-      return { chains: [], contracts: [shape.long.occSymbol, shape.short.occSymbol] };
-    }
-    const entry =
-      shape.kind === "none"
-        ? entryFor(asOfIso, read, listed[SPREAD_SYMBOL] ?? [], calendar)
-        : undefined;
-    return entry
-      ? {
-          chains: [{ underlying: SPREAD_SYMBOL, expiration: entry.expiration, type: "call" }],
-          contracts: [],
-        }
-      : NO_OPTION_DEMAND;
-  },
-  decide(context, portfolio, calendar, mode) {
-    const shape = spreadShape(optionBook(portfolio, SPREAD_SYMBOL));
-    const read = readWindow(context.asOf, calendar);
-    if (shape.kind === "vertical") return closeIntent(context, read, shape);
-    if (shape.kind === "foreign") return [];
-    const entry = entryFor(
-      context.asOf,
-      read,
-      context.options?.listed[SPREAD_SYMBOL] ?? [],
-      calendar,
-    );
-    return entry ? openIntent(context, entry, mode) : [];
-  },
-};
+/** The call spread on one ticker — `NVDA-CALL-SPREAD` is one call of this. Its id is looked up in
+ *  the pair table; a ticker with no call-spread row has none and throws (criterion 8). `lookup` is
+ *  the table's `pairFor`, a seam so a spec can offer a row the real table does not carry yet. */
+export function callSpread(setting: CallSpreadSetting, lookup: typeof pairFor = pairFor): Playbook {
+  const { symbol } = setting;
+  const pair = lookup("call-spread", symbol);
+  if (!pair) {
+    throw new Error(`no pair-table row for call-spread × ${symbol}; add its evidence row first`);
+  }
+  const runUp = lookup("pre-print-run-up", symbol)?.id;
+  const spread: Spread = {
+    symbol,
+    company: setting.company ?? companyOf(symbol),
+    enter: setting.enter,
+    exit: setting.exit,
+    ...(runUp ? { runUp } : {}),
+  };
+  return {
+    id: pair.id,
+    symbols: [symbol],
+    thesis: setting.thesis,
+    evidence: setting.evidence,
+    // Unused, as on HC-SAURON: one spread at a time, sized by its Store allocation.
+    size: { conservative: 0, standard: 0, aggressive: 0 },
+    keyedOn: "earnings",
+    ...(runUp ? { derivesFrom: runUp } : {}),
+    options: { underlyings: [symbol], holdsShortToExpiry: [], requiredLevel: 3 },
+    desiredState: spreadWindow(spread),
+    optionDemand(
+      asOfIso: string,
+      portfolio: Portfolio,
+      listed: ListedExpirations,
+      calendar: readonly EarningsPrint[],
+    ): OptionDemand {
+      const shape = spreadShape(optionBook(portfolio, symbol));
+      const read = readWindow(spread, asOfIso, calendar);
+      if (shape.kind === "vertical" && read.state !== "long") {
+        return { chains: [], contracts: [shape.long.occSymbol, shape.short.occSymbol] };
+      }
+      const entry =
+        shape.kind === "none"
+          ? entryFor(spread, asOfIso, read, listed[symbol] ?? [], calendar)
+          : undefined;
+      return entry
+        ? {
+            chains: [{ underlying: symbol, expiration: entry.expiration, type: "call" }],
+            contracts: [],
+          }
+        : NO_OPTION_DEMAND;
+    },
+    decide(context, portfolio, calendar, mode) {
+      const shape = spreadShape(optionBook(portfolio, symbol));
+      const read = readWindow(spread, context.asOf, calendar);
+      if (shape.kind === "vertical") return closeIntent(spread, context, read, shape);
+      if (shape.kind === "foreign") return [];
+      const entry = entryFor(
+        spread,
+        context.asOf,
+        read,
+        context.options?.listed[symbol] ?? [],
+        calendar,
+      );
+      return entry ? openIntent(spread, context, entry, mode) : [];
+    },
+  };
+}
