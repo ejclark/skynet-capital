@@ -1,3 +1,4 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
@@ -17,7 +18,7 @@ import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { fleetEquity } from "./equity-watch.js";
 import { actionFor } from "./option-cycle.js";
 import type { SafetyController } from "./safety.js";
-import { afterExit, lotFromOutcome, lotShares, type ScoutLot } from "./scout-lots.js";
+import { afterExit, lotFromOutcome, lotShares, type ScoutLot, settleLots } from "./scout-lots.js";
 
 /**
  * The live per-cycle orchestration core (`docs/GAPS-2026-08.md` item 7) — the reusable half of
@@ -66,6 +67,10 @@ export interface BetaScoutDeps {
   /** The bot account the scout trades on (its persona id). Each lot records it, and the scout sells
    *  only lots bought on the account it trades now. */
   readonly hostId?: string;
+  /** How an order the scout left working ended, by its broker id (#4650's settlements) — read
+   *  before a lot from a working buy is sold, which is never on the ordered quantity alone. Absent =
+   *  no source: such a lot waits, never sold on a guess. */
+  readonly settlementOf?: (orderId: string) => OrderSettlement | undefined;
 }
 
 /**
@@ -146,9 +151,10 @@ export class LiveCycleRunner {
   private scoutFiredOrganicallyToday = false;
   /** The scout's own lots (`scout-lots.ts`): only placed buys, with their shares. */
   private scoutLots: ScoutLot[] = [];
-  /** The session day whose due lots were last offered for sale (placed, refused or observed). A
-   *  blocked attempt does not count: the exits are tried again next cycle, never lost. */
-  private exitsTriedDay = "";
+  /** The lots offered for sale today (placed, refused or observed) — tried again next session, not
+   *  next cycle. A blocked attempt marks nothing: those exits are tried again next cycle, never lost.
+   *  A lot confirmed by its settlement later in the day is a lot not yet tried, so it sells then. */
+  private exitTried: { day: string; lots: WeakSet<ScoutLot> } = { day: "", lots: new WeakSet() };
   /** The day a halted cycle last told the operator the scout skipped — once a day, not per cycle. */
   private haltNotedDay = "";
   /** Lots bought on another account than the scout's host now are said once per process. */
@@ -266,8 +272,7 @@ export class LiveCycleRunner {
     const today = sessionDay ?? context.asOf.slice(0, 10);
     const host = readHost(scout); // the one read of the host's subscriptions for this scan
     if (today !== this.scoutDay) this.rollScoutDay(today);
-    const exited =
-      this.exitsTriedDay === today ? [] : await this.exitDueLots(today, context, scout, host);
+    const exited = await this.exitDueLots(today, context, scout, host);
     // Disarmed (`SKYNET_BETA_FORCING` off): its due lots were still offered for sale above.
     if (scout.maxPicks <= 0) {
       return 0;
@@ -334,6 +339,11 @@ export class LiveCycleRunner {
     // submit, never for a pick observed, blocked or rejected.
     await this.submitScoutIntents(guarded, scout, undefined, (outcome) => {
       const lot = lotFromOutcome(outcome, today, scout.hostId);
+      if (!lot && outcome.result?.status === "working") {
+        this.deps.onScoutWarn?.(
+          `[beta-scout] ${outcome.intent.symbol} pick accepted with no order id — its fill cannot be confirmed, so the scout will not sell it`,
+        );
+      }
       if (!lot) return;
       this.scoutLots = [...this.scoutLots, lot];
       this.persistScoutState();
@@ -370,9 +380,36 @@ export class LiveCycleRunner {
     this.persistScoutState();
   }
 
-  /** A lot this host may sell today: bought for an earlier session, on this account. */
+  /** A lot this host may sell today: bought for an earlier session, on this account, with what it
+   *  filled confirmed (never a buy still working). */
   private isDue(lot: ScoutLot, today: string, scout: BetaScoutDeps): boolean {
-    return lot.day < today && (!(lot.host && scout.hostId) || lot.host === scout.hostId);
+    return (
+      !lot.workingOrderId &&
+      lot.day < today &&
+      (!(lot.host && scout.hostId) || lot.host === scout.hostId)
+    );
+  }
+
+  private triedToday(lot: ScoutLot, today: string): boolean {
+    return this.exitTried.day === today && this.exitTried.lots.has(lot);
+  }
+
+  /** The lots just offered — and what a partly filled sell left of one — wait for the next session. */
+  private markTried(today: string, offered: readonly ScoutLot[]): void {
+    if (this.exitTried.day !== today) this.exitTried = { day: today, lots: new WeakSet() };
+    const wasOffered = (lot: ScoutLot) =>
+      offered.some((o) => o.symbol === lot.symbol && o.day === lot.day && o.host === lot.host);
+    for (const lot of this.scoutLots) {
+      if (!lot.workingOrderId && wasOffered(lot)) this.exitTried.lots.add(lot);
+    }
+  }
+
+  /** Each working lot turned into what its order filled, or dropped when it filled nothing. */
+  private settleWorkingLots(scout: BetaScoutDeps): void {
+    const settled = settleLots(this.scoutLots, scout.settlementOf);
+    if (!settled.changed) return;
+    this.scoutLots = settled.lots;
+    this.persistScoutState();
   }
 
   /**
@@ -392,11 +429,11 @@ export class LiveCycleRunner {
     host: ScoutHost,
   ): Promise<readonly string[]> {
     this.noteForeignLots(today, scout);
-    const due = this.scoutLots.filter((lot) => this.isDue(lot, today, scout));
-    if (due.length === 0 || this.haltedToday(today)) {
-      if (due.length === 0) this.exitsTriedDay = today;
-      return [];
-    }
+    this.settleWorkingLots(scout);
+    const due = this.scoutLots.filter(
+      (lot) => this.isDue(lot, today, scout) && !this.triedToday(lot, today),
+    );
+    if (due.length === 0 || this.haltedToday(today)) return [];
     const portfolio = await scout.broker.getPortfolio();
     const gone = due.filter((lot) => heldQuantity(portfolio, lot.symbol) <= 0);
     this.scoutLots = this.scoutLots.filter((lot) => !gone.includes(lot));
@@ -409,11 +446,13 @@ export class LiveCycleRunner {
     // same shares (`uncovers-short-call`). Sells skip every entry rule — the subscribed-only rule
     // included — so a plain exit is approved exactly as before.
     const verdict = applyGuardsWithVerdicts(exits, portfolio, context, host.risk);
+    // An exit releases only the lots it was sized from — never one tried earlier today, nor one
+    // still working.
     const offered = await this.submitScoutIntents(exits, scout, verdict, (outcome) => {
-      this.scoutLots = afterExit(this.scoutLots, outcome, (lot) => this.isDue(lot, today, scout));
+      this.scoutLots = afterExit(this.scoutLots, outcome, (lot) => due.includes(lot));
       this.persistScoutState();
     });
-    if (offered) this.exitsTriedDay = today;
+    if (offered) this.markTried(today, due);
     this.persistScoutState();
     return offered ? verdict.approved.map((exit) => exit.symbol) : [];
   }

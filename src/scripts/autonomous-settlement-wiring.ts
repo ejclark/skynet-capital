@@ -37,6 +37,37 @@ export function settlementSink(
   };
 }
 
+/** How many settlements this process keeps in memory — far more than a day's working orders. */
+const BOOK_SIZE = 500;
+
+/**
+ * The settle loops' listener and the forced pick's reader as one (review of #4642 slice 10): each
+ * settlement goes to the store (`settlementSink`) AND into a small in-memory book, so the scout can
+ * confirm what a working buy filled even with no store, or after a failed write; one an earlier run
+ * recorded is read back from the store. The scout never sells a working-buy lot without it.
+ */
+export function settlementBook(
+  db: Pick<DecisionDb, "recordSettlements" | "settlementOf"> | undefined,
+  logger: Log = console,
+): {
+  readonly onSettled: (settlement: OrderSettlement) => void;
+  readonly settlementOf: (orderId: string) => OrderSettlement | undefined;
+} {
+  const sink = settlementSink(db, logger);
+  const book = new Map<string, OrderSettlement>();
+  return {
+    onSettled(settlement) {
+      book.set(settlement.orderId, settlement);
+      for (const oldest of book.keys()) {
+        if (book.size <= BOOK_SIZE) break;
+        book.delete(oldest);
+      }
+      sink?.(settlement);
+    },
+    settlementOf: (orderId) => book.get(orderId) ?? db?.settlementOf(orderId),
+  };
+}
+
 /**
  * Boot, before the first cycle: every live order a decision left `working` in the last week that no
  * settlement has closed, back into the settle loop of the broker that placed it — the broker may

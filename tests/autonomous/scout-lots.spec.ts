@@ -4,6 +4,8 @@ import type { ScoutState } from "../../src/autonomous/bots-state-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { LiveCycleRunner } from "../../src/autonomous/live-cycle.js";
 import { SafetyController } from "../../src/autonomous/safety.js";
+import { settleLots } from "../../src/autonomous/scout-lots.js";
+import type { OrderSettlement } from "../../src/domain/order-settlement.js";
 import type { OrderIntent, OrderResult } from "../../src/domain/types.js";
 import { aContext, aSubscription } from "../support/builders.js";
 
@@ -28,6 +30,7 @@ function account() {
   const store = { load: () => state, save: (next: ScoutState) => (state = next) };
   const sells: string[] = [];
   const decisions: DecisionRecord[] = [];
+  const warnings: string[] = [];
   const held = async () =>
     (await broker.getPortfolio()).positions.map((p) => `${p.quantity} ${p.symbol}`);
   /** Another playbook on the same account buying the same name (Sauron's own rules, say). */
@@ -40,6 +43,8 @@ function account() {
       readonly blocked?: () => string | null;
       /** The broker's answer to the scout's own order — a partial fill, a rejection. */
       readonly answer?: (intent: OrderIntent) => Promise<OrderResult>;
+      /** How an order the scout left working ended (the settle loop's record). */
+      readonly settlementOf?: (orderId: string) => OrderSettlement | undefined;
     } = {},
   ) {
     const scoutBroker = {
@@ -72,13 +77,34 @@ function account() {
         mode: opts.mode ?? "live",
         subscriptions: () => [aSubscription("sauron", "BETA-SCOUT")],
         hostId: "sauron",
+        ...(opts.settlementOf ? { settlementOf: opts.settlementOf } : {}),
       },
       scoutState: store,
       onDecision: (r) => decisions.push(r),
+      onScoutWarn: (line) => warnings.push(line),
     });
   }
-  return { broker, runner, held, otherBuys, sells, decisions, state: () => state };
+  return { broker, runner, held, otherBuys, sells, decisions, warnings, state: () => state };
 }
+
+/** The scout's buys left `working` (a pick staged for the open), each placing `fills` shares now —
+ *  what the broker will later say it filled. Sells go straight to the account. */
+function leftWorking(acct: ReturnType<typeof account>, fills: number, ids = true) {
+  let n = 0;
+  return async (intent: OrderIntent): Promise<OrderResult> => {
+    if (intent.side === "sell") return acct.broker.submit(intent);
+    if (fills > 0) await acct.broker.submit({ ...intent, quantity: fills });
+    n += 1;
+    return { intent, status: "working", ...(ids ? { orderId: `o-${n}` } : {}) };
+  };
+}
+
+const ended = (orderId: string, filledQuantity: number): OrderSettlement => ({
+  orderId,
+  status: filledQuantity > 0 ? "filled" : "unfilled",
+  filledQuantity,
+  settledAt: "2026-07-27T13:31:00Z",
+});
 
 describe("the forced pick's lots", () => {
   // The review's first repro: armed in observe (today's production), the pick was "owned" though
@@ -147,6 +173,90 @@ describe("the forced pick's lots", () => {
     await acct.otherBuys(500);
     await acct.runner().runCycle(signal(DAY_2));
     expect(acct.sells).toEqual([]);
+  });
+
+  // The review's third repro: a buy recorded `working` at its ordered quantity (49) that never
+  // filled left a lot of 49, and the next session sold 49 of another playbook's 100 under it.
+  describe("a lot from a buy left working is never sold on the ordered quantity", () => {
+    it("settled with nothing filled: the lot is dropped, and the next session sells nothing", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      await acct.runner({ answer: leftWorking(acct, 0), settlementOf }).runCycle(signal(DAY_1));
+      expect(acct.state()?.ownedLots).toEqual([
+        expect.objectContaining({ symbol: "MSFT", quantity: 49, workingOrderId: "o-1" }),
+      ]);
+
+      settled.set("o-1", ended("o-1", 0));
+      await acct.otherBuys(100);
+      await acct.runner({ maxPicks: 0, settlementOf }).runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual([]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+      expect(acct.state()?.ownedLots).toEqual([]);
+    });
+
+    it("settled with 7 filled: the lot becomes 7, and only those 7 are sold", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      await acct.runner({ answer: leftWorking(acct, 7), settlementOf }).runCycle(signal(DAY_1));
+
+      settled.set("o-1", ended("o-1", 7));
+      await acct.otherBuys(100);
+      await acct.runner({ maxPicks: 0, settlementOf }).runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual(["7 MSFT"]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+    });
+
+    it("not settled yet: nothing is sold that cycle; it sells once the settlement lands, the same session", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      await acct.runner({ answer: leftWorking(acct, 7), settlementOf }).runCycle(signal(DAY_1));
+      await acct.otherBuys(100);
+
+      const scout = acct.runner({ maxPicks: 0, settlementOf });
+      await scout.runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual([]);
+      expect(acct.state()?.ownedLots).toEqual([
+        expect.objectContaining({ quantity: 49, workingOrderId: "o-1" }),
+      ]);
+
+      settled.set("o-1", ended("o-1", 7));
+      await scout.runCycle(signal(DAY_2_LATER));
+      await scout.runCycle(signal(DAY_3));
+      expect(acct.sells).toEqual(["7 MSFT"]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+    });
+
+    it("with no settlement source it waits — never sold on a guess", async () => {
+      const acct = account();
+      await acct.runner({ answer: leftWorking(acct, 7) }).runCycle(signal(DAY_1));
+      await acct.otherBuys(100);
+      await acct.runner({ maxPicks: 0 }).runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual([]);
+      expect(await acct.held()).toEqual(["107 MSFT"]);
+    });
+
+    it("left working with no order id: no lot, and the operator is told it will not be sold", async () => {
+      const acct = account();
+      await acct.runner({ answer: leftWorking(acct, 7, false) }).runCycle(signal(DAY_1));
+      expect(acct.state()?.ownedLots).toEqual([]);
+      expect(acct.warnings).toEqual([
+        expect.stringContaining("MSFT pick accepted with no order id"),
+      ]);
+      await acct.otherBuys(100);
+      await acct.runner({ maxPicks: 0 }).runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual([]);
+    });
+
+    it("a settlement read that fails keeps the lot as it is, for the next cycle", () => {
+      const lot = { symbol: "MSFT", quantity: 49, day: "2026-07-24", workingOrderId: "o-1" };
+      const failing = () => {
+        throw new Error("db locked");
+      };
+      expect(settleLots([lot], failing)).toEqual({ lots: [lot], changed: false });
+    });
   });
 
   it("drops a lot the account no longer holds — sold by something else — and sells nothing for it", async () => {

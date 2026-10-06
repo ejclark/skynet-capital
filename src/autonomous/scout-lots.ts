@@ -1,3 +1,4 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { isRecord } from "../storage/parse-guards.js";
 import type { IntentOutcome } from "./decision-record.js";
 
@@ -9,10 +10,15 @@ import type { IntentOutcome } from "./decision-record.js";
  * name — another playbook's shares included — under the BETA-SCOUT label; and the rollover released
  * a lot before its sell was placed, so a halted first cycle stranded it (#4786).
  *
- * A lot is now fill-based and counted: it exists only once a scout buy was actually placed (filled,
- * or still working at the broker — a pick staged after the close fills at the open), carries the
- * shares that buy took, and is sold at the first session after its own, never for more than it
+ * A lot is now fill-based and counted: it exists only once a scout buy was actually placed, carries
+ * the shares that buy took, and is sold at the first session after its own, never for more than it
  * holds and never for more than the account holds. It is released only once its sell was placed.
+ *
+ * A buy still WORKING at the broker (a pick staged after the close fills at the open; a share order
+ * whose fill the submit did not see) has filled nothing yet. Its lot is kept against the order's id
+ * and is never sold on the ordered quantity: the settle loop records how the order ended (#4650,
+ * `order_settlements`), and `settleLots` turns the lot into what it filled — or drops it when it
+ * filled nothing. Until then it waits, and is looked at again next cycle.
  */
 export interface ScoutLot {
   readonly symbol: string;
@@ -22,6 +28,9 @@ export interface ScoutLot {
   readonly day: string;
   /** The bot account (persona id) it was bought on, when known. */
   readonly host?: string;
+  /** Present while the buy is still working at the broker: its order id, the key its settlement
+   *  arrives under. Such a lot is never sold until `settleLots` has confirmed what it filled. */
+  readonly workingOrderId?: string;
 }
 
 /** Shares an outcome actually moved: a placed order the broker took, at what it filled, or at the
@@ -37,7 +46,9 @@ function sharesMoved(outcome: IntentOutcome): number {
 }
 
 /** The lot a scout buy's outcome leaves, if any: only a buy the broker actually took. Never one
- *  from an observed, blocked, refused or rejected pick. */
+ *  from an observed, blocked, refused or rejected pick. A buy still working keeps its order id and
+ *  is not yet sellable (`settleLots`); one working with no order id cannot be confirmed, so it
+ *  leaves no lot at all — the caller says so. */
 export function lotFromOutcome(
   outcome: IntentOutcome,
   day: string,
@@ -46,7 +57,37 @@ export function lotFromOutcome(
   if (outcome.intent.side !== "buy") return undefined;
   const quantity = sharesMoved(outcome);
   if (!(quantity > 0)) return undefined;
-  return { symbol: outcome.intent.symbol, quantity, day, ...(host ? { host } : {}) };
+  const lot = { symbol: outcome.intent.symbol, quantity, day, ...(host ? { host } : {}) };
+  if (outcome.result?.status !== "working") return lot;
+  const orderId = outcome.result.orderId;
+  return orderId ? { ...lot, workingOrderId: orderId } : undefined;
+}
+
+/**
+ * Each working lot reconciled with how its order ended: filled → a lot of exactly what filled;
+ * filled nothing (rejected, canceled, expired at the open) → no lot; no settlement yet → kept as it
+ * is, to be looked at again. A failed read is "no settlement yet", never a guess.
+ */
+export function settleLots(
+  lots: readonly ScoutLot[],
+  settlementOf: ((orderId: string) => OrderSettlement | undefined) | undefined,
+): { readonly lots: ScoutLot[]; readonly changed: boolean } {
+  let changed = false;
+  const out = lots.flatMap((lot): ScoutLot[] => {
+    if (!lot.workingOrderId) return [lot];
+    let settlement: OrderSettlement | undefined;
+    try {
+      settlement = settlementOf?.(lot.workingOrderId);
+    } catch {
+      settlement = undefined;
+    }
+    if (!settlement) return [lot];
+    changed = true;
+    if (!(settlement.filledQuantity > 0)) return [];
+    const { workingOrderId: _settled, ...confirmed } = lot;
+    return [{ ...confirmed, quantity: settlement.filledQuantity }];
+  });
+  return { lots: out, changed };
 }
 
 /**
@@ -94,10 +135,16 @@ export function parseOwned(value: unknown): {
       continue;
     }
     if (!isRecord(entry)) continue;
-    const { symbol, quantity, day, host } = entry;
+    const { symbol, quantity, day, host, workingOrderId } = entry;
     if (typeof symbol !== "string" || typeof day !== "string") continue;
     if (typeof quantity !== "number" || !(quantity > 0)) continue;
-    lots.push({ symbol, quantity, day, ...(typeof host === "string" ? { host } : {}) });
+    lots.push({
+      symbol,
+      quantity,
+      day,
+      ...(typeof host === "string" ? { host } : {}),
+      ...(typeof workingOrderId === "string" ? { workingOrderId } : {}),
+    });
   }
   return { lots, legacySymbols };
 }

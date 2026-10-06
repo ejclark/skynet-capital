@@ -229,6 +229,7 @@ export function buildScoutDeps(
     subscriptions: () => readonly PlaybookSubscription[];
     realizedPlForPlaybook?: (playbookId: string) => number;
     hostId?: string;
+    settlementOf?: (orderId: string) => OrderSettlement | undefined;
   },
 ): BetaScoutDeps | undefined {
   if (!scoutBroker) {
@@ -397,8 +398,8 @@ export function buildLiveBot(
     /** The bots app's local event bus (#1211 slice 2) — omit (no durable dir configured) to run
      *  exactly as before this existed: no publish attempted, nothing to fail. */
     activityBus?: ActivityEventBus;
-    /** What an order this bot left `working` became once the broker ended it (#4650) — omit (no
-     *  decision store) and late fills stay with the broker's own ledger, as before. */
+    /** What an order this bot left `working` became once the broker ended it (#4650) — omit and
+     *  late fills stay with the broker's own ledger, as before. */
     onSettled?: (settlement: OrderSettlement) => void;
   },
 ): LiveBot {

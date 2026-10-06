@@ -93,7 +93,7 @@ import {
   armScoutStaging,
   scoutSkipSymbols,
 } from "./autonomous-scout-staging.js";
-import { resumeWorkingOrders, settlementSink } from "./autonomous-settlement-wiring.js";
+import { resumeWorkingOrders, settlementBook } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 const LIVE_EVAL_INTERVAL_MS = 15_000;
@@ -263,7 +263,10 @@ async function runLive(): Promise<void> {
       .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
   }
   const onDecision = decisionSink(audit, decisionDb);
-  const onSettled = settlementSink(decisionDb); // a `working` order's late fill, beside its decision
+  // A `working` order's late fill, beside its decision — and where the forced pick reads what its
+  // working buys filled before it sells one.
+  const settlements = settlementBook(decisionDb);
+  const onSettled = settlements.onSettled;
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
@@ -313,7 +316,7 @@ async function runLive(): Promise<void> {
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
       ...(botActivityBus ? { activityBus: botActivityBus } : {}),
-      ...(onSettled ? { onSettled } : {}),
+      onSettled,
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -408,6 +411,7 @@ async function runLive(): Promise<void> {
       mode,
       subscriptions: () => botRosters[0]?.subscriptions ?? [],
       ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
+      settlementOf: settlements.settlementOf,
       // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
       // under its own persona id, never the host's.
       ...(decisionDb

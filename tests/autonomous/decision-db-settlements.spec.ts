@@ -296,6 +296,25 @@ describe("DecisionDb — late fills of working orders", () => {
     ]);
     expect(db.unsettledOrders("someone-else", 0)).toEqual([]);
   });
+
+  // What the forced pick reads before it sells a lot its working buy left (review of #4642 slice 10).
+  it("reads one order's settlement by its broker id — none while the order is still working", () => {
+    db.record(cycle(T0, shares("buy"), working("sh-1")));
+    expect(db.settlementOf("sh-1")).toBeUndefined();
+    db.recordSettlements([
+      {
+        orderId: "sh-1",
+        status: "filled",
+        filledQuantity: 7,
+        filledPrice: 100,
+        settledAt: "2026-10-07T15:00:00Z",
+      },
+    ]);
+    db.close();
+    db = openDecisionDb(path);
+    expect(db.settlementOf("sh-1")).toMatchObject({ status: "filled", filledQuantity: 7 });
+    expect(db.settlementOf("never-placed")).toBeUndefined();
+  });
 });
 
 describe("a spread whose order id the decision never learned, first seen settled", () => {
