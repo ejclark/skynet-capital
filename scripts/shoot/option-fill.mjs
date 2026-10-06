@@ -27,7 +27,7 @@
 //
 // THE EXPIRY (#4650): `--expired` lets the dashboard's REAL half-hourly sweep read the broker's report
 // that the sold put expired, into a ledger holding what the stream journaled, then serves Activity
-// from the REAL `/api/desk/:id/activity` route over that ledger. The "expired worthless" row and the
+// from the REAL `/api/desk/:id/activity` route over that ledger. The EXPIRED row, its day and the
 // premium it keeps are what the automatic path writes, not fixture text. Frames: `expired-*`.
 //
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
@@ -249,8 +249,9 @@ async function afterTheExpiry() {
   };
   const path = "/api/desk/bot-sauron/activity";
   const body = await answer((res) => serveDeskJson(res, path, path, config));
-  // The frame proves the close: the expiry's row, keeping the whole premium the put was sold for.
-  if (!body.activity.some((r) => r.status === "expired worthless" && r.realizedPl === "+$212")) {
+  // The frame proves the close: the expiry's row, named as one, keeping the whole premium.
+  const closed = (r) => r.lifecycle === "OPEXP" && r.realizedPl === "+$212";
+  if (!body.activity.some(closed)) {
     throw new Error("the sweep did not close the sold put on Activity");
   }
   return body;
@@ -367,9 +368,10 @@ if (SCENARIO === "wire") {
   process.exit(0);
 }
 
-// After the expiry: the put's report row at the top of the account's Activity. At 390 the status sits
-// past the blotter's sideways scroll, so the phone frame is scrolled to it; the kept premium is a
-// wide-screen column (`col-detail`), so the desktop frame is the one that shows the +$212.
+// After the expiry: the put's report row at the top of the account's Activity, at the blotter's own
+// scroll position — the honest first view, where the day, the contract and the EXPIRED chip must
+// read together at 390. The kept premium is a wide-screen column (`col-detail`), so the desktop
+// frame is the one that shows the +$212.
 if (SCENARIO === "expired") {
   for (const [tag, viewport] of [
     ["phone", { width: 390, height: 844 }],
@@ -377,14 +379,12 @@ if (SCENARIO === "expired") {
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(`${origin}/app/u/bot-sauron/activity`);
-    const row = page.locator("tr", { hasText: "expired worthless" });
+    const row = page.locator("tr", { has: page.locator(".tl-lifecycle", { hasText: "EXPIRED" }) });
     await row.waitFor();
     await page.waitForTimeout(600);
     await row.evaluate((el) => {
       el.scrollIntoView({ block: "start" });
       window.scrollBy(0, -220); // the sticky header, and the table's own header row above it
-      const scroller = el.closest(".blotter-scroll");
-      if (scroller) scroller.scrollLeft = scroller.scrollWidth;
     });
     await shoot(`expired-activity-${tag}`);
   }

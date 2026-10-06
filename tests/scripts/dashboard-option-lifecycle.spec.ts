@@ -15,6 +15,7 @@ import {
   type TradeActivityRecord,
 } from "../../src/observatory/activity-store.js";
 import { deskLedger } from "../../src/observatory/desk-data.js";
+import type { DeskActivityEvent } from "../../src/observatory/desk-json-view.js";
 import type { Participant } from "../../src/participants/participant.js";
 import {
   type LifecycleSweepDeps,
@@ -148,11 +149,11 @@ describe("the dashboard's option expiry/assignment sweep", () => {
       readTradeActivity: (id: string) => store.list(id),
     } as unknown as DashboardServerConfig;
     await serveDeskJson(res, "/api/desk/sauron/activity", "/api/desk/sauron/activity", config);
-    const rows = (JSON.parse(body) as { activity: { status: string; realizedPl?: string }[] })
-      .activity;
-    expect(rows.map((r) => [r.status, r.realizedPl])).toEqual([
-      ["expired worthless", "+$212"],
-      ["filled", undefined],
+    const rows = (JSON.parse(body) as { activity: DeskActivityEvent[] }).activity;
+    // The report names its event (the row's chip reads EXPIRED, not a second SELL); the sale does not.
+    expect(rows.map((r) => [r.status, r.realizedPl, r.lifecycle])).toEqual([
+      ["expired worthless", "+$212", "OPEXP"],
+      ["filled", undefined, undefined],
     ]);
   });
 

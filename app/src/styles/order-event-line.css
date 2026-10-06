@@ -23,6 +23,12 @@
 .tl-sell {
   color: var(--neg);
 }
+/* An expiry, assignment, exercise or settlement on Activity (#4650): no order was bought or sold,
+   so the chip names the event in plain text on a dashed edge, never a buy/sell hue. */
+.tl-lifecycle {
+  color: var(--text);
+  border-style: dashed;
+}
 .tl-status {
   color: var(--muted);
   font-family: var(--mono);

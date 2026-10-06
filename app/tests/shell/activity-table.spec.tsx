@@ -309,3 +309,46 @@ describe("ActivityTable — the row a link points at", () => {
     expect(scroll).not.toHaveBeenCalled();
   });
 });
+
+/** #4650: an expiry or an assignment is not an order. Swept into Activity on its own, a $0 "SELL"
+ *  under the put's real sale read as a second sale on a phone, stamped at a time it never had. */
+describe("ActivityTable — what the broker reported instead of an order", () => {
+  const PUT = "CRWV $85 PUT · 13 NOV 26";
+  const sold = event({ orderId: "opt-put-1", display: PUT, side: "sell", quantity: 1, filled: 1 });
+  const report = (lifecycle: DeskActivityEvent["lifecycle"], orderId: string) =>
+    event({
+      orderId,
+      display: PUT,
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$0.00",
+      status: lifecycle === "OPASN" ? "assigned" : "expired worthless",
+      at: "2026-11-13T23:59:59.999Z",
+      lifecycle,
+    });
+
+  it("names the event where a side would be — EXPIRED, ASSIGNED — never a second SELL", () => {
+    const { container } = render(
+      <ActivityTable
+        events={[report("OPEXP", "lifecycle:a"), report("OPASN", "lifecycle:b"), sold]}
+      />,
+    );
+    expect(screen.getByText("EXPIRED")).toHaveClass("tl-side", "tl-lifecycle");
+    expect(screen.getByText("ASSIGNED")).toHaveClass("tl-side", "tl-lifecycle");
+    // The one real sale keeps its SELL; neither report borrows the sell hue.
+    expect(screen.getAllByText("SELL")).toHaveLength(1);
+    expect(container.querySelectorAll(".tl-sell")).toHaveLength(1);
+  });
+
+  it("dates a report by its day alone, never the synthetic end-of-day time", () => {
+    render(<ActivityTable events={[report("OPEXP", "lifecycle:a"), sold]} />);
+    const reportRow = document.getElementById("act-lifecycle:a");
+    expect(reportRow?.querySelector("td.num")?.textContent).toBe("Nov 13");
+    // An order still carries its time of day.
+    const saleStamp = document
+      .getElementById("act-opt-put-1")
+      ?.querySelector("td.num")?.textContent;
+    expect(saleStamp).toMatch(/\d{1,2}:\d{2}/);
+  });
+});

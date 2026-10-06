@@ -1,4 +1,8 @@
-import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import {
+  LIFECYCLE_STATUS,
+  type NormalizedLifecycleActivity,
+  type OptionLifecycleType,
+} from "../trading/option-lifecycle.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
 /**
@@ -20,6 +24,24 @@ export function lifecycleOrderId(activityId: string): string {
 /** The inverse: the broker's activity id behind a ledger line, or `undefined` for an order's line. */
 export function lifecycleActivityId(orderId: string): string | undefined {
   return orderId.startsWith(LIFECYCLE_PREFIX) ? orderId.slice(LIFECYCLE_PREFIX.length) : undefined;
+}
+
+const TYPE_BY_STATUS = new Map(
+  (Object.entries(LIFECYCLE_STATUS) as [OptionLifecycleType, string][]).map(([type, status]) => [
+    status,
+    type,
+  ]),
+);
+
+/** Which event a ledger line records — read off its namespaced id and the status
+ *  `lifecycleLedgerRecord` wrote — or `undefined` for an order's line. Activity names the event in
+ *  the side column's place, since nothing was bought or sold (#4650). */
+export function lifecycleTypeOf(
+  record: Pick<TradeActivityRecord, "orderId" | "status">,
+): OptionLifecycleType | undefined {
+  return lifecycleActivityId(record.orderId) === undefined
+    ? undefined
+    : TYPE_BY_STATUS.get(record.status);
 }
 
 export function lifecycleLedgerRecord(

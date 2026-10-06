@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { OptionLifecycleType } from "../../../src/trading/option-lifecycle";
+import { lifecycleDayText } from "../live/lifecycle-day";
 import {
   fetchOptionLifecycle,
   type LifecycleRow,
@@ -45,25 +46,6 @@ const EVENT_GLYPH: Record<OptionLifecycleType, string> = {
   OPTRD: "⇄",
 };
 
-/**
- * "Today", else "Sep 18" — the event's DAY, never a clock time, and read in UTC.
- *
- * Both halves of that are corrections of the obvious version. A lifecycle activity usually carries
- * a DATE with no time of day, which `parseLifecycleActivity` normalizes to the last instant of that
- * day so it sorts after the fills it closes (`option-lifecycle.ts`). Rendering that stamp as a time
- * would print "11:59 PM" — a time the event never had, and one still in the future for most of the
- * day. Rendering it in the browser's own zone would date a 18 Sep expiry "Sep 19" for every member
- * east of UTC, which is a false claim about a settlement date rather than a formatting nicety.
- */
-function whenText(at: string, now: Date): string {
-  const stamp = new Date(at);
-  if (Number.isNaN(stamp.getTime())) return at;
-  const day = (d: Date) => d.toISOString().slice(0, 10);
-  return day(stamp) === day(now)
-    ? "Today"
-    : stamp.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-}
-
 /** "1 contract", "3 contracts" — the only word on the row this side chooses, and it chooses it for
  *  grammar alone. Every sentence that carries meaning is the server's, rendered verbatim. */
 function countText(row: LifecycleRow): string {
@@ -79,7 +61,7 @@ function EventRow({ row, now }: { readonly row: LifecycleRow; readonly now: Date
           <span aria-hidden="true">{EVENT_GLYPH[row.type]}</span> {row.headline}
         </span>
         <span className="lc-meta">
-          {countText(row)} · {whenText(row.at, now)}
+          {countText(row)} · {lifecycleDayText(row.at, now)}
         </span>
       </p>
       <p className="lc-sym">{row.display}</p>
@@ -104,7 +86,7 @@ export function OptionLifecycleCard({
   now,
 }: {
   readonly deskId: string;
-  /** Test seam only — the clock `whenText` places each event against. */
+  /** Test seam only — the clock `lifecycleDayText` places each event against. */
   readonly now?: Date;
 }): ReactElement | null {
   // Deliberately NOT on the desk's order bus, and deliberately not polled. None of these four

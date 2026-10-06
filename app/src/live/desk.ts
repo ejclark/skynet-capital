@@ -296,6 +296,9 @@ export interface DeskActivityLine {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** Present when the broker reported an expiry, assignment, exercise or share settlement rather
+   *  than an order filling (#4650): the row names it where a side would be. `side` is unchanged. */
+  readonly lifecycle?: "OPEXP" | "OPASN" | "OPEXC" | "OPTRD";
 }
 
 export interface DeskActivityEvent extends DeskActivityLine {
