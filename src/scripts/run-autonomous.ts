@@ -48,6 +48,11 @@ import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
+import {
+  acceptAndKeep,
+  applyBootSubscriptions,
+  subscriptionsCache,
+} from "../autonomous/subscriptions-cache.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
 import { botTradingClient } from "../bots/bot-broker.js";
@@ -140,12 +145,15 @@ async function runLive(): Promise<void> {
   // process's first cycle, not 30s into it.
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
+  // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
+  // dashboard trades the last subscriptions received rather than none (#4642 slice 10 review).
+  let keptSubscriptions = subscriptionsCache(undefined);
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
     undefined,
     (cursor) => replication.onPoll(cursor),
     (snapshot) => {
-      if (subscriptionSync) subscriptionSync.accept(snapshot);
+      if (subscriptionSync) acceptAndKeep(subscriptionSync, keptSubscriptions, snapshot);
       else parkedSubscriptions = snapshot;
     },
   );
@@ -210,6 +218,7 @@ async function runLive(): Promise<void> {
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
   // stamped on /data/health.json so the next deploy PROVES restore by being read (issue #1181).
   const botsStateDb = seedBotsState(process.env);
+  keptSubscriptions = subscriptionsCache(botsStateDb);
   health.restored(restoreBotsState(botsStateDb, tracker, sentiment, bots));
 
   // Constructed before the boot-time reconcile() below, so a credential rotated while this
@@ -380,8 +389,9 @@ async function runLive(): Promise<void> {
         error,
       ),
   });
-  // Whatever the boot fetch already carried, applied now that there is a roster to apply it to.
-  if (parkedSubscriptions) subscriptionSync.accept(parkedSubscriptions);
+  // Whatever the boot fetch already carried — else the last subscriptions kept — applied now that
+  // there is a roster to apply it to.
+  applyBootSubscriptions(subscriptionSync, keptSubscriptions, parkedSubscriptions);
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real

@@ -32,6 +32,10 @@ export interface BotsStateDb {
   /** The beta scout's day-state (`live-cycle.ts`), or undefined before its first save. */
   loadScoutState(): ScoutState | undefined;
   saveScoutState(state: ScoutState): void;
+  /** The last Playbook Store subscriptions snapshot the bots applied, as stored JSON (unvalidated:
+   *  `subscriptions-cache.ts` parses it), or undefined before the first save. */
+  loadSubscriptions(): unknown;
+  saveSubscriptions(snapshot: unknown): void;
   /** COND-SCOUT's shadow ledger (#3651): the probes still open, oldest first. */
   loadShadowProbes(): ShadowProbe[];
   saveShadowProbe(probe: ShadowProbe): void;
@@ -94,12 +98,19 @@ export function openBotsStateDb(path: string): BotsStateDb {
       snapshot_json TEXT NOT NULL,
       PRIMARY KEY (probe_id, at)
     );
+    CREATE TABLE IF NOT EXISTS subscriptions_cache (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      snapshot_json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS cond_scout_retros (
       probe_id TEXT PRIMARY KEY,
       closed_at INTEGER NOT NULL,
       retro_json TEXT NOT NULL
     );
   `);
+  const upsertSubscriptions = db.prepare(
+    "INSERT INTO subscriptions_cache (id, snapshot_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+  );
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
   );
@@ -225,6 +236,15 @@ export function openBotsStateDb(path: string): BotsStateDb {
         firedOrganicallyToday: row.fired_organically_today === 1,
         ownedSymbols: JSON.parse(row.owned_json),
       };
+    },
+    loadSubscriptions(): unknown {
+      const row = db.prepare("SELECT snapshot_json FROM subscriptions_cache WHERE id = 1").get() as
+        | { snapshot_json: string }
+        | undefined;
+      return row ? JSON.parse(row.snapshot_json) : undefined;
+    },
+    saveSubscriptions(snapshot) {
+      upsertSubscriptions.run(JSON.stringify(snapshot));
     },
     saveScoutState(state) {
       upsertScoutState.run(
