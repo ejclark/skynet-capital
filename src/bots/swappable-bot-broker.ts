@@ -2,6 +2,7 @@ import type { AlpacaBrokerAdapter, BotOrderSubmission } from "../adapters/alpaca
 import { AlpacaOptionMarket } from "../adapters/alpaca-option-market.js";
 import type { OptionOrderTiming } from "../adapters/alpaca-option-order-flow.js";
 import { PendingOptionOrders } from "../adapters/pending-option-orders.js";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import type {
   OptionMarket,
@@ -95,6 +96,12 @@ export class SwappableBotBroker implements BrokerPort, OptionMarketPort, OptionO
   /** Cancels every open order this bot stamped — once at boot, before the first cycle. */
   sweepOrphanOptionOrders(): Promise<readonly string[]> {
     return this.current.sweepOrphanOptionOrders();
+  }
+
+  /** The broker's newest option expiry/assignment reports for this bot's account, read with the
+   *  credentials in force now — a rotation onto another account reads that account's. */
+  readOptionLifecycle(): ReturnType<AlpacaOptionsClient["readOptionLifecycleActivities"]> {
+    return botOptionsClient(this.credentials).readOptionLifecycleActivities();
   }
 
   /** The reload seam: rebuilds the underlying client via the same, unchanged construction

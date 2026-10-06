@@ -109,4 +109,21 @@ describe("SwappableBotBroker — options", () => {
       expect(snapshots[0]?.url).toContain("data.alpaca.markets");
     });
   });
+
+  // #4642 slice 8: expiries and assignments are account activities, never fills — the bot reads
+  // its own, with whichever key is in force, so a rotation reads the new account's.
+  it("reads the account's option expiry/assignment reports with the credentials in force", async () => {
+    const report = { id: "a1", activity_type: "OPEXP", symbol: PUT, qty: "1", date: "2026-11-06" };
+    const { fetchFn, seen } = fakeFetch({ "GET /v2/account/activities": [report] });
+    await withFetch(fetchFn, async () => {
+      const broker = new SwappableBotBroker(bot);
+      expect(await broker.readOptionLifecycle()).toEqual({ ok: true, rows: [report] });
+      broker.replaceCredentials({ apiKey: "NEW-KEY", apiSecret: "new" });
+      await broker.readOptionLifecycle();
+    });
+    const reads = seen.filter((s) => s.url.includes("/v2/account/activities"));
+    expect(reads.map((s) => s.key)).toEqual(["OLD-KEY", "NEW-KEY"]);
+    expect(reads[0]?.url).toContain("activity_types=OPEXP%2COPASN%2COPEXC%2COPTRD");
+    expect(reads[0]?.url).toContain("paper-api.alpaca.markets");
+  });
 });

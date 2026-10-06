@@ -147,6 +147,10 @@
 }
 .blotter-scroll {
   overflow-x: auto;
+  /* A size container so a phone-width "why" panel can be exactly as wide as the visible table
+     (`100cqw`, below) rather than the whole sideways-scrolling one. Safe: a block's width already
+     comes from its column, never from the table inside it. */
+  container-type: inline-size;
 }
 table.blotter {
   width: 100%;
@@ -595,10 +599,12 @@ tr[data-landed] > td:first-child {
 /* At phone width the blotter scrolls sideways, so a why panel laid out across the FULL table width
    leaves its right-hand column off-screen — found while shooting #3961's round row, which landed
    there. One column, capped to the frame, so the whole why reads at 390 without the reader having
-   to scroll the table sideways to find the rest of it. */
+   to scroll the table sideways to find the rest of it. The cap is the visible table less the cell's
+   12px padding each side: 92vw ignored the page gutters and clipped the last words of every long
+   line, found while shooting a bot's option fill (#4642), whose invalidator runs four lines. */
 @media (max-width: 700px) {
   .why-grid {
     grid-template-columns: 1fr;
-    max-width: 92vw;
+    max-width: calc(100cqw - 24px);
   }
 }

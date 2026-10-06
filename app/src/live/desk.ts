@@ -319,6 +319,12 @@ export interface ActivityReasoning {
   /** That round's funnel — intents the persona raised → how many survived the guards. */
   readonly rawCount?: number;
   readonly guardedCount?: number;
+  /** An option order as a whole, in words — a spread as the spread, not one leg. */
+  readonly contract?: string;
+  /** A filled option order's dollars, and how they add up ("$205.00 received — 1 contract × …"). */
+  readonly cost?: string;
+  /** What would prove the trade wrong, in the playbook's own words. */
+  readonly invalidator?: string;
 }
 
 export interface DeskActivity {

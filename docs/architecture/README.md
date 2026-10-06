@@ -78,7 +78,7 @@ C4Container
     Rel(bots, botvol, "Persists state tables, decision journal, JSONL audit, health stamp", "node:sqlite DatabaseSync, fs")
     Rel(bots, api, "Polls GET /controls every 30s carrying decisionsCursor and subscriptions; GET /bot-credentials per persona when credentialsVersion changes; POST /decisions batches of up to 100 (4 MB cap). The insight relay client has no production caller", "HTTP over Fly 6PN to app.process.skynet-capital.internal:8788, shared-secret header")
     Rel(api, alpaca, "Accounts, positions, orders (place, replace, cancel), activities, options chains and snapshots, portfolio history; per-account trade_updates and held-symbol market-data websockets. Live mode only", "REST, WSS")
-    Rel(bots, alpaca, "Market-data websocket for the 10-symbol universe, GET /clock and the 60s news poll on one shared data credential; paper orders per bot in live mode", "REST, WSS")
+    Rel(bots, alpaca, "Market-data websocket for the 10-symbol universe, GET /clock and the 60s news poll on one shared data credential; paper orders per bot in live mode; each bot's option expiry and assignment activities every 30 minutes", "REST, WSS")
     Rel(api, anthropic, "Companion tool rounds then a streamed reply; feedback coach turns on claude-haiku-4-5", "HTTPS JSON and SSE, x-api-key")
     Rel(api, github, "Files feedback issues, labels and follow-up comments, commits screenshots to feedback-assets, searches similar issues, reads issue state, Actions runs, commits and compare; OAuth login", "HTTPS REST, SKYNET_FEEDBACK_GITHUB_TOKEN")
     Rel(api, google, "OAuth code exchange and userinfo, env-gated", "HTTPS")

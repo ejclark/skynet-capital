@@ -2,6 +2,8 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import type { EquitySample } from "./history-store.js";
+import { optionContractLine } from "./option-contract-line.js";
+import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
 import { type WireTradeVitals, wireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
@@ -17,7 +19,10 @@ import type { WireTradeRow } from "./wire-data.js";
  * the moment of submit — an order logged `"working"` that Alpaca fills or cancels later stays
  * `"working"` forever in that field (and before #4655 an accepted order read `"filled"` with no
  * price) — copying it would move a stale answer here. Only `reason`,
- * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time.
+ * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time —
+ * and an option order's dollar cost, which is read only off a `filled` result: the order flow
+ * writes that status once the broker has ended the order (`alpaca-option-result.ts`), so it can
+ * never move again.
  */
 
 export interface WireTradeReasoning {
@@ -41,6 +46,14 @@ export interface WireTradeReasoning {
    *  count inline; the whole round stays one link away (`docs/IA.md` §8.1 — one home per fact). */
   readonly rawCount?: number;
   readonly guardedCount?: number;
+  /** An option order as a whole, in words (`optionContractLine`) — a spread as the spread, not
+   *  one leg. Absent for shares. */
+  readonly contract?: string;
+  /** What a filled option order cost or brought in, in dollars (`optionFillCostWords`). Absent for
+   *  shares, and for an option whose fill the decision record never confirmed. */
+  readonly cost?: string;
+  /** What would prove the trade wrong, in the playbook's own words (`OrderForecast.invalidator`). */
+  readonly invalidator?: string;
 }
 
 export interface WireTradeWithReasoning extends WireTradeRow {
@@ -72,6 +85,10 @@ export function reasoningForOrder(
   if (!found) return undefined;
   const { record, intent } = found;
   const guardDelta = guardDeltaFor(record, intent);
+  const contract = optionContractLine(intent);
+  // The store hands back the outcome's own intent, so its result is found by identity.
+  const cost = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
+  const invalidator = intent.forecast?.invalidator;
   // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
   // the two must match character for character or the link from a fill lands on no row.
   const cycleAt = Number.isFinite(record.at) ? new Date(record.at).toISOString() : undefined;
@@ -86,6 +103,9 @@ export function reasoningForOrder(
     ...(intent.strategy ? { strategy: intent.strategy } : {}),
     ...(intent.expectation ? { expectation: intent.expectation } : {}),
     ...(guardDelta ? { guardDelta } : {}),
+    ...(contract ? { contract } : {}),
+    ...(cost ? { cost: optionFillCostWords(cost) } : {}),
+    ...(invalidator ? { invalidator } : {}),
   };
 }
 
