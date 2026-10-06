@@ -560,6 +560,18 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(called).toEqual([]);
   });
 
+  it("a failed plan read costs the tick no feedback pick — the cap only governs fresh plans", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "feedback"])]);
+    const r = claimNext(0, "abc", {
+      ...deps,
+      readPlans: () => {
+        throw new Error("HTTP 502");
+      },
+    });
+    expect(r).toMatchObject({ claimed: true, lane: "feedback", number: 8 });
+    expect(called).toHaveLength(1);
+  });
+
   it("claims nothing when the cap is full", () => {
     const { deps, called } = setup(
       [issue(8, "z", ["ready", "plan"])],

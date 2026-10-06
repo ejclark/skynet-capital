@@ -497,7 +497,7 @@ export function peekNext(deps = {}) {
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
     continuationPick(continuation) ??
-    nextAdmissible(ready, inFlightOf(), mode, waitingPlans(readPlans()));
+    nextAdmissible(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting);
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -524,13 +524,13 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
     readPrIssues(),
   );
-  // Read once: the sweep's pick and the claim's own gate must count the same Waiting column.
-  const openPlans = readPlans();
-  const waiting = waitingPlans(openPlans);
+  // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
+  // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
+  const { openPlans, waiting } = waitingOrSkip(readPlans);
   const gateDeps = {
     readMode: () => mode,
     readInFlight: () => inFlight,
-    readPlans: () => openPlans,
+    ...(openPlans ? { readPlans: () => openPlans } : { readPlans }),
     ...admission,
   };
   // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
@@ -549,7 +549,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   for (let tries = 0; tries < SWEEP_HELD_SKIPS; tries++) {
     const pick = nextAdmissible(pool, inFlight, mode, waiting);
     if (!pick) {
-      const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, ${waiting.length} plans waiting, work-mode=${mode.position})`;
+      const plans = waiting ? `${waiting.length} plans waiting` : "plans unread";
+      const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, ${plans}, work-mode=${mode.position})`;
       console.log(`::notice::retry sweep — ${why}`);
       return { claimed: false, reason: why };
     }
@@ -567,6 +568,24 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const why = `the top ${SWEEP_HELD_SKIPS} admissible picks are all held by live claims`;
   console.log(`::notice::retry sweep — ${why}`);
   return { claimed: false, reason: why };
+}
+
+/**
+ * The open plans and the board's Waiting column for one sweep tick (#4393 slice 4) — or neither,
+ * with a warning, when the read fails. The started-plan cap governs fresh plans only, so a failed
+ * plan read must not cost the tick its continuation or a feedback pick: the pick runs without the
+ * cap, and a fresh plan it lands on is refused by `gateAdmission`'s own read, which fails closed.
+ */
+function waitingOrSkip(readPlans) {
+  try {
+    const openPlans = readPlans();
+    return { openPlans, waiting: waitingPlans(openPlans) };
+  } catch (err) {
+    console.log(
+      `::warning::the open plans could not be read — picking without the started-plan cap this tick: ${String(err?.message).slice(0, 200)}`,
+    );
+    return { openPlans: undefined, waiting: undefined };
+  }
 }
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */

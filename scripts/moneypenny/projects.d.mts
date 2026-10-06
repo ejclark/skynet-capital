@@ -21,6 +21,7 @@ export function statusOptionsMatch(currentNames?: string[]): boolean;
 /** The option list to write so the live field matches, ids kept for survivors — or null. */
 export function statusFieldUpdate(
   current?: { id?: string; name?: string }[],
+  opts?: { keepExtras?: boolean },
 ): (StatusFieldOption & { id?: string })[] | null;
 
 export interface SubIssueCounts {

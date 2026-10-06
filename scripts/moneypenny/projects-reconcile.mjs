@@ -126,7 +126,8 @@ export function wantedStatusOf(issue, columns = STATUS_OPTIONS) {
  * card can land in a new column. The plan said "add the option via a projects-setup.yml dispatch";
  * doing it here instead means the merge that changes the list also applies it, on the same push,
  * with nobody remembering a dispatch, and every later sweep proves it still holds. One read of the
- * field (already part of the board context), a write only on a mismatch, ids kept so no card moves.
+ * field (already part of the board context), a write only when a column is missing, ids kept so no
+ * card moves, and never a removal — a column made by hand in the UI stays (`keepExtras`).
  *
  * Returns the column names the cards may be planned against: the new list once written, the board's
  * current one on a dry run (which only says what it would change).
@@ -140,7 +141,7 @@ export function ensureStatusColumns({
   const field = (board.fields() ?? []).find((f) => f?.name === "Status");
   if (!field) throw new Error('no "Status" field on the board — has projects-setup run?');
   const have = (field.options ?? []).map((o) => o.name);
-  const options = statusFieldUpdate(field.options ?? []);
+  const options = statusFieldUpdate(field.options ?? [], { keepExtras: true });
   if (!options) return have;
   const change = `(${have.join(", ")}) → (${options.map((o) => o.name).join(", ")})`;
   if (dryRun) {

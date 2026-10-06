@@ -511,6 +511,24 @@ describe("moneypenny projects: statusFieldUpdate", () => {
     expect(statusFieldUpdate(both)?.find((o) => o.name === "Building now")?.id).toBe("o-building");
   });
 
+  it("in the sweep's keepExtras mode, never removes a column made by hand — and never writes for one", () => {
+    const now = STATUS_OPTIONS.map((name, k) => ({ id: `o${k}`, name }));
+    expect(
+      statusFieldUpdate([...now, { id: "o-review", name: "Review" }], { keepExtras: true }),
+    ).toBeNull();
+    const update = statusFieldUpdate([...live, { id: "o-review", name: "Review" }], {
+      keepExtras: true,
+    });
+    expect(update?.map((o) => o.name)).toEqual([...STATUS_OPTIONS, "Review"]);
+    expect(update?.find((o) => o.name === "Review")).toEqual({
+      id: "o-review",
+      name: "Review",
+      color: "GRAY",
+      description: "",
+    });
+    expect(update?.filter((o) => o.id === "o-progress")).toHaveLength(1);
+  });
+
   it("fixes GitHub's own Todo/In Progress/Done default, keeping the ids it can", () => {
     const update = statusFieldUpdate([
       { id: "t", name: "Todo" },

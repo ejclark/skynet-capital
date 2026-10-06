@@ -71,21 +71,36 @@ export function statusOptionsMatch(currentNames = []) {
 }
 
 /**
- * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field becomes
- * `STATUS_FIELD_OPTIONS`, or null when it already is. `current` is the field's options as gh's
- * `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by its
- * old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
+ * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field carries
+ * `STATUS_FIELD_OPTIONS`, or null when nothing needs writing. `current` is the field's options as
+ * gh's `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by
+ * its old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
  * instead of replacing the list (which would strip every card's Status). Pure; specced.
+ *
+ * `keepExtras` is the reconcile sweep's mode: it runs on every push, unattended, so it only ever
+ * ADDS and RENAMES. A column someone made by hand in the Projects UI is kept (with its id; gh does
+ * not report colors, so it is re-sent GRAY) and is never a reason to write. Removing an option stays
+ * projects-setup.mjs's job — the default mode, an exact match, run when someone means it.
  */
-export function statusFieldUpdate(current = []) {
-  if (statusOptionsMatch(current.map((o) => o?.name))) return null;
+export function statusFieldUpdate(current = [], { keepExtras = false } = {}) {
+  const names = current.map((o) => o?.name);
+  const missing = STATUS_OPTIONS.some((n) => !names.includes(n));
+  if (keepExtras ? !missing : statusOptionsMatch(names)) return null;
   const idOf = new Map();
   for (const o of current) {
     if (!(o?.id && o?.name)) continue;
     const name = RENAMED_STATUS_OPTIONS[o.name] ?? o.name;
     if (!idOf.has(name) || o.name === name) idOf.set(name, o.id);
   }
-  return STATUS_FIELD_OPTIONS.map((o) => (idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o));
+  const wanted = STATUS_FIELD_OPTIONS.map((o) =>
+    idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o,
+  );
+  if (!keepExtras) return wanted;
+  const used = new Set(wanted.map((o) => o.id).filter(Boolean));
+  const extras = current
+    .filter((o) => o?.id && o?.name && !used.has(o.id))
+    .map((o) => ({ id: o.id, name: o.name, color: "GRAY", description: "" }));
+  return [...wanted, ...extras];
 }
 
 // ── started plans (#4393 slice 4, criteria 5–6) ─────────────────────────────────────────────────
