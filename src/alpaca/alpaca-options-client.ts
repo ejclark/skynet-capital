@@ -100,6 +100,11 @@ export interface AlpacaAccountActivity {
   readonly net_amount?: string | number;
 }
 
+/** A lifecycle read that SAYS whether it worked — see `readOptionLifecycleActivities`. */
+export type LifecycleRead =
+  | { readonly ok: true; readonly rows: AlpacaAccountActivity[] }
+  | { readonly ok: false };
+
 export interface PlaceOptionOrderParams {
   readonly occSymbol: string;
   readonly contracts: number;
@@ -467,17 +472,31 @@ export class AlpacaOptionsClient {
    * (#3407 slice 4 — "never an empty list that reads as 'nothing working'", `working-orders.tsx`).
    * `after` is the activity `id` cursor (Alpaca's own pagination token for this endpoint).
    */
-  async readOptionLifecycleActivities(
-    after?: string,
-  ): Promise<
-    { readonly ok: true; readonly rows: AlpacaAccountActivity[] } | { readonly ok: false }
-  > {
+  readOptionLifecycleActivities(after?: string): Promise<LifecycleRead> {
+    return this.readLifecycle("desc", after);
+  }
+
+  /**
+   * The same read OLDEST first, starting just past `afterId`: for `direction=asc`, Alpaca's
+   * `page_token` begins the page with the activity immediately after the one named. Handed the
+   * newest id a ledger already holds, one page is exactly what is new since — the resume the
+   * dashboard's half-hourly sweep needs (`sweepParticipantOptionLifecycle`). The `desc` cursor
+   * above cannot do that: it walks further into the past.
+   */
+  readOptionLifecycleActivitiesAfter(afterId?: string): Promise<LifecycleRead> {
+    return this.readLifecycle("asc", afterId);
+  }
+
+  private async readLifecycle(
+    direction: "asc" | "desc",
+    pageToken: string | undefined,
+  ): Promise<LifecycleRead> {
     try {
       const query = new URLSearchParams({
         activity_types: "OPEXP,OPASN,OPEXC,OPTRD",
-        direction: "desc",
+        direction,
         page_size: "100",
-        ...(after ? { page_token: after } : {}),
+        ...(pageToken ? { page_token: pageToken } : {}),
       });
       const response = await this.trading.get(`/v2/account/activities?${query.toString()}`);
       if (response.status < 200 || response.status >= 300) return { ok: false };

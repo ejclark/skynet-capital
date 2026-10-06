@@ -1,4 +1,4 @@
-import type { AlpacaAccountActivity } from "../alpaca/alpaca-options-client.js";
+import type { AlpacaAccountActivity, LifecycleRead } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import { parseLifecycleActivity } from "../trading/option-lifecycle.js";
 import {
@@ -9,11 +9,11 @@ import {
   recordsFromActivity,
   type TradeActivityRecord,
 } from "./activity-store.js";
-import { lifecycleLedgerRecord } from "./option-lifecycle-activity.js";
+import { lifecycleActivityId, lifecycleLedgerRecord } from "./option-lifecycle-activity.js";
 import type { ActivityView } from "./participant-snapshot.js";
 
 /**
- * CAPTURE FROM THE BROKER'S OWN RECORD — the two paths that fill the activity ledger from reads
+ * CAPTURE FROM THE BROKER'S OWN RECORD — the paths that fill the activity ledger from reads
  * rather than the live stream:
  *
  *  - `reconcileBrokerActivity` — every boot banks the broker's recent-order window, so orders that
@@ -22,8 +22,10 @@ import type { ActivityView } from "./participant-snapshot.js";
  *    broker's full order history back to the account's first order and journals everything the
  *    ledger doesn't already hold. This is the recovery path `history-boot.ts` documented as a
  *    non-goal for equity history — the per-order record makes it possible here.
+ *  - `sweepParticipantOptionLifecycle` — the dashboard's half-hourly read of option expiries and
+ *    assignments, which fill no order, so neither path above nor the stream ever sees one (#4650).
  *
- * Both are idempotent by the same predicate (`advancesLedger`): re-running appends nothing new,
+ * All are idempotent by the same predicate (`advancesLedger`): re-running appends nothing new,
  * which is what makes "run it once, safely" an honest promise.
  */
 
@@ -129,6 +131,20 @@ export const LIFECYCLE_MAX_PAGES = 40;
  *  reads off `orders.length < pageSize` above. */
 export const LIFECYCLE_PAGE_SIZE = 100;
 
+/** A page of raw activities as ledger lines — a row that does not parse as one of the four types is
+ *  dropped, never journaled half-read. */
+function lifecycleRows(
+  raw: readonly AlpacaAccountActivity[],
+  participantId: string,
+): TradeActivityRecord[] {
+  const rows: TradeActivityRecord[] = [];
+  for (const activity of raw) {
+    const parsed = parseLifecycleActivity(activity);
+    if (parsed) rows.push(lifecycleLedgerRecord(parsed, participantId));
+  }
+  return rows;
+}
+
 /**
  * Page one participant's option lifecycle activities (`OPEXP`/`OPASN`/`OPEXC`/`OPTRD` — #468
  * criterion 6) into the same durable ledger `backfillParticipantActivity` fills from order
@@ -154,12 +170,7 @@ export async function backfillParticipantOptionLifecycle(opts: {
     pages += 1;
     fetched += raw.length;
 
-    const rows: TradeActivityRecord[] = [];
-    for (const activity of raw) {
-      const parsed = parseLifecycleActivity(activity);
-      if (parsed) rows.push(lifecycleLedgerRecord(parsed, opts.participantId));
-    }
-    appended += await appendAdvancing(opts.store, rows, known);
+    appended += await appendAdvancing(opts.store, lifecycleRows(raw, opts.participantId), known);
 
     const oldest = raw[raw.length - 1]?.id;
     if (raw.length < pageSize || !oldest || oldest === after) break;
@@ -167,4 +178,45 @@ export async function backfillParticipantOptionLifecycle(opts: {
   }
 
   return { participantId: opts.participantId, fetched, appended, pages };
+}
+
+/** The newest broker activity id among these ledger lines, or `undefined` when none is a lifecycle
+ *  line. Alpaca's activity ids lead with their own timestamp (`20261113000000000::<uuid>`) and are
+ *  the key its paging walks, so the greatest id is the latest activity in the broker's own order. */
+function newestLifecycleActivityId(records: Iterable<TradeActivityRecord>): string | undefined {
+  let newest: string | undefined;
+  for (const record of records) {
+    const id = lifecycleActivityId(record.orderId);
+    if (id !== undefined && (newest === undefined || id > newest)) newest = id;
+  }
+  return newest;
+}
+
+type LifecycleSweepResult =
+  | { readonly ok: true; readonly fetched: number; readonly appended: number }
+  | { readonly ok: false };
+
+/**
+ * ONE PAGE of what is new for one participant — the dashboard's half-hourly pass
+ * (`dashboard-option-lifecycle.ts`); full paging stays with `backfillParticipantOptionLifecycle`.
+ *
+ * It resumes from the ledger, not from memory: the cursor is the newest lifecycle activity id the
+ * store already holds, and the read starts just past it, oldest first. So a pass never re-reads
+ * history the ledger has, a restart loses nothing, and a burst longer than one page is finished by
+ * the passes after it rather than skipped. With nothing held yet, the read starts at the account's
+ * first lifecycle activity. Idempotent by the same `advancesLedger` predicate as every other path:
+ * a page the store already holds appends nothing. A row the parser refuses is never journaled, so
+ * the cursor stays behind it and the next pass reads it again: re-read, never skipped.
+ */
+export async function sweepParticipantOptionLifecycle(opts: {
+  readonly participantId: string;
+  readonly store: ActivityStore;
+  readonly readLifecycleAfter: (afterId?: string) => Promise<LifecycleRead>;
+}): Promise<LifecycleSweepResult> {
+  const known = await knownOrders(opts.store, opts.participantId);
+  const read = await opts.readLifecycleAfter(newestLifecycleActivityId(known.values()));
+  if (!read.ok) return { ok: false };
+  const rows = lifecycleRows(read.rows, opts.participantId);
+  const appended = await appendAdvancing(opts.store, rows, known);
+  return { ok: true, fetched: read.rows.length, appended };
 }

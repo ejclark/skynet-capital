@@ -25,13 +25,20 @@
 // drawer's spread marker, each folded from the two leg lines and carrying the spread's why. Frames
 // are named `wire-*` / `thesis-*`.
 //
+// THE EXPIRY (#4650): `--expired` lets the dashboard's REAL half-hourly sweep read the broker's report
+// that the sold put expired, into a ledger holding what the stream journaled, then serves Activity
+// from the REAL `/api/desk/:id/activity` route over that ledger. The "expired worthless" row and the
+// premium it keeps are what the automatic path writes, not fixture text. Frames: `expired-*`.
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
-//   [--working | --late | --wire]
+//   [--working | --late | --wire | --expired]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
+import { InMemoryActivityStore } from "../../src/observatory/activity-store.ts";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts";
 import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
 import { spreadLookup } from "../../src/observatory/spread-activity.ts";
 import { reasoningForOrder } from "../../src/observatory/wire-reasoning.ts";
+import { lifecycleSweepPass } from "../../src/scripts/dashboard-option-lifecycle.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
 import { serveWireJson } from "../../src/server/wire-routes.ts";
 import { humanizeOptionSymbol } from "../../src/trading/option-symbols.ts";
@@ -44,7 +51,9 @@ const SCENARIO = process.argv.includes("--late")
     ? "working"
     : process.argv.includes("--wire")
       ? "wire"
-      : "filled";
+      : process.argv.includes("--expired")
+        ? "expired"
+        : "filled";
 
 /** The same two trades recorded `working`: neither cancel confirmed, the spread's legs unlisted. */
 const workingRecord = {
@@ -81,7 +90,7 @@ const settlements = [
 ];
 
 const store = openDecisionDb(":memory:");
-const AS_WRITTEN = SCENARIO === "filled" || SCENARIO === "wire";
+const AS_WRITTEN = SCENARIO !== "working" && SCENARIO !== "late";
 store.record(AS_WRITTEN ? filledRecord : workingRecord);
 if (SCENARIO === "late") store.recordSettlements(settlements);
 // The default frames read the fixture as written; the late-fill ones read it back through the store.
@@ -135,7 +144,12 @@ const spreadRows = deskActivityView(
   ...row,
   reasoning: reasoningForOrder(row.orderId, { findByOrderId: (id) => store.findByOrderId(id) }),
 }));
-const routePayloads = SCENARIO === "wire" ? await wireAndThesis() : {};
+const routePayloads =
+  SCENARIO === "wire"
+    ? await wireAndThesis()
+    : SCENARIO === "expired"
+      ? { "/api/desk/bot-sauron/activity": await afterTheExpiry() }
+      : {};
 store.close();
 const folded = spreadRows.length === 1 && spreadRows[0].legs?.length === 2;
 // Recorded `working` with no legs listed, the two fills join nothing until the settlement lands.
@@ -184,22 +198,68 @@ const heartbeat = {
   },
 };
 
+/** One filled line of the activity ledger, as the trade_updates stream journals it. */
+function ledgerLine(orderId, participantId, symbol, side, quantity, price, at) {
+  const filled = { filledQuantity: quantity, price, status: "filled", at, source: "stream" };
+  return { orderId, participantId, symbol, side, quantity, ...filled };
+}
+
+/** A real route's JSON body, answered into a fake response. */
+async function answer(serve) {
+  let body = "";
+  const res = { writeHead: () => res, end: (text) => (body = text ?? "") };
+  await serve(res);
+  return JSON.parse(body);
+}
+
+/** `/api/desk/bot-sauron/activity` once the dashboard's sweep has run (#4650): the ledger holds the
+ *  sold put and a share buy as the stream journaled them, the broker then reports the put expired on
+ *  its expiration day, and the real sweep pass and the real route do the rest. */
+async function afterTheExpiry() {
+  const ledger = new InMemoryActivityStore();
+  for (const line of [
+    ledgerLine("opt-put-1", "bot-sauron", PUT, "sell", 1, 2.12, "2026-10-07T14:30:12Z"),
+    ledgerLine("shr-1", "bot-sauron", "NVDA", "buy", 4, 181.4, "2026-10-06T15:02:00Z"),
+  ]) {
+    await ledger.record(line);
+  }
+  const expired = { id: "20261113000000000::7d3e", activity_type: "OPEXP", symbol: PUT, qty: "1" };
+  const broker = {
+    readOptionLifecycleActivitiesAfter: async () => ({
+      ok: true,
+      rows: [{ ...expired, date: "2026-11-13" }],
+    }),
+  };
+  const credentials = { apiKey: "fixture", apiSecret: "fixture" };
+  await lifecycleSweepPass({
+    participants: () => [{ id: "bot-sauron", displayName: "Sauron", kind: "bot", credentials }],
+    optionsClientFor: () => broker,
+    store: ledger,
+  })();
+  const snapshot = { id: "bot-sauron", displayName: "Sauron", kind: "bot", cash: 0, equity: 0 };
+  const config = {
+    hub: {
+      getState: () => ({
+        generatedAt: "2026-11-14T15:00:00Z",
+        participants: [{ ...snapshot, positions: [] }],
+        collisions: [],
+      }),
+    },
+    readTradeActivity: (id) => ledger.list(id),
+  };
+  const path = "/api/desk/bot-sauron/activity";
+  const body = await answer((res) => serveDeskJson(res, path, path, config));
+  // The frame proves the close: the expiry's row, keeping the whole premium the put was sold for.
+  if (!body.activity.some((r) => r.status === "expired worthless" && r.realizedPl === "+$212")) {
+    throw new Error("the sweep did not close the sold put on Activity");
+  }
+  return body;
+}
+
 /** `/api/wire` and `/api/desk/bot-sauron/thesis`, answered by the real routes over the store — the
  *  ledger is the account's own lines: the spread's two legs, the sold put, a share buy, and a member's
  *  trade beside them on the league feed. */
 async function wireAndThesis() {
-  const ledgerLine = (orderId, participantId, symbol, side, quantity, price, at) => ({
-    orderId,
-    participantId,
-    symbol,
-    side,
-    quantity,
-    filledQuantity: quantity,
-    price,
-    status: "filled",
-    at,
-    source: "stream",
-  });
   const sauronLedger = [
     ledgerLine("opt-spread-leg-185", "bot-sauron", LOW, "buy", 1, 5.1, "2026-10-07T14:30:15Z"),
     ledgerLine("opt-spread-leg-200", "bot-sauron", HIGH, "sell", 1, 1.75, "2026-10-07T14:30:15Z"),
@@ -240,12 +300,6 @@ async function wireAndThesis() {
     readHistory: async (id) => (id === "bot-sauron" ? history : []),
     findByOrderId: (id) => store.findByOrderId(id),
     findSpreadLeg: (id) => store.findSpreadLeg(id),
-  };
-  const answer = async (serve) => {
-    let body = "";
-    const res = { writeHead: () => res, end: (text) => (body = text ?? "") };
-    await serve(res);
-    return JSON.parse(body);
   };
   const wire = await answer((res) => serveWireJson(res, "/api/wire", config, true, () => true));
   const thesisPath = "/api/desk/bot-sauron/thesis";
@@ -308,6 +362,31 @@ if (SCENARIO === "wire") {
       window.scrollBy(0, 24);
     });
     await shoot(`thesis-spread-marker-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
+
+// After the expiry: the put's report row at the top of the account's Activity. At 390 the status sits
+// past the blotter's sideways scroll, so the phone frame is scrolled to it; the kept premium is a
+// wide-screen column (`col-detail`), so the desktop frame is the one that shows the +$212.
+if (SCENARIO === "expired") {
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 844 }],
+    ["desktop", { width: 1280, height: 900 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/u/bot-sauron/activity`);
+    const row = page.locator("tr", { hasText: "expired worthless" });
+    await row.waitFor();
+    await page.waitForTimeout(600);
+    await row.evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -220); // the sticky header, and the table's own header row above it
+      const scroller = el.closest(".blotter-scroll");
+      if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+    });
+    await shoot(`expired-activity-${tag}`);
   }
   await close();
   process.exit(0);

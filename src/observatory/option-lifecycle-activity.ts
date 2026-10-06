@@ -9,10 +9,17 @@ import type { TradeActivityRecord } from "./activity-record.js";
  * is a view type (`ActivityView`), and option-lifecycle.ts's own module doc explains why.
  */
 
+const LIFECYCLE_PREFIX = "lifecycle:";
+
 /** `orderId` doubles as the ledger's dedupe key (`collapseActivity` folds on it) — an activity id
  *  namespaced so it can never collide with a real Alpaca order id. */
 export function lifecycleOrderId(activityId: string): string {
-  return `lifecycle:${activityId}`;
+  return `${LIFECYCLE_PREFIX}${activityId}`;
+}
+
+/** The inverse: the broker's activity id behind a ledger line, or `undefined` for an order's line. */
+export function lifecycleActivityId(orderId: string): string | undefined {
+  return orderId.startsWith(LIFECYCLE_PREFIX) ? orderId.slice(LIFECYCLE_PREFIX.length) : undefined;
 }
 
 export function lifecycleLedgerRecord(
