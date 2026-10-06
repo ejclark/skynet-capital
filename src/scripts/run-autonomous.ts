@@ -71,7 +71,11 @@ import {
   tradingRoster,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
-import { BotOptionLevels, sweepOrphanOptionOrders } from "./autonomous-option-wiring.js";
+import {
+  armOptionLifecycleSweep,
+  BotOptionLevels,
+  sweepOrphanOptionOrders,
+} from "./autonomous-option-wiring.js";
 import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
@@ -305,6 +309,8 @@ async function runLive(): Promise<void> {
   // The shared data connections above are already wired, so this catches them too.
   await credentials.reconcile(bootControls);
   await sweepOrphanOptionOrders(brokerHolders); // our own stamped orders only, before any cycle
+  // Expiries and assignments close option round trips no fill ever closes (#4642 slice 8).
+  armOptionLifecycleSweep(brokerHolders, decisionDb);
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
   // mechanics acting in live environments gives me confidence"; if nothing organic fires, force

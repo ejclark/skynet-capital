@@ -3,11 +3,17 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
+import { openOptionLedger } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
-import { type FilledIntentRow, pendingRetrospectives } from "./decision-retrospectives.js";
+import {
+  type FilledIntentRow,
+  pendingRetrospectives,
+  type RetrospectiveInsert,
+} from "./decision-retrospectives.js";
 
 export type { DecisionFunnel } from "./decision-funnel.js";
 
@@ -70,8 +76,16 @@ export interface DecisionDb {
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
    *  `retrospectives` back to `intents.playbook_id` (retrospectives themselves aren't tagged with
    *  a playbook id — only the intent that opened the position is). 0 when nothing has closed yet,
-   *  never `null` — an empty sum is an honest zero, not an absence. */
+   *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
+   *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** The broker's option expiry/assignment reports for one persona's account (#4642 slice 8),
+   *  stored once each by activity id; an expiry or assignment closes the contract it names at $0.
+   *  Returns how many were new. One transaction; throws only if the store itself fails. */
+  recordOptionLifecycle(
+    personaId: string,
+    activities: readonly NormalizedLifecycleActivity[],
+  ): number;
   close(): void;
 }
 
@@ -246,7 +260,8 @@ export function openDecisionDb(path: string): DecisionDb {
   // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
   // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
   // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
-  // the same underlying symbol but is never a share lot, so it is kept out of this tape.
+  // the same underlying symbol but is never a share lot, so it is kept out of this tape and scored
+  // on its own, per contract (`decision-option-ledger.ts`).
   const selectFilledIntentsForSymbol = db.prepare(`
     SELECT intents.id AS intent_id, intents.order_id AS order_id, intents.side AS side,
            intents.filled_quantity AS filled_quantity, intents.filled_price AS filled_price,
@@ -334,19 +349,24 @@ export function openDecisionDb(path: string): DecisionDb {
       ).map((r) => `${r.entry_intent_id}:${r.at}`),
     );
     for (const insert of pendingRetrospectives(filled, existingKeys)) {
-      insertRetrospective.run(
-        insert.at,
-        personaId,
-        insert.symbol,
-        insert.entryIntentId,
-        insert.exitReason,
-        insert.realized,
-        insert.returnPct,
-        insert.sentimentDelta,
-        insert.momentumDelta,
-      );
+      writeRetrospective(personaId, insert);
     }
   }
+
+  function writeRetrospective(personaId: string, insert: RetrospectiveInsert): void {
+    insertRetrospective.run(
+      insert.at,
+      personaId,
+      insert.symbol,
+      insert.entryIntentId,
+      insert.exitReason,
+      insert.realized,
+      insert.returnPct,
+      insert.sentimentDelta,
+      insert.momentumDelta,
+    );
+  }
+  const optionLedger = openOptionLedger(db, writeRetrospective);
 
   function intentRowsFor(decisionId: number) {
     const options = optionTables.forDecision(decisionId);
@@ -416,14 +436,17 @@ export function openDecisionDb(path: string): DecisionDb {
    *  position. Never allowed to break decision capture itself — a retrospective is a derived
    *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
   function triggerRetrospectives(entry: DecisionRecord): void {
-    const filledSymbols = new Set(
-      entry.outcomes
-        .filter((o) => o.result?.status === "filled" && !o.intent.option)
-        .map((o) => o.intent.symbol),
-    );
-    for (const symbol of filledSymbols) {
+    const filled = entry.outcomes.filter((o) => o.result?.status === "filled");
+    // An option fill is scored on its own ledger, per contract, never as a share lot.
+    const ledgers = [
+      ...new Set(filled.filter((o) => !o.intent.option).map((o) => o.intent.symbol)),
+    ].map((symbol) => () => updateRetrospectivesFor(entry.personaId, symbol));
+    const optionLedgers = [
+      ...new Set(filled.filter((o) => o.intent.option).map((o) => o.intent.symbol)),
+    ].map((underlying) => () => optionLedger.rescore(entry.personaId, underlying));
+    for (const update of [...ledgers, ...optionLedgers]) {
       try {
-        updateRetrospectivesFor(entry.personaId, symbol);
+        update();
       } catch {
         // Swallowed — see comment above. The next fill for this symbol retries the full recompute.
       }
@@ -538,6 +561,18 @@ export function openDecisionDb(path: string): DecisionDb {
           count: r.n,
         })),
       );
+    },
+
+    recordOptionLifecycle(personaId, activities): number {
+      db.exec("BEGIN");
+      try {
+        const added = optionLedger.recordLifecycle(personaId, activities);
+        db.exec("COMMIT");
+        return added;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     },
 
     realizedPlForPlaybook(personaId, playbookId): number {
