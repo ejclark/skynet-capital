@@ -1,0 +1,11 @@
+{
+  "id": "opec-momr-2026-10-13",
+  "kind": "macro-print",
+  "title": "OPEC Monthly Oil Market Report (October 2026)",
+  "date": "2026-10-13",
+  "status": "estimate",
+  "source": "EST: a search index naming Tuesday 13 October 2026 as the release (read 2026-10-06, not a primary string off a page). The cadence it rides is primary-documented: opec-momr-2026-09-10's own source chains 19 editions where each report's 'next report' line equals the following cover date, and the 2025 edition of this month landed on 13 Oct. This session's attempt to read the primary — www.opec.org/assets/assetdb/momr-september-2026.pdf, whose 'next report' line would date it — returned HTTP 403 (redirect to /404.html) while the August 2026 PDF on the same host served 200, so the September file is either not yet at that path or blocked. STAYS ESTIMATE: no OPEC: confirmed prefix exists in market-events-data.ts, and this lane may not self-confirm an event it discovered in-sweep. Discovered 2026-10-06 by the iea-omr-2026-10-14 D-8 pulse adjacency sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "The producer-side read one day before the IEA's October OMR and eight days after the 2026-10-04 OPEC+ meeting held November quotas flat. Filed low on the same reasoning as opec-momr-2026-09-10, eia-steo-2026-10-06 and iea-omr-2026-10-14: a forecast publication sets no policy and moves no equity tape. It matters to the iea-omr-2026-10-14 ledger only as a third September-month Gulf supply figure beside the EIA STEO and the IEA OMR, and it prints the day before CPI (2026-10-14) so a crude move on 10-13 is not attributable to it alone. Read after the fact, never a scheduled catalyst."
+}
