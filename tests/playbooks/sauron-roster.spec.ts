@@ -4,12 +4,16 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import type { OrderIntent, PlaybookMode, PlaybookSubscription } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { applyHardcore } from "../../src/personas/registry.js";
+import { applyHardcore, createDefaultPersonas } from "../../src/personas/registry.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { betaScoutIntents } from "../../src/playbooks/beta-scout.js";
-import { onePerPlaybook, yieldPersonaRules } from "../../src/playbooks/option-ownership.js";
+import {
+  claimOptionUnderlyings,
+  onePerPlaybook,
+  yieldPersonaRules,
+} from "../../src/playbooks/option-ownership.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { enabledPlaybooks, S1_NVDA } from "../../src/playbooks/registry.js";
+import { enabledPlaybooks, NVDA_CALL_SPREAD, S1_NVDA } from "../../src/playbooks/registry.js";
 import { SAURON } from "../../src/playbooks/sauron-rules.js";
 import { managedSymbols, withPlaybooks } from "../../src/playbooks/with-playbooks.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
@@ -253,22 +257,24 @@ describe("review of 9a: SAURON yields every name another playbook on the bot tra
 });
 
 /**
- * PAUSE MEANS "STOP NEW ENTRIES, KEEP MANAGING TO FLAT" (#4651, round 4). A paused subscription
- * stays on the roster exits-only — env-named or Store-only — so it still sells what it holds on its
- * own exit rules, never opens, and keeps the bot's own rules off a name only while it still holds
- * it. Round 3 dropped it from the roster instead, which dropped its exits too: S1-NVDA paused at D-5
- * held NVDA through the print.
+ * PAUSE STOPS A PLAYBOOK OPENING ANYTHING NEW; ITS OWNERSHIP AND EXITS ARE UNCHANGED (#4651, round
+ * 5). A paused subscription stays on the roster exits-only, env-named or Store-only: it sells on its
+ * own exit rules, opens nothing but a covered call, and keeps its names exactly as when it runs —
+ * held or flat — so nothing else opens a position that its paused exits would then govern. Round 4
+ * held a paused name from the bot's own rules only while it was held: they bought it flat, then lost
+ * their own exits on it. The scenarios below are the ones that review reproduced.
  */
-describe("Pause means exits only, on every bot and for every playbook", () => {
+describe("Pause stops new opens; ownership and exits are unchanged", () => {
   const ids = (roster: { readonly enabled: readonly EnabledPlaybook[] }) =>
-    roster.enabled.map((e) => `${e.playbook.id}:${e.mode}${e.exitsOnly ? " (exits only)" : ""}`);
+    roster.enabled.map((e) => `${e.playbook.id}:${e.mode}${e.exitsOnly ? " (paused)" : ""}`);
   const envS1 = enabledPlaybooks({ SKYNET_PLAYBOOKS: "S1-NVDA" }).enabled;
   const envSauron = enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON" }).enabled;
   /** NVDA's confirmed print on Aug 26: S1-NVDA wants long at D-16, flat from D-5. */
   const PRINT: readonly EarningsPrint[] = [
     { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "test" },
   ];
-  const atD5 = aContext({ NVDA: { last: 100 } }, "2026-08-21T15:00:00Z");
+  const D5 = "2026-08-21T15:00:00Z";
+  const atD5 = aContext({ NVDA: { last: 100 } }, D5);
   const atD16 = aContext({ NVDA: { last: 100 } }, "2026-08-10T15:00:00Z");
   const holds20 = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 20 })] });
   const pausedS1 = [subscribed("sauron", "S1-NVDA", { enabled: false })];
@@ -285,7 +291,7 @@ describe("Pause means exits only, on every bot and for every playbook", () => {
   it("S1-NVDA paused at D-5 holding NVDA still sells it before the print, env-named or not", () => {
     for (const env of [envS1, []]) {
       const roster = resolveBotRoster(botOf(quietBot("sauron")), env, pausedS1);
-      expect(ids(roster)).toEqual(["S1-NVDA:standard (exits only)"]);
+      expect(ids(roster)).toEqual(["S1-NVDA:standard (paused)"]);
       expect(decideOn(roster, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
     }
   });
@@ -310,18 +316,72 @@ describe("Pause means exits only, on every bot and for every playbook", () => {
     expect(decideOn(paused, atD16, aPortfolio())).toEqual([]);
   });
 
-  it("paused and flat it keeps no name from the bot's own rules; holding, it keeps that one", () => {
-    const reflex: Persona = {
-      id: "sauron",
-      name: "Sauron",
-      thesis: "test",
-      decide: (): OrderIntent[] => [
-        { symbol: "NVDA", side: "buy", quantity: 5, type: "market", reason: "own reflex" },
-      ],
+  // Review scenario 1: a flat paused name is still the playbook's, so Sauron's panic buys none of it.
+  it("paused S1-NVDA keeps NVDA flat: Sauron's panic claim on it buys nothing", () => {
+    const sauron = new SauronPersona();
+    const roster = resolveBotRoster(botOf(sauron), [], pausedS1);
+    const panic = aContext({ NVDA: { sentiment: -0.9, momentum: 0.01 } }, "2026-10-06T15:00:00Z");
+    expect(sauron.decide(panic, aPortfolio())).toHaveLength(1);
+    expect(decideOn(roster, panic, aPortfolio(), sauron)).toEqual([]);
+  });
+
+  // Review scenario 2: no buy/sell churn at D-5 — the bot's own rules never buy what S1 then sells.
+  it("at D-5 there is no churn: one S1-NVDA sell when held, and nothing when flat", () => {
+    const sauron = new SauronPersona();
+    const roster = resolveBotRoster(botOf(sauron), [], pausedS1);
+    const panicAtD5 = aContext({ NVDA: { sentiment: -0.9, momentum: 0.01 } }, D5);
+    expect(decideOn(roster, panicAtD5, holds20, sauron)).toEqual(["sell 20 NVDA S1-NVDA"]);
+    expect(decideOn(roster, panicAtD5, aPortfolio(), sauron)).toEqual([]);
+  });
+
+  // Review scenario 3: paused SAURON on another bot keeps all ten names, as when it runs.
+  it("paused SAURON on another bot keeps all ten names: the day trader buys none of them", () => {
+    const dayTrader = createDefaultPersonas().find((p) => p.id === "day-trader");
+    if (!dayTrader) throw new Error("no day trader");
+    const roster = resolveBotRoster(
+      botOf(dayTrader),
+      [],
+      [subscribed("day-trader", "SAURON", { enabled: false })],
+    );
+    const runs = aContext({ AAPL: { momentum: 0.03 }, MSFT: { momentum: 0.03 } });
+    expect(dayTrader.decide(runs, aPortfolio()).length).toBeGreaterThan(0);
+    expect(decideOn(roster, runs, aPortfolio(), dayTrader)).toEqual([]);
+  });
+
+  it("paused SAURON on another bot buys nothing, and still sells a holding when euphoria rolls over", () => {
+    const futurist = quietBot("futurist");
+    const roster = resolveBotRoster(botOf(futurist), envSauron, [
+      subscribed("futurist", "SAURON", { enabled: false }),
+    ]);
+    expect(ids(roster)).toEqual(["SAURON:standard (paused)"]);
+    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
+    expect(decideOn(roster, panic, aPortfolio(), futurist)).toEqual([]);
+    const euphoria = aContext({ AAPL: { sentiment: 0.8, momentum: -0.01 } });
+    const holdsAapl = aPortfolio({ positions: [aPosition({ symbol: "AAPL", quantity: 10 })] });
+    expect(decideOn(roster, euphoria, holdsAapl, futurist)).toEqual(["sell 10 AAPL SAURON"]);
+  });
+
+  it("paused, its names stay its own everywhere: the scout, SAURON's yield and option claims", () => {
+    const roster = resolveBotRoster(botOf(quietBot("sauron")), [], pausedS1);
+    expect(scoutSkipSymbols(roster)).toEqual(new Set(["NVDA"]));
+    const pausedS1Entry = {
+      playbook: S1_NVDA,
+      mode: "standard" as const,
+      exitsOnly: true as const,
     };
-    const roster = resolveBotRoster(botOf(reflex), envS1, pausedS1);
-    expect(decideOn(roster, atD16, aPortfolio(), reflex)).toEqual(["buy 5 NVDA -"]);
-    expect(decideOn(roster, atD16, holds20, reflex)).toEqual([]);
+    const yielded = yieldPersonaRules(
+      [pausedS1Entry, { playbook: SAURON, mode: "standard" }],
+      () => undefined,
+    );
+    expect(yielded[1]?.playbook.symbols).not.toContain("NVDA");
+    const claimed = claimOptionUnderlyings(
+      [
+        { playbook: NVDA_CALL_SPREAD, mode: "standard", exitsOnly: true },
+        { playbook: S1_NVDA, mode: "standard" },
+      ],
+      () => undefined,
+    );
+    expect(claimed[1]?.playbook.symbols).toEqual([]);
   });
 
   it("the guards pass a paused playbook's exit: a paused subscription's cap and filter refuse no sell", () => {
@@ -336,26 +396,13 @@ describe("Pause means exits only, on every bot and for every playbook", () => {
     expect(applyGuardsWithVerdicts(raw, holds20, atD5, risk).approved).toEqual(raw);
   });
 
-  it("paused SAURON on another bot buys nothing, and still sells a holding when euphoria rolls over", () => {
-    const futurist = quietBot("futurist");
-    const roster = resolveBotRoster(botOf(futurist), envSauron, [
-      subscribed("futurist", "SAURON", { enabled: false }),
-    ]);
-    expect(ids(roster)).toEqual(["SAURON:standard (exits only)"]);
-    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
-    expect(decideOn(roster, panic, aPortfolio(), futurist)).toEqual([]);
-    const euphoria = aContext({ AAPL: { sentiment: 0.8, momentum: -0.01 } });
-    const holdsAapl = aPortfolio({ positions: [aPosition({ symbol: "AAPL", quantity: 10 })] });
-    expect(decideOn(roster, euphoria, holdsAapl, futurist)).toEqual(["sell 10 AAPL SAURON"]);
-  });
-
   // His own rules have no basket of positions apart from himself, so there is nothing for a paused
   // SAURON to manage on his account: it is ignored, and his reflexes run unlabelled as before.
   it("paused SAURON on Sauron's account is ignored: his rules trade unlabelled, buys and sells", () => {
     const roster = resolveBotRoster(botOf(new SauronPersona()), envSauron, [
       subscribed("sauron", "SAURON", { enabled: false }),
     ]);
-    expect(ids(roster)).toEqual(["SAURON:standard (exits only)"]);
+    expect(ids(roster)).toEqual(["SAURON:standard (paused)"]);
     const composed = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona;
     const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
     expect(composed.decide(panic, aPortfolio())).toEqual(

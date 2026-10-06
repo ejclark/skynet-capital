@@ -196,12 +196,17 @@ describe("a subscribed card", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
-  // #4651: Pause stops new entries and keeps managing to flat — said where the owner paused it.
+  // #4651: Pause stops a playbook opening anything new; its names and exits are unchanged — said
+  // where the owner paused it.
   it("says what a pause does under a paused bot subscription, and nowhere else", () => {
     mount(card(["NVDA"], { mode: "standard", enabled: false }));
     expect(screen.getByText(PAUSED_NOTE)).toBeInTheDocument();
-    expect(PAUSED_NOTE).toContain("places no new entries");
-    expect(PAUSED_NOTE).toContain("still exits what it holds on its own exit rules");
+    expect(PAUSED_NOTE).toContain("it opens nothing new and keeps managing what it holds");
+    expect(PAUSED_NOTE).toContain("it sells on its own exit rules");
+    expect(PAUSED_NOTE).toContain("a wheel still sells covered calls on shares it was assigned");
+    expect(PAUSED_NOTE).toContain(
+      "Its names stay its own; unsubscribe to hand them back to the bot's own rules",
+    );
   });
 
   it("draws no pause note on a running subscription or a human account's", () => {

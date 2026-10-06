@@ -10,6 +10,7 @@ import {
   type Position,
 } from "../../src/domain/types.js";
 import { CRWV_WHEEL, WHEEL_DELTAS, wheelPhase } from "../../src/playbooks/crwv-wheel.js";
+import { type EnabledPlaybook, playbookIntents } from "../../src/playbooks/playbook.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
@@ -377,5 +378,35 @@ describe("CRWV-WHEEL — registration", () => {
     });
     expect(CRWV_WHEEL.evidence).toContain("docs/research/crwv-premium-fit.md");
     expect(CRWV_WHEEL.evidence).toContain("2027-01-29");
+  });
+});
+
+/** PAUSED (#4651): the wheel opens nothing new, but a covered call is the one risk-reducing open it
+ *  keeps — without it, shares it was assigned would have no exit at all. */
+describe("CRWV-WHEEL — paused", () => {
+  const paused: readonly EnabledPlaybook[] = [
+    { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+  ];
+
+  it("still sells a covered call on the 100 shares it was assigned — their way out", () => {
+    const intents = playbookIntents(paused, market(), book(shares(100, 80)), CALENDAR);
+    expect(intents).toEqual(
+      decide(market(), book(shares(100, 80))).map((i) => ({
+        ...i,
+        playbookId: "CRWV-WHEEL",
+        playbookMode: "standard",
+      })),
+    );
+    expect(intents).toEqual([
+      expect.objectContaining({
+        playbookId: "CRWV-WHEEL",
+        option: expect.objectContaining({ structure: "covered-call", effect: "open" }),
+      }),
+    ]);
+  });
+
+  it("sells no cash-secured put while flat", () => {
+    expect(decide(market())).toHaveLength(1);
+    expect(playbookIntents(paused, market(), book(), CALENDAR)).toEqual([]);
   });
 });

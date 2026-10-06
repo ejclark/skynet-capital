@@ -3,6 +3,7 @@ import {
   type EnabledPlaybook,
   isExitIntent,
   type Playbook,
+  pausedMayPlace,
   playbookIntents,
   printWindow,
 } from "../../src/playbooks/playbook.js";
@@ -250,6 +251,20 @@ describe("a paused (exits-only) entry", () => {
     expect(isExitIntent(order("buy"))).toBe(false);
     expect(isExitIntent(anOptionIntent())).toBe(false);
     expect(isExitIntent(anOptionIntent({ side: "buy", option: { effect: "close" } }))).toBe(true);
+  });
+
+  // The one risk-reducing open (#4651): a covered call can only deliver shares already held.
+  it("may still place its exits and a covered call — never a put, a spread or a share buy", () => {
+    const coveredCall = anOptionIntent({ option: { structure: "covered-call" } });
+    expect(pausedMayPlace(order("sell"))).toBe(true);
+    expect(pausedMayPlace(anOptionIntent({ side: "buy", option: { effect: "close" } }))).toBe(true);
+    expect(pausedMayPlace(coveredCall)).toBe(true);
+    expect(isExitIntent(coveredCall)).toBe(false);
+    expect(pausedMayPlace(order("buy"))).toBe(false);
+    expect(pausedMayPlace(anOptionIntent())).toBe(false);
+    expect(pausedMayPlace(anOptionIntent({ option: { structure: "call-debit-spread" } }))).toBe(
+      false,
+    );
   });
 
   it("keeps a decide playbook's option close and drops its opens", () => {

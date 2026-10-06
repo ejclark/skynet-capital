@@ -120,6 +120,10 @@ describe("playbookStoreCatalog", () => {
     expect(hold).not.toContain("positions it did not open: does nothing");
     expect(hold).toContain("whoever placed it");
     expect(hold).toContain("any other NVDA option position stops it opening and is left alone");
+    // A paused spread keeps its claim on NVDA (#4651): its names stay its own while subscribed.
+    expect(hold).toContain(
+      "While it is subscribed (on or paused), S1-NVDA stops trading NVDA shares",
+    );
   });
 
   describe("SAURON — Sauron's own rules (#4651)", () => {
@@ -192,7 +196,9 @@ describe("playbookStoreCatalog", () => {
         "takes over every share the bot already holds in these ten names, whoever bought it — " +
           "except a name another playbook on the bot trades, which stays that playbook's",
       );
-      expect(other).toContain("the bot's own rules stop trading altogether while it is on");
+      expect(other).toContain(
+        "the bot's own rules stop trading altogether while it is subscribed, on or paused",
+      );
       expect(other).toContain("its stop-losses included");
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
     });
@@ -241,14 +247,18 @@ describe("playbookStoreCatalog", () => {
       );
       expect(note("Pause")).not.toContain("just without its label");
     });
-
+    // Pause opens nothing new; ownership and exits unchanged (round 5): his names stay his.
     // Pause = exits only (round 4): on another bot it opens nothing and still sells to flat.
     it("says a paused SAURON on another bot buys nothing and still sells what it holds", () => {
       expect(note("Pause")).toContain(
         "Paused on any other bot, it buys nothing new and still sells a holding in his names " +
           "when euphoria rolls over",
       );
-      expect(note("Pause")).toContain("the bot's own rules stay off a name until it is sold");
+      expect(note("Pause")).toContain(
+        "his names stay his, so the bot's own rules stay off them, stop-losses included, until you " +
+          "unsubscribe",
+      );
+      expect(note("Pause")).not.toContain("until it is sold");
       expect(note("Pause")).not.toContain("nothing of his runs");
     });
 

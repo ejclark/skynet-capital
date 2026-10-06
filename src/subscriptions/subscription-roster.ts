@@ -90,9 +90,10 @@ export function pausedPlaybookIds(subscriptions: readonly PlaybookSubscription[]
 }
 
 /**
- * PAUSE MEANS "STOP NEW ENTRIES, KEEP MANAGING TO FLAT" (#4651). Each paused subscription resolves
- * to an `exitsOnly` entry, so it still sells what it holds on its own exit rules — S1-NVDA paused at
- * D-3 still exits before the print — and never opens. Merged over the house roster like any
+ * PAUSE STOPS A PLAYBOOK OPENING ANYTHING NEW; ITS OWNERSHIP AND EXITS ARE UNCHANGED (#4651). Each
+ * paused subscription resolves to an `exitsOnly` entry: it still sells on its own exit rules —
+ * S1-NVDA paused at D-5 still exits before the print — keeps its names exactly as when it runs, and
+ * opens nothing but a covered call (`pausedMayPlace`). Merged over the house roster like any
  * override (`mergeRosters`), it replaces an env entry of the same id. Before, a paused subscription
  * was skipped: an env-named playbook kept trading, and a Store-only one dropped its exits too.
  * An id no playbook resolves is left out quietly; `subscriptionRoster` already names it.

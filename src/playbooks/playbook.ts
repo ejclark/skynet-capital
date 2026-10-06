@@ -224,13 +224,14 @@ export interface EnabledPlaybook {
   readonly playbook: Playbook;
   readonly mode: PlaybookMode;
   /**
-   * A PAUSED subscription (#4651): stop new entries, keep managing to flat. `playbookIntents` keeps
-   * only its exits — share sells and option closes, exit-safety trips included — so it still sells
-   * what its basket holds on its own exit rules and never opens. It reserves no names from other
-   * playbooks (no option claim, no persona-rules yield); `withPlaybooks` keeps the base persona off
-   * one of its names only while that name is still held, and records no verdict for it. On the base
-   * persona's own rules (SAURON on Sauron's account) it is ignored: those orders are the persona's
-   * reflexes, which run unlabelled as before. Absent on every running entry.
+   * A PAUSED subscription (#4651). One rule: Pause stops a playbook opening anything new; its
+   * ownership and its exits are unchanged. `playbookIntents` keeps what `pausedMayPlace` allows —
+   * its exits (share sells, option closes, exit-safety trips) and one risk-reducing open, a covered
+   * call — and drops every other open. Its names stay its own exactly as when it runs, held or flat:
+   * the base persona stays off them (buys and sells), the scout skips them, a running SAURON yields
+   * them, and an option play keeps its claim. It records no verdict. On the base persona's own rules
+   * (SAURON on Sauron's account) it is ignored: those orders are the persona's reflexes, which run
+   * unlabelled as before. Absent on every running entry.
    */
   readonly exitsOnly?: true;
 }
@@ -239,6 +240,16 @@ export interface EnabledPlaybook {
  *  sold put is a `sell` that OPENS risk, so an option order is judged by its effect, never its side. */
 export function isExitIntent(intent: OrderIntent): boolean {
   return intent.option ? intent.option.effect === "close" : intent.side === "sell";
+}
+
+/**
+ * What a PAUSED entry may still place: its exits, plus THE ONE RISK-REDUCING OPEN — a covered call.
+ * Selling it can only ever deliver shares the bot already holds (the guards refuse a call the shares
+ * do not cover), so it is how a paused wheel gets out of assigned shares: without it they would have
+ * no exit at all. Every other open — a cash-secured put, a spread, a share buy — is refused.
+ */
+export function pausedMayPlace(intent: OrderIntent): boolean {
+  return isExitIntent(intent) || intent.option?.structure === "covered-call";
 }
 
 /** One exit-safety dial crossing its trip line — reported whether or not it was enforced, so an
@@ -473,8 +484,8 @@ export function playbookIntents(
   const intents: OrderIntent[] = [...safetyIntents];
   for (const entry of enabled) {
     const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols);
-    // A paused entry (#4651) keeps managing to flat: its exits only, never an open.
-    intents.push(...(entry.exitsOnly ? own.filter(isExitIntent) : own));
+    // A paused entry (#4651) opens nothing new: its exits, and a covered call, only.
+    intents.push(...(entry.exitsOnly ? own.filter(pausedMayPlace) : own));
   }
   return intents;
 }

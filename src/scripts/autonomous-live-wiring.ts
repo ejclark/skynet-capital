@@ -279,11 +279,11 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
     );
   }
-  // Paused = exits only: it still sells what it holds on its own rules, and opens nothing.
+  // Paused: opens nothing new (a covered call excepted); its names and exits are unchanged.
   const paused = pausedRoster(subscriptions);
   if (paused.length > 0) {
     console.log(
-      `[playbooks] ${bot.persona.id} paused (exits only): ${paused.map((e) => e.playbook.id).join(", ")}`,
+      `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
     );
   }
   const merged = mergeRosters(houseEnabled, [...acctRoster.enabled, ...paused]);

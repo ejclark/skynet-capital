@@ -1,9 +1,23 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
-import type { Playbook } from "../../src/playbooks/playbook.js";
+import { createDefaultPersonas } from "../../src/personas/registry.js";
+import {
+  type EnabledPlaybook,
+  type Playbook,
+  playbookIntents,
+  playbookVerdicts,
+} from "../../src/playbooks/playbook.js";
+import {
+  CRWV_WHEEL,
+  G1_GOOG,
+  HC_SAURON,
+  NVDA_CALL_SPREAD,
+  S1_NVDA,
+  TACO_DJT,
+} from "../../src/playbooks/registry.js";
 import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
-import { aContext, aPortfolio } from "../support/builders.js";
+import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 const calendar: readonly EarningsPrint[] = [
   { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "test" },
@@ -136,5 +150,87 @@ describe("withPlaybooks — per-playbook verdicts (#3687)", () => {
 
   it("the dark default (no playbooks) exposes no verdicts at all", () => {
     expect(withPlaybooks(base, [], calendar).playbookVerdicts).toBeUndefined();
+  });
+});
+
+/**
+ * PARITY (#4651): a roster with no paused entry and no persona's-own-rules entry composes exactly as
+ * withPlaybooks always did — the plays, then the base persona's reflexes off every enabled basket,
+ * and a verdict per entry. The reference below restates that original composition, and the grid
+ * walks every house persona against share, tactical, event and option rosters across tapes and books.
+ */
+describe("withPlaybooks — unchanged for every roster without a paused or own-rules entry", () => {
+  const reference = (
+    persona: Persona,
+    roster: readonly EnabledPlaybook[],
+    context: MarketContext,
+    portfolio: Portfolio,
+  ): OrderIntent[] => {
+    if (roster.length === 0) return persona.decide(context, portfolio);
+    const managed = new Set(roster.flatMap((e) => e.playbook.symbols));
+    return [
+      ...playbookIntents(roster, context, portfolio, calendar),
+      ...persona.decide(context, portfolio).filter((i) => !managed.has(i.symbol)),
+    ];
+  };
+  const on = (...plays: Playbook[]): EnabledPlaybook[] =>
+    plays.map((playbook) => ({ playbook, mode: "standard" }));
+  const rosters: readonly (readonly EnabledPlaybook[])[] = [
+    [],
+    on(S1_NVDA),
+    on(S1_NVDA, G1_GOOG),
+    on(HC_SAURON),
+    on(TACO_DJT, S1_NVDA),
+    on(CRWV_WHEEL, NVDA_CALL_SPREAD),
+  ];
+  const tapes: readonly MarketContext[] = [
+    aContext(
+      {
+        NVDA: { sentiment: -0.9, momentum: 0.02 },
+        AAPL: { sentiment: 0.85, momentum: -0.02 },
+        MSFT: { momentum: 0.03 },
+        GOOG: { sentiment: -0.5 },
+        CRWV: { sentiment: -0.8, momentum: 0.01 },
+        SPY: { momentum: 0.001 },
+        GLD: {},
+      },
+      "2026-08-10T15:00:00Z",
+    ),
+    aContext(
+      { NVDA: { sentiment: 0.9, momentum: -0.03 }, AAPL: { momentum: -0.05 }, GLD: {} },
+      "2026-08-21T15:00:00Z",
+    ),
+  ];
+  const books: readonly Portfolio[] = [
+    aPortfolio(),
+    aPortfolio({
+      positions: [
+        aPosition({ symbol: "NVDA", quantity: 20 }),
+        aPosition({ symbol: "AAPL", quantity: 10 }),
+      ],
+    }),
+  ];
+
+  it("matches the original composition, intent for intent and verdict for verdict", () => {
+    let compared = 0;
+    for (const persona of createDefaultPersonas()) {
+      for (const roster of rosters) {
+        const composed = withPlaybooks(persona, roster, calendar);
+        for (const context of tapes) {
+          for (const portfolio of books) {
+            expect(composed.decide(context, portfolio)).toEqual(
+              reference(persona, roster, context, portfolio),
+            );
+            compared += 1;
+          }
+          if (roster.length > 0) {
+            expect(composed.playbookVerdicts?.(context)).toEqual(
+              playbookVerdicts(roster, context.asOf, calendar),
+            );
+          }
+        }
+      }
+    }
+    expect(compared).toBeGreaterThanOrEqual(200);
   });
 });

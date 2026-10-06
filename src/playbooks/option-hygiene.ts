@@ -21,8 +21,9 @@ import type { EnabledPlaybook } from "./playbook.js";
  * A bot never carries a contract into its last two sessions: an exercised long buys 100 shares, an
  * assigned short sells or buys them, and expiration-day liquidity is the worst of the contract's
  * life. So from T-2 (two sessions before expiry) every held contract is closed — longs always;
- * shorts too, unless an ENABLED playbook owning that underlying declares it holds that short into
- * assignment on purpose (the wheel). A paused wheel is unattended, so its shorts are closed.
+ * shorts too, unless the playbook owning that underlying declares it holds that short into
+ * assignment on purpose (the wheel). A PAUSED wheel opens nothing new (#4651): it keeps its covered
+ * call into call-away, which is how its assigned shares leave, and its short put is closed.
  *
  * A short whose expiry now spans a print is closed two sessions before the print's blackout starts,
  * whatever its owner declares — which also catches a print that moved earlier.
@@ -47,16 +48,24 @@ interface DueClose {
   readonly kind: HygieneKind;
 }
 
-/** The RUNNING option playbook that trades `underlying`, if any. A paused one (`exitsOnly`, #4651)
- *  is never the owner: hygiene owns its contracts and closes them on the house schedule — a paused
- *  wheel's shorts are bought back two sessions before expiry instead of being held into
- *  assignment, exactly as before pausing kept it on the roster. A paused spread's own close rule
- *  still runs; whichever closes a contract first claims it, so nothing is closed twice. */
+/** The option playbook that trades `underlying`, running or paused, if any. */
 function ownerOf(
   enabled: readonly EnabledPlaybook[],
   underlying: string,
 ): EnabledPlaybook | undefined {
-  return enabled.find((e) => !e.exitsOnly && e.playbook.options?.underlyings.includes(underlying));
+  return enabled.find((e) => e.playbook.options?.underlyings.includes(underlying));
+}
+
+/**
+ * The shorts an owner holds into assignment. A PAUSED owner (`exitsOnly`, #4651) opens nothing new,
+ * so it keeps only its covered call — call-away is how its assigned shares leave — while a short put,
+ * whose assignment would buy new shares, is bought back here at T-2. Hygiene is that put's one
+ * closer: the wheel never closes its own. A paused spread holds nothing to expiry; its own close
+ * rule and this one both run, and whichever closes a contract first claims it, so never twice.
+ */
+function heldToExpiry(owner: EnabledPlaybook | undefined): readonly ("call" | "put")[] {
+  const holds = owner?.playbook.options?.holdsShortToExpiry ?? [];
+  return owner?.exitsOnly ? holds.filter((type) => type === "call") : holds;
 }
 
 /** Every held contract due to close by `asOfIso`, each with the earliest rule that made it due. */
@@ -70,9 +79,9 @@ function dueCloses(
   const due: DueClose[] = [];
   for (const contract of heldContracts(portfolio)) {
     const short = contract.quantity < 0;
-    const holds = ownerOf(enabled, contract.underlying)?.playbook.options?.holdsShortToExpiry;
+    const holds = heldToExpiry(ownerOf(enabled, contract.underlying));
     const rules: { readonly due: string; readonly kind: HygieneKind }[] = [];
-    if (!(short && holds?.includes(contract.type))) {
+    if (!(short && holds.includes(contract.type))) {
       rules.push({
         due: sessionsBefore(contract.expiration, EXPIRY_CLOSE_SESSIONS),
         kind: "expiry-hygiene",
