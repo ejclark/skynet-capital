@@ -27,7 +27,41 @@ describe("draftRequirements", () => {
     expect(sharesByUnderlying).toEqual(new Map([["NVDA", 100]]));
   });
 
-  it("demands the strike width in cash for a capped call spread, no shares", () => {
+  it("demands nothing for a bull call spread — the lower long call caps the short outright", () => {
+    // #4684: it used to demand 100 shares. Its worst case is the debit, paid when the order fills.
+    const bullCall = addLeg(addLeg(emptyDraft(), SHORT_CALL), {
+      ...SHORT_CALL,
+      strike: 170,
+      action: "buy",
+    });
+    const { cash, sharesByUnderlying } = draftRequirements(bullCall);
+
+    expect(cash).toBe(0);
+    expect(sharesByUnderlying.size).toBe(0);
+  });
+
+  it("charges one long call to one short: a second short call under it still needs shares", () => {
+    const twoUnderOne = addLeg(
+      addLeg(addLeg(emptyDraft(), SHORT_CALL), { ...SHORT_CALL, strike: 190 }),
+      HIGHER_CALL,
+    );
+    const { cash, sharesByUnderlying } = draftRequirements(twoUnderOne);
+
+    expect(cash).toBe((200 - 190) * 100); // the 200 caps the 190, the narrower width
+    expect(sharesByUnderlying).toEqual(new Map([["NVDA", 100]])); // the 180 is bare
+  });
+
+  it("demands nothing for a bear put debit spread — the higher long put caps the short outright", () => {
+    const bearPut = addLeg(addLeg(emptyDraft(), SHORT_PUT), {
+      ...SHORT_PUT,
+      strike: 170,
+      action: "buy",
+    });
+
+    expect(draftRequirements(bearPut).cash).toBe(0);
+  });
+
+  it("demands the strike width in cash for a bear call spread (the long call above), no shares", () => {
     const spread = addLeg(addLeg(emptyDraft(), SHORT_CALL), HIGHER_CALL);
     const { cash, sharesByUnderlying } = draftRequirements(spread);
 
@@ -85,6 +119,19 @@ describe("draftRequirements", () => {
       new Map([["NVDA260918C00180000", 1]]),
     );
     expect(partial.sharesByUnderlying.get("NVDA")).toBe(200);
+  });
+
+  it("lets a buy that closes a held short cap nothing — the short it ends was its only job", () => {
+    // A roll: buy back the held 170 call, sell the 180. The buy-back frees the shares the old call
+    // held (`draft-order-account.ts`); counted as a new long too, it would cover a second call.
+    const roll = addLeg(
+      addLeg(emptyDraft(), { ...SHORT_CALL, strike: 170, action: "buy" }),
+      SHORT_CALL,
+    );
+
+    expect(draftRequirements(roll).sharesByUnderlying.size).toBe(0);
+    const closing = draftRequirements(roll, new Map([["NVDA260918C00170000", -1]]));
+    expect(closing.sharesByUnderlying).toEqual(new Map([["NVDA", 100]]));
   });
 
   it("has nothing to demand from an empty draft", () => {
