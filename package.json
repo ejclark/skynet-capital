@@ -125,7 +125,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@balena/dockerignore": "1.0.2",
-    "@biomejs/biome": "2.5.14",
+    "@biomejs/biome": "2.5.15",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@playwright/experimental-ct-react": "1.62.1",
