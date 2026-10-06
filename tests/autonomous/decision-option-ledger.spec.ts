@@ -150,6 +150,28 @@ describe("DecisionDb — option round trips", () => {
     expect(db.realizedPlForPlaybook("sauron", "NVDA-CALL-SPREAD")).toBe(75);
   });
 
+  it("scores a spread's expiry once, whole, when its legs' reports arrive in separate reads", () => {
+    db.record(
+      filledCycle(1_000, spread("buy"), "s-1", 3.35, [
+        { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
+        { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
+      ]),
+    );
+    db.recordOptionLifecycle("sauron", [activity("exp-low", { symbol: LOW })]);
+    db.recordOptionLifecycle("sauron", [activity("exp-high", { symbol: HIGH })]);
+    expect(db.realizedPlForPlaybook("sauron", "NVDA-CALL-SPREAD")).toBe(-335);
+    expect(db.listRetrospectives("sauron")).toHaveLength(1);
+  });
+
+  it("scores both contracts of a 2-lot assignment reported in separate reads", () => {
+    db.record(filledCycle(1_000, anOptionIntent({ quantity: 2 }), "o-1", 2.05));
+    const assigned = { type: "OPASN" as const };
+    db.recordOptionLifecycle("sauron", [activity("asn-1", assigned)]);
+    db.recordOptionLifecycle("sauron", [activity("asn-2", assigned)]);
+    expect(db.realizedPlForPlaybook("sauron", "CRWV-WHEEL")).toBe(410);
+    expect(db.listRetrospectives("sauron")).toHaveLength(1);
+  });
+
   it("keeps a report on a contract the bot never traded, and scores nothing from it", () => {
     expect(db.recordOptionLifecycle("sauron", [activity("exp-9")])).toBe(1);
     expect(db.listRetrospectives("sauron")).toEqual([]);

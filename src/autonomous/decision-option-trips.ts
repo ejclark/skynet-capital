@@ -26,6 +26,15 @@ import type { RetrospectiveInsert } from "./decision-retrospectives.js";
  * The spread's return is measured against its net premium — the debit paid, or the credit
  * received — matching how a single short contract is measured against its premium.
  *
+ * WHOLE, OR NOT YET. A broker report closes what it names and nothing else, and one expiry's
+ * reports can land across two reads of the activity feed. So an expiry or assignment is scored
+ * only once every contract its entry opened has closed: score the first leg's report alone and
+ * its row is a permanent half-trade that the full spread's row would later double. The legs one
+ * expiry closed merge into one trip whatever report closed each (one assigned, one expired). A
+ * spread leg closed while a sibling leg is still open — exercised, or simply unreported — waits
+ * the same way, so a spread whose long leg became shares stays unscored rather than booking its
+ * short leg's premium as the whole trade.
+ *
  * What it does not score, said plainly: the 100 shares an assignment delivers. That share trade
  * (`OPTRD`) is not confirmed against a live account (`option-lifecycle.ts`), so the wheel's share
  * leg after assignment is outside this ledger, the same as on a member's. Nor an exercise: a long
@@ -59,12 +68,12 @@ export interface OptionLifecycleRow {
   readonly at: number;
 }
 
-/** The closing "order id" a lifecycle close carries through the matcher, so the legs one expiry
- *  or one assignment ended group together, and the trip can say which event ended it. */
+/** The closing "order id" a lifecycle close carries through the matcher, so the trip can say
+ *  which event ended it. */
 const LIFECYCLE_CLOSE = "lifecycle:";
 
-/** The dedup key for one option retrospective. The symbol is part of it because two legs of one
- *  order can end at the same instant by different events (one expires, one is assigned). */
+/** The dedup key for one option retrospective. The symbol set is part of it so a fill and a
+ *  broker report that close different legs of one order at the same instant stay two rows. */
 export function optionRetrospectiveKey(entryIntentId: number, at: number, symbol: string): string {
   return `${entryIntentId}:${at}:${symbol}`;
 }
@@ -99,6 +108,13 @@ function lifecycleFill(row: OptionLifecycleRow): TradeFill | undefined {
   return close ? { ...close, orderId: `${LIFECYCLE_CLOSE}${row.type}` } : undefined;
 }
 
+function lifecycleType(trip: RoundTrip): OptionLifecycleType | undefined {
+  const closing = trip.orderId ?? "";
+  return closing.startsWith(LIFECYCLE_CLOSE)
+    ? (closing.slice(LIFECYCLE_CLOSE.length) as OptionLifecycleType)
+    : undefined;
+}
+
 /** What one order's legs, closed by one event, add up to. */
 function merged(trips: readonly RoundTrip[]): { realized: number; returnPct: number } {
   const realized = trips.reduce((sum, t) => sum + t.realized, 0);
@@ -131,11 +147,19 @@ export function optionRetrospectives(
   const byIntent = new Map(priced.map((r) => [r.intentId, r] as const));
   const byOrder = new Map(priced.map((r) => [r.orderId, r] as const));
   const fills = [...priced.map(legFill), ...lifecycle.flatMap((row) => lifecycleFill(row) ?? [])];
+  const legsOf = new Map<number, Set<string>>();
+  for (const r of priced)
+    legsOf.set(r.intentId, (legsOf.get(r.intentId) ?? new Set()).add(r.occSymbol));
 
+  const ledger = matchRoundTrips(fills);
+  // An entry with a contract still open — exercised, unreported, or simply held.
+  const stillOpen = new Set(ledger.open.map((lot) => lot.entryIntentId));
   const groups = new Map<string, RoundTrip[]>();
-  for (const trip of matchRoundTrips(fills).trips) {
+  for (const trip of ledger.trips) {
     if (trip.entryIntentId === undefined) continue; // nothing to attribute it to
-    const key = `${trip.entryIntentId}|${trip.closedAt}|${trip.orderId ?? ""}`;
+    // Every broker report at one instant is one close, whichever event each leg ended by.
+    const closing = lifecycleType(trip) ? LIFECYCLE_CLOSE : (trip.orderId ?? "");
+    const key = `${trip.entryIntentId}|${trip.closedAt}|${closing}`;
     groups.set(key, [...(groups.get(key) ?? []), trip]);
   }
 
@@ -143,21 +167,31 @@ export function optionRetrospectives(
   for (const trips of groups.values()) {
     const [first] = trips as [RoundTrip, ...RoundTrip[]];
     const entryIntentId = first.entryIntentId as number;
+    const symbols = new Set(trips.map((t) => t.symbol));
+    if (stillOpen.has(entryIntentId)) {
+      // Whole, or not yet (module doc): a report may have siblings still to land, and a leg closed
+      // without its sibling is half a spread.
+      const everyLeg = [...(legsOf.get(entryIntentId) ?? [])].every((s) => symbols.has(s));
+      if (lifecycleType(first) || !everyLeg) continue;
+    }
     const at = new Date(first.closedAt).getTime();
     // Sorted, so a recompute keys a spread the same way whatever order its legs were read in.
-    const symbol = [...new Set(trips.map((t) => t.symbol))].sort().join("/");
+    const symbol = [...symbols].sort().join("/");
     if (alreadyRecorded.has(optionRetrospectiveKey(entryIntentId, at, symbol))) continue;
-    const closing = first.orderId ?? "";
-    const lifecycleType = closing.startsWith(LIFECYCLE_CLOSE)
-      ? (closing.slice(LIFECYCLE_CLOSE.length) as OptionLifecycleType)
-      : undefined;
+    const events = [...new Set(trips.map(lifecycleType))].flatMap((t) => (t ? [t] : []));
     const entry = byIntent.get(entryIntentId);
-    const exit = lifecycleType ? undefined : byOrder.get(closing);
+    const exit = events.length > 0 ? undefined : byOrder.get(first.orderId ?? "");
     inserts.push({
       at,
       symbol,
       entryIntentId,
-      exitReason: lifecycleType ? LIFECYCLE_STATUS[lifecycleType] : (exit?.reason ?? null),
+      exitReason:
+        events.length > 0
+          ? events
+              .map((t) => LIFECYCLE_STATUS[t])
+              .sort()
+              .join(" / ")
+          : (exit?.reason ?? null),
       ...merged(trips),
       sentimentDelta: delta(exit?.sentiment, entry?.sentiment),
       momentumDelta: delta(exit?.momentum, entry?.momentum),

@@ -105,6 +105,55 @@ describe("optionRetrospectives", () => {
     expect(trips[0]?.returnPct).toBeCloseTo(-100, 6);
   });
 
+  it("scores a spread's legs as ONE trip when one is assigned and one expires at the same close", () => {
+    const assigned: OptionLifecycleRow = { ...expired(HIGH), type: "OPASN" };
+    const trips = optionRetrospectives(spreadOpen, [expired(LOW), assigned], new Set());
+    expect(trips).toHaveLength(1);
+    // Long call −$510, short call's premium kept +$175: one trade, not a −100% and a +100%.
+    expect(trips[0]?.realized).toBeCloseTo(-335, 6);
+    expect(trips[0]).toMatchObject({
+      symbol: `${LOW}/${HIGH}`,
+      exitReason: "assigned / expired worthless",
+    });
+  });
+
+  it("scores none of a spread whose long leg was exercised, rather than the short leg alone", () => {
+    const exercised: OptionLifecycleRow = { ...expired(LOW), type: "OPEXC" };
+    // Settled between the strikes: the 185C is exercised, the 200C expires. The true −$135 rests on
+    // shares this ledger does not score, so +$175 for the short leg alone would be a fiction.
+    expect(optionRetrospectives(spreadOpen, [exercised, expired(HIGH)], new Set())).toEqual([]);
+    // Settled above both: the short leg is assigned, the long leg exercised.
+    const assigned: OptionLifecycleRow = { ...expired(HIGH), type: "OPASN" };
+    expect(optionRetrospectives(spreadOpen, [exercised, assigned], new Set())).toEqual([]);
+  });
+
+  it("waits for every leg's report before scoring a spread's expiry", () => {
+    // The broker's batch posts one leg before the other: the first read must not score half.
+    expect(optionRetrospectives(spreadOpen, [expired(LOW)], new Set())).toEqual([]);
+    const trips = optionRetrospectives(spreadOpen, [expired(LOW), expired(HIGH)], new Set());
+    expect(trips.map((t) => [t.symbol, t.realized])).toEqual([[`${LOW}/${HIGH}`, -335]]);
+  });
+
+  it("waits for every contract's report before scoring an assignment", () => {
+    const twoPuts = [leg({ intentId: 1, quantity: 2 })];
+    const assigned: OptionLifecycleRow = { ...expired(PUT), type: "OPASN" };
+    expect(optionRetrospectives(twoPuts, [assigned], new Set())).toEqual([]);
+    const trips = optionRetrospectives(twoPuts, [assigned, assigned], new Set());
+    expect(trips.map((t) => [t.symbol, t.realized])).toEqual([[PUT, 410]]);
+  });
+
+  it("scores none of a spread whose short leg was bought back alone while the long leg was exercised", () => {
+    const exercised: OptionLifecycleRow = { ...expired(LOW), type: "OPEXC" };
+    const buyBackHigh = leg({
+      intentId: 2,
+      occSymbol: HIGH,
+      side: "buy",
+      price: 2.9,
+      at: Date.parse("2026-11-05T15:00:00Z"),
+    });
+    expect(optionRetrospectives([...spreadOpen, buyBackHigh], [exercised], new Set())).toEqual([]);
+  });
+
   it("scores none of a spread with an unpriced leg, rather than half of it", () => {
     const [low, high] = spreadOpen;
     const legs = [low as OptionLegFillRow, { ...(high as OptionLegFillRow), price: undefined }];
