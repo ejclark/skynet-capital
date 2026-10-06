@@ -1,4 +1,8 @@
-import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import {
+  LIFECYCLE_STATUS,
+  type NormalizedLifecycleActivity,
+  type OptionLifecycleType,
+} from "../trading/option-lifecycle.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
 /**
@@ -9,10 +13,35 @@ import type { TradeActivityRecord } from "./activity-record.js";
  * is a view type (`ActivityView`), and option-lifecycle.ts's own module doc explains why.
  */
 
+const LIFECYCLE_PREFIX = "lifecycle:";
+
 /** `orderId` doubles as the ledger's dedupe key (`collapseActivity` folds on it) — an activity id
  *  namespaced so it can never collide with a real Alpaca order id. */
 export function lifecycleOrderId(activityId: string): string {
-  return `lifecycle:${activityId}`;
+  return `${LIFECYCLE_PREFIX}${activityId}`;
+}
+
+/** The inverse: the broker's activity id behind a ledger line, or `undefined` for an order's line. */
+export function lifecycleActivityId(orderId: string): string | undefined {
+  return orderId.startsWith(LIFECYCLE_PREFIX) ? orderId.slice(LIFECYCLE_PREFIX.length) : undefined;
+}
+
+const TYPE_BY_STATUS = new Map(
+  (Object.entries(LIFECYCLE_STATUS) as [OptionLifecycleType, string][]).map(([type, status]) => [
+    status,
+    type,
+  ]),
+);
+
+/** Which event a ledger line records — read off its namespaced id and the status
+ *  `lifecycleLedgerRecord` wrote — or `undefined` for an order's line. Activity names the event in
+ *  the side column's place, since nothing was bought or sold (#4650). */
+export function lifecycleTypeOf(
+  record: Pick<TradeActivityRecord, "orderId" | "status">,
+): OptionLifecycleType | undefined {
+  return lifecycleActivityId(record.orderId) === undefined
+    ? undefined
+    : TYPE_BY_STATUS.get(record.status);
 }
 
 export function lifecycleLedgerRecord(

@@ -56,6 +56,7 @@ import {
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
+import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
 import { startIvClock } from "./iv-clock-wiring.js";
 
 const PORT = resolvePort(process.env);
@@ -103,7 +104,7 @@ async function main(): Promise<void> {
     sweep: sweepLadderProgress,
     readAll: readAllLadderProgress,
   } = wireLadderProgress(process.env, activity, activityEventBus);
-  void reconcileBrokerActivity(activity, initial.participants)
+  const reconciled = reconcileBrokerActivity(activity, initial.participants)
     .then((n) => {
       if (n > 0) console.log(`[activity] banked ${n} order update(s) from the broker window`);
       sweepLadderProgress(initial.participants);
@@ -168,6 +169,15 @@ async function main(): Promise<void> {
       dataSource.stopParticipantStream(id);
       quoteStream.stopDesk(id);
     },
+  });
+
+  // Expiries and assignments fill no order, so neither the reconcile above nor the stream sees one:
+  // after the reconcile, ask each account half-hourly, one page each (#4650).
+  void wireOptionLifecycleSweep(dataSource.mode, reconciled, {
+    participants: liveRoster,
+    optionsClientFor: dataSource.optionsClientFactory,
+    store: activity,
+    onAppended: (id) => sweepLadderProgress([{ id }]),
   });
 
   // The underlying quote, pushed rather than polled (#3407 P4) — one market-data socket per member

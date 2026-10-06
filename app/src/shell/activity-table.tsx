@@ -7,6 +7,7 @@ import type {
   DeskActivityLeg,
   DeskMissingLeg,
 } from "../live/desk";
+import { lifecycleDayText } from "../live/lifecycle-day";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
@@ -202,6 +203,39 @@ export function targetedActivityRow(): string | undefined {
   return hash.startsWith("act-") ? hash : undefined;
 }
 
+/** What a lifecycle row says where an order's side would be. Nothing was bought or sold, and on a
+ *  phone a $0 "SELL" under the put's real sale read as a second sale (#4650). The word carries it;
+ *  the chip is neutral and dashed, never the buy/sell hues. */
+const LIFECYCLE_CHIP: Record<NonNullable<DeskActivityEvent["lifecycle"]>, string> = {
+  OPEXP: "EXPIRED",
+  OPASN: "ASSIGNED",
+  OPEXC: "EXERCISED",
+  OPTRD: "SETTLED",
+};
+
+function SideChip({ event }: { readonly event: DeskActivityEvent }): ReactElement {
+  return event.lifecycle ? (
+    <span className="tl-side tl-lifecycle">{LIFECYCLE_CHIP[event.lifecycle]}</span>
+  ) : (
+    <span className={`tl-side tl-${event.side}`}>{event.side.toUpperCase()}</span>
+  );
+}
+
+/** An order's date and time; a lifecycle row's DAY alone, the lifecycle card's own rule — its stamp
+ *  is a synthetic end-of-day instant, so a time would be one the event never had. */
+function rowStamp(event: DeskActivityEvent, now = new Date()): string {
+  if (event.lifecycle) return lifecycleDayText(event.at, now);
+  const when = new Date(event.at);
+  return Number.isNaN(when.getTime())
+    ? event.at
+    : when.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
 function ActivityRow({
   event,
   withWhy,
@@ -220,15 +254,7 @@ function ActivityRow({
     // Optional-call, as `decisions-section.tsx` does: happy-dom has no `scrollIntoView`.
     if (targetedActivityRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
   }, [anchor]);
-  const when = new Date(event.at);
-  const stamp = Number.isNaN(when.getTime())
-    ? event.at
-    : when.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  const stamp = rowStamp(event);
   return (
     <>
       <tr id={anchor} ref={row}>
@@ -261,7 +287,7 @@ function ActivityRow({
           {event.net ? <span className="sym-sub">net {event.net}</span> : null}
         </td>
         <td>
-          <span className={`tl-side tl-${event.side}`}>{event.side.toUpperCase()}</span>
+          <SideChip event={event} />
         </td>
         <td className="num">
           {event.filled > 0 && event.filled !== event.quantity

@@ -1,6 +1,7 @@
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OptionLegIntent, OrderIntent, Side } from "../domain/types.js";
+import type { OptionLifecycleType } from "../trading/option-lifecycle.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { formatPrice } from "./desk-data.js";
@@ -11,6 +12,7 @@ import {
   optionFillCostWords,
   optionLegCost,
 } from "./option-fill-cost.js";
+import { lifecycleTypeOf } from "./option-lifecycle-activity.js";
 import { type OrderOrigin, type OrderOriginIndex, orderOrigin } from "./order-origin.js";
 import { formatSigned, plClass } from "./render-atoms.js";
 
@@ -197,6 +199,9 @@ export interface DeskActivityLine {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** An expiry, assignment, exercise or share settlement the broker reported, not an order: the row
+   *  names this in place of a side (#4650). `side` stays as written, for the filters and the P/L. */
+  readonly lifecycle?: OptionLifecycleType;
 }
 
 /** One leg beneath its spread's row, with what it alone paid or received and how it adds up —
@@ -229,7 +234,13 @@ export function orderLineFields(
     at: record.at,
     backfilled: record.source === "backfill",
     origin: orderOrigin(record, origins),
+    ...lifecycleField(record),
   };
+}
+
+function lifecycleField(record: TradeActivityRecord): { lifecycle?: OptionLifecycleType } {
+  const lifecycle = lifecycleTypeOf(record);
+  return lifecycle ? { lifecycle } : {};
 }
 
 function legEvent(record: TradeActivityRecord, origins: OrderOriginIndex): DeskActivityLeg {
