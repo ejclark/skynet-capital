@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `release · deploy` red on main: drop local claim lease tags around semantic-release's tag fetch and push
+- **SHA:** 394888f   **DATE:** 2026-10-06   **STATUS:** closed
+- **COVERS:** 77a5842
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `release · deploy` on `main`, the first [37397356694](https://github.com/ejclark/skynet-capital/actions/runs/37397356694) at 2026-10-06T01:05:09Z. Repair capsule #4715 filed 2026-10-06T01:08:15Z, closed 14m later by #4720.
+- **ROOT CAUSE:** Claim leases live at `refs/tags/claim/<slug>`, and semantic-release moves every tag. A lease re-taken while the job installed made `git fetch --tags` refuse to clobber the runner's stale copy, failing the release and leaving `main` merged-but-undeployed. The release runner never needs a local lease.
+- **PREVENTION:** spec — `tests/scripts/release-lease-tags.spec.ts` (#4720).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### A spent GraphQL hour still turned the board sync — a display — into a red run on `main`
 - **SHA:** 3c72dc5   **DATE:** 2026-10-04   **STATUS:** closed
 - **SIGNAL:** run 36808329767 (`Moneypenny Events`, `issues`, 2026-10-01T02:58:24Z) failed `sync project status` for #3960 with `gh project` masked as `unknown owner type`; #3914's probe in the same log said `API rate limit already exceeded for user ID 3472134`. `incident-scan.mjs` held it as the one unlearned incident over a budget of 0, printed on every `ship.sh` run until #4438 was filed.
