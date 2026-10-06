@@ -80,7 +80,7 @@ export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "uncovers-short-call": "selling these shares would leave a sold call uncovered",
   "collateral-reserved": "that cash is set aside to secure a sold put",
   unsubscribed:
-    "not from a subscribed playbook — a bot opens a position only through a playbook it is subscribed to and has not paused",
+    "not from a subscribed playbook — a bot opens a position only through a playbook it is subscribed to and has on",
 };
 
 /** A result that is neither a fill nor a rejection, in words — a limit order's two other endings. */
