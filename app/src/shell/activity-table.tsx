@@ -22,7 +22,9 @@ import { cycleAnchor } from "./cycle-anchor";
  * accordion (docs/PATTERNS.md). Unlike the blotter's own fold column it never hides at wide
  * widths — the "why" is not overflow detail. Its "Playbook" row is the owner's alone (#885: "we do
  * not show what playbooks others are using"): the server withholds the key from anyone else, and
- * `showPlaybook={false}` on a page the viewer does not own keeps the row from ever drawing.
+ * `showPlaybook={false}` on a page the viewer does not own keeps the row from ever drawing. A bot's
+ * option fill adds the order in words, its dollar cost and what would prove it wrong (#4642
+ * criterion 8): the row's Price is per share, so the cost is where the ×100 is shown.
  * @category trading
  */
 export function ActivityTable({
@@ -140,6 +142,18 @@ function WhyDetail({
           </dd>
         </div>
       ) : null}
+      {why.contract ? (
+        <div>
+          <dt>Order</dt>
+          <dd className="num">{why.contract}</dd>
+        </div>
+      ) : null}
+      {why.cost ? (
+        <div>
+          <dt>Cost</dt>
+          <dd className="num">{why.cost}</dd>
+        </div>
+      ) : null}
       {why.strategy ? (
         <div>
           <dt>Strategy</dt>
@@ -150,6 +164,12 @@ function WhyDetail({
         <div>
           <dt>Expected</dt>
           <dd>{why.expectation}</dd>
+        </div>
+      ) : null}
+      {why.invalidator ? (
+        <div>
+          <dt>Proves it wrong</dt>
+          <dd>{why.invalidator}</dd>
         </div>
       ) : null}
       {why.guardDelta ? (

@@ -7,6 +7,7 @@ import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-
 import { formatPrice } from "./desk-data.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import { optionContractLine } from "./option-contract-line.js";
+import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
 
 /**
  * THE BOT'S MIND AS DATA — `/api/desk/:id/decisions`, the JSON view behind the
@@ -38,6 +39,8 @@ interface CycleOutcomeView {
   readonly resultLabel?: string;
   /** An option order's contracts and limit, in one line (`optionContractLine`); absent for shares. */
   readonly contract?: string;
+  /** `10 @ $176.10` for shares; for an option, the dollars that moved and how they add up
+   *  (`optionFillCostWords`) — a per-share price alone would read as 1/100th of the cost. */
   readonly fill?: string;
   /** The cycle's market context at this symbol, when captured — absent for a cycle recorded
    *  before context capture existed, never fabricated. */
@@ -171,6 +174,17 @@ function cycleHeadline(record: DecisionRecord, status: CycleStatus): string {
   return parts.join(" · ");
 }
 
+/** The fill in words: an option's in dollars (`optionFillCost`), a share's as quantity @ price. */
+function fillOf(outcome: IntentOutcome): { readonly fill?: string } {
+  const cost = optionFillCost(outcome.intent, outcome.result);
+  if (cost) return { fill: optionFillCostWords(cost) };
+  const price = outcome.result?.filledPrice;
+  if (price === undefined) return {};
+  return {
+    fill: `${outcome.result?.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(price)}`,
+  };
+}
+
 /** One outcome, shaped for the view — split out of `decisionCyclesView`'s map to stay under the
  *  file's cognitive-complexity budget (each field is one honest, independent "was this captured?"
  *  check, not branching logic). */
@@ -194,11 +208,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
     ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
     ...(resultLabel ? { resultLabel } : {}),
     ...(contract ? { contract } : {}),
-    ...(outcome.result?.filledPrice !== undefined
-      ? {
-          fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
-        }
-      : {}),
+    ...fillOf(outcome),
     ...(record.context?.momentum?.[outcome.intent.symbol] !== undefined
       ? { momentum: record.context.momentum[outcome.intent.symbol] }
       : {}),

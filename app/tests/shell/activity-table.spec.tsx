@@ -136,6 +136,48 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 });
 
+/** #4642 criterion 8 — a bot's option fill opens to the order in words, the dollars that moved and
+ *  what would prove it wrong, beside the playbook its owner already sees. */
+describe("ActivityTable — a bot's option fill", () => {
+  const sold = event({
+    symbol: "CRWV261106P00085000",
+    display: "CRWV $85 PUT · 6 NOV 26",
+    side: "sell",
+    quantity: 1,
+    filled: 1,
+    price: "$2.05",
+    reasoning: {
+      reason: "sell a put a month out, below support",
+      personaId: "sauron",
+      playbookId: "CRWV-WHEEL",
+      playbookMode: "standard",
+      contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+      cost: "$205.00 received — 1 contract × 100 shares × $2.05",
+      invalidator: "CRWV settles below $85 on 2026-11-06",
+    },
+  });
+
+  it("names the order, its cost, the playbook and what proves it wrong", () => {
+    render(<ActivityTable events={[sold]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
+    expect(screen.getByText("SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10")).toBeInTheDocument();
+    expect(
+      screen.getByText("$205.00 received — 1 contract × 100 shares × $2.05"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("CRWV-WHEEL · standard")).toBeInTheDocument();
+    expect(screen.getByText("Proves it wrong")).toBeInTheDocument();
+    expect(screen.getByText("CRWV settles below $85 on 2026-11-06")).toBeInTheDocument();
+  });
+
+  it("draws none of the three on a share fill", () => {
+    render(<ActivityTable events={[scouted]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    expect(screen.queryByText("Order")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cost")).not.toBeInTheDocument();
+    expect(screen.queryByText("Proves it wrong")).not.toBeInTheDocument();
+  });
+});
+
 // #4046 item 1: a Thesis marker links `?section=activity#act-<orderId>`, but the ledger arrives
 // after the router has tried the hash — the row has to bring itself into view once it exists.
 describe("ActivityTable — the row a link points at", () => {
