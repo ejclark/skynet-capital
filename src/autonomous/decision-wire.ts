@@ -195,12 +195,13 @@ export function parseDecisionsCursor(value: unknown): Readonly<Record<string, nu
   return out;
 }
 
-/** The dashboard's half of the bridge: a batch into its copy of the store — the records first, then
- *  the settlements riding them, so a settlement finds a decision that landed in the same batch. */
+/** The dashboard's half of the bridge: a batch into its copy of the store — the settlements FIRST,
+ *  so every close among the records is scored on a tape that already holds the late fills before
+ *  it. A settlement whose decision is among the records is linked as that decision lands. */
 export function storeDecisionBatch(
   db: Pick<DecisionDb, "recordBatch" | "recordSettlements">,
   batch: DecisionBatch,
 ): void {
-  db.recordBatch(batch.records);
   if (batch.settlements) db.recordSettlements(batch.settlements);
+  db.recordBatch(batch.records);
 }

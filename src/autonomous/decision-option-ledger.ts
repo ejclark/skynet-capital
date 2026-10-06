@@ -41,8 +41,10 @@ const OPTION_LIFECYCLE_SQL = `
 
 export interface OptionLedger {
   /** Recomputes one (persona, underlying)'s option round trips and writes the new ones. Safe to
-   *  call again on the same state — the trips already written are skipped by key. */
-  rescore(personaId: string, underlying: string): void;
+   *  call again on the same state — the trips already written are skipped by key. `rebuild`
+   *  replaces them all instead: a late fill that lands behind trips already written re-pairs them
+   *  (#4650), and the old rows must not stay beside the new. The caller holds a transaction. */
+  rescore(personaId: string, underlying: string, rebuild?: boolean): void;
   /** Stores the activities not seen before and rescores each underlying they touch. Returns how
    *  many were new. */
   recordLifecycle(personaId: string, activities: readonly NormalizedLifecycleActivity[]): number;
@@ -121,13 +123,20 @@ export function openOptionLedger(
     FROM retrospectives r JOIN intents i ON i.id = r.entry_intent_id
     WHERE r.persona_id = ? AND i.symbol = ?
   `);
+  // Every option trip on one underlying — by its entry intent, since a trip's own symbol is its
+  // contracts.
+  const deleteTrips = db.prepare(`
+    DELETE FROM retrospectives WHERE persona_id = ? AND entry_intent_id IN (
+      SELECT i.id FROM intents i JOIN intent_options o ON o.intent_id = i.id WHERE i.symbol = ?)
+  `);
   const insertLifecycle = db.prepare(`
     INSERT OR IGNORE INTO option_lifecycle
       (persona_id, activity_id, type, symbol, underlying, quantity, at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  function rescore(personaId: string, underlying: string): void {
+  function rescore(personaId: string, underlying: string, rebuild = false): void {
+    if (rebuild) deleteTrips.run(personaId, underlying);
     const legs = (selectLegs.all(personaId, underlying) as unknown as LegRow[]).map(legFillRow);
     const lifecycle = (
       selectLifecycle.all(personaId, underlying) as {

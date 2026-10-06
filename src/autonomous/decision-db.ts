@@ -306,6 +306,10 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectRetrospectiveKeys = db.prepare(
     "SELECT entry_intent_id, at FROM retrospectives WHERE persona_id = ? AND symbol = ?",
   );
+  // One share tape's trips — an option trip's symbol is its contracts, never a bare ticker.
+  const deleteShareRetrospectives = db.prepare(
+    "DELETE FROM retrospectives WHERE persona_id = ? AND symbol = ?",
+  );
   const insertRetrospective = db.prepare(`
     INSERT INTO retrospectives (
       at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
@@ -347,8 +351,13 @@ export function openDecisionDb(path: string): DecisionDb {
    * any newly-closed trip — the trigger IS the fill itself, called from `recordOne` right below.
    * Deterministic recompute + `pendingRetrospectives`'s own dedup means calling this twice for the
    * same state is always safe, so this never needs its own idempotency beyond that.
+   *
+   * `rebuild` replaces the tape's trips instead of adding to them: a fill that lands BEHIND trips
+   * already written (a late settlement, #4650) re-pairs them, and keeping the old rows beside the
+   * new would count a close twice. The caller holds a transaction around it.
    */
-  function updateRetrospectivesFor(personaId: string, symbol: string): void {
+  function updateRetrospectivesFor(personaId: string, symbol: string, rebuild = false): void {
+    if (rebuild) deleteShareRetrospectives.run(personaId, symbol);
     const rows = selectFilledIntentsForSymbol.all(personaId, symbol) as {
       intent_id: number;
       order_id: string | null;
@@ -400,13 +409,27 @@ export function openDecisionDb(path: string): DecisionDb {
   const optionLedger = openOptionLedger(db, writeRetrospective);
   const settlements = openSettlements(db, { writeLegOrders: optionTables.writeLegOrders });
 
-  /** Rescores what each settled intent's fill touches — its option ledger or its share tape. */
+  /**
+   * Rebuilds every tape a settlement landed on — its option ledger or its share tape — from the
+   * whole of it: the late fill sits at its own decision's place, ahead of closes already scored, so
+   * those trips are re-paired rather than added to. All or nothing, inside a savepoint: a scoring
+   * failure leaves the old trips (and the settlement) as they were, and never throws — the trips
+   * are derived, the next settlement or fill on the tape rebuilds them.
+   */
   function rescoreSettled(settled: readonly SettledIntent[]): void {
     const keys = new Set(settled.map((t) => `${t.option ? "o" : "s"}|${t.personaId}|${t.symbol}`));
-    for (const key of keys) {
-      const [kind, personaId, symbol] = key.split("|") as [string, string, string];
-      if (kind === "o") optionLedger.rescore(personaId, symbol);
-      else updateRetrospectivesFor(personaId, symbol);
+    if (keys.size === 0) return;
+    db.exec("SAVEPOINT rescore_settled");
+    try {
+      for (const key of keys) {
+        const [kind, personaId, symbol] = key.split("|") as [string, string, string];
+        if (kind === "o") optionLedger.rescore(personaId, symbol, true);
+        else updateRetrospectivesFor(personaId, symbol, true);
+      }
+      db.exec("RELEASE rescore_settled");
+    } catch {
+      db.exec("ROLLBACK TO rescore_settled");
+      db.exec("RELEASE rescore_settled");
     }
   }
 
@@ -479,20 +502,20 @@ export function openDecisionDb(path: string): DecisionDb {
   }
 
   /** A settlement can land before its decision on the dashboard's copy: link it once the decision
-   *  is in — the spread's leg ids, and the rescore its fill owes. Derived like the retrospective
-   *  trigger, so it never costs the decision itself; the next settlement or restart retries it. */
+   *  is in — the spread's leg ids, and the tape rebuild its fill owes. Derived like the
+   *  retrospective trigger, so it never costs the decision itself. */
   function linkEarlySettlements(entry: DecisionRecord): void {
+    let settled: SettledIntent[];
     try {
-      rescoreSettled(
-        entry.outcomes.flatMap((o) =>
-          o.result?.status === "working"
-            ? settlements.linkResult(o.result.orderId, o.intent.clientOrderId)
-            : [],
-        ),
+      settled = entry.outcomes.flatMap((o) =>
+        o.result?.status === "working"
+          ? settlements.linkResult(o.result.orderId, o.intent.clientOrderId)
+          : [],
       );
     } catch {
-      // See above.
+      return; // See above.
     }
+    rescoreSettled(settled);
   }
 
   /** The retrospective writer's trigger: a decision that just recorded a fill may have closed a
@@ -648,17 +671,13 @@ export function openDecisionDb(path: string): DecisionDb {
           if (stored.added) added += 1;
           settled.push(...stored.intents);
         }
+        // In the same transaction, but behind its own savepoint: the settlement is the fact, its
+        // P/L is derived — a scoring failure never costs the record the settle loop let go of.
+        rescoreSettled(settled);
         db.exec("COMMIT");
       } catch (error) {
         db.exec("ROLLBACK");
         throw error;
-      }
-      // After the commit: the settlement is the fact, its P/L is derived — a scoring failure must
-      // never cost the record the settle loop has already let go of. The next fill retries it.
-      try {
-        rescoreSettled(settled);
-      } catch {
-        // See above.
       }
       return added;
     },
