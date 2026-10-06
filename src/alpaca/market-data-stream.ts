@@ -6,6 +6,9 @@ import {
   quoteTickFromMessage,
 } from "./market-data-stream-events.js";
 
+/** Ceiling on the reconnect backoff — a minute of missed ticks is the worst gap an outage costs. */
+const MAX_RECONNECT_DELAY_MS = 60_000;
+
 export interface MarketDataStreamConfig {
   readonly apiKey: string;
   readonly apiSecret: string;
@@ -47,6 +50,13 @@ export class AlpacaMarketDataStream {
   /** True between the broker's `authenticated` ack and the socket closing — the only window in
    *  which a subscribe/unsubscribe frame means anything. */
   private authenticated = false;
+  // Confirmed live 2026-10-06: the bots app's socket died ~60s after boot (error → closed, never
+  // authenticated) and nothing reopened it, so no tick arrived, maybeEvaluate never ran, and every
+  // subscribed playbook sat silent through the open. An unexpected close of the CURRENT socket now
+  // schedules a reconnect with capped exponential backoff (1s → 60s), reset by a successful auth;
+  // stop() and a credential swap retire the socket first, so their close never reconnects.
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private reconnectAttempts = 0;
 
   constructor(config: MarketDataStreamConfig) {
     this.config = config;
@@ -79,6 +89,7 @@ export class AlpacaMarketDataStream {
   }
 
   start(): void {
+    this.clearReconnect();
     this.started = true;
     this.authenticated = false;
     const feed = this.config.feed ?? "iex";
@@ -94,17 +105,39 @@ export class AlpacaMarketDataStream {
     socket.addEventListener("close", () => {
       // A closed socket can carry no subscription, so a resubscribe across the gap must record
       // the set rather than send a frame into a dead connection — the next handshake sends it.
-      this.authenticated = false;
+      const current = this.socket === socket;
+      if (current) this.authenticated = false;
       this.config.onStatus?.("closed");
+      if (current) this.scheduleReconnect();
     });
     socket.addEventListener("error", () => {
-      this.authenticated = false;
+      if (this.socket === socket) this.authenticated = false;
       this.config.onStatus?.("error");
     });
   }
 
+  /** Close on purpose: retires the socket before closing it, so its close never reconnects. */
   stop(): void {
-    this.socket?.close();
+    this.clearReconnect();
+    const socket = this.socket;
+    this.socket = undefined;
+    this.authenticated = false;
+    socket?.close();
+  }
+
+  private scheduleReconnect(): void {
+    const delayMs = Math.min(MAX_RECONNECT_DELAY_MS, 1000 * 2 ** this.reconnectAttempts);
+    this.reconnectAttempts += 1;
+    this.config.onStatus?.(`reconnecting in ${delayMs / 1000}s`);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.start();
+    }, delayMs);
+  }
+
+  private clearReconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
   }
 
   private onMessage(raw: unknown): void {
@@ -121,6 +154,7 @@ export class AlpacaMarketDataStream {
       if (message.T === "success" && "msg" in message) {
         if ((message as { msg?: string }).msg === "authenticated") {
           this.authenticated = true;
+          this.reconnectAttempts = 0;
           this.subscribe();
           this.config.onStatus?.("authenticated");
         }
