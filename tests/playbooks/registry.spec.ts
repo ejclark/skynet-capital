@@ -1,5 +1,7 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
+import { nextSession } from "../../src/domain/market-calendar.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
+import { spreadWindow } from "../../src/playbooks/nvda-call-spread.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
 import {
   CRWV_WHEEL,
@@ -20,11 +22,15 @@ const cal = (symbol: string, date: string, status: EarningsPrint["status"]): Ear
 ];
 
 describe("S1-NVDA window", () => {
+  // D-numbers are TRADING SESSIONS (#4776). Before an 08-26 print: D-20 is 07-29, D-6 is 08-18,
+  // D-5 is 08-19.
   const confirmed = cal("NVDA", "2026-08-26", "confirmed");
 
-  it("wants long inside D-20..D-6 on a confirmed date", () => {
-    expect(S1_NVDA.desiredState("2026-08-10T15:00:00Z", confirmed)).toBe("long"); // D-16
-    expect(S1_NVDA.desiredState("2026-08-20T15:00:00Z", confirmed)).toBe("long"); // D-6
+  it("wants long inside D-20..D-6 on a confirmed date, counted in sessions", () => {
+    expect(S1_NVDA.desiredState("2026-07-28T15:00:00Z", confirmed)).toBe("no-window"); // D-21
+    expect(S1_NVDA.desiredState("2026-07-29T15:00:00Z", confirmed)).toBe("long"); // D-20
+    expect(S1_NVDA.desiredState("2026-08-10T15:00:00Z", confirmed)).toBe("long"); // D-12
+    expect(S1_NVDA.desiredState("2026-08-18T15:00:00Z", confirmed)).toBe("long"); // D-6
   });
 
   it("stays dark on an ESTIMATE — the date policy, enforced", () => {
@@ -34,21 +40,66 @@ describe("S1-NVDA window", () => {
   });
 
   it("wants flat from D-5 through the print — the dead-week exit", () => {
-    expect(S1_NVDA.desiredState("2026-08-21T15:00:00Z", confirmed)).toBe("flat"); // D-5
+    expect(S1_NVDA.desiredState("2026-08-19T15:00:00Z", confirmed)).toBe("flat"); // D-5
     expect(S1_NVDA.desiredState("2026-08-26T15:00:00Z", confirmed)).toBe("flat"); // D
   });
 
+  it("reads a weekend as the session before it", () => {
+    // 08-01 is the Saturday after D-19 (07-31): still in the window.
+    expect(S1_NVDA.desiredState("2026-08-01T15:00:00Z", confirmed)).toBe("long");
+    // 08-22 is the Saturday after D-3: still flat.
+    expect(S1_NVDA.desiredState("2026-08-22T15:00:00Z", confirmed)).toBe("flat");
+  });
+
   it("has no window far out or with no print scheduled", () => {
-    expect(S1_NVDA.desiredState("2026-07-01T15:00:00Z", confirmed)).toBe("no-window"); // D-56
+    expect(S1_NVDA.desiredState("2026-07-01T15:00:00Z", confirmed)).toBe("no-window"); // D-39
     expect(S1_NVDA.desiredState("2026-08-10T15:00:00Z", [])).toBe("no-window");
+  });
+});
+
+describe("S1-NVDA trades the window NVDA-CALL-SPREAD and the research count (#4776)", () => {
+  const print = cal("NVDA", "2026-11-18", "confirmed");
+  /** Every session from 10-01 to 11-20, at 11:00 ET. */
+  const sessions = (from: string, to: string): string[] => {
+    const days: string[] = [];
+    for (let at = from; at <= to; at = nextSession(at)) days.push(at);
+    return days;
+  };
+
+  it("holds long 10-21 (D-20) through 11-10 (D-6) and flat on 11-11 (D-5) for an 11-18 print", () => {
+    expect(S1_NVDA.desiredState("2026-10-20T15:00:00Z", print)).toBe("no-window");
+    expect(S1_NVDA.desiredState("2026-10-21T15:00:00Z", print)).toBe("long");
+    expect(S1_NVDA.desiredState("2026-11-10T15:00:00Z", print)).toBe("long");
+    expect(S1_NVDA.desiredState("2026-11-11T15:00:00Z", print)).toBe("flat");
+  });
+
+  it("matches spreadWindow on every session from 10-01 to 11-20", () => {
+    for (const day of sessions("2026-10-01", "2026-11-20")) {
+      const asOf = `${day}T15:00:00Z`;
+      expect({ day, state: S1_NVDA.desiredState(asOf, print) }).toEqual({
+        day,
+        state: spreadWindow(asOf, print),
+      });
+    }
+  });
+
+  it("opens on the first cycle after a late confirmation, as the spread does", () => {
+    // NVIDIA's notice lands 10-28 (D-15): the row flips then, and S1 opens that same session.
+    const estimate = cal("NVDA", "2026-11-18", "estimate");
+    expect(S1_NVDA.desiredState("2026-10-27T15:00:00Z", estimate)).toBe("no-window");
+    expect(S1_NVDA.desiredState("2026-10-28T15:00:00Z", print)).toBe("long");
+    expect(spreadWindow("2026-10-28T15:00:00Z", print)).toBe("long");
   });
 });
 
 describe("G1-GOOG window", () => {
   const confirmed = cal("GOOG", "2026-10-28", "confirmed");
 
-  it("wants long inside D-20..D-1 on a confirmed date", () => {
-    expect(G1_GOOG.desiredState("2026-10-08T15:00:00Z", confirmed)).toBe("long"); // D-20
+  it("wants long from D-20 to D-1 on a confirmed date, counted in sessions", () => {
+    // D-20 before a 10-28 print is 09-30, the day the GOOG ledger counts from — not 10-08.
+    expect(G1_GOOG.desiredState("2026-09-29T15:00:00Z", confirmed)).toBe("no-window"); // D-21
+    expect(G1_GOOG.desiredState("2026-09-30T15:00:00Z", confirmed)).toBe("long"); // D-20
+    expect(G1_GOOG.desiredState("2026-10-08T15:00:00Z", confirmed)).toBe("long"); // D-14
     expect(G1_GOOG.desiredState("2026-10-27T15:00:00Z", confirmed)).toBe("long"); // D-1
   });
 

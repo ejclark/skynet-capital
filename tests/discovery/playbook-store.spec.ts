@@ -37,7 +37,7 @@ describe("playbookStoreCatalog", () => {
 
   it("carries a date-windowed playbook's probe facts, evidence and study link", () => {
     const s1 = byId("S1-NVDA");
-    expect(s1?.window).toBe("D-20 to D-6");
+    expect(s1?.window).toBe("20 to 6 sessions before the print");
     expect(s1?.size?.standard).toBeGreaterThan(0);
     expect(s1?.traits.map((t) => t.id)).toEqual([
       "flat-before-the-release",
@@ -45,6 +45,24 @@ describe("playbookStoreCatalog", () => {
     ]);
     expect(s1?.evidence).toContain("docs/research/");
     expect(s1?.evidenceHref).toMatch(/^\/research\//);
+  });
+
+  it("names S1's and G1's windows in trading sessions, the unit their code counts in (#4776)", () => {
+    const s1 = byId("S1-NVDA");
+    expect(s1?.enter).toContain(
+      "From 20 trading sessions before a CONFIRMED earnings date to 6 before it.",
+    );
+    expect(s1?.enter).toContain("A date confirmed later than that opens on the next cycle.");
+    expect(s1?.exitCutLosses).toContain("Flat from 5 trading sessions before the print");
+    expect(s1?.hold).toContain("inside the last 5 sessions");
+    const g1 = byId("G1-GOOG");
+    expect(g1?.enter).toContain(
+      "From 20 trading sessions before a CONFIRMED earnings date to the close of print day.",
+    );
+    expect(g1?.window).toBe("20 sessions before the print to the close of print day");
+    for (const entry of [s1, g1]) {
+      expect(`${entry?.enter} ${entry?.exitCutLosses} ${entry?.hold}`).not.toMatch(/D-\d/);
+    }
   });
 
   it("shows a tactical playbook's whole basket and no invented window", () => {

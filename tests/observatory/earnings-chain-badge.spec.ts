@@ -1,4 +1,5 @@
 import { type EarningsPrint, PRINT_WINDOWS } from "../../src/domain/earnings-calendar.js";
+import { sessionsBefore } from "../../src/domain/market-calendar.js";
 import {
   type EarningsProximity,
   earningsBadge,
@@ -52,7 +53,10 @@ describe("earningsProximity", () => {
     // The boundary day IS inside the flat zone; one day further out is not.
     const edge = `2026-08-${String(26 - PRINT_WINDOWS.entryFlatDays).padStart(2, "0")}T14:00:00Z`;
     expect(earningsProximity("NVDA", edge, prints)?.nearness).toBe("flat-zone");
-    const beyond = `2026-08-${String(26 - PRINT_WINDOWS.deadZoneDays - 1).padStart(2, "0")}T14:00:00Z`;
+    // The dead zone counts trading sessions, as S1 does (#4776): D-5 is in it, D-6 is not.
+    const sessionEdge = `${sessionsBefore("2026-08-26", PRINT_WINDOWS.deadZoneSessions)}T14:00:00Z`;
+    expect(earningsProximity("NVDA", sessionEdge, prints)?.nearness).toBe("dead-zone");
+    const beyond = `${sessionsBefore("2026-08-26", PRINT_WINDOWS.deadZoneSessions + 1)}T14:00:00Z`;
     expect(earningsProximity("NVDA", beyond, prints)).toBeUndefined();
   });
 });

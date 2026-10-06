@@ -108,8 +108,8 @@ describe("NVDA-CALL-SPREAD — the window, counted in trading sessions", () => {
     expect(spreadWindow(at("2026-11-23"), CONFIRMED)).toBe("no-window");
   });
 
-  it("counts sessions where S1-NVDA counts calendar days — 10-21 is D-28 on the calendar", () => {
-    expect(S1_NVDA.desiredState(at("2026-10-21"), CONFIRMED)).toBe("no-window");
+  it("counts the same sessions S1-NVDA does — 10-21 is D-20 for both (#4776)", () => {
+    expect(S1_NVDA.desiredState(at("2026-10-21"), CONFIRMED)).toBe("long");
     expect(spreadWindow(at("2026-10-21"), CONFIRMED)).toBe("long");
   });
 

@@ -44,8 +44,10 @@ import { type Playbook, POST_PRINT_FLAT_DAYS, printWindow } from "./playbook.js"
  * The trigger menu — the complete set of conditions an authored play may key on, each one the
  * generalization of a shape a house play already proved.
  *
- * `pre-print-window` is `S1-NVDA`/`G1-GOOG`: long from `enterDaysBefore` trading-calendar days
- * ahead of a CONFIRMED print, flat from `exitDaysBefore` onward. `event-window` is `TACO-DJT`:
+ * `pre-print-window` is `S1-NVDA`/`G1-GOOG`'s shape: long from `enterDaysBefore` calendar days
+ * ahead of a CONFIRMED print, flat from `exitDaysBefore` onward. The house plays count trading
+ * sessions instead (#4776); this form declares days, so an authored play keeps them — (20, 5) here
+ * opens later than S1-NVDA does. `event-window` is `TACO-DJT`:
  * long while a qualifying external event for the symbol is younger than `holdMinutes`, flat once
  * every such event has aged out.
  *
