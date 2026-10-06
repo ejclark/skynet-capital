@@ -36,9 +36,9 @@
  * whitelist it declares it isn't, and would reject a legitimate new listing. The desk's own
  * review/submit gate stays the authority on whether a symbol is actually tradeable.
  */
-import { recentPrint } from "../domain/earnings-calendar.js";
 import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
-import { type Playbook, POST_PRINT_FLAT_DAYS, printWindow } from "./playbook.js";
+import type { Playbook } from "./playbook.js";
+import { eventState, prePrintState } from "./templates.js";
 
 /**
  * The trigger menu — the complete set of conditions an authored play may key on, each one the
@@ -297,57 +297,6 @@ export function validateAuthoredPlay(spec: AuthoredPlaySpec): AuthoredPlayValida
   return problems.length === 0 ? { ok: true } : { ok: false, problems };
 }
 
-/** The pre-print trigger as a `desiredState`: the S1/G1 shape with the author's own two numbers. */
-function prePrintState(
-  symbol: string,
-  trigger: Extract<AuthoredTrigger, { kind: "pre-print-window" }>,
-): Playbook["desiredState"] {
-  return (asOfIso, calendar) => {
-    if (recentPrint(symbol, asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
-      return "flat";
-    }
-    const window = printWindow(symbol, asOfIso, calendar);
-    if (!window) {
-      return "no-window";
-    }
-    if (window.days > trigger.enterDaysBefore) {
-      return "no-window";
-    }
-    if (window.days > trigger.exitDaysBefore) {
-      // Date policy (`playbook.ts`): only a CONFIRMED print may open a window; an estimate stays dark.
-      return window.confirmed ? "long" : "no-window";
-    }
-    return "flat";
-  };
-}
-
-/** How old an event is in minutes, or `undefined` when either timestamp is unparseable. */
-function ageMinutes(fromIso: string, toIso: string): number | undefined {
-  const from = Date.parse(fromIso);
-  const to = Date.parse(toIso);
-  return Number.isFinite(from) && Number.isFinite(to) ? (to - from) / 60_000 : undefined;
-}
-
-/** The event trigger as a `desiredState`: the TACO shape with the author's own hold window. */
-function eventState(
-  symbol: string,
-  trigger: Extract<AuthoredTrigger, { kind: "event-window" }>,
-): Playbook["desiredState"] {
-  return (asOfIso, _calendar, events = []) => {
-    const own = events.filter((event) => event.symbol === symbol);
-    if (own.length === 0) {
-      // Never signaled: correctly dark, exactly like a date-keyed play with no upcoming print.
-      return "no-window";
-    }
-    const live = own.some((event) => {
-      const age = ageMinutes(event.detectedAt, asOfIso);
-      return age !== undefined && age >= 0 && age <= trigger.holdMinutes;
-    });
-    // Every event aged out: converge to flat, so a position never rides past its own window.
-    return live ? "long" : "flat";
-  };
-}
-
 /**
  * A validated spec as an ordinary `Playbook`. Callers should validate first — an invalid spec
  * compiles to a playbook whose window is whatever its out-of-bounds numbers say, which is exactly
@@ -367,8 +316,13 @@ export function compileAuthoredPlay(spec: AuthoredPlaySpec): Playbook {
     horizon: spec.trigger.kind === "event-window" ? "short" : "medium",
     desiredState:
       spec.trigger.kind === "event-window"
-        ? eventState(symbol, spec.trigger)
-        : prePrintState(symbol, spec.trigger),
+        ? eventState(symbol, spec.trigger.holdMinutes)
+        : prePrintState(symbol, {
+            // A member's form declares calendar days; the house plays count sessions.
+            unit: "days",
+            enter: spec.trigger.enterDaysBefore,
+            exit: { kind: "before", count: spec.trigger.exitDaysBefore },
+          }),
   };
 }
 
