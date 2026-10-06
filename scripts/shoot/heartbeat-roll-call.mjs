@@ -15,6 +15,13 @@
 // bot still holds GOOG, the lot the stream keeps priced and nothing on the bot will sell. The line
 // comes from the real `unmanagedHoldings`, same rule as the armed frame. Lands in docs/shots/pr-4777.
 //
+// `FRAMES=subscriptions` shoots only `roll-call-subscriptions-*` (#4650): the roll call read with
+// the bot's own subscriptions — S1-NVDA on and run (On), CRWV-WHEEL paused in the Store (Paused),
+// SAURON subscribed a moment ago (Starts next pass), G1-GOOG named only in the bots app's own
+// playbook setting (Off, its exits still run), the rest Off or Can't fire. Built by the real
+// `playbookRollCall` from that roster — a fixture, nothing seeded. The frame is the roll-call card
+// itself, so every line fits. Lands in docs/shots/pr-4650-roll-call.
+//
 // JPEG ≤100KB (docs/PICTURES.md). Shots live under docs/shots/pr-4450 (the plan issue's number).
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/heartbeat-roll-call.mjs
 import { resolve } from "node:path";
@@ -132,12 +139,56 @@ const unmanagedHeartbeat = {
   },
 };
 
-const onlyUnmanaged = process.env.FRAMES === "unmanaged";
-let currentHeartbeat = onlyUnmanaged ? unmanagedHeartbeat : heartbeat;
+// The bot's subscriptions as the Store holds them, and the bots app's own playbook setting.
+const subscribedVerdicts = [{ playbookId: "S1-NVDA", mode: "standard", state: "no-window" }];
+const subscriptionsHeartbeat = {
+  available: true,
+  heartbeat: {
+    ...heartbeat.heartbeat,
+    playbooks: subscribedVerdicts.map((v) => ({
+      ...v,
+      since: "2026-10-01T13:30:00Z",
+      sinceIsLowerBound: false,
+    })),
+    rollCall: playbookRollCall(
+      subscribedVerdicts,
+      NOW,
+      registeredPlaybooks(),
+      PLAYBOOK_WIRING_GAPS,
+      [
+        ...UPCOMING_PRINTS,
+        { symbol: "NVDA", date: "2026-11-01", status: "confirmed", source: "IR: shoot fixture" },
+      ],
+      {
+        subscriptions: [
+          { playbookId: "S1-NVDA", enabled: true },
+          { playbookId: "CRWV-WHEEL", enabled: false },
+          { playbookId: "SAURON", enabled: true },
+        ],
+        envNamed: ["S1-NVDA", "G1-GOOG"],
+      },
+    ),
+  },
+};
+
+const frames = process.env.FRAMES;
+const onlyUnmanaged = frames === "unmanaged";
+const onlySubscriptions = frames === "subscriptions";
+let currentHeartbeat = onlyUnmanaged
+  ? unmanagedHeartbeat
+  : onlySubscriptions
+    ? subscriptionsHeartbeat
+    : heartbeat;
 
 const { page, origin, shoot, close } = await openShell({
   name: "heartbeat-roll-call",
-  out: resolve(onlyUnmanaged ? "docs/shots/pr-4777" : "docs/shots/pr-4450"),
+  out: resolve(
+    onlyUnmanaged
+      ? "docs/shots/pr-4777"
+      : onlySubscriptions
+        ? "docs/shots/pr-4650-roll-call"
+        : "docs/shots/pr-4450",
+  ),
   stubs: {
     "/api/settings": settings,
     "/api/desk/bot-sauron": desk,
@@ -156,6 +207,24 @@ if (onlyUnmanaged) {
     await page.goto(`${origin}/app/u/bot-sauron/decisions`);
     await page.getByText("Nothing sells it").scrollIntoViewIfNeeded();
     await shoot(`roll-call-unmanaged-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
+
+if (onlySubscriptions) {
+  // Tall enough that the card never scrolls under the sticky header; the width sets the layout.
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 2400 }],
+    ["desktop", { width: 1280, height: 1800 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/u/bot-sauron/decisions`);
+    const card = page.locator(".hb-card", { hasText: "Which playbooks this bot runs" });
+    await card.scrollIntoViewIfNeeded();
+    const path = resolve("docs/shots/pr-4650-roll-call", `roll-call-subscriptions-${tag}.jpg`);
+    await card.screenshot({ path, type: "jpeg", quality: 62 });
+    console.log(`shot ${path}`);
   }
   await close();
   process.exit(0);

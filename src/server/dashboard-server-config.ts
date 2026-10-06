@@ -4,6 +4,7 @@ import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
@@ -160,6 +161,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * feeds `/api/desk/:id/probes`. Omit and that panel reports itself unavailable.
    */
   readonly readCondScout?: () => CondScoutSnapshot | undefined;
+  /**
+   * The bots app's own playbook setting (`SKYNET_PLAYBOOKS`) and the bots it runs on, as its latest
+   * `/controls` poll reported it (#4650) — memory only. Lets the roll call say a playbook it names
+   * without a subscription runs exits only. Omit, or no report yet, and no line claims it.
+   */
+  readonly readHouseRoster?: () => HouseRosterReport | undefined;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they

@@ -177,6 +177,106 @@ describe("playbookRollCall — every house playbook is accounted for, never sile
   });
 });
 
+/** #4650 — the roll call read only the bot's passes, so a playbook PAUSED in the Store (no verdict,
+ *  exits still running) read "Off", the same as one nobody subscribed to, and a fresh subscription
+ *  read "Off" until the bot's next pass. The subscriptions now say which is which. */
+describe("playbookRollCall — reads the bot's own subscriptions", () => {
+  const play = (id: string, whenOff?: string): Playbook => ({
+    id,
+    symbols: [id.split("-")[1] ?? "TST"],
+    thesis: "a spec",
+    evidence: "a spec",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    desiredState: () => "no-window",
+    ...(whenOff ? { whenOff } : {}),
+  });
+  const house = [
+    play("S1-NVDA"),
+    play("G1-GOOG"),
+    play("TACO-DJT"),
+    play("CRWV-WHEEL"),
+    play("BETA-SCOUT", "runs on one bot only"),
+  ];
+  const gaps = { "TACO-DJT": "no feed" };
+  const sub = (playbookId: string, enabled = true) => ({ playbookId, enabled });
+  const lineFor = (
+    id: string,
+    verdicts: readonly PlaybookVerdict[] | null,
+    roster?: Parameters<typeof playbookRollCall>[5],
+  ) => playbookRollCall(verdicts, NOW, house, gaps, [], roster).find((l) => l.playbookId === id);
+
+  it("WHEN a playbook is paused in the Store, reads Paused — never Off — and says what still runs", () => {
+    const line = lineFor("CRWV-WHEEL", null, { subscriptions: [sub("CRWV-WHEEL", false)] });
+    expect(line).toMatchObject({ status: "paused" });
+    expect(line?.reason).toMatch(/opens nothing new/);
+    expect(line?.reason).toMatch(/sells on its own exit rules/);
+    expect(line?.reason).toMatch(/covered calls on shares it was assigned/);
+  });
+
+  it("keeps it Paused when the newest pass, recorded before the pause, still ran it", () => {
+    const ranBefore: PlaybookVerdict = { playbookId: "S1-NVDA", mode: "standard", state: "long" };
+    const line = lineFor("S1-NVDA", [ranBefore], { subscriptions: [sub("S1-NVDA", false)] });
+    expect(line).toMatchObject({ status: "paused" });
+    expect(line?.mode).toBeUndefined(); // the stale pass's mode is not quoted as if it ran
+  });
+
+  it("WHEN subscribed and on with no pass yet, says it starts on the bot's next pass", () => {
+    const line = lineFor("G1-GOOG", [s1("long")], { subscriptions: [sub("G1-GOOG")] });
+    expect(line).toMatchObject({ status: "starting" });
+    expect(line?.reason).toMatch(/starts on the bot's next pass/);
+    // Once a pass runs it, it is simply On.
+    const ran: PlaybookVerdict = { playbookId: "G1-GOOG", mode: "standard", state: "flat" };
+    expect(lineFor("G1-GOOG", [ran], { subscriptions: [sub("G1-GOOG")] })?.status).toBe("armed");
+  });
+
+  it("keeps a playbook's own off-reason when a subscription alone never makes it run", () => {
+    const line = lineFor("BETA-SCOUT", null, { subscriptions: [sub("BETA-SCOUT")] });
+    expect(line).toEqual({
+      playbookId: "BETA-SCOUT",
+      status: "off",
+      reason: "runs on one bot only",
+    });
+  });
+
+  it("still calls a wiring gap Can't fire, subscribed, paused or not", () => {
+    for (const enabled of [true, false]) {
+      const line = lineFor("TACO-DJT", null, { subscriptions: [sub("TACO-DJT", enabled)] });
+      expect(line).toEqual({ playbookId: "TACO-DJT", status: "blocked", reason: "no feed" });
+    }
+  });
+
+  it("lists a subscription no house playbook answers to, and says nothing on the bot runs it", () => {
+    const roster = { subscriptions: [sub("U-gone", false), sub("U-stale")] };
+    const lines = playbookRollCall(null, NOW, house, gaps, [], roster);
+    expect(lines.map((l) => l.playbookId).slice(-2)).toEqual(["U-gone", "U-stale"]);
+    for (const line of lines.slice(-2)) {
+      expect(line).toMatchObject({ status: "off" });
+      expect(line.reason).toMatch(/find no playbook by this id/);
+    }
+  });
+
+  it("WHEN the bots app's own setting names one this bot holds no subscription to, says its exits still run", () => {
+    const roster = { subscriptions: [sub("S1-NVDA")], envNamed: ["S1-NVDA", "G1-GOOG"] };
+    const line = lineFor("G1-GOOG", null, roster);
+    expect(line).toMatchObject({ status: "off" });
+    expect(line?.reason).toMatch(/opens nothing and its exit rules still sell what it holds/);
+    // Named there AND subscribed is an ordinary subscription.
+    expect(lineFor("S1-NVDA", null, roster)?.status).toBe("starting");
+  });
+
+  it("judges from the passes alone when the subscriptions could not be read", () => {
+    expect(lineFor("CRWV-WHEEL", null)).toMatchObject({ status: "off" });
+    expect(lineFor("CRWV-WHEEL", null)?.reason).not.toMatch(/Paused|exit rules/);
+  });
+
+  it("rides the heartbeat: botHeartbeatView passes the roster to the roll call", () => {
+    const view = botHeartbeatView([pass(20_000)], NOW, true, undefined, {
+      subscriptions: [sub("CRWV-WHEEL", false)],
+    });
+    expect(view.rollCall.find((l) => l.playbookId === "CRWV-WHEEL")?.status).toBe("paused");
+  });
+});
+
 /** #4777 AC7 — a lot the stream keeps priced but nothing on the bot will ever sell is said out
  *  loud, never left silently frozen on the book. */
 describe("unmanagedHoldings — a held lot no rule on this bot will exit", () => {
@@ -201,6 +301,18 @@ describe("unmanagedHoldings — a held lot no rule on this bot will exit", () =>
     expect(
       unmanagedHoldings({ positions: [lot("GOOG")], subscribedIds: ["G1-GOOG"] }, null),
     ).toEqual([]);
+  });
+
+  /** #4650 — a playbook the bots app's own setting names, with no subscription, opens nothing but
+   *  still runs its exits, so the roll call cannot also say nothing sells its lot. */
+  it("leaves GOOG managed while G1-GOOG runs exits only from the bots app's own setting", () => {
+    const holdings = { positions: [lot("GOOG")], subscribedIds: [] };
+    expect(unmanagedHoldings(holdings, null, undefined, ["G1-GOOG"])).toEqual([]);
+    const view = botHeartbeatView([pass(20_000)], NOW, true, holdings, {
+      subscriptions: [],
+      envNamed: ["G1-GOOG"],
+    });
+    expect(view.unmanaged).toEqual([]);
   });
 
   it("never flags the ten names the base persona trades, an option contract, or a closed line", () => {

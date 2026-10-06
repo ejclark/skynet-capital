@@ -82,7 +82,9 @@ export function mergeRosters(
  * The playbook ids an account has PAUSED: it holds a subscription to the id, switched off, and no
  * enabled one. An id it has no subscription to at all is not paused — that is "never subscribed".
  */
-export function pausedPlaybookIds(subscriptions: readonly PlaybookSubscription[]): Set<string> {
+export function pausedPlaybookIds(
+  subscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled">[],
+): Set<string> {
   const on = new Set(subscriptions.filter((s) => s.enabled).map((s) => s.playbookId));
   return new Set(
     subscriptions.filter((s) => !(s.enabled || on.has(s.playbookId))).map((s) => s.playbookId),

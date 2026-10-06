@@ -606,6 +606,12 @@ describe("/heartbeat — a held lot nothing on the bot will sell", () => {
     );
   });
 
+  it("counts a playbook the bots app's own setting runs exits-only on this bot as covering its lot", async () => {
+    const report = { accounts: ["sauron"], roster: [{ playbookId: "G1-GOOG", mode: "standard" }] };
+    const over = { subscriptions: subscriptionsWith([]), readHouseRoster: () => report } as never;
+    expect((await heartbeatFor(over)).unmanaged).toEqual([]);
+  });
+
   it("withholds the list from a member who does not own the bot", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(
@@ -624,5 +630,74 @@ describe("/heartbeat — a held lot nothing on the bot will sell", () => {
       { email: "guest@x", provider: "google", exp: 0 },
     );
     expect(answered(out).heartbeat).not.toHaveProperty("unmanaged");
+  });
+});
+
+/** #4650: the roll call reads this bot's Store subscriptions, so a paused playbook reads Paused and
+ *  a fresh one Starts next pass instead of both reading Off until a pass says otherwise. */
+describe("/heartbeat — the roll call reads the bot's subscriptions", () => {
+  const rows = (...subs: [string, boolean][]) =>
+    ({
+      loadIfReadable: () => ({
+        sauron: subs.map(([playbookId, enabled]) => ({ accountId: "sauron", playbookId, enabled })),
+        // Another account's subscriptions never reach this bot's roll call.
+        other: [{ accountId: "other", playbookId: "G1-GOOG", enabled: false }],
+      }),
+    }) as unknown as DashboardServerConfig["subscriptions"];
+  const read = async (over: Partial<DashboardServerConfig>, who?: string) => {
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith({ readDecisions: () => Promise.resolve([]), ...over }),
+      who ? { email: who, provider: "google", exp: 0 } : undefined,
+    );
+    return { body: out.body ?? "", heartbeat: answered(out).heartbeat as Record<string, unknown> };
+  };
+  const lineFor = (heartbeat: Record<string, unknown>, id: string) =>
+    (heartbeat.rollCall as { playbookId: string; status: string; reason: string }[]).find(
+      (l) => l.playbookId === id,
+    );
+
+  it("says Paused for a paused subscription and Starts next pass for a fresh one", async () => {
+    const { heartbeat } = await read({
+      subscriptions: rows(["CRWV-WHEEL", false], ["NVDA-CALL-SPREAD", true]),
+    });
+    expect(lineFor(heartbeat, "CRWV-WHEEL")?.status).toBe("paused");
+    expect(lineFor(heartbeat, "NVDA-CALL-SPREAD")?.status).toBe("starting");
+    expect(lineFor(heartbeat, "G1-GOOG")?.status).toBe("off");
+  });
+
+  it("names exits-only only for a bot the bots app says its own playbook setting runs on", async () => {
+    const report = (accounts: string[]) => () => ({
+      accounts,
+      roster: [{ playbookId: "G1-GOOG", mode: "conservative" as const }],
+    });
+    const runs = await read({ subscriptions: rows(), readHouseRoster: report(["sauron"]) });
+    expect(lineFor(runs.heartbeat, "G1-GOOG")?.reason).toMatch(/exit rules still sell/);
+    const elsewhere = await read({ subscriptions: rows(), readHouseRoster: report(["gandalf"]) });
+    expect(lineFor(elsewhere.heartbeat, "G1-GOOG")?.reason).not.toMatch(/exit rules/);
+  });
+
+  it("judges from the passes alone when the subscriptions file cannot be read", async () => {
+    const unreadable = { loadIfReadable: () => undefined } as never;
+    const { heartbeat } = await read({ subscriptions: unreadable });
+    expect(lineFor(heartbeat, "CRWV-WHEEL")?.status).toBe("off");
+  });
+
+  it("gives the owner the new lines and a non-owner none of them", async () => {
+    const gated: Partial<DashboardServerConfig> = {
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      subscriptions: rows(["CRWV-WHEEL", false], ["NVDA-CALL-SPREAD", true]),
+    };
+    const owner = await read(gated, "owner@x");
+    expect(lineFor(owner.heartbeat, "CRWV-WHEEL")?.status).toBe("paused");
+    const guest = await read(gated, "guest@x");
+    expect(guest.heartbeat).not.toHaveProperty("rollCall");
+    for (const word of ["CRWV-WHEEL", "NVDA-CALL-SPREAD", "paused", "starting", "Paused"]) {
+      expect(guest.body).not.toContain(word);
+    }
   });
 });

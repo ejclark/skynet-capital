@@ -5,6 +5,7 @@ import {
   type BotHoldings,
   botHeartbeatView,
   latestVerdictPass,
+  type RollCallRoster,
 } from "../observatory/bot-heartbeat-view.js";
 import {
   decisionCyclesView,
@@ -112,19 +113,35 @@ async function decisionsPayload(
   };
 }
 
+/** This bot's Store subscriptions, on or paused, and the playbooks the bots app's own setting runs
+ *  on it (#4650) — read once for the roll call and the unmanaged-lot line. Undefined when the store
+ *  is unwired or its file unreadable: a read that failed would hide a paused playbook, so neither
+ *  makes a claim from it. */
+function botRoster(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+): RollCallRoster | undefined {
+  const state = config.subscriptions?.loadIfReadable();
+  if (!state) return undefined;
+  const report = config.readHouseRoster?.();
+  const envNamed = report?.accounts.includes(found.id)
+    ? report.roster.map((e) => e.playbookId)
+    : undefined;
+  return { subscriptions: state[found.id] ?? [], ...(envNamed ? { envNamed } : {}) };
+}
+
 /** The bot's book (the hub's broker read) and its Store subscriptions, enabled or paused — what the
  *  roll call's unmanaged-lot line judges from (#4777). Undefined, so no claim is made, when either
  *  is unreadable: a failed broker read carries no positions, and an unwired or unreadable
  *  subscriptions file would hide a paused playbook that still exits. */
 function botHoldings(
   found: ParticipantSnapshot,
-  config: DashboardServerConfig,
+  roster: RollCallRoster | undefined,
 ): BotHoldings | undefined {
-  const subscriptions = config.subscriptions?.loadIfReadable();
-  if (found.error || !subscriptions) return undefined;
+  if (found.error || !roster) return undefined;
   return {
     positions: found.positions,
-    subscribedIds: (subscriptions[found.id] ?? []).map((s) => s.playbookId),
+    subscribedIds: roster.subscriptions.map((s) => s.playbookId),
   };
 }
 
@@ -137,11 +154,13 @@ async function heartbeatPayload(
 ): Promise<unknown> {
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
   if (!records) return { available: false, kind: found.kind };
+  const roster = botRoster(found, config);
   const heartbeat = botHeartbeatView(
     records,
     new Date(),
     regularSessionOpen(),
-    botHoldings(found, config),
+    botHoldings(found, roster),
+    roster,
   );
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }

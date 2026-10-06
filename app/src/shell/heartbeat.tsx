@@ -74,7 +74,9 @@ export function VerdictTable({
 }
 
 /** The roll call (#4450 slice 1): every house playbook against this bot, so one that nobody
- *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. An "On"
+ *  switched on reads "Off" instead of being absent — and, from the bot's subscriptions (#4650), one
+ *  paused in the Store reads "Paused" and a fresh one "Starts next pass", never "Off". Owner-only —
+ *  the server withholds it. An "On"
  *  line also says what it is waiting for and, where its rule has one, the day its window next
  *  opens — "On" alone reads as reassurance when the calendar holds no confirmed date. */
 export function RollCallList({
