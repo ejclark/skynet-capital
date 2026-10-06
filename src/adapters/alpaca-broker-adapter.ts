@@ -196,11 +196,9 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
     return last;
   }
 
-  /** The orders an earlier submit left working: the share orders here, then the option orders
-   *  (`AlpacaOptionOrderFlow.settle`), whose still-live underlyings are returned. */
-  async settle(): Promise<ReadonlySet<string>> {
-    await this.settleShares();
-    return this.optionFlow ? this.optionFlow.settle() : new Set<string>();
+  /** The option orders an earlier submit left working (`AlpacaOptionOrderFlow.settle`). */
+  settle(): Promise<ReadonlySet<string>> {
+    return this.optionFlow ? this.optionFlow.settle() : Promise.resolve(new Set<string>());
   }
 
   /**
@@ -209,7 +207,7 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
    * stays for the next cycle. Never canceled — a share order queued for the open is meant to fill
    * there. No network when nothing is pending.
    */
-  private async settleShares(): Promise<void> {
+  async settleShares(): Promise<void> {
     for (const entry of this.pendingShares?.list() ?? []) {
       let order: AlpacaOrder;
       try {

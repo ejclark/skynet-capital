@@ -18,4 +18,9 @@ export interface OptionOrderTracker {
   /** Re-reads every order a previous submit left `working`: forgets the settled, re-cancels the
    *  live, returns the underlyings still live. No network when nothing is pending. */
   settle(): Promise<ReadonlySet<string>>;
+  /** Re-reads the SHARE orders a submit left `working` and reports each one the broker has ended
+   *  (#4650). Read-only — never cancels — so it runs every cycle in any mode, halted included: a
+   *  share order on this account may be the beta scout's, which trades live whatever mode this
+   *  bot runs in. Never throws. No network when nothing is pending. */
+  settleShares?(): Promise<void>;
 }

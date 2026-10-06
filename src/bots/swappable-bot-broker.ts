@@ -102,6 +102,11 @@ export class SwappableBotBroker implements BrokerPort, OptionMarketPort, OptionO
     return this.current.settle();
   }
 
+  /** The share orders left working on this account — the beta scout's included (#4650). */
+  settleShares(): Promise<void> {
+    return this.current.settleShares();
+  }
+
   /**
    * Boot, before the first cycle: the orders an earlier run left `working` that no settlement has
    * closed, back into the settle loop — the broker may have filled them while no process watched.

@@ -124,8 +124,11 @@ describe("orders left working survive a restart", () => {
         now: NOW,
         logger: quiet,
       });
-      expect([...(await broker.settle())]).toEqual([]);
-      await broker.settle();
+      // Two cycles' worth: the share half, then the option half, as the trader runs them.
+      for (let cycle = 0; cycle < 2; cycle++) {
+        await broker.settleShares();
+        expect([...(await broker.settle())]).toEqual([]);
+      }
     });
 
     const results = [...db.listByPersona("sauron"), ...db.listByPersona("beta-scout")].map(

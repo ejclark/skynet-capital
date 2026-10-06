@@ -176,7 +176,7 @@ class ScriptedTransport implements AlpacaTradingTransport {
   }
 }
 
-describe("AlpacaBrokerAdapter.settle — a share order queued for the open", () => {
+describe("AlpacaBrokerAdapter.settleShares — a share order queued for the open", () => {
   const buy: OrderIntent = {
     symbol: "NVDA",
     side: "buy",
@@ -215,10 +215,10 @@ describe("AlpacaBrokerAdapter.settle — a share order queued for the open", () 
     expect((await adapter.submit(buy)).status).toBe("working");
     expect(pendingShares.list()).toEqual([{ orderId: "sh-1", symbol: "NVDA" }]);
 
-    await adapter.settle();
+    await adapter.settleShares();
     expect(settled).toEqual([]);
-    await adapter.settle();
-    await adapter.settle();
+    await adapter.settleShares();
+    await adapter.settleShares();
 
     expect(settled).toEqual([
       {
@@ -239,7 +239,7 @@ describe("AlpacaBrokerAdapter.settle — a share order queued for the open", () 
       order({ status: "canceled", filled_qty: "0" }),
     ]);
     await adapter.submit(buy);
-    await adapter.settle();
+    await adapter.settleShares();
     expect(settled).toEqual([
       { orderId: "sh-1", status: "rejected", filledQuantity: 0, settledAt: AT },
     ]);
@@ -248,13 +248,13 @@ describe("AlpacaBrokerAdapter.settle — a share order queued for the open", () 
   it("forgets one the broker no longer knows, and keeps one whose read failed", async () => {
     const gone = adapterOver([order({ status: "accepted" }), { status: 404, body: null }]);
     await gone.adapter.submit(buy);
-    await gone.adapter.settle();
+    await gone.adapter.settleShares();
     expect(gone.pendingShares.list()).toEqual([]);
     expect(gone.settled).toEqual([]);
 
     const blip = adapterOver([order({ status: "accepted" }), { status: 503, body: null }]);
     await blip.adapter.submit(buy);
-    await blip.adapter.settle();
+    await blip.adapter.settleShares();
     expect(blip.pendingShares.list()).toHaveLength(1);
   });
 
