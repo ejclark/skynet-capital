@@ -432,3 +432,35 @@ describe("the batch ledger — a premium counts only where its order fills", () 
     expect(result.refused.map((r) => r.intent)).toEqual([second]);
   });
 });
+
+// Share orders that compete see each other in EVERY batch, options or not (#4670): before, a
+// share-only batch on a book promising nothing sized each order against the starting book alone.
+describe("the batch ledger — share orders that compete, with no option anywhere", () => {
+  it("two sells of one ticker cannot jointly sell more than is held", () => {
+    const fifty = aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 50 })] });
+    const result = run([shares("sell", "CRWV", 300), shares("sell", "CRWV", 1)], fifty);
+    expect(result.approved).toMatchObject([{ quantity: 50 }]);
+    expect(result.refused).toEqual([{ intent: shares("sell", "CRWV", 1), reason: "nothing-held" }]);
+  });
+
+  it("two buys cannot jointly spend more than the cash", () => {
+    const result = run(
+      [shares("buy", "NVDA", 10), shares("buy", "NVDA", 10)],
+      aPortfolio({ cash: 1_000 }),
+    );
+    const ask = context.quotes.NVDA?.ask ?? 0;
+    const spent = result.approved.reduce((sum, i) => sum + i.quantity * ask, 0);
+    expect(spent).toBeLessThanOrEqual(1_000);
+    expect(result.refused.map((r) => r.reason)).toEqual(["insufficient-cash"]);
+  });
+
+  it("two buys under one playbook cannot jointly spend more than its allocation", () => {
+    const buy = { ...shares("buy", "CRWV", 200), playbookId: "CRWV-WHEEL" };
+    const result = run([buy, buy], aPortfolio({ cash: 1_000_000 }));
+    const ask = context.quotes.CRWV?.ask ?? 0;
+    const spent = result.approved.reduce((sum, i) => sum + i.quantity * ask, 0);
+    // CRWV-WHEEL is allocated $20,000: 200 shares at ~$90 is $18,010, so the second gets the rest.
+    expect(spent).toBeLessThanOrEqual(20_000);
+    expect(result.approved).toHaveLength(2);
+  });
+});

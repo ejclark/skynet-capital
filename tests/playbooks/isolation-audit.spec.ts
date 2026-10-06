@@ -1,6 +1,12 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import {
+  G1_GOOG,
+  NVDA_CALL_SPREAD,
+  registeredPlaybooks,
+  S1_NVDA,
+  TACO_DJT,
+} from "../../src/playbooks/registry.js";
 import { aContext, aPortfolio } from "../support/builders.js";
 
 /**
@@ -73,12 +79,22 @@ describe("isolation audit: one playbook's intent is unaffected by its peers", ()
     expect(bySymbol(reversed)).toEqual(bySymbol(forward));
   });
 
-  it("today's roster declares no derivative playbooks — the isolation default holds untested by exception", () => {
-    // The moment a playbook declares `derivesFrom`, this audit's job changes: it must then
-    // confirm the named parent actually exists in the roster. Written now so the check exists
-    // before the first derivative playbook does, per #3194's isolation contract.
+  it("the date-keyed share plays declare no parent — each decides in isolation", () => {
+    // A playbook that declares `derivesFrom` must name a parent that exists in the roster — the
+    // check below, live since NVDA-CALL-SPREAD became the first derivative (#3194's contract).
     for (const playbook of [S1_NVDA, G1_GOOG, TACO_DJT]) {
       expect(playbook.derivesFrom).toBeUndefined();
+    }
+  });
+
+  it("every derivative in the house roster names a parent that is in it", () => {
+    // NVDA-CALL-SPREAD is the first: its edge is S1-NVDA's, held as a capped-loss spread.
+    const roster = registeredPlaybooks();
+    const ids = new Set(roster.map((p) => p.id));
+    const derivatives = roster.filter((p) => p.derivesFrom !== undefined);
+    expect(derivatives.map((p) => p.id)).toEqual([NVDA_CALL_SPREAD.id]);
+    for (const playbook of derivatives) {
+      expect(ids.has(playbook.derivesFrom ?? "")).toBe(true);
     }
   });
 

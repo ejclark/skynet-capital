@@ -33,9 +33,11 @@ import { parseOccSymbol } from "../trading/option-symbols.js";
  * leg-by-leg close whose first leg then never fills; "count only their sold legs" would invent a
  * bare short out of a vertical close and lock shares nothing actually promises.
  *
- * Active only when the batch carries an option order or the book already holds a short (cash or
- * shares promised). Inactive, every read is the starting book's and every write is skipped — a
- * share-only cycle with no option positions sizes exactly as it always has.
+ * The option arithmetic runs only when the ledger is ACTIVE — the batch carries an option order or
+ * the book already holds a short (cash or shares promised). What share orders claim — cash a buy
+ * spends, shares a sell takes, a playbook's allocation a buy uses — is kept in every batch, so two
+ * share orders on one ticker in one cycle never jointly oversell or overspend (#4670). A share-only
+ * batch whose orders do not compete sizes exactly as it always has.
  */
 export interface GuardLedger {
   readonly active: boolean;
@@ -164,19 +166,19 @@ function cashElsewhere(portfolio: Portfolio, ledger: GuardLedger, except?: strin
 /** Cash neither paid out this batch nor needed by its options, at worst. With no short options and
  *  no option intents it is exactly the account's cash. */
 export function spendableCash(portfolio: Portfolio, ledger: GuardLedger, book: CoverNeeds): number {
-  if (!ledger.active) return portfolio.cash - book.cash;
+  if (!ledger.active) return unspentCash(portfolio, ledger) - book.cash;
   return unspentCash(portfolio, ledger) - cashElsewhere(portfolio, ledger);
 }
 
 /** Cash not yet paid out by this batch's share buys — the money in the account, before any option
  *  need. */
 export function unspentCash(portfolio: Portfolio, ledger: GuardLedger): number {
-  return portfolio.cash - (ledger.active ? ledger.spent : 0);
+  return portfolio.cash - ledger.spent;
 }
 
 /** Shares of `underlying` approved share sells already took this batch. */
 export function soldShares(ledger: GuardLedger, underlying: string): number {
-  return ledger.active ? (ledger.sold.get(underlying) ?? 0) : 0;
+  return ledger.sold.get(underlying) ?? 0;
 }
 
 /** Whether a change makes its underlying's cover worse — in shares its sold calls lack, or in cash
@@ -243,7 +245,7 @@ export function closableContracts(
   return side === "sell" ? Math.max(0, held - taken) : Math.max(0, -held - taken);
 }
 
-/** Record what an approved intent claimed. A no-op on an inactive ledger. */
+/** Record what an approved intent claimed. */
 export function claim(
   ledger: GuardLedger,
   claimed: {
@@ -261,7 +263,6 @@ export function claim(
     readonly risk?: number;
   },
 ): void {
-  if (!ledger.active) return;
   ledger.spent += Math.max(0, claimed.spent ?? 0);
   if (claimed.sold && claimed.sold.shares > 0) {
     const { underlying, shares } = claimed.sold;
@@ -340,7 +341,7 @@ export function committedToPlaybook(
 ): number {
   const playbookId = intent.playbookId ?? "";
   const basket = playbookSymbols?.get(playbookId) ?? [intent.symbol];
-  let committed = ledger.active ? (ledger.byPlaybook.get(playbookId) ?? 0) : 0;
+  let committed = ledger.byPlaybook.get(playbookId) ?? 0;
   for (const symbol of basket) {
     const ask = context.quotes[symbol]?.ask;
     if (ask !== undefined) committed += heldQuantity(portfolio, symbol) * ask;

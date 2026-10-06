@@ -424,12 +424,6 @@ describe("the guards — soundness over every fill/no-fill outcome (property)", 
     for (let seed = 1; seed <= SEEDS; seed += 1) {
       const c = aCase(seed);
       if (!c) continue;
-      // A share-only batch on a book whose contracts promise nothing leaves the guards' batch ledger
-      // off, so each share order is sized against the starting book — two sells of one ticker can
-      // jointly oversell. That is #4670, outside this property until it lands.
-      const book = bookOf(c.portfolio);
-      const promisesNothing = covered({ ...book, cash: 0, shares: new Map() });
-      if (!c.batch.some((i) => i.option) && promisesNothing) continue;
       checked += 1;
       const { approved } = applyGuardsWithVerdicts(c.batch, c.portfolio, CONTEXT, CONFIG);
       const why = breaks(c.portfolio, approved);

@@ -46,7 +46,8 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   readonly evidence: string;
   readonly evidenceHref?: string;
   /** The date window read off the playbook by the probe ("D-20 to D-6"), and its target exposure
-   *  per mode. Absent for a tactical playbook, which has no window — its rules are the copy above. */
+   *  per mode. Absent for a tactical playbook, which has no window, and for an option playbook,
+   *  which is sized by its allocation — the rules of either are the copy above. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
   /** Probe-proven traits ("Confirmed dates only"…) — empty when nothing was proven. */
@@ -99,6 +100,70 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
     hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
   },
+  "CRWV-WHEEL": {
+    description:
+      "The wheel on CRWV: sell a cash-secured put (the bot is paid now, and keeps the cash to buy " +
+      "100 shares at the strike set aside); if CRWV finishes below the strike, buy the shares and " +
+      "sell covered calls on them (paid again, the shares promised at the call's strike) until " +
+      "they are called away. It runs on its owner's conviction, AGAINST our own study: CRWV's " +
+      "options imply about 70% volatility while the stock has delivered a median of about 89% " +
+      "over the last year, and its 0.20-delta puts are priced to be assigned 19% of the time " +
+      "against 33% in CRWV's own history — the premium has underpaid the moves. It retires if " +
+      "its net P/L is below $0 on 2027-01-29, or if more than 1 in 3 of its sold puts finish in " +
+      "the money — a check made on that date by hand: nothing switches it off automatically.",
+    enter:
+      "Sells one put at the strike nearest 0.20 delta — roughly a 1-in-5 chance the market " +
+      "prices for finishing in the money (0.15 conservative, 0.25 aggressive) — on the latest " +
+      "expiry 30 to 45 days out that ends before CRWV's next earnings blackout. Once assigned, " +
+      "it sells one call at or above both the shares' cost and today's price, nearest 0.25 delta " +
+      "(0.20 / 0.30). Either strike must sit within 0.05 delta of that aim and never above 0.30 " +
+      "— when CRWV's quotes are too wide for any strike that close to trade, it sells nothing " +
+      "that cycle. One contract at a time, inside the capital you allocate.",
+    exitTakeProfit:
+      "No early take-profit and no roll: each put or call is held to expiry. Expiring worthless " +
+      "keeps the whole premium; a call that is exercised sells the shares at its strike, at or " +
+      "above what they cost.",
+    exitCutLosses:
+      "No stop. The real loss is owning a falling stock: an assigned put buys 100 shares at the " +
+      "strike however far below it CRWV trades, and those shares ride through an earnings print " +
+      "whenever no call that expires before the print can be sold. Shares under an open call are " +
+      "never sold out from under it.",
+    hold:
+      "While a put or call is open it waits for expiry. From CRWV's earnings blackout through the " +
+      "session after the print — or when no 30-to-45-day expiry ends before the next one — it " +
+      "sells nothing.",
+  },
+  "NVDA-CALL-SPREAD": {
+    description:
+      "The options form of S1-NVDA's pre-earnings run-up: a call debit spread — buy one NVDA call " +
+      "near the money, sell one higher-strike call on the same expiry, and pay the difference. " +
+      "The most it can lose is the debit paid; the most it can make is the gap between the " +
+      "strikes, less that debit. Since 2023 NVDA has risen in the 20 sessions into all 15 of its " +
+      "prints, and the last 5 of those sessions have been a coin flip, so it is out before them.",
+    enter:
+      "From 20 trading sessions before a CONFIRMED NVIDIA earnings date to 6 before it — an " +
+      "estimated date opens nothing, so it waits for NVIDIA's own call notice. It buys the call " +
+      "nearest 0.50 delta (about at the money) and sells the call nearest 0.25 delta above it " +
+      "(0.30 conservative, 0.20 aggressive) — delta being roughly the market's odds the call " +
+      "finishes in the money — on the latest expiry after its exit day that ends before the " +
+      "print. Each leg must sit near its aim — the long call between 0.40 and 0.60 delta, the " +
+      "short within 0.05 of its target; with none that close, it opens nothing. One spread at a " +
+      "time, inside the capital you allocate.",
+    exitTakeProfit:
+      "No price target — like S1-NVDA, the thesis is the window. It sells the spread back 5 " +
+      "trading sessions before the print, whatever it is worth then.",
+    exitCutLosses:
+      "The loss is capped at the debit paid. It sells the spread back from 5 sessions before the " +
+      "print, and as soon as the date is no longer confirmed, starting at the middle of the quote " +
+      "— from D-5, each session it stays unsold moves the price toward the bid; after a print it " +
+      "sells at the bid at once.",
+    hold:
+      "With no spread held, no confirmed date or outside the window: does nothing. It treats " +
+      "this bot's NVDA options as its own — positions carry no record of who placed them: one " +
+      "call debit spread (a long call below a short call, same expiry and size) is sold back on " +
+      "the rules above, whoever placed it, and any other NVDA option position stops it opening " +
+      "and is left alone. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
+  },
 };
 
 function entryOf(playbook: Playbook): PlaybookStoreEntry {
@@ -110,7 +175,10 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     hold: "Not yet documented for this playbook.",
   };
   const href = evidenceHref(playbook);
-  const probe = playbook.tactics ? undefined : probeWindow(playbook);
+  // An option play is sized by its allocation one contract at a time and opens on its own option
+  // rules, so the probe's "D-20 to D-6" window and percent-of-equity size would describe it falsely
+  // — it shows its rules as copy, the way a tactical playbook does.
+  const probe = playbook.tactics || playbook.options ? undefined : probeWindow(playbook);
   return {
     id: playbook.id,
     symbol: playbook.symbols[0] ?? "",
