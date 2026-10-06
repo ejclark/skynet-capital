@@ -1,7 +1,7 @@
 import { daysBetween } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import { SNAPSHOT_MAX_AGE_MS } from "../domain/option-book.js";
-import type { OptionContractQuote, PlaybookMode, Side } from "../domain/types.js";
+import type { OptionContractQuote, OptionMarket, PlaybookMode, Side } from "../domain/types.js";
 import {
   MAX_SPREAD_OF_MID,
   MIN_BID,
@@ -87,18 +87,37 @@ export function absDeltaOf(
   return delta === undefined ? undefined : { value: Math.abs(delta), source: "model" };
 }
 
-export interface StrikeBounds {
+/** One chain out of a cycle's snapshot — every quoted strike of one type at one expiry, in no
+ *  particular order (every pick below is a total order, so the order never matters). */
+export function chainQuotes(
+  market: OptionMarket | undefined,
+  underlying: string,
+  expiration: string,
+  type: "call" | "put",
+): OptionContractQuote[] {
+  return Object.values(market?.contracts ?? {}).filter(
+    (q) => q.underlying === underlying && q.expiration === expiration && q.type === type,
+  );
+}
+
+export interface PickBounds {
   readonly minStrike?: number;
   readonly maxStrike?: number;
   /** Out-of-the-money rows only (a call above spot, a put below). Default true. */
   readonly otm?: boolean;
+  /** How far |delta| may sit from the target. Without it "nearest" has no limit: when only
+   *  near-the-money rows are liquid, a 0.20 target would sell a 0.45 strike. */
+  readonly maxDeltaMiss?: number;
+  /** The highest |delta| a pick may carry — a sold strike's ceiling. */
+  readonly maxAbsDelta?: number;
 }
 
 export interface DeltaPick {
   readonly quote: OptionContractQuote;
   readonly absDelta: number;
   readonly deltaSource: "feed" | "model";
-  /** Rows that passed every filter — the audit trail's "out of how many". */
+  /** Liquid rows inside the strike bounds — the audit trail's "out of how many" the delta rule
+   *  chose from. */
   readonly candidates: number;
 }
 
@@ -110,34 +129,47 @@ const roundTo = (x: number, scale: number): number => Math.round(x * scale) / sc
 const outOfTheMoney = (q: OptionContractQuote, spot: number): boolean =>
   q.type === "call" ? q.strike > spot : q.strike < spot;
 
+const insideStrikes = (q: OptionContractQuote, spot: number, bounds: PickBounds): boolean =>
+  (bounds.minStrike === undefined || q.strike >= bounds.minStrike) &&
+  (bounds.maxStrike === undefined || q.strike <= bounds.maxStrike) &&
+  (!(bounds.otm ?? true) || outOfTheMoney(q, spot));
+
+const insideDeltaWindow = (absDelta: number, distance: number, bounds: PickBounds): boolean =>
+  (bounds.maxDeltaMiss === undefined || distance <= roundTo(bounds.maxDeltaMiss, 1e6)) &&
+  (bounds.maxAbsDelta === undefined || roundTo(absDelta, 1e6) <= bounds.maxAbsDelta);
+
 /**
- * The liquid row whose |delta| sits nearest `target`, inside the strike bounds. Ties go to the
- * tighter spread, then the farther out-of-the-money strike, then the OCC symbol — a total order.
- * `asOfIso` is the cycle's clock: it judges each row's freshness and sets "today" for the model.
+ * The liquid row whose |delta| sits nearest `target`, inside the strike bounds and the delta window
+ * (`maxDeltaMiss`, `maxAbsDelta`) — `undefined` when no row fits, so nothing trades rather than a
+ * strike far from what the play promises. Ties go to the tighter spread, then the farther
+ * out-of-the-money strike, then the OCC symbol — a total order. `asOfIso` is the cycle's clock: it
+ * judges each row's freshness and sets "today" for the model.
  */
 export function pickByDelta(
   rows: readonly OptionContractQuote[],
   target: number,
   spot: number,
   asOfIso: string,
-  bounds: StrikeBounds = {},
+  bounds: PickBounds = {},
 ): DeltaPick | undefined {
   const today = marketDayKey(asOfIso);
+  let candidates = 0;
   const scored: (DeltaPick & { readonly distance: number; readonly spread: number })[] = [];
   for (const quote of rows) {
-    if (!liquid(quote, asOfIso)) continue;
-    if (bounds.minStrike !== undefined && quote.strike < bounds.minStrike) continue;
-    if (bounds.maxStrike !== undefined && quote.strike > bounds.maxStrike) continue;
-    if ((bounds.otm ?? true) && !outOfTheMoney(quote, spot)) continue;
+    if (!(liquid(quote, asOfIso) && insideStrikes(quote, spot, bounds))) continue;
     const delta = absDeltaOf(quote, spot, today);
     if (!delta) continue;
+    candidates += 1;
+    // Rounded so float noise (0.21 − 0.20 vs 0.20 − 0.19) never decides — the tie-breaks and the
+    // window edges do.
+    const distance = roundTo(Math.abs(delta.value - target), 1e6);
+    if (!insideDeltaWindow(delta.value, distance, bounds)) continue;
     scored.push({
       quote,
       absDelta: delta.value,
       deltaSource: delta.source,
       candidates: 0,
-      // Rounded so float noise (0.21 − 0.20 vs 0.20 − 0.19) never decides — the tie-breaks do.
-      distance: roundTo(Math.abs(delta.value - target), 1e6),
+      distance,
       spread: roundTo(spreadOfMid(quote), 1e9),
     });
   }
@@ -156,7 +188,7 @@ export function pickByDelta(
         quote: best.quote,
         absDelta: best.absDelta,
         deltaSource: best.deltaSource,
-        candidates: scored.length,
+        candidates,
       }
     : undefined;
 }
