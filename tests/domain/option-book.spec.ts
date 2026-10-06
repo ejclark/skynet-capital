@@ -1,4 +1,5 @@
 import {
+  bareCalls,
   bookNeeds,
   type CoverLeg,
   coverNeeds,
@@ -71,7 +72,7 @@ describe("coverNeeds — one-to-one cap assignment", () => {
   });
 
   it("one long caps ONE short, never two — the second short call is bare", () => {
-    // `cappingLeg` would find the 260 for both shorts and read the pair as fully capped.
+    // A rule that lets a long cap every short it could would read the pair as fully capped.
     expect(needs([call(240, -1), call(250, -1), call(260, 1)])).toEqual({
       cash: 1_000, // the 260 caps the 250 (the cheapest cap); the 240 needs 100 shares
       cashByUnderlying: { NVDA: 1_000 },
@@ -111,6 +112,32 @@ describe("coverNeeds — one-to-one cap assignment", () => {
       cashByUnderlying: { CRWV: 8_500 },
       sharesByUnderlying: { NVDA: 100 },
     });
+  });
+});
+
+describe("bareCalls — the sold calls coverNeeds charges shares for", () => {
+  it("names nothing on a debit spread, and the bare one of two shorts under one long", () => {
+    expect(bareCalls([call(240, 1), call(250, -1)])).toEqual([]);
+    expect(bareCalls([call(240, -1), call(250, -1), call(260, 1)])).toEqual([call(240, -1)]);
+  });
+
+  it("counts only the contracts left over when a long caps part of a short", () => {
+    expect(bareCalls([call(250, -3), call(260, 1)])).toEqual([call(250, -2)]);
+  });
+
+  it("agrees with coverNeeds' shares on every underlying, and never names a put", () => {
+    const legs = [
+      call(240, -2),
+      call(250, 1, DEC),
+      put(85, -1),
+      { ...call(300, -1), underlying: "CRWV" },
+    ];
+    const shares = new Map<string, number>();
+    for (const line of bareCalls(legs)) {
+      shares.set(line.underlying, (shares.get(line.underlying) ?? 0) - line.contracts * 100);
+    }
+    expect(shares).toEqual(coverNeeds(legs).sharesByUnderlying);
+    expect(bareCalls(legs).every((line) => line.type === "call")).toBe(true);
   });
 });
 

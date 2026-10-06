@@ -32,6 +32,20 @@ describe("draftPreview", () => {
     expect(preview.undefinedRiskLegIds).toEqual([]);
   });
 
+  it("prices a call debit spread's max loss as the debit, never 'unlimited' (#4684)", () => {
+    const bullCall = addLeg(
+      addLeg(emptyDraft(), { ...SHORT_CALL, strike: 170, action: "buy", limitPrice: 9.5 }),
+      SHORT_CALL,
+    );
+    const preview = draftPreview(bullCall);
+
+    expect(preview.netPremium).toBeCloseTo(-530); // (9.50 − 4.20) × 100 paid — a net debit
+    expect(preview.maxLoss).toBeCloseTo(530); // the debit, all of it, below 170
+    expect(preview.maxGain).toBeCloseTo(470); // (180 − 170) × 100 − 530, above 180
+    expect(preview.unlimitedLoss).toBe(false);
+    expect(preview.undefinedRiskLegIds).toEqual([]);
+  });
+
   it("shows the literal string 'unlimited' for a naked short call, never a numeric placeholder", () => {
     const naked = addLeg(emptyDraft(), SHORT_CALL);
     const preview = draftPreview(naked);
