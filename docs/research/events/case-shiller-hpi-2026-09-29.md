@@ -559,3 +559,22 @@ arrives; this doc goes quiet until then.
 `FT-case-shiller-hpi-2026-09-29-1`, `-2`, `-3`, `-4` and `-6` — all score by **2026-10-06**,
 structurally beyond this event's `closeOutWithinDays: 6` window (ends 2026-10-05) — remain `_open_`
 for `forward-test-due`, not scored here.
+
+### Forward tests scored after the close-out (2026-10-06, `forward-test-due`)
+
+Scored from fresh FRED CSV pulls (`fredgraph.csv`, July 2026 now ingested) and the publisher's own
+2026-09-29 release, never from memory. The assessment and stance above are untouched; only the
+register's Outcome cells moved.
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-…-1` (release on schedule) | Published 2026-09-29, 9:00 ET | press.spglobal.com release datelined Sept. 29, 2026, July data | **pass** |
+| `FT-…-2` (1-step persistence band) | SA m/m in [−0.180%, +0.333%] | **+0.283%** (333.235 ÷ 332.294) | **pass** |
+| `FT-…-3` (July seasonal decayed) | NSA m/m < +0.554% | **+0.118%** (337.306 ÷ 336.908) | **pass** |
+| `FT-…-4` (Detroit backfills) | `DEXRNSA` gains 2026-06 | **204.906** present; release says valid June update provided | **pass** |
+| `FT-…-6` (same sign as FHFA) | CS SA and FHFA SA m/m same sign | **+0.283%** vs **+0.267%** | **pass** |
+
+Five for five, all within the registered rules. One note for the record: June's SA m/m now reads
+**+0.182%** in the current vintage against the **+0.134%** the `-2` band was anchored on, so the
+pass has less cushion than the registered band implied (+0.283% vs a +0.333% edge). Zero capital
+was ever at stake and the stance (stand aside, thermometer never trigger) stands.
