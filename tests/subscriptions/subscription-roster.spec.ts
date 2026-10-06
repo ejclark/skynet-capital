@@ -2,7 +2,12 @@ import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
 import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
-import { mergeRosters, subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
+import {
+  mergeRosters,
+  pausedPlaybookIds,
+  pausedRoster,
+  subscriptionRoster,
+} from "../../src/subscriptions/subscription-roster.js";
 
 const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscription => ({
   accountId: "bot-1",
@@ -121,5 +126,42 @@ describe("mergeRosters", () => {
 
   it("is empty when both base and overrides are empty", () => {
     expect(mergeRosters([], [])).toEqual([]);
+  });
+
+  // #4651: a paused subscription used to be skipped before the merge, so the house entry of the
+  // same id kept trading and Pause did nothing for any playbook the env roster names. Now it is an
+  // exits-only override, which replaces the house entry like any other.
+  it("a paused (exits-only) override replaces the house entry of the same id, in place", () => {
+    const paused: EnabledPlaybook = { playbook: S1_NVDA, mode: "conservative", exitsOnly: true };
+    expect(mergeRosters([house, houseGoog], [paused])).toEqual([paused, houseGoog]);
+  });
+});
+
+describe("pausedRoster — pause means exits only (#4651)", () => {
+  it("resolves a paused subscription to an exits-only entry in its own mode", () => {
+    expect(pausedRoster([sub({ enabled: false, mode: "conservative" })])).toEqual([
+      { playbook: S1_NVDA, mode: "conservative", exitsOnly: true },
+    ]);
+  });
+
+  it("never resolves an enabled subscription, or an id no playbook answers to", () => {
+    expect(pausedRoster([sub(), sub({ playbookId: "NOT-A-PLAYBOOK", enabled: false })])).toEqual(
+      [],
+    );
+  });
+});
+
+describe("pausedPlaybookIds", () => {
+  it("names an id the account holds a switched-off subscription to", () => {
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ playbookId: "G1-GOOG" })])).toEqual(
+      new Set(["S1-NVDA"]),
+    );
+  });
+
+  it("never names an id with no subscription, or one that also has an enabled subscription", () => {
+    expect(pausedPlaybookIds([])).toEqual(new Set());
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ mode: "aggressive" })])).toEqual(
+      new Set(),
+    );
   });
 });

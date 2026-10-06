@@ -189,6 +189,14 @@ export interface Playbook {
   readonly keyedOn?: PlaybookKey;
   /** Optional — present only on an option play; see `OptionPlaybookTraits`. */
   readonly options?: OptionPlaybookTraits;
+  /**
+   * Optional — the id of the persona whose own rules this playbook IS (`SAURON` → `"sauron"`,
+   * #4651). On a bot whose base persona has this id, `withPlaybooks` never calls `decide`: it runs
+   * the bot's own persona exactly as it always has and stamps those reflexes with this playbook's id
+   * and mode, so the bot's own build (a hardcore one included) stays exact and its rules never run
+   * twice. On any other bot it is an ordinary `decide` playbook. Absent on every other playbook.
+   */
+  readonly rulesOf?: string;
   /** PURE. Which chains and contracts this cycle needs priced. `NO_OPTION_DEMAND` = no network. */
   optionDemand?(
     asOfIso: string,
@@ -215,6 +223,33 @@ export interface Playbook {
 export interface EnabledPlaybook {
   readonly playbook: Playbook;
   readonly mode: PlaybookMode;
+  /**
+   * A PAUSED subscription (#4651). One rule: Pause stops a playbook opening anything new; its
+   * ownership and its exits are unchanged. `playbookIntents` keeps what `pausedMayPlace` allows —
+   * its exits (share sells, option closes, exit-safety trips) and one risk-reducing open, a covered
+   * call — and drops every other open. Its names stay its own exactly as when it runs, held or flat:
+   * the base persona stays off them (buys and sells), the scout skips them, a running SAURON yields
+   * them, and an option play keeps its claim. It records no verdict. On the base persona's own rules
+   * (SAURON on Sauron's account) it is ignored: those orders are the persona's reflexes, which run
+   * unlabelled as before. Absent on every running entry.
+   */
+  readonly exitsOnly?: true;
+}
+
+/** An order that takes risk off: a share sell (the bots trade long only) or an option close. A
+ *  sold put is a `sell` that OPENS risk, so an option order is judged by its effect, never its side. */
+export function isExitIntent(intent: OrderIntent): boolean {
+  return intent.option ? intent.option.effect === "close" : intent.side === "sell";
+}
+
+/**
+ * What a PAUSED entry may still place: its exits, plus THE ONE RISK-REDUCING OPEN — a covered call.
+ * Selling it can only ever deliver shares the bot already holds (the guards refuse a call the shares
+ * do not cover), so it is how a paused wheel gets out of assigned shares: without it they would have
+ * no exit at all. Every other open — a cash-secured put, a spread, a share buy — is refused.
+ */
+export function pausedMayPlace(intent: OrderIntent): boolean {
+  return isExitIntent(intent) || intent.option?.structure === "covered-call";
 }
 
 /** One exit-safety dial crossing its trip line — reported whether or not it was enforced, so an
@@ -421,8 +456,20 @@ export function playbookVerdicts(
   return enabled.map(({ playbook, mode }) => ({
     playbookId: playbook.id,
     mode,
-    state: playbook.tactics ? "tactical" : playbook.desiredState(asOfIso, calendar, events),
+    state: readsLiveSignals(playbook)
+      ? "tactical"
+      : playbook.desiredState(asOfIso, calendar, events),
   }));
+}
+
+/**
+ * Whether a playbook decides on live price and sentiment every pass, with no date or event window
+ * at all — a tactic chain (`tactics`) or a persona's own rules (`rulesOf`). Its verdict is
+ * "tactical", and no reader probes or scans a window for it: there is none, and asking its
+ * `desiredState` would answer a question it does not have.
+ */
+export function readsLiveSignals(playbook: Playbook): boolean {
+  return playbook.tactics !== undefined || playbook.rulesOf !== undefined;
 }
 
 export function playbookIntents(
@@ -435,27 +482,38 @@ export function playbookIntents(
   const { intents: safetyIntents } = exitSafetyIntents(enabled, context, portfolio);
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
-  for (const { playbook, mode } of enabled) {
-    if (playbook.decide) {
-      intents.push(...decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols));
-      continue;
-    }
-    if (playbook.tactics) {
-      intents.push(...tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols));
-      continue;
-    }
-    // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
-    // field doc: desiredState is not an independent state machine per symbol.
-    const state = playbook.desiredState(context.asOf, calendar, events);
-    for (const symbol of playbook.symbols) {
-      if (trippedSymbols.has(symbol)) {
-        continue;
-      }
-      const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
-      if (intent) intents.push(intent);
-    }
+  for (const entry of enabled) {
+    const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols);
+    // A paused entry (#4651) opens nothing new: its exits, and a covered call, only.
+    intents.push(...(entry.exitsOnly ? own.filter(pausedMayPlace) : own));
   }
   return intents;
+}
+
+/** One entry's own intents for the cycle, by the shape it declares: a `decide`, a tactic chain, or
+ *  the shared long/flat/no-window condition applied across its basket. */
+function entryIntents(
+  { playbook, mode }: EnabledPlaybook,
+  context: MarketContext,
+  portfolio: Portfolio,
+  calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[],
+  trippedSymbols: ReadonlySet<string>,
+): OrderIntent[] {
+  if (playbook.decide) {
+    return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
+  }
+  if (playbook.tactics) {
+    return tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols);
+  }
+  // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
+  // field doc: desiredState is not an independent state machine per symbol.
+  const state = playbook.desiredState(context.asOf, calendar, events);
+  return playbook.symbols.flatMap((symbol) => {
+    if (trippedSymbols.has(symbol)) return [];
+    const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
+    return intent ? [intent] : [];
+  });
 }
 
 /** The gap between one symbol's desired state and what is held, as at most one intent. */

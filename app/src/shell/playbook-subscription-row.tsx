@@ -43,6 +43,20 @@ function subscriptionFacts(
   ];
 }
 
+/**
+ * What Pause does, said under a paused bot subscription (#4651). One rule: Pause stops a playbook
+ * opening anything new; its ownership and its exits are unchanged. It still sells on its own exit
+ * rules (S1-NVDA still exits before a print); the expiry safety closes its options before they
+ * expire, except a covered call, kept so assigned shares can be called away; and its names stay
+ * its own, so the bot's own rules stay off them until it is unsubscribed. SAURON's card says what
+ * his own rules do when he is paused on his own account.
+ */
+export const PAUSED_NOTE =
+  "Paused: it opens nothing new and keeps managing what it holds — it sells on its own exit rules " +
+  "and closes any option before it expires, except a covered call, kept so the shares can be " +
+  "called away (a wheel still sells covered calls on shares it was assigned). Its names stay its " +
+  "own; unsubscribe to hand them back to the bot's own rules.";
+
 function stateOf(sub: SubscriptionView, human: boolean) {
   if (human) return { glyph: "◌", word: "Saved, never trades", key: "idle" };
   return sub.enabled
@@ -98,6 +112,7 @@ export function SubscriptionRow({
           <span key={fact}> · {fact}</span>
         ))}
       </p>
+      {!(human || sub.enabled) ? <p className="pb-form-note">{PAUSED_NOTE}</p> : null}
       {editing ? (
         <SubscribeForm
           accountId={accountId}

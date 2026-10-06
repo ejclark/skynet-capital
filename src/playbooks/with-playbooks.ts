@@ -11,6 +11,17 @@
  * A roster with an OPTION play (#4645) also tells the trader which underlyings it trades and which
  * quotes this cycle needs (`optionUnderlyings`, `optionDemand`); a roster without one carries
  * neither, so the trader reads no option market for it.
+ *
+ * A playbook that IS the base persona's own rules (`rulesOf === base.id`, today only `SAURON` on
+ * Sauron's account — #4651) is not run as a playbook: it would be the same rules twice. Step 2 runs
+ * the base persona exactly as above — suppressed on the OTHER playbooks' symbols, which stay theirs —
+ * and stamps every surviving reflex with that playbook's id and mode. With no such playbook enabled
+ * nothing here differs from a roster without the field.
+ *
+ * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
+ * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
+ * records no verdict, and a paused own-rules entry is ignored altogether. With no paused entry
+ * nothing here differs from a roster without the field.
  */
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import {
@@ -60,6 +71,20 @@ function optionSurface(
   };
 }
 
+/**
+ * The symbols a bot's playbooks take from its base persona: every enabled basket, running or paused,
+ * EXCEPT the base persona's own rules (`rulesOf === baseId`), whose orders are the persona's
+ * reflexes. Static on purpose: a paused playbook keeps its names held or flat, so nothing else opens
+ * a position its paused exits would then govern (#4651). The one definition — `withPlaybooks`
+ * suppresses reflexes on it, and the beta scout skips it (`run-autonomous.ts`), so the two can never
+ * disagree about which names a playbook owns.
+ */
+export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook[]): Set<string> {
+  return new Set(
+    enabled.filter((e) => e.playbook.rulesOf !== baseId).flatMap((e) => e.playbook.symbols),
+  );
+}
+
 export function withPlaybooks(
   base: Persona,
   enabled: readonly EnabledPlaybook[],
@@ -75,18 +100,34 @@ export function withPlaybooks(
   if (enabled.length === 0) {
     return base;
   }
-  const managed = new Set(enabled.flatMap((e) => e.playbook.symbols));
+  // The base persona's own rules, when enabled as a playbook — run as the base, never as a play.
+  // A live roster holds one entry per playbook (`onePerPlaybook`, applied where it resolves, which
+  // is what stops a repeated env token running any playbook twice on any bot). Dropping EVERY
+  // own-rules entry here also keeps a hand-built roster from running his rules a second time; the
+  // first one names the stamp.
+  // A PAUSED own-rules entry is ignored entirely: his reflexes run unlabelled, as before he
+  // subscribed — his rules have no basket of positions to manage apart from himself.
+  const own = enabled.find((e) => e.playbook.rulesOf === base.id && !e.exitsOnly);
+  const others = enabled.filter((e) => e.playbook.rulesOf !== base.id);
+  const running = enabled.filter((e) => !e.exitsOnly);
+  const managed = managedSymbols(base.id, enabled);
+  const attribute = (intent: OrderIntent): OrderIntent =>
+    own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
   return {
     id: base.id,
     name: base.name,
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      const plays = playbookIntents(enabled, context, portfolio, calendar, events);
-      const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
-      observeMixedSignals(enabled, context, mixedSignalsLog);
+      const plays = playbookIntents(others, context, portfolio, calendar, events);
+      const reflexes = base
+        .decide(context, portfolio)
+        .filter((i) => !managed.has(i.symbol))
+        .map(attribute);
+      observeMixedSignals(running, context, mixedSignalsLog);
       return [...plays, ...reflexes];
     },
-    playbookVerdicts: (context) => playbookVerdicts(enabled, context.asOf, calendar, events),
+    // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
+    playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),
     ...optionSurface(enabled, calendar),
   };
 }

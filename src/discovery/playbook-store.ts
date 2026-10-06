@@ -9,7 +9,7 @@
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
 import type { PlaybookMode } from "../domain/types.js";
-import type { Playbook } from "../playbooks/playbook.js";
+import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
 import {
   evidenceHref,
   housePlaybooks,
@@ -19,12 +19,22 @@ import {
   traitsOf,
 } from "./playbook-probe.js";
 
+/** One labelled row below Hold ("On another bot", "Pause") — for what a playbook must say that the
+ *  four trigger rows have no place for. Kept as rows rather than a longer description, so a phone
+ *  reader meets two sentences, then the rules, then the exceptions, each under its own name. */
+export interface PlaybookCardNote {
+  readonly label: string;
+  readonly text: string;
+}
+
 interface PlaybookStoreCopy {
   readonly description: string;
   readonly enter: string;
   readonly exitTakeProfit: string;
   readonly exitCutLosses: string;
   readonly hold: string;
+  /** Optional rows after Hold, in order. Absent on every card that needs none. */
+  readonly notes?: readonly PlaybookCardNote[];
 }
 
 /** One named, display-ready fact about a playbook's performance (#885/#3543) — a plain label +
@@ -104,6 +114,65 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
     hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
   },
+  // Every number below is pinned to the persona's own behavior by
+  // tests/discovery/playbook-store.spec.ts ("quotes only numbers his persona actually trades on").
+  // The Pause row says what pausing does TODAY: until unlabelled orders are refused (#4642 slice
+  // 10), his rules keep trading his own account without the label. Slice 10 rewrites it.
+  SAURON: {
+    description:
+      "Sauron's own trading rules as a playbook: he trades only at the crowd's extremes, selling " +
+      "into euphoria that has rolled over and buying what panic has thrown away. On his own " +
+      "account it places the orders his rules already place, labelled as this playbook's and held " +
+      "to any capital or symbol limit you set.",
+    enter:
+      "Buys a name it does not hold when news sentiment is −0.70 or lower and price momentum is 0 " +
+      "or higher — the selling has stopped. Each buy asks for $120,000 at −0.70, growing with the " +
+      "depth of the panic to $156,000 at −1.00, the bottom of the sentiment scale; the risk guards " +
+      "then cap any one position at a share of the account. The mode you pick does not change " +
+      "that: his rules size every order. The capital you allocate caps his buys too, counting what " +
+      "the bot already holds in the names he trades there; a name another playbook on the bot " +
+      "trades counts against that playbook, never against both. A symbol filter you set refuses " +
+      "his buys on the names it leaves out.",
+    exitTakeProfit:
+      "Sells the whole position when news sentiment is 0.70 or higher and price momentum is 0 or " +
+      "lower — the euphoria has rolled over. No price target. It sells any holding in his names " +
+      "this way, whoever bought it.",
+    exitCutLosses:
+      "None. His standard rules carry no stop-loss: a holding in his names is held until the exit " +
+      "above fires on it, however long that takes.",
+    hold:
+      "Between extremes, or while an extreme is still building, it places nothing. A name another " +
+      "playbook on the same bot trades — S1-NVDA's NVDA, the wheel's CRWV, the call spread's NVDA " +
+      "— is left to that playbook, so one position never answers to two.",
+    notes: [
+      {
+        label: "On another bot",
+        text:
+          "It runs his standard rules on that bot's own account and takes over every share the bot " +
+          "already holds in these ten names, whoever bought it — except a name another playbook on " +
+          "the bot trades, which stays that playbook's. These are every name the bots trade, so " +
+          "the bot's own rules stop trading altogether while it is subscribed, on or paused, its " +
+          "stop-losses included.",
+      },
+      {
+        label: "Research settings",
+        text:
+          "If Sauron's account runs his high-volume research settings instead, they trade smaller " +
+          "and more often: small tranches, buys on ordinary momentum runs too, half taken off into " +
+          "euphoria, and a momentum stop that closes the position. This card cannot show which his " +
+          "account runs; the rows above are his standard rules.",
+      },
+      {
+        label: "Pause",
+        text:
+          "Pausing it never stops an option playbook. Paused on Sauron's own account, his rules " +
+          "still trade it as they did before this playbook existed — without its label and without " +
+          "any capital or symbol limit you set here. Paused on any other bot, it buys nothing new " +
+          "and still sells a holding in his names when euphoria rolls over; his names stay his, so " +
+          "the bot's own rules stay off them, stop-losses included, until you unsubscribe.",
+      },
+    ],
+  },
   "CRWV-WHEEL": {
     description:
       "The wheel on CRWV: sell a cash-secured put (the bot is paid now, and keeps the cash to buy " +
@@ -166,7 +235,8 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "this bot's NVDA options as its own — positions carry no record of who placed them: one " +
       "call debit spread (a long call below a short call, same expiry and size) is sold back on " +
       "the rules above, whoever placed it, and any other NVDA option position stops it opening " +
-      "and is left alone. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
+      "and is left alone. While it is subscribed (on or paused), S1-NVDA stops trading NVDA " +
+      "shares on the same bot.",
   },
 };
 
@@ -181,8 +251,9 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
   const href = evidenceHref(playbook);
   // An option play is sized by its allocation one contract at a time and opens on its own option
   // rules, so the probe's session window and percent-of-equity size would describe it falsely
-  // — it shows its rules as copy, the way a tactical playbook does.
-  const probe = playbook.tactics || playbook.options ? undefined : probeWindow(playbook);
+  // — it shows its rules as copy, the way a playbook reading live signals (a tactic chain, a
+  // persona's own rules) does.
+  const probe = readsLiveSignals(playbook) || playbook.options ? undefined : probeWindow(playbook);
   return {
     id: playbook.id,
     symbol: playbook.symbols[0] ?? "",

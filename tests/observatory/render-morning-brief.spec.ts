@@ -56,7 +56,17 @@ describe("renderMorningBriefText", () => {
       ...baseBrief,
       rejectedPlaybookTokens: ["NOT-A-PLAYBOOK:standard"],
     });
-    expect(text).toContain("unrecognized token(s): NOT-A-PLAYBOOK:standard");
+    expect(text).toContain(
+      "refused token(s) — unrecognized, malformed or repeated: NOT-A-PLAYBOOK:standard",
+    );
+  });
+
+  it("names a repeated SKYNET_PLAYBOOKS token as refused, by the token itself", () => {
+    const text = renderMorningBriefText({
+      ...baseBrief,
+      rejectedPlaybookTokens: ["SAURON:aggressive (repeated)"],
+    });
+    expect(text).toContain("unrecognized, malformed or repeated: SAURON:aggressive (repeated)");
   });
 
   it("lists the event calendar with days-until", () => {

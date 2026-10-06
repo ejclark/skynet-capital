@@ -21,6 +21,7 @@ export function claimOptionUnderlyings(
   const claimedBy = new Map<string, string>();
   const refused = new Set<EnabledPlaybook>();
   for (const entry of enabled) {
+    // A paused option play keeps its claim (#4651): its names stay its own while it is subscribed.
     const underlyings = entry.playbook.options?.underlyings;
     if (!underlyings) continue;
     const taken = underlyings.filter((u) => claimedBy.has(u));
@@ -42,5 +43,64 @@ export function claimOptionUnderlyings(
     log(`${entry.playbook.id} hands ${to}; it stops trading them on this bot`);
     const symbols = entry.playbook.symbols.filter((s) => !claimedBy.has(s));
     return [{ ...entry, playbook: { ...entry.playbook, symbols } }];
+  });
+}
+
+/**
+ * ONE ENTRY PER PLAYBOOK (#4651) — defence in depth. `enabledPlaybooks` already refuses a repeated
+ * SKYNET_PLAYBOOKS token at parse time; this keeps any other path to a repeat (a hand-built roster,
+ * a future source) from running the same rules twice, which the guards would let through as two
+ * buys — twice the position. The first entry per id wins: after the merge, that is the account's
+ * own enabled subscription when it has one. A different repeat is refused loudly; the same entry
+ * seen twice (one subscription filling two env slots in `mergeRosters`) is dropped silently,
+ * since nothing was refused.
+ */
+export function onePerPlaybook(
+  enabled: readonly EnabledPlaybook[],
+  log: (line: string) => void,
+): EnabledPlaybook[] {
+  const first = new Map<string, EnabledPlaybook>();
+  return enabled.filter((entry) => {
+    const kept = first.get(entry.playbook.id);
+    if (!kept) {
+      first.set(entry.playbook.id, entry);
+      return true;
+    }
+    if (kept === entry) return false;
+    log(
+      `${entry.playbook.id}:${entry.mode} refused — ${kept.playbook.id}:${kept.mode} is already ` +
+        "on this bot's roster, and a playbook runs once",
+    );
+    return false;
+  });
+}
+
+/**
+ * A PERSONA'S OWN RULES YIELD TO EVERY OTHER PLAYBOOK (#4651). A `rulesOf` playbook (SAURON) trades
+ * a whole universe as one basket, so any symbol another enabled playbook trades is that playbook's:
+ * the basket loses it, loudly, the way an option claim narrows one (above). Applied after the option
+ * claims, it makes the ownership rule `withPlaybooks` applies to Sauron's own reflexes hold for the
+ * playbook too — on another bot SAURON never sells S1-NVDA's NVDA — and it keeps a Store allocation
+ * honest: the guards size SAURON against its narrowed basket, so one position never counts against
+ * two allocations. A roster with no `rulesOf` playbook comes back unchanged.
+ */
+export function yieldPersonaRules(
+  enabled: readonly EnabledPlaybook[],
+  log: (line: string) => void,
+): EnabledPlaybook[] {
+  const ownedBy = new Map<string, string>();
+  for (const { playbook } of enabled) {
+    // Running or paused (#4651), a playbook's names are its own: SAURON yields them either way.
+    if (playbook.rulesOf !== undefined) continue;
+    for (const s of playbook.symbols) if (!ownedBy.has(s)) ownedBy.set(s, playbook.id);
+  }
+  return enabled.map((entry) => {
+    if (entry.playbook.rulesOf === undefined) return entry;
+    const lost = entry.playbook.symbols.filter((s) => ownedBy.has(s));
+    if (lost.length === 0) return entry;
+    const to = lost.map((s) => `${s} → ${ownedBy.get(s)}`).join(", ");
+    log(`${entry.playbook.id} hands ${to}; it stops trading them on this bot`);
+    const symbols = entry.playbook.symbols.filter((s) => !ownedBy.has(s));
+    return { ...entry, playbook: { ...entry.playbook, symbols } };
   });
 }

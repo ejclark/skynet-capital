@@ -18,6 +18,8 @@
  * again next poll, the same "empty scan does not spend the day" rule the in-hours scout has.
  */
 import type { MarketContext } from "../domain/types.js";
+import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { managedSymbols } from "../playbooks/with-playbooks.js";
 import type { MarketClock } from "./autonomous-market-clock.js";
 
 export const SCOUT_STAGING_POLL_MS = 5 * 60_000;
@@ -92,6 +94,21 @@ export function announceScout(
   );
 }
 
+/** The names the beta scout leaves to a bot's playbooks: `managedSymbols`, the very set
+ *  `withPlaybooks` takes from the bot's persona. A bot subscribed to its OWN rules (Sauron to
+ *  SAURON) therefore keeps the scout on the same names as before it subscribed — those orders are
+ *  still his reflexes — while every other playbook's symbols stay skipped. No roster, no skips. */
+export function scoutSkipSymbols(
+  roster:
+    | {
+        readonly bot: { readonly persona: { readonly id: string } };
+        readonly enabled: readonly EnabledPlaybook[];
+      }
+    | undefined,
+): Set<string> {
+  return roster ? managedSymbols(roster.bot.persona.id, roster.enabled) : new Set();
+}
+
 /** The playbook roster's boot lines — refused tokens loudly, the armed set once. Moved here from
  *  run-autonomous.ts with the rest of the boot announcements, to keep that file under its cap. */
 export function announceRoster(
@@ -105,7 +122,9 @@ export function announceRoster(
   log: { log(line: string): void; error(line: string): void } = console,
 ): void {
   for (const bad of roster.rejected) {
-    log.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
+    log.error(
+      `[playbooks] REFUSED token "${bad}" in SKYNET_PLAYBOOKS — unknown, malformed or repeated`,
+    );
   }
   if (roster.enabled.length > 0) {
     log.log(

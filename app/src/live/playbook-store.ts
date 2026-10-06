@@ -32,6 +32,9 @@ export interface PlaybookStoreCardView {
   readonly exitTakeProfit: string;
   readonly exitCutLosses: string;
   readonly hold: string;
+  /** Labelled rows drawn after Hold, in order — absent on a card that needs none. Mirrors
+   *  `PlaybookCardNote` in `src/discovery/playbook-store.ts`. */
+  readonly notes?: readonly { readonly label: string; readonly text: string }[];
   readonly metrics: readonly never[];
   /** Enabled subscriptions to this playbook across every account (#3970) — a bare count, never
    *  who. Absent when the deployment has no subscription store wired. */

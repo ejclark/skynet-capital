@@ -8,6 +8,7 @@ import type {
   SubscriptionView,
 } from "../../src/live/playbook-store";
 import { PlaybookCard } from "../../src/shell/playbook-store-cards";
+import { PAUSED_NOTE } from "../../src/shell/playbook-subscription-row";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
 /**
@@ -195,6 +196,24 @@ describe("a subscribed card", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
+  // #4651: Pause stops a playbook opening anything new; its names and exits are unchanged — said
+  // where the owner paused it.
+  it("says what a pause does under a paused bot subscription, and nowhere else", () => {
+    mount(card(["NVDA"], { mode: "standard", enabled: false }));
+    expect(screen.getByText(PAUSED_NOTE)).toBeInTheDocument();
+    expect(PAUSED_NOTE).toContain("it opens nothing new and keeps managing what it holds");
+    expect(PAUSED_NOTE).toContain("it sells on its own exit rules");
+    expect(PAUSED_NOTE).toContain("a wheel still sells covered calls on shares it was assigned");
+    expect(PAUSED_NOTE).toContain(
+      "Its names stay its own; unsubscribe to hand them back to the bot's own rules",
+    );
+  });
+
+  it("draws no pause note on a running subscription or a human account's", () => {
+    mount(card(["NVDA"], { ...active, symbols: undefined }));
+    expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
+  });
+
   it("Edit opens the form pre-filled and posts to configure, keeping a pause", async () => {
     const onChanged = mount(
       card(BASKET, { ...active, enabled: false, mode: "aggressive", compoundAllocation: true }),
@@ -270,6 +289,7 @@ describe("a subscribed card", () => {
     });
     const status = screen.getByText("Saved, never trades").closest("p");
     expect(status).toHaveTextContent("◌ Saved, never trades · standard · $1,000 · paused");
+    expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
     expect(screen.queryByText(/On$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     const section = screen.getByText("S1-NVDA").closest("section");
@@ -333,5 +353,37 @@ describe("the deck, for an owned account", () => {
     );
     expect(note).toHaveTextContent(`Owner's account — ${BOTS_ONLY_NOTE}`);
     expect(screen.queryByText(/capital under management/)).not.toBeInTheDocument();
+  });
+});
+
+/** A card's own labelled rows (#4651): what the four rules have no place for goes below them under
+ *  its own name, so a phone reader meets a short description first, never a long paragraph. */
+describe("a card's labelled rows after the rules", () => {
+  const rowNames = () =>
+    [...document.querySelectorAll(".pb-card-triggers dt")].map((dt) => dt.textContent);
+
+  it("draws each note as a labelled row after Hold, in the server's order", () => {
+    mount({
+      ...card(["AAPL"]),
+      notes: [
+        { label: "On another bot", text: "other-bot rule" },
+        { label: "Pause", text: "pause rule" },
+      ],
+    });
+    expect(rowNames()).toEqual([
+      "Enter",
+      "Exit — take profit",
+      "Exit — cut losses",
+      "Hold",
+      "On another bot",
+      "Pause",
+    ]);
+    expect(precedes(screen.getByText("hold rule"), screen.getByText("other-bot rule"))).toBe(true);
+    expect(precedes(screen.getByText("other-bot rule"), screen.getByText("pause rule"))).toBe(true);
+  });
+
+  it("draws only the four rule rows on a card with no notes", () => {
+    mount(card(["AAPL"]));
+    expect(rowNames()).toEqual(["Enter", "Exit — take profit", "Exit — cut losses", "Hold"]);
   });
 });

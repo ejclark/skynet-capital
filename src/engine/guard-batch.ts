@@ -292,14 +292,17 @@ export function claim(
   }
 }
 
-/** The enabled subscription an intent's playbook trades under, if any. */
+/** The subscription an intent's playbook trades under: the enabled one, else the account's paused
+ *  one (#4651). A paused playbook reaches the guards only with what its roster entry may still place
+ *  — exits, which are never gated, and a covered call on shares it holds — so its paused terms size
+ *  that covered call exactly as they would running, instead of refusing it as unallocated. */
 function subscriptionFor(
   intent: OrderIntent,
   subscriptions: readonly PlaybookSubscription[] | undefined,
 ): PlaybookSubscription | undefined {
-  return intent.playbookId
-    ? subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
-    : undefined;
+  if (!intent.playbookId) return undefined;
+  const mine = subscriptions?.filter((s) => s.playbookId === intent.playbookId) ?? [];
+  return mine.find((s) => s.enabled) ?? mine.find((s) => !s.enabled);
 }
 
 /** The subscription rules a buy and an option open share: which subscription the intent trades

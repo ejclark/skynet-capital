@@ -58,6 +58,10 @@ export function subscriptionRoster(
  * `playbook.id`, so a bot that explicitly subscribed to a playbook the house roster ALSO enables
  * gets its own mode/capital, not a second conflicting entry for the same symbol — in the house
  * entry's position.
+ *
+ * A paused subscription is an override too (`pausedRoster`, exits only), so it replaces a house
+ * entry of the same id exactly as an enabled one does — Pause works even for a playbook the env
+ * roster names (#4651). An account with no subscription to the id keeps the house entry.
  */
 export function mergeRosters(
   base: readonly EnabledPlaybook[],
@@ -72,4 +76,36 @@ export function mergeRosters(
     ...base.map((e) => byId.get(e.playbook.id) ?? e),
     ...overrides.filter((e) => !baseIds.has(e.playbook.id)),
   ];
+}
+
+/**
+ * The playbook ids an account has PAUSED: it holds a subscription to the id, switched off, and no
+ * enabled one. An id it has no subscription to at all is not paused — that is "never subscribed".
+ */
+export function pausedPlaybookIds(subscriptions: readonly PlaybookSubscription[]): Set<string> {
+  const on = new Set(subscriptions.filter((s) => s.enabled).map((s) => s.playbookId));
+  return new Set(
+    subscriptions.filter((s) => !(s.enabled || on.has(s.playbookId))).map((s) => s.playbookId),
+  );
+}
+
+/**
+ * PAUSE STOPS A PLAYBOOK OPENING ANYTHING NEW; ITS OWNERSHIP AND EXITS ARE UNCHANGED (#4651). Each
+ * paused subscription resolves to an `exitsOnly` entry: it still sells on its own exit rules —
+ * S1-NVDA paused at D-5 still exits before the print — keeps its names exactly as when it runs, and
+ * opens nothing but a covered call (`pausedMayPlace`). Merged over the house roster like any
+ * override (`mergeRosters`), it replaces an env entry of the same id. Before, a paused subscription
+ * was skipped: an env-named playbook kept trading, and a Store-only one dropped its exits too.
+ * An id no playbook resolves is left out quietly; `subscriptionRoster` already names it.
+ */
+export function pausedRoster(
+  subscriptions: readonly PlaybookSubscription[],
+  authored?: AuthoredRoster,
+): EnabledPlaybook[] {
+  const paused = pausedPlaybookIds(subscriptions);
+  return subscriptions.flatMap((sub) => {
+    if (sub.enabled || !paused.has(sub.playbookId)) return [];
+    const playbook = authoredPlay(authored, sub) ?? findPlaybook(sub.playbookId);
+    return playbook ? [{ playbook, mode: sub.mode, exitsOnly: true as const }] : [];
+  });
 }

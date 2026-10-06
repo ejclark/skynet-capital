@@ -12,13 +12,17 @@
 //   · `tune`   — #4642 slice 7 (#4649, #4610): a bot account (Sauron) with one subscription on and
 //                aimed at two symbols and one paused, leading their cards; the Edit form; a human
 //                account behind the bots-only door; the bot's roll call linking here.
-// FRAMES=<group> runs one group; unset runs both.
+//   · `options` — the two option plays' cards (#4642 slices 5–6).
+//   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
+// FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
+// Each card's closed-trade numbers (#3665): S1-NVDA with a record, HC-SAURON without one.
+import { performance } from "./playbook-store-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const SAURON = { id: "sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null };
@@ -57,9 +61,9 @@ const deskFor = (account) => ({
 
 // The subscriber count (#3970): enabled subscriptions across every account, a bare number.
 const COUNTS = { "S1-NVDA": 3, "HC-SAURON": 1 };
-const withCounts = (view) => ({
+const withCounts = (view, counts = COUNTS) => ({
   ...view,
-  cards: view.cards.map((card) => ({ ...card, subscribers: COUNTS[card.id] ?? 0 })),
+  cards: view.cards.map((card) => ({ ...card, subscribers: counts[card.id] ?? 0 })),
 });
 
 const AT = "2026-10-01T14:00:00.000Z";
@@ -84,66 +88,6 @@ const views = {
   fogged: withCounts(playbookStoreView([], true)),
   sauron: withCounts(playbookStoreView(SAURON_SUBSCRIPTIONS)),
   human: withCounts(playbookStoreView([], false, [], true)),
-};
-
-// The selected account's own closed trades per playbook (#3665 slice 3): S1-NVDA has a record,
-// HC-SAURON has none — so one frame shows both the numbers and the honest empty state. The
-// house-wide block (slice 4) has both: every account's trips, larger than the account's own and
-// drawn beside it, never summed into it. The cycle mix (slice 5) counts option trips only, so
-// S1-NVDA's 7 house contracts split across cycles while HC-SAURON, which trades only shares, says
-// so in words instead of printing three zeros.
-const HOUR = 3_600_000;
-const row = (playbookId, over) => ({
-  playbookId,
-  avgHoldMs: 10 * 24 * HOUR,
-  longestHold: { holdMs: 15 * 24 * HOUR },
-  shortestHold: { holdMs: 26 * HOUR },
-  byDirection: { long: over.trades, short: 0 },
-  byInstrument: { stock: over.trades, call: 0, put: 0 },
-  byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
-  ...over,
-});
-const performance = {
-  house: [
-    row("S1-NVDA", {
-      trades: 19,
-      wins: 13,
-      losses: 6,
-      winRate: 68.4,
-      netRealized: 3_915.2,
-      returnPct: 4.7,
-      capitalCommitted: 83_300,
-      byInstrument: { stock: 12, call: 7, put: 0 },
-      byCycle: { weekly: 2, monthly: 4, quarterly: 1 },
-    }),
-    row("HC-SAURON", {
-      trades: 212,
-      wins: 109,
-      losses: 97,
-      winRate: 52.9,
-      netRealized: -1_284.75,
-      returnPct: -0.6,
-      capitalCommitted: 214_050,
-      avgHoldMs: 7 * HOUR,
-      longestHold: { holdMs: 4 * 24 * HOUR + 2 * HOUR },
-      shortestHold: { holdMs: 18 * 60_000 },
-      byDirection: { long: 188, short: 24 },
-    }),
-  ],
-  mine: [
-    row("S1-NVDA", {
-      trades: 4,
-      wins: 3,
-      losses: 1,
-      winRate: 75,
-      netRealized: 842.5,
-      returnPct: 6.2,
-      capitalCommitted: 13_580,
-      byInstrument: { stock: 3, call: 1, put: 0 },
-      byCycle: { weekly: 0, monthly: 1, quarterly: 0 },
-    }),
-  ],
-  accounts: ["sauron"],
 };
 
 // The bot's own Heartbeat, with the roll call the live code would read for this roster —
@@ -177,10 +121,12 @@ const heartbeat = {
 const underHeader = (el) =>
   window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 150);
 
-async function frame({ tag, view, account = SAURON, expect, viewport, scrollTo, path, act }) {
+// `shell` passes `viewport` and `quality` (a dense frame's lower JPEG quality, under the ~100KB cap)
+// straight to openShell; either left undefined keeps its default.
+async function frame({ tag, view, account = SAURON, expect, scrollTo, path, act, ...shell }) {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
-    ...(viewport ? { viewport } : {}),
+    ...shell,
     stubs: {
       "/api/playbook-store": view,
       "/api/settings": settings,
@@ -333,6 +279,42 @@ groups.options = [
     scrollTo: "CRWV-WHEEL",
     path: STORE,
   },
+];
+
+// #4642 slice 9a (#4651): SAURON, Sauron's own rules as a playbook — the new card in the catalog,
+// its rules and what pausing does, then the card as his account would show it once subscribed. That
+// last frame is a FIXTURE (uncapped, as 9b would seed it beside the wheel): this slice seeds nothing.
+// The fixture's own subscriptions count on their cards, so an "On" card never reads "no subscribers".
+views.sauronRules = withCounts(
+  playbookStoreView([
+    subscription("SAURON"),
+    subscription("CRWV-WHEEL", { capitalAllocated: 25_000 }),
+  ]),
+  { ...COUNTS, SAURON: 1, "CRWV-WHEEL": 1 },
+);
+// Paused (a fixture too): the note under the state says what Pause does — no new entries, exits kept.
+views.sauronPaused = withCounts(playbookStoreView([subscription("SAURON", { enabled: false })]));
+const SAURON_CARD = "Sauron's own trading rules";
+const toSauronCard = (page) =>
+  page.locator(".pb-card").filter({ hasText: SAURON_CARD }).first().evaluate(underHeader);
+const sauronFrame = (tag, over = {}) => ({
+  tag,
+  view: views.catalog,
+  expect: SAURON_CARD,
+  viewport: PHONE,
+  path: STORE,
+  act: toSauronCard,
+  ...over,
+});
+groups["sauron-rules"] = [
+  sauronFrame("phone-1-sauron-card"),
+  sauronFrame("phone-2-sauron-rules", {
+    act: undefined,
+    scrollTo: "It runs his standard rules on that bot's own account",
+  }),
+  sauronFrame("phone-3-sauron-subscribed-fixture", { view: views.sauronRules, path: undefined }),
+  sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
+  sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),
 ];
 
 const only = process.env.FRAMES;

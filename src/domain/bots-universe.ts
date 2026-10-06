@@ -7,6 +7,9 @@
  * for them: every base persona loops over `Object.keys(context.quotes)` with no list of its own, so
  * `tradingRoster` hands it a view cut to this list (`personas/universe-view.ts`). Adding a claim to
  * the Prospector without adding it here is still a silent no-op.
+ *
+ * The playbooks that run a persona's own rules as a fixed basket (`HC-SAURON`, `SAURON`) read this
+ * same list, so their basket is exactly what the persona sees — never the wider stream.
  */
 export const BOTS_UNIVERSE: readonly string[] = [
   "AAPL",

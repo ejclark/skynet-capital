@@ -115,6 +115,19 @@ describe("readPlaybookWindow — what an armed playbook is actually waiting for"
     expect(read.nextEntry).toBe(null);
     expect(read.reason).toContain("reading live price and sentiment every pass");
   });
+
+  /** SAURON (#4651) has no window either: whatever verdict reaches this read, no date is scanned
+   *  for a persona's own rules — its `desiredState` exists only to satisfy the type. */
+  it("never dates a window for a persona's own rules, whatever verdict arrives", () => {
+    const read = readPlaybookWindow(
+      dated({ rulesOf: "sauron" }),
+      "no-window",
+      NOW,
+      confirmed("2026-11-01"),
+    );
+    expect(read.nextEntry).toBe(null);
+    expect(read.reason).not.toContain(`${NEXT_ENTRY_HORIZON_DAYS}`);
+  });
 });
 
 describe("the live house roster declares what opens each window", () => {

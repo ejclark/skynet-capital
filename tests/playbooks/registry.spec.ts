@@ -13,6 +13,7 @@ import {
   PLAYBOOK_WIRING_GAPS,
   playbookRoster,
   S1_NVDA,
+  SAURON,
   TACO_DJT,
 } from "../../src/playbooks/registry.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
@@ -173,6 +174,30 @@ describe("enabledPlaybooks env parsing", () => {
     expect(rejected).toEqual([]);
     expect(enabled).toEqual([{ playbook: HC_SAURON, mode: "standard" }]);
   });
+
+  it("arms a playbook once: the first token wins and each repeat is refused by name", () => {
+    expect(
+      enabledPlaybooks({
+        SKYNET_PLAYBOOKS: "SAURON,S1-NVDA,SAURON:aggressive,S1-NVDA:conservative,HC-SAURON",
+      }),
+    ).toEqual({
+      enabled: [
+        { playbook: SAURON, mode: "standard" },
+        { playbook: S1_NVDA, mode: "standard" },
+        { playbook: HC_SAURON, mode: "standard" },
+      ],
+      rejected: ["SAURON:aggressive (repeated)", "S1-NVDA:conservative (repeated)"],
+    });
+  });
+
+  it("registers SAURON, his own rules (#4651) — on no default roster, never marked unwired", () => {
+    expect(enabledPlaybooks({}).enabled).toEqual([]);
+    expect(enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON:aggressive" })).toEqual({
+      enabled: [{ playbook: SAURON, mode: "aggressive" }],
+      rejected: [],
+    });
+    expect(PLAYBOOK_WIRING_GAPS.SAURON).toBeUndefined();
+  });
 });
 
 describe("findPlaybook", () => {
@@ -183,6 +208,7 @@ describe("findPlaybook", () => {
     expect(findPlaybook("HC-SAURON")).toBe(HC_SAURON);
     expect(findPlaybook("CRWV-WHEEL")).toBe(CRWV_WHEEL);
     expect(findPlaybook("NVDA-CALL-SPREAD")).toBe(NVDA_CALL_SPREAD);
+    expect(findPlaybook("SAURON")).toBe(SAURON);
   });
 
   it("returns undefined for an unknown id", () => {
@@ -199,6 +225,7 @@ describe("playbookRoster", () => {
       { id: "HC-SAURON", symbol: HC_SAURON.symbols[0] },
       { id: "CRWV-WHEEL", symbol: "CRWV" },
       { id: "NVDA-CALL-SPREAD", symbol: "NVDA" },
+      { id: "SAURON", symbol: SAURON.symbols[0] },
     ]);
   });
 });
