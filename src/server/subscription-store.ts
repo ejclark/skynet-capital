@@ -42,6 +42,12 @@ export class SubscriptionStore {
     return this.file.load();
   }
 
+  /** `load`, but `undefined` for a file that exists and cannot be read — the seeders' read, so a
+   *  seed never rewrites a subscriptions file it could not see (`JsonFileStore.loadIfReadable`). */
+  loadIfReadable(): SubscriptionsState | undefined {
+    return this.file.loadIfReadable();
+  }
+
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
    * existing subscription preserves its original `createdAt`.

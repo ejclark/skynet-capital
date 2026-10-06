@@ -38,21 +38,35 @@ export class JsonFileStore<T> {
   }
 
   load(): T {
+    const state = this.read("using empty");
+    return state === undefined ? this.empty : state;
+  }
+
+  /**
+   * `load`, except that a file which exists but cannot be read or parsed is `undefined` instead of
+   * `empty` (still reported). A missing file is still `empty`. For an unattended writer that
+   * rewrites the whole file from what it read — the subscription seeders — which must leave a file
+   * it could not read alone rather than overwrite it with a state built from nothing.
+   */
+  loadIfReadable(): T | undefined {
+    return this.read("left untouched");
+  }
+
+  private read(fallback: string): T | undefined {
     if (!existsSync(this.path)) return this.empty;
     try {
       const parsed = this.parse(JSON.parse(readFileSync(this.path, "utf8")));
       if (parsed === undefined) {
         this.onReadError(
-          `[${this.label}] ${this.path} did not parse as a ${this.label} state — using empty`,
+          `[${this.label}] ${this.path} did not parse as a ${this.label} state — ${fallback}`,
         );
-        return this.empty;
       }
       return parsed;
     } catch (error) {
       this.onReadError(
-        `[${this.label}] failed to read ${this.path}: ${String(error)} — using empty`,
+        `[${this.label}] failed to read ${this.path}: ${String(error)} — ${fallback}`,
       );
-      return this.empty;
+      return undefined;
     }
   }
 

@@ -50,6 +50,19 @@ describe("json file store — the plain-JSON durable-state primitive", () => {
     expect(errors[0]).toContain("[demo]");
   });
 
+  it("loadIfReadable: a missing file is empty, an unreadable one is undefined — for a writer that must not overwrite it", () => {
+    const errors: string[] = [];
+    expect(store(errors).loadIfReadable()).toEqual({ items: [] });
+    writeFileSync(path, "{nope", "utf8");
+    expect(store(errors).loadIfReadable()).toBeUndefined();
+    writeFileSync(path, JSON.stringify({ items: [7] }), "utf8");
+    expect(store(errors).loadIfReadable()).toBeUndefined();
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain("left untouched");
+    store().write({ items: ["a"] });
+    expect(store(errors).loadIfReadable()).toEqual({ items: ["a"] });
+  });
+
   it("writes atomically — the file on disk is always whole JSON, and creates parent dirs", () => {
     const nested = new JsonFileStore<Demo>({
       path: join(dir, "deep/down/state.json"),
