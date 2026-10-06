@@ -113,6 +113,29 @@ describe("fly deploy runner (transient-failure retry)", () => {
     expect(run.status).toBe(0);
   });
 
+  // Run 37476037256 (#4796): Fly's API found the dashboard's freshly pushed image, then the bots
+  // machine's host 404'd pulling the same digest — registry lag, not a bad reference.
+  const MANIFEST_404 =
+    'failed to get manifest registry.fly.io/skynet-capital@sha256:f6d1: request failed: not found [http 404]: {"errors":[{"code":"MANIFEST_UNKNOWN","message":"manifest unknown"}]}';
+
+  it("retries a manifest 404 once Fly's API has vouched for the image — the run-37476037256 lag", () => {
+    const run = deploy(["--image", "registry.fly.io/skynet-capital@sha256:f6d1"], {
+      failTimes: 1,
+      message: `image found: img_y7nxpk88g1k2p8w2\n${MANIFEST_404}`,
+    });
+    expect(run.attempts).toBe(2);
+    expect(run.status).toBe(0);
+  });
+
+  it("refuses to retry a manifest 404 Fly's API never found — a bad reference stays red at once", () => {
+    const run = deploy(["--image", "registry.fly.io/skynet-capital@sha256:dead"], {
+      failTimes: 99,
+      message: MANIFEST_404,
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
   it("passes flyctl's arguments through verbatim, under the `deploy` subcommand", () => {
     const run = deploy(["--config", "/tmp/fly.bots.deploy.toml", "--image", "reg/app@sha256:abc"]);
     expect(run.stdout).toContain(
