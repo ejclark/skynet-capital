@@ -9,8 +9,16 @@
 // (reason, expectation, invalidator) are fixture text, written in the CRWV wheel's and the NVDA
 // spread's own templates.
 //
+// The NVDA $185/$200 call spread (#4650) fills as TWO leg lines, each under its leg's own order id,
+// exactly as the account reports it. Its Activity row is built the way the server builds it: the
+// record goes into a real (in-memory) decision store, which maps the leg ids; `deskActivityView`
+// folds the two leg lines through that map; `reasoningForOrder` attaches the spread's decision.
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
+import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts";
+import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
+import { spreadLookup } from "../../src/observatory/spread-activity.ts";
 import { reasoningForOrder } from "../../src/observatory/wire-reasoning.ts";
 import { humanizeOptionSymbol } from "../../src/trading/option-symbols.ts";
 import { openShell } from "./shell.mjs";
@@ -109,6 +117,11 @@ const record = {
           { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
           { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
         ],
+        // Each leg's own broker order id — what the account's two fills carry.
+        legOrders: [
+          { occSymbol: LOW, orderId: "opt-spread-leg-185" },
+          { occSymbol: HIGH, orderId: "opt-spread-leg-200" },
+        ],
       },
     },
   ],
@@ -133,6 +146,42 @@ const putRow = {
   origin: "unknown",
   reasoning: reasoningForOrder("opt-put-1", { findByOrderId }),
 };
+// The spread's two leg fills, as the account's ledger holds them — and the row the server makes.
+const store = openDecisionDb(":memory:");
+store.record(record);
+const legLine = (orderId, symbol, side, price) => ({
+  orderId,
+  participantId: "bot-sauron",
+  symbol,
+  side,
+  quantity: 1,
+  filledQuantity: 1,
+  price,
+  status: "filled",
+  at: "2026-10-07T14:30:15Z",
+  source: "stream",
+});
+const spreadRows = deskActivityView(
+  [
+    legLine("opt-spread-leg-185", LOW, "buy", 5.1),
+    legLine("opt-spread-leg-200", HIGH, "sell", 1.75),
+  ],
+  undefined,
+  {
+    spreadOf: spreadLookup({
+      findSpreadLeg: (id) => store.findSpreadLeg(id),
+      findByOrderId: (id) => store.findByOrderId(id),
+    }),
+  },
+).activity.map((row) => ({
+  ...row,
+  reasoning: reasoningForOrder(row.orderId, { findByOrderId: (id) => store.findByOrderId(id) }),
+}));
+store.close();
+if (spreadRows.length !== 1 || spreadRows[0].legs?.length !== 2) {
+  throw new Error("the spread's two leg fills did not fold into one row");
+}
+
 const shareRow = {
   orderId: "shr-1",
   symbol: "NVDA",
@@ -179,7 +228,10 @@ const { page, origin, shoot, close } = await openShell({
   stubs: {
     "/api/settings": settings,
     "/api/desk/bot-sauron": desk,
-    "/api/desk/bot-sauron/activity": { available: true, activity: [putRow, shareRow] },
+    "/api/desk/bot-sauron/activity": {
+      available: true,
+      activity: [...spreadRows, putRow, shareRow],
+    },
     "/api/desk/bot-sauron/heartbeat": heartbeat,
     "/api/desk/bot-sauron/probes": { available: false },
     "/api/desk/bot-sauron/decisions": {
@@ -196,6 +248,30 @@ for (const [tag, viewport] of [
 ]) {
   await page.setViewportSize(viewport);
   await page.goto(`${origin}/app/u/bot-sauron/activity`);
+
+  // The spread: one row, its net once, each leg beneath it — before anything is opened. The row
+  // to the top with the blotter at its left edge (a phone-width blotter scrolls sideways, and a
+  // plain scrollIntoView may nudge it), once the page's entrance has settled.
+  const toTop = (locator) =>
+    locator.evaluate((row) => {
+      row.scrollIntoView({ block: "start", inline: "start" });
+      const scroller = row.closest(".blotter-scroll");
+      if (scroller) scroller.scrollLeft = 0;
+      window.scrollBy(0, -150); // clear the sticky header
+    });
+  const spreadRow = page.locator("#act-opt-spread-1");
+  await spreadRow.waitFor();
+  await page.waitForTimeout(600);
+  await toTop(spreadRow);
+  await shoot(`activity-spread-legs-${tag}`);
+  // Opened: the decision that placed it — its playbook down to what would prove it wrong, which at
+  // 390 needs the panel at the top of the frame (the legs are the frame above).
+  const spreadWhy = page.getByRole("button", { name: /Why NVDA \$185\/\$200 CALL SPREAD/ });
+  await spreadWhy.click();
+  await toTop(tag === "phone" ? page.locator("tr.row-why") : spreadRow);
+  await shoot(`activity-spread-why-${tag}`);
+  await spreadWhy.click();
+
   await page.getByRole("button", { name: /Why CRWV \$85 PUT/ }).click();
   // The row at the top, so one frame holds the contract's name and its whole why at 390.
   await page.locator("#act-opt-put-1").evaluate((row) => {

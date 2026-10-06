@@ -12,6 +12,7 @@ import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
+import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
@@ -48,6 +49,15 @@ function withDecisions<V extends { readonly activity: readonly { readonly orderI
       return { ...event, reasoning: owner ? reasoning : withoutReasoningPlaybook(reasoning) };
     }),
   };
+}
+
+/** A bot's spread fills arrive one per leg, under each leg's own order id: the store's leg
+ *  map hops each to the spread's decision, so Activity can fold them into the spread's row. A human
+ *  desk, or a deployment without the store, folds nothing. */
+function botSpreadLookup(kind: string, config: DashboardServerConfig): SpreadOf | undefined {
+  const { findSpreadLeg, findByOrderId } = config;
+  if (kind !== "bot" || !(findSpreadLeg && findByOrderId)) return undefined;
+  return spreadLookup({ findSpreadLeg, findByOrderId });
 }
 
 /** How many passes to read per persona per page — the store's own max. A page of cycles then
@@ -185,6 +195,7 @@ export async function serveDeskJson(
                   limit,
                   before: before ?? undefined,
                   ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
+                  spreadOf: botSpreadLookup(found.kind, config),
                 }),
                 config,
                 owner,

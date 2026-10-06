@@ -3,6 +3,7 @@ import {
   OPTION_STRUCTURES,
   type OptionLegFill,
   type OptionLegIntent,
+  type OptionLegOrder,
   type OptionOrderIntent,
   type OptionQuoteBand,
   type OptionSelection,
@@ -105,4 +106,17 @@ export function parseLegFills(value: unknown): readonly OptionLegFill[] | undefi
     });
   }
   return fills;
+}
+
+/** A spread's leg order ids. Optional, so a malformed entry costs only its own leg's join — never
+ *  the record — and nothing usable reads as absent rather than empty. */
+export function parseLegOrders(value: unknown): readonly OptionLegOrder[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const legOrders = value.flatMap((entry): OptionLegOrder[] => {
+    if (!isRecord(entry)) return [];
+    const occSymbol = boundedString(entry.occSymbol, MAX_OCC_LENGTH);
+    const orderId = boundedString(entry.orderId);
+    return occSymbol && orderId ? [{ occSymbol, orderId }] : [];
+  });
+  return legOrders.length > 0 ? legOrders : undefined;
 }

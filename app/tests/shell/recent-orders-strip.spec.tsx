@@ -100,6 +100,48 @@ describe("RecentOrdersStrip", () => {
     expect(screen.getAllByText("BUY")).toHaveLength(1);
   });
 
+  /** #4650 — a bot's spread is one Activity row with no symbol of its own, its legs the orders. */
+  describe("a bot's spread", () => {
+    const LOW = "NVDA261113C00185000";
+    const leg = (orderId: string, symbol: string, side: "buy" | "sell", price: string) =>
+      event({ orderId, symbol, display: symbol, side, quantity: 1, filled: 1, price });
+    const spread = event({
+      orderId: "mleg-1",
+      symbol: "",
+      display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
+      quantity: 1,
+      filled: 1,
+      price: "$3.35",
+      net: "$335.00 paid",
+      legs: [
+        leg("leg-low", LOW, "buy", "$5.10"),
+        leg("leg-high", "NVDA261113C00200000", "sell", "$1.75"),
+      ],
+    });
+
+    it("never reads as a share trade on the underlying's ticket", async () => {
+      // Even a spread row that named its underlying: the strip lists a spread's legs, never the row.
+      nextActivity = { available: true, activity: [{ ...spread, symbol: "NVDA" }] };
+      render(withClient(<RecentOrdersStrip symbol="NVDA" deskId="desk-1" />));
+
+      expect(
+        await screen.findByText("No recorded orders for NVDA in the ledger's window."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("$3.35")).not.toBeInTheDocument();
+    });
+
+    it("lists each leg on the ticket of its own contract", async () => {
+      nextActivity = { available: true, activity: [spread] };
+      render(withClient(<RecentOrdersStrip symbol={LOW} deskId="desk-1" />));
+
+      await screen.findByText("BUY");
+      expect(document.querySelectorAll(".tl-event")).toHaveLength(1);
+      expect(screen.getByText("$5.10")).toBeInTheDocument();
+      expect(screen.getByText("filled")).toBeInTheDocument();
+      expect(screen.queryByText("SELL")).not.toBeInTheDocument();
+    });
+  });
+
   it("renders up to 3 events via the reused EventLine row, with a +N more note when a 4th exists", async () => {
     nextActivity = {
       available: true,
