@@ -38,9 +38,13 @@ export interface DraftRequirements {
  * symbol → contracts the account already holds, signed (+ long, − short); a sell leg on a contract
  * held long in at least that size is a sell-to-close, not a new short, so it neither needs shares
  * behind it nor cash set aside. A BUY THAT CLOSES caps nothing: the contracts it buys back against a
- * held short end that short rather than open a long, and `draft-order-account.ts` already hands the
- * shares that short held back to the draft — counting the same contracts as a cap too would let one
- * buy-back cover two sold calls. Without the map (the pure, account-less read) every leg opens.
+ * held short end that short rather than open a long. Without the map (the pure, account-less read)
+ * every leg opens.
+ *
+ * THIS IS THE DRAFT'S OWN DEMAND, NOT THE ACCOUNT'S VERDICT. Dropping a closing leg says nothing
+ * about what the close leaves behind — selling the long call of a bull call spread leaves its short
+ * call bare, and a buy-back frees shares only if shares stood behind it. `draft-order-account.ts`
+ * judges shares on the whole book once the draft fills; only the cash floor is read from here.
  */
 export function draftRequirements(
   draft: DraftOrder,
