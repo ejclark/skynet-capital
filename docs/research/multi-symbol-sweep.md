@@ -765,6 +765,20 @@ robust, alpha fragile — is the finding.
   against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
   the gap it was meant to close was exactly as large as that undersell implies.
 
+- **The East-West pipeline read as still impaired on the day of a quota meeting, three weeks after a
+  5-6 week repair estimate (FT-opec-plus-meeting-2026-10-04-3)** — added 2026-10-06 from the
+  [opec-plus-meeting-2026-10-04 close-out](events/opec-plus-meeting-2026-10-04.md). Registered
+  2026-09-15 on a Middle East Eye repair estimate of 5-6 weeks (restoration 10-15 to 10-22) after
+  drones from Iraq hit the line on 09-10, with the counter-case (an April 2026 hit restored in three
+  days) named and under-weighted. Aramco restarted the line **09-22** and Bloomberg (2026-10-02)
+  reported ~**6 mb/d** pumped through the 7 mb/d conduit, above 80% of capacity, ~4.5 mb/d exportable
+  - above both the 4-5 mb/d pre-attack flow and the ~4 mb/d target quoted on 09-22. **What must
+  travel with the kill:** a single-sourced Bloomberg read (unnamed person; no Aramco/SPA primary
+  reachable), and the parent stand-aside never depended on it. What breaks is the reflex of dating a
+  Gulf repair off a first estimate: the next ledger carrying a press repair window should register
+  the fast-restart branch as the base case until the line's own history (restored in three days in
+  April, in about twelve here) says otherwise.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
