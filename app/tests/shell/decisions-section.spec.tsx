@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { DecisionCycle } from "../../src/live/desk";
 import { CycleRow, GUARDS_GLOSS } from "../../src/shell/decisions-section";
 
@@ -153,6 +153,44 @@ describe("CycleRow", () => {
     expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
     expect(screen.queryByText("SELL 1 CRWV")).not.toBeInTheDocument();
     expect(screen.queryByText("unfilled")).not.toBeInTheDocument();
+  });
+
+  // #4650: what the broker said about the result, beside the label — the owner's alone.
+  describe("the broker's words on a result", () => {
+    const canceled = cycle({
+      outcomes: [
+        {
+          symbol: "CRWV",
+          side: "sell",
+          quantity: 1,
+          action: "placed",
+          reason: "sell a put a month out",
+          contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+          resultStatus: "unfilled",
+          resultLabel: "limit not reached — canceled",
+          brokerReason: "limit $2.10 not reached in 15s; canceled",
+        },
+      ],
+    });
+
+    it("says what the broker said beside the result label", () => {
+      render(<CycleRow cycle={canceled} />);
+      open();
+      expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
+      expect(
+        screen.getByText("broker said: limit $2.10 not reached in 15s; canceled"),
+      ).toBeInTheDocument();
+    });
+
+    it("draws nothing on a bot the viewer does not own, or for a result with no words", () => {
+      render(<CycleRow cycle={canceled} showPlaybooks={false} />);
+      open();
+      expect(screen.queryByText(/broker said/)).not.toBeInTheDocument();
+      cleanup();
+      render(<CycleRow cycle={cycle()} />);
+      open();
+      expect(screen.queryByText(/broker said/)).not.toBeInTheDocument();
+    });
   });
 
   it("keeps a part-filled order's 'may still fill' warning beside its fill", () => {

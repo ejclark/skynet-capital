@@ -37,6 +37,10 @@ interface CycleOutcomeView {
   readonly resultStatus?: string;
   /** The result in words when its status alone would mislead — a limit that never filled. */
   readonly resultLabel?: string;
+  /** What the broker said about the result ("limit $2.10 not reached in 15s; canceled"), as stored
+   *  (`decision-db-results.ts`). The owner's alone — a broker's message can name the account's
+   *  specifics (`desk-owner-gate.ts`). Absent when it said nothing, or on an older record. */
+  readonly brokerReason?: string;
   /** An option order's contracts and limit, in one line (`optionContractLine`); absent for shares. */
   readonly contract?: string;
   /** `10 @ $176.10` for shares; for an option, the dollars that moved and how they add up
@@ -209,6 +213,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
     action: outcome.action,
     ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
     ...(resultLabel ? { resultLabel } : {}),
+    ...(outcome.result?.reason ? { brokerReason: outcome.result.reason } : {}),
     ...(contract ? { contract } : {}),
     ...fillOf(outcome),
     ...(record.context?.momentum?.[outcome.intent.symbol] !== undefined

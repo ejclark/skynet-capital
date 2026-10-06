@@ -165,6 +165,14 @@ function WhyDetail({
           <dd className="num">{why.cost}</dd>
         </div>
       ) : null}
+      {/* The owner's alone, like the playbook (#4650): a broker's message can name the account's
+          specifics. The server withholds it from anyone else; this keeps a non-owner's page clear. */}
+      {showPlaybook && why.brokerReason ? (
+        <div>
+          <dt>Broker said</dt>
+          <dd>{why.brokerReason}</dd>
+        </div>
+      ) : null}
       {why.strategy ? (
         <div>
           <dt>Strategy</dt>

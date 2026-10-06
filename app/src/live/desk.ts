@@ -355,6 +355,9 @@ export interface ActivityReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words. */
   readonly invalidator?: string;
+  /** What the broker said about the order once it ended — the owner's alone, withheld by the server
+   *  from anyone else. Absent when it said nothing, or on an older record. */
+  readonly brokerReason?: string;
 }
 
 export interface DeskActivity {
@@ -415,6 +418,9 @@ export interface DecisionOutcome {
   readonly resultStatus?: string;
   /** The result in words when the status alone would mislead — a limit that never filled. */
   readonly resultLabel?: string;
+  /** What the broker said about the result ("limit $2.10 not reached in 15s; canceled") — the
+   *  owner's alone, withheld by the server from anyone else. Absent on an older record. */
+  readonly brokerReason?: string;
   /** An option order's contracts and limit in one line; absent for shares. */
   readonly contract?: string;
   readonly fill?: string;

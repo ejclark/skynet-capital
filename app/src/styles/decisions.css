@@ -141,6 +141,12 @@
   color: var(--text);
   font-size: 11.5px;
 }
+/* What the broker said about the result (#4650), beside the muted status: full text strength like
+   `.cycle-guard`, since it answers "why didn't it fill". Led by "broker said:", never by hue. */
+.cycle-broker {
+  color: var(--text);
+  font-size: 11.5px;
+}
 .cycle-reason {
   flex-basis: 100%;
   color: var(--muted);
