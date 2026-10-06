@@ -17,7 +17,7 @@ import {
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
-import { openOptionLedger } from "./decision-option-ledger.js";
+import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
 import {
   type FilledIntentRow,
@@ -101,6 +101,9 @@ export interface DecisionDb {
     personaId: string,
     activities: readonly NormalizedLifecycleActivity[],
   ): number;
+  /** Every expiry/assignment report stored after `afterSeq`, oldest first, bounded to
+   *  `[1, MAX_PAGE]` — the bots' lifecycle backlog leg, so the dashboard's copy closes them too. */
+  lifecycleSince(afterSeq: number, limit?: number): SequencedLifecycle[];
   /** What orders a decision left `working` became once the broker ended them (#4650), each stored
    *  once by order id, beside its decision — never over it. Every read here then shows and scores
    *  the settlement in place of the `working` result. One transaction; returns how many were new. */
@@ -668,6 +671,9 @@ export function openDecisionDb(path: string): DecisionDb {
         throw error;
       }
     },
+
+    lifecycleSince: (afterSeq, limit = MAX_PAGE) =>
+      optionLedger.since(afterSeq, Math.max(1, Math.min(limit, MAX_PAGE))),
 
     recordSettlements(list): number {
       let added = 0;

@@ -151,6 +151,10 @@ describe("the dashboard's copy catching up after an outage", () => {
           calls.push("settlements");
           return 0;
         },
+        recordOptionLifecycle: () => {
+          calls.push("lifecycle");
+          return 0;
+        },
       },
       { personaId: "sauron", records: [], settlements: [settled("w", 101)] },
     );

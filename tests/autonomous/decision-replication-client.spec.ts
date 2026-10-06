@@ -298,6 +298,42 @@ describe("resolveDecisionReplication", () => {
       });
     });
 
+    it("sends the expiry and assignment reports on a POST of their own, grouped by persona, and sends a refused page again (#4650)", async () => {
+      const thisBotsDb = botsDb;
+      const expiry = (id: string) => ({
+        id,
+        type: "OPEXP" as const,
+        symbol: "CRWV261106P00085000",
+        quantity: 1,
+        at: "2026-11-06T23:59:59.999Z",
+      });
+      thisBotsDb.recordOptionLifecycle("sauron", [expiry("exp-1")]);
+      thisBotsDb.recordOptionLifecycle("beta-scout", [expiry("exp-2")]);
+      thisBotsDb.recordOptionLifecycle("sauron", [expiry("exp-3")]);
+      const bridge = await recordingBridge(); // refuses decision.v2
+      try {
+        const client = resolveDecisionReplication(
+          { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
+          () => thisBotsDb,
+        );
+        await client.replicate({});
+        await client.replicate({});
+        const page = JSON.stringify({
+          kind: DECISION_BATCH_KIND_V2,
+          personaId: "sauron",
+          records: [],
+          lifecycle: [
+            { personaId: "sauron", activities: [expiry("exp-1"), expiry("exp-3")] },
+            { personaId: "beta-scout", activities: [expiry("exp-2")] },
+          ],
+        });
+        // No bot has decided anything yet: the reports go anyway, and again once refused.
+        expect(bridge.bodies).toEqual([page, page]);
+      } finally {
+        await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
+      }
+    });
+
     it("never throws when the bridge URL points at nothing listening", async () => {
       const thisBotsDb = botsDb;
       thisBotsDb.record(decision({ at: 1 }));

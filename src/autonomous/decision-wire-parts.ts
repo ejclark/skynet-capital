@@ -25,6 +25,9 @@ import { parseLegFills, parseLegOrders, parseOptionOrderIntent } from "./decisio
  * `parseInsightRecord`'s house style (`insight-record.ts`) for input crossing the bots↔app bridge.
  */
 
+/** The longest persona id the bridge accepts, wherever on the envelope one is named. */
+export const MAX_PERSONA_ID_LENGTH = 128;
+
 /** The option half of an intent: a malformed `option` fails the whole intent (never a silent share
  *  order); a malformed `clientOrderId` is optional, so it is dropped rather than rejecting. */
 function parseOptionFields(
