@@ -410,6 +410,14 @@ describe("seeding Sauron's own rules as his subscription", () => {
       expect(after.filter((i) => i.playbookId === undefined)).toEqual([]);
     });
 
+    it("pausing the seeded subscription in the Store takes the label off — his orders are exactly the pre-seed ones", () => {
+      const paused = seededSubs.map((s) =>
+        s.playbookId === "SAURON" ? { ...s, enabled: false } : s,
+      );
+
+      expect(intentsUnder(paused)).toEqual(intentsUnder(ERICS_LIVE));
+    });
+
     it("the guards size his labelled buys exactly as they sized them unlabelled — uncapped means no new limit", () => {
       const sized = (subs: readonly PlaybookSubscription[]) => {
         const { persona, risk } = tradingRoster(resolveBotRoster(bot, [], subs), {
