@@ -1,3 +1,4 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { fetchJson } from "../http/fetch-json.js";
 import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -71,6 +72,15 @@ export interface DecisionReplicationClient {
  *  job on the ascending leg. */
 const LIVE_PREVIEW_BATCH = 20;
 
+/**
+ * The newest late settlements (#4650), resent on the first batch of every poll. A settlement lands
+ * long after its record was sent, and the receiver keeps the first copy of each record, so it
+ * travels on its own field (`DecisionBatch.settlements`) — idempotent on receipt, like the preview
+ * leg. Settlements are rare (an order whose cancel was not confirmed, a share order queued for the
+ * open), so the newest 50 cover days of them; a few hundred bytes each over the private bridge.
+ */
+const SETTLEMENTS_PER_POLL = 50;
+
 const NOOP_CLIENT: DecisionReplicationClient = {
   replicate: async () => {
     /* disabled — no bridge URL or no local decision store */
@@ -91,11 +101,16 @@ export function resolveDecisionReplication(
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
 
+  // This poll's settlements, sent once on its first batch — whichever persona's that is.
+  let unsentSettlements: readonly OrderSettlement[] = [];
+
   const sendOne = async (
     personaId: string,
     kind: string,
     records: readonly DecisionRecord[],
   ): Promise<void> => {
+    const settlements = unsentSettlements;
+    unsentSettlements = [];
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
@@ -104,7 +119,7 @@ export function resolveDecisionReplication(
           "POST",
           endpoint,
           { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
-          { kind, personaId, records },
+          { kind, personaId, records, ...(settlements.length > 0 ? { settlements } : {}) },
           controller.signal,
         );
         if (response.status < 200 || response.status >= 300) {
@@ -147,6 +162,7 @@ export function resolveDecisionReplication(
     replicate: async (_cursor) => {
       const decisionDb = getDecisionDb();
       if (!decisionDb) return;
+      unsentSettlements = decisionDb.recentSettlements(SETTLEMENTS_PER_POLL);
       const localMax = decisionDb.maxAtAll();
       for (const personaId of Object.keys(localMax)) {
         const after = ascendingCursor[personaId] ?? 0;

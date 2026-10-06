@@ -5,6 +5,7 @@ import type {
   OptionLifecycleType,
 } from "../trading/option-lifecycle.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
+import { SETTLED_JOIN } from "./decision-db-settlements.js";
 import {
   type OptionLegFillRow,
   type OptionLifecycleRow,
@@ -90,19 +91,24 @@ export function openOptionLedger(
   write: (personaId: string, insert: RetrospectiveInsert) => void,
 ): OptionLedger {
   db.exec(OPTION_LIFECYCLE_SQL);
+  // An order recorded `working` that the broker filled later is read through its settlement
+  // (`SETTLED_JOIN`): its fill, each leg's, and the broker id the decision may never have learned.
   const selectLegs = db.prepare(`
-    SELECT i.id AS intent_id, i.order_id AS order_id, i.reason AS reason,
+    SELECT i.id AS intent_id, COALESCE(i.order_id, s.order_id) AS order_id, i.reason AS reason,
            i.momentum AS momentum, i.sentiment AS sentiment,
-           i.filled_quantity AS order_filled, i.filled_price AS order_price,
+           COALESCE(s.filled_quantity, i.filled_quantity) AS order_filled,
+           COALESCE(s.filled_price, i.filled_price) AS order_price,
            l.occ_symbol AS occ_symbol, l.side AS side, l.ratio AS ratio,
-           l.filled_quantity AS filled_quantity, l.filled_price AS filled_price,
+           COALESCE(sl.filled_quantity, l.filled_quantity) AS filled_quantity,
+           COALESCE(sl.filled_price, l.filled_price) AS filled_price,
            (SELECT COUNT(*) FROM intent_option_legs n WHERE n.intent_id = i.id) AS leg_count,
            d.at AS at
     FROM intent_option_legs l
     JOIN intents i ON i.id = l.intent_id
-    JOIN decisions d ON d.id = i.decision_id
-    WHERE d.persona_id = ? AND i.symbol = ? AND i.result_status = 'filled'
-      AND i.order_id IS NOT NULL
+    JOIN decisions d ON d.id = i.decision_id ${SETTLED_JOIN}
+    LEFT JOIN order_settlement_legs sl ON sl.order_id = s.order_id AND sl.occ_symbol = l.occ_symbol
+    WHERE d.persona_id = ? AND i.symbol = ? AND COALESCE(s.status, i.result_status) = 'filled'
+      AND COALESCE(i.order_id, s.order_id) IS NOT NULL
     ORDER BY d.at ASC, i.id ASC, l.leg_index ASC
   `);
   const selectLifecycle = db.prepare(

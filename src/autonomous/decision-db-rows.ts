@@ -1,4 +1,5 @@
 import { instrumentKey } from "../domain/option-order.js";
+import { type OrderSettlement, settledResult } from "../domain/order-settlement.js";
 import type {
   MarketContext,
   OptionLegFill,
@@ -54,6 +55,9 @@ export interface StoredIntentRow {
   readonly filledPrice?: number;
   /** Present only on an option order. */
   readonly option?: StoredOption;
+  /** What a `working` order became once the broker ended it (`decision-db-settlements.ts`) — read
+   *  in place of the stored result, which stays as it was written. */
+  readonly settlement?: OrderSettlement;
 }
 
 /** The flat positional tuple `decision-db.ts`'s `insertIntent` prepared statement binds, in
@@ -257,21 +261,22 @@ function legParts(option: StoredOption | undefined): Partial<OrderResult> {
 function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome {
   const clientOrderId = row.option?.clientOrderId;
   const intent = clientOrderId ? { ...guarded, clientOrderId } : guarded;
+  const stored: OrderResult | undefined =
+    row.orderId || row.resultStatus
+      ? {
+          intent,
+          status: (row.resultStatus ?? "rejected") as OrderStatus,
+          ...(row.orderId ? { orderId: row.orderId } : {}),
+          ...(row.filledQuantity !== undefined ? { filledQuantity: row.filledQuantity } : {}),
+          ...(row.filledPrice !== undefined ? { filledPrice: row.filledPrice } : {}),
+          ...legParts(row.option),
+        }
+      : undefined;
   return {
     intent,
     action: (row.action ?? "observed") as IntentOutcome["action"],
-    ...(row.orderId || row.resultStatus
-      ? {
-          result: {
-            intent,
-            status: (row.resultStatus ?? "rejected") as OrderStatus,
-            ...(row.orderId ? { orderId: row.orderId } : {}),
-            ...(row.filledQuantity !== undefined ? { filledQuantity: row.filledQuantity } : {}),
-            ...(row.filledPrice !== undefined ? { filledPrice: row.filledPrice } : {}),
-            ...legParts(row.option),
-          },
-        }
-      : {}),
+    // A late settlement is read in place of a `working` result; any other result is as written.
+    ...(stored ? { result: settledResult(stored, row.settlement) } : {}),
   };
 }
 

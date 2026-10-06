@@ -16,13 +16,14 @@ import type { WireTradeRow } from "./wire-data.js";
  * the order id, never the wire row's `participantId`.
  *
  * Deliberately never copies `outcome.result.status` onto the member surface: it is a snapshot from
- * the moment of submit — an order logged `"working"` that Alpaca fills or cancels later stays
- * `"working"` forever in that field (and before #4655 an accepted order read `"filled"` with no
- * price) — copying it would move a stale answer here. Only `reason`,
+ * the moment of submit — an order logged `"working"` stays `"working"` until the bot's settle loop
+ * sees the broker end it and the store reads its settlement in its place (#4650), which a restart
+ * or a dark store can delay (and before #4655 an accepted order read `"filled"` with no price) —
+ * so the broker's own ledger row stays the source of the status here. Only `reason`,
  * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time —
- * and an option order's dollar cost, which is read only off a `filled` result: the order flow
- * writes that status once the broker has ended the order (`alpaca-option-result.ts`), so it can
- * never move again.
+ * and an option order's dollar cost, which is read only off a `filled` result: written once the
+ * broker has ended the order (`alpaca-option-result.ts`, or a late settlement), so it can never
+ * move again.
  */
 
 export interface WireTradeReasoning {

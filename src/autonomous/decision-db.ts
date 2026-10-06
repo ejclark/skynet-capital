@@ -1,12 +1,20 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
+import {
+  openSettlements,
+  SETTLED_JOIN,
+  SETTLEMENTS_SQL,
+  type SettledIntent,
+  type UnsettledOrder,
+} from "./decision-db-settlements.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -92,6 +100,16 @@ export interface DecisionDb {
     personaId: string,
     activities: readonly NormalizedLifecycleActivity[],
   ): number;
+  /** What orders a decision left `working` became once the broker ended them (#4650), each stored
+   *  once by order id, beside its decision — never over it. Every read here then shows and scores
+   *  the settlement in place of the `working` result. One transaction; returns how many were new. */
+  recordSettlements(settlements: readonly OrderSettlement[]): number;
+  /** The newest settlements, newest first, bounded to `[1, MAX_PAGE]` — the bots' resend to the
+   *  dashboard's copy (`decision-replication-client.ts`). */
+  recentSettlements(limit?: number): OrderSettlement[];
+  /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
+   *  what a restart hands back to the settle loop. */
+  unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
   close(): void;
 }
 
@@ -220,6 +238,8 @@ export function openDecisionDb(path: string): DecisionDb {
     CREATE INDEX IF NOT EXISTS retrospectives_entry_at ON retrospectives(entry_intent_id, at);
   `);
   db.exec(OPTION_TABLES_SQL);
+  // Before any read below is prepared: they join it (`SETTLED_JOIN`).
+  db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
 
   const insertDecision = db.prepare(
@@ -260,7 +280,9 @@ export function openDecisionDb(path: string): DecisionDb {
            decisions.persona_id AS decision_persona_id, decisions.mode AS decision_mode,
            decisions.halted AS decision_halted, decisions.context_json AS decision_context_json
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
-    WHERE intents.order_id = ?
+    WHERE intents.order_id = ?1 OR (intents.order_id IS NULL AND intents.id IN (
+      SELECT o.intent_id FROM intent_options o
+      JOIN order_settlements s ON s.client_order_id = o.client_order_id WHERE s.order_id = ?1))
     LIMIT 1
   `);
   // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
@@ -268,15 +290,18 @@ export function openDecisionDb(path: string): DecisionDb {
   // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
   // the same underlying symbol but is never a share lot, so it is kept out of this tape and scored
   // on its own, per contract (`decision-option-ledger.ts`).
+  // A share order recorded `working` and filled later is read through its settlement, at its own
+  // decision's place on the tape (`SETTLED_JOIN`; `so` is the option row a share never has).
   const selectFilledIntentsForSymbol = db.prepare(`
-    SELECT intents.id AS intent_id, intents.order_id AS order_id, intents.side AS side,
-           intents.filled_quantity AS filled_quantity, intents.filled_price AS filled_price,
-           intents.reason AS reason, intents.momentum AS momentum, intents.sentiment AS sentiment,
+    SELECT i.id AS intent_id, i.order_id AS order_id, i.side AS side,
+           COALESCE(s.filled_quantity, i.filled_quantity) AS filled_quantity,
+           COALESCE(s.filled_price, i.filled_price) AS filled_price,
+           i.reason AS reason, i.momentum AS momentum, i.sentiment AS sentiment,
            decisions.at AS at
-    FROM intents JOIN decisions ON decisions.id = intents.decision_id
-    WHERE decisions.persona_id = ? AND intents.symbol = ? AND intents.result_status = 'filled'
-      AND NOT EXISTS (SELECT 1 FROM intent_options o WHERE o.intent_id = intents.id)
-    ORDER BY decisions.at ASC, intents.id ASC
+    FROM intents i JOIN decisions ON decisions.id = i.decision_id ${SETTLED_JOIN}
+    WHERE decisions.persona_id = ? AND i.symbol = ?
+      AND COALESCE(s.status, i.result_status) = 'filled' AND so.intent_id IS NULL
+    ORDER BY decisions.at ASC, i.id ASC
   `);
   const selectRetrospectiveKeys = db.prepare(
     "SELECT entry_intent_id, at FROM retrospectives WHERE persona_id = ? AND symbol = ?",
@@ -301,11 +326,11 @@ export function openDecisionDb(path: string): DecisionDb {
   // long a persona's history runs, so the count SQLite already has to compute for GROUP BY is the
   // whole result, never a row pulled per intent.
   const selectFunnelGrouped = db.prepare(`
-    SELECT intents.guard_reason AS guard_reason, intents.action AS action,
-           intents.result_status AS result_status, COUNT(*) AS n
-    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    SELECT i.guard_reason AS guard_reason, i.action AS action,
+           COALESCE(s.status, i.result_status) AS result_status, COUNT(*) AS n
+    FROM intents i JOIN decisions ON decisions.id = i.decision_id ${SETTLED_JOIN}
     WHERE decisions.persona_id = ?
-    GROUP BY intents.guard_reason, intents.action, intents.result_status
+    GROUP BY i.guard_reason, i.action, COALESCE(s.status, i.result_status)
   `);
   // Retrospectives carry no playbook id of their own — only the intent that opened the closed
   // position does — so attributing realized P/L to a playbook means joining back through it.
@@ -373,12 +398,26 @@ export function openDecisionDb(path: string): DecisionDb {
     );
   }
   const optionLedger = openOptionLedger(db, writeRetrospective);
+  const settlements = openSettlements(db, { writeLegOrders: optionTables.writeLegOrders });
+
+  /** Rescores what each settled intent's fill touches — its option ledger or its share tape. */
+  function rescoreSettled(settled: readonly SettledIntent[]): void {
+    const keys = new Set(settled.map((t) => `${t.option ? "o" : "s"}|${t.personaId}|${t.symbol}`));
+    for (const key of keys) {
+      const [kind, personaId, symbol] = key.split("|") as [string, string, string];
+      if (kind === "o") optionLedger.rescore(personaId, symbol);
+      else updateRetrospectivesFor(personaId, symbol);
+    }
+  }
 
   function intentRowsFor(decisionId: number) {
     const options = optionTables.forDecision(decisionId);
-    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map((row) =>
-      intentRowToStored(row, options.get(row.id as number)),
-    );
+    const settled = settlements.forDecision(decisionId);
+    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map((row) => {
+      const settlement = settled.get(row.id as number);
+      const stored = intentRowToStored(row, options.get(row.id as number));
+      return settlement ? { ...stored, settlement } : stored;
+    });
   }
 
   function verdictsFor(decisionId: number): PlaybookVerdict[] {
@@ -436,6 +475,24 @@ export function openDecisionDb(path: string): DecisionDb {
     }
 
     triggerRetrospectives(entry);
+    linkEarlySettlements(entry);
+  }
+
+  /** A settlement can land before its decision on the dashboard's copy: link it once the decision
+   *  is in — the spread's leg ids, and the rescore its fill owes. Derived like the retrospective
+   *  trigger, so it never costs the decision itself; the next settlement or restart retries it. */
+  function linkEarlySettlements(entry: DecisionRecord): void {
+    try {
+      rescoreSettled(
+        entry.outcomes.flatMap((o) =>
+          o.result?.status === "working"
+            ? settlements.linkResult(o.result.orderId, o.intent.clientOrderId)
+            : [],
+        ),
+      );
+    } catch {
+      // See above.
+    }
   }
 
   /** The retrospective writer's trigger: a decision that just recorded a fill may have closed a
@@ -580,6 +637,37 @@ export function openDecisionDb(path: string): DecisionDb {
         throw error;
       }
     },
+
+    recordSettlements(list): number {
+      let added = 0;
+      const settled: SettledIntent[] = [];
+      db.exec("BEGIN");
+      try {
+        for (const settlement of list) {
+          const stored = settlements.record(settlement);
+          if (stored.added) added += 1;
+          settled.push(...stored.intents);
+        }
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+      // After the commit: the settlement is the fact, its P/L is derived — a scoring failure must
+      // never cost the record the settle loop has already let go of. The next fill retries it.
+      try {
+        rescoreSettled(settled);
+      } catch {
+        // See above.
+      }
+      return added;
+    },
+
+    recentSettlements(limit = DEFAULT_PAGE) {
+      return settlements.recent(Math.max(1, Math.min(limit, MAX_PAGE)));
+    },
+
+    unsettledOrders: (personaId, sinceAt) => settlements.unsettled(personaId, sinceAt),
 
     realizedPlForPlaybook(personaId, playbookId): number {
       const row = selectRealizedPlForPlaybook.get(playbookId, personaId) as {

@@ -77,6 +77,7 @@ import {
   sweepOrphanOptionOrders,
 } from "./autonomous-option-wiring.js";
 import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import { resumeWorkingOrders, settlementSink } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -246,6 +247,7 @@ async function runLive(): Promise<void> {
       .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
   }
   const onDecision = decisionSink(audit, decisionDb);
+  const onSettled = settlementSink(decisionDb); // a `working` order's late fill, beside its decision
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
@@ -291,6 +293,7 @@ async function runLive(): Promise<void> {
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
       ...(botActivityBus ? { activityBus: botActivityBus } : {}),
+      ...(onSettled ? { onSettled } : {}),
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -308,6 +311,8 @@ async function runLive(): Promise<void> {
   // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
   // The shared data connections above are already wired, so this catches them too.
   await credentials.reconcile(bootControls);
+  // Orders an earlier run left working go back to the settle loop first: the sweep below may end them.
+  resumeWorkingOrders(brokerHolders, decisionDb, { scoutHost: botRosters[0]?.bot.persona.id });
   await sweepOrphanOptionOrders(brokerHolders); // our own stamped orders only, before any cycle
   // Expiries and assignments close option round trips no fill ever closes (#4642 slice 8).
   armOptionLifecycleSweep(brokerHolders, decisionDb);
