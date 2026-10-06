@@ -44,3 +44,32 @@ export function claimOptionUnderlyings(
     return [{ ...entry, playbook: { ...entry.playbook, symbols } }];
   });
 }
+
+/**
+ * A PERSONA'S OWN RULES YIELD TO EVERY OTHER PLAYBOOK (#4651). A `rulesOf` playbook (SAURON) trades
+ * a whole universe as one basket, so any symbol another enabled playbook trades is that playbook's:
+ * the basket loses it, loudly, the way an option claim narrows one (above). Applied after the option
+ * claims, it makes the ownership rule `withPlaybooks` applies to Sauron's own reflexes hold for the
+ * playbook too — on another bot SAURON never sells S1-NVDA's NVDA — and it keeps a Store allocation
+ * honest: the guards size SAURON against its narrowed basket, so one position never counts against
+ * two allocations. A roster with no `rulesOf` playbook comes back unchanged.
+ */
+export function yieldPersonaRules(
+  enabled: readonly EnabledPlaybook[],
+  log: (line: string) => void,
+): EnabledPlaybook[] {
+  const ownedBy = new Map<string, string>();
+  for (const { playbook } of enabled) {
+    if (playbook.rulesOf !== undefined) continue;
+    for (const s of playbook.symbols) if (!ownedBy.has(s)) ownedBy.set(s, playbook.id);
+  }
+  return enabled.map((entry) => {
+    if (entry.playbook.rulesOf === undefined) return entry;
+    const lost = entry.playbook.symbols.filter((s) => ownedBy.has(s));
+    if (lost.length === 0) return entry;
+    const to = lost.map((s) => `${s} → ${ownedBy.get(s)}`).join(", ");
+    log(`${entry.playbook.id} hands ${to}; it stops trading them on this bot`);
+    const symbols = entry.playbook.symbols.filter((s) => !ownedBy.has(s));
+    return { ...entry, playbook: { ...entry.playbook, symbols } };
+  });
+}

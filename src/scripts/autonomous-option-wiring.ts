@@ -12,7 +12,7 @@ import type { Bot } from "../bots/bot.js";
 import { botTradingClient } from "../bots/bot-broker.js";
 import type { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import type { RiskConfig } from "../engine/guards.js";
-import { claimOptionUnderlyings } from "../playbooks/option-ownership.js";
+import { claimOptionUnderlyings, yieldPersonaRules } from "../playbooks/option-ownership.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { parseLifecycleActivity } from "../trading/option-lifecycle.js";
 
@@ -23,15 +23,15 @@ type Log = { log(line: string): void; warn(line: string): void };
 type ReadAccount = (credentials: AlpacaCredentials) => Promise<AlpacaAccount>;
 const readBotAccount: ReadAccount = (credentials) => botTradingClient(credentials).getAccount();
 
-/** A bot's merged roster with the one-option-playbook-per-underlying rule applied, every refusal
- *  and narrowing announced on a `[playbooks]` line — the same prefix the roster's own lines use. */
-export function ownedOptionRoster(
+/** A bot's merged roster with both ownership rules applied — one option playbook per underlying,
+ *  then a persona's own rules yielding every symbol another playbook trades (`option-ownership.ts`)
+ *  — every refusal and narrowing announced on a `[playbooks]` line, the roster's own prefix. */
+export function ownedRoster(
   personaId: string,
   merged: readonly EnabledPlaybook[],
 ): EnabledPlaybook[] {
-  return claimOptionUnderlyings(merged, (line) =>
-    console.warn(`[playbooks] ${personaId}: ${line}`),
-  );
+  const log = (line: string) => console.warn(`[playbooks] ${personaId}: ${line}`);
+  return yieldPersonaRules(claimOptionUnderlyings(merged, log), log);
 }
 
 /**

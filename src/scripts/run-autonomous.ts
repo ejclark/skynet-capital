@@ -78,7 +78,12 @@ import {
   BotOptionLevels,
   sweepOrphanOptionOrders,
 } from "./autonomous-option-wiring.js";
-import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import {
+  announceRoster,
+  announceScout,
+  armScoutStaging,
+  scoutSkipSymbols,
+} from "./autonomous-scout-staging.js";
 import { resumeWorkingOrders, settlementSink } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
@@ -337,7 +342,7 @@ async function runLive(): Promise<void> {
   const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
-  const managedSymbols = new Set((botRosters[0]?.enabled ?? []).flatMap((e) => e.playbook.symbols)); // traders[0]'s account
+  const managedSymbols = scoutSkipSymbols(botRosters[0]); // traders[0]'s account
 
   // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
   // these already-running traders on the next `/controls` poll, in place, through `swapIn`.
@@ -351,9 +356,7 @@ async function runLive(): Promise<void> {
       // The scout skips symbols a bot's own playbooks manage. Mutated in place rather than
       // rebuilt: `buildScoutDeps` below closes over THIS set, so a replacement would never be seen.
       managedSymbols.clear();
-      for (const entry of botRosters[0]?.enabled ?? []) {
-        for (const symbol of entry.playbook.symbols) managedSymbols.add(symbol);
-      }
+      for (const symbol of scoutSkipSymbols(botRosters[0])) managedSymbols.add(symbol);
       console.log(
         `[playbooks] Playbook Store subscriptions applied in place — version ${version}, stamped ${new Date(at).toISOString()}; no restart`,
       );

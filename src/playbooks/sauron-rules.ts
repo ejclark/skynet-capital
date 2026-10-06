@@ -21,6 +21,10 @@ const STANDARD_RULES = new SauronPersona();
  * ON ANY OTHER BOT it is an ordinary `decide` playbook: the standard rules on that bot's own
  * account, kept to the bots' universe and stamped by `playbookIntents`.
  *
+ * ON EITHER, its basket yields every symbol another enabled playbook trades (`yieldPersonaRules`,
+ * applied when the live roster resolves), so it never sells another playbook's position and a Store
+ * allocation on it counts only its own names.
+ *
  * Deliberately absent: an exit-safety dial (a trip would add a sell his rules never make) and a
  * window (`rulesOf` makes the verdict "tactical", which the roll call reads as "reading live price
  * and sentiment every pass").

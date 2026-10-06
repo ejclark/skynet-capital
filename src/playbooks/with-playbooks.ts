@@ -66,6 +66,18 @@ function optionSurface(
   };
 }
 
+/**
+ * The symbols a bot's playbooks take from its base persona: every enabled playbook's basket EXCEPT
+ * the base persona's own rules (`rulesOf === baseId`), whose orders are the persona's reflexes. The
+ * one definition — `withPlaybooks` suppresses reflexes on it, and the beta scout skips it
+ * (`run-autonomous.ts`), so the two can never disagree about which names a playbook owns.
+ */
+export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook[]): Set<string> {
+  return new Set(
+    enabled.filter((e) => e.playbook.rulesOf !== baseId).flatMap((e) => e.playbook.symbols),
+  );
+}
+
 export function withPlaybooks(
   base: Persona,
   enabled: readonly EnabledPlaybook[],
@@ -82,9 +94,11 @@ export function withPlaybooks(
     return base;
   }
   // The base persona's own rules, when enabled as a playbook — run as the base, never as a play.
+  // EVERY such entry leaves the plays (a duplicated env token must not run them a second time);
+  // the first one names the stamp.
   const own = enabled.find((e) => e.playbook.rulesOf === base.id);
-  const others = own ? enabled.filter((e) => e !== own) : enabled;
-  const managed = new Set(others.flatMap((e) => e.playbook.symbols));
+  const others = own ? enabled.filter((e) => e.playbook.rulesOf !== base.id) : enabled;
+  const managed = managedSymbols(base.id, enabled);
   const attribute = (intent: OrderIntent): OrderIntent =>
     own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
   return {

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
@@ -157,15 +158,51 @@ describe("playbookStoreCatalog", () => {
         "On Sauron's own account it places exactly the share orders his rules already place",
       );
       expect(card().description).toContain("runs his standard rules on that bot's own account");
-      expect(card().description).toContain(
-        "that bot's own rules stop trading them while it is subscribed",
-      );
       expect(card().enter).toContain("The mode you pick does not change that");
       expect(card().enter).toContain("The capital you allocate caps his buys");
       // The persona's dollar size is what it ASKS for; the position cap still clamps the fill.
       expect(card().enter).toContain("asks for $120,000");
       expect(card().enter).toContain("the risk guards then cap any one position");
       expect(card().exitCutLosses).toContain("no stop-loss");
+    });
+
+    // #4651 review: on another bot it takes over shares the bot already held, with no stop, and the
+    // bot's own rules (its stop-losses included) go quiet on every name the bots trade.
+    it("says plainly what subscribing another bot does to the shares it already holds", () => {
+      expect(card().description).toContain(
+        "takes over every share that bot already holds in these ten names, whoever bought it",
+      );
+      expect(card().description).toContain(
+        "so that bot's own rules stop trading altogether while it is subscribed",
+      );
+      expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
+      expect(card().exitCutLosses).toContain("already on the bot when it subscribed");
+      expect(card().exitCutLosses).toContain(
+        "that bot's own stop-losses no longer sell these names",
+      );
+    });
+
+    // A member cannot see which build runs, and HC-SAURON's card carries no numbers to point at.
+    it("describes his research settings in its own words rather than pointing at another card", () => {
+      expect(copy()).not.toContain("HC-SAURON");
+      expect(card().description).toContain("this card cannot show which his account runs");
+      expect(card().description).toContain("a momentum stop that closes the position");
+    });
+
+    // The card cites docs/BOTS-SAURON.md as its evidence; the two must state the same ceiling.
+    it("cites a dossier that states the same panic-buy ceiling as the card", () => {
+      expect(card().evidence).toContain("docs/BOTS-SAURON.md");
+      const dossier = readFileSync("docs/BOTS-SAURON.md", "utf8");
+      const callSheet = dossier.slice(0, dossier.indexOf("## Adaptation ledger"));
+      expect(callSheet).toContain("asks for $156,000");
+      expect(callSheet).not.toContain("($120,000 → $240,000)");
+    });
+
+    // One position, one playbook: SAURON yields every name another playbook on the bot trades.
+    it("says a name another playbook trades stays that playbook's, cap included", () => {
+      expect(card().hold).toContain("S1-NVDA's NVDA, the wheel's CRWV, the call spread's NVDA");
+      expect(card().hold).toContain("so one position never answers to two");
+      expect(card().enter).toContain("counts against that playbook, never against both");
     });
 
     // Until slice 10 refuses unlabelled orders, pausing on his own account only removes the label —

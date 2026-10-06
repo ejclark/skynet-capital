@@ -104,7 +104,8 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
     hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
   },
-  // Every number below is pinned to the persona's own behavior by tests/playbooks/sauron-rules.spec.ts.
+  // Every number below is pinned to the persona's own behavior by
+  // tests/discovery/playbook-store.spec.ts ("quotes only numbers his persona actually trades on").
   // The pause sentence says what pausing does TODAY: until unlabelled orders are refused (#4642
   // slice 10), his rules keep trading his own account without the label. Slice 10 rewrites it.
   SAURON: {
@@ -112,30 +113,38 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "Sauron's own trading rules, as a playbook. He trades only at the crowd's extremes, once " +
       "price momentum shows the extreme is fading: he sells into euphoria that has rolled over and " +
       "buys what panic has thrown away. On Sauron's own account it places exactly the share orders " +
-      "his rules already place, labelled as this playbook's — the standard numbers below, or the " +
-      "research-volume ones on HC-SAURON when his account runs those. On any other bot it runs " +
-      "his standard rules on that bot's own account, on these ten names, and that bot's own rules " +
-      "stop trading them while it is subscribed.",
+      "his rules already place, labelled as this playbook's. If his account runs his high-volume " +
+      "research settings instead, those trade smaller and more often — small tranches, buys on " +
+      "ordinary momentum runs too, half taken off into euphoria, and a momentum stop that closes " +
+      "the position — and this card cannot show which his account runs: the rows below are his " +
+      "standard rules. On any other bot it runs his standard rules on that bot's own account and " +
+      "takes over every share that bot already holds in these ten names, whoever bought it. These " +
+      "are every name the bots trade, so that bot's own rules stop trading altogether while it is " +
+      "subscribed.",
     enter:
       "Buys a name it does not hold when news sentiment is −0.70 or lower and price momentum is 0 " +
       "or higher — the selling has stopped. Each buy asks for $120,000 at −0.70, growing with the " +
       "depth of the panic to $156,000 at −1.00, the bottom of the sentiment scale; the risk guards " +
       "then cap any one position at a share of the account. The mode you pick does not change " +
       "that: his rules size every order. The capital you allocate caps his buys too, counting what " +
-      "the bot already holds in these ten names.",
+      "the bot already holds in the names he trades there; a name another playbook on the bot " +
+      "trades counts against that playbook, never against both.",
     exitTakeProfit:
       "Sells the whole position when news sentiment is 0.70 or higher and price momentum is 0 or " +
-      "lower — the euphoria has rolled over. No price target.",
+      "lower — the euphoria has rolled over. No price target. It sells any holding in his names " +
+      "this way, whoever bought it.",
     exitCutLosses:
-      "None. His standard rules carry no stop-loss: a name bought in a panic is held until the " +
-      "exit above fires on it, however long that takes.",
+      "None. His standard rules carry no stop-loss: a holding in his names — bought in a panic, " +
+      "or already on the bot when it subscribed — is held until the exit above fires on it, " +
+      "however long that takes. On any other bot, that bot's own stop-losses no longer sell these " +
+      "names while it is subscribed.",
     hold:
-      "Between extremes, or while an extreme is still building, it places nothing. A name an " +
-      "option playbook on the same bot trades — CRWV for the wheel, NVDA for the call spread — is " +
-      "left to that playbook, and on Sauron's own account so is every name his other playbooks " +
-      "trade. Pausing it never stops an option playbook. Paused or unsubscribed, his rules still " +
-      "trade Sauron's own account as they did before this playbook existed, just without its " +
-      "label; on any other bot, nothing of his runs.",
+      "Between extremes, or while an extreme is still building, it places nothing. A name another " +
+      "playbook on the same bot trades — S1-NVDA's NVDA, the wheel's CRWV, the call spread's NVDA " +
+      "— is left to that playbook, so one position never answers to two. Pausing it never stops " +
+      "an option playbook. Paused or unsubscribed, his rules still trade Sauron's own account as " +
+      "they did before this playbook existed, just without its label; on any other bot, nothing of " +
+      "his runs.",
   },
   "CRWV-WHEEL": {
     description:
