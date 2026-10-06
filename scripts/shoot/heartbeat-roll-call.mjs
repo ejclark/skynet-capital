@@ -11,11 +11,15 @@
 // at once: S1 with a dated window ahead of it, and G1 held by an estimate (the state the real
 // calendar is in for both names today).
 //
+// `FRAMES=unmanaged` shoots only `roll-call-unmanaged-*` (#4777): G1-GOOG unsubscribed while the
+// bot still holds GOOG, the lot the stream keeps priced and nothing on the bot will sell. The line
+// comes from the real `unmanagedHoldings`, same rule as the armed frame. Lands in docs/shots/pr-4777.
+//
 // JPEG ≤100KB (docs/PICTURES.md). Shots live under docs/shots/pr-4450 (the plan issue's number).
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/heartbeat-roll-call.mjs
 import { resolve } from "node:path";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
-import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
+import { playbookRollCall, unmanagedHoldings } from "../../src/observatory/bot-heartbeat-view.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
 import { openShell } from "./shell.mjs";
 
@@ -103,11 +107,37 @@ const armedHeartbeat = {
   },
 };
 
-let currentHeartbeat = heartbeat;
+// G1-GOOG unsubscribed: the newest pass ran only S1-NVDA, no Store row names G1, GOOG still held.
+const unsubscribedVerdicts = [{ playbookId: "S1-NVDA", mode: "standard", state: "no-window" }];
+const unmanagedHeartbeat = {
+  available: true,
+  heartbeat: {
+    ...heartbeat.heartbeat,
+    playbooks: unsubscribedVerdicts.map((v) => ({
+      ...v,
+      since: "2026-10-01T13:30:00Z",
+      sinceIsLowerBound: false,
+    })),
+    rollCall: playbookRollCall(unsubscribedVerdicts, NOW),
+    unmanaged: unmanagedHoldings(
+      {
+        positions: [
+          { symbol: "NVDA", quantity: 12 },
+          { symbol: "GOOG", quantity: 5 },
+        ],
+        subscribedIds: [],
+      },
+      unsubscribedVerdicts,
+    ),
+  },
+};
+
+const onlyUnmanaged = process.env.FRAMES === "unmanaged";
+let currentHeartbeat = onlyUnmanaged ? unmanagedHeartbeat : heartbeat;
 
 const { page, origin, shoot, close } = await openShell({
   name: "heartbeat-roll-call",
-  out: resolve("docs/shots/pr-4450"),
+  out: resolve(onlyUnmanaged ? "docs/shots/pr-4777" : "docs/shots/pr-4450"),
   stubs: {
     "/api/settings": settings,
     "/api/desk/bot-sauron": desk,
@@ -116,6 +146,20 @@ const { page, origin, shoot, close } = await openShell({
     "/api/desk/bot-sauron/decisions": { available: true, kind: "bot", cycles: [] },
   },
 });
+
+if (onlyUnmanaged) {
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 844 }],
+    ["desktop", { width: 1280, height: 900 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/u/bot-sauron/decisions`);
+    await page.getByText("Nothing sells it").scrollIntoViewIfNeeded();
+    await shoot(`roll-call-unmanaged-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
 
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/u/bot-sauron/decisions`);

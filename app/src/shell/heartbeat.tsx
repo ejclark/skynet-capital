@@ -9,6 +9,7 @@ import {
   ROLL_CALL_WORDS,
   type RollCallLine,
   sinceText,
+  UNMANAGED_WORDS,
   VERDICT_WORDS,
 } from "../live/heartbeat";
 import { targetedCycle } from "./cycle-anchor";
@@ -76,7 +77,14 @@ export function VerdictTable({
  *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. An "On"
  *  line also says what it is waiting for and, where its rule has one, the day its window next
  *  opens — "On" alone reads as reassurance when the calendar holds no confirmed date. */
-export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[] }): ReactElement {
+export function RollCallList({
+  lines,
+  unmanaged = [],
+}: {
+  readonly lines: readonly RollCallLine[];
+  /** Held tickers nothing on this bot will sell (#4777) — listed after the playbooks, by ticker. */
+  readonly unmanaged?: readonly string[];
+}): ReactElement {
   // A list, not a table: at 390px the reason is the part worth reading, and a third column
   // squeezed it to two words a line. Name and status share a line; the reason gets the width.
   return (
@@ -99,6 +107,18 @@ export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[
           </li>
         );
       })}
+      {unmanaged.map((symbol) => (
+        <li key={`unmanaged:${symbol}`} data-status="unmanaged">
+          <span className="hb-roll-head">
+            {/* "shares", so a ticker never reads as one more playbook id in this list. */}
+            <span className="num">{symbol} shares</span>
+            <span>
+              <span aria-hidden="true">{UNMANAGED_WORDS.glyph}</span> <b>{UNMANAGED_WORDS.word}</b>
+            </span>
+          </span>
+          <span className="note">{UNMANAGED_WORDS.reason}</span>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -183,7 +203,10 @@ export function HeartbeatSection({
       {showPlaybooks && heartbeat.rollCall ? (
         <section className="hb-card">
           <h2 className="hb-h">Which playbooks this bot runs</h2>
-          <RollCallList lines={heartbeat.rollCall} />
+          <RollCallList
+            lines={heartbeat.rollCall}
+            {...(heartbeat.unmanaged ? { unmanaged: heartbeat.unmanaged } : {})}
+          />
           {/* Observe here, change there (#4642: configure on R&D → Playbooks, no new route). A
               plain link with the /app base, like the shell's other cross-section links, so this
               section needs no router to render. Owner-only, inside the same showPlaybooks gate. */}

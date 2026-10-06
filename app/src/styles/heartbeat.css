@@ -151,6 +151,11 @@
 .hb-roll li[data-status="blocked"] {
   border-top-style: dashed;
 }
+/* A held lot nothing on the bot will sell (#4777): a heavier rule sets it apart from the playbook
+ * lines above it, on top of its own glyph and word. */
+.hb-roll li[data-status="unmanaged"] {
+  border-top-width: 2px;
+}
 .hb-roll-head {
   display: flex;
   justify-content: space-between;
