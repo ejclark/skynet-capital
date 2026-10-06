@@ -1,6 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
+import { activityNarrowing, type PlaybookOf } from "../observatory/activity-filter.js";
 import {
   type BotHoldings,
   botHeartbeatView,
@@ -63,6 +64,55 @@ function botSpreadLookup(kind: string, config: DashboardServerConfig): SpreadOf 
   const { findSpreadLeg, findByOrderId } = config;
   if (kind !== "bot" || !(findSpreadLeg && findByOrderId)) return undefined;
   return spreadLookup({ findSpreadLeg, findByOrderId });
+}
+
+/** The playbook that placed an order, for the bot's OWNER alone (#885: "we do not show what
+ *  playbooks others are using"). Filtering a non-owner's copy by playbook would name it by
+ *  inference, so anyone else gets no lookup and their `?playbook=` is ignored. Memoised: the
+ *  filter and the chip list read the same order ids, one indexed lookup each. */
+function ownerPlaybookOf(
+  kind: string,
+  config: DashboardServerConfig,
+  owner: boolean,
+): PlaybookOf | undefined {
+  const { findByOrderId } = config;
+  if (kind !== "bot" || !owner || !findByOrderId) return undefined;
+  const seen = new Map<string, string | undefined>();
+  return (orderId) => {
+    if (!seen.has(orderId)) seen.set(orderId, findByOrderId(orderId)?.intent.playbookId);
+    return seen.get(orderId);
+  };
+}
+
+/** `/api/desk/:id/activity` — the account's orders, newest first, keyset-paged by `before`, and
+ *  narrowed BEFORE the page is cut (#4650): `?symbol=` to one stock (an option or a spread by its
+ *  underlying), `?playbook=` to one playbook's orders for the bot's owner only. No ledger wired
+ *  (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie. The audit lines ride
+ *  alongside so each row can say who PLACED it; with no audit log wired every row is `unknown`. */
+async function activityPayload(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+  params: URLSearchParams,
+  owner: boolean,
+): Promise<unknown> {
+  const [records, audit] = await Promise.all([
+    config.readTradeActivity?.(found.id),
+    config.readOrderAudit?.(found.id),
+  ]);
+  if (!records) return { available: false, activity: [] };
+  const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
+  // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
+  // so a paginated activity page still carries P/L computed from the complete fill history.
+  const realizedMap = realizedByOrder(deskLedger(found, records));
+  const before = params.get("before");
+  const view = deskActivityView(records, origins, {
+    limit: resolvePageSize(params.get("per_page")),
+    ...(before !== null ? { before } : {}),
+    realizedByOrder: realizedMap,
+    spreadOf: botSpreadLookup(found.kind, config),
+    ...activityNarrowing(params, ownerPlaybookOf(found.kind, config, owner)),
+  });
+  return { available: true, ...withDecisions(found.kind, view, config, owner) };
 }
 
 /** How many passes to read per persona per page — the store's own max. A page of cycles then
@@ -217,37 +267,7 @@ export async function serveDeskJson(
   // posture `resolvePageSize` takes on a bad `per_page`.
   const beforeAt = before !== null && Number.isFinite(Number(before)) ? Number(before) : undefined;
   if (sub === "activity") {
-    // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
-    // The audit lines ride alongside so each row can say who PLACED it; with no audit log
-    // wired the index is empty and every row classifies `unknown`, i.e. unmarked.
-    const [records, audit] = await Promise.all([
-      config.readTradeActivity?.(id),
-      config.readOrderAudit?.(id),
-    ]);
-    const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
-    // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
-    // so a paginated activity page still carries P/L computed from the complete fill history.
-    const realizedMap = records ? realizedByOrder(deskLedger(found, records)) : undefined;
-    res.end(
-      JSON.stringify(
-        records
-          ? {
-              available: true,
-              ...withDecisions(
-                found.kind,
-                deskActivityView(records, origins, {
-                  limit,
-                  before: before ?? undefined,
-                  ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
-                  spreadOf: botSpreadLookup(found.kind, config),
-                }),
-                config,
-                owner,
-              ),
-            }
-          : { available: false, activity: [] },
-      ),
-    );
+    res.end(JSON.stringify(await activityPayload(found, config, params, owner)));
     return;
   }
   // The bot's health panels — one lookup, so a new panel never adds a branch here.

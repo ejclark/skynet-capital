@@ -357,12 +357,33 @@ export interface ActivityReasoning {
 export interface DeskActivity {
   readonly available: boolean;
   readonly activity: readonly DeskActivityEvent[];
+  /** Present only when this page was full — pass it back as `before` for the next, older page
+   *  (under a filter, the next page of the filtered list). */
+  readonly nextCursor?: string;
+  /** The bot owner's alone (#885): every playbook the account's orders were placed under. */
+  readonly playbooks?: readonly string[];
 }
 
-export async function fetchDeskActivity(id: string): Promise<DeskActivity> {
-  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/activity`, {
-    credentials: "same-origin",
-  });
+/** What to ask `/api/desk/:id/activity` for (#4650): an older page, and the server-side narrowing
+ *  to one stock and one playbook (the server honours the playbook for the bot's owner only). */
+export interface DeskActivityQuery {
+  readonly before?: string | undefined;
+  readonly symbol?: string | undefined;
+  readonly playbook?: string | undefined;
+}
+
+export async function fetchDeskActivity(
+  id: string,
+  query: DeskActivityQuery = {},
+): Promise<DeskActivity> {
+  const params = new URLSearchParams();
+  for (const key of ["before", "symbol", "playbook"] as const) {
+    const value = query[key];
+    if (value) params.set(key, value);
+  }
+  const search = params.toString();
+  const url = `/api/desk/${encodeURIComponent(id)}/activity${search ? `?${search}` : ""}`;
+  const res = await fetch(url, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`GET /api/desk/${id}/activity → ${res.status}`);
   return (await res.json()) as DeskActivity;
 }

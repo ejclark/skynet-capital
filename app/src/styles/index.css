@@ -7,6 +7,7 @@
  * preserved verbatim so no rule changes which declaration wins. Add a new sheet in alphabetical
  * position unless it deliberately needs to override a later one.
  */
+@import "./account-activity.css";
 @import "./admin.css";
 @import "./alpaca-guide.css";
 @import "./bench.css";

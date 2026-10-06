@@ -39,6 +39,9 @@ import { formatSigned, plClass } from "./render-atoms.js";
 /** The spread a leg order belongs to, as the decision that placed it describes it. */
 interface SpreadFacts {
   readonly orderId: string;
+  /** The stock the spread is on, as its decision named it — what a symbol filter matches, since the
+   *  row's own broker symbol is none. */
+  readonly underlying: string;
   readonly display: string;
   readonly side: Side;
   /** Every leg the decision placed — a spread's result is only ever read off all of them. */
@@ -71,6 +74,7 @@ function spreadFacts(parentOrderId: string, deps: SpreadLookupDeps): SpreadFacts
   const net = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
   return {
     orderId: parentOrderId,
+    underlying: intent.symbol,
     display:
       spreadContractName(option.legs.map((leg) => leg.occSymbol)) ??
       `${intent.symbol} option spread`,

@@ -196,7 +196,7 @@ function WhyDetail({
 /** The row the URL points at, if any (#4046 item 1): a Thesis marker or a FORM square links
  *  `?section=activity#act-<orderId>`, but the ledger loads after the router has already tried the
  *  hash, so the browser's own jump finds nothing. The row scrolls itself in once it exists. */
-function targetedRow(): string | undefined {
+export function targetedActivityRow(): string | undefined {
   const raw = typeof window === "undefined" ? "" : window.location.hash;
   const hash = raw.startsWith("#") ? decodeURIComponent(raw.slice(1)) : "";
   return hash.startsWith("act-") ? hash : undefined;
@@ -218,7 +218,7 @@ function ActivityRow({
   const row = useRef<HTMLTableRowElement>(null);
   useEffect(() => {
     // Optional-call, as `decisions-section.tsx` does: happy-dom has no `scrollIntoView`.
-    if (targetedRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
+    if (targetedActivityRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
   }, [anchor]);
   const when = new Date(event.at);
   const stamp = Number.isNaN(when.getTime())
@@ -324,7 +324,7 @@ function LegRow({
   const anchor = `act-${leg.orderId}`;
   const row = useRef<HTMLTableRowElement>(null);
   useEffect(() => {
-    if (targetedRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
+    if (targetedActivityRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
   }, [anchor]);
   return (
     <tr className="row-leg" id={anchor} ref={row}>
