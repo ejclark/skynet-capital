@@ -1,7 +1,7 @@
 import type { MarketContext, OrderIntent, OrderResult } from "../domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
-import type { BrokerPort } from "../ports/broker.js";
+import type { BrokerPort, OpenShareOrder } from "../ports/broker.js";
 import type { OptionMarketPort, OptionOrderTracker } from "../ports/option-market.js";
 import { clientOrderIdFor } from "./client-order-id.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
@@ -15,7 +15,8 @@ export interface AutonomousTraderConfig {
   readonly broker: BrokerPort;
   readonly risk?: RiskConfig;
   /** Minimum gap between orders in the same symbol (ms). Guards against re-submitting
-   *  while a fill is still in flight — a live account shows the position only after it fills. */
+   *  while a fill is still in flight — a live account shows the position only after it fills. A buy
+   *  still open past it is caught by the broker's open-order read instead (#4678). */
   readonly cooldownMs?: number;
   /** Injectable clock (ms) for deterministic cooldown tests. */
   readonly now?: () => number;
@@ -53,6 +54,31 @@ export interface AutonomousTraderConfig {
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
 const NOTHING_WORKING: ReadonlySet<string> = new Set();
 
+/**
+ * The share orders still open at the broker this cycle (#4678): which symbols have a buy open, and
+ * how many shares the open sells will take. `known: false` when the broker could not be asked —
+ * then every buy waits (an order may be open) and no sell does (the broker itself refuses to sell
+ * shares an open order already holds, so an exit is never the risk).
+ */
+interface OpenShares {
+  readonly known: boolean;
+  readonly buying: ReadonlySet<string>;
+  readonly selling: ReadonlyMap<string, number>;
+}
+
+const NOTHING_OPEN: OpenShares = { known: true, buying: new Set(), selling: new Map() };
+const OPEN_UNKNOWN: OpenShares = { ...NOTHING_OPEN, known: false };
+
+function openSharesFrom(orders: readonly OpenShareOrder[]): OpenShares {
+  const buying = new Set<string>();
+  const selling = new Map<string, number>();
+  for (const order of orders) {
+    if (order.side === "buy") buying.add(order.symbol);
+    else selling.set(order.symbol, (selling.get(order.symbol) ?? 0) + order.quantity);
+  }
+  return { known: true, buying, selling };
+}
+
 interface Handled {
   readonly outcome: IntentOutcome;
   readonly result?: OrderResult;
@@ -68,6 +94,12 @@ interface Handled {
  * intents, and what happened to each — the durable audit trail Phase 0 of the autonomy plan is built
  * on. The cooldown is the key safety valve for live trading — without it, a persona that stays
  * bullish would re-fire the same buy on every tick before the first fill lands.
+ *
+ * SHARE ORDERS STILL OPEN (#4678): the cooldown is a clock, and an order queued for the open
+ * outlives it. So once a live cycle has a share intent, it reads the broker's open share orders —
+ * once — and a buy waits (`cooldown-skipped`) while a buy of the same symbol is still open, while a
+ * new sell is sized by the guards against what the open sells leave. A failed read holds every buy
+ * and no sell. Observe mode places nothing, so it reads nothing.
  *
  * OPTION ORDERS (#4645): before deciding, a live cycle settles any option order still working, then
  * reads only the quotes the persona asked for — never for an underlying that is cooling down or has
@@ -152,11 +184,13 @@ export class AutonomousTrader {
     const enriched = options ? { ...context, options } : context;
     const rawIntents = persona.decide(enriched, portfolio);
     const playbookVerdicts = persona.playbookVerdicts?.(enriched) ?? [];
+    const open = await this.readOpenShares(mode, rawIntents);
     const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
       rawIntents,
       portfolio,
       enriched,
       risk,
+      open.selling,
     );
 
     const results: OrderResult[] = [];
@@ -164,7 +198,7 @@ export class AutonomousTrader {
     for (const [index, intent] of guardedIntents.entries()) {
       const handled = intent.option
         ? await this.handleOption(intent, index, { persona, mode, now, cooling })
-        : await this.handleShares(intent, mode, now);
+        : await this.handleShares(intent, { mode, now, open });
       outcomes.push(handled.outcome);
       if (handled.result) results.push(handled.result);
     }
@@ -207,10 +241,37 @@ export class AutonomousTrader {
     return cooling;
   }
 
-  private async handleShares(intent: OrderIntent, mode: TraderMode, now: number): Promise<Handled> {
+  /** The broker's open share orders, read once — after deciding, and only by a live cycle that
+   *  decided a share order, so a quiet cycle costs no read. A broker with no such read has nothing
+   *  open. */
+  private async readOpenShares(
+    mode: TraderMode,
+    intents: readonly OrderIntent[],
+  ): Promise<OpenShares> {
+    const broker = this.config.broker;
+    if (mode !== "live" || !intents.some((i) => !i.option) || !broker.openShareOrders) {
+      return NOTHING_OPEN;
+    }
+    try {
+      return openSharesFrom(await broker.openShareOrders());
+    } catch {
+      return OPEN_UNKNOWN;
+    }
+  }
+
+  private async handleShares(
+    intent: OrderIntent,
+    cycle: { readonly mode: TraderMode; readonly now: number; readonly open: OpenShares },
+  ): Promise<Handled> {
+    const { mode, now, open } = cycle;
     const cooldown = this.config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     const last = this.lastOrderAt.get(intent.symbol);
     if (last !== undefined && now - last < cooldown) {
+      return { outcome: { intent, action: "cooldown-skipped" } };
+    }
+    // A buy over one still open would stack a second order on the first: it waits, exactly as it
+    // would inside the cooldown, until the broker no longer holds the earlier buy.
+    if (intent.side === "buy" && (!open.known || open.buying.has(intent.symbol))) {
       return { outcome: { intent, action: "cooldown-skipped" } };
     }
     if (mode === "observe") {

@@ -1,8 +1,9 @@
 import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { isBareContractOrder } from "../domain/option-order.js";
 import type { OrderIntent, OrderResult, Portfolio, Side } from "../domain/types.js";
-import type { BrokerPort } from "../ports/broker.js";
+import type { BrokerPort, OpenShareOrder } from "../ports/broker.js";
 import type { OptionOrderTracker } from "../ports/option-market.js";
+import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { AlpacaOptionOrderFlow } from "./alpaca-option-order-flow.js";
 import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
 
@@ -47,6 +48,25 @@ function resultFromLastRead(
     status: ENDED_UNFILLED.has(brokerStatus) ? "rejected" : "working",
     reason: `order ${brokerStatus}`,
     orderId: placed.id,
+  };
+}
+
+/**
+ * One open order as a share order, or `undefined` for anything option-shaped — a contract, or a
+ * spread whose legs are nested under it; the option order flow fences those itself. What is left to
+ * fill reads as 0 when the broker's numbers do not parse (an order sized in dollars has no share
+ * count): the broker itself refuses to sell shares an open order already holds, so counting 0 can
+ * never oversell, and a 0-share buy still marks the symbol as having a buy open.
+ */
+function openShareOrderFrom(order: AlpacaOrder): OpenShareOrder | undefined {
+  if (order.order_class === "mleg" || !order.symbol || parseOccSymbol(order.symbol)) {
+    return undefined;
+  }
+  const left = Number(order.qty) - Number(order.filled_qty ?? 0);
+  return {
+    symbol: order.symbol,
+    side: order.side,
+    quantity: Number.isFinite(left) ? Math.max(0, left) : 0,
   };
 }
 
@@ -149,6 +169,23 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
   /** Cancels every open order this bot stamped (`AlpacaOptionOrderFlow.sweepOrphans`). */
   sweepOrphanOptionOrders(): Promise<readonly string[]> {
     return this.optionFlow ? this.optionFlow.sweepOrphans() : Promise.resolve([]);
+  }
+
+  /**
+   * The share orders still open on this account (#4678) — ONE list read, which the trader makes at
+   * most once a cycle (Alpaca allows 200 calls a minute). Every open share order counts, whoever
+   * placed it: shares are never stamped with a bot's client order id, and the account is the bot's
+   * own. Throws when the list cannot be read.
+   */
+  async openShareOrders(): Promise<readonly OpenShareOrder[]> {
+    const open: unknown = await this.client.listOrders({
+      status: "open",
+      nested: true,
+      limit: 500,
+    });
+    if (!Array.isArray(open))
+      throw new Error("the broker's open-order list did not read as a list");
+    return (open as AlpacaOrder[]).flatMap((order) => openShareOrderFrom(order) ?? []);
   }
 
   /** Cash and positions, a short always negative (`alpaca-portfolio.ts`). */

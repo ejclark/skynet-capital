@@ -10,7 +10,9 @@ import type { GuardRefusal } from "../engine/guards.js";
  * observe mode with no credential.
  */
 
-/** What the trader did with a single guarded intent this cycle. */
+/** What the trader did with a single guarded intent this cycle. `cooldown-skipped` = not sent this
+ *  cycle: the symbol (an option's underlying) was ordered too recently, or an earlier order on it is
+ *  still open at the broker — a share buy over an open buy, an option over a working order. */
 type CycleAction = "placed" | "rejected" | "observed" | "cooldown-skipped";
 
 export interface IntentOutcome {

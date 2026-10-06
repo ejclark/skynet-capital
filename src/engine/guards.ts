@@ -411,20 +411,24 @@ function clampOne(
  * every one that didn't survive — the data `docs/plans/where-are-we-documenting-*.md`'s "guard
  * opportunity cost" measure scores against. Guards size each intent against the *starting*
  * portfolio for the cycle; the one intra-cycle interaction they track is the batch ledger
- * (`guard-batch.ts`), live only when options are involved — so a sold put and a share buy in one
- * cycle cannot spend the same cash twice.
+ * (`guard-batch.ts`) — so a sold put and a share buy in one cycle cannot spend the same cash twice.
+ *
+ * `openSells` is what sell orders still open at the broker will take, per symbol (#4678): a new
+ * sell is sized against the shares they leave, and refused `nothing-held` when they leave none.
+ * Empty for a broker with nothing open, which sizes exactly as before.
  */
 export function applyGuardsWithVerdicts(
   intents: readonly OrderIntent[],
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig = DEFAULT_RISK_CONFIG,
+  openSells?: ReadonlyMap<string, number>,
 ): GuardResult {
   const approved: OrderIntent[] = [];
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   const book = bookNeeds(portfolio);
-  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio), book };
+  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio, openSells), book };
   for (const intent of intents) {
     // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
     // (a contract only trades as a priced limit through `option`), and a malformed option order is
