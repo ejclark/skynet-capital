@@ -1,3 +1,4 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { fetchJson } from "../http/fetch-json.js";
 import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -71,6 +72,25 @@ export interface DecisionReplicationClient {
  *  job on the ascending leg. */
 const LIVE_PREVIEW_BATCH = 20;
 
+/**
+ * The newest late settlements (#4650), resent on the first batch of every poll. A settlement lands
+ * long after its record was sent, and the receiver keeps the first copy of each record, so it
+ * travels on its own field (`DecisionBatch.settlements`) — idempotent on receipt, like the preview
+ * leg. Settlements are rare (an order whose cancel was not confirmed, a share order queued for the
+ * open), so the newest 50 cover days of them; a few hundred bytes each over the private bridge.
+ */
+const SETTLEMENTS_PER_POLL = 50;
+
+/**
+ * The settlement BACKLOG leg: everything stored after a locally tracked cursor, in bounded pages on
+ * a POST of their own (settlements, no records), so none is ever left behind — a burst after a
+ * restart, a dashboard outage, a refused batch. Unlike the decisions' ascending leg, the cursor
+ * moves only when the dashboard accepted the page: a settlement is never resent by anything else
+ * once it falls out of the newest few. It starts at 0 each boot, so a restart resends every one
+ * once; receipt is idempotent by order id.
+ */
+const SETTLEMENT_BACKLOG_PAGE = MAX_DECISION_BATCH;
+
 const NOOP_CLIENT: DecisionReplicationClient = {
   replicate: async () => {
     /* disabled — no bridge URL or no local decision store */
@@ -91,11 +111,18 @@ export function resolveDecisionReplication(
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
 
+  // This poll's settlements, sent once on its first batch — whichever persona's that is.
+  let unsentSettlements: readonly OrderSettlement[] = [];
+
+  /** One POST; true when the dashboard accepted it. */
   const sendOne = async (
     personaId: string,
     kind: string,
     records: readonly DecisionRecord[],
-  ): Promise<void> => {
+    backlog?: readonly OrderSettlement[],
+  ): Promise<boolean> => {
+    const settlements = backlog ?? unsentSettlements;
+    if (!backlog) unsentSettlements = [];
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
@@ -104,14 +131,16 @@ export function resolveDecisionReplication(
           "POST",
           endpoint,
           { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
-          { kind, personaId, records },
+          { kind, personaId, records, ...(settlements.length > 0 ? { settlements } : {}) },
           controller.signal,
         );
         if (response.status < 200 || response.status >= 300) {
           process.emitWarning(
             `[decision-replication] ${personaId} batch rejected (${response.status}) — will resend`,
           );
+          return false;
         }
+        return true;
       } finally {
         clearTimeout(timer);
       }
@@ -121,6 +150,7 @@ export function resolveDecisionReplication(
       process.emitWarning(
         `[decision-replication] ${personaId} unreachable — will resend: ${String(error)}`,
       );
+      return false;
     }
   };
 
@@ -142,11 +172,14 @@ export function resolveDecisionReplication(
   // preview leg's first send lands. Lives for this process's lifetime; a restart starts a
   // persona back at 0, resending its full known history — safe (idempotent on receipt) and rare.
   const ascendingCursor: Record<string, number> = {};
+  // The settlement backlog's cursor — see `SETTLEMENT_BACKLOG_PAGE`.
+  let settlementCursor = 0;
 
   return {
     replicate: async (_cursor) => {
       const decisionDb = getDecisionDb();
       if (!decisionDb) return;
+      unsentSettlements = decisionDb.recentSettlements(SETTLEMENTS_PER_POLL);
       const localMax = decisionDb.maxAtAll();
       for (const personaId of Object.keys(localMax)) {
         const after = ascendingCursor[personaId] ?? 0;
@@ -160,6 +193,16 @@ export function resolveDecisionReplication(
         // unconditionally alongside the ascending leg above.
         const preview = decisionDb.listByPersona(personaId, { limit: LIVE_PREVIEW_BATCH });
         if (preview.length > 0) await sendAll(personaId, preview);
+      }
+
+      // The settlement backlog — see `SETTLEMENT_BACKLOG_PAGE`. Any persona's envelope will do:
+      // a settlement is keyed by its order id, never by who placed it.
+      const host = Object.keys(localMax)[0];
+      const backlog = decisionDb.settlementsSince(settlementCursor, SETTLEMENT_BACKLOG_PAGE);
+      const last = backlog.at(-1);
+      if (host && last) {
+        const page = backlog.map((s) => s.settlement);
+        if (await sendOne(host, DECISION_BATCH_KIND_V2, [], page)) settlementCursor = last.seq;
       }
     },
   };

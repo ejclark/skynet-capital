@@ -1,11 +1,18 @@
-import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import {
+  AlpacaApiError,
+  type AlpacaOrder,
+  type AlpacaTradingClient,
+} from "../alpaca/alpaca-trading-client.js";
 import { isBareContractOrder } from "../domain/option-order.js";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderIntent, OrderResult, Portfolio, Side } from "../domain/types.js";
 import type { BrokerPort, OpenShareOrder } from "../ports/broker.js";
 import type { OptionOrderTracker } from "../ports/option-market.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { AlpacaOptionOrderFlow } from "./alpaca-option-order-flow.js";
+import { isTerminalOrder } from "./alpaca-option-result.js";
 import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
+import type { PendingShareOrders } from "./pending-share-orders.js";
 
 /** Attempts × delay for the post-fill poll below — Alpaca paper orders "usually" fill near-
  *  instantly but not on the `placeOrder` response itself (this module's own prior doc comment).
@@ -48,6 +55,24 @@ function resultFromLastRead(
     status: ENDED_UNFILLED.has(brokerStatus) ? "rejected" : "working",
     reason: `order ${brokerStatus}`,
     orderId: placed.id,
+  };
+}
+
+/**
+ * What a share order a submit left `working` became once the broker ended it (#4650) — read exactly
+ * as `resultFromLastRead` reads a final answer: a fill only on a reported filled quantity (a partial
+ * one reports what filled), and nothing filled reads `rejected`, as it would have at submit.
+ */
+function shareSettlementOf(order: AlpacaOrder, settledAt: string): OrderSettlement {
+  const filled = Number(order.filled_qty ?? 0);
+  const filledQuantity = Number.isFinite(filled) && filled > 0 ? filled : 0;
+  const price = order.filled_avg_price ? Number(order.filled_avg_price) : Number.NaN;
+  return {
+    orderId: order.id,
+    status: filledQuantity > 0 ? "filled" : "rejected",
+    filledQuantity,
+    ...(filledQuantity > 0 && Number.isFinite(price) ? { filledPrice: price } : {}),
+    settledAt,
   };
 }
 
@@ -101,6 +126,8 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
   private readonly client: AlpacaTradingClient;
   private readonly optionFlow?: AlpacaOptionOrderFlow;
   private readonly onSubmitted?: (info: BotOrderSubmission) => void;
+  private readonly pendingShares?: PendingShareOrders;
+  private readonly onSettled?: (settlement: OrderSettlement) => void;
   private readonly now: () => Date;
   private readonly fillPollAttempts: number;
   private readonly fillPollDelayMs: number;
@@ -118,6 +145,10 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
    *
    * `deps.optionFlow` is where an option order goes (`alpaca-option-order-flow.ts`); without one,
    * every option order is refused — nothing option-shaped can reach the share path below.
+   *
+   * `deps.pendingShares` keeps every share order a submit left `working`, and `settle` reports what
+   * each became through `deps.onSettled` once the broker ends it (#4650). Without them a share
+   * order's late fill reaches only the broker's own ledger, never the decision that placed it.
    */
   constructor(
     client: AlpacaTradingClient,
@@ -128,10 +159,14 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
       fillPollAttempts?: number;
       fillPollDelayMs?: number;
       optionFlow?: AlpacaOptionOrderFlow;
+      pendingShares?: PendingShareOrders;
+      onSettled?: (settlement: OrderSettlement) => void;
     },
   ) {
     this.client = client;
     if (deps?.optionFlow) this.optionFlow = deps.optionFlow;
+    if (deps?.pendingShares) this.pendingShares = deps.pendingShares;
+    if (deps?.onSettled) this.onSettled = deps.onSettled;
     this.onSubmitted = deps?.onSubmitted;
     this.now = deps?.now ?? (() => new Date());
     this.sleep = deps?.sleep ?? sleep;
@@ -164,6 +199,33 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
   /** The option orders an earlier submit left working (`AlpacaOptionOrderFlow.settle`). */
   settle(): Promise<ReadonlySet<string>> {
     return this.optionFlow ? this.optionFlow.settle() : Promise.resolve(new Set<string>());
+  }
+
+  /**
+   * Re-reads each share order a submit left working. One the broker has ended is reported and
+   * forgotten; one it no longer knows (404) is forgotten; one still live, or a read that failed,
+   * stays for the next cycle. Never canceled — a share order queued for the open is meant to fill
+   * there. No network when nothing is pending.
+   */
+  async settleShares(): Promise<void> {
+    for (const entry of this.pendingShares?.list() ?? []) {
+      let order: AlpacaOrder;
+      try {
+        order = await this.client.getOrder(entry.orderId);
+      } catch (error) {
+        if (error instanceof AlpacaApiError && error.status === 404) {
+          this.pendingShares?.forget(entry.orderId);
+        }
+        continue;
+      }
+      if (!isTerminalOrder(order)) continue;
+      try {
+        this.onSettled?.(shareSettlementOf(order, this.now().toISOString()));
+      } catch {
+        // The listener's own failure is its to log; the order has ended either way.
+      }
+      this.pendingShares?.forget(entry.orderId);
+    }
   }
 
   /** Cancels every open order this bot stamped (`AlpacaOptionOrderFlow.sweepOrphans`). */
@@ -244,7 +306,11 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
           // and never allowed to turn a live order into a reported rejection.
         }
       }
-      return resultFromLastRead(order, placed, await this.pollFill(placed.id));
+      const result = resultFromLastRead(order, placed, await this.pollFill(placed.id));
+      if (result.status === "working") {
+        this.pendingShares?.add({ orderId: placed.id, symbol: order.symbol });
+      }
+      return result;
     } catch (error) {
       // The broker never created an order here (the request itself failed), so there is no id to
       // report — `orderId` stays absent, same as any submission that never reached the broker.

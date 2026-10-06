@@ -175,6 +175,13 @@ export class AutonomousTrader {
     // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
     // The market context is still captured here — a halt is exactly the kind of cycle the
     // replay/counterfactual measures want to see, not a gap in the tape.
+    // Before any gate: reading what a share order became places nothing, and the order may be the
+    // beta scout's, which trades live on this account whatever this bot's mode or suspend (#4650).
+    try {
+      await this.config.optionOrders?.settleShares?.();
+    } catch {
+      // Never a reason to skip a cycle: an unread order is read again next cycle.
+    }
     const blocked = this.config.blockedReason?.() ?? null;
     if (blocked) {
       this.config.onDecision?.({

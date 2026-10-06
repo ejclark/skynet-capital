@@ -28,6 +28,7 @@ import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
@@ -354,6 +355,9 @@ export function buildLiveBot(
     /** The bots app's local event bus (#1211 slice 2) — omit (no durable dir configured) to run
      *  exactly as before this existed: no publish attempted, nothing to fail. */
     activityBus?: ActivityEventBus;
+    /** What an order this bot left `working` became once the broker ended it (#4650) — omit (no
+     *  decision store) and late fills stay with the broker's own ledger, as before. */
+    onSettled?: (settlement: OrderSettlement) => void;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
@@ -391,6 +395,7 @@ export function buildLiveBot(
       ? { onSubmitted: botOrderPublisher(bot.persona.id, opts.activityBus) }
       : {}),
     onOptionReadError: optionReadWarn(bot.persona.id),
+    ...(opts.onSettled ? { onSettled: opts.onSettled } : {}),
   });
   return {
     personaName: bot.persona.name,

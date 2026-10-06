@@ -20,6 +20,7 @@ import {
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -130,7 +131,7 @@ export function startInsightsBridge(
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
-          decisions: { recordBatch: (batch) => decisionDb.recordBatch(batch.records) },
+          decisions: { recordBatch: (batch) => storeDecisionBatch(decisionDb, batch) },
         }
       : {}),
     // The bots process polls Mission Control state over the same private-net bridge. Stamps a

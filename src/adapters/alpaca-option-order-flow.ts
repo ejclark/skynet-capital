@@ -14,6 +14,7 @@ import {
   optionOrderProblems,
   positionIntentOf,
 } from "../domain/option-order.js";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OptionOrderIntent, OrderIntent, OrderResult, Side } from "../domain/types.js";
 import { QUOTE_STALE_MS } from "../options/position-guidance-rules.js";
 import type { OptionOrderTracker } from "../ports/option-market.js";
@@ -24,7 +25,12 @@ import {
   optionsBuyingPowerOf,
   ordersOn,
 } from "./alpaca-option-preflight.js";
-import { filledQuantityOf, isTerminalOrder, settledOptionResult } from "./alpaca-option-result.js";
+import {
+  filledQuantityOf,
+  isTerminalOrder,
+  optionSettlementOf,
+  settledOptionResult,
+} from "./alpaca-option-result.js";
 import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
 import type { PendingOptionOrders } from "./pending-option-orders.js";
 
@@ -43,7 +49,8 @@ import type { PendingOptionOrders } from "./pending-option-orders.js";
  *      and one that cannot be looked up either is kept pending by that id, never called rejected;
  *   4–6. given `waitMs` to fill, then canceled, then re-read until the cancel is confirmed;
  *   7. reported as what the broker last said: filled, unfilled, rejected, or still `working` —
- *      which is kept pending and rechecked at the top of the next live cycle (`settle`).
+ *      which is kept pending and rechecked at the top of the next live cycle (`settle`), and once
+ *      the broker has ended it, reported again as a settlement (`onSettled`) for the decision store.
  *
  * Only orders this bot stamped are ever canceled — by their client order id prefix.
  */
@@ -104,6 +111,8 @@ export interface AlpacaOptionOrderFlowDeps {
   /** `clientOrderIdPrefix(persona)` — what makes an order this bot's own. */
   readonly clientOrderIdPrefix: string;
   readonly onSubmitted?: (info: OptionLegSubmission) => void;
+  /** What a `working` order became once the broker ended it — filled, partly, or not at all. */
+  readonly onSettled?: (settlement: OrderSettlement) => void;
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly timing?: Partial<OptionOrderTiming>;
@@ -133,6 +142,7 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
   private readonly pending: PendingOptionOrders;
   private readonly prefix: string;
   private readonly onSubmitted?: (info: OptionLegSubmission) => void;
+  private readonly onSettled?: (settlement: OrderSettlement) => void;
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly timing: OptionOrderTiming;
@@ -143,6 +153,7 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
     this.pending = deps.pending;
     this.prefix = deps.clientOrderIdPrefix;
     if (deps.onSubmitted) this.onSubmitted = deps.onSubmitted;
+    if (deps.onSettled) this.onSettled = deps.onSettled;
     this.now = deps.now ?? Date.now;
     this.sleep = deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.timing = { ...DEFAULT_OPTION_ORDER_TIMING, ...deps.timing };
@@ -191,12 +202,12 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
   }
 
   /**
-   * Re-reads every order a submit left working: forgets the ended, cancels the live again and
-   * returns their underlyings, so the trader attempts nothing new there. An order the broker no
-   * longer knows (404, e.g. after a rotation onto another account) is forgotten; any other failed
-   * read keeps its underlying blocked — unknown is never read as safe. An entry whose broker id was
-   * never learned is read by its client order id, and pinned to the id once found. No network when
-   * nothing is pending.
+   * Re-reads every order a submit left working: reports and forgets the ended (`onSettled`), cancels
+   * the live again and returns their underlyings, so the trader attempts nothing new there. An
+   * order the broker no longer knows (404, e.g. after a rotation onto another account) is
+   * forgotten; any other failed read keeps its underlying blocked — unknown is never read as safe.
+   * An entry whose broker id was never learned is read by its client order id, and pinned to the id
+   * once found. No network when nothing is pending.
    */
   async settle(): Promise<ReadonlySet<string>> {
     const pending = this.pending.list();
@@ -219,7 +230,8 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
       }
       // `undefined`: no order ever carried this client order id — the lost POST never landed.
       if (order === undefined || isTerminalOrder(order)) {
-        // A late fill is not written back into the old record: the positions show it.
+        // What it became rides beside the decision that left it working (#4650), never over it.
+        if (order) this.report(order, entry.clientOrderId);
         this.pending.forget(entry.clientOrderId);
         continue;
       }
@@ -353,6 +365,16 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
       // The POST may have landed although its answer did not (a timeout, a 5xx after the write,
       // or Alpaca's 422 for a client order id it already holds): look before calling it failed.
       return this.lookUpAfterPost(cid, error);
+    }
+  }
+
+  /** A notification, never a gate: a listener that throws never keeps an ended order pending. */
+  private report(order: AlpacaOrder, clientOrderId: string): void {
+    if (!this.onSettled) return;
+    try {
+      this.onSettled(optionSettlementOf(order, clientOrderId, new Date(this.now()).toISOString()));
+    } catch {
+      // The listener's own failure is its to log.
     }
   }
 
