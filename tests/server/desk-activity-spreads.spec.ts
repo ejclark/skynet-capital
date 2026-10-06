@@ -51,8 +51,12 @@ const record: DecisionRecord = {
         filledQuantity: 1,
         filledPrice: 3.35,
         legFills: [
-          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "leg-low" },
-          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75, orderId: "leg-high" },
+          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
+          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
+        ],
+        legOrders: [
+          { occSymbol: LOW, orderId: "leg-low" },
+          { occSymbol: HIGH, orderId: "leg-high" },
         ],
       },
     },

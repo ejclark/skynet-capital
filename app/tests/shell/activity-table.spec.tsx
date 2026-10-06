@@ -184,7 +184,7 @@ describe("ActivityTable — a bot's option fill", () => {
 describe("ActivityTable — a bot's spread and its legs", () => {
   const spread = event({
     orderId: "mleg-1",
-    symbol: "NVDA",
+    symbol: "",
     display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
     side: "buy",
     quantity: 1,
@@ -212,6 +212,8 @@ describe("ActivityTable — a bot's spread and its legs", () => {
         cost: "$510.00 paid — 1 contract × 100 shares × $5.10",
         status: "filled",
         at: "2026-10-27T15:00:00Z",
+        backfilled: false,
+        origin: "unknown",
       },
       {
         orderId: "leg-high",
@@ -224,6 +226,8 @@ describe("ActivityTable — a bot's spread and its legs", () => {
         cost: "$175.00 received — 1 contract × 100 shares × $1.75",
         status: "filled",
         at: "2026-10-27T15:00:01Z",
+        backfilled: false,
+        origin: "unknown",
       },
     ],
   });
@@ -254,6 +258,23 @@ describe("ActivityTable — a bot's spread and its legs", () => {
       screen.getByText("NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints"),
     ).toBeInTheDocument();
     expect(nets()).toHaveLength(1);
+  });
+
+  it("names a leg the ledger does not hold yet, beneath the ones it does", () => {
+    const [low] = spread.legs ?? [];
+    const partial = {
+      ...spread,
+      filled: 0,
+      status: "1 of 2 legs",
+      legs: low ? [low] : [],
+      missingLegs: [{ display: "NVDA $200 CALL · 13 NOV 26", side: "sell" as const }],
+    };
+    const { container } = render(<ActivityTable events={[partial]} />);
+    const missing = container.querySelector(".row-leg-missing");
+    expect(missing).toHaveTextContent("SELL");
+    expect(missing).toHaveTextContent("NVDA $200 CALL · 13 NOV 26");
+    expect(missing).toHaveTextContent("not in this account's ledger yet");
+    expect(screen.getByText("1 of 2 legs")).toBeInTheDocument();
   });
 
   it("draws no leg rows for any other row", () => {

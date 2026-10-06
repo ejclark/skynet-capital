@@ -1,6 +1,6 @@
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import type { OrderIntent, Side } from "../domain/types.js";
+import type { OptionLegIntent, OrderIntent, Side } from "../domain/types.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { formatPrice } from "./desk-data.js";
@@ -27,16 +27,22 @@ import { formatSigned, plClass } from "./render-atoms.js";
  * A leg is folded only when the decision store recorded that exact order id as a leg of a spread it
  * placed, on the same contract and the same side; anything else renders exactly as before. A leg's
  * own realized P/L is not shown: half a spread "winning" while the other half pays for it is not a
- * result. The spread row carries their sum, and only once every leg has closed something.
+ * result. The spread row carries their sum, and a result at all — whole spreads filled, a status,
+ * P/L — only once every leg the decision placed is in the ledger; until then it names the leg it
+ * is still missing.
+ *
+ * The spread row's `symbol` is the broker's own for a multi-leg order: none (`""`). A ticket that
+ * lists one instrument's orders matches on `symbol`, so the spread never reads there as a share
+ * trade on its underlying; each leg carries its contract, for the ticket of that contract.
  */
 
 /** The spread a leg order belongs to, as the decision that placed it describes it. */
 interface SpreadFacts {
   readonly orderId: string;
-  /** The underlying. */
-  readonly symbol: string;
   readonly display: string;
   readonly side: Side;
+  /** Every leg the decision placed — a spread's result is only ever read off all of them. */
+  readonly placedLegs: readonly OptionLegIntent[];
   /** The whole spread's cash, netted once — absent while its fill is unconfirmed. */
   readonly net?: OptionFillCost;
 }
@@ -65,11 +71,11 @@ function spreadFacts(parentOrderId: string, deps: SpreadLookupDeps): SpreadFacts
   const net = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
   return {
     orderId: parentOrderId,
-    symbol: intent.symbol,
     display:
       spreadContractName(option.legs.map((leg) => leg.occSymbol)) ??
       `${intent.symbol} option spread`,
     side: intent.side,
+    placedLegs: option.legs,
     ...(net ? { net } : {}),
   };
 }
@@ -157,25 +163,42 @@ export function foldSpreadLegs(
   return items;
 }
 
-/** One leg beneath its spread's row: the contract, its side, its per-share fill and its dollars. */
-export interface DeskActivityLeg {
+/** One order's line on Activity: every row's own fields, and every leg's — so anything that lists
+ *  one instrument's orders can list a spread's leg exactly as it lists any other order. */
+export interface DeskActivityLine {
   readonly orderId: string;
+  /** The broker's own symbol: a ticker, an OCC contract, or none (`""`) for a multi-leg order. */
   readonly symbol: string;
-  /** The contract in words — `"NVDA $185 CALL · 13 NOV 26"`. */
   readonly display: string;
   readonly side: "buy" | "sell";
   readonly quantity: number;
   readonly filled: number;
-  /** Per share, as the broker filled this leg. */
+  /** Per share. */
   readonly price: string;
-  /** What this leg alone paid or received, and how it adds up — absent until it fills at a price. */
-  readonly cost?: string;
   readonly status: string;
   readonly at: string;
+  readonly backfilled: boolean;
+  readonly origin: OrderOrigin;
 }
 
-/** One ledger line's own fields, as every Activity row shows them — an order's row, and a leg's. */
-export function ledgerLineFields(record: TradeActivityRecord) {
+/** One leg beneath its spread's row, with what it alone paid or received and how it adds up —
+ *  `cost` absent until it fills at a price. */
+export interface DeskActivityLeg extends DeskActivityLine {
+  readonly cost?: string;
+}
+
+/** A leg the decision placed whose line is not in the account's ledger (yet). */
+export interface DeskMissingLeg {
+  /** The contract in words. */
+  readonly display: string;
+  readonly side: "buy" | "sell";
+}
+
+/** One ledger line as Activity shows it — an order's row, and a leg's. */
+export function orderLineFields(
+  record: TradeActivityRecord,
+  origins: OrderOriginIndex,
+): DeskActivityLine {
   return {
     orderId: record.orderId,
     symbol: record.symbol,
@@ -186,12 +209,17 @@ export function ledgerLineFields(record: TradeActivityRecord) {
     price: record.price === undefined ? "—" : formatPrice(record.price),
     status: record.status,
     at: record.at,
+    backfilled: record.source === "backfill",
+    origin: orderOrigin(record, origins),
   };
 }
 
-function legEvent({ record }: SpreadLegLine): DeskActivityLeg {
+function legEvent(record: TradeActivityRecord, origins: OrderOriginIndex): DeskActivityLeg {
   const cost = optionLegCost(record.side, record.price, record.filledQuantity);
-  return { ...ledgerLineFields(record), ...(cost ? { cost: optionFillCostWords(cost) } : {}) };
+  return {
+    ...orderLineFields(record, origins),
+    ...(cost ? { cost: optionFillCostWords(cost) } : {}),
+  };
 }
 
 /** A spread is as far along as its least-filled leg: mid-update, that leg's status is the honest one. */
@@ -217,6 +245,40 @@ function spreadRealized(
   return legs.length > 0 ? sum : undefined;
 }
 
+/**
+ * What the ledger says the spread came to — whole spreads filled, a status, realized P/L — read
+ * only once every leg the decision placed has a line there. Until then nothing is filled, the
+ * status says how many legs are in, and the missing ones are named: one leg's numbers are never
+ * shown as the spread's.
+ */
+function spreadResult(
+  item: Extract<ActivityItem, { kind: "spread" }>,
+  realizedByOrder: ReadonlyMap<string, { readonly realized: number }> | undefined,
+) {
+  const { spread, legs } = item;
+  const missing = spread.placedLegs.filter(
+    (placed) => !legs.some((leg) => leg.record.symbol === placed.occSymbol),
+  );
+  if (missing.length > 0) {
+    const placed = spread.placedLegs.length;
+    return {
+      filled: 0,
+      status: `${placed - missing.length} of ${placed} legs`,
+      missingLegs: missing.map(
+        (leg): DeskMissingLeg => ({ display: humanizeOptionSymbol(leg.occSymbol), side: leg.side }),
+      ),
+    };
+  }
+  const realized = spreadRealized(legs, realizedByOrder);
+  return {
+    filled: Math.min(...legs.map((leg) => Math.floor(leg.record.filledQuantity / leg.ratio))),
+    status: spreadStatus(legs),
+    ...(realized !== undefined
+      ? { realizedPl: formatSigned(realized), realizedTone: plClass(realized) }
+      : {}),
+  };
+}
+
 /** The spread's row, in `DeskActivityEvent`'s shape (`desk-json-view.ts` types it at its one use):
  *  quantities counted in whole spreads, Price the net per share, `net` the spread's cash once. */
 export function spreadActivityEvent(
@@ -225,27 +287,20 @@ export function spreadActivityEvent(
   realizedByOrder?: ReadonlyMap<string, { readonly realized: number }>,
 ) {
   const { spread, legs } = item;
-  const per = (pick: (leg: SpreadLegLine) => number) =>
-    Math.min(...legs.map((leg) => Math.floor(pick(leg) / leg.ratio)));
-  const realized = spreadRealized(legs, realizedByOrder);
   const first = legs[0]?.record;
   const origin: OrderOrigin = first ? orderOrigin(first, origins) : "unknown";
   return {
     orderId: spread.orderId,
-    symbol: spread.symbol,
+    symbol: "",
     display: spread.display,
     side: spread.side,
-    quantity: per((leg) => leg.record.quantity),
-    filled: per((leg) => leg.record.filledQuantity),
+    quantity: Math.min(...legs.map((leg) => Math.floor(leg.record.quantity / leg.ratio))),
     price: spread.net ? formatPrice(spread.net.perShare) : "—",
-    status: spreadStatus(legs),
     at: item.at,
     backfilled: legs.some((leg) => leg.record.source === "backfill"),
     origin,
-    ...(realized !== undefined
-      ? { realizedPl: formatSigned(realized), realizedTone: plClass(realized) }
-      : {}),
+    ...spreadResult(item, realizedByOrder),
     ...(spread.net ? { net: `${formatPrice(spread.net.dollars)} ${spread.net.direction}` } : {}),
-    legs: legs.map(legEvent),
+    legs: legs.map((leg) => legEvent(leg.record, origins)),
   };
 }

@@ -16,7 +16,7 @@ import {
 import { GUARD_REFUSAL_REASONS, type GuardRefusal } from "../engine/guards.js";
 import { boundedString, isRecord } from "../storage/parse-guards.js";
 import type { IntentOutcome } from "./decision-record.js";
-import { parseLegFills, parseOptionOrderIntent } from "./decision-wire-options.js";
+import { parseLegFills, parseLegOrders, parseOptionOrderIntent } from "./decision-wire-options.js";
 
 /**
  * Pure, total, defensive parsers for the parts of a `DecisionRecord` — split out of
@@ -94,6 +94,7 @@ function parseOrderResult(value: unknown, intent: OrderIntent): OrderResult | un
   const reason = boundedString(value.reason);
   const orderId = boundedString(value.orderId);
   const legFills = parseLegFills(value.legFills);
+  const legOrders = parseLegOrders(value.legOrders);
   return {
     intent,
     status,
@@ -102,6 +103,7 @@ function parseOrderResult(value: unknown, intent: OrderIntent): OrderResult | un
     ...(reason ? { reason } : {}),
     ...(orderId ? { orderId } : {}),
     ...(legFills ? { legFills } : {}),
+    ...(legOrders ? { legOrders } : {}),
   };
 }
 

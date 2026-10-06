@@ -1,5 +1,5 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
-import type { OptionLegFill, OrderIntent, OrderResult } from "../domain/types.js";
+import type { OptionLegFill, OptionLegOrder, OrderIntent, OrderResult } from "../domain/types.js";
 
 /**
  * What a bot's option order became, from the broker's last read of it (#4642 slice 5). PURE.
@@ -58,25 +58,35 @@ export function netFillPrice(order: AlpacaOrder): number | undefined {
   return Math.round(net * 1e6) / 1e6;
 }
 
-/** Each contract's own fill: the broker's legs for a spread, the order itself for one leg. A
- *  spread leg keeps its own order id, because the account reports the leg's fill under it. */
+/** Each contract's own fill: the broker's legs for a spread, the order itself for one leg. */
 function legFillsOf(order: AlpacaOrder, intent: OrderIntent): readonly OptionLegFill[] | undefined {
-  const fill = (occSymbol: string, from: AlpacaOrder, orderId?: string): OptionLegFill => {
+  const fill = (occSymbol: string, from: AlpacaOrder): OptionLegFill => {
     const price = brokerNumber(from.filled_avg_price);
     return {
       occSymbol,
       filledQuantity: filledQuantityOf(from),
       ...(price !== undefined ? { filledPrice: price } : {}),
-      ...(orderId ? { orderId } : {}),
     };
   };
-  if (order.legs && order.legs.length > 0) {
-    return order.legs.map((leg) =>
-      fill(leg.symbol, leg, leg.id && leg.id !== order.id ? leg.id : undefined),
-    );
-  }
+  if (order.legs && order.legs.length > 0) return order.legs.map((leg) => fill(leg.symbol, leg));
   const [only, second] = intent.option?.legs ?? [];
   return only && !second ? [fill(only.occSymbol, order)] : undefined;
+}
+
+/**
+ * A spread's leg order ids, in the order the decision named its legs: the account reports each
+ * leg's fill under the leg's own id, so these ride every result the broker answered with legs —
+ * filled, unfilled or still working, since a working order can fill after its result was written.
+ * A contract the decision never named, or a leg echoing the parent's id, is left out.
+ */
+function legOrdersOf(order: AlpacaOrder, intent: OrderIntent): { legOrders?: OptionLegOrder[] } {
+  const named = intent.option?.legs ?? [];
+  if (named.length < 2 || !order.legs) return {};
+  const legOrders = named.flatMap((leg): OptionLegOrder[] => {
+    const id = order.legs?.find((l) => l.symbol === leg.occSymbol)?.id;
+    return id && id !== order.id ? [{ occSymbol: leg.occSymbol, orderId: id }] : [];
+  });
+  return legOrders.length > 0 ? { legOrders } : {};
 }
 
 /** A limit in words: a spread's credit reads as one, never as a negative price. */
@@ -89,7 +99,7 @@ export function settledOptionResult(
   order: AlpacaOrder,
   waitedMs: number,
 ): OrderResult {
-  const base = { intent, orderId: order.id };
+  const base = { intent, orderId: order.id, ...legOrdersOf(order, intent) };
   const filled = filledQuantityOf(order);
   if (filled > 0 && isTerminalOrder(order)) {
     const price = netFillPrice(order);

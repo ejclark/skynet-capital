@@ -3,15 +3,16 @@
    hue — and each leg's side rides as the word BUY or SELL in the house pill. The line is capped to
    the visible table (the why panel's own `100cqw` cap, desk.css) so the contract and its dollars
    read at 390px without scrolling the blotter sideways; the indent clears the chevron column. */
-.blotter tr:has(+ tr.row-leg) > td,
-.blotter tr.row-leg:has(+ tr.row-leg) > td {
-  border-bottom: none;
-}
+
 /* No cell padding between legs, so the rule runs unbroken; the last leg closes the group with the
    row's usual breathing room. */
 .blotter tr.row-leg > td {
   padding-top: 0;
   padding-bottom: 0;
+}
+.blotter tr:has(+ tr.row-leg) > td,
+.blotter tr.row-leg:has(+ tr.row-leg) > td {
+  border-bottom: none;
 }
 .blotter tr.row-leg:not(:has(+ tr.row-leg)) > td {
   padding-bottom: var(--row-py);
@@ -39,4 +40,12 @@
   .leg-cost {
     flex-basis: auto;
   }
+}
+/* A leg the ledger does not hold yet: the rule turns dashed — a shape, never a tone alone. */
+.row-leg-missing .leg-line {
+  border-left-style: dashed;
+}
+.row-leg-missing .leg-cost {
+  font-family: inherit;
+  font-style: italic;
 }

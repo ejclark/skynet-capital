@@ -29,7 +29,7 @@ import {
  *
  * `decision.v2` is that new kind: a record carrying anything a v1 dashboard would silently drop or
  * reject — an option order, a limit, a client order id, an `unfilled`/`working` result, leg fills,
- * or a refusal reason v1 never knew. An older dashboard refuses a v2 batch outright rather than
+ * leg order ids, or a refusal reason v1 never knew. An older dashboard refuses a v2 batch outright rather than
  * store "SELL 1 CRWV at market" for a sold put. The kind is decided PER RECORD (`recordWireKind`)
  * and the sender splits each batch by it, because a refused batch is not resent until the bots
  * restart (`decision-replication-client.ts`'s ascending cursor advances regardless): mixing the
@@ -72,7 +72,9 @@ export function recordWireKind(
     record.outcomes.some(
       (o) =>
         o.result !== undefined &&
-        (!V1_STATUSES.has(o.result.status) || o.result.legFills !== undefined),
+        (!V1_STATUSES.has(o.result.status) ||
+          o.result.legFills !== undefined ||
+          o.result.legOrders !== undefined),
     ) ||
     refusals.some((r) => !V1_REFUSALS.has(r.reason));
   return v2 ? DECISION_BATCH_KIND_V2 : DECISION_BATCH_KIND;

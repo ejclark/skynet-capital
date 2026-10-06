@@ -113,10 +113,14 @@ const record = {
         orderId: "opt-spread-1",
         filledQuantity: 1,
         filledPrice: 3.35,
-        // Each leg's own broker order id — what the account's two fills carry.
         legFills: [
-          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "opt-spread-leg-185" },
-          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75, orderId: "opt-spread-leg-200" },
+          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
+          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
+        ],
+        // Each leg's own broker order id — what the account's two fills carry.
+        legOrders: [
+          { occSymbol: LOW, orderId: "opt-spread-leg-185" },
+          { occSymbol: HIGH, orderId: "opt-spread-leg-200" },
         ],
       },
     },

@@ -352,9 +352,13 @@ export interface OptionLegFill {
   readonly filledQuantity: number;
   /** Per share, as the broker reported the leg. */
   readonly filledPrice?: number;
-  /** A spread leg's own broker order id — the id the account's fill for this leg carries, never
-   *  the parent's. Absent on a one-leg order, whose fill carries the result's own `orderId`. */
-  readonly orderId?: string;
+}
+
+/** One leg of a multi-leg order and the broker's own order id for it — the id the account's fill
+ *  for that leg carries, never the parent's. */
+export interface OptionLegOrder {
+  readonly occSymbol: string;
+  readonly orderId: string;
 }
 
 /** The outcome of submitting a single order to a broker. */
@@ -375,4 +379,8 @@ export interface OrderResult {
    */
   readonly orderId?: string;
   readonly legFills?: readonly OptionLegFill[];
+  /** A spread's leg order ids, whatever the order became — filled, unfilled or still working — so
+   *  a leg's fill can find this result's order even when it lands after the result was written.
+   *  Absent on a one-leg order. */
+  readonly legOrders?: readonly OptionLegOrder[];
 }

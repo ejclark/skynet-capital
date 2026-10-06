@@ -11,12 +11,7 @@ import {
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
 import { formatPrice } from "./desk-data.js";
-import {
-  NO_ORIGIN_EVIDENCE,
-  type OrderOrigin,
-  type OrderOriginIndex,
-  orderOrigin,
-} from "./order-origin.js";
+import { NO_ORIGIN_EVIDENCE, type OrderOriginIndex } from "./order-origin.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
   costBasis,
@@ -28,8 +23,10 @@ import { type PlainPosition, plainPosition } from "./position-plain.js";
 import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
 import {
   type DeskActivityLeg,
+  type DeskActivityLine,
+  type DeskMissingLeg,
   foldSpreadLegs,
-  ledgerLineFields,
+  orderLineFields,
   type SpreadOf,
   spreadActivityEvent,
 } from "./spread-activity.js";
@@ -316,27 +313,18 @@ export function deskView(
 /** One fill/order event on a desk's timeline, formatted. Two independent honesty fields ride
  *  along: `backfilled` says the row was recovered rather than watched landing, and `origin` says
  *  who placed it (`order-origin.ts`) — knowledge and authorship are different questions. */
-export interface DeskActivityEvent {
-  readonly orderId: string;
-  readonly symbol: string;
-  readonly display: string;
-  readonly side: "buy" | "sell";
-  readonly quantity: number;
-  readonly filled: number;
-  readonly price: string;
-  readonly status: string;
-  readonly at: string;
-  readonly backfilled: boolean;
-  readonly origin: OrderOrigin;
+export interface DeskActivityEvent extends DeskActivityLine {
   /** Realized P/L on a closing fill — absent on opening fills and fills that didn't close a lot. */
   readonly realizedPl?: string;
   /** Return percentage on a closing fill — absent on opening fills. */
   readonly returnPct?: string;
   /** Tone for the realized P/L — `pos`/`neg`/`flat`, absent when no P/L. */
   readonly realizedTone?: Tone;
-  /** A bot's spread only (`spread-activity.ts`): its net cash, once, and each leg's own fill. */
+  /** A bot's spread only (`spread-activity.ts`): its net cash, once, each leg's own fill, and any
+   *  leg the decision placed that the ledger does not hold yet. */
   readonly net?: string;
   readonly legs?: readonly DeskActivityLeg[];
+  readonly missingLegs?: readonly DeskMissingLeg[];
 }
 
 export interface DeskActivityPage {
@@ -378,9 +366,7 @@ export function deskActivityView(
     const { record } = item;
     const pl = opts.realizedByOrder?.get(record.orderId);
     return {
-      ...ledgerLineFields(record),
-      backfilled: record.source === "backfill",
-      origin: orderOrigin(record, origins),
+      ...orderLineFields(record, origins),
       ...(pl
         ? {
             realizedPl: formatSigned(pl.realized),

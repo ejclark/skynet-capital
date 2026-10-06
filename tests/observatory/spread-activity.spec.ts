@@ -44,8 +44,12 @@ const record: DecisionRecord = {
         filledQuantity: 1,
         filledPrice: 3.35,
         legFills: [
-          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "leg-low" },
-          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75, orderId: "leg-high" },
+          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
+          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
+        ],
+        legOrders: [
+          { occSymbol: LOW, orderId: "leg-low" },
+          { occSymbol: HIGH, orderId: "leg-high" },
         ],
       },
     },
@@ -103,7 +107,8 @@ describe("deskActivityView — a spread's legs beneath one row", () => {
     });
     expect(activity.map((row) => row.orderId)).toEqual(["mleg-1", "shr-1"]);
     expect(activity[0]).toMatchObject({
-      symbol: "NVDA",
+      // The broker's own symbol for a multi-leg order: none — never the underlying's ticker.
+      symbol: "",
       display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
       side: "buy",
       quantity: 1,
@@ -126,6 +131,8 @@ describe("deskActivityView — a spread's legs beneath one row", () => {
         cost: "$510.00 paid — 1 contract × 100 shares × $5.10",
         status: "filled",
         at: "2026-10-27T15:00:00.000Z",
+        backfilled: false,
+        origin: "unknown",
       },
       {
         orderId: "leg-high",
@@ -138,8 +145,11 @@ describe("deskActivityView — a spread's legs beneath one row", () => {
         cost: "$175.00 received — 1 contract × 100 shares × $1.75",
         status: "filled",
         at: "2026-10-27T15:00:01.000Z",
+        backfilled: false,
+        origin: "unknown",
       },
     ]);
+    expect(activity[0]).not.toHaveProperty("missingLegs");
     // Net dollars once — on the spread, never on a leg.
     expect(JSON.stringify(activity).match(/\$335\.00/g)).toHaveLength(1);
   });
@@ -216,6 +226,24 @@ describe("deskActivityView — a spread's legs beneath one row", () => {
       realizedByOrder: new Map([["leg-low", { realized: 290, returnPct: 56.9 }]]),
     });
     expect(half.activity[0]).not.toHaveProperty("realizedPl");
+  });
+
+  it("shows no result for a spread until every leg it placed is in the ledger, and names the missing one", () => {
+    // The ledger caught the $185 leg's fill and not the $200's (a dropped stream frame, or a
+    // reconcile window that cut between the two). That leg's P/L is not the spread's result.
+    const { activity } = deskActivityView([lowFill, shares], undefined, {
+      spreadOf: spreadOf(),
+      realizedByOrder: new Map([["leg-low", { realized: 290, returnPct: 56.9 }]]),
+    });
+    expect(activity.map((row) => row.orderId)).toEqual(["mleg-1", "shr-1"]);
+    const [row] = activity;
+    expect(row).toMatchObject({ filled: 0, status: "1 of 2 legs" });
+    expect(row).not.toHaveProperty("realizedPl");
+    expect(row).not.toHaveProperty("realizedTone");
+    expect(row?.legs?.map((leg) => leg.orderId)).toEqual(["leg-low"]);
+    expect(row?.missingLegs).toEqual([{ display: "NVDA $200 CALL · 13 NOV 26", side: "sell" }]);
+    // The net is the decision's own fill of the whole spread, so it still says what moved once.
+    expect(row?.net).toBe("$335.00 paid");
   });
 
   it("asks the decision store once per spread, however many legs it has", () => {

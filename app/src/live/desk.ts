@@ -281,8 +281,11 @@ export function toggleQualifier(query: string, qualifier: string): string {
  *  `unknown` is the honest default — a bot desk, or an order outside the log's coverage. */
 export type OrderOrigin = "desk" | "alpaca-direct" | "unknown";
 
-export interface DeskActivityEvent {
+/** One order's line — every Activity row's own fields, and every leg's of a spread. Mirrors the
+ *  server's `DeskActivityLine`. */
+export interface DeskActivityLine {
   readonly orderId: string;
+  /** The broker's own symbol: a ticker, an OCC contract, or none ("") for a multi-leg order. */
   readonly symbol: string;
   readonly display: string;
   readonly side: "buy" | "sell";
@@ -293,6 +296,9 @@ export interface DeskActivityEvent {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+}
+
+export interface DeskActivityEvent extends DeskActivityLine {
   /** Realized P/L on a closing fill — absent on opening fills. */
   readonly realizedPl?: string;
   /** Return percentage on a closing fill — absent on opening fills. */
@@ -306,23 +312,23 @@ export interface DeskActivityEvent {
   readonly net?: string;
   /** A bot's spread only: each leg's own fill, shown beneath the spread's row. */
   readonly legs?: readonly DeskActivityLeg[];
+  /** A bot's spread only: a leg it placed whose line the ledger does not hold yet. Until none is
+   *  missing, the spread row carries no result (nothing filled, no P/L). */
+  readonly missingLegs?: readonly DeskMissingLeg[];
 }
 
-/** One leg of a spread, as the account filled it. Mirrors the server's `DeskActivityLeg`. */
-export interface DeskActivityLeg {
-  readonly orderId: string;
-  readonly symbol: string;
-  /** The contract in words — "NVDA $185 CALL · 13 NOV 26". */
-  readonly display: string;
-  readonly side: "buy" | "sell";
-  readonly quantity: number;
-  readonly filled: number;
-  /** Per share. */
-  readonly price: string;
+/** One leg of a spread, as the account filled it — a whole order line of its own, for the ticket of
+ *  its contract. Mirrors the server's `DeskActivityLeg`. */
+export interface DeskActivityLeg extends DeskActivityLine {
   /** "$510.00 paid — 1 contract × 100 shares × $5.10" — absent until it fills at a price. */
   readonly cost?: string;
-  readonly status: string;
-  readonly at: string;
+}
+
+/** A leg a spread placed that the ledger does not hold yet. Mirrors the server's `DeskMissingLeg`. */
+export interface DeskMissingLeg {
+  /** The contract in words — "NVDA $200 CALL · 13 NOV 26". */
+  readonly display: string;
+  readonly side: "buy" | "sell";
 }
 
 export interface ActivityReasoning {

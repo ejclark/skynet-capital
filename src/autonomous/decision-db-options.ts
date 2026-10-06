@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type {
   OptionLegFill,
   OptionLegIntent,
+  OptionLegOrder,
   OptionOrderIntent,
   OptionSelection,
   OrderIntent,
@@ -90,15 +91,16 @@ function optionFrom(
 ): StoredOption {
   const legFills: OptionLegFill[] = legs
     .filter((l) => l.filled_quantity !== null)
-    .map((l) => {
-      const orderId = legOrderIds?.get(l.occ_symbol);
-      return {
-        occSymbol: l.occ_symbol,
-        filledQuantity: l.filled_quantity as number,
-        ...(l.filled_price !== null ? { filledPrice: l.filled_price } : {}),
-        ...(orderId ? { orderId } : {}),
-      };
-    });
+    .map((l) => ({
+      occSymbol: l.occ_symbol,
+      filledQuantity: l.filled_quantity as number,
+      ...(l.filled_price !== null ? { filledPrice: l.filled_price } : {}),
+    }));
+  // In the decision's own leg order, as the order flow writes them.
+  const legOrders = legs.flatMap((l): OptionLegOrder[] => {
+    const orderId = legOrderIds?.get(l.occ_symbol);
+    return orderId ? [{ occSymbol: l.occ_symbol, orderId }] : [];
+  });
   const option: OptionOrderIntent = {
     effect: row.effect,
     structure: row.structure,
@@ -116,6 +118,7 @@ function optionFrom(
     option,
     ...(row.client_order_id ? { clientOrderId: row.client_order_id } : {}),
     ...(legFills.length > 0 ? { legFills } : {}),
+    ...(legOrders.length > 0 ? { legOrders } : {}),
   };
 }
 

@@ -4,14 +4,19 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { type DecisionDb, openDecisionDb } from "../../src/autonomous/decision-db.js";
 import type { DecisionRecord, IntentOutcome } from "../../src/autonomous/decision-record.js";
-import { DECISION_BATCH_KIND_V2, parseDecisionBatch } from "../../src/autonomous/decision-wire.js";
-import { parseLegFills } from "../../src/autonomous/decision-wire-options.js";
+import {
+  DECISION_BATCH_KIND_V2,
+  parseDecisionBatch,
+  recordWireKind,
+} from "../../src/autonomous/decision-wire.js";
+import { parseLegOrders } from "../../src/autonomous/decision-wire-options.js";
 import type { OrderIntent, OrderResult } from "../../src/domain/types.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /** A spread's leg orders (#4650): Alpaca reports a spread's fills one per leg, each under the LEG's
  *  own order id. The store maps each leg id back to the spread's order, on the bots side and on the
- *  dashboard's replicated copy alike, so a leg fill can find the decision that placed it. */
+ *  dashboard's replicated copy alike, so a leg fill can find the decision that placed it — whatever
+ *  the order's result said when it was written. */
 
 const LOW = "NVDA261113C00185000";
 const HIGH = "NVDA261113C00200000";
@@ -39,7 +44,12 @@ const placed = (intent: OrderIntent, result: Omit<OrderResult, "intent">): Inten
   result: { intent, ...result },
 });
 
-function spreadRecord(at: number, legFills: OrderResult["legFills"]): DecisionRecord {
+const LEG_ORDERS = [
+  { occSymbol: LOW, orderId: "leg-low" },
+  { occSymbol: HIGH, orderId: "leg-high" },
+];
+
+function spreadRecord(at: number, result: Omit<OrderResult, "intent">): DecisionRecord {
   const submitted = { ...spread, clientOrderId: `sk1-sauron-NVDA-k9x2-${at}` };
   return {
     at,
@@ -47,22 +57,21 @@ function spreadRecord(at: number, legFills: OrderResult["legFills"]): DecisionRe
     mode: "live",
     rawIntents: [spread],
     guardedIntents: [spread],
-    outcomes: [
-      placed(submitted, {
-        status: "filled",
-        orderId: "mleg-1",
-        filledQuantity: 1,
-        filledPrice: 3.35,
-        ...(legFills ? { legFills } : {}),
-      }),
-    ],
+    outcomes: [placed(submitted, result)],
   };
 }
 
-const LEG_FILLS = [
-  { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "leg-low" },
-  { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75, orderId: "leg-high" },
-];
+const filled = (legOrders = LEG_ORDERS): Omit<OrderResult, "intent"> => ({
+  status: "filled",
+  orderId: "mleg-1",
+  filledQuantity: 1,
+  filledPrice: 3.35,
+  legFills: [
+    { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
+    { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
+  ],
+  legOrders,
+});
 
 describe("DecisionDb — a spread's leg orders", () => {
   let dir: string;
@@ -79,7 +88,7 @@ describe("DecisionDb — a spread's leg orders", () => {
   });
 
   it("joins each leg's fill to the decision that placed the spread, its playbook and invalidator with it", () => {
-    db.record(spreadRecord(1, LEG_FILLS));
+    db.record(spreadRecord(1, filled()));
 
     for (const [legOrderId, occSymbol, side] of [
       ["leg-low", LOW, "buy"],
@@ -95,18 +104,50 @@ describe("DecisionDb — a spread's leg orders", () => {
     expect(db.findByOrderId("leg-low")).toBeUndefined();
   });
 
+  it("maps the legs of an order whose result was written before anything filled", () => {
+    // A cancel the broker never confirmed (`working`): the order may still fill, and its fills
+    // arrive under these leg ids long after this record was written.
+    db.record(spreadRecord(1, { status: "working", orderId: "mleg-1", legOrders: LEG_ORDERS }));
+    db.record(
+      spreadRecord(2, {
+        status: "unfilled",
+        orderId: "mleg-2",
+        legOrders: [
+          { occSymbol: LOW, orderId: "leg-low-2" },
+          { occSymbol: HIGH, orderId: "leg-high-2" },
+        ],
+      }),
+    );
+    expect(db.findSpreadLeg("leg-low")?.parentOrderId).toBe("mleg-1");
+    expect(db.findSpreadLeg("leg-high")?.parentOrderId).toBe("mleg-1");
+    expect(db.findSpreadLeg("leg-high-2")?.parentOrderId).toBe("mleg-2");
+    // Nothing filled, so no fill is invented: the result carries no leg fills.
+    expect(db.findByOrderId("mleg-1")?.record.outcomes[0]?.result).not.toHaveProperty("legFills");
+  });
+
   it("round-trips the leg ids on the record, so replication carries them", () => {
-    const record = spreadRecord(1, LEG_FILLS);
-    db.record(record);
+    const records = [
+      spreadRecord(1, filled()),
+      spreadRecord(2, {
+        status: "working",
+        orderId: "mleg-2",
+        legOrders: [
+          { occSymbol: LOW, orderId: "leg-low-2" },
+          { occSymbol: HIGH, orderId: "leg-high-2" },
+        ],
+      }),
+    ];
+    for (const record of records) db.record(record);
     db.close();
     db = openDecisionDb(dbPath);
 
-    expect(db.listSince("sauron", 0)).toEqual([record]);
-    expect(db.listByPersona("sauron")).toEqual([record]);
+    expect(db.listSince("sauron", 0)).toEqual(records);
+    // Every record carrying leg ids crosses the wire as the kind a dashboard that knows them reads.
+    expect(records.map(recordWireKind)).toEqual([DECISION_BATCH_KIND_V2, DECISION_BATCH_KIND_V2]);
   });
 
   it("lands the leg map on the dashboard's copy: bots read-back → wire → app store", () => {
-    db.record(spreadRecord(1, LEG_FILLS));
+    db.record(spreadRecord(1, filled()));
     const appDb = openDecisionDb(join(dir, "app-decisions.db"));
     try {
       // Exactly what the replication client posts: the bots' own read-back, as JSON.
@@ -129,10 +170,13 @@ describe("DecisionDb — a spread's leg orders", () => {
 
   it("maps only a leg the decision placed: never another contract, never the spread's own id", () => {
     db.record(
-      spreadRecord(1, [
-        { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "mleg-1" },
-        { occSymbol: "NVDA261113C00210000", filledQuantity: 1, filledPrice: 1, orderId: "stray" },
-      ]),
+      spreadRecord(
+        1,
+        filled([
+          { occSymbol: LOW, orderId: "mleg-1" },
+          { occSymbol: "NVDA261113C00210000", orderId: "stray" },
+        ]),
+      ),
     );
     expect(db.findSpreadLeg("mleg-1")).toBeUndefined();
     expect(db.findSpreadLeg("stray")).toBeUndefined();
@@ -166,23 +210,25 @@ describe("DecisionDb — a spread's leg orders", () => {
     raw.exec("DROP TABLE option_order_legs;");
     raw.close();
     db = openDecisionDb(dbPath);
-    db.record(spreadRecord(2, LEG_FILLS));
+    db.record(spreadRecord(2, filled()));
     expect(db.findSpreadLeg("leg-low")?.parentOrderId).toBe("mleg-1");
   });
 });
 
-describe("parseLegFills — a leg's own order id on the wire", () => {
-  it("keeps a leg's order id, and drops a malformed one without dropping the fill", () => {
+describe("parseLegOrders — a spread's leg order ids on the wire", () => {
+  it("keeps each well-formed leg id and drops a malformed one alone", () => {
     expect(
-      parseLegFills([
-        { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "leg-low" },
-        { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75, orderId: 42 },
-        { occSymbol: HIGH, filledQuantity: 1, orderId: "" },
+      parseLegOrders([
+        { occSymbol: LOW, orderId: "leg-low" },
+        { occSymbol: HIGH, orderId: 42 },
+        { occSymbol: HIGH, orderId: "" },
+        "junk",
       ]),
-    ).toEqual([
-      { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1, orderId: "leg-low" },
-      { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
-      { occSymbol: HIGH, filledQuantity: 1 },
-    ]);
+    ).toEqual([{ occSymbol: LOW, orderId: "leg-low" }]);
+  });
+
+  it("reads nothing usable as absent, never an empty list", () => {
+    expect(parseLegOrders([{ occSymbol: HIGH }])).toBeUndefined();
+    expect(parseLegOrders(undefined)).toBeUndefined();
   });
 });

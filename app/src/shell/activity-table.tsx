@@ -1,7 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { ActivityReasoning, DeskActivityEvent, DeskActivityLeg } from "../live/desk";
+import type {
+  ActivityReasoning,
+  DeskActivityEvent,
+  DeskActivityLeg,
+  DeskMissingLeg,
+} from "../live/desk";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
@@ -285,6 +290,9 @@ function ActivityRow({
       {event.legs?.map((leg) => (
         <LegRow key={leg.orderId} leg={leg} span={withWhy ? 9 : 8} />
       ))}
+      {event.missingLegs?.map((leg) => (
+        <MissingLegRow key={`${leg.side}-${leg.display}`} leg={leg} span={withWhy ? 9 : 8} />
+      ))}
       {open && event.reasoning ? (
         <tr className="row-why">
           <td colSpan={9}>
@@ -325,7 +333,34 @@ function LegRow({
           <span className="visually-hidden">Leg: </span>
           <span className={`tl-side tl-${leg.side}`}>{leg.side.toUpperCase()}</span>
           <span className="leg-contract">{leg.display}</span>
-          <span className="leg-cost num">{leg.cost ?? `${leg.price} a share · ${leg.status}`}</span>
+          {/* No cost means nothing filled at a known price: the broker's status is what there is. */}
+          <span className="leg-cost num">{leg.cost ?? leg.status}</span>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/** A leg the spread placed whose fill the account's ledger does not hold yet — named, so the row
+ *  above never passes the legs it does hold off as the whole spread. A dashed rule marks it, a
+ *  shape rather than a tone. */
+function MissingLegRow({
+  leg,
+  span,
+}: {
+  readonly leg: DeskMissingLeg;
+  readonly span: number;
+}): ReactElement {
+  return (
+    <tr className="row-leg row-leg-missing">
+      <td colSpan={span}>
+        <div className="leg-line">
+          <span className="visually-hidden">Leg: </span>
+          <span className={`tl-side tl-${leg.side}`}>{leg.side.toUpperCase()}</span>
+          <span className="leg-contract">{leg.display}</span>
+          <span className="leg-cost">
+            not in this account's ledger yet — the spread's result waits for it
+          </span>
         </div>
       </td>
     </tr>

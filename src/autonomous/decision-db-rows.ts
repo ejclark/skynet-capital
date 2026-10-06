@@ -2,9 +2,11 @@ import { instrumentKey } from "../domain/option-order.js";
 import type {
   MarketContext,
   OptionLegFill,
+  OptionLegOrder,
   OptionOrderIntent,
   OrderForecast,
   OrderIntent,
+  OrderResult,
   OrderStatus,
   PlaybookMode,
   PlaybookVerdict,
@@ -26,6 +28,7 @@ export interface StoredOption {
   readonly option: OptionOrderIntent;
   readonly clientOrderId?: string;
   readonly legFills?: readonly OptionLegFill[];
+  readonly legOrders?: readonly OptionLegOrder[];
 }
 
 export interface StoredIntentRow {
@@ -242,10 +245,18 @@ function intentFrom(row: StoredIntentRow, quantity: number): OrderIntent {
 /** The outcome half of one approved row's reconstruction — split out of `decisionFrom` purely to
  *  stay under the file's cognitive-complexity budget. The client order id rides the outcome's
  *  intent only, as the trader stamps it: on the order it submitted, never on the guarded intent. */
+/** An option order's per-leg results, read back onto its result: each leg's fill, and a spread's
+ *  leg order ids. */
+function legParts(option: StoredOption | undefined): Partial<OrderResult> {
+  return {
+    ...(option?.legFills ? { legFills: option.legFills } : {}),
+    ...(option?.legOrders ? { legOrders: option.legOrders } : {}),
+  };
+}
+
 function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome {
   const clientOrderId = row.option?.clientOrderId;
   const intent = clientOrderId ? { ...guarded, clientOrderId } : guarded;
-  const legFills = row.option?.legFills;
   return {
     intent,
     action: (row.action ?? "observed") as IntentOutcome["action"],
@@ -257,7 +268,7 @@ function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome 
             ...(row.orderId ? { orderId: row.orderId } : {}),
             ...(row.filledQuantity !== undefined ? { filledQuantity: row.filledQuantity } : {}),
             ...(row.filledPrice !== undefined ? { filledPrice: row.filledPrice } : {}),
-            ...(legFills ? { legFills } : {}),
+            ...legParts(row.option),
           },
         }
       : {}),

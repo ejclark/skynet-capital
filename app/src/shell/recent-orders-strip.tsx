@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { type DeskActivityEvent, fetchDeskActivity } from "../live/desk";
+import { type DeskActivityLine, fetchDeskActivity } from "../live/desk";
 import { EventLine } from "./order-event-line";
 
 /**
@@ -17,7 +17,9 @@ import { EventLine } from "./order-event-line";
  * a narrower question — "what did *I* just do with the EXACT instrument in front of me" — so
  * `e.symbol === symbol` (the raw broker symbol, an OCC symbol for an option) is the correct,
  * narrower match here. Do not reach for underlying-matching in this component; it solves a
- * different problem.
+ * different problem. A bot's spread is one Activity row with no symbol of its own (the broker gives
+ * a multi-leg order none); its legs are the orders, so each is matched on its own contract — the
+ * spread never reads as a share trade on its underlying's ticket.
  *
  * 3B IS OUT OF SCOPE: joining `decisionContextFor` (src/observatory/decision-context.ts) to explain
  * *why* an order fired is explicitly gated on the filed audit-dir hosting decision
@@ -52,9 +54,11 @@ export function RecentOrdersStrip({
     );
   }
 
-  const events: readonly DeskActivityEvent[] = query.data.activity.filter(
-    (e) => e.symbol === symbol,
-  );
+  // A bot's spread arrives as one row whose orders are its legs: each leg is matched on its own
+  // contract, and the spread row itself (no symbol of its own) never matches a ticket.
+  const events: readonly DeskActivityLine[] = query.data.activity
+    .flatMap((e): readonly DeskActivityLine[] => e.legs ?? [e])
+    .filter((e) => e.symbol === symbol);
   const shown = events.slice(0, DISPLAY_CAP);
   const remaining = events.length - shown.length;
 

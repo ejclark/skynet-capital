@@ -9,8 +9,9 @@ import type { OptionLegIntent, OrderResult, Side } from "../domain/types.js";
  *
  * A side table, never `ALTER TABLE` (the store's house rule, `decision-db-options.ts`): CREATE IF
  * NOT EXISTS reaches a database that already exists. Keyed by the leg's own id, so a replayed
- * record maps nothing twice. Written from the outcome's leg fills on both the bots and the app side,
- * because both stores are filled by `record`/`recordBatch` from the same `DecisionRecord`.
+ * record maps nothing twice. Written from the result's leg order ids (`OrderResult.legOrders`,
+ * whatever the order became) on both the bots and the app side, because both stores are filled by
+ * `record`/`recordBatch` from the same `DecisionRecord`.
  */
 const LEG_ORDERS_SQL = `
   CREATE TABLE IF NOT EXISTS option_order_legs (
@@ -32,9 +33,10 @@ export interface OptionOrderLeg {
 }
 
 export interface LegOrders {
-  /** Maps every leg fill of `result` that carries its own order id to the result's order. A fill
-   *  for a contract the order's legs never named, or whose id is the order's own, maps nothing: an
-   *  id is only ever joined to a leg the decision itself placed. */
+  /** Maps each of `result`'s leg order ids to the result's order — whatever the order became, so a
+   *  fill that lands after the result was written still joins. A contract the order's legs never
+   *  named, or an id that is the order's own, maps nothing: an id is only ever joined to a leg the
+   *  decision itself placed. */
   write(result: OrderResult | undefined, legs: readonly OptionLegIntent[]): void;
   /** Intent id → OCC symbol → leg order id, for every option intent of one decision. */
   forDecision(decisionId: number): ReadonlyMap<number, ReadonlyMap<string, string>>;
@@ -66,12 +68,11 @@ export function openLegOrders(db: DatabaseSync): LegOrders {
     write(result, legs) {
       const parentOrderId = result?.orderId;
       if (!parentOrderId) return;
-      for (const fill of result.legFills ?? []) {
-        const legOrderId = fill.orderId;
-        if (!legOrderId || legOrderId === parentOrderId) continue;
-        const leg = legs.find((l) => l.occSymbol === fill.occSymbol);
+      for (const { occSymbol, orderId } of result.legOrders ?? []) {
+        if (!orderId || orderId === parentOrderId) continue;
+        const leg = legs.find((l) => l.occSymbol === occSymbol);
         if (!leg) continue;
-        insert.run(legOrderId, parentOrderId, leg.occSymbol, leg.side, leg.ratio);
+        insert.run(orderId, parentOrderId, leg.occSymbol, leg.side, leg.ratio);
       }
     },
 
