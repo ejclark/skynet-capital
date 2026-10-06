@@ -1,6 +1,8 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderStatus } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { isRecord } from "../storage/parse-guards.js";
+import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
 import {
   parseGuardRefusal,
@@ -9,6 +11,7 @@ import {
   parseOrderIntent,
   parsePlaybookVerdict,
 } from "./decision-wire-parts.js";
+import { parseSettlements } from "./decision-wire-settlements.js";
 
 /**
  * The bots→app decision-replication wire format (`docs/plans/where-are-we-documenting-*.md` PR 4 /
@@ -34,6 +37,13 @@ import {
  * and the sender splits each batch by it, because a refused batch is not resent until the bots
  * restart (`decision-replication-client.ts`'s ascending cursor advances regardless): mixing the
  * two would cost an older dashboard its share records too. The parser reads both kinds the same.
+ *
+ * Late settlements (#4650) ride either kind as an additive envelope field, `settlements`
+ * (`decision-wire-settlements.ts`): what an order a record left `working` became, which the record
+ * itself can never carry — it was sent long before, and the receiver keeps the first copy of each
+ * record it stores. A dashboard that predates the field ignores it and keeps the batch. The bots'
+ * settlement backlog also posts settlements alone, with no records — a batch an older dashboard
+ * refuses, which costs it nothing, and is sent again until a dashboard accepts it.
  */
 
 export const DECISION_BATCH_KIND = "decision.v1";
@@ -143,6 +153,8 @@ export function parseDecisionRecord(value: unknown): DecisionRecord | undefined 
 export interface DecisionBatch {
   readonly personaId: string;
   readonly records: readonly DecisionRecord[];
+  /** Late settlements riding this batch — any persona's, since each is keyed by its order id. */
+  readonly settlements?: readonly OrderSettlement[];
 }
 
 /**
@@ -158,8 +170,11 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   const { personaId, records } = value;
   if (typeof personaId !== "string" || personaId.length === 0) return undefined;
   if (personaId.length > MAX_PERSONA_ID_LENGTH) return undefined;
-  if (!Array.isArray(records) || records.length === 0 || records.length > MAX_DECISION_BATCH) {
-    return undefined;
+  if (!Array.isArray(records) || records.length > MAX_DECISION_BATCH) return undefined;
+  if (records.length === 0) {
+    // The settlement backlog's own POST: settlements alone, which a batch is never otherwise.
+    const settlements = parseSettlements(value.settlements);
+    return settlements.length > 0 ? { personaId, records: [], settlements } : undefined;
   }
   const parsed = records.map(parseDecisionRecord);
   // A record naming another persona is an identity fault on the bridge: refuse the whole batch.
@@ -168,7 +183,9 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   // Refusing the batch lost every record beside it, because the bots' ascending cursor moves on
   // whatever the answer — and the preview leg would resend the same poisoned batch every poll.
   const kept = parsed.filter((r): r is DecisionRecord => r !== undefined);
-  return kept.length > 0 ? { personaId, records: kept } : undefined;
+  if (kept.length === 0) return undefined;
+  const settlements = parseSettlements(value.settlements);
+  return { personaId, records: kept, ...(settlements.length > 0 ? { settlements } : {}) };
 }
 
 /** `GET /controls`'s additive `decisionsCursor` field — a plain `{ personaId: epochMs }` map, the
@@ -181,4 +198,15 @@ export function parseDecisionsCursor(value: unknown): Readonly<Record<string, nu
     if (typeof at === "number" && Number.isFinite(at)) out[personaId] = at;
   }
   return out;
+}
+
+/** The dashboard's half of the bridge: a batch into its copy of the store — the settlements FIRST,
+ *  so every close among the records is scored on a tape that already holds the late fills before
+ *  it. A settlement whose decision is among the records is linked as that decision lands. */
+export function storeDecisionBatch(
+  db: Pick<DecisionDb, "recordBatch" | "recordSettlements">,
+  batch: DecisionBatch,
+): void {
+  if (batch.settlements) db.recordSettlements(batch.settlements);
+  db.recordBatch(batch.records);
 }

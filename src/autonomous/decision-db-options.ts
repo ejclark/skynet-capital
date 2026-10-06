@@ -8,7 +8,7 @@ import type {
   OrderIntent,
   Side,
 } from "../domain/types.js";
-import { type OptionOrderLeg, openLegOrders } from "./decision-db-leg-orders.js";
+import { type LegOrders, type OptionOrderLeg, openLegOrders } from "./decision-db-leg-orders.js";
 import type { StoredOption } from "./decision-db-rows.js";
 import type { IntentOutcome } from "./decision-record.js";
 
@@ -57,6 +57,8 @@ export interface OptionTables {
   forDecision(decisionId: number): ReadonlyMap<number, StoredOption>;
   /** The spread a leg order belongs to, by the leg's own broker id (`decision-db-leg-orders.ts`). */
   findLeg(legOrderId: string): OptionOrderLeg | undefined;
+  /** Maps a spread's leg ids to its order — the same writer a result's own leg ids go through. */
+  writeLegOrders: LegOrders["write"];
 }
 
 interface OptionRow {
@@ -216,5 +218,6 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
     },
 
     findLeg: (legOrderId) => legOrders.find(legOrderId),
+    writeLegOrders: (result, legs) => legOrders.write(result, legs),
   };
 }

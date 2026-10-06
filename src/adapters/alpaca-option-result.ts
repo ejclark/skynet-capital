@@ -1,4 +1,5 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
+import type { OrderSettlement, SettlementLeg } from "../domain/order-settlement.js";
 import type { OptionLegFill, OptionLegOrder, OrderIntent, OrderResult } from "../domain/types.js";
 
 /**
@@ -124,4 +125,45 @@ export function settledOptionResult(
     };
   }
   return { ...base, status: "working", reason: "cancel not confirmed — rechecked next cycle" };
+}
+
+/**
+ * What an option order a submit left `working` became, read once the broker has ended it (#4650) —
+ * kept beside the decision rather than written over it (`domain/order-settlement.ts`). The same
+ * reading as `settledOptionResult`: filled only on a confirmed quantity, each leg as the broker
+ * reported it, and a spread leg's own order id so its fill can find the spread.
+ */
+export function optionSettlementOf(
+  order: AlpacaOrder,
+  clientOrderId: string | undefined,
+  settledAt: string,
+): OrderSettlement {
+  const filled = filledQuantityOf(order);
+  const price = filled > 0 ? netFillPrice(order) : undefined;
+  const leg = (occSymbol: string, from: AlpacaOrder, own?: string): SettlementLeg => {
+    const legFilled = filledQuantityOf(from);
+    const legPrice = legFilled > 0 ? brokerNumber(from.filled_avg_price) : undefined;
+    return {
+      occSymbol,
+      ...(own && own !== order.id ? { orderId: own } : {}),
+      filledQuantity: legFilled,
+      ...(legPrice !== undefined ? { filledPrice: legPrice } : {}),
+    };
+  };
+  const legs =
+    order.legs && order.legs.length > 0
+      ? order.legs.map((l) => leg(l.symbol, l, l.id))
+      : order.symbol
+        ? [leg(order.symbol, order)]
+        : [];
+  const status = filled > 0 ? "filled" : order.status === "rejected" ? "rejected" : "unfilled";
+  return {
+    orderId: order.id,
+    ...(clientOrderId ? { clientOrderId } : {}),
+    status,
+    filledQuantity: filled,
+    ...(price !== undefined ? { filledPrice: price } : {}),
+    ...(legs.length > 0 ? { legs } : {}),
+    settledAt,
+  };
 }

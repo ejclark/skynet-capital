@@ -20,6 +20,9 @@ import type { SafetyController } from "./safety.js";
  * these hooks into console output.
  */
 
+/** The id the beta scout files its decisions under — it trades on the first bot's account. */
+export const BETA_SCOUT_PERSONA_ID = "beta-scout";
+
 /** One live bot: its broker (for equity marks + scout portfolio reads) and its already-wired
  *  `AutonomousTrader` (which owns its own persona, risk, cooldown, and kill-switch check). */
 export interface LiveBot {
@@ -286,7 +289,7 @@ export class LiveCycleRunner {
     const refusals = verdict?.refused ?? [];
     this.deps.onDecision?.({
       at: now(),
-      personaId: "beta-scout",
+      personaId: BETA_SCOUT_PERSONA_ID,
       mode: scout.mode,
       rawIntents: raw,
       guardedIntents: intents,

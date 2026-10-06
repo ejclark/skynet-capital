@@ -14,7 +14,14 @@
 // record goes into a real (in-memory) decision store, which maps the leg ids; `deskActivityView`
 // folds the two leg lines through that map; `reasoningForOrder` attaches the spread's decision.
 //
+// LATE FILLS (#4650): `--working` and `--late` rerun the same two trades as orders recorded
+// `working` — the cancel not confirmed, the spread's legs not yet listed — first as the store holds
+// them before the settle loop sees the broker end them, then after it reports each one's fill. Both
+// read every payload back through the real store, which is where a settlement is read in place of
+// the `working` result. Frames are named `working-*` / `late-*`.
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
+//   [--working | --late]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts";
 import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
@@ -84,8 +91,14 @@ const spread = {
   },
 };
 
+const SCENARIO = process.argv.includes("--late")
+  ? "late"
+  : process.argv.includes("--working")
+    ? "working"
+    : "filled";
+
 const AT = Date.parse("2026-10-07T14:30:00Z");
-const record = {
+const filledRecord = {
   at: AT,
   personaId: "bot-sauron",
   mode: "live",
@@ -127,6 +140,47 @@ const record = {
   ],
 };
 
+/** The same two trades recorded `working`: neither cancel confirmed, the spread's legs unlisted. */
+const workingRecord = {
+  ...filledRecord,
+  outcomes: filledRecord.outcomes.map(({ intent, action, result }) => ({
+    intent,
+    action,
+    result: { intent, status: "working", orderId: result.orderId },
+  })),
+};
+/** What the settle loop reports once the broker has ended each one (`optionSettlementOf`). */
+const settlements = [
+  {
+    orderId: "opt-put-1",
+    clientOrderId: sold.clientOrderId,
+    status: "filled",
+    filledQuantity: 1,
+    filledPrice: 2.12,
+    legs: [{ occSymbol: PUT, filledQuantity: 1, filledPrice: 2.12 }],
+    settledAt: "2026-10-07T14:31:00Z",
+  },
+  {
+    orderId: "opt-spread-1",
+    clientOrderId: spread.clientOrderId,
+    status: "filled",
+    filledQuantity: 1,
+    filledPrice: 3.35,
+    legs: [
+      { occSymbol: LOW, orderId: "opt-spread-leg-185", filledQuantity: 1, filledPrice: 5.1 },
+      { occSymbol: HIGH, orderId: "opt-spread-leg-200", filledQuantity: 1, filledPrice: 1.75 },
+    ],
+    settledAt: "2026-10-07T14:31:00Z",
+  },
+];
+
+const store = openDecisionDb(":memory:");
+store.record(SCENARIO === "filled" ? filledRecord : workingRecord);
+if (SCENARIO === "late") store.recordSettlements(settlements);
+// The default frames read the fixture as written; the late-fill ones read it back through the store.
+const record =
+  SCENARIO === "filled" ? filledRecord : store.listByPersona("bot-sauron", { limit: 1 })[0];
+
 // The sold put's Activity row, with the decision the real join attaches to it.
 const findByOrderId = (orderId) => {
   const outcome = record.outcomes.find((o) => o.result.orderId === orderId);
@@ -147,8 +201,6 @@ const putRow = {
   reasoning: reasoningForOrder("opt-put-1", { findByOrderId }),
 };
 // The spread's two leg fills, as the account's ledger holds them — and the row the server makes.
-const store = openDecisionDb(":memory:");
-store.record(record);
 const legLine = (orderId, symbol, side, price) => ({
   orderId,
   participantId: "bot-sauron",
@@ -178,8 +230,10 @@ const spreadRows = deskActivityView(
   reasoning: reasoningForOrder(row.orderId, { findByOrderId: (id) => store.findByOrderId(id) }),
 }));
 store.close();
-if (spreadRows.length !== 1 || spreadRows[0].legs?.length !== 2) {
-  throw new Error("the spread's two leg fills did not fold into one row");
+const folded = spreadRows.length === 1 && spreadRows[0].legs?.length === 2;
+// Recorded `working` with no legs listed, the two fills join nothing until the settlement lands.
+if (folded !== (SCENARIO !== "working")) {
+  throw new Error(`the spread's leg fills ${folded ? "folded" : "did not fold"} (${SCENARIO})`);
 }
 
 const shareRow = {
@@ -242,6 +296,31 @@ const { page, origin, shoot, close } = await openShell({
   },
 });
 
+// Before the settle loop: the pass still says the orders may fill, the legs are loose fills.
+if (SCENARIO === "working") {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/app/u/bot-sauron/decisions#cycle-${AT}`);
+  await page
+    .getByText(/may still fill/)
+    .first()
+    .scrollIntoViewIfNeeded();
+  await shoot("working-heartbeat-phone");
+  await page.goto(`${origin}/app/u/bot-sauron/activity`);
+  const first = page.locator("#act-opt-spread-leg-200");
+  await first.waitFor();
+  await page.waitForTimeout(600);
+  await first.evaluate((row) => {
+    row.scrollIntoView({ block: "start", inline: "start" });
+    const scroller = row.closest(".blotter-scroll");
+    if (scroller) scroller.scrollLeft = 0;
+    window.scrollBy(0, -150);
+  });
+  await shoot("working-activity-phone");
+  await close();
+  process.exit(0);
+}
+const prefix = SCENARIO === "late" ? "late-" : "";
+
 for (const [tag, viewport] of [
   ["phone", { width: 390, height: 844 }],
   ["desktop", { width: 1280, height: 900 }],
@@ -263,13 +342,13 @@ for (const [tag, viewport] of [
   await spreadRow.waitFor();
   await page.waitForTimeout(600);
   await toTop(spreadRow);
-  await shoot(`activity-spread-legs-${tag}`);
+  await shoot(`${prefix}activity-spread-legs-${tag}`);
   // Opened: the decision that placed it — its playbook down to what would prove it wrong, which at
   // 390 needs the panel at the top of the frame (the legs are the frame above).
   const spreadWhy = page.getByRole("button", { name: /Why NVDA \$185\/\$200 CALL SPREAD/ });
   await spreadWhy.click();
   await toTop(tag === "phone" ? page.locator("tr.row-why") : spreadRow);
-  await shoot(`activity-spread-why-${tag}`);
+  if (!prefix) await shoot(`activity-spread-why-${tag}`);
   await spreadWhy.click();
 
   await page.getByRole("button", { name: /Why CRWV \$85 PUT/ }).click();
@@ -278,12 +357,12 @@ for (const [tag, viewport] of [
     row.scrollIntoView({ block: "start" });
     window.scrollBy(0, -150); // clear the sticky header
   });
-  await shoot(`activity-option-fill-${tag}`);
+  await shoot(`${prefix}activity-option-fill-${tag}`);
 
   // Arriving from the row's "the whole pass" link opens that round with its trades included.
   await page.goto(`${origin}/app/u/bot-sauron/decisions#cycle-${AT}`);
   await page.getByText(/received — 1 contract/).scrollIntoViewIfNeeded();
-  await shoot(`heartbeat-option-fill-${tag}`);
+  await shoot(`${prefix}heartbeat-option-fill-${tag}`);
 }
 
 await close();
