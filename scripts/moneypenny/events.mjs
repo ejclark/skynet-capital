@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { routeAssignments } from "./assignments.mjs";
 import { routeContinuation } from "./continuation.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
+import { routePlanClose } from "./plan-close.mjs";
 import { routeRelay } from "./relay.mjs";
 import { routeShipped } from "./shipped.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
@@ -159,6 +160,7 @@ export function routeSweep(deps) {
     ...intents,
     ...routeReceipts(deps),
     ...routeShipped(deps),
+    ...routePlanClose(deps),
     ...routeRelay(deps),
     ...routeContinuation(deps),
   ];

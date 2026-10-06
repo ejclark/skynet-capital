@@ -90,6 +90,7 @@ import {
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
+import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { readWorkMode } from "./work-mode.mjs";
@@ -883,6 +884,9 @@ function gatherDeps(ctx) {
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
     openIssueTitles: open.map((i) => i.title),
+    // Plans whose sub-issues are all closed (#4393 slice 5) — read from the open list already paged
+    // above, plus a comments page only for a plan that must be held.
+    openPlans: needsScan ? gatherPlanCloseDeps(open) : [],
     openEventReceipts: needsScan ? readReceipts(open) : [],
     // The dropped-remainder relay (#3818 slice 4). REST and paged, like the open-issue read above,
     // and only on a sweep — nothing on a label or comment event can close an issue, so no other
@@ -1213,6 +1217,12 @@ function executeSweepIntent(i) {
     ]);
     console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
     return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
+  }
+  if (i.kind === "close-plan" || i.kind === "hold-plan-close") {
+    // The writes live in plan-close.mjs, like the relay's, so that file never imports this router.
+    const line = executePlanClose(i);
+    console.log(`::notice::${line}`);
+    return line;
   }
   if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing

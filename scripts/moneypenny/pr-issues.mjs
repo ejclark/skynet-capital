@@ -56,6 +56,7 @@ export const LANE_CLASSES = {
   "dependabot/": "dependabot",
   "platter/": "platter",
   "digest/": "digest",
+  "docs/digest-": "digest",
 };
 
 /** The class of service a machine lane's branch belongs to, or null for any other branch. */
@@ -101,4 +102,14 @@ export function derivePrIssues({ title = "", body = "", headRef = "", repo = REP
   const branch = branchIssueOf(headRef);
   if (branch) found.add(branch);
   return [...found].sort((a, b) => a - b);
+}
+
+/**
+ * Does a PR leave NO trace of what it builds — names no issue and is not a machine lane's? The
+ * advisory check for criterion 8 (scripts/pr-provenance-scan.mjs): such a PR is invisible to the
+ * board, so the in-flight cap cannot count it. Lane PRs are exempt by class — they map to a
+ * standing card, never one each.
+ */
+export function namesNoIssue({ title = "", body = "", headRef = "", repo = REPO } = {}) {
+  return !laneClassOf(headRef) && derivePrIssues({ title, body, headRef, repo }).length === 0;
 }
