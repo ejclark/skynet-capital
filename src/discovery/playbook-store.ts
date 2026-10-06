@@ -9,7 +9,7 @@
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
 import type { PlaybookMode } from "../domain/types.js";
-import type { Playbook } from "../playbooks/playbook.js";
+import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
 import {
   evidenceHref,
   housePlaybooks,
@@ -104,6 +104,39 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
     hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
   },
+  // Every number below is pinned to the persona's own behavior by tests/playbooks/sauron-rules.spec.ts.
+  // The pause sentence says what pausing does TODAY: until unlabelled orders are refused (#4642
+  // slice 10), his rules keep trading his own account without the label. Slice 10 rewrites it.
+  SAURON: {
+    description:
+      "Sauron's own trading rules, as a playbook. He trades only at the crowd's extremes, once " +
+      "price momentum shows the extreme is fading: he sells into euphoria that has rolled over and " +
+      "buys what panic has thrown away. On Sauron's own account it places exactly the share orders " +
+      "his rules already place, labelled as this playbook's — the standard numbers below, or the " +
+      "research-volume ones on HC-SAURON when his account runs those. On any other bot it runs " +
+      "his standard rules on that bot's own account, on these ten names, and that bot's own rules " +
+      "stop trading them while it is subscribed.",
+    enter:
+      "Buys a name it does not hold when news sentiment is −0.70 or lower and price momentum is 0 " +
+      "or higher — the selling has stopped. Each buy asks for $120,000 at −0.70, growing with the " +
+      "depth of the panic to $156,000 at −1.00, the bottom of the sentiment scale; the risk guards " +
+      "then cap any one position at a share of the account. The mode you pick does not change " +
+      "that: his rules size every order. The capital you allocate caps his buys too, counting what " +
+      "the bot already holds in these ten names.",
+    exitTakeProfit:
+      "Sells the whole position when news sentiment is 0.70 or higher and price momentum is 0 or " +
+      "lower — the euphoria has rolled over. No price target.",
+    exitCutLosses:
+      "None. His standard rules carry no stop-loss: a name bought in a panic is held until the " +
+      "exit above fires on it, however long that takes.",
+    hold:
+      "Between extremes, or while an extreme is still building, it places nothing. A name an " +
+      "option playbook on the same bot trades — CRWV for the wheel, NVDA for the call spread — is " +
+      "left to that playbook, and on Sauron's own account so is every name his other playbooks " +
+      "trade. Pausing it never stops an option playbook. Paused or unsubscribed, his rules still " +
+      "trade Sauron's own account as they did before this playbook existed, just without its " +
+      "label; on any other bot, nothing of his runs.",
+  },
   "CRWV-WHEEL": {
     description:
       "The wheel on CRWV: sell a cash-secured put (the bot is paid now, and keeps the cash to buy " +
@@ -181,8 +214,9 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
   const href = evidenceHref(playbook);
   // An option play is sized by its allocation one contract at a time and opens on its own option
   // rules, so the probe's session window and percent-of-equity size would describe it falsely
-  // — it shows its rules as copy, the way a tactical playbook does.
-  const probe = playbook.tactics || playbook.options ? undefined : probeWindow(playbook);
+  // — it shows its rules as copy, the way a playbook reading live signals (a tactic chain, a
+  // persona's own rules) does.
+  const probe = readsLiveSignals(playbook) || playbook.options ? undefined : probeWindow(playbook);
   return {
     id: playbook.id,
     symbol: playbook.symbols[0] ?? "",

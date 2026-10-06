@@ -189,6 +189,14 @@ export interface Playbook {
   readonly keyedOn?: PlaybookKey;
   /** Optional — present only on an option play; see `OptionPlaybookTraits`. */
   readonly options?: OptionPlaybookTraits;
+  /**
+   * Optional — the id of the persona whose own rules this playbook IS (`SAURON` → `"sauron"`,
+   * #4651). On a bot whose base persona has this id, `withPlaybooks` never calls `decide`: it runs
+   * the bot's own persona exactly as it always has and stamps those reflexes with this playbook's id
+   * and mode, so the bot's own build (a hardcore one included) stays exact and its rules never run
+   * twice. On any other bot it is an ordinary `decide` playbook. Absent on every other playbook.
+   */
+  readonly rulesOf?: string;
   /** PURE. Which chains and contracts this cycle needs priced. `NO_OPTION_DEMAND` = no network. */
   optionDemand?(
     asOfIso: string,
@@ -421,8 +429,20 @@ export function playbookVerdicts(
   return enabled.map(({ playbook, mode }) => ({
     playbookId: playbook.id,
     mode,
-    state: playbook.tactics ? "tactical" : playbook.desiredState(asOfIso, calendar, events),
+    state: readsLiveSignals(playbook)
+      ? "tactical"
+      : playbook.desiredState(asOfIso, calendar, events),
   }));
+}
+
+/**
+ * Whether a playbook decides on live price and sentiment every pass, with no date or event window
+ * at all — a tactic chain (`tactics`) or a persona's own rules (`rulesOf`). Its verdict is
+ * "tactical", and no reader probes or scans a window for it: there is none, and asking its
+ * `desiredState` would answer a question it does not have.
+ */
+export function readsLiveSignals(playbook: Playbook): boolean {
+  return playbook.tactics !== undefined || playbook.rulesOf !== undefined;
 }
 
 export function playbookIntents(

@@ -11,6 +11,12 @@
  * A roster with an OPTION play (#4645) also tells the trader which underlyings it trades and which
  * quotes this cycle needs (`optionUnderlyings`, `optionDemand`); a roster without one carries
  * neither, so the trader reads no option market for it.
+ *
+ * A playbook that IS the base persona's own rules (`rulesOf === base.id`, today only `SAURON` on
+ * Sauron's account — #4651) is not run as a playbook: it would be the same rules twice. Step 2 runs
+ * the base persona exactly as above — suppressed on the OTHER playbooks' symbols, which stay theirs —
+ * and stamps every surviving reflex with that playbook's id and mode. With no such playbook enabled
+ * nothing here differs from a roster without the field.
  */
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import {
@@ -75,14 +81,22 @@ export function withPlaybooks(
   if (enabled.length === 0) {
     return base;
   }
-  const managed = new Set(enabled.flatMap((e) => e.playbook.symbols));
+  // The base persona's own rules, when enabled as a playbook — run as the base, never as a play.
+  const own = enabled.find((e) => e.playbook.rulesOf === base.id);
+  const others = own ? enabled.filter((e) => e !== own) : enabled;
+  const managed = new Set(others.flatMap((e) => e.playbook.symbols));
+  const attribute = (intent: OrderIntent): OrderIntent =>
+    own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
   return {
     id: base.id,
     name: base.name,
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      const plays = playbookIntents(enabled, context, portfolio, calendar, events);
-      const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
+      const plays = playbookIntents(others, context, portfolio, calendar, events);
+      const reflexes = base
+        .decide(context, portfolio)
+        .filter((i) => !managed.has(i.symbol))
+        .map(attribute);
       observeMixedSignals(enabled, context, mixedSignalsLog);
       return [...plays, ...reflexes];
     },

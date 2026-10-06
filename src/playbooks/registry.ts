@@ -8,6 +8,7 @@
  * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
  * subscriptions (plan #4535).
  */
+import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
@@ -20,6 +21,7 @@ import {
   POST_PRINT_FLAT_DAYS,
   printSessionWindow,
 } from "./playbook.js";
+import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
 
 /**
@@ -153,24 +155,6 @@ export const TACO_DJT: Playbook = {
   },
 };
 
-/** The production watch list `SauronHardcorePersona.decide()` actually sees today (its own loop
- *  is `Object.keys(context.quotes)` — whatever is live, not a fixed list). `run-autonomous.ts`'s
- *  own `UNIVERSE` constant is what makes that dynamic list, in practice, exactly this one — a
- *  fixed basket here is the honest static translation, not a behavior change. Declared locally
- *  rather than imported from `scripts/` (a backwards dependency this file never takes). */
-const HC_SAURON_UNIVERSE = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-  "AMZN",
-  "META",
-  "AVGO",
-  "TSLA",
-  "CRWV",
-  "MRVL",
-];
-
 /** Hardcore Sauron's exact thresholds (`HARDCORE_SAURON_CONFIG`), translated into the tactic
  *  chain's four generic kinds, in the same priority order `SauronHardcorePersona.decideSymbol`
  *  checks them — stop, fade, claim, scalp. `tests/playbooks/tactical-playbook.spec.ts`'s parity
@@ -221,7 +205,9 @@ const HC_SAURON_TACTICS: readonly TacticalRule[] = [
  */
 export const HC_SAURON: Playbook = {
   id: "HC-SAURON",
-  symbols: HC_SAURON_UNIVERSE,
+  // The production watch list `SauronHardcorePersona.decide()` actually sees (its own loop is
+  // `Object.keys(context.quotes)`): the live runner's universe, shared rather than copied.
+  symbols: BOTS_UNIVERSE,
   thesis:
     "Impose order on the market's chaos — hardcore research mode: the same eye, faster hands; " +
     "small tranches probe every extreme and every run, and each order carries its thesis.",
@@ -235,10 +221,11 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
-/** The option plays live in their own files (`crwv-wheel.ts`, `nvda-call-spread.ts`); re-exported
- *  here because the Store catalog and the roll call read the house roster off what this module
- *  exports. Neither is on any default roster: an owner subscribes their own bot to one in the Store. */
-export { CRWV_WHEEL, NVDA_CALL_SPREAD };
+/** The option plays and Sauron's own rules live in their own files (`crwv-wheel.ts`,
+ *  `nvda-call-spread.ts`, `sauron-rules.ts`); re-exported here because the Store catalog and the
+ *  roll call read the house roster off what this module exports. None is on any default roster: an
+ *  owner subscribes their own bot to one in the Store. */
+export { CRWV_WHEEL, NVDA_CALL_SPREAD, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,
@@ -247,6 +234,7 @@ const ROSTER: readonly Playbook[] = [
   HC_SAURON,
   CRWV_WHEEL,
   NVDA_CALL_SPREAD,
+  SAURON,
 ];
 
 /**

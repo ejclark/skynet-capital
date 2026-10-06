@@ -1,4 +1,6 @@
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
+import { SauronPersona } from "../../src/personas/sauron.js";
+import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 describe("playbookStoreCatalog", () => {
   it("returns one entry per house playbook, keyed by id and symbol", () => {
@@ -9,6 +11,7 @@ describe("playbookStoreCatalog", () => {
       "HC-SAURON",
       "NVDA-CALL-SPREAD",
       "S1-NVDA",
+      "SAURON",
       "TACO-DJT",
     ]);
     for (const entry of entries) {
@@ -116,6 +119,91 @@ describe("playbookStoreCatalog", () => {
     expect(hold).not.toContain("positions it did not open: does nothing");
     expect(hold).toContain("whoever placed it");
     expect(hold).toContain("any other NVDA option position stops it opening and is left alone");
+  });
+
+  describe("SAURON — Sauron's own rules (#4651)", () => {
+    const card = () => {
+      const entry = byId("SAURON");
+      if (!entry) throw new Error("SAURON is not in the catalog");
+      return entry;
+    };
+    const copy = () => {
+      const c = card();
+      return [c.description, c.enter, c.exitTakeProfit, c.exitCutLosses, c.hold].join(" ");
+    };
+
+    it("shows the ten names it trades and no invented window, size or study link", () => {
+      expect(card().symbols).toEqual([
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "AVGO",
+        "TSLA",
+        "CRWV",
+        "MRVL",
+      ]);
+      expect(card().window).toBeUndefined();
+      expect(card().size).toBeUndefined();
+      expect(card().traits).toEqual([]);
+      expect(card().evidenceHref).toBeUndefined();
+    });
+
+    it("says plainly whose rules it trades, on which account, and that mode leaves his sizing alone", () => {
+      expect(card().description).toContain("Sauron's own trading rules");
+      expect(card().description).toContain(
+        "On Sauron's own account it places exactly the share orders his rules already place",
+      );
+      expect(card().description).toContain("runs his standard rules on that bot's own account");
+      expect(card().description).toContain(
+        "that bot's own rules stop trading them while it is subscribed",
+      );
+      expect(card().enter).toContain("The mode you pick does not change that");
+      expect(card().enter).toContain("The capital you allocate caps his buys");
+      // The persona's dollar size is what it ASKS for; the position cap still clamps the fill.
+      expect(card().enter).toContain("asks for $120,000");
+      expect(card().enter).toContain("the risk guards then cap any one position");
+      expect(card().exitCutLosses).toContain("no stop-loss");
+    });
+
+    // Until slice 10 refuses unlabelled orders, pausing on his own account only removes the label —
+    // the card must not claim it stops his trades there.
+    it("says what pausing does today: option playbooks keep running, his rules keep trading unlabelled", () => {
+      expect(card().hold).toContain("Pausing it never stops an option playbook");
+      expect(card().hold).toContain(
+        "Paused or unsubscribed, his rules still trade Sauron's own account",
+      );
+      expect(copy()).not.toMatch(/paus\w* (it )?stops his/i);
+    });
+
+    it("quotes only numbers his persona actually trades on", () => {
+      expect(card().enter).toContain("−0.70 or lower");
+      expect(card().enter).toContain("$120,000 at −0.70");
+      expect(card().enter).toContain("$156,000 at −1.00");
+      expect(card().exitTakeProfit).toContain("0.70 or higher");
+      const sauron = new SauronPersona();
+      const ask = (ctx: ReturnType<typeof aContext>) => ctx.quotes.AAPL?.ask ?? 0;
+      // Euphoria exit: at 0.70 with momentum at 0, never at 0.69 or with momentum above 0.
+      const held = aPortfolio({ positions: [aPosition({ symbol: "AAPL", quantity: 7 })] });
+      expect(sauron.decide(aContext({ AAPL: { sentiment: 0.7, momentum: 0 } }), held)).toEqual([
+        expect.objectContaining({ side: "sell", quantity: 7 }),
+      ]);
+      expect(sauron.decide(aContext({ AAPL: { sentiment: 0.69, momentum: 0 } }), held)).toEqual([]);
+      expect(sauron.decide(aContext({ AAPL: { sentiment: 0.7, momentum: 0.001 } }), held)).toEqual(
+        [],
+      );
+      // Panic entry: $120,000 at -0.70 with momentum at 0; $156,000 at -1.00; nothing at -0.69.
+      const at = (sentiment: number) => aContext({ AAPL: { sentiment, momentum: 0 } });
+      expect(sauron.decide(at(-0.7), aPortfolio())).toEqual([
+        expect.objectContaining({ side: "buy", quantity: Math.floor(120_000 / ask(at(-0.7))) }),
+      ]);
+      expect(sauron.decide(at(-1), aPortfolio())).toEqual([
+        expect.objectContaining({ side: "buy", quantity: Math.floor(156_000 / ask(at(-1))) }),
+      ]);
+      expect(sauron.decide(at(-0.69), aPortfolio())).toEqual([]);
+    });
   });
 
   it("keeps an unevidenced playbook's honest note and links nowhere", () => {

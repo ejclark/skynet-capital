@@ -11,6 +11,7 @@ import {
   HC_SAURON,
   NVDA_CALL_SPREAD,
   S1_NVDA,
+  SAURON,
   TACO_DJT,
 } from "../../src/playbooks/registry.js";
 
@@ -36,6 +37,7 @@ describe("housePlaybooks", () => {
         HC_SAURON.id,
         NVDA_CALL_SPREAD.id,
         S1_NVDA.id,
+        SAURON.id,
         TACO_DJT.id,
       ].sort(),
     );

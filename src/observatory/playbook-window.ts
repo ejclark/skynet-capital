@@ -1,6 +1,6 @@
 import { type EarningsPrint, nextPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookVerdictState } from "../domain/types.js";
-import type { Playbook } from "../playbooks/playbook.js";
+import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
 
 /**
  * WHAT AN ARMED PLAYBOOK IS ACTUALLY WAITING FOR (#4450 slice 1, completing criterion 1: "an armed
@@ -51,10 +51,10 @@ function isoDayOffset(from: Date, days: number): string {
 }
 
 /** Whether a day-by-day scan can answer "when does this playbook next open?" at all. An
- *  event-keyed playbook's window turns on an outside signal and a rule-chain playbook has no window
- *  to date, so asking either answers a question it does not have. */
+ *  event-keyed playbook's window turns on an outside signal, and a rule-chain playbook or a persona's
+ *  own rules have no window to date, so asking any of them answers a question it does not have. */
 function windowIsDatable(playbook: Playbook): boolean {
-  return playbook.keyedOn !== "event" && !playbook.tactics;
+  return playbook.keyedOn !== "event" && !readsLiveSignals(playbook);
 }
 
 /** The first day inside the horizon on which this playbook's own rule says "long". `events` is
