@@ -418,13 +418,13 @@ describe("seeding Sauron's own rules as his subscription", () => {
 
   describe("after the seed, on Sauron's live roster", () => {
     const bot: Bot = { persona: new SauronPersona(), credentials: { apiKey: "k", apiSecret: "s" } };
-    /** Panic turning up on four names: S1-NVDA's NVDA, the wheel's CRWV, AAPL, and GLD (outside
-     *  the bots' universe — he trades whatever is quoted, and the seed must not narrow that). */
+    /** Panic turning up on four of the ten names: S1-NVDA's NVDA, the wheel's CRWV, and AAPL and
+     *  MSFT, which are his. (A name outside the ten never reaches his rules since #4779.) */
     const panic = aContext({
       NVDA: { sentiment: -0.9, momentum: 0.02 },
       CRWV: { sentiment: -0.9, momentum: 0.02 },
       AAPL: { sentiment: -0.9, momentum: 0.02 },
-      GLD: { sentiment: -0.8, momentum: 0.01 },
+      MSFT: { sentiment: -0.8, momentum: 0.01 },
     });
     const intentsUnder = (subs: readonly PlaybookSubscription[]): OrderIntent[] =>
       tradingRoster(resolveBotRoster(bot, [], subs), DEFAULT_RISK_CONFIG).persona.decide(
@@ -448,7 +448,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       const before = intentsUnder(ERICS_LIVE).filter((i) => i.playbookId === undefined);
       const after = intentsUnder(seededSubs);
 
-      expect(before.map((i) => i.symbol).sort()).toEqual(["AAPL", "GLD"]);
+      expect(before.map((i) => i.symbol).sort()).toEqual(["AAPL", "MSFT"]);
       expect(after.filter((i) => i.playbookId === "SAURON")).toEqual(
         before.map((i) => ({ ...i, playbookId: "SAURON", playbookMode: "standard" })),
       );
@@ -476,7 +476,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       const before = sized(ERICS_LIVE).filter((i) => i.playbookId === undefined);
       const after = sized(seededSubs).filter((i) => i.playbookId === "SAURON");
 
-      expect(before.map((i) => `${i.side} ${i.symbol}`).sort()).toEqual(["buy AAPL", "buy GLD"]);
+      expect(before.map((i) => `${i.side} ${i.symbol}`).sort()).toEqual(["buy AAPL", "buy MSFT"]);
       expect(after).toEqual(
         before.map((i) => ({ ...i, playbookId: "SAURON", playbookMode: "standard" })),
       );
