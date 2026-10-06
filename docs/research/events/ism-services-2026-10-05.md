@@ -428,3 +428,63 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-credit-2026-10-07","dallas-fed-trimmed-mean-2026-09-30","ecb-account-2026-10-08","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","sudan-sanctions-regime-expiry-2026-10-09","tic-quarterly-external-debt-2026-09-30","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-expiry-2026-09-30","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-06).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design), so the **report** is scored from the release text re-read this session and
+the **tape** from Yahoo daily and hourly bars fetched after the mandated cache bust, never from memory.
+Primary: ISM's **"Services PMI® at 54.9%; September 2026 ISM® Services PMI® Report"** (PRNewswire
+302898421, dateline 2026-10-05 10:00 ET) — read through a summarizing fetch, so the figures below are
+cross-read against a second search-result summary of the same release; payrolls from BLS's Employment
+Situation (2026-10-02) via the same two-source read. ismworld.org stays SSO-gated.
+
+**What printed — the headline cooled, Prices set the series high, Employment crossed 50 by a tenth.**
+
+| Index | Sep | Aug | Δ |
+|---|---|---|---|
+| **Services PMI** | **54.9** | 55.4 | −0.5 |
+| Business Activity | 56.5 | 61.7 | −5.2 |
+| New Orders | 59.8 | 60.9 | −1.1 |
+| **Employment** | **50.1** | 47.8 | +2.3 |
+| Supplier Deliveries | 53.2 | 51.3 | +1.9 |
+| Inventories | 57.8 | 56.7 | +1.1 |
+| **Prices** | **74.0** | 72.6 | **+1.4** |
+
+27th straight month of expansion; thirteen industries expanded, four contracted. Prices **74.0 is the
+highest since July 2022 (74.5)**, above 70 for the sixth time in seven months. As summarized, the chair
+named tariffs and fuel costs as the most-cited issues, fuel *twice as often* as any other single issue.
+
+**Forward tests — one kill, one pass, both thin.**
+
+- **FT-ism-services-2026-10-05-1 → KILL.** Half one held (September payrolls **+29k**, positive, a
+  −55k miss vs ~84k). Half two failed: Employment **50.1** is **not below 50**. Its own kill clause reads
+  "Employment ≥ 50 → the sub-index has re-coupled to a labor market still adding jobs." **Honest
+  limit:** 50.1 is a 0.1pt crossing — a reading one rounding step lower would have passed — and
+  payrolls were the cycle's largest miss vs consensus (−55k), so a labor market adding only +29k
+  hardly "re-coupled" in any strong sense. The registered rule is what it is: the disagreement streak (13 of 18 months)
+  **ended at 13**, and "survey-internal" is not confirmed as the description. One observation, not a
+  trade; `symbols: []`.
+- **FT-ism-services-2026-10-05-2 → PASS, on the threshold.** Prices **74.0** against a registered
+  "at or above 74.0" — it clears by exactly zero, and the fitted point estimate was **74.6–75.1**, so
+  the *magnitude* came in **0.6–1.1 below the fit** while the *direction and series-high claim* held.
+  Not a kill (≥72.6) and not the MISS band (72.6–73.9). The channel is supported in direction and
+  rough size; its slope is not re-tightened by one observation. Corroborated by the same week's ISM
+  manufacturing Prices **77.9** (10-01). No payoff mechanism exists for a Prices call (08-05's finding
+  stands) — this licenses no position.
+
+**Scoring the stance — stand-aside was right and the variance note was small.**
+
+- **Base case:** headline stayed in 2026's 53.6–56.1 range (54.9), so the "A sub-50 headline" regime
+  break did not fire. Prices ≈74.6–75.1 was within 1.1pt of the print.
+- **Tape on 10-05 (daily closes, Yahoo):** `^TNX` 5.277 → **5.311 (+3.4bp, +0.64%)**, TLT 77.48 →
+  **77.11 (−0.48%)**, QQQ 749.58 → **756.20 (+0.88%)**, VIX 15.31 → **15.52**. Every move sits well under
+  the stance's own p90 bars (TLT 1.00%, `^TNX` 1.51%), so the "variance note becomes a reaction
+  function" signal **did not fire**. Direction was hot-Prices → yields **up** this time (unlike 08-05 and
+  09-03), but the move is ordinary, and the session carried two named contaminants — the Sunday OPEC+
+  meeting and S&P Global's services PMI at 09:45 ET — so no attribution to this release is claimed.
+
+Kill-list entry for FT-1 filed in [`multi-symbol-sweep.md`](../multi-symbol-sweep.md).
+
+**Last assessed:** 2026-10-06
+<!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-credit-2026-10-07","dallas-fed-trimmed-mean-2026-09-30","ecb-account-2026-10-08","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","sudan-sanctions-regime-expiry-2026-10-09","tic-quarterly-external-debt-2026-09-30","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-expiry-2026-09-30","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
