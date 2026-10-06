@@ -112,10 +112,10 @@ describe("mergeRosters", () => {
     expect(mergeRosters([house], [override])).toEqual([house, override]);
   });
 
-  it("an override replaces the base entry for the same playbook id, not duplicates it", () => {
+  it("an override replaces the base entry for the same playbook id in place, not duplicates it", () => {
     const override: EnabledPlaybook = { playbook: S1_NVDA, mode: "aggressive" };
     const result = mergeRosters([house, houseGoog], [override]);
-    expect(result).toEqual([houseGoog, override]);
+    expect(result).toEqual([override, houseGoog]);
     expect(result.filter((e) => e.playbook.id === "S1-NVDA")).toHaveLength(1);
   });
 

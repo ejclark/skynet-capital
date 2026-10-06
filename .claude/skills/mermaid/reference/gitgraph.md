@@ -1,7 +1,7 @@
 # gitgraph (https://mermaid.js.org/syntax/gitgraph.html). Git graph: commit, branch, checkout/switch, merge, cherry-pick; commit id, tag and type; orientation (LR/TB/BT); parallel commits; themes and theme variables — `gitGraph` · `gitGraph:` · `gitGraph LR:` · `gitGraph TB:` · `gitGraph BT:`
 
 **Status:** stable. The docs carry no beta or experimental marker, and the keyword has no -beta suffix. Some features are version-gated: LR:/TB: orientation needs v10.3.0+, BT: needs v11.0.0+, parallelCommits needs v10.8.0+. The redux/redux-color/neo themes are recent (the develop docs list redux-color as the default theme, but the Mermaid Chart MCP renderer still used the classic 'default' palette).
-**GitHub (11.17.2):** The gitgraph docs page says nothing about GitHub rendering or integration. Verify on github.com. Keep to the conservative subset: plain `gitGraph` or `gitGraph TB:` (v10.3+). Avoid `BT:` (v11+), `parallelCommits` (v10.8+) and the redux*/neo* themes, because GitHub's Mermaid version is unknown. No init block or themeVariables (per PICTURES.md dark-mode rule). The diagram has no click or interaction features, so nothing is lost on GitHub. accTitle and accDescr validated on the MCP renderer; their support on GitHub is unverified.
+**GitHub (11.17.2):** The gitgraph docs page says nothing about GitHub rendering or integration. Verify on github.com. GitHub renders 11.17.2 (the pin in scripts/mermaid-lint.mjs; config-on-github.md), so `gitGraph TB:` (v10.3+), `BT:` (v11+) and `parallelCommits` (v10.8+) are all available; `BT:` and `parallelCommits` parse under the lint (probed 2026-10-03). The redux*/neo* themes are v12, which GitHub is not on. No init block or themeVariables (per PICTURES.md dark-mode rule). The diagram has no click or interaction features, so nothing is lost on GitHub. accTitle and accDescr validated on the MCP renderer; their support on GitHub is unverified.
 
 **Measured on 11.17.2 (2026-09-26, the round-3 design session):** commit connectors are a fixed 8 px, the diagram takes no `classDef`, its theme is locked, and long plain-word branch names overlap the `main` label. Retired for the held-PR story (`docs/PICTURES.md` → the held PR starter, rule 10); keep it for branch topology with few, short-named branches, vertical (`TB:`, `rotateCommitLabel: false`) on a phone.
 
@@ -173,4 +173,4 @@ gitGraph TB:
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/gitGraphRenderer.ts
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/styles.js
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/gitGraphDetector.ts
-- /home/user/skynet-capital/docs/PICTURES.md (repo picture rules: stable types, <=15 nodes, 390px, no init/style blocks)
+- /home/user/skynet-capital/docs/PICTURES.md (repo picture rules: <=15 nodes, 390px, no init/style blocks)

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // THE BOARD'S SELF-HEALING SWEEP — #4393 slice 1, criterion 4. Recomputes Status for every board
-// item whose column disagrees with `statusForIssue()`, closed issues still outside Done included.
+// item whose column disagrees with `statusForIssue()`, closed issues still outside Done included —
+// and adds any open blocked issue that never got a card at all (#4303, see `planReconcile`). Before
+// the cards, the columns: a Status option list in projects.mjs the live field does not carry yet
+// is written in place first (#4393 slice 4, `ensureStatusColumns`).
 //
 // WHY A SWEEP AND NOT A BETTER EVENT JOB. On 2026-10-01 the In Progress column showed #3818, #3953,
 // #3977 and #4327 while zero open issues carried `in-progress` and two of them were closed. Cause:
@@ -26,7 +29,7 @@
 // projects-sync.mjs: the App token has no path to a personal-account project. THIS SCRIPT HAS NOT
 // BEEN RUN LIVE. It was written in a session whose token lacks the `project` scope, so its real IO
 // is unexercised; the spec drives `reconcileBoard` end to end through injected IO only. Its first
-// workflow run (slice 2's hourly cron) is the live test — and the one assumption that run checks is
+// workflow run (board-sync.yml, on every push to main — slice 2) is the live test — and the one assumption that run checks is
 // that `gh project item-list --format json` puts the Status option's name on each item as `status`.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]
@@ -37,9 +40,12 @@ import {
   isRateLimitExhausted,
   isRetryableRestError,
   planBoardSweep,
+  STATUS_OPTIONS,
+  statusFieldUpdate,
   statusForIssue,
+  subIssueCounts,
 } from "./projects.mjs";
-import { createBoardContext, syncIssue } from "./projects-sync.mjs";
+import { createBoardContext, syncIssue, writeStatusOptions } from "./projects-sync.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
@@ -92,8 +98,12 @@ export function boardIssueNumber(item, repo = REPO) {
   return m ? Number(m[1]) : null;
 }
 
-/** What Status an open issue (a REST issue object) belongs in — `syncIssue`'s rule, no network. */
-export function wantedStatusOf(issue) {
+/**
+ * What Status an open issue (a REST issue object) belongs in — `syncIssue`'s rule, no network.
+ * `columns` is the live board's option names (see `statusForIssue`); the REST list carries
+ * `sub_issues_summary`, which the Waiting rule reads.
+ */
+export function wantedStatusOf(issue, columns = STATUS_OPTIONS) {
   const labels = (issue?.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
   if (!isBacklogCandidate({ labels })) return null;
   const decisionCalloutMissing = missingDecisionCallout({
@@ -101,7 +111,47 @@ export function wantedStatusOf(issue) {
     body: issue?.body,
     author: issue?.user?.login,
   });
-  return statusForIssue({ state: issue?.state ?? "open", labels, decisionCalloutMissing });
+  return statusForIssue({
+    state: issue?.state ?? "open",
+    labels,
+    decisionCalloutMissing,
+    subIssues: subIssueCounts(issue),
+    columns,
+  });
+}
+
+/**
+ * THE COLUMNS FIRST, THEN THE CARDS (#4393 slice 4). When projects.mjs's option list changes — the
+ * rename to Building now, the new Waiting column — the live Status field has to follow before any
+ * card can land in a new column. The plan said "add the option via a projects-setup.yml dispatch";
+ * doing it here instead means the merge that changes the list also applies it, on the same push,
+ * with nobody remembering a dispatch, and every later sweep proves it still holds. One read of the
+ * field (already part of the board context), a write only when a column is missing, ids kept so no
+ * card moves, and never a removal — a column made by hand in the UI stays (`keepExtras`).
+ *
+ * Returns the column names the cards may be planned against: the new list once written, the board's
+ * current one on a dry run (which only says what it would change).
+ */
+export function ensureStatusColumns({
+  board,
+  write = writeStatusOptions,
+  dryRun = false,
+  log = console.log,
+} = {}) {
+  const field = (board.fields() ?? []).find((f) => f?.name === "Status");
+  if (!field) throw new Error('no "Status" field on the board — has projects-setup run?');
+  const have = (field.options ?? []).map((o) => o.name);
+  const options = statusFieldUpdate(field.options ?? [], { keepExtras: true });
+  if (!options) return have;
+  const change = `(${have.join(", ")}) → (${options.map((o) => o.name).join(", ")})`;
+  if (dryRun) {
+    log(`Status field: would change ${change}`);
+    return have;
+  }
+  write(field.id, options);
+  log(`Status field: changed ${change}, ids kept for ${options.filter((o) => o.id).length}`);
+  const fresh = (board.fields({ refresh: true }) ?? []).find((f) => f?.name === "Status");
+  return (fresh?.options ?? options).map((o) => o.name);
 }
 
 /**
@@ -109,25 +159,43 @@ export function wantedStatusOf(issue) {
  * `openIssues` every open issue (REST shape). An issue on the board but not in `openIssues` is
  * treated as closed and wants Done. Returns `[{number, have, want}]`, ascending by number.
  * `statusOf(item)` reads an item's current Status; the default is gh's `status` key.
+ *
+ * #4303 (#3959 slice 3) — AN OPEN ASK THAT NEVER REACHED THE BOARD IS DRIFT TOO. The Blocked column
+ * is the one place a household member checks for an open ask, so "every open needs-eric/needs-info
+ * issue is listed there" has to hold, not just "every listed card is in the right column". A card is
+ * added only by the event job on a label change, and the event job is exactly what dropped runs
+ * on 2026-09-30 — an issue whose one `needs-info` event died never got a card, and a sweep that
+ * walks only cards could not see it. So an open issue absent from the board that wants Blocked
+ * comes back as `have: null`; `syncIssue` adds it (add-or-find, #3954). Only Blocked, on purpose:
+ * Backlog/Ready cards are a convenience the pull rule never reads (it reads labels), and adding
+ * every uncarded issue is projects-backfill.mjs's one-shot job, at a GraphQL cost an hourly sweep
+ * should not carry.
  */
 export function planReconcile({
   items = [],
   openIssues = [],
   statusOf = (item) => item?.status ?? null,
   repo = REPO,
+  columns = STATUS_OPTIONS,
 } = {}) {
   const open = new Map(
     openIssues.filter((i) => i && !i.pull_request).map((i) => [Number(i.number), i]),
   );
   const drift = [];
+  const carded = new Set();
   for (const item of items) {
     const number = boardIssueNumber(item, repo);
     if (!number) continue;
+    carded.add(number);
     const issue = open.get(number);
-    const want = issue ? wantedStatusOf(issue) : "Done";
+    const want = issue ? wantedStatusOf(issue, columns) : "Done";
     if (!want) continue;
     const have = statusOf(item) ?? null;
     if (have !== want) drift.push({ number, have, want });
+  }
+  for (const [number, issue] of open) {
+    if (!carded.has(number) && wantedStatusOf(issue, columns) === "Blocked")
+      drift.push({ number, have: null, want: "Blocked" });
   }
   return drift.sort((a, b) => a.number - b.number);
 }
@@ -142,6 +210,7 @@ export function reconcileBoard({
   readOpenIssues = readOpenIssuesWithRetry,
   rateLimit = () => ghRateLimit().graphql ?? {},
   sync = (number, opts) => syncIssue(String(number), opts),
+  ensureColumns = ensureStatusColumns,
   statusOf,
   dryRun = false,
   log = console.log,
@@ -154,8 +223,9 @@ export function reconcileBoard({
   if (!budget.ok)
     return { started: false, reason: budget.reason, drift: [], fixed: [], failed: [] };
 
+  const columns = ensureColumns({ board, dryRun, log });
   const items = boardItemsOrThrow(board);
-  const drift = planReconcile({ items, openIssues, ...(statusOf ? { statusOf } : {}) });
+  const drift = planReconcile({ items, openIssues, columns, ...(statusOf ? { statusOf } : {}) });
   log(`board: ${items.length} item(s), ${drift.length} in the wrong column`);
 
   const fixed = [];

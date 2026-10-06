@@ -44,6 +44,7 @@ import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
 import {
   boardItemsFromProjectItems,
+  boardSyncSkip,
   explainMaskedOwnerFailure,
   isBacklogCandidate,
   isMaskedOwnerFailure,
@@ -53,6 +54,7 @@ import {
   resolveBoardItem,
   runThroughRateLimit,
   statusForIssue,
+  subIssueCounts,
 } from "./projects.mjs";
 
 const OWNER = "ejclark";
@@ -86,8 +88,8 @@ function probeGraphql() {
  * produce `unknown owner type`, so only `ghProject` passes one (#4439 split this out so the
  * per-issue GraphQL read could share the rate-limit handling without inheriting that diagnosis).
  */
-function runGh(call, argv, { onStickyError } = {}) {
-  const run = () => sh("gh", argv);
+function runGh(call, argv, { onStickyError, input } = {}) {
+  const run = () => (input === undefined ? sh("gh", argv) : sh("gh", argv, { input }));
   try {
     return withRetry(run, { isTransient: isRetryableProjectsGhError });
   } catch (err) {
@@ -283,8 +285,8 @@ export function createBoardContext({
         return readAllItems().items ?? [];
       }
     },
-    fields() {
-      fields ??= readFields();
+    fields({ refresh = false } = {}) {
+      if (refresh || !fields) fields = readFields();
       return fields;
     },
     project() {
@@ -300,6 +302,39 @@ export function createBoardContext({
       if (items && item) items.items = [...(items.items ?? []), item];
     },
   };
+}
+
+// THE STATUS FIELD'S OPTION LIST, WRITTEN IN PLACE (#4393 slice 4). `updateProjectV2Field` REPLACES
+// the whole `singleSelectOptions` list (verified against GitHub's GraphQL schema — gh CLI has no
+// subcommand that edits an existing field's options). Each option input carries an optional `id`
+// (introspected live 2026-10-05: `ProjectV2SingleSelectFieldOptionInput { id, name, color,
+// description }`), and `statusFieldUpdate` (projects.mjs) fills it for every option that survives,
+// so a rename keeps its cards and a new option is simply added. Shared by projects-setup.mjs (the
+// one-time provisioning) and projects-reconcile.mjs (which applies it on the first push after the
+// option list in projects.mjs changes, so nobody has to remember the dispatch).
+const UPDATE_STATUS_OPTIONS_MUTATION = `
+  mutation($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]) {
+    updateProjectV2Field(input: { fieldId: $fieldId, singleSelectOptions: $options }) {
+      projectV2Field {
+        ... on ProjectV2SingleSelectField {
+          id
+          options { id name }
+        }
+      }
+    }
+  }
+`;
+
+/** Send `options` (from `statusFieldUpdate`) as the Status field's whole option list. */
+export function writeStatusOptions(fieldId, options) {
+  const body = JSON.stringify({
+    query: UPDATE_STATUS_OPTIONS_MUTATION,
+    variables: { fieldId, options },
+  });
+  const out = runGh("`gh api graphql` (updateProjectV2Field)", ["api", "graphql", "--input", "-"], {
+    input: body,
+  });
+  return JSON.parse(out || "null")?.data?.updateProjectV2Field?.projectV2Field ?? null;
 }
 
 /**
@@ -342,7 +377,6 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     body: issue.body,
     author: issue.user?.login,
   });
-  const status = statusForIssue({ state: issue.state, labels, decisionCalloutMissing });
 
   // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
   // every sync after an issue's first one hits exactly that (#3954). The board list we already hold
@@ -365,6 +399,16 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
 
   const fieldList = board.fields();
   const project = board.project();
+  // The live board's own column names (#4393 slice 4): a rule that names a column the field does
+  // not carry yet falls back rather than failing the sync — see `statusForIssue`'s `columns`.
+  const columns = (findField(fieldList, "Status")?.options ?? []).map((o) => o.name);
+  const status = statusForIssue({
+    state: issue.state,
+    labels,
+    decisionCalloutMissing,
+    subIssues: subIssueCounts(issue),
+    ...(columns.length ? { columns } : {}),
+  });
 
   const setSingleSelect = (fieldName, optionName) => {
     const field = findField(fieldList, fieldName);
@@ -403,7 +447,22 @@ function main() {
     process.exit(1);
   }
 
-  const result = syncIssue(issueNumber);
+  let result;
+  try {
+    result = syncIssue(issueNumber);
+  } catch (error) {
+    // #4438: a rate limit skips with a warning (the board is a display); anything else stays red.
+    let budget = {};
+    try {
+      budget = ghRateLimit().graphql ?? {};
+    } catch {
+      budget = {};
+    }
+    const warning = boardSyncSkip({ issueNumber, error, budget });
+    if (!warning) throw error;
+    console.log(warning);
+    return;
+  }
   if (result.skipped) {
     console.log(`issue #${issueNumber}: ${result.reason}, skipping`);
     return;

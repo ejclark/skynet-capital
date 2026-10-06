@@ -48,6 +48,19 @@ export function isOccSymbol(symbol: string): boolean {
   return OCC_PATTERN.test(symbol.trim().toUpperCase());
 }
 
+/** One option contract controls 100 shares, so every per-share broker price on an OCC symbol is
+ *  a per-contract price waiting to be scaled. One constant for every surface that values a book —
+ *  the member desk and the bots both — because when only one of two surfaces scaled, they
+ *  disagreed by 100x about the same trade (#4643: the bots' equity, breaker feed and
+ *  retrospectives were the surface that didn't). */
+export const OPTION_MULTIPLIER = 100;
+
+/** Shares one unit of `symbol` controls: 100 for an option contract, 1 for a share. Multiply any
+ *  per-share price (a quote, an average cost, a fill) by this before treating it as dollars. */
+export function contractMultiplier(symbol: string): number {
+  return isOccSymbol(symbol) ? OPTION_MULTIPLIER : 1;
+}
+
 /** `("MSFT","2026-09-18","put",420)` → `MSFT260918P00420000`. Throws on unbuildable input. */
 export function buildOccSymbol(parts: OptionContractParts): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(parts.expiration);
@@ -80,7 +93,17 @@ export function parseOccSymbol(symbol: string): OptionContractParts | undefined 
 export function humanizeOptionSymbol(symbol: string): string {
   const parts = parseOccSymbol(symbol);
   if (!parts) return symbol;
-  const [year, month, day] = parts.expiration.split("-");
+  return `${parts.underlying} ${occStrikeLabel(parts.strike)} ${parts.type.toUpperCase()} · ${occExpiryLabel(parts.expiration)}`;
+}
+
+/** `420` → `$420`, `132.5` → `$132.50` — a strike as the humanized contract prints it. */
+export function occStrikeLabel(strike: number): string {
+  return `$${Number.isInteger(strike) ? String(strike) : strike.toFixed(2)}`;
+}
+
+/** `2026-09-18` → `18 SEP 26` — an expiry as the humanized contract prints it. */
+export function occExpiryLabel(expiration: string): string {
+  const [year, month, day] = expiration.split("-");
   const months = [
     "JAN",
     "FEB",
@@ -96,6 +119,5 @@ export function humanizeOptionSymbol(symbol: string): string {
     "DEC",
   ];
   const monthName = months[Number(month) - 1] ?? month;
-  const strike = Number.isInteger(parts.strike) ? String(parts.strike) : parts.strike.toFixed(2);
-  return `${parts.underlying} $${strike} ${parts.type.toUpperCase()} · ${Number(day)} ${monthName} ${year?.slice(2)}`;
+  return `${Number(day)} ${monthName} ${year?.slice(2)}`;
 }

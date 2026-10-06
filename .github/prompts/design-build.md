@@ -7,10 +7,8 @@ looking — on the canvas.
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
 her mandate and voice; sign canvas-thread replies `— Moneypenny`.
 
-This file is the lane's instruction set. Like its siblings it is deliberately NOT in the workflow
-YAML: workflow files are Eric's carve-out and never auto-merge, so an envelope that lived there
-could only be tuned by spending his attention. Here it is ordinary repo content — and
-`.github/prompts/**` is in `envelope.json`, so a lane can never edit its own instructions.
+This file is the lane's instruction set. `.github/prompts/**` is in `envelope.json`, so a lane can
+never edit its own instructions.
 
 ## How you were started, and why it works this way
 
@@ -93,7 +91,7 @@ Exactly one, always visible, never silence.
 
 | Outcome | What you do | Costs Eric |
 | --- | --- | --- |
-| **Shipped** | Open the PR, arm auto-merge, reply on the canvas thread with the link | no |
+| **Shipped** | Open the PR (the `arm auto-merge` job arms it on green — never by hand), reply on the canvas thread with the link | no |
 | **Nothing marked** | Stop silently. A fire with no marked board is the normal case | no |
 | **Sliced** | Ship the first coherent slice; say what remains on the canvas thread; label `next-slice` | no |
 | **Needs Eric** | Comment one paragraph; label `needs-eric`; stop | **yes — only this** |
@@ -106,8 +104,9 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
 1. **Branch `design/<artboard-stem>`** off `origin/main`. The name is load-bearing twice: it is the
    dedupe key that stops a rebuild, and `envelope.json` keys the gate on it.
 2. **Land it the way this codebase actually builds screens** (`docs/ENGINEERING.md`):
-   `render<Name>Body(data, options)` in `src/observatory/<name>-view.ts`, under the 500-line cap →
-   rules in a `<name>-style.ts`, **never** into `dashboard-shell.ts`, which sits at its budget →
+   `render<Name>Body(data, options)` in `src/observatory/<name>-view.ts`, under the 300-code-line cap
+   (`scripts/arch-scan.mjs`) → rules in a `<name>-style.ts`, **never** into `dashboard-shell.ts`
+   (every view imports it) or the shared `shell-style.ts` (already over the cap) →
    `NavView` + `NAV_ICON` + `drawerLink` → a route arm in `dashboard-server.ts`.
 3. **Compose, don't reinvent.** Colours and type come from `src/ui/tokens.ts` — one definition, and
    a design that needs a value outside it is telling you something worth saying out loud rather than
@@ -117,7 +116,8 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
    budget is zero, so a new `src/` file without one fails the suite.
 5. **Verify by exit status, never tailed output** — a pipeline exits with `tail`'s status, so
    `cmd | tail && …` will not halt on failure. `npm run typecheck`, `npm run lint`, `npm test`.
-6. **A picture, from the real thing.** Add a `scripts/shoot-<name>.mjs` frame and put it in the PR's
+6. **A picture, from the real thing.** Add a `scripts/shoot/<name>.mjs` frame (and its `shoot:<name>`
+   script in `package.json`) and put it in the PR's
    `## The picture`. Screenshot diffing cannot verify `/login` — its canvas rain is random, so the
    same code shot twice differs in every frame; compare emitted HTML there instead.
 7. **Open the PR** via `scripts/ship.sh open` with a `--body-file`. Use `ship.sh`, not a GitHub MCP

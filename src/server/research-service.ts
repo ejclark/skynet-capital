@@ -19,9 +19,17 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked } from "marked";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import { allEvents, type MarketEvent } from "../domain/market-events.js";
+import { allEvents, everyEvent, type MarketEvent } from "../domain/market-events.js";
+import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { DECISION_HEADINGS, type EventCall, todayCallOf } from "./research-event-calls.js";
+import { detached, memoByCorpus } from "./research-corpus-memo.js";
+import {
+  DECISION_HEADINGS,
+  type EventCall,
+  type LedgerDigest,
+  ledgerDigestOf,
+  todayCallOf,
+} from "./research-event-calls.js";
 
 // Re-exported so existing importers of the call-sheet contract keep working unchanged. (An
 // `export ... from` re-export trips Biome's noBarrelFile even in a file full of real logic, so
@@ -88,12 +96,54 @@ function shelvedFiles(dir: string, slugPrefix: string): { slug: string; file: st
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+const docOf = (md: string, slug: string, name: string): ResearchDoc => ({
+  slug,
+  title: titleOf(md, name),
+  lastAssessed: lastAssessedOf(md),
+});
+
 function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
-  return shelvedFiles(dir, slugPrefix).map(({ slug, file }) => {
-    const md = readFileSync(file, "utf8");
-    const name = slug.slice(slugPrefix.length);
-    return { slug, title: titleOf(md, name), lastAssessed: lastAssessedOf(md) };
-  });
+  return shelvedFiles(dir, slugPrefix).map(({ slug, file }) =>
+    detached(docOf(readFileSync(file, "utf8"), slug, slug.slice(slugPrefix.length))),
+  );
+}
+
+/**
+ * Every event ledger, READ ONCE for its three readers: the shelf row, the agenda's call
+ * (`eventCalls`) and the call board's digest (`ledgerDigests`) (#4612 slice 3, #4615). Each used
+ * to re-read all ~700 ledgers, so the first calendar request after boot decoded the event corpus
+ * three times — ~170 MB of strings, and a +60 MB peak in a 512 MB container even with every row
+ * detached. One read, with no second clone of the finished shelf, measured +32-37 MB (from +100).
+ * Calls and digests are keyed by event id.
+ */
+export function ledgerShelf(root: string = RESEARCH_DIR()): {
+  readonly docs: readonly ResearchDoc[];
+  readonly calls: ReadonlyMap<string, EventCall>;
+  readonly digests: ReadonlyMap<string, LedgerDigest>;
+} {
+  return memoByCorpus(
+    "ledgerShelf",
+    root,
+    () => {
+      const docs: ResearchDoc[] = [];
+      const calls = new Map<string, EventCall>();
+      const digests = new Map<string, LedgerDigest>();
+      for (const { slug, file } of shelvedFiles(join(root, "events"), "events/")) {
+        const md = readFileSync(file, "utf8");
+        const id = slug.slice("events/".length);
+        const read = detached({
+          doc: docOf(md, slug, id),
+          call: todayCallOf(md),
+          digest: ledgerDigestOf(md),
+        });
+        docs.push(read.doc);
+        if (read.call) calls.set(id, read.call);
+        if (read.digest) digests.set(id, read.digest);
+      }
+      return { docs, calls, digests };
+    },
+    { detached: true },
+  );
 }
 
 /**
@@ -103,10 +153,15 @@ function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
  * already names the week, so it sorts and reads as one of them.
  */
 export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
-  return {
-    studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
-    ledgers: docsIn(join(root, "events"), "events/"),
-  };
+  return memoByCorpus(
+    "listResearch",
+    root,
+    () => ({
+      studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
+      ledgers: ledgerShelf(root).docs,
+    }),
+    { detached: true },
+  );
 }
 
 /** The forward-test register's slug: an index on disk, the whole register when served. */
@@ -274,16 +329,11 @@ function renderFolded(md: string): string {
 }
 
 /**
- * Event id → the call its ledger reached, for every ledger that states one. Built the same way
- * researchedEventIds builds the link set, so the agenda gets both from one directory read.
+ * Event id → the call its ledger reached, for every ledger that states one. Read in the same pass
+ * as the shelf listing (`ledgerShelf`), so the agenda costs no second read of the corpus.
  */
 export function eventCalls(root: string = RESEARCH_DIR()): ReadonlyMap<string, EventCall> {
-  const calls = new Map<string, EventCall>();
-  for (const doc of listResearch(root).ledgers) {
-    const found = todayCallOf(readFileSync(join(root, `${doc.slug}.md`), "utf8"));
-    if (found) calls.set(doc.slug.slice("events/".length), found);
-  }
-  return calls;
+  return ledgerShelf(root).calls;
 }
 
 /**
@@ -294,15 +344,20 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const shelf = listResearch(root);
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
-  const file = join(root, `${doc.slug}.md`);
-  const raw = readFileSync(file, "utf8");
-  const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
-  const { glanceMd, bodyMd } = extractGlance(md);
-  return {
-    ...doc,
-    html: rewriteDocLinks(renderFolded(bodyMd)),
-    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+  const render = (): RenderedDoc => {
+    const raw = readFileSync(join(root, `${doc.slug}.md`), "utf8");
+    const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
+    const { glanceMd, bodyMd } = extractGlance(md);
+    return {
+      ...doc,
+      html: rewriteDocLinks(renderFolded(bodyMd)),
+      glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+    };
   };
+  // The register composes ~620 fragments into a ~4.7 MB page — ~200 MB of transient heap per
+  // render, so a handful of members opening it together could OOM the dashboard. Render it once
+  // per corpus state; every other doc is one file and stays cheap to render on demand.
+  return doc.slug === REGISTER_SLUG ? memoByCorpus("register", root, render) : render();
 }
 
 /** Verbatim section extraction — an excerpt, never a summary (honesty: no lossy compression). */
@@ -327,8 +382,9 @@ export function shelfSymbols(
   for (const e of upcoming) for (const s of e.symbols) syms.add(s);
   for (const p of UPCOMING_PRINTS) syms.add(p.symbol);
   const ledgers = listResearch(root).ledgers;
+  const symbolsByEvent = eventSymbolsById();
   return [...syms]
-    .filter((s) => ledgers.some((d) => ledgerIsFor(d, s)))
+    .filter((s) => ledgers.some((d) => ledgerIsFor(d, s, symbolsByEvent)))
     .sort()
     .map((symbol) => {
       const next = upcoming.find((e) => e.symbols.includes(symbol));
@@ -336,9 +392,28 @@ export function shelfSymbols(
     });
 }
 
-/** Ledger ids are `<sym>-<date>-print` for prints; match by lowercase prefix. */
-const ledgerIsFor = (doc: ResearchDoc, symbol: string): boolean =>
-  doc.slug.startsWith(`events/${symbol.toLowerCase()}-`);
+/**
+ * Which symbols each event in the WHOLE corpus names, keyed by event id — the second test
+ * `ledgerCoversSymbol` needs. Built from `everyEvent()`, not the upcoming slice: a ledger is often
+ * for an event already past (Costco's Q4 print was 2026-09-24), and the shelf still counts it.
+ */
+const eventSymbolsById = (): ReadonlyMap<string, ReadonlySet<string>> =>
+  new Map(everyEvent().map((e) => [e.id, new Set(e.symbols.map((s) => s.toUpperCase()))] as const));
+
+/**
+ * Ledger ids are `<sym>-<date>-print` for prints — but three in the corpus are named for the
+ * COMPANY (`costco-…`, `lennar-…`, `kb-home-…`), so a prefix test alone dropped COST, LEN and KBH
+ * from the shelf while their ledgers sat on it (#3811). The rule itself lives in
+ * `domain/sector-coverage.ts` so the shelf and the coverage map read one definition of "researched".
+ */
+const ledgerIsFor = (
+  doc: ResearchDoc,
+  symbol: string,
+  symbolsByEvent: ReadonlyMap<string, ReadonlySet<string>> = eventSymbolsById(),
+): boolean => {
+  const id = doc.slug.startsWith("events/") ? doc.slug.slice("events/".length) : doc.slug;
+  return ledgerCoversSymbol(id, symbol, symbolsByEvent.get(id) ?? new Set());
+};
 
 /** A symbol as this module will accept one: the shape `sym:` parses on the board, upper-cased. */
 const SYMBOL_RE = /^[A-Z]{1,6}$/;
@@ -400,17 +475,21 @@ export function docsMentioning(
     .slice(0, MENTION_SCOPE_MAX);
   const found: Record<string, string[]> = Object.fromEntries(wanted.map((s) => [s, []]));
   if (wanted.length === 0) return found;
-  const shelved = [
-    ...shelvedFiles(root, ""),
-    ...shelvedFiles(join(root, "weeks"), "weeks/"),
-    ...shelvedFiles(join(root, "events"), "events/"),
-  ];
-  for (const { slug, file } of shelved) {
-    const tokens = tickerTokens(readFileSync(file, "utf8"));
+  for (const { slug, tokens } of tickerIndex(root)) {
     for (const sym of wanted) if (tokens.has(sym)) found[sym]?.push(slug);
   }
   return found;
 }
+
+/** Every shelved doc's ticker-shaped words, read once per corpus state (research-corpus-memo.ts). */
+const tickerIndex = (root: string): readonly { slug: string; tokens: ReadonlySet<string> }[] =>
+  memoByCorpus("tickerIndex", root, () =>
+    [
+      ...shelvedFiles(root, ""),
+      ...shelvedFiles(join(root, "weeks"), "weeks/"),
+      ...shelvedFiles(join(root, "events"), "events/"),
+    ].map(({ slug, file }) => ({ slug, tokens: tickerTokens(readFileSync(file, "utf8")) })),
+  );
 
 /**
  * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
@@ -428,7 +507,8 @@ export function symbolResearch(
   if (!SYMBOL_RE.test(sym)) return null;
   const shelf = listResearch(root);
   const events = upcoming.filter((e) => e.symbols.includes(sym));
-  const ledgers = shelf.ledgers.filter((d) => ledgerIsFor(d, sym)).reverse();
+  const symbolsByEvent = eventSymbolsById();
+  const ledgers = shelf.ledgers.filter((d) => ledgerIsFor(d, sym, symbolsByEvent)).reverse();
   const studies = shelf.studies.filter((d) =>
     namesSymbol(readFileSync(join(root, `${d.slug}.md`), "utf8"), sym),
   );

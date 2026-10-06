@@ -60,6 +60,7 @@
 @import "./calendar-head.css";
 @import "./vantage.css";
 @import "./events-section.css";
+@import "./route-error.css";
 @import "./settings.css";
 @import "./shell.css";
 @import "./status.css";
@@ -71,8 +72,11 @@
 @import "./unlock.css";
 @import "./views.css";
 @import "./working-orders.css";
+@import "./option-lifecycle.css";
 @import "./guidance.css";
+@import "./outlook.css";
 @import "./desk-alerts.css";
+@import "./watchlist.css";
 @import "./wire.css";
 /* after wire.css, not in alphabetical seat: its `.wire-filing` rules sit beside `.wire-trade`'s card
  * and read as a pair only when they cascade in that order (#784 slice 3). */

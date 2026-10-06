@@ -56,6 +56,23 @@ describe("planForceFlatten", () => {
     expect(plan.unflattened).toEqual(["EEM"]);
   });
 
+  it("REPORTS every option contract, long or short, instead of a share-shaped sell naming it", () => {
+    // A contract is never closed by a market sell of its symbol (the guards refuse that shape);
+    // until this plan learns limit closes, shorts and verticals first, it names them.
+    const portfolio = aPortfolio({
+      positions: [
+        aPosition({ symbol: "NVDA", quantity: 40 }),
+        aPosition({ symbol: "NVDA261113C00240000", quantity: 1 }),
+        aPosition({ symbol: "CRWV261106P00085000", quantity: -1 }),
+      ],
+    });
+
+    const plan = planForceFlatten(portfolio, REASON);
+
+    expect(plan.intents.map((i) => i.symbol)).toEqual(["NVDA"]);
+    expect(plan.unflattened).toEqual(["NVDA261113C00240000", "CRWV261106P00085000"]);
+  });
+
   it("carries the reason through, so the audit trail says why the book was closed", () => {
     const plan = planForceFlatten(
       aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 40 })] }),

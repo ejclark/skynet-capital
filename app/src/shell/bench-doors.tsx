@@ -3,10 +3,16 @@ import type { ReactElement } from "react";
 
 /**
  * THE DOCKED BENCH'S DOORS (#3807 slices 2a and 3b-2): docked at 1280 the section switch leaves the
- * page (frame.tsx → BENCH: every pane is on it), but two panes never dock on their own — Guidance
- * and the standalone Chain (`trade.tsx`'s `Bench` → `shows`), each opened by `?section=`. Folded,
- * the switch reaches both; docked, these two links do, riding the milestone strip's row. A link,
- * not a switch item: `?section=` docked names the pane to open and scroll to, it chooses nothing.
+ * page (frame.tsx → BENCH: every pane is on it), but three panes never dock on their own — Guidance,
+ * the standalone Chain, and Outlook (`trade.tsx`'s `Bench` → `shows`), each opened by `?section=`.
+ * Folded, the switch reaches all three; docked, these links do, riding the milestone strip's row. A
+ * link, not a switch item: `?section=` docked names the pane to open and scroll to, it chooses nothing.
+ *
+ * Outlook joined with #3407 slice 4 as an AUXILIARY entry into the bench, never its home — a door
+ * beside the others is exactly the weight that placement asks for. The Watchlist (#4332) joined on
+ * the same terms, and for one reason more: a bench is several tools for ONE symbol, and the
+ * watchlist is the thing a member picks that symbol WITH, so it belongs at the door rather than in
+ * the grid.
  *
  * The Chain's door closes dead end 8 (returning-trader j1 s6 in `e2e/journeys/`): docked Trade had
  * no entry to the standalone chain at all — the route listed it and nothing drew a way in.
@@ -27,6 +33,20 @@ export function BenchDoors(): ReactElement {
         search={(prev) => ({ ...prev, section: "chain" as const })}
       >
         Options chain
+      </Link>
+      <Link
+        className="trade-guidance-link"
+        to="/trade"
+        search={(prev) => ({ ...prev, section: "outlook" as const })}
+      >
+        Start from a view
+      </Link>
+      <Link
+        className="trade-guidance-link"
+        to="/trade"
+        search={(prev) => ({ ...prev, section: "watchlist" as const })}
+      >
+        Your watchlist
       </Link>
     </span>
   );

@@ -1,3 +1,4 @@
+import { cachedDateTimeFormat } from "../domain/intl-format.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
@@ -33,10 +34,11 @@ export function formatTimestamp(iso: string): string {
   return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
+/** The zone's short name right now ("EDT"); shared formatter, `domain/intl-format.ts`. */
 export function tzAbbrev(timezone?: string): string {
   if (!timezone) return "UTC";
   try {
-    const parts = new Intl.DateTimeFormat("en-US", {
+    const parts = cachedDateTimeFormat("en-US", {
       timeZone: timezone,
       timeZoneName: "short",
     }).formatToParts(new Date());
@@ -46,11 +48,12 @@ export function tzAbbrev(timezone?: string): string {
   }
 }
 
+/** An activity row's time in the viewer's zone; shared formatter, `domain/intl-format.ts`. */
 export function formatActivityTime(iso: string, timezone?: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   try {
-    return new Intl.DateTimeFormat("en-US", {
+    return cachedDateTimeFormat("en-US", {
       timeZone: timezone ?? "UTC",
       month: "short",
       day: "numeric",

@@ -1,4 +1,5 @@
 import type { OrderIntent, Portfolio } from "../domain/types.js";
+import { isOccSymbol } from "../trading/option-symbols.js";
 
 /**
  * The ladder's bottom rung, made actionable: the orders that close a book.
@@ -20,6 +21,12 @@ import type { OrderIntent, Portfolio } from "../domain/types.js";
  * negative position cannot arise from a guarded order in the first place. If one somehow exists,
  * the plan reports it by symbol rather than reporting a flat book that isn't flat.
  *
+ * An option contract is reported too, long or short: a share-shaped sell naming a contract is never
+ * a way to close one (the guards refuse it, `option-shape`), and closing an option book needs limit
+ * orders priced against a quote — shorts and verticals first (until a sold call closes, the guards
+ * hold back the shares under it: `uncovers-short-call`). Before anyone wires this plan, it must learn
+ * to do that; until then it says so by symbol.
+ *
  * The intents are ordinary sells and pass the guards untouched by design — the block rung refuses
  * risk-INCREASING orders only, so a force-flatten is never blocked by the ladder that ordered it.
  */
@@ -30,7 +37,9 @@ export function planForceFlatten(
   const intents: OrderIntent[] = [];
   const unflattened: string[] = [];
   for (const position of portfolio.positions) {
-    if (position.quantity > 0) {
+    if (position.quantity !== 0 && isOccSymbol(position.symbol)) {
+      unflattened.push(position.symbol);
+    } else if (position.quantity > 0) {
       intents.push({
         symbol: position.symbol,
         side: "sell",

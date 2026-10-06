@@ -16,7 +16,12 @@
   flex-direction: column;
   gap: 6px;
 }
-.wire-filing {
+/* `.wire-merge` (#784 slice 4) and `.wire-earn` (slice 5) share every rule rather than copying them:
+   each later kind is a row on the same list, so it is the same card at the same rhythm, differing
+   only in what it says. */
+.wire-filing,
+.wire-merge,
+.wire-earn {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -27,18 +32,41 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.wire-filing > a {
+.wire-filing > a,
+.wire-merge > a {
   font-weight: 600;
   /* one filing's long title must wrap inside the row, never widen the feed at phone width. */
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.wire-filing > a:hover {
+.wire-filing > a:hover,
+.wire-merge > a:hover {
   color: var(--accent);
 }
+/* Who opened the merged PR — a GitHub login, so it is set apart from the title at the meta weight
+   rather than beside it as a peer. A merge GitHub attributed to nobody simply omits this. */
+.wire-merge-by {
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+/* An earned milestone celebrates — the one row on the feed that does, because it is the behavior the
+   league rewards. A left accent rule only: decoration, never the signal (the row's word says
+   "Earned"), so it needs the non-text 3:1 step `--accent` already holds on `--surface`, and the text
+   beside it stays on the AA-checked text tokens. */
+.wire-earn {
+  border-left: 3px solid var(--accent);
+}
+.wire-earn-title {
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 /* The row's leading token, at `.wire-side`'s exact weight and size so the feed's left edge is one
-   column: a trade says BUY/SELL there, a filing says Bug/Feature/Idea. The icon rides WITH the word
-   and never alone (`docs/BRAND.md` → Accessibility: a signal is never one 12px glyph). */
+   column: a trade says BUY/SELL there, a filing says Bug/Feature/Idea, a merge says MERGED, an earn
+   says EARNED. The icon
+   rides WITH the word and never alone (`docs/BRAND.md` → Accessibility: a signal is never one 12px
+   glyph). */
 .wire-filing-kind {
   font-family: var(--mono);
   font-weight: 700;

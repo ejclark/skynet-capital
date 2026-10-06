@@ -13,11 +13,17 @@ export const sh = (cmd, args, opts = {}) =>
  * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
  * `HTTP 504: Gateway Timeout` from graphql killed a whole Moneypenny route run and dispatched a
  * repair session for it), a reset or a timeout — never a 4xx, which a retry only repeats.
+ *
+ * #4675: GraphQL's own internal error carries NO status text. `gh project item-edit` died on
+ * `GraphQL: Something went wrong while executing your query on <ts>. Please include `<id>` when
+ * reporting this issue.` — GitHub's server-side fault, one red among ~40 green runs of the same
+ * job that evening — and got exactly one attempt because nothing here said "5xx". Matched on
+ * GitHub's fixed wording, which no 4xx or validation error uses.
  */
-export const isTransientGhError = (text) =>
-  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(
-    String(text ?? ""),
-  );
+const TRANSIENT_GH_ERROR =
+  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
+
+export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 
 /**
  * Block this thread for `ms`. Exported because `withRetry` is not the only thing in this router

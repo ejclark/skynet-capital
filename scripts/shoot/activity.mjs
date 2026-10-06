@@ -1,4 +1,4 @@
-// Visual harness for /app/activity (#1740; rebuilt for #784 slice 3) — ONE feed of two kinds, with
+// Visual harness for /app/activity (#1740; rebuilt for #784 slice 3) — ONE feed of four kinds, with
 // booked P&L as a strip above it, from the REAL built shell over stub APIs. PHONE FIRST
 // (docs/PICTURES.md → "Trading surfaces shoot the phone frame first"): the 390px frames prove that
 // the ranking is on screen without a tap and that a filing and a fill read as sibling rows, and the
@@ -90,6 +90,79 @@ const wire = {
       at: "2026-09-30T16:20:00.000Z",
     },
   ],
+  // The third kind (#784 slice 4). Dated INTO the same run as the fills and filings above, not after
+  // it — a frame where the merges clump at the top would prove nothing about the interleaving, which
+  // is the whole claim of the slice.
+  developmentEnabled: true,
+  development: [
+    {
+      pullRequest: 4463,
+      icon: "🚀",
+      kindLabel: "Merged",
+      title: "feat(activity): one filterable feed with kind facets, booked P&L as a strip",
+      url: "https://github.com/ejclark/skynet-capital/pull/4463",
+      author: "claude",
+      meta: "#4463 · 10/1/2026",
+      at: "2026-10-01T19:48:00.000Z",
+    },
+    {
+      pullRequest: 4446,
+      icon: "🚀",
+      kindLabel: "Merged",
+      title: "feat(activity): feedback as a kind on the event bus",
+      url: "https://github.com/ejclark/skynet-capital/pull/4446",
+      author: "claude",
+      meta: "#4446 · 10/1/2026",
+      at: "2026-10-01T18:05:00.000Z",
+    },
+    {
+      pullRequest: 4441,
+      icon: "🚀",
+      kindLabel: "Merged",
+      title: "feat(activity): trade feed reads the event schema",
+      url: "https://github.com/ejclark/skynet-capital/pull/4441",
+      // No author: GitHub does not always name one, and the row has to read correctly without it.
+      meta: "#4441 · 9/30/2026",
+      at: "2026-09-30T17:40:00.000Z",
+    },
+  ],
+  // The fourth kind (#784 slice 5). Dated into the same run for the same reason, and one of them an
+  // outcome milestone with no points, so the frame shows the row reads right without them.
+  milestonesEnabled: true,
+  milestones: [
+    {
+      key: "eric:first-covered-call",
+      icon: "🏅",
+      kindLabel: "Earned",
+      who: "Eric",
+      whoId: "eric",
+      title: "Sell your first covered call",
+      points: 35,
+      meta: "+35 pts · 10/1/2026",
+      at: "2026-10-01T19:52:00.000Z",
+    },
+    {
+      key: "tony:first-realized-profit",
+      icon: "🏅",
+      kindLabel: "Earned",
+      who: "Tony",
+      whoId: "tony",
+      title: "Book your first profit",
+      meta: "10/1/2026",
+      at: "2026-10-01T19:31:00.000Z",
+    },
+    {
+      key: "tony:first-buy",
+      icon: "🏅",
+      kindLabel: "Earned",
+      who: "Tony",
+      whoId: "tony",
+      title: "Buy your first stock",
+      points: 25,
+      meta: "+25 pts · 10/1/2026",
+      at: "2026-10-01T17:10:00.000Z",
+    },
+  ],
 };
 
 const { page, origin, shoot, close } = await openShell({
@@ -109,6 +182,27 @@ await shoot("activity-feed-phone");
 await page.getByRole("button", { name: "Ideas", exact: true }).click();
 await page.getByRole("link", { name: /activity route still says/ }).waitFor();
 await shoot("activity-ideas-phone");
+
+// 2b. The third kind (#784 slice 4): the same chip row, one more chip, and the list narrows to merged
+//     pull requests. No section, no widget beside the feed — which is the claim the frame proves.
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
+await page.getByRole("button", { name: "Builds", exact: true }).click();
+await page.getByRole("link", { name: /one filterable feed/ }).waitFor();
+await shoot("activity-builds-phone");
+
+// 2c. The fourth kind (#784 slice 5): one more chip, and the list narrows to members' earned
+//     milestones — the one row on the feed that celebrates, with the word carrying the meaning.
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
+await page.getByRole("button", { name: "Milestones", exact: true }).click();
+await page.getByText("Book your first profit").waitFor();
+await shoot("activity-milestones-phone");
+
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
+await page.getByRole("button", { name: "Ideas", exact: true }).click();
+await page.getByRole("link", { name: /activity route still says/ }).waitFor();
 
 // 3. "Include shipped" is the pulse's old Active/All separation, now a token on the one query.
 await page.getByRole("button", { name: "Include shipped" }).click();

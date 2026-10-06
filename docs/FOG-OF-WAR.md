@@ -70,10 +70,10 @@ common and nobody had written down.
 |---|---|---|---|
 | `/trade` option ticket | option opens beyond the earned rung | the previous rung's fill | shipped (#469, #1461) |
 | R&D → Playbooks store (`/research?section=playbooks`) | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
-| `/trade` multi-leg builder | spread execution | rung 401 | planned (#1671) |
-| `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
-| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4) — interim: the rung is not built, and the fog says so |
-| `/u/:id/playbooks` subscribe | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
+| `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker since #3407 P3, #3422) |
+| `/trade` same-day expiry | any option order expiring today | rung 501 | shipped (#1671 slice 2 — the zero-DTE gate at option review/submit) |
+| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4); rung 501 exists since #1671 slice 1, so the fog names an earnable rung |
+| R&D → Playbooks "Subscribe as" (`/u/:id/playbooks` redirects here since 2026-09-23) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
 | wheels-off button (both surfaces above) | ~~one-click self-serve bypass of every fog~~ removed | n/a — wheels off only by the seeding rule or a coach's hand | shipped (#1671 decision 1) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.
@@ -90,6 +90,7 @@ is gated today for reasons that are *not* fog, so the noise comes off the emergi
 | `/trade` multi-leg builder · same-day expiry | open, inexecutable / ungated | fog behind 401 / 501 | #1671 |
 | `/u/:id/playbooks` subscribe (delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | filed as its own issue |
 | "say hello to Moneypenny" wall before the first stock buy | gated | **not a fog** — the unlock is engagement, not skill evidence (criterion 3); an onboarding gate, name it as one | leave; never call it fog |
+| R&D → Playbooks subscribe on a **human** account (2026-10-05) | refused: only bot accounts subscribe for now | **not a fog** — Q1 no: the runner reads subscriptions for bots only, so a human account's subscription moves no capital; and the unlock is an era (Eric's 2026-10-04 Era 1/Era 2 call), not skill evidence, which criterion 3 rules out. Labelled honestly instead: the door visible, named, disabled, never naming a rung; leaving stays open | #4610, built in #4649 |
 | comprehension checks (`unlock-gate.tsx`) | quiz claims a milestone | a quiz may *accompany* an earn, never substitute for the fill | leave |
 | wheels-off button | one-click bypass of every fog | the door, not a fog — removed | #1671 decision 1, settled |
 | `/research` week · month · quarter lenses | — | open — long-horizon awareness lowers risk (Q1 no) | #1704 |

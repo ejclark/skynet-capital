@@ -1,5 +1,7 @@
+import type { FetchMergedPullRequests } from "../server/development-activity.js";
 import type { FeedbackLogEntry, FeedbackLogStore } from "../server/feedback-log.js";
 import type { FeedbackStatus, FetchFeedbackStatuses } from "../server/feedback-status.js";
+import type { LadderProgressEntry, LadderProgressLogStore } from "../server/ladder-progress-log.js";
 import type { OrderAuditLog, OrderAuditRecord } from "../server/order-audit-log.js";
 import { createBootActivityEventBus } from "./activity-bus.js";
 import {
@@ -7,13 +9,17 @@ import {
   activityEventFromAuditRecord,
   activityEventFromFeedbackEntry,
   activityEventFromFeedbackStatus,
+  activityEventFromLadderEntry,
+  activityEventFromMergedPullRequest,
   activityEventFromTradeRecord,
+  type MergedPullRequestInfo,
 } from "./activity-event.js";
 import {
   type ActivityStore,
   createBootActivityStore,
   type TradeActivityRecord,
 } from "./activity-store.js";
+import { collapseDevelopmentEvents } from "./development-event-feed.js";
 import { latestStatusByIssue } from "./feedback-event-feed.js";
 
 /**
@@ -48,6 +54,7 @@ export function publishingActivityStore(
       }
     },
     list: (participantId) => store.list(participantId),
+    latest: (participantId) => store.latest(participantId),
   };
 }
 
@@ -82,6 +89,28 @@ export function publishingFeedbackLogStore(
       }
     },
     list: (opaqueMemberId) => store.list(opaqueMemberId),
+  };
+}
+
+/** A logged milestone, onto the bus — the milestone kind's write half (#784 slice 5), on the same
+ *  `record()` seam and under the same never-fail-the-caller rule as the three decorators above: a
+ *  lost bus event must never cost a member the earn the detector just proved. Only the ladder
+ *  detector's logged earns come this way; the fill-derived ladder is never stored, so it is never
+ *  published either (`activity-event.ts`, the milestones section). */
+export function publishingLadderProgressLog(
+  store: LadderProgressLogStore,
+  bus: ActivityEventBus,
+): LadderProgressLogStore {
+  return {
+    async record(entry: LadderProgressEntry): Promise<void> {
+      await store.record(entry);
+      try {
+        await bus.publish(activityEventFromLadderEntry(entry));
+      } catch (error) {
+        logBusFailure(`milestone ${entry.milestoneId} for ${entry.participantId}`, error);
+      }
+    },
+    list: (participantId) => store.list(participantId),
   };
 }
 
@@ -148,6 +177,67 @@ export function publishingFeedbackStatuses(
       .catch((error: unknown) => logBusFailure("feedback status", error));
     await queue;
     return statuses;
+  };
+}
+
+/**
+ * The merged-PR poll, demoted to an emitter — `publishingFeedbackStatuses`'s sibling for #784's third
+ * kind (slice 4), and the third time this file has wrapped a read rather than a write.
+ *
+ * Only a merge the bus has not already witnessed publishes. The memory is seeded from the bus itself,
+ * so a restart never re-announces history and the poll's rolling window can overlap itself freely —
+ * which is the point of a window rather than a cursor. A merge's event id is derived from the PR
+ * number alone, so even a double publish could not produce two rows; the memory exists to keep the
+ * bus from accumulating a duplicate line per poll, not to keep the feed correct.
+ *
+ * `fetch`'s own result is returned untouched, so the caller (`assembleWire`) sees exactly what GitHub
+ * said and can fold it into the same render.
+ */
+export function publishingMergedPullRequests(
+  fetchMerges: FetchMergedPullRequests,
+  bus: ActivityEventBus,
+): FetchMergedPullRequests {
+  // The PROMISE is memoized, not the resolved set, so concurrent page loads share one bus read
+  // rather than each seeding its own memory and clobbering the others' — `publishingFeedbackStatuses`
+  // learned this the same way.
+  let seeded: Promise<Set<number>> | undefined;
+  const memory = (): Promise<Set<number>> => {
+    seeded ??= bus
+      .list()
+      .then((events) => new Set(collapseDevelopmentEvents(events).map((m) => m.pullRequest)))
+      .catch((error: unknown) => {
+        // A failed seed must not become permanent: without this, every later poll would await the
+        // one rejected promise and this emitter would never publish again.
+        seeded = undefined;
+        throw error;
+      });
+    return seeded;
+  };
+
+  const publishNew = async (merges: readonly MergedPullRequestInfo[]): Promise<void> => {
+    const published = await memory();
+    // Oldest first, so a window holding several unseen merges lands on the bus in the order they
+    // actually happened rather than reversed.
+    for (const merge of [...merges].sort((a, b) => a.mergedAt.localeCompare(b.mergedAt))) {
+      if (published.has(merge.number)) continue;
+      // Remembered only after the publish succeeds — a failed write that updated the memory anyway
+      // would lose the merge for good, since the next poll would read as a no-op.
+      await bus.publish(activityEventFromMergedPullRequest(merge));
+      published.add(merge.number);
+    }
+  };
+
+  // One publish pass at a time, for the reason spelled out on `publishingFeedbackStatuses`: the
+  // memory updates only after a write resolves, so two concurrent passes would both see the same
+  // stale memory and both write the same merge.
+  let queue: Promise<void> = Promise.resolve();
+  return async () => {
+    const merges = await fetchMerges();
+    queue = queue
+      .then(() => publishNew(merges))
+      .catch((error: unknown) => logBusFailure("merged pull requests", error));
+    await queue;
+    return merges;
   };
 }
 

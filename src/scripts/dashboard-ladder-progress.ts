@@ -1,6 +1,11 @@
+import type { ActivityEventBus } from "../observatory/activity-event.js";
+import { publishingLadderProgressLog } from "../observatory/activity-publishing.js";
 import type { ActivityStore, TradeActivityRecord } from "../observatory/activity-store.js";
 import { detectAndRecordLadderProgress } from "../server/ladder-activity-detector.js";
-import { createLadderProgressLogStore } from "../server/ladder-progress-log.js";
+import {
+  createLadderProgressLogStore,
+  type LadderProgressEntry,
+} from "../server/ladder-progress-log.js";
 
 /**
  * Boot-time wiring for ladder milestone auto-completion: OTM expiry / first
@@ -16,14 +21,19 @@ export interface LadderProgressHandle {
   /** Sweep every given participant once — for activity written outside `onActivity` (the boot
    *  reconcile, and any pre-detector history it never fired). */
   readonly sweep: (participants: readonly { readonly id: string }[]) => void;
+  /** Every participant's logged earns — Activity's bridge for earns logged before the detector
+   *  published to the bus (#784 slice 5, `mergeLadderLogIntoEvents`). */
+  readonly readAll: () => Promise<readonly LadderProgressEntry[]>;
 }
 
-/** Wire the detector against the environment's ladder-progress store and a given activity ledger. */
+/** Wire the detector against the environment's ladder-progress store and a given activity ledger.
+ *  Every earn it logs is also published onto `bus` as a `milestone.earned` event (#784 slice 5). */
 export function wireLadderProgress(
   env: NodeJS.ProcessEnv,
   activity: ActivityStore,
+  bus: ActivityEventBus,
 ): LadderProgressHandle {
-  const progress = createLadderProgressLogStore(env);
+  const progress = publishingLadderProgressLog(createLadderProgressLogStore(env), bus);
   const detect = (participantId: string) => {
     void detectAndRecordLadderProgress(progress, activity, participantId).catch((e) =>
       console.error("[ladder-progress] detection failed:", e),
@@ -39,5 +49,6 @@ export function wireLadderProgress(
     sweep: (participants) => {
       for (const participant of participants) detect(participant.id);
     },
+    readAll: () => progress.list(),
   };
 }

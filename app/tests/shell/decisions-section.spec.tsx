@@ -129,6 +129,81 @@ describe("CycleRow", () => {
     ).toBeInTheDocument();
   });
 
+  it("reads an option order by its contract line, and a limit's unfilled ending in words", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "CRWV",
+              side: "sell",
+              quantity: 1,
+              action: "placed",
+              reason: "sell a put a month out",
+              contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+              resultStatus: "unfilled",
+              resultLabel: "limit not reached — canceled",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10")).toBeInTheDocument();
+    expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
+    expect(screen.queryByText("SELL 1 CRWV")).not.toBeInTheDocument();
+    expect(screen.queryByText("unfilled")).not.toBeInTheDocument();
+  });
+
+  it("keeps a part-filled order's 'may still fill' warning beside its fill", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "CRWV",
+              side: "sell",
+              quantity: 3,
+              action: "placed",
+              reason: "sell puts a month out",
+              fill: "1 @ $2.10",
+              resultStatus: "working",
+              resultLabel: "may still fill — cancel not confirmed",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("1 @ $2.10")).toBeInTheDocument();
+    expect(screen.getByText("may still fill — cancel not confirmed")).toBeInTheDocument();
+  });
+
+  it("names the check that refused an idea, beside the idea itself", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          status: "refused",
+          outcomes: [],
+          refusedIntents: [
+            {
+              symbol: "CRWV",
+              side: "sell",
+              quantity: 1,
+              reason: "sell a put a month out",
+              contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+              guardReason: "not a well-formed option order — never sent",
+            },
+            { symbol: "NVDA", side: "buy", quantity: 60, reason: "panic fade" },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10")).toBeInTheDocument();
+    expect(screen.getByText("not a well-formed option order — never sent")).toBeInTheDocument();
+    expect(screen.getByText("BUY 60 NVDA")).toBeInTheDocument();
+  });
+
   it("renders none of the new fields when the outcome carries none of them", () => {
     render(<CycleRow cycle={cycle()} />);
     open();

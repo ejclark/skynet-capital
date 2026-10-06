@@ -1,17 +1,22 @@
+import { CLIENT_ORDER_ID_PATTERN, optionOrderProblems } from "../domain/option-order.js";
 import {
   type MarketContext,
+  type OptionOrderIntent,
+  ORDER_STATUSES,
+  ORDER_TYPES,
   type OrderForecast,
   type OrderIntent,
   type OrderResult,
+  PLAYBOOK_MODES,
   PLAYBOOK_VERDICT_STATES,
-  type PlaybookMode,
   type PlaybookVerdict,
   type Quote,
-  type Side,
+  SIDES,
 } from "../domain/types.js";
 import { GUARD_REFUSAL_REASONS, type GuardRefusal } from "../engine/guards.js";
-import { isRecord } from "../storage/parse-guards.js";
+import { boundedString, isRecord } from "../storage/parse-guards.js";
 import type { IntentOutcome } from "./decision-record.js";
+import { parseLegFills, parseOptionOrderIntent } from "./decision-wire-options.js";
 
 /**
  * Pure, total, defensive parsers for the parts of a `DecisionRecord` — split out of
@@ -20,17 +25,18 @@ import type { IntentOutcome } from "./decision-record.js";
  * `parseInsightRecord`'s house style (`insight-record.ts`) for input crossing the bots↔app bridge.
  */
 
-/** Generous but bounded — a reason/expectation is prose, never a blob. Mirrors the bridge's own
- *  body-size ceiling (`insights-listener.ts`'s `MAX_BODY_BYTES`) at the per-field level. */
-const MAX_STRING_LENGTH = 2048;
-const SIDES: readonly Side[] = ["buy", "sell"];
-const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
-const ORDER_STATUSES = ["filled", "rejected"] as const;
-
-function boundedString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 && value.length <= MAX_STRING_LENGTH
-    ? value
-    : undefined;
+/** The option half of an intent: a malformed `option` fails the whole intent (never a silent share
+ *  order); a malformed `clientOrderId` is optional, so it is dropped rather than rejecting. */
+function parseOptionFields(
+  value: Record<string, unknown>,
+): { readonly option?: OptionOrderIntent; readonly clientOrderId?: string } | undefined {
+  const option = value.option === undefined ? undefined : parseOptionOrderIntent(value.option);
+  if (value.option !== undefined && !option) return undefined;
+  const clientOrderId =
+    typeof value.clientOrderId === "string" && CLIENT_ORDER_ID_PATTERN.test(value.clientOrderId)
+      ? value.clientOrderId
+      : undefined;
+  return { ...(option ? { option } : {}), ...(clientOrderId ? { clientOrderId } : {}) };
 }
 
 function parseForecast(value: unknown): OrderForecast | undefined {
@@ -53,23 +59,32 @@ export function parseOrderIntent(value: unknown): OrderIntent | undefined {
   const side = SIDES.find((s) => s === value.side);
   const reason = boundedString(value.reason);
   if (!(symbol && side) || typeof value.quantity !== "number" || !reason) return undefined;
+  const optionFields = parseOptionFields(value);
+  if (!optionFields) return undefined;
+  const type = ORDER_TYPES.find((t) => t === value.type) ?? "market";
   const strategy = boundedString(value.strategy);
   const expectation = boundedString(value.expectation);
   const forecast = parseForecast(value.forecast);
   const playbookId = boundedString(value.playbookId);
   const playbookMode = PLAYBOOK_MODES.find((m) => m === value.playbookMode);
-  return {
+  const intent: OrderIntent = {
     symbol,
     side,
     quantity: value.quantity,
-    type: "market",
+    type,
     reason,
     ...(strategy ? { strategy } : {}),
     ...(expectation ? { expectation } : {}),
     ...(forecast ? { forecast } : {}),
     ...(playbookId ? { playbookId } : {}),
     ...(playbookMode ? { playbookMode } : {}),
+    ...optionFields,
   };
+  // The parser accepts exactly what the writer can emit: a well-formed option order, or a share
+  // order at market. A bare contract symbol at market still parses — the guards refuse it
+  // (`option-shape`) and the record must carry that refusal.
+  if (intent.option) return optionOrderProblems(intent).length > 0 ? undefined : intent;
+  return type === "limit" ? undefined : intent;
 }
 
 function parseOrderResult(value: unknown, intent: OrderIntent): OrderResult | undefined {
@@ -78,6 +93,7 @@ function parseOrderResult(value: unknown, intent: OrderIntent): OrderResult | un
   if (!status) return undefined;
   const reason = boundedString(value.reason);
   const orderId = boundedString(value.orderId);
+  const legFills = parseLegFills(value.legFills);
   return {
     intent,
     status,
@@ -85,6 +101,7 @@ function parseOrderResult(value: unknown, intent: OrderIntent): OrderResult | un
     ...(typeof value.filledPrice === "number" ? { filledPrice: value.filledPrice } : {}),
     ...(reason ? { reason } : {}),
     ...(orderId ? { orderId } : {}),
+    ...(legFills ? { legFills } : {}),
   };
 }
 

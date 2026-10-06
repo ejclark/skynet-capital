@@ -8,6 +8,7 @@ import {
   openDecisionDb,
 } from "../../src/autonomous/decision-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
+import { parseDecisionRecord } from "../../src/autonomous/decision-wire.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 
 const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
@@ -195,6 +196,30 @@ describe("DecisionDb", () => {
       { intent: expect.objectContaining({ symbol: "NVDA" }), reason: "s2-print" },
     ]);
     expect(row?.guardedIntents[0]).toMatchObject({ symbol: "MSFT", quantity: 20 });
+  });
+
+  it("keeps a refusal's reason on a record that crossed the wire — distinct objects, not one reference", () => {
+    const refused = intent({ symbol: "NVDA", side: "buy", quantity: 60 });
+    const approved = intent({ symbol: "MSFT", side: "sell", quantity: 30 });
+    const rec: DecisionRecord = {
+      at: 1,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [refused, approved],
+      guardedIntents: [approved],
+      outcomes: [{ intent: approved, action: "observed" }],
+      refusals: [{ intent: refused, reason: "s2-print" }],
+    };
+    const replicated = parseDecisionRecord(JSON.parse(JSON.stringify(rec)));
+    if (!replicated) throw new Error("the record must parse");
+
+    db.record(replicated);
+
+    const [row] = db.listByPersona("sauron");
+    expect(row?.refusals).toEqual([
+      { intent: expect.objectContaining({ symbol: "NVDA", quantity: 60 }), reason: "s2-print" },
+    ]);
+    expect(row?.outcomes.map((o) => o.intent.symbol)).toEqual(["MSFT"]);
   });
 
   it("captures a halted cycle with its market context, even though nothing was decided", () => {

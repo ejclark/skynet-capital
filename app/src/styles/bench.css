@@ -35,6 +35,8 @@
 .bench-docked > .bench-orders,
 .bench-docked > .bench-chain,
 .bench-docked > .bench-guidance,
+.bench-docked > .bench-outlook,
+.bench-docked > .bench-watchlist,
 .bench-docked > .bench-ticket-full {
   grid-column: 1 / -1;
 }

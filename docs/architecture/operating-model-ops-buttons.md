@@ -2,7 +2,7 @@
 
 **Technology:** GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environment (required reviewers)
 
-**Responsibility:** Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-beta-forcing, set-hardcore), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)
+**Responsibility:** Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-beta-forcing, set-hardcore, set-cond-scout-universe), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)
 
 **Code roots:** `.github/workflows/autonomy-ops.yml` · `.github/workflows/fly-logs.yml` · `.github/workflows/companion-eval.yml`
 

@@ -10,6 +10,7 @@ import {
   type PlaybookStoreEntry,
   playbookStoreCatalog,
 } from "../discovery/playbook-store.js";
+import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
@@ -18,7 +19,8 @@ import type { RoundTrip } from "../trading/round-trips.js";
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
   readonly subscription?: {
     readonly mode: PlaybookSubscription["mode"];
-    readonly capitalAllocated: number;
+    /** Absent = uncapped (no subscription budget — #4535's seeded house roster). */
+    readonly capitalAllocated?: number;
     readonly enabled: boolean;
     /** Symbol-targeting filter (#885) — absent means unrestricted. */
     readonly symbols?: readonly string[];
@@ -32,7 +34,8 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   /** Sum of capitalAllocated across this account's ENABLED subscriptions (Eric, #885: "the
-   *  summation of money being managed under playbooks could be an interesting metric"). */
+   *  summation of money being managed under playbooks could be an interesting metric"). An
+   *  uncapped subscription has no allocation to add, so it contributes nothing. */
   readonly capitalUnderManagement: number;
   /** Whether the viewer may subscribe at all — absent when nobody's account is open here. */
   readonly canManage: boolean;
@@ -43,6 +46,13 @@ export interface PlaybookStoreView {
    * Never gates unsubscribe, pause, or resume — an exit is not a lesson.
    */
   readonly delegation: DelegationGateView;
+  /**
+   * Only bot accounts subscribe for now (#4610): locked when the selected account is a human
+   * account the viewer owns. Always present, like `delegation`, so the client never invents the
+   * copy. Checked before the delegation fog, the server's own order. Never gates unsubscribe,
+   * pause or resume.
+   */
+  readonly botsOnly: BotsOnlyGateView;
 }
 
 /** "23% whipsaw (12 round trips)" once measured; "not yet measured (2/5 round trips)" below the
@@ -62,6 +72,8 @@ export function playbookStoreView(
    *  to none: a caller not yet passing them gets the bare catalog metrics, exactly as before this
    *  parameter existed. */
   roundTrips: readonly RoundTrip[] = [],
+  /** The selected account is a human account the viewer owns (#4610). Defaults to open. */
+  humanAccount = false,
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -77,7 +89,9 @@ export function playbookStoreView(
         ? {
             subscription: {
               mode: sub.mode,
-              capitalAllocated: sub.capitalAllocated,
+              ...(sub.capitalAllocated !== undefined
+                ? { capitalAllocated: sub.capitalAllocated }
+                : {}),
               enabled: sub.enabled,
               ...(sub.symbols ? { symbols: sub.symbols } : {}),
               ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
@@ -88,11 +102,12 @@ export function playbookStoreView(
   });
   const capitalUnderManagement = (subscriptions ?? [])
     .filter((s) => s.enabled)
-    .reduce((sum, s) => sum + s.capitalAllocated, 0);
+    .reduce((sum, s) => sum + (s.capitalAllocated ?? 0), 0);
   return {
     cards,
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),
+    botsOnly: botsOnlyGateView(humanAccount),
   };
 }

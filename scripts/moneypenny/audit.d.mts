@@ -101,5 +101,14 @@ export function readyPlanCandidate(
   hasClaim?: boolean,
   nowMs?: number,
 ): ReadyPlanCandidate | null;
+/** The open issues carrying `in-progress`, each with whole hours since `updatedAt` (#3960). */
+export function staleInProgressFrom(
+  issues?: { title: string; number: number; updatedAt: string; labels?: { name: string }[] }[],
+  nowMs?: number,
+): InProgressIssue[];
+/** The open-issue list ceiling `gatherAuditDeps` reads up to. */
+export const OPEN_ISSUE_LIMIT: number;
+/** Pass a `gh … list --limit` result through, or throw when it came back at the limit (may be truncated). */
+export function untruncated<T>(rows: T[] | undefined, limit: number, label: string): T[];
 /** Read the real audit dependencies over `gh` — network, not fixture-drivable. */
 export function gatherAuditDeps(nowMs: number): AuditDeps;

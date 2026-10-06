@@ -33,6 +33,20 @@ export type OutlookDirection = "bullish" | "bearish" | "neutral";
 /** How hard the view is held. Read as distance when directional, as tightness when neutral. */
 export type OutlookMagnitude = "slight" | "moderate" | "strong";
 
+/**
+ * THE VOCABULARY A VIEW CAN BE STATED IN, as values rather than types — ONE source for the pane
+ * that offers the choices and the route that accepts them (#3407 slice 4). A pane that offered a
+ * horizon the route refuses answers every ask with "couldn't reach the chain", which is a lie about
+ * the broker; keeping the two lists in one place is what stops that from being possible.
+ *
+ * The horizons are a product choice, not an engine limit: `structure-candidates.ts` will mark any
+ * horizon the chain carries an expiry for, and the route sizes its chain assembly from whichever of
+ * these is asked (see `pagesForHorizon`). Adding one here is all that is needed to offer it.
+ */
+export const OUTLOOK_DIRECTIONS: readonly OutlookDirection[] = ["bullish", "bearish", "neutral"];
+export const OUTLOOK_MAGNITUDES: readonly OutlookMagnitude[] = ["slight", "moderate", "strong"];
+export const OUTLOOK_HORIZON_DAYS: readonly number[] = [7, 14, 30, 45];
+
 /** A stated view on one underlying over one horizon. Nothing here has been ordered or filled. */
 export interface Outlook {
   /** The UNDERLYING's ticker (e.g. "NVDA") — never an OCC option symbol. */

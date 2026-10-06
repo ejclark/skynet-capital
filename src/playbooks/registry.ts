@@ -1,14 +1,19 @@
 /**
  * The house playbook roster — every play that survived the red team, encoded with its own
  * window shape and its evidence citation. Enablement is DARK by default: nothing here runs
- * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative"), and flipping
- * that env in production goes through the approval-gated autonomy-ops workflow — live
- * enablement stays Eric's single credentialed step (plan → autonomy envelope).
+ * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative") or an account
+ * subscribes to it in the Playbook Store. Who may change what an account runs is ownership and
+ * nothing else (Eric, #928 — `envelope.json` `$openOnPurpose`): an owner subscribes their own
+ * account, nobody changes an account that is not theirs, and there is no approval step on top.
+ * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
+ * subscriptions (plan #4535).
  */
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
+import { CRWV_WHEEL } from "./crwv-wheel.js";
+import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
 import {
   type EnabledPlaybook,
   type Playbook,
@@ -227,7 +232,19 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
-const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON];
+/** The option plays live in their own files (`crwv-wheel.ts`, `nvda-call-spread.ts`); re-exported
+ *  here because the Store catalog and the roll call read the house roster off what this module
+ *  exports. Neither is on any default roster: an owner subscribes their own bot to one in the Store. */
+export { CRWV_WHEEL, NVDA_CALL_SPREAD };
+
+const ROSTER: readonly Playbook[] = [
+  S1_NVDA,
+  G1_GOOG,
+  TACO_DJT,
+  HC_SAURON,
+  CRWV_WHEEL,
+  NVDA_CALL_SPREAD,
+];
 
 /**
  * WHY A REGISTERED PLAYBOOK CANNOT FIRE (#4450 slice 1). Arming one of these changes nothing a

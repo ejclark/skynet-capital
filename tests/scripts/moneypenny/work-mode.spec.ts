@@ -25,10 +25,38 @@ const CONFIG: WorkModeConfig = {
   trackingIssue: 4153,
   labelPrefix: "work-mode:",
   positions: {
-    halt: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 },
-    conserve: { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1, grindWidth: 5 },
-    normal: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
-    surge: { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8, grindWidth: 200 },
+    halt: {
+      inFlightCap: 0,
+      researchPerTick: 0,
+      governorDispatches: 0,
+      grindWidth: 0,
+      continuationsPerDay: 0,
+      startedPlanCap: 0,
+    },
+    conserve: {
+      inFlightCap: 1,
+      researchPerTick: 2,
+      governorDispatches: 1,
+      grindWidth: 5,
+      continuationsPerDay: 1,
+      startedPlanCap: 2,
+    },
+    normal: {
+      inFlightCap: 3,
+      researchPerTick: 6,
+      governorDispatches: 4,
+      grindWidth: 200,
+      continuationsPerDay: 3,
+      startedPlanCap: 4,
+    },
+    surge: {
+      inFlightCap: 6,
+      researchPerTick: 12,
+      governorDispatches: 8,
+      grindWidth: 200,
+      continuationsPerDay: 6,
+      startedPlanCap: 8,
+    },
   },
 };
 
@@ -55,15 +83,52 @@ describe("reading the dial — one label is one position", () => {
     expect(mode).toEqual({
       position: "normal",
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+      caps: {
+        inFlightCap: 3,
+        researchPerTick: 6,
+        governorDispatches: 4,
+        grindWidth: 200,
+        continuationsPerDay: 3,
+        startedPlanCap: 4,
+      },
       reason: "set to normal",
     });
   });
 
   it.each([
-    ["halt", { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 }],
-    ["conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1, grindWidth: 5 }],
-    ["surge", { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8, grindWidth: 200 }],
+    [
+      "halt",
+      {
+        inFlightCap: 0,
+        researchPerTick: 0,
+        governorDispatches: 0,
+        grindWidth: 0,
+        continuationsPerDay: 0,
+        startedPlanCap: 0,
+      },
+    ],
+    [
+      "conserve",
+      {
+        inFlightCap: 1,
+        researchPerTick: 2,
+        governorDispatches: 1,
+        grindWidth: 5,
+        continuationsPerDay: 1,
+        startedPlanCap: 2,
+      },
+    ],
+    [
+      "surge",
+      {
+        inFlightCap: 6,
+        researchPerTick: 12,
+        governorDispatches: 8,
+        grindWidth: 200,
+        continuationsPerDay: 6,
+        startedPlanCap: 8,
+      },
+    ],
   ])("reads %s with its caps while its expiry is ahead", (position, caps) => {
     const mode = resolve([label(position)], [until("2026-10-06")]);
     expect(mode.position).toBe(position);
@@ -99,6 +164,8 @@ describe("reading the dial — anything but exactly one known label fails closed
       researchPerTick: 2,
       governorDispatches: 1,
       grindWidth: 5,
+      continuationsPerDay: 1,
+      startedPlanCap: 2,
     });
     expect(mode.until).toBeNull();
     expect(mode.warning).toMatch(/conserve/);
@@ -115,6 +182,8 @@ describe("expiry — non-normal positions end on their until date", () => {
       researchPerTick: 6,
       governorDispatches: 4,
       grindWidth: 200,
+      continuationsPerDay: 3,
+      startedPlanCap: 4,
     });
   });
 
@@ -173,6 +242,8 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
       researchPerTick: 0,
       governorDispatches: 0,
       grindWidth: 0,
+      continuationsPerDay: 0,
+      startedPlanCap: 0,
     });
     expect(mode.warning).toBeUndefined();
   });
@@ -222,6 +293,8 @@ describe("readWorkMode — one gh call, never a throw on a bad read", () => {
       researchPerTick: 2,
       governorDispatches: 1,
       grindWidth: 5,
+      continuationsPerDay: 1,
+      startedPlanCap: 2,
     });
     expect(mode.warning).toMatch(/could not read issue #4153/);
   });

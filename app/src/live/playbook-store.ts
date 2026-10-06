@@ -36,14 +36,21 @@ export interface PlaybookStoreCardView {
   /** Enabled subscriptions to this playbook across every account (#3970) — a bare count, never
    *  who. Absent when the deployment has no subscription store wired. */
   readonly subscribers?: number;
-  readonly subscription?: {
-    readonly mode: PlaybookMode;
-    readonly capitalAllocated: number;
-    readonly enabled: boolean;
-    /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
-     *  #3527 slice 3) — absent means off, the flat-budget default. */
-    readonly compoundAllocation?: boolean;
-  };
+  readonly subscription?: SubscriptionView;
+}
+
+/** One account's own subscription to one playbook, as the server sends it to its owner. */
+export interface SubscriptionView {
+  readonly mode: PlaybookMode;
+  /** Absent = uncapped: no subscription budget (#4535's seeded house roster). */
+  readonly capitalAllocated?: number;
+  readonly enabled: boolean;
+  /** The symbols filter (#885): new entries only in these, never outside the card's basket.
+   *  Absent = the whole basket. */
+  readonly symbols?: readonly string[];
+  /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
+   *  #3527 slice 3) — absent means off, the flat-budget default. */
+  readonly compoundAllocation?: boolean;
 }
 
 /** The delegation fog (#1707) — mirrors `DelegationGateView`. The server owns the copy. */
@@ -54,11 +61,21 @@ export interface DelegationGateView {
   readonly note: string;
 }
 
+/** Only bot accounts subscribe for now (#4610) — mirrors `BotsOnlyGateView`. The server owns the
+ *  copy and the call; `locked` is true on a human account the viewer owns. */
+export interface BotsOnlyGateView {
+  readonly locked: boolean;
+  readonly note: string;
+}
+
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   readonly capitalUnderManagement: number;
   readonly canManage: boolean;
   readonly delegation: DelegationGateView;
+  /** Optional on the wire's client side only so a page loaded before #4610 shipped still renders:
+   *  absent reads as open, the server's refusal being the real gate. */
+  readonly botsOnly?: BotsOnlyGateView;
 }
 
 export interface SubscriptionWriteResult {
@@ -79,8 +96,20 @@ export const subscribeRequest = (input: {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly capitalAllocated: number;
+  readonly symbols?: readonly string[];
   readonly compoundAllocation?: boolean;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/subscribe", input);
+
+/** Re-tune an existing subscription without touching whether it runs (#4649). Every field is the
+ *  whole new value: `capitalAllocated: null` is uncapped, `symbols: []` is the whole basket. */
+export const configureRequest = (input: {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly mode: PlaybookMode;
+  readonly capitalAllocated: number | null;
+  readonly symbols: readonly string[];
+  readonly compoundAllocation: boolean;
+}): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/configure", input);
 
 export const unsubscribeRequest = (input: {
   readonly id: string;

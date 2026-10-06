@@ -122,8 +122,9 @@ as `src/playbooks/beta-scout.ts` (module name only — architecturally it is clo
   playbook's evidence-backed track record.
 - **Exit:** flattened after one trading day, unconditionally — never carried or managed like a real
   position.
-- **Enablement:** dark by default (`SKYNET_BETA_FORCING` unset = 0). Flips live via the
-  approval-gated `autonomy-ops.yml` `set-beta-forcing` action, same pattern as `set-playbooks`.
+- **Enablement:** dark by default (`SKYNET_BETA_FORCING` unset = 0). Today it is set through the
+  `autonomy-ops.yml` `set-beta-forcing` action, same pattern as `set-playbooks`; plan #4535 moves
+  it into the bot account's own settings, where the only gate is ownership (#928) — no approval step.
 
 **Open fork (not yet answered):** should the dashboard visually distinguish forced beta-scout picks
 from evidence-gated playbook fills? Proposed default: yes, as a fast-follow once the mechanism has

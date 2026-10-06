@@ -18,7 +18,23 @@ export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
 // Board view: one column per Status, WIP limits set per-column in the Projects UI itself (native
 // feature, no code). Order matters — it's the column order gh CLI creates the option list in.
-export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+//
+// #4393 slice 4 (criteria 5 and 9): "In Progress" is renamed **Building now** — the column means a
+// session is building it this minute, and "in progress" also described every plan half-done and
+// idle for days — and those idle plans get their own column, **Waiting**, so started-but-idle work
+// stops hiding in Ready or Backlog. Stop starting, start finishing: the admission gate counts the
+// Waiting column against `startedPlanCap` (admission.mjs).
+export const STATUS_OPTIONS = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
+
+/** The building column's name, and the one it had before #4393 slice 4. */
+export const BUILDING = "Building now";
+export const WAITING = "Waiting";
+
+// Renamed options, old name → new. `statusFieldUpdate` carries the OLD option's id onto the new
+// name, so GitHub renames the column in place — every card in it stays put and Eric's WIP limit on
+// it (set in the UI, keyed to the option) survives. Without the id, `updateProjectV2Field` replaces
+// the option list wholesale and every card loses its Status until the sweep rewrites it.
+export const RENAMED_STATUS_OPTIONS = { "In Progress": BUILDING };
 
 // Every new GitHub Project ships with its own default Status field (Todo/In Progress/Done) — the
 // setup script's "field already exists, skip" check meant our 5-value set was never actually
@@ -32,14 +48,19 @@ export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Do
 export const STATUS_FIELD_OPTIONS = [
   { name: "Backlog", color: "GRAY", description: "" },
   { name: "Ready", color: "BLUE", description: "" },
-  { name: "In Progress", color: "YELLOW", description: "" },
+  { name: BUILDING, color: "YELLOW", description: "A session is building it right now" },
+  {
+    name: WAITING,
+    color: "ORANGE",
+    description: "A plan started and idle — finish before starting",
+  },
   { name: "Blocked", color: "RED", description: "" },
   { name: "Done", color: "GREEN", description: "" },
 ];
 
 /**
  * Does an existing Status field (its current option names, in whatever order the API returned)
- * already carry our 5-value set? Order-insensitive — GitHub may not preserve the order we sent.
+ * already carry our option set? Order-insensitive — GitHub may not preserve the order we sent.
  * Pure so the setup script's "skip if already correct" decision is unit-tested without a network
  * call.
  */
@@ -47,6 +68,70 @@ export function statusOptionsMatch(currentNames = []) {
   const want = new Set(STATUS_OPTIONS);
   const have = new Set(currentNames);
   return want.size === have.size && [...want].every((n) => have.has(n));
+}
+
+/**
+ * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field carries
+ * `STATUS_FIELD_OPTIONS`, or null when nothing needs writing. `current` is the field's options as
+ * gh's `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by
+ * its old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
+ * instead of replacing the list (which would strip every card's Status). Pure; specced.
+ *
+ * `keepExtras` is the reconcile sweep's mode: it runs on every push, unattended, so it only ever
+ * ADDS and RENAMES. A column someone made by hand in the Projects UI is kept (with its id; gh does
+ * not report colors, so it is re-sent GRAY) and is never a reason to write. Removing an option stays
+ * projects-setup.mjs's job — the default mode, an exact match, run when someone means it.
+ */
+export function statusFieldUpdate(current = [], { keepExtras = false } = {}) {
+  const names = current.map((o) => o?.name);
+  const missing = STATUS_OPTIONS.some((n) => !names.includes(n));
+  if (keepExtras ? !missing : statusOptionsMatch(names)) return null;
+  const idOf = new Map();
+  for (const o of current) {
+    if (!(o?.id && o?.name)) continue;
+    const name = RENAMED_STATUS_OPTIONS[o.name] ?? o.name;
+    if (!idOf.has(name) || o.name === name) idOf.set(name, o.id);
+  }
+  const wanted = STATUS_FIELD_OPTIONS.map((o) =>
+    idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o,
+  );
+  if (!keepExtras) return wanted;
+  const used = new Set(wanted.map((o) => o.id).filter(Boolean));
+  const extras = current
+    .filter((o) => o?.id && o?.name && !used.has(o.id))
+    .map((o) => ({ id: o.id, name: o.name, color: "GRAY", description: "" }));
+  return [...wanted, ...extras];
+}
+
+// ── started plans (#4393 slice 4, criteria 5–6) ─────────────────────────────────────────────────
+
+/** `{total, completed}` sub-issue counts from a REST row or webhook payload; zeros when absent. */
+export function subIssueCounts(issue) {
+  const s = issue?.sub_issues_summary ?? issue?.subIssues ?? {};
+  return { total: Number(s.total) || 0, completed: Number(s.completed) || 0 };
+}
+
+/**
+ * HAS THIS PLAN STARTED? Criterion 6's "a plan with zero closed sub-issues" is the fresh plan; one
+ * with a closed sub-issue has started. `next-slice` counts as started too — the plan lane labels a
+ * plan it shipped a slice of and left unfinished, and most plans here slice by PR and a state block,
+ * not by sub-issue (of 85 open plans on 2026-10-05, 66 had no sub-issues; #4393 itself had three
+ * slices merged and zero sub-issues). Reading sub-issues alone would call #4393 fresh and refuse
+ * its own slice 5 the day this landed.
+ */
+export function isStartedPlan({ labels = [], subIssues = {} } = {}) {
+  if (!labels.includes("plan")) return false;
+  return (Number(subIssues.completed) || 0) >= 1 || labels.includes("next-slice");
+}
+
+/**
+ * Started, and with work left: an open sub-issue, or `next-slice` (the lane's "more remains").
+ * A plan whose sub-issues are all closed and that carries no `next-slice` is finished-but-open —
+ * slice 5's auto-close, never the Waiting column.
+ */
+function hasWorkLeft({ labels = [], subIssues = {} } = {}) {
+  const open = (Number(subIssues.total) || 0) - (Number(subIssues.completed) || 0);
+  return open > 0 || labels.includes("next-slice");
 }
 
 // Backlog view: table sorted by Priority. Deliberately not derived from anything below — priority
@@ -63,6 +148,42 @@ export const FIELDS = [
   { name: "Target date", dataType: "DATE" },
 ];
 
+// THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
+// the 2026-10-03 sunset review (docs/COACHES.md). The plan's hypothesis was that GitHub Projects'
+// built-in workflows ("Item closed → Done", "Item reopened", "Auto-add to project") do part of this
+// natively, so the matching code here could be deleted. Three findings killed it; the next session
+// that has the same idea should read them before writing any:
+//
+//   1. NO LANE CAN TURN ONE ON. GitHub's GraphQL schema exposes `ProjectV2.workflows` read-only
+//      (`name`, `number`, `enabled`) and exactly one mutation, `deleteProjectV2Workflow` — no
+//      create, no update, no enable (introspected live 2026-10-05 against the real API). Enabling
+//      one is a click in the Projects UI: not in this repo, not covered by a spec, not readable from
+//      CI without Eric's PROJECTS_PAT. A board rule nothing here can set or assert is worse than a
+//      pure function, whatever it saves.
+//   2. THERE IS NOTHING LEFT TO SUBTRACT. projects-reconcile.mjs (#4393) landed after that plan was
+//      written and makes this rule the authority on every column INCLUDING Done — it exists because
+//      closed cards got stuck outside Done when the event job's run was dropped. `state === "closed"`
+//      below is read by that sweep, projects-backfill.mjs, issues.mjs's column preview and
+//      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
+//      a dropped close event, which is the only thing the built-in would have covered.
+//   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
+//      derives Backlog/Ready/Blocked/Building now from the labels a reopened issue still carries, so
+//      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
+//      overwrote it. "Auto-add to project" filters on creation and cannot express
+//      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
+//
+// Evidence the built-ins are not acting on project #2 today, independent of the schema: on
+// 2026-10-01 closed issues (#3953 among them) sat in In Progress until #4393 built the sweep. A live
+// "Item closed → Done" moves those on their own close event, regardless of our rate limit — it did
+// not. Verdict: keep projects-sync whole; leave the built-ins off.
+//
+// WHAT PROVES THIS WRONG, and it is one line Eric or any session holding the PAT can paste:
+//   gh api graphql -f query='query{user(login:"ejclark"){projectV2(number:2){
+//     workflows(first:20){nodes{name enabled}}}}}'
+// Any node with `enabled: true` means the board has a second writer and this block is stale — then
+// reconcile the two deliberately rather than leaving them to race. (This lane's App token is blind
+// to a personal-account project, so that read was NOT performed here. Said plainly, not "verified".)
+//
 /**
  * The sync rule from #3818 slice B, as one pure decision: given what's already knowable about an
  * issue from labels/state/linked PRs (never a network call itself), which Status column does it
@@ -73,24 +194,45 @@ export const FIELDS = [
  * PR happens to be open against it; then `in-progress` (or an open linked PR); then ready; else
  * it sits in Backlog.
  *
- * #3960 (2026-09-30): the `in-progress` label is what fills "In Progress" now. The column keyed
- * only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions auto-merge
- * within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit to 3 and
- * it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in for a
- * caller that can see one.
+ * #3960 (2026-09-30): the `in-progress` label is what fills the building column now. The column
+ * keyed only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions
+ * auto-merge within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit
+ * to 3 and it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in
+ * for a caller that can see one.
+ *
+ * #4393 slice 4: a started plan with work left and nobody building it reads **Waiting** — after
+ * Blocked (a plan waiting on Eric is blocked, not idle) and after Building now, ahead of Ready.
+ * `subIssues` is `subIssueCounts(issue)`.
+ *
+ * `columns` is the option names the live board carries, for the one window where it lags this
+ * file: between this rule merging and the sweep renaming the field (projects-reconcile.mjs
+ * `ensureStatusColumns`). Without it a sync would ask for a column the board does not have yet
+ * and go red. So the building column falls back to its old name, and Waiting to whatever the
+ * issue would read without it. Left out, it is this file's own `STATUS_OPTIONS`.
  */
 export function statusForIssue({
   state = "open",
   labels = [],
   hasOpenLinkedPr = false,
   decisionCalloutMissing = false,
+  subIssues = {},
+  columns = STATUS_OPTIONS,
 } = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
   // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
   // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
   if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
-  if (has("in-progress") || hasOpenLinkedPr) return "In Progress";
+  if (has("in-progress") || hasOpenLinkedPr) {
+    const legacy = Object.keys(RENAMED_STATUS_OPTIONS).find((k) => columns.includes(k));
+    return columns.includes(BUILDING) || !legacy ? BUILDING : legacy;
+  }
+  if (
+    columns.includes(WAITING) &&
+    isStartedPlan({ labels, subIssues }) &&
+    hasWorkLeft({ labels, subIssues })
+  )
+    return WAITING;
   if (has("ready")) return "Ready";
   return "Backlog";
 }
@@ -321,6 +463,43 @@ export function runThroughRateLimit({
   }
 }
 
+// #4438 — THE BOARD IS A DISPLAY, SO A RATE LIMIT SKIPS THE SYNC INSTEAD OF REDDENING `main`.
+//
+// Run 36808329767 (sha 3c72dc5, 2026-10-01) went red on `sync project status` because the token's
+// GraphQL hour was spent — #3914's probe said so in as many words. Nothing was wrong with the code,
+// and the lane is level-based: the next `issues` event computes the Status from labels again and
+// writes it, so a skipped write costs a stale column for at most one hour. That is the same split
+// the work spigot's title sync draws (#3960 slice 4): a DISPLAY that cannot be written warns, a
+// CONTROL that cannot be read refuses. Only the CLI entry point uses this — `syncIssue` still
+// throws, so projects-backfill.mjs's abort-the-sweep check and every claim/lease/gate stay loud.
+// The split is on the CAUSE (the phrase every rate-limit explainer above deliberately keeps),
+// never on the step: a wrong owner, a missing project or a bad field id still exits non-zero.
+
+/** "the board catches up at …" — the reset is the moment the next event's sync can succeed. */
+function catchUpPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "GitHub did not report a reset time; the hourly GraphQL window rolls over within the hour.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The GraphQL budget resets at ${at} (${mins} min); the next issue event after that re-syncs the board.`;
+}
+
+/**
+ * Should this sync failure skip with a warning rather than fail the job? Returns the one-line
+ * `::warning::` to print when the failure is a rate limit, `null` for anything else (re-throw it).
+ * Pure: `budget` is the caller's free `ghRateLimit().graphql` read, `{}` when unreadable.
+ */
+export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now() } = {}) {
+  const text = `${error?.message ?? ""} ${error?.stderr ?? ""}`.replace(/\s+/g, " ").trim();
+  if (!isRateLimitExhausted(text)) return null;
+  return (
+    `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
+    `board — GitHub refused the GraphQL call for its rate limit, and the board is a display, not a ` +
+    `control (#4438). ${catchUpPhrase(budget.reset, now)} Cause: ${text}`
+  );
+}
+
 // The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
 // once instead of once per issue (`cachedItems`, below), a ~90-issue backfill costs about one
 // `item-list` page (~100 points) plus a couple of points per issue for the REST read and the Status
@@ -522,6 +701,15 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
     return (
       `${head} A direct GraphQL call with the same GH_TOKEN succeeded, so the credential is ` +
       "good: a GitHub-side hiccup outlasted the retries, and re-running the job is the fix."
+    );
+  }
+  // #4438: checked BEFORE the credential branch — gh can word a spent hour with `HTTP 403`, and
+  // "re-save the secret" is the wrong repair for a quota. Keeps the probe's own phrase in the text,
+  // which is what `boardSyncSkip` keys the soft skip on.
+  if (isRateLimitExhausted(probe)) {
+    return (
+      `${head} The same GH_TOKEN's direct GraphQL call was refused for its rate limit: "${probe}" — ` +
+      "a spent or throttled budget, not a code fault and not a bad credential."
     );
   }
   if (/Bad credentials|HTTP 401|Resource not accessible|HTTP 403/i.test(probe)) {

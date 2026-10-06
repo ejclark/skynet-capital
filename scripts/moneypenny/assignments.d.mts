@@ -3,6 +3,7 @@
 export const ASSIGN_MARKER: string;
 export const HOLD_MERGE: string;
 export const HELD_PR_HOURS: number;
+export const ASSIGN_CAP: number;
 
 type Named = string | { name?: string };
 type User = string | { login?: string };
@@ -41,6 +42,16 @@ export interface PlannedAction {
   number: number;
   title?: string;
   why: string;
+  /** Present on every `assign` — the line criterion 1's comment quotes. */
+  decision?: string;
+}
+export interface AssignIntent {
+  kind: "assign-eric" | "unassign-eric";
+  number: number;
+  title?: string;
+  criterion: 1 | 2 | 4;
+  why: string;
+  body?: string;
 }
 export interface NeedsYouRow {
   number: number;
@@ -66,3 +77,15 @@ export function assignmentComment(opts: { decision: string }): string;
 export function plan(input?: PlanInput): Planned;
 export function report(planned: Pick<Planned, "queue" | "actions">): string;
 export function gather(): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
+export function routeAssignments(deps?: {
+  assignments?: Required<Pick<PlanInput, "issues" | "prs" | "markers">> | null;
+  now?: number;
+}): AssignIntent[];
+export function executeAssignments(
+  intent: AssignIntent,
+  opts?: {
+    run?: (cmd: string, args: string[]) => string;
+    /** Injected for specs; production uses gh.mjs's `withRetry` on every write. */
+    retry?: <T>(fn: () => T) => T;
+  },
+): string;

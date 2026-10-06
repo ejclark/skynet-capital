@@ -30,6 +30,13 @@ import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import type { PositionFocus } from "../shell/option-positions";
 import { OrdersSection } from "../shell/orders-section";
+import {
+  chainMarks,
+  type OutlookPick,
+  outlookSearch,
+  type PickedStructure,
+} from "../shell/outlook-pick";
+import { OutlookSection } from "../shell/outlook-section";
 import { RungChip } from "../shell/rung-chip";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -37,6 +44,7 @@ import { TicketNav } from "../shell/ticket-nav";
 import { TradeClock } from "../shell/trade-clock";
 import { TradeGate } from "../shell/trade-gate";
 import { useBenchWidth } from "../shell/use-bench-width";
+import { WatchlistSection } from "../shell/watchlist-section";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
@@ -108,15 +116,21 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-type TradeSection = "ticket" | "chart" | "chain" | "guidance" | "orders";
+type TradeSection = "ticket" | "chart" | "chain" | "guidance" | "outlook" | "watchlist" | "orders";
 
 // "ticket" stays first: `resolveSection` falls back to the first entry, and the ticket is the
-// untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2).
+// untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2); Outlook
+// joined as an AUXILIARY entry (#3407 slice 4, placed by that plan's own state block — "never a
+// home"), which is why it sits beside Guidance in `shows` rather than docking on its own. Watchlist
+// joined on the same terms (#4332) and sits beside Outlook for the same reason: both are ways INTO
+// a symbol, and this one is about many symbols at once, which is the opposite of what a bench is.
 const SECTIONS: readonly PageSection<TradeSection>[] = [
   { id: "ticket", label: "Ticket" },
   { id: "chart", label: "Chart" },
   { id: "chain", label: "Chain" },
   { id: "guidance", label: "Guidance" },
+  { id: "outlook", label: "Outlook" },
+  { id: "watchlist", label: "Watchlist" },
   { id: "orders", label: "Orders" },
 ];
 
@@ -311,6 +325,11 @@ interface StageProps {
   readonly onChainPick: (pick: ChainPick) => void;
   /** A strike picked on the Guidance tab — presets the ticket to that covered call or put. */
   readonly onGuidanceUse: (row: LadderRow) => void;
+  /** A structure picked on the Outlook tab — opens the chain on its legs (slice 4). */
+  readonly onOutlookUse: (pick: OutlookPick) => void;
+  /** A row tapped on the Watchlist pane (#4332) — commits that symbol and, folded, lands the
+   *  member on the ticket, exactly as a chain tap does. */
+  readonly onWatchPick: (symbol: string) => void;
   /** A covered call the guidance's "Calls you've sold" handed off — opens it on the Orders pane. */
   readonly onManage: (call: ManageCall) => void;
   /** The held contract `?manage=` names, when there is one (see `PositionFocus`). */
@@ -366,6 +385,25 @@ function Pane({
         deskId={desk}
         onUse={props.onGuidanceUse}
         onManage={props.onManage}
+        onSymbolCommit={ask}
+      />
+    );
+  }
+  if (id === "watchlist") {
+    // NOT keyed by symbol — unlike Guidance and Outlook, this pane is about the member's whole
+    // list, and remounting it per committed symbol would re-read the list (and tear its one
+    // socket down) every time a row was tapped.
+    return <WatchlistSection symbol={symbol} onPick={props.onWatchPick} />;
+  }
+  if (id === "outlook") {
+    // Keyed by symbol for the same reason Guidance is: a view stated about one underlying must not
+    // survive onto another's chain as a staged control the member never re-read.
+    return (
+      <OutlookSection
+        key={symbol}
+        symbol={symbol}
+        plays={plays}
+        onUse={(_candidate, pick) => props.onOutlookUse(pick)}
         onSymbolCommit={ask}
       />
     );
@@ -467,7 +505,9 @@ function Bench({
     document.getElementById(`bench-${asked}`)?.scrollIntoView({ block: "start" });
   }, [docked, asked]);
   const shows = (id: TradeSection) =>
-    id === "chain" || id === "guidance" ? asked === id : docked || section === id;
+    id === "chain" || id === "guidance" || id === "outlook" || id === "watchlist"
+      ? asked === id
+      : docked || section === id;
   const pane = (id: TradeSection, className?: string) =>
     shows(id) ? (
       <BenchPane
@@ -490,6 +530,8 @@ function Bench({
       {pane("ticket", ticketOwnsChart ? "bench-ticket bench-ticket-full" : "bench-ticket")}
       {pane("chain", "bench-chain")}
       {pane("guidance", "bench-guidance")}
+      {pane("outlook", "bench-outlook")}
+      {pane("watchlist", "bench-watchlist")}
       {shows("chart") && !ticketOwnsChart ? (
         <div className="bench-side">{pane("chart")}</div>
       ) : null}
@@ -589,6 +631,12 @@ function TradePage(): ReactElement {
   );
   const legPickCounter = useRef(0);
   const [draftLegs, setDraftLegs] = useState<readonly DraftLeg[]>([]);
+  // The strikes of a structure picked on the Outlook pane — outlined on the chain so the member can
+  // see which rows the proposal sits on (`onOutlookUse`). The SYMBOL it was picked against is held
+  // beside them and compared at use rather than cleared by an effect: a proposal about one
+  // underlying's chain says nothing about another's, and deriving that is one fewer render pass than
+  // resetting state after the fact (which would also outline the old strikes for one frame).
+  const [picked, setPicked] = useState<PickedStructure | undefined>(undefined);
   const isSpread = navForPlay(play ?? "101").instrument === "spread";
   // Leaving the Spread rung empties the marks — a stale outline from an abandoned draft would
   // otherwise survive a switch to an unrelated ticket (`DraftOrderBuilder` itself remounts fresh
@@ -628,6 +676,38 @@ function TradePage(): ReactElement {
    *  contract, as the guidance sized it. A rung not yet earned shows its own locked panel there. */
   const onGuidanceUse = (row: LadderRow) =>
     void navigate({ search: (prev) => guidanceSearch(prev, row) });
+  /** A structure picked on the Outlook pane (#3407 slice 4) — the member lands on the CHAIN with
+   *  that structure's strikes outlined and the ticket on the rung those legs are, so the next tap
+   *  is already the one that builds it. The marks are component state, not a search param: they
+   *  describe a proposal this browser is looking at, and a bookmarked `?legs=` list would outline
+   *  strikes against whatever the chain lists tomorrow. */
+  const onOutlookUse = (pick: OutlookPick) => {
+    setPicked({
+      symbol: symbol ?? "",
+      strikes: pick.strikes,
+      ...(pick.expiration ? { expiration: pick.expiration } : {}),
+    });
+    void navigate({ resetScroll: false, search: (prev) => outlookSearch(prev, pick) });
+  };
+  /** A row tapped on the Watchlist pane (#4332): the symbol commits and, folded, the member lands
+   *  on the TICKET rather than staying on a list they just chose from — the same move a chain tap
+   *  makes. `?strike=` goes with it for `commitSymbol`'s own reason (a strike picked against the
+   *  old underlying's chain means nothing on a new one); docked, deleting `?section=` costs
+   *  nothing because every pane is already on the page. */
+  const onWatchPick = (next: string) => {
+    const normalized = normalizeSymbol(next);
+    void navigate({
+      resetScroll: false,
+      search: (prev) => {
+        const nextSearch = { ...prev };
+        if (normalized) nextSearch.symbol = normalized;
+        else delete nextSearch.symbol;
+        if (prev.strike !== undefined) delete nextSearch.strike;
+        delete nextSearch.section;
+        return nextSearch;
+      },
+    });
+  };
   /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own
    *  field — so the two never name different contracts. `replace: true`, a refinement. */
   const commitExpiration = (next: string) => {
@@ -662,13 +742,13 @@ function TradePage(): ReactElement {
   const notYours = foreignId ? (foreign.data?.desk.name ?? foreignId) : undefined;
   // The account this page is trading, by name — the head's link back to it on the Profile page.
   const tradedAccount = accounts.find((a) => a.id === activeDesk);
-  // Same underlying, and same expiration when the pane's committed to one (`?exp=` is "" until a
-  // browse writes it) — mirrors `DraftLegForm`'s own marking filter for its inline chain.
-  const markedStrikes = isSpread
-    ? draftLegs
-        .filter((leg) => leg.underlying === (symbol ?? "") && (!exp || leg.expiration === exp))
-        .map((leg) => leg.strike)
-    : undefined;
+  const markedStrikes = chainMarks({
+    symbol: symbol ?? "",
+    expiration: exp ?? "",
+    legs: draftLegs,
+    spread: isSpread,
+    picked,
+  });
   const stageProps: StageProps = {
     section,
     ...(notYours ? { notYours } : {}),
@@ -680,6 +760,8 @@ function TradePage(): ReactElement {
     plays: plays.data?.plays,
     onChainPick,
     onGuidanceUse,
+    onOutlookUse,
+    onWatchPick,
     onManage: (call) => void navigate({ search: (prev) => manageSearch(prev, call) }),
     focus: focusFrom(manage, rollTo),
     onExpirationCommit: commitExpiration,

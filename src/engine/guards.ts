@@ -1,4 +1,6 @@
 import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
+import { bookNeeds, opensRisk } from "../domain/option-book.js";
+import { isBareContractOrder, optionOrderProblems } from "../domain/option-order.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
@@ -7,6 +9,18 @@ import type {
   Portfolio,
 } from "../domain/types.js";
 import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
+import {
+  claim,
+  committedToPlaybook,
+  openLedger,
+  soldShares,
+  spendableCash,
+  subscriptionTerms,
+  unspentCash,
+  worsens,
+} from "./guard-batch.js";
+import { clampOption, type OptionBatch } from "./option-guards.js";
 
 /**
  * Risk guardrails, applied by the engine to every persona's raw intents.
@@ -20,8 +34,8 @@ import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
 
 /**
  * The two universal findings of the eight-symbol sweep (docs/research/multi-symbol-sweep.md),
- * as guards. Both apply to BUYS only — exits always pass, because a guard that blocks
- * risk-reduction is a hazard, not a discipline.
+ * as guards. Both apply to OPENS only (a share buy, an option open) — exits always pass, because a
+ * guard that blocks risk-reduction is a hazard, not a discipline.
  *
  * OPT-IN BY CONSTRUCTION: this config is absent from `DEFAULT_RISK_CONFIG`, so evals, the
  * readiness gate, and every existing caller are untouched. The production runner
@@ -78,6 +92,13 @@ export interface RiskConfig {
    * absent behaves as if every playbook had realized exactly 0 (the flat-budget default).
    */
   readonly realizedPlForPlaybook?: (playbookId: string) => number;
+  /**
+   * Alpaca `options_trading_level`, read at boot and on a credential rotation. Absent = every option
+   * OPEN is refused (`options-level`) — fail closed; closes never need it.
+   */
+  readonly optionsLevel?: number;
+  /** Oldest feed stamp an option quote may carry. Default `QUOTE_STALE_MS` (15 min). */
+  readonly optionQuoteMaxAgeMs?: number;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -91,8 +112,8 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
  * falling through to a vague default, which is exactly what made refusals unattributed before.
  */
 export type GuardRefusalReason =
-  /** The graduated risk ladder's BLOCK rung (buys only — see `applyGuards`'s own comment on why
-   *  gating buys alone is sufficient). */
+  /** The graduated risk ladder's BLOCK rung (opens only — see `applyGuards`'s own comment on why
+   *  gating opens alone is sufficient). */
   | "ladder-block"
   /** S2: a print falls inside the flat window and the intent didn't claim `allowThroughPrint`. */
   | "s2-print"
@@ -109,7 +130,29 @@ export type GuardRefusalReason =
   /** The subscription's own capital allocation leaves zero room. */
   | "subscription-budget"
   /** A sell against a symbol with nothing (or a non-positive quantity) held. */
-  | "nothing-held";
+  | "nothing-held"
+  /** Not a well-formed option order — or a share-shaped order naming a contract. Never sent. */
+  | "option-shape"
+  /** The account's options approval level is too low for this open, or could not be read. */
+  | "options-level"
+  /** An option open with no finite capital allocation behind it. */
+  | "option-unallocated"
+  /** No earnings date on file for the underlying, so the expiry can't be shown to clear it. */
+  | "option-print-unknown"
+  /** The contract would still be open across the underlying's earnings print. */
+  | "option-spans-print"
+  /** The option quote the limit was priced against is too old. */
+  | "option-quote-stale"
+  /** The limit price sits outside the quoted bid/ask. */
+  | "option-limit-outside-quote"
+  /** Not enough free cash to secure the sold put. */
+  | "put-not-secured"
+  /** Not enough free shares to cover the sold call. */
+  | "call-not-covered"
+  /** Selling these shares would leave a sold call uncovered. */
+  | "uncovers-short-call"
+  /** The cash this buy needs is set aside to secure a sold put. */
+  | "collateral-reserved";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -124,6 +167,17 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "position-cap",
   "subscription-budget",
   "nothing-held",
+  "option-shape",
+  "options-level",
+  "option-unallocated",
+  "option-print-unknown",
+  "option-spans-print",
+  "option-quote-stale",
+  "option-limit-outside-quote",
+  "put-not-secured",
+  "call-not-covered",
+  "uncovers-short-call",
+  "collateral-reserved",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -182,12 +236,20 @@ type BuySizingOutcome =
         | "insufficient-cash"
         | "position-cap"
         | "subscription-budget"
+        | "collateral-reserved"
       >;
     };
 
 type SellSizingOutcome =
   | { readonly ok: true; readonly intent: OrderIntent }
-  | { readonly ok: false; readonly reason: Extract<GuardRefusalReason, "nothing-held"> };
+  | {
+      readonly ok: false;
+      readonly reason: Extract<GuardRefusalReason, "nothing-held" | "uncovers-short-call">;
+    };
+
+type SizingOutcome =
+  | { readonly ok: true; readonly intent: OrderIntent }
+  | { readonly ok: false; readonly reason: GuardRefusalReason };
 
 /** Clamp a buy so it neither overspends cash nor breaches the per-position cap. */
 function clampBuy(
@@ -195,86 +257,162 @@ function clampBuy(
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig,
+  { ledger, book }: OptionBatch,
 ): BuySizingOutcome {
   const quote = context.quotes[intent.symbol];
   if (!quote || quote.ask <= 0) {
     return { ok: false, reason: "no-quote" };
   }
 
-  const subscription = intent.playbookId
-    ? config.subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
-    : undefined;
+  const terms = subscriptionTerms(intent, config);
   // Symbol-targeting filter (#885): a subscription with a non-empty `symbols` list refuses a buy
   // outright in any OTHER symbol — this is aim/restriction, not a soft preference. Entry side
   // only, same posture as every discipline guard in this file: a guard blocks opening risk, never
   // closing it, so an exit is never gated by this filter (see `clampSell`).
-  if (subscription?.symbols?.length && !subscription.symbols.includes(intent.symbol)) {
+  if (terms.refusesSymbol) {
     return { ok: false, reason: "subscription-filter" };
   }
 
+  // Dollars for ONE unit of the order. Every bound below divides by this. A share-shaped order
+  // naming a contract is refused before it gets here (`option-shape`), so this is a share price
+  // today; the multiplier stays so the unit rule has one spelling wherever a book is valued.
+  const unitPrice = quote.ask * contractMultiplier(intent.symbol);
   const equity = computeEquity(portfolio, context.quotes);
-  const existingValue = heldQuantity(portfolio, intent.symbol) * quote.ask;
+  const existingValue = heldQuantity(portfolio, intent.symbol) * unitPrice;
   const positionBudget = Math.max(0, config.maxPositionPct * equity - existingValue);
 
-  const affordable = Math.floor(portfolio.cash / quote.ask);
-  const withinPosition = Math.floor(positionBudget / quote.ask);
+  // Cash not set aside to secure a sold put — at worst, counting the option orders approved earlier
+  // this batch — less what earlier intents paid out. With no short options and no option intents
+  // both corrections are 0: the raw cash, exactly as before.
+  const spendable = spendableCash(portfolio, ledger, book);
+  const affordable = Math.floor(spendable / unitPrice);
+  const withinPosition = Math.floor(positionBudget / unitPrice);
 
-  // The subscription's budget is shared across its playbook's WHOLE basket, not just this
-  // intent's symbol — a basket playbook's other open positions already count against the same
-  // allocation. Falls back to `existingValue` (this symbol only) when no basket is registered,
-  // which is exactly today's behavior for a one-symbol playbook.
-  const basketSymbols = intent.playbookId
-    ? config.playbookSymbols?.get(intent.playbookId)
-    : undefined;
-  const basketValue = basketSymbols
-    ? basketSymbols.reduce((sum, symbol) => {
-        const symbolQuote = context.quotes[symbol];
-        return sum + (symbolQuote ? heldQuantity(portfolio, symbol) * symbolQuote.ask : 0);
-      }, 0)
-    : existingValue;
-
-  // Compounding (issue #3527 slice 3, off by default): a subscription opted into
-  // `compoundAllocation` grows or shrinks its own budget by what it has already realized, rather
-  // than trading against a flat number forever.
-  const realizedPl =
-    subscription?.compoundAllocation && intent.playbookId
-      ? (config.realizedPlForPlaybook?.(intent.playbookId) ?? 0)
-      : 0;
-
-  const subscriptionBudgetShares = subscription
-    ? Math.floor(Math.max(0, subscription.capitalAllocated + realizedPl - basketValue) / quote.ask)
-    : undefined;
+  // The subscription's budget is shared across its playbook's WHOLE basket — shares held, the
+  // collateral its sold puts hold, its long contracts and this batch's earlier claims — so a
+  // playbook can never commit its allocation twice (`committedToPlaybook`). With no option positions
+  // that is the basket's share value, or this symbol's alone when no basket is registered: exactly
+  // today's behavior for a one-symbol playbook. Compounding (#3527 slice 3, off by default) grows or
+  // shrinks the budget by what the playbook has realized.
+  // An uncapped subscription (no `capitalAllocated` — #4535's seeded house roster) carries no
+  // budget at all: it sizes exactly like a house-roster entry, on cash and the position cap alone.
+  const capital = terms.subscription?.capitalAllocated;
+  const subscriptionBudgetShares =
+    capital !== undefined
+      ? Math.floor(
+          Math.max(
+            0,
+            capital +
+              terms.realizedPl -
+              committedToPlaybook(intent, portfolio, context, config.playbookSymbols, {
+                ledger,
+                book,
+              }),
+          ) / unitPrice,
+        )
+      : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];
   if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);
   const quantity = Math.min(...bounds);
 
   if (quantity > 0) {
+    claim(ledger, {
+      spent: quantity * unitPrice,
+      ...(intent.playbookId ? { playbookId: intent.playbookId, risk: quantity * unitPrice } : {}),
+    });
     return { ok: true, intent: { ...intent, quantity } };
   }
   // Attribute the specific bound that hit zero — checked in the same priority a reader would
   // reach for the fix: no cash at all is the most actionable, the position cap next, the
-  // subscription's own allocation last (it's the narrowest and rarest budget of the three).
-  if (affordable <= 0) return { ok: false, reason: "insufficient-cash" };
+  // subscription's own allocation last (it's the narrowest and rarest budget of the three). Cash
+  // that is there but promised to a sold put says so, rather than reading as "no cash".
+  if (affordable <= 0) {
+    const reserved = Math.floor(unspentCash(portfolio, ledger) / unitPrice) >= 1;
+    return { ok: false, reason: reserved ? "collateral-reserved" : "insufficient-cash" };
+  }
   if (withinPosition <= 0) return { ok: false, reason: "position-cap" };
   return { ok: false, reason: "subscription-budget" };
 }
 
-/** Clamp a sell so it never sells more than is actually held (no accidental shorting). */
-function clampSell(intent: OrderIntent, portfolio: Portfolio): SellSizingOutcome {
+/**
+ * Clamp a sell so it never sells more than is actually held (no accidental shorting), and never the
+ * shares a sold call stands on — judged against the best cover the book has, so a call a long caps
+ * (a debit spread's short) never blocks selling the stock under it.
+ */
+function clampSell(
+  intent: OrderIntent,
+  portfolio: Portfolio,
+  { ledger }: OptionBatch,
+): SellSizingOutcome {
   const held = heldQuantity(portfolio, intent.symbol);
-  const quantity = Math.min(intent.quantity, Math.max(0, held));
-  return quantity > 0
-    ? { ok: true, intent: { ...intent, quantity } }
-    : { ok: false, reason: "nothing-held" };
+  if (held <= 0) return { ok: false, reason: "nothing-held" };
+  const unsold = held - soldShares(ledger, intent.symbol);
+  const most = Math.min(intent.quantity, Math.max(0, unsold));
+  // Zeroed by an earlier sell in the batch: plain `nothing-held`, never the call.
+  if (!(most > 0)) return { ok: false, reason: "nothing-held" };
+  const quantity = ledger.active ? largestSale(portfolio, ledger, intent.symbol, most) : most;
+  if (!(quantity > 0)) return { ok: false, reason: "uncovers-short-call" };
+  claim(ledger, { sold: { underlying: intent.symbol, shares: quantity } });
+  return { ok: true, intent: { ...intent, quantity } };
+}
+
+/** The most of `most` shares a sale may take without leaving a sold call short of cover. Fewer
+ *  shares sold never needs more cover, so the answer is found by halving. */
+function largestSale(
+  portfolio: Portfolio,
+  ledger: OptionBatch["ledger"],
+  underlying: string,
+  most: number,
+): number {
+  const fits = (sells: number): boolean => {
+    const worse = worsens(portfolio, ledger, underlying, { sells });
+    return !(worse.shares || worse.cash);
+  };
+  if (fits(most)) return most;
+  let low = 0;
+  let high = Math.floor(most);
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (fits(mid)) low = mid;
+    else high = mid - 1;
+  }
+  return low;
+}
+
+/** The S2/E1 check for an intent that opens risk. `allowThroughPrint` is a share-only opt-out: an
+ *  option open is print-gated by its own expiry rule, never waved through. */
+function disciplineReason(
+  intent: OrderIntent,
+  context: MarketContext,
+  discipline: TradeDiscipline,
+): "s2-print" | "e1-open" | undefined {
+  const checked = intent.option ? { ...intent, allowThroughPrint: false } : intent;
+  const outcome = clampDiscipline(checked, context, discipline);
+  return outcome.ok ? undefined : outcome.reason;
+}
+
+/** The sizing clamp for one intent that cleared the shape, ladder and discipline checks. */
+function clampOne(
+  intent: OrderIntent,
+  portfolio: Portfolio,
+  context: MarketContext,
+  config: RiskConfig,
+  batch: OptionBatch,
+): SizingOutcome {
+  if (intent.option) return clampOption(intent, intent.option, portfolio, context, config, batch);
+  return intent.side === "buy"
+    ? clampBuy(intent, portfolio, context, config, batch)
+    : clampSell(intent, portfolio, batch);
 }
 
 /**
  * Apply all guards to a batch of intents against a single portfolio snapshot, and say why for
  * every one that didn't survive — the data `docs/plans/where-are-we-documenting-*.md`'s "guard
- * opportunity cost" measure scores against. Note: guards size each intent against the *starting*
- * portfolio for the cycle; intra-cycle interaction between orders is deliberately out of scope
- * for slice 1.
+ * opportunity cost" measure scores against. Guards size each intent against the *starting*
+ * portfolio for the cycle; the one intra-cycle interaction they track is the batch ledger
+ * (`guard-batch.ts`), live only when options are involved — so a sold put and a share buy in one
+ * cycle cannot spend the same cash twice.
  */
 export function applyGuardsWithVerdicts(
   intents: readonly OrderIntent[],
@@ -285,31 +423,37 @@ export function applyGuardsWithVerdicts(
   const approved: OrderIntent[] = [];
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
+  const book = bookNeeds(portfolio);
+  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio), book };
   for (const intent of intents) {
+    // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
+    // (a contract only trades as a priced limit through `option`), and a malformed option order is
+    // never sized at all — the same rule the builder and the wire parser use.
+    if (isBareContractOrder(intent) || (intent.option && optionOrderProblems(intent).length > 0)) {
+      refused.push({ intent, reason: "option-shape" });
+      continue;
+    }
+    // Whether this order ADDS risk: a share buy, or any option open (a sold put is a sell that opens
+    // risk). For a share intent this is exactly `side === "buy"`.
+    const opens = opensRisk(intent);
     // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
-    //
-    // A buy is the risk-INCREASING side here, and a sell can only ever be risk-reducing, because
-    // `clampSell` below refuses to sell more than is actually held (no accidental shorting). So
-    // blocking buys alone satisfies the rung exactly: new risk is refused, EXISTING POSITIONS ARE
-    // UNTOUCHED, and exits stay open — including the force-flatten sells the bottom rung emits.
-    if (intent.side === "buy" && ladderBlocks) {
+    // A share sell can only ever be risk-reducing, because `clampSell` refuses to sell more than is
+    // held, and an option close only closes what is held. So blocking opens alone satisfies the
+    // rung: new risk is refused, EXISTING POSITIONS ARE UNTOUCHED, and exits stay open — including
+    // the force-flatten sells the bottom rung emits.
+    if (opens && ladderBlocks) {
       refused.push({ intent, reason: "ladder-block" });
       continue;
     }
-    // Trade discipline next (S2/E1, buys only): a dropped entry needs no sizing.
-    let disciplined = intent;
-    if (intent.side === "buy" && config.discipline) {
-      const outcome = clampDiscipline(intent, context, config.discipline);
-      if (!outcome.ok) {
-        refused.push({ intent, reason: outcome.reason });
-        continue;
-      }
-      disciplined = outcome.intent;
+    // Trade discipline next (S2/E1, opens only): a dropped entry needs no sizing. S2 keys on
+    // `intent.symbol`, which for an option order is the underlying.
+    const discipline =
+      opens && config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
+    if (discipline) {
+      refused.push({ intent, reason: discipline });
+      continue;
     }
-    const outcome =
-      disciplined.side === "buy"
-        ? clampBuy(disciplined, portfolio, context, config)
-        : clampSell(disciplined, portfolio);
+    const outcome = clampOne(intent, portfolio, context, config, batch);
     if (outcome.ok) {
       approved.push(outcome.intent);
     } else {

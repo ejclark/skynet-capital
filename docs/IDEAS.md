@@ -18,6 +18,68 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The two lane prompts still name the board's "In Progress" column.** #4393 slice 4 renamed it
+  Building now. `.github/prompts/plan-build.md:130` and `feedback-build.md:165` say "the board's In
+  Progress column and the admission gate's cap both count it". The meaning is unchanged; only the
+  word is stale. Both files are `envelope.json`'s class, so a one-word edit boards the next platter
+  rather than riding a lane PR.
+  _(src: Claude · while: #4393 slice 4, the Waiting column)_
+
+- **Re-run the model-fit audit at every model release.** The 2026-10-04 audit (Anthropic's
+  `claude-api` → `prompt-audit` procedure, ten surface auditors plus an adversarial refuter each)
+  found that the dominant defect was not old-model prompting. It was drift: Babylon-era facts in
+  four agents, three files that contradicted the pipeline-arms-auto-merge rule, and model pins one
+  generation behind. Every pin and floor is per-model (Opus 5.5 defaults to `medium` effort, and
+  Sonnet 5.5 recalibrated its levels), so the next release reopens the same questions. Bank the run
+  as a `docs/grind/` chore keyed to a release, not to a calendar date.
+  _(src: Claude · while: the model-fit audit, 2026-10-04)_
+- **Nine model-fit findings in `.claude/workflows/*.js` were refused as self-modification.** The
+  auto-mode classifier blocked an unattended agent from editing `grind.js` and `symbol-sweep.js`.
+  The refused findings: F04 (`--base origin/main` is passed to `envelope-scan --check`, which treats
+  it as a path), F07/F08 (the sweep's synthesis prompt hard-codes the default eight tickers and a
+  40-test count even when `args.tickers` differs), F11 (N per-item envelope agents could be one
+  pre-dispatch check), F14 (`whenToUse` is truncated in the workflow listing), F17 (a hard-coded
+  cloud path), and three migration-relative comments. The docs half of each already shipped. These
+  need an interactive session where Eric approves the edit.
+  _(src: Claude · while: the model-fit audit build, batch grind)_
+- **No Claude call site reads `usage` or `stop_reason: "max_tokens"`.** The companion, the coach
+  and the eval judge never log `input_tokens` / `output_tokens` / `cache_read_input_tokens`, so the
+  cost of a prompt change, the cache hit rate and a truncated reply are all invisible. The
+  prompt-audit guide names token accounting as the prerequisite for measuring any cleanup. One
+  `usage` line per call in `src/http/anthropic-reply.ts` is enough to start.
+  _(src: Claude · while: the model-fit audit, finding F20)_
+- **The companion reads `stop_reason` for a refusal only — `max_tokens` and a mid-stream refusal's
+  partial are still unhandled.** (a) Neither leg reads `stop_reason: "max_tokens"`, so a truncated
+  reply finishes as done; the 4000 cap makes it rarer, not handled. (b) A refusal after partial text
+  keeps the partial on the rail with " — cut off"; the migration guide's rule is to discard it.
+  Discarding needs the rail (`app/src/live/moneypenny.ts`, the `failure` branch after the stream)
+  to tell a refusal from a transport error — today both arrive as one `onError` string.
+  _(src: Claude · while: the model-fit audit, batch companion-request — the streamed leg's refusal read)_
+- **Move the companion's exhaustion note to a mid-conversation `role: "system"` message on Sonnet
+  5.5.** Today `EXHAUSTED_NOTE` rides as a text block after the last tool_result. That is the
+  guide's fallback form, valid on Sonnet 5 and Haiku 4.5. But the system prompt's UNTRUSTED INPUT
+  rule tells the model that user-turn text is member data, so the note may steer weakly or be
+  narrated back to the member. Once `claude-sonnet-5-5` is on the companion allowlist (the platter
+  item), gate the system-message form by model the way `effortFor` gates effort.
+  _(src: Claude · while: the model-fit audit, batch companion-request — review of the append-only final leg)_
+- **Pin the companion-eval judge's effort instead of inheriting Sonnet 5.5's default.**
+  `src/evals/companion/judge.ts` sends no `output_config.effort`, so it grades at the API default,
+  and Sonnet 5.5's levels are recalibrated. A default change would shift grading with no diff. Pin
+  `effort: "high"` beside `format`, or sweep the 15 fixtures first and pick.
+  _(src: Claude · while: review of the model-fit structured-outputs batch)_
+- **Backfill the event ledgers' Rules paragraph onto the current TEMPLATE.** 585 ledgers under
+  `docs/research/events/` still say a dated adjacent event "gets proposed" with no horizon, and 543
+  say the doc "goes quiet" after close-out. Both contradict `TEMPLATE.md` and the HORIZON LEASH in
+  `.github/prompts/event-research.md`, and a pulse reads its own ledger first. It is mechanical, one
+  string per file: a `/grind` pass. In the same pass, `tests/arch/event-scan.spec.ts` and
+  `tests/domain/research-horizon.spec.ts` still say "opus session" in the present tense, while the
+  research lane runs the Sonnet tier.
+  _(src: Claude · while: the research-lane model-fit batch, RLI-02/03)_
+- **`scripts/issues.mjs` reads only `GH_TOKEN`/`GITHUB_TOKEN`.** `ship.sh` falls back to the gh
+  keyring (`gh auth token`), but `npm run issues` returns a bare 401 in a local session with no env
+  token. That forces a `GH_TOKEN="$(gh auth token)"` prefix, which the permission matcher treats as
+  a new command. Give it the same keyring fallback `ship.sh` has.
+  _(src: Claude · while: filing #4610 during the model-fit audit)_
 - ~~**`/api/wire` reads three full ledgers per request to render ~30 rows.**~~ **Measured and
   routed → #4458** (2026-10-02, while building #784 slice 3). The number the item was waiting for:
   **189 ms and 30.4 MB parsed per request at 100k events**, linear, for ONE of the three legs, on a
@@ -252,6 +314,20 @@ Eric-sourced.
   (`/-/media/documents/...` → `/-/media/Project/Atlanta/FRBA/Documents/...`, discovered this
   session) broke an automated re-fetch somewhere upstream. _(src: Claude · while:
   housing-starts-2026-09-17 close-out)_
+  **Update, `construction-spending-2026-10-01` close-out, 2026-10-05:** still frozen at 2026-07-28,
+  now **ten weeks** stale — confirmed across two independent close-outs seven weeks apart, so this
+  is a standing property of the data source, not a transient gap. The media path moved a **second**
+  time (`cqer/researchcq/gdpnow/` → `research-and-data/data/gdpnow/`, found via the current
+  `/cqer/research/gdpnow` landing page's own link list) — two moves in five weeks. One finding that
+  resolves half the housing-starts gap: the same workbook's **`ContribHistory`** sheet (singular,
+  "Evolution of component contributions ... for 2026q3," distinct from the 6-category
+  `Contributions`/`ChangeInContributions` the prior session used) is live, non-archived, and keeps
+  the full 8-way split — Equipment, Intellectual Property Products and Structures stay separate
+  columns. It only covers the *current* nowcast quarter (reset each quarter), so it does not help a
+  cross-quarter archive query, but it removes the "6-category only" caveat for any live-quarter
+  forward test — `housing-starts-10-20`'s `FT-…-10-20-1` should read `ContribHistory` directly
+  instead of falling back to the coarser sheet if `ContribArchives` is still stale on 2026-10-23.
+  _(src: Claude · while: construction-spending-2026-10-01 close-out)_
 - `quote-header` and the option chain fetch the underlying price independently; consolidate once
   the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
   #2017)_
@@ -1654,6 +1730,27 @@ existing red/green P/L vocabulary elsewhere. Same "real step, not a tone shift" 
 already applied to the strike-pick row highlight (PR #3510) — pick a wash opacity that reads as
 clearly present without being loud.
 _(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_
+
+### No net watches for a green PR that stops moving — only for a red one
+Found 2026-10-02 while landing plan #3665's last slice: PR #4449 sat `MERGEABLE`, `CLEAN`, not a
+draft, both required checks passing, and **unarmed**, for 29 hours. Nothing noticed, because every
+net we have watches for red and this failure mode is green. Root cause in `docs/LESSONS.md`
+(2026-10-02) and the one-line fix in #4477 — but that fix closes one cause, not the class: #4351 is
+the same symptom from a rate-limit cause, so it is already twice. The cheap sweep: over open PRs,
+flag any whose check runs are all green and whose `autoMergeRequest` is null and which carries no
+`hold-merge` — that single query would have caught both in minutes. Candidate home is the
+main-branch tick that already runs `deploy-lag.mjs` and the conflict sweep, so it costs no new
+schedule.
+_(src: Claude · while: landing plan #3665 slice 5, diagnosing why #4449 never armed)_
+
+### An allowlist that must mirror another list in the same file is drift waiting to happen
+Found 2026-10-02 (#4477): `pipeline.yml`'s arm job allow-listed four of the five pull-request
+actions the same file's `types:` declares, ~250 lines away. A spec now pins those two lists
+together, but that is one instance of a class — `workflow-lint.mjs` is where the class could live
+(any `fromJSON([...])` action list in a job must cover its workflow's own `types:`, unless the job
+names the exclusion). Worth doing only if a second instance turns up; noted so the second one is
+recognised as a pattern rather than re-diagnosed.
+_(src: Claude · while: writing the #4477 fix's falsifier spec)_
 
 ## The chat/companion feature will likely change alongside orchestration work
 

@@ -1,4 +1,5 @@
 import { MARKET_TIMEZONE, marketDayKey } from "../domain/market-day.js";
+import { cycleOfExpiration } from "./expiration-cycle.js";
 import { parseOccSymbol } from "./option-symbols.js";
 import type { RoundTrip } from "./round-trips.js";
 
@@ -57,6 +58,15 @@ export interface TradeStats {
    *  just repeat `trades` twice. */
   readonly byDirection: { readonly long: number; readonly short: number };
   readonly byInstrument: { readonly stock: number; readonly call: number; readonly put: number };
+  /** Which expiration cycle the option trips expired on (#3665's "cycle type" — see
+   *  `expiration-cycle.ts` for why that phrase means this). OPTION TRIPS ONLY: a share of stock has
+   *  no expiration cycle, so these three never sum to `trades` on a playbook that also trades
+   *  stock — `byInstrument.stock` is the count they leave out, on purpose. */
+  readonly byCycle: {
+    readonly weekly: number;
+    readonly monthly: number;
+    readonly quarterly: number;
+  };
   /** Σ entryPrice × quantity — the same basis each trip's own `returnPct` is measured against. */
   readonly capitalCommitted: number;
   /** netRealized ÷ capitalCommitted, in percent. Capital-weighted on purpose: averaging per-trip
@@ -109,7 +119,12 @@ export function tradeStats(trips: readonly RoundTrip[]): TradeStats {
   const { current, longestWin, longestLoss } = streaks(trips);
   const shorts = trips.filter((t) => t.short).length;
   const byInstrument = { stock: 0, call: 0, put: 0 };
-  for (const trip of trips) byInstrument[parseOccSymbol(trip.symbol)?.type ?? "stock"] += 1;
+  const byCycle = { weekly: 0, monthly: 0, quarterly: 0 };
+  for (const trip of trips) {
+    const parts = parseOccSymbol(trip.symbol);
+    byInstrument[parts?.type ?? "stock"] += 1;
+    if (parts) byCycle[cycleOfExpiration(parts.expiration)] += 1;
+  }
   const capitalCommitted = trips.reduce((s, t) => s + t.entryPrice * t.quantity, 0);
 
   return {
@@ -133,6 +148,7 @@ export function tradeStats(trips: readonly RoundTrip[]): TradeStats {
     shortestHold: byHold.at(-1) ?? null,
     byDirection: { long: trips.length - shorts, short: shorts },
     byInstrument,
+    byCycle,
     capitalCommitted,
     returnPct: capitalCommitted > 0 ? (netRealized / capitalCommitted) * 100 : null,
     currentStreak: current,

@@ -17,7 +17,14 @@ const mode = (position: string, extra: Partial<WorkMode> = {}): WorkMode =>
   ({
     position,
     until: null,
-    caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+    caps: {
+      inFlightCap: 3,
+      researchPerTick: 6,
+      governorDispatches: 4,
+      grindWidth: 200,
+      continuationsPerDay: 3,
+      startedPlanCap: 4,
+    },
     reason: `set to ${position}`,
     ...extra,
   }) as WorkMode;
@@ -39,6 +46,8 @@ describe("the work gate — the dial and the spend breaker in one answer", () =>
       researchPerTick: 6,
       governorDispatches: 4,
       grindWidth: 200,
+      continuationsPerDay: 3,
+      startedPlanCap: 4,
     });
   });
 
@@ -105,7 +114,14 @@ describe("the gate's CLI — the exit code is the verdict", () => {
       dispatch: true,
       position: "normal",
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+      caps: {
+        inFlightCap: 3,
+        researchPerTick: 6,
+        governorDispatches: 4,
+        grindWidth: 200,
+        continuationsPerDay: 3,
+        startedPlanCap: 4,
+      },
       breakerTripped: false,
       reason: "cleared: work-mode is normal",
     });
@@ -120,7 +136,14 @@ describe("the gate's CLI — the exit code is the verdict", () => {
       dispatch: false,
       position: "halt",
       until: "2026-10-05",
-      caps: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 },
+      caps: {
+        inFlightCap: 0,
+        researchPerTick: 0,
+        governorDispatches: 0,
+        grindWidth: 0,
+        continuationsPerDay: 0,
+        startedPlanCap: 0,
+      },
       breakerTripped: false,
       reason: "refused: work-mode is halt",
     });

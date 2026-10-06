@@ -10,8 +10,8 @@
  * `ANTHROPIC_API_KEY` and its existing Console spend cap — no new credential, no new Fly secret,
  * no raised ceiling. `COMPANION_MODEL` started as the same Haiku tier the coach pays for
  * (`feedback-coach-model.ts`'s `MODEL`); #1672 slice 3 moved the companion's own default to
- * Sonnet 5 on a quality call, independent of the coach's tier — the two dials share a ceiling and
- * a gate, not a model, from here on.
+ * the Sonnet tier on a quality call, independent of the coach's tier — the two dials share a
+ * ceiling and a gate, not a model, from here on.
  *
  * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan floated Sonnet
  * for issue-drafting; on inspection the shipped coach already drafts on Haiku, so the
@@ -20,8 +20,17 @@
  * shared gate.
  */
 
-/** Small replies keep pennies pennies; a long explanation still fits comfortably. */
-export const MAX_TOKENS_PER_REPLY = 700;
+/** Thinking counts toward `max_tokens` on the Sonnet route (adaptive thinking runs when `thinking`
+ *  is omitted), so this cap leaves room for it plus the reply. The reply's own length is the system
+ *  prompt's SIZE DISCIPLINE; real spend is bounded by COMPANION_MODEL_CALLS_MAX. */
+export const MAX_TOKENS_PER_REPLY = 4000;
+
+/** Chat-shaped work starts at `low` effort on Sonnet (short or skipped thinking on simple turns).
+ *  Haiku 4.5 takes no effort parameter, so its requests carry none. Same value on every call of a
+ *  turn — changing top-level effort between requests invalidates the cache. */
+export function effortFor(model: string): { readonly output_config?: { readonly effort: "low" } } {
+  return model.startsWith("claude-sonnet") ? { output_config: { effort: "low" } } : {};
+}
 
 /**
  * A conversation ends gracefully here rather than growing without bound — the client resends the

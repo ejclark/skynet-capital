@@ -18,7 +18,7 @@ following a rulebook. Most specifics below fall out of them.
 anything else is waste — but judged **over time**, not at a snapshot. A production incident is the single
 largest drain on the constraint there is, so fixing cheap debt at the point of discovery *is* protecting
 it, not a distraction (deferring a cheap-now fix that later erupts is the false economy ToC warns against):
-fix-now-if-cheap-and-you're-already-there, else **capture and route** (`IDEAS.md` / the debt gate) — never
+fix-now-if-cheap-and-you're-already-there, else **capture and route** (`docs/IDEAS.md` / the debt gate) — never
 defer-and-forget. The constraint here is **Eric's attention**: *identify* it, *exploit* it (spend
 it only on load-bearing forks + the irreversible class), *subordinate* everything else to it (absorb
 noise, clear logjams, self-correct cheap/reversible drift), *elevate* it (a richer alignment substrate +
@@ -94,14 +94,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
   redesigned, decide the IA first — what the thing actually is, how it relates to everything else — and
   let routes, file names, and URL structure follow from that, including renaming or restructuring routes
   that already exist. A route being there already is never a reason to keep its shape.
-  **Write the IA decision down before implementing it** (issue #895, after #881→#886→#888 re-litigated
-  the same nav-placement question three times in ~2.5 hours on 2026-08-29 — settings-vs-top-nav for
-  prefs, then profile-vs-top-nav for milestones, then per-account-vs-user-level for milestones again).
+  **Write the IA decision down before implementing it** — an unwritten placement call gets
+  re-litigated PR by PR (the same nav question was reopened three times in about two hours, #895).
   When a surface redesign will change nav, route structure, or IA, put the decision in a short issue or
   a note in the relevant surface doc *before* an implementation PR opens — the PR then executes an
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
-  single-link move with no structural ambiguity doesn't need its own decision doc, and this doesn't
-  retroactively judge #881/#886/#888, which are the motivating example, not a target for rework.
+  single-link move with no structural ambiguity doesn't need its own decision doc.
 - **Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
   research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
   rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
@@ -121,8 +119,9 @@ role of responsible owner/steward — shipping lovable work while protecting the
   gets a row there (seeded · placed · declined-here), so awareness precedes need. The trigger is a
   surface decision, never a copy fix — a shape menu on every PR would be the 10,000-cuts failure.
   First instance: #1740's call sheet, which settled *kind / section / sub-view*.
-- **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
-  trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
+- **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal:
+  engagement, trust, and compounding capital all come from one gamified design (see
+  [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md)).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
   punishing spectacle. Reward the behavior we want (disciplined profit-taking, reinvestment, building
   effective bots) by making it the most satisfying thing to watch — the fanfare/motion budget goes to
@@ -269,8 +268,13 @@ quantify the hunches against the corpus/code, and hand back the smallest vocabul
 planning session ends by starting the build, not by handing the `ready` flip back** (Eric,
 2026-09-06, after the research brief produced a plan issue and a "flip `ready`" ask: "I provided
 rich acceptance criteria... this was intended to establish plumbing to enable you to grind through
-the work"). The written decision is the plumbing; his brief was the go signal. Label the plan
-`ready` yourself, cite the brief, and take slice 1 — the flip comes back to him only when a fork
+the work"). The written decision is the plumbing; his brief was the go signal. Flip the plan
+yourself through the door a session has for plans — a comment whose first line is exactly
+`ready — take slice 1 per the state block`, the brief cited beneath it, ending with the lane
+footer (`FOOTER`, `scripts/moneypenny/labels.mjs`) so only that first line is judged — never
+the `ready` label ([`docs/ISSUES.md`](docs/ISSUES.md) → *Ready — the one definition*). The plan
+lane then claims slice 1; check that `in-progress` lands, because a refused flip leaves only a
+notice in the Actions run while the plan sits idle. The flip comes back to him only when a fork
 he alone can settle is genuinely blocking. **Between the research and the grind, a rubber-duck
 round** (Eric, 2026-09-06: "This is a prime time to pair with coworkers when they are in this
 state... rapid ideation which produces aha moments that accelerate emergence of new designs... it
@@ -287,14 +291,27 @@ like you inadequately interrogate my suggestions/commands. It feels like we need
 and/or listeners to trigger interrogation process which organically feeds into grinding fan-out
 process"). A directive that *compounds* — changes process, policy, design, or architecture — gets
 a three-line pass before act/park/fan: steelman (outcome vs. proposed mechanism), the strongest
-objection with the line it cites, what would settle it. The listener is the **Orient** output
-style's step 2 (it already fires on every prompt; only the step was missing); an objection that
-survives routes to `/grind` over
+objection with the line it cites, what would settle it. The listener is step 2 of the **Orient**
+output style, which loads on every prompt; an objection that survives routes to `/grind` over
 [`docs/grind/interrogate.instructions.md`](docs/grind/interrogate.instructions.md) — red/blue/
 tiger/yellow, one call sheet on the issue, a routing label — and the *amended* shape gets built.
 The outcome is his; only the path is on trial. No objection surviving is the common result and
 costs seconds; "compliance by default" was the measured failure (2 of 4 process directives that day
 were built straight from the prompt).
+
+**A system's spirit outlives its implementation — refactor the mechanism, keep the decision** (Eric,
+2026-09-28, with three rewires landing at once: "we are essentially rewiring new systems that have
+over old setup. I expect the spirit of past decisions/systems to remain relevant however i also
+expect implementation details may need refactored"). When a newer system lands over an older one —
+the Projects v2 board over label-only state, the `ready` label over #823's owner-comment trigger — a
+rule written against the old machinery is not thereby void, and it is not thereby binding either.
+Read it for the **decision** it recorded, re-point that decision at the new mechanism, and say in
+the diff which half you kept. Both failures cost: treating the old rule as dead discards a settled
+call nobody re-litigated, and treating its wording as the rule preserves a second code path nobody
+needs. This is the twin of the aligned-intent rule above — there his present intent authorizes
+acting without a fresh nod; here his past intent survives the machinery it was first written
+against. First instance: this file's own plan lane, whose write-access gate (#823's spirit) moved
+onto the `ready` label (#3818's mechanism) in #4165.
 
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
 issues, not in source code"_ — a correction he has had to repeat; #433 moved the committed ones). A
@@ -334,9 +351,9 @@ provides the data points to make an informed decision") before it reaches him. T
 is `docs/grind/interrogate.instructions.md` → step 8. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
-log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
-weight (directive vs. proposal-to-prune), `while` is the proximity worth revisiting. Quality over volume;
-don't derail — capture and continue.
+log the worthy ones to [`docs/IDEAS.md`](docs/IDEAS.md), tagged `_(src: Eric | Claude · while: <context>)_` —
+source sets the weight (directive vs. proposal-to-prune), `while` is the proximity worth revisiting.
+Quality over volume; don't derail — capture and continue.
 
 **Synthesis & the question budget.** Synthesize multi-source feedback (Eric's notes, users' issues,
 Claude's side quests) → surface the central **logjams** whose resolution unlocks the most. Front-load
@@ -365,14 +382,13 @@ a red mid-flow. The tells that a gate has outlived its convention: carve-outs ac
 ignores, uneven firing. When you meet one, demote it in the same PR and say so in
 [`docs/COACHES.md`](docs/COACHES.md) — never route around it with another carve-out.
 
-**Free diagnostics before gated ones** (2026-09-04: five `autonomy-ops` approval taps — Eric on his
-phone, traveling — went to re-pulling the same bot log before ten minutes of reading
-`run-autonomous.ts` explained the silence, `docs/LESSONS.md`). Diagnostic paths have prices: reading
-the code path and re-reading logs already in hand are **free and unlimited**; an approval tap, a
-redeploy, a restart spend the constraint. **Exhaust the free ones first, and before spending a gated
-one, say what it will tell you that they cannot** — a repeat pull returning identical output is
-another tap for zero information. And **never spend a state-destroying action as a probe**: "safety
-scales to stakes" covers accumulated in-memory state too, not just credentials.
+**Free diagnostics before gated ones** (`docs/LESSONS.md`, 2026-09-04). Diagnostic paths have prices:
+reading the code path and re-reading logs already in hand are **free and unlimited**; an approval tap
+(an `autonomy-ops` environment approval), a redeploy, a restart spend the constraint. **Exhaust the
+free ones first, and before spending a gated one, say what it will tell you that they cannot** — a
+repeat pull returning identical output is another tap for zero information. And **never spend a
+state-destroying action as a probe**: "safety scales to stakes" covers accumulated in-memory state
+too, not just credentials.
 
 **Report at altitude — the secretary discipline** (Eric, 2026-08-15: _"the more autonomously
 changes are getting in, the higher altitude of a report out/feedback i need"_). Completed,
@@ -490,8 +506,9 @@ common routes:
   the finding, not the gate.
 - "grind through a batch of near-identical, mechanical chores" (the same fix/skill/command applied
   across many files/PRs/branches/tickers, low judgment per item) → **`/grind`**
-  (`.claude/workflows/grind.js`) — fans a chain of steps across items via `pipeline()`, cheap
-  model/effort by default. `steps: [{kind:"script"|"instructions"|"skill"|"prompt", ...}]` composes
+  (`.claude/workflows/grind.js`) — fans a chain of steps across items via `pipeline()` at the
+  per-step-kind floor in [`docs/COMPUTE.md`](docs/COMPUTE.md) — never a tier chosen for economy.
+  `steps: [{kind:"script"|"instructions"|"skill"|"prompt", ...}]` composes
   a check → fix → re-check chain (`"script"` for an exact command, `"skill"` to fan an existing
   `.claude/skills/<name>/SKILL.md` like `/decompose` across a batch, `"instructions"` to point at a
   reusable `docs/grind/*.instructions.md` chore spec); `promptTemplate` alone covers a one-off. See
@@ -558,7 +575,9 @@ common routes:
 gate makes him the constraint on everything — severely softened). Structural, feature, and visual PRs
 all auto-merge; his taste review happens **live, post-merge** — hand him the deployed route and adapt
 from reactions. Hold a PR pre-merge only when he asks, or when Claude has a specific taste fork worth
-his eyes before shipping (say so on the PR). The irreversible carve-outs (workflow files,
+his eyes before shipping (say so on the PR, and open it with `/ship` and `--hold`:
+`scripts/ship.sh open "<title>" --body-file <f> --hold` applies `hold-merge`, which
+`pipeline.yml`'s arm job skips). The irreversible carve-outs (workflow files,
 credentials/spend/outward-facing) still never auto-merge — **but they board a platter, one touch
 per cadence, not one held PR each** (Eric, 2026-09-04: "10 PRs consolidated into 1 or a few PRs
 result in fewer touch points... at a higher altitude the ideology still holds up that changes are
@@ -616,5 +635,5 @@ is expected and fine; the docs are the memory.
   repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify
   extract . --code-only` (free). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
 - Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated
-  worktrees, verify-before-merge). In burn-down mode, opening + squash-merging small green PRs is
-  the expected loop.
+  worktrees, verify-before-merge). In burn-down mode, opening small green PRs and letting
+  `pipeline.yml` arm their squash auto-merge is the expected loop.

@@ -388,6 +388,22 @@ describe("serveSubscriptionsApi", () => {
     expect(out.status).toBe(400);
   });
 
+  it("set-enabled: refuses an unowned account and never touches the store", async () => {
+    // #4535 slice 1b seeds house bots' subscriptions; ownership stays the only gate on editing
+    // them — pausing a bot's seeded playbook is its owner's call alone.
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({ id: "someone-elses", playbookId: "S1-NVDA", enabled: false }),
+      res,
+      "/api/playbook-store/set-enabled",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([]);
+    expect(answered(out)).toMatchObject({ ok: false });
+  });
+
   it("set-enabled: writes to the store for an owned account", async () => {
     const calls: unknown[] = [];
     const { res, out } = fakeRes();

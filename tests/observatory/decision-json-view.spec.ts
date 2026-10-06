@@ -5,6 +5,7 @@ import {
   expectancyView,
   funnelView,
 } from "../../src/observatory/decision-json-view.js";
+import { anOptionIntent } from "../support/builders.js";
 
 /** PR 5 (issue #2287) made `decisionCyclesView` return a paginated `{cycles, nextCursor}` page
  *  rather than a bare array — this thin wrapper keeps every existing test's `view[0]`/`view.length`
@@ -201,6 +202,85 @@ describe("decisionCyclesView", () => {
       playbook: "S2-NVDA",
       fill: "10 @ $176.10",
     });
+  });
+
+  it("names an option order's contract and a limit's unfilled ending in words; a share outcome has neither", () => {
+    const sold = anOptionIntent();
+    const view = decisionCyclesView([
+      record({
+        mode: "live",
+        rawIntents: [sold, intent()],
+        guardedIntents: [sold, intent()],
+        outcomes: [
+          { intent: sold, action: "placed", result: { intent: sold, status: "unfilled" } },
+          {
+            intent: intent(),
+            action: "placed",
+            result: { intent: intent(), status: "filled", filledQuantity: 10, filledPrice: 176.1 },
+          },
+        ],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]).toMatchObject({
+      symbol: "CRWV",
+      contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+      resultStatus: "unfilled",
+      resultLabel: "limit not reached — canceled",
+    });
+    expect(view[0]?.outcomes[1]).not.toHaveProperty("contract");
+    expect(view[0]?.outcomes[1]).not.toHaveProperty("resultLabel");
+  });
+
+  it("words a limit whose cancel was not confirmed", () => {
+    const sold = anOptionIntent();
+    const view = decisionCyclesView([
+      record({
+        outcomes: [{ intent: sold, action: "placed", result: { intent: sold, status: "working" } }],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]?.resultLabel).toBe("may still fill — cancel not confirmed");
+  });
+
+  it("words a share order the broker took but never confirmed as queued, not as a failed cancel (#4655)", () => {
+    const view = decisionCyclesView([
+      record({
+        outcomes: [
+          {
+            intent: intent(),
+            action: "placed",
+            result: {
+              intent: intent(),
+              status: "working",
+              reason: "order accepted",
+              orderId: "o1",
+            },
+          },
+        ],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]).toMatchObject({
+      resultStatus: "working",
+      resultLabel: "queued at the broker — no fill confirmed yet",
+    });
+    expect(view[0]?.outcomes[0]).not.toHaveProperty("fill");
+  });
+
+  it("names a refused option order's contract beside the check that refused it", () => {
+    const sold = anOptionIntent();
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [sold],
+        guardedIntents: [],
+        outcomes: [],
+        refusals: [{ intent: sold, reason: "option-shape" }],
+      }),
+    ]);
+    expect(view[0]?.refusedIntents).toEqual([
+      expect.objectContaining({
+        contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+        guardReason: "not a well-formed option order — never sent",
+      }),
+    ]);
   });
 
   it("carries strategy, expectation, and forecast through to the view — never parsing reason prose", () => {

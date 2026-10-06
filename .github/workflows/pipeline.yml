@@ -284,6 +284,17 @@ jobs:
     # `synchronize` too (#4094, 2026-09-30): the arm job is now the ONLY arming path — sessions and
     # lanes stopped arming by hand, because native auto-merge honours only required checks and that
     # let three PRs merge mid-integration-tests. A fix pushed after opening must re-arm here too.
+    #
+    # `edited` too (#4477, 2026-10-02): the action list below must cover every action in this
+    # workflow's own `types:` list, or the one it omits becomes a permanent stranding. `edited` was
+    # the omission, and it is not rare — `types:` carries it so a corrected PR title can re-run
+    # commitlint, and `scripts/ship.sh` FIRES one deliberately as #4168's recovery path when a late
+    # draft run cancelled the real `verify`. Since pull_request runs are `cancel-in-progress` per
+    # branch (see `concurrency:` above), an `edited` arriving seconds after `opened` kills the
+    # `opened` run, and the only run that reaches this job is the one action it refused to arm on.
+    # PR #4449 sat green, mergeable and unarmed for 29 hours that way. Keep this list and `types:`
+    # in sync: the check still earns its place as a guard against a FUTURE `types:` addition (a
+    # `labeled` event would arm off stale check results), which is why it is widened, not deleted.
     needs: [verify, e2e]
     # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
     # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
@@ -294,7 +305,7 @@ jobs:
       ${{ !cancelled() && github.event_name == 'pull_request' && needs.verify.result == 'success' &&
           (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
           github.event.pull_request.draft == false &&
-          contains(fromJSON('["opened","reopened","ready_for_review","synchronize"]'), github.event.action) &&
+          contains(fromJSON('["opened","reopened","ready_for_review","synchronize","edited"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
     timeout-minutes: 50 # room for two capped rate-limit waits (#4351)
@@ -521,7 +532,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy to Fly
-        run: flyctl deploy --remote-only
+        # A shim: scripts/fly-deploy.mjs owns the retry decision and is specced. The bare
+        # `flyctl deploy` this replaced had no second attempt, so on run 37094550247 (#4523) one
+        # closed socket on Fly's first app lookup (`api.machines.dev … : EOF`, six seconds in, no
+        # build started) failed the release and left `main` merged-but-undeployed. Connection-level
+        # failures only — an auth refusal, a build error or failed health checks still fail at once.
+        run: node scripts/fly-deploy.mjs --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -543,7 +559,7 @@ jobs:
         if: ${{ failure() && steps.smoke.conclusion == 'failure' && steps.prev.outputs.image != '' }}
         run: |
           echo "smoke failed — rolling back to ${{ steps.prev.outputs.image }}"
-          flyctl deploy -a skynet-capital --image "${{ steps.prev.outputs.image }}"
+          node scripts/fly-deploy.mjs -a skynet-capital --image "${{ steps.prev.outputs.image }}"
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -657,7 +673,7 @@ jobs:
           sed "/^\[env\]/a\\
             GIT_SHA = \"${{ github.sha }}\"" fly.bots.toml > /tmp/fly.bots.deploy.toml
           grep -A2 '^\[env\]' /tmp/fly.bots.deploy.toml
-          flyctl deploy --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
+          node scripts/fly-deploy.mjs --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
@@ -674,6 +690,6 @@ jobs:
         if: ${{ failure() && steps.smoke-bots.conclusion == 'failure' && steps.prev-bots.outputs.image != '' }}
         run: |
           echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
-          flyctl deploy --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
+          node scripts/fly-deploy.mjs --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}

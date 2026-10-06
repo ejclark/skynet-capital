@@ -437,3 +437,16 @@ verdict recorded in
 [forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md](../forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md).
 `FT-…-2`/`FT-…-3` remain `_open_`, unaffected, and are not scoreable from today's date (score-by
 2026-10-05 / 2026-10-09). The stance, the close-out and everything above this note are unchanged.
+
+**`forward-test-due` note, 2026-10-05 (#2884) — `FT-…-2` scored, not a second verdict on the
+event.** Re-fetched the UN's own vote record direct today: `press.un.org/en/2026/sc16466.doc.htm`
+(primary), independently corroborated by `securitycouncilreport.org`'s "What's In Blue" vote page
+and `unmissions.org`/UNSOH's own news page — all three agree, and all three match the 2026-09-30
+close-out's own pull rather than being carried from memory. **Resolution 2829, adopted 2026-09-29:
+12 in favour, 0 against, 3 abstentions (China, Pakistan, Russian Federation)**, extending the GSF
+six months to **2027-03-31**. No veto was cast, and abstentions land exactly at the registered
+ceiling — the res-2793 margin the base rate rests on — not past it; neither kill switch fired.
+**`FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-2` scores `pass`**; full verdict recorded in
+[forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md](../forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md).
+`FT-…-3` remains `_open_`, unaffected, and is not scoreable from today's date (score-by 2026-10-09).
+The stance, the close-out and everything above this note are unchanged.

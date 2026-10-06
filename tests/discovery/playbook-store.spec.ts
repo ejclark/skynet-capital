@@ -4,8 +4,10 @@ describe("playbookStoreCatalog", () => {
   it("returns one entry per house playbook, keyed by id and symbol", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
+      "CRWV-WHEEL",
       "G1-GOOG",
       "HC-SAURON",
+      "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "TACO-DJT",
     ]);
@@ -52,6 +54,50 @@ describe("playbookStoreCatalog", () => {
     expect(hc?.window).toBeUndefined();
     expect(hc?.size).toBeUndefined();
     expect(hc?.traits).toEqual([]);
+  });
+
+  it("shows an option playbook's rules as copy, never a probed window or a percent size", () => {
+    const wheel = byId("CRWV-WHEEL");
+    expect(wheel?.window).toBeUndefined();
+    expect(wheel?.size).toBeUndefined();
+    expect(wheel?.traits).toEqual([]);
+    expect(wheel?.evidenceHref).toBe("/research/crwv-premium-fit");
+  });
+
+  it("says plainly the wheel runs against our own study, and when it retires", () => {
+    const wheel = byId("CRWV-WHEEL");
+    expect(wheel?.description).toContain("AGAINST our own study");
+    expect(wheel?.description).toContain("about 70%");
+    expect(wheel?.description).toContain("about 89%");
+    expect(wheel?.description).toContain("below $0 on 2027-01-29");
+    expect(wheel?.description).toContain("more than 1 in 3 of its sold puts");
+    expect(wheel?.description).toContain("nothing switches it off automatically");
+    expect(wheel?.exitCutLosses).toContain("The real loss is owning a falling stock");
+    expect(wheel?.exitCutLosses).toContain("ride through an earnings print");
+  });
+
+  it("says the NVDA spread is S1-NVDA's run-up with the loss capped, confirmed dates only, out by D-5", () => {
+    const spread = byId("NVDA-CALL-SPREAD");
+    expect(spread?.window).toBeUndefined();
+    expect(spread?.evidenceHref).toBe("/research/nvda-earnings-cycle");
+    expect(spread?.description).toContain("options form of S1-NVDA's pre-earnings run-up");
+    expect(spread?.description).toContain("The most it can lose is the debit paid");
+    expect(spread?.enter).toContain("CONFIRMED NVIDIA earnings date");
+    expect(spread?.exitTakeProfit).toContain("5 trading sessions before the print");
+  });
+
+  it("says each option play trades nothing when no strike sits near the delta it aims at", () => {
+    expect(byId("CRWV-WHEEL")?.enter).toContain("never above 0.30");
+    expect(byId("CRWV-WHEEL")?.enter).toContain("it sells nothing that cycle");
+    expect(byId("NVDA-CALL-SPREAD")?.enter).toContain("between 0.40 and 0.60 delta");
+    expect(byId("NVDA-CALL-SPREAD")?.enter).toContain("with none that close, it opens nothing");
+  });
+
+  it("says the NVDA spread sells back any NVDA call debit spread on its bot, whoever placed it", () => {
+    const hold = byId("NVDA-CALL-SPREAD")?.hold ?? "";
+    expect(hold).not.toContain("positions it did not open: does nothing");
+    expect(hold).toContain("whoever placed it");
+    expect(hold).toContain("any other NVDA option position stops it opening and is left alone");
   });
 
   it("keeps an unevidenced playbook's honest note and links nowhere", () => {
