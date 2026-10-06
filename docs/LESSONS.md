@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `release · deploy bots` red on main: retry a registry 404 once fly's api has found the image
+- **SHA:** f72d873   **DATE:** 2026-10-06   **STATUS:** closed
+- **COVERS:** 43d3f5c
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `release · deploy bots` on `main`, the first [37476037256](https://github.com/ejclark/skynet-capital/actions/runs/37476037256) at 2026-10-06T14:05:19Z. Repair capsule #4796 filed 2026-10-06T14:09:06Z, closed 11m later by #4798.
+- **ROOT CAUSE:** Run 37476037256 left `main` (43d3f5c1) merged but the bots app undeployed. The bots job reuses the image the dashboard job pushed about 60 seconds earlier. flyctl's API lookup answered `image found`, then the machine's host got `MANIFEST_UNKNOWN` (404) for that same digest. flyctl retried 8 times in 16 seconds, all 404, and the job went red. Meanwhile: the dashboard machines were already running that exact digest (its build log exports `sha256:f6d11748…`); the identical cross-app pull worked 17 minutes earlier (run 37473717369) and in every bots deploy before it. No issue on record mentions `MANIFEST_UNKNOWN`. So this is Fly's registry catching up, not a bad reference. A 404 is also what a…
+- **PREVENTION:** spec — `tests/scripts/fly-deploy.spec.ts` (#4798).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy` red on main: drop local claim lease tags around semantic-release's tag fetch and push
 - **SHA:** 394888f   **DATE:** 2026-10-06   **STATUS:** closed
 - **COVERS:** 77a5842
