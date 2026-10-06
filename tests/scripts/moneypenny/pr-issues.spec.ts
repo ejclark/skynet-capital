@@ -3,6 +3,7 @@ import {
   branchIssueOf,
   derivePrIssues,
   laneClassOf,
+  namesNoIssue,
 } from "../../../scripts/moneypenny/pr-issues.mjs";
 
 // #4393 slice 1 — "observe, don't remember". The board's Building-now column derives from the
@@ -124,6 +125,7 @@ describe("laneClassOf: machine lanes are classes of service, not cards", () => {
     ["dependabot/npm_and_yarn/vite-7.1.2", "dependabot"],
     ["platter/2026-10-01", "platter"],
     ["digest/2026-09-30", "digest"],
+    ["docs/digest-2026-10-05", "digest"],
   ])("%s → %s", (ref, lane) => {
     expect(laneClassOf(ref)).toBe(lane);
   });
@@ -134,4 +136,33 @@ describe("laneClassOf: machine lanes are classes of service, not cards", () => {
       expect(laneClassOf(ref)).toBeNull();
     },
   );
+});
+
+// #4393 criterion 8 — the advisory check's question: does a PR leave no trace of what it builds?
+// The 2026-10-06 sample of 100 merged PRs: 58 were lane PRs, 28 named an issue, 14 named nothing —
+// ten of those a `chore/model-fit-*` grind fan-out that never filed an issue.
+describe("namesNoIssue: a PR the board cannot see", () => {
+  it("flags a fan-out branch with no issue anywhere", () => {
+    expect(
+      namesNoIssue({
+        title: "chore(agents): fit the model",
+        body: "Summary",
+        headRef: "chore/model-fit-agents",
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["a title ref", { title: "fix(x): y (#3665 slice 3)", headRef: "fix/y" }],
+    ["a closing keyword", { body: "Closes #4292", headRef: "claude/happy-turing-7l7uat" }],
+    ["a branch number", { headRef: "feat/4292-ci-burst-alarm" }],
+  ])("passes a PR with %s", (_why, pr) => {
+    expect(namesNoIssue(pr)).toBe(false);
+  });
+
+  it("passes a lane PR with no issue — a class of service, not a card", () => {
+    expect(
+      namesNoIssue({ title: "docs(research): pce d-3", headRef: "research/pce-2026-10-02" }),
+    ).toBe(false);
+  });
 });
