@@ -14,6 +14,7 @@ export interface RestIssue {
   user?: { login?: string };
   labels?: ({ name?: string } | string)[];
   pull_request?: unknown;
+  sub_issues_summary?: { total?: number; completed?: number };
 }
 
 export interface Drift {
@@ -33,13 +34,28 @@ export function boardItemsOrThrow(board: {
 
 export function boardIssueNumber(item: ReconcileItem | undefined, repo?: string): number | null;
 
-export function wantedStatusOf(issue: RestIssue): string | null;
+export function wantedStatusOf(issue: RestIssue, columns?: readonly string[]): string | null;
+
+export interface StatusFieldOption {
+  id?: string;
+  name: string;
+  color?: string;
+  description?: string;
+}
+
+export function ensureStatusColumns(deps: {
+  board: BoardContext;
+  write?: (fieldId: string, options: StatusFieldOption[]) => unknown;
+  dryRun?: boolean;
+  log?: (line: string) => void;
+}): string[];
 
 export function planReconcile(input?: {
   items?: ReconcileItem[];
   openIssues?: RestIssue[];
   statusOf?: (item: ReconcileItem) => string | null | undefined;
   repo?: string;
+  columns?: readonly string[];
 }): Drift[];
 
 export function reconcileBoard(deps?: {
@@ -50,6 +66,11 @@ export function reconcileBoard(deps?: {
     number: number,
     opts: { board: BoardContext },
   ) => { skipped?: boolean; reason?: string; status?: string };
+  ensureColumns?: (deps: {
+    board: BoardContext;
+    dryRun: boolean;
+    log: (line: string) => void;
+  }) => readonly string[];
   statusOf?: (item: ReconcileItem) => string | null | undefined;
   dryRun?: boolean;
   log?: (line: string) => void;

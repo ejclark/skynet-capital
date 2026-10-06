@@ -23,6 +23,7 @@ const mode = (position: string, extra: Partial<WorkMode> = {}): WorkMode =>
       governorDispatches: 4,
       grindWidth: 200,
       continuationsPerDay: 3,
+      startedPlanCap: 4,
     },
     reason: `set to ${position}`,
     ...extra,
@@ -46,6 +47,7 @@ describe("the work gate — the dial and the spend breaker in one answer", () =>
       governorDispatches: 4,
       grindWidth: 200,
       continuationsPerDay: 3,
+      startedPlanCap: 4,
     });
   });
 
@@ -118,6 +120,7 @@ describe("the gate's CLI — the exit code is the verdict", () => {
         governorDispatches: 4,
         grindWidth: 200,
         continuationsPerDay: 3,
+        startedPlanCap: 4,
       },
       breakerTripped: false,
       reason: "cleared: work-mode is normal",
@@ -139,6 +142,7 @@ describe("the gate's CLI — the exit code is the verdict", () => {
         governorDispatches: 0,
         grindWidth: 0,
         continuationsPerDay: 0,
+        startedPlanCap: 0,
       },
       breakerTripped: false,
       reason: "refused: work-mode is halt",

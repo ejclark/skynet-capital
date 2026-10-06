@@ -202,6 +202,7 @@ describe("runCli — the admission CLI /work-issues asks", () => {
       readInFlight: () => [],
       readReady: () => [issue(4, ["ready", "feedback"]), issue(6, ["plan"])],
       readIssue: (n: number) => issue(n, ["ready", "feedback"]),
+      readPlans: () => [],
       print: (l: string) => out.push(l),
       printErr: (l: string) => err.push(l),
       ...over,

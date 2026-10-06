@@ -32,7 +32,7 @@ import { lintIssue } from "./issue-lint.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
 import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
-import { statusForIssue } from "./moneypenny/projects.mjs";
+import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 const TOKEN = () => process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "";
@@ -110,6 +110,7 @@ export const boardStatus = (issue) =>
   statusForIssue({
     state: issue.state,
     labels: labelNames(issue),
+    subIssues: subIssueCounts(issue),
     decisionCalloutMissing: missingDecisionCallout({
       labels: labelNames(issue),
       body: issue.body,

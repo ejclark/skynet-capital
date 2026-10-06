@@ -260,6 +260,7 @@ describe("audit() — syncing the work spigot's title", () => {
         governorDispatches: 4,
         grindWidth: 200,
         continuationsPerDay: 3,
+        startedPlanCap: 4,
       },
       reason: "conserve expired at the end of 2026-09-29 (UTC)",
     },
