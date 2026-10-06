@@ -18,14 +18,16 @@ import {
   type EnabledPlaybook,
   type Playbook,
   POST_PRINT_FLAT_DAYS,
-  printWindow,
+  printSessionWindow,
 } from "./playbook.js";
 import type { TacticalRule } from "./tactical-playbook.js";
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
  * sweep: it failed its controls on six of eight peers). Long from D-20, flat at D-5 — the
- * final week is NVDA's dead zone (D-5→D −0.77%, 50% win).
+ * final week is NVDA's dead zone (D-5→D −0.77%, 50% win). D-numbers are TRADING SESSIONS, as the
+ * research counts them and NVDA-CALL-SPREAD trades them (#4776); a date confirmed inside the
+ * window opens it on the next cycle, wherever that lands.
  */
 export const S1_NVDA: Playbook = {
   id: "S1-NVDA",
@@ -44,16 +46,16 @@ export const S1_NVDA: Playbook = {
     if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat";
     }
-    const w = printWindow("NVDA", asOfIso, calendar);
+    const w = printSessionWindow("NVDA", asOfIso, calendar);
     if (!w) {
       return "no-window";
     }
-    if (w.days >= 6 && w.days <= 20) {
+    if (w.sessions >= 6 && w.sessions <= 20) {
       // Date policy: only a confirmed IR date opens the window; an estimate stays dark.
       return w.confirmed ? "long" : "no-window";
     }
     // Inside D-5 (or past the print): whatever we hold, we should not — the play is over.
-    return w.days <= 5 ? "flat" : "no-window";
+    return w.sessions <= 5 ? "flat" : "no-window";
   },
 };
 
@@ -61,7 +63,8 @@ export const S1_NVDA: Playbook = {
  * G1-GOOG — the sweep's sole surviving pre-print long outside NVDA, with a deliberately
  * different exit: hold to the CLOSE of day D (GOOG's final week is not dead money), still
  * never holding the print itself (release is after the close; we exit at ~15:45 ET with a
- * hard next-day failsafe).
+ * hard next-day failsafe). Opens no earlier than D-20 in TRADING SESSIONS, the unit its research
+ * ledger counts in (#4776).
  */
 export const G1_GOOG: Playbook = {
   id: "G1-GOOG",
@@ -75,15 +78,15 @@ export const G1_GOOG: Playbook = {
     if (recentPrint("GOOG", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat"; // failsafe: the close exit was missed — exit on the first post-print cycle
     }
-    const w = printWindow("GOOG", asOfIso, calendar);
+    const w = printSessionWindow("GOOG", asOfIso, calendar);
     if (!w) {
       return "no-window";
     }
-    if (w.days === 0) {
+    if (w.sessions === 0) {
       // Print day: ride to the close, exit before it (release is after hours).
       return etTimeOf(asOfIso) >= "15:45" ? "flat" : w.confirmed ? "long" : "flat";
     }
-    return w.days <= 20 && w.confirmed ? "long" : "no-window";
+    return w.sessions <= 20 && w.confirmed ? "long" : "no-window";
   },
 };
 

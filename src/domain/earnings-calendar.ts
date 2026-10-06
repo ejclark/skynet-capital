@@ -20,12 +20,16 @@
  *     one hop removed from them. Both are "confirmed" for playbook purposes; the prefix is what
  *     makes an audit able to tell how confident to be without re-deriving it.
  *
- * Day math is calendar-day distance on UTC dates. Over weekends this errs toward going flat a
- * day or two early — deliberately the safe direction; do not "fix" it with trading-day math
- * without also bringing a holiday calendar.
+ * TWO CLOCKS, ON PURPOSE. The house pre-print windows (S1-NVDA, G1-GOOG, NVDA-CALL-SPREAD) count
+ * TRADING SESSIONS (`sessionsUntil`), because their research does: the instrument indexes trading
+ * bars, so its D-20 is the 20th session, not the 20th calendar day (#4776 — calendar math had S1
+ * opening six sessions late and leaving two late). Weekends and exchange holidays come from
+ * `market-calendar.ts`. The safety guards (S2's entry guard, post-print hygiene) and member-authored
+ * plays keep calendar days (`daysUntil`): the guards err toward flat that way, and an authored
+ * play's form declares days as its unit.
  */
 
-import { nextSession } from "./market-calendar.js";
+import { nextSession, sessionsBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
 
 type PrintDateStatus = "confirmed" | "estimate";
@@ -51,8 +55,9 @@ export interface EarningsPrint {
  *   - `entryFlatDays`     — S2's entry guard: don't OPEN a buy with a print this close (`engine/guards.ts`).
  *   - `postPrintFlatDays` — post-print hygiene: a position that somehow survived its print is
  *                           exited within this many days (`playbooks/registry.ts`).
- *   - `deadZoneDays`      — S1's dead zone: inside this, the pre-print positioning bid is over
- *                           (docs/research/nvda-earnings-cycle.md — D-5→D is NVDA's dead week).
+ *   - `deadZoneSessions`  — S1's dead zone, in TRADING SESSIONS: inside this, the pre-print
+ *                           positioning bid is over (docs/research/nvda-earnings-cycle.md — D-5→D
+ *                           is NVDA's dead week). The other two are calendar days.
  *
  * WHY THESE MIRROR RATHER THAN DRIVE. `engine/guards.ts` and `playbooks/**` still hold their own
  * literals and these are copies — written when both were envelope-protected. They are open now
@@ -67,7 +72,7 @@ export interface EarningsPrint {
 export const PRINT_WINDOWS = {
   entryFlatDays: 2,
   postPrintFlatDays: 3,
-  deadZoneDays: 5,
+  deadZoneSessions: 5,
 } as const;
 
 /**
@@ -160,6 +165,15 @@ const dateOf = (iso: string): string => iso.slice(0, 10);
 export function daysUntil(asOfIso: string, date: string): number {
   const ms = Date.parse(`${date}T00:00:00Z`) - Date.parse(`${dateOf(asOfIso)}T00:00:00Z`);
   return Math.round(ms / 86_400_000);
+}
+
+/**
+ * Trading sessions from `asOfIso`'s ET market day to `date`: 0 on `date` itself, 20 on the session
+ * the research calls D-20. A weekend or holiday reads as the session before it — Saturday after
+ * D-20 is still D-20 — which is how NVDA-CALL-SPREAD's date comparisons place it too.
+ */
+export function sessionsUntil(asOfIso: string, date: string): number {
+  return sessionsBetween(marketDayKey(asOfIso), date);
 }
 
 /** The symbol's next upcoming print (today counts as upcoming — the print is after the close). */

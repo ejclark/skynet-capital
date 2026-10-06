@@ -6,8 +6,10 @@ import {
   PRINT_WINDOWS,
   printSpan,
   printWithin,
+  sessionsUntil,
   UPCOMING_PRINTS,
 } from "../../src/domain/earnings-calendar.js";
+import { sessionsBefore } from "../../src/domain/market-calendar.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import { applyGuards } from "../../src/engine/guards.js";
 import { S1_NVDA } from "../../src/playbooks/registry.js";
@@ -27,6 +29,28 @@ describe("earnings calendar", () => {
 
     it("is negative for a past date — how stale entries age out", () => {
       expect(daysUntil("2026-08-27T00:00:00Z", "2026-08-26")).toBe(-1);
+    });
+  });
+
+  describe("sessionsUntil — the unit the pre-print research counts in (#4776)", () => {
+    it("counts trading sessions to the print: 0 on the day, 20 on D-20, holidays skipped", () => {
+      expect(sessionsUntil("2026-11-18T15:00:00Z", "2026-11-18")).toBe(0);
+      expect(sessionsUntil("2026-11-11T15:00:00Z", "2026-11-18")).toBe(5);
+      expect(sessionsUntil("2026-10-21T15:00:00Z", "2026-11-18")).toBe(20);
+      // Labor Day (09-07) is not a session: 09-01 is D-20 before 09-30, 29 calendar days back.
+      expect(sessionsUntil("2026-09-01T15:00:00Z", "2026-09-30")).toBe(20);
+    });
+
+    it("reads a weekend as the session before it", () => {
+      // Friday 10-23 is D-18 before 11-18; the weekend after it stays D-18.
+      expect(sessionsUntil("2026-10-23T15:00:00Z", "2026-11-18")).toBe(18);
+      expect(sessionsUntil("2026-10-24T15:00:00Z", "2026-11-18")).toBe(18);
+      expect(sessionsUntil("2026-10-25T15:00:00Z", "2026-11-18")).toBe(18);
+    });
+
+    it("keeps the ET market day — an evening instant is still that day's session", () => {
+      // 23:30 UTC on 10-21 is 19:30 ET on 10-21, not 10-22.
+      expect(sessionsUntil("2026-10-21T23:30:00Z", "2026-11-18")).toBe(20);
     });
   });
 
@@ -161,10 +185,12 @@ describe("earnings calendar", () => {
       expect(after(PRINT_WINDOWS.postPrintFlatDays + 1)).not.toBe("flat");
     });
 
-    it("deadZoneDays is exactly where S1's pre-print bid gives up and goes flat", () => {
-      const before = (n: number) => S1_NVDA.desiredState(daysBeforeD(n), nvdaCalendar);
-      expect(before(PRINT_WINDOWS.deadZoneDays)).toBe("flat");
-      expect(before(PRINT_WINDOWS.deadZoneDays + 1)).toBe("long");
+    it("deadZoneSessions is exactly where S1's pre-print bid gives up and goes flat", () => {
+      // Counted in trading sessions, as S1 counts them (#4776) — not calendar days.
+      const before = (n: number) =>
+        S1_NVDA.desiredState(`${sessionsBefore(D, n)}T15:00:00.000Z`, nvdaCalendar);
+      expect(before(PRINT_WINDOWS.deadZoneSessions)).toBe("flat");
+      expect(before(PRINT_WINDOWS.deadZoneSessions + 1)).toBe("long");
     });
   });
 

@@ -45,9 +45,9 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
    *  research doc we serve, that doc's route. Ported from the retired Plays cards (#3623). */
   readonly evidence: string;
   readonly evidenceHref?: string;
-  /** The date window read off the playbook by the probe ("D-20 to D-6"), and its target exposure
-   *  per mode. Absent for a tactical playbook, which has no window, and for an option playbook,
-   *  which is sized by its allocation — the rules of either are the copy above. */
+  /** The date window read off the playbook by the probe ("20 to 6 sessions before the print"), and
+   *  its target exposure per mode. Absent for a tactical playbook, which has no window, and for an
+   *  option playbook, which is sized by its allocation — the rules of either are the copy above. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
   /** Probe-proven traits ("Confirmed dates only"…) — empty when nothing was proven. */
@@ -62,16 +62,20 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
   "S1-NVDA": {
     description:
       "Pre-print positioning bid, NVDA only — long the run-up, out before the dead final week.",
-    enter: "From D-20 to D-6 ahead of a CONFIRMED earnings date. An estimated date stays dark.",
+    enter:
+      "From 20 trading sessions before a CONFIRMED earnings date to 6 before it. A date confirmed " +
+      "later than that opens on the next cycle. An estimated date stays dark.",
     exitTakeProfit: "No separate take-profit — the thesis is the window, not a price target.",
     exitCutLosses:
-      "Flat from D-5 through the print — the final week is NVDA's dead zone regardless of price.",
-    hold: "No confirmed date in range, or already inside D-5: flat and waiting.",
+      "Flat from 5 trading sessions before the print through the print — the final week is NVDA's dead zone regardless of price.",
+    hold: "No confirmed date in range, or already inside the last 5 sessions: flat and waiting.",
   },
   "G1-GOOG": {
     description:
       "Pre-print run-up held to the close of print day — GOOG's final week is not dead money, but the print itself never is.",
-    enter: "From D-20 to D-1 ahead of a CONFIRMED earnings date.",
+    enter:
+      "From 20 trading sessions before a CONFIRMED earnings date to the close of print day. A date " +
+      "confirmed later than that opens on the next cycle.",
     exitTakeProfit:
       "Rides to the close of print day itself, then exits — the position, not a price level, defines the win.",
     exitCutLosses:
@@ -176,7 +180,7 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
   };
   const href = evidenceHref(playbook);
   // An option play is sized by its allocation one contract at a time and opens on its own option
-  // rules, so the probe's "D-20 to D-6" window and percent-of-equity size would describe it falsely
+  // rules, so the probe's session window and percent-of-equity size would describe it falsely
   // — it shows its rules as copy, the way a tactical playbook does.
   const probe = playbook.tactics || playbook.options ? undefined : probeWindow(playbook);
   return {

@@ -51,7 +51,12 @@
  * is deliberately left to its own follow-up PR, gated by the characterization specs proving every
  * OTHER playbook stays untouched (#3194's step-1 safety net, still doing its job).
  */
-import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
+import {
+  daysUntil,
+  type EarningsPrint,
+  nextPrint,
+  sessionsUntil,
+} from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
   ListedExpirations,
@@ -321,6 +326,23 @@ export function printWindow(
     return undefined;
   }
   return { days: daysUntil(asOfIso, print.date), confirmed: print.status === "confirmed" };
+}
+
+/**
+ * The same question in TRADING SESSIONS — the unit the house pre-print research counts in (#4776).
+ * S1-NVDA and G1-GOOG read this; `printWindow` stays calendar days because a member-authored play's
+ * form declares days as its unit (`authored-play.ts`).
+ */
+export function printSessionWindow(
+  symbol: string,
+  asOfIso: string,
+  calendar: readonly EarningsPrint[],
+): { sessions: number; confirmed: boolean } | undefined {
+  const print = nextPrint(symbol, asOfIso, calendar);
+  if (!print) {
+    return undefined;
+  }
+  return { sessions: sessionsUntil(asOfIso, print.date), confirmed: print.status === "confirmed" };
 }
 
 /**
