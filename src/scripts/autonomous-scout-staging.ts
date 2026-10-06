@@ -122,7 +122,9 @@ export function announceRoster(
   log: { log(line: string): void; error(line: string): void } = console,
 ): void {
   for (const bad of roster.rejected) {
-    log.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
+    log.error(
+      `[playbooks] REFUSED token "${bad}" in SKYNET_PLAYBOOKS — unknown, malformed or repeated`,
+    );
   }
   if (roster.enabled.length > 0) {
     log.log(

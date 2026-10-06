@@ -175,6 +175,21 @@ describe("enabledPlaybooks env parsing", () => {
     expect(enabled).toEqual([{ playbook: HC_SAURON, mode: "standard" }]);
   });
 
+  it("arms a playbook once: the first token wins and each repeat is refused by name", () => {
+    expect(
+      enabledPlaybooks({
+        SKYNET_PLAYBOOKS: "SAURON,S1-NVDA,SAURON:aggressive,S1-NVDA:conservative,HC-SAURON",
+      }),
+    ).toEqual({
+      enabled: [
+        { playbook: SAURON, mode: "standard" },
+        { playbook: S1_NVDA, mode: "standard" },
+        { playbook: HC_SAURON, mode: "standard" },
+      ],
+      rejected: ["SAURON:aggressive (repeated)", "S1-NVDA:conservative (repeated)"],
+    });
+  });
+
   it("registers SAURON, his own rules (#4651) — on no default roster, never marked unwired", () => {
     expect(enabledPlaybooks({}).enabled).toEqual([]);
     expect(enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON:aggressive" })).toEqual({

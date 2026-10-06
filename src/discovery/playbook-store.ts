@@ -166,8 +166,9 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
         label: "Pause",
         text:
           "Pausing it never stops an option playbook. Paused or unsubscribed, his rules still trade " +
-          "Sauron's own account as they did before this playbook existed, just without its label; " +
-          "on any other bot, nothing of his runs.",
+          "Sauron's own account as they did before this playbook existed — without its label and " +
+          "without any capital or symbol limit you set here. Paused on any other bot, nothing of " +
+          "his runs there.",
       },
     ],
   },

@@ -42,7 +42,11 @@ import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
-import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
+import {
+  mergeRosters,
+  pausedPlaybookIds,
+  subscriptionRoster,
+} from "../subscriptions/subscription-roster.js";
 import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
@@ -275,7 +279,13 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
     );
   }
-  const merged = mergeRosters(houseEnabled, acctRoster.enabled);
+  const paused = pausedPlaybookIds(subscriptions);
+  for (const { playbook } of houseEnabled.filter((e) => paused.has(e.playbook.id))) {
+    console.log(
+      `[playbooks] ${bot.persona.id} paused ${playbook.id} — its house entry is off here`,
+    );
+  }
+  const merged = mergeRosters(houseEnabled, acctRoster.enabled, paused);
   return { bot, subscriptions, enabled: ownedRoster(bot.persona.id, merged) };
 }
 

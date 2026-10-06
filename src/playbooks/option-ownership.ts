@@ -46,11 +46,13 @@ export function claimOptionUnderlyings(
 }
 
 /**
- * ONE ENTRY PER PLAYBOOK (#4651). A bot's roster merges the env list with its own subscriptions
- * (`mergeRosters`), and neither promises a playbook appears once: a repeated SKYNET_PLAYBOOKS token
- * ("SAURON,SAURON:aggressive", "S1-NVDA,S1-NVDA") would run the same rules twice, and the guards
- * would approve both buys — twice the position. The first entry per id wins (after the merge, that
- * is the account's own subscription when it has one); every repeat is refused, loudly.
+ * ONE ENTRY PER PLAYBOOK (#4651) — defence in depth. `enabledPlaybooks` already refuses a repeated
+ * SKYNET_PLAYBOOKS token at parse time; this keeps any other path to a repeat (a hand-built roster,
+ * a future source) from running the same rules twice, which the guards would let through as two
+ * buys — twice the position. The first entry per id wins: after the merge, that is the account's
+ * own enabled subscription when it has one. A different repeat is refused loudly; the same entry
+ * seen twice (one subscription filling two env slots in `mergeRosters`) is dropped silently,
+ * since nothing was refused.
  */
 export function onePerPlaybook(
   enabled: readonly EnabledPlaybook[],
@@ -63,6 +65,7 @@ export function onePerPlaybook(
       first.set(entry.playbook.id, entry);
       return true;
     }
+    if (kept === entry) return false;
     log(
       `${entry.playbook.id}:${entry.mode} refused — ${kept.playbook.id}:${kept.mode} is already ` +
         "on this bot's roster, and a playbook runs once",

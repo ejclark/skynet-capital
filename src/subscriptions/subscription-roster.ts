@@ -58,10 +58,17 @@ export function subscriptionRoster(
  * `playbook.id`, so a bot that explicitly subscribed to a playbook the house roster ALSO enables
  * gets its own mode/capital, not a second conflicting entry for the same symbol — in the house
  * entry's position.
+ *
+ * A PAUSE WINS TOO (#4651). A house entry whose id the account has paused (`paused`, from
+ * `pausedPlaybookIds`) leaves this account's roster: pausing a playbook in the Store turns it off on
+ * that account even when the env roster names it. Before, a paused subscription was simply skipped,
+ * so the house entry of the same id kept trading and Pause did nothing. An account with no
+ * subscription to the id keeps the house entry.
  */
 export function mergeRosters(
   base: readonly EnabledPlaybook[],
   overrides: readonly EnabledPlaybook[],
+  paused: ReadonlySet<string> = new Set(),
 ): EnabledPlaybook[] {
   // Replace in place, so an override changes a house entry's mode without changing its turn in
   // the evaluation order — seeding a bot's subscriptions from the house roster (#4535) must leave
@@ -69,7 +76,22 @@ export function mergeRosters(
   const byId = new Map(overrides.map((e) => [e.playbook.id, e]));
   const baseIds = new Set(base.map((e) => e.playbook.id));
   return [
-    ...base.map((e) => byId.get(e.playbook.id) ?? e),
+    ...base.flatMap((e) => {
+      const override = byId.get(e.playbook.id);
+      if (override) return [override];
+      return paused.has(e.playbook.id) ? [] : [e];
+    }),
     ...overrides.filter((e) => !baseIds.has(e.playbook.id)),
   ];
+}
+
+/**
+ * The playbook ids an account has PAUSED: it holds a subscription to the id, switched off, and no
+ * enabled one. An id it has no subscription to at all is not paused — that is "never subscribed".
+ */
+export function pausedPlaybookIds(subscriptions: readonly PlaybookSubscription[]): Set<string> {
+  const on = new Set(subscriptions.filter((s) => s.enabled).map((s) => s.playbookId));
+  return new Set(
+    subscriptions.filter((s) => !(s.enabled || on.has(s.playbookId))).map((s) => s.playbookId),
+  );
 }

@@ -2,7 +2,11 @@ import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
 import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
-import { mergeRosters, subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
+import {
+  mergeRosters,
+  pausedPlaybookIds,
+  subscriptionRoster,
+} from "../../src/subscriptions/subscription-roster.js";
 
 const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscription => ({
   accountId: "bot-1",
@@ -121,5 +125,31 @@ describe("mergeRosters", () => {
 
   it("is empty when both base and overrides are empty", () => {
     expect(mergeRosters([], [])).toEqual([]);
+  });
+
+  // #4651: a paused subscription used to be skipped before the merge, so the house entry of the
+  // same id kept trading and Pause did nothing for any playbook the env roster names.
+  it("drops a house entry the account has paused, keeps every other house entry", () => {
+    expect(mergeRosters([house, houseGoog], [], new Set(["S1-NVDA"]))).toEqual([houseGoog]);
+  });
+
+  it("an enabled override still wins over a pause for the same id", () => {
+    const override: EnabledPlaybook = { playbook: S1_NVDA, mode: "aggressive" };
+    expect(mergeRosters([house], [override], new Set(["S1-NVDA"]))).toEqual([override]);
+  });
+});
+
+describe("pausedPlaybookIds", () => {
+  it("names an id the account holds a switched-off subscription to", () => {
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ playbookId: "G1-GOOG" })])).toEqual(
+      new Set(["S1-NVDA"]),
+    );
+  });
+
+  it("never names an id with no subscription, or one that also has an enabled subscription", () => {
+    expect(pausedPlaybookIds([])).toEqual(new Set());
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ mode: "aggressive" })])).toEqual(
+      new Set(),
+    );
   });
 });

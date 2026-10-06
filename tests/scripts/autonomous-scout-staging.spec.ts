@@ -102,11 +102,15 @@ describe("after-close scout staging", () => {
     };
     announceRoster({ enabled: [], rejected: [] }, sink);
     announceRoster(
-      { enabled: [{ playbook: { id: "S1-NVDA" }, mode: "standard" }], rejected: ["BOGUS"] },
+      {
+        enabled: [{ playbook: { id: "S1-NVDA" }, mode: "standard" }],
+        rejected: ["BOGUS", "S1-NVDA:aggressive (repeated)"],
+      },
       sink,
     );
     expect(lines).toEqual([
-      'error [playbooks] REFUSED unknown/malformed token "BOGUS" in SKYNET_PLAYBOOKS',
+      'error [playbooks] REFUSED token "BOGUS" in SKYNET_PLAYBOOKS — unknown, malformed or repeated',
+      'error [playbooks] REFUSED token "S1-NVDA:aggressive (repeated)" in SKYNET_PLAYBOOKS — unknown, malformed or repeated',
       "log [playbooks] armed: S1-NVDA:standard",
     ]);
   });

@@ -231,6 +231,16 @@ describe("playbookStoreCatalog", () => {
       expect(copy()).not.toMatch(/paus\w* (it )?stops his/i);
     });
 
+    // A paused subscription no longer stamps his orders, so the guards find no subscription for
+    // them: the cap and the symbol filter set here lift with the label (round-3 check of 89e58dcc).
+    it("says pausing lifts the limits set here along with the label", () => {
+      expect(note("Pause")).toContain(
+        "without its label and without any capital or symbol limit you set here",
+      );
+      expect(note("Pause")).not.toContain("just without its label");
+      expect(note("Pause")).toContain("Paused on any other bot, nothing of his runs there");
+    });
+
     it("quotes only numbers his persona actually trades on", () => {
       expect(card().enter).toContain("−0.70 or lower");
       expect(card().enter).toContain("$120,000 at −0.70");

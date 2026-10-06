@@ -261,6 +261,10 @@ const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
  * Parse SKYNET_PLAYBOOKS ("id:mode,id:mode"; mode defaults to standard). Unknown ids and
  * malformed modes are refused loudly via the returned `rejected` list — a typo that silently
  * enabled nothing would look exactly like a quiet market.
+ *
+ * A playbook runs once (#4651): the first token naming an id wins, and every later one is refused
+ * as `"<token> (repeated)"`, so the boot lines, the morning brief and the house-roster report all
+ * name what was actually dropped — "SAURON,SAURON:aggressive" arms SAURON:standard alone.
  */
 export function enabledPlaybooks(env: Readonly<Record<string, string | undefined>>): {
   readonly enabled: EnabledPlaybook[];
@@ -281,6 +285,10 @@ export function enabledPlaybooks(env: Readonly<Record<string, string | undefined
     const mode = (modeRaw ?? "standard") as PlaybookMode;
     if (!(playbook && MODES.has(mode))) {
       rejected.push(token);
+      continue;
+    }
+    if (enabled.some((e) => e.playbook.id === playbook.id)) {
+      rejected.push(`${token} (repeated)`);
       continue;
     }
     enabled.push({ playbook, mode });
