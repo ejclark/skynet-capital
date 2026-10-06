@@ -20,7 +20,13 @@
  */
 
 /** A strategy is the playbook with its ticker taken out: what it does, not what it trades. */
-export type StrategyId = "pre-print-run-up" | "wheel" | "call-spread" | "event" | "tactical";
+export type StrategyId =
+  | "pre-print-run-up"
+  | "wheel"
+  | "call-spread"
+  | "event"
+  | "tactical"
+  | "persona-rules";
 
 export interface Strategy {
   readonly id: StrategyId;
@@ -60,6 +66,11 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     id: "tactical",
     name: "hardcore Sauron's tactics",
     noScreen: "It trades as research, measured by trade volume, not by a backtest.",
+  },
+  "persona-rules": {
+    id: "persona-rules",
+    name: "Sauron's own rules",
+    noScreen: "It is a persona's whole rule set, not a fit test for one ticker.",
   },
 };
 
@@ -113,7 +124,7 @@ export interface Pair {
   /** The id every record keys on. Opaque: look it up, never build or split it. */
   readonly id: string;
   readonly strategy: StrategyId;
-  /** One ticker per pair; HC-SAURON's ten-name basket is the one exception, kept as it is
+  /** One ticker per pair; HC-SAURON's and SAURON's ten-name baskets are the exceptions, kept as they are
    *  (a subscriber's chips narrow it). Must equal the registry playbook's `symbols`. */
   readonly symbols: readonly string[];
   readonly evidence: PairEvidence;
@@ -202,6 +213,17 @@ const PAIRS: readonly Pair[] = [
       verdictOn: "2026-10-05",
       shelfOn: "2027-03-31",
       study: NVDA_STUDY,
+    },
+  },
+  {
+    // A persona's rules over the bots' ten names (#4651), like HC-SAURON's basket; its claims live
+    // in docs/BOTS-SAURON.md, not in a per-ticker study.
+    id: "SAURON",
+    strategy: "persona-rules",
+    symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],
+    evidence: {
+      status: "not-studied",
+      call: "Sauron's own rules, unchanged: sell euphoria that has rolled over, buy panic that has stopped falling.",
     },
   },
 ];
