@@ -18,6 +18,16 @@ function limitLabel(limitPrice: number): string {
   return Number.isFinite(limitPrice) ? formatPrice(Math.abs(limitPrice)) : "unknown";
 }
 
+/** `"NVDA $185/$200 CALL SPREAD · 13 NOV 26"` — a two-leg order named as the spread it is, or
+ *  undefined when its legs are not two readable contracts. */
+export function spreadContractName(occSymbols: readonly string[]): string | undefined {
+  const parts = occSymbols.flatMap((occ) => parseOccSymbol(occ) ?? []);
+  const [low, high] = [...parts].sort((a, b) => a.strike - b.strike);
+  if (!(low && high && parts.length === 2)) return undefined;
+  const strikes = `${occStrikeLabel(low.strike)}/${occStrikeLabel(high.strike)}`;
+  return `${low.underlying} ${strikes} ${low.type.toUpperCase()} SPREAD · ${occExpiryLabel(low.expiration)}`;
+}
+
 /** `"SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10"` ·
  *  `"BUY 1 NVDA $185/$200 CALL SPREAD · 13 NOV 26 · limit $3.40 debit"` ·
  *  `"CLOSE 1 NVDA $185/$200 CALL SPREAD · 13 NOV 26 · limit $2.80 credit"`. Undefined for a share
@@ -33,12 +43,8 @@ export function optionContractLine(intent: OrderIntent): string | undefined {
     const paid = close ? (intent.side === "buy" ? " debit" : " credit") : "";
     return `${verb} ${intent.quantity} ${humanizeOptionSymbol(first.occSymbol)} · ${limit}${paid}`;
   }
-  const parts = option.legs.flatMap((leg) => parseOccSymbol(leg.occSymbol) ?? []);
-  const [low, high] = [...parts].sort((a, b) => a.strike - b.strike);
-  if (!(low && high && parts.length === 2)) {
-    return `${verb} ${intent.quantity} ${intent.symbol} option order · ${limit}`;
-  }
-  const strikes = `${occStrikeLabel(low.strike)}/${occStrikeLabel(high.strike)}`;
+  const spread = spreadContractName(option.legs.map((leg) => leg.occSymbol));
+  if (!spread) return `${verb} ${intent.quantity} ${intent.symbol} option order · ${limit}`;
   const net = option.limitPrice > 0 ? "debit" : "credit";
-  return `${verb} ${intent.quantity} ${low.underlying} ${strikes} ${low.type.toUpperCase()} SPREAD · ${occExpiryLabel(low.expiration)} · ${limit} ${net}`;
+  return `${verb} ${intent.quantity} ${spread} · ${limit} ${net}`;
 }

@@ -18,6 +18,7 @@ import {
   openDecisionDb,
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
@@ -75,6 +76,9 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** A spread leg's order id → its spread — the same store, filled by the same replicated
+   *  records, so a leg resolves the moment its decision has landed. */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
@@ -181,6 +185,7 @@ export function startInsightsBridge(
               ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
           funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume

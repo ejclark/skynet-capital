@@ -302,6 +302,27 @@ export interface DeskActivityEvent {
   /** The decision that placed this order — bot accounts only, when the audit trail resolves it
    *  (#3687 slice 4). Absent means none was found, never an empty placeholder. */
   readonly reasoning?: ActivityReasoning;
+  /** A bot's spread only (#4650): the whole order's net cash, once — "$335.00 paid". */
+  readonly net?: string;
+  /** A bot's spread only: each leg's own fill, shown beneath the spread's row. */
+  readonly legs?: readonly DeskActivityLeg[];
+}
+
+/** One leg of a spread, as the account filled it. Mirrors the server's `DeskActivityLeg`. */
+export interface DeskActivityLeg {
+  readonly orderId: string;
+  readonly symbol: string;
+  /** The contract in words — "NVDA $185 CALL · 13 NOV 26". */
+  readonly display: string;
+  readonly side: "buy" | "sell";
+  readonly quantity: number;
+  readonly filled: number;
+  /** Per share. */
+  readonly price: string;
+  /** "$510.00 paid — 1 contract × 100 shares × $5.10" — absent until it fills at a price. */
+  readonly cost?: string;
+  readonly status: string;
+  readonly at: string;
 }
 
 export interface ActivityReasoning {

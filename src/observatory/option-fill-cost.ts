@@ -64,15 +64,31 @@ export function optionFillCost(
   if (!(quantity > 0)) return undefined;
   const perShare = signedPerShare(option, result, quantity);
   if (perShare === undefined || !Number.isFinite(perShare)) return undefined;
-  // Cents, so a net summed from per-share legs never prints a float's tail.
-  const dollars = Math.round(Math.abs(perShare) * OPTION_MULTIPLIER * quantity * 100) / 100;
+  return costOf(perShare, quantity, option.legs.length > 1);
+}
+
+/** Cents, so a net summed from per-share legs never prints a float's tail. */
+function costOf(signedPerShare: number, quantity: number, spread: boolean): OptionFillCost {
+  const dollars = Math.round(Math.abs(signedPerShare) * OPTION_MULTIPLIER * quantity * 100) / 100;
   return {
     dollars,
-    direction: perShare < 0 ? "received" : "paid",
+    direction: signedPerShare < 0 ? "received" : "paid",
     quantity,
-    perShare: Math.abs(perShare),
-    spread: option.legs.length > 1,
+    perShare: Math.abs(signedPerShare),
+    spread,
   };
+}
+
+/** One leg of a spread as the account filled it: a bought leg paid, a sold one received —
+ *  `"$510.00 paid — 1 contract × 100 shares × $5.10"` once worded. Undefined with nothing filled or
+ *  no price, never a $0. */
+export function optionLegCost(
+  side: "buy" | "sell",
+  perShare: number | undefined,
+  contracts: number,
+): OptionFillCost | undefined {
+  if (perShare === undefined || !Number.isFinite(perShare) || !(contracts > 0)) return undefined;
+  return costOf(sign(side) * Math.abs(perShare), contracts, false);
 }
 
 /** `"$205.00 received — 1 contract × 100 shares × $2.05"` ·

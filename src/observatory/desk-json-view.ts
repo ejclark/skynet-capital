@@ -26,6 +26,13 @@ import {
 } from "./participant-snapshot.js";
 import { type PlainPosition, plainPosition } from "./position-plain.js";
 import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
+import {
+  type DeskActivityLeg,
+  foldSpreadLegs,
+  ledgerLineFields,
+  type SpreadOf,
+  spreadActivityEvent,
+} from "./spread-activity.js";
 
 /**
  * THE DESK AS DATA — the JSON view `/api/desk/:id` serves the React shell.
@@ -327,6 +334,9 @@ export interface DeskActivityEvent {
   readonly returnPct?: string;
   /** Tone for the realized P/L — `pos`/`neg`/`flat`, absent when no P/L. */
   readonly realizedTone?: Tone;
+  /** A bot's spread only (`spread-activity.ts`): its net cash, once, and each leg's own fill. */
+  readonly net?: string;
+  readonly legs?: readonly DeskActivityLeg[];
 }
 
 export interface DeskActivityPage {
@@ -341,7 +351,8 @@ export interface DeskActivityPage {
  *  an origin index every row reads `unknown` — the honest default when no audit evidence was
  *  handed in. `realizedByOrder` carries the per-order realized P/L the round-trip matcher computed
  *  from the full ledger — attached to closing fills so the activity table shows what each close
- *  earned, absent on opens. */
+ *  earned, absent on opens. `spreadOf` (a bot's desk) folds a spread's leg fills into one row
+ *  BEFORE paging, so a spread is never split across two pages. */
 export function deskActivityView(
   records: readonly TradeActivityRecord[],
   origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
@@ -352,26 +363,22 @@ export function deskActivityView(
       string,
       { readonly realized: number; readonly returnPct: number }
     >;
+    readonly spreadOf?: SpreadOf | undefined;
   } = {},
 ): DeskActivityPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
+  const sorted = collapseActivity(records).sort((a, b) => (a.at < b.at ? 1 : -1));
   const { items, nextCursor } = paginateDesc(
-    collapseActivity(records).sort((a, b) => (a.at < b.at ? 1 : -1)),
-    (record) => record.at,
+    foldSpreadLegs(sorted, opts.spreadOf),
+    (item) => item.at,
     { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
   );
-  const activity = items.map((record) => {
+  const activity = items.map((item): DeskActivityEvent => {
+    if (item.kind === "spread") return spreadActivityEvent(item, origins, opts.realizedByOrder);
+    const { record } = item;
     const pl = opts.realizedByOrder?.get(record.orderId);
     return {
-      orderId: record.orderId,
-      symbol: record.symbol,
-      display: humanizeOptionSymbol(record.symbol),
-      side: record.side,
-      quantity: record.quantity,
-      filled: record.filledQuantity,
-      price: record.price === undefined ? "—" : formatPrice(record.price),
-      status: record.status,
-      at: record.at,
+      ...ledgerLineFields(record),
       backfilled: record.source === "backfill",
       origin: orderOrigin(record, origins),
       ...(pl

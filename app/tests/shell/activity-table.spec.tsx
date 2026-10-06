@@ -178,6 +178,91 @@ describe("ActivityTable — a bot's option fill", () => {
   });
 });
 
+/** #4650 — a bot's spread is one broker order whose fills arrive one per leg. Activity shows the
+ *  spread once, its net once, and each leg beneath it: the contract, its side in words, and what it
+ *  alone paid or received — visible without opening anything. */
+describe("ActivityTable — a bot's spread and its legs", () => {
+  const spread = event({
+    orderId: "mleg-1",
+    symbol: "NVDA",
+    display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
+    side: "buy",
+    quantity: 1,
+    filled: 1,
+    price: "$3.35",
+    net: "$335.00 paid",
+    reasoning: {
+      reason: "the options form of S1-NVDA's pre-earnings run-up",
+      personaId: "sauron",
+      playbookId: "NVDA-CALL-SPREAD",
+      playbookMode: "standard",
+      contract: "BUY 1 NVDA $185/$200 CALL SPREAD · 13 NOV 26 · limit $3.40 debit",
+      cost: "$335.00 paid — 1 spread × 100 shares × $3.35 net",
+      invalidator: "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints",
+    },
+    legs: [
+      {
+        orderId: "leg-low",
+        symbol: "NVDA261113C00185000",
+        display: "NVDA $185 CALL · 13 NOV 26",
+        side: "buy",
+        quantity: 1,
+        filled: 1,
+        price: "$5.10",
+        cost: "$510.00 paid — 1 contract × 100 shares × $5.10",
+        status: "filled",
+        at: "2026-10-27T15:00:00Z",
+      },
+      {
+        orderId: "leg-high",
+        symbol: "NVDA261113C00200000",
+        display: "NVDA $200 CALL · 13 NOV 26",
+        side: "sell",
+        quantity: 1,
+        filled: 1,
+        price: "$1.75",
+        cost: "$175.00 received — 1 contract × 100 shares × $1.75",
+        status: "filled",
+        at: "2026-10-27T15:00:01Z",
+      },
+    ],
+  });
+
+  it("shows each leg beneath the spread's row, its side in words and its own dollars", () => {
+    const { container } = render(<ActivityTable events={[spread, event({ orderId: "ord-2" })]} />);
+    const rows = [...container.querySelectorAll("tbody tr")].map((tr) => tr.id);
+    expect(rows).toEqual(["act-mleg-1", "act-leg-low", "act-leg-high", "act-ord-2"]);
+    const low = container.querySelector("#act-leg-low");
+    expect(low).toHaveTextContent("BUY");
+    expect(low).toHaveTextContent("NVDA $185 CALL · 13 NOV 26");
+    expect(low).toHaveTextContent("$510.00 paid — 1 contract × 100 shares × $5.10");
+    const high = container.querySelector("#act-leg-high");
+    expect(high).toHaveTextContent("SELL");
+    expect(high).toHaveTextContent("$175.00 received — 1 contract × 100 shares × $1.75");
+  });
+
+  it("says the spread's net once, on its own row, whether or not its decision is open", () => {
+    const { container } = render(<ActivityTable events={[spread]} />);
+    const nets = () => container.textContent?.match(/\$335\.00/g) ?? [];
+    expect(screen.getByText("net $335.00 paid")).toBeInTheDocument();
+    expect(nets()).toHaveLength(1);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Why NVDA $185/$200 CALL SPREAD · 13 NOV 26 was bought" }),
+    );
+    expect(screen.getByText("NVDA-CALL-SPREAD · standard")).toBeInTheDocument();
+    expect(
+      screen.getByText("NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints"),
+    ).toBeInTheDocument();
+    expect(nets()).toHaveLength(1);
+  });
+
+  it("draws no leg rows for any other row", () => {
+    const { container } = render(<ActivityTable events={[scouted]} />);
+    expect(container.querySelector(".row-leg")).toBeNull();
+    expect(screen.queryByText(/^net /)).not.toBeInTheDocument();
+  });
+});
+
 // #4046 item 1: a Thesis marker links `?section=activity#act-<orderId>`, but the ledger arrives
 // after the router has tried the hash — the row has to bring itself into view once it exists.
 describe("ActivityTable — the row a link points at", () => {

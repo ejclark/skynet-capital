@@ -2,6 +2,7 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -135,6 +136,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /**
+   * A spread leg's own broker order id → the spread order it belongs to — the hop Activity
+   * needs before `findByOrderId`, because the account reports a spread's fills one per leg. Omit and
+   * a bot's spread legs render as the separate fills they always did.
+   */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
    * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on

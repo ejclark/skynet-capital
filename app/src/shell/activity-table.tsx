@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { ActivityReasoning, DeskActivityEvent } from "../live/desk";
+import type { ActivityReasoning, DeskActivityEvent, DeskActivityLeg } from "../live/desk";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
@@ -24,7 +24,9 @@ import { cycleAnchor } from "./cycle-anchor";
  * not show what playbooks others are using"): the server withholds the key from anyone else, and
  * `showPlaybook={false}` on a page the viewer does not own keeps the row from ever drawing. A bot's
  * option fill adds the order in words, its dollar cost and what would prove it wrong (#4642
- * criterion 8): the row's Price is per share, so the cost is where the ×100 is shown.
+ * criterion 8): the row's Price is per share, so the cost is where the ×100 is shown. A bot's
+ * spread is ONE row — the spread in words, its net cash once — with each leg's own fill beneath
+ * it (#4650), because the broker reports a spread's fills one per leg.
  * @category trading
  */
 export function ActivityTable({
@@ -118,10 +120,13 @@ function WhyDetail({
   why,
   showPlaybook,
   deskId,
+  costShown = false,
 }: {
   readonly why: ActivityReasoning;
   readonly showPlaybook: boolean;
   readonly deskId?: string;
+  /** The row itself already says what the order cost (a spread's net) — said once, not twice. */
+  readonly costShown?: boolean;
 }): ReactElement {
   return (
     <dl className="more-grid why-grid">
@@ -148,7 +153,7 @@ function WhyDetail({
           <dd className="num">{why.contract}</dd>
         </div>
       ) : null}
-      {why.cost ? (
+      {why.cost && !costShown ? (
         <div>
           <dt>Cost</dt>
           <dd className="num">{why.cost}</dd>
@@ -248,6 +253,7 @@ function ActivityRow({
         <td className="num">{stamp}</td>
         <td>
           <span className="sym">{event.display}</span>
+          {event.net ? <span className="sym-sub">net {event.net}</span> : null}
         </td>
         <td>
           <span className={`tl-side tl-${event.side}`}>{event.side.toUpperCase()}</span>
@@ -276,17 +282,52 @@ function ActivityRow({
           ) : null}
         </td>
       </tr>
+      {event.legs?.map((leg) => (
+        <LegRow key={leg.orderId} leg={leg} span={withWhy ? 9 : 8} />
+      ))}
       {open && event.reasoning ? (
         <tr className="row-why">
           <td colSpan={9}>
             <WhyDetail
               why={event.reasoning}
               showPlaybook={showPlaybook}
+              costShown={event.net !== undefined}
               {...(deskId ? { deskId } : {})}
             />
           </td>
         </tr>
       ) : null}
     </>
+  );
+}
+
+/** One leg of a spread, beneath the spread's row (#4650) — always shown, never behind the chevron:
+ *  the broker filled each leg as its own order, so a member must be able to see what each one paid
+ *  or received without opening anything. One spanning cell, capped to the visible table, so the
+ *  contract, its side in words and its dollars all read at 390px. Its anchor is the leg's own order
+ *  id, the one a Thesis marker for that fill links to. */
+function LegRow({
+  leg,
+  span,
+}: {
+  readonly leg: DeskActivityLeg;
+  readonly span: number;
+}): ReactElement {
+  const anchor = `act-${leg.orderId}`;
+  const row = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (targetedRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
+  }, [anchor]);
+  return (
+    <tr className="row-leg" id={anchor} ref={row}>
+      <td colSpan={span}>
+        <div className="leg-line">
+          <span className="visually-hidden">Leg: </span>
+          <span className={`tl-side tl-${leg.side}`}>{leg.side.toUpperCase()}</span>
+          <span className="leg-contract">{leg.display}</span>
+          <span className="leg-cost num">{leg.cost ?? `${leg.price} a share · ${leg.status}`}</span>
+        </div>
+      </td>
+    </tr>
   );
 }
