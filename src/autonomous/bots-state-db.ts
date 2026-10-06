@@ -4,6 +4,7 @@ import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond
 import type { ProbeRetro } from "../playbooks/cond-scout-retro.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
+import { parseOwned, type ScoutLot } from "./scout-lots.js";
 
 /**
  * Durable current-state storage for the bots process, on the dedicated volume
@@ -32,6 +33,10 @@ export interface BotsStateDb {
   /** The beta scout's day-state (`live-cycle.ts`), or undefined before its first save. */
   loadScoutState(): ScoutState | undefined;
   saveScoutState(state: ScoutState): void;
+  /** The last Playbook Store subscriptions snapshot the bots applied, as stored JSON (unvalidated:
+   *  `subscriptions-cache.ts` parses it), or undefined before the first save. */
+  loadSubscriptions(): unknown;
+  saveSubscriptions(snapshot: unknown): void;
   /** COND-SCOUT's shadow ledger (#3651): the probes still open, oldest first. */
   loadShadowProbes(): ShadowProbe[];
   saveShadowProbe(probe: ShadowProbe): void;
@@ -59,8 +64,12 @@ export interface ScoutState {
   readonly day: string;
   readonly ranToday: boolean;
   readonly firedOrganicallyToday: boolean;
-  /** Symbols the scout opened and still owns — exited at the next day rollover. */
-  readonly ownedSymbols: readonly string[];
+  /** The scout's own lots — a placed buy and its shares — each sold on the first session after its
+   *  own (`scout-lots.ts`). */
+  readonly ownedLots: readonly ScoutLot[];
+  /** Read only: bare symbols a state saved before lots carried a quantity still names. Never sold
+   *  by the scout; the runner says so once and drops them. */
+  readonly legacySymbols?: readonly string[];
 }
 
 export function openBotsStateDb(path: string): BotsStateDb {
@@ -94,12 +103,19 @@ export function openBotsStateDb(path: string): BotsStateDb {
       snapshot_json TEXT NOT NULL,
       PRIMARY KEY (probe_id, at)
     );
+    CREATE TABLE IF NOT EXISTS subscriptions_cache (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      snapshot_json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS cond_scout_retros (
       probe_id TEXT PRIMARY KEY,
       closed_at INTEGER NOT NULL,
       retro_json TEXT NOT NULL
     );
   `);
+  const upsertSubscriptions = db.prepare(
+    "INSERT INTO subscriptions_cache (id, snapshot_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+  );
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
   );
@@ -219,19 +235,30 @@ export function openBotsStateDb(path: string): BotsStateDb {
         | { day: string; ran_today: number; fired_organically_today: number; owned_json: string }
         | undefined;
       if (!row) return undefined;
+      const { lots, legacySymbols } = parseOwned(JSON.parse(row.owned_json));
       return {
         day: row.day,
         ranToday: row.ran_today === 1,
         firedOrganicallyToday: row.fired_organically_today === 1,
-        ownedSymbols: JSON.parse(row.owned_json),
+        ownedLots: lots,
+        ...(legacySymbols.length > 0 ? { legacySymbols } : {}),
       };
+    },
+    loadSubscriptions(): unknown {
+      const row = db.prepare("SELECT snapshot_json FROM subscriptions_cache WHERE id = 1").get() as
+        | { snapshot_json: string }
+        | undefined;
+      return row ? JSON.parse(row.snapshot_json) : undefined;
+    },
+    saveSubscriptions(snapshot) {
+      upsertSubscriptions.run(JSON.stringify(snapshot));
     },
     saveScoutState(state) {
       upsertScoutState.run(
         state.day,
         state.ranToday ? 1 : 0,
         state.firedOrganicallyToday ? 1 : 0,
-        JSON.stringify(state.ownedSymbols),
+        JSON.stringify(state.ownedLots),
       );
     },
     close() {

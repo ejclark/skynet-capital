@@ -108,6 +108,10 @@ export interface DecisionDb {
   /** The newest settlements, newest first, bounded to `[1, MAX_PAGE]` — the bots' resend to the
    *  dashboard's copy (`decision-replication-client.ts`). */
   recentSettlements(limit?: number): OrderSettlement[];
+  /** How one order a decision left `working` ended, by its broker id — undefined while unsettled.
+   *  What the forced pick reads before it sells a lot its working buy left (review of #4642 slice
+   *  10): it never sells on the ordered quantity alone. */
+  settlementOf(orderId: string): OrderSettlement | undefined;
   /** Every settlement stored after `afterSeq`, oldest first, bounded to `[1, MAX_PAGE]` — the
    *  bots' backlog leg, so none is ever left behind on the dashboard's copy. */
   settlementsSince(afterSeq: number, limit?: number): SequencedSettlement[];
@@ -695,6 +699,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     unsettledOrders: (personaId, sinceAt) => settlements.unsettled(personaId, sinceAt),
+
+    settlementOf: (orderId) => settlements.byOrderId(orderId),
 
     realizedPlForPlaybook(personaId, playbookId): number {
       const row = selectRealizedPlForPlaybook.get(playbookId, personaId) as {

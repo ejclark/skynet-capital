@@ -26,7 +26,8 @@ export type StrategyId =
   | "call-spread"
   | "event"
   | "tactical"
-  | "persona-rules";
+  | "persona-rules"
+  | "forced-pick";
 
 export interface Strategy {
   readonly id: StrategyId;
@@ -71,6 +72,11 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     id: "persona-rules",
     name: "Sauron's own rules",
     noScreen: "It is a persona's whole rule set, not a fit test for one ticker.",
+  },
+  "forced-pick": {
+    id: "forced-pick",
+    name: "the forced daily pick",
+    noScreen: "It tests the order path on a quiet day; no ticker is chosen for fit.",
   },
 };
 
@@ -125,7 +131,8 @@ export interface Pair {
   readonly id: string;
   readonly strategy: StrategyId;
   /** One ticker per pair; HC-SAURON's and SAURON's ten-name baskets are the exceptions, kept as they are
-   *  (a subscriber's chips narrow it). Must equal the registry playbook's `symbols`. */
+   *  (a subscriber's chips narrow it), and BETA-SCOUT names none — it picks among the bots' ten
+   *  names on the day. Must equal the registry playbook's `symbols`. */
   readonly symbols: readonly string[];
   readonly evidence: PairEvidence;
 }
@@ -224,6 +231,17 @@ const PAIRS: readonly Pair[] = [
     evidence: {
       status: "not-studied",
       call: "Sauron's own rules, unchanged: sell euphoria that has rolled over, buy panic that has stopped falling.",
+    },
+  },
+  {
+    // The forced daily pick (#4642 slice 10): subscribable, but a probe of the order path, never a
+    // strategy with a ticker to fit; its results are kept apart from every playbook's record.
+    id: "BETA-SCOUT",
+    strategy: "forced-pick",
+    symbols: [],
+    evidence: {
+      status: "not-studied",
+      call: "The first time in a session no bot has traded yet, a few small picks ranked on whatever signal exists, sold the next trading day. A test of the order path, not a call on any name.",
     },
   },
 ];

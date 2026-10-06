@@ -89,6 +89,8 @@ export interface Settlements {
   /** Strictly after `afterSeq`, in the order stored, bounded — the backlog the bots drain. */
   since(afterSeq: number, limit: number): SequencedSettlement[];
   unsettled(personaId: string, sinceAt: number): UnsettledOrder[];
+  /** How one order ended, by its broker id — undefined while no settlement closed it. */
+  byOrderId(orderId: string): OrderSettlement | undefined;
 }
 
 /** A settlement and its place in the order the store kept them. */
@@ -273,6 +275,11 @@ export function openSettlements(db: DatabaseSync, deps: SettlementsDeps): Settle
       return (
         selectSince.all(afterSeq, limit) as unknown as (SettlementRow & { seq: number })[]
       ).map((row) => ({ seq: row.seq, settlement: read(row) }));
+    },
+
+    byOrderId(orderId) {
+      const row = selectByOrder.get(orderId) as SettlementRow | undefined;
+      return row ? read(row) : undefined;
     },
 
     unsettled(personaId, sinceAt) {

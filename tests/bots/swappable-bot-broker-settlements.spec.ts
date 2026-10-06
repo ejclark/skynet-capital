@@ -11,6 +11,7 @@ import type { Persona } from "../../src/personas/persona.js";
 import {
   RESUME_WINDOW_MS,
   resumeWorkingOrders,
+  settlementBook,
   settlementSink,
 } from "../../src/scripts/autonomous-settlement-wiring.js";
 import { anOptionIntent } from "../support/builders.js";
@@ -223,5 +224,39 @@ describe("settlementSink", () => {
       }),
     ).not.toThrow();
     expect(warnings[0]).toContain("settlement write failed");
+  });
+});
+
+// What the forced pick reads before it sells a lot its working buy left (review of #4642 slice 10).
+describe("settlementBook", () => {
+  const ended = (orderId: string, filledQuantity: number) => ({
+    orderId,
+    status: "filled" as const,
+    filledQuantity,
+    settledAt: "2026-10-08T13:35:00Z",
+  });
+  const quiet = { log: () => undefined, warn: () => undefined };
+
+  it("confirms a fill the store failed to keep, and reads one an earlier run kept", () => {
+    const kept = new Map([["earlier", ended("earlier", 3)]]);
+    const book = settlementBook(
+      {
+        recordSettlements: () => {
+          throw new Error("SQLITE_BUSY");
+        },
+        settlementOf: (id) => kept.get(id),
+      },
+      quiet,
+    );
+    book.onSettled(ended("o-1", 7));
+    expect(book.settlementOf("o-1")?.filledQuantity).toBe(7);
+    expect(book.settlementOf("earlier")?.filledQuantity).toBe(3);
+    expect(book.settlementOf("never-settled")).toBeUndefined();
+  });
+
+  it("works with no store at all — for this process", () => {
+    const book = settlementBook(undefined, quiet);
+    book.onSettled(ended("o-1", 7));
+    expect(book.settlementOf("o-1")?.filledQuantity).toBe(7);
   });
 });

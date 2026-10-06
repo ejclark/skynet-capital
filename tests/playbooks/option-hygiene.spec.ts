@@ -10,8 +10,10 @@ import type { Persona } from "../../src/personas/persona.js";
 import { CRWV_WHEEL } from "../../src/playbooks/crwv-wheel.js";
 import { hygieneDemand, hygieneIntents } from "../../src/playbooks/option-hygiene.js";
 import type { EnabledPlaybook, Playbook } from "../../src/playbooks/playbook.js";
+import { enabledPlaybooks } from "../../src/playbooks/registry.js";
 import { withOptionSafety } from "../../src/playbooks/with-option-safety.js";
 import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
+import { resolveBotRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
 // Expiry hygiene. CRWV's Nov 6 contracts fall due at T-2 = Wed Nov 4; CRWV's print blackout runs
@@ -198,6 +200,24 @@ describe("expiry hygiene — shorts", () => {
     expect(bot.decide(quoted(T2, [PUT_NOV6, 0.3, 0.4]), book)).toMatchObject([
       { side: "buy", strategy: "expiry-hygiene", option: { effect: "close" } },
     ]);
+  });
+
+  // Review of #4642 slice 10, finding 8: a wheel named in SKYNET_PLAYBOOKS with no subscription may
+  // open nothing, yet it stayed a running entry — so hygiene kept its short put to assignment, which
+  // would buy 100 shares no subscription stood behind. It now resolves exits-only, as a paused one.
+  it("buys back the short put of a wheel named only in SKYNET_PLAYBOOKS, as a paused one", () => {
+    const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
+    const warn = rstest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const roster = resolveBotRoster(
+      { persona: quiet, credentials: { apiKey: "k", apiSecret: "s" } },
+      enabledPlaybooks({ SKYNET_PLAYBOOKS: "CRWV-WHEEL" }).enabled,
+      [],
+    );
+    warn.mockRestore();
+    const book = holding(contract(PUT_NOV6, -1, { avgPrice: 2.1 }));
+    expect(
+      hygieneIntents(quoted(T2, [PUT_NOV6, 0.3, 0.4]), book, roster.enabled, CALENDAR),
+    ).toMatchObject([{ side: "buy", strategy: "expiry-hygiene", option: { effect: "close" } }]);
   });
 
   // A paused wheel keeps its covered call into call-away: that is how its assigned shares leave.

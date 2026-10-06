@@ -204,9 +204,13 @@ describe("a subscribed card", () => {
     expect(PAUSED_NOTE).toContain("it opens nothing new and keeps managing what it holds");
     expect(PAUSED_NOTE).toContain("it sells on its own exit rules");
     expect(PAUSED_NOTE).toContain("a wheel still sells covered calls on shares it was assigned");
+    expect(PAUSED_NOTE).toContain("Its names stay its own until you unsubscribe");
+    // #4642 slice 10: nothing opens without a subscribed playbook that is on — so a paused SAURON
+    // on Sauron's own account no longer leaves his rules buying.
     expect(PAUSED_NOTE).toContain(
-      "Its names stay its own; unsubscribe to hand them back to the bot's own rules",
+      "Only a playbook the bot is subscribed to and has on opens anything new on it, apart from that covered call",
     );
+    expect(PAUSED_NOTE).not.toContain("hand them back to the bot's own rules");
   });
 
   it("draws no pause note on a running subscription or a human account's", () => {

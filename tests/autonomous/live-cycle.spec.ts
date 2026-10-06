@@ -6,7 +6,7 @@ import { type LiveBot, LiveCycleRunner } from "../../src/autonomous/live-cycle.j
 import { SafetyController } from "../../src/autonomous/safety.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { aContext } from "../support/builders.js";
+import { aContext, aSubscription } from "../support/builders.js";
 
 /** Persona that always wants to buy a fixed symbol — isolates the orchestration from persona
  *  judgment, exactly like `AlwaysBuys` in autonomous-trader.spec.ts. */
@@ -30,6 +30,9 @@ class NeverBuys implements Persona {
 }
 
 const RISK = { maxPositionPct: 0.5 };
+/** The scout's host bot subscribed to it, uncapped, in the mode its picks always carried — the
+ *  scout exactly as it ran before only subscribed playbooks could open (#4642 slice 10). */
+const SCOUT_ON = () => [aSubscription("host", "BETA-SCOUT", { mode: "conservative" })];
 
 /** One bot: an AlwaysBuys or NeverBuys persona wired to its own AutonomousTrader on a broker. */
 function aBot(
@@ -106,6 +109,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => scoutDecisions.push(r),
     });
@@ -155,6 +159,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => decisions.push(r),
     });
@@ -188,6 +193,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => decisions.push(r),
     });
@@ -222,7 +228,7 @@ describe("LiveCycleRunner", () => {
         day: today,
         ranToday: true,
         firedOrganicallyToday: false,
-        ownedSymbols: ["AVGO"],
+        ownedLots: [{ symbol: "AVGO", quantity: 3, day: today }],
       }),
       save: (state: ScoutState) => {
         saved.push(state);
@@ -240,6 +246,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: store,
       onDecision: (r) => decisions.push(r),
@@ -264,11 +271,16 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: { load: () => undefined, save: (s) => fresh.push(s) },
     });
     await runner2.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
-    expect(fresh.at(-1)).toMatchObject({ day: today, ranToday: true, ownedSymbols: ["MSFT"] });
+    expect(fresh.at(-1)).toMatchObject({
+      day: today,
+      ranToday: true,
+      ownedLots: [{ symbol: "MSFT", quantity: 49, day: today }], // 0.5% of $1M at the $100.05 ask
+    });
   });
 
   // Regression for the exact bug class caught and fixed before this extraction: applying
@@ -293,6 +305,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => scoutDecisions.push(r),
     });
@@ -338,6 +351,7 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onScoutHalted: (reason) => scoutHaltedReasons.push(reason),
     });
@@ -409,13 +423,14 @@ describe("LiveCycleRunner", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       scoutState: {
         load: () => ({
           day: "2026-07-23",
           ranToday: true,
           firedOrganicallyToday: false,
-          ownedSymbols: ["MSFT"],
+          ownedLots: [{ symbol: "MSFT", quantity: 50, day: "2026-07-23" }],
         }),
         save: (state) => saved.push(state),
       },
@@ -426,7 +441,7 @@ describe("LiveCycleRunner", () => {
 
     expect(submitted).toEqual([]);
     // A refused exit never orphans the lot: the next rollover tries the exit again.
-    expect(saved.at(-1)?.ownedSymbols).toEqual(["MSFT"]);
+    expect(saved.at(-1)?.ownedLots).toEqual([{ symbol: "MSFT", quantity: 50, day: "2026-07-23" }]);
     expect(decisions).toHaveLength(1);
     expect(decisions[0]).toMatchObject({
       personaId: "beta-scout",
@@ -454,6 +469,7 @@ describe("LiveCycleRunner", () => {
           managedSymbols: new Set(),
           risk: RISK,
           mode: "live",
+          subscriptions: SCOUT_ON,
         },
         scoutState: { load: () => undefined, save: (state) => saved.push(state) },
         onDecision: (r) => decisions.push(r),
@@ -493,7 +509,7 @@ describe("LiveCycleRunner", () => {
       expect(saved[saved.length - 1]).toMatchObject({
         day: "2026-09-08",
         ranToday: true,
-        ownedSymbols: ["NVDA"],
+        ownedLots: [expect.objectContaining({ symbol: "NVDA", day: "2026-09-08" })],
       });
 
       // Saturday: another staging poll is a no-op — the session is already spent.

@@ -12,6 +12,7 @@ import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
+import { BETA_SCOUT } from "./beta-scout.js";
 import { CRWV_WHEEL } from "./crwv-wheel.js";
 import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
@@ -175,11 +176,11 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
-/** The option plays and Sauron's own rules live in their own files (`crwv-wheel.ts`,
- *  `nvda-call-spread.ts`, `sauron-rules.ts`); re-exported here because the Store catalog and the
- *  roll call read the house roster off what this module exports. None is on any default roster: an
- *  owner subscribes their own bot to one in the Store. */
-export { CRWV_WHEEL, NVDA_CALL_SPREAD, SAURON };
+/** The option plays, Sauron's own rules and the forced daily pick live in their own files
+ *  (`crwv-wheel.ts`, `nvda-call-spread.ts`, `sauron-rules.ts`, `beta-scout.ts`); re-exported here
+ *  because the Store catalog and the roll call read the house roster off what this module exports.
+ *  None is on any default roster: an owner subscribes their own bot to one in the Store. */
+export { BETA_SCOUT, CRWV_WHEEL, NVDA_CALL_SPREAD, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,
@@ -189,6 +190,7 @@ const ROSTER: readonly Playbook[] = [
   CRWV_WHEEL,
   NVDA_CALL_SPREAD,
   SAURON,
+  BETA_SCOUT,
 ];
 
 /**

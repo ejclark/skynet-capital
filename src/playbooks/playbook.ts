@@ -197,6 +197,10 @@ export interface Playbook {
    * twice. On any other bot it is an ordinary `decide` playbook. Absent on every other playbook.
    */
   readonly rulesOf?: string;
+  /** Optional — what the roll call says when no recorded pass ran this playbook, for one whose
+   *  being off is not "nobody switched it on" (the forced daily pick runs on one bot only, and only
+   *  while armed in operations). Absent on every other playbook. */
+  readonly whenOff?: string;
   /** PURE. Which chains and contracts this cycle needs priced. `NO_OPTION_DEMAND` = no network. */
   optionDemand?(
     asOfIso: string,

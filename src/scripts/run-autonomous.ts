@@ -14,13 +14,17 @@
  *   SKYNET_MAX_POSITION_PCT  per-position cap as a fraction of equity (default: 0.03)
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
  *   SKYNET_PLAYBOOKS         playbook roster, "id:mode" pairs (e.g. "S1-NVDA:standard,G1-GOOG:conservative").
- *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only.
+ *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only. Since
+ *                            #4642 slice 10 it opens nothing on its own: a bot opens a position only
+ *                            through a playbook it is subscribed to in the Store (exits always run).
  *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts. "3+stage" also lets the scout stage
- *                            its picks after the close for Alpaca's next open (holiday-aware) —
- *                            see autonomous-scout-staging.ts. Flip via autonomy-ops only.
+ *                            see src/playbooks/beta-scout.ts — and only while the first bot is
+ *                            subscribed to BETA-SCOUT in the Store: armed AND subscribed. "3+stage"
+ *                            also lets the scout stage its picks after the close for Alpaca's next
+ *                            open (holiday-aware) — see autonomous-scout-staging.ts. Flip via
+ *                            autonomy-ops only.
  *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
@@ -40,10 +44,15 @@ import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
-import { LiveCycleRunner } from "../autonomous/live-cycle.js";
+import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
+import {
+  acceptAndKeep,
+  applyBootSubscriptions,
+  subscriptionsCache,
+} from "../autonomous/subscriptions-cache.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
 import { botTradingClient } from "../bots/bot-broker.js";
@@ -84,7 +93,7 @@ import {
   armScoutStaging,
   scoutSkipSymbols,
 } from "./autonomous-scout-staging.js";
-import { resumeWorkingOrders, settlementSink } from "./autonomous-settlement-wiring.js";
+import { resumeWorkingOrders, settlementBook } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 const LIVE_EVAL_INTERVAL_MS = 15_000;
@@ -136,12 +145,15 @@ async function runLive(): Promise<void> {
   // process's first cycle, not 30s into it.
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
+  // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
+  // dashboard trades the last subscriptions received rather than none (#4642 slice 10 review).
+  let keptSubscriptions = subscriptionsCache(undefined);
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
     undefined,
     (cursor) => replication.onPoll(cursor),
     (snapshot) => {
-      if (subscriptionSync) subscriptionSync.accept(snapshot);
+      if (subscriptionSync) acceptAndKeep(subscriptionSync, keptSubscriptions, snapshot);
       else parkedSubscriptions = snapshot;
     },
   );
@@ -206,6 +218,7 @@ async function runLive(): Promise<void> {
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
   // stamped on /data/health.json so the next deploy PROVES restore by being read (issue #1181).
   const botsStateDb = seedBotsState(process.env);
+  keptSubscriptions = subscriptionsCache(botsStateDb);
   health.restored(restoreBotsState(botsStateDb, tracker, sentiment, bots));
 
   // Constructed before the boot-time reconcile() below, so a credential rotated while this
@@ -250,7 +263,10 @@ async function runLive(): Promise<void> {
       .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
   }
   const onDecision = decisionSink(audit, decisionDb);
-  const onSettled = settlementSink(decisionDb); // a `working` order's late fill, beside its decision
+  // A `working` order's late fill, beside its decision — and where the forced pick reads what its
+  // working buys filled before it sells one.
+  const settlements = settlementBook(decisionDb);
+  const onSettled = settlements.onSettled;
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
@@ -275,6 +291,9 @@ async function runLive(): Promise<void> {
       playbookRoster.enabled,
     ),
   );
+  // The forced daily pick's arming (ops, Eric's) — read here because the bot it runs on, the first,
+  // carries it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -283,6 +302,7 @@ async function runLive(): Promise<void> {
       optionLevels.risk(r.bot.persona.id, risk),
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
+      { runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id },
     );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {
@@ -296,7 +316,7 @@ async function runLive(): Promise<void> {
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
       ...(botActivityBus ? { activityBus: botActivityBus } : {}),
-      ...(onSettled ? { onSettled } : {}),
+      onSettled,
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -337,8 +357,9 @@ async function runLive(): Promise<void> {
   // Persona (which the contract requires to be pure — "same inputs, same intents"); this is
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
-  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
-  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off), which stops new picks only:
+  // the picks it holds are still sold on the next trading day. Armed, it still opens only while its
+  // host bot is subscribed to BETA-SCOUT (#4642 slice 10).
   const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
@@ -371,8 +392,9 @@ async function runLive(): Promise<void> {
         error,
       ),
   });
-  // Whatever the boot fetch already carried, applied now that there is a roster to apply it to.
-  if (parkedSubscriptions) subscriptionSync.accept(parkedSubscriptions);
+  // Whatever the boot fetch already carried — else the last subscriptions kept — applied now that
+  // there is a roster to apply it to.
+  applyBootSubscriptions(subscriptionSync, keptSubscriptions, parkedSubscriptions);
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real
@@ -387,6 +409,17 @@ async function runLive(): Promise<void> {
       managedSymbols,
       risk,
       mode,
+      subscriptions: () => botRosters[0]?.subscriptions ?? [],
+      ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
+      settlementOf: settlements.settlementOf,
+      // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
+      // under its own persona id, never the host's.
+      ...(decisionDb
+        ? {
+            realizedPlForPlaybook: (playbookId: string) =>
+              decisionDb.realizedPlForPlaybook(BETA_SCOUT_PERSONA_ID, playbookId),
+          }
+        : {}),
     }),
     onResult: logResult,
     onDecision,
@@ -395,6 +428,7 @@ async function runLive(): Promise<void> {
     onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
     onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
     onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
+    onScoutWarn: (line) => console.warn(line),
     onScoutObserve: (intent) =>
       console.log(
         `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,
