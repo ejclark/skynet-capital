@@ -461,4 +461,52 @@ describe("AlpacaBrokerAdapter", () => {
       expect(result).toMatchObject({ status: "filled", filledQuantity: 100, filledPrice: 42.1 });
     });
   });
+
+  // #4678: what the trader reads once a cycle so a buy never stacks on one still queued.
+  describe("openShareOrders", () => {
+    const OPEN_PATH = "/v2/orders?status=open&limit=500&direction=desc&nested=true";
+
+    it("lists every open share order with what it has left to fill, and nothing option-shaped", async () => {
+      const adapter = adapterWith({
+        [OPEN_PATH]: {
+          status: 200,
+          body: [
+            {
+              id: "1",
+              symbol: "NVDA",
+              qty: "10",
+              side: "buy",
+              status: "accepted",
+              filled_qty: "0",
+            },
+            {
+              id: "2",
+              symbol: "CRWV",
+              qty: "50",
+              side: "sell",
+              status: "partially_filled",
+              filled_qty: "20",
+            },
+            // A dollar-sized order carries no share count.
+            { id: "3", symbol: "AMD", qty: null, side: "buy", status: "new", filled_qty: "0" },
+            // A contract, and a spread whose legs are nested under it: the option flow's to fence.
+            { id: "4", symbol: "CRWV261106P00085000", qty: "1", side: "sell", status: "new" },
+            { id: "5", symbol: "", qty: "1", side: "buy", status: "new", order_class: "mleg" },
+          ],
+        },
+      });
+
+      expect(await adapter.openShareOrders()).toEqual([
+        { symbol: "NVDA", side: "buy", quantity: 10 },
+        { symbol: "CRWV", side: "sell", quantity: 30 },
+        { symbol: "AMD", side: "buy", quantity: 0 },
+      ]);
+    });
+
+    it("throws when the list cannot be read — never 'nothing open'", async () => {
+      const adapter = adapterWith({ [OPEN_PATH]: { status: 503, body: { message: "down" } } });
+
+      await expect(adapter.openShareOrders()).rejects.toThrow();
+    });
+  });
 });

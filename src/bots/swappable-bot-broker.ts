@@ -10,7 +10,7 @@ import type {
   OrderResult,
   Portfolio,
 } from "../domain/types.js";
-import type { BrokerPort } from "../ports/broker.js";
+import type { BrokerPort, OpenShareOrder } from "../ports/broker.js";
 import type { OptionMarketPort, OptionOrderTracker } from "../ports/option-market.js";
 import type { Bot } from "./bot.js";
 import { botOptionsClient, createBotBroker } from "./bot-broker.js";
@@ -76,6 +76,12 @@ export class SwappableBotBroker implements BrokerPort, OptionMarketPort, OptionO
 
   submit(order: OrderIntent): Promise<OrderResult> {
     return this.current.submit(order);
+  }
+
+  /** Forwarded, never dropped: without it the trader would read this bot as having nothing open,
+   *  and buy again over an order still queued at the broker (#4678). */
+  openShareOrders(): Promise<readonly OpenShareOrder[]> {
+    return this.current.openShareOrders();
   }
 
   readOptionMarket(request: OptionMarketRequest): Promise<OptionMarket | undefined> {

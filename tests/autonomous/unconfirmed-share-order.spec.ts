@@ -27,7 +27,10 @@ import { aContext } from "../support/builders.js";
  *  market order placed after the close looks like until the next open. Counts every placement. */
 class QueuingAlpaca implements AlpacaTradingTransport {
   readonly placed: string[] = [];
+  private readonly open: unknown[] = [];
   get(path: string): Promise<JsonResponse> {
+    // The open-order list (#4678): every order here sits at "accepted", so every one is open.
+    if (path.startsWith("/v2/orders?")) return Promise.resolve({ status: 200, body: this.open });
     if (path === "/v2/account") {
       return Promise.resolve({
         status: 200,
@@ -46,10 +49,9 @@ class QueuingAlpaca implements AlpacaTradingTransport {
     const { symbol, side, qty } = body as { symbol: string; side: string; qty: number };
     const id = `o${this.placed.length + 1}`;
     this.placed.push(`${side} ${qty} ${symbol}`);
-    return Promise.resolve({
-      status: 200,
-      body: { id, symbol, qty: String(qty), side, status: "accepted" },
-    });
+    const order = { id, symbol, qty: String(qty), side, status: "accepted" };
+    this.open.push(order);
+    return Promise.resolve({ status: 200, body: order });
   }
   delete(): Promise<JsonResponse> {
     return Promise.resolve({ status: 404, body: null });

@@ -47,7 +47,8 @@ export interface GuardLedger {
    *  (`ApprovedOptionOrder.pays`) — counted only in the outcomes where it fills — and collateral is a
    *  need, read from `orders`. */
   spent: number;
-  /** Shares sold per underlying by approved share sells. */
+  /** Shares sold per underlying by approved share sells — starting from what sell orders still
+   *  open at the broker will take (#4678), so a new sell is sized against what they leave. */
   readonly sold: Map<string, number>;
   /** Option orders approved this batch, in order. Each fills whole or not at all. */
   readonly orders: ApprovedOptionOrder[];
@@ -69,17 +70,20 @@ interface ApprovedOptionOrder {
  *  gets near it. */
 const MAX_ENUMERATED_ORDERS = 10;
 
+/** `openSells`: shares per symbol that sell orders still open at the broker will take. Counted as
+ *  already sold — the shares are promised whether or not anything in this batch sells them. */
 export function openLedger(
   intents: readonly OrderIntent[],
   book: CoverNeeds,
   portfolio: Portfolio,
+  openSells: ReadonlyMap<string, number> = new Map(),
 ): GuardLedger {
   const promisesShares = [...book.sharesByUnderlying.values()].some((n) => n > 0);
   return {
     active: intents.some((i) => i.option !== undefined) || book.cash > 0 || promisesShares,
     held: heldCoverLegs(portfolio),
     spent: 0,
-    sold: new Map(),
+    sold: new Map(openSells),
     orders: [],
     byPlaybook: new Map(),
   };
@@ -176,7 +180,7 @@ export function unspentCash(portfolio: Portfolio, ledger: GuardLedger): number {
   return portfolio.cash - ledger.spent;
 }
 
-/** Shares of `underlying` approved share sells already took this batch. */
+/** Shares of `underlying` approved share sells already took this batch, open sells included. */
 export function soldShares(ledger: GuardLedger, underlying: string): number {
   return ledger.sold.get(underlying) ?? 0;
 }

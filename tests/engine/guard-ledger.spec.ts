@@ -464,3 +464,34 @@ describe("the batch ledger — share orders that compete, with no option anywher
     expect(result.approved).toHaveLength(2);
   });
 });
+
+// Shares a sell order still open at the broker will take are already gone (#4678): the trader reads
+// the open sells once a cycle and the ledger starts from them, so a new sell — or a call written on
+// those shares — is judged against what they leave.
+describe("the batch ledger — sells still open at the broker", () => {
+  const fifty = aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 50 })] });
+  const openSells = (quantity: number) => new Map([["CRWV", quantity]]);
+  const runOpen = (intents: readonly OrderIntent[], portfolio: Portfolio, open: number) =>
+    applyGuardsWithVerdicts(intents, portfolio, context, CONFIG, openSells(open));
+
+  it("a new sell is sized against the shares the open sell leaves", () => {
+    expect(runOpen([shares("sell", "CRWV", 50)], fifty, 30).approved).toMatchObject([
+      { symbol: "CRWV", quantity: 20 },
+    ]);
+  });
+
+  it("an open sell and this batch's own sells together never sell more than is held", () => {
+    const second = shares("sell", "CRWV", 10);
+    const result = runOpen([shares("sell", "CRWV", 10), second], fifty, 40);
+    expect(result.approved).toMatchObject([{ quantity: 10 }]);
+    expect(result.refused).toEqual([{ intent: second, reason: "nothing-held" }]);
+  });
+
+  it("shares an open sell will take no longer cover a call written on them", () => {
+    const hundred = aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 100 })] });
+    expect(runOpen([coveredCall], hundred, 0).approved).toEqual([coveredCall]);
+    expect(runOpen([coveredCall], hundred, 100).refused).toEqual([
+      { intent: coveredCall, reason: "call-not-covered" },
+    ]);
+  });
+});
