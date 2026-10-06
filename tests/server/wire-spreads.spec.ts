@@ -23,7 +23,7 @@ const spread = anOptionIntent({
   symbol: "NVDA",
   side: "buy",
   playbookId: "NVDA-CALL-SPREAD",
-  reason: "the options form of S1-NVDA's pre-earnings run-up",
+  reason: "the options form of the pre-earnings run-up",
   forecast: { direction: "up", invalidator: INVALIDATOR },
   option: {
     structure: "call-debit-spread",
@@ -159,7 +159,7 @@ describe("a bot's spread on the league Wire", () => {
       net: "$335.00 paid",
     });
     expect(row?.reasoning).toMatchObject({
-      reason: "the options form of S1-NVDA's pre-earnings run-up",
+      reason: "the options form of the pre-earnings run-up",
       invalidator: INVALIDATOR,
       contract: "BUY 1 NVDA $185/$200 CALL SPREAD · 13 NOV 26 · limit $3.40 debit",
     });

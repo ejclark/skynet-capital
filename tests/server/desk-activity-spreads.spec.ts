@@ -23,7 +23,7 @@ const spread = anOptionIntent({
   symbol: "NVDA",
   side: "buy",
   playbookId: "NVDA-CALL-SPREAD",
-  reason: "the options form of S1-NVDA's pre-earnings run-up",
+  reason: "the options form of the pre-earnings run-up",
   forecast: { direction: "up", invalidator: INVALIDATOR },
   option: {
     structure: "call-debit-spread",

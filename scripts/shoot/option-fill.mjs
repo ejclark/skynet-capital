@@ -78,7 +78,7 @@ const spread = {
   clientOrderId: "sk1-sauron-NVDA-mgf2a-1",
   strategy: "nvda-spread-open",
   reason:
-    "Buying one NVDA $185/$200 CALL SPREAD · 13 NOV 26 for about $3.40 a share — the options form of S1-NVDA's pre-earnings run-up. The most it can lose is that $340 debit.",
+    "Buying one NVDA $185/$200 CALL SPREAD · 13 NOV 26 for about $3.40 a share — the options form of the pre-earnings run-up. The most it can lose is that $340 debit.",
   expectation:
     "NVDA keeps rising into the print: above $200 at expiry the spread is worth $1,500. It is sold back five sessions before the print whatever it is worth then.",
   forecast: {

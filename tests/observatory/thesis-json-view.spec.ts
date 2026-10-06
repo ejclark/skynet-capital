@@ -3,6 +3,7 @@ import { decisionCyclesView } from "../../src/observatory/decision-json-view.js"
 import type { DeskActivityEvent } from "../../src/observatory/desk-json-view.js";
 import type { EquitySample } from "../../src/observatory/history-record.js";
 import { personaThesis, thesisView } from "../../src/observatory/thesis-json-view.js";
+import { anOptionIntent } from "../support/builders.js";
 
 /** #3186 slice 4a — the Thesis Drawer's read-only composer: verdict/why from the latest decision
  *  cycle, the persona's one-line thesis, an honest drawdown-proxy health read, and 2-zone
@@ -174,6 +175,62 @@ describe("thesisView", () => {
   it("turns a sell fill into an exit marker", () => {
     const view = thesisView("sauron", { cycles: [] }, [activityEvent({ side: "sell" })], []);
     expect(view.markers[0]?.kind).toBe("exit");
+  });
+
+  // An option's side says which way the premium went, not whether a position opened or closed: a
+  // put sold to open is the wheel's ENTRY, and buying it back is its exit (#4650).
+  describe("an option fill's marker", () => {
+    const PUT = "CRWV261106P00085000";
+    const decisions: Record<string, ReturnType<typeof anOptionIntent>> = {
+      "opt-open": anOptionIntent({ side: "sell", option: { effect: "open" } }),
+      "opt-close": anOptionIntent({
+        side: "buy",
+        option: { effect: "close", legs: [{ occSymbol: PUT, side: "buy", ratio: 1 }] },
+      }),
+    };
+    const lookup = (orderId: string) => {
+      const found = decisions[orderId];
+      return found ? { record: record(), intent: found } : undefined;
+    };
+    const fill = (orderId: string, side: "buy" | "sell", at: string) =>
+      activityEvent({
+        orderId,
+        symbol: PUT,
+        display: "CRWV $85 PUT · 6 NOV 26",
+        side,
+        quantity: 1,
+        filled: 1,
+        at,
+      });
+
+    it("is an entry when the order opened the position — a sale included — and an exit when it closed it", () => {
+      const view = thesisView(
+        "sauron",
+        { cycles: [] },
+        [
+          fill("opt-open", "sell", "2026-10-07T14:30:00Z"),
+          fill("opt-close", "buy", "2026-10-20T14:30:00Z"),
+        ],
+        [],
+        lookup,
+      );
+      // The verb stays the order's own side: the put was sold, then bought.
+      expect(view.markers.map((m) => [m.kind, m.label])).toEqual([
+        ["entry", "Sell 1 CRWV $85 PUT · 6 NOV 26"],
+        ["exit", "Buy 1 CRWV $85 PUT · 6 NOV 26"],
+      ]);
+    });
+
+    it("falls back to buy as entry and sell as exit when no decision says which", () => {
+      const view = thesisView(
+        "sauron",
+        { cycles: [] },
+        [fill("unknown", "sell", "2026-10-07T14:30:00Z")],
+        [],
+        lookup,
+      );
+      expect(view.markers[0]?.kind).toBe("exit");
+    });
   });
 
   it("numbers markers oldest-first regardless of input order", () => {

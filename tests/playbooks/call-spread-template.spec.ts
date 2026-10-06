@@ -89,7 +89,7 @@ describe("callSpread — a second ticker", () => {
     const portfolio: Portfolio = aPortfolio({ cash: 50_000, positions: [] });
     const [open] = AVGO.decide?.(context, portfolio, calendar(), "standard") ?? [];
     expect(open).toMatchObject({ symbol: "AVGO", strategy: "avgo-spread-open" });
-    expect(open?.reason).toContain("the options form of AVGO's pre-earnings run-up");
+    expect(open?.reason).toContain("the options form of the pre-earnings run-up");
     // No company override: the ticker directory's own name, and the setting's own exit.
     expect(open?.reason).toContain("Broadcom confirmed its 2026-12-10 print");
     expect(open?.reason).toContain("three sessions before");
