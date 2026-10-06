@@ -81,13 +81,21 @@ export function TradeRow({ trade }: { readonly trade: WireTrade }): ReactElement
         disabled={!expandable}
         onClick={() => setOpen(!open)}
       >
-        {expandable ? <span className="wire-disclosure" aria-hidden="true" /> : null}
-        <span className={`wire-side tone-${trade.side === "buy" ? "pos" : "neg"}`}>
-          {trade.side.toUpperCase()}
+        {/* Two groups, so a long name (a spread in words, #4650) wraps beside its side while the
+         *  numbers drop beneath it whole at 390px; a short row stays one line. */}
+        <span className="wire-what">
+          {expandable ? <span className="wire-disclosure" aria-hidden="true" /> : null}
+          <span className={`wire-side tone-${trade.side === "buy" ? "pos" : "neg"}`}>
+            {trade.side.toUpperCase()}
+          </span>
+          <span className="wire-sym">{trade.display ?? trade.symbol}</span>
         </span>
-        <span className="wire-sym">{trade.symbol}</span>
-        <span className="num wire-qty">{trade.quantity}</span>
-        <span className="num wire-price">{trade.price}</span>
+        <span className="wire-fill">
+          <span className="num wire-qty">{trade.quantity}</span>
+          <span className="num wire-price">{trade.price}</span>
+          {/* A spread's Price is its net per share; the cash that moved is said once beside it. */}
+          {trade.net ? <span className="num wire-net">net {trade.net}</span> : null}
+        </span>
       </button>
       <Link to="/u/$id" params={{ id: trade.whoId }} className="wire-who">
         {trade.who}

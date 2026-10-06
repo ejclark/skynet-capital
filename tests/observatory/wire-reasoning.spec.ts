@@ -188,13 +188,39 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
       guardedIntents: [scouted],
       outcomes: [{ intent: scouted, action: "placed" }],
     };
+    // Read by the account's owner: the playbook is theirs to see (#885).
     const rows = attachWireReasoning([row()], {
       findByOrderId: () => ({ record, intent: scouted as never }),
+      ownsAccount: (id) => id === "sauron",
     });
     expect(rows[0]?.reasoning).toMatchObject({
       personaId: "beta-scout",
       playbookId: "BETA-SCOUT",
       playbookMode: "conservative",
     });
+  });
+
+  it("withholds the playbook on every account the viewer does not own, keeping the why (#885)", () => {
+    const fired = intent({ playbookId: "S1-NVDA", playbookMode: "standard" });
+    const record: DecisionRecord = {
+      at: 1,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [fired],
+      guardedIntents: [fired],
+      outcomes: [{ intent: fired, action: "placed" }],
+    };
+    const deps = { findByOrderId: () => ({ record, intent: fired as never }) };
+    const rows = [row(), row({ participantId: "vol-harvester", orderId: "ord-2" })];
+    const [own, other] = attachWireReasoning(rows, {
+      ...deps,
+      ownsAccount: (id) => id === "sauron",
+    });
+    expect(own?.reasoning).toMatchObject({ playbookId: "S1-NVDA" });
+    expect(other?.reasoning).toMatchObject({ reason: "panic fade", personaId: "sauron" });
+    expect(other?.reasoning).not.toHaveProperty("playbookId");
+    expect(other?.reasoning).not.toHaveProperty("playbookMode");
+    // No ownership answer at all reads as owning nothing.
+    expect(attachWireReasoning(rows, deps)[0]?.reasoning).not.toHaveProperty("playbookId");
   });
 });

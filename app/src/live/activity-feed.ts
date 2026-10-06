@@ -225,11 +225,15 @@ function matchesTradeFacets(trade: WireTrade, qualifiers: readonly ActivityQuali
   return true;
 }
 
-/** What a bare search term matches, per kind: a trade by its symbol or its trader, a filing by its
- *  title or its issue number (so pasting "#4271" finds the row the way pasting "NVDA" does), a merge
- *  by its title, its PR number or the author GitHub named, an earn by the milestone or the member. */
+/** What a bare search term matches, per kind: a trade by the words its row shows, its symbol or its
+ *  trader (a bot's spread has no symbol of its own, #4650), a filing by its title or its issue
+ *  number (so pasting "#4271" finds the row the way pasting "NVDA" does), a merge by its title, its
+ *  PR number or the author GitHub named, an earn by the milestone or the member. */
 function haystack(item: ActivityFeedItem): string {
-  if (item.kind === "trade") return `${item.trade.symbol} ${item.trade.who}`.toLowerCase();
+  if (item.kind === "trade") {
+    const { display, symbol, who } = item.trade;
+    return `${display ?? ""} ${symbol} ${who}`.toLowerCase();
+  }
   if (item.kind === "feedback") {
     return `${item.filing.title} #${item.filing.issueNumber}`.toLowerCase();
   }

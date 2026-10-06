@@ -95,31 +95,39 @@ export function spreadLookup(deps: SpreadLookupDeps): SpreadOf {
   };
 }
 
-interface SpreadLegLine {
-  readonly record: TradeActivityRecord;
+/** What the fold reads off one fill line — a ledger record, or a fill off the Wire's event feed. */
+interface FillLine {
+  readonly orderId: string;
+  readonly symbol: string;
+  readonly side: string;
+  readonly at: string;
+}
+
+interface SpreadLegLine<R extends FillLine = TradeActivityRecord> {
+  readonly record: R;
   readonly ratio: number;
 }
 
-export type ActivityItem =
-  | { readonly kind: "order"; readonly at: string; readonly record: TradeActivityRecord }
+export type ActivityItem<R extends FillLine = TradeActivityRecord> =
+  | { readonly kind: "order"; readonly at: string; readonly record: R }
   | {
       readonly kind: "spread";
       readonly at: string;
       readonly spread: SpreadFacts;
-      readonly legs: readonly SpreadLegLine[];
+      readonly legs: readonly SpreadLegLine<R>[];
     };
 
-interface SpreadGroup {
+interface SpreadGroup<R extends FillLine> {
   readonly spread: SpreadFacts;
-  readonly legs: SpreadLegLine[];
+  readonly legs: SpreadLegLine<R>[];
 }
 
 /** Every leg line of the ledger, grouped by the spread it belongs to. */
-function spreadGroups(
-  sortedDesc: readonly TradeActivityRecord[],
+function spreadGroups<R extends FillLine>(
+  sortedDesc: readonly R[],
   spreadOf: SpreadOf,
-): Map<string, SpreadGroup> {
-  const groups = new Map<string, SpreadGroup>();
+): Map<string, SpreadGroup<R>> {
+  const groups = new Map<string, SpreadGroup<R>>();
   for (const record of sortedDesc) {
     if (!isOccSymbol(record.symbol)) continue;
     const match = spreadOf(record.orderId);
@@ -138,14 +146,14 @@ function spreadGroups(
  * spread's own order id is folded in too, so the spread is never listed twice. No `spreadOf`, or no
  * spread in the ledger, returns one item per line in the same order.
  */
-export function foldSpreadLegs(
-  sortedDesc: readonly TradeActivityRecord[],
+export function foldSpreadLegs<R extends FillLine = TradeActivityRecord>(
+  sortedDesc: readonly R[],
   spreadOf?: SpreadOf,
-): ActivityItem[] {
-  const groups = spreadOf ? spreadGroups(sortedDesc, spreadOf) : new Map<string, SpreadGroup>();
+): ActivityItem<R>[] {
+  const groups = spreadOf ? spreadGroups(sortedDesc, spreadOf) : new Map<string, SpreadGroup<R>>();
   const legOf = new Map<string, string>();
   for (const [id, group] of groups) for (const leg of group.legs) legOf.set(leg.record.orderId, id);
-  const items: ActivityItem[] = [];
+  const items: ActivityItem<R>[] = [];
   const placed = new Set<string>();
   for (const record of sortedDesc) {
     const id =
@@ -161,6 +169,12 @@ export function foldSpreadLegs(
     items.push({ kind: "spread", at: record.at, spread: group.spread, legs });
   }
   return items;
+}
+
+/** A spread's net cash in words, `"$335.00 paid"` — the one figure both Activity's spread row and
+ *  the Wire's carry beside its per-share price. */
+export function spreadNetWords(net: OptionFillCost): string {
+  return `${formatPrice(net.dollars)} ${net.direction}`;
 }
 
 /** One order's line on Activity: every row's own fields, and every leg's — so anything that lists
@@ -300,7 +314,7 @@ export function spreadActivityEvent(
     backfilled: legs.some((leg) => leg.record.source === "backfill"),
     origin,
     ...spreadResult(item, realizedByOrder),
-    ...(spread.net ? { net: `${formatPrice(spread.net.dollars)} ${spread.net.direction}` } : {}),
+    ...(spread.net ? { net: spreadNetWords(spread.net) } : {}),
     legs: legs.map((leg) => legEvent(leg.record, origins)),
   };
 }

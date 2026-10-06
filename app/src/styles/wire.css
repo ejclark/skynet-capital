@@ -60,8 +60,12 @@
    half, with the trader link and chips as independently-clickable siblings. */
 .wire-trade-row {
   display: flex;
+  /* a spread in words is long: at 390px its numbers drop beneath it as one group, never squeezed
+     into a column beside it (#4650). A row that fits on one line is unchanged. */
+  flex-wrap: wrap;
+  text-align: left;
   align-items: baseline;
-  gap: 8px;
+  gap: 2px 8px;
   background: none;
   border: none;
   padding: 0;
@@ -69,6 +73,15 @@
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+/* what traded (side + name) and what it filled at (qty, price, net) — each wraps as a unit; the name
+   alone may wrap inside its own group */
+.wire-what,
+.wire-fill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 .wire-trade-row:disabled {
   cursor: default;
@@ -198,6 +211,11 @@
 .wire-qty,
 .wire-price {
   color: var(--muted);
+}
+/* a bot's spread (#4650): the cash that moved, once, after its per-share net — words, not a hue */
+.wire-net {
+  color: var(--muted);
+  font-size: 11px;
 }
 .wire-who {
   font-weight: 500;

@@ -21,7 +21,7 @@ import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
-import { reasoningForOrder } from "../observatory/wire-reasoning.js";
+import { reasoningForOrder, withoutReasoningPlaybook } from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
@@ -32,7 +32,6 @@ import {
   withoutCyclePlaybooks,
   withoutHeartbeatPlaybookIds,
   withoutLadderPlaybookIds,
-  withoutReasoningPlaybook,
   withoutThesisPlaybooks,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
@@ -291,8 +290,13 @@ export async function serveDeskJson(
     const decisions = decisionRecords
       ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
       : { cycles: [] };
+    // A spread's legs fold into one fill here as on Activity, so its marker carries the spread's
+    // order id — the one its decision is filed under and its Activity row is anchored on (#4650).
     const activity = activityRecords
-      ? deskActivityView(activityRecords, undefined, { limit: MAX_PAGE_SIZE }).activity
+      ? deskActivityView(activityRecords, undefined, {
+          limit: MAX_PAGE_SIZE,
+          spreadOf: botSpreadLookup(found.kind, config),
+        }).activity
       : [];
     // The safeguard ladder (#3194 slice 6a) — read off the plays the BOT's own newest
     // verdict-carrying pass reported, never this process's env (see `safeguard-ladder-view.ts`).

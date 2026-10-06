@@ -11,6 +11,7 @@ import type { BoardPatchChannel } from "./board-patch-routes.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
+import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
@@ -102,7 +103,11 @@ export async function serveContentApi(
     return true;
   };
   if (path === "/api/wire") {
-    await serveWireJson(res, url, config, Boolean(config.submitFeedback));
+    // Every account's fills, so each bot row's playbook rides only to that account's owner (#885),
+    // the rule `/api/desk/:id` already keeps.
+    await serveWireJson(res, url, config, Boolean(config.submitFeedback), (id) =>
+      ownsDesk(id, config, session),
+    );
     return true;
   }
   const serialized = (body: string): true => {

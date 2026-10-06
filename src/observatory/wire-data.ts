@@ -1,8 +1,10 @@
 import { paginateDesc } from "../server/pagination.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { ActivityEvent } from "./activity-event.js";
+import type { OptionFillCost } from "./option-fill-cost.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
-import { collapseTradeEvents } from "./trade-event-feed.js";
+import { type ActivityItem, foldSpreadLegs, type SpreadOf } from "./spread-activity.js";
+import { collapseTradeEvents, type TradeEventFill } from "./trade-event-feed.js";
 
 /**
  * THE WIRE's data assembly — pure joins over data every other view already reads, kept out of
@@ -38,6 +40,54 @@ export interface WireTradeRow {
    *  join a trade to the `DecisionRecord` that produced it via `DecisionDb.findByOrderId`'s exact
    *  index, rather than `decision-context.ts`'s fuzzy symbol+side+time match. */
   readonly orderId: string;
+  /** A bot's spread, folded from the fills its legs reported (#4650): the spread in words, and its
+   *  net cash once — read off the decision's own fill, absent while that is unconfirmed. On such a
+   *  row `symbol` is the broker's own for a multi-leg order, none (`""`), `quantity` counts whole
+   *  spreads and `price` is the net per share. Absent on every other row. */
+  readonly spread?: { readonly display: string; readonly net?: OptionFillCost };
+}
+
+type WireFill = TradeEventFill & { readonly spread?: WireTradeRow["spread"] };
+
+/** A spread whose every placed leg is in the feed, as one fill — or undefined while one is missing
+ *  (or no whole spread has filled): one leg's numbers are never the spread's. */
+function wholeSpread(item: Extract<ActivityItem<TradeEventFill>, { kind: "spread" }>) {
+  const { spread, legs } = item;
+  const quantity = Math.min(
+    ...legs.map((leg) => Math.floor(leg.record.filledQuantity / leg.ratio)),
+  );
+  const allIn = spread.placedLegs.every((placed) =>
+    legs.some((leg) => leg.record.symbol === placed.occSymbol),
+  );
+  const first = legs[0]?.record;
+  if (!(allIn && first && quantity > 0)) return undefined;
+  const recovered = legs.find((leg) => leg.record.source !== "stream")?.record.source;
+  return {
+    orderId: spread.orderId,
+    participantId: first.participantId,
+    symbol: "",
+    side: spread.side,
+    filledQuantity: quantity,
+    ...(spread.net ? { price: spread.net.perShare } : {}),
+    at: item.at,
+    source: recovered ?? "stream",
+    spread: { display: spread.display, ...(spread.net ? { net: spread.net } : {}) },
+  } satisfies WireFill;
+}
+
+/** A bot's spread reaches the feed as one fill per leg, each under its leg's own order id — the
+ *  same fold the account's Activity runs (`foldSpreadLegs`), so the row carries the spread's order
+ *  id and its why joins. A spread still missing a leg stays as the contract fills it has: each is
+ *  true, and only the whole spread's numbers are the spread's. Newest first, as handed in. */
+function foldWireSpreads(fills: readonly TradeEventFill[], spreadOf?: SpreadOf): WireFill[] {
+  if (!spreadOf) return [...fills];
+  return foldSpreadLegs(fills, spreadOf)
+    .flatMap((item): WireFill[] => {
+      if (item.kind === "order") return [item.record];
+      const whole = wholeSpread(item);
+      return whole ? [whole] : item.legs.map((leg) => leg.record);
+    })
+    .sort((a, b) => b.at.localeCompare(a.at));
 }
 
 /** True when a raw broker order symbol names a fill in `underlying` — a plain stock symbol
@@ -65,11 +115,14 @@ export interface WireTradeRowsPage {
  * `underlyingFilter`, when given, narrows to fills on that underlying (stock or option) BEFORE
  * pagination — #2017 Phase 1 slice 12. The unfiltered Wire's page bound is an unrelated window;
  * filtering after paginating would let it silently drop a symbol's own older fill, so the filter
- * always runs first. Omitted, behavior is byte-identical to the plain feed. */
+ * always runs first. Omitted, behavior is byte-identical to the plain feed.
+ *
+ * `spreadOf` (the decision store's leg map) folds a bot's spread legs into one row, after that
+ * filter and BEFORE pagination for the same reason: a spread is never split across two pages. */
 export function buildWireTradeRows(
   events: readonly ActivityEvent[],
   participants: readonly ParticipantSnapshot[],
-  opts: { readonly limit: number; readonly before?: string },
+  opts: { readonly limit: number; readonly before?: string; readonly spreadOf?: SpreadOf },
   underlyingFilter?: string,
 ): WireTradeRowsPage {
   const byId = new Map(participants.map((p) => [p.id, p]));
@@ -77,7 +130,8 @@ export function buildWireTradeRows(
   const scoped = underlyingFilter
     ? collapsed.filter((r) => matchesUnderlying(r.symbol, underlyingFilter))
     : collapsed;
-  const { items, nextCursor } = paginateDesc(scoped, (r) => r.at, {
+  const folded = foldWireSpreads(scoped, opts.spreadOf);
+  const { items, nextCursor } = paginateDesc(folded, (r) => r.at, {
     limit: opts.limit,
     ...(opts.before !== undefined ? { before: opts.before } : {}),
   });
@@ -94,6 +148,7 @@ export function buildWireTradeRows(
       at: r.at,
       reconstructed: r.source !== "stream",
       orderId: r.orderId,
+      ...(r.spread ? { spread: r.spread } : {}),
     };
   });
   return { rows, ...(nextCursor !== undefined ? { nextCursor } : {}) };

@@ -247,6 +247,22 @@ describe("a bare search term", () => {
     expect(keys(show(feed, "#4271"))).toEqual(["filing:4271"]);
     expect(keys(show(feed, "4271"))).toEqual(["filing:4271"]);
   });
+
+  // #4650 — a bot's spread has no broker symbol of its own, so its row is found by the words it
+  // shows; a contract is found by those words or by the OCC string a member might paste.
+  it("matches an option by the words its row shows, as well as its broker symbol", () => {
+    const options = buildActivityFeed(
+      [
+        trade({ key: "t-spread", symbol: "", display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26" }),
+        trade({ key: "t-put", symbol: "CRWV261106P00085000", display: "CRWV $85 PUT · 6 NOV 26" }),
+      ],
+      [],
+    );
+    expect(keys(show(options, "nvda"))).toEqual(["t-spread"]);
+    expect(keys(show(options, "spread"))).toEqual(["t-spread"]);
+    expect(keys(show(options, "put"))).toEqual(["t-put"]);
+    expect(keys(show(options, "crwv261106p00085000"))).toEqual(["t-put"]);
+  });
 });
 
 describe("toggleActivityQualifier", () => {

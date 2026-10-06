@@ -1,10 +1,12 @@
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
+import { humanizeOptionSymbol } from "../trading/option-symbols.js";
 import { formatPrice } from "./desk-data.js";
 import type { DevelopmentFeedItem } from "./development-event-feed.js";
 import type { FeedbackFeedItem } from "./feedback-event-feed.js";
 import { FEEDBACK_KIND_ICON, FEEDBACK_KIND_WORD } from "./feedback-view.js";
 import type { MemberMilestone } from "./milestone-event-feed.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
+import { spreadNetWords } from "./spread-activity.js";
 import type { WireTradeVitals } from "./vitals.js";
 import type { WirePnlRow } from "./wire-data.js";
 import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasoning.js";
@@ -25,9 +27,18 @@ import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasonin
 interface WireTradeView {
   readonly key: string;
   readonly side: "buy" | "sell";
+  /** The broker's own symbol — a ticker, an OCC contract, or none (`""`) for a bot's spread. */
   readonly symbol: string;
+  /** What the row names, as the account's Activity names it: a ticker, a contract in words, or a
+   *  spread in words (`spread-activity.ts`). */
+  readonly display: string;
+  /** Whole spreads on a spread's row; shares or contracts filled on any other. */
   readonly quantity: number;
+  /** Per share — a spread's net per share. */
   readonly price: string;
+  /** A spread's net cash, once (`"$335.00 paid"`) — absent on every other row, and on a spread
+   *  whose fill the decision never confirmed. */
+  readonly net?: string;
   readonly who: string;
   readonly whoId: string;
   readonly kind: "human" | "bot";
@@ -157,8 +168,10 @@ export function wireJsonView(
       key: `${row.participantId}:${row.at}:${row.symbol}:${index}`,
       side: row.side,
       symbol: row.symbol,
+      display: row.spread?.display ?? humanizeOptionSymbol(row.symbol),
       quantity: row.quantity,
       price: row.price !== undefined ? formatPrice(row.price) : "—",
+      ...(row.spread?.net ? { net: spreadNetWords(row.spread.net) } : {}),
       who: row.participantName,
       whoId: row.participantId,
       kind: row.kind,

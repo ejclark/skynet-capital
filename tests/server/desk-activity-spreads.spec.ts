@@ -11,7 +11,8 @@ import { anOptionIntent } from "../support/builders.js";
 
 /** `/api/desk/:id/activity` over the real decision store (#4650): a bot's spread fills as two leg
  *  lines in the account's ledger; the bot's Activity shows ONE spread row carrying the decision that
- *  placed it — playbook and invalidator — with its net once and each leg beneath. */
+ *  placed it — playbook and invalidator — with its net once and each leg beneath. The Thesis
+ *  drawer's fill markers (`/thesis`) read the same ledger, so they fold the same way. */
 
 const LOW = "NVDA261113C00185000";
 const HIGH = "NVDA261113C00200000";
@@ -98,14 +99,10 @@ const bot = {
   activity: [],
 };
 
-async function activityOf(config: Partial<DashboardServerConfig>): Promise<
-  {
-    orderId: string;
-    reasoning?: Record<string, unknown>;
-    net?: string;
-    legs?: { orderId: string; cost?: string }[];
-  }[]
-> {
+async function deskPayload(
+  sub: "activity" | "thesis",
+  config: Partial<DashboardServerConfig>,
+): Promise<Record<string, unknown>> {
   let body = "";
   const res = {
     writeHead: () => res,
@@ -118,8 +115,27 @@ async function activityOf(config: Partial<DashboardServerConfig>): Promise<
     readTradeActivity: async () => ledger,
     ...config,
   } as unknown as DashboardServerConfig;
-  await serveDeskJson(res, "/api/desk/sauron/activity", "/api/desk/sauron/activity", full);
-  return JSON.parse(body).activity;
+  const path = `/api/desk/sauron/${sub}`;
+  await serveDeskJson(res, path, path, full);
+  return JSON.parse(body);
+}
+
+async function activityOf(config: Partial<DashboardServerConfig>): Promise<
+  {
+    orderId: string;
+    reasoning?: Record<string, unknown>;
+    net?: string;
+    legs?: { orderId: string; cost?: string }[];
+  }[]
+> {
+  return (await deskPayload("activity", config)).activity as never;
+}
+
+async function markersOf(
+  config: Partial<DashboardServerConfig>,
+): Promise<{ label: string; activityAnchor: string; reasoning?: Record<string, unknown> }[]> {
+  const payload = await deskPayload("thesis", { readDecisions: async () => [record], ...config });
+  return (payload.thesis as { markers: never }).markers;
 }
 
 describe("a bot's spread on its Activity", () => {
@@ -161,5 +177,45 @@ describe("a bot's spread on its Activity", () => {
     const activity = await activityOf({ findByOrderId: (id) => db.findByOrderId(id) });
     expect(activity.map((row) => row.orderId)).toEqual(["leg-high", "leg-low", "stray"]);
     expect(activity.some((row) => row.reasoning || row.legs)).toBe(false);
+  });
+});
+
+describe("a bot's spread on its Thesis drawer", () => {
+  let dir: string;
+  let db: DecisionDb;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "desk-thesis-spreads-"));
+    db = openDecisionDb(join(dir, "decisions.db"));
+    db.record(record);
+  });
+  afterEach(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("marks the spread once, linked to its Activity row, with the decision that placed it", async () => {
+    const markers = await markersOf({
+      findByOrderId: (id) => db.findByOrderId(id),
+      findSpreadLeg: (id) => db.findSpreadLeg(id),
+    });
+    expect(markers.map((m) => [m.label, m.activityAnchor])).toEqual([
+      ["Buy 1 NVDA", "act-stray"],
+      ["Buy 1 NVDA $185/$200 CALL SPREAD · 13 NOV 26", "act-mleg-1"],
+    ]);
+    expect(markers[1]?.reasoning).toMatchObject({
+      playbookId: "NVDA-CALL-SPREAD",
+      invalidator: INVALIDATOR,
+    });
+    expect(markers[0]).not.toHaveProperty("reasoning");
+  });
+
+  it("marks each leg as the separate fill it always was when the store has no leg map", async () => {
+    const markers = await markersOf({ findByOrderId: (id) => db.findByOrderId(id) });
+    expect(markers.map((m) => m.activityAnchor)).toEqual([
+      "act-stray",
+      "act-leg-low",
+      "act-leg-high",
+    ]);
+    expect(markers.some((m) => m.reasoning)).toBe(false);
   });
 });
