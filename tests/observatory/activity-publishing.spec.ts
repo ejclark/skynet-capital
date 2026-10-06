@@ -11,6 +11,7 @@ import {
   publishingActivityStore,
   publishingFeedbackLogStore,
   publishingFeedbackStatuses,
+  publishingLadderProgressLog,
   publishingMergedPullRequests,
   publishingOrderAuditLog,
 } from "../../src/observatory/activity-publishing.js";
@@ -20,6 +21,8 @@ import { InMemoryActivityStore } from "../../src/observatory/in-memory-activity-
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import { InMemoryFeedbackLogStore } from "../../src/server/feedback-log-memory-store.js";
 import type { FeedbackStatus } from "../../src/server/feedback-status.js";
+import type { LadderProgressEntry } from "../../src/server/ladder-progress-log.js";
+import { InMemoryLadderProgressLogStore } from "../../src/server/ladder-progress-log-memory-store.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import { InMemoryOrderAuditLog } from "../../src/server/order-audit-memory-log.js";
 
@@ -386,5 +389,54 @@ describe("bootPublishingActivityStore", () => {
     const { activity, bus } = bootPublishingActivityStore({} as NodeJS.ProcessEnv, "offline");
     await activity.record(tradeRecord);
     expect(await bus.list("sauron")).toHaveLength(1);
+  });
+});
+
+// #784 slice 5 — a logged milestone onto the bus. The fill-derived ladder never comes this way: it is
+// never stored, so it is never published (`activity-event.ts`).
+describe("publishingLadderProgressLog", () => {
+  const earn: LadderProgressEntry = {
+    uuid: "u-1",
+    participantId: "eric",
+    milestoneId: "first-realized-profit",
+    evidence: { kind: "realized-profit", orderId: "ord-9" },
+    at: "2026-10-02T15:00:00.000Z",
+  };
+
+  it("still records and lists exactly as the wrapped log would (behavior-preserving)", async () => {
+    const store = new InMemoryLadderProgressLogStore();
+    const wrapped = publishingLadderProgressLog(store, new InMemoryActivityEventBus());
+
+    await wrapped.record(earn);
+
+    expect(await wrapped.list("eric")).toEqual(await store.list("eric"));
+  });
+
+  it("publishes one public milestone.earned event, under the member who earned it", async () => {
+    const bus = new InMemoryActivityEventBus();
+
+    await publishingLadderProgressLog(new InMemoryLadderProgressLogStore(), bus).record(earn);
+
+    const published = await bus.list("eric");
+    expect(published).toHaveLength(1);
+    expect(published[0]).toMatchObject({
+      eventType: "milestone.earned",
+      visibility: "public",
+      payload: { milestoneId: "first-realized-profit", orderId: "ord-9" },
+    });
+  });
+
+  it("a bus failure never costs the member the earn the detector just proved", async () => {
+    const failingBus: ActivityEventBus = {
+      publish: () => Promise.reject(new Error("bus down")),
+      list: () => Promise.resolve([]),
+      subscribe: () => ({ unsubscribe: () => undefined }),
+    };
+    const store = new InMemoryLadderProgressLogStore();
+
+    await expect(
+      publishingLadderProgressLog(store, failingBus).record(earn),
+    ).resolves.toBeUndefined();
+    expect(await store.list("eric")).toHaveLength(1);
   });
 });

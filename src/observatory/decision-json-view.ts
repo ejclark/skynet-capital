@@ -84,6 +84,16 @@ const ORDER_RESULT_LABEL: Partial<Record<OrderStatus, string>> = {
   working: "may still fill — cancel not confirmed",
 };
 
+/** A share order is never canceled by the bot, so its `working` means something else: the broker
+ *  took it but no fill was seen yet — queued for the open, or slower than the poll (#4655). */
+const SHARE_WORKING_LABEL = "queued at the broker — no fill confirmed yet";
+
+function resultLabelFor(outcome: IntentOutcome): string | undefined {
+  if (!outcome.result) return undefined;
+  if (outcome.result.status === "working" && !outcome.intent.option) return SHARE_WORKING_LABEL;
+  return ORDER_RESULT_LABEL[outcome.result.status];
+}
+
 /** A raw intent the risk guards refused outright — nothing survived to become an `IntentOutcome`,
  *  so this is the persona's own ask, unfiltered. `guardReason` is present whenever
  *  `DecisionRecord.refusals` was captured (see `applyGuardsWithVerdicts`); absent for records
@@ -167,7 +177,7 @@ function cycleHeadline(record: DecisionRecord, status: CycleStatus): string {
 function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutcomeView {
   const guardDelta = guardDeltaFor(record, outcome.intent);
   const contract = optionContractLine(outcome.intent);
-  const resultLabel = outcome.result ? ORDER_RESULT_LABEL[outcome.result.status] : undefined;
+  const resultLabel = resultLabelFor(outcome);
   return {
     symbol: outcome.intent.symbol,
     side: outcome.intent.side,

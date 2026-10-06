@@ -25,6 +25,14 @@ Eric-sourced.
   sha to the open `lesson/capsule-<n>` PR's entry, or comments it for the next `/retro`. Worth doing
   if the learning line stops reaching zero because of echoes alone.
   _(src: Claude · while: building #4056 slice 7, from its /code-review)_
+
+- **The two lane prompts still name the board's "In Progress" column.** #4393 slice 4 renamed it
+  Building now. `.github/prompts/plan-build.md:130` and `feedback-build.md:165` say "the board's In
+  Progress column and the admission gate's cap both count it". The meaning is unchanged; only the
+  word is stale. Both files are `envelope.json`'s class, so a one-word edit boards the next platter
+  rather than riding a lane PR.
+  _(src: Claude · while: #4393 slice 4, the Waiting column)_
+
 - **Re-run the model-fit audit at every model release.** The 2026-10-04 audit (Anthropic's
   `claude-api` → `prompt-audit` procedure, ten surface auditors plus an adversarial refuter each)
   found that the dominant defect was not old-model prompting. It was drift: Babylon-era facts in

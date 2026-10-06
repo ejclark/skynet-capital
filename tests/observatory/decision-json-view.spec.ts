@@ -241,6 +241,30 @@ describe("decisionCyclesView", () => {
     expect(view[0]?.outcomes[0]?.resultLabel).toBe("may still fill — cancel not confirmed");
   });
 
+  it("words a share order the broker took but never confirmed as queued, not as a failed cancel (#4655)", () => {
+    const view = decisionCyclesView([
+      record({
+        outcomes: [
+          {
+            intent: intent(),
+            action: "placed",
+            result: {
+              intent: intent(),
+              status: "working",
+              reason: "order accepted",
+              orderId: "o1",
+            },
+          },
+        ],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]).toMatchObject({
+      resultStatus: "working",
+      resultLabel: "queued at the broker — no fill confirmed yet",
+    });
+    expect(view[0]?.outcomes[0]).not.toHaveProperty("fill");
+  });
+
   it("names a refused option order's contract beside the check that refused it", () => {
     const sold = anOptionIntent();
     const view = decisionCyclesView([

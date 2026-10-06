@@ -1,9 +1,11 @@
 import {
   type CoverLeg,
   type CoverNeeds,
-  coverNeeds,
+  coverShortfall,
   heldCoverLegs,
   orderLegs,
+  premiumOut,
+  type Shortfall,
 } from "../domain/option-book.js";
 import { heldQuantity, positionValue } from "../domain/portfolio.js";
 import type {
@@ -24,22 +26,26 @@ import { parseOccSymbol } from "../trading/option-symbols.js";
  * Option orders are kept WHOLE, not as sums (#4645 red-team). A held long contract's power to cap a
  * short is a pairing, not an amount: two opens could each lean on the same long, or a close could
  * pull the long out from under an open approved a moment earlier — each correct alone, a naked short
- * together. And every approved order may fill or not, independently (a vertical fills as one), so a
- * promise is the WORST case over every fill/no-fill combination of the orders approved so far —
- * cash and shares each at their own worst (`worstOn`). "Assume they all fill" would pass a
+ * together. And every approved order may fill or not, independently (a vertical fills as one), so
+ * what the book needs is the WORST case over every fill/no-fill combination of the orders approved
+ * so far — share shortfall and cash each at its own worst (`worstOn`), every outcome valued by its
+ * best cover assignment against the shares actually free (`coverShortfall`). "Assume they all fill" would pass a
  * leg-by-leg close whose first leg then never fills; "count only their sold legs" would invent a
  * bare short out of a vertical close and lock shares nothing actually promises.
  *
- * Active only when the batch carries an option order or the book already holds a short (cash or
- * shares promised). Inactive, every read is the starting book's and every write is skipped — a
- * share-only cycle with no option positions sizes exactly as it always has.
+ * The option arithmetic runs only when the ledger is ACTIVE — the batch carries an option order or
+ * the book already holds a short (cash or shares promised). What share orders claim — cash a buy
+ * spends, shares a sell takes, a playbook's allocation a buy uses — is kept in every batch, so two
+ * share orders on one ticker in one cycle never jointly oversell or overspend (#4670). A share-only
+ * batch whose orders do not compete sizes exactly as it always has.
  */
 export interface GuardLedger {
   readonly active: boolean;
   /** Every contract held at the start of the cycle. */
   readonly held: readonly CoverLeg[];
-  /** Dollars paid out by approved intents: share buys' cost, premiums and debits. Never collateral
-   *  — that is a promise, read from `orders`. */
+  /** Dollars approved share buys pay out. An option order's premium or debit rides with the order
+   *  (`ApprovedOptionOrder.pays`) — counted only in the outcomes where it fills — and collateral is a
+   *  need, read from `orders`. */
   spent: number;
   /** Shares sold per underlying by approved share sells. */
   readonly sold: Map<string, number>;
@@ -54,10 +60,13 @@ interface ApprovedOptionOrder {
   readonly underlying: string;
   readonly legs: readonly CoverLeg[];
   readonly changes: ReadonlyMap<string, number>;
+  /** Cash it pays out if it fills: a premium, a debit. */
+  readonly pays: number;
 }
 
 /** Past this many approved orders on one underlying, `worstOn` stops enumerating combinations
- *  (2^n) and bounds them instead. One play per ticker plus a few expiry closes never gets near it. */
+ *  (2^n) and judges one bounding book instead. One play per ticker plus a few expiry closes never
+ *  gets near it. */
 const MAX_ENUMERATED_ORDERS = 10;
 
 export function openLedger(
@@ -76,49 +85,62 @@ export function openLedger(
   };
 }
 
-/** What a book promises on one underlying: cash set aside and shares held back. */
-export interface Promised {
-  readonly cash: number;
+/** What one fill/no-fill outcome on one underlying needs: shares its sold calls lack, and cash —
+ *  collateral under the best assignment plus the premiums its filled orders paid. */
+interface Outcome {
   readonly shares: number;
+  readonly cash: number;
 }
 
 /**
- * The most `underlying` can promise — cash and shares each at its worst — over every combination of
- * this batch's approved orders on it filling or not, with `extra` (the order being judged, whole)
- * filled. Every outcome is valued by the same one-to-one cap assignment the guards always used.
- * Past `MAX_ENUMERATED_ORDERS` it values one book instead: the approved orders' SOLD legs only (new
- * shorts, longs given up), which promises at least as much real cover as any outcome — stricter,
- * never looser.
+ * Every fill/no-fill outcome of this batch's approved orders on `underlying` (index = the set that
+ * filled, as bits), each with `extra` — the change being judged, whole — filled and paying `pays`,
+ * against `freeShares`. Each outcome is valued by `coverShortfall`'s best assignment.
+ *
+ * Past `MAX_ENUMERATED_ORDERS` it values one bounding book instead — the approved orders' SOLD legs
+ * only (new shorts, longs given up) with every premium paid — and marks the answer inexact, so the
+ * caller judges it outright rather than outcome by outcome.
  */
-function worstOn(
+function outcomesOn(
   ledger: GuardLedger,
   underlying: string,
-  extra: readonly CoverLeg[] = [],
-): Promised {
-  const start = [...ledger.held.filter((l) => l.underlying === underlying), ...extra];
+  freeShares: number,
+  extra: { readonly legs?: readonly CoverLeg[]; readonly pays?: number } = {},
+): { readonly outcomes: readonly Outcome[]; readonly exact: boolean } {
+  const start = [...ledger.held.filter((l) => l.underlying === underlying), ...(extra.legs ?? [])];
+  const pays = Math.max(0, extra.pays ?? 0);
   const orders = ledger.active ? ledger.orders.filter((o) => o.underlying === underlying) : [];
-  const promisedBy = (legs: readonly CoverLeg[]): Promised => {
-    const needs = coverNeeds(legs);
-    return {
-      cash: needs.cashByUnderlying.get(underlying) ?? 0,
-      shares: needs.sharesByUnderlying.get(underlying) ?? 0,
-    };
-  };
   if (orders.length > MAX_ENUMERATED_ORDERS) {
-    return promisedBy([...start, ...orders.flatMap((o) => o.legs.filter((l) => l.contracts < 0))]);
+    const sold = orders.flatMap((o) => o.legs.filter((l) => l.contracts < 0));
+    const bound = coverShortfall([...start, ...sold], underlying, freeShares);
+    const paid = orders.reduce((sum, o) => sum + o.pays, pays);
+    return { outcomes: [{ shares: bound.shares, cash: bound.cash + paid }], exact: false };
   }
-  let cash = 0;
-  let shares = 0;
+  const outcomes: Outcome[] = [];
+  let exact = true;
   for (let filled = 0; filled < 2 ** orders.length; filled++) {
     const legs = [...start];
+    let paid = pays;
     orders.forEach((order, i) => {
-      if (filled & (2 ** i)) legs.push(...order.legs);
+      if (!(filled & (2 ** i))) return;
+      legs.push(...order.legs);
+      paid += order.pays;
     });
-    const outcome = promisedBy(legs);
-    cash = Math.max(cash, outcome.cash);
-    shares = Math.max(shares, outcome.shares);
+    const outcome: Shortfall = coverShortfall(legs, underlying, freeShares);
+    outcomes.push({ shares: outcome.shares, cash: outcome.cash + paid });
+    exact &&= outcome.exact;
   }
-  return { cash, shares };
+  return { outcomes, exact };
+}
+
+/** The worst outcome on `underlying` — share shortfall and cash, each at its own worst. Every outcome
+ *  is covered exactly when the worst of each is. */
+function worstOn(ledger: GuardLedger, underlying: string, freeShares: number): Outcome {
+  const { outcomes } = outcomesOn(ledger, underlying, freeShares);
+  return {
+    shares: Math.max(0, ...outcomes.map((o) => o.shares)),
+    cash: Math.max(0, ...outcomes.map((o) => o.cash)),
+  };
 }
 
 /** Every underlying the starting book or the batch's orders touch. */
@@ -126,53 +148,82 @@ function underlyings(ledger: GuardLedger): Set<string> {
   return new Set([...ledger.held, ...ledger.orders].map((x) => x.underlying));
 }
 
-/** Cash the whole book promises at its worst, across every underlying. */
-function promisedCash(ledger: GuardLedger, book: CoverNeeds): number {
-  if (!ledger.active) return book.cash;
+/** Shares of `underlying` held and not sold by an approved sell this batch. */
+function freeSharesOf(portfolio: Portfolio, ledger: GuardLedger, underlying: string): number {
+  return Math.max(0, heldQuantity(portfolio, underlying)) - soldShares(ledger, underlying);
+}
+
+/** Cash every underlying but `except` needs at its worst, premiums included. */
+function cashElsewhere(portfolio: Portfolio, ledger: GuardLedger, except?: string): number {
   let total = 0;
-  for (const underlying of underlyings(ledger)) total += worstOn(ledger, underlying).cash;
+  for (const underlying of underlyings(ledger)) {
+    if (underlying === except) continue;
+    total += worstOn(ledger, underlying, freeSharesOf(portfolio, ledger, underlying)).cash;
+  }
   return total;
 }
 
-/** Cash neither paid out this batch nor promised as collateral, at worst. With no short options and
+/** Cash neither paid out this batch nor needed by its options, at worst. With no short options and
  *  no option intents it is exactly the account's cash. */
 export function spendableCash(portfolio: Portfolio, ledger: GuardLedger, book: CoverNeeds): number {
-  return portfolio.cash - promisedCash(ledger, book) - (ledger.active ? ledger.spent : 0);
+  if (!ledger.active) return unspentCash(portfolio, ledger) - book.cash;
+  return unspentCash(portfolio, ledger) - cashElsewhere(portfolio, ledger);
 }
 
-/** Cash not yet paid out this batch — the money in the account, before any promise. */
+/** Cash not yet paid out by this batch's share buys — the money in the account, before any option
+ *  need. */
 export function unspentCash(portfolio: Portfolio, ledger: GuardLedger): number {
-  return portfolio.cash - (ledger.active ? ledger.spent : 0);
-}
-
-/** Shares of `underlying` held back to cover sold calls, at worst. */
-export function promisedShares(ledger: GuardLedger, book: CoverNeeds, underlying: string): number {
-  if (!ledger.active) return book.sharesByUnderlying.get(underlying) ?? 0;
-  return worstOn(ledger, underlying).shares;
+  return portfolio.cash - ledger.spent;
 }
 
 /** Shares of `underlying` approved share sells already took this batch. */
 export function soldShares(ledger: GuardLedger, underlying: string): number {
-  return ledger.active ? (ledger.sold.get(underlying) ?? 0) : 0;
+  return ledger.sold.get(underlying) ?? 0;
+}
+
+/** Whether a change makes its underlying's cover worse — in shares its sold calls lack, or in cash
+ *  the account lacks for every need. */
+export interface Worsening {
+  readonly shares: boolean;
+  readonly cash: boolean;
+  /** Cash the change newly needs at worst: collateral it adds plus what it pays out. */
+  readonly newCash: number;
 }
 
 /**
- * What one option order would do to its underlying's promises, judged against the worst case of
- * everything approved before it: `before` without it, `after` with it filled, and `elsewhere` — the
- * cash every OTHER underlying promises at its worst.
+ * Judge one change on `underlying` — an option order's legs and payment, and/or a share sale —
+ * outcome by outcome against everything approved before it. It WORSENS cover when, in ANY fill/no-fill
+ * combination of the earlier orders, the book with it filled lacks more shares, or the account more
+ * cash, than the same combination without it. So a covered book stays covered in every outcome, and a
+ * book already short of cover can still shed risk.
+ *
+ * Outcome by outcome, not worst against worst (#4645 fuzz): an earlier spread's premium counted as
+ * paid while its collateral was read from the outcome where it did not fill made a covered book look
+ * short of cash, and "no worse than that" then let the next spread through.
  */
-export function coverWith(
+export function worsens(
+  portfolio: Portfolio,
   ledger: GuardLedger,
-  book: CoverNeeds,
   underlying: string,
-  legs: readonly CoverLeg[],
-): { readonly before: Promised; readonly after: Promised; readonly elsewhere: number } {
-  const before = worstOn(ledger, underlying);
-  return {
-    before,
-    after: worstOn(ledger, underlying, legs),
-    elsewhere: promisedCash(ledger, book) - before.cash,
-  };
+  change: { readonly legs?: readonly CoverLeg[]; readonly sells?: number; readonly pays?: number },
+): Worsening {
+  const free = freeSharesOf(portfolio, ledger, underlying);
+  const before = outcomesOn(ledger, underlying, free);
+  const after = outcomesOn(ledger, underlying, free - (change.sells ?? 0), change);
+  const available = unspentCash(portfolio, ledger) - cashElsewhere(portfolio, ledger, underlying);
+  const short = (o: Outcome): number => Math.max(0, o.cash - available);
+  let shares = false;
+  let cash = false;
+  let newCash = 0;
+  after.outcomes.forEach((then, i) => {
+    // Inexact (a bounding book past MAX_ENUMERATED_ORDERS or MAX_EXACT_CONTRACTS): "no worse than
+    // before" means nothing against an estimate, so the change must leave cover whole outright.
+    const now = before.exact && after.exact ? before.outcomes[i] : undefined;
+    shares ||= now ? then.shares > now.shares : then.shares > 0;
+    cash ||= now ? short(then) > short(now) : short(then) > 0;
+    newCash = Math.max(newCash, then.cash - (now ?? before.outcomes[0] ?? then).cash);
+  });
+  return { shares, cash, newCash };
 }
 
 /**
@@ -194,11 +245,11 @@ export function closableContracts(
   return side === "sell" ? Math.max(0, held - taken) : Math.max(0, -held - taken);
 }
 
-/** Record what an approved intent claimed. A no-op on an inactive ledger. */
+/** Record what an approved intent claimed. */
 export function claim(
   ledger: GuardLedger,
   claimed: {
-    /** Dollars paid out: a share buy's cost, a premium or debit. */
+    /** Dollars a share buy pays out. (An option order's premium rides with `order`.) */
     readonly spent?: number;
     /** Shares a share sell takes. */
     readonly sold?: { readonly underlying: string; readonly shares: number };
@@ -212,7 +263,6 @@ export function claim(
     readonly risk?: number;
   },
 ): void {
-  if (!ledger.active) return;
   ledger.spent += Math.max(0, claimed.spent ?? 0);
   if (claimed.sold && claimed.sold.shares > 0) {
     const { underlying, shares } = claimed.sold;
@@ -225,7 +275,12 @@ export function claim(
       const signed = (leg.side === "buy" ? 1 : -1) * leg.ratio * units;
       changes.set(leg.occSymbol, (changes.get(leg.occSymbol) ?? 0) + signed);
     }
-    ledger.orders.push({ underlying, legs: orderLegs(option, units), changes });
+    ledger.orders.push({
+      underlying,
+      legs: orderLegs(option, units),
+      changes,
+      pays: premiumOut(option) * units,
+    });
   }
   if (claimed.playbookId !== undefined && (claimed.risk ?? 0) > 0) {
     const prior = ledger.byPlaybook.get(claimed.playbookId) ?? 0;
@@ -286,7 +341,7 @@ export function committedToPlaybook(
 ): number {
   const playbookId = intent.playbookId ?? "";
   const basket = playbookSymbols?.get(playbookId) ?? [intent.symbol];
-  let committed = ledger.active ? (ledger.byPlaybook.get(playbookId) ?? 0) : 0;
+  let committed = ledger.byPlaybook.get(playbookId) ?? 0;
   for (const symbol of basket) {
     const ask = context.quotes[symbol]?.ask;
     if (ask !== undefined) committed += heldQuantity(portfolio, symbol) * ask;

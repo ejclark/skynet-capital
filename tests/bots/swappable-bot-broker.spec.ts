@@ -87,6 +87,11 @@ describe("SwappableBotBroker", () => {
         status: 200,
         body: { id: "o1", symbol: "AAPL", qty: "1", side: "buy", status: "accepted" },
       },
+      // Only a fill the broker confirms is reported as one (#4655).
+      "/v2/orders/o1": {
+        status: 200,
+        body: { id: "o1", status: "filled", filled_qty: "1", filled_avg_price: "231.50" },
+      },
     });
     const original = globalThis.fetch;
     globalThis.fetch = fetchFn;
@@ -103,7 +108,13 @@ describe("SwappableBotBroker", () => {
 
       const result = await broker.submit(intent);
 
-      expect(result).toEqual({ intent, status: "filled", filledQuantity: 1, orderId: "o1" });
+      expect(result).toEqual({
+        intent,
+        status: "filled",
+        filledQuantity: 1,
+        filledPrice: 231.5,
+        orderId: "o1",
+      });
     } finally {
       globalThis.fetch = original;
     }

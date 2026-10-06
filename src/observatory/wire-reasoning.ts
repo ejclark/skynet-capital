@@ -13,9 +13,10 @@ import type { WireTradeRow } from "./wire-data.js";
  * Sauron's broker — a per-persona index would miss them) still resolve correctly: the join key is
  * the order id, never the wire row's `participantId`.
  *
- * Deliberately never copies `outcome.result.status` onto the member surface: the broker adapter
- * reports an accepted market order as `"filled"` with no price, and an order Alpaca later cancels
- * stays `"filled"` forever in that field — copying it would move a lie here. Only `reason`,
+ * Deliberately never copies `outcome.result.status` onto the member surface: it is a snapshot from
+ * the moment of submit — an order logged `"working"` that Alpaca fills or cancels later stays
+ * `"working"` forever in that field (and before #4655 an accepted order read `"filled"` with no
+ * price) — copying it would move a stale answer here. Only `reason`,
  * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time.
  */
 

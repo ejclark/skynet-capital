@@ -95,11 +95,16 @@ describe("createBotBroker", () => {
     "authenticates with a Bearer token when the bot has an accessToken, omitting key/secret headers",
   );
 
-  it("reports a filled order when the wired broker's submit is accepted by the API", async () => {
+  it("reports a filled order when the wired broker's submit is accepted and the broker confirms the fill", async () => {
     const { fetchFn } = fakeFetch({
       "/v2/orders": {
         status: 200,
         body: { id: "o1", symbol: "AAPL", qty: "2", side: "buy", status: "accepted" },
+      },
+      // Only a fill the broker confirms is reported as one (#4655).
+      "/v2/orders/o1": {
+        status: 200,
+        body: { id: "o1", status: "filled", filled_qty: "2", filled_avg_price: "231.50" },
       },
     });
     const original = globalThis.fetch;
@@ -119,6 +124,7 @@ describe("createBotBroker", () => {
         intent,
         status: "filled",
         filledQuantity: 2,
+        filledPrice: 231.5,
         orderId: "o1",
       });
     } finally {

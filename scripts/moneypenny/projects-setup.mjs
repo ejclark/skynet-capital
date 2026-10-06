@@ -19,7 +19,8 @@
 //
 //   GH_TOKEN=<eric's classic PAT, project scope> node scripts/moneypenny/projects-setup.mjs
 import { sh, withRetry } from "./gh.mjs";
-import { FIELDS, PROJECT_TITLE, STATUS_FIELD_OPTIONS, statusOptionsMatch } from "./projects.mjs";
+import { FIELDS, PROJECT_TITLE, statusFieldUpdate } from "./projects.mjs";
+import { writeStatusOptions } from "./projects-sync.mjs";
 
 const OWNER = "ejclark";
 
@@ -27,32 +28,14 @@ function ghJson(args) {
   return JSON.parse(withRetry(() => sh("gh", [...args, "--format", "json"])));
 }
 
-// updateProjectV2Field REPLACES the whole singleSelectOptions list (verified against GitHub's own
-// GraphQL schema — gh CLI has no `field-*` subcommand that edits an existing field's options, only
-// field-create for a brand-new field). Every new Project auto-creates its own default Status field
-// (Todo/In Progress/Done), so this is the only path to our 5-value set once one already exists.
-const UPDATE_STATUS_OPTIONS_MUTATION = `
-  mutation($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]) {
-    updateProjectV2Field(input: { fieldId: $fieldId, singleSelectOptions: $options }) {
-      projectV2Field {
-        ... on ProjectV2SingleSelectField {
-          id
-          options { id name }
-        }
-      }
-    }
-  }
-`;
-
-function fixStatusOptions(field) {
-  const body = JSON.stringify({
-    query: UPDATE_STATUS_OPTIONS_MUTATION,
-    variables: { fieldId: field.id, options: STATUS_FIELD_OPTIONS },
-  });
-  const result = JSON.parse(
-    withRetry(() => sh("gh", ["api", "graphql", "--input", "-"], { input: body })),
-  );
-  console.log(`fixed "Status" options: ${JSON.stringify(result.data.updateProjectV2Field)}`);
+// The Status field's options are written by `writeStatusOptions` (projects-sync.mjs), shared with
+// the reconcile sweep. Every new Project auto-creates its own default Status field (Todo/In
+// Progress/Done), so updating that field is the only path to our option set once one exists —
+// and `statusFieldUpdate` keeps each surviving option's id, so a rename (#4393 slice 4: "In
+// Progress" → "Building now") moves no cards.
+function fixStatusOptions(field, options) {
+  const result = writeStatusOptions(field.id, options);
+  console.log(`fixed "Status" options: ${JSON.stringify(result)}`);
 }
 
 function findProject(title) {
@@ -116,13 +99,14 @@ function main() {
     }
     if (field.name === "Status") {
       const currentNames = (existing.options ?? []).map((o) => o.name);
-      if (statusOptionsMatch(currentNames)) {
-        console.log(`field "Status" already has the 5-value set, skipping`);
+      const options = statusFieldUpdate(existing.options ?? []);
+      if (!options) {
+        console.log(`field "Status" already has the full option set, skipping`);
       } else {
         console.log(
-          `field "Status" exists with GitHub's default options (${currentNames.join(", ")}) — fixing`,
+          `field "Status" has options (${currentNames.join(", ")}) — renaming/adding in place`,
         );
-        fixStatusOptions(existing);
+        fixStatusOptions(existing, options);
       }
       continue;
     }

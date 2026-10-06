@@ -204,6 +204,146 @@ function assignCaps(group: readonly CoverLeg[]): {
   return assigned;
 }
 
+/** Past this many contracts of one type on one side (short or long) on one underlying,
+ *  `coverShortfall` stops searching every assignment and reports the greedy one, marked inexact. */
+const MAX_EXACT_CONTRACTS = 12;
+
+/** What one underlying's contracts still need once the shares free to cover them are counted. */
+export interface Shortfall {
+  /** Shares the sold calls need beyond the shares free to cover them. */
+  readonly shares: number;
+  /** Cash the shorts need, under the assignment that best fits those shares. */
+  readonly cash: number;
+  /** False past `MAX_EXACT_CONTRACTS`: a valid assignment, not necessarily the best one. */
+  readonly exact: boolean;
+}
+
+type Unit = { readonly strike: number; readonly expiration: string };
+
+/** One contract per entry, so an assignment can pair them one to one. */
+function unitsOf(
+  legs: readonly CoverLeg[],
+  type: "call" | "put",
+): { shorts: Unit[]; longs: Unit[] } {
+  const shorts: Unit[] = [];
+  const longs: Unit[] = [];
+  for (const leg of legs) {
+    if (leg.type !== type) continue;
+    for (let n = 0; n < Math.abs(leg.contracts); n += 1) {
+      (leg.contracts < 0 ? shorts : longs).push({ strike: leg.strike, expiration: leg.expiration });
+    }
+  }
+  return { shorts, longs };
+}
+
+/** Every (shares, cash) a set of short calls can be covered at — each by 100 shares, or by a distinct
+ *  long call expiring no earlier at its strikes' width in cash — keeping only the points no other
+ *  point beats on both. */
+function callFrontier(shorts: readonly Unit[], longs: readonly Unit[]): [number, number][] {
+  const memo = new Map<string, [number, number][]>();
+  const best = (points: [number, number][]): [number, number][] => {
+    points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const kept: [number, number][] = [];
+    for (const point of points) {
+      if (kept.length === 0 || point[1] < (kept[kept.length - 1] as [number, number])[1]) {
+        kept.push(point);
+      }
+    }
+    return kept;
+  };
+  const search = (i: number, used: number): [number, number][] => {
+    if (i === shorts.length) return [[0, 0]];
+    const key = `${i}:${used}`;
+    const hit = memo.get(key);
+    if (hit) return hit;
+    const short = shorts[i] as Unit;
+    const points: [number, number][] = [];
+    for (const [shares, cash] of search(i + 1, used))
+      points.push([shares + OPTION_MULTIPLIER, cash]);
+    longs.forEach((long, j) => {
+      if (used & (1 << j) || long.expiration < short.expiration) return;
+      const width = Math.max(0, long.strike - short.strike) * OPTION_MULTIPLIER;
+      for (const [shares, cash] of search(i + 1, used | (1 << j)))
+        points.push([shares, cash + width]);
+    });
+    const kept = best(points);
+    memo.set(key, kept);
+    return kept;
+  };
+  return search(0, 0);
+}
+
+/** The least cash a set of short puts can be secured with — each by its strike, or by a distinct long
+ *  put expiring no earlier at the strikes' width. */
+function putCash(shorts: readonly Unit[], longs: readonly Unit[]): number {
+  const memo = new Map<string, number>();
+  const search = (i: number, used: number): number => {
+    if (i === shorts.length) return 0;
+    const key = `${i}:${used}`;
+    const hit = memo.get(key);
+    if (hit !== undefined) return hit;
+    const short = shorts[i] as Unit;
+    let least = short.strike * OPTION_MULTIPLIER + search(i + 1, used);
+    longs.forEach((long, j) => {
+      if (used & (1 << j) || long.expiration < short.expiration) return;
+      const width = Math.max(0, short.strike - long.strike) * OPTION_MULTIPLIER;
+      least = Math.min(least, width + search(i + 1, used | (1 << j)));
+    });
+    memo.set(key, least);
+    return least;
+  };
+  return search(0, 0);
+}
+
+/**
+ * What one underlying's contracts need, judged against the shares actually free to cover its sold
+ * calls — under the BEST one-to-one assignment, not a greedy one. A sold call can be covered by 100
+ * shares or by a long call (at its strikes' width in cash); which is right depends on what is held,
+ * and `coverNeeds`' greedy pick, blind to the shares, read a fully covered book as short of cash
+ * (#4645 fuzz). Of every assignment, the one that leaves the fewest calls without shares wins, then
+ * the one needing the least cash.
+ *
+ * Exact means a guard may judge an order by whether it makes this WORSE: a covered book stays
+ * covered, and a book already short of cover can still shed risk. Past `MAX_EXACT_CONTRACTS` it falls
+ * back to `coverNeeds` (a valid assignment, so never an understatement of what that assignment needs)
+ * and says so.
+ */
+export function coverShortfall(
+  legs: readonly CoverLeg[],
+  underlying: string,
+  freeShares: number,
+): Shortfall {
+  const own = netLegs(legs).filter((l) => l.underlying === underlying);
+  const calls = unitsOf(own, "call");
+  const puts = unitsOf(own, "put");
+  const room = Math.max(0, freeShares);
+  const tooMany = [calls.shorts, calls.longs, puts.shorts, puts.longs].some(
+    (units) => units.length > MAX_EXACT_CONTRACTS,
+  );
+  if (tooMany) {
+    const greedy = coverNeeds(own);
+    const shares = greedy.sharesByUnderlying.get(underlying) ?? 0;
+    return {
+      shares: Math.max(0, shares - room),
+      cash: greedy.cashByUnderlying.get(underlying) ?? 0,
+      exact: false,
+    };
+  }
+  const short = (shares: number): number => Math.max(0, shares - room);
+  const [fewestShort, leastCash] = callFrontier(calls.shorts, calls.longs).reduce<[number, number]>(
+    (chosen, [shares, cash]) =>
+      short(shares) < chosen[0] || (short(shares) === chosen[0] && cash < chosen[1])
+        ? [short(shares), cash]
+        : chosen,
+    [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
+  );
+  return {
+    shares: fewestShort,
+    cash: leastCash + putCash(puts.shorts, puts.longs),
+    exact: true,
+  };
+}
+
 const coverLegOf = (c: HeldContract): CoverLeg => ({
   underlying: c.underlying,
   type: c.type,
@@ -306,6 +446,18 @@ export function premiumOut(option: OptionOrderIntent): number {
   return perShare * OPTION_MULTIPLIER;
 }
 
+/** Half a cent of slack when a cents limit meets a quoted band — float sums, never a price. */
+const LIMIT_EPSILON = 0.005;
+
+/** Whether a limit sits inside a quoted band (in the limit's own sign convention). The guards and
+ *  the order flow's last re-check before sending share this, so they cannot disagree. */
+export function limitInsideBand(
+  limitPrice: number,
+  band: { readonly low: number; readonly high: number },
+): boolean {
+  return limitPrice >= band.low - LIMIT_EPSILON && limitPrice <= band.high + LIMIT_EPSILON;
+}
+
 /** Sums of per-share quotes drift in the 15th decimal; a band is compared against a cents limit. */
 const tidy = (x: number): number => Math.round(x * 1e6) / 1e6;
 
@@ -332,15 +484,21 @@ export function quoteBand(
   const stamps: string[] = [];
   let stampMissing = false;
   for (const { leg, quote } of legQuotes) {
-    if (quote?.bid === undefined || quote.ask === undefined) return undefined;
-    if (legQuotes.length === 1) {
-      low = quote.bid;
-      high = quote.ask;
-    } else {
-      low += leg.ratio * (leg.side === "buy" ? quote.bid : -quote.ask);
-      high += leg.ratio * (leg.side === "buy" ? quote.ask : -quote.bid);
+    // Two real numbers, ask at or above bid — a null, infinite or inverted side prices nothing.
+    const bid = quote?.bid;
+    const ask = quote?.ask;
+    if (bid === undefined || ask === undefined || !Number.isFinite(bid) || !Number.isFinite(ask)) {
+      return undefined;
     }
-    if (quote.quotedAt === undefined) stampMissing = true;
+    if (ask < bid) return undefined;
+    if (legQuotes.length === 1) {
+      low = bid;
+      high = ask;
+    } else {
+      low += leg.ratio * (leg.side === "buy" ? bid : -ask);
+      high += leg.ratio * (leg.side === "buy" ? ask : -bid);
+    }
+    if (quote?.quotedAt === undefined) stampMissing = true;
     else stamps.push(quote.quotedAt);
   }
   const oldest = [...stamps].sort((a, b) => Date.parse(a) - Date.parse(b))[0];

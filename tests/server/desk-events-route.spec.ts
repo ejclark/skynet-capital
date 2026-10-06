@@ -136,6 +136,23 @@ describe("serveDeskEventsApi", () => {
     expect(frames(out.chunks).filter((c) => c.includes("event: order"))).toHaveLength(1);
   });
 
+  it("relays only orders — a member's earned milestone is not an order frame", () => {
+    const bus = fakeBus();
+    const { res, out } = fakeRes();
+    const req = get("/api/trade/events?participantId=human-eric");
+    serveDeskEventsApi(req, res, "/api/trade/events", configWith({ activityEvents: bus }), session);
+
+    bus.emit(
+      fill("human-eric", {
+        id: "milestone:human-eric:first-buy:milestone.earned",
+        eventType: "milestone.earned",
+        target: { kind: "milestone", id: "human-eric:first-buy" },
+      }),
+    );
+
+    expect(frames(out.chunks).filter((c) => c.includes("event: order"))).toHaveLength(0);
+  });
+
   it("shapes the wire event from the envelope's own fields", () => {
     expect(deskOrderEvent(fill("x"))).toEqual({
       id: "o-1:order.filled:t:5",

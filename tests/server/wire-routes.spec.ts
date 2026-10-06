@@ -4,6 +4,7 @@ import {
   activityEventFromAuditRecord,
   activityEventFromFeedbackEntry,
   activityEventFromFeedbackStatus,
+  activityEventFromLadderEntry,
   activityEventFromMergedPullRequest,
   activityEventFromTradeRecord,
 } from "../../src/observatory/activity-event.js";
@@ -350,6 +351,102 @@ describe("serveWireJson", () => {
       await serveWireJson(res, "/api/wire?per_page=2", deps, false);
 
       expect(JSON.parse(out.body).wire.development).toHaveLength(2);
+    });
+  });
+
+  // #784 slice 5 — the milestone kind, and the plan's falsifier end to end: an earn produces exactly
+  // one row, and a milestone nobody earned produces none.
+  describe("earned milestones", () => {
+    const member = snapshot({ id: "eric", displayName: "Eric", kind: "human" });
+    const logged = {
+      uuid: "u-1",
+      participantId: "eric",
+      milestoneId: "first-realized-profit",
+      evidence: { kind: "realized-profit" as const, orderId: "ord-9" },
+      at: "2026-10-02T15:00:00.000Z",
+    };
+    const wired = (over: Partial<WireRouteDeps> = {}): WireRouteDeps => ({
+      hub: hubWith([member]),
+      readAllLadderProgress: () => Promise.resolve([]),
+      readAllOrderAudit: () => Promise.resolve([]),
+      ...over,
+    });
+    const milestonesOf = async (deps: WireRouteDeps, url = "/api/wire") => {
+      const { res, out } = capture();
+      await serveWireJson(res, url, deps, false);
+      return JSON.parse(out.body).wire;
+    };
+
+    it("shows one row for a member's first fill, derived from the ledger the Learn page reads", async () => {
+      const { milestones, milestonesEnabled } = await milestonesOf(
+        wired({ readAllTradeActivity: () => Promise.resolve([record({ participantId: "eric" })]) }),
+      );
+
+      expect(milestonesEnabled).toBe(true);
+      expect(milestones).toEqual([
+        expect.objectContaining({
+          who: "Eric",
+          title: "Buy your first stock",
+          kindLabel: "Earned",
+        }),
+      ]);
+    });
+
+    it("shows NO row for a member with no fills — nothing was earned", async () => {
+      const { milestones } = await milestonesOf(wired());
+
+      expect(milestones).toEqual([]);
+    });
+
+    it("shows a logged earn once, whether it reached the bus, the log, or both", async () => {
+      const { milestones } = await milestonesOf(
+        wired({
+          readAllActivityEvents: () => Promise.resolve([activityEventFromLadderEntry(logged)]),
+          readAllLadderProgress: () => Promise.resolve([logged]),
+        }),
+      );
+
+      expect(milestones).toEqual([expect.objectContaining({ title: "Book your first profit" })]);
+    });
+
+    it("leaves a bot's first fill off — the ladder is a member's curriculum", async () => {
+      const { milestones } = await milestonesOf(
+        wired({
+          hub: hubWith([snapshot()]),
+          readAllTradeActivity: () => Promise.resolve([record()]),
+        }),
+      );
+
+      expect(milestones).toEqual([]);
+    });
+
+    it("says the kind is off when either source is unwired, rather than sending an empty list", async () => {
+      const noAudit = await milestonesOf({
+        hub: hubWith([member]),
+        readAllLadderProgress: () => Promise.resolve([logged]),
+      });
+
+      expect(noAudit.milestonesEnabled).toBe(false);
+      expect(noAudit.milestones).toEqual([]);
+    });
+
+    it("bounds the milestone rows by the same per_page every other kind rides", async () => {
+      const fills = [
+        record({ orderId: "b", participantId: "eric", side: "buy" }),
+        record({
+          orderId: "s",
+          participantId: "eric",
+          side: "sell",
+          at: "2026-08-20T14:30:00.000Z",
+        }),
+      ];
+
+      const { milestones } = await milestonesOf(
+        wired({ readAllTradeActivity: () => Promise.resolve(fills) }),
+        "/api/wire?per_page=1",
+      );
+
+      expect(milestones).toHaveLength(1);
     });
   });
 

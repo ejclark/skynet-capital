@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **ISM Services Employment sub-50 as a survey-internal reading that persists against positive
+  payrolls (FT-ism-services-2026-10-05-1)** — added 2026-10-06 from the
+  [ism-services-2026-10-05 close-out](events/ism-services-2026-10-05.md). Registered as a joint
+  prediction (positive September payrolls **and** Employment < 50, base rate ≈52%). Payrolls held
+  (+29k) but Employment printed **50.1**, so the registered "Employment ≥ 50" kill clause fired. A
+  0.1pt crossing on the cycle's largest payroll miss: the disagreement streak (13 of 18 months) ended,
+  but this does not show the sub-index re-coupled to labor. Do not re-propose the joint test without a
+  stated margin around 50 — a threshold that a one-tenth rounding step flips is not a test of the
+  relationship.
+
 - **The disappearing index effect, tested at a single-name threshold set before the additions were
   known (FT-sp-rebalance-proforma-2026-09-04-1)** — added 2026-09-22 from the
   [sp-rebalance-proforma-2026-09-04 close-out](events/sp-rebalance-proforma-2026-09-04.md). All
@@ -754,6 +764,20 @@ robust, alpha fragile — is the finding.
   wide, qualitatively-different cross-series wedge" without first sizing the fix's own realized effect
   against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
   the gap it was meant to close was exactly as large as that undersell implies.
+
+- **The East-West pipeline read as still impaired on the day of a quota meeting, three weeks after a
+  5-6 week repair estimate (FT-opec-plus-meeting-2026-10-04-3)** — added 2026-10-06 from the
+  [opec-plus-meeting-2026-10-04 close-out](events/opec-plus-meeting-2026-10-04.md). Registered
+  2026-09-15 on a Middle East Eye repair estimate of 5-6 weeks (restoration 10-15 to 10-22) after
+  drones from Iraq hit the line on 09-10, with the counter-case (an April 2026 hit restored in three
+  days) named and under-weighted. Aramco restarted the line **09-22** and Bloomberg (2026-10-02)
+  reported ~**6 mb/d** pumped through the 7 mb/d conduit, above 80% of capacity, ~4.5 mb/d exportable
+  - above both the 4-5 mb/d pre-attack flow and the ~4 mb/d target quoted on 09-22. **What must
+  travel with the kill:** a single-sourced Bloomberg read (unnamed person; no Aramco/SPA primary
+  reachable), and the parent stand-aside never depended on it. What breaks is the reflex of dating a
+  Gulf repair off a first estimate: the next ledger carrying a press repair window should register
+  the fast-restart branch as the base case until the line's own history (restored in three days in
+  April, in about twelve here) says otherwise.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

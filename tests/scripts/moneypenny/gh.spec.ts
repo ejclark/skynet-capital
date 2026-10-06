@@ -16,6 +16,17 @@ describe("moneypenny gh retry", () => {
     expect(isTransientGhError(undefined)).toBe(false);
   });
 
+  // #4675: GitHub's GraphQL internal error names no HTTP status, so `item-edit` got one attempt.
+  it("classifies GraphQL's status-less internal error as transient", () => {
+    const GH_SAID =
+      "GraphQL: Something went wrong while executing your query on 2026-10-05T23:26:22Z. " +
+      "Please include `9424:27423:3B6D361:C7247FB:6AC4321D` when reporting this issue.\n";
+    expect(isTransientGhError(GH_SAID)).toBe(true);
+    expect(isTransientGhError("GraphQL: Could not resolve to a node with the global id")).toBe(
+      false,
+    );
+  });
+
   it("retries a transient failure with exponential backoff and returns the eventual answer", () => {
     const slept: number[] = [];
     let calls = 0;
