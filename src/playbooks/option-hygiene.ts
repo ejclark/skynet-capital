@@ -47,12 +47,16 @@ interface DueClose {
   readonly kind: HygieneKind;
 }
 
-/** The enabled option playbook that trades `underlying`, if any. */
+/** The RUNNING option playbook that trades `underlying`, if any. A paused one (`exitsOnly`, #4651)
+ *  is never the owner: hygiene owns its contracts and closes them on the house schedule — a paused
+ *  wheel's shorts are bought back two sessions before expiry instead of being held into
+ *  assignment, exactly as before pausing kept it on the roster. A paused spread's own close rule
+ *  still runs; whichever closes a contract first claims it, so nothing is closed twice. */
 function ownerOf(
   enabled: readonly EnabledPlaybook[],
   underlying: string,
 ): EnabledPlaybook | undefined {
-  return enabled.find((e) => e.playbook.options?.underlyings.includes(underlying));
+  return enabled.find((e) => !e.exitsOnly && e.playbook.options?.underlyings.includes(underlying));
 }
 
 /** Every held contract due to close by `asOfIso`, each with the earliest rule that made it due. */

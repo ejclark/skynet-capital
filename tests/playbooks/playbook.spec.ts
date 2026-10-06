@@ -1,12 +1,13 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import {
   type EnabledPlaybook,
+  isExitIntent,
   type Playbook,
   playbookIntents,
   printWindow,
 } from "../../src/playbooks/playbook.js";
 import type { TacticalRule } from "../../src/playbooks/tactical-playbook.js";
-import { aContext, aPortfolio, aPosition } from "../support/builders.js";
+import { aContext, anOptionIntent, aPortfolio, aPosition } from "../support/builders.js";
 
 const calendar: readonly EarningsPrint[] = [
   { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "test" },
@@ -236,5 +237,49 @@ describe("playbookIntents", () => {
       expect(intents).toHaveLength(1);
       expect(intents[0]).toMatchObject({ side: "sell", quantity: 100 });
     });
+  });
+});
+
+/** PAUSE = EXITS ONLY (#4651): a paused entry keeps managing to flat and never opens. */
+describe("a paused (exits-only) entry", () => {
+  const order = (side: "buy" | "sell") =>
+    ({ symbol: "NVDA", side, quantity: 1, type: "market", reason: "test" }) as const;
+
+  it("judges an exit by risk taken off: a share sell or an option close, never a sold put", () => {
+    expect(isExitIntent(order("sell"))).toBe(true);
+    expect(isExitIntent(order("buy"))).toBe(false);
+    expect(isExitIntent(anOptionIntent())).toBe(false);
+    expect(isExitIntent(anOptionIntent({ side: "buy", option: { effect: "close" } }))).toBe(true);
+  });
+
+  it("keeps a decide playbook's option close and drops its opens", () => {
+    const close = anOptionIntent({ side: "buy", option: { effect: "close" } });
+    const decider = play({
+      id: "CRWV-WHEEL",
+      symbols: ["CRWV"],
+      decide: () => [anOptionIntent(), close],
+    });
+    const context = aContext({ CRWV: { last: 92 } });
+    const running = playbookIntents(enabled(decider), context, aPortfolio(), calendar);
+    expect(running.map((i) => i.option?.effect)).toEqual(["open", "close"]);
+    const paused = playbookIntents(
+      [{ playbook: decider, mode: "standard", exitsOnly: true }],
+      context,
+      aPortfolio(),
+      calendar,
+    );
+    expect(paused.map((i) => i.option?.effect)).toEqual(["close"]);
+  });
+
+  it("still sells a held position when its window closes, and buys nothing when it opens", () => {
+    const held = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 20 })] });
+    const pausedFlat: EnabledPlaybook[] = [
+      { playbook: play({ desiredState: () => "flat" }), mode: "standard", exitsOnly: true },
+    ];
+    expect(playbookIntents(pausedFlat, aContext({ NVDA: {} }), held, calendar)).toEqual([
+      expect.objectContaining({ symbol: "NVDA", side: "sell", quantity: 20 }),
+    ]);
+    const pausedLong: EnabledPlaybook[] = [{ playbook: play(), mode: "standard", exitsOnly: true }];
+    expect(playbookIntents(pausedLong, aContext({ NVDA: {} }), aPortfolio(), calendar)).toEqual([]);
   });
 });

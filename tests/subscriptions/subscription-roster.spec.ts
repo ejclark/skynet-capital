@@ -5,6 +5,7 @@ import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 import {
   mergeRosters,
   pausedPlaybookIds,
+  pausedRoster,
   subscriptionRoster,
 } from "../../src/subscriptions/subscription-roster.js";
 
@@ -128,14 +129,25 @@ describe("mergeRosters", () => {
   });
 
   // #4651: a paused subscription used to be skipped before the merge, so the house entry of the
-  // same id kept trading and Pause did nothing for any playbook the env roster names.
-  it("drops a house entry the account has paused, keeps every other house entry", () => {
-    expect(mergeRosters([house, houseGoog], [], new Set(["S1-NVDA"]))).toEqual([houseGoog]);
+  // same id kept trading and Pause did nothing for any playbook the env roster names. Now it is an
+  // exits-only override, which replaces the house entry like any other.
+  it("a paused (exits-only) override replaces the house entry of the same id, in place", () => {
+    const paused: EnabledPlaybook = { playbook: S1_NVDA, mode: "conservative", exitsOnly: true };
+    expect(mergeRosters([house, houseGoog], [paused])).toEqual([paused, houseGoog]);
+  });
+});
+
+describe("pausedRoster — pause means exits only (#4651)", () => {
+  it("resolves a paused subscription to an exits-only entry in its own mode", () => {
+    expect(pausedRoster([sub({ enabled: false, mode: "conservative" })])).toEqual([
+      { playbook: S1_NVDA, mode: "conservative", exitsOnly: true },
+    ]);
   });
 
-  it("an enabled override still wins over a pause for the same id", () => {
-    const override: EnabledPlaybook = { playbook: S1_NVDA, mode: "aggressive" };
-    expect(mergeRosters([house], [override], new Set(["S1-NVDA"]))).toEqual([override]);
+  it("never resolves an enabled subscription, or an id no playbook answers to", () => {
+    expect(pausedRoster([sub(), sub({ playbookId: "NOT-A-PLAYBOOK", enabled: false })])).toEqual(
+      [],
+    );
   });
 });
 

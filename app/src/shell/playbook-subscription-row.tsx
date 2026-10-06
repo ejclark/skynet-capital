@@ -43,6 +43,16 @@ function subscriptionFacts(
   ];
 }
 
+/**
+ * What Pause does, said under a paused bot subscription (#4651): stop new entries, keep managing to
+ * flat. A paused playbook still sells what it holds by its own exit rules — S1-NVDA still exits
+ * before a print — and the account's expiry safety closes any contract it holds. "Places no new
+ * entries" is about this playbook's own orders: SAURON's card says what his own rules do paused.
+ */
+export const PAUSED_NOTE =
+  "Paused: it places no new entries, and still exits what it holds on its own exit rules — any " +
+  "option contract it holds is closed before it expires.";
+
 function stateOf(sub: SubscriptionView, human: boolean) {
   if (human) return { glyph: "◌", word: "Saved, never trades", key: "idle" };
   return sub.enabled
@@ -98,6 +108,7 @@ export function SubscriptionRow({
           <span key={fact}> · {fact}</span>
         ))}
       </p>
+      {!(human || sub.enabled) ? <p className="pb-form-note">{PAUSED_NOTE}</p> : null}
       {editing ? (
         <SubscribeForm
           accountId={accountId}

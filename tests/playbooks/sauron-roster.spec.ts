@@ -253,56 +253,115 @@ describe("review of 9a: SAURON yields every name another playbook on the bot tra
 });
 
 /**
- * ROUND-3 CHECK — PAUSE (a pre-existing bug, fixed for every playbook). A paused subscription used
- * to be skipped before the merge, so a house entry of the same id from SKYNET_PLAYBOOKS kept
- * trading and Pause did nothing. Now a pause takes that id off the account's roster; an account
- * with no subscription to it keeps the house entry, as before.
+ * PAUSE MEANS "STOP NEW ENTRIES, KEEP MANAGING TO FLAT" (#4651, round 4). A paused subscription
+ * stays on the roster exits-only — env-named or Store-only — so it still sells what it holds on its
+ * own exit rules, never opens, and keeps the bot's own rules off a name only while it still holds
+ * it. Round 3 dropped it from the roster instead, which dropped its exits too: S1-NVDA paused at D-5
+ * held NVDA through the print.
  */
-describe("round-3 check: Pause turns a playbook off on that account, even when the env names it", () => {
+describe("Pause means exits only, on every bot and for every playbook", () => {
   const ids = (roster: { readonly enabled: readonly EnabledPlaybook[] }) =>
-    roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`);
+    roster.enabled.map((e) => `${e.playbook.id}:${e.mode}${e.exitsOnly ? " (exits only)" : ""}`);
   const envS1 = enabledPlaybooks({ SKYNET_PLAYBOOKS: "S1-NVDA" }).enabled;
   const envSauron = enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON" }).enabled;
-  const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
+  /** NVDA's confirmed print on Aug 26: S1-NVDA wants long at D-16, flat from D-5. */
+  const PRINT: readonly EarningsPrint[] = [
+    { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "test" },
+  ];
+  const atD5 = aContext({ NVDA: { last: 100 } }, "2026-08-21T15:00:00Z");
+  const atD16 = aContext({ NVDA: { last: 100 } }, "2026-08-10T15:00:00Z");
+  const holds20 = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 20 })] });
+  const pausedS1 = [subscribed("sauron", "S1-NVDA", { enabled: false })];
+  const decideOn = (
+    roster: { readonly enabled: readonly EnabledPlaybook[] },
+    context: ReturnType<typeof aContext>,
+    portfolio: ReturnType<typeof aPortfolio>,
+    base: Persona = quietBot("sauron"),
+  ) =>
+    withPlaybooks(base, roster.enabled, PRINT)
+      .decide(context, portfolio)
+      .map((i) => `${i.side} ${i.quantity} ${i.symbol} ${i.playbookId ?? "-"}`);
 
-  it("a paused S1-NVDA subscription takes the env's S1-NVDA off that account", () => {
-    const roster = resolveBotRoster(botOf(quietBot("sauron")), envS1, [
-      subscribed("sauron", "S1-NVDA", { enabled: false }),
-    ]);
-    expect(ids(roster)).toEqual([]);
+  it("S1-NVDA paused at D-5 holding NVDA still sells it before the print, env-named or not", () => {
+    for (const env of [envS1, []]) {
+      const roster = resolveBotRoster(botOf(quietBot("sauron")), env, pausedS1);
+      expect(ids(roster)).toEqual(["S1-NVDA:standard (exits only)"]);
+      expect(decideOn(roster, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
+    }
   });
 
-  it("an enabled subscription runs on its own terms over the env entry", () => {
-    const roster = resolveBotRoster(botOf(quietBot("sauron")), envS1, [
+  it("that is the same sell it makes running, or when only the env names it", () => {
+    const running = resolveBotRoster(botOf(quietBot("sauron")), envS1, [
       subscribed("sauron", "S1-NVDA", { mode: "conservative" }),
     ]);
-    expect(ids(roster)).toEqual(["S1-NVDA:conservative"]);
+    expect(ids(running)).toEqual(["S1-NVDA:conservative"]);
+    expect(decideOn(running, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
+    const envOnly = resolveBotRoster(botOf(quietBot("sauron")), envS1, []);
+    expect(ids(envOnly)).toEqual(["S1-NVDA:standard"]);
+    expect(decideOn(envOnly, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
   });
 
-  it("an account with no subscription to it keeps today's env entry", () => {
-    expect(ids(resolveBotRoster(botOf(quietBot("sauron")), envS1, []))).toEqual([
-      "S1-NVDA:standard",
+  it("paused, it never opens: inside its window and flat it buys nothing", () => {
+    const running = resolveBotRoster(botOf(quietBot("sauron")), envS1, []);
+    expect(decideOn(running, atD16, aPortfolio())).toEqual([
+      expect.stringMatching(/^buy \d+ NVDA S1-NVDA$/),
     ]);
+    const paused = resolveBotRoster(botOf(quietBot("sauron")), envS1, pausedS1);
+    expect(decideOn(paused, atD16, aPortfolio())).toEqual([]);
   });
 
-  it("paused SAURON on another bot, with the env naming SAURON: nothing of his runs there", () => {
-    const roster = resolveBotRoster(botOf(quietBot("futurist")), envSauron, [
+  it("paused and flat it keeps no name from the bot's own rules; holding, it keeps that one", () => {
+    const reflex: Persona = {
+      id: "sauron",
+      name: "Sauron",
+      thesis: "test",
+      decide: (): OrderIntent[] => [
+        { symbol: "NVDA", side: "buy", quantity: 5, type: "market", reason: "own reflex" },
+      ],
+    };
+    const roster = resolveBotRoster(botOf(reflex), envS1, pausedS1);
+    expect(decideOn(roster, atD16, aPortfolio(), reflex)).toEqual(["buy 5 NVDA -"]);
+    expect(decideOn(roster, atD16, holds20, reflex)).toEqual([]);
+  });
+
+  it("the guards pass a paused playbook's exit: a paused subscription's cap and filter refuse no sell", () => {
+    const roster = resolveBotRoster(
+      botOf(quietBot("sauron")),
+      [],
+      [subscribed("sauron", "S1-NVDA", { enabled: false, capitalAllocated: 1, symbols: ["AAPL"] })],
+    );
+    const { risk } = tradingRoster(roster, DEFAULT_RISK_CONFIG);
+    const raw = withPlaybooks(quietBot("sauron"), roster.enabled, PRINT).decide(atD5, holds20);
+    expect(raw).toHaveLength(1);
+    expect(applyGuardsWithVerdicts(raw, holds20, atD5, risk).approved).toEqual(raw);
+  });
+
+  it("paused SAURON on another bot buys nothing, and still sells a holding when euphoria rolls over", () => {
+    const futurist = quietBot("futurist");
+    const roster = resolveBotRoster(botOf(futurist), envSauron, [
       subscribed("futurist", "SAURON", { enabled: false }),
     ]);
-    expect(ids(roster)).toEqual([]);
-    expect(tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio())).toEqual(
-      [],
-    );
+    expect(ids(roster)).toEqual(["SAURON:standard (exits only)"]);
+    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
+    expect(decideOn(roster, panic, aPortfolio(), futurist)).toEqual([]);
+    const euphoria = aContext({ AAPL: { sentiment: 0.8, momentum: -0.01 } });
+    const holdsAapl = aPortfolio({ positions: [aPosition({ symbol: "AAPL", quantity: 10 })] });
+    expect(decideOn(roster, euphoria, holdsAapl, futurist)).toEqual(["sell 10 AAPL SAURON"]);
   });
 
-  it("paused SAURON on Sauron's account, with the env naming SAURON: his rules trade unlabelled", () => {
+  // His own rules have no basket of positions apart from himself, so there is nothing for a paused
+  // SAURON to manage on his account: it is ignored, and his reflexes run unlabelled as before.
+  it("paused SAURON on Sauron's account is ignored: his rules trade unlabelled, buys and sells", () => {
     const roster = resolveBotRoster(botOf(new SauronPersona()), envSauron, [
       subscribed("sauron", "SAURON", { enabled: false }),
     ]);
-    expect(ids(roster)).toEqual([]);
-    expect(tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio())).toEqual(
+    expect(ids(roster)).toEqual(["SAURON:standard (exits only)"]);
+    const composed = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona;
+    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
+    expect(composed.decide(panic, aPortfolio())).toEqual(
       new SauronPersona().decide(panic, aPortfolio()),
     );
+    expect(composed.playbookVerdicts?.(panic)).toEqual([]);
   });
 });
 

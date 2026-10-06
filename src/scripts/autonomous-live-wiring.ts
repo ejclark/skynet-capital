@@ -44,7 +44,7 @@ import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import {
   mergeRosters,
-  pausedPlaybookIds,
+  pausedRoster,
   subscriptionRoster,
 } from "../subscriptions/subscription-roster.js";
 import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
@@ -279,13 +279,14 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
     );
   }
-  const paused = pausedPlaybookIds(subscriptions);
-  for (const { playbook } of houseEnabled.filter((e) => paused.has(e.playbook.id))) {
+  // Paused = exits only: it still sells what it holds on its own rules, and opens nothing.
+  const paused = pausedRoster(subscriptions);
+  if (paused.length > 0) {
     console.log(
-      `[playbooks] ${bot.persona.id} paused ${playbook.id} — its house entry is off here`,
+      `[playbooks] ${bot.persona.id} paused (exits only): ${paused.map((e) => e.playbook.id).join(", ")}`,
     );
   }
-  const merged = mergeRosters(houseEnabled, acctRoster.enabled, paused);
+  const merged = mergeRosters(houseEnabled, [...acctRoster.enabled, ...paused]);
   return { bot, subscriptions, enabled: ownedRoster(bot.persona.id, merged) };
 }
 

@@ -17,6 +17,11 @@
  * the base persona exactly as above — suppressed on the OTHER playbooks' symbols, which stay theirs —
  * and stamps every surviving reflex with that playbook's id and mode. With no such playbook enabled
  * nothing here differs from a roster without the field.
+ *
+ * A PAUSED entry (`exitsOnly`, #4651) still runs its exits and never opens (`playbookIntents`). It
+ * keeps the base persona off one of its names only while that name is still held, records no
+ * verdict, and — as a paused own-rules entry — is ignored altogether. With no paused entry nothing
+ * here differs from a roster without the field.
  */
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import {
@@ -28,6 +33,7 @@ import {
   type Portfolio,
 } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
+import { parseOccSymbol } from "../trading/option-symbols.js";
 import {
   type MixedSignalsSink,
   observeMixedSignals,
@@ -67,15 +73,33 @@ function optionSurface(
 }
 
 /**
- * The symbols a bot's playbooks take from its base persona: every enabled playbook's basket EXCEPT
- * the base persona's own rules (`rulesOf === baseId`), whose orders are the persona's reflexes. The
- * one definition — `withPlaybooks` suppresses reflexes on it, and the beta scout skips it
- * (`run-autonomous.ts`), so the two can never disagree about which names a playbook owns.
+ * The symbols a bot's RUNNING playbooks take from its base persona: every enabled basket EXCEPT the
+ * base persona's own rules (`rulesOf === baseId`), whose orders are the persona's reflexes, and
+ * except a paused entry (`exitsOnly`), which holds a name only while it still owns shares or
+ * contracts in it (`pausedHeldSymbols`, added per cycle). The one static definition —
+ * `withPlaybooks` suppresses reflexes on it, and the beta scout skips it (`run-autonomous.ts`); the
+ * scout never buys a name already held, so the per-cycle part cannot change what it picks.
  */
 export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook[]): Set<string> {
   return new Set(
-    enabled.filter((e) => e.playbook.rulesOf !== baseId).flatMap((e) => e.playbook.symbols),
+    enabled
+      .filter((e) => e.playbook.rulesOf !== baseId && !e.exitsOnly)
+      .flatMap((e) => e.playbook.symbols),
   );
+}
+
+/** Whether the account still owns anything in `symbol`: its shares, or a contract on it. */
+function holdsAny(portfolio: Portfolio, symbol: string): boolean {
+  return portfolio.positions.some(
+    (p) =>
+      p.quantity !== 0 && (p.symbol === symbol || parseOccSymbol(p.symbol)?.underlying === symbol),
+  );
+}
+
+/** A paused entry's names it still holds this cycle — kept from the base persona until it is flat,
+ *  so its exits are the only decision on them; a flat name drops out. */
+function pausedHeldSymbols(paused: readonly EnabledPlaybook[], portfolio: Portfolio): string[] {
+  return paused.flatMap((e) => e.playbook.symbols).filter((s) => holdsAny(portfolio, s));
 }
 
 export function withPlaybooks(
@@ -98,8 +122,12 @@ export function withPlaybooks(
   // is what stops a repeated env token running any playbook twice on any bot). Dropping EVERY
   // own-rules entry here also keeps a hand-built roster from running his rules a second time; the
   // first one names the stamp.
-  const own = enabled.find((e) => e.playbook.rulesOf === base.id);
-  const others = own ? enabled.filter((e) => e.playbook.rulesOf !== base.id) : enabled;
+  // A PAUSED own-rules entry is ignored entirely: his reflexes run unlabelled, as before he
+  // subscribed — his rules have no basket of positions to manage apart from himself.
+  const own = enabled.find((e) => e.playbook.rulesOf === base.id && !e.exitsOnly);
+  const others = enabled.filter((e) => e.playbook.rulesOf !== base.id);
+  const paused = others.filter((e) => e.exitsOnly);
+  const running = enabled.filter((e) => !e.exitsOnly);
   const managed = managedSymbols(base.id, enabled);
   const attribute = (intent: OrderIntent): OrderIntent =>
     own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
@@ -109,14 +137,16 @@ export function withPlaybooks(
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
       const plays = playbookIntents(others, context, portfolio, calendar, events);
+      const held = new Set(pausedHeldSymbols(paused, portfolio));
       const reflexes = base
         .decide(context, portfolio)
-        .filter((i) => !managed.has(i.symbol))
+        .filter((i) => !(managed.has(i.symbol) || held.has(i.symbol)))
         .map(attribute);
-      observeMixedSignals(enabled, context, mixedSignalsLog);
+      observeMixedSignals(running, context, mixedSignalsLog);
       return [...plays, ...reflexes];
     },
-    playbookVerdicts: (context) => playbookVerdicts(enabled, context.asOf, calendar, events),
+    // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
+    playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),
     ...optionSurface(enabled, calendar),
   };
 }

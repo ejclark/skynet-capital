@@ -192,7 +192,7 @@ describe("playbookStoreCatalog", () => {
         "takes over every share the bot already holds in these ten names, whoever bought it — " +
           "except a name another playbook on the bot trades, which stays that playbook's",
       );
-      expect(other).toContain("the bot's own rules stop trading altogether while it is subscribed");
+      expect(other).toContain("the bot's own rules stop trading altogether while it is on");
       expect(other).toContain("its stop-losses included");
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
     });
@@ -225,9 +225,11 @@ describe("playbookStoreCatalog", () => {
     // the card must not claim it stops his trades there.
     it("says what pausing does today: option playbooks keep running, his rules keep trading unlabelled", () => {
       expect(note("Pause")).toContain("Pausing it never stops an option playbook");
+      // "Paused", never "or unsubscribed": an env roster naming SAURON keeps his label unsubscribed.
       expect(note("Pause")).toContain(
-        "Paused or unsubscribed, his rules still trade Sauron's own account",
+        "Paused on Sauron's own account, his rules still trade it as they did before",
       );
+      expect(note("Pause")).not.toContain("unsubscribed");
       expect(copy()).not.toMatch(/paus\w* (it )?stops his/i);
     });
 
@@ -238,7 +240,16 @@ describe("playbookStoreCatalog", () => {
         "without its label and without any capital or symbol limit you set here",
       );
       expect(note("Pause")).not.toContain("just without its label");
-      expect(note("Pause")).toContain("Paused on any other bot, nothing of his runs there");
+    });
+
+    // Pause = exits only (round 4): on another bot it opens nothing and still sells to flat.
+    it("says a paused SAURON on another bot buys nothing and still sells what it holds", () => {
+      expect(note("Pause")).toContain(
+        "Paused on any other bot, it buys nothing new and still sells a holding in his names " +
+          "when euphoria rolls over",
+      );
+      expect(note("Pause")).toContain("the bot's own rules stay off a name until it is sold");
+      expect(note("Pause")).not.toContain("nothing of his runs");
     });
 
     it("quotes only numbers his persona actually trades on", () => {

@@ -292,6 +292,8 @@ views.sauronRules = withCounts(
   ]),
   { ...COUNTS, SAURON: 1, "CRWV-WHEEL": 1 },
 );
+// Paused (a fixture too): the note under the state says what Pause does — no new entries, exits kept.
+views.sauronPaused = withCounts(playbookStoreView([subscription("SAURON", { enabled: false })]));
 const SAURON_CARD = "Sauron's own trading rules";
 const toSauronCard = (page) =>
   page.locator(".pb-card").filter({ hasText: SAURON_CARD }).first().evaluate(underHeader);
@@ -308,9 +310,10 @@ groups["sauron-rules"] = [
   sauronFrame("phone-1-sauron-card"),
   sauronFrame("phone-2-sauron-rules", {
     act: undefined,
-    scrollTo: "Between extremes, or while an extreme is still building",
+    scrollTo: "It runs his standard rules on that bot's own account",
   }),
   sauronFrame("phone-3-sauron-subscribed-fixture", { view: views.sauronRules, path: undefined }),
+  sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
   sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),
 ];
 

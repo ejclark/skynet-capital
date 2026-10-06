@@ -21,7 +21,8 @@ export function claimOptionUnderlyings(
   const claimedBy = new Map<string, string>();
   const refused = new Set<EnabledPlaybook>();
   for (const entry of enabled) {
-    const underlyings = entry.playbook.options?.underlyings;
+    // A paused option play (`exitsOnly`) only closes what it holds; it claims no ticker.
+    const underlyings = entry.exitsOnly ? undefined : entry.playbook.options?.underlyings;
     if (!underlyings) continue;
     const taken = underlyings.filter((u) => claimedBy.has(u));
     if (taken.length > 0) {
@@ -88,8 +89,9 @@ export function yieldPersonaRules(
   log: (line: string) => void,
 ): EnabledPlaybook[] {
   const ownedBy = new Map<string, string>();
-  for (const { playbook } of enabled) {
-    if (playbook.rulesOf !== undefined) continue;
+  for (const { playbook, exitsOnly } of enabled) {
+    // A paused playbook (`exitsOnly`) only exits what it holds; it reserves no names.
+    if (playbook.rulesOf !== undefined || exitsOnly) continue;
     for (const s of playbook.symbols) if (!ownedBy.has(s)) ownedBy.set(s, playbook.id);
   }
   return enabled.map((entry) => {

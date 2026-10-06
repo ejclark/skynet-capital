@@ -59,16 +59,13 @@ export function subscriptionRoster(
  * gets its own mode/capital, not a second conflicting entry for the same symbol — in the house
  * entry's position.
  *
- * A PAUSE WINS TOO (#4651). A house entry whose id the account has paused (`paused`, from
- * `pausedPlaybookIds`) leaves this account's roster: pausing a playbook in the Store turns it off on
- * that account even when the env roster names it. Before, a paused subscription was simply skipped,
- * so the house entry of the same id kept trading and Pause did nothing. An account with no
- * subscription to the id keeps the house entry.
+ * A paused subscription is an override too (`pausedRoster`, exits only), so it replaces a house
+ * entry of the same id exactly as an enabled one does — Pause works even for a playbook the env
+ * roster names (#4651). An account with no subscription to the id keeps the house entry.
  */
 export function mergeRosters(
   base: readonly EnabledPlaybook[],
   overrides: readonly EnabledPlaybook[],
-  paused: ReadonlySet<string> = new Set(),
 ): EnabledPlaybook[] {
   // Replace in place, so an override changes a house entry's mode without changing its turn in
   // the evaluation order — seeding a bot's subscriptions from the house roster (#4535) must leave
@@ -76,11 +73,7 @@ export function mergeRosters(
   const byId = new Map(overrides.map((e) => [e.playbook.id, e]));
   const baseIds = new Set(base.map((e) => e.playbook.id));
   return [
-    ...base.flatMap((e) => {
-      const override = byId.get(e.playbook.id);
-      if (override) return [override];
-      return paused.has(e.playbook.id) ? [] : [e];
-    }),
+    ...base.map((e) => byId.get(e.playbook.id) ?? e),
     ...overrides.filter((e) => !baseIds.has(e.playbook.id)),
   ];
 }
@@ -94,4 +87,24 @@ export function pausedPlaybookIds(subscriptions: readonly PlaybookSubscription[]
   return new Set(
     subscriptions.filter((s) => !(s.enabled || on.has(s.playbookId))).map((s) => s.playbookId),
   );
+}
+
+/**
+ * PAUSE MEANS "STOP NEW ENTRIES, KEEP MANAGING TO FLAT" (#4651). Each paused subscription resolves
+ * to an `exitsOnly` entry, so it still sells what it holds on its own exit rules — S1-NVDA paused at
+ * D-3 still exits before the print — and never opens. Merged over the house roster like any
+ * override (`mergeRosters`), it replaces an env entry of the same id. Before, a paused subscription
+ * was skipped: an env-named playbook kept trading, and a Store-only one dropped its exits too.
+ * An id no playbook resolves is left out quietly; `subscriptionRoster` already names it.
+ */
+export function pausedRoster(
+  subscriptions: readonly PlaybookSubscription[],
+  authored?: AuthoredRoster,
+): EnabledPlaybook[] {
+  const paused = pausedPlaybookIds(subscriptions);
+  return subscriptions.flatMap((sub) => {
+    if (sub.enabled || !paused.has(sub.playbookId)) return [];
+    const playbook = authoredPlay(authored, sub) ?? findPlaybook(sub.playbookId);
+    return playbook ? [{ playbook, mode: sub.mode, exitsOnly: true as const }] : [];
+  });
 }

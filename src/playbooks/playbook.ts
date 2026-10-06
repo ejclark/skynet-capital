@@ -223,6 +223,22 @@ export interface Playbook {
 export interface EnabledPlaybook {
   readonly playbook: Playbook;
   readonly mode: PlaybookMode;
+  /**
+   * A PAUSED subscription (#4651): stop new entries, keep managing to flat. `playbookIntents` keeps
+   * only its exits — share sells and option closes, exit-safety trips included — so it still sells
+   * what its basket holds on its own exit rules and never opens. It reserves no names from other
+   * playbooks (no option claim, no persona-rules yield); `withPlaybooks` keeps the base persona off
+   * one of its names only while that name is still held, and records no verdict for it. On the base
+   * persona's own rules (SAURON on Sauron's account) it is ignored: those orders are the persona's
+   * reflexes, which run unlabelled as before. Absent on every running entry.
+   */
+  readonly exitsOnly?: true;
+}
+
+/** An order that takes risk off: a share sell (the bots trade long only) or an option close. A
+ *  sold put is a `sell` that OPENS risk, so an option order is judged by its effect, never its side. */
+export function isExitIntent(intent: OrderIntent): boolean {
+  return intent.option ? intent.option.effect === "close" : intent.side === "sell";
 }
 
 /** One exit-safety dial crossing its trip line — reported whether or not it was enforced, so an
@@ -455,27 +471,38 @@ export function playbookIntents(
   const { intents: safetyIntents } = exitSafetyIntents(enabled, context, portfolio);
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
-  for (const { playbook, mode } of enabled) {
-    if (playbook.decide) {
-      intents.push(...decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols));
-      continue;
-    }
-    if (playbook.tactics) {
-      intents.push(...tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols));
-      continue;
-    }
-    // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
-    // field doc: desiredState is not an independent state machine per symbol.
-    const state = playbook.desiredState(context.asOf, calendar, events);
-    for (const symbol of playbook.symbols) {
-      if (trippedSymbols.has(symbol)) {
-        continue;
-      }
-      const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
-      if (intent) intents.push(intent);
-    }
+  for (const entry of enabled) {
+    const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols);
+    // A paused entry (#4651) keeps managing to flat: its exits only, never an open.
+    intents.push(...(entry.exitsOnly ? own.filter(isExitIntent) : own));
   }
   return intents;
+}
+
+/** One entry's own intents for the cycle, by the shape it declares: a `decide`, a tactic chain, or
+ *  the shared long/flat/no-window condition applied across its basket. */
+function entryIntents(
+  { playbook, mode }: EnabledPlaybook,
+  context: MarketContext,
+  portfolio: Portfolio,
+  calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[],
+  trippedSymbols: ReadonlySet<string>,
+): OrderIntent[] {
+  if (playbook.decide) {
+    return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
+  }
+  if (playbook.tactics) {
+    return tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols);
+  }
+  // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
+  // field doc: desiredState is not an independent state machine per symbol.
+  const state = playbook.desiredState(context.asOf, calendar, events);
+  return playbook.symbols.flatMap((symbol) => {
+    if (trippedSymbols.has(symbol)) return [];
+    const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
+    return intent ? [intent] : [];
+  });
 }
 
 /** The gap between one symbol's desired state and what is held, as at most one intent. */

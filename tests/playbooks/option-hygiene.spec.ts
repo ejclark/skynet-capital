@@ -180,6 +180,19 @@ describe("expiry hygiene — shorts", () => {
     ]);
   });
 
+  // #4651: a paused subscription stays on the roster exits-only. Hygiene, not the paused wheel, owns
+  // its contracts — the short is bought back at T-2 rather than held into assignment.
+  it("treats a paused (exits-only) wheel as no owner: its short is closed at T-2", () => {
+    const book = holding(contract(PUT_NOV6, -1, { avgPrice: 2.1 }));
+    const context = quoted(T2, [PUT_NOV6, 0.3, 0.4]);
+    const paused: readonly EnabledPlaybook[] = [
+      { playbook: WHEEL, mode: "standard", exitsOnly: true },
+    ];
+    expect(hygieneIntents(context, book, paused, CALENDAR)).toMatchObject([
+      { side: "buy", strategy: "expiry-hygiene" },
+    ]);
+  });
+
   it("closes a short that spans a print two sessions before the blackout, whatever its owner holds", () => {
     const book = holding(contract(PUT_NOV20, -1, { avgPrice: 3 }));
     const asOf = "2026-11-05T16:00:00Z";

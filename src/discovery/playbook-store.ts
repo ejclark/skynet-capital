@@ -151,7 +151,7 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
           "It runs his standard rules on that bot's own account and takes over every share the bot " +
           "already holds in these ten names, whoever bought it — except a name another playbook on " +
           "the bot trades, which stays that playbook's. These are every name the bots trade, so " +
-          "the bot's own rules stop trading altogether while it is subscribed, its stop-losses " +
+          "the bot's own rules stop trading altogether while it is on, its stop-losses " +
           "included.",
       },
       {
@@ -165,10 +165,11 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       {
         label: "Pause",
         text:
-          "Pausing it never stops an option playbook. Paused or unsubscribed, his rules still trade " +
-          "Sauron's own account as they did before this playbook existed — without its label and " +
-          "without any capital or symbol limit you set here. Paused on any other bot, nothing of " +
-          "his runs there.",
+          "Pausing it never stops an option playbook. Paused on Sauron's own account, his rules " +
+          "still trade it as they did before this playbook existed — without its label and without " +
+          "any capital or symbol limit you set here. Paused on any other bot, it buys nothing new " +
+          "and still sells a holding in his names when euphoria rolls over; the bot's own rules " +
+          "stay off a name until it is sold.",
       },
     ],
   },
@@ -234,7 +235,8 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "this bot's NVDA options as its own — positions carry no record of who placed them: one " +
       "call debit spread (a long call below a short call, same expiry and size) is sold back on " +
       "the rules above, whoever placed it, and any other NVDA option position stops it opening " +
-      "and is left alone. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
+      "and is left alone. While it is on (not paused), S1-NVDA stops trading NVDA shares on the " +
+      "same bot.",
   },
 };
 

@@ -8,6 +8,7 @@ import type {
   SubscriptionView,
 } from "../../src/live/playbook-store";
 import { PlaybookCard } from "../../src/shell/playbook-store-cards";
+import { PAUSED_NOTE } from "../../src/shell/playbook-subscription-row";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
 /**
@@ -195,6 +196,19 @@ describe("a subscribed card", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
+  // #4651: Pause stops new entries and keeps managing to flat — said where the owner paused it.
+  it("says what a pause does under a paused bot subscription, and nowhere else", () => {
+    mount(card(["NVDA"], { mode: "standard", enabled: false }));
+    expect(screen.getByText(PAUSED_NOTE)).toBeInTheDocument();
+    expect(PAUSED_NOTE).toContain("places no new entries");
+    expect(PAUSED_NOTE).toContain("still exits what it holds on its own exit rules");
+  });
+
+  it("draws no pause note on a running subscription or a human account's", () => {
+    mount(card(["NVDA"], { ...active, symbols: undefined }));
+    expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
+  });
+
   it("Edit opens the form pre-filled and posts to configure, keeping a pause", async () => {
     const onChanged = mount(
       card(BASKET, { ...active, enabled: false, mode: "aggressive", compoundAllocation: true }),
@@ -270,6 +284,7 @@ describe("a subscribed card", () => {
     });
     const status = screen.getByText("Saved, never trades").closest("p");
     expect(status).toHaveTextContent("◌ Saved, never trades · standard · $1,000 · paused");
+    expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
     expect(screen.queryByText(/On$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     const section = screen.getByText("S1-NVDA").closest("section");
