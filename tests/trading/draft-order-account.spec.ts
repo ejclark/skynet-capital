@@ -74,6 +74,31 @@ describe("validateDraftAccount", () => {
     expect(validateDraftAccount(rollClose, shortHeld as never).ok).toBe(false);
   });
 
+  it("passes a bull call spread with no shares held — the lower long call is the short's cover", () => {
+    // #4684: refused before with "NVDA needs 100 held and you hold 0" — shares it never needed.
+    const bullCall = addLeg(
+      addLeg(emptyDraft(), { ...NAKED_CALL, strike: 170, action: "buy" }),
+      NAKED_CALL,
+    );
+
+    expect(validateDraftAccount(bullCall, accountWith(0))).toEqual({
+      ok: true,
+      refusals: [],
+      warnings: [],
+    });
+  });
+
+  it("still refuses the second of two short calls under one long call, with no shares held", () => {
+    const twoUnderOne = addLeg(
+      addLeg(addLeg(emptyDraft(), NAKED_CALL), { ...NAKED_CALL, strike: 190 }),
+      { ...NAKED_CALL, strike: 200, action: "buy" },
+    );
+    const verdict = validateDraftAccount(twoUnderOne, accountWith(10_000));
+
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals).toEqual([expect.stringMatching(/NVDA needs 100 held and you hold 0/)]);
+  });
+
   it("passes an empty draft — nothing demanded, nothing to check", () => {
     expect(validateDraftAccount(emptyDraft(), accountWith(0))).toEqual({
       ok: true,
@@ -114,5 +139,21 @@ describe("validateDraftAccount — calls already sold", () => {
     const roll = addLeg(addLeg(emptyDraft(), buyBack), NAKED_CALL);
     const verdict = validateDraftAccount(roll, { cash: 0, positions: [held(100), OPEN_SHORT] });
     expect(verdict.refusals).toEqual([]);
+  });
+
+  it("refuses a roll that leans on one buy-back twice — freed shares AND a cap for a second call", () => {
+    // Buying the 170 back frees 100 shares for ONE new call. Read as a new long as well, it would
+    // cap the 190 while the shares covered the 180: two sold calls on 100 shares, one of them naked.
+    const buyBack: NewLeg = { ...NAKED_CALL, strike: 170, action: "buy" };
+    const rollIntoTwo = addLeg(addLeg(addLeg(emptyDraft(), buyBack), NAKED_CALL), {
+      ...NAKED_CALL,
+      strike: 190,
+    });
+    const verdict = validateDraftAccount(rollIntoTwo, {
+      cash: 0,
+      positions: [held(100), OPEN_SHORT],
+    });
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals[0]).toMatch(/NVDA needs 200 held/);
   });
 });

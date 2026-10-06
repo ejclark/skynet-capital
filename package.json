@@ -87,6 +87,7 @@
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:status-pill": "tsx scripts/shoot/status-pill.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
+    "shoot:debit-spread": "tsx scripts/shoot/debit-spread.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",
     "shoot:research-week": "tsx scripts/shoot/research-week.mjs",
     "shoot:research-board": "tsx scripts/shoot/research-board.mjs",

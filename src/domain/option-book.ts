@@ -141,9 +141,10 @@ function capOrder(type: "call" | "put"): (a: CoverLeg, b: CoverLeg) => number {
 
 /**
  * What a set of contracts promises, by ONE-TO-ONE cap assignment — a long caps at most as many shorts
- * as it has contracts, unlike `draft-order.ts`'s `cappingLeg`, which may find one long for several
- * shorts. Per (underlying, type): shorts in expiration order each take capacity from unused longs
- * expiring no earlier, cheapest first.
+ * as it has contracts. Per (underlying, type): shorts in expiration order each take capacity from
+ * unused longs expiring no earlier, cheapest first. The member desk's multi-leg ticket reads the same
+ * assignment (`draft-order-requirements.ts`, and `bareCalls` below for its unlimited-loss warning),
+ * so a bot and a member are held to one cover rule.
  *
  *   capped call:  cash   += max(0, L−S)·100·n      uncapped call: shares += 100·n
  *   capped put:   cash   += max(0, S−L)·100·n      uncapped put:  cash   += S·100·n
@@ -154,31 +155,50 @@ function capOrder(type: "call" | "put"): (a: CoverLeg, b: CoverLeg) => number {
 export function coverNeeds(legs: readonly CoverLeg[]): CoverNeeds {
   const cashByUnderlying = new Map<string, number>();
   const sharesByUnderlying = new Map<string, number>();
-  const groups = new Map<string, CoverLeg[]>();
-  for (const leg of netLegs(legs)) {
-    const key = `${leg.underlying}|${leg.type}`;
-    groups.set(key, [...(groups.get(key) ?? []), leg]);
-  }
-  for (const group of groups.values()) {
-    for (const { short, capStrike, contracts } of assignCaps(group)) {
-      if (capStrike === undefined && short.type === "call") {
-        addTo(sharesByUnderlying, short.underlying, OPTION_MULTIPLIER * contracts);
-      } else {
-        addTo(cashByUnderlying, short.underlying, shortRequirement(short, capStrike) * contracts);
-      }
+  for (const { short, capStrike, contracts } of assignAll(legs)) {
+    if (capStrike === undefined && short.type === "call") {
+      addTo(sharesByUnderlying, short.underlying, OPTION_MULTIPLIER * contracts);
+    } else {
+      addTo(cashByUnderlying, short.underlying, shortRequirement(short, capStrike) * contracts);
     }
   }
   const cash = [...cashByUnderlying.values()].reduce((sum, n) => sum + n, 0);
   return { cash, cashByUnderlying, sharesByUnderlying };
 }
 
-/** One (underlying, type) group's shorts, each split into the contracts a long caps (at its strike)
- *  and the contracts left bare (`capStrike` undefined). */
-function assignCaps(group: readonly CoverLeg[]): {
+/**
+ * The sold calls `coverNeeds` leaves with no long to cap them: one line per short call contract,
+ * `contracts` the (negative) count left bare. Read off the very assignment `coverNeeds` charges shares
+ * for, so a caller naming the bare legs and one counting their shares can never disagree — the member
+ * desk's unlimited-loss warning (`draft-order.ts`'s `undefinedRiskLegs`) is that caller.
+ */
+export function bareCalls(legs: readonly CoverLeg[]): CoverLeg[] {
+  return assignAll(legs)
+    .filter(({ short, capStrike }) => short.type === "call" && capStrike === undefined)
+    .map(({ short, contracts }) => ({ ...short, contracts: -contracts }));
+}
+
+/** A short line's contracts that one long caps (at its strike), or that are left bare (`capStrike`
+ *  undefined). */
+interface CapAssignment {
   readonly short: CoverLeg;
   readonly capStrike: number | undefined;
   readonly contracts: number;
-}[] {
+}
+
+/** Every (underlying, type) group's shorts split by `assignCaps`, after netting the same contract. */
+function assignAll(legs: readonly CoverLeg[]): CapAssignment[] {
+  const groups = new Map<string, CoverLeg[]>();
+  for (const leg of netLegs(legs)) {
+    const key = `${leg.underlying}|${leg.type}`;
+    groups.set(key, [...(groups.get(key) ?? []), leg]);
+  }
+  return [...groups.values()].flatMap(assignCaps);
+}
+
+/** One (underlying, type) group's shorts, each split into the contracts a long caps (at its strike)
+ *  and the contracts left bare (`capStrike` undefined). */
+function assignCaps(group: readonly CoverLeg[]): CapAssignment[] {
   const capacity = new Map<CoverLeg, number>();
   for (const leg of group) if (leg.contracts > 0) capacity.set(leg, leg.contracts);
   // Within one expiry the higher strike goes first: capping it costs the least cash for a call, and
@@ -186,7 +206,7 @@ function assignCaps(group: readonly CoverLeg[]): {
   const shorts = group
     .filter((l) => l.contracts < 0)
     .sort((a, b) => a.expiration.localeCompare(b.expiration) || b.strike - a.strike);
-  const assigned: { short: CoverLeg; capStrike: number | undefined; contracts: number }[] = [];
+  const assigned: CapAssignment[] = [];
   for (const short of shorts) {
     let left = -short.contracts;
     const caps = [...capacity.keys()]

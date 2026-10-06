@@ -65,11 +65,12 @@ function sharesFreedByDraft(
   }, 0);
 }
 
-/** OCC symbol → long contracts held, so a sell that closes one is not read as a new short. */
+/** OCC symbol → contracts held, signed (+ long, − short), so a sell that closes a long is not read
+ *  as a new short, nor a buy that closes a short as a new long that caps one. */
 function heldContracts(context: DraftAccountContext): ReadonlyMap<string, number> {
   const held = new Map<string, number>();
   for (const position of context.positions) {
-    if (position.quantity <= 0 || !parseOccSymbol(position.symbol)) continue;
+    if (position.quantity === 0 || !parseOccSymbol(position.symbol)) continue;
     held.set(position.symbol.toUpperCase(), position.quantity);
   }
   return held;
