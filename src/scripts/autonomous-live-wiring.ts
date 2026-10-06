@@ -26,6 +26,7 @@ import type { SafetyController } from "../autonomous/safety.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
+import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -34,6 +35,7 @@ import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.j
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
+import { withQuoteUniverse } from "../personas/universe-view.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
@@ -305,9 +307,17 @@ export function tradingRoster(
     // `console` is the live runtime's log sink: an opted-in playbook's mixed-signals readings
     // (#3194 step 5b-i) land beside the `[playbooks]`/`[gate]` lines. Observe-only — the sink
     // never feeds back into a decision. Expiry hygiene wraps it all, so a contract on the account is
-    // looked after even with no option playbook subscribed (`with-option-safety.ts`).
+    // looked after even with no option playbook subscribed (`with-option-safety.ts`). The base persona
+    // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
+    // bot, a bot with no playbook included.
     persona: withOptionSafety(
-      withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS, [], console),
+      withPlaybooks(
+        withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+        roster.enabled,
+        UPCOMING_PRINTS,
+        [],
+        console,
+      ),
       roster.enabled,
       UPCOMING_PRINTS,
     ),
