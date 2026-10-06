@@ -9,14 +9,29 @@ import type { MarketContext } from "../domain/types.js";
 export class MomentumTracker {
   private readonly window: number;
   private readonly prices = new Map<string, number[]>();
+  /** Unset = track every symbol ticked or restored (the default); set by `track`. */
+  private tracked?: ReadonlySet<string>;
 
   constructor(window = 20) {
     this.window = Math.max(2, window);
   }
 
+  /**
+   * Track exactly `symbols` from now on: forget every other symbol's window, and ignore its late
+   * ticks (#4777). `context` restamps each symbol's last price with the cycle's `asOf`, so a symbol
+   * that left the price stream would otherwise read as a fresh quote forever — and an entry or the
+   * daily-loss breaker would trust a frozen price.
+   */
+  track(symbols: readonly string[]): void {
+    this.tracked = new Set(symbols);
+    for (const symbol of [...this.prices.keys()]) {
+      if (!this.tracked.has(symbol)) this.prices.delete(symbol);
+    }
+  }
+
   /** Record a price tick, keeping only the most recent `window` prices for the symbol. */
   record(symbol: string, price: number): void {
-    if (!(price > 0)) {
+    if (!(price > 0) || (this.tracked && !this.tracked.has(symbol))) {
       return;
     }
     const series = this.prices.get(symbol) ?? [];
@@ -55,6 +70,7 @@ export class MomentumTracker {
    *  the configured window in case it was persisted under a different window size. */
   restore(entries: Readonly<Record<string, readonly number[]>>): void {
     for (const [symbol, series] of Object.entries(entries)) {
+      if (this.tracked && !this.tracked.has(symbol)) continue;
       this.prices.set(symbol, series.slice(-this.window));
     }
   }

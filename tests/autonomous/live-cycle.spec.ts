@@ -72,6 +72,23 @@ describe("LiveCycleRunner", () => {
     expect(decisions[0]?.outcomes[0]?.action).toBe("placed");
   });
 
+  it("hands the cycle's portfolio read to onPortfolios, in trader order (#4777's held-ticker feed)", async () => {
+    const quote = { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" };
+    const first = new InMemoryBroker(1_000, [quote]);
+    const second = new InMemoryBroker(2_000, [quote]);
+    const seen: (readonly Portfolio[])[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), first), aBot(new NeverBuys(), second)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      onPortfolios: (portfolios) => seen.push(portfolios),
+    });
+
+    await runner.runCycle(aContext({ NVDA: { last: 100 } }));
+
+    expect(seen.map((portfolios) => portfolios.map((p) => p.cash))).toEqual([[1_000, 2_000]]);
+  });
+
   it("an organic fire suppresses the beta scout that same cycle", async () => {
     const broker = new InMemoryBroker(1_000_000, [
       { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
