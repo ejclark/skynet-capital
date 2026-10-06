@@ -360,6 +360,7 @@ export function tradingRoster(
         UPCOMING_PRINTS,
         [],
         console,
+        (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
       ),
       roster.enabled,
       UPCOMING_PRINTS,

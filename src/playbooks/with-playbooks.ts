@@ -18,6 +18,10 @@
  * and stamps every surviving reflex with that playbook's id and mode. With no such playbook enabled
  * nothing here differs from a roster without the field.
  *
+ * ONE RUN-UP BET PER ACCOUNT (#4469 slice 2e, `run-up-bet.ts`): the plays' intents pass through it,
+ * so a second run-up strategy never opens on another ticker while the account holds one. Exits and
+ * every non-run-up intent pass unchanged.
+ *
  * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
  * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
  * records no verdict, and a paused own-rules entry is ignored altogether. With no paused entry
@@ -45,6 +49,7 @@ import {
   playbookIntents,
   playbookVerdicts,
 } from "./playbook.js";
+import { oneRunUpBet } from "./run-up-bet.js";
 
 /** The option half of a composed persona: present only when an enabled playbook is an option play. */
 function optionSurface(
@@ -96,6 +101,9 @@ export function withPlaybooks(
    *  after this cycle's intents are fixed and its output never reaches them. Defaults to a no-op,
    *  and no playbook opts in today, so every existing call site is unchanged. */
   mixedSignalsLog: MixedSignalsSink = SILENT_MIXED_SIGNALS_SINK,
+  /** Where a refused run-up open is said (#4469 2e), once per distinct line however many cycles
+   *  repeat it. Defaults to silence; the live wiring points it at its `[playbooks]` log. */
+  refusalLog: (line: string) => void = () => undefined,
 ): Persona {
   if (enabled.length === 0) {
     return base;
@@ -113,12 +121,24 @@ export function withPlaybooks(
   const managed = managedSymbols(base.id, enabled);
   const attribute = (intent: OrderIntent): OrderIntent =>
     own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
+  // One run-up bet per account (#4469 2e): a refusal repeats every cycle, so each line says it once.
+  const told = new Set<string>();
+  const refuseRunUp = (line: string): void => {
+    if (told.has(line)) return;
+    told.add(line);
+    refusalLog(line);
+  };
   return {
     id: base.id,
     name: base.name,
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      const plays = playbookIntents(others, context, portfolio, calendar, events);
+      const plays = oneRunUpBet(
+        others,
+        playbookIntents(others, context, portfolio, calendar, events),
+        portfolio,
+        refuseRunUp,
+      );
       const reflexes = base
         .decide(context, portfolio)
         .filter((i) => !managed.has(i.symbol))
