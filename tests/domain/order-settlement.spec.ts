@@ -38,6 +38,42 @@ describe("settledResult", () => {
     ).toEqual({ intent, status: "unfilled", orderId: "opt-1" });
   });
 
+  it("gives a spread the settlement's leg ids when its result never learned them, and keeps its own when it did", () => {
+    const LOW = "NVDA261113C00185000";
+    const HIGH = "NVDA261113C00200000";
+    const spread = anOptionIntent({
+      symbol: "NVDA",
+      side: "buy",
+      option: {
+        structure: "call-debit-spread",
+        legs: [
+          { occSymbol: LOW, side: "buy", ratio: 1 },
+          { occSymbol: HIGH, side: "sell", ratio: 1 },
+        ],
+        limitPrice: 3.4,
+      },
+    });
+    const late: OrderSettlement = {
+      orderId: "par-1",
+      status: "filled",
+      filledQuantity: 1,
+      legs: [
+        { occSymbol: LOW, orderId: "leg-a", filledQuantity: 1 },
+        { occSymbol: HIGH, orderId: "leg-b", filledQuantity: 1 },
+        { occSymbol: "NVDA261113C00999000", orderId: "stray", filledQuantity: 1 },
+      ],
+      settledAt: "2026-10-07T14:31:00.000Z",
+    };
+    expect(settledResult({ intent: spread, status: "working" }, late).legOrders).toEqual([
+      { occSymbol: LOW, orderId: "leg-a" },
+      { occSymbol: HIGH, orderId: "leg-b" },
+    ]);
+    const known = [{ occSymbol: LOW, orderId: "own" }];
+    expect(
+      settledResult({ intent: spread, status: "working", legOrders: known }, late).legOrders,
+    ).toBe(known);
+  });
+
   it("returns any other result untouched, and a working one with nothing settled as it was", () => {
     const filled: OrderResult = { intent, status: "filled", orderId: "opt-1", filledQuantity: 3 };
     expect(settledResult(filled, settlement)).toBe(filled);

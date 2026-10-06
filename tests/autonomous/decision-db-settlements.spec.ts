@@ -297,3 +297,44 @@ describe("DecisionDb — late fills of working orders", () => {
     expect(db.unsettledOrders("someone-else", 0)).toEqual([]);
   });
 });
+
+describe("a spread whose order id the decision never learned, first seen settled", () => {
+  let dir: string;
+  let bots: DecisionDb;
+  let app: DecisionDb;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "decision-db-settlements-lost-"));
+    bots = openDecisionDb(join(dir, "bots.db"));
+    app = openDecisionDb(join(dir, "app.db"));
+  });
+  afterEach(() => {
+    bots.close();
+    app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("carries its leg ids to a dashboard copy that stores it already filled", () => {
+    bots.record(cycle(T0, spread, working()));
+    bots.recordSettlements([
+      {
+        orderId: "par-1",
+        clientOrderId: `${CID}-${T0}`,
+        status: "filled",
+        filledQuantity: 1,
+        filledPrice: 3.35,
+        legs: [
+          { occSymbol: LOW, orderId: "leg-a", filledQuantity: 1, filledPrice: 5.1 },
+          { occSymbol: HIGH, orderId: "leg-b", filledQuantity: 1, filledPrice: 1.75 },
+        ],
+        settledAt: "2026-10-07T14:31:00.000Z",
+      },
+    ]);
+    expect(bots.findSpreadLeg("leg-a")?.parentOrderId).toBe("par-1");
+
+    // The replicated record, read after its settlement, is the dashboard's first copy of it.
+    app.recordBatch(bots.listByPersona("sauron"));
+    expect(app.findSpreadLeg("leg-a")).toMatchObject({ parentOrderId: "par-1", side: "buy" });
+    expect(app.findSpreadLeg("leg-b")).toMatchObject({ parentOrderId: "par-1", side: "sell" });
+    expect(app.findByOrderId("par-1")?.intent.option?.legs).toHaveLength(2);
+  });
+});

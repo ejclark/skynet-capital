@@ -1,4 +1,4 @@
-import type { OptionLegFill, OrderResult } from "./types.js";
+import type { OptionLegFill, OptionLegOrder, OrderResult } from "./types.js";
 
 /**
  * What an order a bot left `working` turned out to be, once the broker ended it (#4650, plan
@@ -61,10 +61,28 @@ function legFillsOf(
   return legFills.length > 0 ? { legFills } : {};
 }
 
+/** A spread's leg order ids, from the settlement, for the legs the decision named — what a result
+ *  carries when the submit never learned them (its answer listed no legs, or was lost). */
+function legOrdersOf(
+  settlement: OrderSettlement,
+  result: OrderResult,
+): { legOrders?: readonly OptionLegOrder[] } {
+  if (result.legOrders) return { legOrders: result.legOrders };
+  const named = result.intent.option?.legs ?? [];
+  if (named.length < 2) return {};
+  const legOrders = named.flatMap((leg): OptionLegOrder[] => {
+    const id = settlement.legs?.find((l) => l.occSymbol === leg.occSymbol)?.orderId;
+    return id && id !== settlement.orderId ? [{ occSymbol: leg.occSymbol, orderId: id }] : [];
+  });
+  return legOrders.length > 0 ? { legOrders } : {};
+}
+
 /**
  * A result read through its settlement. Only a `working` result is ever replaced — one the submit
  * already settled is returned untouched, whatever a settlement says — so a decision that ended on
- * time reads exactly as it was written. The leg order ids a spread's result carried are kept.
+ * time reads exactly as it was written. A spread keeps the leg order ids its result carried, or
+ * takes the settlement's: a copy of the store that first sees this result already settled maps its
+ * legs from them.
  */
 export function settledResult(
   result: OrderResult,
@@ -81,6 +99,6 @@ export function settledResult(
       ? { filledPrice: settlement.filledPrice }
       : {}),
     ...(filled ? legFillsOf(settlement, result) : {}),
-    ...(result.legOrders ? { legOrders: result.legOrders } : {}),
+    ...legOrdersOf(settlement, result),
   };
 }
