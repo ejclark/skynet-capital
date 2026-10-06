@@ -32,6 +32,31 @@ describe("markedEquity", () => {
   });
 });
 
+describe("markedEquity — option contracts (#4643)", () => {
+  const call = "NVDA261113C00240000";
+
+  it("marks an unquoted contract at the broker's market value, not 1/100th of its cost", () => {
+    const portfolio: Portfolio = {
+      cash: 9_500,
+      positions: [{ symbol: call, quantity: 1, avgPrice: 5, marketValue: 520 }],
+    };
+    expect(markedEquity(portfolio, ctx({}))).toBe(9_500 + 520);
+  });
+
+  it("an option held overnight does not read as a loss against the broker's own baseline", () => {
+    // The breaker's baseline is the broker's last equity: $9,000 cash + two $500 calls = $10,000.
+    const safety = new SafetyController({ maxDailyLossPct: 0.05 });
+    safety.recordEquity(10_000);
+    const portfolio: Portfolio = {
+      cash: 9_000,
+      positions: [{ symbol: call, quantity: 2, avgPrice: 5 }], // no quote, no market value
+    };
+    // Unscaled, this read $9,010 — a 9.9% "loss" that halted the whole fleet on a paper call.
+    safety.recordEquity(markedEquity(portfolio, ctx({})));
+    expect(safety.blockedReason()).toBeNull();
+  });
+});
+
 describe("fleetEquity", () => {
   it("sums every bot's marked equity into the one baseline the breaker watches", () => {
     const a: Portfolio = { cash: 100, positions: [] };

@@ -8,7 +8,11 @@ import {
   type UnderlyingBeta,
 } from "../options/greeks-aggregator.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
-import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
+import {
+  humanizeOptionSymbol,
+  OPTION_MULTIPLIER,
+  parseOccSymbol,
+} from "../trading/option-symbols.js";
 
 /**
  * OPTION POSITIONS AS DATA (#3407 P2 slice 3; parity study row 10) — the Position Statement
@@ -80,14 +84,12 @@ export interface OptionPositionsView {
   readonly betaWeighted?: BetaWeightedDelta;
 }
 
-const SHARES_PER_CONTRACT = 100;
-
 /** Exposure figures to the thousandth — kills float noise (0.55 × −100 = −55.00000000000001)
  *  at the source, once, for every consumer. */
 const exposure = (perShare: number, k: number): number => Math.round(perShare * k * 1000) / 1000;
 
 function scaled(greeks: ContractGreeks, contracts: number): ContractGreeks {
-  const k = contracts * SHARES_PER_CONTRACT;
+  const k = contracts * OPTION_MULTIPLIER;
   return {
     ...(greeks.delta !== undefined ? { delta: exposure(greeks.delta, k) } : {}),
     ...(greeks.gamma !== undefined ? { gamma: exposure(greeks.gamma, k) } : {}),

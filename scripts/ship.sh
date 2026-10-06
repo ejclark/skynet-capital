@@ -378,6 +378,10 @@ EOF_SHOTS
   # slices of a multi-slice plan should NOT close the issue yet.
   node scripts/plan-closure-scan.mjs "$branch" "$bodyfile" 2>/dev/null || true
 
+  # PR-provenance advisory (#4393 criterion 8): a PR that names no issue is invisible to the
+  # Orchestration board, so the in-flight cap cannot count it. Lane branches are exempt by class.
+  node scripts/pr-provenance-scan.mjs --pr "$branch" "$title" "$bodyfile" 2>/dev/null || true
+
   # Test-quality advisory (Eric, 2026-08-30: tests as acceptance criteria): flags a new spec
   # asserting on call counts or spying on internals — docs/ENGINEERING.md's BDD rule already
   # forbids it, this just makes drift back into it visible. Advisory only — a real system boundary
@@ -534,7 +538,7 @@ cmd_automerge() {
   cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
 
   # NEVER ARM PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
-  # checks, and only `verify` is required — so arming here the moment a PR opened let #4151, #4155
+  # checks, and only `verify` was required then — so arming here the moment a PR opened let #4151, #4155
   # and #4158 merge while `integration tests` was still running (two went red). pipeline.yml's own
   # `arm auto-merge` job already waits for it; this is the fallback for a PR that job can't arm
   # (e.g. a re-push, where `opened` won't fire again), so it must hold the same line. Skipped counts

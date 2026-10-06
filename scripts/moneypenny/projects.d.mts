@@ -2,6 +2,9 @@
 // directly. The scripts/ tree is plain ESM with `allowJs` off (see index.d.mts for the reasoning).
 export const PROJECT_TITLE: string;
 export const STATUS_OPTIONS: string[];
+export const BUILDING: "Building now";
+export const WAITING: "Waiting";
+export const RENAMED_STATUS_OPTIONS: Record<string, string>;
 export const PRIORITY_OPTIONS: string[];
 export const HORIZON_OPTIONS: string[];
 
@@ -14,6 +17,27 @@ export interface StatusFieldOption {
 export const STATUS_FIELD_OPTIONS: StatusFieldOption[];
 
 export function statusOptionsMatch(currentNames?: string[]): boolean;
+
+/** The option list to write so the live field matches, ids kept for survivors — or null. */
+export function statusFieldUpdate(
+  current?: { id?: string; name?: string }[],
+  opts?: { keepExtras?: boolean },
+): (StatusFieldOption & { id?: string })[] | null;
+
+export interface SubIssueCounts {
+  total: number;
+  completed: number;
+}
+
+export function subIssueCounts(issue?: {
+  sub_issues_summary?: { total?: number; completed?: number } | null;
+  subIssues?: { total?: number; completed?: number } | null;
+}): SubIssueCounts;
+
+export function isStartedPlan(issue?: {
+  labels?: string[];
+  subIssues?: Partial<SubIssueCounts>;
+}): boolean;
 
 export interface ProjectField {
   name: string;
@@ -28,7 +52,9 @@ export function statusForIssue(issue?: {
   labels?: string[];
   hasOpenLinkedPr?: boolean;
   decisionCalloutMissing?: boolean;
-}): "Backlog" | "Ready" | "In Progress" | "Blocked" | "Done";
+  subIssues?: Partial<SubIssueCounts>;
+  columns?: readonly string[];
+}): "Backlog" | "Ready" | "Building now" | "In Progress" | "Waiting" | "Blocked" | "Done";
 
 export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;
 

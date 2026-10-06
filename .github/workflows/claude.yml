@@ -165,7 +165,7 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+      - uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — so a PR this session opens actually triggers `verify`.
@@ -179,12 +179,13 @@ jobs:
           # headroom over that observed overrun. Steering (cancel-in-progress above) is untouched.
           # docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5 --max-turns 80
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5-5 --effort high --max-turns 80
           # The instruction set lives in .github/prompts/interactive.md, not here — workflow files
           # never auto-merge, so a policy written in this file could only be corrected by spending
           # Eric's attention. That is precisely how this lane's blanket "do NOT auto-merge" rule
           # outlived the 2026-08-20 ruling that superseded it and went on holding pure-CSS PRs for
-          # sixteen hours. As repo content the policy is an ordinary auto-merging PR.
+          # sixteen hours. `.github/prompts/**` is envelope-protected (blocking), so the prompt
+          # merges through Eric like this file, but no lane can rewrite its own orders.
           prompt: |
             Read `.github/prompts/interactive.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.

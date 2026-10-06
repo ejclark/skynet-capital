@@ -249,3 +249,31 @@ export function sourceBlockedOf(md: string): boolean {
     return false;
   }
 }
+
+/**
+ * A ledger's DIGEST (#1704): every horizon row its decision header states, its TL;DR as plain
+ * text, and the adjacent event ids its probe-ref records — what the shelf's call board reads.
+ */
+export interface LedgerDigest {
+  readonly horizons: HorizonCalls;
+  /** The TL;DR paragraph, plain text — the shelf's search index, never a substitute document. */
+  readonly tldr?: string;
+  /** Event ids the ledger's probe-ref names as adjacent — the corridor graph. */
+  readonly adjacent: readonly string[];
+  /** Whether the ledger's probe-ref records a blocked/downgraded source fetch (#1711) — the call
+   *  board's "source blocked" mark, computed from the field, never inferred from prose. */
+  readonly sourceBlocked: boolean;
+}
+
+/** One ledger's digest, or null when its decision header states no horizon row. */
+export function ledgerDigestOf(md: string): LedgerDigest | null {
+  const horizons = horizonCallsOf(md);
+  if (Object.keys(horizons).length === 0) return null;
+  const tldr = tldrOf(md);
+  return {
+    horizons,
+    ...(tldr ? { tldr } : {}),
+    adjacent: adjacentIdsOf(md),
+    sourceBlocked: sourceBlockedOf(md),
+  };
+}

@@ -1,6 +1,7 @@
 import type { FetchMergedPullRequests } from "../server/development-activity.js";
 import type { FeedbackLogEntry, FeedbackLogStore } from "../server/feedback-log.js";
 import type { FeedbackStatus, FetchFeedbackStatuses } from "../server/feedback-status.js";
+import type { LadderProgressEntry, LadderProgressLogStore } from "../server/ladder-progress-log.js";
 import type { OrderAuditLog, OrderAuditRecord } from "../server/order-audit-log.js";
 import { createBootActivityEventBus } from "./activity-bus.js";
 import {
@@ -8,6 +9,7 @@ import {
   activityEventFromAuditRecord,
   activityEventFromFeedbackEntry,
   activityEventFromFeedbackStatus,
+  activityEventFromLadderEntry,
   activityEventFromMergedPullRequest,
   activityEventFromTradeRecord,
   type MergedPullRequestInfo,
@@ -52,6 +54,7 @@ export function publishingActivityStore(
       }
     },
     list: (participantId) => store.list(participantId),
+    latest: (participantId) => store.latest(participantId),
   };
 }
 
@@ -86,6 +89,28 @@ export function publishingFeedbackLogStore(
       }
     },
     list: (opaqueMemberId) => store.list(opaqueMemberId),
+  };
+}
+
+/** A logged milestone, onto the bus — the milestone kind's write half (#784 slice 5), on the same
+ *  `record()` seam and under the same never-fail-the-caller rule as the three decorators above: a
+ *  lost bus event must never cost a member the earn the detector just proved. Only the ladder
+ *  detector's logged earns come this way; the fill-derived ladder is never stored, so it is never
+ *  published either (`activity-event.ts`, the milestones section). */
+export function publishingLadderProgressLog(
+  store: LadderProgressLogStore,
+  bus: ActivityEventBus,
+): LadderProgressLogStore {
+  return {
+    async record(entry: LadderProgressEntry): Promise<void> {
+      await store.record(entry);
+      try {
+        await bus.publish(activityEventFromLadderEntry(entry));
+      } catch (error) {
+        logBusFailure(`milestone ${entry.milestoneId} for ${entry.participantId}`, error);
+      }
+    },
+    list: (participantId) => store.list(participantId),
   };
 }
 

@@ -46,9 +46,9 @@ fails costs them more trust than a control that is greyed with a reason.
   `app/src/routes/u.$id.activity.tsx`).
 - **6 (fixed in 2a/2d)** — the rail always said "← Leaderboard"; the page now has its own head
   (`app/src/shell/account-head.tsx`) and the topbar's Leaderboard tab is the way back.
-- **8** — Thesis Subscribe is disabled with its reason only in `title`
-  (`app/src/shell/thesis-drawer.tsx:81`); "past the guards" with no gloss
-  (`app/src/shell/decisions-section.tsx:133`).
+- **8 (fixed, #3807 slices 2e and 3b-4)** — Thesis Subscribe's reason lived only in `title` and
+  is now a sentence under the buttons. "Past the guards" had no gloss and is now glossed in place
+  (`app/src/shell/decisions-section.tsx`).
 
 ## 6. Journeys
 
@@ -57,23 +57,25 @@ fails costs them more trust than a control that is greyed with a reason.
 1. `/app/leaderboard` — the match bar, ranked rows, Sauron with a BOT chip; they click it. **WHEN a
    viewer opens the leaderboard, the app shall list every account with a link into its desk.**
    Judge: can this reader find the bot they heard about?
-2. desktop only — `/app/u/sauron` — tiles, the blotter with Close on every row. **WHEN a viewer
-   opens another account's desk, the app shall render no write control that will refuse them.**
-   _known gap — dead end 4 (the phone's card layout has no Close; the table does)._ Judge: does
-   this reader know what they may do here?
-3. `/app/u/sauron` — the footer promises "click a symbol for its fill timeline". **WHEN the desk
-   promises an interaction, the app shall have a target for it.** _known gap — dead end 5._
-   Judge: can this reader tell what to do next in ten seconds?
-4. `/app/u/sauron/decisions` — every cycle: what the persona wanted, "N past the guards", what
-   happened. **WHEN a viewer reads a bot's decisions, the app shall gloss its own words where they
-   appear.** Judge: does a first-time reader understand "past the guards"?
+2. desktop only — `/app/u/sauron` — Sauron's page: its own head (name, BOT, SIM, the section
+   switch), the character card, the blotter with no Close controls, and one line saying why.
+   **WHEN a viewer opens another account's page, the app shall render no write control that will
+   refuse them.** _Fixed — dead end 4 (#3807 slice 2d)._ Judge: does this reader know what they may do here?
+3. `/app/u/sauron` — the footer reads only "as of <time>"; the retired fill-timeline promise is
+   gone. **WHEN the page promises an interaction, the app shall have a target for it.** _Fixed —
+   dead end 5 (#3807 slice 2d)._ Judge: can this reader tell what to do next in ten seconds?
+4. `/app/u/sauron/decisions` — Heartbeat: is the bot alive, what each playbook concluded on its
+   last pass, the passes that placed no trade. **WHEN a viewer reads a bot's passes, the app shall
+   name them Heartbeat, as the Profile page does, and gloss its own words where they appear.**
+   Judge: does a first-time reader understand "past the guards"?
 5. `/app/u/sauron/thesis` — the thesis, its markers, a disabled Subscribe cluster, each reason in
    a sentence under the buttons. **WHEN a control is disabled, the app shall show its reason as
    visible text, not only in a title.** _Fixed — #3807 slice 2e._ Judge: does this reader know why
    Subscribe is off?
-6. `/app/u/sauron` — the desk rail: Active · Decisions · Thesis · Pulse · ← Leaderboard. **WHEN a
-   viewer is on a desk, the app shall offer that account's activity beside its decisions.** _known
-   gap — dead end 5._ Judge: can this reader find what the bot actually did?
+6. `/app/u/sauron` — the page's head: Overview · Activity · Pulse · Heartbeat · Thesis — the
+   switch, not "← Leaderboard". **WHEN a viewer is on an account's page, the app shall offer that
+   account's activity beside its heartbeat.** _Fixed — dead end 5 (#3807 slice 2d)._ Judge: can
+   this reader find what the bot actually did?
 7. `/app/u/sauron/activity` — Sauron's Activity: every order it placed, newest first — what, at
    what price, and why. **WHEN a viewer opens a bot's Activity, the app shall list every order it
    placed, newest first.** Judge: can this reader find what the bot actually did? _(Added

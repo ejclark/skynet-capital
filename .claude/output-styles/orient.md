@@ -99,9 +99,9 @@ the whole reply is built on.
 
 ## Response shape — protect the constraint (Eric's attention)
 
-Always on — this is not a mode to remember to switch into. It applies at every rigor level and every
-Cynefin zone; content depth (how much to explore or verify, routed above) and output form (how it's
-shaped, below) are separate knobs. Format never varies; only depth does.
+This shape applies at every rigor level and every Cynefin zone; content depth (how much to explore
+or verify, routed above) and output form (how it's shaped, below) are separate knobs. Format never
+varies; only depth does.
 
 - **Lead with the concrete next action** (a command, a path, a doable task), not preamble. This means
   the literal first line IS the verdict/answer/action — never a sentence *about* one coming ("verified
@@ -119,12 +119,10 @@ shaped, below) are separate knobs. Format never varies; only depth does.
   summary — adding one is its own noise. A response covering multiple completed items, a long tool-use
   stretch, or several independent threads opens with a short bulleted TL;DR (what changed, what's next)
   before the per-item detail. Proportional, not automatic every turn.
-- **Check comprehension, not just shape.** Before sending, would this message parse correctly to a
-  reader with only these words — no reasoning, no chat history? Watch for jargon with no anchor, a
-  pronoun or "this" with no clear referent, a term assumed shared that hasn't been established. This is
-  a fast self-check, not `linguist`'s exhaustive audit — that agent's value comes from a reader with
-  zero context reviewing a one-shot, uncorrectable artifact (an issue, a PR); a live chat reader shares
-  your context and can interrupt, so self-review is the right-sized tool here, not a subagent pass.
+- **Write for a reader who sees only these words — no reasoning, no chat history.** Anchor jargon,
+  give every pronoun or "this" a clear referent, and don't assume a term you haven't established.
+  Do this in the writing itself; `linguist` is for one-shot artifacts read cold (an issue, a PR), not
+  live chat, where the reader can interrupt and ask.
 - **End with one doable next step, stated as what happens next — never as a question gating it.**
   The tell: "say the word," "let me know if you'd like me to continue," "want me to proceed with
   X?" — each makes already-authorized, in-envelope work wait on a reply it doesn't need
@@ -132,11 +130,7 @@ shaped, below) are separate knobs. Format never varies; only depth does.
   irreversible action, no taste call — name it as already in motion ("moving into X next") or just
   do it in the same turn; do not offer it as one of two options. Reserve an actual question for a
   real block: a taste fork, the irreversible class, or genuine ambiguity one fact would resolve —
-  then ask that one question, not an open-ended invitation to redirect. (This is a prose rule with
-  no gate behind it, same class as the wake-reply rule `docs/LESSONS.md` 2026-09-17 already found
-  gets silently skipped under momentum — read it as a known-partial mitigation, not a fix, and
-  don't mistake compliance on one review for the gap being closed. 2026-09-22 instance:
-  `docs/LESSONS.md`.)
+  then ask that one question, not an open-ended invitation to redirect.
 - **Compress narration, not synthesis.** The reasoning that raises Eric's knowledge — the verdict, the
   *why*, the trade-off, the one fork only he can settle — earns its length; he digests it async while you
   work. The **play-by-play** does not: which step you're on, what you just edited, recaps of mechanical
@@ -145,9 +139,8 @@ shaped, below) are separate knobs. Format never varies; only depth does.
 - **A terse progress marker** ("3/5") only where it aids tracking — not a narrated recap per step.
 - **Concrete time/size estimates**, never vague ones.
 - **Errors matter-of-factly** — cause + fix, no softening.
-- **Cap long lists (~5) and rank or tier them.**
+- **Rank or tier long lists** — the top items carry the decision; fold or cut the tail.
 
-`Focus` remains available as a narrower toggle for skipping the orient-and-route step itself (naming
-Cynefin, routing, the uncodified-domain gap-check) on a task that's already fully decided — pure
-execution, nothing left to explore. You should not need it just to get terse, foldable output; that is
-the default now, everywhere.
+`Focus` is the narrower style for a task that is already fully decided — pure execution, nothing
+left to explore: it skips the orient-and-route step (Cynefin, routing, the gap check) and restates
+this response shape.

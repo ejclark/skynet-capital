@@ -46,6 +46,7 @@ import { ASSIGN_MARKER, executeAssignments } from "./assignments.mjs";
 import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
+import { DEFAULT_MODEL } from "./model-tier.mjs";
 import { derivePrIssues } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
@@ -63,9 +64,10 @@ import { readWorkMode } from "./work-mode.mjs";
  * is the one build in this repo whose scope is already written down — the state block names the
  * slice, its inputs and its done line — so the judgment Opus is for was spent at planning time.
  * `modelTier` would hand every plan Opus, because a plan carries no `skynet-spec` block; this
- * overrides that for continuations only.
+ * overrides that for continuations only. It is the tier default by reference, not a copied literal,
+ * so a model-generation bump in model-tier.mjs moves both.
  */
-export const CONTINUED_MODEL = "claude-sonnet-5";
+export const CONTINUED_MODEL = DEFAULT_MODEL;
 
 /** How recently a plan's slice PR must have merged for its plan to be a continuation candidate.
  *  The screen exists for cost: 27 open `ready` plans × (comments + sub-issues + runs) on every push
@@ -363,7 +365,7 @@ const restOr = (path, fallback) => {
  * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
  * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
  */
-function openPrsByIssue(openPrs = []) {
+export function openPrsByIssue(openPrs = []) {
   const byIssue = new Map();
   for (const pr of openPrs) {
     const named = derivePrIssues({

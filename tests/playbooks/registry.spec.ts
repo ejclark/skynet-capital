@@ -2,10 +2,13 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
 import {
+  CRWV_WHEEL,
   enabledPlaybooks,
   findPlaybook,
   G1_GOOG,
   HC_SAURON,
+  NVDA_CALL_SPREAD,
+  PLAYBOOK_WIRING_GAPS,
   playbookRoster,
   S1_NVDA,
   TACO_DJT,
@@ -107,6 +110,13 @@ describe("enabledPlaybooks env parsing", () => {
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
 
+  it("arms no option play by default — only a subscription does — and neither is marked unwired", () => {
+    expect(enabledPlaybooks({}).enabled).toEqual([]);
+    // The Alpaca option order flow is live (#4679): nothing stands between a subscription and a trade.
+    expect(PLAYBOOK_WIRING_GAPS["CRWV-WHEEL"]).toBeUndefined();
+    expect(PLAYBOOK_WIRING_GAPS["NVDA-CALL-SPREAD"]).toBeUndefined();
+  });
+
   it("recognises HC-SAURON — registered, but still dark unless named (issue #3527 plan, slice 3)", () => {
     const { enabled, rejected } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON:standard" });
     expect(rejected).toEqual([]);
@@ -120,6 +130,8 @@ describe("findPlaybook", () => {
     expect(findPlaybook("G1-GOOG")).toBe(G1_GOOG);
     expect(findPlaybook("TACO-DJT")).toBe(TACO_DJT);
     expect(findPlaybook("HC-SAURON")).toBe(HC_SAURON);
+    expect(findPlaybook("CRWV-WHEEL")).toBe(CRWV_WHEEL);
+    expect(findPlaybook("NVDA-CALL-SPREAD")).toBe(NVDA_CALL_SPREAD);
   });
 
   it("returns undefined for an unknown id", () => {
@@ -134,6 +146,8 @@ describe("playbookRoster", () => {
       { id: "G1-GOOG", symbol: "GOOG" },
       { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
       { id: "HC-SAURON", symbol: HC_SAURON.symbols[0] },
+      { id: "CRWV-WHEEL", symbol: "CRWV" },
+      { id: "NVDA-CALL-SPREAD", symbol: "NVDA" },
     ]);
   });
 });

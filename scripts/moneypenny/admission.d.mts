@@ -11,6 +11,11 @@ export interface AdmissionIssue {
   body?: string;
   labels?: readonly Label[];
   createdAt?: string;
+  /** GitHub's dependency summary; the pull rule refuses `blocked_by > 0` (open blockers). */
+  issue_dependencies_summary?: { blocked_by?: number };
+  /** GitHub's sub-issue counts; the started-plan cap reads `completed` (#4393 criterion 6). */
+  sub_issues_summary?: { total?: number; completed?: number };
+  user?: { login?: string };
 }
 
 export interface AdmissionVerdict {
@@ -21,12 +26,16 @@ export interface AdmissionVerdict {
 }
 
 export type AdmissionMode = Pick<WorkMode, "position"> & {
-  caps: Pick<WorkMode["caps"], "inFlightCap">;
+  caps: Pick<WorkMode["caps"], "inFlightCap"> & Partial<Pick<WorkMode["caps"], "startedPlanCap">>;
 };
 
 export interface AdmissionDeps {
   readMode?: () => WorkMode | (AdmissionMode & { warning?: string; until?: string | null });
   readInFlight?: () => AdmissionIssue[];
+  /** Every open `plan` issue — read only when the issue might be a fresh plan (#4393 slice 4). */
+  readPlans?: () => AdmissionIssue[];
+  /** The caller knows this is a started plan's next slice (a continuation): skip the plan cap. */
+  started?: boolean;
   comments?: (n: number) => Array<{ body?: string }>;
   comment?: (n: number, body: string) => unknown;
   log?: (line: string) => void;
@@ -35,12 +44,25 @@ export interface AdmissionDeps {
 export const QUEUE_MARKER: string;
 /** The capsule `Surface` cell, normalised (lowercase, markdown stripped); null when absent/empty. */
 export function surfaceOf(body: unknown): string | null;
-/** The pure gate: halt → conserve → in-flight cap → same-surface fence. */
+/** The pure gate: halt → conserve → in-flight cap → started-plan cap → same-surface fence. */
 export function admitBuild(opts: {
   issue: AdmissionIssue;
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
+  /** The board's Waiting column (`waitingPlans`); the started-plan cap is skipped without it. */
+  waiting?: readonly AdmissionIssue[];
 }): AdmissionVerdict;
+/** A `plan` issue with no closed sub-issue and no `next-slice` — the only kind the plan cap refuses. */
+export function isFreshPlan(issue: AdmissionIssue | undefined): boolean;
+/** The open plans the board shows in Waiting (same `statusForIssue` as the column). */
+export function waitingPlans<T extends AdmissionIssue>(openPlans?: readonly T[]): T[];
+/** Every open `plan` issue over REST, paginated. */
+export function readOpenPlans(readAll?: (path: string) => unknown[]): AdmissionIssue[];
+/** The Waiting list, and the issue with its sub-issue counts filled from the plan list. */
+export function startedPlanInputs(
+  issue: AdmissionIssue,
+  openPlans?: readonly AdmissionIssue[],
+): { issue: AdmissionIssue; waiting: AdmissionIssue[] };
 /** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
 export function pullQueue<T extends AdmissionIssue>(readyIssues: readonly T[]): T[];
 /** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
@@ -48,6 +70,7 @@ export function nextAdmissible<T extends AdmissionIssue>(
   readyIssues: readonly T[],
   inFlight: readonly AdmissionIssue[],
   mode: AdmissionMode,
+  waiting?: readonly AdmissionIssue[],
 ): T | null;
 /** The comment a refused issue gets. */
 export function queueNote(reason: string): string;
@@ -72,6 +95,7 @@ export function checkAdmission(opts: {
   issue: AdmissionIssue;
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
+  waiting?: readonly AdmissionIssue[];
 }): AdmissionVerdict;
 /** One issue over REST; throws on a PR number or an unreadable row. */
 export function readIssue(
@@ -84,6 +108,7 @@ export interface AdmissionCliIO {
   readInFlight?: () => AdmissionIssue[];
   readReady?: () => AdmissionIssue[];
   readIssue?: (n: number) => AdmissionIssue;
+  readPlans?: () => AdmissionIssue[];
   print?: (line: string) => void;
   printErr?: (line: string) => void;
 }

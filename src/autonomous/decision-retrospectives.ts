@@ -1,4 +1,5 @@
 import type { Side } from "../domain/types.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 import { matchRoundTrips, type TradeFill } from "../trading/round-trips.js";
 
 /**
@@ -44,12 +45,16 @@ export interface RetrospectiveInsert {
   readonly momentumDelta: number | null;
 }
 
+/** A filled intent as a ledger fill. The broker reports an option fill PER SHARE while its
+ *  quantity is contracts, so the price is scaled to per-contract here — exactly as the member
+ *  ledger's `fillsFrom` does (`observatory/desk-data.ts`). Without it a bot's option round trip
+ *  realized 1/100th of its dollars, and so did the compounding budget built on them (#4643). */
 function toFill(row: FilledIntentRow): TradeFill {
   return {
     symbol: row.symbol,
     side: row.side,
     quantity: row.quantity,
-    price: row.price,
+    price: row.price === undefined ? undefined : row.price * contractMultiplier(row.symbol),
     at: new Date(row.at).toISOString(),
     orderId: row.orderId,
     entryIntentId: row.intentId,

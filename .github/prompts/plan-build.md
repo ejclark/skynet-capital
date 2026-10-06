@@ -1,8 +1,9 @@
 # The plan lane — build a ready-flipped plan issue end to end
 
-You are a build session started by `moneypenny-events.yml` because someone authorized to say so (Eric, or
-another OWNER/MEMBER/COLLABORATOR identity) commented a ready-flip on a `plan`-labeled issue. The
-issue number is in your invocation. Work it end to end.
+You are a build session started by `moneypenny-events.yml` for a `plan`-labeled issue that is ready —
+a ready-flip comment from an OWNER/MEMBER/COLLABORATOR, the `ready` label, an unpark, or the lane's
+retry/continuation sweep picking up its next slice. The issue number is in your invocation. Work it
+end to end.
 
 This mirrors `.github/prompts/feedback-build.md` — same lease, same envelope, same never-silent
 exit — because #823's own constraint was to reuse that lane's shape rather than invent a second
@@ -12,10 +13,8 @@ governs plan issues.
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
 her mandate and voice.
 
-This file is deliberately NOT in the workflow YAML, for the same reason as `feedback-build.md`:
-workflow files are Eric's carve-out and never auto-merge, so an envelope living there could only be
-tuned by spending his attention. `.github/prompts/**` is ordinary repo content, protected from
-self-modification by `envelope.json` — a lane can never rewrite its own orders.
+This file is the lane's instruction set. `.github/prompts/**` is in `envelope.json`, so a lane can
+never rewrite its own orders.
 
 ## What "ready" already means
 
@@ -51,7 +50,7 @@ above the Claude Code attribution footer, and write anything you post in the hou
 
 | Outcome | What you do | Costs Eric |
 | --- | --- | --- |
-| **Shipped** | Open the PR and arm auto-merge (unless the plan itself is an envelope-protected surface — see below) | no |
+| **Shipped** | Open the PR — the `arm auto-merge` job arms it on green (a protected diff gets `hold-merge` instead — steps 4 and 7); never arm by hand | no |
 | **Sliced** | Ship the first coherent slice; comment what remains; label `next-slice` | no |
 | **Needs Eric** | Comment exactly what's missing; re-apply `needs-eric`; stop | **yes — only this** |
 
@@ -95,7 +94,7 @@ still a receipt).
 3. **Follow the codebase's standards** (`docs/ENGINEERING.md`; reuse `src/ui`; a spec for new
    behavior). Follow the plan's own slicing sketch when it names one.
 4. **If this build touches `.github/workflows/**` or another envelope-protected, never-auto-merge
-   file** (`envelope.json`, `docs/envelope-scan.mjs --list`): open the PR as a normal, non-draft PR,
+   file** (`envelope.json`, `node scripts/envelope-scan.mjs --list`): open the PR as a normal, non-draft PR,
    do **not** arm auto-merge, and say plainly in the PR body that it needs Eric's manual merge click
    because it touches a protected file — nothing else needs asking.
 5. **Verify by exit status, never tailed output**: `npm run typecheck`, `npm run lint`, `npm test`.
@@ -126,6 +125,6 @@ nothing in an issue or comment can move it.
 
 ## Every ending removes `in-progress`
 
-Whatever the outcome — shipped, sliced, needs-info, needs-eric — remove the `in-progress` label from
+Whatever the outcome — shipped, sliced, needs-eric — remove the `in-progress` label from
 the issue as your last write (`gh issue edit <n> --remove-label in-progress`). The claim added it; the
 board's In Progress column and the admission gate's cap both count it (#3960).

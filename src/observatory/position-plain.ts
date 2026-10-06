@@ -1,6 +1,5 @@
-import { parseOccSymbol } from "../trading/option-symbols.js";
+import { OPTION_MULTIPLIER, parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
-import { OPTION_MULTIPLIER } from "./broker-positions.js";
 import { formatPrice } from "./desk-data.js";
 import { type NextEvent, type NextPrint, nextEventFor, nextPrintFor } from "./position-event.js";
 import { formatCurrency } from "./render-atoms.js";

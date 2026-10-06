@@ -1,4 +1,13 @@
-import type { MarketContext, Portfolio, Position, Quote } from "../../src/domain/types.js";
+import type {
+  MarketContext,
+  OptionContractQuote,
+  OptionOrderIntent,
+  OrderIntent,
+  Portfolio,
+  Position,
+  Quote,
+} from "../../src/domain/types.js";
+import { parseOccSymbol } from "../../src/trading/option-symbols.js";
 
 /**
  * Test data builders. One place to construct domain objects for specs so the tests
@@ -22,6 +31,7 @@ export function aPosition(overrides: Partial<Position> & Pick<Position, "symbol"
     symbol: overrides.symbol,
     quantity: overrides.quantity ?? 100,
     avgPrice: overrides.avgPrice ?? 90,
+    ...(overrides.marketValue !== undefined ? { marketValue: overrides.marketValue } : {}),
   };
 }
 
@@ -55,4 +65,71 @@ export function aContext(
   }
 
   return { asOf, quotes, momentum, newsSentiment };
+}
+
+/**
+ * A well-formed bot option order: one cash-secured CRWV $85 put sold for $2.10, priced inside a
+ * quoted band. `option` overrides merge into that shape; every other override replaces its field.
+ */
+export function anOptionIntent(
+  overrides: Partial<Omit<OrderIntent, "option">> & {
+    readonly option?: Partial<OptionOrderIntent>;
+  } = {},
+): OrderIntent {
+  const { option, ...intent } = overrides;
+  return {
+    symbol: "CRWV",
+    side: "sell",
+    quantity: 1,
+    type: "limit",
+    reason: "sell a put a month out, below support",
+    playbookId: "CRWV-WHEEL",
+    playbookMode: "standard",
+    ...intent,
+    option: {
+      effect: "open",
+      structure: "cash-secured-put",
+      legs: [{ occSymbol: "CRWV261106P00085000", side: "sell", ratio: 1 }],
+      limitPrice: 2.1,
+      band: { low: 2, high: 2.2, at: "2026-10-05T14:30:00Z" },
+      ...option,
+    },
+  };
+}
+
+/**
+ * One option contract's quote as the trader would have read it — parsed from its OCC symbol, two-
+ * sided, feed-stamped and fetched at `at` (default: `aContext`'s own asOf). Override any field.
+ */
+export function anOptionQuote(
+  occSymbol: string,
+  overrides: Partial<OptionContractQuote> & { readonly at?: string } = {},
+): OptionContractQuote {
+  const parts = parseOccSymbol(occSymbol);
+  if (!parts) throw new Error(`not an OCC symbol: ${occSymbol}`);
+  const { at = "2026-07-24T14:30:00Z", ...rest } = overrides;
+  return {
+    occSymbol,
+    underlying: parts.underlying,
+    type: parts.type,
+    strike: parts.strike,
+    expiration: parts.expiration,
+    bid: 2,
+    ask: 2.2,
+    quotedAt: at,
+    fetchedAt: at,
+    ...rest,
+  };
+}
+
+/** `context` with these option quotes attached, keyed by OCC symbol. */
+export function withOptionQuotes(
+  context: MarketContext,
+  quotes: readonly OptionContractQuote[],
+  listed: Readonly<Record<string, readonly string[]>> = {},
+): MarketContext {
+  return {
+    ...context,
+    options: { listed, contracts: Object.fromEntries(quotes.map((q) => [q.occSymbol, q])) },
+  };
 }

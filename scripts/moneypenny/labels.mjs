@@ -144,9 +144,10 @@ export const LABELS = {
       "Urgent (a user-harming bug or CVE): builds even when the work spigot is on conserve",
     managed: true,
   },
-  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's "In Progress" column could
-  // never fill: it keyed on an open linked PR nobody read, and live sessions auto-merge within
-  // minutes, so an open PR is rarely there to see. Every build path applies this when it starts
+  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's building column (named
+  // "In Progress" until #4393 slice 4 renamed it "Building now") could never fill: it keyed on an
+  // open linked PR nobody read, and live sessions auto-merge within minutes, so an open PR is
+  // rarely there to see. Every build path applies this when it starts
   // (the claim lanes in index.mjs, `/work-issues`), takes it off at its terminal state, and the
   // stall audit clears one left behind after 6h quiet. Managed: an unprovisioned label would 404 on
   // the very `--add-label` that marks work started.
@@ -272,7 +273,8 @@ export const parkedReason = (number, labels = []) =>
 /**
  * THE ONE PULL RULE (#4393 criterion 10). An automated puller — both claim lanes, the retry sweep
  * (`nextAdmissible`) and `/work-issues` — may start an issue only when the board shows it in
- * **Ready**: open, labelled `ready`, `isBuildable`, and not already `in-progress`. Before this,
+ * **Ready**: open, labelled `ready`, `isBuildable`, not already `in-progress`, and not blocked by
+ * an open issue (`openBlockers`). Before this,
  * each puller re-derived its own test, and `/work-issues` pulled any open `feedback`/`plan` issue,
  * Backlog included. Asked in that order, so the reason names the first rule that fails.
  *
@@ -293,8 +295,23 @@ export function notPullableReason(issue) {
   if (names.includes(LABELS.inProgress.name)) {
     return `#${n} is already \`in-progress\` — another session or lane is building it`;
   }
+  const blockers = openBlockers(issue);
+  if (blockers > 0) {
+    return `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`;
+  }
   return null;
 }
+
+/**
+ * OPEN `blocked-by` LINKS ON THE ISSUE ITSELF (2026-10-05). A slice filed as a sub-issue can carry
+ * `ready` ahead of time ("ready once slice 1 holds", #4301) with GitHub's dependency link doing the
+ * waiting. Only the continuation branch read those links (`nextSubIssue`); rank order did not, so
+ * once #4664 stepped past the parent plan the sweep dispatched #4301 itself while #4299 was open.
+ * REST rows and webhook payloads both carry `issue_dependencies_summary`, whose `blocked_by` counts
+ * OPEN blockers only (`total_blocked_by` counts all). A shape without it (`gh issue view` JSON)
+ * reads as 0 — the same unknown-is-unblocked reading the rule gave before this check existed.
+ */
+const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocked_by) || 0;
 
 /** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
 export const pullable = (issue) => notPullableReason(issue) === null;

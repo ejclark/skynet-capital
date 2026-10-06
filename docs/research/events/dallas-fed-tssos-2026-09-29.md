@@ -668,3 +668,25 @@ sized either way. `## Outcome` now exists for the tests this window could score 
 `event-scan.mjs`'s `hasOutcome` check this document goes quiet on the `event-passed-unscored` door,
 with exactly one door back in: `FT-…-1` and `FT-…-2` reopen it as `forward-test-due` once
 2026-10-06 arrives.
+
+### Forward tests FT-1 and FT-2, scored (2026-10-06, `forward-test-due`)
+
+Scored from the Dallas Fed's own September report, re-fetched direct this session —
+`dallasfed.org/research/surveys/tssos/2026/2609`, desktop-UA curl, **HTTP 200** — and read from the
+results-summary table (seasonally adjusted), never from the D+1 paragraph above. Nothing else in
+this document is edited; the assessment stays closed.
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (wages & benefits ≥ 15.4) | ≥ 15.4, registered High on a 95% t+1 base rate | **15.1** (Aug 18.8, −3.7; the report calls 15.4 "the series average") | **KILLED** |
+| FT-…-2 (employment < 5.66) | below the series mean, registered High on a 96% t+1 base rate | **4.1** (Aug 0.8, +3.3) | **PASSED** |
+
+**FT-1 missed by 0.3 points on a 3.7-point drop** — the threshold was the publisher's own average, so
+the test asked only whether the wage line stayed above its long-run mean one month out. It did not;
+this is the ~5% tail of the cohort, and the same report notes wage pressures "eased". That is a
+margin call, not a regime call: the table's trend column still reads `76(+)` for wages, so the index
+stayed positive and just under its own average. **FT-2 passes
+on the claim as registered**, but employment did rise 3.3 points toward the mean, so the registered
+"sharpest soft-labour reading" was right about the level and slightly early about the direction.
+Neither result changes the stance: `low` impact, `symbols: []`, read-it-do-not-trade-it.
+

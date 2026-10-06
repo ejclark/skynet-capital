@@ -29,22 +29,22 @@ export interface OpsStatusSetupDeps {
 }
 
 /** Latest `at` among trade-activity records belonging to a BOT participant — the panel's
- *  credential-free "when did a bot last trade" corroboration of the bridge-poll signal. */
-async function lastBotActivityAt(
+ *  credential-free "when did a bot last trade" corroboration of the bridge-poll signal.
+ *
+ * Reads each bot's own newest line with `activity.latest`, not the whole ledger: this panel
+ * polls every 60 s from every open tab, and `activity.list()` (every participant's full journal)
+ * shared the event loop with the Accounts/Pulse request that OOM-killed the server (#4612 slice 7
+ * — the handoff measured this call at 186 ms against the whole ledger). */
+export async function lastBotActivityAt(
   hub: ObservatoryHub,
   activity: ActivityStore,
 ): Promise<string | undefined> {
-  const botIds = new Set(
-    hub
-      .getState()
-      .participants.filter((p) => p.kind === "bot")
-      .map((p) => p.id),
-  );
-  const records = await activity.list();
-  const times = records
-    .filter((r) => botIds.has(r.participantId))
-    .map((r) => r.at)
-    .sort();
+  const botIds = hub
+    .getState()
+    .participants.filter((p) => p.kind === "bot")
+    .map((p) => p.id);
+  const latest = await Promise.all(botIds.map((id) => activity.latest(id)));
+  const times = latest.flatMap((record) => (record ? [record.at] : [])).sort();
   return times.at(-1);
 }
 

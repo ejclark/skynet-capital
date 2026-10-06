@@ -54,7 +54,14 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
+import {
+  gateAdmission,
+  nextAdmissible,
+  readInFlight,
+  readOpenIssues,
+  readOpenPlans,
+  waitingPlans,
+} from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
@@ -63,6 +70,7 @@ import {
   continuationContext,
   executeStopContinuation,
   gatherContinuationDeps,
+  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -80,8 +88,10 @@ import {
   MANAGED_LABELS,
   setInProgress,
 } from "./labels.mjs";
+import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
+import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
@@ -124,10 +134,12 @@ export const slugify = (s) =>
  * @returns Intent[]  — `[]` means "nothing to do", which is the common and correct outcome.
  *
  * (Issue-label events reach the workflow but carry no router lane here — the feedback claim is a
- * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone.)
+ * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone. One
+ * issue event does: a repair capsule closing drafts its LESSONS entry, #4212.)
  */
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
+  if (ctx.eventName === "issues") return routeLessonDraft(ctx);
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -536,7 +548,9 @@ export function claimPlan(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
-  const gate = gateAdmission(issue, admission); // #3960 — same gate as the feedback claim
+  // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
+  // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
+  const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });
   if (!gate.admit) return { claimed: false, reason: gate.reason };
   const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
@@ -580,14 +594,21 @@ export function peekNext(deps = {}) {
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    readPrIssues = () => readOpenPrIssues(),
+    readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
+  const ready = withoutOpenPr(
+    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
+    readPrIssues(),
+  );
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
-  const pick = continuationPick(continuation) ?? nextAdmissible(ready, inFlightOf(), mode);
+  const pick =
+    continuationPick(continuation) ??
+    nextAdmissible(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting);
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -601,6 +622,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    readPrIssues = () => readOpenPrIssues(),
+    readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
     ...admission
@@ -608,8 +631,19 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const mode = readMode();
   const inFlight = inFlightOf();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  let pool = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
-  const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
+  let pool = withoutOpenPr(
+    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
+    readPrIssues(),
+  );
+  // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
+  // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
+  const { openPlans, waiting } = waitingOrSkip(readPlans);
+  const gateDeps = {
+    readMode: () => mode,
+    readInFlight: () => inFlight,
+    ...(openPlans ? { readPlans: () => openPlans } : { readPlans }),
+    ...admission,
+  };
   // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
   // Rank order cannot express it: the plan's lease is still held by the build that just finished,
   // so the loop below would step past it for the lease's full TTL and claim something else.
@@ -624,9 +658,10 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
   // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
   for (let tries = 0; tries < SWEEP_HELD_SKIPS; tries++) {
-    const pick = nextAdmissible(pool, inFlight, mode);
+    const pick = nextAdmissible(pool, inFlight, mode, waiting);
     if (!pick) {
-      const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, work-mode=${mode.position})`;
+      const plans = waiting ? `${waiting.length} plans waiting` : "plans unread";
+      const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, ${plans}, work-mode=${mode.position})`;
       console.log(`::notice::retry sweep — ${why}`);
       return { claimed: false, reason: why };
     }
@@ -646,8 +681,62 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   return { claimed: false, reason: why };
 }
 
+/**
+ * The open plans and the board's Waiting column for one sweep tick (#4393 slice 4) — or neither,
+ * with a warning, when the read fails. The started-plan cap governs fresh plans only, so a failed
+ * plan read must not cost the tick its continuation or a feedback pick: the pick runs without the
+ * cap, and a fresh plan it lands on is refused by `gateAdmission`'s own read, which fails closed.
+ */
+function waitingOrSkip(readPlans) {
+  try {
+    const openPlans = readPlans();
+    return { openPlans, waiting: waitingPlans(openPlans) };
+  } catch (err) {
+    console.log(
+      `::warning::the open plans could not be read — picking without the started-plan cap this tick: ${String(err?.message).slice(0, 200)}`,
+    );
+    return { openPlans: undefined, waiting: undefined };
+  }
+}
+
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
+
+/**
+ * AN ISSUE AN OPEN PR ALREADY NAMES IS NOT THE SWEEP'S TO START (2026-10-05). `pr-in-progress.mjs`
+ * labels such an issue `in-progress`, and that label is what kept the rank-order pick off it, but
+ * the label can come off while the PR is still open: the plan lane's prompt ends every session with
+ * `--remove-label in-progress`, a held slice PR included. #3959 then read as `ready` and idle, and
+ * the sweep dispatched it twice in one day against #4605 (held for a merge click). Each session
+ * found nothing to build. The continuation branch already refuses a plan with an open PR
+ * (`continuationDecision`), and this applies the same check, on the same evidence, to rank order.
+ * So the PR stays the source of truth even when the label has been removed.
+ *
+ * @param named `openPrsByIssue`'s map: issue number → the open PR naming it
+ */
+export function withoutOpenPr(pool = [], named = new Map()) {
+  return pool.filter((i) => {
+    const pr = named.get(i.number);
+    if (pr) console.log(`::notice::retry sweep — skipping #${i.number}, open PR #${pr} names it`);
+    return !pr;
+  });
+}
+
+/**
+ * The open PRs' named issues, FAIL-OPEN to an empty map. The cost of a failed read is one wasted
+ * session on a held plan. That is smaller than a red `route` tick, which also takes the
+ * event-research legs down (`continuationPick`'s header gives the same reasoning).
+ */
+function readOpenPrIssues() {
+  try {
+    return openPrsByIssue(ghRestAll("pulls?state=open"));
+  } catch (err) {
+    console.log(
+      `::warning::retry sweep — open-PR read failed, not screening: ${String(err).slice(0, 200)}`,
+    );
+    return new Map();
+  }
+}
 
 /**
  * `pickContinuation` over a freshly gathered context, FAIL-OPEN — the same call `gatherDeps` wraps
@@ -902,6 +991,9 @@ function gatherDeps(ctx) {
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
     openIssueTitles: open.map((i) => i.title),
+    // Plans whose sub-issues are all closed (#4393 slice 5) — read from the open list already paged
+    // above, plus a comments page only for a plan that must be held.
+    openPlans: needsScan ? gatherPlanCloseDeps(open) : [],
     openEventReceipts: needsScan ? readReceipts(open) : [],
     // The dropped-remainder relay (#3818 slice 4). REST and paged, like the open-issue read above,
     // and only on a sweep — nothing on a label or comment event can close an issue, so no other
@@ -1233,6 +1325,12 @@ function executeSweepIntent(i) {
     console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
     return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
   }
+  if (i.kind === "close-plan" || i.kind === "hold-plan-close") {
+    // The writes live in plan-close.mjs, like the relay's, so that file never imports this router.
+    const line = executePlanClose(i);
+    console.log(`::notice::${line}`);
+    return line;
+  }
   if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
     // this router — the same cycle-avoidance as the relay below.
@@ -1293,6 +1391,7 @@ function executeOne(i, stallRepairs = []) {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   }
+  if (i.kind === "draft-lesson") return draftLesson(i);
   if (i.kind === "release-claim") {
     const freed = releaseBuild(i.slug);
     console.log(

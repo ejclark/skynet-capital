@@ -26,11 +26,11 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    nothing else, as JSON, in the order the gate would pick (#4393 criterion 10). It filters every
    open `ready` issue through `pullable()` (`scripts/moneypenny/labels.mjs`): open, labelled
    `ready`, `isBuildable` (none of `needs-eric` / `needs-info` / `needs-design` / `hold-merge`),
-   and not `in-progress`. That is the same predicate both Moneypenny claim lanes and her retry
+   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). That is the same predicate both Moneypenny claim lanes and her retry
    sweep ask, so this pass and her lanes can never disagree about what is pullable. A Backlog issue
    (no `ready`) is never pulled here, however buildable it looks — getting it `ready` is a triage
    call, not this pass's. An issue with an open PR naming it is already `in-progress` (the PR
-   derives the label, #4402), so the old "skip anything with an open PR" check is inside the rule.
+   derives the label, #4402), so the rule already skips it.
 
    One extra check the rule cannot make: Moneypenny's lease window. Her lanes take a git-tag lease
    a moment *before* they apply `in-progress`, so for the head of the queue run `node
@@ -52,7 +52,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    The CLI only reads: it never comments and never labels.
 
    On admit, label it `in-progress` right away (`gh issue edit <n> --add-label in-progress`) —
-   that label is what the Orchestration board's In Progress column and the cap count (#3960).
+   that label is what the Orchestration board's Building now column and the cap count (#3960).
+   A fresh plan can also be refused because the board's Waiting column (started plans nobody is
+   building) is at `startedPlanCap` — the CLI says so; finish one of those instead (#4393).
    Every terminal outcome in LAND takes it back off.
 
    **The expedite class (#4393 criterion 12).** A session Eric starts by hand to build something
@@ -97,7 +99,7 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
 ## Reporting
 
-One line per issue as it resolves (`#123 → PR #456, auto-merge armed` / `#128 → needs-info: ...`),
+One line per issue as it resolves (`#123 → PR #456 opened; the pipeline arms it after integration tests` / `#128 → needs-info: ...`),
 not a narrated play-by-play of the build. Close the pass with a short tally: shipped / parked /
 blocked, and what's left in the queue if it wasn't emptied. This is Eric's report altitude
 (`CLAUDE.md` → *Report at altitude*) applied to a burn-down instead of a time-boxed digest.

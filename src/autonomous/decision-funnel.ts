@@ -25,11 +25,14 @@ export interface DecisionFunnel {
   readonly refusalsByReason: Readonly<Partial<Record<GuardRefusalReason, number>>>;
 }
 
-/** The narrow row shape `DecisionDb.funnelFor` reads back — one row per intent ever recorded. */
+/** The narrow row shape `DecisionDb.funnelFor` reads back. `count` lets the SQL-backed caller pass
+ *  `GROUP BY` totals (one row per distinct outcome, not per intent — #4612 slice 7, defect #9) —
+ *  it defaults to 1 for a caller passing one row per intent, as every test here does. */
 export interface FunnelIntentRow {
   readonly guardReason: GuardRefusalReason | null;
   readonly action: string | null;
   readonly resultStatus: string | null;
+  readonly count?: number;
 }
 
 export function computeFunnel(
@@ -37,24 +40,27 @@ export function computeFunnel(
   closed: number,
   intentRows: readonly FunnelIntentRow[],
 ): DecisionFunnel {
+  let rawIntents = 0;
   let survivedGuards = 0;
   let placed = 0;
   let filled = 0;
   const refusalsByReason: Partial<Record<GuardRefusalReason, number>> = {};
 
   for (const row of intentRows) {
+    const n = row.count ?? 1;
+    rawIntents += n;
     if (row.guardReason) {
-      refusalsByReason[row.guardReason] = (refusalsByReason[row.guardReason] ?? 0) + 1;
+      refusalsByReason[row.guardReason] = (refusalsByReason[row.guardReason] ?? 0) + n;
       continue;
     }
-    survivedGuards++;
-    if (row.action === "placed") placed++;
-    if (row.resultStatus === "filled") filled++;
+    survivedGuards += n;
+    if (row.action === "placed") placed += n;
+    if (row.resultStatus === "filled") filled += n;
   }
 
   return {
     cycles,
-    rawIntents: intentRows.length,
+    rawIntents,
     survivedGuards,
     placed,
     filled,

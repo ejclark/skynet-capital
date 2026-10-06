@@ -23,6 +23,7 @@ import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
+import { MilestoneRow } from "../shell/wire-milestone-row";
 import { TradeRow } from "../shell/wire-trade-row";
 
 /**
@@ -40,9 +41,10 @@ import { TradeRow } from "../shell/wire-trade-row";
  * fundamental overlap"), which is what slices 1 and 2 fixed by putting both on #1211's one event
  * envelope. So this page now spends its "section" concept on only what is genuinely a different
  * SHAPE of data, and expresses the rest as KINDS — `frame.tsx`'s three-word rule, applied:
- *   - Trades, filings and merged pull requests are KINDS: chips on one list (`activity-feed.ts` owns
- *     the grammar). The third one arrived in slice 4 as a chip and a row component — no new section,
- *     no widget beside the feed, which is the test the shape was built to pass.
+ *   - Trades, filings, merged pull requests and members' earned milestones are KINDS: chips on one
+ *     list (`activity-feed.ts` owns the grammar). The third and fourth arrived in slices 4 and 5 as a
+ *     chip and a row component each — no new section, no widget beside the feed, which is the test
+ *     the shape was built to pass.
  *   - Booked P&L is a STRIP, not a section: a standing snapshot, always true, never paged to
  *     (#784's criterion — "never a fourth item competing for the same section concept").
  *   - The Council stays a SECTION: a composer plus this week's lines is not a record of something
@@ -60,6 +62,7 @@ const KIND_CHIPS = [
   ["is:trade", "Trades"],
   ["is:feedback", "Ideas"],
   ["is:development", "Builds"],
+  ["is:milestone", "Milestones"],
 ] as const;
 const SIDE_CHIPS = [
   ["is:buy", "Buys"],
@@ -89,6 +92,7 @@ function WireControls({
   filter,
   feedbackEnabled,
   developmentEnabled,
+  milestonesEnabled,
   onChange,
   section,
   onSection,
@@ -101,6 +105,7 @@ function WireControls({
    *  do. The feed says why in its own note instead. */
   readonly feedbackEnabled: boolean;
   readonly developmentEnabled: boolean;
+  readonly milestonesEnabled: boolean;
   readonly onChange: (next: string) => void;
   readonly section: ActivitySection;
   readonly onSection: (next: ActivitySection) => void;
@@ -121,13 +126,13 @@ function WireControls({
       ))}
     </>
   );
-  const kinds = KIND_CHIPS.filter(([qualifier]) =>
-    qualifier === "is:feedback"
-      ? feedbackEnabled
-      : qualifier === "is:development"
-        ? developmentEnabled
-        : true,
-  );
+  const wired: Record<(typeof KIND_CHIPS)[number][0], boolean> = {
+    "is:trade": true,
+    "is:feedback": feedbackEnabled,
+    "is:development": developmentEnabled,
+    "is:milestone": milestonesEnabled,
+  };
+  const kinds = KIND_CHIPS.filter(([qualifier]) => wired[qualifier]);
   const tradesInScope = kindInScope(filter, "trade");
   const filings = feedbackEnabled && filingsInScope(filter);
   return (
@@ -218,7 +223,7 @@ function CouncilSection(): ReactElement {
   );
 }
 
-/** The feed — one list, both kinds, newest first; its filter bar travels with it, because the filter
+/** The feed — one list, every kind, newest first; its filter bar travels with it, because the filter
  *  is the feed's control and not the page's.
  *
  *  Only TRADES page: `/api/wire` cursors them at 30 rows (`src/server/pagination.ts`'s default), so
@@ -252,6 +257,7 @@ function FeedSection({
     wire.trades,
     wire.feedbackEnabled ? wire.feedback : [],
     wire.developmentEnabled ? (wire.development ?? []) : [],
+    wire.milestonesEnabled ? (wire.milestones ?? []) : [],
   );
   const shown = items.filter((item) => matchesActivity(item, filter));
   return (
@@ -261,7 +267,7 @@ function FeedSection({
       {shown.length === 0 ? (
         <p className="note">
           {items.length === 0
-            ? "Nothing yet — the first fill, filed idea or merge lights it up."
+            ? "Nothing yet — the first fill, filed idea, merge or milestone lights it up."
             : "Nothing here matches this filter."}
         </p>
       ) : (
@@ -271,6 +277,7 @@ function FeedSection({
             if (item.kind === "development") {
               return <DevelopmentRow key={item.key} merge={item.merge} />;
             }
+            if (item.kind === "milestone") return <MilestoneRow key={item.key} earn={item.earn} />;
             return (
               <FilingRow
                 key={item.key}
@@ -308,6 +315,13 @@ function FeedSection({
       {wire.developmentEnabled ? null : (
         <p className="note">
           The build record isn't switched on in this deployment, so merged work isn't listed here.
+        </p>
+      )}
+      {/* And for the fourth. Same reasoning: no "nobody has earned anything yet" note, because the
+          kind being on is not proof every source behind it was read in full. */}
+      {wire.milestonesEnabled ? null : (
+        <p className="note">
+          Milestones aren't switched on in this deployment, so members' earns aren't listed here.
         </p>
       )}
       {wire.feedbackEnabled && wire.feedback.length === 0 ? (
@@ -399,6 +413,7 @@ function WirePage(): ReactElement {
           filter={filter}
           feedbackEnabled={feed.feedbackEnabled}
           developmentEnabled={Boolean(feed.developmentEnabled)}
+          milestonesEnabled={Boolean(feed.milestonesEnabled)}
           onChange={setFilter}
           section={section}
           onSection={setSection}
@@ -408,8 +423,8 @@ function WirePage(): ReactElement {
       <header className="page-header">
         <h1>Activity</h1>
         <p>
-          Every trade, every idea filed, every change merged — the live pulse of the whole league,
-          one feed.
+          Every trade, every idea filed, every change merged, every milestone earned — the live
+          pulse of the whole league, one feed.
         </p>
       </header>
       {section === "feed" ? (

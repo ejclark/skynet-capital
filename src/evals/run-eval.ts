@@ -2,6 +2,7 @@ import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type { OrderIntent } from "../domain/types.js";
 import { applyGuards, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 import type { Scenario } from "./scenario.js";
 
 /**
@@ -81,13 +82,15 @@ export function runScenario(
     } else {
       const q = context.quotes[o.symbol];
       if (q) {
-        const positionValue = (heldQuantity(portfolio, o.symbol) + o.quantity) * q.ask;
+        // Per-share ask × shares per unit: an option contract is 100 shares of exposure (#4643).
+        const unitPrice = q.ask * contractMultiplier(o.symbol);
+        const positionValue = (heldQuantity(portfolio, o.symbol) + o.quantity) * unitPrice;
         if (positionValue > cap + 1) {
           violations.push(
             `${o.symbol} position ${positionValue.toFixed(0)} exceeds cap ${cap.toFixed(0)}`,
           );
         }
-        if (o.quantity * q.ask > portfolio.cash + 1) {
+        if (o.quantity * unitPrice > portfolio.cash + 1) {
           violations.push(`${o.symbol} buy spends beyond cash`);
         }
       }

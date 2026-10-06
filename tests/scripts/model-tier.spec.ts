@@ -40,7 +40,7 @@ describe("feedback model tier", () => {
       [["a", "b", "c"], []],
     ] as const) {
       const body = specBlock({ rounds: 0, criteria, assumptions, readiness: "spec-complete" });
-      expect(tier(body).model).toBe("claude-sonnet-5");
+      expect(tier(body).model).toBe("claude-sonnet-5-5");
     }
   });
 
@@ -53,7 +53,7 @@ describe("feedback model tier", () => {
       assumptions: [],
       readiness: "spec-complete",
     });
-    expect(tier(body).model).toBe("claude-haiku-4-5-20251001");
+    expect(tier(body).model).toBe("claude-haiku-4-5");
   });
 
   it("keeps a single-criterion ask on Sonnet once it carries an open assumption", () => {
@@ -63,7 +63,7 @@ describe("feedback model tier", () => {
       assumptions: ["assuming the old label isn't referenced elsewhere"],
       readiness: "spec-complete",
     });
-    expect(tier(body).model).toBe("claude-sonnet-5");
+    expect(tier(body).model).toBe("claude-sonnet-5-5");
   });
 
   it("escalates to Opus once criteria count exceeds the simple-ask floor", () => {
@@ -73,32 +73,32 @@ describe("feedback model tier", () => {
       assumptions: [],
       readiness: "spec-complete",
     });
-    expect(tier(body).model).toBe("claude-opus-5");
+    expect(tier(body).model).toBe("claude-opus-5-5");
   });
 
   it("escalates to Opus when readiness is not spec-complete", () => {
     for (const readiness of ["partial", "draft", undefined]) {
       const body = specBlock({ rounds: 0, criteria: ["a"], assumptions: [], readiness });
-      expect(tier(body).model).toBe("claude-opus-5");
+      expect(tier(body).model).toBe("claude-opus-5-5");
     }
   });
 
   it("escalates to Opus when spec-complete but criteria is empty or missing", () => {
     expect(tier(specBlock({ readiness: "spec-complete", criteria: [] })).model).toBe(
-      "claude-opus-5",
+      "claude-opus-5-5",
     );
-    expect(tier(specBlock({ readiness: "spec-complete" })).model).toBe("claude-opus-5");
+    expect(tier(specBlock({ readiness: "spec-complete" })).model).toBe("claude-opus-5-5");
   });
 
   it("escalates to Opus when there is no skynet-spec block at all (a plan issue, or a bare paste)", () => {
     for (const body of ["", "a plain member paste with no spec block", "x".repeat(1410)]) {
-      expect(tier(body).model).toBe("claude-opus-5");
+      expect(tier(body).model).toBe("claude-opus-5-5");
     }
   });
 
   it("escalates to Opus on a malformed spec block rather than guessing", () => {
     const malformed = `\n${FENCE}skynet-spec\n{not valid json\n${FENCE}\n`;
-    expect(tier(malformed).model).toBe("claude-opus-5");
+    expect(tier(malformed).model).toBe("claude-opus-5-5");
   });
 
   it("still reports which structural signal drove the decision, for the run log", () => {

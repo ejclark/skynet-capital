@@ -1,5 +1,7 @@
+import type { EarnedMilestone } from "../domain/progression.js";
 import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import type { FeedbackStatus } from "../server/feedback-status.js";
+import type { LadderProgressEntry, LadderProgressEvidence } from "../server/ladder-progress-log.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
@@ -295,6 +297,92 @@ export function activityEventFromMergedPullRequest(info: MergedPullRequestInfo):
       url: info.url,
     },
   };
+}
+
+// --- milestones (#784 slice 5) -------------------------------------------------------------------
+//
+// The fourth KIND, and the one with two honest regimes underneath it — which is why it has two
+// translators onto ONE event type rather than one:
+//
+// - **Logged** (`activityEventFromLadderEntry`): the ladder detector's two outcome milestones, an OTM
+//   expiry and a first realized profit. A fill alone cannot prove either, so the detector writes a
+//   durable row once it has (`ladder-progress-log.ts`), and that write is what publishes.
+// - **Derived** (`activityEventFromEarnedMilestone`): the trade ladder (first buy, first covered
+//   call…). These are NEVER stored — `domain/progression.ts` re-derives them from the fill + audit
+//   ledgers on every read, Eric's 2026-08-25 ruling that a stored verdict only invites drift. So this
+//   translator runs at READ time over those same ledgers and its events are never published: writing
+//   them to the bus would be exactly the stored "earned" record that ruling forbids.
+//
+// Both key identity on (participant, milestone) and nothing else — a milestone is earned ONCE, so an
+// instant in the id would let a detector re-log, or a backfilled earlier fill, mint a second row for
+// the same earn. The fold (`milestone-event-feed.ts`) keeps the earliest instant, the same rule
+// `earliestPerMilestone` and `deriveEarned` both use.
+//
+// `actor.participantId` IS a hub participant id here, unlike a filing's: the ladder is keyed on the
+// roster id (`ladder-progress-log.ts`), so a milestone row can name who earned it the way a trade row
+// names who traded.
+
+/** What one earn says, whichever regime proved it. `orderId` is the evidence — the fill, expiry or
+ *  closing trade that proved the milestone — never a claim. */
+interface MilestoneEarnedInfo {
+  readonly participantId: string;
+  readonly milestoneId: string;
+  readonly orderId: string;
+  readonly evidence: LadderProgressEvidence["kind"];
+  readonly at: string;
+}
+
+function activityEventFromMilestone(info: MilestoneEarnedInfo, source: string): ActivityEvent {
+  const identity = `${info.participantId}:${info.milestoneId}`;
+  return {
+    id: `milestone:${identity}:milestone.earned`,
+    eventType: "milestone.earned",
+    actor: { participantId: info.participantId },
+    target: { kind: "milestone", id: identity },
+    at: info.at,
+    correlationId: `milestone:${identity}`,
+    source,
+    outcome: "success",
+    // Public, said with what it costs: an option rung is classified from the ticket's play tag, which
+    // `activityEventFromAuditRecord` keeps owner-only, so "Sell your first covered call" tells the
+    // league a strategy that a bare SELL row does not. That is in bounds. The cross-member feed sits
+    // behind the invite gate (`serveAuthorizedRoute`), where pooling members' trades is what the
+    // invite agreement authorizes (`CLAUDE.md` → shared-universe data mixing). The audit line stays
+    // owner-only for what it carries that this event never does: the confirming member's email.
+    visibility: "public",
+    payload: { milestoneId: info.milestoneId, orderId: info.orderId, evidence: info.evidence },
+  };
+}
+
+/** One ladder-detector row → one bus event; the write half `publishingLadderProgressLog` rides. */
+export function activityEventFromLadderEntry(entry: LadderProgressEntry): ActivityEvent {
+  return activityEventFromMilestone(
+    {
+      participantId: entry.participantId,
+      milestoneId: entry.milestoneId,
+      orderId: entry.evidence.orderId,
+      evidence: entry.evidence.kind,
+      at: entry.at,
+    },
+    "ladder-detector",
+  );
+}
+
+/** One fill-derived ladder earn → one event, built at read time and never published (see above). */
+export function activityEventFromEarnedMilestone(
+  participantId: string,
+  earned: EarnedMilestone,
+): ActivityEvent {
+  return activityEventFromMilestone(
+    {
+      participantId,
+      milestoneId: earned.milestoneId,
+      orderId: earned.orderId,
+      evidence: "fill",
+      at: earned.at,
+    },
+    "derived",
+  );
 }
 
 /** One bot order the broker actually accepted. A structural (not imported) shape — mirrors

@@ -1,4 +1,5 @@
 import type { JsonResponse } from "../../src/http/fetch-json.js";
+import { FEEDBACK_AREAS } from "../../src/server/feedback-areas.js";
 import {
   createFeedbackCoach,
   parseCoachReply,
@@ -47,18 +48,50 @@ describe("feedback coach", () => {
     });
   });
 
-  it("returns the draft when the model finishes, tolerating a code fence", async () => {
+  it("returns the draft when the model finishes", async () => {
     const coach = createFeedbackCoach({ apiKey: "k" }, () =>
       Promise.resolve(
-        anthropicReply(
-          '```json\n{"draft": {"title": "fix the wobble", "details": "## What\\n…"}}\n```',
-        ),
+        anthropicReply('{"draft": {"title": "fix the wobble", "details": "## What\\n…"}}'),
       ),
     );
 
     const result = await coach({ kind: "bug", messages: [{ role: "user", content: "chart bad" }] });
 
     expect(result).toMatchObject({ ok: true, done: true, title: "fix the wobble" });
+    expect(result).not.toHaveProperty("spec.assumptions.0"); // parsed whole, not salvaged
+  });
+
+  // The reply shape is enforced by the API (output_config.format), not by prose in the prompt —
+  // so the area enum is the same list the form's <select> offers, and the draft's required fields
+  // are the ones `toSpec` reads.
+  it("asks the API to enforce the reply schema, with the form's own area list", async () => {
+    type Branch = {
+      required: string[];
+      additionalProperties: boolean;
+      properties: {
+        draft?: { required: string[]; properties: { area: { enum: string[] } } };
+      };
+    };
+    type Schema = { anyOf: Branch[]; properties?: unknown };
+    let sent: { output_config?: { format?: { type?: string; schema?: Schema } } } = {};
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_method, _url, _headers, body) => {
+      sent = body as typeof sent;
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "chart bad" }] });
+
+    const format = sent.output_config?.format;
+    expect(format?.type).toBe("json_schema");
+    // Exactly one shape: each branch requires its one key and admits no other, so neither `{}`
+    // nor a reply carrying both a question and a draft validates.
+    const branches = format?.schema?.anyOf ?? [];
+    expect(format?.schema?.properties).toBeUndefined();
+    expect(branches.map((b) => b.required)).toEqual([["question"], ["draft"]]);
+    expect(branches.every((b) => b.additionalProperties === false)).toBe(true);
+    const draft = branches[1]?.properties.draft;
+    expect(draft?.properties.area.enum).toEqual([...FEEDBACK_AREAS]);
+    expect(draft?.required).toContain("readiness");
   });
 
   // The build spec is what earns the wide build envelope: a curated ask is treated as the SPEC and

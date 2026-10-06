@@ -37,6 +37,34 @@ const row = (samples: readonly EquitySample[], label: string) =>
   groups(samples)[0]?.rows.find((r) => r.label === label);
 
 describe("pulseStreaks — trading-day runs", () => {
+  it("keys each sample's market day once a request, not once per streak row (#4613)", () => {
+    // Three rows (running, longest green, longest red) used to re-key the whole history each.
+    // The zone is one no other test here uses: a formatter already in intl-format's cache is the
+    // real class, not the counting one below, and would make `formatted` read 0.
+    const samples = [3, 4, 5, 6, 7].map((day, i) => close(day, 100 + i));
+    const Real = Intl.DateTimeFormat;
+    let formatted = 0;
+    Intl.DateTimeFormat = class extends Real {
+      constructor(...args: ConstructorParameters<typeof Real>) {
+        super(...args);
+        const format = super.format;
+        Object.defineProperty(this, "format", {
+          value: (date?: Date | number) => {
+            formatted += 1;
+            return format(date);
+          },
+        });
+      }
+    } as typeof Real;
+    try {
+      pulseStreaks(samples, tradeStats([]), "America/Regina");
+    } finally {
+      Intl.DateTimeFormat = Real;
+    }
+    expect(formatted).toBeGreaterThan(0);
+    expect(formatted).toBeLessThanOrEqual(samples.length);
+  });
+
   it("shows the open run, both longest runs, and what each was worth", () => {
     const day = groups([close(10, 100), close(11, 110), close(12, 120), close(13, 100)])[0];
     expect(day?.title).toBe("Trading-day runs");

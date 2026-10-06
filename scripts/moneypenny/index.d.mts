@@ -74,14 +74,23 @@ export function claimNext(
   sha?: string,
   deps?: AdmissionDeps & {
     readReady?: () => AdmissionIssue[];
+    readPrIssues?: () => Map<number, number>;
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
   },
 ): ClaimResult & { lane?: "plan" | "feedback" };
 /** How many lease-held picks one sweep steps past before giving up for the tick. */
 export const SWEEP_HELD_SKIPS: number;
+/** The pool minus every issue an open PR already names (`openPrsByIssue`'s map: issue → PR). */
+export function withoutOpenPr<T extends { number?: number }>(
+  pool?: T[],
+  named?: Map<number, number>,
+): T[];
 /** The sweep's dry run for the push pass: the issue `claimNext` would pick, or null. Claims nothing. */
 export function peekNext(
-  deps?: AdmissionDeps & { readReady?: () => AdmissionIssue[] },
+  deps?: AdmissionDeps & {
+    readReady?: () => AdmissionIssue[];
+    readPrIssues?: () => Map<number, number>;
+  },
 ): AdmissionIssue | null;
 /** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
 export function claimPlan(
@@ -92,3 +101,5 @@ export function claimPlan(
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
+/** The pure router: an event (and its gathered deps) in, the intents to execute out. */
+export function route(ctx: unknown, deps?: unknown): Record<string, unknown>[];

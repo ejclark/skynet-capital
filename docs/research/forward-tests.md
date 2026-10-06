@@ -43,10 +43,8 @@ date; editing a registered prediction after the fact is falsification and never 
 
 **Score by whatever date the hypothesis actually needs.** It may fall well after the parent event's
 close-out window — that is what a forward test is *for*, and a row scoring months out is honest,
-not late. Nobody used to come back for those rows: once a ledger carried `## Outcome` the scanner
-went quiet forever, so 31 of them sat `_open_` on 21 closed-out events (measured 2026-09-20), six
-already decided by the tape and unrecorded. `scripts/event-scan.mjs` now re-dispatches the event's
-own lane as **`forward-test-due`** the day an unscored row reaches its `Score by` (#2884).
+not late. `scripts/event-scan.mjs` re-dispatches the event's own lane as **`forward-test-due`** the
+day an unscored row reaches its `Score by`, so a row past the close-out is never orphaned (#2884).
 
 **The terminal-verdict rule.** A session dispatched for a due row leaves it carrying a verdict —
 `pass`, `kill`, `VOID — the reason`, or `unscoreable — where the data will be` — and **never

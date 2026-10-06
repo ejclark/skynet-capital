@@ -87,6 +87,7 @@
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:status-pill": "tsx scripts/shoot/status-pill.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
+    "shoot:debit-spread": "tsx scripts/shoot/debit-spread.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",
     "shoot:research-week": "tsx scripts/shoot/research-week.mjs",
     "shoot:research-board": "tsx scripts/shoot/research-board.mjs",
@@ -109,6 +110,7 @@
     "test:e2e:journeys": "playwright test -c playwright.journeys.config.ts",
     "test:e2e:journeys:open": "JOURNEYS_MODE=open playwright test -c playwright.journeys.config.ts",
     "crawl": "tsx scripts/crawl/run.mjs",
+    "stability:budget": "tsx scripts/stability/budget-run.mjs",
     "crawl:coverage": "node scripts/crawl/coverage.mjs",
     "phone": "tsx scripts/crawl/phone-one.mjs",
     "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
@@ -117,6 +119,7 @@
     "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots",
     "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots",
     "shoot:market-session": "tsx scripts/shoot/market-session.mjs",
+    "shoot:route-error": "tsx scripts/shoot/route-error.mjs",
     "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs"
   },
   "devDependencies": {

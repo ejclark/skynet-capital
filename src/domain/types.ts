@@ -7,6 +7,7 @@
  */
 
 export type Side = "buy" | "sell";
+export const SIDES: readonly Side[] = ["buy", "sell"];
 
 /** A point-in-time two-sided price for a symbol. */
 export interface Quote {
@@ -34,13 +35,83 @@ export interface MarketContext {
   readonly momentum?: Readonly<Record<string, number>>;
   /** News sentiment in [-1, 1]. Keyed by symbol. */
   readonly newsSentiment?: Readonly<Record<string, number>>;
+  /** In-process only: the option quotes this cycle's playbooks price from. Never written to disk or
+   *  the wire — the trader records the context it was handed, without these. */
+  readonly options?: OptionMarket;
 }
 
-/** A single holding. `quantity` may be negative for short positions. */
+/** One option contract as this process read it — in-process only, never persisted or sent. Per-share
+ *  prices; a $0.00 bid is a real quote, so an absent side is `undefined`, never 0. */
+export interface OptionContractQuote {
+  readonly occSymbol: string;
+  readonly underlying: string;
+  readonly type: "call" | "put";
+  readonly strike: number;
+  /** `YYYY-MM-DD`. */
+  readonly expiration: string;
+  readonly bid?: number;
+  readonly ask?: number;
+  /** The feed's own greek, signed (puts negative). */
+  readonly delta?: number;
+  readonly openInterest?: number;
+  /** The feed's quote stamp (`latestQuote.t`), ISO. */
+  readonly quotedAt?: string;
+  /** When this process read it, ISO. */
+  readonly fetchedAt: string;
+}
+
+/** Underlying → its listed expirations, sorted ascending. */
+export type ListedExpirations = Readonly<Record<string, readonly string[]>>;
+
+/** What one cycle knows about the option market: the listed expirations and the quotes it read. */
+export interface OptionMarket {
+  readonly listed: ListedExpirations;
+  /** Keyed by OCC symbol. */
+  readonly contracts: Readonly<Record<string, OptionContractQuote>>;
+}
+
+/** One chain a cycle asks to read: every strike of one type at one expiry. */
+export interface OptionChainRequest {
+  readonly underlying: string;
+  readonly expiration: string;
+  readonly type: "call" | "put";
+}
+
+/** The quotes a cycle needs — chains to scan, and named contracts (held, or about to be closed). */
+export interface OptionDemand {
+  readonly chains: readonly OptionChainRequest[];
+  readonly contracts: readonly string[];
+}
+
+/** Needs nothing — the answer that costs no network at all. */
+export const NO_OPTION_DEMAND: OptionDemand = { chains: [], contracts: [] };
+
+/** What the trader asks the option market for, once per cycle. */
+export interface OptionMarketRequest {
+  readonly asOf: string;
+  readonly underlyings: readonly string[];
+  /** Underlyings cooling down or with a working order — nothing is read for them. */
+  readonly skip: ReadonlySet<string>;
+  /** PURE: called by the port once `listed` is known, so demand can depend on what is listed. */
+  demand(listed: ListedExpirations): OptionDemand;
+}
+
+/**
+ * A single holding. `quantity` may be negative for short positions. For an option contract (an
+ * OCC `symbol`) `quantity` is CONTRACTS and `avgPrice` is the broker's PER-SHARE premium — value
+ * it through `contractMultiplier` (`trading/option-symbols.ts`), never as `quantity × avgPrice`.
+ */
 export interface Position {
   readonly symbol: string;
   readonly quantity: number;
   readonly avgPrice: number;
+  /**
+   * The broker's own total-dollar mark for the holding, when the source has one (Alpaca's
+   * `market_value`). The best mark for anything the live price stream does not quote — an option
+   * contract above all — because it is already in dollars and already contract-scaled. Optional:
+   * in-memory and replayed books have none, and fall back to cost.
+   */
+  readonly marketValue?: number;
 }
 
 /** A persona's full account state at the start of a cycle. */
@@ -73,17 +144,84 @@ export interface PlaybookVerdict {
   readonly state: PlaybookVerdictState;
 }
 
+export type OrderType = "market" | "limit";
+export const ORDER_TYPES: readonly OrderType[] = ["market", "limit"];
+
+/** Whether an option order adds risk (`open`) or takes it off (`close`). An option's risk direction is
+ *  this, never `side` — a sold put is a `sell` that OPENS risk. */
+export type OptionEffect = "open" | "close";
+export const OPTION_EFFECTS: readonly OptionEffect[] = ["open", "close"];
+
+/** The structures a bot may send — a closed set the wire validates and the dashboard words. */
+export type OptionStructure = "cash-secured-put" | "covered-call" | "call-debit-spread" | "close";
+export const OPTION_STRUCTURES: readonly OptionStructure[] = [
+  "cash-secured-put",
+  "covered-call",
+  "call-debit-spread",
+  "close",
+];
+
+export interface OptionLegIntent {
+  /** OCC symbol; its root MUST equal the owning OrderIntent's `symbol` (the underlying). */
+  readonly occSymbol: string;
+  readonly side: Side;
+  /** Alpaca mleg `ratio_qty`; 1 in every structure a bot may send today. */
+  readonly ratio: number;
+}
+
+/** The bid/ask the limit was priced inside — per share, in `limitPrice`'s own sign convention. */
+export interface OptionQuoteBand {
+  readonly low: number;
+  readonly high: number;
+  /** The OLDEST feed stamp among the legs (`latestQuote.t`), ISO. */
+  readonly at: string;
+}
+
+/** Why this contract — the audit trail for "why that strike" without storing the chain. */
+export interface OptionSelection {
+  readonly rule: string;
+  readonly phase?: string;
+  readonly spot?: number;
+  readonly dte?: number;
+  readonly targetDelta?: number;
+  readonly pickedDelta?: number;
+  readonly deltaSource?: "feed" | "model";
+  readonly expiryBefore?: string;
+  readonly candidates?: number;
+  readonly towardNatural?: number;
+}
+
+export interface OptionOrderIntent {
+  readonly effect: OptionEffect;
+  readonly structure: OptionStructure;
+  /** One leg, or a same-expiry 1:1 vertical (legs[0] = the long/closing-long leg for a debit
+   *  spread open). */
+  readonly legs: readonly OptionLegIntent[];
+  /** Per share, per unit. One leg: the premium, > 0. Two legs: Alpaca's signed net — + debit paid,
+   *  − credit received (`PlaceMultiLegOrderParams.netLimitPrice`). */
+  readonly limitPrice: number;
+  /** Absent only on a close priced without a live quote, which the guards refuse ("no-quote"). */
+  readonly band?: OptionQuoteBand;
+  /** Set only by a play that means to be assigned on this short (the CRWV wheel). */
+  readonly assignment?: "intended";
+  readonly selection?: OptionSelection;
+}
+
 /**
  * A persona's proposed trade. Personas express *direction and conviction*; the engine
  * owns *risk and sizing*. `reason` is required — it feeds the touch-point recaps and
  * the future learning loop, and it makes the DX legible when replaying a session.
  */
 export interface OrderIntent {
+  /** The ticker. For an option order: the UNDERLYING — cooldown, S2/E1, the subscription filter,
+   *  basket budget and managed-symbol suppression all key on it. The contracts live in `option.legs`. */
   readonly symbol: string;
+  /** One leg: that leg's side. Two legs: "buy" when limitPrice > 0 (net debit), else "sell". */
   readonly side: Side;
+  /** Shares; contracts (one leg); or whole structures (two legs). */
   readonly quantity: number;
-  /** Slice 1 supports market orders only; the field exists so adapters can widen later. */
-  readonly type: "market";
+  /** Shares stay "market"; an option order is always "limit", and only option orders are. */
+  readonly type: OrderType;
   readonly reason: string;
   /**
    * Structured attribution: which named playbook produced this intent (e.g. "S1-NVDA",
@@ -129,6 +267,10 @@ export interface OrderIntent {
    * carry only `expectation` prose.
    */
   readonly forecast?: OrderForecast;
+  readonly option?: OptionOrderIntent;
+  /** Alpaca `client_order_id`, stamped by the trader immediately before submit — never by a
+   *  playbook. */
+  readonly clientOrderId?: string;
 }
 
 /**
@@ -198,13 +340,26 @@ export interface PlaybookSubscription {
   readonly compoundAllocation?: boolean;
 }
 
-type OrderStatus = "filled" | "rejected";
+/** `unfilled`: was live, ended with nothing filled. `working`: still live at the broker, so it may
+ *  still fill — a limit whose cancel was not confirmed, or a share order no fill was seen for yet
+ *  (queued after hours, or slower than the poll, #4655). A result is `filled` only on a
+ *  broker-confirmed filled quantity > 0. */
+export type OrderStatus = "filled" | "rejected" | "unfilled" | "working";
+export const ORDER_STATUSES: readonly OrderStatus[] = ["filled", "rejected", "unfilled", "working"];
+
+export interface OptionLegFill {
+  readonly occSymbol: string;
+  readonly filledQuantity: number;
+  /** Per share, as the broker reported the leg. */
+  readonly filledPrice?: number;
+}
 
 /** The outcome of submitting a single order to a broker. */
 export interface OrderResult {
   readonly intent: OrderIntent;
   readonly status: OrderStatus;
   readonly filledQuantity?: number;
+  /** Per share. Two legs: the broker's signed net. */
   readonly filledPrice?: number;
   readonly reason?: string;
   /**
@@ -216,4 +371,5 @@ export interface OrderResult {
    * attribution gap named in #885.
    */
   readonly orderId?: string;
+  readonly legFills?: readonly OptionLegFill[];
 }

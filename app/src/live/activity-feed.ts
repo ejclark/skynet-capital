@@ -1,4 +1,4 @@
-import type { WireDevelopmentItem, WireFeedbackItem, WireTrade } from "./wire";
+import type { WireDevelopmentItem, WireFeedbackItem, WireMilestoneItem, WireTrade } from "./wire";
 
 /**
  * ONE FEED, SEVERAL KINDS (#784 slice 3) — the Activity page's own model, and the reason the page
@@ -18,10 +18,13 @@ import type { WireDevelopmentItem, WireFeedbackItem, WireTrade } from "./wire";
  * shape did not move. That is the test slices 1–3 were built to pass: the next kind is a filter, never a
  * widget.
  *
+ * AND THE FOURTH (#784 slice 5): a member's earned milestone, `is:milestone`, the same four edits. Its
+ * rows name a person, as a trade row does, so a bare search term matches the member's name too.
+ *
  * THE GRAMMAR IS ONE MODEL (the Issues-list template, unchanged since #738): every control on the
  * page writes a token into the same query string the filter box accepts as text. Three groups, and
  * one include-flag:
- *   - `is:trade` · `is:feedback` · `is:development` — the kind facets.
+ *   - `is:trade` · `is:feedback` · `is:development` · `is:milestone` — the kind facets.
  *   - `is:buy`/`is:sell` and `is:bot`/`is:human` — facets only a TRADE can satisfy, so either one
  *     narrows the feed to trades. A filing has no side and no desk; leaving filings in the list
  *     while "Buys" is pressed would be noise, not honesty, and the kind chip would then disagree
@@ -61,6 +64,12 @@ export type ActivityFeedItem =
       readonly at: string;
       readonly kind: "development";
       readonly merge: WireDevelopmentItem;
+    }
+  | {
+      readonly key: string;
+      readonly at: string;
+      readonly kind: "milestone";
+      readonly earn: WireMilestoneItem;
     };
 
 /** The kinds one list can hold. Named so the qualifier table and the scope checks below can't drift
@@ -68,7 +77,7 @@ export type ActivityFeedItem =
 export type ActivityKind = ActivityFeedItem["kind"];
 
 /**
- * Both kinds into one list, newest first. The tie-break on `key` is not decoration: two fills can
+ * Every kind into one list, newest first. The tie-break on `key` is not decoration: two fills can
  * share a millisecond, and a list whose order flips between renders makes a member re-read it.
  *
  * `instant()` is a deploy guard, not paranoia: `at` is a field `/api/wire` GAINED in this slice, so
@@ -82,6 +91,7 @@ export function buildActivityFeed(
   trades: readonly WireTrade[],
   filings: readonly WireFeedbackItem[],
   merges: readonly WireDevelopmentItem[] = [],
+  earns: readonly WireMilestoneItem[] = [],
 ): ActivityFeedItem[] {
   const items: ActivityFeedItem[] = [
     ...trades.map(
@@ -111,6 +121,14 @@ export function buildActivityFeed(
         merge,
       }),
     ),
+    ...earns.map(
+      (earn): ActivityFeedItem => ({
+        key: `earn:${earn.key}`,
+        at: instant(earn.at),
+        kind: "milestone",
+        earn,
+      }),
+    ),
   ];
   return items.sort((a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key));
 }
@@ -118,7 +136,7 @@ export function buildActivityFeed(
 /** Facets only a trade row can satisfy — see the header for why each one narrows the feed to
  *  trades rather than letting filings ride along beside them. */
 const TRADE_ONLY_QUALIFIERS = ["is:buy", "is:sell", "is:bot", "is:human"] as const;
-const KIND_QUALIFIERS = ["is:trade", "is:feedback", "is:development"] as const;
+const KIND_QUALIFIERS = ["is:trade", "is:feedback", "is:development", "is:milestone"] as const;
 
 export const ACTIVITY_QUALIFIERS = [
   ...KIND_QUALIFIERS,
@@ -152,6 +170,9 @@ const QUALIFIER_KIND: Record<ActivityQualifier, ActivityKind> = {
   // settled rule for slice 4 holds for whatever one is added next: anything only a merge can satisfy
   // belongs in this table, so turning a chip on can never strand it in the query with no chip to clear it.
   "is:development": "development",
+  // No facets of its own either. A member's earn is NOT narrowed by `is:human`, which is a trade
+  // facet (a desk filter); every milestone row is already a member's (`toMemberMilestones`).
+  "is:milestone": "milestone",
 };
 
 export interface ActivityFilter {
@@ -206,12 +227,13 @@ function matchesTradeFacets(trade: WireTrade, qualifiers: readonly ActivityQuali
 
 /** What a bare search term matches, per kind: a trade by its symbol or its trader, a filing by its
  *  title or its issue number (so pasting "#4271" finds the row the way pasting "NVDA" does), a merge
- *  by its title, its PR number or the author GitHub named. */
+ *  by its title, its PR number or the author GitHub named, an earn by the milestone or the member. */
 function haystack(item: ActivityFeedItem): string {
   if (item.kind === "trade") return `${item.trade.symbol} ${item.trade.who}`.toLowerCase();
   if (item.kind === "feedback") {
     return `${item.filing.title} #${item.filing.issueNumber}`.toLowerCase();
   }
+  if (item.kind === "milestone") return `${item.earn.title} ${item.earn.who}`.toLowerCase();
   return `${item.merge.title} #${item.merge.pullRequest} ${item.merge.author ?? ""}`.toLowerCase();
 }
 

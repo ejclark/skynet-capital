@@ -4,8 +4,10 @@ import {
   DELEGATION_RUNG_NAME,
   delegationGateView,
   delegationLocked,
+  raisesDelegation,
 } from "../../src/domain/playbook-delegation.js";
 import { TRADE_TYPES, type TradeTypeCode } from "../../src/domain/trade-types.js";
+import type { PlaybookSubscription } from "../../src/domain/types.js";
 
 const progression = (wheels: boolean, earned: readonly TradeTypeCode[]) => ({
   wheels,
@@ -57,5 +59,43 @@ describe("the playbook delegation fog (#1707)", () => {
     expect(DELEGATION_LOCKED_NOTE).toContain(DELEGATION_RUNG_NAME);
     expect(DELEGATION_LOCKED_NOTE.toLowerCase()).not.toContain("danger");
     expect(DELEGATION_LOCKED_NOTE.toLowerCase()).not.toContain("warning");
+  });
+});
+
+describe("raisesDelegation (#4649) — only an edit that hands the bot MORE is behind the fog", () => {
+  const prior: PlaybookSubscription = {
+    accountId: "sauron",
+    playbookId: "HC-SAURON",
+    mode: "standard",
+    capitalAllocated: 5_000,
+    enabled: true,
+    createdAt: "t",
+    updatedAt: "t",
+    symbols: ["NVDA", "CRWV"],
+  };
+  const same = { mode: prior.mode, capitalAllocated: 5_000, symbols: ["NVDA", "CRWV"] } as const;
+
+  it("an unchanged or strictly lower edit delegates nothing more", () => {
+    expect(raisesDelegation(prior, same)).toBe(false);
+    expect(
+      raisesDelegation(prior, { ...same, mode: "conservative", capitalAllocated: 1_000 }),
+    ).toBe(false);
+    expect(raisesDelegation(prior, { ...same, symbols: ["NVDA"] })).toBe(false);
+  });
+
+  it.each([
+    ["a bigger mode", { ...same, mode: "aggressive" as const }],
+    ["more capital", { ...same, capitalAllocated: 6_000 }],
+    ["uncapped", { mode: same.mode, symbols: same.symbols }],
+    ["a symbol added", { ...same, symbols: ["NVDA", "CRWV", "AMD"] }],
+    ["the filter cleared to the whole basket", { ...same, symbols: [] }],
+    ["compounding switched on", { ...same, compoundAllocation: true }],
+  ])("%s delegates more", (_label, next) => {
+    expect(raisesDelegation(prior, next)).toBe(true);
+  });
+
+  it("capping an uncapped subscription is a reduction, at any figure", () => {
+    const { capitalAllocated: _cap, ...uncapped } = prior;
+    expect(raisesDelegation(uncapped, { ...same, capitalAllocated: 50_000 })).toBe(false);
   });
 });

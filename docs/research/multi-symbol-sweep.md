@@ -71,6 +71,24 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **Services wage stickiness at t+1 as a ≥-series-average test, registered High on a 95% base rate
+  (FT-dallas-fed-tssos-2026-09-29-1)** — added 2026-10-06 from the
+  [dallas-fed-tssos-2026-09-29 forward-test scoring](events/dallas-fed-tssos-2026-09-29.md). The
+  September 2026 TSSOS wages & benefits index printed **15.1** against the 15.4 line (Aug 18.8), a
+  0.3-point miss on a 3.7-point drop. Do not re-register a High-confidence test whose threshold is
+  the series average itself: the margin is smaller than one month's σ, so a 95% historical rate
+  carries no cushion. A threshold needs a stated margin below the mean.
+
+- **ISM Services Employment sub-50 as a survey-internal reading that persists against positive
+  payrolls (FT-ism-services-2026-10-05-1)** — added 2026-10-06 from the
+  [ism-services-2026-10-05 close-out](events/ism-services-2026-10-05.md). Registered as a joint
+  prediction (positive September payrolls **and** Employment < 50, base rate ≈52%). Payrolls held
+  (+29k) but Employment printed **50.1**, so the registered "Employment ≥ 50" kill clause fired. A
+  0.1pt crossing on the cycle's largest payroll miss: the disagreement streak (13 of 18 months) ended,
+  but this does not show the sub-index re-coupled to labor. Do not re-propose the joint test without a
+  stated margin around 50 — a threshold that a one-tenth rounding step flips is not a test of the
+  relationship.
+
 - **The disappearing index effect, tested at a single-name threshold set before the additions were
   known (FT-sp-rebalance-proforma-2026-09-04-1)** — added 2026-09-22 from the
   [sp-rebalance-proforma-2026-09-04 close-out](events/sp-rebalance-proforma-2026-09-04.md). All
@@ -755,6 +773,38 @@ robust, alpha fragile — is the finding.
   against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
   the gap it was meant to close was exactly as large as that undersell implies.
 
+- **A fixed-band spread kill switch, tested against the series it was written for
+  (FT-pmms-2026-10-01-1)** — added 2026-10-02 from the
+  [pmms-2026-10-01 close-out](events/pmms-2026-10-01.md). Registered 2026-09-16: the PMMS 30-year
+  average modelled as the window-average CMT 10Y plus a trailing spread (36 paired 2026 weeks, mean
+  1.967pp, last-13-week mean 1.987pp, sd 0.019), with the kill switch naming a trailing-13-week
+  spread outside **1.94–2.04pp** as a regime break distinct from a point-error miss. The 2026-10-01
+  print landed at 7.28% against a 7.215% projection ((09-24…09-30 average 10Y 5.228%) + 1.987pp) —
+  a 6.5bp miss, inside the point forecast's own ±10bp tolerance. But the realized spread, 2.052pp,
+  printed outside the registered band for the first time in the sample, after two prior
+  post-registration prints (09-17: 1.972pp; 09-24: 2.034pp) that both stayed inside it — three
+  straight readings drifting 1.972 → 2.034 → 2.052pp. **What this does and does not refute:** the
+  transmission mechanism — PMMS lags the 10Y plus a roughly stable spread — is not refuted; the
+  point forecast it produces is still accurate to 6.5bp. What's refuted is the band's stationarity
+  assumption at the precision it was fixed to: the spread is drifting wider as the level rises, not
+  holding flat. Do not re-propose a fixed-width spread-band kill switch for this series without
+  first widening it to the trend's own drift rate, or re-deriving it from a shorter trailing window
+  that can track a live widening regime.
+
+- **The East-West pipeline read as still impaired on the day of a quota meeting, three weeks after a
+  5-6 week repair estimate (FT-opec-plus-meeting-2026-10-04-3)** — added 2026-10-06 from the
+  [opec-plus-meeting-2026-10-04 close-out](events/opec-plus-meeting-2026-10-04.md). Registered
+  2026-09-15 on a Middle East Eye repair estimate of 5-6 weeks (restoration 10-15 to 10-22) after
+  drones from Iraq hit the line on 09-10, with the counter-case (an April 2026 hit restored in three
+  days) named and under-weighted. Aramco restarted the line **09-22** and Bloomberg (2026-10-02)
+  reported ~**6 mb/d** pumped through the 7 mb/d conduit, above 80% of capacity, ~4.5 mb/d exportable
+  - above both the 4-5 mb/d pre-attack flow and the ~4 mb/d target quoted on 09-22. **What must
+  travel with the kill:** a single-sourced Bloomberg read (unnamed person; no Aramco/SPA primary
+  reachable), and the parent stand-aside never depended on it. What breaks is the reflex of dating a
+  Gulf repair off a first estimate: the next ledger carrying a press repair window should register
+  the fast-restart branch as the base case until the line's own history (restored in three days in
+  April, in about twelve here) says otherwise.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
@@ -776,7 +826,11 @@ robust, alpha fragile — is the finding.
    newest print on five of eight tickers — blinding each study to its freshest out-of-sample
    point. The red teams caught all three; the instrument did not.
 
-## Time-sensitive (as of 2026-08-12)
+## Time-sensitive (as of 2026-08-12 — expired)
+
+Every window below closed by 2026-09-10; this section is the record of what the sweep advised that
+day, not current guidance. The MRVL, AVGO, CRWV and META follow-ups are registered as FT-1 … FT-4 in
+[`forward-tests/legacy.md`](forward-tests/legacy.md), where they are scored.
 
 - **CRWV printed yesterday** (8-K filed midday 2026-08-11 — not in the study's n=4). Today is the
   D+1 window where all four *prior* prints were ugly — but the first post-print hours ran green

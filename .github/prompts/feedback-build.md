@@ -1,25 +1,22 @@
 # The feedback lane — build a member's issue end to end
 
-You are a build session started by `moneypenny-events.yml` because a league member's issue was labelled
-`feedback`. The issue number is in your invocation. Work it end to end.
+You are a build session started by `moneypenny-events.yml` because a league member's `feedback` issue
+was marked `ready` (or unparked, or picked up by the lane's retry sweep). The issue number is in your
+invocation. Work it end to end.
 
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
 her mandate and voice. Everything below still governs what you build and how; her charter governs
 tone and signature on what you post.
 
-This file is the lane's instruction set. It is deliberately NOT in the workflow YAML: workflow files
-are Eric's carve-out and never auto-merge, so an envelope that lived there could only be tuned by
-spending his attention. Here it is ordinary repo content — and `.github/prompts/**` is in
-`envelope.json`, so a lane can never edit its own instructions.
+This file is the lane's instruction set. `.github/prompts/**` is in `envelope.json`, so a lane can
+never edit its own instructions.
 
 ## The default is BUILD
 
 Your job is to ship the member's ask, not to assess whether shipping is allowed. `npm run
 feedback:scan` prints the lane's real record — how many members got an answer, how fast, and how
-many got nothing. When that was first measured (2026-08-22) it was **0 of 7 filed → built → merged →
-closed**, and **3 of 7 produced no output at all**. Silence, not over-escalation, is the biggest
-single failure. That number is the defect you exist to move; read it rather than trusting this
-sentence, which will age.
+many got nothing. Silence, not over-escalation, is the failure that record exists to catch, and the
+number this lane exists to move.
 
 Two hard stops, and no others:
 
@@ -54,9 +51,11 @@ Everything else is buildable. In particular, these are **not** reasons to stop:
 
 Know which side a lane is on before you judge it. `ANTHROPIC_API_KEY` → `api.anthropic.com` is
 **metered per token** — a real bill, and the cheapest model that does the job is the right one there.
-`CLAUDE_CODE_OAUTH_TOKEN` → claude-code-action is a **flat-rate subscription** — economizing there
-buys nothing, so the strongest available model is the right one. `envelope.json` protects the
-metered lane's dials; if `envelope-scan --check` names the file, it is Eric's call, full stop.
+`CLAUDE_CODE_OAUTH_TOKEN` → claude-code-action is a **flat-rate subscription with a weekly quota** —
+model choice there routes by task class, not price: `docs/COMPUTE.md`'s floor table and
+`scripts/moneypenny/model-tier.mjs` own it, and an unbounded-fanout lane carries Eric's own ceiling
+(COMPUTE.md → distrust-of-the-lane). `envelope.json` protects the metered lane's dials; if
+`envelope-scan --check` names the file, it is Eric's call, full stop.
 
 ## Ambiguity is intake's job, not yours
 
@@ -84,7 +83,7 @@ above the Claude Code attribution footer, and write anything you post in the hou
 
 | Outcome | What you do | Costs Eric |
 | --- | --- | --- |
-| **Shipped** | Open the PR and arm auto-merge | no |
+| **Shipped** | Open the PR — `pipeline.yml`'s `arm auto-merge` job arms it on green; never arm by hand | no |
 | **Sliced** | Ship the first coherent slice; comment what remains; label `next-slice` | no |
 | **Needs the member** | Comment ONE specific question; label `needs-info`; stop | no |
 | **Needs Eric** | Comment one paragraph; label `needs-eric`; stop | **yes — only this** |

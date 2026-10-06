@@ -239,10 +239,24 @@ keep the two scales apart in writing — rename back if that reads worse out lou
   - **AI position/opportunity guidance toward maximizing profit**, and **hypothetical-scenario
     guidance** ("what if I did X"). Both new — nearest existing thread is CLAUDE.md's "position
     guidance" / the trade form's Guidance tab, which today is UI copy, not an advisory system.
+  - **Only bot accounts subscribe to playbooks — decided** (Eric, 2026-10-04, #4610): *"For
+    season 1, I'm only allowing bots to subscribe to playbooks. In season 2, playbook
+    subscriptions will be enabled for all accounts. The intent is to have season one be 'bots vs
+    humans' and season 2 enables users to adopt autonomous trading strategies. This approach buys
+    us time to refine the autonomous trading process in season 1 in preparation for season 2."*
+    Built 2026-10-05 (#4649): the Store refuses a human account's subscribe and edit with one
+    sentence (`src/domain/playbook-bots-only.ts`), and leaving stays open on every account
+    (unsubscribe, pause, resume). Member copy says "a later season", never "Season 2", which a
+    member would read as `THE-GAME.md`'s next quarter. Not a fog: nothing earnable opens it
+    (`docs/FOG-OF-WAR.md` audit).
 - **Era 2 — bots vs. bots; members create and configure their own bots' strategies.** This is
   phase 4 of the roadmap above (**contributable personas**) under a sharper frame: *promoting
   Sauron's own capabilities to other users*, not just accepting outside contributions. Same
   mechanism (plugin architecture, tier-gated trading authority via the contribution ladder below).
+  - **Playbook subscriptions open to every account** (the same 2026-10-04 decision): members
+    adopt autonomous strategies on their own accounts. A subscription the owner made counts as
+    the owner triggering the trade, and the rung-102 delegation fog (#1707) is the gate that
+    carries over unchanged.
 - **Era 3 — TBD.** Named open, not decided: real-money account integration for autonomous trading.
   This is where goals 1 and 4 above converge, and where `## Boundaries & consent` below's
   real-cash-standard practice is the thing being tested for real.

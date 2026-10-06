@@ -1,6 +1,6 @@
 import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
 import { applyGuards, applyGuardsWithVerdicts } from "../../src/engine/guards.js";
-import { aContext, aPortfolio, aPosition } from "../support/builders.js";
+import { aContext, anOptionIntent, aPortfolio, aPosition } from "../support/builders.js";
 
 const buy = (symbol: string, quantity: number): OrderIntent => ({
   symbol,
@@ -35,6 +35,68 @@ describe("applyGuards", () => {
       // Position value must not exceed the 20% cap.
       const eemAsk = context.quotes.EEM?.ask ?? 0;
       expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(200_000);
+    });
+  });
+
+  describe("an option contract", () => {
+    const call = "NVDA261113C00240000";
+
+    it("refuses a share-shaped buy naming a quoted, affordable contract before anything sizes it", () => {
+      const context = aContext({ [call]: { last: 5 } }); // ~$505 per contract
+      const portfolio = aPortfolio({ cash: 2_000 });
+
+      const result = applyGuardsWithVerdicts([buy(call, 1)], portfolio, context, {
+        maxPositionPct: 1,
+      });
+
+      expect(result.approved).toEqual([]);
+      expect(result.refused).toEqual([{ intent: buy(call, 1), reason: "option-shape" }]);
+    });
+
+    it("counts two held contracts at 100 shares each in the equity that caps a share buy", () => {
+      const context = aContext({ NVDA: { last: 100 }, [call]: { last: 5 } });
+      const portfolio = aPortfolio({
+        cash: 10_000,
+        positions: [aPosition({ symbol: call, quantity: 2, avgPrice: 5 })],
+      });
+
+      // Equity $11,000 (the pair is $1,000, not $10); half of it buys 54 NVDA at ~$100.05.
+      // Unscaled, equity read $10,010 and the cap left room for 50.
+      const [approved] = applyGuards([buy("NVDA", 1_000)], portfolio, context, {
+        maxPositionPct: 0.5,
+      });
+
+      expect(approved?.quantity).toBe(54);
+    });
+
+    it("gates an option order by its effect, not its side: the ladder refuses a sold put, never a close", () => {
+      const sold = anOptionIntent(); // a SELL that opens risk
+      const bought = anOptionIntent({
+        side: "buy",
+        option: {
+          effect: "close",
+          structure: "close",
+          legs: [{ occSymbol: "CRWV261106P00085000", side: "buy", ratio: 1 }],
+          limitPrice: 0.4,
+        },
+      });
+      const malformed = { ...anOptionIntent(), type: "market" as const };
+
+      const result = applyGuardsWithVerdicts(
+        [sold, bought, malformed],
+        aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 100 })] }),
+        aContext({ CRWV: { last: 90 } }),
+        { maxPositionPct: 1, accountTier: "restricted" },
+      );
+
+      expect(result.approved).toEqual([]);
+      expect(result.refused).toEqual([
+        { intent: sold, reason: "ladder-block" },
+        // The close passes the ladder and reaches the option clamp, which has no quote to price it.
+        { intent: bought, reason: "no-quote" },
+        // A malformed option order is refused before any other rule sees it.
+        { intent: malformed, reason: "option-shape" },
+      ]);
     });
   });
 

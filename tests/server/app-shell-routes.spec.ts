@@ -67,6 +67,37 @@ describe("app shell static route", () => {
     }
   });
 
+  // #4614 (slice 2 of #4612): a tab built before a deploy asks for a hashed chunk the new build no
+  // longer has. Answering that with index.html made the browser run HTML as a script and blanked
+  // the whole app; a missing asset now fails as what it is, so the shell can recover.
+  it("answers a missing file under /app/static with 404 plain text, uncached, never index.html", () => {
+    for (const path of [
+      "/app/static/js/async/775.0ldha5h000.js",
+      "/app/static/css/async/12.deadbeef.css",
+      "/app/static/js/index.abc123.js.map",
+      "/app/static/image/gone.png",
+      "/app/static/",
+      "/app/static",
+    ]) {
+      const { res, out } = fakeRes();
+      serveAppShell(res, path, { distDir: dist });
+      expect({ path, status: out.status }).toEqual({ path, status: 404 });
+      expect(out.headers?.["content-type"]).toContain("text/plain");
+      expect(out.headers?.["cache-control"]).toBe("no-store");
+      expect(out.headers?.["x-content-type-options"]).toBe("nosniff");
+      expect(out.body).not.toContain("shell");
+    }
+  });
+
+  it("keeps the index.html fallback for route paths that merely look like the asset folder", () => {
+    for (const path of ["/app/statics", "/app/u/static", "/app/research/static/thing"]) {
+      const { res, out } = fakeRes();
+      serveAppShell(res, path, { distDir: dist });
+      expect(out.status).toBe(200);
+      expect(out.headers?.["content-type"]).toContain("text/html");
+    }
+  });
+
   it("refuses traversal structurally — an escape resolves to the fallback, never a file outside", () => {
     writeFileSync(join(dist, "..", "secret.json"), "{}");
     for (const path of [

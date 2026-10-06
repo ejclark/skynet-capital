@@ -1,5 +1,6 @@
 import type { AlpacaPosition } from "../../src/alpaca/alpaca-trading-client.js";
-import { OPTION_MULTIPLIER, positionsFrom } from "../../src/observatory/broker-positions.js";
+import { positionsFrom } from "../../src/observatory/broker-positions.js";
+import { OPTION_MULTIPLIER } from "../../src/trading/option-symbols.js";
 
 /**
  * The one conversion from Alpaca's stringly-typed position payload into real arithmetic — an

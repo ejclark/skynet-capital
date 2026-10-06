@@ -1,11 +1,12 @@
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { DecisionRecord, IntentOutcome } from "../autonomous/decision-record.js";
-import type { OrderForecast, PlaybookMode } from "../domain/types.js";
+import type { OrderForecast, OrderStatus, PlaybookMode } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
 import { formatPrice } from "./desk-data.js";
 import { guardDeltaFor } from "./guard-delta.js";
+import { optionContractLine } from "./option-contract-line.js";
 
 /**
  * THE BOT'S MIND AS DATA — `/api/desk/:id/decisions`, the JSON view behind the
@@ -33,6 +34,10 @@ interface CycleOutcomeView {
   readonly forecast?: OrderForecast;
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
+  /** The result in words when its status alone would mislead — a limit that never filled. */
+  readonly resultLabel?: string;
+  /** An option order's contracts and limit, in one line (`optionContractLine`); absent for shares. */
+  readonly contract?: string;
   readonly fill?: string;
   /** The cycle's market context at this symbol, when captured — absent for a cycle recorded
    *  before context capture existed, never fabricated. */
@@ -60,7 +65,34 @@ export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "position-cap": "the per-position cap left no room",
   "subscription-budget": "the subscription's own budget was exhausted",
   "nothing-held": "nothing held to sell",
+  "option-shape": "not a well-formed option order — never sent",
+  "options-level": "the account's options approval is too low, or could not be read",
+  "option-unallocated": "an option play needs a capital allocation set in the Store",
+  "option-print-unknown": "no earnings date on file, so the expiry can't be shown to clear it",
+  "option-spans-print": "the contract would still be open across earnings",
+  "option-quote-stale": "the option quote was too old to price against",
+  "option-limit-outside-quote": "the limit price sat outside the quoted bid/ask",
+  "put-not-secured": "not enough free cash to secure the sold put",
+  "call-not-covered": "not enough free shares to cover the sold call",
+  "uncovers-short-call": "selling these shares would leave a sold call uncovered",
+  "collateral-reserved": "that cash is set aside to secure a sold put",
 };
+
+/** A result that is neither a fill nor a rejection, in words — a limit order's two other endings. */
+const ORDER_RESULT_LABEL: Partial<Record<OrderStatus, string>> = {
+  unfilled: "limit not reached — canceled",
+  working: "may still fill — cancel not confirmed",
+};
+
+/** A share order is never canceled by the bot, so its `working` means something else: the broker
+ *  took it but no fill was seen yet — queued for the open, or slower than the poll (#4655). */
+const SHARE_WORKING_LABEL = "queued at the broker — no fill confirmed yet";
+
+function resultLabelFor(outcome: IntentOutcome): string | undefined {
+  if (!outcome.result) return undefined;
+  if (outcome.result.status === "working" && !outcome.intent.option) return SHARE_WORKING_LABEL;
+  return ORDER_RESULT_LABEL[outcome.result.status];
+}
 
 /** A raw intent the risk guards refused outright — nothing survived to become an `IntentOutcome`,
  *  so this is the persona's own ask, unfiltered. `guardReason` is present whenever
@@ -75,6 +107,8 @@ interface RefusedIntentView {
   readonly reason: string;
   readonly expectation?: string;
   readonly guardReason?: string;
+  /** An option order's contracts and limit, in one line; absent for shares. */
+  readonly contract?: string;
 }
 
 export interface DecisionCycleView {
@@ -142,6 +176,8 @@ function cycleHeadline(record: DecisionRecord, status: CycleStatus): string {
  *  check, not branching logic). */
 function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutcomeView {
   const guardDelta = guardDeltaFor(record, outcome.intent);
+  const contract = optionContractLine(outcome.intent);
+  const resultLabel = resultLabelFor(outcome);
   return {
     symbol: outcome.intent.symbol,
     side: outcome.intent.side,
@@ -156,6 +192,8 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
     ...(outcome.intent.forecast ? { forecast: outcome.intent.forecast } : {}),
     action: outcome.action,
     ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
+    ...(resultLabel ? { resultLabel } : {}),
+    ...(contract ? { contract } : {}),
     ...(outcome.result?.filledPrice !== undefined
       ? {
           fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
@@ -191,15 +229,19 @@ function refusedIntentsFor(
     record.refusals ??
     (status === "refused" ? record.rawIntents.map((intent) => ({ intent })) : undefined);
   if (!refusals || refusals.length === 0) return undefined;
-  return refusals.map((r) => ({
-    symbol: r.intent.symbol,
-    side: r.intent.side,
-    quantity: r.intent.quantity,
-    ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
-    reason: r.intent.reason,
-    ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
-    ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
-  }));
+  return refusals.map((r) => {
+    const contract = optionContractLine(r.intent);
+    return {
+      symbol: r.intent.symbol,
+      side: r.intent.side,
+      quantity: r.intent.quantity,
+      ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+      reason: r.intent.reason,
+      ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
+      ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
+      ...(contract ? { contract } : {}),
+    };
+  });
 }
 
 /** Runs `decisionCyclesView`'s per-record shaping — split out so a collapsed quiet run

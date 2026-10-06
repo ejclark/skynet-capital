@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `release · deploy` red on main: drop local claim lease tags around semantic-release's tag fetch and push
+- **SHA:** 394888f   **DATE:** 2026-10-06   **STATUS:** closed
+- **COVERS:** 77a5842
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `release · deploy` on `main`, the first [37397356694](https://github.com/ejclark/skynet-capital/actions/runs/37397356694) at 2026-10-06T01:05:09Z. Repair capsule #4715 filed 2026-10-06T01:08:15Z, closed 14m later by #4720.
+- **ROOT CAUSE:** Claim leases live at `refs/tags/claim/<slug>`, and semantic-release moves every tag. A lease re-taken while the job installed made `git fetch --tags` refuse to clobber the runner's stale copy, failing the release and leaving `main` merged-but-undeployed. The release runner never needs a local lease.
+- **PREVENTION:** spec — `tests/scripts/release-lease-tags.spec.ts` (#4720).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### A smoke test of a new claim path took a real lease and labelled a real issue
 - **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed
 - **SIGNAL:** immediate, and only because the run's own `::notice::` said "resuming feedback #4299 … building in this run" — a line that can only print if the lease was actually taken. Checked within a minute: `refs/tags/claim/feedback-4299` existed on the repo and #4299 (a `plan` sub-issue, whose number the new fixture had borrowed) carried `in-progress`. Both reverted with `--release feedback-4299`; nothing else had read either.
@@ -2681,7 +2691,8 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 
 ### Three PRs merged mid-integration-tests — `/ship` told every session to arm auto-merge the moment a PR opened
 
-- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** partly closed — the required check is Eric's
+- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** closed — `integration tests` is a required
+  check on `main` (`isRequired: true` on #4663's head, read 2026-10-05, #4211)
 - **SIGNAL:** Eric, looking at #4158's pipeline mid-run: "I take it integration tests don't really
   matter?" — then: "If a quality gate matters, you'd enforce it." #4151, #4155 and #4158 had each
   merged ~2–3 minutes after opening, on `verify` alone, while `integration tests` was still running.

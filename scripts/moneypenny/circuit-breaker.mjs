@@ -148,12 +148,7 @@ export function recentResearchSpend({ windowHours, exec = defaultExec }) {
     try {
       log = exec("gh", ["run", "view", String(run.databaseId), "--log"]);
     } catch (err) {
-      // A single unreadable run log is a real failure of the same class as the others — this
-      // check exists to prevent a runaway, so an undercounted total is worse than a loud refusal.
-      throw new Error(
-        `moneypenny: could not read run ${run.databaseId}'s log (${err.message}) — refusing to ` +
-          "dispatch with an incomplete spend total.",
-      );
+      log = costLegLogs(run.databaseId, err, exec);
     }
     for (const m of log.matchAll(COST_LINE)) {
       const usd = Number(m[1]);
@@ -161,6 +156,46 @@ export function recentResearchSpend({ windowHours, exec = defaultExec }) {
     }
   }
   return totalUsd;
+}
+
+/** Matrix legs of the `build-events` job — the only job that writes a cost line. GitHub names
+ *  each leg "<job name> (<matrix value>)", and an unexpanded skipped matrix keeps the bare name. */
+const COST_JOB_PREFIX = "research due events";
+
+/** The fallback when a run's combined log can't be read. `gh run view --log` fails for the WHOLE
+ *  run when any one job has no log — a cancelled job does not (#4658, 2026-10-05: run
+ *  37373634443's `route` was cancelled and every other job skipped, so `gh` answered
+ *  `log not found: <route's job id>` and the breaker refused every tick for the next 4 hours).
+ *  So read only the jobs that can carry a cost line, one at a time. A run whose research legs
+ *  were all skipped never launched a session and adds $0 — that is a known zero, not a guess.
+ *  Anything else stays fail-closed: a research leg that ran but whose log can't be read, or a
+ *  job list that can't be read, still refuses, because an undercounted total is worse than a
+ *  loud refusal (this check exists to stop a runaway). */
+function costLegLogs(runId, cause, exec) {
+  const refuse = (detail) =>
+    new Error(
+      `moneypenny: could not read run ${runId}'s log (${detail}) — refusing to ` +
+        "dispatch with an incomplete spend total.",
+    );
+  let jobs;
+  try {
+    jobs = JSON.parse(exec("gh", ["run", "view", String(runId), "--json", "jobs"])).jobs;
+  } catch {
+    throw refuse(cause.message);
+  }
+  if (!Array.isArray(jobs)) throw refuse(cause.message);
+  const legs = jobs.filter(
+    (j) => String(j.name ?? "").startsWith(COST_JOB_PREFIX) && j.conclusion !== "skipped",
+  );
+  return legs
+    .map((leg) => {
+      try {
+        return exec("gh", ["run", "view", String(runId), "--log", "--job", String(leg.databaseId)]);
+      } catch (err) {
+        throw refuse(`${cause.message}; job ${leg.databaseId}: ${err.message}`);
+      }
+    })
+    .join("\n");
 }
 
 /** Trips the breaker: applies the label (creating it first if the repo doesn't have it yet — a

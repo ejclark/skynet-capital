@@ -32,22 +32,20 @@ is a second visit. They never read a tooltip because they cannot.
 
 ## 5. What frustrates them
 
-- **8** — every disabled control whose reason lives only in `title`: Thesis Subscribe
-  (`app/src/shell/thesis-drawer.tsx:81`), Arm · soon (`app/src/routes/playbooks.tsx:42`), Roll
-  (`app/src/shell/blotter-row.tsx:297`).
-- **3** — the folded Trade panes that point at "the Ticket" for the symbol they lack
-  (`app/src/shell/chain-section.tsx:125`).
-- The rail as a chip strip: reachable, but the calendar's fog notice must be readable without
-  hover (`app/src/shell/board-section.tsx:318`).
+- **8 (fixed, #3807 slice 2e)** — disabled controls whose reason lived only in `title` (Thesis
+  Subscribe, Arm · soon, Roll) now carry it as a visible line under them.
+- **3 (fixed, #3807 slice 2e)** — the folded Trade panes that pointed at "the Ticket" for the
+  symbol they lack now carry the symbol input.
+- **The calendar folded into one chip on R&D (fixed)** — the day lens's fog reason is a visible
+  line beside the lens pill, in the same box (`app/src/shell/calendar-head.tsx`), never a hover.
 
 ## 6. Journeys
 
 ### j1 — the whole app, one thumb
 
-1. `/app/accounts` — the cockpit at 390: the account switcher, the section switch as a row (the
-   net-worth card and the blotter are missing offline — crawl finding 9, README). **WHEN the
-   cockpit renders at 390px, the app shall keep every section reachable without horizontal page
-   scroll.** Judge: can this reader tell what to do next in ten seconds?
+1. `/app/accounts` — the cockpit at 390: the account switcher, the section switch as a row.
+   **WHEN the cockpit renders at 390px, the app shall keep every section reachable without
+   horizontal page scroll.** Judge: can this reader tell what to do next in ten seconds?
 2. `/app/u/human-eric` — the desk's positions as cards; EEM one tap from Trade. **WHEN positions
    render at 390px, the app shall show each position as one tappable card into Trade.** Judge:
    can this reader tell which position to act on?
@@ -62,9 +60,9 @@ is a second visit. They never read a tooltip because they cannot.
    a phone, the app shall show its reason without hover.** _Fixed — #3807 slice 2e in code; slice
    3b-4 gave the frozen fixture a closed XLF round trip (rung 102), so the first playbook is earned
    and the step sees Arm and its reason._ Judge: does this reader know why Arm is off?
-6. `/app/research` — R&D with the calendar in the phone strip, the day lens fogged. **WHEN R&D
-   renders at 390px, the app shall keep the calendar's range control reachable and its fog notice
-   readable.** Judge: can this reader change the week from here?
+6. `/app/research` — R&D with the calendar folded into one chip that names the range and opens it
+   in a sheet, the day lens fogged inside. **WHEN R&D renders at 390px, the app shall keep the
+   calendar's range control reachable and its fog notice readable.** Judge: can this reader change the week from here?
 
 Journey map: [`maps.md`](maps.md#phone-only). Findings: [`friction-ledger.md`](friction-ledger.md).
 

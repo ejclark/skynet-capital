@@ -16,3 +16,11 @@ export function derivePrIssues(pr?: {
   headRef?: string | null;
   repo?: string;
 }): number[];
+
+/** True when a PR names no issue and is not a machine lane's — invisible to the board. */
+export function namesNoIssue(pr?: {
+  title?: string | null;
+  body?: string | null;
+  headRef?: string | null;
+  repo?: string;
+}): boolean;
