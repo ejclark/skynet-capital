@@ -9,6 +9,11 @@ import {
   recordWireKind,
 } from "./decision-wire.js";
 import {
+  type LifecycleReports,
+  MAX_LIFECYCLE_PER_BATCH,
+  reportsByPersona,
+} from "./decision-wire-lifecycle.js";
+import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
@@ -91,6 +96,24 @@ const SETTLEMENTS_PER_POLL = 50;
  */
 const SETTLEMENT_BACKLOG_PAGE = MAX_DECISION_BATCH;
 
+/**
+ * The LIFECYCLE leg (#4650): the broker's option expiry and assignment reports, which close a
+ * contract no order ever fills. The settlement backlog's shape exactly — every report stored after
+ * a locally tracked cursor, in pages on a POST of their own (reports, no records, so a dashboard
+ * that predates the field refuses the page instead of accepting it and dropping them), the cursor
+ * moving only once the dashboard accepted the page, and starting at 0 each boot, so a restart
+ * resends every report once; receipt is idempotent by (persona, activity id). Unlike settlements
+ * there is no newest-few resend beside it: nothing else ever carries a report, and the order one
+ * arrives in changes no score (`storeDecisionBatch`), so the backlog alone delivers each one.
+ */
+const LIFECYCLE_PAGE = MAX_LIFECYCLE_PER_BATCH;
+
+/** What a backlog POST carries instead of this poll's settlement rider. */
+interface BacklogPage {
+  readonly settlements?: readonly OrderSettlement[];
+  readonly lifecycle?: readonly LifecycleReports[];
+}
+
 const NOOP_CLIENT: DecisionReplicationClient = {
   replicate: async () => {
     /* disabled — no bridge URL or no local decision store */
@@ -114,14 +137,16 @@ export function resolveDecisionReplication(
   // This poll's settlements, sent once on its first batch — whichever persona's that is.
   let unsentSettlements: readonly OrderSettlement[] = [];
 
-  /** One POST; true when the dashboard accepted it. */
+  /** One POST; true when the dashboard accepted it. A backlog page goes alone; a record batch
+   *  takes this poll's settlements, once. */
   const sendOne = async (
     personaId: string,
     kind: string,
     records: readonly DecisionRecord[],
-    backlog?: readonly OrderSettlement[],
+    backlog?: BacklogPage,
   ): Promise<boolean> => {
-    const settlements = backlog ?? unsentSettlements;
+    const riders =
+      backlog ?? (unsentSettlements.length > 0 ? { settlements: unsentSettlements } : {});
     if (!backlog) unsentSettlements = [];
     try {
       const controller = new AbortController();
@@ -131,7 +156,7 @@ export function resolveDecisionReplication(
           "POST",
           endpoint,
           { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
-          { kind, personaId, records, ...(settlements.length > 0 ? { settlements } : {}) },
+          { kind, personaId, records, ...riders },
           controller.signal,
         );
         if (response.status < 200 || response.status >= 300) {
@@ -174,6 +199,21 @@ export function resolveDecisionReplication(
   const ascendingCursor: Record<string, number> = {};
   // The settlement backlog's cursor — see `SETTLEMENT_BACKLOG_PAGE`.
   let settlementCursor = 0;
+  // The lifecycle leg's cursor, the store's own row order — see `LIFECYCLE_PAGE`.
+  let lifecycleCursor = 0;
+
+  // The lifecycle leg — see `LIFECYCLE_PAGE`. Each group names its own persona, so the envelope's
+  // is the first report's: a report can exist before its bot has decided anything.
+  const sendLifecycle = async (decisionDb: DecisionDb): Promise<void> => {
+    const reports = decisionDb.lifecycleSince(lifecycleCursor, LIFECYCLE_PAGE);
+    const [first] = reports;
+    const last = reports.at(-1);
+    if (!(first && last)) return;
+    const lifecycle = reportsByPersona(reports);
+    if (await sendOne(first.personaId, DECISION_BATCH_KIND_V2, [], { lifecycle })) {
+      lifecycleCursor = last.seq;
+    }
+  };
 
   return {
     replicate: async (_cursor) => {
@@ -201,9 +241,13 @@ export function resolveDecisionReplication(
       const backlog = decisionDb.settlementsSince(settlementCursor, SETTLEMENT_BACKLOG_PAGE);
       const last = backlog.at(-1);
       if (host && last) {
-        const page = backlog.map((s) => s.settlement);
-        if (await sendOne(host, DECISION_BATCH_KIND_V2, [], page)) settlementCursor = last.seq;
+        const settlements = backlog.map((s) => s.settlement);
+        if (await sendOne(host, DECISION_BATCH_KIND_V2, [], { settlements })) {
+          settlementCursor = last.seq;
+        }
       }
+
+      await sendLifecycle(decisionDb);
     },
   };
 }

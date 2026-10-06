@@ -22,7 +22,8 @@ import type { RetrospectiveInsert } from "./decision-retrospectives.js";
  * `option_lifecycle` is a side table, never `ALTER TABLE` (the store's house rule, see
  * `decision-db-options.ts`): one row per broker activity, keyed by the broker's own activity id, so
  * re-reading the same page of activities records nothing twice. The bots process feeds it
- * (`sweepOptionLifecycle`); every report is kept, but only an expiry or an assignment closes a
+ * (`sweepOptionLifecycle`) and sends each row on to the dashboard's copy (`since`, #4650), where
+ * the same write stores it; every report is kept, but only an expiry or an assignment closes a
  * contract here — an exercise or the share trade an assignment settles is never scored on a guess.
  */
 const OPTION_LIFECYCLE_SQL = `
@@ -48,6 +49,21 @@ export interface OptionLedger {
   /** Stores the activities not seen before and rescores each underlying they touch. Returns how
    *  many were new. */
   recordLifecycle(personaId: string, activities: readonly NormalizedLifecycleActivity[]): number;
+  /** Every report stored after `afterSeq`, in the order stored, bounded — the backlog the bots
+   *  drain to the dashboard's copy (`decision-replication-client.ts`). */
+  since(afterSeq: number, limit: number): SequencedLifecycle[];
+}
+
+/**
+ * One stored report and its place in the order the store kept them. The place is the table's
+ * implicit `rowid` — it has no sequence column, and gaining one would mean `ALTER TABLE`. Nothing
+ * ever deletes from it, so the rowids run in insertion order with no gaps a `VACUUM` could renumber.
+ * Price and side are not kept here (nothing scores them), so a report read back carries neither.
+ */
+export interface SequencedLifecycle {
+  readonly seq: number;
+  readonly personaId: string;
+  readonly activity: NormalizedLifecycleActivity;
 }
 
 interface LegRow {
@@ -134,6 +150,10 @@ export function openOptionLedger(
       (persona_id, activity_id, type, symbol, underlying, quantity, at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
+  const selectSince = db.prepare(`
+    SELECT rowid AS seq, persona_id, activity_id, type, symbol, quantity, at
+    FROM option_lifecycle WHERE rowid > ? ORDER BY rowid LIMIT ?
+  `);
 
   function rescore(personaId: string, underlying: string, rebuild = false): void {
     if (rebuild) deleteTrips.run(personaId, underlying);
@@ -181,6 +201,28 @@ export function openOptionLedger(
       }
       for (const underlying of touched) rescore(personaId, underlying);
       return added;
+    },
+    since(afterSeq, limit) {
+      const rows = selectSince.all(afterSeq, limit) as {
+        seq: number;
+        persona_id: string;
+        activity_id: string;
+        type: OptionLifecycleType;
+        symbol: string;
+        quantity: number;
+        at: number;
+      }[];
+      return rows.map((r) => ({
+        seq: r.seq,
+        personaId: r.persona_id,
+        activity: {
+          id: r.activity_id,
+          type: r.type,
+          symbol: r.symbol,
+          quantity: r.quantity,
+          at: new Date(r.at).toISOString(),
+        },
+      }));
     },
   };
 }
