@@ -2,7 +2,7 @@ import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartb
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
-import type { WireTradeReasoning } from "../observatory/wire-reasoning.js";
+import { withoutReasoningPlaybook } from "../observatory/wire-reasoning.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
@@ -13,7 +13,8 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  * table, the decision outcome chips and Activity's "Playbook" row onto any member's view of any
  * bot, so the desk JSON family strips the playbook key before it leaves the server for a session
  * that does not own the account. Verdicts, modes, reasons and fills still ride — only the name of
- * the playbook is withheld.
+ * the playbook is withheld. The league Wire (`/api/wire`) lists every account's fills with the same
+ * decisions attached, so it asks `ownsDesk` per row (`attachWireReasoning`'s `ownsAccount`).
  *
  * Ownership is the rule every other per-account gate uses (`trade-orders-routes.ts`,
  * `desk-events-route.ts`): with no OAuth configured there is no one to withhold from (the local,
@@ -66,14 +67,6 @@ export function withoutCyclePlaybooks(cycles: readonly DecisionCycleView[]): (Om
     ...cycle,
     outcomes: cycle.outcomes.map(({ playbook: _p, playbookMode: _m, ...outcome }) => outcome),
   }));
-}
-
-/** An activity row's attached decision without its `playbookId`/`playbookMode`. */
-export function withoutReasoningPlaybook(
-  reasoning: WireTradeReasoning,
-): Omit<WireTradeReasoning, "playbookId" | "playbookMode"> {
-  const { playbookId: _p, playbookMode: _m, ...rest } = reasoning;
-  return rest;
 }
 
 type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {

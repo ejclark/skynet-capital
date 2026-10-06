@@ -1,9 +1,9 @@
+import { withoutReasoningPlaybook } from "../../src/observatory/wire-reasoning.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import {
   ownsDesk,
   withoutCyclePlaybooks,
   withoutHeartbeatPlaybookIds,
-  withoutReasoningPlaybook,
 } from "../../src/server/desk-owner-gate.js";
 
 /**

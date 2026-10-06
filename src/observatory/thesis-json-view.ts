@@ -134,7 +134,19 @@ function healthFor(samples: readonly EquitySample[]): ThesisHealth {
   };
 }
 
-/** Buy → entry, sell → exit, oldest first, numbered — a 2-zone simplification of the issue's 5-zone
+/** An option order says whether it opened or closed a position — a put SOLD to open is an entry —
+ *  so its decision's own `effect` decides (#4650). Shares, and any fill whose decision is not on
+ *  hand, read buy → entry, sell → exit. */
+function markerKind(
+  event: DeskActivityEvent,
+  findByOrderId: WireReasoningDeps["findByOrderId"],
+): ThesisMarker["kind"] {
+  const effect = findByOrderId?.(event.orderId)?.intent.option?.effect;
+  if (effect) return effect === "open" ? "entry" : "exit";
+  return event.side === "sell" ? "exit" : "entry";
+}
+
+/** Entry or exit, oldest first, numbered — a 2-zone simplification of the issue's 5-zone
  *  taxonomy (entry/take-profit/hold/wait-event-dependent/avoid), which nothing in this repo
  *  classifies yet (see the plan). Only filled events carry a real marker. */
 function markersFrom(
@@ -148,7 +160,7 @@ function markersFrom(
     const reasoning = reasoningForOrder(event.orderId, { findByOrderId });
     return {
       n: index + 1,
-      kind: event.side === "sell" ? "exit" : "entry",
+      kind: markerKind(event, findByOrderId),
       at: event.at,
       label: `${event.side === "sell" ? "Sell" : "Buy"} ${event.filled} ${event.display}`,
       activityAnchor: `act-${event.orderId}`,

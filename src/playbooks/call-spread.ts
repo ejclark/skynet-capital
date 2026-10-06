@@ -104,14 +104,13 @@ export interface CallSpreadSetting {
   readonly evidence: string;
 }
 
-/** What the helpers below read: the setting, with the name and the run-up it derives from settled. */
+/** What the helpers below read: the setting, with the company's name settled. The run-up pair it
+ *  derives from is the descriptor's `derivesFrom`, never said in a member-facing sentence (#885). */
 interface Spread {
   readonly symbol: string;
   readonly company: string;
   readonly enter: number;
   readonly exit: number;
-  /** The id of the run-up pair on this ticker — the pair this spread derives its edge from. */
-  readonly runUp?: string;
 }
 
 const NUMBER_WORDS = [
@@ -320,7 +319,7 @@ function openIntent(
     strategy: `${symbol.toLowerCase()}-spread-open`,
     reason:
       `Buying one ${name} for about ${dollars(limitPrice)} a share — the options form of ` +
-      `${spread.runUp ?? symbol}'s pre-earnings run-up. The most it can lose is that $${debit} ` +
+      `the pre-earnings run-up. The most it can lose is that $${debit} ` +
       `debit. ${spread.company} confirmed its ${entry.print.date} print; the spread is sold back ` +
       `by ${entry.exitDay}, ${inWords(spread.exit)} sessions before.`,
     expectation:
@@ -443,7 +442,6 @@ export function callSpread(setting: CallSpreadSetting, lookup: typeof pairFor = 
     company: setting.company ?? companyOf(symbol),
     enter: setting.enter,
     exit: setting.exit,
-    ...(runUp ? { runUp } : {}),
   };
   return {
     id: pair.id,

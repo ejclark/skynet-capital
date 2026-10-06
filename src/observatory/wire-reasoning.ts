@@ -71,6 +71,19 @@ export interface WireReasoningDeps {
   /** One participant's equity history, keyed by participant id — supplied pre-fetched so this
    *  function stays synchronous and pure; the route layer owns the I/O. */
   readonly historyByParticipant?: ReadonlyMap<string, readonly EquitySample[]>;
+  /** Whether the viewer owns this account (`desk-owner-gate.ts`'s `ownsDesk`) — a row on any
+   *  other account loses its playbook (#885). Absent, the viewer owns none. */
+  readonly ownsAccount?: (participantId: string) => boolean;
+}
+
+/** A fill's attached decision without its `playbookId`/`playbookMode` — what a viewer who does not
+ *  own the account reads (#885: "we do not show what playbooks others are using"). The why, the
+ *  persona and the order's own words all stay. */
+export function withoutReasoningPlaybook(
+  reasoning: WireTradeReasoning,
+): Omit<WireTradeReasoning, "playbookId" | "playbookMode"> {
+  const { playbookId: _p, playbookMode: _m, ...rest } = reasoning;
+  return rest;
 }
 
 /** The exact-order-id reasoning join, standalone — shared by `attachWireReasoning` (per wire row)
@@ -112,7 +125,8 @@ export function reasoningForOrder(
 
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
- *  never a placeholder object). */
+ *  never a placeholder object). The Wire lists every account's fills, so a row's playbook rides
+ *  only to that account's owner (`ownsAccount`). */
 export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
@@ -124,7 +138,9 @@ export function attachWireReasoning(
     const samples = deps.historyByParticipant?.get(row.participantId);
     return {
       ...row,
-      reasoning,
+      reasoning: deps.ownsAccount?.(row.participantId)
+        ? reasoning
+        : withoutReasoningPlaybook(reasoning),
       ...(samples ? { vitals: wireTradeVitals(samples, row.at) } : {}),
     };
   });

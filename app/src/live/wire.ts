@@ -39,9 +39,17 @@ export interface WireTradeVitals {
 export interface WireTrade {
   readonly key: string;
   readonly side: "buy" | "sell";
+  /** The broker's own symbol — a ticker, an OCC contract, or none (`""`) for a bot's spread. */
   readonly symbol: string;
+  /** What the row names, as the account's Activity does: a ticker, a contract or a spread in words
+   *  (#4650). Absent from a server older than that, where the row falls back to `symbol`. */
+  readonly display?: string;
+  /** Whole spreads on a spread's row; shares or contracts filled on any other. */
   readonly quantity: number;
+  /** Per share — a spread's net per share. */
   readonly price: string;
+  /** A bot's spread only: its net cash, once ("$335.00 paid"). */
+  readonly net?: string;
   readonly who: string;
   readonly whoId: string;
   readonly kind: "human" | "bot";

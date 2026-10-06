@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEvent } from "../observatory/activity-event.js";
@@ -23,6 +24,7 @@ import {
   toMemberMilestones,
 } from "../observatory/milestone-event-feed.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { spreadLookup } from "../observatory/spread-activity.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
@@ -108,6 +110,12 @@ export interface WireRouteDeps {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /**
+   * A spread leg's own broker order id → the spread order it belongs to — the hop the Wire and a
+   * bot's Activity need before `findByOrderId`, because the account reports a spread's fills one
+   * per leg. Omit and a bot's spread legs render as the separate fills they always did.
+   */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** One participant's equity history — the "Loss headroom" gauge's input. Omit and every gauge
    *  renders its honest "not yet measured" state instead of guessing. */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
@@ -219,6 +227,7 @@ async function assembleMilestones(
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
+  ownsAccount: ((participantId: string) => boolean) | undefined,
   underlyingFilter?: string,
   before?: string,
 ): Promise<AssembledWire> {
@@ -244,7 +253,16 @@ async function assembleWire(
     assembleDevelopment(config, published, limit),
     assembleMilestones(config, published, records, participants, limit),
   ]);
-  const page = buildWireTradeRows(events, participants, { limit, before }, underlyingFilter);
+  // A bot's spread legs fold into the spread's row, so "the why" below joins on its order id.
+  const { findSpreadLeg, findByOrderId } = config;
+  const spreadOf =
+    findSpreadLeg && findByOrderId ? spreadLookup({ findSpreadLeg, findByOrderId }) : undefined;
+  const page = buildWireTradeRows(
+    events,
+    participants,
+    { limit, ...(before !== undefined ? { before } : {}), ...(spreadOf ? { spreadOf } : {}) },
+    underlyingFilter,
+  );
 
   // "the why" and "the vitals" (PR 6, issue #2287) — only bot rows can resolve either, and only
   // when both deps are wired; a plain deployment renders every row exactly as before this PR.
@@ -263,6 +281,7 @@ async function assembleWire(
   const rows = attachWireReasoning(page.rows, {
     ...(config.findByOrderId ? { findByOrderId: config.findByOrderId } : {}),
     ...(historyByParticipant ? { historyByParticipant } : {}),
+    ...(ownsAccount ? { ownsAccount } : {}),
   });
 
   return {
@@ -288,13 +307,16 @@ export async function serveWireJson(
   url: string,
   config: WireRouteDeps,
   feedbackEnabled: boolean,
+  /** Whether the viewer owns an account — its rows keep their playbook (#885). Omitted, the viewer
+   *  owns none and every row's playbook is withheld. */
+  ownsAccount?: (participantId: string) => boolean,
 ): Promise<void> {
   const params = new URL(url, "http://localhost").searchParams;
   const requested = (params.get("symbol") ?? "").trim().toUpperCase();
   const underlyingFilter = UNDERLYING_PATTERN.test(requested) ? requested : undefined;
   const limit = resolvePageSize(params.get("per_page"));
   const before = params.get("before") ?? undefined;
-  const assembled = await assembleWire(config, limit, underlyingFilter, before);
+  const assembled = await assembleWire(config, limit, ownsAccount, underlyingFilter, before);
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "cache-control": "no-store",

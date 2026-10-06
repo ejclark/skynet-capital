@@ -10,7 +10,7 @@ import {
   type Position,
 } from "../../src/domain/types.js";
 import { SPREAD_SHORT_DELTA, spreadShape } from "../../src/playbooks/call-spread.js";
-import { NVDA_CALL_SPREAD, S1_NVDA } from "../../src/playbooks/registry.js";
+import { NVDA_CALL_SPREAD, registeredPlaybooks, S1_NVDA } from "../../src/playbooks/registry.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
@@ -225,11 +225,20 @@ describe("NVDA-CALL-SPREAD — opening the spread", () => {
 
   it("says what it can lose, when it leaves, and where a one-sigma rise reaches", () => {
     const [open] = decide(market());
-    expect(open?.reason).toContain("the options form of S1-NVDA's pre-earnings run-up");
+    expect(open?.reason).toContain("the options form of the pre-earnings run-up");
     expect(open?.reason).toContain("The most it can lose is that $530 debit");
     expect(open?.reason).toContain("sold back by 2026-11-11");
     expect(open?.expectation).toContain("above $255 at expiry the spread is worth $1,500");
     expect(open?.expectation).toMatch(/one-standard-deviation rise .* reaches about \$26\d\.\d\d/);
+  });
+
+  // #885: which playbooks a bot runs is its owner's to see. Its sentences ride every fill to any
+  // member (the league Wire), so they say what the play does and never name a playbook.
+  it("names no playbook in anything it tells a member", () => {
+    const [open] = decide(market());
+    const said = [open?.reason, open?.expectation, open?.forecast?.invalidator].join(" ");
+    expect(said.length).toBeGreaterThan(0);
+    for (const { id } of registeredPlaybooks()) expect(said).not.toContain(id);
   });
 
   it("moves the short strike and the price with the mode", () => {

@@ -20,13 +20,20 @@
 // read every payload back through the real store, which is where a settlement is read in place of
 // the `working` result. Frames are named `working-*` / `late-*`.
 //
+// THE WIRE AND THE THESIS (#4650): `--wire` serves the same fills through the REAL `/api/wire` and
+// `/api/desk/:id/thesis` routes over the same store — the league feed's spread row and the Thesis
+// drawer's spread marker, each folded from the two leg lines and carrying the spread's why. Frames
+// are named `wire-*` / `thesis-*`.
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
-//   [--working | --late]
+//   [--working | --late | --wire]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts";
 import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
 import { spreadLookup } from "../../src/observatory/spread-activity.ts";
 import { reasoningForOrder } from "../../src/observatory/wire-reasoning.ts";
+import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
+import { serveWireJson } from "../../src/server/wire-routes.ts";
 import { humanizeOptionSymbol } from "../../src/trading/option-symbols.ts";
 import { openShell } from "./shell.mjs";
 
@@ -71,7 +78,7 @@ const spread = {
   clientOrderId: "sk1-sauron-NVDA-mgf2a-1",
   strategy: "nvda-spread-open",
   reason:
-    "Buying one NVDA $185/$200 CALL SPREAD · 13 NOV 26 for about $3.40 a share — the options form of S1-NVDA's pre-earnings run-up. The most it can lose is that $340 debit.",
+    "Buying one NVDA $185/$200 CALL SPREAD · 13 NOV 26 for about $3.40 a share — the options form of the pre-earnings run-up. The most it can lose is that $340 debit.",
   expectation:
     "NVDA keeps rising into the print: above $200 at expiry the spread is worth $1,500. It is sold back five sessions before the print whatever it is worth then.",
   forecast: {
@@ -95,7 +102,9 @@ const SCENARIO = process.argv.includes("--late")
   ? "late"
   : process.argv.includes("--working")
     ? "working"
-    : "filled";
+    : process.argv.includes("--wire")
+      ? "wire"
+      : "filled";
 
 const AT = Date.parse("2026-10-07T14:30:00Z");
 const filledRecord = {
@@ -175,11 +184,11 @@ const settlements = [
 ];
 
 const store = openDecisionDb(":memory:");
-store.record(SCENARIO === "filled" ? filledRecord : workingRecord);
+const AS_WRITTEN = SCENARIO === "filled" || SCENARIO === "wire";
+store.record(AS_WRITTEN ? filledRecord : workingRecord);
 if (SCENARIO === "late") store.recordSettlements(settlements);
 // The default frames read the fixture as written; the late-fill ones read it back through the store.
-const record =
-  SCENARIO === "filled" ? filledRecord : store.listByPersona("bot-sauron", { limit: 1 })[0];
+const record = AS_WRITTEN ? filledRecord : store.listByPersona("bot-sauron", { limit: 1 })[0];
 
 // The sold put's Activity row, with the decision the real join attaches to it.
 const findByOrderId = (orderId) => {
@@ -229,6 +238,7 @@ const spreadRows = deskActivityView(
   ...row,
   reasoning: reasoningForOrder(row.orderId, { findByOrderId: (id) => store.findByOrderId(id) }),
 }));
+const routePayloads = SCENARIO === "wire" ? await wireAndThesis() : {};
 store.close();
 const folded = spreadRows.length === 1 && spreadRows[0].legs?.length === 2;
 // Recorded `working` with no legs listed, the two fills join nothing until the settlement lands.
@@ -277,6 +287,81 @@ const heartbeat = {
   },
 };
 
+/** `/api/wire` and `/api/desk/bot-sauron/thesis`, answered by the real routes over the store — the
+ *  ledger is the account's own lines: the spread's two legs, the sold put, a share buy, and a member's
+ *  trade beside them on the league feed. */
+async function wireAndThesis() {
+  const ledgerLine = (orderId, participantId, symbol, side, quantity, price, at) => ({
+    orderId,
+    participantId,
+    symbol,
+    side,
+    quantity,
+    filledQuantity: quantity,
+    price,
+    status: "filled",
+    at,
+    source: "stream",
+  });
+  const sauronLedger = [
+    ledgerLine("opt-spread-leg-185", "bot-sauron", LOW, "buy", 1, 5.1, "2026-10-07T14:30:15Z"),
+    ledgerLine("opt-spread-leg-200", "bot-sauron", HIGH, "sell", 1, 1.75, "2026-10-07T14:30:15Z"),
+    ledgerLine("opt-put-1", "bot-sauron", PUT, "sell", 1, 2.12, "2026-10-07T14:30:12Z"),
+    ledgerLine("shr-1", "bot-sauron", "NVDA", "buy", 4, 181.4, "2026-10-06T15:02:00Z"),
+  ];
+  const ledger = [
+    ledgerLine("eric-1", "human-eric", "AAPL", "buy", 10, 227.35, "2026-10-07T14:41:00Z"),
+    ...sauronLedger,
+  ];
+  // Six weeks of equity, deterministic, so the drawer's chart (and with it the markers) renders.
+  const history = Array.from({ length: 30 }, (_, i) => ({
+    at: new Date(Date.parse("2026-09-08T20:00:00Z") + i * 86_400_000).toISOString(),
+    participantId: "bot-sauron",
+    equity: 100_000 * (1 + 0.0009 * i + Math.sin(i / 2) * 0.003),
+    cash: 60_000,
+    realizedPl: 0,
+  }));
+  const participants = [
+    {
+      id: "bot-sauron",
+      displayName: "Sauron",
+      kind: "bot",
+      personaId: "sauron",
+      cash: 0,
+      equity: 0,
+      positions: [],
+    },
+    { id: "human-eric", displayName: "Eric", kind: "human", cash: 0, equity: 0, positions: [] },
+  ];
+  const config = {
+    hub: {
+      getState: () => ({ generatedAt: "2026-10-07T15:00:00Z", participants, collisions: [] }),
+    },
+    readAllTradeActivity: async () => ledger,
+    readTradeActivity: async (id) => ledger.filter((line) => line.participantId === id),
+    readDecisions: async () => [record],
+    readHistory: async (id) => (id === "bot-sauron" ? history : []),
+    findByOrderId: (id) => store.findByOrderId(id),
+    findSpreadLeg: (id) => store.findSpreadLeg(id),
+  };
+  const answer = async (serve) => {
+    let body = "";
+    const res = { writeHead: () => res, end: (text) => (body = text ?? "") };
+    await serve(res);
+    return JSON.parse(body);
+  };
+  const wire = await answer((res) => serveWireJson(res, "/api/wire", config, true, () => true));
+  const thesisPath = "/api/desk/bot-sauron/thesis";
+  const thesis = await answer((res) => serveDeskJson(res, thesisPath, thesisPath, config));
+  // The frames prove the fold: one spread row on the feed, one spread marker in the drawer.
+  const spreadTrades = wire.wire.trades.filter((t) => t.net);
+  const spreadMarkers = thesis.thesis.markers.filter((m) => m.label.includes("SPREAD"));
+  if (spreadTrades.length !== 1 || !spreadTrades[0].reasoning || spreadMarkers.length !== 1) {
+    throw new Error("the spread did not fold into one Wire row and one Thesis marker with its why");
+  }
+  return { "/api/wire": wire, [thesisPath]: thesis };
+}
+
 const { page, origin, shoot, close } = await openShell({
   name: "option-fill",
   stubs: {
@@ -293,8 +378,43 @@ const { page, origin, shoot, close } = await openShell({
       kind: "bot",
       ...decisionCyclesView([record], { homePersonaId: "bot-sauron" }),
     },
+    ...routePayloads,
   },
 });
+
+// The league feed's spread row, opened to its why; then the Thesis drawer's spread marker.
+if (SCENARIO === "wire") {
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 844 }],
+    ["desktop", { width: 1280, height: 900 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/activity`);
+    const row = page.locator(".wire-trade", { hasText: "CALL SPREAD" });
+    await row.waitFor();
+    await row.locator(".wire-trade-row").click();
+    await page.waitForTimeout(400);
+    await row.evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -150); // clear the sticky header and the session bar
+    });
+    await shoot(`wire-spread-${tag}`);
+
+    await page.goto(`${origin}/app/u/bot-sauron/thesis`);
+    const marker = page.locator(".thesis-marker", { hasText: "CALL SPREAD" });
+    await marker.waitFor();
+    await marker.getByRole("button", { name: "Why?" }).click();
+    await page.waitForTimeout(400);
+    // The opened marker's why at the frame's foot, the chart its numbers sit on above it.
+    await marker.evaluate((el) => {
+      el.scrollIntoView({ block: "end" });
+      window.scrollBy(0, 24);
+    });
+    await shoot(`thesis-spread-marker-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
 
 // Before the settle loop: the pass still says the orders may fill, the legs are loose fills.
 if (SCENARIO === "working") {

@@ -118,6 +118,27 @@ describe("TradeRow", () => {
     expect(bars[1]).not.toHaveAttribute("aria-valuenow");
   });
 
+  // #4650 — an option reads as the account's Activity reads it: the contract in words, never the
+  // broker's OCC string; a bot's spread is one row, its per-share net beside its cash once.
+  it("names a contract in words rather than its broker symbol", () => {
+    renderRow({ symbol: "CRWV261106P00085000", display: "CRWV $85 PUT · 6 NOV 26" });
+    expect(screen.getByText("CRWV $85 PUT · 6 NOV 26")).toBeInTheDocument();
+    expect(screen.queryByText("CRWV261106P00085000")).not.toBeInTheDocument();
+  });
+
+  it("shows a spread once, in words, with its net cash beside its per-share price", () => {
+    renderRow({
+      symbol: "",
+      display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
+      quantity: 1,
+      price: "$3.35",
+      net: "$335.00 paid",
+    });
+    expect(screen.getByText("NVDA $185/$200 CALL SPREAD · 13 NOV 26")).toBeInTheDocument();
+    expect(screen.getByText("$3.35")).toBeInTheDocument();
+    expect(screen.getByText("net $335.00 paid")).toBeInTheDocument();
+  });
+
   it("never lets a human trade's row claim reasoning that isn't there", () => {
     renderRow({ kind: "human", who: "Eric", whoId: "eric" });
     expect(screen.getByRole("button")).toBeDisabled();
