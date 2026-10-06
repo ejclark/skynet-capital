@@ -9,7 +9,7 @@ import {
 import { controlsPollRosterHeaders } from "../../src/autonomous/house-roster-wire.js";
 import type { Bot } from "../../src/bots/bot.js";
 import type { OrderIntent, PlaybookSubscription } from "../../src/domain/types.js";
-import { DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
+import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { createDefaultPersonas } from "../../src/personas/registry.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { enabledPlaybooks, registeredPlaybooks } from "../../src/playbooks/registry.js";
@@ -408,6 +408,25 @@ describe("seeding Sauron's own rules as his subscription", () => {
         before.map((i) => ({ ...i, playbookId: "SAURON", playbookMode: "standard" })),
       );
       expect(after.filter((i) => i.playbookId === undefined)).toEqual([]);
+    });
+
+    it("the guards size his labelled buys exactly as they sized them unlabelled — uncapped means no new limit", () => {
+      const sized = (subs: readonly PlaybookSubscription[]) => {
+        const { persona, risk } = tradingRoster(resolveBotRoster(bot, [], subs), {
+          ...DEFAULT_RISK_CONFIG,
+          maxPositionPct: 1,
+        });
+        const portfolio = aPortfolio({ cash: 1_000_000 });
+        return applyGuardsWithVerdicts(persona.decide(panic, portfolio), portfolio, panic, risk)
+          .approved;
+      };
+      const before = sized(ERICS_LIVE).filter((i) => i.playbookId === undefined);
+      const after = sized(seededSubs).filter((i) => i.playbookId === "SAURON");
+
+      expect(before.map((i) => `${i.side} ${i.symbol}`).sort()).toEqual(["buy AAPL", "buy GLD"]);
+      expect(after).toEqual(
+        before.map((i) => ({ ...i, playbookId: "SAURON", playbookMode: "standard" })),
+      );
     });
   });
 });
