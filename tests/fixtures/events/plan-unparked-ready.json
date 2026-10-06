@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "action": "unlabeled",
+    "label": { "name": "needs-eric" },
+    "issue": {
+      "number": 3194,
+      "state": "open",
+      "labels": [{ "name": "plan" }, { "name": "ready" }],
+      "body": "a ready plan whose needs-eric was just cleared"
+    }
+  }
+}

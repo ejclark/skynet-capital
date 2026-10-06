@@ -10,6 +10,8 @@ export interface TradeUpdateMessage {
   readonly stream?: string;
   readonly data?: {
     readonly event?: string;
+    /** On `authorization` frames only: `authorized` or `unauthorized`. */
+    readonly status?: string;
     readonly price?: string | number;
     readonly qty?: string | number;
     readonly timestamp?: string;

@@ -7,15 +7,16 @@
 (3) ELK in v11 had to be enabled by the host.
 (4) v12 changes the default layout, look and theme, so the same source can render differently.
 
-GitHub's deployed Mermaid version is unknown. The validator here runs v11.13.0, so a green validation is only a proxy for GitHub. To pin GitHub's actual version, preview a ```mermaid block containing only `info` in an issue or PR on github.com; it renders the version string.
+GitHub renders 11.17.2 (the pin in scripts/mermaid-lint.mjs; config-on-github.md). The validator here runs v11.13.0, so a green validation is only a proxy; `npm run mermaid:lint` parses with GitHub's version and is the oracle. To re-check the pin, preview a ```mermaid block containing only `info` on github.com.
 
-Until that is known, keep repo diagrams to features that parse on v11.13:
+Everything through 11.17 is available on GitHub, including:
 - classic bracket shapes
-- @{ shape } restricted to the v11.13 list (so no person, folder, bucket, console, browser or datastore)
+- the full @{ shape } list on 11.17.2 (person, folder, bucket, console, browser and datastore included)
 - markdown strings
-- edge IDs
+- edge IDs, and edge animation (`e1@{ animate: true }`)
+- collapsible subgraphs (`one@{ view: collapsed }`, v11.17.0; parses under the lint, probed 2026-10-03)
 
-Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: verify on github.com.
+Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validator (11.13) draws collapsed subgraphs expanded and rejects the newer shapes, so a red there on these is a false red.
 
 ## When to reach for it
 - PR-body opening picture (the fridge rule) for any dataflow, pipeline or CI change: ship.sh open → auto-merge → deploy, pipeline.yml's verify-vs-deploy split, and the docs-only fast path. docs/PICTURES.md already prescribes `flowchart LR` for 'Dataflow / pipeline'.
@@ -26,7 +27,7 @@ Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: v
 - Platter PRs: items (@{shape: docs}) → one commit per item → one held PR → Eric merge ([stadium] human hand-off), with carve-outs on a normal edge and the auto-land path thick.
 - Governor / coach dispatch cycle: WIP check → gate target → collision check → dispatch athlete in a worktree → PR with auto-merge.
 - Research-doc structure arguments (constraint chains, reaction functions), as PICTURES.md already notes; see ai-hardware-constraints-aug-2026.md.
-- Stable-type fallback for architecture maps: subgraphs as system or container boundaries, [(cyl)] for stores, [[subroutine]] for services. Use it wherever C4 or architecture-beta cannot be trusted to render on GitHub's unknown version.
+- Stable-type fallback for architecture maps: subgraphs as system or container boundaries, [(cyl)] for stores, [[subroutine]] for services. Use it wherever C4 or architecture-beta would draw badly on a phone, or the reader needs the stable classic look.
 
 **Not for:**
 - Lifecycles with guarded transitions (issue proposed → ready → executing → done; SIM/LIVE mode; order states): stateDiagram-v2 says it more honestly, and a flowchart hides which states are resting states.
@@ -35,9 +36,9 @@ Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: v
 - Research call sheets (call · confidence · why · falsifier): the five-column table is already the picture. Wrapping it in nodes adds nothing and costs width.
 - Schemas or data models: erDiagram or classDiagram.
 - UI changes: before/after screenshots. A box diagram of a screen is misleading.
-- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or use collapsed subgraphs once the renderer is at v11.17 or later.
+- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
 - Any diagram where colour (classDef fill) is the only carrier of pass/fail or risk. It violates the colourblind rule, and PICTURES.md bans improvised styling.
-- Interactive affordances (click, tooltips, animated edges as the only signal): GitHub renders statically and strict. Links and callbacks will not work there, and motion alone must not carry meaning.
+- Interactive affordances (click, tooltips): GitHub renders in strict mode, so links and callbacks will not work there. Edge animation does move on github.com (see Emphasis below).
 
 ## Header forms
 - flowchart LR   (direction one of TB | TD | BT | RL | LR; TD = TB)
@@ -182,6 +183,7 @@ Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: v
 - Subgraph titles as named boundaries or swimlanes (Session / GitHub / Deploy job). Collapsed subgraphs (v11.17+) hide detail but degrade to expanded on older renderers.
 - Numbered step labels ("1. verify", "2. open") stand in for the missing autonumber.
 - Rank distance: extra dashes (---->) push an outcome visibly further away, e.g. a rare exit.
+- Edge animation: `A e1@==> B` then `e1@{ animate: true }` (or `animation: fast|slow`) marches dashes along an edge in its direction of travel. Moves on github.com: an issue preview on 2026-10-03 rendered `info` as v11.17.2 and the dashes shifted between captures a second apart. **Animate the flow the picture is about, all of it** (Eric, 2026-10-04: "only showing one animated line/edge/arrow when there are multiple arrows creates more questions about what you are trying to communicate than answers... showing all arrows being animated seems infinitely better to understand the system as a whole"). A flow or pipeline picture animates every edge of that flow. A delta picture animates the live paths and leaves the removed (dotted) ones still, so motion says "this runs" and stillness says "this is gone". Known costs, stated so a picture can weigh them, not as a cap: (1) the animated stroke is a 9-5 dash, so a still capture (a screenshot, an email notification) shows those edges dashed; caption a still frame of an animated picture, and do not rely on solid-vs-dotted to separate an animated edge from a removed one. (2) Mermaid 11.17.2 ships no prefers-reduced-motion rule and GitHub adds none. Labels and edge weight still carry the meaning, so a reader who never sees motion loses nothing.
 - Hue-free classDef/style keys: stroke-width:4px and stroke-dasharray: 5 5 (escape commas as \, inside classDef), font-size. Repo rule (docs/PICTURES.md): no style/classDef/init by default, so GitHub can auto-theme light and dark. Use these only from a checked-in, contrast-verified snippet.
 - linkStyle N stroke-width:4px (or stroke-dasharray) re-weights one edge without colour. It is fragile: the index is definition order.
 
@@ -314,5 +316,5 @@ flowchart TD
 - https://raw.githubusercontent.com/mermaid-js/mermaid/mermaid%4011.13.0/packages/mermaid/src/schemas/config.schema.yaml (v11.13 flowchart, layout, elk, look, htmlLabels, maxTextSize, maxEdges)
 - https://raw.githubusercontent.com/mermaid-js/mermaid/mermaid%4011.13.0/packages/mermaid/src/docs/config/layouts.md
 - https://registry.npmjs.org/mermaid (latest 12.0.0, 2026-09-10; 11.x release dates)
-- /home/user/skynet-capital/docs/PICTURES.md (house rules: stable types only, no init/classDef by default)
+- /home/user/skynet-capital/docs/PICTURES.md (house rules: the parse gate, not a type list; no theme or %%{init}%%, colour only from the sanctioned snippet)
 - /home/user/skynet-capital/scripts/ship.sh and /home/user/skynet-capital/.github/workflows/pipeline.yml (grounding for the rich example)

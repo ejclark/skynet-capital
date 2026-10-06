@@ -86,6 +86,12 @@
   font-size: 12px;
 }
 
+.pb-card-subscribers {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .pb-card-modes {
   font-size: 10px;
   color: var(--muted);
@@ -128,7 +134,6 @@
 }
 
 .pb-subscribe-form,
-.pb-subscription,
 .pb-locked {
   display: flex;
   flex-direction: column;
@@ -137,20 +142,131 @@
   border-top: 1px dashed var(--border);
 }
 
-.pb-subscription-line,
+/* A subscribed card's state leads it, straight under the header (#4649). It is set off by a
+   solid rule and a bold state word, so it never reads as part of the rules below it. */
+.pb-subscription {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The edit form opens inside the status block, which already has a rule under it. */
+.pb-subscription .pb-subscribe-form {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.pb-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ● On · ○ Paused · ◌ Saved, never trades — the glyph and the word carry the state; the weight
+   sets it apart from the facts after it. No hue means anything here. */
+.pb-status-state {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pb-subscription[data-state="paused"] .pb-status,
+.pb-subscription[data-state="idle"] .pb-status {
+  color: var(--muted);
+}
+
 .pb-locked-note {
+  margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
 }
 
-/* The delegation fog's door (#1707) — drawn, named, and dimmed, never removed. */
+/* A door (the delegation fog, #1707; bots only, #4610) — drawn, named, and dimmed, never removed. */
 .pb-locked-note {
+  color: var(--muted);
+}
+
+.pb-form-note {
+  margin: 0;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .pb-subscription-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+/* `.btn` is `width: 100%` (gate.css) and `.mc-btn` is `width: auto` (admin.css) at equal
+   specificity; this beats both by specificity, not source order (the `.lot-actions` lesson). */
+.pb-subscription-actions .btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+/* The form's primary action still fills the row, as it did when it stood alone. */
+.pb-subscribe-form .pb-subscription-actions .btn-primary,
+.pb-locked .pb-subscription-actions .btn-primary {
+  flex: 1;
+}
+
+/* The symbols filter (#4649): chips from the card's own basket, many on at once. Pressed carries a
+   ✓ in a fixed slot as well as the accent border, so the state is never hue alone (the chart
+   studies' idiom, chart-section.css). */
+.pb-symbols {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pb-symbols legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pb-symbols-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pb-symbols .railctl {
+  width: auto;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.pb-symbols .railctl::before {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+}
+
+.pb-symbols .railctl[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+.pb-symbols .railctl[aria-pressed="true"]::before {
+  content: "✓";
+}
+
+.pb-symbols-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 /* Overrides `.field input`'s `width: 100%` (gate.css) — a checkbox stays its own size, inline
@@ -192,4 +308,65 @@
 .pb-subscribe .railctl {
   width: auto;
   white-space: nowrap;
+}
+
+/* The selected account's own numbers on this playbook (#3665 slice 3). Its own bordered block, so
+   the house-wide block slice 4 adds beside it can never read as the same figure. Two fixed columns
+   at every width, the facts grid's comparison rule. */
+.pb-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* The house-wide block (#3665 slice 4): dashed, so "every account" differs from "this account" by
+   shape and by its heading's words — never by hue alone (a standing reader is red/green colorblind). */
+.pb-metrics-house {
+  border-style: dashed;
+}
+
+.pb-metrics-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pb-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.pb-metrics-grid dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.pb-metrics-grid dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.pb-metrics-grid .pb-metrics-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.pb-metrics-wide {
+  grid-column: 1 / -1;
+}
+
+.pb-metrics-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
 }

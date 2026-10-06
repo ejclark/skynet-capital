@@ -1,5 +1,6 @@
 import {
   type CouncilDeps,
+  retractThesis as retractFn,
   submitThesis as submitFn,
   councilWeekView as viewFn,
 } from "../../src/server/council-form.js";
@@ -22,6 +23,10 @@ function deps(overrides: Partial<CouncilDeps> = {}): CouncilDeps {
         [memberId]: { text, at: at.toISOString(), ...(playbookId ? { playbookId } : {}) },
       };
     },
+    retract: (week, memberId) => {
+      const { [memberId]: _gone, ...rest } = weeks[week] ?? {};
+      weeks[week] = rest;
+    },
     now: () => new Date("2026-09-07T12:00:00.000Z"),
     ...overrides,
   };
@@ -34,6 +39,18 @@ describe("submitThesis", () => {
     expect(result).toEqual({ ok: true });
     const view = viewFn(d, "abc123");
     expect(view.mine?.text).toBe("NVDA runs, because volume confirms it.");
+  });
+
+  it("strips bidi overrides and flattens control characters to one line (#2224 shape 3, H2)", () => {
+    const d = deps();
+    expect(submitFn("long \u202Eevil\u202C\nNVDA\tinto print", "member-1", d)).toEqual({
+      ok: true,
+    });
+    expect(viewFn(d, "member-1").mine?.text).toBe("long evil NVDA into print");
+  });
+
+  it("refuses a line that is only control characters", () => {
+    expect(submitFn("\u202E\n\u2066", "member-1", deps())).toMatchObject({ ok: false });
   });
 
   it("refuses an empty line without touching the store", () => {
@@ -98,5 +115,23 @@ describe("councilWeekView", () => {
     expect(viewFn(d, undefined).plays).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "S1-NVDA", symbol: "NVDA" })]),
     );
+  });
+});
+
+describe("retractThesis", () => {
+  it("removes only the caller's own line for this week", () => {
+    const d = deps();
+    submitFn("mine", "member-1", d);
+    submitFn("theirs", "member-2", d);
+    expect(retractFn("member-1", d)).toEqual({ ok: true });
+    const view = viewFn(d, "member-1");
+    expect(view.mine).toBeUndefined();
+    expect(view.entries.map((e) => e.text)).toEqual(["theirs"]);
+  });
+
+  it("is a no-op, not an error, when there is nothing to take back", () => {
+    const d = deps();
+    expect(retractFn("member-1", d)).toEqual({ ok: true });
+    expect(viewFn(d).entries).toEqual([]);
   });
 });

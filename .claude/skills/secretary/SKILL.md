@@ -26,10 +26,28 @@ block*, #3765): the block's current state and next-pickup line are the plan's st
 is the delta since the last digest. A plan with no block is itself a headline (it cannot be picked
 up without re-reading everything).
 
+**Rank movement** (#4064 slice 3): `npm run rank -- --digest` prints one line — "N moved up · M
+retired" since the last digest's snapshot — and a `<!-- rank-snapshot: … -->` marker. Put the line
+in "Noise absorbed" and the marker at the end of the digest, verbatim: it is what the next digest
+diffs against. A missing marker reads as "baseline set", never as zero movement.
+
+**Thrash** (#3939 slice 2): `npm run thrash:scan -- --digest --file` (≈300 REST calls, ~3.5 min)
+prints the scan's hits as digest lines — a T3 burst under "Needs you", the rest under "Noise
+absorbed", only hits newer than the last digest listed — and a `<!-- thrash-snapshot: … -->`
+marker. Paste both verbatim, the marker beside the rank one: the next digest reads it as "the
+previous scan". A T1–T5 hit on both scans with no `bottleneck` issue carrying its key files one
+(T2 folded per lane, ≤3 a run); the filed numbers come back as a Noise line. T6 never files. No
+marker on the last digest reads as "baseline set" and files nothing. `--json` gives the same
+shape for tooling; without `--file` it drafts and says so, never posts.
+
 **Classify into exactly three tiers** (docs/digests/TEMPLATE.md):
 
 1. **Needs you** — the blocked queue: ready-flips, Routine armings, carve-out merges, taste
    forks, irreversible-class items. Each with evidence attached and phrased so "yes" is one word.
+   **The item set is `node scripts/digest-scan.mjs --needs-you`** (#4293) — the same query that
+   assigns him issues (`scripts/moneypenny/assignments.mjs`), so the digest never lists a
+   decision GitHub didn't send him, or misses one it did. Shape each listed item; don't add or
+   drop items by hand — a missing one is a selector bug, fixed there.
    **Format contract (Eric, 2026-08-15):** a TLDR-style *numbered procedure* per item, never
    prose; every instruction pre-verified before it ships (commands actually run, links resolved,
    states confirmed — it must work on his first try). Before an item enters this tier at all,
@@ -44,6 +62,10 @@ up without re-reading everything).
    "worked on X").
 3. **Noise absorbed** — counts only ("6 structural PRs auto-merged, 2 gate catches
    self-corrected"). The tier that proves the machine is eating its own noise.
+   **Unlearned incidents go here, as `node scripts/digest-scan.mjs --learning`'s one line —
+   never as a "run `/retro`" item under Needs you** (#4212). A repair capsule's close drafts its
+   own LESSONS entry (`scripts/moneypenny/lesson-draft.mjs`), so the count drains without him; a
+   number that stops falling is a retro for this pipeline, not a step on his list.
 
 **Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
 per PR merged since the last digest — which picture form it used (or waived, with the reason),

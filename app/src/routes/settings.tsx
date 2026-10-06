@@ -323,7 +323,7 @@ function SettingsFrame({
   readonly children: ReactNode;
 }): ReactElement {
   return (
-    <PageFrame>
+    <PageFrame towerless>
       <div className="set-layout">
         <nav className="settings-list" aria-label="Section">
           {list}

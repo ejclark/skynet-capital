@@ -13,6 +13,13 @@
 //   node scripts/doctrine-scan.mjs --explain          # decide() from full state on stdin, no fs/network
 //   ... --today=YYYY-MM-DD                            # deterministic date override for tests
 //   ... --dossiers-dir=                               # fixture override (tests)
+//   ... --loops-file=                                 # loop-list override (tests)
+//
+// --due also carries every learning loop whose `Next check` has arrived (#4060, slice 2 of #3955):
+// docs/process/LEARNING-LOOP.md's "## Loops running now" table, read by loop-list-decide.mjs. It
+// rides this scan so the secretary-digest Routine's existing `doctrine-scan.mjs --due` call raises
+// it with no schedule change. Each entry says what it is: `source: "dossier"` or `"loop-list"`.
+// --candidate and the budget stay dossier-only (a loop check is a digest line, not a budget).
 //
 // Loud-failure doctrine (event-scan.mjs): an unreadable dossier is an error, never an empty
 // result — a scheduled caller must not mistake "broken" for "nothing due". An EMPTY dossiers
@@ -29,6 +36,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { decide, parseLedgerRows, readDossier } from "./doctrine-decide.mjs";
+import { overdueLoops, parseLoopList } from "./loop-list-decide.mjs";
 
 const ROOT = process.cwd();
 
@@ -40,6 +48,7 @@ const has = (name) => process.argv.includes(`--${name}`);
 
 const DOSSIERS_DIR = arg("dossiers-dir") ?? join(ROOT, "docs");
 const BUDGET_FILE = join(ROOT, "doctrine-budget.json");
+const LOOPS_FILE = arg("loops-file") ?? join(ROOT, "docs", "process", "LEARNING-LOOP.md");
 const TODAY = arg("today") ?? new Date().toISOString().slice(0, 10);
 const DOSSIER_RE = /^BOTS-([A-Z0-9-]+)\.md$/;
 
@@ -83,7 +92,13 @@ function assess(dossier) {
   const md = readDossier(dossier.path); // throws loudly if unreadable — never silently skipped
   const rows = parseLedgerRows(md);
   const decision = decide({ today: TODAY, rows });
-  return { persona: dossier.persona, ...decision };
+  return { source: "dossier", persona: dossier.persona, ...decision };
+}
+
+/** The loop list's rows (`null` = the doc has no list yet). A missing FILE is loud, like a missing
+ *  dossiers directory — main() checks it first and exits 2. */
+function loopRows() {
+  return parseLoopList(readFileSync(LOOPS_FILE, "utf8"));
 }
 
 function main() {
@@ -99,12 +114,23 @@ function main() {
     );
     return 2;
   }
+  if (!existsSync(LOOPS_FILE)) {
+    console.error(
+      `✗ doctrine-scan: loop list ${LOOPS_FILE} does not exist — overdue loop checks UNKNOWN.`,
+    );
+    return 2;
+  }
   const dossiers = findDossiers();
   const assessed = dossiers.map(assess);
   const due = assessed.filter((a) => a.due);
+  const loops = loopRows();
+  const overdue = overdueLoops({ today: TODAY, rows: loops }).map((l) => ({
+    source: "loop-list",
+    ...l,
+  }));
 
   if (has("due")) {
-    console.log(JSON.stringify(due));
+    console.log(JSON.stringify([...due, ...overdue]));
     return 0;
   }
 
@@ -132,6 +158,13 @@ function main() {
   for (const a of assessed) {
     const mark = a.due ? `DUE (${a.reason})` : `not due — next check ${a.nextDueDate}`;
     console.log(`  ${a.persona}: ${mark}`);
+  }
+  if (loops === null) {
+    console.log(`loop list: none yet in ${LOOPS_FILE}`);
+  } else {
+    console.log(`loop list: ${loops.length} loop(s), ${overdue.length} check(s) overdue`);
+    for (const l of overdue)
+      console.log(`  OVERDUE ${l.loop} (${l.issue}) — next check was ${l.nextCheck}`);
   }
 
   if (has("update")) {

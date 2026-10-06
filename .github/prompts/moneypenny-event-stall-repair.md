@@ -25,7 +25,7 @@ call, a bug specific to this one event id) touches nothing on the receipt issue 
 zero visible trace, which is exactly what the stall audit is built to catch and exactly what
 nothing before this lane ever acted on.
 
-TERMINAL STATE, NON-NEGOTIABLE: this session ends in exactly one of two visible states —
+**Terminal state.** This session ends in exactly one of two visible states —
 (a) the event actually gets researched (a normal `never-assessed` PR per
 [`docs/process/EVENT-RESEARCH.md`](../../docs/process/EVENT-RESEARCH.md) and
 [`event-research.md`](event-research.md), shipped and auto-merge armed the usual way), possibly
@@ -56,7 +56,8 @@ HOW TO WORK IT:
      cache, a malformed proposal file, an instrument script throwing on this symbol) — fix it on an
      ordinary branch (never `research/<event-id>` — that branch name is reserved for the research
      lane itself and this fix is not that PR), verify (`npm run typecheck && npm run lint && npm
-     test`), ship it via `gh pr create` + `bash scripts/ship.sh automerge <pr-number>`. Once merged,
+     test`), ship it via `gh pr create` (the pipeline's `arm auto-merge` job arms it after integration tests —
+     never arm by hand, #4094). Once merged,
      the next push naturally re-includes the event as due and a normal matrix leg will research it —
      you do not need to also do the research yourself, but you may if it is fast and you have budget
      left, following `event-research.md` exactly as any other matrix leg would.

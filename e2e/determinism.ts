@@ -54,16 +54,35 @@ const SEEDED_RANDOM = `
 `;
 
 /**
- * 10:00 America/New_York — deliberately inside regular trading hours, so the skyline renders at
- * full `marketLife()` liveliness. Pinning it to a quiet overnight hour would bake a dimmed city
- * into the baseline and quietly drop the lit-window detail out of visual regression.
+ * Friday 2026-09-18, 10:00 America/New_York — a regular-session weekday (not in
+ * `MARKET_CLOSURES`, src/domain/market-calendar.ts), 30 minutes after the open. Two surfaces read
+ * this: the login skyline renders at full `marketLife()` liveliness, and the topbar market clock
+ * (#3690) draws its open-session state. The instant was 2026-09-19 until #3690 exposed that it was
+ * a Saturday — every baseline had quietly captured "MARKET CLOSED · opens Mon 9:30". A weekend or
+ * holiday bakes the closed state in; so would an overnight hour (and a dimmed city). If this ever
+ * moves, keep it a weekday session hour and check the calendar — `isMarketClosed(date)` must be
+ * false. Friday also keeps the research fixture's ledgers (e2e/fixtures/research) in the same week.
  */
-const FIXED_CLOCK = new Date("2026-09-19T14:00:00Z");
+const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
+
+/**
+ * The board's live channel (`/events?by=…`, app/src/live/channel.ts) is the third irreproducible
+ * input. Once the league card joined the tower column on every Profile section (#4133, #4143), the
+ * topbar pill began reading `live · seq N` there instead of `connecting…` — and N is however many
+ * hub ticks the offline server had run before the capture (measured 2, 3, 5, 6, 8, 10 across local
+ * runs of one commit). The label's width slides the market clock beside it, so the same commit drew
+ * a different topbar per run: ~940–1,130 pixels per shot, about a third of the shortest page's
+ * FROZEN_DIFF_RATIO budget spent on noise. Refusing the stream holds every page at `connecting…`,
+ * the state every baseline has always captured; the board snapshot the league card draws from is a
+ * plain fetch and still lands.
+ */
+const isBoardChannel = (url: URL): boolean => url.pathname === "/events";
 
 export async function freezePage(page: Page): Promise<void> {
   await page.clock.setFixedTime(FIXED_CLOCK);
   await page.addInitScript(SEEDED_RANDOM);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route(isBoardChannel, (route) => route.abort());
 }
 
 /**
@@ -73,6 +92,20 @@ export async function freezePage(page: Page): Promise<void> {
  * the test stops complaining — the drift that makes a visual suite decorative.
  */
 export const FROZEN_DIFF_RATIO = 0.002;
+
+/**
+ * The topbar market clock, asserted on its own at a FIXED size on every whole-frame page (#4094).
+ *
+ * WHY (measured 2026-09-30). The whole-frame ratio above scales with page height (resized to content,
+ * 1,843–6,215 px of budget across the suite), while a wrong market state is a fixed-size change in
+ * the topbar: 1,257 px locally with the clock moved to a Saturday, and all seven route shots passed
+ * it. A fixed PIXEL budget on the whole frame is no fix either: CI runners disagree on glyph
+ * antialiasing by up to 1,846 px per frame (run 36684412259, the same commit on retry), which lands
+ * on top of the market-state signal. Inside this element the same CI images differ by 0 px, so the
+ * clock gets its own shot and a small fixed budget, and the frame keeps its ratio for text noise.
+ */
+const MARKET_CLOCK = ".market-session";
+const MARKET_CLOCK_DIFF_PIXELS = 50;
 
 /**
  * Resize the viewport to the page's actual content height, then screenshot the (now full-content)
@@ -102,10 +135,16 @@ export async function resizeToContentHeight(page: Page, width = 1280): Promise<v
  * what's rendered), resize to content height (see resizeToContentHeight), then assert the shot.
  * Call `freezePage(page)` before `page.goto`, and wait for the page's own content marker to be
  * visible, before calling this — it only owns the settle → resize → screenshot tail every route
- * spec shares.
+ * spec shares, plus the fixed-size market clock assertion (MARKET_CLOCK above).
  */
 export async function captureWholeFrame(page: Page, name: string): Promise<void> {
   await page.waitForLoadState("networkidle");
   await resizeToContentHeight(page);
   await expect(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
+  await expect(page.locator(MARKET_CLOCK)).toHaveScreenshot(
+    name.replace(/\.png$/, "-market-clock.png"),
+    {
+      maxDiffPixels: MARKET_CLOCK_DIFF_PIXELS,
+    },
+  );
 }

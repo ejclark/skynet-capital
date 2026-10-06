@@ -12,6 +12,7 @@ import { NetWorthRoster } from "./networth-summary";
 import { NewHighCeremony } from "./new-high-ceremony";
 import { useLens } from "./positions-lens";
 import { SauronCard } from "./sauron-card";
+import { useTowerColumn } from "./use-tower-column";
 
 /**
  * ACCOUNTS' OVERVIEW SECTION — Summary's old cash/position detail and per-account roster, then the
@@ -35,9 +36,8 @@ import { SauronCard } from "./sauron-card";
  * market calendar's range (the burning-day joint, docs/IA.md §6; `held-events-line.tsx`). The
  * Eye's glance scope widens to the whole `.cockpit`, so the head's lenses and arrows turn it too.
  *
- * #3807 slice 3b-1: the card stands `besideHead` here — under the flag the calendar head draws
- * its own tower, so `?card=league` (Eric's compare) drops the card's art at ≥861px; `/u/:id` has
- * no calendar head and keeps its art either way.
+ * #3977: at the bench width and wider the card leaves this grid for the page's own tower column
+ * (`tower-column.tsx`), open and unboxed from just under the navbar; the grid is then one column.
  *
  * #3963: under the card that carries the league standing, the member's own council line for the week
  * — write or edit it here (docs/IA.md §5.7: "`mine` (member × week) renders on the Overview beside
@@ -78,6 +78,7 @@ export function OverviewSection({
   const landmark = allAccounts || singleDesk?.error ? undefined : desks?.[0]?.landmark;
   // The Map lens stacks the decisions beside the map (handoff 3c), so the pager steps aside.
   const [lens] = useLens();
+  const towerColumn = useTowerColumn();
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
@@ -85,7 +86,7 @@ export function OverviewSection({
       {allAccounts ? null : (
         <NewHighCeremony key={accountId} accountId={accountId} caption={caption} stats={stats} />
       )}
-      <div className="overview-grid">
+      <div className={`overview-grid${towerColumn ? " overview-grid--solo" : ""}`}>
         <div className="overview-worth">
           <NetWorthCard
             stats={stats}
@@ -120,16 +121,7 @@ export function OverviewSection({
             <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
           )}
         </div>
-        <div className="overview-card">
-          <SauronCard
-            {...(landmark ? { landmark } : {})}
-            ownedIds={owned.map((a) => a.id)}
-            meId={owned.find((a) => a.kind === "human")?.id}
-            scope=".cockpit"
-            besideHead
-          />
-          <CouncilLineCard />
-        </div>
+        {towerColumn ? null : <OverviewCard landmark={landmark} owned={owned} />}
       </div>
       {desksLoading ? (
         <p className="note">Reading positions…</p>
@@ -138,6 +130,28 @@ export function OverviewSection({
       ) : (
         <AccountsPositionsSection desks={desks} query={query} onFilterChange={onFilterChange} />
       )}
+    </div>
+  );
+}
+
+/** The boxed card in the Overview's own flow, below the bench width: the tower over the league,
+ *  then the member's council line. At the bench width it stands open in the page's tower column. */
+function OverviewCard({
+  landmark,
+  owned,
+}: {
+  readonly landmark: { readonly power: number; readonly health: number } | undefined;
+  readonly owned: readonly OwnedAccount[];
+}): ReactElement {
+  return (
+    <div className="overview-card">
+      <SauronCard
+        {...(landmark ? { landmark } : {})}
+        ownedIds={owned.map((a) => a.id)}
+        meId={owned.find((a) => a.kind === "human")?.id}
+        scope=".cockpit"
+      />
+      <CouncilLineCard />
     </div>
   );
 }

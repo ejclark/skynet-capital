@@ -7,7 +7,7 @@ import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
-import { fetchResearch, type Lens, type ResearchEvent } from "../live/research";
+import { fetchResearchCalendar, type Lens, type ResearchEvent } from "../live/research";
 import { EventHorizon } from "./event-horizon";
 import { AgendaRow, TIER, TierMark } from "./events-agenda";
 
@@ -18,9 +18,10 @@ import { AgendaRow, TIER, TierMark } from "./events-agenda";
  * ≥861 and stacked at ≤860:
  *
  *   the grid    the market calendar (`event-horizon.tsx`, R&D's own instrument) fed ONLY the book's
- *               events — held and market-wide (`live/book-events.ts`). Its head IS the page's one
- *               range control: on this section it stands in for the cockpit's (`accounts.tsx`), the
- *               same component over the same root `?on=&span=`, so there is never a second lens row.
+ *               events — decisions due (▲ in the cell, #3977 slice 4), held and market-wide
+ *               (`live/book-events.ts`). Its head IS the page's one range control: on this section
+ *               it stands in for the cockpit's (`accounts.tsx`), the same component over the same
+ *               root `?on=&span=`, so there is never a second lens row.
  *   the agenda  one row per event in the range, each with ONE link to a place (`events-agenda.tsx`).
  *
  * A PICKED DAY is this section's own param, `?events=YYYY-MM-DD` — it narrows the agenda to that
@@ -47,6 +48,9 @@ const asGridEvent = (event: BookEvent): ResearchEvent => ({
   symbols: [],
   researched: event.call !== undefined,
 });
+
+/** On one day: what to decide, then what you hold, then market-wide. */
+const TIER_ORDER: Record<BookEvent["tier"], number> = { decide: 0, held: 1, market: 2 };
 
 /** The held tier's honest state in words — never a blank where the rows would be. */
 function HeldNote({
@@ -89,7 +93,7 @@ export function EventsSection({
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
   const fog = dayLensFog(plays.data);
   const horizon = useHorizonRange({ fogged: fog.fogged });
-  const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch });
+  const research = useQuery({ queryKey: ["research-calendar"], queryFn: fetchResearchCalendar });
 
   const events = research.data?.events ?? [];
   const calls = research.data?.calls ?? [];
@@ -100,15 +104,16 @@ export function EventsSection({
   const inView = join(day ? { start: day, end: day } : horizon.range);
   const phrase = when(horizon.range, horizon.lens, day);
   const named = events.filter((e) => e.symbols.length > 0).length;
-  const rows = [...inView.held, ...inView.market].sort((a, b) =>
-    a.date < b.date ? -1 : a.date > b.date ? 1 : a.tier === "held" ? -1 : 1,
+  const rows = [...inView.decide, ...inView.held, ...inView.market].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : TIER_ORDER[a.tier] - TIER_ORDER[b.tier],
   );
 
   return (
     <section className="book-events" aria-label="Events">
       <h2 className="visually-hidden">Events</h2>
       <EventHorizon
-        events={[...everything.held, ...everything.market].map(asGridEvent)}
+        events={[...everything.decide, ...everything.held, ...everything.market].map(asGridEvent)}
+        decideDays={new Set(everything.decide.map((e) => e.date))}
         closures={research.data?.closures.length ? research.data.closures : MARKET_CLOSURES}
         lens={horizon.lens}
         anchor={day ?? horizon.anchor}
@@ -123,6 +128,12 @@ export function EventsSection({
       />
       <div className="book-agenda">
         <p className="book-tiers">
+          {everything.decide.length > 0 ? (
+            <>
+              <TierMark tier="decide" /> <span className="num">{inView.decide.length}</span>
+              {" · "}
+            </>
+          ) : null}
           <TierMark tier="held" /> <span className="num">{inView.held.length}</span>
           {" · "}
           <TierMark tier="market" /> <span className="num">{inView.market.length}</span>

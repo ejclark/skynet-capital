@@ -2,6 +2,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { RESTRICT_DRAWDOWN_PCT } from "../risk/risk-ladder.js";
 import type { DecisionCyclesPage, DecisionCycleView } from "./decision-json-view.js";
 import type { DeskActivityEvent } from "./desk-json-view.js";
+import { downsampleMinMax } from "./downsample.js";
 import { equityDrawdown } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-record.js";
 import {
@@ -156,10 +157,11 @@ function markersFrom(
   });
 }
 
+/** Bounded like `pulse-json-view.ts`'s curve — the backdrop line, not `health`'s drawdown read,
+ *  is what grows unboundedly with history (#4612 slice 7, #13). */
 function equityPoints(samples: readonly EquitySample[]): ThesisEquityPoint[] {
-  return [...samples]
-    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
-    .map((s) => ({ t: s.at, value: s.equity }));
+  const sorted = [...samples].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  return downsampleMinMax(sorted, (s) => s.equity).map((s) => ({ t: s.at, value: s.equity }));
 }
 
 export function thesisView(

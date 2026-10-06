@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { DeskPosition } from "../../src/live/desk";
+import * as actualDraft from "../../src/live/draft-order" with { rstest: "importActual" };
 import type { DraftOrder, DraftResponse, NewLeg } from "../../src/live/draft-order";
 import type { ChainData } from "../../src/live/options";
 import { defaultRollExpiration, nearestListedStrike, RollRow } from "../../src/shell/roll-row";
@@ -45,6 +46,8 @@ function answer(phase: DraftOrder["phase"], legs: DraftOrder["legs"]): DraftResp
   return { draft: { phase, legs, refusals: [], nextLegId: legs.length + 1 }, preview };
 }
 rstest.mock("../../src/live/draft-order", () => ({
+  // The real selector: the builder asks it whether a pick is a reprice before it posts.
+  legOnSameContract: actualDraft.legOnSameContract,
   emptyDraft: () => ({ phase: "empty", legs: [], refusals: [], nextLegId: 1 }),
   addDraftLeg: (_desk: string, draft: DraftOrder, leg: NewLeg) => {
     calls.push({ kind: "add-leg", leg });

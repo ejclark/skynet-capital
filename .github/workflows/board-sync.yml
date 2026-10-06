@@ -1,0 +1,92 @@
+name: Board sync
+
+# #4393 slice 2 — wires the two scripts slice 1 built (#4402) so the Orchestration board's
+# In Progress column, and the admission gate's in-flight cap that reads the same label, tell the
+# truth. Eric, 2026-10-04: "The WIP limit is still not being upheld" — the board read 6 / 3 while
+# only 3 issues carried `in-progress`: #2224, #3953 (closed) and #3977 had lost the label but their
+# cards never moved, because `sync-project` fires once per issue event and a dropped run (GraphQL
+# rate limit, 2026-09-30) is never retried. GitHub's column limit is display-only; it never refuses
+# a card, so the only enforcement is the admission gate — and it is only as good as the label.
+#
+# Two jobs, two triggers:
+#   in-progress — a PR opening, reopening, being edited or closing re-derives `in-progress` on every
+#     open issue it names (scripts/moneypenny/pr-in-progress.mjs: the ONE writer for PR-backed
+#     work, criteria 1–3). This is what makes a live session, /governor, /grind or repair count
+#     against the cap — the paths that applied nothing before. App token, so the label change emits
+#     an `issues` event and `sync-project` (moneypenny-events.yml) moves the card.
+#   reconcile — every push to main recomputes Status for each board item whose column disagrees
+#     with its labels/state (scripts/moneypenny/projects-reconcile.mjs, criterion 4). The plan said
+#     "hourly cron"; this repo's directive is no cron (moneypenny-events.yml header: every merge is
+#     the tick), and merges land far more often than hourly. `cancel-in-progress` coalesces a burst
+#     of merges into one sweep. The script pre-flights the GraphQL budget (#4183) and refuses to
+#     start below the floor — `continue-on-error` keeps that refusal from reading as a red run the
+#     repair lane would chase (a retry storm is the thrash #3939 measured); the next push retries.
+#
+# Its own file, not more `pull_request` types on moneypenny-events.yml: that workflow's `route` job
+# runs on every event, so widening its PR trigger would spin the whole router on every PR close.
+#
+# PROJECTS_PAT, not the App token, for the board — the App has no path to a personal-account
+# project (projects-setup.yml header). First live run of the reconcile sweep is this workflow's
+# first push; `workflow_dispatch` with dry_run lets a human read a drift list without writing.
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, closed]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report drift without writing the board
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  in-progress:
+    name: derive in-progress from the PR
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: board-sync-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI, not mise.toml — see moneypenny-events.yml
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: derive in-progress
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/pr-in-progress.mjs ${{ github.event.pull_request.number }} ${{ github.event.action }}
+
+  reconcile:
+    name: reconcile board status
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: board-sync-reconcile
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI, not mise.toml — see moneypenny-events.yml
+
+      - name: reconcile
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
+        run: node scripts/moneypenny/projects-reconcile.mjs $DRY_RUN

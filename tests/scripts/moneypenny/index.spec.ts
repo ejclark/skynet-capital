@@ -75,6 +75,19 @@ describe("moneypenny routing", () => {
     expect(intents[0]?.label?.name).toBe("event-research");
   });
 
+  // The issue is a RECEIPT, never a trigger (moneypenny-events.yml's header): the research matrix
+  // does the work. A body that still addressed @claude with orders would read as a live ask to
+  // humans and the stall-repair lane, and could match claude.yml's mention gate.
+  it("writes the event issue as a receipt — names the ledger and branch, gives nobody orders", () => {
+    const [intent] = dryRun("push-one-due.json") as Intent[];
+
+    expect(intent?.body).not.toContain("@claude");
+    expect(intent?.body).not.toContain("/ship");
+    expect(intent?.body).toContain("receipt, not the trigger");
+    expect(intent?.body).toContain("docs/research/events/fomc-2026-12-09.md");
+    expect(intent?.body).toContain("research/fomc-2026-12-09");
+  });
+
   it("dedupes by exact open-issue title, so a re-push while queued does nothing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });
@@ -101,6 +114,8 @@ describe("moneypenny routing", () => {
   it("dueForResearch filters out events whose research PR is still open — the per-push dedupe", () => {
     // The event lane rides EVERY push (no cron, by directive — docs/ROUTINES.md). This filter plus
     // the mandated `research/<id>` branch name is what stops back-to-back merges double-researching.
+    // The cap is passed explicitly so this stays offline: the default now reads the work spigot's
+    // dial over `gh` (#3960 slice 2), which is `researchCapNow`'s business to test, not this one's.
     const out = execFileSync(
       "node",
       [
@@ -109,7 +124,7 @@ describe("moneypenny routing", () => {
            const due = [{ id: "cpi-2026-09-11", reason: "interval-elapsed" },
                         { id: "fomc-2026-12-09", reason: "never-assessed" }];
            const heads = ["research/cpi-2026-09-11", "feedback/42"];
-           console.log(JSON.stringify(m.dueForResearch(due, heads).map((e) => e.id)));
+           console.log(JSON.stringify(m.dueForResearch(due, heads, 6).map((e) => e.id)));
          });`,
       ],
       { cwd: process.cwd(), encoding: "utf8" },
@@ -241,6 +256,15 @@ describe("closing the last mile", () => {
     expect(intents[0]?.body).toContain("Shipped");
   });
 
+  // The sweep rides the push to main, before deploy has run — so the comment must not claim the
+  // change is live yet (#3952, follow-up to #4181).
+  it("says merged, live after the next deploy — never that it is already live", () => {
+    const intents = dryRun("sweep-shipped-feedback.json") as Intent[];
+
+    expect(intents[0]?.body).toContain("merged in #448; live after the next deploy");
+    expect(intents[0]?.body).not.toContain("and is live");
+  });
+
   // 2026-08-28 triage: #510/#706/#707/#720 all had their research docs merged (PRs
   // #695/#727, #721, #715, #712) but stayed open — the sweep only ever swept `feedback`, so
   // `event-research` issues had no last-mile net at all. This is that net.
@@ -368,6 +392,28 @@ describe("resolving which feedback issues have shipped", () => {
 
     expect(resolve(issues, [492])).toEqual({
       shipped: [{ number: 475, title: "Mission control on the account desk", pr: 492 }],
+      warnings: [],
+    });
+  });
+
+  it("leaves a next-slice issue open when a slice's PR merged — the remainder is unbuilt (#3818 criterion 11)", () => {
+    const issues = [
+      {
+        number: 3818,
+        title: "sliced plan, slice 1 shipped",
+        labels: [{ name: "feedback" }, { name: "next-slice" }],
+        closedByPullRequestsReferences: [{ number: 4100 }],
+      },
+      {
+        number: 3819,
+        title: "final slice shipped, next-slice removed",
+        labels: [{ name: "feedback" }],
+        closedByPullRequestsReferences: [{ number: 4101 }],
+      },
+    ];
+
+    expect(resolve(issues, [4100, 4101], { "3818": [{ number: 4100 }] })).toEqual({
+      shipped: [{ number: 3819, title: "final slice shipped, next-slice removed", pr: 4101 }],
       warnings: [],
     });
   });

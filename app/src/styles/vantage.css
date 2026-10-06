@@ -1,47 +1,36 @@
-/* The tower's crest at the market calendar band's RIGHT cap (#3807 slice 3a) — only under
-   `?shell=watchtower`, which stamps `data-shell` on <html> (`shell/prefs.ts`). The band renders an
-   empty slot (`TowerSlot`); the shell's one frame (`shell/vantage.tsx`) is laid over it. */
+/* The page's tower (#3977): the shell's one frame (`shell/vantage.tsx`), laid over the tower
+   column's slot (`TowerSlot`, `shell/tower-column.tsx`) on every non-Settings page at the bench
+   width and wider. It was the crest at the calendar head's right cap behind `?shell=watchtower`
+   (#3807 slice 3a); that flag and its slot are retired. */
 
-/* ≥861: the band makes room on its right for a 160×96 crest (the scene's `frame=crown`). The
-   band grows to the crest's height; its row stays one row. */
-[data-shell="watchtower"] .cal-head:has(> .tower-slot) {
-  position: relative;
-  min-height: 96px;
-  padding-right: 176px;
-}
+/* The column's art box: the size the character card's art always had. */
 .tower-slot {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 160px;
-  height: 96px;
-  border-radius: 8px;
+  display: block;
+  height: 664px;
   pointer-events: none;
 }
 
 /* The frame: fixed over the slot, measured by the shell. It never takes a click or a touch — the
-   crest is a picture — and it sits at the sticky head's level, so the topbar covers it on scroll. */
+   tower is a picture — and it sits at the sticky head's level, so the topbar covers it on scroll.
+   UNBOXED (Eric, 2026-09-30: "remove the section outline around the tower… less contained"): no
+   border and no background; three fades intersected take the sides, the top and the bottom to
+   fully transparent at the frame's edge, so no edge of the box survives and the tower's foot melts
+   into the mist of whatever stands under it (the league, on the Profile page). */
 .vantage {
   position: fixed;
   z-index: 4;
   border: 0;
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px var(--border);
-  background: #0b0f14;
+  background: transparent;
   pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
 }
 .vantage[data-shown="false"] {
   visibility: hidden;
-}
-
-/* ≤860, the phone: no crest (no WebGL on the phone until the real-device recheck), so the band is
-   exactly today's. */
-@media (max-width: 860px) {
-  .tower-slot {
-    display: none;
-  }
-  [data-shell="watchtower"] .cal-head:has(> .tower-slot) {
-    min-height: 0;
-    padding-right: 0;
-  }
 }

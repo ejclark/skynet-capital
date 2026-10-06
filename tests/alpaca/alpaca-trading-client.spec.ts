@@ -205,6 +205,20 @@ describe("AlpacaTradingClient", () => {
       expect(transport.gets).toEqual(["/v2/orders/o1"]);
     });
 
+    it("asks for an mleg order's legs rolled up only when nested is set", async () => {
+      const filled = { id: "o1", symbol: "", qty: "1", side: "buy", status: "filled" };
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1?nested=true": { status: 200, body: filled },
+        "/v2/orders/o1": { status: 200, body: filled },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.getOrder("o1", { nested: true });
+      await client.getOrder("o1", { nested: false });
+
+      expect(transport.gets).toEqual(["/v2/orders/o1?nested=true", "/v2/orders/o1"]);
+    });
+
     it("throws AlpacaApiError for an unknown id", async () => {
       const transport = new FakeTradingTransport({
         "/v2/orders/ghost": { status: 404, body: { message: "not found" } },

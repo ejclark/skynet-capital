@@ -1,0 +1,42 @@
+/* The tower's column (#3977): `shell/tower-column.tsx`, drawn by `shell/frame.tsx`. From the bench
+ * width (1280, `widths.ts`) the frame is two columns on every page but Settings — the stage, and
+ * the tower's own column from just under the topbar. The column holds the art box the shell's one
+ * tower frame is laid over (`vantage.css`), then whatever the page stands under the tower. */
+
+.frame.frame--tower {
+  grid-template-columns: minmax(0, 1fr) 384px;
+  column-gap: 24px;
+}
+.tower-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* The Overview's grid (and an account's page) gives up its card column when the frame carries the
+ * tower (#3977). */
+.overview-grid.overview-grid--solo {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "worth"
+    "decide";
+}
+
+/* ---- the character card under the tower: the shade and the league, no art ---- */
+/* The shade keeps its pull up over the art (`.char-blend`, sauron-card.css) and is no longer clipped:
+ * it rises over the art box's foot, where the tower frame fades out (`vantage.css`). */
+.char-card--under {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+/* …but only upward: its noise edge is drawn wider than the card, and sideways it must not spill out
+ * of the column over the stage. */
+.char-card--under .char-blend {
+  overflow: clip visible;
+}
+.char-card--under .char-body {
+  border-radius: 0 0 14px 14px;
+}

@@ -18,6 +18,158 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Fold a stale-echo run into its capsule's drafted lesson.** `lesson-draft.mjs` (#4212) drafts a
+  capsule's LESSONS entry at the close, but repair.mjs posts a stale echo (a run that started before
+  the fix merged) only after the close, so that run's sha never reaches the entry's `COVERS:` and
+  stays in `digest-scan --learning`'s count. Cheapest fix: the stale-echo intent also appends its
+  sha to the open `lesson/capsule-<n>` PR's entry, or comments it for the next `/retro`. Worth doing
+  if the learning line stops reaching zero because of echoes alone.
+  _(src: Claude · while: building #4056 slice 7, from its /code-review)_
+
+- **The two lane prompts still name the board's "In Progress" column.** #4393 slice 4 renamed it
+  Building now. `.github/prompts/plan-build.md:130` and `feedback-build.md:165` say "the board's In
+  Progress column and the admission gate's cap both count it". The meaning is unchanged; only the
+  word is stale. Both files are `envelope.json`'s class, so a one-word edit boards the next platter
+  rather than riding a lane PR.
+  _(src: Claude · while: #4393 slice 4, the Waiting column)_
+
+- **Re-run the model-fit audit at every model release.** The 2026-10-04 audit (Anthropic's
+  `claude-api` → `prompt-audit` procedure, ten surface auditors plus an adversarial refuter each)
+  found that the dominant defect was not old-model prompting. It was drift: Babylon-era facts in
+  four agents, three files that contradicted the pipeline-arms-auto-merge rule, and model pins one
+  generation behind. Every pin and floor is per-model (Opus 5.5 defaults to `medium` effort, and
+  Sonnet 5.5 recalibrated its levels), so the next release reopens the same questions. Bank the run
+  as a `docs/grind/` chore keyed to a release, not to a calendar date.
+  _(src: Claude · while: the model-fit audit, 2026-10-04)_
+- **Nine model-fit findings in `.claude/workflows/*.js` were refused as self-modification.** The
+  auto-mode classifier blocked an unattended agent from editing `grind.js` and `symbol-sweep.js`.
+  The refused findings: F04 (`--base origin/main` is passed to `envelope-scan --check`, which treats
+  it as a path), F07/F08 (the sweep's synthesis prompt hard-codes the default eight tickers and a
+  40-test count even when `args.tickers` differs), F11 (N per-item envelope agents could be one
+  pre-dispatch check), F14 (`whenToUse` is truncated in the workflow listing), F17 (a hard-coded
+  cloud path), and three migration-relative comments. The docs half of each already shipped. These
+  need an interactive session where Eric approves the edit.
+  _(src: Claude · while: the model-fit audit build, batch grind)_
+- **No Claude call site reads `usage` or `stop_reason: "max_tokens"`.** The companion, the coach
+  and the eval judge never log `input_tokens` / `output_tokens` / `cache_read_input_tokens`, so the
+  cost of a prompt change, the cache hit rate and a truncated reply are all invisible. The
+  prompt-audit guide names token accounting as the prerequisite for measuring any cleanup. One
+  `usage` line per call in `src/http/anthropic-reply.ts` is enough to start.
+  _(src: Claude · while: the model-fit audit, finding F20)_
+- **The companion reads `stop_reason` for a refusal only — `max_tokens` and a mid-stream refusal's
+  partial are still unhandled.** (a) Neither leg reads `stop_reason: "max_tokens"`, so a truncated
+  reply finishes as done; the 4000 cap makes it rarer, not handled. (b) A refusal after partial text
+  keeps the partial on the rail with " — cut off"; the migration guide's rule is to discard it.
+  Discarding needs the rail (`app/src/live/moneypenny.ts`, the `failure` branch after the stream)
+  to tell a refusal from a transport error — today both arrive as one `onError` string.
+  _(src: Claude · while: the model-fit audit, batch companion-request — the streamed leg's refusal read)_
+- **Move the companion's exhaustion note to a mid-conversation `role: "system"` message on Sonnet
+  5.5.** Today `EXHAUSTED_NOTE` rides as a text block after the last tool_result. That is the
+  guide's fallback form, valid on Sonnet 5 and Haiku 4.5. But the system prompt's UNTRUSTED INPUT
+  rule tells the model that user-turn text is member data, so the note may steer weakly or be
+  narrated back to the member. Once `claude-sonnet-5-5` is on the companion allowlist (the platter
+  item), gate the system-message form by model the way `effortFor` gates effort.
+  _(src: Claude · while: the model-fit audit, batch companion-request — review of the append-only final leg)_
+- **Pin the companion-eval judge's effort instead of inheriting Sonnet 5.5's default.**
+  `src/evals/companion/judge.ts` sends no `output_config.effort`, so it grades at the API default,
+  and Sonnet 5.5's levels are recalibrated. A default change would shift grading with no diff. Pin
+  `effort: "high"` beside `format`, or sweep the 15 fixtures first and pick.
+  _(src: Claude · while: review of the model-fit structured-outputs batch)_
+- **Backfill the event ledgers' Rules paragraph onto the current TEMPLATE.** 585 ledgers under
+  `docs/research/events/` still say a dated adjacent event "gets proposed" with no horizon, and 543
+  say the doc "goes quiet" after close-out. Both contradict `TEMPLATE.md` and the HORIZON LEASH in
+  `.github/prompts/event-research.md`, and a pulse reads its own ledger first. It is mechanical, one
+  string per file: a `/grind` pass. In the same pass, `tests/arch/event-scan.spec.ts` and
+  `tests/domain/research-horizon.spec.ts` still say "opus session" in the present tense, while the
+  research lane runs the Sonnet tier.
+  _(src: Claude · while: the research-lane model-fit batch, RLI-02/03)_
+- **`scripts/issues.mjs` reads only `GH_TOKEN`/`GITHUB_TOKEN`.** `ship.sh` falls back to the gh
+  keyring (`gh auth token`), but `npm run issues` returns a bare 401 in a local session with no env
+  token. That forces a `GH_TOKEN="$(gh auth token)"` prefix, which the permission matcher treats as
+  a new command. Give it the same keyring fallback `ship.sh` has.
+  _(src: Claude · while: filing #4610 during the model-fit audit)_
+- ~~**`/api/wire` reads three full ledgers per request to render ~30 rows.**~~ **Measured and
+  routed → #4458** (2026-10-02, while building #784 slice 3). The number the item was waiting for:
+  **189 ms and 30.4 MB parsed per request at 100k events**, linear, for ONE of the three legs, on a
+  `no-store` page. Slice 3 settled the half that was its to settle — the paging *shape*
+  (`app/src/live/activity-feed.ts`'s header: the feed pages on the trade cursor, filings ride the
+  same `per_page` and have no cursor of their own, because a filing mutates after it is written) —
+  and the storage half, a keyset bound at `JsonlKeyedStore` rather than after the join, is now a
+  `bottleneck` issue with its own `Before:` row.
+  _(src: Claude · while: building #784 slices 1 and 2, the trade feed and the pulse moving onto the bus)_
+- **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
+  refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
+  rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches
+  merged-but-undeployed; the repair lane watches a red `main`; nothing lists open PRs with green
+  checks, a failed arm job, and no `hold-merge`. One digest line would have caught it within the hour.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **Derive `allowed_bots` from the dispatching token instead of linting two hand-kept lists.**
+  Workflow-lint rule 8 decides reachability from the `if:` spelling, so `!= 'push'` slipped past it
+  (#4385 widens it; `event_name == 'issues' || …` still under-flags). Three recurrences (09-05,
+  09-25, 09-30) were all "a lane's token changed and its allow-list didn't". A shared constant per
+  token (or a composite action that sets both) removes the second edit entirely.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **`auditLedger()` could warn on an entry with `SHA: n/a` and no `COVERS:`.** That shape closes no
+  incident in the scan, so the entry's own failing runs stay "unlearned" — the backfill-sweep entry of
+  2026-09-30 left `decfc83` open that way. Advisory warning, not a failure.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **A failed open-issue read makes the board sweep plan a Done move for every card.** `planReconcile`
+  cannot tell "no open issues came back" from "every issue is closed", and the sweep's own specs use
+  `openIssues: []` as shorthand for the second. The COLUMNS still come out right — `syncIssue`
+  re-reads each issue before it writes — so the cost is bounded to ~one `item-edit` per board item
+  on a quiet hour, with `isRateLimitExhausted`'s abort as the backstop. Deliberately NOT guarded
+  when found: a refusal in the pure function would have meant rewriting four just-merged specs to
+  protect against a self-correcting cost. The honest fix is in `reconcileBoard`, which is the layer
+  that knows a READ happened — a sentinel (`null` for "not read") rather than an empty list.
+  _(src: Claude · while: #4393 slice 1 hardening, reviewing the landed sweep)_
+- **A `gh project` failure outside the two classified ones is still a raw stack trace.** `ghProject`
+  explains gh's masked owner failure (#3914) and an exhausted quota (#4183); everything else —
+  including `Could not resolve to a ProjectV2 with the number 2`, which is what a token WITHOUT
+  Projects access says — reaches the log as a `child_process` trace with the useful sentence buried
+  on line 5. The first line is honest, so this is log ergonomics, not a wrong answer: one more
+  classifier naming "this token cannot see the project — it needs `PROJECTS_PAT`, not the App
+  token". _(src: Claude · while: #4393 slice 1, smoking `projects-reconcile.mjs --dry-run` locally)_
+- **`Projects v2 setup` is not on the repair lane's watched-workflow list**, so its reds are silent.
+  Its 2026-09-30 backfill drained the whole GraphQL hour and failed; nothing filed, and the incident
+  was diagnosed from #4183 — a `sync project status` bystander that failed on the drain eight minutes
+  later. Add the workflow name to `moneypenny-repair.yml`'s `workflow_run.workflows` list. A workflow
+  file, so Eric's merge. _(src: Claude · while: repairing #4183)_
+- ~~**A skipped board sync has no scheduled catch-up.**~~ **Closed by #4402** —
+  `projects-reconcile.mjs` is that sweep; the hourly cron that fires it is #4393 slice 2.
+  `projects-sync.mjs` is eventually consistent by
+  design (an issue re-syncs on its next event), but an issue whose LAST event lost its sync stays
+  stale, and `projects-backfill.mjs` is `workflow_dispatch`-only. A nightly backfill would close the
+  gap now that a sweep costs ~1 `item-list` page instead of one per issue (#4183). A workflow file,
+  so Eric's merge. _(src: Claude · while: repairing #4183)_
+- **Moneypenny's `Position:` line may read the wrong one of a member's own desks.** A member who
+  owns two accounts gets `resolveOwnerIds(email)[0]` (`dashboard-access.ts:98`), while the ticket
+  may be on another owned `?desk=`. Own data only, so honesty, not leakage. Honor `?desk=` when it
+  is in `resolveOwnedIds`. Unproven: no multi-desk repro yet. _(src: Claude · while: #2224 shape 3
+  red-team, H3)_
+- **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
+  chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
+  for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
+- **NYSE Day Trader's Alpaca keys are rejected** — prod logs `NYSE Day Trader: unauthorized` on
+  every boot since #4159, so that bot gets no fill updates until its keys are rotated (a credential
+  step, Eric's). The 2026-09-30 outage was this rejection looping. _(src: Claude · while: #4159)_
+- **The board's `/events` stream sends no heartbeat.** `streamBoardPatches`
+  (`src/server/board-patch-routes.ts`) writes only on a patch, so with the market closed a stream
+  whose client vanished is never noticed; `desk-events-route.ts` already pings every
+  `HEARTBEAT_MS`. Mirror it plus a fake-timer spec. Latent, not an outage cause; #4143 doubled the
+  streams per page (the league card). _(src: Claude · while: root-causing the 2026-09-30 outage)_
+- **The Profile screenshot fixture crashes on Milestones and Feedback.** `scripts/shoot/accounts-fixture.mjs`
+  stubs the book's endpoints but not the viewer-level sections', so `/app/accounts?section=milestones`
+  renders "Something went wrong" ("Cannot read properties of undefined (reading 'length')") on `main`
+  as well. Trade's fixture had the same class of gap (an unstubbed `/api/research`), fixed in #4143.
+  First step, about 20 minutes: log the `/api/*` paths the section requests, then stub each with an
+  honest empty payload. _(src: Claude · while: shooting the tower column, #3977)_
+- **Dependabot will offer `mermaid` 12 again.** `scripts/mermaid-lint.mjs` pins `mermaid` to
+  github.com's renderer (11.17.2) on purpose, and #4025 bumped it to 12, so the lint was checking
+  against the wrong version until the pin was restored. An `ignore` rule for `mermaid` majors in
+  `.github/dependabot.yml` stops the re-offer. That file is protected, so it goes on the platter.
+  Until then, the dependency reviewer escalates majors rather than merging them.
+  _(src: Claude · while: clearing the Dependabot backlog, #4053)_
+
 - **Backfill IV history so position guidance can grade "high" in weeks, not a year.** Daily IV
   recording went live 2026-09-25 (#3742, #3746). But IV rank (`src/research/iv-rank.ts`) needs a
   full, continuous 365-day window, so until ~2027-09 every covered-call or put write stays capped at
@@ -170,6 +322,20 @@ Eric-sourced.
   (`/-/media/documents/...` → `/-/media/Project/Atlanta/FRBA/Documents/...`, discovered this
   session) broke an automated re-fetch somewhere upstream. _(src: Claude · while:
   housing-starts-2026-09-17 close-out)_
+  **Update, `construction-spending-2026-10-01` close-out, 2026-10-05:** still frozen at 2026-07-28,
+  now **ten weeks** stale — confirmed across two independent close-outs seven weeks apart, so this
+  is a standing property of the data source, not a transient gap. The media path moved a **second**
+  time (`cqer/researchcq/gdpnow/` → `research-and-data/data/gdpnow/`, found via the current
+  `/cqer/research/gdpnow` landing page's own link list) — two moves in five weeks. One finding that
+  resolves half the housing-starts gap: the same workbook's **`ContribHistory`** sheet (singular,
+  "Evolution of component contributions ... for 2026q3," distinct from the 6-category
+  `Contributions`/`ChangeInContributions` the prior session used) is live, non-archived, and keeps
+  the full 8-way split — Equipment, Intellectual Property Products and Structures stay separate
+  columns. It only covers the *current* nowcast quarter (reset each quarter), so it does not help a
+  cross-quarter archive query, but it removes the "6-category only" caveat for any live-quarter
+  forward test — `housing-starts-10-20`'s `FT-…-10-20-1` should read `ContribHistory` directly
+  instead of falling back to the coarser sheet if `ContribArchives` is still stale on 2026-10-23.
+  _(src: Claude · while: construction-spending-2026-10-01 close-out)_
 - `quote-header` and the option chain fetch the underlying price independently; consolidate once
   the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
   #2017)_
@@ -866,15 +1032,15 @@ market events — **potentially _the brand itself_**, the addictive hook. **Fun 
 (engagement → legibility/trust → capital → autonomy). Reflects portfolio positions, news, economy, and
 politics; domain-themed empires; construction = maturing bets; a judgment axis (good bet vs. hype vs.
 legal risk) held to an honest, data-sourced standard. Phased:
-- **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_
-- **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_
-- **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_
-- **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_
-- **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_
+- **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
 - **Scale across the four views** — the sim-city grammar renders at different zoom: individual = a city,
   comparison = two cities (commonality + contrast), leaderboard = a region/map, bots-vs-humans = country
   vs country where the *units of measure change* (buildings fall off; GDP/territory/development emerge).
-  A per-view rendering spec over the existing routes. _(src: Eric)_
+  A per-view rendering spec over the existing routes. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when the leaderboard gets a zoomed-out aggregate view; the four routes now fold into `/app/leaderboard` (#552, #553, #827))_
 
 ### Living Universe — event ceremonies, the founding & player agency (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 - **The founding + "key to the city" ceremony** — starting/uninvested capital renders as a landmark
@@ -957,7 +1123,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
   (surfaced at signup / `/welcome`) so the basis for data-sharing is on record. Eric to define the
-  wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_
+  wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when someone outside the founding group is invited)_
 - **Issue-driven distributed development (Eric, 2026-08-11):** "enable Claude to pick up and work
   GitHub issues… lets humans create issues that get serviced, as well as orchestration for bots to
   manage their work." Two consumers, one mechanism — humans file work, and bots file their *own*
@@ -968,20 +1134,15 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   starting one; (b) the **trust ladder** below, deciding which issue classes may be serviced
   unattended; (c) a **concurrency/ownership rule** so two agents never take the same issue. Worth
   scoping as its own plan; the credentialed step (granting the trigger write access) stays Eric's.
-- **Autonomous GitHub-issue contribution system** — autonomously pick up & act on issues, starting
-  narrow (tier 1: additive, display-only persona/landmark integrations) and widening by a progressive-
-  trust ladder. Rails-first, mantra **Detect · Correct · Maintain**: brand + Graphify `affected` +
-  tests + alignment review gate every change; drift blocks/reverts. Sensitive steps (granting
-  autonomy, credentials, **real-money trading**) always Eric's. Framework in `LIVING-UNIVERSE.md`. _(src: Eric)_
 
 ### Larger tasks (need dedicated focus)
 - **Login terminal drawer + backstory** — convert the canvas play-panel into a terminal-style DOM
-  drawer that opens with a preamble/backstory. (tasks #68/#72; canvas→DOM migration; best done live.)
+  drawer that opens with a preamble/backstory. (tasks #68/#72; canvas→DOM migration; best done live.) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login play panel (`drawTerminal` in `src/server/auth/authenticator.ts`))_
 - **Two modes** — intro `/login` = fast preview (gist, gloss details); logged-in = slow, controllable,
-  studyable inspection. (task #54)
+  studyable inspection. (task #54) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when the logged-in shell gets a playcall surface)_
 - **Decoupled playcall drawer** — a left collapsible drawer housing Signal→Play→profit, decoupled from
   the trend chart, carried into the logged-in view; move the playcall recap into it with a connector
-  line to its chart position. (tasks #49 + #51-remainder)
+  line to its chart position. (tasks #49 + #51-remainder) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login play panel; `authenticator.ts` still keeps the drawer helpers for task #49)_
 - **/add as the character sheet — persona field = character class** — the persona-id input on `/add` is
   really the CLASS slot of a character sheet; redesign the flow around that: bot setup presents the
   roster as selectable class cards (name, thesis, lore line, risk read from its eval report), Human is
@@ -1011,12 +1172,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   pieces scene-graph refactor** (uniform piece contract) and feeds **contributable personas (P4)** +
   bot-creation. Big — needs dedicated focus; Barad-dûr is the first worked example to extract the template
   from. _(src: Eric · while: detailing the Sauron tower — wanting hero fidelity to be systematic + generable)_
-- **North-star autonomous pipeline** — recycle the playbook artifact as a systems-level pipeline
-  toward autonomous deployment (recognize signal → recommend → trade, with safeguards). (task #41)
 - **Lore universe (mixed multiverse)** — give each persona a character card (name, archetype,
   allegiance, one-line legend) surfaced on `/u/:id` and woven into trade narration + cityscape + copy;
   keep the system extensible to adopt others' ideas. Confirm the pantheon direction with Eric before
-  broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.)
+  broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a persona character card or the `/add` class picker ships)_
   - **Real name + character alias (identity duality).** Real names are ideal for accountability —
     within the invite gate, people should know who represents what (consistent with the consensual
     shared-universe boundary). *On top of that*, the gamification warrants a **character alias** people
@@ -1032,7 +1191,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   as accepting/proposing side quests could organically pique interest. v1 shipped (the `/feedback`
   "idea" kind is now a 🗺️ Side quest). Deeper version: a light quest board — proposed side quests
   visible, upvotable, with playful status (open → accepted → shipped), tied into the lore universe.
-  _(src: Eric · while: extending the Claude side-quest idea system)_
+  _(src: Eric · while: extending the Claude side-quest idea system)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when member filings resume at ≥2/week; the v1 label is now "🗺️ Enhancement" (#982))_
 - **Timed play events + bounties** — a time-boxed group event where everyone's play is measured over a
   window, with a **bounty** as the prize; adds a fun competitive beat (and pairs with human-vs-own-bot).
   Two constraints to design around: (1) **everyone needs powder to participate** — solve in-app by
@@ -1116,51 +1275,19 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   OAuth-connected bot ("Connect with Alpaca", Round B) would auth with a blank key/secret instead of its
   Bearer token. Latent today (no OAuth bots yet); real fix before Round B ships. A `.todo` in
   `tests/bots/bot-broker.spec.ts` documents it. _(src: Claude · while: backfilling bot-broker specs)_
-- **Empire skyline on the comparison view** — render two empire skylines side by side on `/compare`
-  (the "two cities" from the scale ladder: commonality = shared towers, contrast = coal/rail vs.
-  solar/silicon silhouettes). Reuses `renderEmpireSkyline`; the next natural P2 slice.
-  _(src: Claude · while: building the empire skyline)_
 - **Sector map from a data source** — `SECTOR_BY_TICKER` is a curated table; as holdings diversify,
-  drive it from a real sector feed (or derive) so any ticker themes correctly. _(src: Claude · while: building the empire skyline)_
-- **Refine energy/gold/broad silhouettes** — the non-tech sector shapes are basic; give each the
-  exquisite-detail treatment once those sectors actually appear in holdings. _(src: Claude · while: building the empire skyline)_
-- **Skyline label collision at high position counts** — ticker labels crowd past ~6 holdings; needs the
-  same collision handling as the canvas labels (#47). _(src: Claude · while: building the empire skyline)_
-- **Machine-checkable brand cohesion (`brand.json`)** — emit tokens + anchor→node bindings + per-scope
-  rules so BCP's *Enforce* step can lint deliverables against the brand automatically (per community
-  scope). The deeper half of the BCP × Graphify integration. _(src: Claude · while: running Graphify)_
-- **Refactor candidates from the graph** — Graphify flags low-cohesion communities (`MarketContext`,
-  `dashboard-data.ts`, `data-source.ts`) as split opportunities. Not urgent; run `affected` first on
-  any target. _(src: Claude · while: reading the structural map)_
-- **Dead-code sweep from isolated nodes** — 126 weakly-connected nodes flagged; most are config keys
-  (noise), but some may be genuinely unused exports. Verify carefully (entry points / test-only aren't
-  dead) before removing. _(src: Claude · while: reading the structural map)_
-- **Install Graphify as a native `/graphify` skill** — `graphify install --platform claude` would make
-  the commands first-class in-session; env is ephemeral so it doesn't persist, but worth it if a
-  durable place to store the skill emerges. _(src: Claude · while: exploring Graphify's command surface)_
-- **Eye searchlight sweep + drifting embers** — at rest, a slow narrow beam from the Eye scans the
-  skyline, and embers drift up from the tower; deepens the lore anchor without stealing focus.
-  _(src: Claude · while: making the Eye of Sauron more pronounced)_
+  drive it from a real sector feed (or derive) so any ticker themes correctly. _(src: Claude · while: building the empire skyline)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a live board projection sends a held symbol to the `market` fallback in `src/universe/sectors.ts`)_
 - **Tie billboard ticker prices to the real sim market** — the marquee prices are independent seeded
   walks; driving them from the actual sim tape (or the `/pulse` cohort data) would make the city
-  cohere with the trend it sits under. _(src: Claude · while: adding ticker billboards)_
+  cohere with the trend it sits under. _(src: Claude · while: adding ticker billboards)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches `drawBillboards` in `src/server/auth/authenticator.ts`)_
 - **Reduced-motion "distant flash"** — under `prefers-reduced-motion` the storm never fires lightning
   (rainT never reaches the threshold); render one static distant flash so the frozen frame still reads
-  as a storm. _(src: Claude · while: adding the rain + lightning storm)_
-- **Verify + polish the 3-bot board** — with Sauron added, sanity-check the leaderboard /
-  bots-vs-humans / compare views with three bots (ordering, cohort aggregates, spacing). The offline
-  server render got interrupted and was never confirmed. _(src: Claude · while: adding the Sauron persona)_
+  as a storm. _(src: Claude · while: adding the rain + lightning storm)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login storm (`drawWeather`, reduced-motion branch))_
 - **Login canvas frame-budget audit** — the login now stacks rain + weather + Eye + city + beams +
   playcall; a quick perf pass (frame cap, offscreen work, DPR cost) would protect the "lovable" feel
-  on weaker devices. _(src: Claude · while: layering cityscape effects)_
-- **Persona WATCHING richness parity** — the playcall's WATCHING/fear-greed panel is rich; the six
-  older personas have plain one-line theses. A light pass could give each a signature "watches"
-  signal, feeding the future lore cards. _(src: Claude · while: adding the Sauron persona)_
+  on weaker devices. _(src: Claude · while: layering cityscape effects)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a phone or low-end device report shows the login canvas stuttering)_
 
 ### Eric's governance calls (do not build unattended)
-- **Feedback triage / auto-fix automation** on the issues the in-app funnel now creates. (task #74)
-- **Self-service "request feedback access"** collaborator flow — largely *superseded* by the in-app
-  feedback funnel (PR #80); likely closeable. (task #76)
 - **History / persistence backend** — shipped and recording; consumption tracked in
   [`plans/history-layer.md`](plans/history-layer.md). Still Eric's to settle: retention (keep
   forever vs prune), and whether to add an off-machine backup export beyond Fly's default snapshots.
@@ -1179,6 +1306,19 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## Shipped (recent)
 
+- **IDEAS.md sweep, 2026-09-30** (#4056 slice 5): 14 of the 30 oldest entries retired. The evidence
+  per entry is in the sweep PR's table.
+  - Shipped: feedback triage/auto-fix automation and the autonomous issue system (Moneypenny's
+    build lane, `moneypenny-events.yml`, #912, with `envelope.json` as the rails); the north-star
+    pipeline (`src/autonomous`, #184, `docs/AUTONOMY-PLAN.md`); the Eye's searchlight and embers (#146, #3718).
+  - Superseded: "request feedback access" (#80, `/app/join` #777); the 3-bot board check and WATCHING
+    parity (views folded in #552/#553, WATCHING panel dissolved in #146); graph refactor and dead-code
+    sweeps (the arch and knip gates plus the decomposer and mortician); `brand.json` (open question in
+    `docs/BCP-GRAPHIFY.md`); the `/graphify` skill (`docs/GRAPHIFY.md`; not installed in session containers).
+  - Dead: the three empire-skyline ideas. No page has rendered the skyline since #827; #4201 deletes it.
+- `integration tests` is a required merge check, beside `verify` (Eric, 2026-09-30, one
+  branch-protection call). Since 09-22 it had been advisory: auto-merge fired on `verify` alone,
+  and a red e2e rode 10+ merges unnoticed. _(src: Claude · while: root-causing PR #3576)_
 - Progressive reveal on the trade ticket — **the rail over a standalone form** (#1461): the
   milestone strip replaces the play picker (#1506); the ticket owns its nav and `?play=` presets
   it, locked segments visible-but-disabled with their reason (#1520). Mockup:
@@ -1599,20 +1739,26 @@ already applied to the strike-pick row highlight (PR #3510) — pick a wash opac
 clearly present without being loud.
 _(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_
 
-### "integration tests" (e2e) isn't actually a required/blocking merge check, despite its own doc comment saying it is
-`.github/workflows/pipeline.yml`'s `e2e` job has a comment reading "Blocking from day one (Eric's
-call) — a failing spec or a hero-screenshot diff fails this check same as any other." In practice,
-observed live 2026-09-22: PR #3576 merged (via auto-merge) at 23:07:37Z, ~2 seconds before its own
-"integration tests" check even reported its failure — meaning `verify` alone gates the merge and
-`e2e` is cosmetic. This is how a repo-wide e2e break (the `@playwright/test` 1.63.0 dependabot bump,
-#3370, root-caused and reverted in #3577) went unnoticed for ~11 hours across 10+ merged PRs: every
-one showed a red "integration tests" check, but nothing stopped any of them from shipping. Worth
-checking whether branch protection's required-checks list actually names `integration tests` (or
-its job id `e2e`) — if it's missing, that's a one-line settings fix; if it's present but GitHub's
-auto-merge doesn't wait for a same-workflow job that finishes after the required ones, that's a
-sequencing question (maybe `arm-auto-merge`/`deploy` should `needs: e2e` too). Did not touch repo
-settings myself — out of scope for the PR that surfaced it, and settings changes are Eric's call.
-_(src: Claude · while: root-causing PR #3576's failing e2e check)_
+### No net watches for a green PR that stops moving — only for a red one
+Found 2026-10-02 while landing plan #3665's last slice: PR #4449 sat `MERGEABLE`, `CLEAN`, not a
+draft, both required checks passing, and **unarmed**, for 29 hours. Nothing noticed, because every
+net we have watches for red and this failure mode is green. Root cause in `docs/LESSONS.md`
+(2026-10-02) and the one-line fix in #4477 — but that fix closes one cause, not the class: #4351 is
+the same symptom from a rate-limit cause, so it is already twice. The cheap sweep: over open PRs,
+flag any whose check runs are all green and whose `autoMergeRequest` is null and which carries no
+`hold-merge` — that single query would have caught both in minutes. Candidate home is the
+main-branch tick that already runs `deploy-lag.mjs` and the conflict sweep, so it costs no new
+schedule.
+_(src: Claude · while: landing plan #3665 slice 5, diagnosing why #4449 never armed)_
+
+### An allowlist that must mirror another list in the same file is drift waiting to happen
+Found 2026-10-02 (#4477): `pipeline.yml`'s arm job allow-listed four of the five pull-request
+actions the same file's `types:` declares, ~250 lines away. A spec now pins those two lists
+together, but that is one instance of a class — `workflow-lint.mjs` is where the class could live
+(any `fromJSON([...])` action list in a job must cover its workflow's own `types:`, unless the job
+names the exclusion). Worth doing only if a second instance turns up; noted so the second one is
+recognised as a pattern rather than re-diagnosed.
+_(src: Claude · while: writing the #4477 fix's falsifier spec)_
 
 ## The chat/companion feature will likely change alongside orchestration work
 

@@ -25,7 +25,41 @@ export interface Heartbeat {
   readonly staleAfterMs: number;
   readonly halted?: string;
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
+  /** Every house playbook, armed · off · blocked (#4450). Absent for a non-owner. */
+  readonly rollCall?: readonly RollCallLine[];
 }
+
+export type RollCallStatus = "armed" | "off" | "blocked";
+
+export interface RollCallLine {
+  readonly playbookId: string;
+  readonly status: RollCallStatus;
+  readonly mode?: string;
+  readonly reason: string;
+  /** `YYYY-MM-DD` its own rule would next open a position. Absent for a playbook with no datable
+   *  window, one already inside its window, and anything not on. */
+  readonly nextEntry?: string;
+}
+
+/** "Oct 28" — the day a playbook's own rule would next open a position. Date-only in, so it is
+ *  parsed at UTC noon: a bare `YYYY-MM-DD` read in a negative-offset timezone prints the day
+ *  before. */
+export function entryDateText(date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). */
+export const ROLL_CALL_WORDS: Record<
+  RollCallStatus,
+  { readonly glyph: string; readonly word: string }
+> = {
+  armed: { glyph: "●", word: "On" },
+  off: { glyph: "○", word: "Off" },
+  blocked: { glyph: "⊘", word: "Can't fire" },
+};
 
 export type DeskHeartbeat =
   | { readonly available: true; readonly heartbeat: Heartbeat }

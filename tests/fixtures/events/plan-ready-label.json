@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "action": "labeled",
+    "label": { "name": "ready" },
+    "issue": {
+      "number": 3960,
+      "state": "open",
+      "labels": [{ "name": "enhancement" }, { "name": "plan" }, { "name": "ready" }],
+      "body": "a plan flipped by the ready label, not a comment"
+    }
+  }
+}

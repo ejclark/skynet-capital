@@ -3,10 +3,18 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import { decisionFrom, intentRowToStored, paramsForRawIntent } from "./decision-db-rows.js";
+import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
+import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
+import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
+import { openOptionLedger } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
-import { type FilledIntentRow, pendingRetrospectives } from "./decision-retrospectives.js";
+import {
+  type FilledIntentRow,
+  pendingRetrospectives,
+  type RetrospectiveInsert,
+} from "./decision-retrospectives.js";
 
 export type { DecisionFunnel } from "./decision-funnel.js";
 
@@ -29,9 +37,11 @@ export type { DecisionFunnel } from "./decision-funnel.js";
  * Row shape (see `decision-db-rows.ts`): one `intents` row PER RAW INTENT, because that is the
  * count that matters for "why didn't it trade" — a raw intent either carries a `guard_reason`
  * (refused, never sized) or an `approved_quantity`/`action` (survived `applyGuardsWithVerdicts`).
- * `record()` is called with the SAME `DecisionRecord` object `autonomous-trader.ts`/`live-cycle.ts`
- * already build, before anything serializes, so a refusal matches its raw intent by reference; an
- * approved one falls back to the house's own symbol+side match (see `decision-db-rows.ts`).
+ * On the bots side `record()` gets the SAME `DecisionRecord` object `autonomous-trader.ts`/
+ * `live-cycle.ts` built, so a refusal matches its raw intent by reference; on the app side the
+ * record crossed the wire, so it matches structurally. An approved one matches on symbol + side +
+ * instrument (see `decision-db-rows.ts`'s `fateOf`). An option order's legs and limit live in the
+ * side tables `decision-db-options.ts` owns.
  */
 
 export interface DecisionDb {
@@ -43,6 +53,11 @@ export interface DecisionDb {
   /** The exact `orderId` join `playbook-attribution.ts` wants — O(1) via the `intents.order_id`
    *  index, never `decision-context.ts`'s fuzzy symbol+side+time match. */
   findByOrderId(orderId: string): { record: DecisionRecord; intent: OrderIntent } | undefined;
+  /** A spread leg's own broker order id → the spread order it belongs to. The account
+   *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
+   *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
+   *  scores fills per order (`playbook-performance.ts`) must not count a spread once per leg. */
+  findSpreadLeg(legOrderId: string): OptionOrderLeg | undefined;
   /** Writes every entry with `record()`'s own idempotency guarantee, wrapped in one transaction —
    *  the app-side replication listener's insert path (PR 4). */
   recordBatch(entries: readonly DecisionRecord[]): void;
@@ -67,8 +82,16 @@ export interface DecisionDb {
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
    *  `retrospectives` back to `intents.playbook_id` (retrospectives themselves aren't tagged with
    *  a playbook id — only the intent that opened the position is). 0 when nothing has closed yet,
-   *  never `null` — an empty sum is an honest zero, not an absence. */
+   *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
+   *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** The broker's option expiry/assignment reports for one persona's account (#4642 slice 8),
+   *  stored once each by activity id; an expiry or assignment closes the contract it names at $0.
+   *  Returns how many were new. One transaction; throws only if the store itself fails. */
+  recordOptionLifecycle(
+    personaId: string,
+    activities: readonly NormalizedLifecycleActivity[],
+  ): number;
   close(): void;
 }
 
@@ -196,6 +219,8 @@ export function openDecisionDb(path: string): DecisionDb {
     -- Idempotency is instead enforced in code (see recordOne below) against this index.
     CREATE INDEX IF NOT EXISTS retrospectives_entry_at ON retrospectives(entry_intent_id, at);
   `);
+  db.exec(OPTION_TABLES_SQL);
+  const optionTables = openOptionTables(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -238,9 +263,11 @@ export function openDecisionDb(path: string): DecisionDb {
     WHERE intents.order_id = ?
     LIMIT 1
   `);
-  // Every filled intent this persona has ever recorded for one symbol, oldest first — the
+  // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
   // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
-  // keep this bounded to one symbol's history, never a whole-table scan.
+  // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
+  // the same underlying symbol but is never a share lot, so it is kept out of this tape and scored
+  // on its own, per contract (`decision-option-ledger.ts`).
   const selectFilledIntentsForSymbol = db.prepare(`
     SELECT intents.id AS intent_id, intents.order_id AS order_id, intents.side AS side,
            intents.filled_quantity AS filled_quantity, intents.filled_price AS filled_price,
@@ -248,6 +275,7 @@ export function openDecisionDb(path: string): DecisionDb {
            decisions.at AS at
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE decisions.persona_id = ? AND intents.symbol = ? AND intents.result_status = 'filled'
+      AND NOT EXISTS (SELECT 1 FROM intent_options o WHERE o.intent_id = intents.id)
     ORDER BY decisions.at ASC, intents.id ASC
   `);
   const selectRetrospectiveKeys = db.prepare(
@@ -268,11 +296,16 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectClosedCount = db.prepare(
     "SELECT COUNT(*) AS n FROM retrospectives WHERE persona_id = ?",
   );
-  const selectFunnelIntents = db.prepare(`
+  // Grouped, not one row per intent (#4612 slice 7, defect #9: "+205 MB at 12 × 180 days" on this
+  // path) — the distinct (guard_reason, action, result_status) combinations are few no matter how
+  // long a persona's history runs, so the count SQLite already has to compute for GROUP BY is the
+  // whole result, never a row pulled per intent.
+  const selectFunnelGrouped = db.prepare(`
     SELECT intents.guard_reason AS guard_reason, intents.action AS action,
-           intents.result_status AS result_status
+           intents.result_status AS result_status, COUNT(*) AS n
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE decisions.persona_id = ?
+    GROUP BY intents.guard_reason, intents.action, intents.result_status
   `);
   // Retrospectives carry no playbook id of their own — only the intent that opened the closed
   // position does — so attributing realized P/L to a playbook means joining back through it.
@@ -322,22 +355,30 @@ export function openDecisionDb(path: string): DecisionDb {
       ).map((r) => `${r.entry_intent_id}:${r.at}`),
     );
     for (const insert of pendingRetrospectives(filled, existingKeys)) {
-      insertRetrospective.run(
-        insert.at,
-        personaId,
-        insert.symbol,
-        insert.entryIntentId,
-        insert.exitReason,
-        insert.realized,
-        insert.returnPct,
-        insert.sentimentDelta,
-        insert.momentumDelta,
-      );
+      writeRetrospective(personaId, insert);
     }
   }
 
+  function writeRetrospective(personaId: string, insert: RetrospectiveInsert): void {
+    insertRetrospective.run(
+      insert.at,
+      personaId,
+      insert.symbol,
+      insert.entryIntentId,
+      insert.exitReason,
+      insert.realized,
+      insert.returnPct,
+      insert.sentimentDelta,
+      insert.momentumDelta,
+    );
+  }
+  const optionLedger = openOptionLedger(db, writeRetrospective);
+
   function intentRowsFor(decisionId: number) {
-    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map(intentRowToStored);
+    const options = optionTables.forDecision(decisionId);
+    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map((row) =>
+      intentRowToStored(row, options.get(row.id as number)),
+    );
   }
 
   function verdictsFor(decisionId: number): PlaybookVerdict[] {
@@ -348,6 +389,17 @@ export function openDecisionDb(path: string): DecisionDb {
       mode: r.mode as PlaybookVerdict["mode"],
       state: r.state as PlaybookVerdict["state"],
     }));
+  }
+
+  /** One `intents` row per raw intent, each matched to its fate first (`fateOf`), plus an option
+   *  order's side-table rows. */
+  function insertIntents(decisionId: number, entry: DecisionRecord): void {
+    const used = { outcomes: new Set<number>(), refusals: new Set<number>() };
+    for (const raw of entry.rawIntents) {
+      const fate = fateOf(raw, entry, used);
+      const { lastInsertRowid } = insertIntent.run(decisionId, ...intentParams(raw, entry, fate));
+      if (raw.option) optionTables.write(Number(lastInsertRowid), raw, fate.outcome);
+    }
   }
 
   function recordOne(entry: DecisionRecord): void {
@@ -367,10 +419,7 @@ export function openDecisionDb(path: string): DecisionDb {
     }
     if (hasIntents.get(decisionId)) return;
 
-    const usedOutcomes = new Set<number>();
-    for (const raw of entry.rawIntents) {
-      insertIntent.run(decisionId, ...paramsForRawIntent(raw, entry, usedOutcomes));
-    }
+    insertIntents(decisionId, entry);
 
     if (entry.context) {
       for (const [symbol, quote] of Object.entries(entry.context.quotes)) {
@@ -393,12 +442,17 @@ export function openDecisionDb(path: string): DecisionDb {
    *  position. Never allowed to break decision capture itself — a retrospective is a derived
    *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
   function triggerRetrospectives(entry: DecisionRecord): void {
-    const filledSymbols = new Set(
-      entry.outcomes.filter((o) => o.result?.status === "filled").map((o) => o.intent.symbol),
-    );
-    for (const symbol of filledSymbols) {
+    const filled = entry.outcomes.filter((o) => o.result?.status === "filled");
+    // An option fill is scored on its own ledger, per contract, never as a share lot.
+    const ledgers = [
+      ...new Set(filled.filter((o) => !o.intent.option).map((o) => o.intent.symbol)),
+    ].map((symbol) => () => updateRetrospectivesFor(entry.personaId, symbol));
+    const optionLedgers = [
+      ...new Set(filled.filter((o) => o.intent.option).map((o) => o.intent.symbol)),
+    ].map((underlying) => () => optionLedger.rescore(entry.personaId, underlying));
+    for (const update of [...ledgers, ...optionLedgers]) {
       try {
-        updateRetrospectivesFor(entry.personaId, symbol);
+        update();
       } catch {
         // Swallowed — see comment above. The next fill for this symbol retries the full recompute.
       }
@@ -497,10 +551,11 @@ export function openDecisionDb(path: string): DecisionDb {
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
-      const rows = selectFunnelIntents.all(personaId) as {
+      const rows = selectFunnelGrouped.all(personaId) as {
         guard_reason: string | null;
         action: string | null;
         result_status: string | null;
+        n: number;
       }[];
       return computeFunnel(
         cycles,
@@ -509,8 +564,21 @@ export function openDecisionDb(path: string): DecisionDb {
           guardReason: r.guard_reason as GuardRefusalReason | null,
           action: r.action,
           resultStatus: r.result_status,
+          count: r.n,
         })),
       );
+    },
+
+    recordOptionLifecycle(personaId, activities): number {
+      db.exec("BEGIN");
+      try {
+        const added = optionLedger.recordLifecycle(personaId, activities);
+        db.exec("COMMIT");
+        return added;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     },
 
     realizedPlForPlaybook(personaId, playbookId): number {
@@ -544,6 +612,8 @@ export function openDecisionDb(path: string): DecisionDb {
       const matched = record.outcomes.find((o) => o.result?.orderId === orderId);
       return matched ? { record, intent: matched.intent } : undefined;
     },
+
+    findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
 
     close() {
       db.close();

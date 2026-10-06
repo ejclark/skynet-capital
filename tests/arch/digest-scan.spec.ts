@@ -27,6 +27,8 @@ describe("digest-scan contract", () => {
     // With docs/digests/ seeded, the volume fields are real numbers keyed to the newest digest.
     expect(s.lastDigest).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(typeof s.commitsSinceLast).toBe("number");
+    // A shallow clone's count is a floor, flagged — never a silent 50 (#3818 slice 7).
+    expect(typeof s.commitsTruncated).toBe("boolean");
     expect(typeof s.daysSinceLast).toBe("number");
   });
 });

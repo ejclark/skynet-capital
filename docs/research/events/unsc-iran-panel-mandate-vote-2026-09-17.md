@@ -310,3 +310,19 @@ never be scored by this lane's automation (their score-by postdates the point at
 goes quiet) — a future session reading this file manually, after 2026-09-30, could still write the
 verdicts in by hand if the sibling `unsc-iran-panel-mandate-expiry-2026-09-26` ledger or a fresh
 primary read settles them, but no automation will prompt that.
+
+**`forward-test-due` note, 2026-09-30 (#2884) — all four forward tests scored, not a second verdict
+on the event.** Re-fetched `main.un.org`'s mandate and Reports pages direct today (both HTTP 200,
+byte-for-byte unchanged from every prior read: mandate page still *"ends on 26 September 2026,"*
+Reports page still ending at S/2015/401, 183,716 bytes) and `press.un.org/en/2026/sc16455.doc.htm`
+direct — a primary the 09-18 close-out could not obtain (`press.un.org` 404'd that session): *"was
+not adopted owing to the negative vote of two permanent members"* — **11 in favour, 2 against
+(China, Russian Federation), 2 abstentions (Pakistan, Somalia)**. Also re-pulled XLE/CL=F/BZ=F daily
+closes fresh from Yahoo's chart API for the registered 09-16-close→09-18-close window (the 09-18
+close-out's own Yahoo/stooq attempts returned corrupted/empty data and were logged blocked; this
+session's succeeded): XLE **64.03 → 64.31 (+0.44%)**, Brent's largest single-session move in-window
+**0.95%**, attributed by wire coverage to an inventory build, not the vote — both well inside the
+registered null. **`FT-unsc-iran-panel-mandate-vote-2026-09-17-1/-2/-3/-4` all score `pass`**; full
+verdicts recorded in
+[forward-tests/unsc-iran-panel-mandate-vote-2026-09-17.md](../forward-tests/unsc-iran-panel-mandate-vote-2026-09-17.md).
+The stance, the close-out and everything above this note are unchanged.

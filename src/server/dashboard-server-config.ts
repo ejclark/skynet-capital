@@ -1,6 +1,8 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -8,7 +10,9 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
+import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
@@ -20,6 +24,7 @@ import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
+import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
@@ -32,6 +37,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { ProgressionService } from "./progression-service.js";
+import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
@@ -131,6 +137,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
   /**
+   * A spread leg's own broker order id → the spread order it belongs to — the hop Activity
+   * needs before `findByOrderId`, because the account reports a spread's fills one per leg. Omit and
+   * a bot's spread legs render as the separate fills they always did.
+   */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
+  /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
    * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
    * whether the bot is even firing. Omit to leave the panel with no funnel section, same dark-when-
@@ -143,6 +155,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section absent, same dark-when-unset posture as `funnelFor`.
    */
   readonly listRetrospectives?: (participantId: string) => readonly RetrospectiveRecord[];
+  /**
+   * COND-SCOUT's latest ledger snapshot (#3651 slice 7a), replicated whole on every bots poll —
+   * feeds `/api/desk/:id/probes`. Omit and that panel reports itself unavailable.
+   */
+  readonly readCondScout?: () => CondScoutSnapshot | undefined;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
@@ -190,9 +207,22 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** The underlying quote, pushed instead of polled (`quote-stream-route.ts`, #3407 P4) — one
+   *  market-data socket per member, on that member's own credential. Absent = the route says so
+   *  and the quote keeps its 15-second poll. */
+  readonly quoteStream?: QuoteStreamPort;
   /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
    *  alerts route still lists, and says dismissals are off. */
   readonly alertDismissals?: AlertDismissalsPort;
+  /** Where a member's alert-delivery choice and sent-ledger live (#3407 P4 slice 3). Absent: the
+   *  delivery route still answers, and says this deployment keeps no delivery settings. */
+  readonly alertDeliveryStore?: AlertDeliveryStorePort;
+  /** The transport that carries an alert off this machine — the one half that needs Eric's
+   *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
+  readonly alertDelivery?: AlertDeliveryPort;
+  /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
+   *  list isn't stored on this deployment rather than accepting names into memory. */
+  readonly watchlist?: WatchlistPort;
   /** The IV clock's daily at-the-money IV history (#3729) — the position guidance reads IV rank off
    *  it. Absent (clock off): richness falls back to implied ÷ realized, capped at medium. */
   readonly ivHistory?: IvHistoryPort;
@@ -265,4 +295,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * of the composer.
    */
   readonly council?: CouncilDeps;
+  /**
+   * `GET/POST /api/feedback/comments` — comments on another member's filing, kept in the app and
+   * never posted to GitHub (issue #2224 shape 3). Omit to disable — the Feedback pulse then shows
+   * its cards with no comment fold.
+   */
+  readonly filingComments?: FilingCommentsDeps;
 }

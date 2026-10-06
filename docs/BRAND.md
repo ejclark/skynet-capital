@@ -100,7 +100,7 @@ window while the rail narrows the shell.
 - Educational first — teach the play, name the "why," recap the outcome.
 - **Customer-facing copy never uses an internal component/type name as its own noun** (`desk`,
   `rail`, `tile`) — use the one established plain name for a surface (its nav label — Leaderboard ·
-  Profile · Trade · Activity · Research · Settings — or a documented lore term below) everywhere it's
+  Profile · Trade · Activity · R&D · Settings — or a documented lore term below) everywhere it's
   referenced. An account is "the account," never "the desk"; the order-review flow is "the gate";
   the `/trade` page is "Trade." This is sized to the actual failure mode (undefined internal
   shorthand drifting into copy one string at a time, 2026-09) rather than a heavyweight controlled
@@ -120,8 +120,9 @@ The recurring visual/narrative language. New work should draw from these, or *ex
 - **The empire built from capital** — the cityscape as generational wealth; the skyline breathes with
   the market (session lighting), and reads as a living market surface (ticker billboards, red rail).
 - **Named surfaces** — sanctioned, consistently-used feature names, not internal shorthand: **the
-  Trading Outpost** (browse every play in the house as a card), **the Playbook Store** (subscribe an
-  account's capital to a house playbook). Use the proper name every time the surface is referenced.
+  Playbook Store** (R&D → Playbooks — every house playbook as a card, with its evidence, and
+  "Subscribe as" to put an account's capital behind one). Use the proper name every time the
+  surface is referenced.
 
 ## The signature — the Living Universe
 

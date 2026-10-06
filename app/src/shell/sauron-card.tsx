@@ -1,9 +1,8 @@
 import { type ReactElement, useId, useRef } from "react";
-import { PHONE_QUERY } from "./cockpit-clock";
 import { LeagueCard } from "./league-card";
-import { type CardPick, type Crest, usePrefs } from "./prefs";
+import { type Crest, usePrefs } from "./prefs";
 import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
-import { useMediaQuery } from "./use-media";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -26,9 +25,18 @@ import { useMediaQuery } from "./use-media";
  *
  * THE MEMBER'S MOTION SETTING (#3807 slice 3b-1): "Still" in Settings → Display stills this tower
  * too — the scene's `rest=still` works in any framing (one frame at rest, the loop only while a
- * glance plays). THE COMPARE (same slice, only under `?shell=watchtower`): beside the calendar
- * head's tower, `?card=league` drops the art at ≥861px so the page draws one tower, not two; on a
- * phone the head's tower is hidden, so the card keeps its art there. Eric picks by eye.
+ * glance plays.
+ *
+ * UNDER THE PAGE'S TOWER (#3977, Eric 2026-09-30, picked by eye from a mock): at the bench width
+ * the tower stands unboxed in the page frame's own column (`tower-column.tsx`, drawn by the shell's
+ * one frame, `vantage.tsx`), and this card gives up its art to it — `under` is the same card from
+ * the shade down: the mist the tower's foot melts into, then the league. Its landmark's dials still
+ * reach the tower (`useTowerMood`). It replaces the `?card=art|league` compare (#3807 slice 3b-1),
+ * retired unused: neither option was the intent.
+ *
+ * ON A PHONE (≤860, #3977 the phone face): the same `under` card — no frame mounts, so no WebGL
+ * context opens on a phone until a real-device recheck measures one. The Eye stays in view as the
+ * brand slot's still picture (`brand-eye.tsx`).
  */
 
 /** The tower's URL: the card framing, the landmark's dials when this account has one, and the
@@ -41,17 +49,6 @@ export function towerSrc(
     ? `&power=${landmark.power.toFixed(3)}&health=${landmark.health.toFixed(3)}`
     : "";
   return `/tower?frame=card${dials}${crest === "still" ? "&rest=still" : ""}`;
-}
-
-/** Whether the card draws its art: always, except the `league` pick beside the head's tower, on
- *  the flag, wider than a phone — the only place a second tower would stand next to the first. */
-export function cardShowsArt(where: {
-  readonly besideHead: boolean;
-  readonly flag: boolean;
-  readonly card: CardPick;
-  readonly phone: boolean;
-}): boolean {
-  return !(where.besideHead && where.flag && where.card === "league" && !where.phone);
 }
 
 /** The shade zone: the forge's ember seat, then mist with an uneven, organic top edge. */
@@ -132,7 +129,7 @@ export function SauronCard({
   ownedIds,
   meId,
   scope,
-  besideHead = false,
+  under = false,
 }: {
   /** The selected account's landmark dials, when it has one (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
@@ -140,23 +137,27 @@ export function SauronCard({
   readonly meId?: string;
   /** CSS selector for the region whose filter clicks the Eye glances at. */
   readonly scope: string;
-  /** The page also shows the calendar head's tower (the Profile page's Overview). */
-  readonly besideHead?: boolean;
+  /** In the tower column, under the page's tower: the shade and the league, no art of its own. */
+  readonly under?: boolean;
 }): ReactElement {
   const frame = useRef<HTMLIFrameElement>(null);
   const crest = usePrefs((s) => s.crest);
-  const flag = usePrefs((s) => s.shell) === "watchtower";
-  const card = usePrefs((s) => s.card);
-  const phone = useMediaQuery(PHONE_QUERY);
-  const art = cardShowsArt({ besideHead, flag, card, phone });
+  // Under the column's tower no frame mounts here (the ref stays empty), so this hook sends
+  // nothing; the page's one frame hears the glance itself (`vantage.tsx`).
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
   useCardFrame(frame);
-  if (!art)
+  // No WebGL on a phone (#3977) until a real-device recheck: the still Eye in the brand slot is the
+  // tower's presence there (`brand-eye.tsx`), and this card is the league under its mist.
+  const phone = usePhoneWidth();
+  if (under || phone)
     return (
-      <section className="char-card char-card--league" aria-label="The league">
-        <div className="char-body">
-          <LeagueCard ownedIds={ownedIds} meId={meId} />
+      <section className="char-card char-card--under" aria-label="The league">
+        <div className="char-blend">
+          <Shade />
+          <div className="char-body">
+            <LeagueCard ownedIds={ownedIds} meId={meId} />
+          </div>
         </div>
       </section>
     );

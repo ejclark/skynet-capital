@@ -1,0 +1,196 @@
+/* The Outlook pane (#3407, slice 4) — `shell/outlook-section.tsx` + `shell/outlook-card.tsx`.
+ * Mobile-first: at 390px one column, and each card reads name → most it can lose → one sentence
+ * before any grid of marks; the marks go two-up from 600px, which is ROOM for what was already
+ * there rather than anything new. Theme tokens only.
+ *
+ * Hue carries nothing here (docs/BRAND.md → Accessibility — a standing reader is red/green
+ * colorblind): the chosen segment of a control is a border plus a weight, and the one figure that
+ * must stand out (the most a structure can lose) is a larger type step with a rule above it. */
+.outlook {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+.outlook p {
+  margin: 0;
+}
+.outlook-kicker {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.outlook-sentence {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.outlook-muted {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.outlook-regime {
+  font-weight: 600;
+}
+/* The view the cards below ANSWER, echoed from the route. Set apart with a rule rather than a tone
+   so it reads as a label on the answer, not as the live controls above it. */
+.outlook-answered {
+  padding-left: var(--space-2);
+  border-left: 3px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.outlook-disclosure {
+  font-size: var(--text-xs);
+}
+.outlook-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.outlook-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.outlook-choice > legend {
+  float: left;
+  width: 100%;
+  padding: 0 0 2px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.outlook-choice > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.outlook-choice > label[data-checked="true"] {
+  border-color: var(--text);
+  border-width: 2px;
+  padding: 3px 9px;
+  font-weight: 700;
+}
+/* `.btn` is width:100% by default (gate.css); this one is its own width from 600px up. */
+.outlook-ask {
+  width: 100%;
+}
+.outlook-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.outlook-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.outlook-card h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+.outlook-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.outlook-worst {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border);
+}
+.outlook-worst > strong {
+  font-size: var(--text-lg);
+}
+.outlook-kicker,
+.outlook-worst > .outlook-kicker {
+  margin: 0;
+}
+.outlook-mechanics {
+  font-size: var(--text-sm);
+}
+.outlook-marks {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.outlook-mark {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+.outlook-mark > dt {
+  color: var(--muted);
+}
+.outlook-mark > dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+.outlook-use {
+  width: 100%;
+}
+.outlook-absent > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.outlook-absent ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.1em;
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 600px) {
+  .outlook-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .outlook-ask,
+  .outlook-use {
+    width: auto;
+    align-self: flex-start;
+  }
+  /* The desktop layout ADDS ROOM for the marks that were one scroll away at 390px — it introduces
+   * no figure the phone frame doesn't carry (CLAUDE.md → mobile-first). */
+  .outlook-marks {
+    grid-template-columns: 1fr 1fr;
+  }
+  .outlook-card-head {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .outlook-worst {
+    align-items: flex-end;
+    padding-top: 0;
+    border-top: 0;
+  }
+}

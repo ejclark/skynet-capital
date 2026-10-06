@@ -1,7 +1,9 @@
 import {
   buildOccSymbol,
+  contractMultiplier,
   humanizeOptionSymbol,
   isOccSymbol,
+  OPTION_MULTIPLIER,
   parseOccSymbol,
 } from "../../src/trading/option-symbols.js";
 
@@ -57,5 +59,13 @@ describe("OCC option symbols", () => {
 describe("BRK.B-style dotted underlyings", () => {
   it("does not treat a dotted ticker as an option", () => {
     expect(isOccSymbol("BRK.B")).toBe(false);
+  });
+});
+
+describe("contractMultiplier (#4643)", () => {
+  it("is 100 for an option contract and 1 for a share", () => {
+    expect(contractMultiplier("NVDA261113C00240000")).toBe(OPTION_MULTIPLIER);
+    expect(OPTION_MULTIPLIER).toBe(100);
+    expect(contractMultiplier("NVDA")).toBe(1);
   });
 });

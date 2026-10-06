@@ -1,3 +1,4 @@
+import { bareCalls, type CoverLeg } from "../domain/option-book.js";
 import type { OptionType } from "./option-symbols.js";
 import {
   buildOccSymbol,
@@ -243,36 +244,30 @@ export function submitDraft(draft: DraftOrder): DraftOrder {
 }
 
 /**
- * The long leg that caps a short leg's risk, or `undefined` if none does — shared by
- * `undefinedRiskLegs` (which only needs to know THAT one exists) and `draftRequirements` (which
- * needs the leg itself, to size the capped width). Same criteria either direction: a call is
- * capped by a higher-or-equal strike above it; a put is capped by a lower-or-equal strike below
- * it — both need an expiration at or after the short's (a long that expires first leaves the
- * short bare for the remaining days) and at least as many contracts.
+ * A leg as `option-book.ts`'s cover arithmetic reads it: signed contracts, + bought, − sold.
  *
- * NOT A MATCHING/ASSIGNMENT ALGORITHM: one long leg can be found as the cap for more than one
- * short leg (two short calls under a single higher long call, say). That double-counts the same
- * protection instead of splitting it — always toward MORE of the structure reading as capped,
- * which is the safe direction both here (fewer warnings would be unsafe) and in
- * `draft-order-requirements.ts` (double-use over-charges collateral, never under). A real
- * one-to-one assignment is later work if a leg set ever needs it.
- *
- * Exported only for `draft-order-requirements.ts`; everything else here keeps it private.
+ * WHY THE DESK BORROWS THE BOTS' RULE instead of keeping its own (#4684). Which long caps which short
+ * is one question with one answer, and the bots already answer it one-to-one: a long call that
+ * expires no earlier caps a short call at ANY strike — a lower one fully (a debit spread's worst case
+ * is the debit), a higher one at the strikes' width — and a long caps at most as many shorts as it
+ * has contracts. The desk's own copy let only a HIGHER long call count, so every bull call spread
+ * read as a naked call, and it let one long cap several shorts. Exported for
+ * `draft-order-requirements.ts`, which charges cash and shares off the same assignment.
  */
-export function cappingLeg(legs: readonly DraftLeg[], leg: DraftLeg): DraftLeg | undefined {
-  return legs.find(
-    (cap) =>
-      cap.action === "buy" &&
-      cap.optionType === leg.optionType &&
-      cap.underlying === leg.underlying &&
-      (leg.optionType === "call" ? cap.strike >= leg.strike : cap.strike <= leg.strike) &&
-      cap.expiration >= leg.expiration &&
-      cap.contracts >= leg.contracts,
-  );
+export function coverLegOf(leg: DraftLeg): CoverLeg {
+  return {
+    underlying: leg.underlying,
+    type: leg.optionType,
+    strike: leg.strike,
+    expiration: leg.expiration,
+    contracts: leg.action === "buy" ? leg.contracts : -leg.contracts,
+  };
 }
 
 /**
- * Short calls this draft does not cap on its own — the legs behind an unlimited-loss warning.
+ * Short calls this draft does not cap on its own — the legs behind an unlimited-loss warning. A leg
+ * is named when any of its contracts is left without a long call to cap it (`bareCalls`), so two
+ * short calls under one long call name one of them.
  *
  * JUDGES THE DRAFT ALONE. A covered call is covered by SHARES, which live in the account, not in
  * this leg set — so a legitimately covered call appears here and the validation layer (slice 2,
@@ -281,8 +276,17 @@ export function cappingLeg(legs: readonly DraftLeg[], leg: DraftLeg): DraftLeg |
  * "max loss $420" on a position that has none.
  */
 export function undefinedRiskLegs(draft: DraftOrder): readonly DraftLeg[] {
+  const bare = bareCalls(draft.legs.map(coverLegOf));
   return draft.legs.filter(
-    (leg) => leg.action === "sell" && leg.optionType === "call" && !cappingLeg(draft.legs, leg),
+    (leg) =>
+      leg.action === "sell" &&
+      leg.optionType === "call" &&
+      bare.some(
+        (line) =>
+          line.underlying === leg.underlying &&
+          line.strike === leg.strike &&
+          line.expiration === leg.expiration,
+      ),
   );
 }
 

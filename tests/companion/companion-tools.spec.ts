@@ -3,6 +3,7 @@ import {
   COMPANION_TOOL_NAMES,
   type CompanionDeskDeps,
   type CompanionToolName,
+  declaredToolNames,
   runCompanionTool,
 } from "../../src/companion/companion-tools.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
@@ -59,6 +60,38 @@ const progressionView: ParticipantProgression = {
   engagementCelebrating: [],
 };
 
+/** Wheels on and nothing said to Moneypenny yet (#1119): the whole ladder is shut, so nothing is
+ *  unlocked and nothing is next — the same absent `nextUp` a finished ladder has. */
+const gatedView: ParticipantProgression = {
+  ...progressionView,
+  ladderGate: "first-message",
+  unlocked: new Set(),
+  nextUp: undefined,
+};
+
+/** A written put: sold to open, bought back to close — the round trip that carries `soldToOpen`. */
+const WRITTEN = "MSFT260918P00420000";
+const writtenFills = [
+  fill({
+    orderId: "w1",
+    symbol: WRITTEN,
+    side: "sell",
+    quantity: 1,
+    filledQuantity: 1,
+    price: 4.2,
+    at: "2026-08-03T00:00:00Z",
+  }),
+  fill({
+    orderId: "w2",
+    symbol: WRITTEN,
+    side: "buy",
+    quantity: 1,
+    filledQuantity: 1,
+    price: 1,
+    at: "2026-08-04T00:00:00Z",
+  }),
+];
+
 function fakeProgression(view = progressionView): ProgressionService {
   return {
     view: () => Promise.resolve(view),
@@ -86,6 +119,73 @@ describe("the tool surface itself", () => {
     for (const name of COMPANION_TOOL_NAMES) {
       expect(name).not.toMatch(/order|trade|place|submit|cancel|buy|sell/i);
     }
+  });
+
+  // The description is the model's only contract for a lookup: a field it never names is a field
+  // the model can't read honestly, and one it names but never gets (the old round trips "hold
+  // time") invites an invented number. Keys are read off real results, so a field added to a
+  // payload without its description fails here.
+  it("each desk lookup's description names every field its result returns", async () => {
+    const descriptionOf = (name: CompanionToolName) =>
+      COMPANION_TOOL_DEFS.find((t) => t.name === name)?.description ?? "";
+    const keysOf = (value: unknown) =>
+      value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
+    const rowKeysOf = (rows: unknown) => (rows as unknown[]).flatMap(keysOf);
+    const resultOf = async (name: CompanionToolName, deps = depsFor()) => {
+      const answer = await runCompanionTool(name, deps, "acct-1");
+      if (!answer.ok) throw new Error(`${name} refused: ${answer.error}`);
+      return answer.result as Record<string, unknown>;
+    };
+
+    const positions = await resultOf("get_my_positions");
+    const trips = await resultOf(
+      "get_my_round_trips",
+      depsFor({
+        readTradeActivity: () =>
+          Promise.resolve([
+            fill({ orderId: "o1", side: "buy", price: 100, at: "2026-08-01T00:00:00Z" }),
+            fill({ orderId: "o2", side: "sell", price: 110, at: "2026-08-02T00:00:00Z" }),
+            ...writtenFills,
+          ]),
+      }),
+    );
+    const progress = await resultOf("get_my_curriculum_progress");
+    const gated = await resultOf(
+      "get_my_curriculum_progress",
+      depsFor({ progression: fakeProgression(gatedView) }),
+    );
+    const expected: [CompanionToolName, readonly string[]][] = [
+      [
+        "get_my_positions",
+        [...keysOf(positions).filter((k) => k !== "positions"), ...rowKeysOf(positions.positions)],
+      ],
+      [
+        "get_my_round_trips",
+        [
+          ...keysOf(trips).filter((k) => k !== "recent"),
+          ...rowKeysOf(trips.recent), // a stock trip and a written contract's, so soldToOpen too
+        ],
+      ],
+      ["get_my_curriculum_progress", [...keysOf(progress), ...keysOf(gated)]],
+    ];
+    for (const [name, keys] of expected) {
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) expect(descriptionOf(name)).toContain(key);
+    }
+  });
+
+  it("draft_feedback's description names every field its result returns", async () => {
+    const answer = await runCompanionTool(
+      "draft_feedback",
+      depsFor({ findSimilarFeedback: () => Promise.resolve([{ number: 101, title: "Same ask" }]) }),
+      undefined,
+      { kind: "idea", title: "Show hold time", details: "Closed trades have no hold time." },
+    );
+    if (!answer.ok) throw new Error(answer.error);
+    const keys = Object.keys(answer.result as object);
+    expect(keys).toEqual(["captured", "status", "similar"]);
+    const description = COMPANION_TOOL_DEFS.find((t) => t.name === "draft_feedback")?.description;
+    for (const key of keys) expect(description).toContain(key);
   });
 });
 
@@ -126,6 +226,22 @@ describe("runCompanionTool — the four real lanes", () => {
     });
   });
 
+  it("get_my_round_trips marks a written contract's row soldToOpen, and only that row", async () => {
+    const deps = depsFor({
+      readTradeActivity: () =>
+        Promise.resolve([
+          fill({ orderId: "o1", side: "buy", price: 100, at: "2026-08-01T00:00:00Z" }),
+          fill({ orderId: "o2", side: "sell", price: 110, at: "2026-08-02T00:00:00Z" }),
+          ...writtenFills,
+        ]),
+    });
+    const result = await runCompanionTool("get_my_round_trips", deps, "acct-1");
+    if (!result.ok) throw new Error(result.error);
+    const { recent } = result.result as { recent: readonly Record<string, unknown>[] };
+    expect(recent.find((t) => t.symbol === WRITTEN)).toMatchObject({ soldToOpen: true });
+    expect(recent.find((t) => t.symbol === "AAPL")).not.toHaveProperty("soldToOpen");
+  });
+
   it("get_my_curriculum_progress answers wheels/points/rank/next-up from the shared service", async () => {
     const result = await runCompanionTool("get_my_curriculum_progress", depsFor(), "acct-1");
     expect(result).toEqual({
@@ -139,6 +255,19 @@ describe("runCompanionTool — the four real lanes", () => {
         unlocked: ["101"],
       },
     });
+  });
+
+  // A shut ladder and a finished one both lack `nextUp`; only the flag tells them apart, so a
+  // brand-new member is never read as having completed the ladder.
+  it("get_my_curriculum_progress flags a ladder that hasn't opened yet", async () => {
+    const shut = await runCompanionTool(
+      "get_my_curriculum_progress",
+      depsFor({ progression: fakeProgression(gatedView) }),
+      "acct-1",
+    );
+    expect(shut).toMatchObject({ ok: true, result: { ladderGated: true, unlocked: [] } });
+    const open = await runCompanionTool("get_my_curriculum_progress", depsFor(), "acct-1");
+    expect((open as { ok: true; result: unknown }).result).not.toHaveProperty("ladderGated");
   });
 
   it("get_play_catalog lists every trade type with this member's own lock state", async () => {
@@ -176,12 +305,32 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
   ];
 
   it.each(adversarialNames)(
-    "refuses %j with nothing but the refusal — no desk data ever rides along",
+    "refuses %j with nothing but the refusal and the declared names — no desk data ever rides along",
     async (name) => {
       const result = await runCompanionTool(name, depsFor(), "acct-1");
-      expect(result).toEqual({ ok: false, error: `no such tool: ${name}` });
+      expect(result).toEqual({
+        ok: false,
+        error: `no such tool: ${name} (the declared tools are ${COMPANION_TOOL_NAMES.join(", ")})`,
+      });
     },
   );
+
+  // An unlinked member's turn declares only the two deskless tools, so the refusal must not invite
+  // a call to a desk lookup that turn never offered.
+  it("names only this turn's declared tools when the member has no linked desk", async () => {
+    const result = await runCompanionTool("bogus", depsFor(), undefined);
+    expect(result).toEqual({
+      ok: false,
+      error:
+        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, draft_feedback)",
+    });
+    expect(declaredToolNames(undefined)).toEqual([
+      "get_work_status",
+      "get_roadmap",
+      "draft_feedback",
+    ]);
+    expect(declaredToolNames("acct-1")).toEqual(COMPANION_TOOL_NAMES);
+  });
 
   it("draft_feedback hands the draft to the hook and files nothing — a malformed one is refused", async () => {
     const drafts: unknown[] = [];
@@ -203,8 +352,26 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
       },
     ]);
     const bad = await runCompanionTool("draft_feedback", deps, undefined, { title: "" });
-    expect(bad.ok).toBe(false);
+    // A missing kind is drafted as an idea, so the refusal names only what is truly required.
+    expect(bad).toEqual({ ok: false, error: "a draft needs a title and details" });
     expect(drafts).toHaveLength(1);
+  });
+
+  // A tool result is data, never a command (the system prompt's UNTRUSTED INPUT rule). What to say
+  // after a draft lives in the prompt's FILING SOMETHING step, so the result carries only the fact.
+  it("draft_feedback's result states where the draft is, and gives the model no instruction", async () => {
+    const result = await runCompanionTool("draft_feedback", depsFor(), undefined, {
+      kind: "idea",
+      title: "Show hold time on closed trades",
+      details: "The closed-trades list has no hold time.",
+    });
+    expect(result).toEqual({
+      ok: true,
+      result: {
+        captured: true,
+        status: "held in the rail, not sent — the member's own reply 'send' files it",
+      },
+    });
   });
 
   it("the type export names exactly the real tools, so an adversarial cast is visibly a lie", () => {
@@ -273,5 +440,72 @@ describe("draft_feedback — advisory dedup against open feedback issues (#1867 
     expect(result.ok).toBe(true);
     expect((result as { ok: true; result: unknown }).result).not.toHaveProperty("similar");
     expect(drafts).toHaveLength(1);
+  });
+});
+
+describe("get_work_status — where any issue stands (#3952 slice 1)", () => {
+  it("passes the bounded, de-duplicated numbers to the reader and returns its answer as-is", async () => {
+    const asked: (readonly number[])[] = [];
+    const result = await runCompanionTool(
+      "get_work_status",
+      depsFor({
+        readWorkStatus: (ns) => {
+          asked.push(ns);
+          return Promise.resolve(ns.map((number) => ({ number, found: false }) as const));
+        },
+      }),
+      undefined, // no linked desk: this tool reads no member data, so it still answers
+      { issues: [42, 42, 7, -1, 1.5, "8", 9, 10, 11, 12] },
+    );
+    expect(asked).toEqual([[42, 7, 9, 10, 11]]);
+    expect(result).toEqual({
+      ok: true,
+      result: { issues: [42, 7, 9, 10, 11].map((number) => ({ number, found: false })) },
+    });
+  });
+
+  // The "say so plainly, never guess" half lives in the system prompt's WORK RECORDS clause; the
+  // tool result carries the fact only, because a tool result is data, never an instruction.
+  it("refuses with nothing to look up, and says 'not available' — never a guess — with no token", async () => {
+    const empty = await runCompanionTool("get_work_status", depsFor(), "acct-1", { issues: [] });
+    expect(empty.ok).toBe(false);
+    const off = await runCompanionTool("get_work_status", depsFor(), "acct-1", { issues: [42] });
+    expect(off).toEqual({
+      ok: false,
+      error: "issue status isn't available on this deployment",
+    });
+  });
+});
+
+describe("get_roadmap — what is coming next (#3952 slice 3)", () => {
+  const roadmap = {
+    available: true,
+    note: "Sequencing, not dates",
+    openPlans: 1,
+    groups: [{ horizon: "Now", meaning: "Being built", total: 1, items: [] }],
+  } as const;
+
+  it("takes no input and returns the reader's answer as-is, with no linked desk", async () => {
+    const result = await runCompanionTool(
+      "get_roadmap",
+      depsFor({ readRoadmap: () => Promise.resolve(roadmap) }),
+      undefined, // no linked desk: this tool reads no member data, so it still answers
+    );
+    expect(result).toEqual({ ok: true, result: roadmap });
+  });
+
+  // Both failure shapes refuse rather than return an EMPTY roadmap: "no groups" would read to the
+  // model as "nothing is planned", which is the one thing it must never say by accident.
+  it("says 'not available' with no token, and refuses — never an empty queue — on a read failure", async () => {
+    expect(await runCompanionTool("get_roadmap", depsFor(), "acct-1")).toEqual({
+      ok: false,
+      error: "the roadmap isn't available on this deployment",
+    });
+    const blip = await runCompanionTool(
+      "get_roadmap",
+      depsFor({ readRoadmap: () => Promise.resolve({ available: false } as const) }),
+      "acct-1",
+    );
+    expect(blip).toEqual({ ok: false, error: "couldn't read the build queue right now" });
   });
 });

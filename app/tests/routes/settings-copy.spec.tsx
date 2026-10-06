@@ -48,8 +48,8 @@ rstest.mock("../../src/live/controls", () => ({
             fleet: {
               allSuspended: false,
               bots: [{ id: "sauron", displayName: "Sauron", suspended: false }],
-              companionModel: "claude-sonnet-5",
-              companionModels: ["claude-sonnet-5"],
+              companionModel: "claude-sonnet-5-5",
+              companionModels: ["claude-sonnet-5-5"],
             },
           }
         : { owner: false },

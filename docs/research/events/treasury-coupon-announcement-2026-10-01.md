@@ -395,6 +395,8 @@ i.e. the benchmark ladder holds or steps up at the FY2027 quarter turn, rather t
 
 | 2026-09-26 | D-5 | **Why this reached a session: `event-material-scan.mjs` fired `material` on `new-adjacent-event:mu-2026-09-30-print`** — MU's print (confirmed, high/critical) entered `adjacentStrongIds` within the 5-day window for the first time; every diffable reading otherwise sits under threshold. **THE FINDING: the benchmark ladder has already stepped up, one cycle before this event's own announcement.** The 09-24 row flagged the routine weekly bill cycle announced that day as having blank offering amounts "worth a same-day recheck" — `auctions_query` (direct, HTTP 200, re-fetched today with bracket-encoded pagination params after a bare `[size]` query string 404'd this session) now carries the filled sizes: **13-Week 912797VJ3 $95B** (auction 09-28), **26-Week 912797WM5 $82B** (09-28), **52-Week 912797WJ2 $54B** (09-29), **6-Week 912797UY1 $85B** (09-29) — all `issue_date` **2026-10-01**, confirming this cycle settles exactly this event's own date though it is announced a week early. That is the 13-/26-week benchmarks stepping **92→95 / 79→82** (+$3B each) and 52-week **52→54** (+$2B), landing on the FY2027 quarter turn precisely as the 09-05/09-15 rows' seasonal-step thesis called it. **This sharpens FT-2, it does not replace it:** the registered test asks whether 10-01's own 13w/26w print **at or above $92B/$79B** — the floor itself has now visibly moved to $95B/$82B one cycle early, so anything printing at the new level clears the registered floor with room, and a reversion back to 92/79 would itself be new information. **Debt-limit headroom loosened, not tightened.** DTS `debt_subject_to_limit` (direct, HTTP 200, record date 2026-09-24, summed from category rows): Debt Held by the Public **$32,362,729M** + Intragovernmental **$7,706,079M** = **$40,068,808M** gross, less Other Debt **$474M** + Unamortized Discount **$185,741M** + FFB **$3,591M** = **$189,806M** not subject to limit → Debt Subject to Limit **≈$39,879,002M** against the unchanged **$41,103,996M** statutory limit → **≈$1.225T headroom** — **up** ~$31B from the 09-22 row's $1.194T, moving further from binding as Treasury draws down post-tax-date, not toward it. **Schedule PDF re-fetched, conclusively unrevised for a third time.** `home.treasury.gov/system/files/221/Tentative-Auction-Schedule.pdf` direct, HTTP 200, **17,195 bytes**, md5 **`a079d72f5fd2c73a6e65e852a57a9658`** — byte-identical AND hash-identical to both the 09-15 and 09-24 fetches (the 09-22 row's hash check was inconclusive; this one and 09-24's are both conclusive and agree). **Press-release index re-read, still through sb0633** (2026-09-22) — nothing on issuance, refunding, buybacks or the debt limit since `sb0590`/`sb0607`; no off-cycle coupon action. **VIX eased slightly.** Cboe `VIX_History.csv` (direct, HTTP 200 after following a 307 redirect off the bare host — recorded since the plain URL redirects through a CDN): close **2026-09-25 = 14.87**, vs the 09-24 probe-ref's **14.21** — **+0.66**, inside the 3-point threshold, still the 14–15 handle this doc has called the cycle's baseline since 09-05. **Curve eased at the short end, firmed at the long end.** Treasury par curve (primary CSV, direct, HTTP 200), 09-23 → 09-25: 2Y 4.85 → **4.81** (−4bp) · **3Y 4.97 → 4.94** (−3bp, this block's largest leg) · 5Y 4.99 → **4.98** (−1bp) · 10Y 5.11 → **5.17** (+6bp) · 30Y 5.40 → **5.49** (+9bp) — a mild bull-flattener at the front end against continued long-end pressure, a partial reversal of the 09-23 row's broad selloff; `symbols: []` means it carries no play here regardless of cause. **Government funding reconfirmed resolved**, inherited from the sibling ledger's own 2026-09-26 deterministic screen (`government-funding-deadline-2026-09-30.md`): unchanged, PL 119-103 through 12-11, no lapse touches 10-01. **Adjacency — corridor re-verified via `event-material-scan.mjs`'s own mechanical read**, not eyeballed: `node scripts/event-scan.mjs --on-date=2026-10-01` lists the same **11** entries as the 09-24 row, all already tracked. Two ids entered the wider 5-day `adjacentIds` list since 09-24 (`amzn-prime-big-deal-days-2026-10-06`, `jgb-10y-auction-2026-10-06`), both already canonical and outside the corridor's strong set. **No new dated event proposed** — everything this sweep found is already tracked. | **Stance survives.** Coupon half unchanged — a scheduled nil, verified out-of-sample twice now, schedule unrevised a third time. Bill half's confidence rises: the seasonal step it called two rows ago has now printed one cycle early, one level above the registered floor. Neither forward test scored or newly registered (both remain open, scoreable 2026-10-02) | 2026-09-28 (medium, D-5 → the `0+` band, 2-day interval) |
 | 2026-09-28 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.0pt since last), band unchanged (medium:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-30 |
+| 2026-09-30 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 16.0 (+1.2pt since last), band unchanged (medium:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-02 |
+| 2026-10-02 | D+1 | **Close-out. Both tests PASS — the coupon half exactly as predicted, the bill half comfortably clear of its floor.** `auctions_query` (direct, HTTP 200, `announcemt_date:eq:2026-10-01`, 6 rows): 3-Year new issue **91282CRQ6 $58B** (auction 10-06) · 10-Year reopening **91282CRF0 $39B**, term `9-Year 10-Month` (auction 10-07) · 30-Year reopening **912810UW6 $22B**, term `29-Year 10-Month` (auction 10-08) — every size, CUSIP and term lands exactly as `FT-…-1` registered, all three settling 10-15. 13-Week **912797VS3 $95B** and 26-Week **912797WU7 $82B** (auction 10-05, settling 10-08) both print above the registered **$92B/$79B** floor — `FT-…-2` PASSES, at the stepped-up level the 09-26 row already flagged one cycle early. No off-cycle coupon action, no SOMA line, no funding lapse. Full detail below in `## Outcome`. | **Stance closes: read-not-trade held for the event's whole life, correctly — no position was ever keyed to a scheduled announcement.** Both forward tests pass; no kill switch fired | Close-out (below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay. The adjacency sweep (peer prints · macro surprises · VIX regime ·
@@ -410,3 +412,91 @@ from re-run instrument data (cache busted first), never from memory.
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+## Outcome
+
+**Assessed 2026-10-02 (D+1, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so there was nothing to bust in the instrument
+cache (recorded rather than skipped, per the doc's own method note). Every number below is a fresh
+pull this session, never carried from a prior row: `api.fiscaldata.treasury.gov` `auctions_query`
+(plain curl, HTTP 200, filter `announcemt_date:eq:2026-10-01`, 6 rows returned) and Yahoo daily
+closes for `^VIX`/`^TNX`/`^TYX`.
+
+### The announcement, re-pulled from the primary
+
+| Security | CUSIP | Term | Reopening? | Offering | Auction | Issue/settle |
+|---|---|---|---|---|---|---|
+| 3-Year NOTE | **91282CRQ6** | new issue | No | **$58.000B** | 2026-10-06 | 2026-10-15 |
+| 10-Year NOTE R | **91282CRF0** | `9-Year 10-Month` | Yes | **$39.000B** | 2026-10-07 | 2026-10-15 |
+| 30-Year BOND R | **912810UW6** | `29-Year 10-Month` | Yes | **$22.000B** | 2026-10-08 | 2026-10-15 |
+| 13-Week BILL | 912797VS3 | reopening of a 26-Week | Yes | **$95.000B** | 2026-10-05 | 2026-10-08 |
+| 26-Week BILL | 912797WU7 | new issue | No | **$82.000B** | 2026-10-05 | 2026-10-08 |
+| 6-Week BILL | 912797UZ8 | reopening of a 26-Week | Yes | **$95.000B** | 2026-10-06 | 2026-10-08 |
+
+Every coupon field matches the prediction exactly: the two reopening CUSIPs (**91282CRF0**,
+**912810UW6**) are the ones the 18/18 · 18/18 cycle record named, the terms are the arithmetic
+decrement from September's `9-Year 11-Month` / `29-Year 11-Month` observed one month early, and all
+three sizes match `sb0590`'s Oct-26 row (**58 / 39 / 22**) on a grid of 30/21/21 completed auctions
+that stayed unbroken through this print. The bill rows print **above** the registered floor: 13-week
+at **$95B** (floor $92B) and 26-week at **$82B** (floor $79B) — the stepped-up level the 09-26 pulse
+already measured one cycle early on the 10-01-settling slate, now confirmed on this announcement's
+own slate too. The 6-week bill (also a 26-week reopening, $95B) and the 13-week's own reopening
+mechanic are read for completeness; neither carries a registered test.
+
+### Forward tests scored
+
+- **`FT-treasury-coupon-announcement-2026-10-01-1`** — **PASS**. Predicted 3-Year new issue $58B
+  (new CUSIP), 10-Year reopening of 91282CRF0 at $39B term `9-Year 10-Month`, 30-Year reopening of
+  912810UW6 at $22B term `29-Year 10-Month`, all settling 10-15. Every field printed exactly as
+  registered — the CUSIP-level inference this doc's own *Honest limits* flagged as unconfirmed held
+  on first contact with the actual announcement, and the cycle record advances to **31/31 · 19/19 ·
+  19/19** completed-and-reopened-on-schedule.
+- **`FT-treasury-coupon-announcement-2026-10-01-2`** — **PASS**. Predicted 13-week and 26-week bills
+  print at or above $92B/$79B. Actual **$95B / $82B**, both above the floor and at the stepped-up
+  level the ladder moved to one cycle early (09-26 row). The debt-limit channel named as this test's
+  one unmeasured exposure never bound — headroom sat at ~$1.2T through every pulse this doc ran —
+  and no off-cycle coupon or CMB action displaced the regular slate.
+
+No new forward test is registered: the close-out is terminal for this document, so a prediction
+filed here would have no session left to score it.
+
+### Kill switches, adjudicated against the close-out data
+
+- **"Either reopening printing on a CUSIP other than 91282CRF0 / 912810UW6"** — does **not** fire;
+  both printed exactly on the predicted CUSIPs.
+- **"Any of 3Y $58B / 10Y $39B / 30Y $22B printing off-grid"** — does **not** fire; all three printed
+  on-grid.
+- **"The 13-week or 26-week bill printing below $92B / $79B"** — does **not** fire; both printed
+  above floor, at the newly-stepped level.
+- **"An off-cycle coupon issuance action"** — does **not** fire; nothing in the press-release index
+  through **sb0648** (re-read this session) touches issuance, refunding, buybacks or the debt limit
+  since `sb0590`/`sb0607`.
+- **The 2026-09-16 FOMC SOMA switch** — already adjudicated not-fired by the 09-22 row (no
+  balance-sheet line in the statement); unchanged, and it stays [`FT-39`](../forward-tests.md)'s
+  question for **11-04**, not this event's.
+
+### Tape, for the record (no attribution claimed)
+
+VIX **16.39** (10-01 close) → **15.31** (10-02). 10Y (`^TNX`) **5.237%** (10-01) → **5.277%**
+(10-02); 30Y (`^TYX`) **5.603%** (10-01) → **5.630%** (10-02) — both ticked up a few bp the day
+after, well inside the noise this `symbols: []` event has never claimed to move. No tracked name's
+tape is attributed to this announcement, per the initial research's own leg 11.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — no position was ever
+keyed to a scheduled, pre-published announcement, and none is retrofitted now.** What five pulses
+and a close-out actually resolved: the coupon half was retired as a *scheduled nil* three weeks
+before it printed (the 09-08/09-09/09-10 out-of-sample check), and the close-out is simply that
+same cycle clearing for a 31st/19th/19th time, on the securities and terms this doc named in advance
+— the durable output is the **CUSIP-level predictability** itself, which no sibling ledger in this
+calendar had used before. The bill half was the one genuinely live question this release carried,
+and it resolved toward **more** supply, not less: the benchmark ladder stepped up at the FY2027
+quarter turn exactly as every quarter-turn step since mid-2025 predicted, the debt-limit channel
+that is the ladder's only historical failure mode never came close to binding, and the short-tenor
+paydown into the 09-15 tax date turned out to be transient rather than a structural cut. The open
+thread this hands forward is **11-04** — the next quarterly refunding, where the grid itself can
+change and where `FT-39` lives — not anything left open here. The scanner goes quiet on this event.

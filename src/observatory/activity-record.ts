@@ -26,4 +26,9 @@ export interface ActivityStore {
   record(entry: TradeActivityRecord): Promise<void>;
   /** All journal lines (order not guaranteed); one participant's when given. Callers collapse. */
   list(participantId?: string): Promise<TradeActivityRecord[]>;
+  /** The most recently *appended* line for one participant, without reading the rest of their
+   *  ledger (#4612 slice 7) — the last write, not re-sorted by `at`. Good enough for a soft
+   *  corroboration signal (e.g. "did this bot trade recently"); use `list` + `collapseActivity`
+   *  when the caller needs an order's true latest fill state. */
+  latest(participantId: string): Promise<TradeActivityRecord | undefined>;
 }

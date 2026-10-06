@@ -91,3 +91,25 @@ export function announceScout(
     `[beta-scout] armed: up to ${betaForcing.maxPicks} forced pick(s)/day when nothing organic fires, on ${accountName}'s account${betaForcing.stageAfterClose ? "; after the close, picks stage for Alpaca's next open" : ""}.`,
   );
 }
+
+/** The playbook roster's boot lines — refused tokens loudly, the armed set once. Moved here from
+ *  run-autonomous.ts with the rest of the boot announcements, to keep that file under its cap. */
+export function announceRoster(
+  roster: {
+    readonly enabled: readonly {
+      readonly playbook: { readonly id: string };
+      readonly mode: string;
+    }[];
+    readonly rejected: readonly string[];
+  },
+  log: { log(line: string): void; error(line: string): void } = console,
+): void {
+  for (const bad of roster.rejected) {
+    log.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
+  }
+  if (roster.enabled.length > 0) {
+    log.log(
+      `[playbooks] armed: ${roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
+    );
+  }
+}

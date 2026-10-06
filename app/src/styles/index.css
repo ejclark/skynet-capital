@@ -26,6 +26,7 @@
 @import "./form-strip.css";
 @import "./gate.css";
 @import "./heartbeat.css";
+@import "./shadow-probes.css";
 @import "./glossary.css";
 @import "./hero-chart.css";
 @import "./hovercard.css";
@@ -42,9 +43,11 @@
 @import "./networth.css";
 @import "./networth-card.css";
 @import "./new-high.css";
+@import "./level-up.css";
 @import "./onboarding.css";
 @import "./overview-grid.css";
 @import "./sauron-card.css";
+@import "./tower-column.css";
 @import "./playbook-store.css";
 @import "./positions-lens.css";
 @import "./profile.css";
@@ -57,8 +60,10 @@
 @import "./calendar-head.css";
 @import "./vantage.css";
 @import "./events-section.css";
+@import "./route-error.css";
 @import "./settings.css";
 @import "./shell.css";
+@import "./spread-legs.css";
 @import "./status.css";
 @import "./symbol-field.css";
 @import "./theme.css";
@@ -68,6 +73,12 @@
 @import "./unlock.css";
 @import "./views.css";
 @import "./working-orders.css";
+@import "./option-lifecycle.css";
 @import "./guidance.css";
+@import "./outlook.css";
 @import "./desk-alerts.css";
+@import "./watchlist.css";
 @import "./wire.css";
+/* after wire.css, not in alphabetical seat: its `.wire-filing` rules sit beside `.wire-trade`'s card
+ * and read as a pair only when they cascade in that order (#784 slice 3). */
+@import "./activity-feed.css";

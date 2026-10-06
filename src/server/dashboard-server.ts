@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { serveAdminApi } from "./admin-api-routes.js";
+import { serveAlertDeliveryApi } from "./alert-delivery-route.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
 import {
@@ -22,20 +23,24 @@ import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
+import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
+import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveTradeOrdersApi } from "./trade-orders-routes.js";
+import { serveWatchlistApi } from "./watchlist-route.js";
 
 export type { DashboardServerConfig };
 
@@ -118,6 +123,20 @@ function serveHomePage(
   return true;
 }
 
+/** The desk's Server-Sent Events channels — a desk's order lifecycle (#3407 P4 slice 1) and one
+ *  symbol's pushed quote (#3407 P4, the quote stream). Grouped because neither is a write API and
+ *  both are synchronous route claims, so `serveWriteApis` carries one branch for the pair. */
+function serveStreamApis(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): boolean {
+  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  return serveQuoteStream(req, res, path, config, session);
+}
+
 /** The shell's write-API families, one dispatcher — trade (shares, options, the plays catalog),
  *  settings, learn, controls, join. */
 async function serveWriteApis(
@@ -129,9 +148,12 @@ async function serveWriteApis(
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
   if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
-  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  if (serveStreamApis(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
+  if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
+  if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;
@@ -143,6 +165,7 @@ async function serveWriteApis(
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveCouncilApi(req, res, path, config.council, session)) return true;
+  if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;

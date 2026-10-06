@@ -288,6 +288,7 @@ Zero capital by construction.
 | 2026-09-15 | D-14 | **Initial research**, and the canonical `src/domain/market-events/unsc-haiti-gsf-mandate-adoption-2026-09-29.json` written this PR after reading the one proposal that named the id (`from-unsc-middle-east-2334-2026-09-28`, now shadowed and inert); nothing in it was contradicted and its one stated open question is settled. **Date — the discrepancy dissolves:** France's provisional programme, re-fetched direct and independently (HTTP 200), carries *"Tuesday, 29 September Adoption (A.M.). Haiti [GSF mandate]"* and, separately, *"Wednesday, 30 September — Haiti GSF mandate expires"*; the apparent contradictors date only the **expiry** — `securitycouncilreport.org`'s September Haiti forecast names **no vote date** and Al Jazeera's 09-04 report gives only *"set to expire on September 30"*. `chathamhouse.org`, the one source phrasing 09-30 as the vote, **403s** to this lane and is characterised, not quoted. Corroborated by practice: across the **8 dated Haiti renewals since 2023** (2692/2743/2751/2752/2785/2793/2794/2814) the adoption lands **0–3 days before** the deadline, median **1**, never on or after; the two same-class rows (2751, 2793) each beat a 10-02 MSS expiry by **2 days** on an ordinary weekday. Stays `estimate`. **The structural finding:** the only listed company with a named Haitian asset is **RCL (Labadee)**, and RCL has **cancelled every 2026 Labadee call** (last call April 2025, sailings re-routed to Nassau) — the channel is zero by the issuer's own decision, before any statistic. **The measured finding:** across the **6 Haiti adoptions that do not collide with a cruise print**, **RCL 0.62%** median absolute vs its **1.52%** 2022+ baseline, **0.61× local, 1.97% max**; CCL **0.60% vs 1.85% (0.50×)**; NCLH 1.76% vs 1.87% (1.01×); XLY 0.63% vs 0.87%; SPY **0.41% vs 0.56% (0.99×), 0.63% max**; WU 0.81% vs 0.98%. CL=F 1.30% (0.81×, 1/6 up) dies on its own t+5 placebo (2.08%). **The method finding:** **3 of 9** adoption dates collide with a major cruise print (EDGAR 8-K Item 2.02, primary) — 2024-09-30 CCL Q3, 2025-09-30 (D+1 of CCL's 09-29 Q3), **2026-01-29 RCL Q4**, which alone carried **RCL +18.65%, NCLH +10.25%, CCL +8.46%** in sympathy; the collision is structural (Haiti deadlines cluster in late Sept and mid-Jul/late Jan = CCL Q3 and RCL Q2/Q4 windows). **Substance:** GSF at **1,083 military + 16 civilian** as of 2026-07-08 against an authorised **5,500 + 50** (~20%, eleven months in); US/Panama co-penholders; Kenya and Chad troops, Canada/Germany/Qatar/US funding; res 2793 **12-0-3** (China, Pakistan, Russia abstaining over ROE, funding, troop composition, oversight); **no veto has ever been cast on a Haiti text** and Haiti's foreign minister requested renewal 2026-09-04. **Adjacency sweep:** (1) peers n/a, `symbols: []`; (2) macro — **60** tracked events within ±5 days, only **three** confirmed-and-high (`pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`), plus `estimate`-high Trump–Xi 09-24 and the funding deadline 09-30; FOMC **09-16** falls before the next pulse; (3) **VIX 17.29**, VIX3M **19.40**, contango intact, 2.71pt from the ≥20 kill switch; (4) geopolitical — Hormuz effectively closed, **CL=F 106.10 (+28.8%/21d)** at a 60-session high, with **OPEC+ 10-04** the adjacent that owns it; (5) tape — **RCL 249.30, CCL 22.11, NCLH 14.28 all at fresh 60-session lows** (−18.3% / −21.4% / −24.9%/21d) against XLY −6.2%: the cruise complex is pricing bunker cost, not the Council. **Proposed this PR:** `proposals/unsc-haiti-gsf-mandate-expiry-2026-09-30.from-unsc-haiti-gsf-mandate-adoption-2026-09-29.json` (`estimate`, EST:) — the hard deadline behind this soft one, on the exact precedent of the Iran panel's vote/expiry pair; the adoption day can move within a 0–3-day window, the twelve-month expiry cannot. **Blocked, recorded not substituted:** `chathamhouse.org` (403), `unscr.com/en/resolutions/2793/` (403), `press.un.org/en/2025/sc16218.doc.htm` (site error) — which is why resolution dates and tallies are title-level reads and are flagged as such. | **Stance opened: stand aside, and decline the date class rather than the instance.** No position; `symbols: []`. Registered `FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-1/-2/-3`. | 2026-09-22 (low:0+ band, 7-day interval) |
 | 2026-09-22 | D-7 | **Pulse check.** No draft resolution found in blue and no veto-risk news; France's programme entry is unchanged (re-read 2026-09-15's fetch, not re-pulled this pulse). **The open read flag is now settled, and it settles against the "clean" hope:** Carnival's own Q3 FY2026 earnings call is confirmed for **2026-09-29, 10:00 a.m. EDT** (NEWS: stocktitan.net republishing Carnival's release, checked 2026-09-22; consensus EPS $1.35 / revenue $8.4B corroborate a real scheduled print, not an aggregator guess) — the D-14 row's 10-05 aggregator estimate was wrong, and 2026 joins 2024-09-30 and 2025-09-30 as a **direct** cruise-earnings collision on the adoption's own day; Signals & conditions updated in place (append-only ledger, live stance section). **Macro surprise (leg 2 material):** the **09-16 FOMC** delivered the hawkish 25bp hike already flagged as the modal case (federalreserve.gov, cross-read via [`dallas-fed-tssos-2026-09-29`](dallas-fed-tssos-2026-09-29.md)'s own 09-22 row) — 3.75%–4.00%, 12-0, 2026 SEP median **4.1%**. **VIX regime:** **14.87** (Cboe, 09-21 close) vs **17.29** last row, **−2.42pt** — under the 3pt material screen but directionally calmer, now **5.13pt** from the ≥20 kill switch (was 2.71); contango restored, VIX9D 13.14 < VIX 14.87 < VIX3M 18.08 (same sibling cross-read). **Geopolitical / fuel:** crude reversed hard — Brent **$100.06** (tradingeconomics, 09-21, −3.67% d/d, −7.6% over six sessions from the $108.35 this doc's D-14 row cited) as Saudi Aramco restores East–West pipeline capacity — the fuel-cost story behind leg 7's 60-session-low cruise names is now unwinding, not deepening. **Event tape (own pull, 2026-09-22, Yahoo/stockanalysis.com, 2026-09-21 close):** **RCL $250.25** (was 249.30, **+0.38%**), **CCL $22.31** (was 22.11, **+0.90%**), **NCLH $14.24** (was 14.28, **−0.28%**) — all quiet, consistent with the standing null; none of this is separable from the broad post-FOMC/oil-reversal tape in any case. **New dated adjacency (the material trigger):** `mu-2026-09-30-print` is now `confirmed`/`critical` (Micron's print, D+1 of this event) and was not in the D-14 `adjacentIds` — one more name in the already-crowded 09-29/09-30 corridor, no cruise or Haiti channel. Also newly in the ±5-day window since D-14: `dallas-fed-tssos-2026-09-29` and the sibling `unsc-haiti-gsf-mandate-expiry-2026-09-30`, now itself a canonical file (promoted from this doc's own D-14 proposal by its own initial research) — nothing to re-propose. **No new dated event discovered outside the existing calendar this pulse; nothing proposed.** **Blocked:** `press.un.org/en/2026/sc16417.doc.htm` (fetch error, attempted while checking for a fresher Council press release; not cited, no claim rests on it). | **No.** Stand aside holds; `symbols: []` unchanged. The CCL-collision read flag resolves from open to confirmed, which *reinforces* the standing "don't read cruise tape as Haiti" caution rather than weakening it — no kill switch fired (date still 09-29, no veto/lapse news, RCL/CCL/NCLH both well inside the 1.97% band and non-separable from FOMC/oil in any case, Labadee still off the 2026 schedule, VIX further from 20 than last row). | 2026-09-29 (low:0+ band, 7-day interval) — lands on the event's own date; the next session in practice is the close-out |
 | 2026-09-29 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (low:0+), 66 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-06 |
+| 2026-09-30 | D+1 | **Close-out.** Cache busted first (`earnings-cycle`/`intraday-edges`); `symbols: []` gives neither instrument a target, unchanged since initial research — run regardless, per the lane's standing instruction. **The date resolved exactly as the primary named:** the Council adopted on **09-29**, not 09-28 or 09-30 — leg 2's modal call landed. **Resolution 2829 adopted 12-0-3** (China, Pakistan, Russia abstain), **no veto** — the identical margin res 2793 carried — extending the GSF for **six months, to 2027-03-31** (a technical-rollover length; FT-2's own prediction counts any duration as a pass, so this is not a miss). Sourced: `securitycouncilreport.org`'s own "What's In Blue" vote page (fetched direct, HTTP 200) — *"On 29 September, the Security Council adopted resolution 2829... 12 votes in favour and three abstentions (China, Pakistan, and Russia)"* — independently corroborated by `unmissions.org`/UNSOH's own news page (same date/tally/resolution number, fetched direct) and wire reporting (UPI, UN News's own account). `usun.usmission.gov`'s remarks page **403s** to this lane (recorded, not substituted). No veto, no lapse — the two structural kill switches did not fire. **The tape is NOT a clean instance — the 09-22 pulse's own flag fired exactly as written:** Carnival's Q3 FY2026 print landed on schedule at 10:00 ET on the adoption's own day — a real beat (EPS $1.43 vs $1.35 consensus, revenue $8.43B, FY26 EPS guidance raised to $2.24) — and close-to-close moves (own pull, stockanalysis.com daily bars, checked 2026-09-30) are **RCL 242.59→260.67 (+7.45%)**, **CCL 22.14→25.11 (+13.41%)**, **NCLH 14.31→14.80 (+3.42%)** — all far above the six-adoption collision-free ceiling (RCL's registered 1.97% max) and the same sympathy signature leg 6 named for 2026-01-29 (RCL's own Q4 print carrying NCLH/CCL along with it), just with Carnival in the driver's seat this time. SPY **765.61→764.20 (−0.18%)** stayed quiet, matching (to the same close, 764.20) the sibling [`dallas-fed-tssos-2026-09-29`](dallas-fed-tssos-2026-09-29.md) close-out's own same-day SPY pull. VIX **16.04** (Cboe, 09-29 close, cross-checked independently), essentially flat vs 16.07 last row. **Adjacency, light:** `event-scan.mjs --on-date=2026-09-29` shows the same 10 tracked entries the D-0 screen recorded — nothing untracked on the event's own date; `computeAdjacentIds` run fresh this session returns **65** ids (`mu-2026-09-30-print`, cited in the 09-22 and dallas-fed rows, is not present as a canonical or proposal file in this checkout and drops out of the corridor accordingly — not re-added, not this lane's file to create), `adjacentStrongIds` unchanged in substance: `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `pce-2026-09-30`. No adjacency proposal from this close-out — nothing dated and untracked surfaced, and the sweep is not mandatory at close-out. **Forward tests — none scored, all deferred by design:** `event-scan.mjs --due` names `FT-…-3` (score by 2026-10-09) in `forwardTestsBeyondWindow` — past this event's `closeOutWithinDays: 6` ceiling (2026-10-05) — which is what forces this close-out to dispatch now rather than hold. `FT-…-1` (score by 2026-10-01) and `FT-…-2` (score by 2026-10-05) are not beyond window but are equally unarrived as of today; scoring either ahead of its own registered date is falsification under the append-only rule regardless of how settled the answer already looks, so none of the three scores this session. Full detail in `## Outcome` below — this document goes quiet on the `event-passed-unscored` door, with three doors back in. | **No new stance — nothing to change.** The Council-action leg (FT-2) resolved exactly as the base rate predicted (pass on the merits, verdict written at its own score-by); the market-null leg (FT-1) hit a genuine cruise-earnings collision, the fourth this doc has now tracked, and the move's shape (RCL+CCL+NCLH in strict proportion to Carnival's own beat, SPY quiet, no headline attributing it to the Council) reads as separable — but that call is for 2026-10-01, not this row. Never traded either way; `symbols: []`, `low` impact unchanged. | — (closed; `FT-…-1`/`-2`/`-3` each reopen this event as `forward-test-due` on 2026-10-01 / 2026-10-05 / 2026-10-09) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay, and a stance *change* earns its sentence in the Stance section with
@@ -303,3 +304,149 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"usun.usmission.gov/remarks-following-the-adoption-of-a-un-security-council-resolution-to-renew-the-gang-suppression-force-mandate/","status":"403","at":"2026-09-30"}]} -->
+
+## Outcome
+
+**Close-out (2026-09-30, D+1 — inside the `closeOutWithinDays: 6` deadline, ceiling 2026-10-05).**
+Geopolitical kind carries no `earnings-cycle`/`intraday-edges` instrument (`symbols: []`, unchanged
+since initial research); the cache-bust command was run regardless, per the lane's standing
+instruction — nothing here uses it. "Re-run instrument data" means re-fetching every cited surface
+direct this session, never recalled from memory or copied from a prior row.
+
+### What happened
+
+The Council adopted on **2026-09-29**, exactly the date the primary named — not 09-28 or 09-30,
+resolving leg 2's practice-distribution question at its modal value. **Resolution 2829** passed
+**12 votes in favour, 0 against, 3 abstentions** (China, Pakistan, Russia — citing insufficient
+funds, personnel and efficacy), extending the Gang Suppression Force for **six months, to
+2027-03-31**. No veto was cast; the margin is identical to res 2793's own 12-0-3. A six-month grant
+is shorter than a full year, but `FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-2`'s own registered
+prediction explicitly counts "a technical roll-over of any length" as a pass — duration was never
+the bet, Council action was.
+
+Sourced this session, all fetched direct 2026-09-30: `securitycouncilreport.org`'s own "What's In
+Blue" vote page (HTTP 200) — *"On 29 September, the Security Council adopted resolution 2829,
+extending the mandate of the Gang Suppression Force (GSF) for another six months, until 31 March
+2027. The resolution received 12 votes in favour and three abstentions (China, Pakistan, and
+Russia)"* — independently corroborated by `unmissions.org`/UNSOH's own news page (same date, same
+resolution number, same tally, HTTP 200) and by wire/UN-account reporting (UPI, the UN News
+Twitter/X account's own vote-result post). `usun.usmission.gov`'s remarks page **403s** to this
+lane and is recorded in this row's `probe-ref.blocked`, not substituted. Neither structural kill
+switch fired: no veto, no lapse.
+
+### The tape — not a clean instance, and the 09-22 flag fired exactly as written
+
+Carnival's Q3 FY2026 earnings landed on schedule at 10:00 a.m. EDT on the adoption's own day (the
+09-22 pulse row already confirmed the date) — a genuine beat: non-GAAP EPS **$1.43** vs $1.35
+consensus, revenue **$8.43B** (+3.4% y/y, topping estimates by $40M), record net yields, full-year
+2026 EPS guidance raised to **$2.24**.
+
+Close-to-close moves, own pull (stockanalysis.com daily bars, checked 2026-09-30):
+
+| Instrument | 09-28 close | 09-29 close | Close-to-close |
+|---|---|---|---|
+| RCL (owns Labadee) | 242.59 | 260.67 | **+7.45%** |
+| CCL (the print) | 22.14 | 25.11 | **+13.41%** |
+| NCLH | 14.31 | 14.80 | **+3.42%** |
+| SPY | 765.61 | 764.20 | −0.18% |
+
+RCL's move is well above the registered **1.97%** six-adoption ceiling, and CCL's is the largest
+single-name move this whole event-class study has recorded outside 2026-01-29's RCL Q4 print. But
+the shape is the same sympathy signature leg 6 named for that January instance (RCL+CCL+NCLH all up
+together, in rough proportion to the reporting company's own beat) — just with Carnival, not Royal
+Caribbean, in the driver's seat this time. SPY stayed quiet at **764.20**, matching (to the exact
+same close) the sibling [`dallas-fed-tssos-2026-09-29`](dallas-fed-tssos-2026-09-29.md) close-out's
+own same-day SPY pull — independent cross-corroboration of both reads. VIX **16.04** (Cboe, 09-29
+close, cross-checked independently this session), essentially flat vs 16.07 last row.
+
+**2026-09-29 is now the fourth Haiti-adoption date on record to collide with a major cruise-line
+print within ±1 day** — joining 2024-09-30 (CCL Q3), 2025-09-30 (D+1 of CCL's 09-29 Q3) and
+2026-01-29 (RCL Q4) from leg 6's own list — not the collision-free instance the D-14 row's wrong
+10-05 aggregator estimate had hoped for, and confirmed as a live risk by the 09-22 pulse a week
+ahead of the print.
+
+### Adjacency, light
+
+`event-scan.mjs --on-date=2026-09-29` shows the same 10 tracked entries the D-0 screen row
+recorded — nothing untracked on the event's own date. `computeAdjacentIds`, run fresh this session
+against the current calendar, returns **65** ids — `mu-2026-09-30-print` (cited in the 09-22 pulse
+and in the sibling dallas-fed close-out) is not present as a canonical or proposal file in this
+checkout and drops out of the corridor accordingly; not re-added, and not this lane's file to
+create. `adjacentStrongIds` unchanged in substance: `ism-manufacturing-2026-10-01`,
+`jobs-2026-10-02`, `pce-2026-09-30`. No adjacency proposal from this close-out — nothing dated and
+untracked surfaced, and the sweep is not mandatory at close-out per
+[`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md).
+
+### Forward tests — none scored, all deferred by design
+
+`event-scan.mjs --due` names `FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-3` (score by
+2026-10-09) in `forwardTestsBeyondWindow` — past this event's `closeOutWithinDays: 6` ceiling
+(2026-10-05) — which is the structural conflict that forces this close-out to dispatch now rather
+than hold for it, per EVENT-RESEARCH.md's `event-passed-unscored` mode (#2884/#2988).
+`FT-…-1` (score by 2026-10-01) and `FT-…-2` (score by 2026-10-05) are **not** beyond the window, but
+neither has reached its own registered score-by as of today (2026-09-30) either — scoring ahead of
+that date is falsification under the append-only rule regardless of how settled the answer already
+looks, so **none of the three scores this session**.
+
+For the record only, not scored:
+
+- **`FT-…-1`** (RCL move + separability): the +7.45% RCL move clears the registered 1.97%
+  kill-switch ceiling, but it lands squarely on Carnival's own confirmed Q3 print — precisely the
+  "not separable from any cruise-sector print" carve-out the kill switch's own text names, and the
+  move's shape (RCL/CCL/NCLH moving together, in rough proportion to CCL's own beat, no headline
+  attributing any of it to the Council) reads toward separable rather than not. The pass/kill call
+  is for the 2026-10-01 `forward-test-due` session to render from re-run data at that time, not this
+  paragraph.
+- **`FT-…-2`** (Council action): already publicly resolved above — resolution 2829, 12-0-3, no
+  veto, matching the registered bar with room to spare. The verdict waits for 2026-10-05.
+- **`FT-…-3`** (cruise-collision method correction): 2026-09-29 is confirmed a collision instance,
+  not the clean one the test needed — its own kill switch anticipated exactly this ("**Void** if a
+  cruise print does land within ±1 day of the adoption... re-creating the very collision this test
+  exists to avoid"), which reads toward VOID rather than a scoreable instance. The verdict waits for
+  2026-10-09.
+
+### Honest accounting
+
+The Council-action call resolved exactly as the base rate this doc built predicted: adopted, no
+veto, an abstention margin matching res 2793's own, even the shorter six-month grant explicitly
+priced in as a non-kill. The market-null call drew the worst case for a *clean* read — a fourth
+cruise-earnings collision, and the largest single-day move this study has recorded outside the
+2026-01-29 outlier — but the move's shape is the same fuel/earnings-sympathy signature leg 6 already
+named, not a Council channel newly appearing. Nothing here changes the stance: never traded,
+`symbols: []`, `low` impact — the structural refusal (leg 4: Labadee already off the 2026 schedule
+by RCL's own decision) was never contingent on the day being quiet, and it holds again. `##
+Outcome` now exists; per `event-scan.mjs`'s `hasOutcome` check this document goes quiet on the
+`event-passed-unscored` door, with exactly three doors back in — `FT-…-1`, `FT-…-2` and `FT-…-3`
+each reopen this event as `forward-test-due` on 2026-10-01, 2026-10-05 and 2026-10-09
+respectively, scored from re-run data at that time, never from this paragraph.
+
+**`forward-test-due` note, 2026-10-01 (#2884) — `FT-…-1` scored, not a second verdict on the
+event.** Re-fetched RCL/CCL/NCLH/SPY direct today (`stockanalysis.com` daily-history API, HTTP
+200): 09-28→09-29 closes **RCL 242.59→260.67 (+7.45%)**, **CCL 22.14→25.11 (+13.41%)**, **NCLH
+14.31→14.80 (+3.42%)**, **SPY 765.61→764.20 (−0.18%)** — unchanged from the close-out's own pull,
+independently reconfirmed rather than carried from memory. RCL's move clears the registered
+**1.97%** ceiling, but contemporaneous reporting (Yahoo/Fool's "Stock Market Today, Sept. 29," 24/7
+Wall St, TradingKey) attributes it explicitly and exclusively to Carnival's Q3 beat and the analyst
+upgrades that followed it — TradingKey: RCL "climbed purely on Carnival's news... a sympathy gain
+tied to a rival's report" — with no surfaced reporting naming the Council vote in connection with
+any cruise-name move. **`FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-1` scores `pass`**; full
+verdict recorded in
+[forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md](../forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md).
+`FT-…-2`/`FT-…-3` remain `_open_`, unaffected, and are not scoreable from today's date (score-by
+2026-10-05 / 2026-10-09). The stance, the close-out and everything above this note are unchanged.
+
+**`forward-test-due` note, 2026-10-05 (#2884) — `FT-…-2` scored, not a second verdict on the
+event.** Re-fetched the UN's own vote record direct today: `press.un.org/en/2026/sc16466.doc.htm`
+(primary), independently corroborated by `securitycouncilreport.org`'s "What's In Blue" vote page
+and `unmissions.org`/UNSOH's own news page — all three agree, and all three match the 2026-09-30
+close-out's own pull rather than being carried from memory. **Resolution 2829, adopted 2026-09-29:
+12 in favour, 0 against, 3 abstentions (China, Pakistan, Russian Federation)**, extending the GSF
+six months to **2027-03-31**. No veto was cast, and abstentions land exactly at the registered
+ceiling — the res-2793 margin the base rate rests on — not past it; neither kill switch fired.
+**`FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-2` scores `pass`**; full verdict recorded in
+[forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md](../forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md).
+`FT-…-3` remains `_open_`, unaffected, and is not scoreable from today's date (score-by 2026-10-09).
+The stance, the close-out and everything above this note are unchanged.

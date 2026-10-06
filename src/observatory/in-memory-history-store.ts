@@ -12,4 +12,8 @@ export class InMemoryHistoryStore implements HistoryStore {
   list(participantId?: string): Promise<EquitySample[]> {
     return this.store.list(participantId);
   }
+
+  latest(participantId: string): Promise<EquitySample | undefined> {
+    return this.store.latest(participantId);
+  }
 }

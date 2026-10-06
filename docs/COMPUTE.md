@@ -9,7 +9,7 @@ agent, and the reference a session consults when deciding whether to escalate th
 
 - **Subagent frontmatter supports both dials.** `model` — `opus`/`sonnet`/`haiku`/`fable`/full-ID/`inherit`
   (default `inherit`); `effort` — `low`/`medium`/`high`/`xhigh`/`max`, overrides the session effort level,
-  default inherits. Every roster agent declares `model`; the compute-routing change adds `effort`.
+  default inherits. Every roster agent declares both.
 - **Resolution order:** `CLAUDE_CODE_SUBAGENT_MODEL` env → per-invocation param → frontmatter → inherit,
   checked against the org `availableModels` allowlist.
 - **Main session is advisory only.** Model is set by `/model`, effort by `/effort` — user-controlled, the
@@ -22,12 +22,17 @@ agent, and the reference a session consults when deciding whether to escalate th
 ## Extensibility (why the floors survive roster changes)
 
 - **Write floors in aliases, never pinned IDs.** `opus`/`sonnet`/`haiku`/`fable` auto-resolve to the
-  latest recommended version and update over time. A new model release needs **zero** changes here. Pin a
-  full ID (`claude-opus-5`) only to deliberately *freeze* a choice.
+  latest recommended version and update over time, so a new model release needs **zero** changes to the
+  model column. Pin a full ID only to deliberately *freeze* a choice, and revisit every pin (the lanes'
+  `--model` strings, `scripts/moneypenny/model-tier.mjs`, `continuation.mjs`) at each release — a pin
+  nobody revisits silently keeps running the old model.
 - **The effort ladder degrades gracefully.** Setting a level a model doesn't support falls back to the
   highest supported level at or below it. New effort levels extend the top; a floor referencing a
-  not-yet-available level still resolves cleanly. So this table changes only when *our taste about
-  task-classes* changes — not when the roster does.
+  not-yet-available level still resolves cleanly. Each model calibrates the ladder itself, so the same
+  level name can buy a different amount of thinking on the next model: when an alias moves, check that
+  each effort floor still buys the thoroughness its task class needs — raise it if not, never lower it
+  for economy. So this table changes only when *our taste about task-classes* changes, or a new model
+  makes a floor buy less — not when the roster merely grows.
 
 ## The assessment heuristic (Anthropic's own)
 
@@ -38,8 +43,9 @@ From `claude.com/blog/claude-model-and-effort-level-in-claude-code`:
   subtle bugs, unfamiliar domains, architecture, long multi-step; what smaller models can't do at any
   effort).
 - **Effort ← thoroughness demand.** How many files to read, how much to verify, how far to go before
-  checking in. Default `high`; raise where skipping a file / not running tests / not double-checking would
-  bite; lower for straightforward work.
+  checking in. Start at `high` and declare it — a model's own default level differs by model and moves
+  between releases, so never rely on inheriting it; raise where skipping a file / not running tests /
+  not double-checking would bite; lower for straightforward work.
 - **Diagnostic on failure:** lacked *knowledge* → upgrade **model**; lacked *thoroughness* → raise
   **effort**. Fix context and prompt first; then, with headroom, prefer more compute over less wherever it
   could change the outcome.
@@ -88,7 +94,20 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   statement from Eric in the prompt, of the shape *"we need to conserve tokens to ensure we have
   tokens to develop until the reset on Tuesday."* Under that signal, and only then, cut in this
   order: waste first (`docs/process/TOKEN-EFFICIENCY.md`), then fan-out width (fewer parallel
-  items, not cheaper ones), then effort, then model — and say which cut was made.
+  items, not cheaper ones), then effort, then model — and say which cut was made. The durable
+  carrier for that signal is the `work-mode:*` label on #4153, read by
+  `scripts/moneypenny/work-mode.mjs`. It now cuts width mechanically, in exactly that order and no
+  further, across every lane the plan named: the build lanes' in-flight cap
+  (`scripts/moneypenny/admission.mjs`), the research lane's per-tick ceiling
+  (`scripts/moneypenny/events.mjs` → `researchCapNow`), a `/governor` cycle's athlete allowance
+  (`npm run work-gate`), a `/grind` run's fan-out width (`.claude/workflows/grind.js`, which
+  refuses a batch wider than the position's `grindWidth` rather than silently dropping items), and
+  the slices one ready plan may continue into on its own in a day
+  (`scripts/moneypenny/continuation.mjs` → `continuationsPerDay`; `halt` stops continuation dead).
+  **The numbers live in `work-mode.json`, not in this doc** — citing the spigot is the whole point
+  of it having one carrier; restating the positions here is how the two drift apart. Effort and
+  model floors are untouched at every position — the dial is a width control, which is why it can
+  be mechanical while this bullet's cut order stays a judgment.
 - **Cost-first defaults are bugs.** A default that exists "to be cheap" rather than because a
   higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
   agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`
@@ -101,8 +120,8 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   above), it's "this specific unbounded-fanout lane cannot be trusted with the top tier until it has
   a real ceiling." Scope: any autonomous lane that can generate its own next unit of work with no
   per-run or per-window dollar ceiling that's actually been validated against real spend — currently
-  `.github/workflows/moneypenny-events.yml`'s research dispatch job (`--model claude-sonnet-5`, was
-  `claude-opus-5`, see the job's own comment and #2946). This is a stopgap tied to that lane's
+  `.github/workflows/moneypenny-events.yml`'s research dispatch job (pinned to the Sonnet tier, not
+  Opus — see the job's own comment and #2946). This is a stopgap tied to that lane's
   unvalidated ceiling, not a revision to the floor table above — once the batching/tiering redesign
   and a validated spend ceiling land, revisit whether Opus can return.
 
@@ -129,11 +148,19 @@ best-outcome routing, not economy:
   ambiguous escalates up, never down. The `haiku` band sits below this table's first row on
   purpose — a single-fact, zero-ambiguity edit is the one case where the lightest model changes
   nothing but wall-clock.
+- **A plan's CONTINUED slice** (`scripts/moneypenny/continuation.mjs` → `CONTINUED_MODEL`, #3818
+  criterion 9): a plan issue carries no `skynet-spec` block, so `modelTier` hands every plan build
+  `opus` — right for the first slice off a brief, and over-resourced for a slice whose scope the
+  state block already fixes (its inputs, its done line, its falsifier). So a continuation claim
+  pins `sonnet`; a ready-flip or label claim on the same plan still gets `opus`. The structural
+  signal is which door the claim came through, and the justification is the same as the row above
+  it: the judgment this tier buys was already spent, at planning time. Not economy — if a
+  continued slice starts needing Opus, that is evidence the state block is not carrying the scope,
+  which is a planning defect to fix rather than a tier to raise.
 - **`/grind` steps** (`.claude/workflows/grind.js`): effort defaults by step kind — `script`
   (run a command, report its exit) at `low`, everything else at `high`; model defaults to
   `sonnet`, and a chore that needs more declares it in its front matter (the research chore runs
-  `fable`/`high`). The two `docs/grind` chores that shipped at `low` were cost-first defaults and
-  were raised the day this section was written.
+  `fable`/`high`).
 
 ## Honest limit
 

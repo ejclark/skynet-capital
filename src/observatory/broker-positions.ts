@@ -1,5 +1,5 @@
 import type { AlpacaPosition } from "../alpaca/alpaca-trading-client.js";
-import { isOccSymbol } from "../trading/option-symbols.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 
 /**
  * What a POSITION is, and the single conversion from the broker's payload into it.
@@ -28,17 +28,11 @@ export interface PositionView {
   readonly lastdayPrice?: number;
 }
 
-/** One option contract controls 100 shares, so every per-share broker price on an OCC symbol is
- *  a per-contract price waiting to be scaled. Exported because the round-trip adapter needs the
- *  SAME multiplier — when only one of the two surfaces scaled, positions and history disagreed
- *  by 100x about the same trade. */
-export const OPTION_MULTIPLIER = 100;
-
 export function positionsFrom(positions: readonly AlpacaPosition[]): PositionView[] {
   return positions.map((position) => {
     // The per-share → per-contract multiplier applies to EVERY per-share broker price, so
     // quantity × avgPrice and quantity × lastdayPrice both stay true dollar totals for options.
-    const scale = isOccSymbol(position.symbol) ? OPTION_MULTIPLIER : 1;
+    const scale = contractMultiplier(position.symbol);
     const lastday = Number(position.lastday_price) * scale;
     return {
       symbol: position.symbol,

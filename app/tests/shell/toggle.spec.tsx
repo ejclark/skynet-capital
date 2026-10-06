@@ -18,6 +18,15 @@ describe("Toggle", () => {
     expect(screen.getByRole("button", { name: "Dark" })).toBeInTheDocument();
   });
 
+  // #4046 item 2: at ≤860px shell.css hides the word and shows an aria-hidden initial, which left
+  // the button with no name at all. The word has to ride on the button, not on its visible text.
+  it("names each button with its full word, independent of the narrow-width initial", () => {
+    render(<Toggle label="Theme" value="light" options={options} onPick={() => undefined} />);
+
+    for (const word of ["Light", "Dark"])
+      expect(screen.getByRole("button", { name: word })).toHaveAttribute("aria-label", word);
+  });
+
   it("marks the current value as pressed, and no other option", () => {
     render(<Toggle label="Theme" value="dark" options={options} onPick={() => undefined} />);
 

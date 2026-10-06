@@ -1,11 +1,11 @@
 // Visual harness + the falsifier's number for the market calendar's head on /app/trade (#3807 slice
 // 3b-2). PHONE FIRST (docs/PICTURES.md): 390 with the head's events line (no tower on phones), then
-// 1280 under `?shell=watchtower` with the tower at the head's right cap. JPEG ≤100KB.
+// 1280 with the tower in the page frame's own column (#3977). JPEG ≤100KB.
 //
-// THE NUMBER. The plan put the tower top-right on the bet that the head is a ROW, never a column,
-// so the docked Bench keeps its width at 1280 with Moneypenny's rail open. Every run prints the
-// Bench's docked width there, with and without the flag — run it on main and on the branch, and the
-// two lines are the before/after the PR quotes. A Bench that folds (`docked: false`) is the failure.
+// THE NUMBER. The Bench must stay docked at 1280, rail closed (beside the tower's column, #3977) and
+// open (the column steps aside, `use-tower-column.ts` — it once left the Bench 353px wide). Every
+// run prints the Bench's width both ways and the column's — run it on main and on the branch, and
+// the lines are the before/after the PR quotes. A Bench that folds (`docked: false`) is the failure.
 //
 // It serves the REAL offline dashboard signed in as the crawl member (scripts/crawl/server.mjs +
 // mint-session.ts — the same boot the persona crawl uses), so the events line reads the real
@@ -51,19 +51,22 @@ async function settle(page, path) {
 
 try {
   const rows = [];
-  for (const flag of [false, true]) {
+  for (const rail of [false, true]) {
     const page = await open({ width: 1280, height: 900 });
-    await settle(page, flag ? `${PLAIN}&shell=watchtower` : PLAIN);
-    await page.getByRole("button", { name: /Moneypenny/ }).click();
-    await page.waitForTimeout(600);
+    await settle(page, PLAIN);
+    if (rail) {
+      await page.getByRole("button", { name: /Moneypenny/ }).click();
+      await page.waitForTimeout(600);
+    }
     rows.push({
-      flag: flag ? "watchtower" : "off",
+      moneypenny: rail ? "open" : "closed",
       ...(await page.evaluate(() => {
         const px = (el) => (el ? Math.round(el.getBoundingClientRect().width) : null);
         const head = document.querySelector("main .cal-head");
         return {
           rail: px(document.querySelector(".mp-rail")),
           stage: px(document.querySelector("main.stage")),
+          tower: px(document.querySelector(".tower-column")),
           bench: px(document.querySelector(".bench")),
           docked: document.querySelector(".bench-docked") !== null,
           head: head ? Math.round(head.getBoundingClientRect().height) : null,
@@ -72,7 +75,7 @@ try {
     });
     await page.context().close();
   }
-  console.log(`bench at 1280, Moneypenny open: ${JSON.stringify(rows)}`);
+  console.log(`bench at 1280: ${JSON.stringify(rows)}`);
 
   if (!measureOnly) {
     const phone = await open({ width: 390, height: 844 });
@@ -80,7 +83,7 @@ try {
     await shooter(phone, out, { quality: 58 })("trade-band-phone");
     await phone.context().close();
     const desk = await open({ width: 1280, height: 800 });
-    await settle(desk, `${PICTURE}&shell=watchtower`);
+    await settle(desk, PICTURE);
     await desk.waitForTimeout(2500); // the tower's first frames
     await shooter(desk, out, { quality: 50 })("trade-band-desktop");
     await desk.context().close();

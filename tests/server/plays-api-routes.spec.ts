@@ -85,6 +85,9 @@ describe("servePlaysApi plays", () => {
     expect(play("401").opensAfter?.code).toBe("302");
     expect(play("501").locked).toBe(true);
     expect(play("501").opensAfter?.code).toBe("401");
+    // The ticket shows the server's own refusal sentence (#469); an open rung carries none.
+    expect((play("201") as { lockedReason?: string }).lockedReason).toContain("first filled 102");
+    expect((play("101") as { lockedReason?: string }).lockedReason).toBeUndefined();
     // The rail's ✓ is the server's word (#1461): a fill earned 101; 102 is open but not earned.
     expect(play("101").earned).toBe(true);
     expect(play("102").earned).toBe(false);
@@ -230,5 +233,12 @@ describe("servePlaysApi wheels", () => {
     expect(body.gate.note).toContain("hello to Moneypenny");
     expect(body.plays.every((p: { locked: boolean }) => p.locked)).toBe(true);
     expect(body.plays.some((p: { opensAfter?: unknown }) => p.opensAfter)).toBe(false);
+    // …and every locked rung's reason is the one the server refuses with (#469): saying hello,
+    // except a sell (102) — an exit the gate never holds, so it names the rung below instead.
+    const reasons = body.plays as { code: string; lockedReason?: string }[];
+    for (const p of reasons.filter((r) => r.code !== "102")) {
+      expect(p.lockedReason).toContain("hello to Moneypenny");
+    }
+    expect(reasons.find((r) => r.code === "102")?.lockedReason).toContain("first filled 101");
   });
 });

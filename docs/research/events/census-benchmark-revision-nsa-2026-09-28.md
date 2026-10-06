@@ -403,3 +403,13 @@ retail benchmark revision entire, not-adjusted and adjusted together, on 09-28 a
 **This document goes quiet**, with one door back in: `FT-…-1`, `-2` or `-4` reaching its own `Score by`
 date re-dispatches this same lane as `forward-test-due` (#2884) to fill only the Outcome cell of the
 row that came due — never to reopen this section.
+
+### Forward-test-due note (2026-10-05, #2884 re-dispatch)
+
+Two rows reached `Score by 2026-10-05` and were scored in their own fragment, not here — see
+[the fragment](../forward-tests/census-benchmark-revision-nsa-2026-09-28.md). `FT-…-1` **PASSED**
+(a fresh `census.gov/retail` fetch still reads both not-adjusted and adjusted estimates released
+together on 09-28). `FT-…-4` **KILLED** (`benchsales25.xlsx` vs the newly-published
+`benchsales26.xlsx` found only 72 of 398 overlapping months, 18.1%, moved ≥0.05% — the shallow,
+recent-years-only shape, not the whole-history re-basing registered). `FT-…-2` (score by
+2026-10-16) stays `_open_`. This verdict is the fragment's, not a second word on the stance above.

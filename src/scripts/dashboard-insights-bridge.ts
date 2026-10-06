@@ -7,8 +7,10 @@
  * for the full reasoning + what was verified. Pulled out of `serve-dashboard.ts` to keep that
  * file's own complexity budget (`scripts/arch-scan.mjs`'s sibling lint gate).
  */
+
 import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
+import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import {
   type DecisionDb,
@@ -16,6 +18,7 @@ import {
   openDecisionDb,
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
@@ -24,6 +27,7 @@ import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
+import { createSubscriptionSeederFromEnv } from "../server/subscription-seed-store.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
 /**
@@ -72,11 +76,16 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** A spread leg's order id → its spread — the same store, filled by the same replicated
+   *  records, so a leg resolves the moment its decision has landed. */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
+  /** COND-SCOUT's latest snapshot (#3651 slice 7a) — memory only, refilled by the next poll. */
+  readonly readCondScout: () => CondScoutSnapshot | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -103,11 +112,21 @@ export function startInsightsBridge(
   // a threaded-through one: `SKYNET_SUBSCRIPTIONS_FILE` already pins the path on this app, and
   // `JsonFileStore` holds no state between reads.
   const subscriptions = createSubscriptionStore(env, (message) => console.error(message));
+  // #4535 slice 1b: seeds each house bot's subscriptions once from the bots app's reported env
+  // roster (uncapped, behaviour-preserving). Runs before the response reads the store, so the
+  // poll that carries the first report already gets the seeded snapshot back.
+  const seeder = createSubscriptionSeederFromEnv(env, (message) => console.error(message));
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let condScout: CondScoutSnapshot | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    condScout: {
+      accept: (snapshot) => {
+        condScout = snapshot;
+      },
+    },
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
@@ -132,6 +151,14 @@ export function startInsightsBridge(
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
+      if (report.houseRoster) {
+        const seeded = seeder.seed(report.houseRoster);
+        if (seeded.length > 0) {
+          console.log(
+            `[subscriptions] seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped): ${seeded.join(", ")}`,
+          );
+        }
+      }
     },
     ...(credentialsDeps && botCredentialsSecret
       ? {
@@ -149,6 +176,7 @@ export function startInsightsBridge(
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
+    readCondScout: () => condScout,
     ...(decisionDb
       ? {
           readDecisions: async (personaId, page) =>
@@ -157,6 +185,7 @@ export function startInsightsBridge(
               ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
           funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume

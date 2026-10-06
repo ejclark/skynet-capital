@@ -4,9 +4,9 @@ import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { fetchPlays } from "../live/options";
-import { CalendarHead } from "./calendar-head";
-import { useMediaQuery } from "./use-media";
-import { TABLET_QUERY } from "./widths";
+import { CalendarHead, headLine } from "./calendar-head";
+import { CalendarSheet } from "./calendar-sheet";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * THE COCKPIT CLOCK (#3807 slice 2·1; the design panel 2026-09-26, shape 2 — "the calendar head
@@ -37,30 +37,30 @@ import { TABLET_QUERY } from "./widths";
  * live route by 2026-10-10 — then it leaves the head for the stage's first row.
  */
 
-/** ≤ the tablet width (860, `widths.ts`) — the shell wraps (`shell.css`), phones included, and
- *  the head sits under the sticky block. */
-export const PHONE_QUERY = TABLET_QUERY;
-
-export function usePhoneWidth(): boolean {
-  return useMediaQuery(PHONE_QUERY);
-}
+/** Re-exported where the cockpit head has always read it; it lives in `use-media.ts` now (#3977),
+ *  where the calendar's sheet and the phone's card read it without importing this clock. */
+export { usePhoneWidth };
 
 export function CockpitClock(): ReactElement {
   // The day lens's fog reads the ladder the trade page already fetches (same key, shared cache).
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
   const fog = dayLensFog(plays.data);
   const horizon = useHorizonRange({ fogged: fog.fogged });
+  const all = { name: "any date", count: "everything dated on your book" };
   return (
-    <section className="cal-head" aria-label="Market calendar">
+    <CalendarSheet
+      className="cal-head"
+      line={headLine({ lens: horizon.lens, range: horizon.range, closures: MARKET_CLOSURES, all })}
+    >
       <CalendarHead
         lens={horizon.lens}
         range={horizon.range}
         closures={MARKET_CLOSURES}
-        all={{ name: "any date", count: "everything dated on your book" }}
+        all={all}
         onLens={horizon.setLens}
         onStep={horizon.step}
         {...(fog.fogged ? { dayFog: { door: fog.door, reason: fog.reason } } : {})}
       />
-    </section>
+    </CalendarSheet>
   );
 }

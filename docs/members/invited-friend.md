@@ -53,15 +53,16 @@ for, and seeing one would read as "I am in the wrong place".
 
 ## 5. What frustrates them
 
-- **The playbook names of another member's bot (code, not yet seen by the crawl)** —
-  `docs/IA.md:326` says a non-owner's `/u/<bot>` Heartbeat withholds playbook ids (#885), but
-  `/api/desk/<bot>/heartbeat` returns every `playbookId` to any viewer
-  (`src/server/desk-json-routes.ts:86`, no ownership check) and the page renders them
-  (`app/src/shell/heartbeat.tsx:51`). Offline no decision trail is wired, so j3 s2 passes on
-  absent data — it goes red the day a crawl boot wires one, which is when the fix lands.
+- **The playbook names of another member's bot (fixed, #3834)** — `docs/IA.md` §5.2 says a
+  non-owner's `/u/<bot>` Heartbeat withholds playbook ids (#885). A non-owner's copy of
+  `/api/desk/<bot>/heartbeat` and of its decisions carries no `playbookId`
+  (`src/server/desk-json-routes.ts` → `withoutHeartbeatPlaybookIds`, `src/server/desk-owner-gate.ts`),
+  and the page hides the column (`app/src/shell/heartbeat.tsx`, `showPlaybook`). Offline no
+  decision trail is wired, so j3 s2 still passes on absent data. A crawl boot that wires one turns
+  it into a real check.
 - Nothing else on the boundary: every j1 step holds today, at both widths. The friend meets the
-  same probe findings every member meets (disabled Activity rows with no reason, a chart pane that
-  says "Pick a symbol" with no input — dead end 3's family) — the ledger carries those.
+  same probe findings every member meets (disabled Activity rows with no reason) — the ledger
+  carries those.
 
 ## 6. Journeys
 
@@ -98,11 +99,12 @@ for, and seeing one would read as "I am in the wrong place".
 2. `/app/activity` — the league's fills: the friend's XLE buy beside Eric's EEM buy. **WHEN the
    invited friend opens Activity, the app shall show the whole league's fills, other members'
    included.** Judge: can this reader tell who did what today?
-3. `/app/activity?section=pnl` — Booked P&L: realized P&L per account across the league, each a
-   link into its page (offline nothing is booked yet — the frozen fixture has no closes). **WHEN
-   the invited friend opens Booked P&L, the app shall show realized P&L for every member's
-   accounts, the friend's and the owner's alike.** Judge: can this reader tell where they stand on
-   what has been closed? _(Added 2026-09-29, #3816 slice 9.)_
+3. `/app/activity` — the Booked P&L strip above the feed: realized P&L per account across the
+   league, each a link into its page, on screen without a tap (offline nothing is booked yet — the
+   frozen fixture has no closes). **WHEN the invited friend opens Activity, the app shall show
+   realized P&L for every member's accounts, the friend's and the owner's alike, without paging
+   away from the feed.** Judge: can this reader tell where they stand on what has been closed?
+   _(Added 2026-09-29, #3816 slice 9; the section became a strip in #784 slice 3.)_
 
 ### j3 — another member's bot, read only
 

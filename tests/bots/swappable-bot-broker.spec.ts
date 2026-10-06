@@ -87,6 +87,11 @@ describe("SwappableBotBroker", () => {
         status: 200,
         body: { id: "o1", symbol: "AAPL", qty: "1", side: "buy", status: "accepted" },
       },
+      // Only a fill the broker confirms is reported as one (#4655).
+      "/v2/orders/o1": {
+        status: 200,
+        body: { id: "o1", status: "filled", filled_qty: "1", filled_avg_price: "231.50" },
+      },
     });
     const original = globalThis.fetch;
     globalThis.fetch = fetchFn;
@@ -103,7 +108,13 @@ describe("SwappableBotBroker", () => {
 
       const result = await broker.submit(intent);
 
-      expect(result).toEqual({ intent, status: "filled", filledQuantity: 1, orderId: "o1" });
+      expect(result).toEqual({
+        intent,
+        status: "filled",
+        filledQuantity: 1,
+        filledPrice: 231.5,
+        orderId: "o1",
+      });
     } finally {
       globalThis.fetch = original;
     }
@@ -133,6 +144,30 @@ describe("SwappableBotBroker", () => {
       });
 
       expect(submitted).toHaveLength(1);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // #4678: a wrapper that dropped this read would tell the trader nothing is open, and a bot would
+  // buy again over an order still queued at the broker.
+  it("reads the open share orders through the current broker after a swap", async () => {
+    const { fetchFn, requests } = fakeFetch({
+      "/v2/orders": {
+        status: 200,
+        body: [{ id: "o1", symbol: "AAPL", qty: "3", side: "buy", status: "accepted" }],
+      },
+    });
+    const original = globalThis.fetch;
+    globalThis.fetch = fetchFn;
+    try {
+      const broker = new SwappableBotBroker(bot("OLD-KEY"));
+      broker.replaceCredentials({ apiKey: "NEW-KEY", apiSecret: "new-secret" });
+
+      const open = await broker.openShareOrders();
+
+      expect(open).toEqual([{ symbol: "AAPL", side: "buy", quantity: 3 }]);
+      expect(requests.map((r) => r.headers["APCA-API-KEY-ID"])).toEqual(["NEW-KEY"]);
     } finally {
       globalThis.fetch = original;
     }

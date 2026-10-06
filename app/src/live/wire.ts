@@ -1,8 +1,11 @@
 /**
- * The Wire's client model (#738 phase 5a) — mirrors `WireView` on the server, plus the feed's own
- * subset of the Issues filter grammar: `is:buy`/`is:sell` split by side, `is:bot`/`is:human` by
- * desk kind, and a bare term matches the symbol or the trader's name. Chips and query text stay
- * ONE model, exactly like the blotter's bar.
+ * Activity's client model (#738 phase 5a) — mirrors `WireView` on the server: the kinds of the
+ * page's one feed, plus the standing P&L snapshot, plus the two fetches that get them.
+ *
+ * The filter grammar that used to live here moved to `activity-feed.ts` with the one-feed model
+ * (#784 slice 3), because it now narrows a list of two kinds rather than a list of trades. This
+ * file stays the transport and the types — it is also what the options ticket's who-else-traded row
+ * imports, and that row wants trades alone, no grammar.
  */
 
 /** "Why did that trade fire?" — absent for a human trade, or a bot trade whose decision wasn't
@@ -44,6 +47,8 @@ export interface WireTrade {
   readonly kind: "human" | "bot";
   readonly reconstructed: boolean;
   readonly when: string;
+  /** The raw ISO instant behind `when` — what the one feed sorts both kinds on. */
+  readonly at: string;
   readonly reasoning?: WireTradeReasoning;
   readonly vitals?: WireTradeVitals;
 }
@@ -57,12 +62,53 @@ export interface WirePnl {
 }
 
 export interface WireFeedbackItem {
+  /** Keys the filing's in-app comments (`/api/feedback/comments`, issue #2224 shape 3). */
+  readonly issueNumber: number;
   readonly icon: string;
+  /** The icon's word ("Bug", "Feature", "Idea", else "Filing") — the row's leading token. */
+  readonly kindLabel: string;
   readonly title: string;
   readonly url: string;
   readonly status?: string;
   readonly statusKey?: string;
   readonly meta: string;
+  /** The filing instant, raw — the trade row's `at` twin. */
+  readonly at: string;
+}
+
+/** One merged pull request on the feed (#784 slice 4) — the third kind. No in-app identity to join
+ *  on: GitHub owns the merge, so the row is a title, a link and when it landed. */
+export interface WireDevelopmentItem {
+  readonly pullRequest: number;
+  readonly icon: string;
+  /** The icon's word ("Merged") — the row's leading token, as BUY/SELL and "Bug" are for the others. */
+  readonly kindLabel: string;
+  readonly title: string;
+  readonly url: string;
+  /** Absent when GitHub named no author — the row then says what merged, not who merged it. */
+  readonly author?: string;
+  readonly meta: string;
+  /** The merge instant, raw — the other kinds' `at` twin. */
+  readonly at: string;
+}
+
+/** One member's earned milestone (#784 slice 5) — the fourth kind. Proved by a fill (or a fill's
+ *  expiry or close) on the server; the browser only ever displays it. */
+export interface WireMilestoneItem {
+  /** Participant + milestone — an earn happens once, so the pair is its identity. */
+  readonly key: string;
+  readonly icon: string;
+  /** The row's leading word ("Earned"). */
+  readonly kindLabel: string;
+  readonly who: string;
+  readonly whoId: string;
+  /** The achievement title, as the Learn page words it ("Buy your first stock"). */
+  readonly title: string;
+  /** Absent for a milestone the course score does not count. */
+  readonly points?: number;
+  readonly meta: string;
+  /** The proving instant, raw — the other kinds' `at` twin. */
+  readonly at: string;
 }
 
 export interface WireFeed {
@@ -70,6 +116,15 @@ export interface WireFeed {
   readonly pnl: readonly WirePnl[];
   readonly feedbackEnabled: boolean;
   readonly feedback: readonly WireFeedbackItem[];
+  /** False when this deployment cannot read GitHub — the feed says so, rather than letting an empty
+   *  list imply nothing has ever merged. Absent on a response from a server older than slice 4, which
+   *  reads as off: the honest answer for a server that cannot send the kind at all. */
+  readonly developmentEnabled?: boolean;
+  readonly development?: readonly WireDevelopmentItem[];
+  /** False when this deployment cannot read every milestone source; absent on a server older than
+   *  slice 5, which reads as off for the reason `developmentEnabled` does. */
+  readonly milestonesEnabled?: boolean;
+  readonly milestones?: readonly WireMilestoneItem[];
   /** Present only when the trade page was full — the `before` cursor for the next `/api/wire`
    *  request, read off the server's `Link: rel="next"` header (GitHub's own pagination
    *  convention, `src/server/pagination.ts`). Absent means there are no older trades to fetch. */
@@ -110,48 +165,4 @@ export async function fetchWireForSymbol(symbol: string): Promise<WireFeed> {
   if (!res.ok) throw new Error(`wire ${res.status}`);
   const body = (await res.json()) as { wire: WireFeed };
   return body.wire;
-}
-
-const WIRE_QUALIFIERS = ["is:buy", "is:sell", "is:bot", "is:human"] as const;
-type WireQualifier = (typeof WIRE_QUALIFIERS)[number];
-
-/** One side and one kind at a time — picking the sibling replaces, never stacks a contradiction. */
-const WIRE_EXCLUSIVE: readonly (readonly WireQualifier[])[] = [
-  ["is:buy", "is:sell"],
-  ["is:bot", "is:human"],
-];
-
-export interface WireFilter {
-  readonly terms: readonly string[];
-  readonly qualifiers: readonly WireQualifier[];
-}
-
-export function parseWireQuery(query: string): WireFilter {
-  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return {
-    terms: tokens.filter((t) => !(WIRE_QUALIFIERS as readonly string[]).includes(t)),
-    qualifiers: tokens.filter((t): t is WireQualifier =>
-      (WIRE_QUALIFIERS as readonly string[]).includes(t),
-    ),
-  };
-}
-
-export function matchesWire(trade: WireTrade, filter: WireFilter): boolean {
-  for (const qualifier of filter.qualifiers) {
-    if (qualifier === "is:buy" && trade.side !== "buy") return false;
-    if (qualifier === "is:sell" && trade.side !== "sell") return false;
-    if (qualifier === "is:bot" && trade.kind !== "bot") return false;
-    if (qualifier === "is:human" && trade.kind !== "human") return false;
-  }
-  const haystack = `${trade.symbol} ${trade.who}`.toLowerCase();
-  return filter.terms.every((term) => haystack.includes(term));
-}
-
-/** Chip toggle with the exclusive-group rule (the blotter's behavior, on the wire's groups). */
-export function toggleWireQualifier(query: string, qualifier: WireQualifier): string {
-  const tokens = query.split(/\s+/).filter(Boolean);
-  const active = tokens.some((t) => t.toLowerCase() === qualifier);
-  const siblings = WIRE_EXCLUSIVE.find((group) => group.includes(qualifier)) ?? [qualifier];
-  const kept = tokens.filter((t) => !(siblings as readonly string[]).includes(t.toLowerCase()));
-  return (active ? kept : [...kept, qualifier]).join(" ");
 }

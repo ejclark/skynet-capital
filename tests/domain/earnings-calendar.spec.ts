@@ -2,7 +2,9 @@ import {
   daysUntil,
   type EarningsPrint,
   nextPrint,
+  nextPrintRisk,
   PRINT_WINDOWS,
+  printSpan,
   printWithin,
   UPCOMING_PRINTS,
 } from "../../src/domain/earnings-calendar.js";
@@ -58,6 +60,57 @@ describe("earnings calendar", () => {
     it("counts an estimate — estimates widen safety windows, per the date policy", () => {
       const hit = printWithin("NVDA", "2026-08-25T14:00:00Z", 2, prints);
       expect(hit?.status).toBe("estimate");
+    });
+
+    describe("an estimate's window (#4646)", () => {
+      const estimate: EarningsPrint = {
+        symbol: "CRWV",
+        date: "2026-11-10",
+        status: "estimate",
+        source: "test",
+        window: { start: "2026-11-09", end: "2026-11-16" },
+      };
+      const crwv: readonly EarningsPrint[] = [estimate];
+
+      it("counts from the window's start, not the point estimate", () => {
+        // 11-07 is 3 days from the 11-10 estimate but 2 from the window's 11-09 start.
+        expect(printWithin("CRWV", "2026-11-07T15:00:00Z", 2, crwv)?.date).toBe("2026-11-10");
+      });
+
+      it("stays live after the point estimate, until the window closes", () => {
+        // 11-12: past the 11-10 guess, but CRWV may not have reported yet.
+        expect(printWithin("CRWV", "2026-11-12T15:00:00Z", 2, crwv)?.date).toBe("2026-11-10");
+        expect(nextPrintRisk("CRWV", "2026-11-12T15:00:00Z", crwv)?.date).toBe("2026-11-10");
+        // The display question is unchanged: no upcoming date to show once the guess has passed.
+        expect(nextPrint("CRWV", "2026-11-12T15:00:00Z", crwv)).toBeUndefined();
+      });
+
+      it("lets go once the window has passed", () => {
+        expect(printWithin("CRWV", "2026-11-17T15:00:00Z", 2, crwv)).toBeUndefined();
+      });
+
+      it("reads a confirmed print as its one date, window or not", () => {
+        const confirmed: EarningsPrint = { ...estimate, status: "confirmed", source: "IR: test" };
+        expect(printSpan(confirmed)).toEqual({ start: "2026-11-10", end: "2026-11-10" });
+        expect(printWithin("CRWV", "2026-11-07T15:00:00Z", 2, [confirmed])).toBeUndefined();
+      });
+
+      it("refuses a bot's buy inside the window through the S2 guard", () => {
+        const buy: OrderIntent = {
+          symbol: "CRWV",
+          side: "buy",
+          quantity: 10,
+          type: "market",
+          reason: "test",
+        };
+        const approved = applyGuards(
+          [buy],
+          aPortfolio({ cash: 100_000 }),
+          aContext({ CRWV: { last: 90 } }, "2026-11-12T16:00:00Z"),
+          { maxPositionPct: 1, discipline: { calendar: crwv } },
+        );
+        expect(approved).toEqual([]);
+      });
     });
   });
 

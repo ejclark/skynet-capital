@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId } from "react";
 import { fiscalQuarterFor, fiscalYearEndFor } from "../../../src/domain/fiscal-calendar";
+import { eventInSector } from "../../../src/domain/sector-coverage";
 import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
 import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
@@ -13,11 +14,13 @@ import {
   type DocSymbolMatch,
   docSymbolMatch,
   fetchResearch,
+  fetchResearchCalendar,
   fetchResearchMentions,
   LENS_LABEL,
   type MentionSearchState,
   mentionsSymbol,
   parseResearchQuery,
+  type ResearchCalendarData,
   type ResearchCall,
   type ResearchDocLink,
   type ResearchEvent,
@@ -36,6 +39,19 @@ import { FacetRow } from "./facet-row";
  * text/symbol filter, the call board, and the ledger/study doc lists. See `research.tsx`'s own doc
  * comment for the lens/range design and why this became one section among three.
  */
+
+/** Sector scope (#3811): the WHERE axis, applied to the event-keyed lists only. One rule, shared
+ *  with the coverage join, so a sector tile and the board it filters never disagree. An event the
+ *  payload has no entry for (a call whose event fell out of the calendar) cannot be placed in a
+ *  sector by its symbols, so its id alone is tested — the same fallback `inSymbolScope` makes. */
+function inSectorScope(
+  sector: string | undefined,
+  event: ResearchEvent | undefined,
+  eventId: string,
+): boolean {
+  if (!sector) return true;
+  return eventInSector(sector, { id: eventId, symbols: event?.symbols ?? [] });
+}
 
 /** Symbol scope (OR): on the event, leading the id, or named in the TL;DR — any listed symbol. */
 function inSymbolScope(
@@ -90,7 +106,7 @@ export function CallBoard({
   readonly inRangeIds: ReadonlySet<string>;
   readonly rangeName: string;
 }): ReactElement | null {
-  const { lens, terms, symbols, kind, impact, callClass } = filter;
+  const { lens, terms, symbols, sector, kind, impact, callClass } = filter;
   const today = marketToday();
   const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   // One row per ledger, read through the lens; a ledger with no row for it is left out, never
@@ -103,6 +119,7 @@ export function CallBoard({
     ({ call, row, event }) =>
       inRangeIds.has(call.eventId) &&
       inSymbolScope(symbols, event, call.eventId, call.tldr) &&
+      inSectorScope(sector, event, call.eventId) &&
       (!kind || event?.kind === kind) &&
       (!impact || event?.impact === impact) &&
       (!callClass || classifyCall(row.call) === callClass) &&
@@ -210,6 +227,12 @@ export function CallBoard({
             two lists otherwise disagree about the same scope for no visible reason. */}
         {symbols.length > 0
           ? " Scoped to the names a call is about — a ledger that only mentions one is listed below, not called here."
+          : ""}
+        {/* #3811: a sector is read off the event (its symbols, its id, its own macro series), which
+            studies are not keyed by at all. Said out loud so the Studies list below is not read as
+            "no study touches this sector" when it was never sector-scoped in the first place. */}
+        {sector
+          ? ` Sector scope reaches the calls and ledgers below; studies are not sector-keyed, so ${sector} does not narrow them.`
           : ""}
       </p>
     </section>
@@ -321,7 +344,7 @@ export function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter — a word · sym:NVDA · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month · lens:all"
+            placeholder="filter — a word · sym:NVDA · sector:energy · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month · lens:all"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
@@ -355,6 +378,69 @@ export function ResearchFilters({
   );
 }
 
+/** R&D's grid, from the calendar's slice (#3977 slice 5) — or, on a server from before it, the
+ *  shelf. The day lens never lacks a row (`callForLens` falls back to the headline), so the calls
+ *  held behind its fog are exactly the called events in range: the slice marks them `called`, the
+ *  shelf's own calls name them. */
+function BoardGrid({
+  grid,
+  shelfCalls,
+  horizon,
+  fog,
+  fiscal,
+}: {
+  readonly grid: ResearchCalendarData;
+  readonly shelfCalls: readonly ResearchCall[];
+  readonly horizon: ReturnType<typeof useHorizonRange>;
+  readonly fog: ReturnType<typeof dayLensFog>;
+  readonly fiscal: FiscalQuarterLabel | undefined;
+}): ReactElement {
+  const { anchor, range, today, pinned } = horizon;
+  const shelfCalled = new Set(shelfCalls.map((c) => c.eventId));
+  const held = grid.events.filter(
+    (e) => (e.called || shelfCalled.has(e.id)) && inRange(e.date, range),
+  ).length;
+  return (
+    <EventHorizon
+      events={grid.events}
+      closures={grid.closures}
+      lens={horizon.lens}
+      anchor={anchor}
+      range={range}
+      today={today}
+      pinned={pinned}
+      onPick={(date) => horizon.setOn(pinned && anchor === date ? undefined : date)}
+      onLens={horizon.setLens}
+      onStep={horizon.step}
+      {...(fiscal ? { fiscal } : {})}
+      {...(fog.fogged ? { dayFog: { door: fog.door, reason: fog.reason, held } } : {})}
+    />
+  );
+}
+
+/** Which payload draws the grid: the calendar's slice, or — when a server from before it answers
+ *  404 — the shelf, once it lands. Nothing until one has. */
+function gridOf(
+  calendar: { readonly data?: ResearchCalendarData | undefined; readonly isError: boolean },
+  research: { readonly data?: ResearchShelfData | undefined },
+  horizon: ReturnType<typeof useHorizonRange>,
+  fog: ReturnType<typeof dayLensFog>,
+  fiscal: FiscalQuarterLabel | undefined,
+): ReactElement | null {
+  const shelf = calendar.isError ? research.data : undefined;
+  const grid = calendar.data ?? shelf;
+  if (!grid) return null;
+  return (
+    <BoardGrid
+      grid={grid}
+      shelfCalls={shelf?.calls ?? []}
+      horizon={horizon}
+      fog={fog}
+      fiscal={fiscal}
+    />
+  );
+}
+
 /** The Board section — everything Research rendered before #3333 slice 9, unchanged, just scoped
  *  to its own section and gated so its queries only run while Board is the active section. */
 export function useBoardView({
@@ -367,6 +453,14 @@ export function useBoardView({
   readonly setFilter: (next: string) => void;
 }): { readonly band: ReactElement | null; readonly body: ReactElement } {
   const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch, enabled: active });
+  // The grid reads the calendar's slice (#3977 slice 5), the same key Trade and the Profile page's
+  // Events read, so it paints from ~200 KB while the board's 2.5 MB shelf is still arriving, and a
+  // member coming from either page brings it cached.
+  const calendar = useQuery({
+    queryKey: ["research-calendar"],
+    queryFn: fetchResearchCalendar,
+    enabled: active,
+  });
   // The day lens's fog reads the ladder the trade page already fetches (same key, shared cache).
   const plays = useQuery({
     queryKey: ["plays"],
@@ -400,17 +494,6 @@ export function useBoardView({
     ...(fiscalYearEnd ? { fiscalYearEndMonth: fiscalYearEnd.fiscalYearEndMonth } : {}),
   });
 
-  if (research.isPending) return { band: null, body: <p className="note">Opening Research…</p> };
-  if (research.isError)
-    return { band: null, body: <p className="note">Research is unreachable.</p> };
-
-  const data = research.data;
-  const { on: _on, lens: _lens, ...facets } = parsed;
-  const filter: ResearchFilter = {
-    ...facets,
-    lens: horizon.lens,
-    ...(horizon.pinned ? { on: horizon.anchor } : {}),
-  };
   const { anchor, range, today } = horizon;
   const fiscal: FiscalQuarterLabel | undefined =
     fiscalYearEnd && scopedSymbol
@@ -424,11 +507,20 @@ export function useBoardView({
           return { symbol: scopedSymbol, fiscalYear: fq.fiscalYear, quarter: fq.quarter };
         })()
       : undefined;
+  const band = gridOf(calendar, research, horizon, fog, fiscal);
+
+  if (research.isPending) return { band, body: <p className="note">Opening Research…</p> };
+  if (research.isError) return { band, body: <p className="note">Research is unreachable.</p> };
+
+  const data = research.data;
+  const { on: _on, lens: _lens, ...facets } = parsed;
+  const filter: ResearchFilter = {
+    ...facets,
+    lens: horizon.lens,
+    ...(horizon.pinned ? { on: horizon.anchor } : {}),
+  };
   // The range resolves through the served events — precise ids, never date-string guessing.
   const inRangeIds = new Set(data.events.filter((e) => inRange(e.date, range)).map((e) => e.id));
-  const heldDayCalls = fog.fogged
-    ? data.calls.filter((c) => inRangeIds.has(c.eventId) && callForLens(c, "day") !== null).length
-    : 0;
   const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   const matchesTerms = (doc: ResearchDocLink) =>
     filter.terms.every(
@@ -457,6 +549,7 @@ export function useBoardView({
       const event = eventsById.get(eventId);
       const keep =
         matchesTerms(doc) &&
+        inSectorScope(filter.sector, event, eventId) &&
         (!filter.kind || event?.kind === filter.kind) &&
         (!filter.impact || event?.impact === filter.impact);
       return keep ? [rowOf(doc, eventId)] : [];
@@ -477,30 +570,17 @@ export function useBoardView({
   // `impact:low` actually emptied, which is the same false claim in the other direction.
   const alsoFiltered = {
     study: filter.terms.length > 0,
-    ledger: filter.terms.length > 0 || Boolean(filter.kind) || Boolean(filter.impact),
+    ledger:
+      filter.terms.length > 0 ||
+      Boolean(filter.kind) ||
+      Boolean(filter.impact) ||
+      Boolean(filter.sector),
   };
   const scopedEmpty = (noun: "study" | "ledger", where: string) =>
     scopeEmptyText(noun, where, filter.symbols, searchState, alsoFiltered[noun]);
 
   return {
-    band: (
-      <EventHorizon
-        events={data.events}
-        closures={data.closures}
-        lens={filter.lens}
-        anchor={anchor}
-        range={range}
-        today={today}
-        pinned={horizon.pinned}
-        onPick={(date) => horizon.setOn(horizon.pinned && anchor === date ? undefined : date)}
-        onLens={horizon.setLens}
-        onStep={horizon.step}
-        {...(fiscal ? { fiscal } : {})}
-        {...(fog.fogged
-          ? { dayFog: { door: fog.door, reason: fog.reason, held: heldDayCalls } }
-          : {})}
-      />
-    ),
+    band,
     body: (
       <>
         <header className="page-header">
@@ -524,8 +604,16 @@ export function useBoardView({
             rows={ledgers}
             empty={
               scopedEmpty("ledger", ` in ${rangeLabel(range, filter.lens, fiscal)}`) ??
+              // "No ledger in this week." claims the range is empty; with a sector scoped and
+              // nothing else narrowing, the honest claim is about the sector (#3811). The sector
+              // only takes the credit when it is the ONLY thing filtering — the same rule
+              // `alsoFiltered` applies to the symbol scope, for the same reason.
               `No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
-                filter.terms.length > 0 ? " matches this filter." : "."
+                filter.terms.length > 0 || filter.kind || filter.impact
+                  ? " matches this filter."
+                  : filter.sector
+                    ? ` is in ${filter.sector}.`
+                    : "."
               }`
             }
           />

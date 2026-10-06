@@ -302,6 +302,8 @@ change,** and none is claimed. The entry's operational value is threefold and no
 | 2026-09-09 | 22 | **Initial research; canonical file written from `proposals/…from-uk-cpi-2026-09-16.json`, read in full first.** THE PROPOSAL SAID "ANNOUNCED"; IT IS NOW LAW — **SI 2026/987** made 2026-09-07, laid 09-08, in force 10-01 to 2027-03-31 (legislation.gov.uk, fetched). **No further vote needed:** none of VATA 1994 s.97(4)'s made-affirmative limbs is engaged (it creates a Sch 8 group and narrows Sch 7A to NI), so s.97(5) annulment applies — and an *early* repeal WOULD need a 28-day Commons vote under (4)(c)(iii), so the ratchet runs one way. **−0.10pp reproduces exactly:** ONS CJXA weight 20.6065/1000 × 5/105 = **0.098pp**; RPI 27/1000 gives 0.129pp vs a stated 0.14pp (gap unresolved). **HMRC's TIIN (2026-09-08) declines to assert pass-through**; Ofgem's cap (+4%, gas +8%, electricity-only <1%) forces it where it binds. **No Exchequer costing exists** — table empty, deferred to OBR at the 10-28 Budget; press "£850m" has no primary source. Adjacency: 43 tracked events within 5 days (US funding deadline 09-30, PCE, ISM, jobs 10-02, Tankan, OPEC+) — nothing on 10-01 will be confused for this; the confusion risk is **2026-11-18**. VIX 15.72 (09-08); Bank Rate 3.75%, next meeting 93.1% hold. Proposed: `uk-cpi-2026-11-18` (the scoring venue) and `uk-electricity-vat-reversion-2027-04-01` (the +0.1pp lapse). | **Stance set: stand aside at every horizon** — plus a stated refinement of the sibling `uk-cpi-2026-09-16` ledger's dovish quarter call: the sunset is inside the Order, so this is a look-through notch, not a policy signal. FT-…-1 and FT-…-2 registered. | 2026-10-09 (low band, 30d interval; but the event date 10-01 falls first — next assessment is the close-out) |
 | 2026-09-17 | 14 | **Cadence band transition (low:15+ → low:0+); no kill switch fired, no channel opened.** **Event-specific tape — the one thing this pulse existed to check.** Targeted search for any Commons prayer/EDM against **SI 2026/987**: none found; the instrument's own 40-day annulment window (from 08-08 laying) is running quietly. **Found, not material:** a separate, long-running backbench **"Domestic Energy (Value Added Tax) Bill"** (successive Private Member's Bills across recent sessions, e.g. `bills.parliament.uk/bills/3272`, `/3859`, `/4229` — the last-named 403'd on direct fetch, corroborated via search instead) had its latest Second Reading slot on **Friday 2026-09-11**; no report found of it progressing past that Friday sitting, and it is a distinct instrument from the Government's own SI — it neither authorises nor blocks anything the Order doesn't already do on its own. Not proposed: no independent forward date, no legislative effect of its own. **Macro since the last row.** UK **August CPI** printed 09-16 (ONS, primary): headline **3.1%** y/y, services **3.4%** (flat), core **2.6%** (flat) — landed inside the sibling `uk-cpi-2026-09-16` ledger's base case, gilts **fell** on it, no VAT-cut information in an August print by construction (the effect is an October phenomenon). UK **labour market** (09-15) softened further: vacancies 702k (four-year low), regular pay 3.5%. US **FOMC hiked 25bp to 3.75–4.00%**, hawkish 12-0 (09-16) — a US rate surprise with no channel to this GB consumption-tax entry (`symbols: []`). The **BoE's own 09-17 decision** (rate + annual QT review) is this event's nearest sibling and its own ledger's last row is a **deterministic screen with no outcome recorded yet** — this pulse does not assert a hold/hike result it cannot see in the corpus. **Volatility.** VIX **15.9** (boe-decision sibling's same-day screen) vs **15.72** at the last row: **+0.18pt**, no regime shift. **Geopolitical.** Brent **$107.46** (09-15) vs $99.41 (09-08), **+8.1%** in a week, driving UK 30Y gilts toward **5.93%** — feeds the fiscal/gilt-supply backdrop `uk-autumn-budget-2026-10-28` already tracks, no new channel to this entry's own mechanics. **Budget date unchanged** per that ledger's own last pulse (09-09; not independently re-verified this session). **Both of this event's own proposals are now canonical:** `uk-cpi-2026-11-18` (the scoring venue) and `uk-electricity-vat-reversion-2027-04-01` (the +0.1pp lapse) — no longer proposals. **Corridor:** 60 tracked ids within 5 days (up from 43), 5 confirmed high/critical (`mu-2026-09-30-print`, `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`) — nothing on 10-01 itself will be confused for this. No new dated adjacency discovered; nothing proposed this row. `probe-ref.blocked`: one exploratory fetch (bills.parliament.uk, 403), not a cited primary — the fact it would have carried was corroborated via search instead. | — (no change: stand aside holds at every horizon; `symbols: []`, no channel opened by the FOMC hike, the CPI print, or the oil/gilt move; the annulment kill switch stays unfired) | 2026-09-24 (low, 0+ band: every 7d) |
 | 2026-09-24 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.2 (-0.7pt since last), band unchanged (low:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-01 |
+| 2026-10-01 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.3 (+1.2pt since last), band unchanged (low:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-08 |
+| 2026-10-02 | D+1 | **Close-out — full detail in [`## Outcome`](#outcome).** SI 2026/987 re-fetched direct at legislation.gov.uk today: unamended, unannulled, "the original version (as it was originally made)" — in force 1 October 2026 exactly as filed in September. A targeted search for a Commons prayer motion or EDM against the instrument since the 09-17 pulse found none, corroborating that pulse's own read that the 40-day annulment window (from 08-08 laying) closed quietly. No tracked name (`AAPL/AMZN/AVGO/CRWV/GOOG/META/MRVL/MSFT`) moved on anything attributable to UK electricity VAT policy — the kill switch never had a channel to begin with, `symbols: []`. VIX **16.39**, the same session reading the 10-02 sibling close-outs carry. Both registered forward tests — `FT-...-1` (score by 2026-11-18) and `FT-...-2` (score by 2026-10-28) — fall outside `closeOutWithinDays: 6`'s 2026-10-07 ceiling, exactly as `event-scan.mjs --due`'s `forwardTestsBeyondWindow` named them this morning; neither is scored here. | — (event closed; stand-aside held unexecuted at every horizon — `estimate`-on-taxonomy, `low`, `symbols: []` licensed no position and none was taken) | none — closed, except `FT-...-1`/`FT-...-2`'s own forward-test-due dispatch on their score-by dates |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -314,3 +316,76 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-24
 <!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-02, D+1 — well inside `closeOutWithinDays: 6`'s 2026-10-07 ceiling).**
+Macro-print mode with `symbols: []` runs no `earnings-cycle`/`intraday-edges` instrument — there is
+no issuer to point either at — so "re-run instrument data" here means re-fetching the cited
+primaries fresh rather than reading this ledger's own memory of the September rows:
+legislation.gov.uk's own instrument page (re-fetched today) and a targeted parliamentary-procedure
+search, neither carried over from the 09-09 or 09-17 rows. The instrument cache was busted first
+(`rm -rf node_modules/.cache/{earnings-cycle,intraday-edges}`) though nothing in this ledger reads it.
+
+**The headline verdict: the stand-aside call held at every horizon, and the one thing worth checking
+at close-out — did the instrument actually survive to its effective date untouched — came back
+clean.** legislation.gov.uk's page for SI 2026/987, re-fetched today, carries no amendment,
+annulment or revocation annotation: "This is the original version (as it was originally made)." A
+targeted search for a Commons prayer motion or Early Day Motion against the instrument since the
+09-17 pulse found none, corroborating that pulse's own finding that the 40-day annulment window
+(from the 08-08 laying) closed quietly. The Order came into force on 1 October 2026 exactly as
+filed in September, GB-only, zero-rating domestic electricity through 31 March 2027.
+
+### What actually happened, against what was filed
+
+| Filed | What happened | Verdict |
+|---|---|---|
+| Today / This week: no instrument in this book; SI 2026/987 legally settled and in force 10-01 | Confirmed at the primary, re-fetched 2026-10-02: unamended, unannulled, in force as made | **Correct** |
+| Kill switch: a tracked name moves >2% attributable to UK electricity VAT policy | No tracked name (AAPL/AMZN/AVGO/CRWV/GOOG/META/MRVL/MSFT) has any channel to a GB consumption-tax order, and no coverage attributed any move to it | **Not tripped** |
+| Kill switch: SI 2026/987 annulled, or a prayer motion tabled before 10-01 | Neither occurred | **Not tripped** |
+| This month: diarise 11-18, not 10-01 — the effective date itself publishes nothing | Correct by construction: no ONS data point exists yet, and none was expected on 10-01 | **Confirmed, not yet testable** |
+| This quarter: a self-reversing notch, weaker Bank Rate evidence than its headline size implies | Not yet observable — the MPC's next decision is 11-05, the Budget is 10-28; nothing at close-out moves this either way | **Unresolved, carries forward** |
+
+### Forward tests — neither scoreable at close-out, both stay open by design
+
+Per `EVENT-RESEARCH.md`'s `event-passed-unscored` mode, a close-out waits for its own forward tests
+only up to `closeOutWithinDays` (6 days from 2026-10-01 = **2026-10-07**); past that ceiling the
+scanner dispatches the close-out anyway rather than losing the outcome record to the horizon cut,
+and names the overrun rows in `--due`'s `forwardTestsBeyondWindow` instead — exactly what
+`event-scan.mjs --due` showed for this id this morning. Both of this ledger's registrations overrun:
+
+- **`FT-uk-electricity-vat-zero-rate-2026-10-01-1`** (pass-through via Ofgem's cap; score by
+  **2026-11-18**, the ONS October CPI bulletin) — **stays `_open_`.** Nothing published today bears
+  on the October electricity index; it does not exist until the bulletin.
+- **`FT-uk-electricity-vat-zero-rate-2026-10-01-2`** (no Budget extension beyond 2027-03-31; score
+  by **2026-10-28**) — **stays `_open_`.** The Budget has not happened.
+
+Neither is scored here, and neither was shortened to fit the window — that would be exactly the
+falsification pressure #2884 exists to prevent. This event's own `forward-test-due` dispatch
+re-opens the fragment on each score-by date and fills the Outcome cell then.
+
+### What carries forward, and where
+
+- **To this ledger's own stance, unchanged.** Stand-aside was correct and cost nothing — there was
+  never a channel, and none opened on the effective date itself.
+- **The attribution rule is the asset this ledger produced, and it is still live.** Whoever reads
+  the 2026-11-18 ONS bulletin (this event's own `forward-test-due` dispatch, or a sibling CPI ledger
+  if one exists by then) needs the arithmetic already on record here: 5/105 × 20.6065/1000 =
+  0.098pp — a ~0.1pp-softer October print is this tax change, not disinflation.
+- **The look-through correction to the sibling [`uk-cpi-2026-09-16`](uk-cpi-2026-09-16.md) ledger's
+  dovish quarter call stands, untested by anything that happened today** — it resolves at the 11-05
+  MPR and the 10-28 Budget, neither of which has occurred yet.
+- **No position was taken at any point in this ledger's life, and none was ever licensed** —
+  `estimate` on a taxonomy gap, `low`, `symbols: []`.
+
+**Verdict.** The instrument survived to its effective date exactly as filed — no annulment, no
+amendment, no prayer motion — and no tracked name moved on anything attributable to it, which is the
+only thing this close-out could actually test today. The two predictions that matter are both
+honestly past the close-out window; they stay registered and open rather than being scored early or
+quietly dropped. This doc goes quiet on `## Outcome` until a score-by date reopens it.
+
+**Last assessed:** 2026-10-02
+<!-- probe-ref: {"symbols":{},"vix":16.39,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->

@@ -1,4 +1,5 @@
 import { TRADE_TYPES, type TradeTypeCode } from "./trade-types.js";
+import type { PlaybookMode, PlaybookSubscription } from "./types.js";
 
 /**
  * THE PLAYBOOK STORE'S FOG (issue #1707) — the one rung that gates handing an account's capital to
@@ -32,10 +33,14 @@ export const DELEGATION_RUNG_NAME =
  * The one sentence the door is drawn with — the same words on the disabled control and in the
  * server's refusal, so a member can never be told two different things about one gate.
  * States what the rung teaches, never a warning (`docs/FOG-OF-WAR.md` criterion 9).
+ *
+ * "On its own", not "for you" (#4610 criterion 5): only a bot account can subscribe for now, so a
+ * playbook never trades for the member in person, and this sentence must stay true on every
+ * account it could ever be drawn on.
  */
 export const DELEGATION_LOCKED_NOTE =
   `Delegating capital opens after your first filled ${DELEGATION_RUNG} (${DELEGATION_RUNG_NAME}). ` +
-  "Every house playbook buys and then sells for you — the round trip by hand is the rung that proves it.";
+  "Every house playbook buys and then sells on its own — the round trip by hand is the rung that proves it.";
 
 /** The gate as data, for the JSON view and the UI that renders the door. */
 export interface DelegationGateView {
@@ -66,4 +71,35 @@ export function delegationGateView(locked: boolean): DelegationGateView {
     unlocksAfterName: DELEGATION_RUNG_NAME,
     note: DELEGATION_LOCKED_NOTE,
   };
+}
+
+const MODE_RANK: Readonly<Record<PlaybookMode, number>> = {
+  conservative: 0,
+  standard: 1,
+  aggressive: 2,
+};
+
+/**
+ * Whether an edit hands the bot MORE than its subscription already has: a bigger mode, more or
+ * uncapped capital, a wider symbol filter, or compounding switched on. The fog gates delegation,
+ * and only this direction delegates; an edit that only lowers exposure goes through behind it,
+ * because restricting how someone reduces risk is the same safety bug as gating Pause.
+ */
+export function raisesDelegation(
+  prior: PlaybookSubscription,
+  next: Pick<PlaybookSubscription, "mode" | "capitalAllocated" | "symbols" | "compoundAllocation">,
+): boolean {
+  if (MODE_RANK[next.mode] > MODE_RANK[prior.mode]) return true;
+  if (
+    prior.capitalAllocated !== undefined &&
+    (next.capitalAllocated === undefined || next.capitalAllocated > prior.capitalAllocated)
+  ) {
+    return true;
+  }
+  const before = prior.symbols ?? [];
+  const after = next.symbols ?? [];
+  if (before.length > 0 && (after.length === 0 || after.some((s) => !before.includes(s)))) {
+    return true;
+  }
+  return next.compoundAllocation === true && prior.compoundAllocation !== true;
 }

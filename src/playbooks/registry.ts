@@ -1,20 +1,26 @@
 /**
  * The house playbook roster — every play that survived the red team, encoded with its own
  * window shape and its evidence citation. Enablement is DARK by default: nothing here runs
- * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative"), and flipping
- * that env in production goes through the approval-gated autonomy-ops workflow — live
- * enablement stays Eric's single credentialed step (plan → autonomy envelope).
+ * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative") or an account
+ * subscribes to it in the Playbook Store. Who may change what an account runs is ownership and
+ * nothing else (Eric, #928 — `envelope.json` `$openOnPurpose`): an owner subscribes their own
+ * account, nobody changes an account that is not theirs, and there is no approval step on top.
+ * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
+ * subscriptions (plan #4535).
  */
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
-import { type EnabledPlaybook, type Playbook, printWindow } from "./playbook.js";
+import { CRWV_WHEEL } from "./crwv-wheel.js";
+import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
+import {
+  type EnabledPlaybook,
+  type Playbook,
+  POST_PRINT_FLAT_DAYS,
+  printWindow,
+} from "./playbook.js";
 import type { TacticalRule } from "./tactical-playbook.js";
-
-/** Post-print hygiene shared by every date-keyed play: a position that somehow survived its
- *  print (missed exit, process restart) is exited on the first cycle after — never carried. */
-const POST_PRINT_FLAT_DAYS = 3;
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
@@ -27,6 +33,13 @@ export const S1_NVDA: Playbook = {
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+  // #3194 step 5b-i: the first opt-in to the mixed-signals detector, OBSERVE-ONLY — a reading is
+  // logged and never reaches this playbook's intents. S1 is a trend-with-the-bid play (news and
+  // price should agree into the print), so a disagreement is a warning for it, not the signal;
+  // it also carries the strongest evidence line of the roster. Pausing entries on a reading is
+  // step 5b-ii, gated on the detector's falsifier (30 observations or 2026-11-30).
+  mixedSignals: { action: "observe" },
+  keyedOn: "earnings",
   desiredState(asOfIso, calendar) {
     if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat";
@@ -57,6 +70,7 @@ export const G1_GOOG: Playbook = {
   evidence:
     "docs/research/multi-symbol-sweep.md G1: pooled 37/43 positive, p=0.0008 at measured base; net-of-QQQ positive all eras",
   size: { conservative: 0.01, standard: 0.015, aggressive: 0.02 },
+  keyedOn: "earnings",
   desiredState(asOfIso, calendar) {
     if (recentPrint("GOOG", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat"; // failsafe: the close exit was missed — exit on the first post-print cycle
@@ -119,6 +133,7 @@ export const TACO_DJT: Playbook = {
   // Below S1-NVDA (0.01-0.03) and G1-GOOG (0.01-0.02): an unvalidated, event-driven play sized
   // more cautiously than the evidence-backed date-keyed ones until a backtest earns it more.
   size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
+  keyedOn: "event",
   desiredState(asOfIso, _calendar, events = []) {
     const own = events.filter((event) => event.symbol === TACO_SYMBOL);
     if (own.length === 0) {
@@ -217,7 +232,38 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
-const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON];
+/** The option plays live in their own files (`crwv-wheel.ts`, `nvda-call-spread.ts`); re-exported
+ *  here because the Store catalog and the roll call read the house roster off what this module
+ *  exports. Neither is on any default roster: an owner subscribes their own bot to one in the Store. */
+export { CRWV_WHEEL, NVDA_CALL_SPREAD };
+
+const ROSTER: readonly Playbook[] = [
+  S1_NVDA,
+  G1_GOOG,
+  TACO_DJT,
+  HC_SAURON,
+  CRWV_WHEEL,
+  NVDA_CALL_SPREAD,
+];
+
+/**
+ * WHY A REGISTERED PLAYBOOK CANNOT FIRE (#4450 slice 1). Arming one of these changes nothing a
+ * member would recognise as "this playbook trades", so the roll call must never call it armed.
+ * Each line is the honesty-gap note on the playbook's own definition, said in one sentence; a
+ * slice that closes a gap deletes its line here in the same PR.
+ */
+export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
+  "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
+  "HC-SAURON":
+    "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
+};
+
+/** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:
+ *  reading what an armed playbook is waiting for means asking its own `desiredState`
+ *  (`observatory/playbook-window.ts`), which an id cannot answer. */
+export function registeredPlaybooks(): readonly Playbook[] {
+  return ROSTER;
+}
 const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
 
 /**

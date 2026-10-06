@@ -16,7 +16,13 @@ import { githubHeaders } from "./github-api.js";
 
 type DoFetch = typeof fetchJson;
 
-export type FeedbackStatus = "open" | "needs-info" | "needs-eric" | "next-slice" | "shipped";
+export type FeedbackStatus =
+  | "open"
+  | "needs-info"
+  | "needs-eric"
+  | "next-slice"
+  | "shipped"
+  | "not-built";
 
 export const FEEDBACK_STATUS_LABEL: Record<FeedbackStatus, string> = {
   open: "In the queue",
@@ -24,6 +30,7 @@ export const FEEDBACK_STATUS_LABEL: Record<FeedbackStatus, string> = {
   "needs-eric": "Needs Eric's call",
   "next-slice": "First slice shipped",
   shipped: "Shipped",
+  "not-built": "Closed, not built",
 };
 
 export interface FeedbackStatusConfig {
@@ -39,16 +46,28 @@ const CACHE_TTL_MS = 5 * 60_000;
 
 /** Folds a GitHub issue's `state` + labels into the app's own status vocabulary — same mapping
  *  docs/FEEDBACK.md's "four ways a build session ends" table already defines. A closed issue reads
- *  as shipped: the lane never closes one any other way (docs/FEEDBACK.md, "the four ways"). */
-function statusFromIssue(state: string, labelNames: readonly string[]): FeedbackStatus {
-  if (state === "closed") return "shipped";
+ *  as shipped: the lane never closes one any other way (docs/FEEDBACK.md, "the four ways") —
+ *  except a closed issue still carrying `next-slice`, which shipped only its first slice and must
+ *  not read as done (#3952, from #4056's close-the-loop study) — and a closed issue whose
+ *  `state_reason` is `not_planned`, which was declined, not built, and must not read as shipped
+ *  to the member who filed it (#3952 follow-up to #4181). Shared with Moneypenny's
+ *  `get_work_status` (`work-status.ts`), so the badge and her answer never disagree. */
+export function statusFromIssue(
+  state: string,
+  labelNames: readonly string[],
+  stateReason?: unknown,
+): FeedbackStatus {
+  if (state === "closed") {
+    if (stateReason === "not_planned") return "not-built";
+    return labelNames.includes("next-slice") ? "next-slice" : "shipped";
+  }
   if (labelNames.includes("needs-eric")) return "needs-eric";
   if (labelNames.includes("needs-info")) return "needs-info";
   if (labelNames.includes("next-slice")) return "next-slice";
   return "open";
 }
 
-function labelNamesOf(body: unknown): readonly string[] {
+export function labelNamesOf(body: unknown): readonly string[] {
   const raw = (body as { labels?: unknown } | null)?.labels;
   if (!Array.isArray(raw)) return [];
   return raw.map((l) => (typeof l === "string" ? l : ((l as { name?: string })?.name ?? "")));
@@ -77,8 +96,12 @@ export function createStatusFetcher(
             githubHeaders(config.token),
           );
           if (res.status !== 200 || !res.body || typeof res.body !== "object") return;
-          const state = (res.body as { state?: string }).state ?? "open";
-          cache.set(n, { status: statusFromIssue(state, labelNamesOf(res.body)), at: now });
+          const { state = "open", state_reason } = res.body as {
+            state?: string;
+            state_reason?: unknown;
+          };
+          const status = statusFromIssue(state, labelNamesOf(res.body), state_reason);
+          cache.set(n, { status, at: now });
         } catch {
           // Leave this issue uncached — the member sees no badge for it, never an error page.
         }

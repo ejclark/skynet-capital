@@ -1,7 +1,9 @@
 // THE LAST MILE — closing feedback and event-research issues whose work has already merged. Split
 // out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { ghRest } from "./gh.mjs";
-import { FOOTER } from "./labels.mjs";
+import { FOOTER, LABELS, labelNames } from "./labels.mjs";
+
+const NEXT_SLICE = LABELS.nextSlice.name;
 
 /**
  * THE LAST MILE. An issue whose work has MERGED but which is still open.
@@ -24,7 +26,7 @@ export function routeShipped(deps = {}) {
     issueNumber: f.number,
     title: f.title,
     pr: f.pr,
-    body: `🚀 **Shipped** — this landed in #${f.pr} and is live.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so Moneypenny closes these itself rather than depending on an event.\n\n${FOOTER}`,
+    body: `🚀 **Shipped** — merged in #${f.pr}; live after the next deploy.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so Moneypenny closes these itself rather than depending on an event.\n\n${FOOTER}`,
   }));
 }
 
@@ -64,7 +66,12 @@ export function mergedReference(refs = [], isMerged = () => false) {
  *
  * Pure, given its three injected dependencies, so every branch is fixture-drivable.
  *
- * @param issues  `[{ number, title, closedByPullRequestsReferences }]` from the list query
+ * NEVER CLOSES A `next-slice` ISSUE (#3818 slice 2, criterion 11 as amended 2026-09-29). A sliced
+ * issue gets a merged PR per slice, and each one references it — so without this, slice 1 landing
+ * would close the whole issue with its remainder unbuilt. The final slice removes `next-slice`, so
+ * a finished issue still closes on the next sweep. Skipped before the re-check, so it costs nothing.
+ *
+ * @param issues  `[{ number, title, labels, closedByPullRequestsReferences }]` from the list query
  * @param deps    { isMerged, recheckRefs, warn }
  */
 export function resolveShipped(issues = [], deps = {}) {
@@ -74,6 +81,7 @@ export function resolveShipped(issues = [], deps = {}) {
   const { isMerged = () => false, recheckRefs = () => [], warn = silent } = deps;
   const shipped = [];
   for (const issue of issues ?? []) {
+    if (labelNames(issue?.labels).includes(NEXT_SLICE)) continue;
     const listed = issue?.closedByPullRequestsReferences ?? [];
     let pr = mergedReference(listed, isMerged);
     if (pr === undefined) {

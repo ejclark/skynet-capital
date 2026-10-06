@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { logArgVariants, sanitizeLog } from "../../../scripts/moneypenny/repair-logs.mjs";
@@ -92,6 +92,44 @@ describe("moneypenny repair — routing a failed run", () => {
     expect(intent?.type).toBe("open-issue");
     expect(intent?.body).toContain("zero jobs were created");
     expect(intent?.body).toContain("scripts/workflow-lint.mjs");
+  });
+
+  it("names a runner outage as one — never as a rejected workflow file", () => {
+    // #4656: run 37370406790's jobs queued 15 minutes, got no runner, and were cancelled unstarted.
+    // With no `failure` job to find, the lane filed "GitHub rejected the workflow file" for a file
+    // that parsed fine, and dispatched a repair session to hunt a syntax error that did not exist.
+    const [intent, ...rest] = dryRun("workflow-run-runner-starved.json");
+
+    expect(rest).toEqual([]);
+    expect(intent?.type).toBe("open-issue");
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — (no runner was ever assigned)",
+    );
+    expect(intent?.body).toContain("`route` (ubuntu-latest)");
+    expect(intent?.body).toContain("`sync project status` (ubuntu-latest)");
+    expect(intent?.body).not.toContain("dep-warden review");
+    expect(intent?.body).toContain("gh run rerun 37370406790 --failed");
+    expect(intent?.body).not.toContain("rejected the workflow file");
+  });
+
+  it("still reports the real failure when a run has one beside a starved job", () => {
+    const payload = JSON.parse(
+      readFileSync("tests/fixtures/events/workflow-run-runner-starved.json", "utf8"),
+    );
+    payload.jobs.push({
+      id: 1,
+      name: "build feedback issue",
+      conclusion: "failure",
+      runner_name: "GitHub Actions 1",
+      steps: [{ name: "Run claude-code-action", conclusion: "failure" }],
+    });
+    const [intent, ...rest] = dryRunPayload(payload);
+
+    expect(rest).toEqual([]);
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — build feedback issue",
+    );
+    expect(intent?.body).toContain("Run claude-code-action");
   });
 
   it("ignores a red PR branch — that failure belongs to the PR and its author", () => {
@@ -278,5 +316,104 @@ describe("moneypenny repair — fetching the evidence", () => {
     const raw = "2026-08-26T23:03:39.9371678Z ##[error]App creation was refused";
 
     expect(sanitizeLog(raw)).toBe("##[error]App creation was refused");
+  });
+});
+
+// #4374, measured 2026-10-01: guard 3's dedupe reads only OPEN capsules, so the window shuts the
+// instant the fixing PR merges — while runs started on pre-fix commits keep finishing for minutes
+// after. Run 36800376847 started 01:17:21Z on `ec0605b8`; #4361 merged and closed #4359 (identical
+// signature) at 01:20:06Z; 49s later this lane filed #4374 as a brand-new fault and burned a full
+// Opus repair session on a bug that no longer existed. The guard is purely temporal — a run that
+// STARTED before the fix merged cannot have carried it — so it can never silence the net.
+describe("moneypenny repair — a run already fixed while it was in flight", () => {
+  const signature = "[ci] Moneypenny Events (event-research automation) — build plan issue";
+
+  /** The #4374 shape: a failed run, plus a closed capsule for the same signature. */
+  const inFlight = (runStartedAt: string, closedAt: string | undefined, title = signature) => ({
+    repository: { default_branch: "main" },
+    workflow_run: {
+      id: 36800376847,
+      name: "Moneypenny Events (event-research automation)",
+      conclusion: "failure",
+      event: "workflow_dispatch",
+      head_branch: "main",
+      head_sha: "ec0605b8aa474d1eb59e2a686f9d734b37c9703a",
+      run_started_at: runStartedAt,
+      html_url: "https://github.com/ejclark/skynet-capital/actions/runs/36800376847",
+    },
+    failures: [{ job: "build plan issue", step: "Run anthropics/claude-code-action" }],
+    deps: { openIssues: [], closedIssues: [{ number: 4359, title, closedAt }] },
+  });
+
+  it("comments on the closed capsule instead of filing a fresh one", () => {
+    const intents = dryRunPayload(inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z"));
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.type).toBe("comment");
+    expect(intents[0]?.issue).toBe(4359);
+  });
+
+  it("dispatches no repair session — the whole cost this guard exists to avoid", () => {
+    const intents = dryRunPayload(inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z"));
+
+    expect(intents.some((i) => i.type === "open-issue")).toBe(false);
+    expect(intents.every((i) => !("dispatch" in i))).toBe(true);
+  });
+
+  it("says why it stayed quiet, with both timestamps — silence is not an option", () => {
+    const body = dryRunPayload(inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z"))[0]?.body;
+
+    expect(body).toContain("Stale echo, not a recurrence");
+    expect(body).toContain("2026-10-01T01:17:21Z");
+    expect(body).toContain("2026-10-01T01:20:06Z");
+    expect(body).toContain("ec0605b8");
+  });
+
+  it("files normally when the fault outlives the fix — the run started AFTER the close", () => {
+    const intents = dryRunPayload(inFlight("2026-10-01T01:25:00Z", "2026-10-01T01:20:06Z"));
+
+    expect(intents[0]?.type).toBe("open-issue");
+    expect(intents[0]?.title).toBe(signature);
+  });
+
+  it("files when the closed capsule is a different signature", () => {
+    const intents = dryRunPayload(
+      inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z", "[ci] Pipeline — release · deploy"),
+    );
+
+    expect(intents[0]?.type).toBe("open-issue");
+    expect(intents[0]?.title).toBe(signature);
+  });
+
+  // Fail-safe direction: this guard may only suppress a report it can PROVE is stale. Where a
+  // timestamp is missing or unparseable it must fall through to filing — a lane that goes quiet on
+  // a malformed payload is worse than one that files twice.
+  it("files when the run carries no start time to compare against", () => {
+    const payload = inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z") as {
+      workflow_run: { run_started_at?: string };
+    };
+    delete payload.workflow_run.run_started_at;
+
+    expect(dryRunPayload(payload)[0]?.type).toBe("open-issue");
+  });
+
+  it("files when the closed capsule carries no close time", () => {
+    expect(dryRunPayload(inFlight("2026-10-01T01:17:21Z", undefined))[0]?.type).toBe("open-issue");
+  });
+
+  it("files when a timestamp is present but unparseable", () => {
+    expect(dryRunPayload(inFlight("2026-10-01T01:17:21Z", "not a date"))[0]?.type).toBe(
+      "open-issue",
+    );
+  });
+
+  // Guard 3 still wins: an OPEN capsule means the fault is live, whatever a closed twin says.
+  it("prefers the open capsule's recurrence comment over the stale-echo path", () => {
+    const payload = inFlight("2026-10-01T01:17:21Z", "2026-10-01T01:20:06Z");
+    payload.deps.openIssues = [{ number: 4374, title: signature, labels: [] }] as never;
+
+    const [intent] = dryRunPayload(payload);
+    expect(intent?.issue).toBe(4374);
+    expect(intent?.body).toContain("Failed again");
   });
 });

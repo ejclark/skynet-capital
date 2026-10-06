@@ -264,6 +264,7 @@ score-by **2026-10-02**, inside the 6-day close-out window.
 | 2026-09-24 | D-5 | **Deterministic screen (no Claude session).** Readings — CRWV $86.90 (1.7% since last), VIX 15.2 (+0.3pt since last), band unchanged (medium:0+), 66 adjacent event(s) tracked, new in corridor since last pulse: `steel-imports-preliminary-2026-09-24` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-26 |
 | 2026-09-26 | D-3 | **Deterministic screen (no Claude session).** Readings — CRWV $87.59 (0.8% since last), VIX 14.9 (-0.3pt since last), band unchanged (medium:0+), 66 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-28 |
 | 2026-09-28 | D-1 | **Full session, staleness ceiling** (`event-material-scan.mjs`: `screenStreak` was 2, forcing a real look on the 3rd consecutive pulse). Readings unchanged since the last screen: CRWV **$87.59**, VIX **14.87** — both still dated **2026-09-25** (Yahoo has not backfilled a 09-28 bar at fetch time, the same lag already recorded in the 2026-09-22 row). **Adjacency sweep, all legs run:** SEC EDGAR re-checked (CIK 0001769628) — no filing since the already-known 09-24 Form 4s, no compute/infrastructure 8-K — **kill switches 1 and 4 stay unfired**. `devday.openai.com` re-fetched: schedule unchanged (Sam Altman keynote, 10:00 PT / 13:00 ET; no agenda, speaker list beyond Altman, or product content published) — **kill switch 2 unfired**. `openai.com/index/devday-2026/` plus WebSearch corroborate no OpenAI–CoreWeave or OpenAI-competitor compute/infrastructure announcement dated in the 09-26→09-28 window. CoreWeave's own **Fully Connected** conference (same tracked corridor entry, `crwv-fully-connected-2026-09-29`) opens tomorrow; its day-2 NVIDIA keynote (Ian Buck, "Built for Adoption," 09-30) is inside that same multi-day entry, not a new dated event — nothing proposed. **Intraday-edges re-run** (cache busted, `n=372` sessions, up from 361): the 13:30 ET bar now reads **8.8% of daily vol / 10.2% of range** — unchanged within noise from the registered baseline; FT-openai-devday-2026-09-29-1's 15.0% p90 threshold stands as written. No peer-print or macro surprise since the last row (weekend). VIX regime unchanged. Corridor: `adjacentStrongIds` unchanged (**ism-manufacturing-10-01, jobs-10-02, mu-09-30-print, pce-09-30**); `daysBand` unchanged (medium:0+). No new dated adjacency to propose. | — (stance survives unchanged; no kill switch fired) | 2026-09-30 (event passes tomorrow — the next tick is close-out, not another pulse) |
+| 2026-10-02 | D+3 (close-out) | **Close-out — both instrument caches busted first** (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), every figure below re-pulled fresh via `scripts/research/market-data.mjs` and `scripts/research/intraday-edges.mjs CRWV`, never from this doc's memory. **DevDay 2026's actual keynote content** (Sam Altman, confirmed by CNBC's live-updates coverage and the company's own `openai.com/index/devday-2026-recap/`): Dots always-on agents on GPT-6 Astra, GPT-6.1 Sol, the Agents API public beta, "Sign in with ChatGPT," an OpenAI Marketplace, and a hardware teaser — **no new compute/infrastructure counterparty was named from the stage.** The AMD 6GW figure some secondary aggregators repeat in "recap" pieces is the pre-existing 2025-10-06 partnership restated, not a new 2026 disclosure — **kill switch 2 did not fire.** WebSearch across the 2026-09-28→10-01 window found no dated OpenAI–CoreWeave or OpenAI–competitor compute/infrastructure agreement (the $11.9B CoreWeave figure still circulating in aggregator feeds traces to the original 2025-03-10 CoreWeave press release, not a 2026 re-announcement) — **kill switch 1 did not fire**, and **`FT-openai-devday-2026-09-29-2` scores NOT TRIGGERED** (no qualifying agreement published in its stated window, exactly the "explicit, legitimate outcome" the registration named). SEC EDGAR (CIK 0001769628) carries nothing past the already-known 09-24 Form 4s — **kill switch 4 stays unfired.** **The 13:30 ET hourly bar on 2026-09-29 took 8.32% of that session's own total hourly range** (bars: 09:30 range 5.33, 10:30 4.08, 11:30 0.91, 12:30 1.23, **13:30 1.185**, 14:30 0.73, 15:30 0.78, total 14.25 — computed from the cache-busted hourly pull), clearing neither the 15.0% threshold nor even the registered baseline's own ordinary share — **kill switch 3 did not fire, and `FT-openai-devday-2026-09-29-1` scores PASS.** **CRWV's own reaction:** D0 (09-29) close **$85.93** vs prior close **$85.07** = **+1.011%**, QQQ +0.190% → **+0.821pp excess**; D+1 (09-30) close **$87.12** = **+1.385%**, QQQ +0.249% → **+1.136pp excess**. Both readings sit well inside CRWV's own **4.71pp** since-IPO mean \|excess\|, extending the keynote-is-a-non-event finding to **n=2** CRWV-tracked DevDays (2025-10-06 and 2026-09-29) with no exception in either. **AMD, the one historical exception**, traded a flat **−0.24pp** excess on 09-29 — confirming the 2025 spike was the 6GW-partnership disclosure, not the stage, exactly as leg 3 concluded: no new counterparty, no AMD-sized move. No house playbook touched this event; no paper position was ever live against it. | **Stance CONFIRMED, not falsified — stand aside held all the way through, with no kill switch firing and both forward tests resolved cleanly.** | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -285,3 +286,62 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{"CRWV":87.59},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (written 2026-10-02, D+3 — inside the `closeOutWithinDays: 6` deadline, and the exact
+`Score by` date both registered forward tests named).** Both instrument caches were busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every figure below
+is a fresh pull this session via `scripts/research/market-data.mjs` (daily bars) and
+`scripts/research/intraday-edges.mjs CRWV` (hourly bars, cache rebuilt to `n=377` sessions), never
+read from this doc's own memory of the tape.
+
+**The keynote stayed a non-event for CRWV, and the stance's one open risk never materialized.**
+DevDay 2026's actual content — confirmed via CNBC's live-updates coverage and OpenAI's own
+`devday-2026-recap` page — was Dots always-on agents on GPT-6 Astra, GPT-6.1 Sol, the Agents API
+public beta, "Sign in with ChatGPT," an OpenAI Marketplace, and a hardware teaser. **No new
+compute/infrastructure counterparty was named from the stage.** A handful of secondary aggregators'
+"recap" pieces repeat the AMD 6GW figure, but that traces to the pre-existing 2025-10-06
+announcement, not a fresh 2026 disclosure — confirmed by AMD's own tape: **−0.24pp excess vs QQQ**
+on 09-29, flat and unremarkable, the opposite of 2025's +22.96pp. **Kill switch 2 did not fire.**
+
+A WebSearch sweep of the 2026-09-28 → 10-01 window (the exact window
+`FT-openai-devday-2026-09-29-2` was registered against) found no dated OpenAI–CoreWeave or
+OpenAI–competitor compute/infrastructure agreement; the "$11.9B CoreWeave deal" still circulating in
+aggregator feeds traces to CoreWeave's original 2025-03-10 press release, not a 2026 re-announcement.
+**Kill switch 1 did not fire, and `FT-openai-devday-2026-09-29-2` scores NOT TRIGGERED** — the
+registration's own explicit, legitimate third outcome, not a pass by default. SEC EDGAR (CIK
+0001769628) carries nothing past the already-known 09-24 Form 4s — **kill switch 4 stayed unfired**
+through close-out.
+
+**The 13:30 ET hour stayed CRWV's quiet hour.** Pulled directly from the cache-busted hourly bars for
+2026-09-29 (high − low per bar: 09:30 **5.329**, 10:30 **4.080**, 11:30 **0.910**, 12:30 **1.230**,
+13:30 **1.185**, 14:30 **0.732**, 15:30 **0.783**; session total **14.250**), the keynote-hour bar
+took **8.32%** of that session's own total hourly range — short of both the registered **15.0%** p90
+threshold and even the baseline's ordinary **~10%** share. **Kill switch 3 did not fire, and
+`FT-openai-devday-2026-09-29-1` scores PASS**: the keynote did not relocate CRWV's volatility into
+its own window.
+
+**CRWV's actual reaction, both days:** D0 (09-29) closed **$85.93** vs the prior close **$85.07**
+(+1.011%) while QQQ did +0.190% — **+0.821pp excess**. D+1 (09-30) closed **$87.12** (+1.385%) while
+QQQ did +0.249% — **+1.136pp excess**. Both readings sit comfortably inside CRWV's own **4.71pp**
+since-IPO mean \|excess\|, extending the ledger's keynote-is-a-non-event finding to **n=2**
+CRWV-tracked DevDays (2025-10-06 and 2026-09-29) with no exception in either. **No house playbook
+was live against this event and no paper position was ever entered or resized because of it** — the
+stance's own guards (S1 kill-listed, S2/E1 as standing guards only) were never tested against a real
+position, exactly as the doc's honest limits anticipated.
+
+**Stance CONFIRMED, not falsified.** Stand-aside at every horizon held all the way through close-out:
+none of the four kill switches fired, both forward tests resolved cleanly (one pass, one
+not-triggered), and the measured non-event / negative-skew-risk framing from initial research is what
+the tape actually did.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-openai-devday-2026-09-29-1` (the keynote is not a CRWV repricing window) | CRWV's 13:30 ET hourly bar takes **< 15.0%** of the 2026-09-29 session's total hourly range | **8.32%** (bar range 1.185 ÷ session total 14.250, cache-busted hourly pull) | **PASS** |
+| `FT-openai-devday-2026-09-29-2` (DevDay reprices the named counterparty, not the incumbent) | Conditional on a company-primary OpenAI compute/infrastructure agreement dated 2026-09-28→10-01 naming any counterparty | No qualifying agreement found in the window (WebSearch sweep; the circulating "$11.9B CoreWeave" figure dates to 2025-03-10) | **NOT TRIGGERED** |
+
+**Last assessed:** 2026-10-02
+<!-- probe-ref: {"symbols":{"CRWV":89.415},"vix":15.51,"daysBand":"medium:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->

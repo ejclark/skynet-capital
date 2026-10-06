@@ -3,6 +3,7 @@
  * board leads (the house doctrine: research leads with the call); documents stay server-rendered
  * and every href here crosses to one honestly.
  */
+import { sectorFromSlug, sectorSlug } from "../../../src/domain/sector-coverage";
 
 export interface ResearchDocLink {
   readonly slug: string;
@@ -58,6 +59,9 @@ export interface ResearchEvent {
   readonly impact?: string;
   readonly symbols: readonly string[];
   readonly researched: boolean;
+  /** The calendar payload's mark for an event whose ledger states a call (#3977 slice 5) — how
+   *  R&D's fog line counts held calls without the calls. Absent on the full shelf's events. */
+  readonly called?: boolean;
 }
 
 /** A day the exchange is closed, or closes early — mirrors the server's MarketClosure. */
@@ -82,6 +86,27 @@ export async function fetchResearch(): Promise<ResearchShelfData> {
   const raw = (await res.json()) as Partial<ResearchShelfData>;
   // A server from before slice 2 sends no closures; the calendar then colours nothing, honestly.
   return { ...(raw as ResearchShelfData), closures: raw.closures ?? [] };
+}
+
+/**
+ * THE CALENDAR'S SLICE (#3977 slice 5) — `/api/research/calendar`, what the three calendar
+ * surfaces (R&D's grid, the Profile page's Events, Trade's line) read instead of the whole shelf:
+ * every event without its impact, the closures, and only the calls a calendar can print (an event
+ * naming a ticker, or a headline macro print). The server says why each field is there
+ * (`src/observatory/research-calendar-json-view.ts`). Its calls are `ResearchCall`s without the
+ * board's TL;DR, adjacents or freshness, so `callForLens` and `bookEventsIn` read them unchanged.
+ */
+export interface ResearchCalendarData {
+  readonly events: readonly ResearchEvent[];
+  readonly closures: readonly ResearchClosure[];
+  readonly calls: readonly ResearchCall[];
+}
+
+export async function fetchResearchCalendar(): Promise<ResearchCalendarData> {
+  const res = await fetch("/api/research/calendar", { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`research calendar ${res.status}`);
+  const raw = (await res.json()) as Partial<ResearchCalendarData>;
+  return { events: raw.events ?? [], closures: raw.closures ?? [], calls: raw.calls ?? [] };
 }
 
 /**
@@ -114,6 +139,10 @@ export const LENS_LABEL: Record<Lens, string> = {
  *   `sym:NVDA`      OR scope — a watchlist; a ledger is in scope when any listed symbol is on its
  *                   event, leads its id, or is named in its TL;DR (#1704: chips were AND over a
  *                   corpus where 257 of 266 events carry no symbol, so three chips returned nothing)
+ *   `sector:energy` WHERE, not when (#3811) — one GICS sector: an event is in scope when it names
+ *                   a symbol the directory files there, its id leads with one, or it is one of the
+ *                   sector's own macro series (EIA and OPEC for Energy). Single-valued, because a
+ *                   sector is a place on the map rather than a watchlist.
  *   `kind:opex`     the event's kind · `impact:high` its impact tier · `call:watch` the call class
  *   `on:YYYY-MM-DD` the anchor day · `lens:week` the horizon row and range (`lens:all` — no
  *                   time filter: every ledger, its headline row)
@@ -121,6 +150,9 @@ export const LENS_LABEL: Record<Lens, string> = {
 export interface ResearchFilter {
   readonly terms: readonly string[];
   readonly symbols: readonly string[];
+  /** The canonical GICS sector name, resolved from the token's slug; absent when none is scoped
+   *  (and also when the token named no sector — nothing can be said, so nothing is filtered). */
+  readonly sector?: string;
   readonly kind?: string;
   readonly impact?: string;
   readonly callClass?: string;
@@ -131,11 +163,24 @@ export interface ResearchFilter {
 const ON_RE = /^on:(\d{4}-\d{2}-\d{2})$/;
 const LENS_RE = /^lens:(day|week|month|quarter|all)$/;
 const SYM_RE = /^sym:([a-z]{1,6})$/;
+const SECTOR_RE = /^sector:([a-z-]+)$/;
 const KIND_RE = /^kind:([a-z-]+)$/;
 const IMPACT_RE = /^impact:(critical|high|medium|low)$/;
 const CALL_RE = /^call:(stand-aside|watch|act|conditional)$/;
 const CONTROLS = [ON_RE, LENS_RE, SYM_RE, KIND_RE, IMPACT_RE, CALL_RE];
-const isControl = (token: string): boolean => CONTROLS.some((re) => re.test(token.toLowerCase()));
+
+/**
+ * A `sector:` token counts as a control ONLY when its slug names a real sector. An unresolvable
+ * one falls through to a plain term instead of being swallowed, which is already how
+ * `impact:huge` and `lens:decade` behave — the typo stays visible on screen rather than filtering
+ * nothing and leaving no trace of why.
+ */
+const isControl = (token: string): boolean => {
+  const lower = token.toLowerCase();
+  const slug = SECTOR_RE.exec(lower)?.[1];
+  if (slug !== undefined) return sectorFromSlug(slug) !== undefined;
+  return CONTROLS.some((re) => re.test(lower));
+};
 
 const firstMatch = (tokens: readonly string[], re: RegExp): string | undefined =>
   tokens.map((t) => re.exec(t.toLowerCase())?.[1]).find(Boolean);
@@ -147,6 +192,9 @@ export function parseResearchQuery(query: string): ResearchFilter {
   const kind = firstMatch(tokens, KIND_RE);
   const impact = firstMatch(tokens, IMPACT_RE);
   const callClass = firstMatch(tokens, CALL_RE);
+  // An unknown sector slug resolves to nothing and filters nothing — a token nobody can answer
+  // must not silently narrow the board to zero rows, which reads as "no research here".
+  const sector = sectorFromSlug(firstMatch(tokens, SECTOR_RE) ?? "");
   const symbols = [
     ...new Set(
       tokens
@@ -158,6 +206,7 @@ export function parseResearchQuery(query: string): ResearchFilter {
   return {
     terms: tokens.filter((t) => !isControl(t)).map((t) => t.toLowerCase()),
     symbols,
+    ...(sector ? { sector } : {}),
     ...(kind ? { kind } : {}),
     ...(impact ? { impact } : {}),
     ...(callClass ? { callClass } : {}),
@@ -172,6 +221,20 @@ export function toggleSymbolScope(query: string, symbol: string): string {
   const tokens = query.split(/\s+/).filter(Boolean);
   const same = (t: string) => t.toUpperCase() === token.toUpperCase();
   return (tokens.some(same) ? tokens.filter((t) => !same(t)) : [...tokens, token]).join(" ");
+}
+
+/**
+ * Toggle the sector scope — what a coverage tile's tap writes (#3811 criterion 4). Single-valued:
+ * a second sector REPLACES the first rather than widening, because the readout the tap came from
+ * says "this sector", and an OR of two sectors would make that sentence false. Tapping the sector
+ * already scoped clears it; every other token survives, the same contract `setFacet` honours.
+ */
+export function toggleSectorScope(query: string, sector: string): string {
+  const token = `sector:${sectorSlug(sector)}`;
+  const tokens = query.split(/\s+/).filter(Boolean);
+  const already = tokens.some((t) => t.toLowerCase() === token);
+  const kept = tokens.filter((t) => !SECTOR_RE.test(t.toLowerCase()));
+  return (already ? kept : [...kept, token]).join(" ");
 }
 
 /** Word-boundary mention of a symbol in free text — the rule `symbolResearch` uses server-side. */

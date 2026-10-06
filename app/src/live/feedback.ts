@@ -18,7 +18,7 @@ export interface RecentFiling {
   readonly kind: FeedbackKind;
   readonly filedAt: string;
   readonly url: string;
-  readonly status?: "open" | "needs-info" | "needs-eric" | "next-slice" | "shipped";
+  readonly status?: "open" | "needs-info" | "needs-eric" | "next-slice" | "shipped" | "not-built";
 }
 
 /** One unclaimed community-track earn (#567), ready for its one-time fanfare — the fill-earned

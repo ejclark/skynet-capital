@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import { isSameMarketDay } from "../domain/market-day.js";
-import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
+import { ladderRefusal } from "../domain/progression.js";
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -32,6 +32,7 @@ import {
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
 import { serveQuote } from "./quote-route.js";
 import { serveSpotChecks } from "./spot-checks-route.js";
+import { serveStructures } from "./structures-route.js";
 import { serveSymbolSearch } from "./symbol-search-route.js";
 
 /** Trade-type codes that ride the OPTION preview/review pipeline. */
@@ -204,31 +205,12 @@ function parseOptionBody(raw: string): DeskOptionRequest | undefined {
   return undefined;
 }
 
-/** The legacy `lockedRefusal` sentence, minus its HTML shell — names the rung to fill. */
-function lockedSentence(
-  code: OptionPlayCode,
-  progression: ParticipantProgression | undefined,
-): string {
-  // The feedback gate (#1119) outranks the rung below: while it holds, that is the remedy.
-  if (progression?.ladderGate) {
-    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent. Turn the wheels off to open the full catalog.`;
-  }
-  const prev = ladderNeighbor(code, -1);
-  return `Training wheels are on, and course ${code} hasn't been unlocked yet${
-    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
-  }. Nothing was sent. Turn the wheels off to open the full catalog.`;
-}
-
 /** The zero-DTE gate (#1671): any option OPEN expiring today is course 501, checked independently
  *  of the play's own rung — a member can have 301 wide open and still be shut out of a same-day
- *  expiration until 501 is earned. No `ladderGate` branch here (unlike `lockedSentence`): the
- *  feedback gate locks every unearned rung including the play's own, so `optionOpenRefusal` below
- *  always catches it one line earlier — this function only ever runs once that's already cleared. */
+ *  expiration until 501 is earned. Never gated-phrased: the feedback gate locks every unearned
+ *  rung including the play's own, so `optionOpenRefusal` below always catches it one line earlier. */
 function zeroDteLockedSentence(): string {
-  const prev = ladderNeighbor("501", -1);
-  return `This order expires today — a zero-DTE trade — and course 501 hasn't been unlocked yet${
-    prev ? ` (it opens after your first filled ${prev.code} — ${prev.name})` : ""
-  }. Nothing was sent. Turn the wheels off to open the full catalog.`;
+  return `This order expires today — a zero-DTE trade. ${ladderRefusal("501", false)}`;
 }
 
 /** Every ladder refusal an OPEN can hit, resolved together since both name the same "now": the
@@ -241,7 +223,10 @@ function optionOpenRefusal(
   progression: ParticipantProgression | undefined,
   now: Date,
 ): string | undefined {
-  if (playLocked(request.code, progression)) return lockedSentence(request.code, progression);
+  if (playLocked(request.code, progression)) {
+    // The feedback gate (#1119) outranks the rung below: while it holds, that is the remedy.
+    return ladderRefusal(request.code, Boolean(progression?.ladderGate));
+  }
   if (isSameMarketDay(now.toISOString(), request.expiration) && playLocked("501", progression)) {
     return zeroDteLockedSentence();
   }
@@ -345,6 +330,7 @@ const GET_ROUTES: Readonly<Record<string, GetRoute>> = {
   "/api/symbols/search": serveSymbolSearch,
   "/api/trade/guidance": serveGuidance,
   "/api/trade/guidance/spot-checks": serveSpotChecks,
+  "/api/trade/structures": serveStructures,
 };
 
 /** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.

@@ -398,6 +398,7 @@ three at the 2026-09-08 initial research, and `FT-4` (the 2026 concession regime
 | 2026-09-15 | D-14 | **Why this pulse reached a session:** the cadence band transitioned **low:15+ → low:0+** (interval 30d → 7d). **THE THRESHOLD THIS LEDGER JUDGES BY IS MIS-CALIBRATED, and it is measurable.** All **22** of 2026's 20/30/40-year MOF result pages re-fetched direct 2026-09-15 and each joined to MOF's own same-session par curve (`jgbcm_all.csv` + current-month `jgbcm.csv`, 4,611 sessions): clearing-minus-par gap **40Y mean +2.45bp** (n=4: +2.9, +0.2, +4.4, +2.3) against the **−0.25bp** across 95 auctions since 2007-11-06 this doc calibrated on; **30Y mean +4.49bp** (n=9, **every one positive**, range +0.6 to +9.8); **20Y mean +1.29bp** (n=8, four negative). **The concession is real and rises with tenor**, so kill switch 3's "+3bp = only 4 of 95" is optimistic as a *forward* probability — **1 of the last 4** 40-years (2026-05-27, **+4.4bp**) already cleared past it. `FT-2` stands registered as written; a new **`FT-4`** registers the narrower regime claim (09-29 clears at a **positive** gap). *Limit:* par is an end-of-day reading against a 12:45 JST stop, so a positive gap mixes concession with the post-auction move — the level comparison is what carries, not the decomposition. **THE ONE UNSOURCED NUMBER IS NOW SOURCED** (initial research: *"the next pulse should find that page"*). BoJ `mpr260616a.pdf` (Quarterly Schedule Jul–Sep 2026, fetched direct, HTTP 200, 141,472 bytes): the **">25 years"** zone — the 40-year's only bucket — is **¥75bn per auction, ¥150bn a month, twice monthly**. Against September gross >25y coupon supply of **¥900bn** (30Y **¥600bn** on 09-03 + 40Y **¥300bn** anticipated 09-29, both MOF announcements) the Bank absorbs **16.7%**; net ≈ **¥750bn**. And `mpr260616b.pdf` note 3, verbatim: *"On the day of the JGBs auctions… the Bank will in principle refrain from announcing auctions for the corresponding maturity segments"* — **no BoJ super-long bid on 09-29, by rule**. **Peers (the sibling super-longs):** 09-15 **20Y** (`eresul20260915.htm`, today) **4.005x** cover (¥2,131.3bn / ¥532.1bn), tail **1.3bp** (3.869% low vs 3.856% avg) — **firm** on the sibling's own lines (soft = tail ≥2bp, weak = cover <3.0); its same-session par is not published yet, so the gap is uncomputable today (+6.1bp vs 09-14's 3.808). 09-03 **30Y** cover **3.788x**, tail **2.1bp**, gap **+4.8bp**. **Super-long demand held at the 20-year three days before the hike.** **Macro:** CPI 09-11 printed core **+0.3% m/m** vs 0.2% consensus ([`cpi-2026-09-11.md`](cpi-2026-09-11.md) close-out) and the policy path repriced hard — **FOMC 09-16 ~90% to hike** (91.4% futures-derived / 86.2% venue VWAP, [`fomc-2026-09-16.md`](fomc-2026-09-16.md)); **BoJ 09-18 98.25%** to hike (Polymarket direct, stamp 2026-09-15T16:39:40Z, [`boj-decision-2026-09-18.md`](boj-decision-2026-09-18.md)) against the **80–84%** recorded at D-21. The stance's "provisional until 09-18" caveat has largely resolved. **LEG 6 REVERSED, AND THE MECHANISM IS TWO-SIDED.** Domestic-minus-hedged advantage on the same basis, both primaries, 09-14: JGB 40Y **4.040** − [US 30Y **5.34** − (US 3M **4.11** − JP 1Y **1.553**)] = **+125.7bp**, against **+109bp** on 09-04 — **it widened 17bp in a week**, and the cause is the **Fed**, not the BoJ: US 3M ran **3.91 → 4.11** on the CPI print, which makes dollar hedging dearer and pushes a yen investor *further* toward home. A 25bp BoJ hike takes ~25bp off this number and a 25bp Fed hike adds ~25bp, so with both ~90%+ priced this week the convergence story the initial research carried **stalls this quarter** rather than continuing (approximation unchanged: short-rate differential, cross-currency basis excluded). **Curve (MOF par, primary):** 30s40s **0.0bp** on 09-14 (40Y 4.040, 30Y 4.040), the **1.47th percentile** of 4,611 sessions (median +11.2bp) — flatter than 09-07's +0.4bp, so `FT-3` tracks in favour; 20s40s **+23.2bp**; 40Y **4.040** sits **10.5bp** below the **4.145%** all-time high of 09-01, retest level unfired. **Volatility / FX (Yahoo, secondary):** VIX **15.31 → 17.52** (live, stamp 2026-09-15T19:45:31Z; 09-14 close 17.10), **+2.21** — inside the screen's 3-point band, ten-session range 14.53–17.84 against 14.32–16.34 last row, a step up with no regime break. USD/JPY **155.12** (stamp 2026-09-15T20:00:37Z) against 154.235 last row, after a 09-13/14 low of **153.42**: the −3.7% yen rally **stalled and partly reversed**. **KILL SWITCH 1 CHECKED, NOT FIRED — and the attribution is measured, not assumed.** Tracked names did move >2%: CRWV **−18.9%** (99.83 → 81.00), AVGO **−8.0%**, NVDA **−6.1%**, MRVL −1.7% with a −7.3% session on 09-14. But the **co-movement sign is wrong for a yen story** — a carry unwind needs a *stronger* yen and USD/JPY went **153.42 → 155.12** across exactly those sessions — and the repo's own CPI close-out attributes the damage to the 09-14 policy-path repricing, naming `CRWV −6.89%`. The premise holds; the switch's wording is tightened in the decision header to require the yen leg. **Process:** September calendar re-fetched direct (HTTP 200, **26,451** bytes, up from 25,556 — the new 09-15 result link is the growth); the **09-29 40-year row still carries no Auction Announcement link**, so the size is unannounced at D-14. That **clears the "This week" falsifier** (*terms before 2026-09-15*) and leaves **kill switch 6 unfired**; terms due ~09-18–09-22. October re-checked: still no 40-year. **One new dated event PROPOSED (`estimate`):** `boj-jgb-purchase-schedule-q4-2026-09-30` — the Oct–Dec >25y purchase amounts, published **2026-09-30 17:00 JST** per the Jul–Sep schedule's own verbatim note, **D+1** from this auction and the first scheduled read on whether a post-hike BoJ trims the ¥150bn/month bucket. **Adjacency:** corridor grew **35 → 60** tracked ids within ±5d, of which **3** are confirmed high-impact (`pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`) — the prior probe-ref carried no `adjacentStrongIds` key, so this row sets that baseline; `jgb-2y-auction-2026-09-30` is newly tracked at D+1 and does not compete for the >25y bucket. **Geopolitical:** nothing touching yen rates or the event's symbols this week (`symbols: []`). **Peers:** n/a. All fetches returned HTTP 200; `probe-ref.blocked` stays empty. | **No change — stand aside, permanently.** Two *reading* rules added to the Stance section (judge the gap against 2026, not 2007–2026; the BoJ half of net supply is small and absent on the day). Zero capital either way | 2026-09-22 (low band, `low:0+`, 7d) |
 | 2026-09-22 | D-7 | **The D-14 pulse's open contingency is resolved, and uneventfully.** [`boj-decision-2026-09-18`](boj-decision-2026-09-18.md) closed out (2026-09-19): the BoJ hiked 25bp to **1.25%**, **7-2** (Asada, Sato dissenting to **hold** — two DOVISH dissents, against July's single hawkish one). USD/JPY moved **155.69 → 157.89** (+1.41%), inside that ledger's own ±2.0% carry-unwind band — the yen **weakened** on the hike rather than strengthening. **THE SIZE IS NOW ANNOUNCED.** MOF's September calendar row for 09-29 now carries a live Auction Announcement link (`announcement/auct20260918eb.htm`, fetched direct today) published **2026-09-18** — inside the "about one week prior" window this ledger flagged at D-14: **¥300bn** (the anticipated size, confirmed exactly), reopening the 40-year 2066-03-20 maturity, Dutch-style auction at 0.5bp intervals, issue date 2026-09-30. **Kill switch 6 checked, not fired** — date and size both unchanged. Still `estimate` (no MOF confirmed-prefix slot). **Rates (MOF par curve, primary — `jgbcm.csv`, CP932-decoded after the English path 302'd to the Japanese one, exactly as initial research recorded):** the file's last row is **09-17** — Tokyo cash was shut **09-21** for Respect for the Aged Day (Silver Week), so no newer session has published as of this fetch (`Last-Modified` header confirms). 40Y **4.036%**, 30Y **4.047%**, **30s40s −1.1bp** — still deep in the collapsed range this ledger has tracked since D-21 (09-14: 0.0bp; 09-07: +0.4bp); no re-steepening, FT-3 unchanged. **Volatility (Yahoo, secondary; raw JSON parsed directly this session — WebFetch's own summarizer hallucinated a 2025 VIX series on first attempt and should not be trusted on this endpoint going forward):** VIX **17.52 (09-15) → 14.81 (09-18 close) → 14.87 (09-21 close, live)** — real decompression through both central-bank decisions, not a regime break upward. **USD/JPY kept weakening: 155.12 (09-15) → 157.54 (09-22, live)**, +1.56%. **Kill switch 1 still cannot fire on sign alone** — tracked names ripped this week (NVDA +7.2%, AVGO +6.9%, MRVL +16.1%, CRWV +5.6%, 09-15→09-21 closes, Yahoo) but a carry unwind needs a *stronger* yen, and USD/JPY has done nothing but rise since D-21. **Adjacency: corridor grew 60 → 65** ids within ±5d; **one new confirmed high/critical id joins `adjacentStrongIds`:** `mu-2026-09-30-print` (Micron earnings, D+1 from this auction), alongside standing `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`; `trump-xi-summit-2026-09-24` and `government-funding-deadline-2026-09-30` (both high) stay `estimate`, not confirmed. **`--on-date` checked for both 09-29 and 09-30 — nothing new to propose**; every id this sweep would surface is already canonical, including `boj-jgb-purchase-schedule-q4-2026-09-30` (this ledger's own D-14 proposal, now on the calendar). **Peers:** n/a, `symbols: []`. All fetches returned HTTP 200 (English-path redirects resolved via the Japanese path); `probe-ref.blocked` stays empty. | **No change — stand aside, permanently.** The BoJ resolution clears the last open contingency this ledger was carrying; nothing here licenses a position | 2026-09-29 (low band, `low:0+`, 7d — lands on the auction date itself) |
 | 2026-09-29 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (low:0+), 66 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-06 |
+| 2026-09-30 | D+1 | **CLOSE-OUT — detail in `## Outcome` below.** Instrument cache busted first (`rm -rf node_modules/.cache/{earnings-cycle,intraday-edges}`, though this `rates` entry with `symbols: []` uses neither). MOF's own result page (`calendar/eresul/eresul20260929.htm`, HTTP 200, 18,513 bytes, fetched direct) confirms **`FT-1`** (no tail — `-`/`-` in both average columns, a ninth straight 40-year with none) and **`FT-2`** (**3.096x** cover, ¥928.0bn bids / ¥299.7bn accepted, vs MOF's current-month par curve (`jgbcme.csv`, fetched direct) reading **4.127%** 40Y on 09-29 against the **4.125%** highest accepted yield — a **−0.2bp** gap, both legs of the ≥2.5x / ≤+3bp prediction clearing comfortably, and the best cover of the tracked series). **`FT-4`, registered at the D-14 pulse on the "2026 auctions now clear cheap to screen" reading, is KILLED**: its switch fires at a gap **≤ 0.0bp** and this auction cleared at **−0.2bp**, through the screen rather than cheap to it — the fifth 2026 print breaks the four-observation streak the D-14 pulse read as a regime (2026 mean now ≈+1.94bp over n=5, still elevated vs the 95-auction −0.25bp, but not the one-directional regime FT-4 staked out). 30s40s (same curve) closed **+0.1bp** (30Y 4.126, 40Y 4.127) — still deep in the collapsed range this ledger has tracked since D-21; `FT-3` is not due until 2027-01-08 and stays `_open_`. VIX **16.04** (Yahoo close, secondary), no regime move. No fetch of a cited source failed. | **Closed — stand aside was right and free.** Two of three due predictions confirmed (`FT-1`, `FT-2`); one killed (`FT-4`) — the ledger's own D-14 amendment did not survive its first out-of-sample test | — (closed; this doc goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -413,3 +414,114 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-09-30, D+1 — inside the `closeOutWithinDays: 6` window).** Rates mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran anyway per
+protocol. Every number below is a primary re-fetched direct this session — MOF's own 40-year result
+page and MOF's current-month par-yield CSV — never from memory of the tape. VIX is Yahoo, secondary.
+No fetch of a cited source failed.
+
+**The headline verdict.** The single-price-auction correction and its replacement metric both held
+up exactly as designed, and the auction itself was the strongest print in the tracked series — a
+**3.096x** cover, the best of the last nine 40-years, clearing **0.2bp through** the same-session
+screen rather than cheap to it. `FT-1` and `FT-2` both **CONFIRM**. `FT-4` — this ledger's own D-14
+amendment, built on 2026's first four 40-years all clearing at a positive (cheap) gap and proposing a
+standing regime — is **KILLED** by the fifth data point: 09-29 cleared rich, not cheap, so the D-14
+reading was a four-observation streak, not a durable state change. The stand-aside stance cost
+nothing, exactly as designed, and the entry's diagnostic jobs (correcting the tail framework, holding
+the 30s40s read, banking a killed seasonality story) all did their work without ever licensing a
+trade.
+
+### What Japan sold — MOF's own result page, verbatim
+
+`policy/jgbs/auction/calendar/eresul/eresul20260929.htm`, fetched direct 2026-09-30 (HTTP 200,
+18,513 bytes; `Last-Modified: Tue, 29 Sep 2026 03:22:30 GMT`):
+
+| Field | Value |
+|---|---|
+| Security · issue · coupon · maturity | 40-Year · **19** · **3.8%** · **3/20/2066** |
+| Auction / issue date | **9/29/2026** / **9/30/2026** |
+| Competitive bids | **¥928.0bn** |
+| Competitive accepted | **¥299.7bn** — matches the ¥300bn announced 2026-09-18 (`auct20260918eb.htm`) |
+| **Bid-to-cover** | **3.096x** (928.0 / 299.7) |
+| Price / yield at the highest accepted yield | 93.69 / **4.125%** |
+| Allotment at the highest accepted yield | 42.4153% |
+| Weighted average price · yield at the average price | **`-`** · **`-`** — leg 1 confirmed a ninth straight time |
+| NPC Ⅱ | **`-`** (none) |
+
+**Cover is a new high for the tracked series**, extending the run this ledger has followed since
+D-21: 2.214 · 2.127 · 2.604 · 2.585 · 2.760 · 2.541 · 2.702 · 2.824 · **3.096** (2026-09-29) — still
+on a ¥300bn size cut 40% in twelve months. By the ledger's own "strong print" reading rule (cover
+≥2.8x with the clearing yield within 1bp of the screen), this is the cleanest strong print the series
+has produced.
+
+### The replacement metric, scored
+
+MOF's current-month par curve (`jgbcme.csv`, linked from the English reference-rate index page,
+fetched direct 2026-09-30 — `historical/jgbcme_all.csv` freezes at 2026-08-31 and does not carry
+September; the live `jgbcme.csv` does): **40Y par 4.127%** on 2026-09-29 (30Y **4.126%**, so **30s40s
+closed +0.1bp** — still deep in the collapsed range this ledger has tracked since D-21; `FT-3`'s
+score-by is 2027-01-08, not due, and its cell stays `_open_`).
+
+**Gap = highest accepted yield − same-session par 40Y = 4.125 − 4.127 = −0.2bp.** The auction cleared
+**through** the screen, not cheap to it — the first negative gap of the five 2026 40-year auctions
+this ledger has now tracked, against the four positive gaps (+2.9, +0.2, +4.4, +2.3bp) the D-14 pulse
+used to build its "+2.45bp regime" reading.
+
+### `FT-jgb-40y-auction-2026-09-29-1` — CONFIRMED
+
+Predicted the result page prints `-` in both average columns, extending the single-price finding.
+It does: Weighted Average Price and Yield at the Average Price both print `-`. The 40-year has now
+shown zero tails across every result page on record (2025-05-28 → 2026-09-29, n=9) — the correction
+this entry was written for holds without exception.
+
+### `FT-jgb-40y-auction-2026-09-29-2` — CONFIRMED
+
+Predicted cover **≥ 2.5x** and a clearing gap **≤ +3bp**. Actual: **3.096x** and **−0.2bp** — both
+comfortably clear, and cover is the best of the series. The cuts-not-demand reading (initial research
+leg 8) gets its cleanest support yet: MOF has cut this auction 40% in a year and cover keeps rising.
+
+### `FT-jgb-40y-auction-2026-09-29-4` — KILL
+
+Registered at the D-14 pulse (2026-09-15) on the finding that 2026's first four 40-years all cleared
+at a positive gap to par (mean +2.45bp) against the 95-auction full-sample mean of −0.25bp, proposing
+a standing regime shift. Kill switch: a 2026-09-29 gap **≤ 0.0bp**. Actual: **−0.2bp** — the switch
+fires on the very first out-of-sample test. **This is a kill, not a wash on the underlying concession
+reading**: across the five 2026 auctions the mean gap is now ≈**+1.94bp** (+2.9, +0.2, +4.4, +2.3,
+−0.2), still well above the 95-auction −0.25bp, but the one-directional "auctions now always clear
+cheap" regime `FT-4` staked out did not survive its first test. No rates-mode equivalent of the
+earnings kill list exists to move this to (`multi-symbol-sweep.md`'s kill list is symbol-keyed); the
+kill is recorded here and in the forward-tests fragment.
+
+### Kill switches, each checked against data
+
+| # | Switch | Verdict |
+|---|---|---|
+| 1 | Tracked name (NVDA/AVGO/MRVL/CRWV) moves **>2%** on a session **2026-09-08 → 2026-09-29** attributed to a JGB/yen headline | **Not triggered on the yen leg** — never re-fired past the D-7 check; no new attribution surfaced |
+| 2 | 2026-09-29 result page prints an actual weighted-average price / yield at the average price | **Not triggered** — both print `-`, confirmed above |
+| 3 | Cover **<2.5x** *or* clearing yield **>+3bp** above same-session par 40Y | **Not triggered** — 3.096x and **−0.2bp** |
+| 4 | Cover **<2.5x** *while* 30s40s **<+5bp** | **Not triggered** — cover condition never met (3.096x) |
+| 5 | 30s40s **≥+10bp** on 2026-12-31 | **Cannot trigger yet**; tracking at +0.1bp on 09-29, `FT-3` not due |
+| 6 | Announced size other than ¥300bn, date other than 09-29, or terms published before 09-15 | **Not triggered** — accepted ¥299.7bn against the announced ¥300bn, date exactly 09-29, terms published 09-18 |
+
+### Honest limits of this close-out
+
+- **`FT-3` is not scored here.** Its score-by (2027-01-08) is past this event's `closeOutWithinDays`
+  ceiling; the scanner named it in `forwardTestsBeyondWindow` and dispatched this close-out anyway,
+  exactly as designed. The 30s40s reading (+0.1bp on 09-29) is recorded above, not scored.
+- **The BoJ's own super-long purchase schedule**, sourced at the D-14 pulse (¥75bn/auction,
+  ¥150bn/month, no bid on auction day), was not re-verified this session — nothing about this
+  close-out depends on it, and it belongs to
+  [`boj-jgb-purchase-schedule-q4-2026-09-30`](boj-jgb-purchase-schedule-q4-2026-09-30.md)'s own
+  close-out (D+1 from this auction).
+- **A single out-of-sample point cannot settle a five-observation series.** `FT-4`'s kill retires the
+  specific one-directional prediction as registered; it does not establish that the concession is
+  gone, only that it is not monotone. The next 40-year (November, per MOF's own calendar showing no
+  October print) is the honest next test of the underlying reading.
+- **The date label stays `estimate`** — a taxonomy gap (no confirmed-prefix slot for a non-US
+  sovereign debt office), not date or size doubt; MOF's result page makes both a matter of record now.
+  It widened caution throughout and licensed nothing, the correct outcome for a document whose every
+  call was a refusal.

@@ -322,7 +322,15 @@ Medium, no position, no sizing, no house playbook, and the stand-aside holds.
   senior Iranian official quoted the same day), with Iran floating a **seven-day Hormuz reopening**
   conditional on the US easing military pressure and lifting its port blockade. That condition is
   unmet — the switch does not fire — but this is the first concrete diplomatic step toward the
-  scenario this switch was written for, not just a price move to extrapolate from. **A new,
+  scenario this switch was written for, not just a price move to extrapolate from. **Re-tested
+  2026-09-30: the diplomatic track stalled, even as the price kept drifting toward the trigger.**
+  Per Bloomberg (09-24) the US and Iran were exploring a phased Hormuz-reopening deal; by 09-29
+  (Yahoo Finance market wrap) **President Trump rejected that proposal**, with officials reportedly
+  weighing tighter sanctions rather than relief. Brent nonetheless closed **$96.54 on 09-30**
+  (tradingeconomics) — down from ~$98–99 on 09-23 and **~11% above** the $87 trigger, the closest
+  yet on price alone — but on supply-side mechanics (Aramco's pipeline restoration), not a
+  settlement. The switch was written for a genuine Hormuz settlement; that specific track just
+  closed. Closer in price, further in mechanism — still does not fire. **A new,
   narrower switch beside it (2026-09-15):** the August report's *own* stated cause — metal costs — had
   unwound by 09-15. **Copper 6.56 (08-28) → 6.45 (09-15), −1.7%.** If the September report attributes
   its prices line to metals alone with energy unmentioned, the rotation this row claimed is wrong and
@@ -334,6 +342,9 @@ Medium, no position, no sizing, no house playbook, and the stand-aside holds.
   tape, not just a live risk. **Re-tested 2026-09-24: unresolved, roughly unchanged.** Copper
   **$6.71–6.74/lb on 09-23** (NEWS: tradingeconomics/Kitco), still **~1–2% above** the 08-28
   baseline — the caution neither resolves nor worsens this row. Scored as `FT-chicago-pmi-2026-09-30-4`.
+  **Re-tested 2026-09-30: still flat, still unresolved.** Copper **$6.58/lb** (tradingeconomics),
+  **+0.3%** above the 08-28 baseline — essentially unchanged from the 09-24 reading. The September
+  report's own attribution sentence, not the commodity tape, remains the thing `FT-4` actually scores.
 - ~~**The Fed stops being inflation-anchored** — e.g. the **2026-09-04** payroll print pulling hike odds
   down hard~~ → ~~its successor, the **2026-09-11** CPI resolving the FOMC question toward
   hold-vs-cut, restoring the headline's primacy over Prices Paid~~ — **RESOLVED 2026-09-11, did not
@@ -370,6 +381,8 @@ Medium, no position, no sizing, no house playbook, and the stand-aside holds.
 | 2026-09-24 | D-6 | **Cadence-band transition triggered this session (`medium:8+` → `medium:0+`), not a new stance — the honest finding is a diplomatic first, not a level or confidence move.** **(1) GEOPOLITICAL — the Brent/Hormuz kill switch gets its first concrete diplomatic test.** US special envoy Witkoff met Iranian FM Araghchi at UNGA on 09-22/23, Qatar-mediated (NEWS: Al Jazeera "US, Iran hold mediated UNGA talks on ending war, opening Strait of Hormuz," corroborated by Reuters reporting a senior Iranian official's own words the same day), Iran floating a **seven-day Hormuz reopening** conditional on the US easing military pressure and lifting its port blockade — a live, unmet condition, so the switch does not fire. Brent's own tape continued the trend this doc has tracked since 09-21: a **sixth consecutive down session, closing below $100 for the first time since early September**, ~$98–99 on 09-23 (NEWS: tradingeconomics) — closer to the ~$87 trigger than at any prior row, though not there. **Copper $6.71–6.74/lb on 09-23** (NEWS: tradingeconomics/Kitco), still ~1–2% above the 08-28 baseline — the metals-reversal caution behind `FT-4` is unresolved, neither better nor worse. **(2) VOLATILITY.** VIX **14.87 (09-21) → 15.18 (09-23 close)**, Δ +0.31 (NEWS: Yahoo Finance) — immaterial, well inside the 3-point band. **(3) PEERS/MACRO.** No regional survey or national print landed in this window — Dallas Fed mfg (09-28), Consumer Confidence/JOLTS (09-29) remain ahead of this row. **Noted for context, not proposed** (outside the 5-day corridor by one day, no direct read on this survey): `trump-xi-summit-2026-09-24` (high, estimate) lands today — trade/export-control/AI-governance agenda. **(4) EVENT TAPE.** MNI's calendar re-fetched at its live URL: unchanged, **September 30, 09:45 ET** — sixth consecutive reconfirmation. tradingeconomics re-checked: **still no September consensus** — fifth consecutive row confirming none exists; the site's own quarter-end extrapolation moved **48.90 → 46.90**, which is not a monthly forecast and not treated as one. **(5) CORRIDOR.** 56 tracked ids within 5 days (57 at the last row, ordinary churn); `adjacentStrongIds` unchanged — `mu-2026-09-30-print`, `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`. **No new dated adjacency to propose** — the Iran/Hormuz thread carries no fixed date. | **No.** The Brent/Hormuz kill switch is closer and, for the first time, backed by a real diplomatic step rather than price action alone — recorded in the open on the kill-switch itself, not absorbed into the stance. Mean-reversion Medium, Prices Paid High, stand-aside, no-position and the reading order all hold unchanged. | 2026-09-26 (medium, 0+ band: every 2d) |
 | 2026-09-26 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-0.3pt since last), band unchanged (medium:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-28 |
 | 2026-09-28 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.0pt since last), band unchanged (medium:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-30 |
+| 2026-09-30 | D-0 | **The print itself has not landed at the time of this pulse — still no September figure and no consensus, seventh consecutive confirmation — so this row is the last pre-print check, not a close-out; `FT-1/-2/-4` (score by today) stay `_open_` for the close-out to fill from re-run data.** MNI's calendar re-fetched at its live URL: unchanged, **September 30, 09:45 ET** (seventh reconfirmation). tradingeconomics re-checked: still no September consensus; its own quarter-end extrapolation is unchanged at **46.90** (not a monthly forecast, not substituted as one). **(1) The Hormuz diplomatic track this doc has followed since D-8 stalled at the head-of-state level — a genuine new fact, and it cuts against the kill switch, not toward it.** Bloomberg (09-24) reported the US and Iran exploring a phased Hormuz-reopening deal; by 09-29, per Yahoo Finance's market wrap, **President Trump rejected that peace proposal**, with officials reportedly weighing tighter sanctions rather than relief. Brent nonetheless kept falling on supply-side mechanics — **$96.54 on 09-30** (tradingeconomics), down from ~$98–99 on 09-23, now **~11% above** the ~$87 trigger, the closest yet on price alone — but the switch was written for a *settlement-driven* unwind, and the settlement track it names was just explicitly rejected. Recorded as: closer in price, further in mechanism; the switch does not fire. **(2) The metals caution stays flat, not resolved either way.** Copper **$6.58/lb on 09-30** (tradingeconomics) is **+0.3%** above the 08-28 baseline ($6.56) — essentially unchanged from 09-23's ~+1–2% reading — so `FT-4`'s open question (does the September report name energy, metals, or both) remains exactly as open as the last row left it. **(3) Two new same-window prints both corroborate the standing calls without moving a tier.** **Dallas Fed manufacturing (Sep data, released 09-28, primary: dallasfed.org/research/surveys/tmos/2026/2609)** — general business activity **9.8, down from 11.6** but still solidly positive; **Production +13pt to 29.5**, a robust output read; and **input price growth accelerated to 4.9% y/y, the fastest pace in more than two years**, selling prices flat at 3.0%. A third regional survey now shows the same shape this doc has tracked since D-25: headline softening while staying positive, cost pressure building underneath — corroborating mean-reversion ≥50 (still Medium) and Prices Paid (still High) alike, not upgrading either. **Conference Board Consumer Confidence (Sep data, released 09-29)** fell **6.7pt to 81.9, a 12-year low** — Present Situation −7.9pt to 109.3, Expectations −5.9pt to 63.6 (third straight monthly decline) — respondents citing both inflation and jobs concerns (Yahoo Finance/CNBC/Axios, 09-29). This is a genuine new caution for the mean-reversion call: it is a demand-side signal, not a manufacturing one, and it does not license a downgrade on its own — no channel from household sentiment to a Chicagoland purchasing-manager panel is established here — but it is the first consumer-side data point this doc has carried, and it sits in tension with three regional surveys still reading positive. Named, not acted on. **JOLTS (Aug data, 09-29):** job openings **7.08M, −256k**, driven by professional/business services and healthcare — a softening labor market, consistent with but not additive to the standing reading order. **(4) Rates and vol moved together on the Iran headline, both short of a regime call.** **10-Year Treasury yield briefly touched 5.234% on 09-29, its highest since June 2007** (Yahoo Finance market wrap), and **CME FedWatch priced a 70.3% probability of another 25bp October hike** the same session — market-implied confirmation that the hawkish read this doc has carried since the 09-16 SEP is still the consensus going into the print, even though that specific fork is closed. **VIX 14.87 (09-26) → 16.04–16.07 close on 09-29** (Yahoo Finance), **Δ +1.2pt**, under the 3-point material band but a single-session **+8.1%** move, driven by the same Iran/Hormuz headline as (1) — the same "numerically sub-threshold, structurally notable" pattern this doc recorded on 09-15. **(5) MU** — reconfirmed reporting AMC today, 16:30 ET, guiding **$50B ± $1B** revenue against a **$51.2B / $31.56 EPS** consensus (SEC 8-K, Yahoo Finance/MarketBeat, 09-30) — unchanged from `mu-2026-09-30-print`'s canonical entry. **(6) CORRIDOR/ADJACENCY.** `node scripts/event-scan.mjs --on-date=2026-09-30` returns 19 entries, all already tracked or sibling-owned (`government-funding-deadline-2026-09-30` among them, independently reconfirmed averted through 12-11 by its own owning lane's 09-30 pulse) — nothing new to propose. `adjacentStrongIds` unchanged: `mu-2026-09-30-print`, `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`. | **No.** Three new prints (Dallas Fed mfg, Consumer Confidence, JOLTS) and two rates/vol data points (10Y yield, FedWatch) all corroborate or sit in honest tension with standing calls without crossing a tier threshold. The Hormuz kill switch is closer on price and further on mechanism after Trump's rejection of the phased deal — recorded, not fired. Mean-reversion Medium, Prices Paid High, stand-aside, no-position and the reading order all hold into the print itself. | 2026-10-02 (medium, 0+ band: every 2d) — moot in practice, since the print lands today and the next dispatch is expected to be the close-out (`event-passed-unscored`) once MNI publishes |
+| 2026-10-01 | D+1 | **Close-out — see `## Outcome` for the full accounting.** Cache busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); `symbols: []` gives neither instrument a target, unchanged since initial research. September's print re-fetched direct, four independent secondaries cross-checked (MNI's own release republished verbatim by mondovisione.com, plus tradingeconomics.com, TradingView's wire and FX.co/InstaForex, all fetched today): headline **58.8** (Aug 47.1, **+11.7pt**, the strongest since May and the sharpest month-over-month swing of this doc's entire life), New Orders +13.3, Production +15.5 (highest since May), Supplier Deliveries +9.6 (20th straight expansion month), Order Backlog +8.4 but still contracting a third month, Employment **−4.3** (back to contraction), **Prices Paid −3.7pt** to "around July's level." No source quotes a September attribution sentence for the prices line at all — not metals, not energy, not freight; the only metals/energy language any outlet carries is August's own, repeated for contrast. **FT-1 PASSES decisively, FT-2 KILLS, FT-4 is VOID on its own pre-registered clause, FT-3 KILLS on its SPY leg by a razor-thin margin** — full scoring and the honest accounting in `## Outcome`. **Also resolved:** the second-consecutive-sub-50 kill switch does not fire (58.8 is the opposite extreme); the Hormuz/Brent-$87 switch closes unfired (Brent in the mid-$90s on 09-30 per the prior row, and Trump rejected the phased reopening deal 09-29); the metals-narrow switch is superseded by FT-4's finding that neither metals nor energy was named. VIX **16.34** (09-30 close, Yahoo), +0.30 off the 09-29 reading, immaterial. **A sourcing limit worth naming:** this doc confirmed "no September consensus" at tradingeconomics' live calendar seven rows running, but print-day wire coverage (CNBC, RTT, FX.co) uniformly cites a **51.0–51.2 consensus** that must have existed on a desk poll this doc's sources never reached — the repeated finding was accurate for the sources checked, not for the true state of the world, and that gap is the honest takeaway for the next survey this calendar tracks the same way. `event-scan.mjs --on-date=2026-09-30` still returns the same 19 entries as the 09-30 row — nothing new to propose at close-out, consistent with the sweep being optional here. | **No new stance — the document closes.** One decisive pass (headline), one load-bearing kill (Prices Paid, the call this entire document was built around), one void (no mechanism named at all) and one near-miss kill (the attribution-null test, failed only on SPY and by a noise-level margin). Never traded throughout. | — (closed; scanner goes quiet unless a future dated forward test reopens it, per EVENT-RESEARCH.md) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -388,3 +401,142 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.mnimarkets.com/chicago-business-barometer","status":"404 (the URL the prior rows cited; the live calendar is at /chicago-business-barometer-aka-chicago-pmi-publication-calendar, re-fetched HTTP 200 and used)","at":"2026-09-15"},{"url":"https://chicago.ismworld.org/news-publications/reports/research-survey/","status":"302 to ecommerce.ismworld.org/SSO/Login.aspx — the full report with absolute subcomponent levels stays gated; FT-2 remains a delta test","at":"2026-09-15"},{"url":"https://tradingeconomics.com/united-states/chicago-pmi/calendar","status":"200 but the release table is client-rendered — no September consensus extractable, none substituted","at":"2026-09-15"}]} -->
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.mnimarkets.com/chicago-business-barometer","status":"404 (the URL the prior rows cited; the live calendar is at /chicago-business-barometer-aka-chicago-pmi-publication-calendar, re-fetched HTTP 200 and used)","at":"2026-09-15"},{"url":"https://chicago.ismworld.org/news-publications/reports/research-survey/","status":"302 to ecommerce.ismworld.org/SSO/Login.aspx — the full report with absolute subcomponent levels stays gated; FT-2 remains a delta test","at":"2026-09-15"},{"url":"https://tradingeconomics.com/united-states/chicago-pmi/calendar","status":"200 but the release table is client-rendered — no September consensus extractable, none substituted","at":"2026-09-15"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1 — inside the `closeOutWithinDays: 6` window).** Macro-print mode carries
+no `earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, unchanged since initial
+research); the cache-bust command was run regardless, per the lane's standing instruction. "Re-run
+instrument data" here means the September Chicago Business Barometer release and same-session SPY/TLT
+intraday bars, all fetched fresh this session — none of it carried from the D-0 pulse's own text or
+recalled from memory. The release itself was cross-checked across four independent secondaries, since
+the two primaries this doc has used all session (MNI's own calendar page, ISM-Chicago's SSO-gated
+report) carry no free full-text report: MNI's press release as republished verbatim by
+mondovisione.com, tradingeconomics.com's own write-up, TradingView's wire reproduction of the same
+tradingeconomics release, and FX.co/InstaForex's independent write-up — all fetched 2026-10-01, all
+agreeing to the decimal on every figure below.
+
+### What printed
+
+| Line | September | August | Change |
+|---|---|---|---|
+| Headline (Business Barometer) | **58.8** | 47.1 | **+11.7** |
+| New Orders | — | — | +13.3 |
+| Production | — | — | +15.5 (highest since May) |
+| Supplier Deliveries | — | — | +9.6 (20th straight expansion month) |
+| Order Backlog | — | — | +8.4 (still contraction, 3rd month) |
+| Employment | — | — | **−4.3** (back to contraction) |
+| Prices Paid | — | — | **−3.7** (back near July's level) |
+
+Absolute subcomponent levels are not published by any free source (ISM-Chicago's own report stays
+SSO-gated, the same limit named at initial research and every pulse since); every row above is the
+point change all four secondaries report identically. No source — MNI's own release text included —
+quotes a September attribution sentence for the prices line at all: not metals, not energy, not
+freight, not tariffs. The only metals/energy language any outlet carries is August's *"some firms
+reporting higher metal costs,"* repeated for contrast with August, never applied to September.
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-chicago-pmi-2026-09-30-1 (headline ≥50) | ≥50, directional only | **58.8** | **PASSED** |
+| FT-chicago-pmi-2026-09-30-2 (Prices Paid no more than 2.0pt below August) | delta ≥ −2.0pt | **−3.7pt** | **KILLED** |
+| FT-chicago-pmi-2026-09-30-3 (09:45–10:15 \|return\| < 08:30–09:00 \|return\|, SPY and TLT, no wrap attribution) | both symbols, plus no wrap credit | TLT confirms (0.025% vs 0.319%); **SPY fails** (0.193% vs 0.169%); no wrap attributes the day to this print | **KILLED — the SPY leg** |
+| FT-chicago-pmi-2026-09-30-4 (September report names an energy-complex input) | ≥1 energy-complex term in the attribution sentence | no attribution sentence published at all | **VOID — no attribution commentary published** |
+
+**FT-1 passes decisively, and by more than the call required.** The 58.8 print is not merely ≥50; it
+is an **11.7-point** swing, the largest single-month move of this document's own 2026 series (previous
+largest: May's +13.5, April's −10.5 is close behind) and roughly **1.5σ** against the series' own
+trailing σ of 7.59 — large, but inside the range this doc's own σ-driven refusal to point-forecast
+already anticipated. The directional (≥50) call registered at **Medium** confidence on 2026-09-05 is
+vindicated; the level itself was never forecast, consistent with the registration's own explicit
+scope.
+
+**FT-2 is the load-bearing kill, and it is the headline finding of this close-out.** This document's
+entire reason to read this report over its headline was the Prices Paid line — upgraded Low→Medium
+(09-05) then Medium→**High** (09-15) on two independent same-reference-month regional corroborations
+(Empire +5pt to 63.1, Philly +7.7pt to 48.6) and a commodity backdrop (Brent +21.8% off this doc's own
+baseline). September's Prices Paid **eased 3.7 points**, nearly double the 2.0pt kill line, reversing
+rather than extending the trend both regional peers showed in their own September reads. The
+09-15/09-22 rows' own words apply without softening: *"the parent ledger's High-confidence upgrade"*
+rested on a reading that did not hold at the one survey it was built to predict.
+
+**FT-4 is VOID on its own pre-registered clause, and that clause anticipated exactly this outcome.**
+The registration named two independent off-ramps: metals cited as sole driver (kill) or no attribution
+commentary published at all (void). What printed is the second one — four independent sources, none
+carrying a causal sentence for the prices line — so this is not an ambiguous call forced into a box; it
+is the test resolving exactly as its author anticipated it might. It does **not** rescue FT-2: FT-2
+killed on the delta magnitude alone, independent of mechanism.
+
+**FT-3 kills on a single leg, by a margin inside ordinary 5-minute noise — recorded honestly rather
+than rounded to a clean pass.** TLT confirms the prediction outright: its 08:30–09:00 ET move
+(−0.319%, PCE's own window) dwarfs its 09:45–10:15 ET move (−0.025%) by better than 12x. SPY does not:
+its 09:45–10:15 window returned **+0.193%** against **+0.169%** for 08:30–09:00 — a 0.025-percentage-point
+difference, on 5-minute bars, in a session that also carried GDP's third estimate and ADP in the same
+pre-open stretch. The prediction's own text required the inequality on **both** symbols; it is honest
+to call that FAILED on SPY even though the margin is almost certainly noise rather than signal. The
+second half of the prediction holds cleanly: two independent market wraps (a Yahoo/TheStreet-class
+aggregator and Investrade's professional desk review) both credit the session's move to "cooler" PCE,
+GDP and quarter-end/yield dynamics; neither mentions Chicago PMI at all, confirming the kill switch's
+own "did the tape attribute anything to this print" question in this document's favor even as the
+window-comparison leg fails.
+
+### Kill switches, resolved at close
+
+**A second consecutive sub-50 headline — RESOLVED, did not fire, and the opposite of what would have
+fired it happened.** 58.8 is this series' highest print since May, not a second air pocket.
+
+**The Hormuz/Brent-$87 settlement switch — RESOLVED, did not fire.** The D-0 row recorded Brent closing
+**$96.54** on 09-30, ~11% above the $87 trigger, after President Trump rejected the Witkoff-brokered
+phased Hormuz-reopening proposal on 09-29 (Yahoo Finance market wrap). The switch was written for a
+genuine settlement-driven unwind; that track closed rejected, not reached. Carried forward as closed,
+not re-tested further — the event this ledger exists for has passed.
+
+**The metals-narrow switch ("does the report cite metals alone, energy unmentioned") — superseded by
+FT-4's finding, not separately resolved.** The report cited neither metals nor energy; the switch's
+binary framing did not anticipate a report naming nothing, and that is exactly what FT-4's void clause
+exists to catch instead.
+
+**The Fed-anchoring switch — stays closed, as recorded 2026-09-22.** No further SEP-bearing FOMC
+meeting fell between that row and this print.
+
+**The MNI primary-source-tier gap — unresolved, and now moot for this document's life.** No
+confirmed-tier source prefix exists for MNI/ISM-Chicago (`market-events-data.ts`), so this entry never
+promoted out of `estimate` across its entire 32-day life despite the publisher's own calendar being
+re-verified correct eight consecutive times. The gap itself is inherited by `chicago-pmi-2026-10-30`
+and `chicago-pmi-2026-12-30`, not fixed here — naming it once more for whoever next touches this
+calendar's source-prefix table.
+
+### Never traded
+
+Consistent with the stance's standing refusal across all nine rows of this document's life: `medium`
+impact, `estimate` date throughout (never promoted — see the gap above), no house playbook macro-keyed
+(S1/S2/E1/S3/S4 + G1 are all symbol/earnings-keyed and `symbols: []` here). No position was opened,
+closed, or sized off this print at any point.
+
+### Honest accounting
+
+Of four pre-registered forward tests, one passed cleanly (FT-1), one killed cleanly and consequentially
+(FT-2, the document's own load-bearing call), one voided exactly as its own registration anticipated
+(FT-4), and one killed on a single leg by a margin indistinguishable from noise (FT-3). Read plainly:
+this is not a clean sweep, and the miss is the important one. The headline — the number this doc
+repeatedly instructed readers to read *second* — is the call that landed decisively. Prices Paid, the
+line this doc built its entire reading-order instruction around and upgraded to High confidence across
+three separate rows, is the call that reversed. That tension does not retroactively indict the
+reading-order logic (built on the Fed's own inflation anchoring and two independent regional
+corroborations, not on this series alone), but it is the honest record: following "prices before
+headline" this month would have pointed toward persistence and away from the move that mattered.
+**A second honest limit, found only at close-out:** this document confirmed "no September consensus"
+against tradingeconomics' live calendar on seven consecutive rows, yet print-day wire coverage (CNBC,
+RTT, FX.co) uniformly cites a 51.0–51.2 consensus that existed on some desk's poll this doc's sources
+never reached. The repeated finding was accurate for the sources actually checked and wrong about the
+state of the world — worth naming for the next MNI-sourced survey this calendar tracks the same way.
+The stance's structural refusal — never trade this print — was never at risk and held again. `##
+Outcome` now exists — per `event-scan.mjs`'s `hasOutcome` check, this document goes quiet permanently,
+with no door back in: all four registered forward tests carry a terminal verdict, and none is `_open_`.

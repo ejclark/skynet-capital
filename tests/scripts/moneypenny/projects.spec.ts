@@ -10,12 +10,15 @@ import {
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRetryableProjectsGhError,
+  isStartedPlan,
   PRIORITY_OPTIONS,
   resolveBoardItem,
   STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
+  statusFieldUpdate,
   statusForIssue,
   statusOptionsMatch,
+  subIssueCounts,
   viewsToCreate,
 } from "../../../scripts/moneypenny/projects.mjs";
 
@@ -24,7 +27,7 @@ import {
 // Claude Code sessions; the live `gh project` calls in projects-setup.mjs are only exercised by a
 // real Actions run).
 describe("moneypenny projects: statusForIssue", () => {
-  it("closed always reads Done, even if it would otherwise be Blocked or In Progress", () => {
+  it("closed always reads Done, even if it would otherwise be Blocked or Building now", () => {
     expect(statusForIssue({ state: "closed", labels: ["needs-eric"], hasOpenLinkedPr: true })).toBe(
       "Done",
     );
@@ -35,8 +38,33 @@ describe("moneypenny projects: statusForIssue", () => {
     expect(statusForIssue({ labels: ["needs-info"] })).toBe("Blocked");
   });
 
-  it("an open linked PR reads In Progress ahead of ready", () => {
-    expect(statusForIssue({ labels: ["ready"], hasOpenLinkedPr: true })).toBe("In Progress");
+  it("an open linked PR reads Building now ahead of ready", () => {
+    expect(statusForIssue({ labels: ["ready"], hasOpenLinkedPr: true })).toBe("Building now");
+  });
+
+  // #3960: the label is the in-flight signal — the sync never passes `hasOpenLinkedPr`, and live
+  // sessions auto-merge before an open PR could be seen, so without it the column read 0 forever.
+  it("the in-progress label reads Building now ahead of ready, with no linked PR needed", () => {
+    expect(statusForIssue({ labels: ["feedback", "ready", "in-progress"] })).toBe("Building now");
+  });
+
+  // #3913 slice 2: a needs-eric with no "Needs from you" callout is not waiting on Eric yet.
+  it("does not read Blocked for a needs-eric whose decision callout is missing", () => {
+    expect(statusForIssue({ labels: ["needs-eric"], decisionCalloutMissing: true })).toBe(
+      "Backlog",
+    );
+    expect(statusForIssue({ labels: ["needs-eric", "ready"], decisionCalloutMissing: true })).toBe(
+      "Ready",
+    );
+    expect(
+      statusForIssue({ labels: ["needs-eric", "needs-info"], decisionCalloutMissing: true }),
+    ).toBe("Blocked");
+  });
+
+  it("in-progress still yields to Blocked and to Done", () => {
+    expect(statusForIssue({ labels: ["in-progress", "needs-info"] })).toBe("Blocked");
+    expect(statusForIssue({ labels: ["in-progress", "needs-eric"] })).toBe("Blocked");
+    expect(statusForIssue({ state: "closed", labels: ["in-progress"] })).toBe("Done");
   });
 
   it("ready with no linked PR reads Ready", () => {
@@ -321,9 +349,83 @@ describe("moneypenny projects: a board that reads stale right after a sibling's 
   });
 });
 
+// #4393 slice 4, criterion 5 — a started plan nobody is building reads Waiting. "Started" is a
+// closed sub-issue OR `next-slice` (most plans here slice by PR, not by sub-issue).
+describe("moneypenny projects: the Waiting column (#4393 criterion 5)", () => {
+  const plan = (labels: string[], total = 0, completed = 0) => ({
+    labels: ["plan", ...labels],
+    subIssues: { total, completed },
+  });
+
+  it("WHEN a plan has a closed and an open sub-issue and no in-progress, it reads Waiting", () => {
+    expect(statusForIssue(plan(["ready"], 3, 1))).toBe("Waiting");
+    expect(statusForIssue(plan([], 11, 6))).toBe("Waiting");
+  });
+
+  it("a plan the lane shipped a slice of (next-slice) reads Waiting with no sub-issues at all", () => {
+    expect(statusForIssue(plan(["ready", "next-slice"]))).toBe("Waiting");
+  });
+
+  it("being built wins: the same plan with in-progress reads Building now", () => {
+    expect(statusForIssue(plan(["ready", "in-progress"], 3, 1))).toBe("Building now");
+  });
+
+  it("blocked wins: a started plan waiting on Eric reads Blocked, not Waiting", () => {
+    expect(statusForIssue(plan(["needs-eric"], 3, 1))).toBe("Blocked");
+  });
+
+  it("a fresh plan (no closed sub-issue, no next-slice) is never Waiting", () => {
+    expect(statusForIssue(plan(["ready"], 4, 0))).toBe("Ready");
+    expect(statusForIssue(plan([], 0, 0))).toBe("Backlog");
+  });
+
+  it("a plan with every sub-issue closed and no next-slice is finished, not Waiting", () => {
+    expect(statusForIssue(plan([], 8, 8))).toBe("Backlog");
+  });
+
+  it("only plans wait — a feedback issue with sub-issues reads by its labels", () => {
+    expect(
+      statusForIssue({ labels: ["feedback", "ready"], subIssues: { total: 2, completed: 1 } }),
+    ).toBe("Ready");
+  });
+
+  it("isStartedPlan and subIssueCounts read GitHub's own summary shape", () => {
+    expect(subIssueCounts({ sub_issues_summary: { total: 5, completed: 2 } })).toEqual({
+      total: 5,
+      completed: 2,
+    });
+    expect(subIssueCounts({})).toEqual({ total: 0, completed: 0 });
+    expect(isStartedPlan({ labels: ["plan"], subIssues: { completed: 1 } })).toBe(true);
+    expect(isStartedPlan({ labels: ["plan", "next-slice"] })).toBe(true);
+    expect(isStartedPlan({ labels: ["plan"] })).toBe(false);
+    expect(isStartedPlan({ labels: ["feedback", "next-slice"] })).toBe(false);
+  });
+});
+
+// The window between this rule merging and the sweep renaming the live field: a sync must never ask
+// for a column the board does not carry yet (that write throws and reddens `main`).
+describe("moneypenny projects: statusForIssue against an older board (columns)", () => {
+  const OLD = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+
+  it("writes the building column under its old name until the rename lands", () => {
+    expect(statusForIssue({ labels: ["in-progress"], columns: OLD })).toBe("In Progress");
+  });
+
+  it("falls back to the column a plan would read without Waiting", () => {
+    expect(statusForIssue({ labels: ["plan", "ready", "next-slice"], columns: OLD })).toBe("Ready");
+  });
+});
+
 describe("moneypenny projects: field/option constants", () => {
-  it("Status carries the five kanban columns, in column order", () => {
-    expect(STATUS_OPTIONS).toEqual(["Backlog", "Ready", "In Progress", "Blocked", "Done"]);
+  it("Status carries the six kanban columns, in column order (#4393 slice 4)", () => {
+    expect(STATUS_OPTIONS).toEqual([
+      "Backlog",
+      "Ready",
+      "Building now",
+      "Waiting",
+      "Blocked",
+      "Done",
+    ]);
   });
 
   it("Priority and Horizon are the backlog-sort and roadmap-group option sets", () => {
@@ -342,18 +444,22 @@ describe("moneypenny projects: field/option constants", () => {
 });
 
 describe("moneypenny projects: statusOptionsMatch", () => {
-  it("matches the same five names in any order", () => {
-    expect(statusOptionsMatch(["Done", "Backlog", "Blocked", "Ready", "In Progress"])).toBe(true);
+  it("matches the same six names in any order", () => {
+    expect(
+      statusOptionsMatch(["Done", "Waiting", "Backlog", "Blocked", "Ready", "Building now"]),
+    ).toBe(true);
+  });
+
+  it("does not match the board as it stood before #4393 slice 4", () => {
+    expect(statusOptionsMatch(["Backlog", "Ready", "In Progress", "Blocked", "Done"])).toBe(false);
   });
 
   it("does not match GitHub's own default Status options (Todo/In Progress/Done)", () => {
     expect(statusOptionsMatch(["Todo", "In Progress", "Done"])).toBe(false);
   });
 
-  it("does not match a superset or a subset of the five", () => {
-    expect(
-      statusOptionsMatch(["Backlog", "Ready", "In Progress", "Blocked", "Done", "Extra"]),
-    ).toBe(false);
+  it("does not match a superset or a subset of the six", () => {
+    expect(statusOptionsMatch([...STATUS_OPTIONS, "Extra"])).toBe(false);
     expect(statusOptionsMatch(["Backlog", "Ready"])).toBe(false);
   });
 
@@ -362,12 +468,77 @@ describe("moneypenny projects: statusOptionsMatch", () => {
     expect(statusOptionsMatch([])).toBe(false);
   });
 
-  it("STATUS_FIELD_OPTIONS carries the same five names STATUS_OPTIONS does, each with a color", () => {
+  it("STATUS_FIELD_OPTIONS carries the same names STATUS_OPTIONS does, each with a color", () => {
     expect(STATUS_FIELD_OPTIONS.map((o) => o.name)).toEqual(STATUS_OPTIONS);
     for (const option of STATUS_FIELD_OPTIONS) {
       expect(typeof option.color).toBe("string");
       expect(option.color.length).toBeGreaterThan(0);
     }
+  });
+});
+
+// #4393 slice 4, criterion 9 — the rename must move no card. `updateProjectV2Field` replaces the
+// whole option list; an option sent WITH its old id is renamed in place, one sent without is new.
+describe("moneypenny projects: statusFieldUpdate", () => {
+  const live = [
+    { id: "o-backlog", name: "Backlog" },
+    { id: "o-ready", name: "Ready" },
+    { id: "o-progress", name: "In Progress" },
+    { id: "o-blocked", name: "Blocked" },
+    { id: "o-done", name: "Done" },
+  ];
+
+  it("renames In Progress to Building now on the SAME option id, and adds Waiting without one", () => {
+    const update = statusFieldUpdate(live);
+    expect(update?.map((o) => [o.name, o.id])).toEqual([
+      ["Backlog", "o-backlog"],
+      ["Ready", "o-ready"],
+      ["Building now", "o-progress"],
+      ["Waiting", undefined],
+      ["Blocked", "o-blocked"],
+      ["Done", "o-done"],
+    ]);
+    for (const option of update ?? []) expect(typeof option.color).toBe("string");
+  });
+
+  it("returns null once the board already matches — the sweep's every-push check writes nothing", () => {
+    const now = STATUS_OPTIONS.map((name, k) => ({ id: `o${k}`, name }));
+    expect(statusFieldUpdate(now)).toBeNull();
+  });
+
+  it("keeps an option already named Building now over a stray In Progress", () => {
+    const both = [...live, { id: "o-building", name: "Building now" }];
+    expect(statusFieldUpdate(both)?.find((o) => o.name === "Building now")?.id).toBe("o-building");
+  });
+
+  it("in the sweep's keepExtras mode, never removes a column made by hand — and never writes for one", () => {
+    const now = STATUS_OPTIONS.map((name, k) => ({ id: `o${k}`, name }));
+    expect(
+      statusFieldUpdate([...now, { id: "o-review", name: "Review" }], { keepExtras: true }),
+    ).toBeNull();
+    const update = statusFieldUpdate([...live, { id: "o-review", name: "Review" }], {
+      keepExtras: true,
+    });
+    expect(update?.map((o) => o.name)).toEqual([...STATUS_OPTIONS, "Review"]);
+    expect(update?.find((o) => o.name === "Review")).toEqual({
+      id: "o-review",
+      name: "Review",
+      color: "GRAY",
+      description: "",
+    });
+    expect(update?.filter((o) => o.id === "o-progress")).toHaveLength(1);
+  });
+
+  it("fixes GitHub's own Todo/In Progress/Done default, keeping the ids it can", () => {
+    const update = statusFieldUpdate([
+      { id: "t", name: "Todo" },
+      { id: "p", name: "In Progress" },
+      { id: "d", name: "Done" },
+    ]);
+    expect(update?.map((o) => o.name)).toEqual(STATUS_OPTIONS);
+    expect(update?.find((o) => o.name === "Building now")?.id).toBe("p");
+    expect(update?.find((o) => o.name === "Done")?.id).toBe("d");
+    expect(update?.some((o) => o.id === "t")).toBe(false);
   });
 });
 

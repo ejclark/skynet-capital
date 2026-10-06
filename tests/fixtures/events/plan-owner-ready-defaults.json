@@ -1,0 +1,11 @@
+{
+  "payload": {
+    "issue": {
+      "number": 724,
+      "state": "open",
+      "labels": [{ "name": "enhancement" }, { "name": "plan" }, { "name": "next-slice" }],
+      "body": "a plan whose open questions all carry a recommended default"
+    },
+    "comment": { "body": "ready — use the proposed defaults" }
+  }
+}

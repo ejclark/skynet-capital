@@ -147,6 +147,10 @@
 }
 .blotter-scroll {
   overflow-x: auto;
+  /* A size container so a phone-width "why" panel can be exactly as wide as the visible table
+     (`100cqw`, below) rather than the whole sideways-scrolling one. Safe: a block's width already
+     comes from its column, never from the table inside it. */
+  container-type: inline-size;
 }
 table.blotter {
   width: 100%;
@@ -544,6 +548,41 @@ table.blotter {
   }
 }
 
+/* Landed on (#4348): an Events row's `#pos-<symbol>` link scrolls the row or card to centre and
+   marks it for a moment (position-anchor.ts). A thick outline plus an inset bar — shape carries it,
+   never hue alone. The mark fades; with reduced motion it simply holds until it is removed. */
+tr[data-landed] > td,
+.pos-card[data-landed] {
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+}
+tr[data-landed] {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+tr[data-landed] > td:first-child {
+  box-shadow: inset 5px 0 0 var(--text);
+}
+.pos-card[data-landed] {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: inset 5px 0 0 var(--text);
+}
+@media (prefers-reduced-motion: no-preference) {
+  tr[data-landed],
+  .pos-card[data-landed] {
+    animation: pos-landed 2.4s ease-out both;
+  }
+}
+@keyframes pos-landed {
+  0%,
+  70% {
+    outline-color: var(--accent);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
 /* The activity row's "why" (#3687 slice 4): the inline row accordion, but always visible — unlike
    .fold-col/.row-more above, which hide at wide widths because theirs is overflow detail. */
 .why-col {
@@ -560,10 +599,12 @@ table.blotter {
 /* At phone width the blotter scrolls sideways, so a why panel laid out across the FULL table width
    leaves its right-hand column off-screen — found while shooting #3961's round row, which landed
    there. One column, capped to the frame, so the whole why reads at 390 without the reader having
-   to scroll the table sideways to find the rest of it. */
+   to scroll the table sideways to find the rest of it. The cap is the visible table less the cell's
+   12px padding each side: 92vw ignored the page gutters and clipped the last words of every long
+   line, found while shooting a bot's option fill (#4642), whose invalidator runs four lines. */
 @media (max-width: 700px) {
   .why-grid {
     grid-template-columns: 1fr;
-    max-width: 92vw;
+    max-width: calc(100cqw - 24px);
   }
 }

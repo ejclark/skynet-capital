@@ -1,0 +1,40 @@
+{
+  "$comment": "The work spigot's dial (#3960). One `work-mode:<position>` label on trackingIssue sets how fast every autonomous lane pulls work; scripts/moneypenny/work-mode.mjs reads it and hands lanes the numbers below. Same doctrine as research-circuit-breaker.json: the STATE is an issue label (never a committed file, #915), this file only holds the per-position numbers, and a missing or malformed file refuses to run rather than defaulting to unlimited.",
+  "$why": "Eric's three scenarios on #3960 (2026-09-28): throttle hard to protect the weekly quota (conserve), shut everything off (halt), and fan out when quota would otherwise be lost at the reset (surge). The phrase-triggered conserve-mode in docs/COMPUTE.md reached only the session that heard it; a label on one issue reaches every lane with one `gh issue view`. Numbers: normal.inFlightCap 3 matches the board's In Progress WIP limit Eric set on 2026-09-30, so the board and the lanes never disagree; normal.researchPerTick 6 matches research-dispatch-budget.json maxPerTick (today's behavior, unchanged). surge doubles normal as a first guess, to be re-sized once the ::notice::cost data for a 6-session tick is measured (#3960 open question). halt is zero everywhere by definition — a brake is a brake. normal.governorDispatches 4 is today's behavior too: `/governor` walks all four athletes in the roster at WIP 1 each, so 4 is one full cycle; conserve 1 is the plan's 'one coach per cycle'; surge 8 lets a coach be dispatched more than once in a cycle, which is the only way a governor cycle goes faster (added #3960 slice 2). grindWidth is the items one `/grind` run may fan out over: normal 200 is grind.js's own MAX_ITEMS sanity cap, so normal changes nothing and surge cannot exceed it without raising that constant; conserve 5 is the plan's 'cap /grind width' made a number — a wider batch is refused with the position named, never silently truncated (added #3960 slice 4). continuationsPerDay is the slices one ready plan may continue into on its own within 24h (scripts/moneypenny/continuation.mjs, #3818 criterion 9, added 2026-10-03): normal 3 is that criterion's own number, read off the dial rather than hard-coded so a throttle reaches it too — halt 0 stops continuation dead, conserve 1 lets a plan advance once a day, surge 6 doubles normal like every other key here. startedPlanCap is how many started-but-idle plans (the board's Waiting column) may stand before the plan lanes stop starting fresh plans (scripts/moneypenny/admission.mjs, #4393 criterion 6, added 2026-10-05): normal 4 is that plan's recommended default (five plans were started on 2026-10-01, so one had to finish before a new one opened), to be re-read against the first week of Waiting dwell times; conserve 2 and surge 8 halve and double it like the rest. The next slice of a started plan is never refused by it — stop starting, start finishing.",
+  "trackingIssue": 4153,
+  "labelPrefix": "work-mode:",
+  "positions": {
+    "halt": {
+      "inFlightCap": 0,
+      "researchPerTick": 0,
+      "governorDispatches": 0,
+      "grindWidth": 0,
+      "continuationsPerDay": 0,
+      "startedPlanCap": 0
+    },
+    "conserve": {
+      "inFlightCap": 1,
+      "researchPerTick": 2,
+      "governorDispatches": 1,
+      "grindWidth": 5,
+      "continuationsPerDay": 1,
+      "startedPlanCap": 2
+    },
+    "normal": {
+      "inFlightCap": 3,
+      "researchPerTick": 6,
+      "governorDispatches": 4,
+      "grindWidth": 200,
+      "continuationsPerDay": 3,
+      "startedPlanCap": 4
+    },
+    "surge": {
+      "inFlightCap": 6,
+      "researchPerTick": 12,
+      "governorDispatches": 8,
+      "grindWidth": 200,
+      "continuationsPerDay": 6,
+      "startedPlanCap": 8
+    }
+  }
+}

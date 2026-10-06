@@ -1,5 +1,6 @@
 import type { MarketContext } from "../../src/domain/types.js";
 import {
+  announceRoster,
   announceScout,
   sessionDayOf,
   stageOnce,
@@ -90,6 +91,23 @@ describe("after-close scout staging", () => {
     expect(lines).toEqual([
       "warn [beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
       "log [beta-scout] armed: up to 2 forced pick(s)/day when nothing organic fires, on Sauron's account; after the close, picks stage for Alpaca's next open.",
+    ]);
+  });
+
+  it("announces the playbook roster: refused tokens loudly, the armed set once", () => {
+    const lines: string[] = [];
+    const sink = {
+      log: (l: string) => lines.push(`log ${l}`),
+      error: (l: string) => lines.push(`error ${l}`),
+    };
+    announceRoster({ enabled: [], rejected: [] }, sink);
+    announceRoster(
+      { enabled: [{ playbook: { id: "S1-NVDA" }, mode: "standard" }], rejected: ["BOGUS"] },
+      sink,
+    );
+    expect(lines).toEqual([
+      'error [playbooks] REFUSED unknown/malformed token "BOGUS" in SKYNET_PLAYBOOKS',
+      "log [playbooks] armed: S1-NVDA:standard",
     ]);
   });
 });

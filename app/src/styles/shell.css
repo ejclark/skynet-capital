@@ -91,6 +91,21 @@ a {
   font-weight: 700;
   font-size: 11px;
 }
+/* The phone's brand slot (#3977, `shell/brand-eye.tsx`): the still Eye in place of the "SC" tile at
+   ≤860 — the tower's presence where no WebGL frame mounts. A swap in CSS alone: no width read in JS,
+   nothing flashes on load. */
+.brand-eye {
+  display: none;
+  flex: none;
+}
+@media (max-width: 860px) {
+  .brand .brand-mark {
+    display: none;
+  }
+  .brand .brand-eye {
+    display: block;
+  }
+}
 .env-pill {
   font-family: var(--mono);
   font-size: 10.5px;

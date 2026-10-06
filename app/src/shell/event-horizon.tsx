@@ -8,7 +8,9 @@ import {
   rangeLabel,
 } from "../live/horizon-range";
 import type { Lens, ResearchEvent } from "../live/research";
-import { CalendarHead, type DayFog } from "./calendar-head";
+import { CalendarHead, type DayFog, headLine } from "./calendar-head";
+import { CalendarSheet } from "./calendar-sheet";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * THE EVENT HORIZON (#738, rail-controls round — Eric: "view template shift controls to the left
@@ -138,6 +140,7 @@ export function EventHorizon({
   onStep,
   dayFog,
   fiscal,
+  decideDays,
   open = false,
 }: {
   readonly events: readonly ResearchEvent[];
@@ -157,12 +160,21 @@ export function EventHorizon({
   /** The quarter lens's fiscal identity (#1736) — set only when exactly one symbol is in scope
    *  and has a confirmed fiscal year-end; absent, the quarter lens reads (and is) the calendar. */
   readonly fiscal?: FiscalQuarterLabel;
+  /** Days a "Needs a decision" card is due (#3977 slice 4) — the Profile page's Events section
+   *  passes them; each gets a ▲ in its cell and the legend names it, so the mark is a shape and a
+   *  word, never a hue. R&D's market board passes none: a member's decisions are not its data. */
+  readonly decideDays?: ReadonlySet<string>;
   /** Whether the month grid starts unfolded — the Profile page's Events section, where the grid is
    *  the point (#3807 slice 2c); R&D keeps it folded under its band head. */
   readonly open?: boolean;
 }): ReactElement | null {
+  const phone = usePhoneWidth();
   const month = anchor.slice(0, 7);
   const allLens = lens === "all";
+  const all = {
+    name: rangeLabel(range, "all"),
+    count: `${String(events.length)} ${events.length === 1 ? "event" : "events"}`,
+  };
   const blockLens = lens === "month" || lens === "quarter";
   const byDate = new Map<string, ResearchEvent[]>();
   for (const event of events) {
@@ -179,77 +191,122 @@ export function EventHorizon({
     return parts.length > 0 ? parts.join(" · ") : undefined;
   };
 
+  const head = (
+    <CalendarHead
+      lens={lens}
+      range={range}
+      closures={closures}
+      all={all}
+      onLens={onLens}
+      onStep={onStep}
+      {...(fiscal ? { fiscal } : {})}
+      {...(dayFog ? { dayFog } : {})}
+    />
+  );
+  const clear = pinned ? (
+    <button type="button" className="eh-clear" onClick={() => onPick(anchor)}>
+      Clear {anchor} ×
+    </button>
+  ) : null;
+  /** The month grid; `onPicked` runs after a day is picked (the phone's sheet closes on it). */
+  const grid = (onPicked?: () => void): ReactElement => (
+    <div className="eh">
+      <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
+        {WEEKDAYS.map((d, i) => (
+          <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
+            {d}
+          </span>
+        ))}
+        {monthGrid(month).map((date, i) => {
+          const closure = closedOn.get(date);
+          const outside = date.slice(0, 7) !== month;
+          const className = `${dayClassName({
+            date,
+            column: i % 7,
+            inRange: !blockLens && rangeDays.has(date),
+            rangeDays,
+            today,
+            closure,
+          })}${outside ? " eh-outside" : ""}`;
+          return (
+            <button
+              key={date}
+              type="button"
+              className={className}
+              aria-pressed={pinned && anchor === date}
+              title={titleFor(date)}
+              onClick={() => {
+                onPick(date);
+                onPicked?.();
+              }}
+            >
+              {date.endsWith("-01") ? (
+                <span className="eh-month-tag" aria-hidden="true">
+                  {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
+                </span>
+              ) : null}
+              <span className="eh-num">{Number(date.slice(8, 10))}</span>
+              {decideDays?.has(date) ? (
+                <i className="eh-decide" aria-hidden="true">
+                  ▲
+                </i>
+              ) : null}
+              {byDate.has(date) ? (
+                <i
+                  className={
+                    byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
+                  }
+                />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      <p className="eh-legend">
+        <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
+        <s className="eh-legend-closed num">7</s> closed
+        {decideDays && decideDays.size > 0 ? (
+          <>
+            {" "}
+            · <i className="eh-decide eh-decide-key">▲</i> decide by
+          </>
+        ) : null}
+      </p>
+    </div>
+  );
+
+  // A phone's R&D (#3977): the head and the grid, unfolded, in the calendar's one sheet; the chip
+  // and the pinned day's Clear stay in flow. The Events section's open grid IS its content, so it
+  // stays in flow at every width.
+  if (phone && !open) {
+    return (
+      <CalendarSheet
+        className="cal-head rx-band"
+        line={headLine({
+          lens,
+          range,
+          closures,
+          all,
+          ...(fiscal ? { fiscal } : {}),
+        })}
+        below={clear}
+      >
+        {(close) => (
+          <>
+            {head}
+            {grid(close)}
+          </>
+        )}
+      </CalendarSheet>
+    );
+  }
   return (
     <section className="cal-head rx-band" aria-label="Market calendar">
-      <CalendarHead
-        lens={lens}
-        range={range}
-        closures={closures}
-        all={{
-          name: rangeLabel(range, "all"),
-          count: `${String(events.length)} ${events.length === 1 ? "event" : "events"}`,
-        }}
-        onLens={onLens}
-        onStep={onStep}
-        {...(fiscal ? { fiscal } : {})}
-        {...(dayFog ? { dayFog } : {})}
-      />
-      {pinned ? (
-        <button type="button" className="eh-clear" onClick={() => onPick(anchor)}>
-          Clear {anchor} ×
-        </button>
-      ) : null}
+      {head}
+      {clear}
       <details className="eh-fold" open={open}>
         <summary className="eh-fold-toggle">Month · pick a day</summary>
-        <div className="eh">
-          <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
-            {WEEKDAYS.map((d, i) => (
-              <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
-                {d}
-              </span>
-            ))}
-            {monthGrid(month).map((date, i) => {
-              const closure = closedOn.get(date);
-              const outside = date.slice(0, 7) !== month;
-              const className = `${dayClassName({
-                date,
-                column: i % 7,
-                inRange: !blockLens && rangeDays.has(date),
-                rangeDays,
-                today,
-                closure,
-              })}${outside ? " eh-outside" : ""}`;
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  className={className}
-                  aria-pressed={pinned && anchor === date}
-                  title={titleFor(date)}
-                  onClick={() => onPick(date)}
-                >
-                  {date.endsWith("-01") ? (
-                    <span className="eh-month-tag" aria-hidden="true">
-                      {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
-                    </span>
-                  ) : null}
-                  <span className="eh-num">{Number(date.slice(8, 10))}</span>
-                  {byDate.has(date) ? (
-                    <i
-                      className={
-                        byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
-                      }
-                    />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-          <p className="eh-legend">
-            <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
-            <s className="eh-legend-closed num">7</s> closed
-          </p>
-        </div>
+        {grid()}
       </details>
     </section>
   );

@@ -97,6 +97,20 @@ describe("tradeStats — the playbook metrics family (#3665)", () => {
     expect(stats.bestTrade?.realized).toBe(500);
   });
 
+  it("breaks option trips down by the cycle they expired on, leaving shares out", () => {
+    const stats = tradeStats([
+      trip(10), // AAPL shares — no expiration cycle at all
+      trip(5, { symbol: "MSFT260918C00420000" }), // Sep 18 2026 — quarterly witching
+      trip(-3, { symbol: "NVDA261016P00120000" }), // Oct 16 2026 — standard monthly
+      trip(8, { symbol: "NVDA261009C00120000" }), // Oct 9 2026 — a weekly
+    ]);
+    expect(stats.byCycle).toEqual({ weekly: 1, monthly: 1, quarterly: 1 });
+    // Shares are counted by instrument, never folded into a cycle they don't have.
+    expect(stats.byCycle.weekly + stats.byCycle.monthly + stats.byCycle.quarterly).toBe(
+      stats.trades - stats.byInstrument.stock,
+    );
+  });
+
   it("carries the new family through statsByPlaybook, per playbook", () => {
     const [s1] = statsByPlaybook([
       trip(10, { playbookId: "S1-NVDA", entryPrice: 100, quantity: 2 }),
@@ -117,6 +131,7 @@ describe("tradeStats — unmeasurable stats are null, never zero", () => {
     expect(stats.capitalCommitted).toBe(0);
     expect(stats.byDirection).toEqual({ long: 0, short: 0 });
     expect(stats.byInstrument).toEqual({ stock: 0, call: 0, put: 0 });
+    expect(stats.byCycle).toEqual({ weekly: 0, monthly: 0, quarterly: 0 });
   });
 
   it("returns null measures for an empty history", () => {

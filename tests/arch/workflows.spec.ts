@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  actionReachableOnPush,
   lintWorkflow,
   unlistedDispatchActor,
   unlistedWatchedActor,
@@ -267,10 +268,12 @@ describe("workflow lint — prompt shims", () => {
     return result;
   };
 
+  // Triggered on `issues`, not `push`, so rule 9 has nothing to say about it — a push-triggered
+  // claude-code-action job is its own (real) problem, and this fixture is about prompt shims.
   const SHIM = `name: Sample
 on:
-  push:
-    branches: [main]
+  issues:
+    types: [labeled]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -336,17 +339,92 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
     expect(job).toContain("grep -qx 'hold-merge'");
   });
 
+  // 2026-09-30 (found by #4169): `e2e` is skipped on a docs-only PR, and a job whose `needs:` include
+  // a skipped job is itself skipped unless its `if:` calls a status function. Without `!cancelled()`
+  // the `needs.e2e.result == 'skipped'` branch never ran, so no docs PR was ever armed.
+  it("still evaluates its condition when integration tests were skipped", () => {
+    const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
+    expect(condition).toContain("!cancelled()");
+    expect(condition).toContain("needs.e2e.result == 'skipped'");
+  });
+
+  // #4351 (2026-09-30): a burst of issue writes spent the App's budget; both API calls 403'd and
+  // two green PRs sat unarmed. Every call the job makes waits out a rate limit instead of failing.
+  it("routes every GitHub call through the rate-limit retry helper", () => {
+    expect(job).toContain("- name: Rate-limit retry helper");
+    const calls =
+      job.match(/(?:\$\(|^\s+)(?:"\$RUNNER_TEMP\/gh-retry\.sh" )?gh (?:api|pr merge)[^\n]*/gm) ??
+      [];
+    const outsideHelper = calls.filter((c) => !c.includes("rate_limit"));
+    expect(outsideHelper.length).toBeGreaterThanOrEqual(3);
+    for (const call of outsideHelper) expect(call).toContain('"$RUNNER_TEMP/gh-retry.sh" gh');
+  });
+
   it("arms only when that live read said unheld", () => {
     const arm = job.slice(job.indexOf("- name: Arm auto-merge"));
     expect(arm).toContain("steps.hold.outputs.held == 'false'");
     expect(job.indexOf("id: hold")).toBeLessThan(job.indexOf("- name: Arm auto-merge"));
   });
+
+  // #4477 (2026-10-02): the allowlist omitted `edited`, which `types:` carries and `ship.sh` fires
+  // on purpose as #4168's recovery path. Because pull_request runs cancel in progress per branch,
+  // an `edited` seconds after `opened` kills the `opened` run — so the one run that completed was
+  // the one action that could not arm, and PR #4449 sat green and unarmed for 29 hours. The drift
+  // is invisible by inspection (two lists 250 lines apart), so this pins them together rather than
+  // just fixing the one word. An action may be left out only by naming it here, deliberately.
+  it("can arm on every pull_request action this workflow triggers on", () => {
+    const typeList = pipeline.match(/^\s*types:\s*\[([^\]]+)\]/m)?.[1];
+    expect(typeList).toBeDefined();
+    const triggered = (typeList ?? "").split(",").map((t) => t.trim());
+    expect(triggered).toContain("edited");
+
+    const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
+    const allowList = condition.match(/fromJSON\('(\[[^']+\])'\)/)?.[1];
+    expect(allowList).toBeDefined();
+    const allowed = JSON.parse(allowList ?? "[]") as string[];
+
+    // Actions that reach this job and must NOT arm. Empty today; an entry here is a decision with
+    // a reason, which is the whole point — a silent omission is what #4477 was.
+    const deliberatelyUnarmable: string[] = [];
+
+    for (const action of triggered) {
+      if (deliberatelyUnarmable.includes(action)) continue;
+      expect(allowed).toContain(action);
+    }
+  });
+});
+
+// #4211 (slice 6 of #4056): `integration tests` is a required check, and GitHub counts a SKIPPED
+// required check as a pass. A draft skips both suites, so the promotion to ready must run them
+// again — or the stale `skipped` is the last word and the PR merges untested (PR #322's shape).
+describe("pipeline — a draft promoted to ready runs both required suites", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const jobIf = (id: string, next: string) => {
+    const job = pipeline.slice(pipeline.indexOf(`\n  ${id}:`), pipeline.indexOf(`\n  ${next}:`));
+    return job.slice(job.indexOf("if:"), job.indexOf("runs-on:"));
+  };
+
+  it("triggers on ready_for_review", () => {
+    const typeList = pipeline.match(/^\s*types:\s*\[([^\]]+)\]/m)?.[1] ?? "";
+    expect(typeList.split(",").map((t) => t.trim())).toContain("ready_for_review");
+  });
+
+  it("gates verify and integration tests on draft state, never on which action fired", () => {
+    for (const condition of [jobIf("verify", "e2e"), jobIf("e2e", "arm-auto-merge")]) {
+      expect(condition).toContain("github.event.pull_request.draft == false");
+      expect(condition).not.toContain("github.event.action");
+    }
+  });
 });
 
 // Rule 8 (#2292): a self re-dispatch signed by one bot, landing on a claude-code-action job that
 // allow-lists another. Event research died in ~3s per leg for ~41h on exactly this drift.
-describe("workflow lint — a self-dispatch actor the dispatch-gated job does not allow", () => {
-  const selfDispatching = (token: string, allowed: string | null) => `name: Loop
+describe("workflow lint — a self-dispatch actor a dispatch-reachable job does not allow", () => {
+  const selfDispatching = (
+    token: string,
+    allowed: string | null,
+    gate = "github.event_name == 'workflow_dispatch'",
+  ) => `name: Loop
 on:
   push:
     branches: [main]
@@ -364,7 +442,7 @@ jobs:
   build:
     needs: route
     # comment lines never count as the gate
-    if: github.event_name == 'workflow_dispatch'
+    if: ${gate}
     runs-on: ubuntu-latest
     steps:
       - uses: anthropics/claude-code-action@v1
@@ -401,9 +479,61 @@ jobs:
     ]);
   });
 
+  it("fails a gate that admits the dispatch without naming it (build-plan, run 36800601479)", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name != 'push'",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  it("ignores a job pinned to another event", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name == 'issues'",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([]);
+  });
+
   it("ignores a dispatch aimed at a different workflow file", () => {
     const other = selfDispatching("steps.app-token.outputs.token", "github-actions");
     expect(unlistedDispatchActor("elsewhere.yml", other)).toEqual([]);
+  });
+
+  // Reachability is the question rule 9 asks of `push` (run 36802272261 died on the gap a
+  // substring test left): no `if:` admits every trigger, and any one `||` branch is a way in.
+  it("fails a job with no `if:` at all — every trigger reaches it", () => {
+    const loop = selfDispatching("steps.app-token.outputs.token", null).replace(
+      /^ {4}if: .*\n/m,
+      "",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  it("fails an `||` with one branch a dispatch can enter", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name == 'issues' || needs.route.outputs.x != ''",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  // The live gate: whatever the fixtures prove, the real file is what runs.
+  it("holds for the real workflows in this repo", () => {
+    for (const f of readdirSync(".github/workflows")) {
+      expect(unlistedDispatchActor(f, readFileSync(join(".github/workflows", f), "utf8"))).toEqual(
+        [],
+      );
+    }
   });
 });
 
@@ -442,5 +572,148 @@ jobs:
 
   it("says nothing about a watched workflow that never re-dispatches itself", () => {
     expect(unlistedWatchedActor(watcher("github-actions"), new Map())).toEqual([]);
+  });
+});
+
+// Rule 9 (#4359). `claude-code-action@v1` rejects `push` as an event type outright — "Action
+// failed with error: Unsupported event type: push" — so a job that invokes it from a push run
+// cannot succeed for any prompt, any token, any model. moneypenny-events.yml has known this since
+// 2026-08-20 for the event-research lane (which re-dispatches itself as a `workflow_dispatch`) but
+// nothing checked the OTHER build lanes: #4165 wired the retry sweep onto `push`, the sweep claimed
+// plan #784 in the push run, and `build plan issue` went red on every merge to `main` in ~17s.
+//
+// The reachability question is exactly "can this job's `if:` be true on a push?", so these specs
+// pin the expression shapes that answer it — including the `||` case, where one unguarded operand
+// is enough to re-open the hole.
+describe("workflow lint — claude-code-action reachable on a `push` event", () => {
+  const lane = (jobIf: string) => `name: Events
+on:
+  push:
+    branches: [main]
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+jobs:
+  build:
+    needs: route
+    if: ${jobIf}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          prompt: build it
+`;
+
+  it("fails the #4359 shape: a build lane gated only on an upstream output", () => {
+    expect(actionReachableOnPush(lane("needs.route.outputs.plan_issue != ''"))).toEqual(["build"]);
+  });
+
+  it("fails a job with no `if:` at all", () => {
+    expect(actionReachableOnPush(lane("").replace(/^ {4}if: *$\n/m, ""))).toEqual(["build"]);
+  });
+
+  it("passes the guard the fix applied — an explicit `!= 'push'`", () => {
+    expect(
+      actionReachableOnPush(lane("github.event_name != 'push' && needs.route.outputs.x != ''")),
+    ).toEqual([]);
+  });
+
+  it("passes a positively-gated lane, the shape `build-events` already used", () => {
+    expect(
+      actionReachableOnPush(
+        lane("github.event_name == 'workflow_dispatch' && inputs.command == 'scan'"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("passes a block-scalar `if:` spanning lines", () => {
+    const yaml = lane("PLACEHOLDER").replace(
+      "    if: PLACEHOLDER",
+      `    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      needs.route.outputs.due_events != '' && needs.route.outputs.due_events != '[]'`,
+    );
+    expect(actionReachableOnPush(yaml)).toEqual([]);
+  });
+
+  // The `||` trap: every operand is a way in on its own, so all of them have to rule push out.
+  it("passes an `||` where every branch names a non-push event", () => {
+    expect(
+      actionReachableOnPush(
+        lane(
+          "(github.event_name == 'issues' && github.event.action == 'labeled') || github.event_name == 'issue_comment'",
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("fails an `||` with one unguarded branch", () => {
+    expect(
+      actionReachableOnPush(
+        lane("github.event_name == 'issues' || needs.route.outputs.plan_issue != ''"),
+      ),
+    ).toEqual(["build"]);
+  });
+
+  it("fails an `||` that names push itself", () => {
+    expect(
+      actionReachableOnPush(
+        lane("github.event_name == 'push' || github.event_name == 'workflow_dispatch'"),
+      ),
+    ).toEqual(["build"]);
+  });
+
+  it("says nothing about a workflow that has no push trigger", () => {
+    expect(
+      actionReachableOnPush(lane("needs.route.outputs.x != ''").replace(/ {2}push:\n.*\n/, "")),
+    ).toEqual([]);
+  });
+
+  // A job that only TALKS about the action in a comment is not invoking it — `route` carries three
+  // such comments, including the re-dispatch step that exists to work around this very rule.
+  it("reads `uses:`, never a comment mentioning the action", () => {
+    const talker = `name: Events
+on:
+  push:
+    branches: [main]
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      # claude-code-action cannot see \`push\`, so re-dispatch as a workflow_dispatch instead
+      - name: Re-dispatch for work claude-code-action can't do under \`push\`
+        run: gh workflow run events.yml -f command=scan
+`;
+    expect(actionReachableOnPush(talker)).toEqual([]);
+  });
+
+  // The live gate: whatever the fixtures prove, the real file is what runs.
+  it("holds for the real workflows in this repo", () => {
+    for (const f of readdirSync(".github/workflows")) {
+      expect(actionReachableOnPush(readFileSync(join(".github/workflows", f), "utf8"))).toEqual([]);
+    }
+  });
+});
+
+// #4430 sat clean and unarmed: the arm job's two-dot `git diff base head` also listed what landed
+// on main after the PR branched (#4425's Dockerfile/fly.toml), so the envelope step called a
+// scripts-only PR protected and skipped the arm with a green job. Three dots = the PR's own diff.
+describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const range =
+    /git diff --name-only "?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
+
+  it("every base..head diff in pipeline.yml uses the merge-base range", () => {
+    const seps = [...pipeline.matchAll(range)].map((m) => m[1]);
+    expect(seps.length).toBeGreaterThanOrEqual(2);
+    expect(seps.every((sep) => sep === "...")).toBe(true);
+  });
+
+  it("the envelope step fails closed and says why it did not arm", () => {
+    const step = pipeline.slice(pipeline.indexOf("name: Is the diff protected?"));
+    const body = step.slice(0, step.indexOf("- name:", 10));
+    expect(body).toContain("SCAN=$(node scripts/envelope-scan.mjs");
+    expect(body).toContain("jq -er");
+    expect(body).toContain("::notice::not arming");
   });
 });

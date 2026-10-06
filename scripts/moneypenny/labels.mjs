@@ -106,6 +106,57 @@ export const LABELS = {
     description: "Green but held — a taste call or explicit hold; arm-auto-merge skips this PR",
     managed: true,
   },
+  // #3960 — the work spigot. Exactly one of these four sits on tracking issue #4153 and sets how
+  // fast every autonomous lane pulls work (scripts/moneypenny/work-mode.mjs reads it). Managed, so
+  // the dial exists before anyone reaches for it: a position nobody provisioned would 404 on
+  // `--add-label` exactly when someone is trying to hit the brake — the 2026-08-22 defect again.
+  workModeHalt: {
+    name: "work-mode:halt",
+    color: "000000",
+    description: "Work spigot: every autonomous lane dispatches nothing (set on #4153)",
+    managed: true,
+  },
+  workModeConserve: {
+    name: "work-mode:conserve",
+    color: "fbca04",
+    description:
+      "Work spigot: lanes cut to 1 build in flight and 2 research sessions a tick (#4153)",
+    managed: true,
+  },
+  workModeNormal: {
+    name: "work-mode:normal",
+    color: "0e8a16",
+    description: "Work spigot: lanes run at today's numbers, 3 builds in flight (set on #4153)",
+    managed: true,
+  },
+  workModeSurge: {
+    name: "work-mode:surge",
+    color: "1d76db",
+    description: "Work spigot: raised caps to use spare quota before the reset — Eric only (#4153)",
+    managed: true,
+  },
+  // #3960 — goes on a work issue, not on #4153: an urgent bug or CVE that still builds under
+  // `work-mode:conserve` (never under `halt`). Any session may apply it.
+  fastTrack: {
+    name: "fast-track",
+    color: "b60205",
+    description:
+      "Urgent (a user-harming bug or CVE): builds even when the work spigot is on conserve",
+    managed: true,
+  },
+  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's building column (named
+  // "In Progress" until #4393 slice 4 renamed it "Building now") could never fill: it keyed on an
+  // open linked PR nobody read, and live sessions auto-merge within minutes, so an open PR is
+  // rarely there to see. Every build path applies this when it starts
+  // (the claim lanes in index.mjs, `/work-issues`), takes it off at its terminal state, and the
+  // stall audit clears one left behind after 6h quiet. Managed: an unprovisioned label would 404 on
+  // the very `--add-label` that marks work started.
+  inProgress: {
+    name: "in-progress",
+    color: "fef2c0",
+    description: "Being built right now — cleared when the build ends or after 6h with no activity",
+    managed: true,
+  },
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,
@@ -166,6 +217,13 @@ export const LABELS = {
   // Owned by repair.mjs's own lane (formerly ci-medic.mjs), which applies it and therefore
   // guarantees it. Registered here so there is ONE vocabulary, not two that can drift.
   ciFailure: { name: "ci-failure", color: "b60205", description: "A run failed on main" },
+  // Owned by burst-alarm.mjs (#4292): a burst of capsules with a dead repair job. Its own label, not
+  // `ci-failure`, so an alarm is never counted as a capsule or dispatched to the lane it reports on.
+  ciAlarm: {
+    name: "ci-alarm",
+    color: "5319e7",
+    description: "CI failures are piling up and the repair lane is not running",
+  },
 };
 
 /** The labels this file applies and therefore guarantees. The rest are registered for lookup. */
@@ -190,8 +248,104 @@ export const PARKING_LABELS = [
   LABELS.holdMerge.name,
 ];
 
+/** Label names from either shape a caller holds: plain strings, or a payload's `[{ name }]`. */
+export const labelNames = (labels = []) =>
+  (labels ?? []).map((l) => (typeof l === "string" ? l : l?.name)).filter(Boolean);
+
 /** The parking labels present on an issue (empty when it is free to build). */
-export const parkedBy = (labels = []) => PARKING_LABELS.filter((l) => labels.includes(l));
+export const parkedBy = (labels = []) => {
+  const names = labelNames(labels);
+  return PARKING_LABELS.filter((l) => names.includes(l));
+};
+
+/**
+ * THE ONE BUILDABLE TEST (#3818 slice 2). Both claim paths (`claimFeedback`, `planReadyIntent`)
+ * and the live burn-down (`/work-issues`'s QUEUE step) ask this, so the async lane and a live
+ * session can never disagree about whether a parked issue may be built. Accepts names or `{ name }`.
+ */
+export const isBuildable = (labels = []) => parkedBy(labels).length === 0;
+
+/** The one-line reason a claim path gives when it refuses a parked issue. */
+export const parkedReason = (number, labels = []) =>
+  `issue #${number} is parked by ${parkedBy(labels).join(", ")} — ready + parked is never built; ` +
+  "clear the parking label (or the stale flip) on the issue first";
+
+/**
+ * THE ONE PULL RULE (#4393 criterion 10). An automated puller — both claim lanes, the retry sweep
+ * (`nextAdmissible`) and `/work-issues` — may start an issue only when the board shows it in
+ * **Ready**: open, labelled `ready`, `isBuildable`, not already `in-progress`, and not blocked by
+ * an open issue (`openBlockers`). Before this,
+ * each puller re-derived its own test, and `/work-issues` pulled any open `feedback`/`plan` issue,
+ * Backlog included. Asked in that order, so the reason names the first rule that fails.
+ *
+ * Pure: accepts a REST row, an event payload's issue, or `gh issue view` JSON (state `OPEN`).
+ * A missing `state` counts as open — the same reading the claim lanes already gave it.
+ *
+ * @returns {string | null} why the issue may not be pulled, or null when it may
+ */
+export function notPullableReason(issue) {
+  if (!issue) return "no issue to pull";
+  const n = issue.number;
+  if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
+  const names = labelNames(issue.labels);
+  if (!names.includes(LABELS.ready.name)) {
+    return `#${n} does not carry \`ready\` — the board shows it in Backlog, not Ready`;
+  }
+  if (!isBuildable(issue.labels)) return parkedReason(n, issue.labels);
+  if (names.includes(LABELS.inProgress.name)) {
+    return `#${n} is already \`in-progress\` — another session or lane is building it`;
+  }
+  const blockers = openBlockers(issue);
+  if (blockers > 0) {
+    return `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`;
+  }
+  return null;
+}
+
+/**
+ * OPEN `blocked-by` LINKS ON THE ISSUE ITSELF (2026-10-05). A slice filed as a sub-issue can carry
+ * `ready` ahead of time ("ready once slice 1 holds", #4301) with GitHub's dependency link doing the
+ * waiting. Only the continuation branch read those links (`nextSubIssue`); rank order did not, so
+ * once #4664 stepped past the parent plan the sweep dispatched #4301 itself while #4299 was open.
+ * REST rows and webhook payloads both carry `issue_dependencies_summary`, whose `blocked_by` counts
+ * OPEN blockers only (`total_blocked_by` counts all). A shape without it (`gh issue view` JSON)
+ * reads as 0 — the same unknown-is-unblocked reading the rule gave before this check existed.
+ */
+const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocked_by) || 0;
+
+/** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
+export const pullable = (issue) => notPullableReason(issue) === null;
+
+/**
+ * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →
+ * null. The release paths (`--release <slug>`, the `release-claim` dispatch) only carry the slug,
+ * and they are the ones that must take `in-progress` back off (#3960).
+ */
+export function issueNumberFromSlug(slug) {
+  const m = /^(?:feedback|plan)-(\d+)$/.exec(String(slug ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Put `in-progress` on (`add: true`) or take it off an issue (#3960). BEST-EFFORT on purpose: the
+ * label is how the board SHOWS a build, never what makes the build safe (the lease does that), so a
+ * failed write warns and returns false rather than killing a claim that already won. Removing a
+ * label an issue does not carry is a harmless no-op.
+ */
+export function setInProgress(number, add) {
+  if (!number) return false;
+  const flag = add ? "--add-label" : "--remove-label";
+  try {
+    sh("gh", ["issue", "edit", String(number), flag, LABELS.inProgress.name]);
+    return true;
+  } catch (err) {
+    const verb = add ? "apply" : "remove";
+    console.log(
+      `::warning::could not ${verb} \`${LABELS.inProgress.name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+    return false;
+  }
+}
 
 /** The hand-set priority labels, highest first — what `scripts/rank.mjs` reads (#4064). */
 export const PRIORITY_LABELS = [LABELS.p0.name, LABELS.p1.name, LABELS.p2.name, LABELS.p3.name];

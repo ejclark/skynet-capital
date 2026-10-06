@@ -115,3 +115,24 @@
   color: var(--accent);
   white-space: nowrap;
 }
+
+/* A DECISION'S DUE DAY on the grid (#3977 slice 4, `event-horizon.tsx`'s `decideDays`) — a ▲ in
+   the cell's top-right corner, in the text colour (never a warm ramp: fire on the calendar waits
+   on a BRAND amendment, slice 7). The shape carries the meaning and the legend names it in words;
+   the pressed day flips it to the accent's ink. Only this section passes decide days. */
+.eh-decide {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text);
+  font-family: var(--sans);
+}
+.eh-day[aria-pressed="true"] .eh-decide {
+  color: var(--accent-contrast);
+}
+.eh-legend .eh-decide-key {
+  position: static;
+}

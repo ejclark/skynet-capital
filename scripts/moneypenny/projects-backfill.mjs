@@ -13,32 +13,64 @@
 // ever sets automatically either). An issue missing from the map still gets added with Status
 // set; its Horizon is left for a later triage pass rather than guessed.
 //
+// #4183 — THIS SCRIPT IS THE ONE THAT DRAINED THE HOUR, and the three things below are why it
+// can't again. It calls `syncIssue` once per open issue, and `syncIssue` used to re-read the board's
+// whole item list plus the project and its fields on every call: ~100 GraphQL points each, ninety
+// times, which spent Eric's entire 5,000-point hour in 5m41s on 2026-09-30 and took every
+// `sync project status` run behind it down with it (#4183 was filed by one of those bystanders).
+//   1. ONE shared `createBoardContext()` for the whole sweep — the three board-wide reads happen
+//      once, not once per issue. This is the fix; the other two are nets under it.
+//   2. A free pre-flight (`ghRateLimit` + `planBoardSweep`): refuse to start a sweep the remaining
+//      budget cannot finish, rather than half-writing the board and finding out at issue 40.
+//   3. ABORT on exhaustion, never grind on. The old loop caught every error per issue and kept
+//      going, so one drained quota produced fifty identical "FAILED — API rate limit exceeded"
+//      lines and spent two more points apiece proving it.
+//   4. (#4182) A GitHub 5xx is retried with bounded backoff on EVERY call `syncIssue` makes — the
+//      board calls always were; the issue's own REST read was not (`readIssue`), and 12 of that
+//      run's 20 failures were 5xx. An exhausted quota still aborts at once (3), never retries.
+//
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-backfill.mjs
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { ghRestAll } from "./gh.mjs";
-import { isBacklogCandidate } from "./projects.mjs";
-import { syncIssue } from "./projects-sync.mjs";
+import { ghRateLimit, ghRestAll } from "./gh.mjs";
+import { isBacklogCandidate, isRateLimitExhausted, planBoardSweep } from "./projects.mjs";
+import { createBoardContext, syncIssue } from "./projects-sync.mjs";
 
 const HORIZONS_PATH = fileURLToPath(new URL("./projects-horizons.json", import.meta.url));
 
 function main() {
   const horizons = JSON.parse(readFileSync(HORIZONS_PATH, "utf8"));
   const issues = ghRestAll("issues?state=open").filter((i) => !("pull_request" in i));
+  const candidates = issues.filter((i) =>
+    isBacklogCandidate({ labels: (i.labels ?? []).map((l) => l.name) }),
+  );
 
+  // The budget read is free (`GET /rate_limit` counts against nothing), so this pre-flight is pure
+  // upside — and its `reason` is logged on the GO path too, which is how the next run's log carries
+  // the budget it actually saw instead of leaving a future session to infer it from a stack trace.
+  const { graphql } = ghRateLimit();
+  const plan = planBoardSweep({
+    issueCount: candidates.length,
+    remaining: graphql?.remaining,
+    reset: graphql?.reset,
+  });
+  console.log(`budget check: ${plan.reason}`);
+  if (!plan.ok) process.exit(1);
+
+  const board = createBoardContext();
+  // #4439: read the board ONCE, up front. `syncIssue` now prefers a per-issue lookup when no list
+  // has been read — right for the one-issue events job, wrong for a sweep, which gets every issue's
+  // answer out of a single page. Warming it here keeps (1) above a property of this file, not a
+  // side effect of which call happens to touch the board first.
+  board.items();
   let added = 0;
-  let skipped = 0;
+  const skipped = issues.length - candidates.length;
   const failures = [];
 
-  for (const issue of issues) {
-    const labels = (issue.labels ?? []).map((l) => l.name);
-    if (!isBacklogCandidate({ labels })) {
-      skipped++;
-      continue;
-    }
+  for (const issue of candidates) {
     const horizon = horizons[String(issue.number)];
     try {
-      const result = syncIssue(String(issue.number), { horizon });
+      const result = syncIssue(String(issue.number), { horizon, board });
       console.log(
         `#${issue.number}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : " (no Horizon triaged yet)"}`,
       );
@@ -46,6 +78,15 @@ function main() {
     } catch (err) {
       console.error(`#${issue.number}: FAILED — ${err.message}`);
       failures.push({ number: issue.number, message: err.message });
+      // One drained quota is the whole sweep's problem, not this issue's: every remaining issue
+      // would fail identically, and each attempt spends more of a budget that is already gone.
+      if (isRateLimitExhausted(err?.message)) {
+        console.error(
+          `aborting the sweep after #${issue.number} — ${candidates.length - added - failures.length} ` +
+            "issue(s) left unsynced. Re-run once the window has rolled over; this script is idempotent.",
+        );
+        break;
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 // Type surface for audit.mjs (formerly postmaster-audit.mjs) — the scripts/ tree is plain ESM with `allowJs` off, so a
 // spec that imports from it needs this rather than a repo-wide tsconfig loosening for one file
 // (see scripts/moneypenny/index.d.mts (formerly postmaster.d.mts), the pattern this mirrors).
+import type { WorkModeState } from "./work-mode-title.d.mts";
 export interface AuditIssue {
   number?: number;
   title?: string;
@@ -40,26 +41,47 @@ export interface AlreadyFlaggedPR {
   sha: string | null;
   attempt: number;
 }
+/** An open issue carrying `in-progress`, and how long it has been quiet (#3960). */
+export interface InProgressIssue {
+  title: string;
+  number: number;
+  hoursQuiet: number;
+}
 export interface AuditDeps {
+  /** The work spigot's dial and the title it currently shows (#3960 criterion 4) — null when it
+   *  could not be read, which skips the title sync without touching the other checks. */
+  workMode?: WorkModeState | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
   conflictedPRs?: ConflictedPR[];
+  staleInProgress?: InProgressIssue[];
   alreadyFlagged?: number[];
   alreadyFlaggedPRs?: (number | AlreadyFlaggedPR)[];
   staleAfterDays?: number;
   silentAfterHours?: number;
   planStallAfterHours?: number;
+  inProgressStaleAfterHours?: number;
 }
 export interface AuditIntent {
   kind: string;
   issueNumber?: number;
   prNumber?: number;
   title: string;
-  body: string;
+  /** Every flag intent posts a comment; `retitle-work-mode` deliberately does not — a title is a
+   *  display, and its own value is the memory that stops the next push repeating the edit. */
+  body?: string;
+  /** The title a `retitle-work-mode` intent writes (#3960 criterion 4). */
+  newTitle?: string;
+  /** The position a `retitle-work-mode` intent is syncing the title to. */
+  position?: string;
+  /** Why that position resolved, carried from the dial's reader for the run receipt. */
+  reason?: string;
   quietDays?: number;
   hoursSinceFiled?: number;
   hoursSinceReady?: number;
+  /** How long a `clear-in-progress` intent's issue had been quiet (#3960). */
+  hoursQuiet?: number;
   /** Which re-dispatch this is for a `flag-conflict`/`flag-conflict-cap` intent (#1403). */
   attempt?: number;
 }
@@ -79,5 +101,14 @@ export function readyPlanCandidate(
   hasClaim?: boolean,
   nowMs?: number,
 ): ReadyPlanCandidate | null;
+/** The open issues carrying `in-progress`, each with whole hours since `updatedAt` (#3960). */
+export function staleInProgressFrom(
+  issues?: { title: string; number: number; updatedAt: string; labels?: { name: string }[] }[],
+  nowMs?: number,
+): InProgressIssue[];
+/** The open-issue list ceiling `gatherAuditDeps` reads up to. */
+export const OPEN_ISSUE_LIMIT: number;
+/** Pass a `gh … list --limit` result through, or throw when it came back at the limit (may be truncated). */
+export function untruncated<T>(rows: T[] | undefined, limit: number, label: string): T[];
 /** Read the real audit dependencies over `gh` — network, not fixture-drivable. */
 export function gatherAuditDeps(nowMs: number): AuditDeps;

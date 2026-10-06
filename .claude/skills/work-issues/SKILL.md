@@ -1,10 +1,11 @@
 ---
 name: work-issues
 description: >-
-  Burn down the ready backlog in one live session: pull the next buildable `feedback`- or
-  `plan`-labeled issue, echo the parsed ask back as a comment, build it in an isolated worktree,
-  verify green, ship it, then move to the next issue. Use when asked to "work through the backlog",
-  "burn down issues", "iterate on open issues", or to make visible, controlled progress on the
+  Burn down the ready backlog in one live session: pull the next issue in the board's Ready
+  column (the shared `pullable` rule) once the admission gate admits it, echo the parsed ask back
+  as a comment, build it in an isolated worktree, verify green, ship it, then move to the next.
+  Use when asked to "work through the backlog", "burn down issues", "iterate on open issues", or
+  to make visible, controlled progress on the
   ready queue right now — as opposed to waiting on Moneypenny's async event lane
   (`moneypenny-events.yml`) to pick items up on its own schedule. Never builds a `needs-eric` or
   `needs-info` item, and never touches the irreversible class without stopping for Eric.
@@ -21,38 +22,47 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 ## The cycle
 
 1. **SYNC.** `git fetch origin main` — every decision derives from shipped reality.
-2. **QUEUE.** List open issues labeled `feedback` or `plan`. From that set, exclude:
-   - anything also labeled `needs-eric`, `needs-info`, `next-slice`, `hold-merge`,
-     `conflict-flagged`, or `stall-flagged` — those are already parked on a signal only a human (or
-     a later cycle) resolves, per `docs/ISSUES.md`'s label vocabulary.
-   - anything with an open PR already referencing it (`Fixes #N` / a branch named for the issue) —
-     WIP limit 1 per issue, same rule as `/governor`'s athlete check. Inventory is waste.
-   - anything Moneypenny already has a live claim on — `node scripts/moneypenny/index.mjs
-     --check-claim feedback-<n>` (or `plan-<n>`) reporting `claimed: true`. Her feedback/plan lanes
-     claim an issue via a git-tag lease (2h TTL) *before* any PR exists, so the PR check above alone
-     misses that window — a manual pass during it would otherwise dispatch a duplicate build. The
-     check is read-only; it never joins or breaks her claim.
+2. **QUEUE.** `node scripts/moneypenny/admission.mjs --queue` — the board's **Ready** column and
+   nothing else, as JSON, in the order the gate would pick (#4393 criterion 10). It filters every
+   open `ready` issue through `pullable()` (`scripts/moneypenny/labels.mjs`): open, labelled
+   `ready`, `isBuildable` (none of `needs-eric` / `needs-info` / `needs-design` / `hold-merge`),
+   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). That is the same predicate both Moneypenny claim lanes and her retry
+   sweep ask, so this pass and her lanes can never disagree about what is pullable. A Backlog issue
+   (no `ready`) is never pulled here, however buildable it looks — getting it `ready` is a triage
+   call, not this pass's. An issue with an open PR naming it is already `in-progress` (the PR
+   derives the label, #4402), so the rule already skips it.
 
-   Order the remainder by `npm run rank` (#4064), unless Eric names an order for this pass. The
-   rank sorts by class first. A `P0`–`P3` label is Eric's hand and always wins; otherwise the
-   class is derived, with a one-line why. Within a class it goes oldest-ready-first, and an item
-   past one delivery unit sinks, marked "split first". It also covers `bottleneck` and `bug`
-   issues and ranks a split plan's open sub-issues instead of the parent. Take its top row that
-   survives the exclusions above.
+   One extra check the rule cannot make: Moneypenny's lease window. Her lanes take a git-tag lease
+   a moment *before* they apply `in-progress`, so for the head of the queue run `node
+   scripts/moneypenny/index.mjs --check-claim feedback-<n>` (or `plan-<n>`); `claimed: true` means
+   skip it. Read-only; it never joins or breaks her claim.
 
-   **The `plan`-label authorization gap:** the `feedback` label alone is a settled authorization
-   invariant (`docs/plans/issue-centric-orchestration.md`: "the label is the authorization"), but a
-   `plan`-labeled issue's readiness historically depended on Eric's own comment/flip. The `ready`
-   label now exists (registered in `scripts/moneypenny/labels.mjs`, gating feedback builds since
-   #3912), and `npm run ready:report` prints the readiness notes for everything carrying it (#4056).
-   Skip a `ready` issue that the report shows as parked. Treat a
-   `plan` issue as buildable under the same rule as `feedback` (open, none of the parking labels
-   above) **unless its body still carries an explicit `Status: draft` marker** — that marker means a
-   human hasn't flipped it yet, and this skill must not flip it for them. If the queue produces zero
-   issues because everything is genuinely parked, say so and stop; don't loosen the filter to find
-   something to do.
+   The order is fast-track first, then `npm run rank`'s class (a hand-set `P0`–`P3` always wins),
+   an expedited bug first inside its class, then oldest. Eric may name a different order for this
+   pass; `npm run rank` still explains *why* a row sits where it does. If the queue is empty, say
+   so and stop — don't loosen the filter to find something to do.
 
-3. **PICK ONE.** Take the head of the queue.
+3. **ADMIT, then PICK ONE.** Before building the head of the queue, ask the gate:
+   `node scripts/moneypenny/admission.mjs --check <n>` (#4393 criterion 11). It prints
+   `{number, admit, reason, queuedBehind?}` and exits **0** admitted or **3** refused — work-mode
+   `halt`/`conserve`, the in-flight cap (`work-mode.json` → `inFlightCap`, counting every open
+   `in-progress` issue whichever path started it), or the same-surface fence. **A refusal ends the
+   pass** with one line — `pass ended — #<n> not admitted: <reason>` — and builds nothing. Do not
+   try the next row to get around the cap; the cap is the point. Exit 2 is a usage slip; fix it.
+   The CLI only reads: it never comments and never labels.
+
+   On admit, label it `in-progress` right away (`gh issue edit <n> --add-label in-progress`) —
+   that label is what the Orchestration board's Building now column and the cap count (#3960).
+   A fresh plan can also be refused because the board's Waiting column (started plans nobody is
+   building) is at `startedPlanCap` — the CLI says so; finish one of those instead (#4393).
+   Every terminal outcome in LAND takes it back off.
+
+   **The expedite class (#4393 criterion 12).** A session Eric starts by hand to build something
+   directly is never asked to pass this gate and is never refused — that freedom is settled
+   (#4393 fork 3). It is still *counted*: its PR names the issue, which derives `in-progress`, so
+   it fills a slot the next automated pull sees. This skill is an automated puller even when Eric
+   invoked it — it pulls from the queue, so it asks the gate; only a hand-picked build skips it.
+
 4. **READ THE STATE BLOCK FIRST, on a `plan` issue.** If the issue carries a state block
    (`docs/ISSUES.md` → *The state block*, #3765), it names the slice, its inputs, its done line
    and its falsifier: take that slice and do not re-read the thread to re-derive it. If a `plan`
@@ -62,8 +72,8 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    sketch, and the slice you're about to build — before writing any code. This is the confirmation
    loop named as a follow-up in `docs/plans/issue-centric-orchestration.md` (slice 4): it catches a
    misread ask for the cost of one comment instead of a wasted build. If the restated ask feels
-   underspecified to act on, label `needs-info` (member) or `needs-eric` (his call) here and skip to
-   the next issue — don't guess past real ambiguity just to keep the loop moving.
+   underspecified to act on, label `needs-info` (member) or `needs-eric` (his call), remove
+   `in-progress`, and skip to the next issue — don't guess past real ambiguity just to keep the loop moving.
 6. **BUILD.** Branch off `origin/main` in an isolated worktree (`docs/DELEGATION.md`), dispatch the
    build via the `Agent` tool (general-purpose, or a named athlete if the work matches one's mandate)
    with the issue's full capsule as its prompt — it has no memory of this session, so the prompt must
@@ -72,21 +82,24 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 7. **LAND.** On a PR outcome: open it with `/ship`, following its merge-policy table verbatim
    (`.claude/skills/governor/SKILL.md` — don't re-derive it here) including the carve-outs
    (workflow files, the irreversible class per `envelope.json`, taste holds). On any other outcome:
-   apply the label, comment the reason in one line, and move on — a `needs-eric` item doesn't block
+   apply the label, comment the reason in one line, and move on. Either way, remove `in-progress`
+   (`--remove-label in-progress`) on every terminal outcome — PR merged, `next-slice`,
+   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
    log line) and never a new status comment; the one-line reason for a non-PR outcome goes in the
    log line.
-8. **REPEAT.** Re-run QUEUE against the new `origin/main` before picking the next issue — same
+8. **REPEAT.** Re-run QUEUE and ADMIT against the new `origin/main` before picking the next issue — same
    re-derivation discipline as `/governor`'s cycle boundary, so two picks never race the same file.
-9. **STOP** when the queue is empty, when Eric set a cap for this pass and it's reached, or when an
+9. **STOP** when the queue is empty, when the gate refuses (step 3), when Eric set a cap for this
+   pass and it's reached, or when an
    item surfaces that is in the irreversible class (`node scripts/envelope-scan.mjs --check <paths>`)
    — that one pauses the *whole* pass for his call, since it's the one class interrupt economics
    never defers.
 
 ## Reporting
 
-One line per issue as it resolves (`#123 → PR #456, auto-merge armed` / `#128 → needs-info: ...`),
+One line per issue as it resolves (`#123 → PR #456 opened; the pipeline arms it after integration tests` / `#128 → needs-info: ...`),
 not a narrated play-by-play of the build. Close the pass with a short tally: shipped / parked /
 blocked, and what's left in the queue if it wasn't emptied. This is Eric's report altitude
 (`CLAUDE.md` → *Report at altitude*) applied to a burn-down instead of a time-boxed digest.
@@ -98,10 +111,9 @@ report. Same no-new-gate discipline as `/governor`'s own cycle-close retro line.
 
 ## Boundaries
 
-- **Never invent a `ready` label or a new authorization signal.** The two that exist —
-  `feedback`'s label-is-authorization, and a `plan` issue's absence of `Status: draft` — are the
-  whole gate. If neither settles it, that's a `needs-eric` outcome, not a judgment call for this
-  skill to make.
+- **Never apply `ready` yourself to make something pullable.** `ready` is the authorization
+  signal and the board's Ready column; this pass only pulls what already carries it. Whether a
+  Backlog item should be `ready` is triage, not burn-down.
 - **Never batch multiple issues into one PR.** Unlike `/governor`'s structural-debt cycle (same
   gate, fungible commits), backlog issues are independently-scoped asks from different sources —
   bundling them defeats the "small, independently-revertable PR" flow principle and makes a bad

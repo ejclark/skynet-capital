@@ -154,7 +154,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
           # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
@@ -165,7 +165,7 @@ jobs:
           # auto-merge needs the App identity regardless of this workflow's own `permissions:` block.
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
-            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5
+            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5-5 --effort high
           prompt: |
             Read `.claude/agents/dep-warden.md` in this repo and follow it exactly — it is your
             complete instruction set. Review exactly one PR: #${{ github.event.pull_request.number }}
@@ -176,10 +176,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       due_events: ${{ steps.screen.outputs.due }}
-      feedback_issue: ${{ steps.feedback.outputs.number }}
-      feedback_model: ${{ steps.feedback.outputs.model }}
-      plan_issue: ${{ steps.plan.outputs.number }}
-      plan_model: ${{ steps.plan.outputs.model }}
+      # #3960 slice 3: the retry sweep (`next`) fills a lane when no event-driven claim did.
+      feedback_issue: ${{ steps.feedback.outputs.number || (steps.next.outputs.lane == 'feedback' && steps.next.outputs.number) || '' }}
+      feedback_model: ${{ steps.feedback.outputs.model || (steps.next.outputs.lane == 'feedback' && steps.next.outputs.model) || '' }}
+      plan_issue: ${{ steps.plan.outputs.number || (steps.next.outputs.lane == 'plan' && steps.next.outputs.number) || '' }}
+      plan_model: ${{ steps.plan.outputs.model || (steps.next.outputs.lane == 'plan' && steps.next.outputs.model) || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -220,8 +221,10 @@ jobs:
       # step — repair (merging main in and resolving it) is a later slice, not this one.
       - name: Audit for stalls & conflicts
         if: github.event_name == 'push'
+        # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
+        # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --audit
 
       # Which events owe research right now. Filtered against open research/<id> PR heads
@@ -370,8 +373,25 @@ jobs:
       # lived, across every event that ever failed inside it. The App token is a real,
       # non-suppressed identity — same fix already applied to every PR-opening step in this file, for
       # the same underlying mechanism (see the header).
-      - name: Re-dispatch for event research (claude-code-action can't see `push`)
-        if: github.event_name == 'push' && steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'
+      # THE SAME WALL, ONE LANE OVER (#4359). #4165 wired the retry sweep (`next`, below) onto
+      # `push` — and a sweep that CLAIMS on a push puts `build plan issue` / `build feedback issue`
+      # on a push run, which is the one event claude-code-action will not take. Every merge to
+      # `main` failed in ~17s. So on a push the sweep only PEEKS (reads the dial, the in-flight list
+      # and the open `ready` issues; claims nothing, labels nothing) and the re-dispatch below
+      # carries it into a `workflow_dispatch` run where the claim and the build can both happen.
+      # The decision lives in `peekNext` (scripts/moneypenny/index.mjs, specced, landed in #4360) —
+      # this is the shim that calls it, and `has_next` is its whole output contract.
+      - name: Peek at the retry sweep (push only — the claim happens in the re-dispatch)
+        id: peek
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --peek-next
+
+      - name: Re-dispatch for work claude-code-action can't do under `push`
+        if: >-
+          github.event_name == 'push' && (steps.peek.outputs.has_next == 'true' ||
+          (steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'))
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh workflow run moneypenny-events.yml --ref "$GITHUB_REF_NAME" -f command=scan
@@ -384,9 +404,31 @@ jobs:
       # only `claimFeedback`'s job, below, once `ready` actually lands.
       - name: Triage a freshly-filed feedback issue
         if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
+        # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --triage-feedback
+
+      # THE DECISION-QUEUE CHECK (#3913 slice 2b). `needs-eric` promises Eric a decision; the
+      # `Needs from you` callout is where that decision is actually written (docs/ISSUES.md rule 7).
+      # `issue-lint` demands it at FILING, but the 2026-09-28 audit found the label almost always
+      # lands later, from another lane — 7 of 8 open `needs-eric` issues carried no callout. Slice 2a
+      # closed the two paths we own (`issues.mjs` refuses the label without one; the board keeps such
+      # an issue out of Blocked). This step is the catch-all for the rest: a human or a lane labelling
+      # through `gh` or the UI gets one loud, reversible comment. It never strips the label — a
+      # settled fork on #3913: silently removing a decision label would hide a real ask.
+      #
+      # GITHUB_TOKEN, deliberately, where every step around it uses the App token: those steps WRITE
+      # LABELS and need the resulting event to start another run, which GITHUB_TOKEN suppresses. This
+      # one only comments, and a comment that woke another lane would be a loop, not a feature. Never
+      # `sync-project`'s PAT either — that is Eric's, so the comment would read as him talking to
+      # himself about his own missing ask.
+      - name: Check the decision callout when needs-eric lands
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'needs-eric'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/moneypenny/index.mjs --triage-feedback
+        run: node scripts/moneypenny/index.mjs --check-callout
 
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
       # assigned to a claude session"; re-gated on `ready` rather than `feedback` itself, #3818
@@ -404,9 +446,13 @@ jobs:
       # anything belongs in the specced script; this file is a trigger shim, per the header.
       - name: Claim a feedback issue, if it was marked ready
         id: feedback
-        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'ready'
+        # #3960 slice 3: also on a parking label coming off a still-`ready` issue (the unpark path).
+        # The admission gate (scripts/moneypenny/admission.mjs) runs inside the claim: work-mode,
+        # the in-flight cap and the surface fence can all queue it instead.
+        if: >-
+          github.event_name == 'issues' && ((github.event.action == 'labeled' && github.event.label.name == 'ready') || (github.event.action == 'unlabeled' && contains(fromJSON('["needs-eric","needs-info","needs-design","hold-merge"]'), github.event.label.name)))
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --claim-feedback
 
       # THE PLAN LANE'S GATE (#823) — mirrors the feedback gate immediately above, one authorization
@@ -419,12 +465,29 @@ jobs:
       # carries the cheap, github-context-only filters, same division as the feedback gate.
       - name: Claim a plan issue, if the owner said ready
         id: plan
+        # #3818 slice 3: the `ready` LABEL (and an unpark) wakes the plan lane too, not only a comment.
+        # Both claim steps may run on one label event; each re-checks its own lane label.
         if: >-
-          github.event_name == 'issue_comment' && github.event.action == 'created' &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+          (github.event_name == 'issue_comment' && github.event.action == 'created' &&
+           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+          (github.event_name == 'issues' && ((github.event.action == 'labeled' && github.event.label.name == 'ready') || (github.event.action == 'unlabeled' && contains(fromJSON('["needs-eric","needs-info","needs-design","hold-merge"]'), github.event.label.name))))
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --claim-plan
+
+      # THE RETRY SWEEP (#3960 slice 3). An issue queued by the admission gate keeps `ready`; every
+      # tick claims the oldest one that is now admissible, so a freed slot fills without anyone
+      # re-labelling. At most one claim per tick — the cap, not the sweep, sets the pace.
+      #
+      # NOT ON `push` (#4359) — a claim here starts a build in THIS run, and claude-code-action
+      # rejects `push` outright. The push tick peeks instead (the `peek` step above) and re-fires
+      # itself as `command=scan`; this is that dispatch's claim.
+      - name: Claim the next admissible ready issue
+        id: next
+        if: github.event_name == 'workflow_dispatch' && inputs.command == 'scan'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --claim-next
 
   # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
   # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
@@ -449,8 +512,8 @@ jobs:
     # 4-event run hit turn 101 mid-wrap-up (`error_max_turns`, 25 min, $11.50) after already
     # opening PRs for 3 of them — orphaned with no way to tell whether their checks would ever
     # fire. Matrixing gives every event its OWN session and its OWN turn budget: a stuck/runaway
-    # session on ONE event still gets caught fast (the guard is now TIGHTER — 60 turns for one
-    # event's work is a smaller window than 100 for a whole batch used to be), and a busy week is
+    # session on ONE event still gets caught by its own --max-turns (set on the research step below)
+    # instead of a ceiling sized for a whole batch, and a busy week is
     # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
     # one event's session dying never cancels its siblings' already-in-flight work.
     # `max-parallel` (2026-09-05, docs/LESSONS.md): sixteen sessions opened inside five minutes and six
@@ -490,7 +553,7 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So each PR this session opens
@@ -520,12 +583,12 @@ jobs:
           # Revisit once S5's eval and the batching/tiering redesign (#2946) land — this pin is a
           # stopgap, not a permanent floor. --max-turns is a runaway backstop only, scoped to ONE
           # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
-          # + first ledger row — is the heaviest single-event case, typically 20-30 turns). The 60
-          # set here 2026-08-28 turned out too tight within a day — two runs finished normal work
-          # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
-          # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
+          # + first ledger row — is the heaviest single-event case; a normal full session now lands in
+          # the 80s-90s). 150 sits above that measured distribution of green runs: a runaway stop, never
+          # a budget normal work is expected to reach (60, then 90, each failed runs that had already
+          # landed — issue #904; docs/LESSONS.md 2026-09-06). docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5 --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5-5 --effort high --max-turns 150
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of
@@ -611,7 +674,11 @@ jobs:
   build-feedback:
     name: build feedback issue
     needs: route
-    if: needs.route.outputs.feedback_issue != ''
+    # `github.event_name != 'push'` is the standing invariant, not a redundancy (#4359):
+    # claude-code-action rejects `push` outright, so no wiring upstream of here may ever hand this
+    # job a push run. `route` no longer claims on a push — this is the guard that stops the next
+    # change from quietly re-opening that path. Enforced by workflow-lint rule 9.
+    if: github.event_name != 'push' && needs.route.outputs.feedback_issue != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -631,7 +698,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
@@ -646,13 +713,14 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header.
           github_token: ${{ steps.app-token.outputs.token }}
+          # --effort high is the COMPUTE.md effort floor for this lane whichever tier routes it; on a
+          # Haiku route Claude Code leaves it off the request (Haiku 4.5 takes no effort parameter —
+          # docs/vendor/claude-code/env-vars.md, CLAUDE_CODE_ALWAYS_ENABLE_EFFORT). Same on plan builds.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.feedback_model }}
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.feedback_model }} --effort high
           # The triage rules and the build envelope live in .github/prompts/feedback-build.md,
-          # not here. Workflow files are Eric's carve-out and never auto-merge, so an envelope
-          # written in this file could only be tuned by spending his attention; as repo content it
-          # is an ordinary auto-merging PR. `.github/prompts/**` is in envelope.json, so no lane can
-          # rewrite its own orders.
+          # not here. `.github/prompts/**` is envelope-protected (blocking), so the prompt merges
+          # through Eric like this file, but no lane can rewrite its own orders.
           prompt: |
             Read `.github/prompts/feedback-build.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.
@@ -689,7 +757,7 @@ jobs:
       # Freeing it here makes a retry immediate; the claim itself still prevents double-builds.
       - if: failure() && needs.route.outputs.feedback_issue != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
   # ═══ THE PLAN LANE (#823) ═══
@@ -700,7 +768,9 @@ jobs:
   build-plan:
     name: build plan issue
     needs: route
-    if: needs.route.outputs.plan_issue != ''
+    # Never on `push` — see the same guard on `build-feedback` above (#4359). This is the job that
+    # actually went red on every merge; the guard is what makes that unrepeatable.
+    if: github.event_name != 'push' && needs.route.outputs.plan_issue != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -720,18 +790,19 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
           github_token: ${{ steps.app-token.outputs.token }}
+          # The route job re-dispatches this file with the App token, so a plan build runs as
+          # skynet-envoy; without it the action refuses in ~3s (run 36800601479, workflow-lint rule 8).
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }}
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }} --effort high
           # The triage rules and the build envelope live in .github/prompts/plan-build.md, not
-          # here — same reasoning as feedback-build.md (see its file for the full rationale):
-          # workflow files never auto-merge, so an envelope living here could only be tuned by
-          # spending Eric's attention, while `.github/prompts/**` is ordinary auto-merging content
-          # protected from self-modification by envelope.json.
+          # here — same as feedback-build.md. `.github/prompts/**` is envelope-protected (blocking),
+          # so the prompt merges through Eric like this file, but no lane can rewrite its own orders.
           prompt: |
             Read `.github/prompts/plan-build.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.
@@ -741,7 +812,7 @@ jobs:
       # claimed for the full 2h TTL while looking "in progress" with nothing running.
       - if: failure() && needs.route.outputs.plan_issue != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
 
   sync-project:

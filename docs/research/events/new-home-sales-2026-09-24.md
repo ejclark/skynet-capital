@@ -500,3 +500,10 @@ none is authorized, and nothing in this release changes that.
 **This document goes quiet**, with one door back in: `FT-…-1`, `-3` or `-4` reaching its own
 `Score by` date re-dispatches this same lane as `forward-test-due` (#2884) to fill only the Outcome
 cell of the row that came due — never to reopen this section.
+
+**`forward-test-due` dispatch (2026-10-02).** `FT-…-1` scored **PASS** in its own fragment — see
+[`forward-tests/new-home-sales-2026-09-24.md`](../forward-tests/new-home-sales-2026-09-24.md). Both
+Atlanta Fed primaries re-fetched fresh at a corrected path (the site moved
+`cqer/researchcq/gdpnow/` → `research-and-data/data/gdpnow/` since the 2026-09-26 close-out's
+blocked attempt); no `PostedUpdates` row and no `ContribArchives` vintage exist for 2026-09-24.
+`-3` and `-4` still score 2026-11-03 and remain `_open_` in their own fragment — not due yet.

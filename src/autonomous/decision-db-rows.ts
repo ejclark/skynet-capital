@@ -1,7 +1,13 @@
+import { instrumentKey } from "../domain/option-order.js";
 import type {
   MarketContext,
+  OptionLegFill,
+  OptionLegOrder,
+  OptionOrderIntent,
   OrderForecast,
   OrderIntent,
+  OrderResult,
+  OrderStatus,
   PlaybookMode,
   PlaybookVerdict,
   Side,
@@ -15,6 +21,15 @@ import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
  * matching logic (the one genuinely tricky part of this store) is unit-testable with no database
  * at all. See `decision-db.ts`'s module doc for why one `intents` row is stored per RAW intent.
  */
+
+/** One intent's option order as stored in the side tables (`decision-db-options.ts`). The client
+ *  order id and leg fills belong to the SUBMITTED order, so they are read back onto the outcome. */
+export interface StoredOption {
+  readonly option: OptionOrderIntent;
+  readonly clientOrderId?: string;
+  readonly legFills?: readonly OptionLegFill[];
+  readonly legOrders?: readonly OptionLegOrder[];
+}
 
 export interface StoredIntentRow {
   readonly symbol: string;
@@ -37,6 +52,8 @@ export interface StoredIntentRow {
   readonly resultStatus?: string;
   readonly filledQuantity?: number;
   readonly filledPrice?: number;
+  /** Present only on an option order. */
+  readonly option?: StoredOption;
 }
 
 /** The flat positional tuple `decision-db.ts`'s `insertIntent` prepared statement binds, in
@@ -62,24 +79,78 @@ export type IntentInsertParams = readonly [
   filledPrice: number | null,
 ];
 
-/**
- * Build the insert params for one raw intent, matching it to its fate first.
- *
- * `applyGuardsWithVerdicts` pushes the loop's own raw-intent reference into `refused`, so a
- * refusal match is an exact `===` — no ambiguity. `clampBuy`/`clampSell` always return a NEW
- * spread object on success (even when the quantity is unchanged), so an approved intent can never
- * be matched to its raw ask by reference; this falls back to the same best-effort symbol+side
- * match `decision-context.ts`'s `guardNote` already uses elsewhere in this codebase — consistent
- * with existing house practice, not a new invented ambiguity. `usedOutcomes` prevents the same
- * outcome row from being claimed by two raw intents that happen to share a symbol+side (already
- * rare — a persona emits at most one intent per symbol per side per cycle in every persona this
- * repo ships — and this makes the rare case fail safe: the second raw intent simply matches
- * nothing rather than double-counting a fill).
- */
-export function paramsForRawIntent(
+/** What became of one raw intent this cycle: refused outright, carried into an outcome, or neither
+ *  (a record written before refusals were captured). */
+export interface IntentFate {
+  readonly refusal?: GuardRefusal;
+  readonly outcome?: IntentOutcome;
+}
+
+/** JSON with sorted keys — the form two copies of one intent share however each was built. */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v !== null && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+}
+
+function claimRefusal(
   raw: OrderIntent,
-  entry: Pick<DecisionRecord, "outcomes" | "refusals" | "context">,
-  usedOutcomes: Set<number>,
+  refusals: readonly GuardRefusal[],
+  used: Set<number>,
+): GuardRefusal | undefined {
+  let index = refusals.findIndex((r, i) => !used.has(i) && r.intent === raw);
+  if (index < 0) {
+    const key = canonicalJson(raw);
+    index = refusals.findIndex((r, i) => !used.has(i) && canonicalJson(r.intent) === key);
+  }
+  if (index < 0) return undefined;
+  used.add(index);
+  return refusals[index];
+}
+
+/**
+ * Match one raw intent to its fate.
+ *
+ * Refusal: by reference first — `applyGuardsWithVerdicts` pushes the loop's own raw-intent
+ * reference into `refused` — then STRUCTURALLY (the first unused refusal whose intent JSON-equals
+ * the raw one). A record that crossed the bots→app wire or the JSONL migration holds distinct
+ * objects for the two, and matching by reference alone stored every replicated refusal as an
+ * "observed" outcome with its reason lost.
+ *
+ * Outcome: `clampBuy`/`clampSell` always return a NEW object, so an approved intent can never be
+ * matched by reference; this takes the first unused outcome with the same symbol, side and
+ * instrument (shares, or exactly which contracts — `instrumentKey`), the same best-effort match
+ * `decision-context.ts`'s `guardNote` uses. The instrument check keeps a share sell and a covered
+ * call on one ticker from trading fills. `used` keeps either kind from being claimed twice: a
+ * second same-shaped raw intent matches nothing rather than double-counting a fill.
+ */
+export function fateOf(
+  raw: OrderIntent,
+  entry: Pick<DecisionRecord, "outcomes" | "refusals">,
+  used: { readonly outcomes: Set<number>; readonly refusals: Set<number> },
+): IntentFate {
+  const refusal = claimRefusal(raw, entry.refusals ?? [], used.refusals);
+  if (refusal) return { refusal };
+  const key = instrumentKey(raw);
+  const index = entry.outcomes.findIndex(
+    (o, i) =>
+      !used.outcomes.has(i) &&
+      o.intent.symbol === raw.symbol &&
+      o.intent.side === raw.side &&
+      instrumentKey(o.intent) === key,
+  );
+  if (index < 0) return {};
+  used.outcomes.add(index);
+  return { outcome: entry.outcomes[index] };
+}
+
+/** The insert params for one raw intent whose fate is already matched (`fateOf`). */
+export function intentParams(
+  raw: OrderIntent,
+  entry: Pick<DecisionRecord, "context">,
+  fate: IntentFate,
 ): IntentInsertParams {
   const momentum = entry.context?.momentum?.[raw.symbol] ?? null;
   const sentiment = entry.context?.newsSentiment?.[raw.symbol] ?? null;
@@ -97,17 +168,10 @@ export function paramsForRawIntent(
     sentiment,
   ] as const;
 
-  const refusal = entry.refusals?.find((r: GuardRefusal) => r.intent === raw);
-  if (refusal) {
-    return [...common, refusal.reason, null, null, null, null, null, null];
+  if (fate.refusal) {
+    return [...common, fate.refusal.reason, null, null, null, null, null, null];
   }
-
-  const outcomeIndex = entry.outcomes.findIndex(
-    (o, i) => !usedOutcomes.has(i) && o.intent.symbol === raw.symbol && o.intent.side === raw.side,
-  );
-  const outcome = outcomeIndex >= 0 ? entry.outcomes[outcomeIndex] : undefined;
-  if (outcomeIndex >= 0) usedOutcomes.add(outcomeIndex);
-
+  const outcome = fate.outcome;
   return [
     ...common,
     null,
@@ -121,8 +185,12 @@ export function paramsForRawIntent(
 }
 
 /** Parse one `intents` table row (as returned by `better-sqlite3`/`node:sqlite`'s `.get()`/`.all()`,
- *  snake_case columns, `null` for absent) into the honest, optional-field `StoredIntentRow` shape. */
-export function intentRowToStored(row: Record<string, unknown>): StoredIntentRow {
+ *  snake_case columns, `null` for absent) into the honest, optional-field `StoredIntentRow` shape,
+ *  with its option order when the side tables hold one. */
+export function intentRowToStored(
+  row: Record<string, unknown>,
+  option?: StoredOption,
+): StoredIntentRow {
   return {
     symbol: row.symbol as string,
     side: row.side as Side,
@@ -152,6 +220,7 @@ export function intentRowToStored(row: Record<string, unknown>): StoredIntentRow
     ...(row.filled_price !== null && row.filled_price !== undefined
       ? { filledPrice: row.filled_price as number }
       : {}),
+    ...(option ? { option } : {}),
   };
 }
 
@@ -162,30 +231,44 @@ function intentFrom(row: StoredIntentRow, quantity: number): OrderIntent {
     symbol: row.symbol,
     side: row.side,
     quantity,
-    type: "market",
+    type: row.option ? "limit" : "market",
     reason: row.reason,
     ...(row.strategy ? { strategy: row.strategy } : {}),
     ...(row.expectation ? { expectation: row.expectation } : {}),
     ...(row.forecast ? { forecast: row.forecast } : {}),
     ...(row.playbookId ? { playbookId: row.playbookId } : {}),
     ...(row.playbookMode ? { playbookMode: row.playbookMode } : {}),
+    ...(row.option ? { option: row.option.option } : {}),
   };
 }
 
 /** The outcome half of one approved row's reconstruction — split out of `decisionFrom` purely to
- *  stay under the file's cognitive-complexity budget. */
-function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome {
+ *  stay under the file's cognitive-complexity budget. The client order id rides the outcome's
+ *  intent only, as the trader stamps it: on the order it submitted, never on the guarded intent. */
+/** An option order's per-leg results, read back onto its result: each leg's fill, and a spread's
+ *  leg order ids. */
+function legParts(option: StoredOption | undefined): Partial<OrderResult> {
   return {
-    intent: guarded,
+    ...(option?.legFills ? { legFills: option.legFills } : {}),
+    ...(option?.legOrders ? { legOrders: option.legOrders } : {}),
+  };
+}
+
+function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome {
+  const clientOrderId = row.option?.clientOrderId;
+  const intent = clientOrderId ? { ...guarded, clientOrderId } : guarded;
+  return {
+    intent,
     action: (row.action ?? "observed") as IntentOutcome["action"],
     ...(row.orderId || row.resultStatus
       ? {
           result: {
-            intent: guarded,
-            status: (row.resultStatus ?? "rejected") as "filled" | "rejected",
+            intent,
+            status: (row.resultStatus ?? "rejected") as OrderStatus,
             ...(row.orderId ? { orderId: row.orderId } : {}),
             ...(row.filledQuantity !== undefined ? { filledQuantity: row.filledQuantity } : {}),
             ...(row.filledPrice !== undefined ? { filledPrice: row.filledPrice } : {}),
+            ...legParts(row.option),
           },
         }
       : {}),
@@ -193,7 +276,7 @@ function outcomeFrom(row: StoredIntentRow, guarded: OrderIntent): IntentOutcome 
 }
 
 /** Reassemble one `DecisionRecord` from its `decisions` row plus every `intents` row it owns —
- *  the exact inverse of `paramsForRawIntent`. */
+ *  the exact inverse of `intentParams`. */
 export function decisionFrom(
   at: number,
   personaId: string,

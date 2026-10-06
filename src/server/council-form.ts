@@ -1,5 +1,6 @@
 import { findPlaybook, playbookRoster } from "../playbooks/registry.js";
 import { type CouncilState, MAX_COUNCIL_TEXT_LENGTH, weekKey } from "./council-store.js";
+import { toMemberLine } from "./member-line.js";
 
 /**
  * THE COUNCIL's action + read authority — the shared logic `council-api-routes.ts` calls, kept
@@ -15,6 +16,8 @@ export interface CouncilDeps {
     at: Date,
     playbookId?: string,
   ) => void;
+  /** Remove one member's own line for one week — `council-store.ts`'s `retract`. */
+  readonly retract: (week: string, opaqueMemberId: string) => void;
   readonly now?: () => Date;
 }
 
@@ -75,7 +78,8 @@ export function submitThesis(
   deps: CouncilDeps,
   playbookId?: string,
 ): SubmitThesisResult {
-  const trimmed = text.trim();
+  // Everyone in the gate reads this line — `toMemberLine` owns why (#2224 shape 3 red-team, H2).
+  const trimmed = toMemberLine(text);
   if (trimmed.length === 0) {
     return { ok: false, error: "Say something — even one line." };
   }
@@ -87,5 +91,15 @@ export function submitThesis(
   }
   const at = deps.now?.() ?? new Date();
   deps.submit(weekKey(at), opaqueMemberId, trimmed, at, playbookId);
+  return { ok: true };
+}
+
+/** Take back the member's own line for THIS week (issue #2224 slice 4). The id is always the
+ *  caller's own session-derived one (`council-api-routes.ts`), so there is no path to remove
+ *  someone else's line — author-retract is the whole moderation surface shape 1 carries. Only the
+ *  current week: a past week is the record, the same way a resubmit only edits this week. */
+export function retractThesis(opaqueMemberId: string, deps: CouncilDeps): SubmitThesisResult {
+  const at = deps.now?.() ?? new Date();
+  deps.retract(weekKey(at), opaqueMemberId);
   return { ok: true };
 }

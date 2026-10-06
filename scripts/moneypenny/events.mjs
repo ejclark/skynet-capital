@@ -3,27 +3,33 @@
 // moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { routeAssignments } from "./assignments.mjs";
+import { routeContinuation } from "./continuation.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
+import { routePlanClose } from "./plan-close.mjs";
+import { routeRelay } from "./relay.mjs";
 import { routeShipped } from "./shipped.mjs";
+import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /* THE DISPATCH CEILING (#2946). The research lane spent a full weekly token quota in ~24 hours:
- * moneypenny-events.yml's matrix buys ONE opus session per row this function returns, at
+ * moneypenny-events.yml's matrix buys ONE Sonnet session per row this function returns, at
  * --max-turns 150, and nothing bounded the row COUNT. `max-parallel` bounds concurrency,
  * `--max-turns` bounds one session's depth, the dedupe below bounds repeats — none of them bound
  * how many events dispatch at once. On the day this landed, `event-scan --due` returned 108.
  *
  * WHY THE CAP LIVES HERE and not in event-scan's printDue, where it was first written: `--due` is
- * also the "is this event still outstanding?" oracle for .github/prompts/event-research.md:13 and
- * moneypenny-event-stall-repair.md:38, and its full list feeds routeSweep's receipt issues. A cap
- * upstream makes DEFERRED indistinguishable from HANDLED, so the stall lane would close events
- * that are merely waiting their turn. Capping after the dedupe also avoids a deadlock: cap first,
- * and six stuck `research/*` PRs on the top-priority events would refill the top six every tick,
- * all get filtered here, and the matrix would dispatch ZERO while a hundred events waited.
+ * also the "is this event still outstanding?" oracle for the `--due` cross-check in
+ * .github/prompts/event-research.md and step 1 of moneypenny-event-stall-repair.md, and its full
+ * list feeds routeSweep's receipt issues. A cap upstream makes DEFERRED indistinguishable from
+ * HANDLED, so the stall lane would close events that are merely waiting their turn. Capping after
+ * the dedupe also avoids a deadlock: cap first, and six stuck `research/*` PRs on the top-priority
+ * events would refill the top six every tick, all get filtered here, and the matrix would dispatch
+ * ZERO while a hundred events waited.
  *
  * It still sits UPSTREAM of event-material-scan's deterministic screen, which only ever removes
  * rows (for free) — so a tick can dispatch fewer than the cap but never more, and the ceiling
- * survives the fail-open hole at moneypenny-events.yml:229 where a missing App token skips that
- * screen and "every due pulse dispatches a session". */
+ * survives the fail-open hole in moneypenny-events.yml's screen step, where a missing App token
+ * skips that screen and "every due pulse dispatches a session". */
 const DISPATCH_BUDGET_FILE = join(process.cwd(), "research-dispatch-budget.json");
 
 const IMPACT_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -82,9 +88,59 @@ export function loadDispatchCap(file = DISPATCH_BUDGET_FILE) {
   return cap;
 }
 
+/* THE DIAL ON TOP OF THE CEILING (#3960 slice 2). Two things now bound this one number, so one of
+ * them has to win. research-dispatch-budget.json is a POLICY ceiling: edited in a reviewed PR,
+ * durable across ticks. The work spigot is a STATE dial: one label on #4153, flipped with no PR,
+ * re-read every tick (work-mode.mjs). The DIAL WINS, because the plan's criteria ask for exactly
+ * what a `Math.min` of the two could never give — `conserve` must drop the lane to 2 with no PR,
+ * and `surge` must raise it ABOVE the file's number (criterion 3).
+ *
+ * The budget file keeps a job rather than losing one: it DEFINES the `normal` position, and a spec
+ * pins the two together (tests/scripts/moneypenny/work-mode.spec.ts: normal.researchPerTick ===
+ * maxPerTick), so editing one without the other turns the build red instead of letting the two
+ * disagree silently. It is also still LOADED on every tick, which is what keeps #2946's loud
+ * failure alive: delete or corrupt it and the lane refuses to dispatch, dial or no dial.
+ *
+ * WHY THE READ LIVES IN dueForResearch'S DEFAULT PARAMETER rather than in the workflow step beside
+ * the breaker's own check: `.github/workflows/**` is envelope-protected and never auto-merges, so
+ * wiring it there would put this slice on Eric's platter for zero behavioral gain. The production
+ * call site passes no `cap` (moneypenny-events.yml → "List due events"), so the default IS the
+ * production path — and `cap` stays injectable, so every spec below is still pure and offline. */
+
+/** Pure: the ceiling for the position the dial is on. `normal` reads the budget file, so today's
+ *  behavior is byte-identical; every other position reads its own number. A mode object with no
+ *  usable number is 0 rather than unlimited — fail-closed, the same instinct as the loaders above
+ *  (unreachable from `resolveWorkMode`, which only ever returns numbers a validated config held). */
+export function researchCapFor(mode, budgetCap = loadDispatchCap()) {
+  if (mode?.position === "normal") return budgetCap;
+  const n = mode?.caps?.researchPerTick;
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+/** Impure: read the dial (one `gh issue view`) and return this tick's ceiling, announcing both the
+ *  position and any override on stderr — stdout carries the matrix JSON the workflow hands to
+ *  `fromJSON()`, so a line there would corrupt it. `readMode` is injectable for specs. */
+export function researchCapNow(readMode = readWorkMode, budgetCap = loadDispatchCap()) {
+  const mode = readMode();
+  console.error(noticeLine(mode));
+  if (mode.warning) console.error(`::warning::${mode.warning}`);
+  const cap = researchCapFor(mode, budgetCap);
+  if (cap !== budgetCap)
+    console.error(
+      `::notice::work spigot — the dial reads ${mode.position}, so this tick's research ceiling ` +
+        `is ${cap}, not research-dispatch-budget.json's ${budgetCap} (#3960).`,
+    );
+  return cap;
+}
+
 /** Something landed on main (or the `scan` command re-ran the sweep by hand — same path, never a
  *  second one that can drift). One issue per never-assessed event, deduped by exact open-issue
- *  title; plus the close-the-loop pass below. */
+ *  title; plus the close-the-loop pass below, and the relay that keeps a sliced issue's remainder
+ *  pullable after the issue itself closes (#3818 slice 4, relay.mjs), and the assignment lane that
+ *  puts a decision in front of Eric where GitHub will actually push it to him (slice 5,
+ *  assignments.mjs). Both of those fold in HERE, not as workflow steps, because this sweep already
+ *  rides every push with the App token — a `.github/**` step would cost one of Eric's merges for no
+ *  behavioural gain, the same reasoning `dueForResearch`'s default parameter records above. */
 export function routeSweep(deps) {
   const { dueEvents = [], openIssueTitles = [] } = deps;
   const intents = [];
@@ -95,14 +151,35 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [...intents, ...routeReceipts(deps), ...routeShipped(deps)];
+  // Continuation's STOP half goes before the assignment lane for the same reason the closes do:
+  // both can ask Eric about the same plan, and a stop already assigns him with the run link, so
+  // letting it land first means the generic `needs-eric` ask has nothing left to add (#3818
+  // criterion 10). Its CONTINUE half is not here — a claim only works in a run
+  // `claude-code-action` accepts, so `claimNext` asks `pickContinuation` instead.
+  const sweep = [
+    ...intents,
+    ...routeReceipts(deps),
+    ...routeShipped(deps),
+    ...routePlanClose(deps),
+    ...routeRelay(deps),
+    ...routeContinuation(deps),
+  ];
+  // The assignment lane goes LAST and reads what the rest of this tick already decided to close.
+  // Every lane here plans from the same pre-write snapshot, so an issue carrying `needs-eric` whose
+  // PR merged would otherwise be asked about and closed in the same run — one interrupt spent on a
+  // question that stopped existing seconds later, then an unassign next tick. The closes win:
+  // `needs-eric` on a shipped issue is a stale label, not a live decision.
+  const closing = new Set(
+    sweep.filter((i) => i.kind?.startsWith("close-")).map((i) => i.issueNumber),
+  );
+  return [...sweep, ...routeAssignments(deps).filter((i) => !closing.has(i.number))];
 }
 
 /** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */
 export const RECEIPT_TITLE_RE = /^\[event-research\] (.+)$/;
 
 /* HOW MANY RECEIPTS ONE TICK MAY CLOSE. A different axis from the dispatch ceiling next door:
- * that one bounds SPEND (opus sessions), this one bounds WRITE RATE. The reconcile below found 199
+ * that one bounds SPEND (Sonnet sessions), this one bounds WRITE RATE. The reconcile below found 199
  * open receipts on its first real run, 55 dormant and 144 already researched — closing them in one
  * push is ~199 mutating `gh` calls in a few seconds, which is what GitHub's secondary rate limits
  * exist to refuse. Draining 20 a tick clears that backlog over a normal day of pushes and then
@@ -212,9 +289,10 @@ function receiptCloseBody(r) {
  * Then the dispatch ceiling (#2946): rank what survived the dedupe and hand the matrix at most
  * `cap` of them. Deferral is not dropping — the remainder stays due and rides the next tick in the
  * same order — and the deferred count goes to stderr as a `::notice::` so it is never silent.
- * `cap` is injectable so specs can pin it; production reads research-dispatch-budget.json.
+ * `cap` is injectable so specs can pin it; production reads the work spigot's number for whatever
+ * position the dial is on, which is the budget file's `maxPerTick` at `normal` (`researchCapNow`).
  */
-export function dueForResearch(dueEvents = [], openPrHeads = [], cap = loadDispatchCap()) {
+export function dueForResearch(dueEvents = [], openPrHeads = [], cap = researchCapNow()) {
   const inFlight = new Set(openPrHeads);
   const eligible = dueEvents
     .filter((e) => !inFlight.has(`research/${e.id}`))
@@ -228,9 +306,9 @@ export function dueForResearch(dueEvents = [], openPrHeads = [], cap = loadDispa
     const next = eligible[dispatched.length];
     console.error(
       `::notice::dispatch ceiling — ${dispatched.length} of ${eligible.length} eligible event(s) ` +
-        `dispatched this tick (cap ${cap}, research-dispatch-budget.json); ${deferred} deferred to ` +
-        `later ticks, close-outs then highest impact then soonest. Next in line: ${next.id} ` +
-        `(${next.impact}).`,
+        `dispatched this tick (cap ${cap}, the work spigot's number for the dial's position — ` +
+        `work-mode.json / research-dispatch-budget.json); ${deferred} deferred to later ticks, ` +
+        `close-outs then highest impact then soonest. Next in line: ${next.id} (${next.impact}).`,
     );
   }
   return dispatched;
@@ -238,12 +316,13 @@ export function dueForResearch(dueEvents = [], openPrHeads = [], cap = loadDispa
 
 function eventIssueBody(e) {
   return [
-    `@claude — a calendar event is awaiting initial research: **${e.title}** (${e.date}, ${e.status}, impact: ${e.impact})`,
+    `📅 **Queued for initial research** — **${e.title}** (${e.date}, ${e.status}, impact: ${e.impact})`,
     "",
-    "Run the `never-assessed` mode of [`docs/process/EVENT-RESEARCH.md`](../blob/main/docs/process/EVENT-RESEARCH.md):",
-    `produce \`${e.ledger}\` from its TEMPLATE (initial research + stance + kill switches + first`,
-    "ledger row), and ship it via `/ship`. Moneypenny's push-driven sweep takes the pulse",
-    "checks from there.",
+    "This issue is the receipt, not the trigger: `moneypenny-events.yml`'s research matrix runs the",
+    "`never-assessed` mode of [`docs/process/EVENT-RESEARCH.md`](../blob/main/docs/process/EVENT-RESEARCH.md)",
+    `under \`.github/prompts/event-research.md\` and writes \`${e.ledger}\` on \`research/${e.id}\`.`,
+    "Moneypenny closes this once that ledger is on `main`, then takes the pulse checks from there.",
+    "Nothing needed from anyone here.",
     "",
     FOOTER,
   ].join("\n");

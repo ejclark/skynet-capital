@@ -1,0 +1,733 @@
+import {
+  admitBuild,
+  gateAdmission,
+  isDuplicateQueueNote,
+  isFreshPlan,
+  nextAdmissible,
+  QUEUE_MARKER,
+  queueNote,
+  readInFlight,
+  readOpenPlans,
+  startedPlanInputs,
+  surfaceOf,
+  waitingPlans,
+} from "../../../scripts/moneypenny/admission.mjs";
+import {
+  type ClaimCtx,
+  claimNext,
+  peekNext,
+  SWEEP_HELD_SKIPS,
+  withoutOpenPr,
+} from "../../../scripts/moneypenny/index.mjs";
+
+// THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
+// halt refuses everything, conserve refuses all but fast-track, the in-flight cap refuses all but
+// fast-track, and the same-surface fence refuses everything — fast-track included. Pure specs,
+// then the impure `gateAdmission` with every read injected (no `gh`, no network).
+
+const capsule = (surface: string) =>
+  `**Do the thing.**\n\n| | |\n|---|---|\n| **Status** | ready |\n| **Surface** | ${surface} |\n| **Size** | ~1 PR |\n`;
+
+const issue = (number: number, surface: string | null, labels: string[] = []) => ({
+  number,
+  body: surface === null ? "no capsule here" : capsule(surface),
+  labels: labels.map((name) => ({ name })),
+});
+
+const mode = (position: "halt" | "conserve" | "normal" | "surge", inFlightCap = 3) => ({
+  position,
+  caps: { inFlightCap },
+});
+
+/**
+ * "No plan is waiting to continue" — the continuation context `claimNext` and `peekNext` BOTH
+ * consult. Every `deps` in this file injects it, so no suite falls back to `continuationContext()`,
+ * which reads live GitHub (`gatherContinuationDeps` → `ghRestAll`).
+ *
+ * Left uninjected, these suites read the real repo's open plans. Two ways that showed up on
+ * 2026-10-04: `peekNext` returned live issue #3913 where the fixture named #8, so the spec went red
+ * on a clean checkout of `main` — and the `claimNext` suites went green only by luck, because
+ * `nowMs = 0` makes `0 - mergedMs` negative so the 24h merge window filters nothing out, and
+ * `pickContinuation` handed back a real plan. What stopped a local `npm test` from acting on it was
+ * one branch: `continueNext` bails when the plan's claim tag is stamped later than its merge
+ * (`index.mjs:599`). The very next line is `releaseClaim(slug)` — a live `DELETE` of
+ * `refs/tags/claim/plan-<n>` — followed by a real `postContinuationReceipt` comment on the issue.
+ * So the suite was one expired lease away from a test run deleting a production claim and
+ * commenting on a live plan.
+ *
+ * That is the whole reason this is injected rather than tolerated, and it is what this file's own
+ * header already promised: "no `gh`, no network."
+ */
+const noContinuation = () => ({
+  continuations: { candidates: [], caps: { continuationsPerDay: 3 } },
+  inFlight: [],
+  mode: mode("normal"),
+  now: Date.parse("2026-10-04T00:00:00Z"),
+});
+
+/** "No open PR names anything" — injected beside `noContinuation`, for the same reason: the
+ *  default reads live GitHub (`ghRestAll("pulls?state=open")`). */
+const noOpenPrs = () => new Map<number, number>();
+
+/** "No plan is open" — the started-plan cap's read (#4393 slice 4), injected for the same reason:
+ *  the default is `ghRestAll("issues?state=open&labels=plan")` against live GitHub. */
+const noOpenPlans = () => [];
+
+describe("surfaceOf — the capsule's Surface cell", () => {
+  it("reads and normalises the cell (lowercase, trimmed, markdown stripped)", () => {
+    expect(surfaceOf(capsule("  The `/app/accounts` **Rail**  "))).toBe("the /app/accounts rail");
+  });
+
+  it("reduces a markdown link to its text", () => {
+    expect(surfaceOf(capsule("[Research lens](https://x.test/y)"))).toBe("research lens");
+  });
+
+  it.each([
+    ["no spaces", "|**Surface**|Trade form|", "trade form"],
+    ["wide spaces", "|   **Surface**   |   Trade   form   |", "trade form"],
+    ["no bold", "| Surface | Trade form |", "trade form"],
+    ["no closing pipe", "| **Surface** | Trade form", "trade form"],
+  ])("tolerates odd spacing — %s", (_, row, want) => {
+    expect(surfaceOf(`| | |\n|---|---|\n${row}\n`)).toBe(want);
+  });
+
+  it("is null with no table, no Surface row, or an empty/placeholder cell", () => {
+    expect(surfaceOf("just prose")).toBeNull();
+    expect(surfaceOf(undefined)).toBeNull();
+    expect(surfaceOf("| **Status** | ready |\n| **Size** | ~1 PR |")).toBeNull();
+    expect(surfaceOf(capsule(""))).toBeNull();
+    expect(surfaceOf(capsule("—"))).toBeNull();
+    expect(surfaceOf(capsule("n/a"))).toBeNull();
+  });
+
+  it("does not mistake prose mentioning 'surface' for the row", () => {
+    expect(surfaceOf("The surface | is shiny")).toBeNull();
+  });
+});
+
+describe("admitBuild — the pure gate", () => {
+  const me = issue(10, "trade form");
+  const urgent = issue(10, "trade form", ["fast-track"]);
+
+  it("admits under normal with room and no shared surface", () => {
+    expect(
+      admitBuild({ issue: me, inFlight: [issue(1, "research lens")], mode: mode("normal") }),
+    ).toEqual({ admit: true, reason: "admitted" });
+  });
+
+  it("halt refuses — even fast-track", () => {
+    expect(admitBuild({ issue: me, inFlight: [], mode: mode("halt", 0) })).toEqual({
+      admit: false,
+      reason: "work-mode is halt",
+    });
+    expect(admitBuild({ issue: urgent, inFlight: [], mode: mode("halt", 0) }).admit).toBe(false);
+  });
+
+  it("conserve refuses without fast-track, admits with it", () => {
+    expect(admitBuild({ issue: me, inFlight: [], mode: mode("conserve", 1) })).toEqual({
+      admit: false,
+      reason: "queued: conserve mode",
+    });
+    expect(admitBuild({ issue: urgent, inFlight: [], mode: mode("conserve", 1) })).toEqual({
+      admit: true,
+      reason: "admitted (fast-track, conserve)",
+    });
+  });
+
+  it("refuses at the in-flight cap, naming the count", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
+    expect(admitBuild({ issue: me, inFlight: busy, mode: mode("normal") })).toEqual({
+      admit: false,
+      reason: "queued: 3 of 3 in flight",
+    });
+  });
+
+  it("does not count the issue itself as in flight", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(10, "trade form")];
+    expect(admitBuild({ issue: me, inFlight: busy, mode: mode("normal") }).admit).toBe(true);
+  });
+
+  it("fast-track skips the cap", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
+    expect(admitBuild({ issue: urgent, inFlight: busy, mode: mode("normal") }).admit).toBe(true);
+  });
+
+  it("surge's bigger cap lets a fourth build through", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
+    expect(admitBuild({ issue: me, inFlight: busy, mode: mode("surge", 6) }).admit).toBe(true);
+  });
+
+  it("the surface fence refuses a second build on the same surface, naming the blocker", () => {
+    expect(
+      admitBuild({ issue: me, inFlight: [issue(7, "  Trade Form ")], mode: mode("normal") }),
+    ).toEqual({
+      admit: false,
+      reason: "queued behind #7 (same surface: trade form)",
+      queuedBehind: 7,
+    });
+  });
+
+  it("fast-track does NOT bypass the surface fence", () => {
+    const verdict = admitBuild({
+      issue: urgent,
+      inFlight: [issue(7, "trade form")],
+      mode: mode("normal"),
+    });
+    expect(verdict.admit).toBe(false);
+    expect(verdict.queuedBehind).toBe(7);
+  });
+
+  it("no Surface on either side never fences", () => {
+    expect(
+      admitBuild({ issue: issue(10, null), inFlight: [issue(7, null)], mode: mode("normal") })
+        .admit,
+    ).toBe(true);
+  });
+});
+
+describe("nextAdmissible — the retry sweep's pick", () => {
+  const dated = (n: number, createdAt: string, labels: string[] = [], surface = `s${n}`) => ({
+    ...issue(n, surface, ["ready", ...labels]),
+    createdAt,
+  });
+
+  it("picks the oldest admissible ready issue within one rank class", () => {
+    const ready = [dated(5, "2026-09-29T00:00:00Z"), dated(4, "2026-09-28T00:00:00Z")];
+    expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(4);
+  });
+
+  it("skips one fenced by an in-flight surface and takes the next", () => {
+    const ready = [
+      dated(4, "2026-09-28T00:00:00Z", [], "trade form"),
+      dated(5, "2026-09-29T00:00:00Z"),
+    ];
+    expect(nextAdmissible(ready, [issue(1, "trade form")], mode("normal"))?.number).toBe(5);
+  });
+
+  it("skips parked and already-in-progress issues", () => {
+    const ready = [
+      dated(3, "2026-09-27T00:00:00Z", ["needs-eric"]),
+      dated(4, "2026-09-28T00:00:00Z", ["in-progress"]),
+      dated(5, "2026-09-29T00:00:00Z"),
+    ];
+    expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(5);
+  });
+
+  it("puts fast-track first, and under conserve only fast-track is admissible", () => {
+    const ready = [
+      dated(4, "2026-09-28T00:00:00Z"),
+      dated(9, "2026-09-30T00:00:00Z", ["fast-track"]),
+    ];
+    expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(9);
+    expect(nextAdmissible(ready.slice(0, 1), [], mode("conserve", 1))).toBeNull();
+  });
+
+  // The sweep's first live tick (2026-09-30) took #784, a P3 idea, because it was the oldest.
+  it("follows npm run rank: a bug before older P2 work, a P3 idea last, a hand P-label wins", () => {
+    const ready = [
+      dated(784, "2026-08-20T00:00:00Z", ["idea"]),
+      dated(900, "2026-09-01T00:00:00Z"),
+      dated(950, "2026-09-29T00:00:00Z", ["bug"]),
+    ];
+    expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(950);
+    expect(nextAdmissible(ready.slice(0, 2), [], mode("normal"))?.number).toBe(900);
+    // Eric's P1 on the idea lifts it over the derived P2 — his label always wins.
+    const hand = [
+      dated(784, "2026-08-20T00:00:00Z", ["idea", "P1"]),
+      dated(900, "2026-08-01T00:00:00Z"),
+    ];
+    expect(nextAdmissible(hand, [], mode("normal"))?.number).toBe(784);
+  });
+
+  it("is null at the cap, under halt, or with nothing ready", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
+    expect(nextAdmissible([dated(4, "2026-09-28T00:00:00Z")], busy, mode("normal"))).toBeNull();
+    expect(nextAdmissible([dated(4, "2026-09-28T00:00:00Z")], [], mode("halt", 0))).toBeNull();
+    expect(nextAdmissible([], [], mode("normal"))).toBeNull();
+  });
+});
+
+describe("the queue note and its dedupe", () => {
+  it("carries the marker, the reason, and the lane footer", () => {
+    const body = queueNote("queued: 3 of 3 in flight");
+    expect(body).toContain(QUEUE_MARKER);
+    expect(body).toContain("queued: 3 of 3 in flight");
+    expect(body).toContain("Generated by [Claude Code]");
+  });
+
+  it("is a duplicate only when this lane's NEWEST note says the same thing", () => {
+    const a = { body: queueNote("queued: conserve mode") };
+    const b = { body: queueNote("queued: 3 of 3 in flight") };
+    const human = { body: "any news?" };
+    expect(isDuplicateQueueNote([a, human], "queued: conserve mode")).toBe(true);
+    expect(isDuplicateQueueNote([a, b], "queued: conserve mode")).toBe(false);
+    expect(isDuplicateQueueNote([human], "queued: conserve mode")).toBe(false);
+    expect(isDuplicateQueueNote([], "queued: conserve mode")).toBe(false);
+  });
+});
+
+describe("readInFlight — the REST read", () => {
+  it("asks for open in-progress issues and drops pull requests", () => {
+    const seen: string[][] = [];
+    const rows = readInFlight((_cmd, args) => {
+      seen.push(args);
+      return JSON.stringify([
+        { number: 1, body: capsule("a"), labels: [{ name: "in-progress" }] },
+        { number: 2, body: "", labels: [], pull_request: {} },
+      ]);
+    });
+    expect(seen[0]?.join(" ")).toContain("issues?state=open&labels=in-progress");
+    expect(rows.map((r) => r.number)).toEqual([1]);
+  });
+
+  it("throws on a non-list answer rather than reading it as 'nothing in flight'", () => {
+    expect(() => readInFlight(() => '{"message":"Bad credentials"}')).toThrow();
+  });
+});
+
+describe("gateAdmission — the impure call, reads injected", () => {
+  const me = issue(10, "trade form");
+  const setup = (over: Record<string, unknown> = {}) => {
+    const posted: [number, string][] = [];
+    const lines: string[] = [];
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readInFlight: () => [] as ReturnType<typeof issue>[],
+      comments: () => [] as Array<{ body?: string }>,
+      comment: (n: number, body: string) => posted.push([n, body]),
+      log: (l: string) => lines.push(l),
+      ...over,
+    };
+    return { deps, posted, lines };
+  };
+
+  it("admits and posts nothing when there is room", () => {
+    const { deps, posted, lines } = setup();
+    expect(gateAdmission(me, deps).admit).toBe(true);
+    expect(posted).toEqual([]);
+    expect(lines).toContain("::notice::work-mode=normal");
+  });
+
+  it("refuses at the cap and posts ONE queue note", () => {
+    const { deps, posted } = setup({
+      readInFlight: () => [issue(1, "a"), issue(2, "b"), issue(3, "c")],
+    });
+    expect(gateAdmission(me, deps)).toEqual({ admit: false, reason: "queued: 3 of 3 in flight" });
+    expect(posted).toHaveLength(1);
+    expect(posted[0]?.[0]).toBe(10);
+    expect(posted[0]?.[1]).toContain("queued: 3 of 3 in flight");
+  });
+
+  it("does not repeat a note the newest lane comment already carries", () => {
+    const { deps, posted, lines } = setup({
+      readMode: () => ({ ...mode("conserve", 1), until: "2026-10-02", reason: "x" }),
+      comments: () => [{ body: queueNote("queued: conserve mode") }],
+    });
+    expect(gateAdmission(me, deps).admit).toBe(false);
+    expect(posted).toEqual([]);
+    expect(lines.some((l) => l.includes("not repeating"))).toBe(true);
+  });
+
+  it("fails closed, with no note, when the in-flight list cannot be read", () => {
+    const { deps, posted } = setup({
+      readInFlight: () => {
+        throw new Error("HTTP 502");
+      },
+    });
+    expect(gateAdmission(me, deps)).toEqual({
+      admit: false,
+      reason: "queued: the in-flight list could not be read",
+    });
+    expect(posted).toEqual([]);
+  });
+
+  it("prints the dial's warning when it read one", () => {
+    const { deps, lines } = setup({
+      readMode: () => ({ ...mode("conserve", 1), until: null, reason: "x", warning: "no dial" }),
+    });
+    gateAdmission(me, deps);
+    expect(lines).toContain("::warning::no dial");
+  });
+
+  it("still returns the refusal when posting the note fails", () => {
+    const { deps, lines } = setup({
+      readMode: () => ({ ...mode("halt", 0), until: null, reason: "x" }),
+      comment: () => {
+        throw new Error("403");
+      },
+    });
+    expect(gateAdmission(me, deps)).toEqual({ admit: false, reason: "work-mode is halt" });
+    expect(lines.some((l) => l.startsWith("::warning::could not post"))).toBe(true);
+  });
+});
+
+// #4393 slice 4, criterion 6 — stop starting, start finishing. When the board's Waiting column
+// holds `startedPlanCap` plans, a FRESH plan is refused; the next slice of a started plan never is.
+describe("the started-plan cap (#4393 criterion 6)", () => {
+  const planMode = { position: "normal" as const, caps: { inFlightCap: 3, startedPlanCap: 2 } };
+  /** A started plan nobody is building — what the board shows in Waiting. */
+  const idle = (n: number) => ({
+    ...issue(n, `w${n}`, ["plan", "ready"]),
+    sub_issues_summary: { total: 3, completed: 1 },
+  });
+  const fresh = issue(50, "new surface", ["plan", "ready"]);
+
+  it("WHEN Waiting is at the cap, refuses a plan with zero closed sub-issues", () => {
+    expect(admitBuild({ issue: fresh, mode: planMode, waiting: [idle(1), idle(2)] })).toEqual({
+      admit: false,
+      reason: "queued: 2 started plans waiting (cap 2) — finish one before starting a new plan",
+    });
+  });
+
+  it("admits a fresh plan below the cap", () => {
+    expect(admitBuild({ issue: fresh, mode: planMode, waiting: [idle(1)] }).admit).toBe(true);
+  });
+
+  it("still admits the next slice of an already-started plan at the cap", () => {
+    const nextSlice = {
+      ...issue(51, "x", ["plan", "ready"]),
+      sub_issues_summary: { total: 4, completed: 2 },
+    };
+    const slicedByPr = issue(52, "y", ["plan", "ready", "next-slice"]);
+    const waiting = [idle(1), idle(2)];
+    expect(admitBuild({ issue: nextSlice, mode: planMode, waiting }).admit).toBe(true);
+    expect(admitBuild({ issue: slicedByPr, mode: planMode, waiting }).admit).toBe(true);
+  });
+
+  it("never refuses a feedback item, and fast-track bypasses it like the in-flight cap", () => {
+    const waiting = [idle(1), idle(2)];
+    const feedback = issue(53, "z", ["feedback", "ready"]);
+    const urgent = issue(54, "q", ["plan", "ready", "fast-track"]);
+    expect(admitBuild({ issue: feedback, mode: planMode, waiting }).admit).toBe(true);
+    expect(admitBuild({ issue: urgent, mode: planMode, waiting }).admit).toBe(true);
+  });
+
+  it("is skipped when the caller passed no Waiting list (a continuation, or an old caller)", () => {
+    expect(admitBuild({ issue: fresh, mode: planMode }).admit).toBe(true);
+  });
+
+  it("counts what the board shows in Waiting — not a blocked plan, not one being built", () => {
+    const plans = [
+      idle(1),
+      { ...idle(2), labels: [{ name: "plan" }, { name: "in-progress" }] },
+      {
+        ...idle(3),
+        labels: [{ name: "plan" }, { name: "needs-info" }],
+      },
+      issue(4, "a", ["plan", "ready"]), // fresh
+      issue(5, "b", ["plan", "next-slice"]),
+    ];
+    expect(waitingPlans(plans).map((p) => p.number)).toEqual([1, 5]);
+  });
+
+  it("isFreshPlan: a plan with no closed sub-issue and no next-slice", () => {
+    expect(isFreshPlan(fresh)).toBe(true);
+    expect(isFreshPlan(idle(1))).toBe(false);
+    expect(isFreshPlan(issue(9, "f", ["feedback"]))).toBe(false);
+  });
+
+  it("fills the issue's own sub-issue counts from the plan list when its copy lacks them", () => {
+    const payload = issue(7, "p", ["plan", "ready"]); // an event payload with no summary
+    const { issue: filled, waiting } = startedPlanInputs(payload, [idle(7), idle(8)]);
+    expect(isFreshPlan(filled)).toBe(false);
+    expect(waiting.map((p) => p.number)).toEqual([7, 8]);
+  });
+
+  it("readOpenPlans pages through every open plan and drops pull requests", () => {
+    const asked: string[] = [];
+    const rows = readOpenPlans((path) => {
+      asked.push(path);
+      return [
+        { number: 1, labels: [{ name: "plan" }], sub_issues_summary: { total: 2, completed: 1 } },
+        { number: 2, pull_request: {} },
+      ];
+    });
+    expect(asked).toEqual(["issues?state=open&labels=plan"]);
+    expect(rows.map((r) => r.number)).toEqual([1]);
+    expect(rows[0]?.sub_issues_summary).toEqual({ total: 2, completed: 1 });
+  });
+
+  describe("through gateAdmission", () => {
+    const setup = (over: Record<string, unknown> = {}) => {
+      let planReads = 0;
+      const posted: [number, string][] = [];
+      const deps = {
+        readMode: () => ({ ...planMode, until: null, reason: "set to normal" }),
+        readInFlight: () => [],
+        readPlans: () => {
+          planReads += 1;
+          return [idle(1), idle(2)];
+        },
+        comments: () => [],
+        comment: (n: number, body: string) => posted.push([n, body]),
+        log: () => undefined,
+        ...over,
+      };
+      return { deps, posted, planReads: () => planReads };
+    };
+
+    it("refuses a fresh plan at the cap and posts one queue note", () => {
+      const s = setup();
+      expect(gateAdmission(fresh, s.deps).reason).toContain("2 started plans waiting");
+      expect(s.posted).toHaveLength(1);
+    });
+
+    it("a continuation (`started`) skips the cap and the plan read entirely", () => {
+      const s = setup();
+      expect(gateAdmission(fresh, { ...s.deps, started: true }).admit).toBe(true);
+      expect(s.planReads()).toBe(0);
+    });
+
+    it("reads no plans for a feedback item, nor once a cheaper rule already refused", () => {
+      const s = setup();
+      gateAdmission(issue(60, "f", ["feedback", "ready"]), s.deps);
+      const halted = setup({ readMode: () => ({ ...mode("halt", 0), until: null, reason: "x" }) });
+      gateAdmission(fresh, halted.deps);
+      expect(s.planReads()).toBe(0);
+      expect(halted.planReads()).toBe(0);
+    });
+
+    it("fails closed, with no note, when the open plans cannot be read", () => {
+      const s = setup({
+        readPlans: () => {
+          throw new Error("HTTP 502");
+        },
+      });
+      expect(gateAdmission(fresh, s.deps)).toEqual({
+        admit: false,
+        reason: "queued: the open plans could not be read",
+      });
+      expect(s.posted).toEqual([]);
+    });
+  });
+
+  it("the sweep steps past a fresh plan the cap refuses and takes the next pullable item", () => {
+    const pick = nextAdmissible(
+      [
+        { ...fresh, createdAt: "2026-09-01T00:00:00Z" },
+        { ...issue(61, "g", ["feedback", "ready"]), createdAt: "2026-09-02T00:00:00Z" },
+      ],
+      [],
+      planMode,
+      [idle(1), idle(2)],
+    );
+    expect(pick?.number).toBe(61);
+  });
+});
+
+describe("claimNext — the retry sweep hands the pick to its own lane's claim", () => {
+  const setup = (ready: ReturnType<typeof issue>[], inFlight: ReturnType<typeof issue>[] = []) => {
+    const called: Array<{ lane: string; ctx: unknown }> = [];
+    const fake = (lane: string) => (ctx: ClaimCtx) => {
+      called.push({ lane, ctx });
+      return { claimed: true, reason: "claimed", number: ctx.payload?.issue?.number };
+    };
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => ready,
+      readInFlight: () => inFlight,
+      claims: { plan: fake("plan"), feedback: fake("feedback") },
+      continuation: noContinuation,
+      readPrIssues: noOpenPrs,
+      readPlans: noOpenPlans,
+    };
+    return { deps, called };
+  };
+  const at = (i: ReturnType<typeof issue>, createdAt: string) => ({ ...i, createdAt });
+
+  it("claims the oldest admissible ready issue through its lane, as a labeled:ready event", () => {
+    const { deps, called } = setup([
+      at(issue(8, "a", ["ready", "feedback"]), "2026-09-29T00:00:00Z"),
+      at(issue(6, "b", ["ready", "plan"]), "2026-09-28T00:00:00Z"),
+    ]);
+    const r = claimNext(0, "abc", deps);
+    expect(r).toMatchObject({ claimed: true, lane: "plan", number: 6 });
+    expect(called).toHaveLength(1);
+    expect(called[0]?.ctx).toMatchObject({
+      payload: { action: "labeled", label: { name: "ready" } },
+    });
+  });
+
+  it("routes a feedback issue to the feedback lane", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "feedback"])]);
+    expect(claimNext(0, "abc", deps).lane).toBe("feedback");
+    expect(called[0]?.lane).toBe("feedback");
+  });
+
+  it("ignores ready issues that belong to neither lane", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "enhancement"])]);
+    expect(claimNext(0, "abc", deps).claimed).toBe(false);
+    expect(called).toEqual([]);
+  });
+
+  it("a failed plan read costs the tick no feedback pick — the cap only governs fresh plans", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "feedback"])]);
+    const r = claimNext(0, "abc", {
+      ...deps,
+      readPlans: () => {
+        throw new Error("HTTP 502");
+      },
+    });
+    expect(r).toMatchObject({ claimed: true, lane: "feedback", number: 8 });
+    expect(called).toHaveLength(1);
+  });
+
+  it("claims nothing when the cap is full", () => {
+    const { deps, called } = setup(
+      [issue(8, "z", ["ready", "plan"])],
+      [issue(1, "a"), issue(2, "b"), issue(3, "c")],
+    );
+    const r = claimNext(0, "abc", deps);
+    expect(r.claimed).toBe(false);
+    expect(r.reason).toContain("1 ready, 3 in flight, 0 plans waiting, work-mode=normal");
+    expect(called).toEqual([]);
+  });
+});
+
+// 2026-10-01: #3960's lease outlived its successful build, and every tick for ~2h stopped at
+// "held by a live claim" without trying the next ready issue. The sweep now steps past a held pick.
+describe("claimNext — a lease-held pick does not block the rest of the queue", () => {
+  const sweep = (held: number[], ready: ReturnType<typeof issue>[]) => {
+    const tried: number[] = [];
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      tried.push(n);
+      return held.includes(n)
+        ? { claimed: false, reason: "held by a live claim (112m old)" }
+        : { claimed: true, reason: "claimed", number: n };
+    };
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => ready,
+      readInFlight: () => [],
+      claims: { plan: claim, feedback: claim },
+      continuation: noContinuation,
+      readPrIssues: noOpenPrs,
+      readPlans: noOpenPlans,
+    };
+    return { r: claimNext(0, "abc", deps), tried };
+  };
+  const at = (n: number, day: number) => ({
+    ...issue(n, `t${n}`, ["ready", "plan"]),
+    createdAt: `2026-09-${String(day).padStart(2, "0")}T00:00:00Z`,
+  });
+
+  it("claims the next admissible issue when the top pick is held", () => {
+    const { r, tried } = sweep([1], [at(1, 1), at(2, 2)]);
+    expect(r).toMatchObject({ claimed: true, number: 2, lane: "plan" });
+    expect(tried).toEqual([1, 2]);
+  });
+
+  it("stops at a refusal that is not a lease, rather than walking the queue", () => {
+    const tried: number[] = [];
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => [at(1, 1), at(2, 2)],
+      readInFlight: () => [],
+      claims: {
+        plan: (ctx: ClaimCtx) => {
+          tried.push(ctx.payload?.issue?.number ?? -1);
+          return { claimed: false, reason: "parked" };
+        },
+        feedback: () => ({ claimed: false, reason: "unused" }),
+      },
+      continuation: noContinuation,
+      readPrIssues: noOpenPrs,
+      readPlans: noOpenPlans,
+    };
+    expect(claimNext(0, "abc", deps)).toMatchObject({ claimed: false, reason: "parked" });
+    expect(tried).toEqual([1]);
+  });
+
+  it("gives up for the tick after a bounded number of held picks", () => {
+    const all = Array.from({ length: SWEEP_HELD_SKIPS + 2 }, (_, k) => at(k + 1, k + 1));
+    const { r, tried } = sweep(
+      all.map((i) => i.number),
+      all,
+    );
+    expect(r.claimed).toBe(false);
+    expect(r.reason).toContain("held by live claims");
+    expect(tried).toHaveLength(SWEEP_HELD_SKIPS);
+  });
+
+  it("reports nothing admissible once every candidate was held", () => {
+    const { r, tried } = sweep([1], [at(1, 1)]);
+    expect(r).toMatchObject({ claimed: false });
+    expect(r.reason).toContain("nothing admissible (0 ready");
+    expect(tried).toEqual([1]);
+  });
+});
+
+describe("peekNext — the push pass asks, and claims nothing", () => {
+  const deps = (ready: ReturnType<typeof issue>[]) => ({
+    readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+    readReady: () => ready,
+    readInFlight: () => [],
+    continuation: noContinuation,
+    readPrIssues: noOpenPrs,
+    readPlans: noOpenPlans,
+  });
+
+  it("returns the pick claimNext would take, without taking a lease", () => {
+    const pick = peekNext(deps([issue(8, "a", ["ready", "plan"])]));
+    expect(pick?.number).toBe(8);
+  });
+
+  it("returns null when nothing in either lane is admissible", () => {
+    expect(peekNext(deps([issue(8, "a", ["ready", "enhancement"])]))).toBeNull();
+    expect(peekNext(deps([]))).toBeNull();
+  });
+});
+
+// 2026-10-05: #3959's lane stripped `in-progress` at the end of a session while its slice PR #4605
+// sat open and held, and the sweep dispatched the plan twice that day into "nothing to build". An
+// open PR naming the issue is the in-flight evidence, so it counts even after the label is gone.
+describe("the sweep skips an issue an open PR already names", () => {
+  const deps = (ready: ReturnType<typeof issue>[], named: [number, number][]) => {
+    const tried: number[] = [];
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      tried.push(n);
+      return { claimed: true, reason: "claimed", number: n };
+    };
+    return {
+      tried,
+      deps: {
+        readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+        readReady: () => ready,
+        readInFlight: () => [],
+        readPrIssues: () => new Map(named),
+        readPlans: noOpenPlans,
+        claims: { plan: claim, feedback: claim },
+        continuation: noContinuation,
+      },
+    };
+  };
+  const at = (n: number, day: number, lane = "plan") => ({
+    ...issue(n, `t${n}`, ["ready", lane]),
+    createdAt: `2026-09-${String(day).padStart(2, "0")}T00:00:00Z`,
+  });
+
+  it("claims the next ready issue, not the one whose held slice PR is still open", () => {
+    const { deps: d, tried } = deps([at(3959, 1), at(42, 2)], [[3959, 4605]]);
+    expect(claimNext(0, "abc", d)).toMatchObject({ claimed: true, number: 42 });
+    expect(tried).toEqual([42]);
+  });
+
+  it("applies to the feedback lane too — an open PR is that build's in-flight evidence", () => {
+    const { deps: d, tried } = deps([at(7, 1, "feedback")], [[7, 70]]);
+    expect(claimNext(0, "abc", d).claimed).toBe(false);
+    expect(tried).toEqual([]);
+  });
+
+  it("peeks nothing when the only ready issue is named by an open PR", () => {
+    const { deps: d } = deps([at(3959, 1)], [[3959, 4605]]);
+    expect(peekNext(d)).toBeNull();
+  });
+
+  it("withoutOpenPr keeps every issue no open PR names", () => {
+    const pool = [at(1, 1), at(2, 2)];
+    expect(withoutOpenPr(pool, new Map([[2, 9]])).map((i) => i.number)).toEqual([1]);
+    expect(withoutOpenPr(pool)).toEqual(pool);
+  });
+});

@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "action": "unlabeled",
+    "label": { "name": "needs-info" },
+    "issue": {
+      "number": 4100,
+      "state": "open",
+      "labels": [{ "name": "feedback" }, { "name": "ready" }],
+      "body": "a ready feedback issue whose needs-info was just cleared"
+    }
+  }
+}

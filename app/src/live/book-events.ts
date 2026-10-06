@@ -1,5 +1,5 @@
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
-import type { DeskPosition } from "./desk";
+import type { Decision, DeskPosition } from "./desk";
 import { underlyingOf } from "./held-events";
 import { type DayRange, inRange } from "./horizon-range";
 import {
@@ -14,7 +14,7 @@ import {
  * EVENTS ON YOUR BOOK (#3807 slice 2c, the co-location — `docs/IA.md` §8): the market calendar's
  * events joined to what a book holds, for the Profile page's Events section. `held-events.ts` is
  * the one-line version over each position's single `nextEvent`; this reads the research corpus
- * itself (`/api/research` — every dated event, earnings prints included), so a month with two
+ * itself (`/api/research/calendar` — every dated event, earnings prints included), so a month with two
  * events on one name shows both, in two tiers:
  *
  *   held    an event naming a ticker the book holds (an option counts as its underlying)
@@ -26,9 +26,17 @@ import {
  * carry a symbol and ten prints are dated, so most books read one or two held days a month — the
  * section counts what it has and links out rather than padding.
  *
+ * THE BOOK'S OWN DAYS (#3977 slice 4): two per-member dates the desk payload carries, joined here
+ * on the client — never on the shared `/api/research/calendar` (#4204), which every member reads:
+ *
+ *   decide  a "Needs a decision" card's `due` day — the stock's own event while it can still move
+ *           the position, else the option's expiry. A third tier, so the grid can mark it apart.
+ *   print   a held name's `nextPrint`, whenever it lands — a held-tier row when the corpus has no
+ *           print for that name on that day. An estimated date says so in words ("estimated
+ *           date"); an `unknown` print has no day and gets no row.
+ *
  * NO FAKE DATES. A playbook store card's window ("D-20 to D-6") is relative to a print, not a day
- * (`playbook-store.ts`), and a decision carries no structured due date yet (a data slice in the
- * plan, F11) — neither is placed on a day here.
+ * (`playbook-store.ts`), so ideas carry no `due` and are never placed on a day here.
  *
  * A position's own `nextEvent` backs the corpus up: when the research payload is missing (the
  * endpoint unreachable, an older server), each position's server-joined event still lands on its
@@ -47,8 +55,9 @@ export interface BookDesk {
     readonly id: string;
     readonly positions: readonly Pick<
       DeskPosition,
-      "symbol" | "isOption" | "quantity" | "nextEvent"
+      "symbol" | "isOption" | "quantity" | "nextEvent" | "nextPrint"
     >[];
+    readonly decisions?: readonly Pick<Decision, "id" | "symbol" | "display" | "title" | "due">[];
   };
 }
 
@@ -72,7 +81,7 @@ export interface BookEvent {
   readonly title: string;
   /** `YYYY-MM-DD`. */
   readonly date: string;
-  readonly tier: "held" | "market";
+  readonly tier: "held" | "market" | "decide";
   /** The held names it lands on — for a market-wide print, the ones it is the next event for
    *  (it moves all of them; these are the ones with nothing sooner of their own). */
   readonly touches: readonly TouchedPosition[];
@@ -81,6 +90,8 @@ export interface BookEvent {
 }
 
 export interface BookEvents {
+  /** Decision cards due in range — their own tier, so the grid marks the day apart (▲). */
+  readonly decide: readonly BookEvent[];
   readonly held: readonly BookEvent[];
   readonly market: readonly BookEvent[];
   /** Open positions across the desks read — zero is its own honest state. */
@@ -187,9 +198,65 @@ function backstop(
   }
 }
 
+/** " (estimated date)" when the day is a cadence estimate — said in words, never styled alone. */
+const estimateNote = (estimated: boolean): string => (estimated ? " (estimated date)" : "");
+
 /**
- * The book's events in `range`: the corpus's events naming a held ticker, the headline macro
- * prints, and — as the backstop — any position's own `nextEvent` the corpus did not carry.
+ * Each held name's next earnings print (`nextPrint`) the corpus did not already put on that day.
+ * Runs before the `nextEvent` backstop, so a print both carry lands once, with its estimate flag.
+ */
+function prints(
+  desks: readonly BookDesk[],
+  range: DayRange,
+  touched: readonly TouchedPosition[],
+  held: BookEvent[],
+): void {
+  for (const { desk } of desks) {
+    for (const position of desk.positions) {
+      const print = position.nextPrint;
+      if (!print || print.status === "unknown" || !inRange(print.at, range)) continue;
+      const symbol = underlyingOf(position.symbol);
+      if (held.some((e) => e.date === print.at && e.touches.some((t) => t.symbol === symbol)))
+        continue;
+      held.push({
+        id: `print ${symbol} ${print.at}`,
+        title: `${symbol} earnings${estimateNote(print.status === "estimate")}`,
+        date: print.at,
+        tier: "held",
+        touches: touched.filter((t) => t.symbol === symbol),
+      });
+    }
+  }
+}
+
+/** Every "Needs a decision" card with a `due` day in range, landing on its held name. */
+function dueDecisions(
+  desks: readonly BookDesk[],
+  range: DayRange,
+  touched: readonly TouchedPosition[],
+): BookEvent[] {
+  const out: BookEvent[] = [];
+  for (const { desk } of desks) {
+    for (const decision of desk.decisions ?? []) {
+      const due = decision.due;
+      if (!(due && inRange(due.at, range))) continue;
+      const symbol = underlyingOf(decision.symbol);
+      out.push({
+        id: `decide ${desk.id} ${decision.id}`,
+        title: `${decision.display} — ${decision.title} (${due.label}${due.estimated ? ", estimated date" : ""})`,
+        date: due.at,
+        tier: "decide",
+        touches: touched.filter((t) => t.deskId === desk.id && t.symbol === symbol),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The book's events in `range`: the decisions due, the corpus's events naming a held ticker, each
+ * held name's next print, the headline macro prints, and — as the backstop — any position's own
+ * `nextEvent` the corpus did not carry.
  */
 export function bookEventsIn({
   desks,
@@ -222,8 +289,10 @@ export function bookEventsIn({
     else if (isHeadlineMacro(event))
       market.push({ ...base, tier: "market", touches: nextFor(desks, touched, event.date) });
   }
+  prints(desks, range, touched, held);
   backstop(desks, range, touched, held, market);
   return {
+    decide: dueDecisions(desks, range, touched).sort(byDay),
     held: held.sort(byDay),
     market: market.sort(byDay),
     positions: desks.reduce((n, { desk }) => n + desk.positions.length, 0),

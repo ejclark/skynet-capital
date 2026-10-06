@@ -1,3 +1,7 @@
+import {
+  FIRST_OTM_EXPIRY_MILESTONE,
+  FIRST_REALIZED_PROFIT_MILESTONE,
+} from "../domain/milestone-catalog.js";
 import type { ActivityStore, TradeActivityRecord } from "../observatory/activity-record.js";
 import { collapseActivity } from "../observatory/activity-store.js";
 import { fillsFrom } from "../observatory/desk-data.js";
@@ -34,10 +38,9 @@ import {
 
 /** The two milestone ids this detector owns. Not in `curriculum.ts` yet — outcome milestones return
  *  there once #468's short-lot matching is a first-class citizen; the log doesn't validate
- *  `milestoneId` against a catalog (see `ladder-progress-log.ts`), so minting them here is safe and
- *  matches the naming style of the milestones curriculum.ts already has (`first-buy`, `first-sell`). */
-export const FIRST_OTM_EXPIRY_MILESTONE = "first-otm-expiry";
-export const FIRST_REALIZED_PROFIT_MILESTONE = "first-realized-profit";
+ *  `milestoneId` against a catalog (see `ladder-progress-log.ts`). Minted in
+ *  `domain/milestone-catalog.ts` since #784 slice 5, beside the titles Activity renders them with. */
+export { FIRST_OTM_EXPIRY_MILESTONE, FIRST_REALIZED_PROFIT_MILESTONE };
 
 /** One completion this detector found in a participant's activity, ready to become a log entry. */
 export interface LadderDetection {

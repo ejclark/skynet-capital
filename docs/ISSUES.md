@@ -60,7 +60,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Status** | proposed · waiting on a decision (needs-eric) |
+| **Status** | Blocked · waiting on a decision (needs-eric) |
 | **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
@@ -106,7 +106,10 @@ Rules that make it work, in priority order:
    a member or open build forks — questions nobody is blocked on. Mixing the two is how a decision
    Eric alone can make ends up 3/4 of the way down an accordion, which is the defect this rule
    exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
-   of surfacing it below the context).
+   of surfacing it below the context). The rule holds **after filing too**: the label usually
+   lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
+   callout, and the board keeps such an issue out of Blocked until the callout exists
+   (`scripts/moneypenny/decision-callout.mjs`, #3913). Eric's own issues are exempt.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
@@ -120,6 +123,14 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready ·
+   Building now · Waiting · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`;
+   Building now was "In Progress" until #4393 slice 4, and still reads as it), then a `·`
+   and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
+   after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
+   `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels
+   contradict (#3913) — a note, not a failure. When the state changes, the row's first word
+   changes with it; free text that does not lead with a board word is left alone.
 
 ### An optional block: capturing a raw idea before it's a plan
 
@@ -210,6 +221,65 @@ Two issue-specific cautions:
   `main` — that would fire the deploy pipeline) and linked as a SHA-pinned
   `raw.githubusercontent.com` URL, same mechanics as a PR screenshot (src/server/feedback-images.ts).
 
+## Ready — the one definition (#3818 slice 4)
+
+**`ready` means one thing: an automated puller may start this issue now.** It is the
+*authorization*, never a quality score — a shabby issue can be `ready` and a beautifully written one
+can sit in Backlog for weeks. The word was said in dozens of plan issues before anything read it
+(#823: #467/#468/#469 sat 7.3 days fully scoped on a flip nobody could act on), so the point of
+writing it down once is that the label, the comment and the code now agree.
+
+**Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
+Four conditions, asked in this order so the refusal names the first one that fails
+(`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
+retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
+disagree about what may be built:
+
+1. **open** — a closed issue is never pulled. If its remainder outlived it, see the relay below.
+2. **labelled `ready`** — without it the board shows Backlog, and nothing pulls from Backlog.
+3. **not parked** — none of `needs-eric`, `needs-info`, `needs-design`, `hold-merge`
+   (`PARKING_LABELS`). `ready` + parked is illegal, reported, and never auto-fixed: some flips are
+   Eric's own. `ready` + `next-slice` is legal and means "in progress, a remainder pending".
+4. **not `in-progress`** — another lane or session already holds it.
+
+**Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
+filing at capture (`FEEDBACK.md` → *What the lane will build*) — and otherwise **never applies
+`ready` to make something pullable**, which is the one rule that keeps the label an authorization
+rather than a formality. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
+"go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
+Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
+so a lane quoting the word in prose can never flip itself.
+
+**Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
+carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and
+nobody should have to say it twice.
+
+### When a remainder outlives its issue — the relay (`scripts/moneypenny/relay.mjs`)
+
+Every condition above starts with **open**, which is where a sliced issue used to lose its tail: the
+build writes the remainder onto the issue, applies `next-slice`, and once the issue closes that
+remainder is invisible to every puller while still reading, on the issue itself, as "captured". 24
+closed issues were in exactly that state on 2026-10-02, all closed `completed`.
+
+So the push sweep relays them. A closed issue still carrying `next-slice` or `needs-session` gets a
+fresh `[relay] #N remainder — …` issue that links back, and the remainder label comes off the
+source (with a receipt comment, which is what makes the sweep idempotent). Three properties worth
+knowing:
+
+- **It lands in Backlog, never `ready`.** A remainder's shape is the thing nobody has judged yet;
+  carrying it forward is capture, authorizing it is a separate act. A false positive — a remainder
+  that actually landed and left its label behind — therefore costs one close, never a build.
+- **It quotes nothing.** The remainder is prose whose shape nobody pinned, so the relay points at
+  the source thread instead of restating it; a confidently wrong restatement is worse for a
+  zero-context puller than a link.
+- **A `not planned` close is never relayed.** That close is a decision, and overturning a decision
+  mechanically is the opposite of what the lane is for.
+
+The push path only relays closes from the watermark (`RELAY_FROM`) forward, so nothing is lost from
+here on with no noise; the historical queue is `node scripts/moneypenny/relay.mjs --list --backfill`
+and drains with `--apply` when a person is there to read it.
+
 ## Readiness — what committed work carries when it goes `ready` (#4056)
 
 A fresh build session cannot ask a question mid-run, so whatever the issue leaves open gets
@@ -231,7 +301,8 @@ They are advice, never a gate:
   stale; don't auto-fix it, because some flips are Eric's own. Ready + `next-slice` is legal and
   means "in progress, a remainder pending".
 - **past one delivery unit**: a Size cell declaring more than 3 PRs (or slices). Split the slices
-  into sub-issues that each fit one. Lead every Size cell with `~N PRs` so it can be read at all.
+  into sub-issues that each fit one (*Slices as sub-issues*, below). Lead every Size cell with
+  `~N PRs` so it can be read at all.
 - **a decision-shaped title with no `Done when`**: *Decide / Investigate / Rethink…* work needs the
   recorded decision that ends it, or its remainder idles after the first PR.
 - **a protected path with no route**: a named `.github/`, `.claude/` or envelope path with no
@@ -240,6 +311,29 @@ They are advice, never a gate:
 
 The rubric retires itself if it doesn't earn its place: #4056's call sheet says to drop everything
 except the parked check if flagged and unflagged items deliver within 5pp of each other by 2026-10-31.
+
+### Slices as sub-issues (#4056 slice 3)
+
+**Any plan whose slices will outlive the session that files it splits them into native sub-issues.**
+GitHub then draws the parent's progress bar on the board and in the issue list (`5/5 ▰▰▰▰▰`), which
+is the story at a glance, and `npm run rank` ranks the open children instead of the parent, so
+lanes pick up the next slice without reading the thread. Pilot: #3955, five slices filed as
+#4059–#4063 on 2026-09-29, all shipped by 2026-09-30 with no re-plan.
+
+- **Parent keeps** the intent, the picture, the brief and the state block. **Each child carries**
+  a one-line ask, the metadata table (Status · Parent `#N, slice k of n` · Size · As of), an EARS
+  `Done when` line, and nothing else — the brief is the parent's (#4059 is the reference shape).
+- A child inherits the parent's `ready`; say so in its Status cell. A slice that waits on another
+  gets a native **blocked-by** link, not prose.
+- **Only the last child closes the parent.** A slice PR writes `Closes #<child>` and `Part of
+  #<parent>` — never the parent's number next to a closing keyword anywhere in the body, follow-ups
+  included (#4179's "closes #3955" in a follow-up line closed the parent with a slice still open).
+- **Not for** a plan that ships in one sitting: its bar would go 0 → full inside an hour, and the
+  children are filing cost with no reader. One PR, no children.
+
+Held as a hypothesis (#4056's call sheet, confidence medium-low): it is wrong if split parents show
+no lower follow-up-fix rate than unsplit ≥4-PR plans by 2026-10-31, or ≥2 of the first 5 split
+plans need a re-plan.
 
 ## What is gated, what is taste
 
@@ -254,6 +348,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | duplicate blocks | no paragraph repeated verbatim | #455 shipped its whole body twice |
 | mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
+| `bottleneck` baseline | labelled `bottleneck` ⇒ a `**Before:**` line with a number, or `unmeasured — <why>` | a fix nobody measured before cannot be shown to have worked |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤80 chars, not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -277,6 +372,26 @@ The research behind that caution: no readability formula is universally valid, o
 general prose scores worse on technical text, which is exactly this repo's content. Treat a hit as
 "maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
 in this section.
+
+## Bottleneck issues — the number the fix should move (#4063)
+
+A `bottleneck` issue names a *measured* constraint (CLAUDE.md → "A bottleneck surfaced by
+fan-out"), so it carries the measurement, in two lines of the body:
+
+```text
+- **Before:** <number and unit> — <date>, <how it was counted>
+- **After:** <number and unit> — <date>, <how it was counted>
+```
+
+- **Before** is required when the issue is filed: `issue-lint` refuses a `bottleneck`-labelled
+  body without it. **After** is added by whoever closes the issue, counted the same way.
+- Either line may say `unmeasured — <why>` instead. An honest "we could not count this" is an
+  answer; a missing line or a `TBD` is not.
+- `npm run bottleneck:baseline` lists the issues owed a line and the closed ones that carry both.
+  It feeds the *Bottleneck before/after* row in `docs/process/LEARNING-LOOP.md`. Issues filed
+  before 2026-10-01 are reported as legacy; the research grind backfills their Before line when
+  it picks one up (`docs/grind/research-bottleneck.instructions.md`, step 2).
+- First instance: #3926, the CI-failure recurrence storm.
 
 ## The state block — a plan issue's context store (#3765)
 
@@ -346,6 +461,20 @@ block itself, notes a top half (between the diagram and the Log, the rules line 
 past three prose lines or carries more than two inline code spans; both notes are advisory, never a
 gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/prompts/feedback-build.md`,
 `/work-issues`) read the block first and edit it on finish (slice 3 of #3765).
+
+**Two lines of the block are machine-read now, so write them for a reader AND a script**
+(`scripts/moneypenny/continuation.mjs`, #3818 criterion 9 — after a slice PR merges, the plan takes
+its next slice itself):
+
+- **The next-pickup line is the fallback target.** The lane prefers the plan's next open, unblocked
+  sub-issue; with none, it continues on whatever that line names. A block with no next-pickup line
+  and no open slice is read as "this plan is finished" and nothing continues — which is correct on
+  the last slice, and a silent stall if the line was simply forgotten. Either bold shape works
+  (`**Next pickup: …**` or `**Next pickup:** …`).
+- **The edit itself is the proof of work.** A continued slice that ends with the block byte-identical
+  stops the plan and assigns Eric with the run link — the lane cannot tell "nothing moved" from
+  "moved but did not say so". Editing in place on finish is therefore not hygiene; it is how the
+  chain keeps going.
 
 ## Comments — the surface that outnumbers issues 10:1
 

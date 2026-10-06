@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { DeskActivityEvent } from "../live/desk";
+import type { DeskActivityLine } from "../live/desk";
 
 /**
  * One fill/order event on a desk's activity timeline (#738 phase 2d) — the Activity tab's blotter
@@ -12,7 +12,7 @@ import type { DeskActivityEvent } from "../live/desk";
  * and where the evidence doesn't reach, nothing is marked.
  */
 
-export function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactElement {
+export function EventLine({ event }: { readonly event: DeskActivityLine }): ReactElement {
   const when = new Date(event.at);
   const stamp = Number.isNaN(when.getTime())
     ? event.at

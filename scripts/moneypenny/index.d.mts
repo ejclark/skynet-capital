@@ -1,6 +1,8 @@
 // Type surface for the parts of moneypenny.mjs (formerly postmaster.mjs) that carry logic worth testing directly.
 // The scripts/ tree is plain ESM with `allowJs` off, so a spec that imports from it needs this
 // rather than a repo-wide tsconfig loosening for one file.
+import type { AdmissionDeps, AdmissionIssue } from "./admission.mjs";
+
 export interface ShippedDeps {
   isMerged: (ref: unknown) => boolean;
   recheckRefs: (n: number) => unknown[];
@@ -18,5 +20,75 @@ export function triageFeedbackDecision(issue?: { labels?: string[] }): {
   ready: boolean;
   reason: string;
 };
+export type ClaimCtx = {
+  payload?: {
+    issue?: { number?: number; state?: string; body?: string; labels?: Array<{ name?: string }> };
+    comment?: { body?: string };
+    action?: string;
+    label?: { name?: string };
+  };
+};
+export type CalloutCtx = {
+  actor?: string;
+  payload?: {
+    issue?: {
+      number?: number;
+      body?: string | null;
+      user?: { login?: string };
+      labels?: Array<{ name?: string }>;
+    };
+    sender?: { login?: string };
+  };
+};
+/** #3913 slice 2b: `needs-eric` landed — comment once if the body never states the decision. */
+export function checkCallout(
+  ctx: CalloutCtx,
+  deps?: {
+    readComments?: (issueNumber: number) => (string | null)[];
+    post?: (issueNumber: number, body: string) => void;
+  },
+): { posted: boolean; reason?: string; actor?: string };
+export type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
+/** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
+ *  then asks the admission gate (#3960) — a refusal takes no lease and adds no label. */
+export function claimFeedback(
+  ctx: ClaimCtx,
+  nowMs?: number,
+  sha?: string,
+  admission?: AdmissionDeps,
+): ClaimResult;
+/** The #3960 retry sweep: claim the oldest admissible `ready` issue (plan or feedback lane). */
+export function claimNext(
+  nowMs?: number,
+  sha?: string,
+  deps?: AdmissionDeps & {
+    readReady?: () => AdmissionIssue[];
+    readPrIssues?: () => Map<number, number>;
+    claims?: Record<"plan" | "feedback", typeof claimPlan>;
+  },
+): ClaimResult & { lane?: "plan" | "feedback" };
+/** How many lease-held picks one sweep steps past before giving up for the tick. */
+export const SWEEP_HELD_SKIPS: number;
+/** The pool minus every issue an open PR already names (`openPrsByIssue`'s map: issue → PR). */
+export function withoutOpenPr<T extends { number?: number }>(
+  pool?: T[],
+  named?: Map<number, number>,
+): T[];
+/** The sweep's dry run for the push pass: the issue `claimNext` would pick, or null. Claims nothing. */
+export function peekNext(
+  deps?: AdmissionDeps & {
+    readReady?: () => AdmissionIssue[];
+    readPrIssues?: () => Map<number, number>;
+  },
+): AdmissionIssue | null;
+/** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
+export function claimPlan(
+  ctx: ClaimCtx,
+  nowMs?: number,
+  sha?: string,
+  admission?: AdmissionDeps,
+): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
+/** The pure router: an event (and its gathered deps) in, the intents to execute out. */
+export function route(ctx: unknown, deps?: unknown): Record<string, unknown>[];

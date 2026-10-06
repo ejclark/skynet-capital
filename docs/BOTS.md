@@ -29,7 +29,9 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 - `alpaca/alpaca-trading-client.ts` — typed `GET /v2/account`, `GET /v2/positions`,
   `POST /v2/orders`.
 - `adapters/alpaca-broker-adapter.ts` — maps Alpaca's string-typed payloads to the domain
-  `Portfolio` and submits market orders.
+  `Portfolio` and submits market orders. A result is `filled` only on a fill the broker
+  confirmed; an order it took but never confirmed (queued after hours, or slower than the
+  sub-second poll) reads `working` (#4655).
 
 Because the engine depends only on `BrokerPort`, the exact same engine, personas, and risk
 guards run against the in-memory simulator or a live paper account with no code change.

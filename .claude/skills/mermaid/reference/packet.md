@@ -1,7 +1,7 @@
 # packet — Packet diagram (packet / packet-beta): bit ranges and field labels. Docs heading "Packet Diagram (v11.0.0+)". — `packet` · `packet-beta`
 
 **Status:** Stable. The docs page header says "v11.0.0+". It shipped as `packet-beta` in 11.0.0. Changelog 11.9.0 (#6510, "Move packet diagram out of beta") added the bare `packet` keyword, and `packet-beta` is still accepted (detector regex `/^\s*packet(-beta)?/`, grammar `("packet"|"packet-beta")`). The `+<count>` bit-count syntax needs v11.7.0+ (#5980). `bitOrder: descending` is marked `v<MERMAID_RELEASE_VERSION>+` on the develop branch, meaning it is not yet in any release (not in the 12.0.0 changelog).
-**GitHub (11.17.2):** The docs page says nothing about GitHub or renderer support. Verify on github.com. Version guidance for GitHub's unknown Mermaid version: `packet-beta` is recognised from 11.0.0 onward, the `packet` keyword only from 11.9.0, `+N` from 11.7.0, and `bitOrder` is not in any release. For the widest compatibility, use `packet-beta` with explicit `start-end` ranges and no bitOrder. There are no click or interaction features, so nothing is lost on GitHub's static render. A render failure shows as an error box in the PR's opening frame (house note in docs/PICTURES.md). Before prescribing this type, validate it with the Mermaid Chart MCP and preview it on GitHub.
+**GitHub (11.17.2):** The docs page says nothing about GitHub or renderer support; `npm run mermaid:lint` parses with GitHub's pinned 11.17.2 and is the oracle. GitHub renders 11.17.2 (the pin in scripts/mermaid-lint.mjs), so `packet-beta` (11.0.0+), the `packet` keyword (11.9.0+) and `+N` (11.7.0+) all work there; `bitOrder` is not in any release, so never use it. Prefer `packet-beta` with explicit `start-end` ranges only when the diagram must also pass the older Mermaid Chart validator. There are no click or interaction features, so nothing is lost on GitHub's static render. A render failure shows as an error box in the PR's opening frame (house note in docs/PICTURES.md).
 
 ## When to reach for it
 - Broker wire formats in src/trading/option-symbols.ts. The OCC symbol ROOT+YYMMDD+C|P+strike×1000 (8 digits) is the textbook case: fixed-width, ordered, contiguous fields where width is meaning. The picture makes the known encoding limits visible: the dot-less root (BRK.A cannot be encoded) and the 8-digit strike (no strike at or above $100,000, MAX_OCC_STRIKE).
@@ -15,11 +15,11 @@
 - Variable-length or keyed formats (JSON payloads, API responses, YAML frontmatter). A packet diagram implies fixed offsets. Using it for JSON fields is misleading, and erDiagram or classDiagram is better.
 - Status or state (open/closed, verbatim/amended/reject verdicts). Every block looks identical and cannot be styled per field, so the distinction would rest on text alone. Use a table or stateDiagram.
 - Large layouts on phones at default config (32x32 = 1026px wide). This is decorative at best, because the text becomes unreadable once scaled into 390px.
-- Prescribed PR-template slots. By house rule (docs/PICTURES.md) only stable types that GitHub is known to render are prescribed. Packet is ad hoc only until verified on github.com.
+- Prescribed PR-template slots. The house gate is the parse check rather than a stable/beta list (docs/PICTURES.md), but its decision table names no story packet is the right weapon for — so it stays ad hoc, and the phone read above is the reason.
 
 ## Header forms
 - packet
-- packet-beta   (alias, accepted from v11.0.0 to develop; safest on older renderers such as GitHub's unknown version)
+- packet-beta   (alias, accepted from v11.0.0 to develop; the form older renderers such as the Mermaid Chart validator expect; GitHub's 11.17.2 accepts both)
 - ---
 title: "TCP Packet"
 ---
@@ -117,7 +117,7 @@ packet   (the grammar parses the DIRECTIVE terminal. The docs page only shows YA
 - When showBits is true, getConfig adds 10 to paddingY internally to make room for the bit numbers, so vertical spacing is not the configured value.
 - Units are unitless numbers labelled 'bits' only by convention. You can lay out chars or bytes, but say the unit in the title or accDescr, because the axis numbers do not.
 - Hard cap: maxPacketSize = 10_000, checked against the number of rows pushed (db.getPacket().length), and it silently stops. You will never hit it in practice.
-- Version skew: `packet` needs 11.9.0+, `+N` needs 11.7.0+, and bitOrder is unreleased (develop only). On an unknown renderer version (GitHub), the most compatible form is `packet-beta` with explicit `start-end` ranges.
+- Version skew: `packet` needs 11.9.0+, `+N` needs 11.7.0+, and bitOrder is unreleased (develop only). GitHub's 11.17.2 takes every released form; `packet-beta` with explicit `start-end` ranges is only needed for older renderers such as the Mermaid Chart validator.
 - A `%%` inside a title line ends it (the TITLE regex stops at %%). Comments are full-line or trailing: `+8: "x" %% note`.
 - There is no per-block styling at all: no classDef, no `style`, no `:::`, no click. Emphasis has to come from structure or label text (see achromatic_emphasis).
 - Default-theme colours are hard-coded black on #efefef in styles.ts. The dark theme overrides them via themeVariables.packet (primaryTextColor on background). Verify contrast in GitHub dark mode.
@@ -172,4 +172,4 @@ accDescr: ROOT, then YYMMDD expiry, C or P, then strike x1000 zero-padded to 8 d
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/themes/theme-dark.js
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/CHANGELOG.md (11.7.0 #5980 +count; 11.9.0 #6510 out of beta)
 - /home/user/skynet-capital/src/trading/option-symbols.ts (grounding for rich example)
-- /home/user/skynet-capital/docs/PICTURES.md (house rule: beta types ad hoc only; GitHub Mermaid version lags)
+- /home/user/skynet-capital/docs/PICTURES.md (house rules: the parse gate, not a type list; the 390px phone read)

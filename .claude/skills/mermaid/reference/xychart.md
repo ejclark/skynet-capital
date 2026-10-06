@@ -1,7 +1,7 @@
 # xyChart — https://mermaid.js.org/syntax/xyChart.html (XY chart: bar + line on shared x/y axes) — `xychart` · `xychart-beta`
 
-**Status:** Stable upstream. Mermaid v11.10.0 (changelog #6653) dropped the "-beta" suffix "to reflect their stable status". The detector regex is /^\s*xychart(-beta)?/ and the lexer maps both keywords to the same token, so `xychart-beta` still works as an alias. Several features are recent: showDataLabelOutsideBar arrived in v11.14.0; per-point line labels, x-axis labelRotation and the truncation of extra data points arrived in v11.16.0; the legend (showLegend, legendFontSize, legendPadding) arrived in v11.17.0. docs/PICTURES.md in this repo still classes it as beta: "permitted ad hoc but never prescribed". Since GitHub's Mermaid version is unknown, treat it as beta on GitHub.
-**GitHub (11.17.2):** The docs page says nothing about GitHub or renderer support; verify on github.com. What is known: the MCP validator runs v11.13.0, measured by rendering an `info` diagram. A ```mermaid\ninfo\n``` block in an issue or PR on github.com would show the deployed version the same way; run that probe before prescribing anything from v11.14 or later. Use the `xychart-beta` keyword, which every version accepts. Keep version-gated features out of PR opening frames: point labels (11.16) fail to parse on older versions, and the legend (11.17) silently disappears. XY charts have no click or interaction syntax, so GitHub's lack of callbacks costs nothing. Frontmatter config and themeVariables.xyChart support on GitHub, and dark-mode palette contrast, are unverified. docs/PICTURES.md already lists xychart-beta as 'permitted ad hoc but never prescribed'.
+**Status:** Stable upstream. Mermaid v11.10.0 (changelog #6653) dropped the "-beta" suffix "to reflect their stable status". The detector regex is /^\s*xychart(-beta)?/ and the lexer maps both keywords to the same token, so `xychart-beta` still works as an alias. Several features are recent: showDataLabelOutsideBar arrived in v11.14.0; per-point line labels, x-axis labelRotation and the truncation of extra data points arrived in v11.16.0; the legend (showLegend, legendFontSize, legendPadding) arrived in v11.17.0. docs/PICTURES.md prescribes it outright, for "a number moving over time" — the old stable-versus-beta classing is gone, replaced by the parse gate (`npm run mermaid:lint`, the pinned 11.17.2). GitHub renders 11.17.2, so every feature above, the legend included, is available there (the legend config parses under the lint, probed 2026-10-03).
+**GitHub (11.17.2):** The docs page says nothing about GitHub or renderer support; `npm run mermaid:lint` parses with GitHub's pinned 11.17.2 and is the oracle, so every feature on this card through v11.17 (point labels, the legend, showDataLabelOutsideBar, labelRotation) is available in PR and issue bodies. The Mermaid Chart MCP validator runs v11.13.0: it renders no legend and can false-red on v11.14+ features, so never let it overrule the lint. Use the `xychart-beta` keyword, which every version accepts. XY charts have no click or interaction syntax, so GitHub's lack of callbacks costs nothing. `themeVariables.xyChart` is declined here: the lint fails any theme or themeVariables (config-on-github.md). Other frontmatter `config.xyChart` keys and dark-mode palette contrast are render-time questions the lint cannot answer. docs/PICTURES.md prescribes xychart-beta in its decision table; the gate on any type is the parse check, not a stable/beta list.
 
 ## When to reach for it
 - Fitness-gate budget ratchets over time: clone-budget.json (clones 9), comment-bloat-budget.json (narrationComments 44), forward-test-id-budget.json (duplicateIds 7, which docs/COACHES.md says 'ratcheted down as those rows get renumbered'), dep-graph and scripts-grouping. Draw measured findings as bars and the ceiling as a line. This fits /governor cycle PRs, coach athlete PRs (/decompose, /dedupe, /bury, /backfill) and /secretary weekly digests.
@@ -19,7 +19,6 @@
 - One or two data points, or values the reader must read exactly. A GFM table is clearer and already counts as the fridge-rule picture.
 - Irregularly spaced dates or strikes on a numeric x-axis, which are silently evened out, and truncated y-axes on bars, which exaggerate changes.
 - PRs with no numeric claim (typo, chore, pure docs). An honest `Picture: waived` beats a decorative chart.
-- Anything that needs the legend, point labels, showDataLabelOutsideBar or labelRotation when GitHub's renderer may be older than v11.14-11.17. It either fails to parse or silently loses the cue.
 
 ## Header forms
 - xychart-beta   (the only keyword before v11.10.0; accepted by every version, so this is the GitHub-safe choice)
@@ -32,9 +31,6 @@ config:
     width: 400
     height: 300
     showDataLabel: true
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#9a9a9a, #505050"
 ---
 xychart-beta   (YAML frontmatter goes before the keyword; a frontmatter title renders as the chart title, confirmed)
 - config.xyChart.chartOrientation: horizontal   (the config-key alternative to the keyword token)
@@ -79,7 +75,7 @@ xychart-beta   (YAML frontmatter goes before the keyword; a frontmatter title re
 
 ## Emphasis without hue (the colourblind rule)
 - Mark type is the strongest non-hue channel. Make the actual a `bar` and the target/ceiling/threshold a `line`, so the two series differ in shape.
-- Separate series by lightness, not hue: plotColorPalette "#9a9a9a, #505050" (light-grey bar, dark-grey line). Avoid two series of similar lightness.
+- Separating series by lightness (plotColorPalette "#9a9a9a, #505050") worked in the validator, but the palette is a `themeVariables` key, which the lint fails (a pinned colour freezes one of GitHub's two modes, config-on-github.md). Declined on GitHub: series identity rests on bar-vs-line and data labels.
 - A threshold or ceiling can be drawn as a flat reference line, e.g. `line "budget" [10, 10, 10, 10]`. Keep it the only line so it cannot be mistaken for another series.
 - Print the number on each bar with showDataLabel: true. The value is readable as text, so colour is never needed to decode it. Declare the bar first (see gotchas).
 - Name key points on a line with per-point labels (`9 "now"`, `15 "start"`, `12 "breach"`); v11.16.0+ only.
@@ -88,7 +84,7 @@ xychart-beta   (YAML frontmatter goes before the keyword; a frontmatter title re
 - Limits: there is no per-series dashed, dotted or thick stroke, no markers and no icons. Two lines can only be told apart by lightness or labels, so use at most one bar plus one line when the reader is colourblind.
 
 ## Styling hooks
-- No classDef, style, `:::` or per-element styling. All styling goes through config and themeVariables.
+- No classDef, style, `:::` or per-element styling. All styling goes through config and themeVariables, and the house declines themeVariables on GitHub (the lint fails them), so the themeVariables.xyChart keys below are reference only.
 - themeVariables.xyChart.plotColorPalette: a comma-separated colour string (e.g. "#000000, #0000FF"). Colours map to series in declaration order across bars and lines, cycling modulo the length.
 - themeVariables.xyChart.backgroundColor, titleColor, dataLabelColor, legendTextColor
 - themeVariables.xyChart.xAxisLabelColor, xAxisTitleColor, xAxisTickColor, xAxisLineColor
@@ -120,7 +116,7 @@ xychart-beta   (YAML frontmatter goes before the keyword; a frontmatter title re
 - Unquoted multi-word text is joined silently: `x-axis [big cat, dog]` rendered the label "bigcat" (confirmed). Quote any text with spaces.
 - Unquoted text may contain only letters, digits and & + = * . # _ -. A colon, parentheses, $, %, /, apostrophes or commas need quotes. A quoted string cannot contain `"` and there is no escape for it.
 - Data values are plain numbers. `1,000` becomes two values because the comma is the separator. Units, %, $ and exponents (1e3) are not allowed.
-- The default palette is unusable: the first series is #ECECFF, nearly invisible on white (confirmed in the render), and the rest mixes peach, green and pink hues. Always set plotColorPalette.
+- The default palette is weak: the first series is #ECECFF, nearly invisible on white (confirmed in the render), and the rest mixes peach, green and pink hues. plotColorPalette is declined on GitHub (a themeVariable), so never let colour carry a series: one bar plus one line, showDataLabel: true, and the claim in the title.
 - The auto y-range starts at the data minimum, not 0. With bar [1, 2] the smallest bar rendered about 3px tall (confirmed). For bars, always give `y-axis "..." 0 --> max`.
 - Bars always grow from the bottom edge of the plot, not from zero. A y-min above 0 truncates and exaggerates differences, and negative values do not hang below a zero baseline.
 - Multiple bar series overlap at the same x at full width (barPlot.ts). There are no grouped or stacked bars. Use one bar series.
@@ -129,8 +125,8 @@ xychart-beta   (YAML frontmatter goes before the keyword; a frontmatter title re
 - Numeric x-axis spaces points evenly between min and max. Irregular dates or strikes are misplaced, so use categorical labels for uneven spacing.
 - Phone fit: the default is 700x500 and GitHub scales it to the container, so on a 390px screen 14px labels shrink to about 7-8px. Set width ~400 and height ~300 (rendered max-width 400 confirmed). Keep to 6-8 categories or fewer with 2-4 character labels, or use horizontal orientation.
 - Casing: the diagram keyword is `xychart`, but the config and themeVariables key is `xyChart`. The docs prose says 'xychart attribute' while its YAML uses xyChart; follow the YAML.
-- A multi-line `accDescr { }` could hang the browser before v11.13.0 (fix #7293). On unknown versions use a single-line accDescr.
-- Pinning very dark or very light plot colours may disappear if GitHub renders with a dark theme background. Prefer mid-greys and check both light and dark mode. This is an inference and has not been verified.
+- A multi-line `accDescr { }` could hang the browser before v11.13.0 (fix #7293). GitHub's 11.17.2 has the fix; the single-line form matters only for pre-11.13 renderers.
+- If plot colours are ever pinned (declined on GitHub today), very dark or very light ones may vanish against GitHub's dark-mode background. Prefer mid-greys and check both light and dark mode. This is an inference and has not been verified.
 
 ## Starters (validated mcp__Mermaid_Chart__validate_and_render_mermaid_diagram. Rendering the `info` diagram shows it runs Mermaid v11.13.0.; minimal ✓, rich ✓ — The first rich draft added per-point labels (`line "ceiling" [15 "start", 15, 12, 12, 10, 9 "now"]`). v11.13.0 rejected it: "Parse error on line 8: ...line \"ceiling\" [15 \"start\", 15, 12, 12, ... Expecting 'SQUARE_BRACES_END', 'COMMA', got 'STR'". This is expected because the feature is v11.16.0+. The labels were removed and the pasted rich_example validated. Its render showed data labels 15/14/12/12/10/9 on the bars, bar fill #9a9a9a, max-width 400px, and SVG <title>/<desc> from accTitle/accDescr, with no legend (legend is v11.17.0+). Extra probes, all valid on v11.13.0: bare `xychart` with a frontmatter `title:`, `horizontal`, a `%%` comment and a `;` separator; `[big cat, dog]`, which rendered "bigcat". Values W1-W5 in the rich example are illustrative. The endpoint 9 matches the current clone-budget.json {"clones": 9}.)
 

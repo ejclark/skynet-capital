@@ -10,3 +10,14 @@ export const FEEDBACK_KIND_ICON: Record<FeedbackLogEntry["kind"], string> = {
   feature: "✨",
   idea: "🗺️",
 };
+
+/** The same three kinds as WORDS (#784 slice 3). On a feed that mixes trades and filings, the
+ *  leftmost token of every row has to say what the row is, and an emoji alone does not: it is one
+ *  glyph at 12px, it renders differently per platform, and a screen reader announces it as the
+ *  icon's own name. Ride the word with the icon — the same rule hue follows (`docs/BRAND.md` →
+ *  Accessibility), applied to a glyph. */
+export const FEEDBACK_KIND_WORD: Record<FeedbackLogEntry["kind"], string> = {
+  bug: "Bug",
+  feature: "Feature",
+  idea: "Idea",
+};

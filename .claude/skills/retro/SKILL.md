@@ -72,8 +72,8 @@ Rank, best first (this ordering is the doctrine; deviating needs a stated reason
 **A command an agent must never run is rank 1, never rank 3.** Claude Code fires a `PreToolUse`
 hook before every Bash call and exit 2 refuses it with your reason (`docs/vendor/claude-code/hooks.md`
 → Exit code 2). Add the pattern to `scripts/hooks/guard-bash.mjs`'s `BANNED` table with the
-doctrine line it enforces; the `git stash` ban was ledger-only for a month because "no git hook
-intercepts it" — the hook that does is not git's (#3769 slice 5, 2026-09-26).
+doctrine line it enforces. "No git hook intercepts it" is not a reason to stop at a ledger entry:
+the hook that intercepts it is Claude Code's, not git's (the `git stash` ban lives there).
 
 Then apply the interrupt-economics test in reverse: if the same slip recurring would be cheap and
 self-correcting, do not build ceremony around it. Process that taxes flow at scale is a net negative
@@ -93,6 +93,11 @@ Append an entry to `docs/LESSONS.md` in the documented format (title, `SHA`, `DA
 `SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The gate parses these field names, so keep
 them exact, and never leave `STATUS: open` — an open entry fails the build by design.
 
+**Same class as an earlier entry?** Then that entry's fix did not hold. Add
+`- **RECURS:** <the earlier entry's exact title>` under your `SHA`/`DATE` line, and run
+`npm run lessons:held` — it lists unlearned runs on the same workflow as earlier lessons, as leads,
+and scores whether gate-type preventions recur less than doctrine-only ones.
+
 ## 7. Verify and ratchet
 
 ```bash
@@ -100,5 +105,5 @@ npm run verify                      # typecheck · lint · test (the ledger gate
 node scripts/incident-scan.mjs      # every incident on main now has a lesson
 ```
 
-Land it with `/ship` (verify → REST open → one auto-merge call → stop). If the prevention was a new
+Land it with `/ship` (verify + integration tests → REST open → stop; the pipeline arms). If the prevention was a new
 gate, that gate's own budget starts at today's number and ratchets down from there.

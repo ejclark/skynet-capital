@@ -110,6 +110,8 @@ export interface PlaceOptionOrderParams {
   readonly positionIntent: "buy_to_open" | "sell_to_open" | "buy_to_close" | "sell_to_close";
   /** Alpaca accepts `day` or `gtc` for options; omit and the standing `day` is sent (#3407). */
   readonly timeInForce?: "day" | "gtc";
+  /** Alpaca `client_order_id` (≤ 128 chars, unique per account) — omitted, Alpaca makes one up. */
+  readonly clientOrderId?: string;
 }
 
 /** One leg of a multi-leg (`mleg`) order — the structure's smallest unit, so a 2:1 ratio spread
@@ -132,6 +134,8 @@ export interface PlaceMultiLegOrderParams {
    *  to remember. */
   readonly netLimitPrice: number;
   readonly timeInForce?: "day" | "gtc";
+  /** Alpaca `client_order_id`, as on a single-leg order. */
+  readonly clientOrderId?: string;
 }
 
 const num = (value: unknown): number | undefined => {
@@ -177,7 +181,7 @@ type RawGreeks = Partial<Record<GreekKey, unknown>>;
 
 /** One raw snapshot from the data host, before any field is trusted. */
 interface RawSnapshot {
-  readonly latestQuote?: { bp?: unknown; ap?: unknown };
+  readonly latestQuote?: { bp?: unknown; ap?: unknown; t?: unknown };
   readonly greeks?: RawGreeks;
   readonly impliedVolatility?: unknown;
   readonly dailyBar?: { v?: unknown };
@@ -189,6 +193,9 @@ export interface ContractSnapshot {
   readonly ask?: number;
   readonly greeks?: Partial<Record<GreekKey, number>>;
   readonly impliedVol?: number;
+  /** When the feed says this bid/ask was quoted (`latestQuote.t`) — what a bot ages a quote off
+   *  before it prices an order against it; absent when the feed gave no usable stamp. */
+  readonly quotedAt?: string;
 }
 
 /**
@@ -379,17 +386,21 @@ export class AlpacaOptionsClient {
    * successful answer meaning the feed has nothing for this symbol/window (a brand-new or halted
    * ticker). The two are never conflated. Takes explicit `start`/`end` so it stays a thin, testable
    * wrapper; the lookback-window arithmetic and its clamp belong to the route that builds the URL.
+   *
+   * `adjustment` stays `raw` for the chart (it prints what traded); a returns calculation such as
+   * beta (#4327) asks for `all`, so a split or a dividend is not read as a price move.
    */
   async getBars(
     symbol: string,
     start: string,
     end: string,
     limit = 1000,
+    adjustment: "raw" | "split" | "all" = "raw",
   ): Promise<Bar[] | undefined> {
     if (!this.data) return undefined;
     try {
       const response = await this.data.get(
-        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=raw`,
+        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=${adjustment}`,
       );
       if (response.status < 200 || response.status >= 300) return undefined;
       const body = response.body as { bars?: Record<string, unknown>[] } | null;
@@ -450,11 +461,17 @@ export class AlpacaOptionsClient {
   /**
    * The four option lifecycle activity types: `OPEXP` (expired worthless),
    * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
-   * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —
-   * an empty array on any error, rather than breaking history rendering over a broker hiccup.
+   * trade). Same read as `getOptionLifecycleActivities` below, but it SAYS whether the read
+   * worked, because on a member-facing surface the two outcomes are different sentences: an empty
+   * list means nothing happened to this account's contracts, a failed read means we do not know
+   * (#3407 slice 4 — "never an empty list that reads as 'nothing working'", `working-orders.tsx`).
    * `after` is the activity `id` cursor (Alpaca's own pagination token for this endpoint).
    */
-  async getOptionLifecycleActivities(after?: string): Promise<AlpacaAccountActivity[]> {
+  async readOptionLifecycleActivities(
+    after?: string,
+  ): Promise<
+    { readonly ok: true; readonly rows: AlpacaAccountActivity[] } | { readonly ok: false }
+  > {
     try {
       const query = new URLSearchParams({
         activity_types: "OPEXP,OPASN,OPEXC,OPTRD",
@@ -463,12 +480,26 @@ export class AlpacaOptionsClient {
         ...(after ? { page_token: after } : {}),
       });
       const response = await this.trading.get(`/v2/account/activities?${query.toString()}`);
-      if (response.status < 200 || response.status >= 300) return [];
+      if (response.status < 200 || response.status >= 300) return { ok: false };
       const body = response.body;
-      return Array.isArray(body) ? (body as AlpacaAccountActivity[]) : [];
+      // A 2xx whose body isn't a list is the broker answering in a shape this app doesn't know —
+      // reported as a failed read rather than as "nothing happened", same reasoning as a non-2xx.
+      if (!Array.isArray(body)) return { ok: false };
+      return { ok: true, rows: body as AlpacaAccountActivity[] };
     } catch {
-      return [];
+      return { ok: false };
     }
+  }
+
+  /**
+   * The fail-SOFT view of the same read, for the paging backfill sweep
+   * (`activity-backfill.ts`), which only ever APPENDS: an empty array on any error, so a broker
+   * hiccup stops the sweep rather than breaking history rendering. A caller that renders the
+   * result to a member wants `readOptionLifecycleActivities` above instead.
+   */
+  async getOptionLifecycleActivities(after?: string): Promise<AlpacaAccountActivity[]> {
+    const read = await this.readOptionLifecycleActivities(after);
+    return read.ok ? read.rows : [];
   }
 
   async placeOptionOrder(params: PlaceOptionOrderParams): Promise<AlpacaOrder> {
@@ -480,6 +511,7 @@ export class AlpacaOptionsClient {
       ...(params.type === "limit" ? { limit_price: params.limitPrice } : {}),
       time_in_force: params.timeInForce ?? "day",
       position_intent: params.positionIntent,
+      ...(params.clientOrderId !== undefined ? { client_order_id: params.clientOrderId } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }
@@ -503,6 +535,7 @@ export class AlpacaOptionsClient {
         side: leg.side,
         position_intent: leg.positionIntent,
       })),
+      ...(params.clientOrderId !== undefined ? { client_order_id: params.clientOrderId } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }
@@ -529,16 +562,7 @@ export class AlpacaOptionsClient {
         if (response.status < 200 || response.status >= 300) continue;
         const body = response.body as { snapshots?: Record<string, RawSnapshot> } | null;
         for (const [symbol, snap] of Object.entries(body?.snapshots ?? {})) {
-          const greeks = greeksOf(snap.greeks);
-          const bid = price0(snap.latestQuote?.bp);
-          const ask = num(snap.latestQuote?.ap);
-          const impliedVol = num(snap.impliedVolatility);
-          out.set(symbol, {
-            ...(bid !== undefined ? { bid } : {}),
-            ...(ask !== undefined ? { ask } : {}),
-            ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
-            ...(impliedVol !== undefined ? { impliedVol } : {}),
-          });
+          out.set(symbol, contractSnapshotOf(snap));
         }
       } catch {
         // fail-soft: this chunk stays uncovered
@@ -596,6 +620,22 @@ export class AlpacaOptionsClient {
       return rows;
     }
   }
+}
+
+/** One held contract's snapshot, each field carried only when the feed quoted it honestly. */
+function contractSnapshotOf(snap: RawSnapshot): ContractSnapshot {
+  const greeks = greeksOf(snap.greeks);
+  const bid = price0(snap.latestQuote?.bp);
+  const ask = num(snap.latestQuote?.ap);
+  const impliedVol = num(snap.impliedVolatility);
+  const quotedAt = stampOf(snap.latestQuote?.t);
+  return {
+    ...(bid !== undefined ? { bid } : {}),
+    ...(ask !== undefined ? { ask } : {}),
+    ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
+    ...(impliedVol !== undefined ? { impliedVol } : {}),
+    ...(quotedAt !== undefined ? { quotedAt } : {}),
+  };
 }
 
 /** A feed timestamp worth carrying: an ISO string that parses. Anything else stays absent. */

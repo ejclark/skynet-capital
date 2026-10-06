@@ -1,4 +1,4 @@
-import { isMarketClosed } from "../domain/market-calendar.js";
+import { daysBetween, sessionsBefore } from "../domain/market-calendar.js";
 import { CHEAP_IV_RANK, RICH_IV_RANK } from "./outlook.js";
 import type {
   Confidence,
@@ -74,22 +74,9 @@ export function etDateOf(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-/** Whole calendar days between two YYYY-MM-DD dates (negative = `to` is earlier). */
-export function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-}
-
-/** Step back `sessions` trading days from `date` — weekends and full-day exchange holidays skipped
- *  (`market-calendar.ts`); an early close still counts as a session. */
-export function sessionsBefore(date: string, sessions: number): string {
-  const at = new Date(`${date}T00:00:00Z`);
-  let left = sessions;
-  while (left > 0) {
-    at.setUTCDate(at.getUTCDate() - 1);
-    if (!isMarketClosed(at.toISOString().slice(0, 10))) left -= 1;
-  }
-  return at.toISOString().slice(0, 10);
-}
+// Session and day arithmetic live with the exchange calendar they count against; re-exported so the
+// guidance's existing readers keep one definition (the bots' option rules read the same two).
+export { daysBetween, sessionsBefore };
 
 /**
  * The last expiry options may be sold on, given the goal. An option must never outlive the

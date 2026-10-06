@@ -117,6 +117,69 @@ describe("serveSubscriptionsApi", () => {
     expect(body.canManage).toBe(false);
   });
 
+  describe("the subscriber count (#3970)", () => {
+    const sub = (playbookId: string, enabled: boolean) => ({
+      playbookId,
+      mode: "standard",
+      capitalAllocated: 1_000,
+      enabled,
+      createdAt: "2026-09-01T00:00:00.000Z",
+    });
+    // Three accounts on S1-NVDA, one of them paused; nobody on the rest.
+    const crowd = {
+      "acct-mine": [sub("S1-NVDA", true)],
+      "acct-alice-7f3a": [sub("S1-NVDA", true)],
+      "bot-zeta-91c2": [sub("S1-NVDA", false)],
+    };
+    const indexFor = async (id: string, subscriptions: unknown) => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        get(`/api/playbook-store?id=${id}`),
+        res,
+        "/api/playbook-store",
+        configWith({ subscriptions }),
+        session,
+      );
+      return out;
+    };
+    const cardsOf = (out: Answer) => answered(out).cards as { id: string; subscribers?: number }[];
+    const store = () => ({ ...(storeWith() as object), load: () => crowd });
+
+    it("counts enabled subscriptions across every account, paused ones excluded", async () => {
+      const cards = cardsOf(await indexFor("acct-mine", store()));
+      expect(cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(2);
+    });
+
+    it("says zero, not nothing, for a playbook nobody subscribes to", async () => {
+      const cards = cardsOf(await indexFor("acct-mine", store()));
+      const others = cards.filter((c) => c.id !== "S1-NVDA");
+      expect(others.length).toBeGreaterThan(0);
+      for (const c of others) expect(c.subscribers).toBe(0);
+    });
+
+    it("gives a non-owner and a catalog-only viewer the same count", async () => {
+      for (const id of ["someone-elses", ""]) {
+        const cards = cardsOf(await indexFor(id, store()));
+        expect(cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(2);
+      }
+    });
+
+    it("never carries another account's identifier in the response", async () => {
+      for (const id of ["acct-mine", "someone-elses", ""]) {
+        const raw = (await indexFor(id, store())).body ?? "";
+        expect(raw).not.toContain("acct-alice-7f3a");
+        expect(raw).not.toContain("bot-zeta-91c2");
+        // The viewer's own id is theirs to know, but the index never echoes it either.
+        expect(raw).not.toContain("acct-mine");
+      }
+    });
+
+    it("sends no count when no store is wired, rather than a false zero", async () => {
+      const cards = cardsOf(await indexFor("acct-mine", undefined));
+      for (const c of cards) expect(c).not.toHaveProperty("subscribers");
+    });
+  });
+
   it("subscribe: refuses malformed bodies with 400", async () => {
     const { res, out } = fakeRes();
     await serveSubscriptionsApi(
@@ -323,6 +386,22 @@ describe("serveSubscriptionsApi", () => {
       session,
     );
     expect(out.status).toBe(400);
+  });
+
+  it("set-enabled: refuses an unowned account and never touches the store", async () => {
+    // #4535 slice 1b seeds house bots' subscriptions; ownership stays the only gate on editing
+    // them — pausing a bot's seeded playbook is its owner's call alone.
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({ id: "someone-elses", playbookId: "S1-NVDA", enabled: false }),
+      res,
+      "/api/playbook-store/set-enabled",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([]);
+    expect(answered(out)).toMatchObject({ ok: false });
   });
 
   it("set-enabled: writes to the store for an owned account", async () => {

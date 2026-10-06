@@ -2,6 +2,8 @@ import {
   audit,
   CONFLICT_REPAIR_CAP,
   readyPlanCandidate,
+  staleInProgressFrom,
+  untruncated,
 } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
@@ -164,5 +166,146 @@ describe("audit() — the plan-stall threshold and memory", () => {
       "flag-silent-feedback",
       "flag-stall",
     ]);
+  });
+});
+
+// #3960 — the board's In Progress column reads the `in-progress` label, so a build that died
+// without its terminal step would leave a ghost counting against the WIP limit of 3. The audit
+// takes a label quiet past 6h back off, with one comment; the label's absence is the memory.
+describe("audit() — clearing a stale in-progress label", () => {
+  const w = (number: number, hoursQuiet: number) => ({
+    number,
+    title: `Build ${number}`,
+    hoursQuiet,
+  });
+
+  it("clears a label quiet for 6h or more, with the one plain comment", () => {
+    const intents = audit({ staleInProgress: [w(4200, 6), w(4201, 30)] });
+    expect(intents.map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["clear-in-progress", 4200],
+      ["clear-in-progress", 4201],
+    ]);
+    expect(intents[0]?.body).toContain(
+      "Cleared `in-progress`: no activity for 6h. Re-apply it when work resumes.",
+    );
+  });
+
+  it("leaves a label alone inside the 6h window — the build may simply be running", () => {
+    expect(audit({ staleInProgress: [w(4202, 5)] })).toHaveLength(0);
+  });
+
+  it("respects a custom inProgressStaleAfterHours threshold", () => {
+    const deps = { staleInProgress: [w(4203, 3)] };
+    expect(audit(deps)).toHaveLength(0);
+    expect(audit({ ...deps, inProgressStaleAfterHours: 2 })).toHaveLength(1);
+  });
+
+  it("does not read the stall-flagged memory — removing the label is its own", () => {
+    // A stall-flagged issue can still carry a ghost label; the one-ping rule for stall comments
+    // must not keep the column lying.
+    const intents = audit({ staleInProgress: [w(4204, 12)], alreadyFlagged: [4204] });
+    expect(intents).toHaveLength(1);
+  });
+});
+
+// 2026-10-04 — the gather filtered `in-progress` out of the newest-100 open-issue read, so the
+// oldest plans (positions 110–124 of 139) were invisible and held every in-flight slot as ghosts.
+// The gather now reads the label directly; this pins the shaping it hands `audit()`.
+describe("staleInProgressFrom() — the in-flight issues and how long each has been quiet", () => {
+  const now = Date.parse("2026-10-04T12:00:00Z");
+  const issue = (number: number, updatedAt: string, labels: string[]) => ({
+    number,
+    title: `Plan ${number}`,
+    updatedAt,
+    labels: labels.map((name) => ({ name })),
+  });
+
+  it("keeps only issues carrying in-progress, with whole hours quiet", () => {
+    const rows = staleInProgressFrom(
+      [
+        issue(3651, "2026-10-03T15:24:36Z", ["plan", "in-progress"]),
+        issue(3939, "2026-10-03T04:21:51Z", ["in-progress"]),
+        issue(4100, "2026-10-01T00:00:00Z", ["plan", "ready"]),
+      ],
+      now,
+    );
+    expect(rows).toEqual([
+      { number: 3651, title: "Plan 3651", hoursQuiet: 20 },
+      { number: 3939, title: "Plan 3939", hoursQuiet: 31 },
+    ]);
+  });
+
+  it("feeds audit() so a ghost older than any page window still clears", () => {
+    const rows = staleInProgressFrom([issue(3407, "2026-10-03T00:33:18Z", ["in-progress"])], now);
+    expect(audit({ staleInProgress: rows }).map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["clear-in-progress", 3407],
+    ]);
+  });
+});
+
+// #3960 slice 4 (criterion 4's write half) — this push-driven audit IS "the next lane run", so it
+// is where the spigot's dashboard catches up with the dial. The decision rules live in
+// work-mode-title.spec.ts; what matters here is that the dial is wired into this lane and costs the
+// other four checks nothing.
+describe("audit() — syncing the work spigot's title", () => {
+  const expired = {
+    trackingIssue: 4153,
+    title: "Work mode: CONSERVE until 2026-09-29",
+    mode: {
+      position: "normal" as const,
+      until: null,
+      caps: {
+        inFlightCap: 3,
+        researchPerTick: 6,
+        governorDispatches: 4,
+        grindWidth: 200,
+        continuationsPerDay: 3,
+        startedPlanCap: 4,
+      },
+      reason: "conserve expired at the end of 2026-09-29 (UTC)",
+    },
+  };
+
+  it("emits one retitle intent when the title has gone stale", () => {
+    const intents = audit({ workMode: expired });
+    expect(intents.map((i) => [i.kind, i.issueNumber, i.newTitle])).toEqual([
+      ["retitle-work-mode", 4153, "Work mode: NORMAL"],
+    ]);
+  });
+
+  it("is silent when the dial could not be read, and when the title already matches", () => {
+    expect(audit({ workMode: null })).toHaveLength(0);
+    expect(audit({})).toHaveLength(0);
+    expect(audit({ workMode: { ...expired, title: "Work mode: NORMAL" } })).toHaveLength(0);
+  });
+
+  it("does not disturb the other audit lanes", () => {
+    const intents = audit({
+      workMode: expired,
+      staleInProgress: [{ title: "Build 4205", number: 4205, hoursQuiet: 9 }],
+      silentFeedback: [{ title: "some feedback", number: 2, hoursSinceFiled: 10 }],
+    });
+    expect(intents.map((i) => i.kind)).toEqual([
+      "flag-silent-feedback",
+      "clear-in-progress",
+      "retitle-work-mode",
+    ]);
+  });
+});
+
+describe("untruncated() — a list read at its --limit fails loudly instead of auditing a partial list", () => {
+  it("passes a list shorter than the limit through unchanged", () => {
+    const rows = [{ number: 1 }, { number: 2 }];
+    expect(untruncated(rows, 3, "gh issue list")).toBe(rows);
+  });
+
+  it("throws when the read came back exactly at the limit — more may sit behind it", () => {
+    // 2026-10-04: 100 rows at --limit 100 with ~140 open; the oldest 40 were invisible.
+    const rows = Array.from({ length: 100 }, (_, n) => ({ number: n }));
+    expect(() => untruncated(rows, 100, "gh issue list")).toThrow(/may be truncated/);
+  });
+
+  it("treats a missing list as empty, not as a crash", () => {
+    expect(untruncated(undefined, 100, "gh issue list")).toEqual([]);
   });
 });

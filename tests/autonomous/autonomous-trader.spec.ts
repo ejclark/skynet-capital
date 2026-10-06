@@ -524,4 +524,25 @@ describe("AutonomousTrader", () => {
       expect((await trader.evaluate(twoSymbolContext()))[0]?.intent.symbol).toBe("GOOGL");
     });
   });
+
+  describe("AutonomousTrader — a limit that ended unfilled (#4644)", () => {
+    it("records it as rejected, never as a placed trade", async () => {
+      const records: DecisionRecord[] = [];
+      const unfilled: BrokerPort = {
+        getPortfolio: async () => ({ cash: 1_000_000, positions: [] }),
+        submit: async (intent) => ({ intent, status: "unfilled", reason: "limit not reached" }),
+      };
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker: unfilled,
+        cooldownMs: 0,
+        onDecision: (record) => records.push(record),
+      });
+      await trader.evaluate({
+        asOf: "2026-08-09T15:00:00.000Z",
+        quotes: { NVDA: { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" } },
+      });
+      expect(records[0]?.outcomes[0]?.action).toBe("rejected");
+    });
+  });
 });

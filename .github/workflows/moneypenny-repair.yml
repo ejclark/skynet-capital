@@ -133,6 +133,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # #3334's real root cause (Moneypenny on #4027, 2026-09-29): a persisted checkout leaves an
+          # `http.https://github.com/.extraheader` holding this job's read-only GITHUB_TOKEN, and that
+          # header beats the App token the session puts in the remote URL — so pushes 403'd as
+          # `github-actions[bot]` whichever token the session held. The App already has write (it
+          # pushed `bd111d34` once the header was cleared by hand). Nothing in this job needs the
+          # ambient credential after checkout; every push goes through the App token.
+          persist-credentials: false
 
       # The App identity, so the repair PR emits `pull_request.opened` and `verify` actually runs.
       # Same reasoning as moneypenny-events.yml's header — a PR with zero checks is worse than a red one.
@@ -154,7 +161,7 @@ jobs:
             carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         env:
           # `github_token:` below is what the ACTION itself uses for its own API calls; it does not
           # reach a `git push` the spawned session runs via its own Bash tool, which instead
@@ -179,11 +186,9 @@ jobs:
           # The App token, no fallback tier — see above.
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
-          # The repair envelope lives in .github/prompts/moneypenny-ci-repair.md, not here. Those hard
-          # limits are exactly the kind of rule that must stay tunable without a carve-out merge —
-          # and `.github/prompts/**` is protected by envelope.json, so this lane cannot loosen its
-          # own leash.
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5-5 --effort high
+          # The repair envelope lives in .github/prompts/moneypenny-ci-repair.md, not here.
+          # `.github/prompts/**` is envelope-protected, so this lane cannot loosen its own leash.
           prompt: |
             Read `.github/prompts/moneypenny-ci-repair.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.
@@ -195,7 +200,7 @@ jobs:
       # with the other workflow_dispatch step by construction (`pr_number` vs `issue_number`, never
       # both on the same dispatch), so exactly one of the three steps here ever runs per invocation.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != ''
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         env:
           # See the sibling step above (#3334) — this is the path that actually pushes conflict
           # resolutions, and the one confirmed broken without it.
@@ -205,7 +210,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5-5 --effort high
           # The repair envelope lives in .github/prompts/moneypenny-conflict-repair.md, same reasoning as
           # moneypenny-ci-repair.md above — never in this workflow file.
           prompt: |
@@ -220,7 +225,7 @@ jobs:
       # stays mutually exclusive with the step above by construction, same as that step is with the
       # `needs.triage.outputs.issue` one.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number != ''
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         env:
           # See the first step in this job (#3334) — applied defensively here too, since this path
           # can end in a real research write-up, not just a script fix.
@@ -234,7 +239,7 @@ jobs:
           # own tool list), not just fixing a script. --max-turns matches build-events' own ceiling:
           # the heaviest outcome here is the same never-assessed write-up a normal matrix leg does.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5-5 --effort high --max-turns 150
           # The repair envelope lives in .github/prompts/moneypenny-event-stall-repair.md, same
           # reasoning as the other two prompts above — never in this workflow file.
           prompt: |

@@ -12,13 +12,29 @@
 // below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
-import { isTransientGhError, sleepSync } from "./gh.mjs";
+import { isTransientGhError, sleepSync, withRetry } from "./gh.mjs";
 
 export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
 // Board view: one column per Status, WIP limits set per-column in the Projects UI itself (native
 // feature, no code). Order matters — it's the column order gh CLI creates the option list in.
-export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+//
+// #4393 slice 4 (criteria 5 and 9): "In Progress" is renamed **Building now** — the column means a
+// session is building it this minute, and "in progress" also described every plan half-done and
+// idle for days — and those idle plans get their own column, **Waiting**, so started-but-idle work
+// stops hiding in Ready or Backlog. Stop starting, start finishing: the admission gate counts the
+// Waiting column against `startedPlanCap` (admission.mjs).
+export const STATUS_OPTIONS = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
+
+/** The building column's name, and the one it had before #4393 slice 4. */
+export const BUILDING = "Building now";
+export const WAITING = "Waiting";
+
+// Renamed options, old name → new. `statusFieldUpdate` carries the OLD option's id onto the new
+// name, so GitHub renames the column in place — every card in it stays put and Eric's WIP limit on
+// it (set in the UI, keyed to the option) survives. Without the id, `updateProjectV2Field` replaces
+// the option list wholesale and every card loses its Status until the sweep rewrites it.
+export const RENAMED_STATUS_OPTIONS = { "In Progress": BUILDING };
 
 // Every new GitHub Project ships with its own default Status field (Todo/In Progress/Done) — the
 // setup script's "field already exists, skip" check meant our 5-value set was never actually
@@ -32,14 +48,19 @@ export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Do
 export const STATUS_FIELD_OPTIONS = [
   { name: "Backlog", color: "GRAY", description: "" },
   { name: "Ready", color: "BLUE", description: "" },
-  { name: "In Progress", color: "YELLOW", description: "" },
+  { name: BUILDING, color: "YELLOW", description: "A session is building it right now" },
+  {
+    name: WAITING,
+    color: "ORANGE",
+    description: "A plan started and idle — finish before starting",
+  },
   { name: "Blocked", color: "RED", description: "" },
   { name: "Done", color: "GREEN", description: "" },
 ];
 
 /**
  * Does an existing Status field (its current option names, in whatever order the API returned)
- * already carry our 5-value set? Order-insensitive — GitHub may not preserve the order we sent.
+ * already carry our option set? Order-insensitive — GitHub may not preserve the order we sent.
  * Pure so the setup script's "skip if already correct" decision is unit-tested without a network
  * call.
  */
@@ -47,6 +68,70 @@ export function statusOptionsMatch(currentNames = []) {
   const want = new Set(STATUS_OPTIONS);
   const have = new Set(currentNames);
   return want.size === have.size && [...want].every((n) => have.has(n));
+}
+
+/**
+ * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field carries
+ * `STATUS_FIELD_OPTIONS`, or null when nothing needs writing. `current` is the field's options as
+ * gh's `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by
+ * its old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
+ * instead of replacing the list (which would strip every card's Status). Pure; specced.
+ *
+ * `keepExtras` is the reconcile sweep's mode: it runs on every push, unattended, so it only ever
+ * ADDS and RENAMES. A column someone made by hand in the Projects UI is kept (with its id; gh does
+ * not report colors, so it is re-sent GRAY) and is never a reason to write. Removing an option stays
+ * projects-setup.mjs's job — the default mode, an exact match, run when someone means it.
+ */
+export function statusFieldUpdate(current = [], { keepExtras = false } = {}) {
+  const names = current.map((o) => o?.name);
+  const missing = STATUS_OPTIONS.some((n) => !names.includes(n));
+  if (keepExtras ? !missing : statusOptionsMatch(names)) return null;
+  const idOf = new Map();
+  for (const o of current) {
+    if (!(o?.id && o?.name)) continue;
+    const name = RENAMED_STATUS_OPTIONS[o.name] ?? o.name;
+    if (!idOf.has(name) || o.name === name) idOf.set(name, o.id);
+  }
+  const wanted = STATUS_FIELD_OPTIONS.map((o) =>
+    idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o,
+  );
+  if (!keepExtras) return wanted;
+  const used = new Set(wanted.map((o) => o.id).filter(Boolean));
+  const extras = current
+    .filter((o) => o?.id && o?.name && !used.has(o.id))
+    .map((o) => ({ id: o.id, name: o.name, color: "GRAY", description: "" }));
+  return [...wanted, ...extras];
+}
+
+// ── started plans (#4393 slice 4, criteria 5–6) ─────────────────────────────────────────────────
+
+/** `{total, completed}` sub-issue counts from a REST row or webhook payload; zeros when absent. */
+export function subIssueCounts(issue) {
+  const s = issue?.sub_issues_summary ?? issue?.subIssues ?? {};
+  return { total: Number(s.total) || 0, completed: Number(s.completed) || 0 };
+}
+
+/**
+ * HAS THIS PLAN STARTED? Criterion 6's "a plan with zero closed sub-issues" is the fresh plan; one
+ * with a closed sub-issue has started. `next-slice` counts as started too — the plan lane labels a
+ * plan it shipped a slice of and left unfinished, and most plans here slice by PR and a state block,
+ * not by sub-issue (of 85 open plans on 2026-10-05, 66 had no sub-issues; #4393 itself had three
+ * slices merged and zero sub-issues). Reading sub-issues alone would call #4393 fresh and refuse
+ * its own slice 5 the day this landed.
+ */
+export function isStartedPlan({ labels = [], subIssues = {} } = {}) {
+  if (!labels.includes("plan")) return false;
+  return (Number(subIssues.completed) || 0) >= 1 || labels.includes("next-slice");
+}
+
+/**
+ * Started, and with work left: an open sub-issue, or `next-slice` (the lane's "more remains").
+ * A plan whose sub-issues are all closed and that carries no `next-slice` is finished-but-open —
+ * slice 5's auto-close, never the Waiting column.
+ */
+function hasWorkLeft({ labels = [], subIssues = {} } = {}) {
+  const open = (Number(subIssues.total) || 0) - (Number(subIssues.completed) || 0);
+  return open > 0 || labels.includes("next-slice");
 }
 
 // Backlog view: table sorted by Priority. Deliberately not derived from anything below — priority
@@ -63,6 +148,42 @@ export const FIELDS = [
   { name: "Target date", dataType: "DATE" },
 ];
 
+// THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
+// the 2026-10-03 sunset review (docs/COACHES.md). The plan's hypothesis was that GitHub Projects'
+// built-in workflows ("Item closed → Done", "Item reopened", "Auto-add to project") do part of this
+// natively, so the matching code here could be deleted. Three findings killed it; the next session
+// that has the same idea should read them before writing any:
+//
+//   1. NO LANE CAN TURN ONE ON. GitHub's GraphQL schema exposes `ProjectV2.workflows` read-only
+//      (`name`, `number`, `enabled`) and exactly one mutation, `deleteProjectV2Workflow` — no
+//      create, no update, no enable (introspected live 2026-10-05 against the real API). Enabling
+//      one is a click in the Projects UI: not in this repo, not covered by a spec, not readable from
+//      CI without Eric's PROJECTS_PAT. A board rule nothing here can set or assert is worse than a
+//      pure function, whatever it saves.
+//   2. THERE IS NOTHING LEFT TO SUBTRACT. projects-reconcile.mjs (#4393) landed after that plan was
+//      written and makes this rule the authority on every column INCLUDING Done — it exists because
+//      closed cards got stuck outside Done when the event job's run was dropped. `state === "closed"`
+//      below is read by that sweep, projects-backfill.mjs, issues.mjs's column preview and
+//      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
+//      a dropped close event, which is the only thing the built-in would have covered.
+//   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
+//      derives Backlog/Ready/Blocked/Building now from the labels a reopened issue still carries, so
+//      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
+//      overwrote it. "Auto-add to project" filters on creation and cannot express
+//      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
+//
+// Evidence the built-ins are not acting on project #2 today, independent of the schema: on
+// 2026-10-01 closed issues (#3953 among them) sat in In Progress until #4393 built the sweep. A live
+// "Item closed → Done" moves those on their own close event, regardless of our rate limit — it did
+// not. Verdict: keep projects-sync whole; leave the built-ins off.
+//
+// WHAT PROVES THIS WRONG, and it is one line Eric or any session holding the PAT can paste:
+//   gh api graphql -f query='query{user(login:"ejclark"){projectV2(number:2){
+//     workflows(first:20){nodes{name enabled}}}}}'
+// Any node with `enabled: true` means the board has a second writer and this block is stale — then
+// reconcile the two deliberately rather than leaving them to race. (This lane's App token is blind
+// to a personal-account project, so that read was NOT performed here. Said plainly, not "verified".)
+//
 /**
  * The sync rule from #3818 slice B, as one pure decision: given what's already knowable about an
  * issue from labels/state/linked PRs (never a network call itself), which Status column does it
@@ -70,13 +191,48 @@ export const FIELDS = [
  *
  * Precedence, most authoritative first: closed always wins (an issue can't be both Done and
  * Blocked); needs-eric/needs-info next, because a blocked item should read as blocked even if a
- * PR happens to be open against it; then an open linked PR; then ready; else it sits in Backlog.
+ * PR happens to be open against it; then `in-progress` (or an open linked PR); then ready; else
+ * it sits in Backlog.
+ *
+ * #3960 (2026-09-30): the `in-progress` label is what fills the building column now. The column
+ * keyed only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions
+ * auto-merge within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit
+ * to 3 and it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in
+ * for a caller that can see one.
+ *
+ * #4393 slice 4: a started plan with work left and nobody building it reads **Waiting** — after
+ * Blocked (a plan waiting on Eric is blocked, not idle) and after Building now, ahead of Ready.
+ * `subIssues` is `subIssueCounts(issue)`.
+ *
+ * `columns` is the option names the live board carries, for the one window where it lags this
+ * file: between this rule merging and the sweep renaming the field (projects-reconcile.mjs
+ * `ensureStatusColumns`). Without it a sync would ask for a column the board does not have yet
+ * and go red. So the building column falls back to its old name, and Waiting to whatever the
+ * issue would read without it. Left out, it is this file's own `STATUS_OPTIONS`.
  */
-export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = false } = {}) {
+export function statusForIssue({
+  state = "open",
+  labels = [],
+  hasOpenLinkedPr = false,
+  decisionCalloutMissing = false,
+  subIssues = {},
+  columns = STATUS_OPTIONS,
+} = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
-  if (has("needs-eric") || has("needs-info")) return "Blocked";
-  if (hasOpenLinkedPr) return "In Progress";
+  // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
+  // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
+  if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
+  if (has("in-progress") || hasOpenLinkedPr) {
+    const legacy = Object.keys(RENAMED_STATUS_OPTIONS).find((k) => columns.includes(k));
+    return columns.includes(BUILDING) || !legacy ? BUILDING : legacy;
+  }
+  if (
+    columns.includes(WAITING) &&
+    isStartedPlan({ labels, subIssues }) &&
+    hasWorkLeft({ labels, subIssues })
+  )
+    return WAITING;
   if (has("ready")) return "Ready";
   return "Backlog";
 }
@@ -118,6 +274,19 @@ export function isRetryableProjectsGhError(text) {
   return isTransientGhError(text) || isMaskedOwnerFailure(text);
 }
 
+// #4182 — CURL SAYS "5xx" IN ITS OWN WORDS. `syncIssue`'s one REST read (`ghRest`, curl `--fail`)
+// reports a GitHub 502 as `curl: (22) The requested URL returned error: 502` — reproduced against a
+// local server returning 502/504/403 with curl 8.5. `isTransientGhError` matches gh's `HTTP 502`
+// form, not this one, so the issue read got exactly one attempt; 12 of the 2026-09-30 backfill's 20
+// failures were GitHub 5xx. Only 5xx: curl's 403/429 is a rate limit or auth, and an hourly window
+// does not reopen in six seconds (see `isRateLimitExhausted`, below).
+export const CURL_SERVER_ERROR = /returned error: 5\d\d\b/i;
+
+/** Is this `ghRest` (curl) failure a GitHub-side 5xx or network blip that a second try can fix? */
+export function isRetryableRestError(text) {
+  return isTransientGhError(text) || CURL_SERVER_ERROR.test(String(text ?? ""));
+}
+
 // #3954 — `gh project item-add` IS NOT IDEMPOTENT, and every sync after an issue's first one
 // depends on it being so. `addProjectV2ItemById` answers a second add for the same content with
 // `GraphQL: Content already exists in this project`, so `sync project status` went red on `main`
@@ -134,6 +303,249 @@ export function isAlreadyOnBoardError(text) {
   return ALREADY_ON_BOARD_FAILURE.test(String(text ?? ""));
 }
 
+// #4183 — A BULK SWEEP PRICED BY COST, NOT BY CALL COUNT, DRAINS THE HOUR FOR EVERYTHING ELSE.
+//
+// `projects-setup.yml`'s backfill job ran 12:14:53Z–12:20:34Z on 2026-09-30 and called `syncIssue`
+// once per open issue. Each call re-read the board's ENTIRE item list, plus the project and its
+// field definitions — and GraphQL prices an `items(first: 100){ … fieldValues(first: 100) }` page
+// by node count (~100 points), not as one call. Ninety-odd issues spent Eric's whole 5,000-point
+// hour in under six minutes: the backfill died on its own drain, and every `sync project status`
+// run behind it failed the same way until the window rolled over. #4183 is one of those, filed at
+// 12:22:43Z — a repair session dispatched against a job that was an innocent bystander.
+//
+// This is docs/LESSONS.md's 2026-08-26 entry recurring one level up ("A burst of pushes drained the
+// postmaster's own GraphQL rate limit"), and that entry's own banked side quest is half the fix:
+// GitHub exposes the remaining quota for free (`ghRateLimit`), so a sweep can refuse to start
+// instead of failing into it. The other half is `resolveBoardItem`'s `cachedItems` below — reading
+// the per-run constants ONCE is what takes the sweep off the ceiling in the first place.
+export const RATE_LIMIT_EXHAUSTED = /API rate limit (?:already )?exceeded/i;
+
+/** Is this `gh` failure "the hourly API budget for this token is spent", rather than a code fault? */
+export function isRateLimitExhausted(text) {
+  return RATE_LIMIT_EXHAUSTED.test(String(text ?? ""));
+}
+
+// Deliberately NOT added to `isRetryableProjectsGhError`, for the same reason `isAlreadyOnBoardError`
+// is not: the window is HOURLY and the retry ladder is six seconds, so three attempts only restate
+// the same refusal three times and spend two more points doing it.
+
+/** `reset` is epoch SECONDS. Renders it as the sentence a log reader can act on. */
+function resetPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "Re-run once GitHub's hourly GraphQL window has rolled over.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The budget resets at ${at} (${mins} min) — re-run after that.`;
+}
+
+/**
+ * The sentence a repair session should find in the log instead of a `child_process` stack trace.
+ * An exhausted quota is not a defect in this repo's code and no retry can shorten an hourly window,
+ * so the only useful output is: which bucket, how much is left, when it comes back. Pure — the
+ * caller supplies the free `ghRateLimit` read.
+ *
+ * KEEPS THE PHRASE `API rate limit exceeded` IN THE TEXT, deliberately: this replaces gh's error as
+ * the message a caller further up sees, and projects-backfill.mjs decides whether to abort the whole
+ * sweep by running `isRateLimitExhausted` over exactly that message. An explanation its own
+ * classifier can no longer recognise would have turned the abort back into a grind. The round trip
+ * is specced, not assumed.
+ */
+export function explainRateLimitExhausted({
+  call = "a `gh project` call",
+  remaining,
+  reset,
+  now = Date.now(),
+} = {}) {
+  const left = typeof remaining === "number" ? ` GitHub reports ${remaining} point(s) left.` : "";
+  return (
+    `${call} hit "API rate limit exceeded" — this token's hourly GraphQL budget is spent (#4183), ` +
+    `which is not a code fault and not retryable: the window is hourly, the retry ladder is ` +
+    `seconds.${left} ${resetPhrase(reset, now)}`
+  );
+}
+
+// #4213 — "API RATE LIMIT EXCEEDED" IS TWO DIFFERENT FAILURES WEARING ONE SENTENCE.
+//
+// On 2026-09-30 a burst of ~29 `issues` events between 18:07:50Z and 18:09:54Z fanned out that many
+// concurrent `sync project status` jobs against Eric's one PAT. The first fourteen synced; from
+// 18:08:02Z every one of them died on `GraphQL: API rate limit exceeded for user ID 3472134`, eight
+// red runs on `main` and a repair session dispatched for each. #4183's classifier called all of it
+// "the hourly budget is spent" — and printed `GitHub reports 4998 point(s) left` in the same
+// sentence, because that number came from REST's stale mirror (see `ghGraphqlBudget`).
+//
+// With a budget we can actually trust, the two cases separate:
+//   · budget genuinely low  → an hour is gone; no ladder outwaits it. Fail loudly. (#4183, unchanged)
+//   · budget clearly fine   → GitHub is throttling a BURST, not enforcing the hour. Its own guidance
+//                             for that is to wait at least a minute and try again — so we do, on a
+//                             minute-scale ladder, instead of turning a 60-second squeeze into a red
+//                             `main` and a repair session.
+//
+// The floor is two `item-list` pages' worth (~100 points each by node count). Below that a single
+// board read could legitimately exhaust what is left, so "plenty remains" would be a guess; at or
+// above it, a refusal cannot be the hourly window and calling it one is the mistake this fixes.
+export const THROTTLE_BUDGET_FLOOR = 200;
+
+// Minute-scale on purpose: GitHub's advice for a throttled burst is to wait at least 60s, and
+// `withRetry`'s six-second ladder was built for a 502. Three attempts = 60s + 120s of waiting at
+// worst, on a job whose happy path is twelve seconds — cheap next to a red run someone must read.
+export const THROTTLE_ATTEMPTS = 3;
+export const THROTTLE_BASE_MS = 60_000;
+
+/**
+ * Which of the two failures is this refusal? `"spent"` when GitHub says the hourly budget really is
+ * gone — and when it told us nothing, which keeps an unreadable budget on #4183's proven behaviour
+ * rather than inventing a retry on no evidence. `"throttled"` only on a number that says otherwise.
+ */
+export function classifyRateLimitRefusal({ remaining, floor = THROTTLE_BUDGET_FLOOR } = {}) {
+  if (typeof remaining !== "number" || !Number.isFinite(remaining)) return "spent";
+  return remaining >= floor ? "throttled" : "spent";
+}
+
+/**
+ * The sentence for a burst that never cleared. Deliberately keeps the phrase `API rate limit
+ * exceeded`, for the same reason `explainRateLimitExhausted` does: projects-backfill.mjs decides
+ * whether to abort a whole sweep by running `isRateLimitExhausted` over the message it caught, and
+ * a throttle that survives three minutes should abort a sweep exactly as an empty hour does.
+ */
+export function explainThrottled({
+  call = "a `gh project` call",
+  remaining,
+  attempts = THROTTLE_ATTEMPTS,
+  baseMs = THROTTLE_BASE_MS,
+} = {}) {
+  const left = typeof remaining === "number" ? `${remaining} point(s)` : "an unknown amount";
+  const waited = Math.round((baseMs * (2 ** (attempts - 1) - 1)) / 1000);
+  return (
+    `${call} still hit "API rate limit exceeded" after ${attempts} attempts across ${waited}s — but ` +
+    `GitHub's own rateLimit reports ${left} of the hourly GraphQL budget still available, so this ` +
+    `is a burst being throttled, not a spent hour (#4213). Something is fanning many concurrent ` +
+    `calls at this token; look for a burst of workflow runs around this timestamp before looking ` +
+    `for a bug here.`
+  );
+}
+
+/**
+ * THE DECISION BEHIND THE REFUSAL, with its effects injected so it is provable without a network
+ * call. Reads the budget once (free), then either fails the #4183 way or rides the burst out.
+ *
+ * `run` has already failed once at the call site — that first failure is `firstError`, carried as
+ * the `cause` so the raw gh wording survives under the explanation.
+ */
+export function runThroughRateLimit({
+  call,
+  run,
+  firstError,
+  readBudget,
+  sleep,
+  attempts = THROTTLE_ATTEMPTS,
+  baseMs = THROTTLE_BASE_MS,
+  now = Date.now(),
+}) {
+  const { graphql } = readBudget();
+  const remaining = graphql?.remaining;
+
+  if (classifyRateLimitRefusal({ remaining }) === "spent") {
+    throw new Error(explainRateLimitExhausted({ call, remaining, reset: graphql?.reset, now }), {
+      cause: firstError,
+    });
+  }
+
+  try {
+    return withRetry(run, {
+      attempts,
+      baseMs,
+      isTransient: isRateLimitExhausted,
+      ...(sleep ? { sleep } : {}),
+    });
+  } catch (err) {
+    throw new Error(explainThrottled({ call, remaining, attempts, baseMs }), { cause: err });
+  }
+}
+
+// #4438 — THE BOARD IS A DISPLAY, SO A RATE LIMIT SKIPS THE SYNC INSTEAD OF REDDENING `main`.
+//
+// Run 36808329767 (sha 3c72dc5, 2026-10-01) went red on `sync project status` because the token's
+// GraphQL hour was spent — #3914's probe said so in as many words. Nothing was wrong with the code,
+// and the lane is level-based: the next `issues` event computes the Status from labels again and
+// writes it, so a skipped write costs a stale column for at most one hour. That is the same split
+// the work spigot's title sync draws (#3960 slice 4): a DISPLAY that cannot be written warns, a
+// CONTROL that cannot be read refuses. Only the CLI entry point uses this — `syncIssue` still
+// throws, so projects-backfill.mjs's abort-the-sweep check and every claim/lease/gate stay loud.
+// The split is on the CAUSE (the phrase every rate-limit explainer above deliberately keeps),
+// never on the step: a wrong owner, a missing project or a bad field id still exits non-zero.
+
+/** "the board catches up at …" — the reset is the moment the next event's sync can succeed. */
+function catchUpPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "GitHub did not report a reset time; the hourly GraphQL window rolls over within the hour.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The GraphQL budget resets at ${at} (${mins} min); the next issue event after that re-syncs the board.`;
+}
+
+/**
+ * Should this sync failure skip with a warning rather than fail the job? Returns the one-line
+ * `::warning::` to print when the failure is a rate limit, `null` for anything else (re-throw it).
+ * Pure: `budget` is the caller's free `ghRateLimit().graphql` read, `{}` when unreadable.
+ */
+export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now() } = {}) {
+  const text = `${error?.message ?? ""} ${error?.stderr ?? ""}`.replace(/\s+/g, " ").trim();
+  if (!isRateLimitExhausted(text)) return null;
+  return (
+    `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
+    `board — GitHub refused the GraphQL call for its rate limit, and the board is a display, not a ` +
+    `control (#4438). ${catchUpPhrase(budget.reset, now)} Cause: ${text}`
+  );
+}
+
+// The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
+// once instead of once per issue (`cachedItems`, below), a ~90-issue backfill costs about one
+// `item-list` page (~100 points) plus a couple of points per issue for the REST read and the Status
+// write — low hundreds, not thousands. 500 is that shape with headroom. Below it the honest move is
+// to wait for the reset rather than start: a sweep that dies halfway leaves the board half-written
+// and the log carrying one identical failure per remaining issue, which is what #4183 looked like.
+export const SWEEP_MIN_GRAPHQL_POINTS = 500;
+
+/**
+ * May a whole-backlog sweep start on the budget GitHub currently reports? Returns `{ok, reason}` —
+ * the reason is logged either way, so the next run's log carries the budget that was actually seen
+ * rather than leaving a future session to infer it.
+ *
+ * A missing/garbled budget reads as GO, never as STOP: the pre-flight exists to protect a shared
+ * quota, not to become a second way for the sweep to fail. If the read was wrong, the sweep's own
+ * `isRateLimitExhausted` abort still catches the exhaustion on the first call that hits it.
+ */
+export function planBoardSweep({
+  issueCount = 0,
+  remaining,
+  reset,
+  now = Date.now(),
+  minPoints = SWEEP_MIN_GRAPHQL_POINTS,
+} = {}) {
+  if (typeof remaining !== "number" || !Number.isFinite(remaining)) {
+    return {
+      ok: true,
+      reason:
+        "GitHub reported no graphql budget — proceeding rather than blocking on a read that failed.",
+    };
+  }
+  if (remaining >= minPoints) {
+    return {
+      ok: true,
+      reason: `graphql budget ${remaining} ≥ floor ${minPoints} — enough for a ${issueCount}-issue sweep.`,
+    };
+  }
+  return {
+    ok: false,
+    reason:
+      `Only ${remaining} graphql point(s) left, floor ${minPoints} — refusing to start a ` +
+      `${issueCount}-issue sweep that would die halfway and half-write the board (#4183). ` +
+      resetPhrase(reset, now),
+  };
+}
+
 /**
  * The board item for one issue, matched on `content.url` — unambiguous where a bare number is not
  * (a project can carry items from several repos, and a draft item has no content at all). Pure, so
@@ -142,6 +554,40 @@ export function isAlreadyOnBoardError(text) {
 export function findBoardItem(items = [], issueUrl) {
   if (!issueUrl) return undefined;
   return items.find((item) => item?.content?.url === issueUrl);
+}
+
+// #4439 — ONE ISSUE'S SYNC PAID FOR THE WHOLE BOARD, AND A DOZEN OF THEM SPENT THE HOUR.
+//
+// `sync project status` fires once per `issues` event and syncs exactly ONE issue — but to answer
+// "is it already an item?" it read the board's entire item list, which GraphQL prices by node count
+// (~100 points per 100-item page, and the board carries every issue synced since 2026-09-27, closed
+// ones included). Measured on the 2026-10-01 window that opened 05:41:57Z: 12 `issues` runs went
+// through it, and the 13th found 44 of 5,000 points left at 06:25:56Z — ~400 points a run, so a
+// dozen issue events in one hour exhaust Eric's PAT and every sync behind them fails #4183's way.
+// That is a normal hour here, not a burst: #4213 had already separated the burst case out.
+//
+// #4183 took the whole-board read off the per-ISSUE path inside one process (`cachedItems`, below);
+// it could not help the per-RUN path, which is the only shape the events lane has. GitHub answers
+// the narrow question directly: an Issue's own `projectItems` connection names the items it already
+// belongs to — ~40 nodes for one issue, 1 point instead of ~400. The whole-board read stays for the
+// callers that genuinely want it (a sweep reads it once and shares it across every issue) and as
+// this lookup's own fallback, so a credential that cannot see `projectItems` degrades to today's
+// cost instead of to a red `main`.
+//
+// ARCHIVED ITEMS STAY INVISIBLE, deliberately. `gh project item-list` hides them too, so asking with
+// `includeArchived: false` keeps `resolveBoardItem`'s fail-closed archived message reachable rather
+// than handing back an id whose card nobody can see.
+/**
+ * One issue's board items, selected from its `projectItems` nodes and shaped like the `item-list`
+ * rows `resolveBoardItem`'s `cachedItems` already takes: a one-element list when the issue is on
+ * project `projectNumber`, empty when it is not. Pure — the caller runs the GraphQL read.
+ *
+ * `issueUrl` is carried through rather than read back from GitHub because the match rule downstream
+ * is `content.url` (`findBoardItem`), and the query was asked ABOUT this issue: the url is known.
+ */
+export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl } = {}) {
+  const node = (nodes ?? []).find((n) => n?.id && n?.project?.number === projectNumber);
+  return node ? [{ id: node.id, content: { type: "Issue", url: issueUrl } }] : [];
 }
 
 // #3979 — THE BOARD READS STALE FOR A FEW SECONDS AFTER SOMEONE ELSE'S ADD, and the add-or-find
@@ -194,15 +640,26 @@ function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, slee
  * missing (#3979, above). Still fails closed once the re-reads are spent — a silent miss here
  * would write Status to nothing at all — naming the two states that survive a re-read: a truncated
  * page, or an item GitHub counts but `item-list` won't show (an ARCHIVED item is the known case).
+ *
+ * `cachedItems` is a board list the caller ALREADY HOLDS (#4183): a whole-backlog sweep reads the
+ * board once and hands the same list to every issue. A hit costs nothing at all — no `item-add`
+ * mutation that was only ever going to come back "already exists", and no second `item-list`. A
+ * miss falls straight into the add-first path below, unchanged, so the first sync of a brand-new
+ * issue still costs one mutation and no list read; and a stale cache can only produce a miss, never
+ * a false hit, because the match is on `content.url` against a list GitHub really returned.
  */
 export function resolveBoardItem({
   addItem,
   listItems,
   issueUrl,
+  cachedItems,
   attempts = BOARD_LOOKUP_ATTEMPTS,
   baseMs = BOARD_LOOKUP_BASE_MS,
   sleep = sleepSync,
 }) {
+  const known = findBoardItem(cachedItems, issueUrl);
+  if (known) return { item: known, added: false };
+
   try {
     return { item: addItem(), added: true };
   } catch (err) {
@@ -244,6 +701,15 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
     return (
       `${head} A direct GraphQL call with the same GH_TOKEN succeeded, so the credential is ` +
       "good: a GitHub-side hiccup outlasted the retries, and re-running the job is the fix."
+    );
+  }
+  // #4438: checked BEFORE the credential branch — gh can word a spent hour with `HTTP 403`, and
+  // "re-save the secret" is the wrong repair for a quota. Keeps the probe's own phrase in the text,
+  // which is what `boardSyncSkip` keys the soft skip on.
+  if (isRateLimitExhausted(probe)) {
+    return (
+      `${head} The same GH_TOKEN's direct GraphQL call was refused for its rate limit: "${probe}" — ` +
+      "a spent or throttled budget, not a code fault and not a bad credential."
     );
   }
   if (/Bad credentials|HTTP 401|Resource not accessible|HTTP 403/i.test(probe)) {

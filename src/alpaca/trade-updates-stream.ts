@@ -32,6 +32,7 @@ export function streamUrlFromBase(baseUrl: string): string {
  */
 export class AlpacaTradeUpdatesStream {
   private socket?: WebSocket;
+  private listening = false;
   private readonly config: TradeUpdatesStreamConfig;
 
   constructor(config: TradeUpdatesStreamConfig) {
@@ -42,6 +43,7 @@ export class AlpacaTradeUpdatesStream {
     const socket = new WebSocket(streamUrlFromBase(this.config.baseUrl));
     socket.binaryType = "arraybuffer";
     this.socket = socket;
+    this.listening = false;
 
     socket.addEventListener("open", () => {
       socket.send(
@@ -61,6 +63,29 @@ export class AlpacaTradeUpdatesStream {
     this.socket?.close();
   }
 
+  /**
+   * Alpaca answers `auth` with an `authorization` frame — and answers a `listen` sent on an
+   * unauthorized socket with ANOTHER `authorization` frame. Replying `listen` to every such frame
+   * without reading its status was an unbounded ping-pong at network round-trip speed: on
+   * 2026-09-30 one participant's rejected keys flooded the log and pinned the dashboard's single
+   * vCPU until authed API calls stopped answering. So: `listen` exactly once, only on
+   * `authorized`; anything else closes the socket and says why. No retry — bad keys stay bad
+   * until a credential rotation, which starts a fresh stream (`data-source.ts`).
+   */
+  private onAuthorization(status: string | undefined): void {
+    if (status !== "authorized") {
+      this.config.onStatus?.(
+        `${this.config.participantId}: unauthorized (${status ?? "no status"})`,
+      );
+      this.socket?.close();
+      return;
+    }
+    if (this.listening) return;
+    this.listening = true;
+    this.socket?.send(JSON.stringify({ action: "listen", data: { streams: ["trade_updates"] } }));
+    this.config.onStatus?.(`${this.config.participantId}: listening`);
+  }
+
   private onMessage(raw: unknown): void {
     const text = typeof raw === "string" ? raw : Buffer.from(raw as ArrayBuffer).toString("utf8");
     let message: TradeUpdateMessage;
@@ -71,8 +96,7 @@ export class AlpacaTradeUpdatesStream {
     }
 
     if (message.stream === "authorization") {
-      this.socket?.send(JSON.stringify({ action: "listen", data: { streams: ["trade_updates"] } }));
-      this.config.onStatus?.(`${this.config.participantId}: listening`);
+      this.onAuthorization(message.data?.status);
       return;
     }
 

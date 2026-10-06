@@ -356,6 +356,7 @@ Zero capital by construction.
 | 2026-09-24 | D-6 | **Quiet pulse — cadence band tightened exactly as the last row predicted (medium 8+ → medium 0-7, interval 7d → 2d).** **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro surprises:** none since the last row — no CPI/jobs/PCE print has landed between 09-22 and today; the 09-16 FOMC hike is already priced into this ledger. **Volatility regime:** VIX **15.18** (2026-09-23 close, Yahoo chart endpoint, timestamp verified `date -d @1790146800` → 2026-09-23 07:00 UTC, since the fetch tool's own human-readable date label read "May 2025" in error) vs **14.87** at the last row — **+0.31, under the 3pt screen threshold**, no regime shift. **Geopolitical/policy:** `federalreserve.gov/newsevents/2026-speeches.htm` re-fetched direct — four speeches since the last row (Bowman ×2, 09-18, stress testing / SVB review; Jefferson, 09-22, discount window / Treasury market functioning; Barr, 09-23, cost of shelter) — none touch inflation measurement, trimmed mean, or PCE methodology. **Event tape, two primaries re-fetched direct today:** `dallasfed.org/research/pce` — unchanged (still July 2.2%/2.3%/2.3%, next release still stated September 30, no methodology-change language); `bea.gov/news/schedule` — unchanged, both 08:30 09-30 slots confirmed verbatim. No published estimate of the revision's effect on the trimmed mean was found in the sources checked this pulse (the primaries above); a broader web search for it was **not run this session** — two prior targeted searches (09-15) already found none, and a generic web search returned unrelated real-2025 content bleeding into this calendar's fictional 2026 dates on an unrelated query today (see Honest limits), which counsels trusting the primaries over another such search rather than repeating one. **Corridor recomputed directly against `src/domain/market-events/` via `--on-date` across 09-25→10-05: 56 entries (unchanged count), but the membership moved twice.** Confirmed via `git`-independent recomputation, not carried over from the last row: **`retail-benchmark-revision-2026-09-28` dropped out** — already retired 2026-09-22 by its own owning lane as `supersededBy: census-benchmark-revision-nsa-2026-09-28` (#3101 mechanism; not this event's file, no action taken here). **`mu-2026-09-30-print` (MU earnings, confirmed, critical) newly appears**, sharing this event's exact date — a new confirmed critical-impact adjacent not in the last pulse's `adjacentStrongIds`, so `adjacentStrongIds` now reads `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`, `mu-2026-09-30-print`. It changes nothing about this release's content (an after-hours single-name earnings print, no symbol overlap with a `symbols: []` macro release) but is recorded per the adjacency sweep's own materiality criterion. **No new dated event discovered outside the existing calendar** — `--on-date=2026-09-30` lists 19 entries, all already tracked → no proposal filed. **Kill switches re-adjudicated, none fired.** | **No.** Stand aside every horizon, unchanged; nothing crossed a kill switch or changed leg 2/3/4's composition this pulse. | 2026-09-26 (medium, 0-7 band → 2d) |
 | 2026-09-26 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-0.3pt since last), band unchanged (medium:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-28 |
 | 2026-09-28 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.0pt since last), band unchanged (medium:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-30 |
+| 2026-09-30 | D-0 | **The release has not yet posted as of this pulse — both primaries re-fetched direct still show the pre-release state.** `dallasfed.org/research/pce`: unchanged, still July (2.2%/2.3%/2.3%), "Next update: Sept. 30." `bea.gov/news/schedule`: page's own last-modified stamp reads 9/29/26 and both 08:30 09-30 slots ("Personal Income and Outlays, August 2026"; "GDP (Third Estimate)…") are still listed as upcoming, not yet posted. **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro surprises:** none new since the last row — no CPI/jobs/PCE has landed 09-28→09-30; the Dallas Fed print itself is what's pending. **Volatility regime:** VIX **16.04** (2026-09-29 close) vs **14.87** at the last row — **+1.17, under the 3pt screen threshold**, no regime shift. **Geopolitical/policy — new this pulse:** Governor Barr's 09-29 Detroit Economic Club speech ("further rate increases are likely to be needed"; only 2 of the last 20 months read consistent with 2% core PCE; ties price pressure partly to AI-buildout investment/energy demand) reinforces the hawkish read already on this ledger (leg 6) but is commentary on already-published **core** PCE, not new data and not trimmed-mean-specific — no stance implication. **Event tape:** re-searched for a published trimmed-mean-specific revision estimate — found only the same core-PCE-side estimates already on this ledger (Goldman ≈−20bp core, JPMorgan ≈−10bp, via Investing.com/Yahoo/Macrostream syndication of the BEA methodology story), nothing new and nothing keyed to the trimmed mean itself; **kill switch not fired**. One source blocked: `macrostream.ai` article returned HTTP 403 (recorded in `probe-ref.blocked`), superseded by the Investing.com/Yahoo syndication of the same wire story. **Corridor recomputed directly against `src/domain/market-events/` via `--on-date` across 09-25→10-05: 56 entries (unchanged count and unchanged membership), `adjacentStrongIds` unchanged** (`pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`, `mu-2026-09-30-print`). **No new dated event discovered → no proposal filed.** | **No.** Stand aside every horizon, unchanged; the release this ledger exists to read has not posted yet, so nothing has adjudicated FT-1/FT-2 or any kill switch this pulse. | Next dispatch expected as `event-passed-unscored` once the 08:30 print posts, not a further interval-elapsed pulse |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -378,3 +379,117 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.macrostream.ai/articles/6a42c52d3c80f748cb621def","status":403,"at":"2026-09-30"}]} -->
+
+## Outcome
+
+**Close-out (2026-09-30, the release itself — posted at 08:30 ET, same minute as PCE, the GDP third
+estimate, ADP and the advance economic indicators).** Macro-print mode carries no `earnings-cycle` /
+`intraday-edges` run (`symbols: []` by design; the cache was busted per the lane contract regardless —
+`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`, a no-op here since
+neither script was ever invoked for this event). The measurement is re-derived from primaries
+re-fetched today, never from the 2026-09-15 figures already on this ledger.
+
+**What printed.** `dallasfed.org/research/pce` (fetched direct today): August 2026 — 1-month **1.9%**,
+6-month **2.3%**, 12-month **2.2%**; next update stated **"Oct. 29"**, matching the
+already-canonical `dallas-fed-trimmed-mean-2026-10-29` — nothing to propose. `bea.gov`'s Personal
+Income and Outlays release (fetched direct today, 8:30am 09-30 dateline) confirms the annual update
+this ledger was built around: *"The revisions for estimates of personal income and outlays begin with
+January 2021."* August headline PCE **+0.3% m/m, +3.4% y/y**; core **+0.2% m/m, +3.0% y/y**.
+
+**The restated July-2026 figures — leg 5's pre-committed procedure, run for real.** Re-derived from
+FRED CSV fetched direct today (`PCEPILFE`, `PCETRIM12M159SFRBDAL`), cross-checked against the Dallas
+Fed's own `pcehist` workbook (fetched direct today; both agree to 2 decimals):
+
+| | Registered 2026-09-15 (the FT-1/FT-2 anchor) | Restated, fetched 2026-09-30 | Δ (anchor − restated) |
+|---|---|---|---|
+| Core PCE y/y, July 2026 | 3.344% | **2.983%** | **−0.361pp** (core revised DOWN) |
+| 12-month trimmed mean, July 2026 | 2.280% | **2.280%** | **0.000pp** (unrevised) |
+| Wedge (core − trim) | 1.06pp | **0.70pp** | **−0.36pp** |
+
+**Freshness check:** the same FRED pull gives August 2026 core y/y **3.008%**, matching BEA's own
+"3.0 percent" to the rounding digit — the CSV is the post-annual-update vintage, not a stale cache.
+**The pattern holds across every month this doc measured in July, not just July:** re-pulling March,
+April and May 2026 the same way shows core revised down **−14.0bp, −30.7bp and −29.8bp** respectively
+while the trimmed mean moved **≤2bp** in every case (Mar 2.36%→2.36%, Apr 2.38%→2.38% unrevised; May
+2.43%→2.44%, Jun 2.26%→2.28%, +1–2bp) — the wedge compressed from **0.74–1.08pp down to 0.70–0.76pp**
+across the whole five-month window the annual update touched, entirely on the core side. July was not
+a one-off; the compression is uniform and the mechanism is one-sided.
+
+**FT-dallas-fed-trimmed-mean-2026-09-30-1 — KILL.** The registered prediction was a restated wedge
+**≥0.75pp**; the actual restated wedge is **0.70pp**, below the kill line by 5bp. The kill switch's own
+framing fired exactly as specified: *"That kill would be the more informative outcome — it would make
+the annual update, not the tail concentration, the explanation for a 48-year-extreme wedge."* That is
+what happened — core alone absorbed a −36.1bp revision, larger than the top of every cited
+deflator-specific estimate (UBS −20 to −30bp, Goldman ≈−20bp, Bloomberg Economics −13bp, JPMorgan
+≈−10bp, all about the **portfolio-management** leg specifically), which means the annual update's net
+effect on core was broader than the three legs this ledger's leg 4 debated. **Void conditions did not
+apply** — the release posted on schedule and carried restated history, exactly as the test required.
+
+**FT-dallas-fed-trimmed-mean-2026-09-30-2 — KILL, and it vindicates the proposal this ledger's own leg
+4 had graded MIXED.** The registered prediction was **Δcore − Δtrim < 0.10pp**; the actual value is
+**0.361pp − 0.000pp = 0.361pp**, more than 3.6× the kill line. The trimmed mean absorbed essentially
+none of the revision while core absorbed all of it — the asymmetry the original proposal
+(`proposals/dallas-fed-trimmed-mean-2026-09-30.from-pce-2026-09-30.json`) named at the outset
+("portfolio management... is exactly what a trimmed mean discards") and that leg 4's weight-
+renormalization argument contested. **This ledger's own correction was the one that needed correcting**:
+leg 4 reasoned that two of the three revised legs (legal services, computer software) would be
+*retained* in the trim and weight-amplified, offsetting the one that gets trimmed out (portfolio
+management) — a reasonable mechanism, built from the Dallas Fed's own published trim fractions, that
+the actual outcome does not bear out at the aggregate level. Either the amplified legs' net effect was
+smaller than the arithmetic implied, or the broader annual update (beyond the three named legs) revised
+core down by more than those three legs account for, while leaving the trim's composition largely
+alone. This doc cannot separate those two explanations from what was fetched today; see Honest limits.
+
+**The stance calls, scored against their own falsifiers (the `## At a glance` horizon table).**
+
+- **Today / This week ("stand aside," High confidence) — CORRECT, trivially.** Nothing was priced off
+  this release at any point in its life; `symbols: []` held throughout.
+- **This month ("read the difference-of-differences... and expect the wedge to survive," High
+  confidence) — REFUTED, by its own stated falsifier.** The falsifier was *"The 2026-09-30 release
+  putting the restated July-2026 core-minus-trimmed wedge below 0.75pp"* — it printed at **0.70pp**.
+  A High-confidence call was wrong; recording that plainly is the point of pre-registration. The
+  *procedure* (leg 5) was right to pre-commit; the *expectation* about where it would land was not.
+- **This quarter ("don't treat the trimmed mean as the clean read," Medium confidence) — NOT YET
+  SCOREABLE.** Its falsifier is the 2026-12-23 PCE release; nothing here adjudicates it. If anything,
+  today's print cuts the other way on the narrow point (the trimmed mean moved almost nothing while
+  core corrected toward it), which is a reason for lower conviction on this call, not a scoring — noted
+  for whichever session next touches a sibling ledger citing this one.
+
+**Kill list.** No house playbook is macro-keyed to this release (`symbols: []`, stated throughout this
+doc's life), so neither killed forward test has an entry to add to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list — that list is scoped to ticker-level
+S1/S2/E1/S3/S4/G1 hypotheses, which this event never had. Recorded here so the next session that
+checks doesn't go looking for one.
+
+**Honest limits.**
+- **The "restated vs. registered" comparison is not a true ALFRED vintage diff.** A direct
+  `alfred.stlouisfed.org` vintage-dated pull for 2026-09-15 vs. 2026-09-30 was attempted and returned
+  HTTP 404 (the endpoint shape didn't resolve for this series/vintage combination); this close-out
+  instead compares today's standard FRED pull against the anchor figures this ledger itself registered
+  on 2026-09-15 from the same series via the same endpoint type — methodologically consistent with how
+  the anchor was derived, but not an independently-sourced vintage snapshot.
+- **The −36.1bp Δcore is not attributed between "ordinary one-release revision" and "this year's deeper
+  annual update."** July 2026 core PCE would have received some revision with the August release even
+  in a year without an annual update; BEA's own release confirms an annual update back to January 2021
+  is also in this release, but this doc does not separately measure how much of the −36.1bp each
+  mechanism contributed. It does not change either kill verdict — both forward tests are defined on the
+  measured restated figures, not on mechanism — but it limits how much of leg 4's component-level story
+  this outcome actually tests.
+- **The August 2026 trim-component classification (which categories were retained/trimmed) was not
+  re-fetched this session.** The 2026-09-22 stance addendum's retained/trimmed read was a July
+  snapshot; whether legal services and computer software kept the same classification in August is
+  unverified here and not needed for scoring FT-1/FT-2, which are both specified on the July restatement.
+- **GDP (third estimate), ADP, the government funding deadline and the other 08:30 same-minute releases
+  are not characterized here** — each has its own ledger, and re-deriving their content would duplicate
+  work this lane does not own.
+
+**Zero capital was deployed or licensed at any point in this doc's life** — `symbols: []`, no
+macro-keyed house playbook ever existed for this release, and both forward tests were registered
+explicitly without an edge claimed. The finding worth banking for sibling docs: the 48-year-extreme
+wedge legs 2–3 measured was mostly a *measurement* artifact of stale vintages, not a durable
+distributional story — it compressed by roughly a third in every month the annual update touched, and
+it compressed because core moved toward the trimmed mean, not the reverse. This document is now
+closed; the scanner goes quiet on it permanently.

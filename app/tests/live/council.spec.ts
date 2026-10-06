@@ -1,4 +1,4 @@
-import { fetchCouncil, submitThesis } from "../../src/live/council";
+import { fetchCouncil, retractThesis, submitThesis } from "../../src/live/council";
 
 /** `fetchCouncil`/`submitThesis` — the Council's client model (issue #2224 shape 1). */
 
@@ -89,5 +89,14 @@ describe("submitThesis", () => {
   it("surfaces the server's own refusal message on failure", async () => {
     stubPost({ error: "Sign in to speak at the Council." }, 403);
     await expect(submitThesis("NVDA runs")).rejects.toThrow("Sign in to speak at the Council.");
+  });
+});
+
+describe("retractThesis", () => {
+  it("posts only the retract flag — no id, the server derives whose line from the session", async () => {
+    const { calls } = stubPost({ ok: true });
+    expect(await retractThesis()).toEqual({ ok: true });
+    expect(calls[0]?.url).toBe("/api/council");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ retract: true });
   });
 });

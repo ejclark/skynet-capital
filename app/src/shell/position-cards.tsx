@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
+import { positionAnchor } from "./position-anchor";
 
 /** Trade's search for a held position: the contract (underlying, strike, expiry) for an option,
  *  the ticker for shares. Trade's `?symbol=` takes tickers only. */
@@ -43,7 +44,14 @@ export function PositionCards({
           .join(" · ");
         return (
           <li key={p.symbol}>
-            <Link to="/trade" search={tradeSearch(deskId, p.symbol)} className="pos-card">
+            <Link
+              to="/trade"
+              search={tradeSearch(deskId, p.symbol)}
+              className="pos-card"
+              // The phone's landing target for `#pos-<symbol>` (#4348): an `id` would duplicate the
+              // table row's, which is still in the DOM, only hidden.
+              data-pos-anchor={positionAnchor(p.symbol)}
+            >
               <span className="pos-card-top">
                 <span className="pos-card-name">{p.display}</span>
                 <span className={`pos-card-pl num tone-${p.totalTone}`}>{p.totalPl}</span>

@@ -5,6 +5,8 @@ export interface RankRow {
   cls: string;
   why: string;
   hand: boolean;
+  /** A derived-P0 bug: sorts first inside its class (Eric, 2026-09-30). */
+  expedite: boolean;
   ready: boolean;
   readyHours: number | null;
   splitFirst: boolean;
@@ -15,6 +17,7 @@ export function classOf(input: { labels?: string[]; blocks?: number[]; horizon?:
   cls: string;
   why: string;
   hand?: boolean;
+  expedite?: boolean;
 };
 export function rankRow(
   issue: {
@@ -28,3 +31,10 @@ export function rankRow(
 ): RankRow | null;
 export function rankOrder(rows: RankRow[]): RankRow[];
 export function renderRank(rows: RankRow[]): string;
+export function snapshotMarker(numbers: number[]): string;
+export function parseSnapshot(text: string | null | undefined): number[] | null;
+export function rankDelta(
+  prev: number[],
+  curr: number[],
+): { movedUp: number[]; retired: number[]; added: number[] };
+export function digestLine(prev: number[] | null, curr: number[], since: string | null): string;

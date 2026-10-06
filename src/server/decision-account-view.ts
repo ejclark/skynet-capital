@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { maxOf, minOf } from "../math/num.js";
 import type { TradeActivityRecord } from "../observatory/activity-record.js";
 
 /** A keyset page of one persona's decisions: strictly older than `before`, newest first, at most
@@ -53,12 +54,16 @@ export async function readAccountDecisions(
   return [...ownRecords, ...foreignSets.flat()];
 }
 
-/** Every OTHER persona whose orders land on this account's ledger, found by the order-id join. */
+/** Every OTHER persona whose orders land on this account's ledger, found by the order-id join.
+ *  Looked up once per unique order id, not once per ledger line — a partial fill posts several
+ *  activity rows for the same order, and `findByOrderId` is a synchronous SQLite call (#4612
+ *  slice 7, defect #9: "~10x faster" over unique ids on a 70-day ledger). */
 async function foreignPersonas(accountId: string, deps: AccountDecisionsDeps): Promise<string[]> {
   if (!(deps.findByOrderId && deps.readTradeActivity)) return [];
   const found = new Set<string>();
-  for (const trade of await deps.readTradeActivity(accountId)) {
-    const personaId = deps.findByOrderId(trade.orderId)?.record.personaId;
+  const orderIds = new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId));
+  for (const orderId of orderIds) {
+    const personaId = deps.findByOrderId(orderId)?.record.personaId;
     if (personaId && personaId !== accountId) found.add(personaId);
   }
   return [...found];
@@ -92,8 +97,9 @@ export async function readAccountDecisionsPage(
     s.filter((r) => r.at < before),
   );
   const full = streams.filter((s) => s.length >= page.limit);
-  const horizon =
-    full.length > 0 ? Math.max(...full.map((s) => Math.min(...s.map((r) => r.at)))) : undefined;
+  // A legacy reader returns a persona's WHOLE audit trail, so a stream is unbounded: fold it, never
+  // spread it into Math.min (RangeError past ~121k cycles, #4615). Personas are few; either works.
+  const horizon = full.length > 0 ? maxOf(full.map((s) => minOf(s.map((r) => r.at)))) : undefined;
   const records = streams.flat().filter((r) => horizon === undefined || r.at >= horizon);
   return { records, ...(horizon !== undefined ? { horizon } : {}) };
 }

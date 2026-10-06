@@ -27,7 +27,39 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** threads pulled (→ docs/IDEAS.md), or `none`
 ```
 
+Two optional lines go after `SHA`/`DATE`: **`COVERS:`** lists other failing-run shas the same
+root cause closes (read by `incident-scan.mjs`), and **`RECURS:`** names, by exact title, the
+earlier entry whose class came back — the fix it describes did not hold. `npm run lessons:held`
+counts those against each entry's prevention type (the "Did the fix hold?" loop,
+`docs/process/LEARNING-LOOP.md`).
+
 ---
+
+### `release · deploy` red on main: drop local claim lease tags around semantic-release's tag fetch and push
+- **SHA:** 394888f   **DATE:** 2026-10-06   **STATUS:** closed
+- **COVERS:** 77a5842
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `release · deploy` on `main`, the first [37397356694](https://github.com/ejclark/skynet-capital/actions/runs/37397356694) at 2026-10-06T01:05:09Z. Repair capsule #4715 filed 2026-10-06T01:08:15Z, closed 14m later by #4720.
+- **ROOT CAUSE:** Claim leases live at `refs/tags/claim/<slug>`, and semantic-release moves every tag. A lease re-taken while the job installed made `git fetch --tags` refuse to clobber the runner's stale copy, failing the release and leaving `main` merged-but-undeployed. The release runner never needs a local lease.
+- **PREVENTION:** spec — `tests/scripts/release-lease-tags.spec.ts` (#4720).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### A spent GraphQL hour still turned the board sync — a display — into a red run on `main`
+- **SHA:** 3c72dc5   **DATE:** 2026-10-04   **STATUS:** closed
+- **SIGNAL:** run 36808329767 (`Moneypenny Events`, `issues`, 2026-10-01T02:58:24Z) failed `sync project status` for #3960 with `gh project` masked as `unknown owner type`; #3914's probe in the same log said `API rate limit already exceeded for user ID 3472134`. `incident-scan.mjs` held it as the one unlearned incident over a budget of 0, printed on every `ship.sh` run until #4438 was filed.
+- **ROOT CAUSE:** the #4183/#4213 work made a rate limit *legible* and rode out a throttled burst, but kept a genuinely spent hour (and the masked-owner path whose probe says the same thing) fatal — on a job whose only output is a board column, written level-based from labels on every `issues` event. A display that cannot be written was being treated like a control that cannot be read. The explainer also checked `HTTP 403` before the rate-limit phrase, so a quota could be diagnosed as a bad `PROJECTS_PAT`.
+- **PREVENTION:** script + spec (#4438). `projects-sync.mjs`'s CLI entry catches a failure whose text carries the rate-limit phrase every explainer deliberately keeps, prints one `::warning::` naming the GraphQL reset time, and exits 0 (`boardSyncSkip` in `projects.mjs`); everything else re-throws. `syncIssue` itself still throws, so the backfill's sweep abort and every claim/lease/gate stay loud. `explainMaskedOwnerFailure` names a rate-limited probe before the credential branch. 6 specs in `tests/scripts/moneypenny/projects-sync-rate-limit-skip.spec.ts`, driven from the failing run's own probe text.
+- **SIDE QUESTS:** the falsifier on #4438 — if next month's red `sync project status` runs are mostly *not* rate limits, the owner-type path (#3914) is the real half. The `concurrency:` group already named on #4242 would stop the bursts at the source.
+
+---
+
+### The arm job refused the one pull-request action ship.sh fires on purpose, so a finished PR sat green for 29 hours
+- **SHA:** n/a   **DATE:** 2026-10-02   **STATUS:** open
+- **SIGNAL:** none fired. PR #4449 — the fifth and final slice of plan #3665 — was merged only because a build session was dispatched at the plan that owned it, 29 hours after its checks went green. No red check, no notification, no stale-PR sweep caught it: the PR was `MERGEABLE`, `CLEAN`, not a draft, unlabelled, both required checks passing. The absence of a signal IS the finding here — every net we have watches for red, and this failure mode is green.
+- **ROOT CAUSE:** `pipeline.yml` triggers on `[opened, synchronize, reopened, ready_for_review, edited]`; the `arm auto-merge` job armed on `["opened","reopened","ready_for_review","synchronize"]`. The set difference is one action, `edited` — and pull-request runs are `cancel-in-progress` per branch, so when an `edited` event lands seconds after `opened`, it cancels the `opened` run and the only run that reaches the arm job is the single action the job refused to arm on. `edited` is not exotic: `types:` carries it so a corrected PR *title* can re-run commitlint (no other event fires), and `scripts/ship.sh` **fires one deliberately** as #4168's recovery path when a late draft run cancelled the real `verify`. The repo's own fix for one stranding bug hands a PR straight into this one. Both runs on #4449 sit on head sha `25de3c0f`, which is what rules out `synchronize`; the PR was opened ready (no `hold-merge`), which rules out `ready_for_review`; `edited` is what is left.
+- **PREVENTION:** gate — `tests/arch/workflows.spec.ts` → "can arm on every pull_request action this workflow triggers on": every action in `types:` must appear in the arm allowlist unless named in a `deliberatelyUnarmable` list (empty today, and an entry there costs a deliberate line with a reason). Plus `edited` added to the allowlist. **Not landed yet** — `.github/workflows/**` is protected and the App token has no `workflows` permission, so GitHub rejects the push; the verified diff and a one-paste command are on #4477, which stays `open` here until that merges. The ledger entry is the half that survives regardless: **an unarmed green PR is not waiting on anything, it is stranded** — check `arm auto-merge`'s conclusion before assuming a quiet PR is in flight.
+- **SIDE QUESTS:** two generalizations worth their own look, both → docs/IDEAS.md. (1) Any allowlist that must mirror a list elsewhere in the same file is a drift waiting to happen; `workflow-lint.mjs` could check the class rather than this one instance. (2) We have no net for a green PR that stops moving — #4351 is the same symptom from a rate-limit cause, so this is now twice. A sweep over open PRs whose checks are green and whose auto-merge is unarmed would have caught both in minutes instead of a day.
 
 ### A mount declared before its volume existed turned 16 consecutive merges to main red
 - **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
@@ -64,6 +96,7 @@ it. Prevention ranks, best first:
 ### Two successful research sessions were reported as failures for crossing `--max-turns 90`
 - **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
 - **COVERS:** 3a208f2 dbf6880 2384fa9 59d0276 56cd30e 5cd7119 a3a2950
+- **RECURS:** `claude-code-action`'s turn caps are chronically too tight — and it fails runs that already succeeded (cause now established)
 - **SIGNAL:** research legs on 2026-09-05 with a merged PR and a complete assessment row, red in the run list at 92 and 94 turns. Recurred 2026-09-06 07:10Z and 07:52Z while the raise sat on platter #1757: five legs across two runs hit 90, three of them after landing their PR (#1783, #1790); `existing-home-sales-2026-11-12` hit it twice without landing, ~$22 of research with no row to show. Third recurrence 08:28Z (`56cd30e`): the same event landed on its third attempt (#1796) and was still reported red at 93 turns. Fourth and fifth 09:35Z and 10:10Z (`5cd7119`, `a3a2950`): both fhfa-hpi sessions landed (#1821 at 105 turns, #1836) and were reported red — five recurrence runs, eight legs, in one night while the raise waited. **Falsifier for the 150 cap:** an event that hits 150 twice is a loop in the session, not a short cap — fix the prompt, not the number.
 - **ROOT CAUSE:** `--max-turns 90` was set as a runaway backstop when a research session took ~40 turns; the deterministic screen, the adjacency sweep and the proposal write each added tool calls, and a normal full session now lands in the 80s–90s. The action treats "over the cap" as a failed run even when the work landed, so the backstop became a false red that dispatched repair for finished work.
 - **PREVENTION:** gate — raise the cap in `.github/workflows/moneypenny-events.yml` (protected, boards the platter) to a number a full session never reaches on a normal day, keeping it as a runaway stop. Ledger: a turn cap is sized from the measured distribution of green runs, not from the first run that worked, and re-sized whenever the session gains a step.
@@ -292,6 +325,7 @@ it. Prevention ranks, best first:
 ### The app/ cache fix only ever warmed a scope no other PR could read — verify never runs on main
 
 - **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **RECURS:** The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile [INCOMPLETE — see the follow-up entry above]
 - **SIGNAL:** Eric, reading a live CI run: "verify is still installing dependencies twice... This
   feels like a complete waste of time." Three separate PRs that evening (#1194, #1203, #1206) each
   ran `verify` and each showed the identical pattern in its raw log: `Install dependencies` and
@@ -410,6 +444,7 @@ it. Prevention ranks, best first:
 ### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
 
 - **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
+- **RECURS:** The first-feedback milestone never earned in production — the engagement track read the feedback log with the wrong key
 - **SIGNAL:** found by code review while re-plumbing the ladder gate onto a new message log (a
   member request to lower the gate from "filed an issue" to "said hello"), not by a report — the
   binding below it never independently surfaced a symptom distinct from the incident it was meant
@@ -1490,6 +1525,7 @@ it. Prevention ranks, best first:
 
 ### The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
 - **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **RECURS:** The chain was severed at the join — a workflow's issue can never wake another workflow
 - **SIGNAL:** the canary's PR (#371) opened successfully, carrying a clean five-file diff and three
   well-formed commits — and `get_check_runs` returned **`total_count: 0`**. Not a failing check: no
   checks. `mergeable_state: "blocked"`, because a required check that never runs never passes.
@@ -1542,6 +1578,7 @@ it. Prevention ranks, best first:
 - **SHA:** a5ebe9d   **DATE:** 2026-08-10   **STATUS:** closed
 - **SHA:** b29b4fb   **DATE:** 2026-08-10   **STATUS:** closed
 - **SHA:** e9390b9   **DATE:** 2026-08-09   **STATUS:** closed
+- **RECURS:** The deploy doom loop — a gate that counted main failures ran inside the job it counted
 - **SIGNAL:** `incident-scan.mjs`'s own 14-day lookback still carried 21 unlearned `main` failures
   when this batch closure was written — only `615a269` (the entry directly above) had a ledger
   line. Detection lag: none, since the scan is the detector; the gap was that 14 of its 15 findings
@@ -1655,6 +1692,7 @@ it. Prevention ranks, best first:
 ### A markdown screenshot embed — and `<details>`/`<summary>` — vanished through `ship.sh` too: the 2026-08-25 attribution to the GitHub MCP tools was incomplete
 - **SHA:** 5eb6b8a   **DATE:** 2026-08-26   **STATUS:** closed (worked around; the constraint itself
   is outside repo control)
+- **RECURS:** The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
 - **SIGNAL:** PR #661's fridge picture — `![alt](<SHA-pinned raw.githubusercontent.com URL>)`, opened
   via `scripts/ship.sh open` (REST, not the GitHub MCP write tools) — came back from
   `pull_request_read` with the `!` dropped and the URL wrapped in stray backticks/quotes,
@@ -1939,6 +1977,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** f681944   **DATE:** 2026-08-29   **STATUS:** closed
 - **SHA:** 65da6c3   **DATE:** 2026-08-29   **STATUS:** closed
 - **SHA:** c27600e   **DATE:** 2026-08-29   **STATUS:** closed
+- **RECURS:** A `claude-code-action` research run twice burned its entire turn budget without finishing — cause not established
 - **SIGNAL:** 5 failed runs on `main` in one afternoon, surfaced by `incident-scan.mjs` as two
   apparently-separate classes — 2 labeled `Claude` (`.github/workflows/claude.yml`, PR-comment
   review sessions on #869 and #724) and 3 labeled `Postmaster` (`.github/workflows/moneypenny-events.yml`'s
@@ -2503,6 +2542,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A "free-standing state, replace in place" design choice for one ledger field produced a 19-PR conflict backlog — the first fix only rate-limited it
 
 - **SHA:** n/a (a 19-PR backlog, not a single failing run)   **DATE:** 2026-09-19   **STATUS:** closed
+- **RECURS:** Three merge-side fixes in one day could not stop research PRs conflicting — the shared file was the bug, not the merge
 - **SIGNAL:** Eric: "there is a lot of research related prs that have conflicts. the conflicts
   feels like the same structural/systemic problem that we've called out that remains unaddressed."
   19 of 23 open PRs carried `conflict-flagged` + `needs-eric` — 17 the bot's "deterministic screen"
@@ -2547,6 +2587,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A fourth `gh run view --log` timeout is the same already-tracked circuit-breaker fragility as #3307's cause 3 — not re-diagnosed here
 
 - **SHA:** b4dbb23   **DATE:** 2026-09-19   **STATUS:** closed
+- **RECURS:** The just-shipped rate-limit fix's own circuit breaker crashes reading a large prior run's log, plus two more shell steps break at the same growing volume
 - **SIGNAL:** `route` job failed on run 35415921799 (push): `dial tcp 140.82.114.22:443: i/o
   timeout` fetching a prior run's log via `gh run view --log`, so `circuit breaker machinery
   failed... refusing to dispatch with an incomplete spend total.`
@@ -2564,6 +2605,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A turn-closing "say the word" re-asked permission for already-`ready`, fork-free work — third confirmed instance of the ungated-prose-rule class
 
 - **SHA:** n/a   **DATE:** 2026-09-22   **STATUS:** closed
+- **RECURS:** A wake-reply rule written in prose was skipped at generation time — no gate exists for "does this reply add anything"
 - **SIGNAL:** Eric, one turn after Claude closed a report on shipped/merged slice 1 of plan #3543
   with "say the word when you want the next one, or let it sit as banked work": "Why do you need my
   blessing? I ask so u can codify removal of the impediment you continue to add." Detection lag: one
@@ -2637,3 +2679,102 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   Closed 2026-09-26: `ship.sh automerge` was GraphQL-only too, so from a cloud session it could
   only fail; it now falls back to the session's `PUT /pulls/{n}/ccr/auto_merge` route before
   refusing, and the existing read-back still judges the arm.
+
+### Three PRs merged mid-integration-tests — `/ship` told every session to arm auto-merge the moment a PR opened
+
+- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** closed — `integration tests` is a required
+  check on `main` (`isRequired: true` on #4663's head, read 2026-10-05, #4211)
+- **SIGNAL:** Eric, looking at #4158's pipeline mid-run: "I take it integration tests don't really
+  matter?" — then: "If a quality gate matters, you'd enforce it." #4151, #4155 and #4158 had each
+  merged ~2–3 minutes after opening, on `verify` alone, while `integration tests` was still running.
+  #4151's and #4155's runs ended red (6 screenshot mismatches, runs 36666883548 and 36668165417).
+  Detection lag: ~50 minutes, and only because Eric looked. Cost this time: none — the red was
+  stale baselines from another session's #4143, re-baselined by #4157 — but the mechanism would
+  have landed a real regression the same way.
+- **ROOT CAUSE:** two mouths. (1) Branch protection requires only `verify`, and native auto-merge
+  waits on required checks only (#4094 item 1). (2) Ours: `/ship` and `ship.sh open` told the
+  session to make "one `enable_pr_auto_merge` call" right after opening. `pipeline.yml`'s own
+  `arm auto-merge` job already waits for `verify` AND `e2e` — arming by hand pre-empted the one
+  gate we had. The session also shipped on local `npm run verify`, which has no Playwright step.
+- **PREVENTION:**
+  1. **Fix (not protected, this PR):** `ship open` runs `npm run test:e2e` locally on a non-docs diff
+     and refuses to push on red — only when the pinned Chromium build is on disk (its first run found
+     a cloud session has build 1194 against the pinned 1234, which would be false-red, so there it
+     prints that CI is the gate instead); it no longer tells anyone to arm. `ship automerge` (the fallback
+     for a PR the pipeline job can't reach) refuses unless the head's `integration tests` run
+     passed or was skipped. The skill, CLAUDE.md, CONTRIBUTING, COACHES, retro and dep-warden stop
+     saying "arm". Pinned by `tests/arch/ship.spec.ts` → "ship — integration tests gate every merge
+     path".
+  2. **The hard stop (Eric's, governance):** add `integration tests` to `main`'s required checks.
+     Until then an arm by any other route (MCP tool, UI) still merges past it — so this is closed
+     only when #4094 item 1 is.
+- **SIDE QUESTS:** dep-warden arms dependabot PRs by hand too; it now waits for `integration
+  tests` first. The Moneypenny build prompts (`.github/prompts/*-build.md`, protected) should be
+  checked for the same instruction on the next held PR.
+
+---
+
+### A whole-backlog board sweep priced by node count, not call count, drained the GraphQL hour and took every board sync behind it down
+- **SHA:** n/a   **DATE:** 2026-09-30   **STATUS:** closed
+- **RECURS:** A burst of pushes drained the postmaster's own GraphQL rate limit, and every push failed until it recovered
+- **SIGNAL:** five `sync project status` runs failed inside sixteen seconds (12:22:08–12:22:24Z) on the one line `GraphQL: API rate limit exceeded for user ID 3472134`, and the repair lane filed #4183 against the LAST of them. Detection was instant; attribution was not — the named job was a bystander, and the run that actually spent the quota (`Projects v2 setup`, dispatched 12:14:25Z) is not one of the workflows `moneypenny-repair.yml` watches, so its own red never filed anything. The repair session's first ten minutes went to establishing that the failure was a quota rather than a bug, because gh's message arrived as a raw `child_process` stack trace with no budget or reset stamp attached.
+- **ROOT CAUSE:** `projects-backfill.mjs` calls `syncIssue` once per open issue, and `syncIssue` re-read three BOARD-WIDE constants on every call — the project, its field/option ids, and the board's entire item list. GraphQL prices an `items(first: 100){ … fieldValues(first: 100) }` page by node count (~100 points), not as one call, so 52 backlog candidates cost roughly 5,200 points against a 5,000/hour ceiling. Measured against a fake `gh`: a 3-issue sweep made **14** `gh project` calls including one `item-list` page per already-on-board issue — O(N) on the single most expensive call in the set. The sweep died on its own drain at 12:20:34Z after 5m41s, and because the loop caught per issue and continued, it also spent points restating the same refusal once per remaining issue. Every `sync project status` run in the rest of the window then failed identically until the hour rolled over.
+- **PREVENTION:** script, three layers (`tests/scripts/moneypenny/projects-graphql-budget.spec.ts`, 18 specs). (1) The fix: `createBoardContext()` reads the three constants ONCE per process and `resolveBoardItem`'s new `cachedItems` answers the common case with no call at all — the same 3-issue sweep now makes **7** calls with **one** `item-list`, and the expensive read is O(1) in issues rather than O(N). (2) A free pre-flight — `GET /rate_limit` counts against nothing, so `ghRateLimit()` + `planBoardSweep()` refuse a sweep the remaining budget cannot finish (verified: zero GraphQL spent on refusal). This is the 2026-08-26 entry's own banked side quest, built. (3) `isRateLimitExhausted` aborts the sweep on the first drained call instead of grinding, and `explainRateLimitExhausted` replaces the stack trace with the bucket, what is left and the reset stamp — deliberately kept out of `isRetryableProjectsGhError`, because a six-second retry ladder cannot outwait an hourly window.
+- **SIDE QUESTS:** two, both filed rather than built here. (a) `Projects v2 setup` is absent from `moneypenny-repair.yml`'s watched-workflow list, so a red there is silent and this incident was diagnosed from a bystander's issue — a workflow-file change, therefore Eric's. (b) A deferred or aborted sync leaves the board stale until that issue's next event, and `projects-backfill.mjs` is `workflow_dispatch`-only with no scheduled catch-up — also a workflow file. → docs/IDEAS.md.
+
+---
+
+### The retry sweep put a build lane on a `push` run — `claude-code-action` rejects that event type, so every merge to `main` went red
+- **SHA:** n/a   **DATE:** 2026-09-30   **STATUS:** closed
+- **COVERS:** 284bb14 96e1741
+- **RECURS:** `claude-code-action@v1` rejects `push` as an event type — the event-research lane's first live firing
+- **SIGNAL:** `build plan issue` failed 17s into run 36781456516, one line: `Action failed with error: Unsupported event type: push`. Detection was instant and self-filed (the repair lane opened #4359 off the red run), but the log tail the issue carried was post-job cleanup — the actual error was only in the run's annotations, not in the quoted evidence.
+- **ROOT CAUSE:** `claude-code-action@v1` does not recognize `push` among its supported GitHub event types and aborts before running anything — the same defect this repo banked on 2026-08-20 for the event-research lane. That fix was scoped to the one job that had fired: `build-events` was gated to `workflow_dispatch` and `route` re-dispatched itself when a push turned up due events. The other two lanes (`build-feedback`, `build-plan`) were left reachable-in-principle and unreachable-in-practice, because their claim steps only fired on `issues`/`issue_comment`. #4165's retry sweep (`--claim-next`, merged ~40 minutes before the failure) added a claim step that runs on `push` — so a push tick claimed plan #784, `route` emitted `plan_issue=784`, and `build-plan` invoked the action under `push`. Level-based by design, so it re-failed on every subsequent merge. The 2026-08-20 entry's own first side quest was "audit every `claude-code-action@v1` trigger in this repo"; it went to `docs/IDEAS.md` and was never mechanized, which is precisely why a second lane could walk into the same wall.
+- **PREVENTION:** gate/script, three layers — landed across two PRs by two sessions that diagnosed it independently within the same hour (see SIDE QUESTS).
+  1. **The mechanical audit that was owed (#4361):** `workflow-lint.mjs` rule 9 — in a workflow that triggers on `push`, any job whose steps `uses:` `anthropics/claude-code-action` must carry a job-level `if:` that cannot be true on a push. Reachability is read as "can this expression be true on a push?", so it splits top-level `||` and requires every operand to rule push out on its own. Run against `main` at the time of the failure it names both `build-plan` and `build-feedback` and exits 1. 13 specs in `tests/arch/workflows.spec.ts`, including the live gate over the real `.github/workflows`. **This is the layer that closes the class**, not just this instance: it is the 2026-08-20 side quest, built.
+  2. **The script half (#4360):** `peekNext()` + `--peek-next` — the sweep's pick with no lease and no `in-progress` label, writing `has_next=true|false`. Same PR also made `nextAdmissible` sort by `npm run rank` class, so the sweep takes the top-ranked issue rather than the oldest (the failing run had claimed #784, a P3).
+  3. **The workflow half (#4361, protected, needs Eric):** `route`'s sweep no longer claims on a push — the new `peek` step answers "is there work a dispatch would take?" and the existing re-dispatch step carries it into a `workflow_dispatch` run where the claim and the build both happen. Peeking rather than dispatching blind keeps the duplicate run rare: three cheap reads on a quiet merge instead of a second whole `route` job. `build-feedback` and `build-plan` also gained `github.event_name != 'push'` as a standing invariant, which is what rule 9 now enforces.
+- **SIDE QUESTS:** two.
+  (a) **Two sessions built the same fix in parallel.** The repair lane opened #4359 off the red run and started work; another session diagnosed the same failure and merged #4360's script half ~20 minutes before the repair branch pushed, so the repair PR had to be rebased down to the workflow half plus rule 9. Nothing was lost, but the duplicate diagnosis was — a `ci-failure` issue does not signal "a session is already on this", and the repair lane's own claim lease does not extend to an interactive session working the same red run. → `docs/IDEAS.md`.
+  (b) **The repair issue's evidence block quoted the wrong thing:** post-job cleanup rather than the failing step's error. `moneypenny-repair.yml`'s log tail is taken from the job log, and the actual `Action failed with error:` line lands in the run's **annotations**. A repair session that trusted the quoted tail would have diagnosed nothing. Workflow-file change, therefore Eric's → `docs/IDEAS.md`.
+
+---
+
+### The same `allowed_bots` refusal failed 81 runs across two lanes — and the incident scan never saw the bigger one, because it read one 50-run page
+- **SHA:** n/a   **DATE:** 2026-10-01   **STATUS:** closed
+- **COVERS:** 01a3253 01e25d9 0355c9e 03ca747 044f676 06a8a5f 0722c43 09da566 12eaacb 1704798 1724843 19c07f7 1adf731 1d87ebb 1f6dd4f 245b952 2c304dc 2c3fa5e 303a48b 34be994 364fd50 36842c1 399833d 3a48144 3d81f88 3f3a267 4308073 43389d4 44a7bb4 44beec3 4539a1c 4694716 4ac684f 528f37f 550155e 5a1aefa 5b9bfb7 5e40a4b 6284f7e 64f659d 683d9af 6967dee 6af3086 6f32de8 7140878 772a9b9 78fe483 7b2541e 7ed261b 823d8f9 84ef017 8769d4b 8f39304 91470fe 93c083e 9426bb7 9d1f4e9 9d6ce33 9fa226c a1a64c7 a8587fd a98398e ae0688c b1977f2 b30bd01 b48e606 b54ab9f be80db6 c55ef50 cb9d3e7 d1d520a d651b6b d6536b4 d95ef5f dfce5ca e03bcc5 e19cb54 e3e9bf5 e77f22f fae70c0 fbebc9c
+- **RECURS:** Moneypenny's dispatch token was rejected by the action because `skynet-envoy` was not in `allowed_bots`
+- **SIGNAL:** 81 failed runs on `main`, one line each: `Action failed with error: Workflow initiated by non-human actor: skynet-envoy (type: Bot). Add bot to allowed_bots list`. Two bursts. (1) 76 runs, 2026-09-25 00:16Z → 09-26 18:04Z — every `research due events` leg (plus two repair-lane runs) died in ~3s after #2292 moved the re-dispatch to the App token; event research was dark ~42h and a digest, not a gate, surfaced it. (2) 5 runs, 2026-10-01 01:02Z → 02:29Z — `build plan issue`, the first ticks after #4361 moved the plan lane's build off `push` and onto an envoy-signed `workflow_dispatch` (run 36800601479, job 110174572723). Detection of (2) was minutes (#4385 opened 01:41Z). Detection of (1) by the learning Coach was **never**: `incident-scan.mjs` fetched a single page of 50 runs, which on 2026-10-01 reached back ~33h of a 14-day window that held 499 failed runs. The 76-run outage was older than the page, so it was never listed, never retro'd, and never named as a recurrence of the 2026-09-05 entry.
+- **ROOT CAUSE:** two mechanisms, one per detection layer. *The failure:* `claude-code-action` refuses any bot actor not named in its step's `allowed_bots`, and the list lives a hundred lines from the dispatch that decides the actor. Every time a lane's trigger path changes token (09-05: the envoy became a dispatcher; 09-25: #2292 signed the re-dispatch with the App; 09-30: #4361 sent `build-plan` through that re-dispatch), the allow-list is a second edit nobody's diff points at. Workflow-lint rule 8 (added 09-26 for burst 1) checks exactly this — but only for jobs whose `if:` *names* `workflow_dispatch`; #4361 gated `build-plan` with `github.event_name != 'push'`, which admits the dispatch without naming it, so rule 8 skipped the job. *The blindness:* the scan's "14-day window" was a page size, not a date range — `per_page=50` and no paging — so on a busy fortnight the eye whose metric is detection lag silently dropped the oldest ~90% of incidents.
+- **PREVENTION:** gate + script, three layers. (1) **Rule 8 exists** (`scripts/workflow-lint.mjs`, #3815, merged 2026-09-26 18:05Z — one minute after burst 1's last failure) and closed burst 1. (2) **Its widening is held in #4385** (protected — it edits `moneypenny-events.yml`, so it waits for Eric): `dispatchReachable()` counts any claude-code-action job unless its `if:` pins `event_name ==` another event, and `build-plan` gains `allowed_bots: "github-actions,claude,skynet-envoy"`. Run on `main` today, the widened rule names `build-plan` and exits 1 — the lint and the fix must land together, which is why they share one PR. Named as a follow-up on #4242. (3) **The scan pages now** (this PR): `scripts/incident-runs.mjs` reads every page up to 10×100 runs and says `read N of M — truncated` on stderr when the window outgrows the cap, instead of passing a partial list as whole. Measured: 21 runs seen before, 129 after, same window. 4 specs in `tests/scripts/incident-runs.spec.ts`.
+- **SIDE QUESTS:** rule 8 reads the gate's *spelling* to decide reachability; an `if:` written as `event_name == 'issues' || …` is read as pinned and under-flags (#4385's own stated limit). The durable shape is to derive the allow-list from the dispatching token rather than lint two hand-kept lists against each other → docs/IDEAS.md.
+
+---
+
+### A green fix for the board-sync GraphQL refusals sat unarmed for 8 hours — its own arm job hit a rate limit — while the class it fixes failed 11 more runs
+- **SHA:** n/a   **DATE:** 2026-10-01   **STATUS:** closed
+- **COVERS:** 2fa1289 4e72cb2 5b3aa65 046a881 f613b5b c81f53f bf9f7c8 b139377 45b64c0 cf7720c acce163
+- **RECURS:** A whole-backlog board sweep priced by node count, not call count, drained the GraphQL hour and took every board sync behind it down
+- **SIGNAL:** 11 `sync project status` runs failed between 2026-09-30 18:20Z and 10-01 02:47Z, all on a `gh project` read, all saying the hourly GraphQL budget was spent — while the same message reported **4990, 4992 and 4897 points left**. Both halves cannot be true. Every run was posted to #4213 as "same signature, a recurrence"; none produced a new diagnosis because the diagnosis already existed: #4349, opened 18:22Z, green on `verify` and `integration tests`. Its `arm auto-merge` job then failed at 18:29Z on `API rate limit exceeded for installation` — the App's REST hour, spent by the same issue-write burst — and nothing re-armed it. Detection lag for the stranded fix: 8h+ and counting at the time of this retro; no gate or digest names a green PR that is neither merged nor armed.
+- **ROOT CAUSE:** a burst of `issues` events fans out one concurrent `sync project status` job per event, all on Eric's PAT, and GitHub's burst throttle refuses them while the hourly budget is nearly full. `projects-sync.mjs` read the budget from REST's `/rate_limit`, which lags GraphQL's own, so it labelled a throttle a spent hour and failed without retrying (#4349's measured diagnosis). The fix then shared the failure's blast radius: the arm job runs on the App token, the App's hour was being drained by the same burst, and the arm job had no retry. A fix that has to ride the very channel its bug saturates needs a way back in that does not.
+- **PREVENTION:** script + gate, existing or landing. (1) **The arm job retries now:** #4165 (for #4351) added `gh-retry.sh` to `pipeline.yml`'s arm job — on a rate-limit error it waits for the reset (≤15 min, 3 tries) instead of failing. It merged 2026-09-30 21:45Z, three hours after #4349's arm failed, so it could not save that one. (2) **#4349 is the script fix** — reads GraphQL's own `rateLimit` (free), retries a throttle on 60s/120s, fails loudly only on a genuinely spent hour. This retro merged `main` into its branch so the pipeline re-runs and arms it under (1); no hand-arming. (3) **A `concurrency:` group on `sync-project`** would collapse a burst into one sync per issue — a workflow file, so named as a follow-up on #4242 for Eric.
+- **SIDE QUESTS:** a green PR whose arm job failed is invisible: `deploy-lag.mjs` watches merged-but-undeployed, the repair lane watches red `main`, nothing watches green-but-unarmed. A digest line (open, verify green, arm job failed, not `hold-merge`) would have surfaced #4349 the same hour → docs/IDEAS.md.
+
+---
+
+### The other 24 failed runs from the 2026-10-01 sweep — each one already has a banked cause or a closed repair issue
+- **SHA:** n/a   **DATE:** 2026-10-01   **STATUS:** closed
+- **COVERS:** aa32fd9 a7358af 2f43e38 ec0605b 7973483 dd036e1 2847f66 7199032 868910f af08d17 a089eb9 320a87a 25d973d decfc83 8b71ca3 084080f 2d0d2de 72d08bc 33873a4 3b39fe6 0e191c2 9dc5226 04aec61 016ca31
+- **SIGNAL:** the paged incident scan (this PR) listed 116 unlearned runs on `main` over 14 days; 92 belong to the two entries above. The remaining 24, one line per cause:
+  - `aa32fd9 a7358af 2f43e38 ec0605b` (09-30 23:13Z → 10-01 01:17Z) — `build plan issue` under `push`, "Unsupported event type: push". Same cause as *The retry sweep put a build lane on a `push` run*; all four predate its fix (#4361, merged 01:20Z).
+  - `7973483 dd036e1 2847f66` (09-22) — `route`'s circuit breaker could not read a prior run's log (`gh run view --log` 403, App installation rate limit) and refused to dispatch. Same class as *The just-shipped rate-limit fix's own circuit breaker crashes reading a large prior run's log*.
+  - `7199032 868910f af08d17` (09-26/27) — `Projects v2 setup` before the board existed: the App may not create a user-owned project, then the PAT lacked project scope. Board bootstrap, credentialed by Eric; the board has run since 09-27.
+  - `a089eb9 320a87a 25d973d` (09-28/29) — board sync on `gh project`'s masked "unknown owner type" (#3914) and the 30-row `item-list` default that hid an on-board issue (#3954). Both repaired and closed; `projects-sync.mjs` cites each.
+  - `decfc83` (09-30 12:22Z) — a `field-list` read inside the backfill-sweep drain. Same cause as *A whole-backlog board sweep priced by node count…*, which named no shas.
+  - `8b71ca3 084080f` (09-29) — research legs ended `subtype: success, is_error: true` (25 turns, real work, no clean exit). The known shape the repair-lane entry says becomes diagnosable once legs are watched; no new mechanism.
+  - `2d0d2de 72d08bc 33873a4 3b39fe6` (09-30) — release smoke failed and rolled back as designed (web surface unhealthy once; bots "controls bridge never armed" three times). The rollback *is* the net; same signal as *The bots deploy smoke check's own message still can't say which of two things failed*.
+  - `0e191c2` (09-30 04:04Z) — semantic-release's GitHub plugin got 422 `already_exists` on a tag a concurrent release had just cut. Self-healing: the next release went green.
+  - `9dc5226 04aec61 016ca31` (09-24 → 09-30) — `Set up flyctl` failed before flyctl ran (one `ECONNRESET`). Transient fetch, same class as *`setup-flyctl@master` resolves "latest" through an unauthenticated GitHub call*.
+- **ROOT CAUSE:** none new — every line above maps to an existing entry, a closed repair issue, or a designed net (rollback). They were unlearned only because the scan never listed them (see the `allowed_bots` entry's blindness half) or because their entry carried `SHA: n/a` and no `COVERS`.
+- **PREVENTION:** ledger-only, by design: each cause's prevention is already banked where its line points, and the paged scan (this PR) is what stops a fortnight of runs going unlisted again. A lesson per run would be ceremony with no new mechanism behind it.
+- **SIDE QUESTS:** an entry with `SHA: n/a` and no `COVERS` closes nothing in the scan, so its own failing runs stay "unlearned" forever (here: the backfill-sweep entry). A lint warning in `auditLedger()` for that shape is cheap → docs/IDEAS.md.

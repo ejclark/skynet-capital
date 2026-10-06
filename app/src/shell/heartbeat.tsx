@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import {
+  entryDateText,
   fetchDeskHeartbeat,
   type Heartbeat,
   heartbeatLine,
   type PlaybookHeartbeat,
+  ROLL_CALL_WORDS,
+  type RollCallLine,
   sinceText,
   VERDICT_WORDS,
 } from "../live/heartbeat";
 import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
+import { ShadowProbes } from "./shadow-probes";
 
 /**
  * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a chip in the account
@@ -65,6 +69,37 @@ export function VerdictTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/** The roll call (#4450 slice 1): every house playbook against this bot, so one that nobody
+ *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. An "On"
+ *  line also says what it is waiting for and, where its rule has one, the day its window next
+ *  opens — "On" alone reads as reassurance when the calendar holds no confirmed date. */
+export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[] }): ReactElement {
+  // A list, not a table: at 390px the reason is the part worth reading, and a third column
+  // squeezed it to two words a line. Name and status share a line; the reason gets the width.
+  return (
+    <ul className="hb-roll">
+      {lines.map((line) => {
+        const { glyph, word } = ROLL_CALL_WORDS[line.status];
+        return (
+          <li key={line.playbookId} data-status={line.status}>
+            <span className="hb-roll-head">
+              <span className="num">{line.playbookId}</span>
+              <span>
+                <span aria-hidden="true">{glyph}</span> <b>{word}</b>
+                {line.mode ? ` · ${line.mode}` : ""}
+              </span>
+            </span>
+            <span className="note">{line.reason}</span>
+            {line.nextEntry ? (
+              <span className="note">Next window: {entryDateText(line.nextEntry)}</span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -145,10 +180,26 @@ export function HeartbeatSection({
           {stale} min during market hours.
         </p>
       </section>
+      {showPlaybooks && heartbeat.rollCall ? (
+        <section className="hb-card">
+          <h2 className="hb-h">Which playbooks this bot runs</h2>
+          <RollCallList lines={heartbeat.rollCall} />
+          {/* Observe here, change there (#4642: configure on R&D → Playbooks, no new route). A
+              plain link with the /app base, like the shell's other cross-section links, so this
+              section needs no router to render. Owner-only, inside the same showPlaybooks gate. */}
+          <a
+            className="hb-link"
+            href={`/app/research?section=playbooks&account=${encodeURIComponent(deskId)}`}
+          >
+            Change this bot's playbooks →
+          </a>
+        </section>
+      ) : null}
       <section className="hb-card">
         <h2 className="hb-h">What each playbook concluded on the last pass</h2>
         <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
       </section>
+      <ShadowProbes deskId={deskId} />
       <section className="hb-log">
         <h2 className="hb-h">
           {withTrades

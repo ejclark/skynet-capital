@@ -28,8 +28,6 @@
  *                            Flip via autonomy-ops only.
  */
 import { existsSync } from "node:fs";
-import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
   armMomentumPersistence,
@@ -39,7 +37,7 @@ import {
 } from "../autonomous/bots-state-db.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
-import { resolveDecisionReplication } from "../autonomous/decision-replication-client.js";
+import { houseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -47,7 +45,7 @@ import { SafetyController } from "../autonomous/safety.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
-import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
+import { botTradingClient } from "../bots/bot-broker.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
@@ -56,8 +54,11 @@ import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
+import { bridgeReplication } from "./autonomous-bridge-replication.js";
+import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
+  type BotRoster,
   bootMissionControl,
   buildBotRosters,
   buildLiveBot,
@@ -70,7 +71,12 @@ import {
   tradingRoster,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
-import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import {
+  armOptionLifecycleSweep,
+  BotOptionLevels,
+  sweepOrphanOptionOrders,
+} from "./autonomous-option-wiring.js";
+import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -98,6 +104,7 @@ async function runLive(): Promise<void> {
   // in BEFORE the map is populated is still a documented no-op (nothing to look up yet), never a
   // crash, and every poll after boot finds the map fully populated.
   const brokerHolders = new Map<string, SwappableBotBroker>();
+  const optionLevels = new BotOptionLevels(); // read at boot below; re-read on every rotation
   // The bot supplying the shared data connections below — its rotation refreshes them too.
   let dataCredsPersonaId: string | undefined;
   let shared: Awaited<ReturnType<typeof startSharedDataConnections>> | undefined;
@@ -105,6 +112,7 @@ async function runLive(): Promise<void> {
     const broker = brokerHolders.get(personaId);
     if (!broker) return false;
     broker.replaceCredentials(next);
+    void optionLevels.refresh(personaId, next);
     console.log(`[creds] ${personaId}: broker swapped in place (rotated) — no restart`);
     if (personaId === dataCredsPersonaId) {
       shared?.replaceCredentials(next);
@@ -113,10 +121,10 @@ async function runLive(): Promise<void> {
     return true;
   });
   // `decisionDb` doesn't exist yet at this point in boot (it's seeded further down, once the
-  // enabled roster is known) — `decisionReplication` reads it fresh via a getter on every poll
+  // enabled roster is known) — `replication` reads it fresh via a getter on every poll
   // rather than closing over a value, so the background poll (started later) sees it once seeded.
   let decisionDbRef: DecisionDb | undefined;
-  const decisionReplication = resolveDecisionReplication(process.env, () => decisionDbRef);
+  const replication = bridgeReplication(process.env, () => decisionDbRef);
   // The subscription swap (issue #3595) can't exist yet either — the roster it swaps is built much
   // further down, once credentials and the collision guard have settled who is actually trading.
   // The hook below therefore PARKS the boot fetch's own snapshot instead of dropping it, and the
@@ -127,7 +135,7 @@ async function runLive(): Promise<void> {
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
     undefined,
-    (cursor) => void decisionReplication.replicate(cursor),
+    (cursor) => replication.onPoll(cursor),
     (snapshot) => {
       if (subscriptionSync) subscriptionSync.accept(snapshot);
       else parkedSubscriptions = snapshot;
@@ -149,16 +157,8 @@ async function runLive(): Promise<void> {
   // Confirmed-collision guard (docs/LESSONS.md, 2026-08-11): two bots that authenticate fine but
   // secretly resolve to the SAME Alpaca account look completely healthy individually — nothing
   // else here would ever notice. Check once at boot, before anything trades.
-  const { safe: bots, collisions } = await guardAccountCollisions(
-    loaded,
-    (bot) =>
-      new AlpacaTradingClient(
-        new FetchAlpacaTradingTransport({
-          baseUrl: bot.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-          apiKey: bot.credentials.apiKey,
-          apiSecret: bot.credentials.apiSecret,
-        }),
-      ),
+  const { safe: bots, collisions } = await guardAccountCollisions(loaded, (bot) =>
+    botTradingClient(bot.credentials),
   );
   for (const collision of collisions) {
     console.error(
@@ -194,14 +194,7 @@ async function runLive(): Promise<void> {
     discipline: { calendar: UPCOMING_PRINTS },
   };
   const playbookRoster = enabledPlaybooks(process.env);
-  for (const bad of playbookRoster.rejected) {
-    console.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
-  }
-  if (playbookRoster.enabled.length > 0) {
-    console.log(
-      `[playbooks] armed: ${playbookRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
-    );
-  }
+  announceRoster(playbookRoster);
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
@@ -224,7 +217,7 @@ async function runLive(): Promise<void> {
     },
     UNIVERSE,
   );
-  const { marketClock, marketDataStream, getNews } = shared;
+  const { marketClock, marketDataStream, getNews, currentCredentials } = shared;
 
   const pollNews = async () => {
     try {
@@ -267,16 +260,29 @@ async function runLive(): Promise<void> {
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
-  await seedDailyLossBaseline(bots, safety);
+  seedDailyLossBaseline(await optionLevels.readAtBoot(bots), safety); // one read: baseline + levels
   const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
-  const realizedPlFor = (bot: Bot) =>
-    decisionDb
-      ? (playbookId: string) => decisionDb.realizedPlForPlaybook(bot.persona.id, playbookId)
-      : undefined;
+  // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
+  // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
+  controls.reportHouseRoster(
+    houseRosterReport(
+      bots.map((bot) => bot.persona.id),
+      playbookRoster.enabled,
+    ),
+  );
+  // What one bot trades under — at boot and on every swap: its roster, its own options level, and
+  // (decision store on) its realized P/L per playbook.
+  const rosterFor = (r: BotRoster) =>
+    tradingRoster(
+      r,
+      optionLevels.risk(r.bot.persona.id, risk),
+      decisionDb &&
+        ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
+    );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {
       mode,
-      trading: tradingRoster(botRoster, risk, realizedPlFor(botRoster.bot)),
+      trading: rosterFor(botRoster),
       blockedReason,
       safety,
       onDecision,
@@ -291,11 +297,20 @@ async function runLive(): Promise<void> {
     const broker = traders[i]?.broker;
     if (broker instanceof SwappableBotBroker) brokerHolders.set(bot.persona.id, broker);
   });
+  // ONE swap path (Store change, options-level change), so every later read sees what is traded.
+  const swapIn = (i: number, next: BotRoster) => {
+    botRosters[i] = next;
+    traders[i]?.trader.swapRoster(rosterFor(next));
+  };
+  optionLevels.follow(botRosters, swapIn);
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
   // rotation that landed while this process was down is caught here, using the snapshot
   // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
   // The shared data connections above are already wired, so this catches them too.
   await credentials.reconcile(bootControls);
+  await sweepOrphanOptionOrders(brokerHolders); // our own stamped orders only, before any cycle
+  // Expiries and assignments close option round trips no fill ever closes (#4642 slice 8).
+  armOptionLifecycleSweep(brokerHolders, decisionDb);
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
   // mechanics acting in live environments gives me confidence"; if nothing organic fires, force
@@ -311,17 +326,12 @@ async function runLive(): Promise<void> {
   const managedSymbols = new Set((botRosters[0]?.enabled ?? []).flatMap((e) => e.playbook.symbols)); // traders[0]'s account
 
   // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
-  // these already-running traders on the next `/controls` poll, in place. `botRosters[i]` is
-  // reassigned so every later read of the roster (the scout's managed set below, and a subsequent
-  // swap's own baseline) sees what is actually being traded, not what boot happened to load.
+  // these already-running traders on the next `/controls` poll, in place, through `swapIn`.
   subscriptionSync = createSubscriptionSync({
     bots: botRosters.map((botRoster, i) => ({
       personaId: botRoster.bot.persona.id,
-      applySubscriptions: (subscriptions) => {
-        const next = resolveBotRoster(botRoster.bot, playbookRoster.enabled, subscriptions);
-        botRosters[i] = next;
-        traders[i]?.trader.swapRoster(tradingRoster(next, risk, realizedPlFor(botRoster.bot)));
-      },
+      applySubscriptions: (subscriptions) =>
+        swapIn(i, resolveBotRoster(botRoster.bot, playbookRoster.enabled, subscriptions)),
     })),
     onApplied: (version, at) => {
       // The scout skips symbols a bot's own playbooks manage. Mutated in place rather than
@@ -373,6 +383,18 @@ async function runLive(): Promise<void> {
       ),
   });
 
+  // COND-SCOUT (#3651): shadow probes only, dark unless SKYNET_COND_SCOUT_UNIVERSE is set.
+  const condScoutPass = armCondScout(process.env, {
+    streamed: UNIVERSE,
+    credentials: currentCredentials,
+    risk,
+    blockedReason,
+    botsStateDb,
+    onDecision,
+    ...(dataCredsPersonaId ? { hostPersonaId: dataCredsPersonaId } : {}),
+    publish: replication.publishCondScout,
+  });
+
   armMomentumPersistence(botsStateDb, tracker);
 
   const contextNow = () => sentiment.overlay(tracker.context(new Date().toISOString()));
@@ -383,7 +405,9 @@ async function runLive(): Promise<void> {
     if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) return;
     lastEval = now;
     evaluating = true;
-    await runner.runCycle(contextNow());
+    const context = contextNow();
+    await runner.runCycle(context);
+    void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
     evaluating = false;
   };
   // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".

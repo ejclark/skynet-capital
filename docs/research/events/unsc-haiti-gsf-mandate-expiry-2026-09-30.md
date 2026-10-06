@@ -337,3 +337,112 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1 — inside the `closeOutWithinDays: 6` window, ceiling 2026-10-06).**
+Geopolitical kind, `symbols: []` throughout, so no `earnings-cycle`/`intraday-edges` instrument ever
+had a target for this event itself; the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first regardless.
+"Re-run instrument data" here means fresh daily-bar pulls (`scripts/research/market-data.mjs`,
+cache-free for this corridor) plus the sibling ledger's own direct primary re-fetches, not this
+document's memory of its prior rows.
+
+**The authorisation did not lapse — it was renewed, exactly as leg 2's rollover thesis and the
+sibling's own close-out already record.** [`unsc-haiti-gsf-mandate-adoption-2026-09-29`](unsc-haiti-gsf-mandate-adoption-2026-09-29.md)
+closed out today citing `securitycouncilreport.org`'s own What's-in-Blue (fetched direct 2026-09-30,
+HTTP 200) and `unmissions.org`: the Council adopted **resolution 2829 on 2026-09-29**, **12 votes in
+favour, 0 against, 3 abstentions** (China, Pakistan, Russia — citing insufficient funds, personnel
+and efficacy), extending the Gang Suppression Force **six months, to 2027-03-31**. No veto was cast.
+This is a **renewal**, not the shorter technical-rollover device leg 2 described as the fallback — a
+stronger outcome than the stance required, since `FT-…-2`'s own registered prediction counted either
+as a pass. **Kill switch 2 ("the authorisation lapses with no renewal and no rollover, or any Haiti
+text is vetoed") did not fire.** **Kill switch 1 ("a Haiti item appears on the Council's 30 September
+programme") also did not fire** — the vote landed on 09-29 exactly as France's programme dated it, so
+09-30 carried no Haiti item of its own; the "diary line" this ledger's whole thesis rested on is now
+moot by resolution rather than merely unscheduled.
+
+**The 09-30 tape, re-pulled direct today (`market-data.mjs`, Yahoo daily bars, cache-free):**
+
+| Instrument | 09-29 close | 09-30 close | Close-to-close |
+|---|---|---|---|
+| SPY | 764.20 | 762.63 | **−0.21%** |
+| RCL (owns Labadee) | 260.67 | 265.86 | **+1.99%** |
+| CCL (the print) | 25.11 | 24.54 | **−2.27%** |
+| NCLH | 14.80 | 14.66 | **−0.95%** |
+| WU (remittances) | 5.97 | 5.90 | **−1.17%** |
+| XLY | 109.15 | 108.84 | **−0.28%** |
+
+**VIX 16.34** (Cboe, 09-30 close) vs **16.07** last row, **+0.27pt** — under the 3pt material-screen
+threshold, and **3.66pt** from the ≥20 kill switch (was 3.93pt at the 09-29 screen). VIX3M **18.37**,
+contango intact. **Kill switch 5 (VIX ≥ 20 on a Haiti-sourced headline) did not fire** — the whole
+VIX move since the last row is a quarter-point of ordinary noise. **Kill switch 4 (RCL restoring
+Labadee for 2026/2027)** — no evidence found; not independently re-checked beyond the sibling's own
+unchanged finding, carried forward.
+
+**Leg 4's contamination thesis did not show up on the tape — the single most notable finding of this
+close-out, read honestly rather than fitted to the stance.** SPY's actual 09-30 move, **0.21%**, sits
+*below* the six-observation Haiti-deadline median (0.31%) this ledger spent its whole initial research
+treating as the floor a contaminated date would clear. That is the literal condition `FT-…-1`'s own
+kill switch names ("SPY's move coming in at or below 0.31%... the quarter-end/PCE/funding-deadline
+block failed to appear and the date was readable after all") — trending toward **kill** for `FT-…-1`,
+not pass. The honest explanation is not that leg 4 was wrong about the corridor's density (56
+adjacent events, 17 sharing the date itself, is a fact, not a forecast) but that two of the three
+items actually capable of moving the tape had already been defanged *before* today: the
+`government-funding-deadline-2026-09-30` entry closed out on its own ledger confirming H.R. 6500 was
+signed **2026-09-02**, funding the government through **2026-12-11** — the shutdown branch died three
+weeks before this date arrived, not on it — and PCE (confirmed, high) printed without a surprise large
+enough to move SPY beyond its own ordinary range. The quarter-end mechanical flows this ledger
+measured as real (1.20x local ratio historically) evidently did not compound with a live macro surprise
+this particular quarter-end. This is a limit on leg 4's generalization, not a retraction of its
+arithmetic — the next quarter-end UN deadline should not assume today's quiet repeats.
+
+**Forward tests — none reach a scoreable state at this close-out; the scanner dispatched now only
+because `FT-…-3` is structurally beyond the window, exactly as `event-passed-unscored` mode predicts
+(#2884/#2988). None is scored today regardless of how settled the underlying fact already looks — the
+append-only rule forbids scoring ahead of a test's own stated window:**
+
+| Test | Prediction | What this session found | Verdict |
+|---|---|---|---|
+| `FT-unsc-haiti-gsf-mandate-expiry-2026-09-30-1` (quarter-end contamination) | SPY's 09-30 move lands above 0.31% | SPY moved **0.21%**, below the registered 0.31% floor — the kill-switch condition as written | **`_open_`, not scored — score-by 2026-10-02 has not arrived**; trending toward **kill** |
+| `FT-unsc-haiti-gsf-mandate-expiry-2026-09-30-2` (renewal or rollover, not lapse) | GSF renewed or technically rolled over by 09-30 | Resolution 2829 adopted 09-29, 12-0-3, six-month renewal to 2027-03-31 — fully decided and sourced | **`_open_`, not scored — score-by 2026-10-06 has not arrived**; trending decisively toward **pass** |
+| `FT-unsc-haiti-gsf-mandate-expiry-2026-09-30-3` (CCL cadence vs aggregator) | CCL's Q3 FY2026 Item 2.02 filing lands on or before 2026-10-01 | EDGAR primary (`market-data.mjs earningsDates('CCL')`, re-pulled today): filed **2026-09-29** | **`_open_`, not scored — score-by 2026-10-09 is beyond this event's own `closeOutWithinDays` ceiling (2026-10-06), a structural conflict**; trending toward **pass** |
+| `FT-unsc-haiti-gsf-mandate-expiry-2026-09-30-4` (WU anomaly does not repeat) | WU closes flat-or-up, or down less than 1.58% | WU closed **−1.17%** | **`_open_`, not scored — score-by 2026-10-02 has not arrived**; trending toward **pass**, consistent with leg 8's multiple-comparison read |
+
+**Reading the split honestly.** `FT-…-3` is structurally unscoreable at any close-out of this event —
+its score-by sits past the 6-day ceiling by construction — but stays live: once 2026-10-09 arrives,
+`forward-test-due` mode re-dispatches this lane to score it from re-run data. `FT-…-1`, `-2` and `-4`
+differ only in shape: each sits inside the window, one to five days from today, and the same mechanism
+picks each one up the moment its own date arrives — none needed today's close-out to be held, because
+`FT-…-3` already forced immediate dispatch regardless (see `--due`'s `forwardTestsBeyondWindow`), and
+holding for the other three alone would still have left `FT-…-3` unscoreable at the eventual dispatch.
+
+**The call itself, scored against the tape.** The stand-aside was the entire position: `symbols: []`,
+no position, hedge or size ever proposed, and none is proposed now. That call cost nothing and earned
+nothing by design — exactly as intended for an event this ledger declined on arithmetic, not judgement.
+What held: no trade was placed on a date that both lapsed-or-not and was, in the event, the quietest
+day in its own disputed corridor. What this close-out adds beyond "the stance survived": the specific
+mechanism this ledger predicted would make the date unreadable (quarter-end + PCE + funding-deadline
+density) did not visibly fire this particular quarter, because two of its three legs had already
+resolved to non-events before the date arrived — a sharper, more falsifiable finding than "nothing
+happened," and one worth carrying into the next UN-mandate-on-quarter-end instance this calendar
+produces. No new dated adjacent event was found this session (the adjacency sweep is not mandatory at
+close-out); none is proposed.
+
+**Nothing blocked this session.**
+
+**Forward-test-due re-dispatch (2026-10-02).** `FT-…-1` and `FT-…-4` reached their 2026-10-02
+score-by; both re-scored from freshly re-pulled instrument data (`market-data.mjs`, cache busted
+again this session) rather than yesterday's close-out prose. `FT-…-1`: SPY's 09-29→09-30
+close-to-close is **−0.205%** (764.20 → 762.63) — at/below the registered 0.31% floor, so the
+kill-switch condition fires. Scored **kill**; added to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list. `FT-…-4`: WU's 09-29→09-30
+close-to-close is **−1.172%** (5.97 → 5.90) — down, but short of the registered 1.58% kill
+threshold. Scored **pass**. `FT-…-2` (score-by 2026-10-06) and `FT-…-3` (score-by 2026-10-09)
+remain `_open_` — not yet due. No assessment reopened; `## Outcome` above is otherwise unchanged.
+
+**Forward-test-due re-dispatch (2026-10-06).** `FT-…-2` reached its 2026-10-06 score-by and was re-scored from a fresh direct read of unmissions.org/UNSOH (the Council's own support-office news page), not from the close-out prose. Resolution **2829**, adopted **2026-09-29**, **12-0-3** (China, Pakistan, Russia abstaining), no veto, extended the GSF to **2027-03-31** — a renewal, so the authorisation never lapsed. Scored **pass**; the stance's lapse-requires-a-veto mechanism was never tested, since no rollover was needed. `FT-…-3` (score-by 2026-10-09) remains `_open_` — not yet due. No assessment reopened; no adjacency sweep at a scoring-only dispatch; nothing proposed.
+
+**Last assessed:** 2026-10-01 (close-out — this document goes quiet, except for the four forward tests
+above, which re-open this lane via `forward-test-due` on or after their own score-by dates)
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["pce-2026-09-30","ism-manufacturing-2026-10-01","jobs-2026-10-02","ism-services-2026-10-05","mu-2026-09-30-print"],"screenStreak":0,"blocked":[]} -->

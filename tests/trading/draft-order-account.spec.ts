@@ -74,6 +74,31 @@ describe("validateDraftAccount", () => {
     expect(validateDraftAccount(rollClose, shortHeld as never).ok).toBe(false);
   });
 
+  it("passes a bull call spread with no shares held — the lower long call is the short's cover", () => {
+    // #4684: refused before with "NVDA needs 100 held and you hold 0" — shares it never needed.
+    const bullCall = addLeg(
+      addLeg(emptyDraft(), { ...NAKED_CALL, strike: 170, action: "buy" }),
+      NAKED_CALL,
+    );
+
+    expect(validateDraftAccount(bullCall, accountWith(0))).toEqual({
+      ok: true,
+      refusals: [],
+      warnings: [],
+    });
+  });
+
+  it("still refuses the second of two short calls under one long call, with no shares held", () => {
+    const twoUnderOne = addLeg(
+      addLeg(addLeg(emptyDraft(), NAKED_CALL), { ...NAKED_CALL, strike: 190 }),
+      { ...NAKED_CALL, strike: 200, action: "buy" },
+    );
+    const verdict = validateDraftAccount(twoUnderOne, accountWith(10_000));
+
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals).toEqual([expect.stringMatching(/NVDA needs 100 held and you hold 0/)]);
+  });
+
   it("passes an empty draft — nothing demanded, nothing to check", () => {
     expect(validateDraftAccount(emptyDraft(), accountWith(0))).toEqual({
       ok: true,
@@ -114,5 +139,115 @@ describe("validateDraftAccount — calls already sold", () => {
     const roll = addLeg(addLeg(emptyDraft(), buyBack), NAKED_CALL);
     const verdict = validateDraftAccount(roll, { cash: 0, positions: [held(100), OPEN_SHORT] });
     expect(verdict.refusals).toEqual([]);
+  });
+
+  it("refuses a roll that leans on one buy-back twice — freed shares AND a cap for a second call", () => {
+    // Buying the 170 back frees 100 shares for ONE new call. Read as a new long as well, it would
+    // cap the 190 while the shares covered the 180: two sold calls on 100 shares, one of them naked.
+    const buyBack: NewLeg = { ...NAKED_CALL, strike: 170, action: "buy" };
+    const rollIntoTwo = addLeg(addLeg(addLeg(emptyDraft(), buyBack), NAKED_CALL), {
+      ...NAKED_CALL,
+      strike: 190,
+    });
+    const verdict = validateDraftAccount(rollIntoTwo, {
+      cash: 0,
+      positions: [held(100), OPEN_SHORT],
+    });
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals[0]).toMatch(/NVDA needs 200 held/);
+  });
+});
+
+// #4684 review: a bull call spread needs no shares, so its closing legs must be judged against what
+// the whole book still promises once the draft fills — never assumed to leave every short covered.
+describe("validateDraftAccount — the book once the draft fills", () => {
+  const position = (symbol: string, quantity: number) => ({
+    symbol,
+    quantity,
+    avgPrice: 4,
+    marketValue: 0,
+  });
+  const LONG_180 = position("NVDA260918C00180000", 1);
+  const SHORT_190 = position("NVDA260918C00190000", -1);
+  const BULL_CALL = [LONG_180, SHORT_190]; // opened with no shares — the 180 caps the 190
+  const call = (strike: number, action: "buy" | "sell"): NewLeg => ({
+    ...NAKED_CALL,
+    strike,
+    action,
+  });
+  const draftOf = (...legs: NewLeg[]) => legs.reduce(addLeg, emptyDraft());
+
+  it("refuses selling the long call that caps a held short call, when no shares stand behind it", () => {
+    const verdict = validateDraftAccount(
+      draftOf(call(180, "sell"), { ...NAKED_PUT, action: "buy" }),
+      { cash: 0, positions: BULL_CALL },
+    );
+
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals).toEqual([
+      expect.stringMatching(/NVDA needs 100 held and you hold 0\./),
+    ]);
+    expect(verdict.refusals[0]).toMatch(/leaves the call it capped uncovered/);
+  });
+
+  it("refuses a roll whose bought-back call was covered by a long call, not by shares", () => {
+    // Buying the 190 back frees no shares — none ever stood behind it — so the new 200 has no cover
+    // once the 180 is sold too.
+    const verdict = validateDraftAccount(
+      draftOf(call(190, "buy"), call(200, "sell"), call(180, "sell")),
+      { cash: 0, positions: BULL_CALL },
+    );
+
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals).toEqual([expect.stringMatching(/NVDA needs 100 held and you hold 0/)]);
+  });
+
+  it("passes closing the whole spread — nothing sold is left behind", () => {
+    const verdict = validateDraftAccount(draftOf(call(190, "buy"), call(180, "sell")), {
+      cash: 0,
+      positions: BULL_CALL,
+    });
+
+    expect(verdict).toEqual({ ok: true, refusals: [], warnings: [] });
+  });
+
+  it("passes rolling the short call up while the long call stays — the long caps the new one", () => {
+    const verdict = validateDraftAccount(draftOf(call(190, "buy"), call(200, "sell")), {
+      cash: 0,
+      positions: BULL_CALL,
+    });
+
+    expect(verdict).toEqual({ ok: true, refusals: [], warnings: [] });
+  });
+
+  it("does not count a call a held long already caps against shares for a new covered call", () => {
+    const verdict = validateDraftAccount(draftOf(call(210, "sell")), {
+      cash: 0,
+      positions: [position("NVDA", 100), ...BULL_CALL],
+    });
+
+    expect(verdict).toEqual({ ok: true, refusals: [], warnings: [] });
+  });
+
+  it("refuses selling the long put that caps a held short put without the cash to secure it", () => {
+    // Bull put spread: short 190, long 180 — $1,000 of width. Alone, the 190 needs $19,000.
+    const verdict = validateDraftAccount(draftOf({ ...NAKED_PUT, strike: 180, action: "sell" }), {
+      cash: 5_000,
+      positions: [position("NVDA260918P00190000", -1), position("NVDA260918P00180000", 1)],
+    });
+
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals).toEqual([
+      expect.stringMatching(/needs \$18,000 set aside and you have \$5,000/),
+    ]);
+  });
+
+  it("does not refuse an order that leaves an already uncovered call no worse", () => {
+    const verdict = validateDraftAccount(draftOf({ ...NAKED_PUT, action: "buy" }), {
+      cash: 0,
+      positions: [SHORT_190],
+    });
+
+    expect(verdict).toEqual({ ok: true, refusals: [], warnings: [] });
   });
 });

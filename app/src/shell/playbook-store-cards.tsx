@@ -1,136 +1,67 @@
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
-import {
-  type DelegationGateView,
-  type PlaybookMode,
-  type PlaybookStoreCardView,
-  setSubscriptionEnabledRequest,
-  subscribeRequest,
-  unsubscribeRequest,
+import type {
+  BotsOnlyGateView,
+  DelegationGateView,
+  PlaybookStoreCardView,
 } from "../live/playbook-store";
+import {
+  AccountPlaybookMetrics,
+  HousePlaybookMetrics,
+  type MetricsScope,
+} from "./playbook-metrics";
+import { SubscribeForm } from "./playbook-subscribe-form";
+import { SubscriptionRow } from "./playbook-subscription-row";
 
 /**
  * THE PLAYBOOK STORE's cards (issue #885), moved here whole from the retired desk route
- * `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). One card per house playbook:
- * its rules (Enter / both exits / Hold), then — only when the viewer manages the selected account —
- * the subscription controls. The account is a parameter of the action, never a page of its own.
+ * `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). One card per house playbook.
+ * The account is a parameter of the action, never a page of its own.
+ *
+ * Two orders, by what the owner came to do (#4649, mobile-first):
+ *  - A card the selected account is SUBSCRIBED to leads with that subscription: state, mode,
+ *    capital, symbols, with Pause, Edit and Unsubscribe beside it. The rules, evidence and metrics
+ *    follow (`playbook-subscription-row.tsx`).
+ *  - A card it is not subscribed to reads first and acts last: rules, evidence, metrics, then the
+ *    Subscribe form or the door that holds it.
  *
  * No cross-account visibility: `canManage` (from the server) is the only signal a viewer gets about
  * whether the selected account is theirs — without it the catalog renders with no controls and no
  * capital figures.
  *
- * THE DELEGATION FOG (#1707) — with training wheels on and rung 102 unearned, the subscribe
- * control renders VISIBLE and DISABLED, naming the rung that opens it (`docs/FOG-OF-WAR.md`).
- * Everything a member needs to judge a playbook — what it does, when it enters, both exits, how
- * to leave — stays fully readable; only the delegation itself waits. Rendering only: the server
- * refuses a locked subscribe regardless of whether this door is ever bypassed, and unsubscribe,
- * pause, and resume are never gated on either side.
+ * TWO DOORS can hold a new subscription, checked in the server's order:
+ *  - Bots only for now (#4610): on a human account the Subscribe control is drawn disabled under
+ *    `BOTS_ONLY_NOTE`. That is not a fog, because nothing earnable opens it (`docs/FOG-OF-WAR.md`),
+ *    so it names no rung.
+ *  - The delegation fog (#1707): with training wheels on and rung 102 unearned, the control is
+ *    drawn disabled under the sentence naming the rung that opens it.
+ * Everything a member needs to judge a playbook (what it does, when it enters, both exits, how to
+ * leave) stays readable behind either door. Rendering only: the server refuses a held subscribe
+ * regardless, and unsubscribe, pause and resume are never gated on either side.
  */
-
-function SubscribeForm({
-  accountId,
-  playbookId,
-  onSubscribed,
-}: {
-  readonly accountId: string;
-  readonly playbookId: string;
-  readonly onSubscribed: () => void;
-}): ReactElement {
-  const [mode, setMode] = useState<PlaybookMode>("standard");
-  const [capital, setCapital] = useState("");
-  const [compoundAllocation, setCompoundAllocation] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-  const modeId = useId();
-  const capitalId = useId();
-  const compoundId = useId();
-  const capitalAllocated = Number(capital);
-  const valid = capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0;
-
-  const subscribe = async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      const answer = await subscribeRequest({
-        id: accountId,
-        playbookId,
-        mode,
-        capitalAllocated,
-        ...(compoundAllocation ? { compoundAllocation: true } : {}),
-      });
-      if (answer.ok) onSubscribed();
-      else setError(answer.error);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="pb-subscribe-form">
-      <div className="field">
-        <label htmlFor={modeId}>Mode</label>
-        <select id={modeId} value={mode} onChange={(e) => setMode(e.target.value as PlaybookMode)}>
-          <option value="conservative">Conservative</option>
-          <option value="standard">Standard</option>
-          <option value="aggressive">Aggressive</option>
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor={capitalId}>Capital to delegate ($)</label>
-        <input
-          id={capitalId}
-          type="number"
-          min={0}
-          step={100}
-          value={capital}
-          onChange={(e) => setCapital(e.target.value)}
-        />
-      </div>
-      <div className="field field-checkbox">
-        <input
-          id={compoundId}
-          type="checkbox"
-          checked={compoundAllocation}
-          onChange={(e) => setCompoundAllocation(e.target.checked)}
-        />
-        <label htmlFor={compoundId}>
-          Compound gains/losses into allocation — a profitable run grows this budget, a losing one
-          shrinks it. Off by default.
-        </label>
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={busy || !valid}
-        onClick={() => void subscribe()}
-      >
-        {busy ? "Subscribing…" : "Subscribe"}
-      </button>
-      {error ? <span className="set-err">{error}</span> : null}
-    </div>
-  );
-}
 
 /**
- * The door, drawn: the Subscribe button, disabled, under the server's own sentence naming the
- * rung that opens it — exactly as the ladder's own locked panel does (`shell/locked-panel.tsx`).
- * No self-serve way past it (#1671 decision 1, 2026-09-06: "block until earned" taken literally)
- * — this used to also offer "Turn the wheels off," the same one-click bypass `locked-panel.tsx`
- * removed; `POST /api/trade/wheels` now refuses that flip while any rung is unearned regardless.
+ * A door, drawn: the Subscribe button, disabled, under the server's own sentence — exactly as the
+ * ladder's own locked panel does (`shell/locked-panel.tsx`). No self-serve way past it (#1671
+ * decision 1, 2026-09-06: "block until earned" taken literally) — this used to also offer "Turn
+ * the wheels off," the same one-click bypass `locked-panel.tsx` removed; `POST /api/trade/wheels`
+ * now refuses that flip while any rung is unearned regardless.
  */
-function SubscribeLocked({ gate }: { readonly gate: DelegationGateView }): ReactElement {
+function SubscribeDoor({
+  glyph,
+  note,
+  title,
+}: {
+  readonly glyph: string;
+  readonly note: string;
+  readonly title: string;
+}): ReactElement {
   return (
     <div className="pb-locked">
-      <p className="pb-locked-note">◷ {gate.note}</p>
+      <p className="pb-locked-note">
+        <span aria-hidden="true">{glyph}</span> {note}
+      </p>
       <div className="pb-subscription-actions">
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled
-          title={`Opens after your first filled ${gate.unlocksAfter} (${gate.unlocksAfterName})`}
-        >
+        <button type="button" className="btn btn-primary" disabled title={title}>
           Subscribe
         </button>
       </div>
@@ -138,75 +69,35 @@ function SubscribeLocked({ gate }: { readonly gate: DelegationGateView }): React
   );
 }
 
-function SubscriptionRow({
+/** What sits at the end of a card the selected account is not subscribed to. */
+function NewSubscription({
   accountId,
   card,
+  delegation,
+  botsOnly,
   onChanged,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
+  readonly delegation: DelegationGateView;
+  readonly botsOnly?: BotsOnlyGateView;
   readonly onChanged: () => void;
 }): ReactElement {
-  const sub = card.subscription;
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-  if (!sub) return <></>;
-
-  const toggle = async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      const answer = await setSubscriptionEnabledRequest({
-        id: accountId,
-        playbookId: card.id,
-        enabled: !sub.enabled,
-      });
-      if (answer.ok) onChanged();
-      else setError(answer.error);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const unsubscribe = async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      const answer = await unsubscribeRequest({ id: accountId, playbookId: card.id });
-      if (answer.ok) onChanged();
-      else setError(answer.error);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="pb-subscription">
-      <span className="pb-subscription-line">
-        Subscribed at <b>{sub.mode}</b>, ${sub.capitalAllocated.toLocaleString()} delegated —
-        currently <b>{sub.enabled ? "active" : "paused"}</b>.
-        {sub.compoundAllocation ? " Compounding realized gains/losses into allocation." : ""}
-      </span>
-      <div className="pb-subscription-actions">
-        <button type="button" className="btn mc-btn" disabled={busy} onClick={() => void toggle()}>
-          {busy ? "Saving…" : sub.enabled ? "Pause" : "Resume"}
-        </button>
-        <button
-          type="button"
-          className="btn mc-btn mc-danger"
-          disabled={busy}
-          onClick={() => void unsubscribe()}
-        >
-          Unsubscribe
-        </button>
-      </div>
-      {error ? <span className="set-err">{error}</span> : null}
-    </div>
-  );
+  if (botsOnly?.locked) {
+    return (
+      <SubscribeDoor glyph="◌" note={botsOnly.note} title="Only bot accounts subscribe for now" />
+    );
+  }
+  if (delegation.locked) {
+    return (
+      <SubscribeDoor
+        glyph="◷"
+        note={delegation.note}
+        title={`Opens after your first filled ${delegation.unlocksAfter} (${delegation.unlocksAfterName})`}
+      />
+    );
+  }
+  return <SubscribeForm accountId={accountId} card={card} onSaved={onChanged} />;
 }
 
 const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
@@ -252,25 +143,66 @@ function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): Reac
   );
 }
 
+/**
+ * "No active subscribers yet" · "1 active subscriber" · "3 active subscribers" — a count of
+ * accounts, never which ones (#3970). Words carry it; no colour means anything here.
+ *
+ * "active" is load-bearing, not decoration. The server counts ENABLED subscriptions only
+ * (`subscriberCounts`, deliberately — a paused subscription delegates nothing), so a card that
+ * said plain "subscribers" would be narrower than its own word: an account that paused is still a
+ * subscriber, and it is not in this number. The label names the measure it is actually reporting.
+ */
+function subscriberLine(count: number): string {
+  if (count === 0) return "No active subscribers yet";
+  return `${count} active ${count === 1 ? "subscriber" : "subscribers"}`;
+}
+
 export function PlaybookCard({
   accountId,
   card,
   canManage,
   delegation,
+  botsOnly,
   onChanged,
+  accountName,
+  metrics,
+  house,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
   readonly canManage: boolean;
   readonly delegation: DelegationGateView;
+  /** Bots only for now (#4610) — absent reads as open (a server from before the rule). */
+  readonly botsOnly?: BotsOnlyGateView;
   readonly onChanged: () => void;
+  readonly accountName: string;
+  /** The selected account's own numbers on this playbook (#3665) — absent when none is managed. */
+  readonly metrics?: MetricsScope;
+  /** Every account's numbers on this playbook (#3665 slice 4) — a separate block, never summed. */
+  readonly house?: MetricsScope;
 }): ReactElement {
+  const subscribed = canManage && card.subscription !== undefined;
   return (
-    <section className="pb-card">
+    <section className="pb-card" data-subscribed={subscribed || undefined}>
       <h2 className="pb-card-h">
         <span className="pb-card-id">{card.id}</span>{" "}
         <span className="num pb-card-symbols">{card.symbols.join(" · ")}</span>
       </h2>
+      {subscribed ? (
+        // An existing subscription keeps every exit it had, on every account — pausing and
+        // leaving are never gated. Behind the fog an edit may only lower exposure; the server
+        // refuses anything that delegates more.
+        <SubscriptionRow
+          accountId={accountId}
+          card={card}
+          human={botsOnly?.locked === true}
+          reduceOnly={delegation.locked}
+          onChanged={onChanged}
+        />
+      ) : null}
+      {card.subscribers !== undefined ? (
+        <p className="pb-card-subscribers">{subscriberLine(card.subscribers)}</p>
+      ) : null}
       <p className="pb-card-description">{card.description}</p>
       <PlaybookFacts card={card} />
       <dl className="pb-card-triggers">
@@ -287,15 +219,16 @@ export function PlaybookCard({
         <span className="num">{card.evidence}</span>
         {card.evidenceHref ? <a href={card.evidenceHref}>the study behind it →</a> : null}
       </footer>
-      {canManage ? (
-        card.subscription ? (
-          // An existing subscription keeps every control it had — pausing and leaving are exits.
-          <SubscriptionRow accountId={accountId} card={card} onChanged={onChanged} />
-        ) : delegation.locked ? (
-          <SubscribeLocked gate={delegation} />
-        ) : (
-          <SubscribeForm accountId={accountId} playbookId={card.id} onSubscribed={onChanged} />
-        )
+      {metrics ? <AccountPlaybookMetrics accountName={accountName} scope={metrics} /> : null}
+      {house ? <HousePlaybookMetrics scope={house} /> : null}
+      {canManage && !subscribed ? (
+        <NewSubscription
+          accountId={accountId}
+          card={card}
+          delegation={delegation}
+          {...(botsOnly ? { botsOnly } : {})}
+          onChanged={onChanged}
+        />
       ) : null}
     </section>
   );

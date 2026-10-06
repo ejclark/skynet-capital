@@ -229,6 +229,15 @@
 .quote-change.tone-flat {
   color: var(--muted, inherit);
 }
+/* The pushed frame's own stamp (#3407 P4) — "◦ live 14:32:05 ET". Muted and one step down, so at
+   390px it wraps under the price instead of competing with it; the word "live" and the glyph carry
+   the state, never a colour (a standing reader is red/green colourblind). */
+.quote-live {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 .quote-note {
   font-size: var(--text-sm);
   color: var(--muted);

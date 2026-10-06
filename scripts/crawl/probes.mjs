@@ -90,7 +90,10 @@ export function probeDeadEnds(page) {
     // 4 — same-page anchors with no target.
     for (const a of document.querySelectorAll("a[href*='#']")) {
       const url = new URL(a.getAttribute("href"), location.href);
-      if (url.pathname !== location.pathname || url.hash.length < 2) continue;
+      // Same page = same path AND query: `?section=activity#act-o1` from `?section=thesis` swaps the
+      // view first, so its target lives on the page it opens, not this one (#4046 item 1).
+      if (url.pathname !== location.pathname || url.search !== location.search) continue;
+      if (url.hash.length < 2) continue;
       const id = decodeURIComponent(url.hash.slice(1));
       if (!(document.getElementById(id) || document.getElementsByName(id).length)) {
         push(

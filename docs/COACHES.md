@@ -44,7 +44,7 @@ Work descends this ladder as its contract gets written; each rung frees the head
 3. **Gated** — the trigger is mechanized (`--candidate` names the target); no one picks the work.
 4. **Agent** — the full contract (trigger, procedure, verification, output) is written; a background athlete runs it end to end.
 
-**The rule of three applies to agents:** do it manually once; codify the skill on the second recurrence; promote to an agent on the third. Speculative roster-building is premature abstraction — the roster recruits itself from demonstrated repetition. A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work stays on the strongest model. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
+**The rule of three applies to agents:** do it manually once; codify the skill on the second recurrence; promote to an agent on the third. Speculative roster-building is premature abstraction — the roster recruits itself from demonstrated repetition. A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work keeps the judgment tier — the floors are `docs/COMPUTE.md`'s table. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
 
 ## Resource cost is a fitness dimension
 
@@ -63,7 +63,7 @@ Worked example (the one that motivated this): landing a PR via the GitHub **MCP*
 by the thousands (one create+auto-merge+read cycle measured ~6,000 points; status-*polling* is worse),
 while the same outcome over `git` + repo-scoped **REST** runs on your machine and the plentiful 15k/hr
 **core** bucket. The fix was codified as `scripts/ship.sh` + the `/ship` skill: verify locally → push →
-open over REST → one auto-merge call → **stop, trust the webhook, never poll**. Reach for the script;
+open over REST → **stop** (the pipeline arms auto-merge after integration tests) → **trust the webhook, never poll**. Reach for the script;
 grow the roster of scripts as recurring costs surface. When a finite resource starts binding, that's a
 *measured* constraint the offensive coordinator elevates — never optimize a resource speculatively.
 
@@ -142,6 +142,18 @@ collisions this fix did not cause and wasn't scoped to repair. `forward-test-id-
 at that measured `7`, not a fabricated `0` — the honest number, ratcheted down as those rows get
 renumbered, exactly as `clone-budget.json` starts non-zero rather than claiming clean.
 
+**Second instance — the code-map freshness check (2026-09-30, #4074).** The last blocking piece of
+the doc-rot coach, "structural graph freshness", failed any PR once `main` ran 50 commits past the
+`docs/STRUCTURE-graph.md` snapshot — an ambient property of `main`, not of the diff, and `main` now
+moves ~50 commits a day, so 3 of one session's 5 PRs carried an unrelated ~1,000-line refresh
+(#3830, #3984, #4070). Its "correctness, not hygiene" claim didn't survive a read: blast-radius
+queries (`graphify affected`) read the live, git-ignored `graphify-out/`, never the committed
+snapshot, so a stale map is navigation debt. Demoted to advisory (still printed on every `npm test`).
+The same read found the measurement broken: `graph:refresh` stamps the PR branch's sha, which
+squash-merge drops, so on `main` the check read UNKNOWN; it now measures from the commit that landed
+the snapshot. Falsifier: the map ≥ 500 commits behind and unrefreshed by 2026-10-31 → give the
+refresh an owner (a scheduled refresh is envelope-class, Eric's call), not a red.
+
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
 templates, the `/feedback` form) stays **plain-language** for non-technical friends & family — triage
@@ -168,6 +180,16 @@ comment), and goes silent on any signature already escalated. The signature is t
 job name with a matrix leg's values stripped (#3913): keying on the leg made one failing job file 19
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
+
+**The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
+When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
+`scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
+closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
+it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
+`/retro` still deepens an entry when a class recurs; it is no longer the only way one lands. The
+digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
+under Needs you.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):
@@ -235,8 +257,10 @@ the #3754 platter promise showed what a prose-only status costs.
 | **CI install duration** (verify job's dependency-install wall-clock) | `scripts/ci-install-duration-scan.mjs` + `ci-install-duration-budget.json` + `tests/arch/ci-install-duration.spec.ts` (median over recent successful runs, no-op offline) | check for a missing `Cache restored` line, fix the cache scope/key, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Forward-test id collisions** (two `docs/research/forward-tests/*.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable); its `--contract` mode is the BLOCKING placement gate (`tests/arch/forward-tests-fragments.spec.ts`: one fragment per event, no rows in the index — #1449) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
 | **Journey coverage** (a living screen no member journey step visits at phone width; a screen the code has that `docs/members/triage.json` never judged) | `scripts/crawl/coverage.mjs --json` + `scripts/crawl/coverage-budget.mjs` + `journey-coverage-budget.json` + `tests/arch/journey-coverage.spec.ts` — the unjudged half BLOCKS (triage is the contract other lanes read); the gap count is advisory, ratchet-down | add a phone journey step that visits the screen, or re-judge it in triage, then `--update` | none yet (recruit on recurrence #3) | ✅ live |
+| **PR provenance** (a merged PR that names no issue and is no machine lane's — invisible to the Orchestration board, so the in-flight cap cannot count it; #4393 criterion 8) | `scripts/pr-provenance-scan.mjs` + `pr-provenance-budget.json` + `tests/arch/pr-provenance.spec.ts` (advisory, ratchet-down; the rule is `namesNoIssue` in `scripts/moneypenny/pr-issues.mjs`; `ship.sh open` runs its `--pr` mode before the push) | name the issue in the PR body (`Part of #<n>`), or file one first for a fan-out | none yet (recruit on recurrence #3) | ✅ live |
 | **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
-| **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that CLAUDE.md's own house style forbids; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
+| **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that `docs/ENGINEERING.md` → *WHY earns its place* rules out; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
+| **Mermaid skill drift** (the /mermaid skill telling sessions less than github.com draws: cards still calling GitHub's version unknown or deferring features at or below the pin, syntax-table encodings the card's "Emphasis without hue" section never names with no recorded decision, registered diagram types with no card) | `scripts/mermaid-skill-scan.mjs` + `mermaid-skill-budget.json` + `.claude/skills/mermaid/encodings-ledger.json` + `tests/arch/mermaid-skill.spec.ts` (lexicon-based for encodings — a row named without any encoding term is honestly out of reach; widen the lexicon on a miss) | reword to the pin / name it in the emphasis section or record a ledger decision / write the card, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
 | **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `moneypenny.mjs`'s (formerly `postmaster.mjs`) push-driven audit (#909) — `gh pr list`'s `mergeable` field, one-ping-per-PR via `conflict-flagged` | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Moneypenny detects + dispatches; her repair lane's `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
@@ -355,14 +379,17 @@ with the complexity moved into the wiring.
   two half-agreeing docs** (`docs/grind/README.md`'s own "when to reach for this" section points
   here rather than restating a narrower version). Pick by whether the target list is known up front
   and whether dynamic re-triggering is needed:
-  - Routine, one-target-at-a-time burn-down → `/governor`'s normal cycle. The default.
+  - Routine, one-target-at-a-time burn-down → `/governor`'s normal cycle, or
+    [`docs/grind/governor.instructions.md`](grind/governor.instructions.md) — the same cycle's
+    dispatch steps as a chore, one item per coach, which is the shape the 2026-10-03 sunset review
+    below settled on. Either way the gate picks the target and the wave lands as one cycle PR.
   - The target list isn't fully known up front, or new targets should unblock reactively as fenced
     seams land within one sitting → `/governor` feast mode — its "every athlete completion is a
     mini-cycle trigger" re-checks the fence ledger for newly-unblocked work, something a static item
     list cannot do.
   - A known, fixed batch of targets for one athlete's own chore, no dynamic re-triggering needed →
-    `/grind` fanning that athlete's skill (already true today for `/bury`/`/backfill`; `/decompose`/
-    `/dedupe` are equally fannable, just not yet checked in as manifest chores). Land the wave the
+    `/grind` fanning that athlete's skill (`/bury` and `/backfill` carry their own calling
+    conventions; `/decompose` and `/dedupe` are equally fannable). Land the wave the
     *same shape* feast mode's own platter step already uses — merge each item's verified branch into
     one wave branch, verify the union once, open one PR, auto-merge normally per the merge-policy
     table below — **never** via `scripts/ship.sh platter`, a different mechanism reserved for the
@@ -372,3 +399,80 @@ with the complexity moved into the wiring.
     uncontested case.
 - Adding a Coach = one eval + one budget + one CI spec + one skill (+ optionally one agent). Use
   `skill-creator` and mirror an existing pair so the roster stays uniform.
+
+## Sunset review — the first one, 2026-10-03 (#3939 slice 3)
+
+Machinery earns its place or loses it, and the only honest way to tell is to count. The rule
+`/charter` already holds for a *new* agent — never trust an unchecked usage claim, in either
+direction — pointed at the roster that already exists. Eric's trigger (2026-09-28): *"a lot of the
+orchestration we setup before… should be scrutinised and considered for being consolidated /
+decommissioned / replaced by better more ootb systems as we scale."*
+
+**Method, so the next pass reproduces it rather than re-deriving it.** Window 2026-09-03 → 2026-10-03
+(30 days), measured against GitHub and git, never estimated:
+
+| Question | How it was counted |
+|---|---|
+| Did an athlete run? | every PR in the window whose head branch matches that athlete's prefix glob, then the PR's author and body read to tell a dispatch from a human's own refactor |
+| Did a cycle run? | PRs on `refactor/governed-cycle-*` |
+| Did the correction land? | `git log --since=<window start> -- <that coach's budget file>` — a ratchet is the only durable trace a rep leaves |
+| Is there work to do? | each eye's own `--candidate` |
+
+**What it found.** One rep in 30 days across all four athletes, zero cycles — and not one budget
+moved. Meanwhile every gate names a live target: 76 duplicate symbols, 135 dead exports, 31 untested
+files, the top size target 1,020 code lines over cap. So the roster is not idle because the codebase
+is clean, and the thing that stopped was never the drills.
+
+| Piece | Reps, 30d | Call | Conf. | Why | What proves it wrong |
+|---|---|---|---|---|---|
+| `/governor`'s dispatch steps (3–4) | 0 cycles | **consolidate** into [`docs/grind/governor.instructions.md`](grind/governor.instructions.md) | high | A chore expresses WIP 1 and the collision check with no new grind code, and *one item per coach* makes the ratchet fence structural instead of prose | The chore needs a rule `grind.js` cannot carry → keep the dispatch layer. Tested when writing it: it did not |
+| `/governor`'s merge-policy table + feast mode | cited from `CLAUDE.md` | **keep** | high | Policy, not dispatch; nothing else holds the auto-merge carve-outs | — |
+| `decomposer` · `ui-librarian` · `mortician` · `test-backfiller` | 1 · 0 · 0 · 0 | **merge** — the chore reads each drill's own skill spec, so the agent file is a second copy of a loop that already lives in one place | med-high | Four wrappers, one rep between them; the skills and gates they drive all stay | A drill turns out to need an agent-only capability the chore cannot reach → keep the wrapper |
+| The four eyes and the four drills | gates run every `npm test` | **keep, untouched** | high | These are the capability. The review found the *trigger* missing, never the correction | — |
+| `/charter` | this review is its first sunset pass | **keep, and give it a sunset mode** | high | Usage proved measurable four different ways above, which was the falsifier for adding the mode | A later pass cannot measure an agent → the mode defaults to keep, never to retire on silence |
+
+**The next constraint, which this review surfaced rather than fixed.** Consolidating one idle layer
+into another does not answer why neither ran. Nothing schedules, nudges or surfaces debt work, so it
+happens when a human thinks of it — once, in 30 days. That is filed with its number as
+[#4527](https://github.com/ejclark/skynet-capital/issues/4527) (`bottleneck`), for the research chore
+to price the candidates: the digest clock that already exists, a standing issue per coach in the ready
+queue, a scheduled workflow, or a native GitHub feature. Exactly ToC's own corollary — elevate one
+constraint and the next binds.
+
+**Still pending, and deliberately not done here.** The `merge` verdicts above are *recorded, not yet
+executed*: deleting the four agent files and adding sunset mode to `/charter` are both writes under
+`.claude/`, a Claude Code protected directory an unattended lane cannot write to at all (probed
+2026-10-03, refused; `docs/grind/README.md` → *Known limitations* says to route it to an interactive
+session). Until [#4526](https://github.com/ejclark/skynet-capital/issues/4526) lands, the four agent
+files still exist and still work — the roster table above is accurate as written, and `/governor`
+remains invokable exactly as before. Nothing is removed by a doc.
+
+### The board half, 2026-10-05 (#3939 slice 4)
+
+Same review, the other piece of machinery #3939 put on trial: the Orchestration board's Status
+column, which the plan suspected GitHub Projects' built-in workflows already maintain natively
+("keep the core; subtract what Projects does natively"). **Verdict: subtract nothing.** The reasoning
+lives next to the code it governs — `statusForIssue()` in
+[`scripts/moneypenny/projects.mjs`](../scripts/moneypenny/projects.mjs) — because that is where the
+next session has the same idea.
+
+| Candidate | Call | Conf. | Why | What proves it wrong |
+|---|---|---|---|---|
+| Built-in "Item closed → Done" replacing our `closed → Done` | **skip** | high | `projects-reconcile.mjs` (#4393) landed after the plan was written and made that line the authority for four callers — the sweep, the backfill, `issues.mjs`'s preview, `issue-lint.mjs`. The sweep already heals a dropped close event, which is all the built-in covered | The sweep is retired → the close line has one caller again, and the built-in is worth pricing |
+| Built-in "Item reopened" | **skip** | high | It writes one fixed value; our rule derives Backlog / Ready / Blocked / In Progress from the labels a reopened issue still carries | Reopens stop carrying meaningful labels → a fixed value is honest |
+| Built-in "Auto-add to project" replacing the `item-add` path | **skip** | med-high | Its filter runs on creation and cannot express `isBacklogCandidate` for a `ci-failure` label applied afterwards; the add-or-find path (#3954) is still needed by both sweeps regardless | `ci-failure` moves to filing-time → the filter can express it |
+| Any built-in workflow, as a mechanism | **skip** | high | GraphQL exposes `ProjectV2.workflows` read-only plus `deleteProjectV2Workflow` — no create/update/enable mutation (introspected live 2026-10-05). Enabling one is a UI click: unversioned, unspecced, unreadable from CI | GitHub ships an enable mutation → re-price every row above |
+
+**The method, since it differs from the coach half.** No usage counting was possible: this lane's App
+token cannot see a personal-account project at all (`projects-setup.yml`'s header says why), so the
+schema was introspected directly and the behavioural question answered from the repo's own incident
+record — on 2026-10-01 closed cards sat in In Progress until #4393 built the sweep, which a live
+"Item closed → Done" would have moved on its own close event. The live `workflows{enabled}` read is
+the falsifier, not the evidence, and the one-line probe to run it is in `projects.mjs`'s block.
+
+**The general lesson, which is why this is written down at all.** A plan's *"replace it with the
+off-the-shelf thing"* row needs a fourth question beside call, confidence and falsifier: **can we set
+and read the off-the-shelf thing from here?** A native feature that only a human can toggle in a UI
+is not a smaller system than a pure function with a spec — it is the same system with its
+configuration moved somewhere nothing can assert on it. Count that cost before counting the lines
+saved.

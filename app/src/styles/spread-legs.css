@@ -1,0 +1,51 @@
+/* A bot's spread on Activity (#4650; activity-table.tsx `LegRow`): each leg beneath its spread's
+   row, always visible. One unbroken left rule ties the legs to the row above — a shape, never a
+   hue — and each leg's side rides as the word BUY or SELL in the house pill. The line is capped to
+   the visible table (the why panel's own `100cqw` cap, desk.css) so the contract and its dollars
+   read at 390px without scrolling the blotter sideways; the indent clears the chevron column. */
+
+/* No cell padding between legs, so the rule runs unbroken; the last leg closes the group with the
+   row's usual breathing room. */
+.blotter tr.row-leg > td {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.blotter tr:has(+ tr.row-leg) > td,
+.blotter tr.row-leg:has(+ tr.row-leg) > td {
+  border-bottom: none;
+}
+.blotter tr.row-leg:not(:has(+ tr.row-leg)) > td {
+  padding-bottom: var(--row-py);
+}
+.leg-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-left: 28px;
+  padding: 5px 0 5px 10px;
+  border-left: 2px solid var(--border);
+  max-width: calc(100cqw - 24px - 28px);
+  font-size: 12px;
+}
+.leg-contract {
+  font-weight: 600;
+}
+.leg-cost {
+  flex-basis: 100%;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+@media (min-width: 701px) {
+  .leg-cost {
+    flex-basis: auto;
+  }
+}
+/* A leg the ledger does not hold yet: the rule turns dashed — a shape, never a tone alone. */
+.row-leg-missing .leg-line {
+  border-left-style: dashed;
+}
+.row-leg-missing .leg-cost {
+  font-family: inherit;
+  font-style: italic;
+}

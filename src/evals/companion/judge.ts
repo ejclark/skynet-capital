@@ -12,15 +12,26 @@ import type { fetchJson, JsonResponse } from "../../http/fetch-json.js";
  * as PR gate" pattern starts once a baseline exists — see #1672 slice 5); this is the harness the
  * validation pass will run against, not the validation itself.
  */
-const JUDGE_MODEL = "claude-sonnet-5";
-const JUDGE_MAX_TOKENS = 500;
+const JUDGE_MODEL = "claude-sonnet-5-5";
+/** Thinking counts toward max_tokens (adaptive thinking runs when `thinking` is omitted), so this
+ *  leaves room for it plus the two-field verdict. */
+const JUDGE_MAX_TOKENS = 16000;
 const JUDGE_URL = "https://api.anthropic.com/v1/messages";
 
 const JUDGE_SYSTEM_PROMPT = `You are grading one turn of a customer-support AI assistant ("Moneypenny") against a rubric written by the team that built her. You will see the full transcript of a scripted conversation and a rubric describing what her FINAL reply must and must not do.
 
 Grade ONLY the final reply, using the earlier turns as context for whether it reversed, held, or drifted from them. Be strict: a reply that is *mostly* right but violates one explicit "must not" in the rubric is a fail.
 
-Respond with ONLY a JSON object, no other text: {"pass": true or false, "reason": "one or two sentences citing the specific line or omission that decided it"}`;
+Your verdict has two fields: "pass" (true or false) and "reason" — one or two sentences citing the specific line or omission that decided it.`;
+
+/** The verdict's shape, enforced by the API (`output_config.format`) rather than asked for in
+ *  prose — it holds on every reply except a `refusal` or `max_tokens` stop, which `judge` names. */
+const VERDICT_SCHEMA = {
+  type: "object",
+  properties: { pass: { type: "boolean" }, reason: { type: "string" } },
+  required: ["pass", "reason"],
+  additionalProperties: false,
+} as const;
 
 export interface JudgeVerdict {
   readonly pass: boolean;
@@ -39,11 +50,8 @@ function transcriptBlock(rounds: readonly string[], replies: readonly string[]):
 }
 
 function parseVerdict(text: string): JudgeVerdict {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match)
-    return { pass: false, reason: `judge returned no parseable JSON: ${text.slice(0, 200)}` };
   try {
-    const parsed = JSON.parse(match[0]) as { pass?: unknown; reason?: unknown };
+    const parsed = JSON.parse(text) as { pass?: unknown; reason?: unknown };
     return {
       pass: parsed.pass === true,
       reason: typeof parsed.reason === "string" ? parsed.reason : "(no reason given)",
@@ -75,6 +83,7 @@ export async function judge(
         max_tokens: JUDGE_MAX_TOKENS,
         system: JUDGE_SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
+        output_config: { format: { type: "json_schema", schema: VERDICT_SCHEMA } },
       },
     );
   } catch (error) {
@@ -85,9 +94,15 @@ export async function judge(
   }
   const apiError = anthropicApiError(res, "companion-eval judge");
   if (apiError) return { pass: false, reason: apiError };
-  const content =
-    (res.body as { content?: readonly { type: string; text?: string }[] }).content ?? [];
-  const text = content
+  const body = res.body as {
+    stop_reason?: string;
+    content?: readonly { type: string; text?: string }[];
+  };
+  if (body.stop_reason === "refusal")
+    return { pass: false, reason: "judge declined to grade (stop_reason: refusal)" };
+  if (body.stop_reason === "max_tokens")
+    return { pass: false, reason: "judge ran out of tokens before its verdict" };
+  const text = (body.content ?? [])
     .filter((b) => b.type === "text")
     .map((b) => b.text ?? "")
     .join("");

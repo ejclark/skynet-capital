@@ -15,6 +15,11 @@
 //     `show`/`search` print the column that rule yields, so a session can check without GraphQL.
 //
 //   node scripts/issues.mjs create --title "…" --body-file b.md [--labels a,b] [--force] [--dry-run]
+//                                  [--parent N] [--blocked-by a,b] [--closed]
+//     (--parent files it as a native sub-issue of #N; --blocked-by adds native blocked-by links;
+//      --closed closes it as completed at once — a slice that already shipped, so the parent's
+//      progress bar counts it. docs/ISSUES.md → Slices as sub-issues.)
+//   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
 //   node scripts/issues.mjs search "words" [--label x] [--state open|closed|all] [--limit 20] [--json]
@@ -24,9 +29,10 @@
 // Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
 import { readFileSync } from "node:fs";
 import { lintIssue } from "./issue-lint.mjs";
+import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
 import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
-import { statusForIssue } from "./moneypenny/projects.mjs";
+import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 const TOKEN = () => process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "";
@@ -44,6 +50,8 @@ const VALUE_FLAGS = new Set([
   "--label",
   "--state",
   "--limit",
+  "--parent",
+  "--blocked-by",
 ]);
 
 /** argv → { cmd, positional, flags }. Value flags take the next arg; the rest are booleans. */
@@ -99,7 +107,16 @@ const labelNames = (issue) => (issue.labels ?? []).map((l) => (typeof l === "str
 
 /** The board column statusForIssue() yields — what projects-sync.mjs will set on its next run. */
 export const boardStatus = (issue) =>
-  statusForIssue({ state: issue.state, labels: labelNames(issue) });
+  statusForIssue({
+    state: issue.state,
+    labels: labelNames(issue),
+    subIssues: subIssueCounts(issue),
+    decisionCalloutMissing: missingDecisionCallout({
+      labels: labelNames(issue),
+      body: issue.body,
+      author: issue.user?.login,
+    }),
+  });
 
 /** One scan-able line per issue: `#N [Status] title (labels)`. */
 export function row(issue) {
@@ -128,6 +145,37 @@ export function matches(issue, words, { label } = {}) {
     .split(/\s+/)
     .filter(Boolean)
     .every((w) => hay.includes(w));
+}
+
+/**
+ * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
+ * then close a slice that already shipped. Ids, not numbers — both endpoints take the issue's
+ * database id. Pure so the order is specced: closing before linking would leave the bar short.
+ */
+export function followUps({ child, parentNumber, blockers = [], closed = false }) {
+  const ops = [];
+  if (parentNumber) {
+    ops.push({
+      method: "POST",
+      path: `issues/${parentNumber}/sub_issues`,
+      payload: { sub_issue_id: child.id },
+    });
+  }
+  for (const b of blockers) {
+    ops.push({
+      method: "POST",
+      path: `issues/${child.number}/dependencies/blocked_by`,
+      payload: { issue_id: b.id },
+    });
+  }
+  if (closed) {
+    ops.push({
+      method: "PATCH",
+      path: `issues/${child.number}`,
+      payload: { state: "closed", state_reason: "completed" },
+    });
+  }
+  return ops;
 }
 
 // ─── IO (REST core bucket, curl so HTTPS_PROXY is honoured — see gh.mjs's ghRest header) ──────────
@@ -178,6 +226,17 @@ function lintOrDie({ title, body, labels }) {
   }
 }
 
+/** A label-only update never re-lints the whole body (old issues predate the capsule), but adding
+ *  `needs-eric` still must not create an ask with no callout (#3913 slice 2). */
+function calloutOrDie(issue) {
+  if (!missingDecisionCallout(issue)) return;
+  console.error(
+    "problem: `needs-eric` with no `Needs from you` callout above the fold — pass --body-file with the callout (docs/ISSUES.md rule 7)",
+  );
+  console.error("issues: refused — the label promises Eric a decision the body never states.");
+  process.exit(1);
+}
+
 function create({ flags }) {
   const title = flags.title;
   if (!(title && flags["body-file"])) throw new Error("create needs --title and --body-file");
@@ -195,7 +254,28 @@ function create({ flags }) {
   }
   if (flags["dry-run"]) return console.log(`dry-run ok: would file "${title}" [${labels}]`);
   const issue = ghWrite("POST", "issues", { title, body, labels });
-  console.log(`${row(issue)}  ${issue.html_url}`);
+  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  const ops = followUps({
+    child: issue,
+    parentNumber: Number(flags.parent) || 0,
+    blockers,
+    closed: Boolean(flags.closed),
+  });
+  let last = issue;
+  for (const op of ops) last = ghWrite(op.method, op.path, op.payload) ?? last;
+  console.log(`${row(flags.closed ? last : issue)}  ${issue.html_url}`);
+}
+
+function link({ positional }) {
+  const [parent, ...children] = positional.map(Number);
+  if (!(parent && children.length)) throw new Error("link needs <parent> <child…>");
+  for (const n of children) {
+    const child = ghRest(`issues/${n}`);
+    for (const op of followUps({ child, parentNumber: parent })) {
+      ghWrite(op.method, op.path, op.payload);
+    }
+    console.log(`#${n} → sub-issue of #${parent}`);
+  }
 }
 
 function update({ positional, flags }) {
@@ -204,16 +284,15 @@ function update({ positional, flags }) {
   const current = ghRest(`issues/${n}`);
   const patch = {};
   if (flags.title) patch.title = flags.title;
+  // #3913 slice 2: lint against the labels the issue will HAVE, not the ones it had — a body
+  // written alongside `--add needs-eric` must carry the callout the new label promises.
+  const labels = nextLabels(labelNames(current), csv(flags.add), csv(flags.remove));
+  if (flags.add || flags.remove) patch.labels = labels;
   if (flags["body-file"]) {
     patch.body = withFooter(readBody(flags["body-file"]));
-    lintOrDie({
-      title: flags.title ?? current.title,
-      body: patch.body,
-      labels: labelNames(current),
-    });
-  }
-  if (flags.add || flags.remove) {
-    patch.labels = nextLabels(labelNames(current), csv(flags.add), csv(flags.remove));
+    lintOrDie({ title: flags.title ?? current.title, body: patch.body, labels });
+  } else if (csv(flags.add).includes("needs-eric")) {
+    calloutOrDie({ labels, body: current.body, author: current.user?.login });
   }
   if (flags.close) Object.assign(patch, { state: "closed", state_reason: flags.close });
   if (flags.reopen) patch.state = "open";
@@ -241,13 +320,15 @@ function show({ positional, flags }) {
   console.log(`${row(issue)}  ${issue.html_url}`);
 }
 
-const COMMANDS = { create, update, search, show };
+const COMMANDS = { create, update, search, show, link };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = parseArgs(process.argv.slice(2));
   const run = COMMANDS[args.cmd];
   if (!run) {
-    console.error("usage: node scripts/issues.mjs <create|update|search|show> … (see file header)");
+    console.error(
+      "usage: node scripts/issues.mjs <create|update|search|show|link> … (see file header)",
+    );
     process.exit(2);
   }
   try {

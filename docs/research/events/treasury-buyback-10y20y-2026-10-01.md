@@ -402,6 +402,8 @@ The list below is superseded by this paragraph where the two conflict.
 | 2026-09-24 | D-7 | **Cadence band tightens (D-7 crosses out of the 8+/7d band into 0-7/2d), and the free out-of-sample test this doc's own "This week" horizon call named — the 09-24 20-30Y announcement — landed exactly on schedule.** **Buyback prints since 09-17** (`fiscaldata` `buybacks_operations`, pulled direct, HTTP 200, 10 rows): **2026-09-24 20-30Y nominal**, preliminary announcement only (`results_pdf: null`, operation runs 1:40-2:00pm ET today, settles 09-25) — announced maximum **$6.000B**, **35 eligible issues**. This is the **second $6B liquidity-support operation ever run** and the **first outside the 10Y-20Y sector**, confirming 09-10's $6B was not a sector-specific or one-off print. **Directly falsifies the dead branch of this doc's own "This week" call:** the stated falsifier — *"09-24 announcing exactly $4.0B and filling 100%"* — did not occur; the announcement is 50% above the $4B floor, same as 09-10. Offer/accept totals are not yet posted as of this fetch and are the 20-30Y sibling ledger's to record, not registered as a test here (this event's own 10Y-20Y sector has had no new print since 09-10; the next one is this event itself, 10-01). **Schedule PDF re-fetched** — byte-identical, **89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`**, unrevised since 09-09; the 10-01 row still reads **"= or > $4 billion"**, announcement still pending 09-30 11:00 ET. **Rates (Yahoo `^TNX`/`^TYX`, 09-23 close, freshest available):** 10Y **5.114** (+15.1bp vs 4.963 on 09-22) — a **new cycle high**, corroborated by press (tradingeconomics/CNBC coverage dated 09-24: 10Y "highest since 2007" on strong S&P Global PMI prints and swelling AI-sector corporate debt supply); 30Y **5.401** (+10.5bp vs 5.296), also a new high. **The kill switch "offers reverting to $15-36B while long-end yields keep making highs" — the yields-making-highs half, flagged half-live 09-15 and reversed by the 09-22 post-FOMC rally, is live again.** **Volatility:** VIX **15.18** (09-23 close) vs **14.87**, **+0.31** — below the 3-point regime threshold, no shift. **Adjacency — peers:** n/a (`symbols: []`). **Adjacency — corridor:** 59 tracked entries within ±5 days of 10-01, identical in count and membership to the 09-22 row; confirmed high/critical set unchanged — `ism-manufacturing-2026-10-01`, `pce-2026-09-30`, `jobs-2026-10-02`, `ism-services-2026-10-05`; no new confirmed high/critical adjacent event. **Geopolitical:** `government-funding-deadline-2026-09-30` checked directly (its own file) — still resolved/averted, CR (PL 119-103) funded through 12-11, no new development. **NOTHING new proposed** — no dated entry found off-calendar. | — (no change; base case — partial take at sub-2.5x cover — kill switches, and the two open forward tests `FT-…-3`/`FT-…-4` all stand. 09-24's $6B 20-30Y announcement reinforces rather than revises: the enlarged cap is repeating across sectors on schedule, not a 10-20Y-specific one-off, and the yields-making-highs kill switch resumes live) | 2026-09-26 (medium; D-7 crosses into the 0-7d/2-day band) |
 | 2026-09-26 | D-5 | **The 09-24 20-30Y operation's own results posted (it was preliminary-only last row), and they extend the corridor's cover rule to its sixth consecutive confirmation while landing well above the cross-sector fill median.** `fiscaldata` `buybacks_operations` re-pulled direct, HTTP 200: **2026-09-24 20Y-30Y** final results — offered **$10.468B** against the **$6.000B** cap (**cover 1.745x**, sub-2.0x), accepted **$4.078B = 67.97%**, spread across **12 of 35** eligible issues. Cover stays in the **0-of-26** zone (was 0-of-25 as of the 09-22 row) — no $4B+-cap operation below 2.5x cover has ever taken the full cap — but the **fill, 67.97%, sits well above the ~35-39% cross-sector median** for that cover band and closer to 09-10's own-sector **86.4%** outlier than to the thin cross-sector fills the 09-15 doc's base rates were built from; a second long-end data point reads as the long end filling *more* than other sectors at the same cover, not less. Issue spread (12/35 = 34%) sits between the pre-regime **1-5-issue** norm and 09-10's **23/40 (58%)** — directionally consistent with "the doubled cap buys by spreading across more issues," not yet as pronounced as the 10-20Y precedent. **This event's own sector (10Y-20Y) still has no new print since 09-10**; the next one is this operation itself. **Schedule PDF re-fetched** — byte-identical, **89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`**, unrevised since 09-09; the 10-01 row still reads **"= or > $4 billion"**, announcement pending **09-30 11:00 ET** (4 days out). **Rates (Yahoo `^TNX`/`^TYX`, 09-25 close, freshest available):** 10Y **5.184** (+7.0bp vs 5.114 on 09-23) — another new cycle high; 30Y **5.504** (+10.3bp vs 5.401) — also a new high. **The "offers reverting to $15-36B while yields keep making highs" kill switch stays half-live**, unchanged in kind from the 09-24 row: yields extended their highs again, but 09-24's $10.468B offered is still well below the $15-36B range, so the offers half has not fired. **Volatility:** VIX **14.87** (09-25 close) vs **15.18**, **-0.31** — no regime shift. **Adjacency — peers:** n/a (`symbols: []`). **Adjacency — corridor:** re-swept across 09-26 through 10-06 (`event-scan.mjs --on-date`, 11 dates); **60 tracked entries**, one net change versus the 09-24 row's 59 — `retail-benchmark-revision-2026-09-28` dropped off (already past/reclassified elsewhere, not this lane's concern) and **`mu-2026-09-30-print` (confirmed, critical — MU earnings) is new to this event's own adjacentStrongIds**, though already carried in the `government-funding-deadline-2026-09-30` sibling's corridor since 09-19. It is a semiconductor earnings print with no rates or Treasury-demand channel to this event; recorded, not acted on. Confirmed high/critical set is otherwise unchanged: `ism-manufacturing-2026-10-01`, `pce-2026-09-30`, `jobs-2026-10-02`, `ism-services-2026-10-05`. **Geopolitical:** `government-funding-deadline-2026-09-30` re-checked directly — still resolved/averted, CR (PL 119-103) funded through 12-11, no new development. **NOTHING new proposed** — no dated entry found off-calendar. | — (no change; base case — partial take at sub-2.5x cover — kill switches, and the two open forward tests `FT-…-3`/`FT-…-4` all stand. The 09-24 cross-sector result reinforces the cover rule's direction for the sixth straight time while sharpening the magnitude question: the long end is filling above the cross-sector median at this cover band, which is what `FT-…-4`'s ≥$3.0B magnitude clause is betting on) | 2026-09-28 (medium; D-5 stays in the 0-7d/2-day band) |
 | 2026-09-28 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.0pt since last), band unchanged (medium:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-30 |
+| 2026-09-30 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 16.0 (+1.2pt since last), band unchanged (medium:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-02 |
+| 2026-10-02 | D+1 | **Close-out. The operation ran, and it is the sector's second-ever test of an enlarged cap — the opposite result from the first.** `fiscaldata` `buybacks_operations` re-pulled direct, HTTP 200: announced maximum **$6.000B** (the second $6B 10Y-20Y operation, after 09-10), offered **$46.391B** — cover **7.73x**, the highest ever recorded in this sector at any cap — accepted **$6.000B = 100%, a full take**, across just **2 of 41** eligible issues. Full detail and forward-test scoring below in `## Outcome`. | **Stance closes: read-not-trade held throughout, correctly — no position was ever keyed to this operation and none is retrofitted now.** The dollar-threshold mechanism (`FT-…-1`, `FT-…-2`) stayed void for want of a $4B print; the cover-threshold regime call (`FT-…-3`) lands in the one zone (cover ≥3.5x) its own registration pre-declared uninformative, scored **inconclusive**; the magnitude claim (`FT-…-4`) **passes** cleanly — $6.0B accepted is 2x the $3.0B floor and the 09-15 "perverse case" stays dead on its second observation too | Close-out (below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -422,3 +424,110 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+## Outcome
+
+**Assessed 2026-10-02 (D+1, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so there was nothing to bust in the instrument
+cache (recorded rather than skipped, per the doc's own method note). Every number below is a fresh
+pull this session, never carried from a prior row: `api.fiscaldata.treasury.gov`
+`buybacks_operations` (plain curl, HTTP 200, filtered `operation_date:gte:2026-09-10`, 6 rows) and
+Yahoo daily closes for `^VIX`/`^TNX`/`^TYX`.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** |
+| Total par offered | **$46,391,000,000** |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **7.73x** |
+| Fill (accepted ÷ max) | **100% — a full take** |
+| Issues | **2 accepted of 41 eligible** |
+| Window / settlement | 1:40–2:00pm ET **2026-10-01**, settled **2026-10-02** |
+
+This is the sector's **second-ever** operation at an enlarged, non-$2B cap, and it is the mirror
+image of the first. **09-10** printed the lowest cover this bucket has ever run (1.75x) and filled
+partially (86.4%) by spreading across 23 of 40 eligible issues. **10-01** printed the highest cover
+this bucket has ever run (**7.73x**, beating every $2B-era reading too) and filled **fully**, by
+accepting just **2 of 41** eligible issues. Read together, the two operations resolve the question
+this doc's leg 4 and FT-1 opened: **cover, not the cap era, still predicts the binary** (≥3.5x → full
+take, now 12 of 12 across every cap this sector or any other has run) — and the *mechanism* behind
+09-10's spread was never a long-end feature, it was a thin-book necessity. At high cover Treasury
+does not need breadth: it fills its entire $6B from the two cheapest-to-deliver issues on offer and
+leaves the other 39 untouched. **Eligible count printed 41** here, against **40** on 09-10 and the
+**39** the 10-15 sibling's `FT-…-1` inherited and predicts — recorded for that lane to reconcile,
+not re-derived here.
+
+### Forward tests scored
+
+- **`FT-treasury-buyback-10y20y-2026-10-01-2`** — **VOID**, on its own pre-registered clause (*"Void
+  … if … announced at a maximum other than $4B"*). The 09-30 announcement printed **$6.000B**, not
+  $4B — exactly the outcome the 09-15 row flagged as "on track to void for the same reason" as
+  `FT-…-1`. No credit taken; the dollar-threshold mechanism this test and its predecessor both rested
+  on never got a $4B print to test against, across either sector observation this corridor has now
+  seen.
+- **`FT-treasury-buyback-10y20y-2026-10-01-3`** — **INCONCLUSIVE, not a kill**, on its own
+  pre-registered override: *"Cover landing at or above 3.5x with any outcome scores inconclusive,
+  not pass … the prediction is only informative in the sub-2.5x zone."* Cover printed **7.73x**, more
+  than double that line. Read literally outside that override, a full take would be the stated kill
+  condition — but the override exists precisely so a high-cover full take is not retrofitted into
+  disproving a regime claim that was only ever about the thin-book zone the two most recent prints
+  (as of registration) pointed at. The registered rule never got tested in its own zone; this
+  operation answers a different question (what happens at very high cover) that the corridor's old
+  $2B-era record already answered the same way, 51 of 57 times.
+- **`FT-treasury-buyback-10y20y-2026-10-01-4`** — **PASS**. Predicted accepted par ≥ $3.0B and fill ≥
+  60%; actual **$6.0B accepted (2x the floor) at 100% fill**. The leg-7 "perverse case" — a bigger cap
+  buying less than the $2B cap it replaced — stays dead on its second observation, this time by the
+  widest margin either operation has shown: $6.0B against the $2.00B the superseded cap would have
+  delivered mechanically at this offer volume.
+
+No new forward test is registered: the close-out is terminal for this document, so a prediction
+filed here would have no session left to score it.
+
+### Kill switches, adjudicated against the close-out data
+
+- **"A second consecutive sub-$12B offer total"** — does **not** fire. 09-10 offered $10.489B (below
+  $12B); 10-01 offered **$46.391B**, the highest this sector has ever drawn by a wide margin. The
+  thin-book pattern broke rather than repeated.
+- **"Offers reverting to $15–36B while long-end yields keep making highs"** — **neither half fires as
+  written**. Offers did not settle back into the named $15–36B band; they overshot it by a full order
+  of magnitude. Yields did not keep making highs through the operation: 10Y **5.237%** on 10-01
+  (Yahoo `^TNX`, down **5.6bp** from 09-30's 5.293%) and 30Y **5.603%** (down 3.5bp from 5.638%) —
+  both eased on the day, reversing the run of fresh highs the 09-24/09-26 rows recorded.
+- **"The 1:40–2:00pm ET window … moving 10-20Y yields >5bp with no ISM/coupon-announcement
+  explanation"** — **not attempted, as stated at registration (leg 12)**. 2026-10-01 also carried ISM
+  manufacturing (10:00), a Treasury coupon announcement (~11:00), and the BoJ Tankan overnight; daily
+  closes cannot isolate a 20-minute window from those confounds, and no attribution is claimed.
+- **"Treasury escalating past $4B/op, adding sectors or frequency, publishing the updated schedule, or
+  making the increase permanent at the 2026-11-04 refunding"** — **outside this event's window**;
+  `treasury-refunding-2026-11-04` is already a tracked calendar entry and inherits the question.
+- The two **$14.0B-dollar-threshold** switches and the **"09-09/09-30 maximum below $4B"** switch were
+  already retired or adjudicated not-fired by the 09-15 row and stay that way — the 09-30 announcement
+  printed $6B, same as 09-10, confirming the dollar cap is durably gone rather than a one-off.
+
+### Tape, for the record (no attribution claimed)
+
+VIX **16.39** (10-01 close) vs **16.34** (09-30) — **+0.05pt**, no regime shift; **15.51** (10-02,
+**intraday/unsettled as of this fetch**, not a final close). 10Y **5.237%** / 30Y **5.603%** on 10-01;
+10Y **5.277%** / 30Y **5.630%** on 10-02 (same intraday caveat). No tracked name's tape is attributed
+to this ~1bp operation, per leg 14, unchanged.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — no position was ever keyed
+to a single liquidity-support operation, and none is retrofitted now.** What the five-and-a-half
+weeks of pulses actually resolved: the corridor's inherited "Treasury takes the full announced
+maximum, mechanically" survives at high cover (now 12/12 at ≥3.5x, any cap, any sector) and fails at
+low cover (0/24 at <2.5x, $4B+) — cover, not the cap era, was always the right variable, and this
+event's own two forward tests (`FT-…-1` on 09-10, `FT-…-3` here) both landed in the high-cover zone
+their own registrations declared uninformative for the regime question, while the magnitude question
+(`FT-…-4`, and 09-10's leg-7 refutation) settled cleanly: the doubled cap buys **more**, not less,
+paper than the one it replaced. The open question this doc hands to the corridor is new, not the one
+it started with: **why did 09-10 spread across 23 issues at low cover while 10-01 concentrated in 2 at
+high cover** — answered above as a thin-book necessity rather than a long-end feature, but untested
+against a third observation. **10-15** and **11-04** are where that gets a third and fourth look. The
+scanner goes quiet on this event.

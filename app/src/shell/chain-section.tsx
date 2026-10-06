@@ -103,9 +103,12 @@ export function ChainSection({
   /** A browse to another expiry writes it back to `?exp=`, so the ticket follows (slice 4a). */
   readonly onExpirationChange?: (expiration: string) => void;
   readonly onPick: (pick: ChainPick) => void;
-  /** Strikes the Spread draft already carries a leg on (same convention as `DraftLegForm`'s own
-   *  inline chain) — outlined here too, so a member who tapped a leg from THIS pane can see it
-   *  stuck before switching to the ticket to review. Undefined off the Spread rung. */
+  /** Strikes this page is pointing the member AT — outlined, never selected. Two sources, both
+   *  proposals rather than orders: a leg the Spread draft already carries (same convention as
+   *  `DraftLegForm`'s own inline chain, so a leg tapped from THIS pane can be seen to have stuck),
+   *  and the legs of a structure picked on the Outlook pane (#3407 slice 4). Neither claims a fill
+   *  — a REAL holding has its own `straddle-held-badge` letter, and the single-leg ticket's one
+   *  strike has `straddle-selected`. Undefined when there is nothing to mark. */
   readonly markedStrikes?: readonly number[];
   /** Set when the ticket is not on screen (folded): the empty pane asks for the symbol itself. */
   readonly onSymbolCommit?: (symbol: string) => void;
@@ -175,6 +178,7 @@ export function ChainSection({
         markedStrikes={markedStrikes}
         expirationField={expirationField}
         pending={chain.isFetching}
+        onRefresh={() => void chain.refetch()}
         onPickStrike={(value) =>
           onPick({ strike: value, side: optionType, expiration: answer.expiration })
         }
@@ -184,7 +188,7 @@ export function ChainSection({
       />
       <p className="note">
         {nav.instrument === "spread"
-          ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread."
+          ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread. Tap an outlined strike's price again to reprice that leg."
           : "Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract."}
       </p>
     </section>

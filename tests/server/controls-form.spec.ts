@@ -1,6 +1,7 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { COMPANION_MODEL } from "../../src/companion/companion-model.js";
 import { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import {
   applyControlsAction,
@@ -116,8 +117,24 @@ describe("fleetControls", () => {
         { id: "banker", displayName: "The Banker", suspended: false },
       ]);
       expect(controls.updatedBy).toBe("owner@example.com");
-      expect(controls.companionModel).toBe("claude-sonnet-5"); // the store's untouched default
-      expect(controls.companionModels).toEqual(["claude-haiku-4-5", "claude-sonnet-5"]);
+      expect(controls.companionModel).toBe("claude-sonnet-5-5"); // the store's untouched default
+      expect(controls.companionModels).toEqual(["claude-haiku-4-5", "claude-sonnet-5-5"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a dial saved on the previous Sonnet ID reads as the default, with no migration write", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "skynet-controls-form-"));
+    try {
+      const path = join(dir, "bot-controls.json");
+      await writeFile(path, JSON.stringify({ bots: {}, companionModel: "claude-sonnet-5" }));
+      const store = new BotControlsStore(path);
+      // What the turn's resolveModel reads (dashboard-companion.ts) — undefined, so the chat
+      // falls back to COMPANION_MODEL.
+      expect(store.load().companionModel).toBeUndefined();
+      const controls = fleetControls({ store, isOwner: () => true, bots: () => BOTS });
+      expect(controls.companionModel).toBe(COMPANION_MODEL);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

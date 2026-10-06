@@ -31,9 +31,11 @@
         {
           "id": "s3",
           "goto": "/app/accounts",
-          "sees": "the market calendar's head under the section switch — the week's range, arrows, the lens row — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
+          "sees": "the market calendar under the section switch — at desktop the head in the row (the week's range, arrows, the lens row); on a phone one chip naming the range that opens the head in a sheet — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
           "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
-          "expect": [{ "role": "button", "name": "Week", "exact": true, "within": "main" }],
+          "expect": [
+            { "role": "region", "name": "Market calendar", "exact": true, "within": "main" }
+          ],
           "act": { "click": { "role": "button", "name": "Events", "exact": true } },
           "judge": "does this reader know what is happening this week to what they hold?"
         },
@@ -163,7 +165,7 @@
           "sees": "the book — no standing 'wait' anywhere, no date that reopens the question",
           "ears": "WHEN the owner has decided to wait, the app shall carry the wait on the book with the date that reopens it.",
           "expect": [{ "text": "Wait until", "within": "main" }],
-          "known_gap": "'wait' is per-position only (src/options/position-guidance-rules.ts:231 CALL_WORDS.WAIT); nothing at book level carries a wait or the date that reopens it, and the calendar's range never reaches /accounts",
+          "known_gap": "'wait' is per-position only (src/options/position-guidance-rules.ts:231 CALL_WORDS.WAIT); nothing at book level carries a wait or the date that reopens it",
           "where": "src/options/position-guidance-rules.ts:231",
           "severity": "medium",
           "fix": "L",
@@ -198,9 +200,12 @@
         {
           "id": "s3",
           "goto": "/app/research",
-          "sees": "R&D at 390: the calendar in the phone strip, the fog notice beside the day lens",
-          "ears": "WHEN R&D renders on a phone, the app shall keep the range control and its fog notice visible without hover.",
-          "expect": [{ "role": "heading", "name": "R&D" }],
+          "sees": "R&D at 390: the calendar's chip naming the range; one tap opens the head and the month grid in a sheet, the fog notice beside the day lens",
+          "ears": "WHEN R&D renders on a phone, the app shall keep the range control one tap away and its fog notice visible without hover.",
+          "expect": [
+            { "role": "heading", "name": "R&D" },
+            { "role": "button", "name": "Market calendar:" }
+          ],
           "judge": "can this reader change the week from here?"
         }
       ]

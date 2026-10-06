@@ -5,14 +5,15 @@ import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
-import { fetchResearch } from "../live/research";
+import { fetchResearchCalendar } from "../live/research";
 import { describeSymbolEvent, type SymbolEvent, symbolEventsIn } from "../live/symbol-events";
-import { CalendarHead } from "./calendar-head";
+import { CalendarHead, headLine } from "./calendar-head";
+import { CalendarSheet } from "./calendar-sheet";
 
 /**
  * THE MARKET CALENDAR'S HEAD ON TRADE (#3807 slice 3b-2): the same row the Profile page's head is
- * (`cockpit-clock.tsx` — range · arrows · lens row · fog line, the tower's slot at its right cap
- * under `?shell=watchtower`), leading Trade's stage the way R&D's band head leads its board. Its
+ * (`cockpit-clock.tsx` — range · arrows · lens row · fog line), leading Trade's stage the way R&D's
+ * band head leads its board. Its
  * range is the ROOT `?on=&span=` (`live/horizon-params.ts`), so a week picked on the Profile page
  * is the week Trade opens on, and a step here follows you back.
  *
@@ -27,9 +28,8 @@ import { CalendarHead } from "./calendar-head";
  * press moves the calendar's range and nothing on the ticket.
  *
  * A ROW, NEVER A COLUMN. The Bench docks at 1280 by the window's width (`use-bench-width.ts`), and
- * this head spends height, never width — `scripts/shoot/trade-band.mjs` prints the docked Bench's
- * width with Moneypenny's rail open, with and without the tower, which is the falsifier for the
- * tower's top-right placement.
+ * this head spends height, never width. From 1280 the page frame's tower column (#3977) takes its
+ * width beside the whole stage, not from this row.
  * @category trading
  */
 
@@ -77,7 +77,7 @@ export function SymbolEventsLine({
   /** The range in words, for the empty states: "Sep 28 – Oct 4", "from today on". */
   readonly when: string;
 }): ReactElement {
-  const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch });
+  const research = useQuery({ queryKey: ["research-calendar"], queryFn: fetchResearchCalendar });
   if (research.isPending) return <p className="held-events">Reading the calendar…</p>;
   if (research.isError) {
     return <p className="held-events">The calendar's events are unreachable right now.</p>;
@@ -113,25 +113,36 @@ export function TradeClock({ symbol = "" }: { readonly symbol?: string }): React
   // Under the all lens a ticket reads what is ahead: history is R&D's, not the order form's.
   const all = horizon.lens === "all";
   const range = all ? { ...horizon.range, start: horizon.today } : horizon.range;
+  const head = {
+    name: "any date",
+    count: symbol ? `everything ahead on ${symbol}` : "everything ahead market-wide",
+  };
   return (
-    <section className="cal-head trade-clock" aria-label="Market calendar">
+    <CalendarSheet
+      className="cal-head trade-clock"
+      line={headLine({
+        lens: horizon.lens,
+        range: horizon.range,
+        closures: MARKET_CLOSURES,
+        all: head,
+      })}
+      below={
+        <SymbolEventsLine
+          symbol={symbol}
+          range={range}
+          when={all ? "from today on" : rangeLabel(horizon.range, horizon.lens)}
+        />
+      }
+    >
       <CalendarHead
         lens={horizon.lens}
         range={horizon.range}
         closures={MARKET_CLOSURES}
-        all={{
-          name: "any date",
-          count: symbol ? `everything ahead on ${symbol}` : "everything ahead market-wide",
-        }}
+        all={head}
         onLens={horizon.setLens}
         onStep={horizon.step}
         {...(fog.fogged ? { dayFog: { door: fog.door, reason: fog.reason } } : {})}
       />
-      <SymbolEventsLine
-        symbol={symbol}
-        range={range}
-        when={all ? "from today on" : rangeLabel(horizon.range, horizon.lens)}
-      />
-    </section>
+    </CalendarSheet>
   );
 }

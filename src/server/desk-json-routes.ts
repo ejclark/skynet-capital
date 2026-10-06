@@ -1,7 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
-import { botHeartbeatView } from "../observatory/bot-heartbeat-view.js";
+import { botHeartbeatView, latestVerdictPass } from "../observatory/bot-heartbeat-view.js";
 import {
   decisionCyclesView,
   expectancyView,
@@ -11,9 +11,12 @@ import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
+import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
+import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
+import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -22,7 +25,9 @@ import {
   ownsDesk,
   withoutCyclePlaybooks,
   withoutHeartbeatPlaybookIds,
+  withoutLadderPlaybookIds,
   withoutReasoningPlaybook,
+  withoutThesisPlaybooks,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
@@ -44,6 +49,15 @@ function withDecisions<V extends { readonly activity: readonly { readonly orderI
       return { ...event, reasoning: owner ? reasoning : withoutReasoningPlaybook(reasoning) };
     }),
   };
+}
+
+/** A bot's spread fills arrive one per leg, under each leg's own order id: the store's leg
+ *  map hops each to the spread's decision, so Activity can fold them into the spread's row. A human
+ *  desk, or a deployment without the store, folds nothing. */
+function botSpreadLookup(kind: string, config: DashboardServerConfig): SpreadOf | undefined {
+  const { findSpreadLeg, findByOrderId } = config;
+  if (kind !== "bot" || !(findSpreadLeg && findByOrderId)) return undefined;
+  return spreadLookup({ findSpreadLeg, findByOrderId });
 }
 
 /** How many passes to read per persona per page — the store's own max. A page of cycles then
@@ -106,6 +120,25 @@ async function heartbeatPayload(
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
 
+/**
+ * `/api/desk/:id/probes` (#3651 slice 7a) — COND-SCOUT's shadow ledger, only on the bot account
+ * the scout runs beside: open probes, recent retros, and a verdict per hypothesis. Every number
+ * here is simulated (no order was ever sent); the Heartbeat labels it so. Absent snapshot, or a
+ * different desk, says so plainly rather than showing an empty ledger.
+ */
+function probesPayload(found: { readonly id: string }, config: DashboardServerConfig): unknown {
+  const snapshot = config.readCondScout?.();
+  if (!snapshot || snapshot.hostPersonaId !== found.id) return { available: false };
+  return {
+    available: true,
+    simulated: true,
+    at: snapshot.at,
+    open: snapshot.open,
+    retros: snapshot.retros,
+    verdicts: hypothesisVerdicts(snapshot.retros),
+  };
+}
+
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
  *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race).
@@ -120,7 +153,7 @@ export async function serveDeskJson(
   session?: Session,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
-  const sub = ["activity", "decisions", "heartbeat", "pulse", "thesis"].find((name) =>
+  const sub = ["activity", "decisions", "heartbeat", "probes", "pulse", "thesis"].find((name) =>
     rest.endsWith(`/${name}`),
   );
   const id = sub ? rest.slice(0, -(sub.length + 1)) : rest;
@@ -162,6 +195,7 @@ export async function serveDeskJson(
                   limit,
                   before: before ?? undefined,
                   ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
+                  spreadOf: botSpreadLookup(found.kind, config),
                 }),
                 config,
                 owner,
@@ -172,8 +206,14 @@ export async function serveDeskJson(
     );
     return;
   }
-  if (sub === "heartbeat") {
-    res.end(JSON.stringify(await heartbeatPayload(found, config, owner)));
+  // The bot's health panels — one lookup, so a new panel never adds a branch here.
+  const panels: Record<string, () => Promise<unknown>> = {
+    heartbeat: () => heartbeatPayload(found, config, owner),
+    probes: () => Promise.resolve(probesPayload(found, config)),
+  };
+  const panel = panels[String(sub)];
+  if (panel) {
+    res.end(JSON.stringify(await panel()));
     return;
   }
   if (sub === "decisions") {
@@ -209,11 +249,21 @@ export async function serveDeskJson(
     const activity = activityRecords
       ? deskActivityView(activityRecords, undefined, { limit: MAX_PAGE_SIZE }).activity
       : [];
+    // The safeguard ladder (#3194 slice 6a) — read off the plays the BOT's own newest
+    // verdict-carrying pass reported, never this process's env (see `safeguard-ladder-view.ts`).
+    // Null means "no pass on hand said which plays ran", which is never "no safeguards".
+    const pass = latestVerdictPass(decisionRecords ?? []);
+    const ladder = pass ? safeguardLadderView(pass.verdicts) : null;
+    const view = thesisView(found.personaId, decisions, activity, samples, config.findByOrderId);
     res.end(
       JSON.stringify({
         available: true,
         kind: "bot",
-        thesis: thesisView(found.personaId, decisions, activity, samples, config.findByOrderId),
+        thesis: owner ? view : withoutThesisPlaybooks(view),
+        ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
+        // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
+        // as current (the same reason `playbookLines` carries `since`).
+        ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
       }),
     );
     return;

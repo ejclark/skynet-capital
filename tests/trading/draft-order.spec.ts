@@ -219,14 +219,25 @@ describe("the draft — what carries unlimited loss", () => {
     expect(undefinedRiskLegs(validatedSpread())).toEqual([]);
   });
 
-  it("still names it when the cap sits BELOW the short strike, where it caps nothing", () => {
-    const inverted = addLeg(addLeg(emptyDraft(), CALL), {
+  it("clears a short call capped by a long call BELOW it — a debit spread, whose worst is the debit", () => {
+    // #4684: the desk used to call this bull call spread a naked call. Below the short strike the
+    // long call caps it MORE, not less: past 180 every dollar the short loses, the 170 makes.
+    const bullCall = addLeg(addLeg(emptyDraft(), CALL), {
       ...CALL,
       strike: 170,
       action: "buy",
     });
 
-    expect(undefinedRiskLegs(inverted).map((l) => l.id)).toEqual(["leg-1"]);
+    expect(undefinedRiskLegs(bullCall)).toEqual([]);
+  });
+
+  it("names one of two short calls sharing a single long call — one long caps one short", () => {
+    // The 200 caps the 190 (the narrower width, so the cheaper cap) and the 180 is left bare.
+    const twoUnderOne = addLeg(addLeg(addLeg(emptyDraft(), CALL), { ...CALL, strike: 190 }), {
+      ...HIGHER_CALL,
+    });
+
+    expect(undefinedRiskLegs(twoUnderOne).map((l) => l.id)).toEqual(["leg-1"]);
   });
 
   it("still names it when the cap expires first, leaving the short bare for the rest", () => {

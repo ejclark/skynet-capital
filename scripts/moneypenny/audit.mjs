@@ -6,6 +6,8 @@ import { existsSync } from "node:fs";
 import { sh } from "./gh.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
+import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
+import { workModeRetitle } from "./work-mode-title.mjs";
 
 /**
  * #1403 — how many times a conflicted PR gets re-dispatched before this lane stops trying and
@@ -39,6 +41,13 @@ export function answered(issue = {}) {
  * Deliberately DETERMINISTIC and ceiling-capped: it comments and warns — it never reclaims a lock,
  * reassigns work, or flips a status. Deciding whether a stalled build is dead or just slow is
  * judgment, and judgment belongs to the humans and agents the comment summons.
+ *
+ * ONE NARROW EXCEPTION (#3960, 2026-09-30): a stale `in-progress` label comes off. That label is
+ * not work state but a DISPLAY of it — the board's In Progress column — and a build that died
+ * without its terminal step leaves the column lying, with a WIP limit of 3 counting a ghost. So
+ * after `inProgressStaleAfterHours` with no activity on the issue it is removed, with one comment
+ * saying so. Removing the label is its own memory (the issue leaves the candidate list), so this
+ * fires once per stale label, and re-applying it is one click. No lease is touched.
  */
 export function audit(deps = {}) {
   const {
@@ -46,6 +55,8 @@ export function audit(deps = {}) {
     silentFeedback = [],
     readyPlans = [],
     conflictedPRs = [],
+    staleInProgress = [],
+    inProgressStaleAfterHours = 6,
     staleAfterDays = 2,
     silentAfterHours = 6,
     planStallAfterHours = 48,
@@ -111,6 +122,20 @@ export function audit(deps = {}) {
       body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
+  // #3960 — a stale in-flight label. `staleInProgress` arrives as every open issue carrying
+  // `in-progress` with how long it has been quiet (`updatedAt`: any comment, label or edit counts
+  // as activity); this loop only applies the threshold. No `flagged` check: taking the label off
+  // is what stops the next push from seeing it again.
+  for (const w of staleInProgress) {
+    if (w.hoursQuiet < inProgressStaleAfterHours) continue;
+    intents.push({
+      kind: "clear-in-progress",
+      issueNumber: w.number,
+      title: w.title,
+      hoursQuiet: w.hoursQuiet,
+      body: `Cleared \`${LABELS.inProgress.name}\`: no activity for ${inProgressStaleAfterHours}h. Re-apply it when work resumes.\n\n${FOOTER}`,
+    });
+  }
   // #909 / #1403 — the one class nothing else was watching: a PR that went `CONFLICTING` against
   // `main` on some push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly
   // what makes this detectable — `conflictedPRs` arrives pre-filtered to open, actually-conflicting
@@ -166,6 +191,13 @@ export function audit(deps = {}) {
       body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
     });
   }
+  // #3960 criterion 4's write half: this push-driven audit IS "the next lane run", so it is where
+  // the work spigot's dashboard — the tracking issue's title — catches up with the position the
+  // lanes are actually acting on. Pure decision in `workModeRetitle`, which returns null (the
+  // common case) whenever the title is already right. No comment, no label: a title is a display,
+  // and the title itself is the memory that stops the next push repeating the edit.
+  const retitle = workModeRetitle(deps.workMode);
+  if (retitle) intents.push(retitle);
   return intents;
 }
 
@@ -193,6 +225,44 @@ export function readyPlanCandidate(issue, comments = [], hasClaim = false, nowMs
   if (!readyComment) return null;
   const hoursSinceReady = Math.floor((nowMs - Date.parse(readyComment.createdAt)) / 3_600_000);
   return { title: issue.title, number: issue.number, hoursSinceReady };
+}
+
+/**
+ * #3960 — the open issues carrying `in-progress`, each with how long it has been quiet. `updatedAt`
+ * is the activity proxy: a live build comments, pushes a linked PR, or moves a label well inside
+ * 6h. Re-filters on the label so a caller may pass any issue list; `audit()` applies the threshold.
+ */
+export function staleInProgressFrom(issues = [], nowMs = 0) {
+  return (issues ?? [])
+    .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name))
+    .map((i) => ({
+      title: i.title,
+      number: i.number,
+      hoursQuiet: Math.floor((nowMs - Date.parse(i.updatedAt)) / 3_600_000),
+    }));
+}
+
+/**
+ * How many open issues the audit reads in one list call. `gh issue list` pages GraphQL in 100s up
+ * to this, so it is a ceiling, not a page size — ~140 open on 2026-10-04, so ~7x headroom.
+ */
+export const OPEN_ISSUE_LIMIT = 1000;
+
+/**
+ * LOUD ON THE CEILING — `ghRestAll`'s fail-closed doctrine, for a `gh … list --limit` read. A list
+ * that came back exactly `limit` long may have had more behind it, and every audit rule reads an
+ * absent issue as "nothing to flag": at `--limit 100` the oldest ~40 open issues were invisible to
+ * the plan-stall, silent-feedback, unclaimed and already-flagged checks (#4547 found it for
+ * `in-progress`). Throwing turns that silent half-answer into a red run someone sees.
+ */
+export function untruncated(rows, limit, label) {
+  if ((rows ?? []).length >= limit) {
+    throw new Error(
+      `${label} returned ${rows.length} rows at --limit ${limit}; the list may be truncated. ` +
+        "Raise the limit rather than audit a partial list.",
+    );
+  }
+  return rows ?? [];
 }
 
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
@@ -239,16 +309,23 @@ export function gatherAuditDeps(nowMs) {
     }
     return { sha: null, attempt: 1 };
   }
-  const issues = json("gh issue list", [
-    "issue",
-    "list",
-    "--state",
-    "open",
-    "--limit",
-    "100",
-    "--json",
-    "title,number,state,updatedAt,createdAt,labels,closedByPullRequestsReferences",
-  ]).map((i) => ({ ...i, closedByPullRequests: i.closedByPullRequestsReferences ?? [] }));
+  // EVERY open issue, not the newest 100: each rule below filters this list, so a truncated read
+  // is a rule that silently sees nothing. Not REST (`ghRestAll`) — REST has no
+  // `closedByPullRequestsReferences`, and `answered()` would then cost one lookup per issue.
+  const issues = untruncated(
+    json("gh issue list", [
+      "issue",
+      "list",
+      "--state",
+      "open",
+      "--limit",
+      String(OPEN_ISSUE_LIMIT),
+      "--json",
+      "title,number,state,updatedAt,createdAt,labels,closedByPullRequestsReferences",
+    ]),
+    OPEN_ISSUE_LIMIT,
+    "gh issue list",
+  ).map((i) => ({ ...i, closedByPullRequests: i.closedByPullRequestsReferences ?? [] }));
   const alreadyFlagged = issues
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
     .map((i) => i.number);
@@ -288,6 +365,12 @@ export function gatherAuditDeps(nowMs) {
       number: i.number,
       hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
     }));
+
+  // #3960: every open issue still marked in-flight, and how long it has been quiet. #4547 gave this
+  // its own label-filtered read because `issues` was then the newest 100 of ~140 open — on
+  // 2026-10-04 #3651, #3407 and #3939 sat at positions 110–124 and held all 3 in-flight slots as
+  // ghosts. `issues` is now the whole open list, so the filter is safe again.
+  const staleInProgress = staleInProgressFrom(issues, nowMs);
 
   // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
   // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
@@ -347,9 +430,50 @@ export function gatherAuditDeps(nowMs) {
     silentFeedback,
     readyPlans,
     conflictedPRs,
+    staleInProgress,
     alreadyFlagged,
     alreadyFlaggedPRs,
+    workMode: workModeState(nowMs, json),
   };
+}
+
+/**
+ * The dial as the audit needs to see it (#3960 slice 4): the tracking issue's CURRENT title beside
+ * the position the lanes resolve, so `workModeRetitle` can tell a stale dashboard from a fresh one.
+ * One `gh issue view` — title, labels and comments in a single call — and the same pure resolver
+ * every lane uses, so this can never disagree with them about what the position is.
+ *
+ * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: this is the only
+ * thing in this file that is a DISPLAY rather than a pair of eyes. Every lane that acts on the dial
+ * reads it itself and fails closed on its own, so a malformed work-mode.json or a GitHub blip must
+ * cost one stale title — not the stall, silent-feedback, plan-stall and conflict checks that ride
+ * the same run. The warning says so out loud rather than failing silently.
+ */
+function workModeState(nowMs, json) {
+  try {
+    const config = loadWorkModeConfig();
+    const view = json(`gh issue view (work-mode, #${config.trackingIssue})`, [
+      "issue",
+      "view",
+      String(config.trackingIssue),
+      "--json",
+      "title,labels,comments",
+    ]);
+    const mode = resolveWorkMode({
+      labels: view.labels,
+      comments: view.comments,
+      now: nowMs,
+      config,
+    });
+    // A dial read fine but misconfigured — two labels, a forgotten `until` — still warns, and the
+    // title sync corrects the DISPLAY without fixing the cause. Print it here so the push run that
+    // retitles also says why it had to.
+    if (mode.warning) console.log(`::warning::${mode.warning}`);
+    return { trackingIssue: config.trackingIssue, title: view.title ?? null, mode };
+  } catch (err) {
+    console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
+    return null;
+  }
 }
 
 /**

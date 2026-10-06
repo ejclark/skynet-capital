@@ -13,3 +13,19 @@ export function withRetry<T>(
   },
 ): T;
 export function ghRest(path: string, opts?: { token?: string }): unknown;
+
+export interface RateLimitBucket {
+  limit?: number;
+  remaining?: number;
+  reset?: number;
+}
+
+export function ghGraphqlBudget(opts?: {
+  run?: (cmd: string, args: string[]) => string;
+}): RateLimitBucket;
+
+export function ghRateLimit(opts?: {
+  token?: string;
+  readRest?: (path: string, opts?: { token?: string }) => unknown;
+  readGraphql?: () => RateLimitBucket;
+}): Record<string, RateLimitBucket>;

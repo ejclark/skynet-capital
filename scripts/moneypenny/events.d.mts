@@ -2,6 +2,8 @@
 // the scripts/ tree is plain ESM with `allowJs` off, so a spec that imports from it needs this
 // rather than a repo-wide loosening. Only the exports a spec consumes are declared.
 
+import type { WorkMode } from "./work-mode.d.mts";
+
 /** One row of `event-scan.mjs --due`, narrowed to the fields dispatch ordering actually reads. */
 export interface DueEvent {
   readonly id: string;
@@ -19,6 +21,19 @@ export interface DueEvent {
 export function loadDispatchCap(file?: string): number;
 
 /**
+ * Pure: the research ceiling for the position the work spigot's dial is on (#3960 slice 2).
+ * `normal` reads the budget file, so today's behavior is unchanged; every other position reads its
+ * own `researchPerTick`. A mode with no usable number is 0, never unlimited.
+ */
+export function researchCapFor(mode: WorkMode | null | undefined, budgetCap?: number): number;
+
+/**
+ * Impure: read the dial and return this tick's ceiling, announcing the position (and any override
+ * of the budget file's number) on stderr — stdout carries the matrix JSON.
+ */
+export function researchCapNow(readMode?: () => WorkMode, budgetCap?: number): number;
+
+/**
  * Which due events actually get researched this run: drop anything whose `research/<id>` branch
  * already has an open PR, rank the rest (close-outs by slack, then impact, then proximity), and
  * return at most `cap` of them. The remainder is deferred, not dropped, and reported on stderr.
@@ -28,3 +43,11 @@ export function dueForResearch<T extends DueEvent>(
   openPrHeads?: readonly string[],
   cap?: number,
 ): T[];
+
+/**
+ * The push sweep's whole intent list: receipt issues for never-assessed events, the receipt and
+ * shipped closes, the dropped-remainder relay, then the assignment lane — which is filtered against
+ * the closes this same tick already decided, so a shipped-but-still-labelled issue is never asked
+ * about and closed in one run (#3818 slice 5).
+ */
+export function routeSweep(deps?: Record<string, unknown>): Record<string, unknown>[];

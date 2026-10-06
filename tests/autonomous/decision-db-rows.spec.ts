@@ -1,11 +1,13 @@
 import {
   decisionFrom,
+  fateOf,
+  intentParams,
   intentRowToStored,
-  paramsForRawIntent,
   type StoredIntentRow,
 } from "../../src/autonomous/decision-db-rows.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent } from "../../src/domain/types.js";
+import { anOptionIntent } from "../support/builders.js";
 
 const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
   symbol: "NVDA",
@@ -16,7 +18,14 @@ const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
   ...over,
 });
 
-describe("paramsForRawIntent", () => {
+/** One raw intent's row params, as `recordOne` builds them: its fate, then its columns. */
+const paramsForRawIntent = (
+  raw: OrderIntent,
+  entry: Pick<DecisionRecord, "outcomes" | "refusals" | "context">,
+  usedOutcomes: Set<number>,
+) => intentParams(raw, entry, fateOf(raw, entry, { outcomes: usedOutcomes, refusals: new Set() }));
+
+describe("intentParams over fateOf", () => {
   it("attributes an exact-reference refusal, never touching the approved columns", () => {
     const raw = intent();
     const usedOutcomes = new Set<number>();
@@ -98,6 +107,76 @@ describe("paramsForRawIntent", () => {
     );
     expect(params[9]).toBe(0.05); // momentum
     expect(params[10]).toBe(-0.6); // sentiment
+  });
+});
+
+describe("fateOf", () => {
+  const fresh = () => ({ outcomes: new Set<number>(), refusals: new Set<number>() });
+
+  it("takes the refusal holding the very same object first, even when an equal copy comes earlier", () => {
+    const raw = intent();
+    const copy = { ...raw };
+    const entry = {
+      outcomes: [],
+      refusals: [
+        { intent: copy, reason: "s2-print" as const },
+        { intent: raw, reason: "position-cap" as const },
+      ],
+    };
+    expect(fateOf(raw, entry, fresh()).refusal?.reason).toBe("position-cap");
+  });
+
+  it("falls back to a structural match for a record whose objects were rebuilt — key order aside", () => {
+    const raw = intent({ strategy: "panic-fade" });
+    const rebuilt = JSON.parse(
+      JSON.stringify({
+        strategy: "panic-fade",
+        reason: "test",
+        type: "market",
+        quantity: 10,
+        side: "buy",
+        symbol: "NVDA",
+      }),
+    ) as OrderIntent;
+    const entry = { outcomes: [], refusals: [{ intent: rebuilt, reason: "e1-open" as const }] };
+    expect(fateOf(raw, entry, fresh())).toEqual({
+      refusal: { intent: rebuilt, reason: "e1-open" },
+    });
+  });
+
+  it("never claims the same refusal twice — two equal raw intents need two refusals", () => {
+    const entry = { outcomes: [], refusals: [{ intent: intent(), reason: "s2-print" as const }] };
+    const used = fresh();
+    expect(fateOf(intent(), entry, used).refusal).toBeDefined();
+    expect(fateOf(intent(), entry, used)).toEqual({});
+  });
+
+  it("matches an outcome on its instrument too — shares never take a contract's outcome", () => {
+    const shareSell = intent({ symbol: "CRWV", side: "sell", quantity: 100 });
+    const call = anOptionIntent({
+      option: {
+        structure: "covered-call",
+        legs: [{ occSymbol: "CRWV261106C00100000", side: "sell", ratio: 1 }],
+      },
+    });
+    const entry = {
+      outcomes: [
+        { intent: { ...call, clientOrderId: "c-1" }, action: "placed" as const },
+        { intent: { ...shareSell }, action: "placed" as const },
+      ],
+    };
+    const used = fresh();
+    expect(fateOf(shareSell, entry, used).outcome).toBe(entry.outcomes[1]);
+    expect(fateOf(call, entry, used).outcome).toBe(entry.outcomes[0]);
+  });
+
+  it("does not mistake a different refusal on the same ticker for this one", () => {
+    const raw = intent({ quantity: 10 });
+    const entry = {
+      outcomes: [],
+      refusals: [{ intent: intent({ quantity: 60 }), reason: "s2-print" as const }],
+    };
+    expect(fateOf(raw, entry, fresh())).toEqual({});
   });
 });
 

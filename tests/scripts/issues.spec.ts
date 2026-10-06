@@ -3,6 +3,7 @@ import {
   boardStatus,
   csv,
   findDuplicates,
+  followUps,
   matches,
   nextLabels,
   parseArgs,
@@ -49,13 +50,24 @@ describe("issues cli: findDuplicates", () => {
 });
 
 describe("issues cli: board status follows labels", () => {
+  const CALLOUT = "> [!IMPORTANT]\n> **Needs from you**\n> 1. Pick A or B?";
+
   it("reads needs-eric as Blocked, ready as Ready, closed as Done", () => {
-    expect(boardStatus({ title: "x", state: "open", labels: [{ name: "needs-eric" }] })).toBe(
-      "Blocked",
-    );
+    expect(
+      boardStatus({ title: "x", state: "open", labels: [{ name: "needs-eric" }], body: CALLOUT }),
+    ).toBe("Blocked");
     expect(boardStatus({ title: "x", state: "open", labels: ["ready"] })).toBe("Ready");
     expect(boardStatus({ title: "x", state: "closed", labels: ["needs-eric"] })).toBe("Done");
     expect(boardStatus({ title: "x", state: "open", labels: [] })).toBe("Backlog");
+  });
+
+  // #3913 slice 2: the board keeps an unstated ask out of Blocked until the callout is written.
+  it("keeps a needs-eric issue with no callout out of Blocked, unless Eric filed it", () => {
+    const labels = [{ name: "needs-eric" }];
+    expect(boardStatus({ title: "x", state: "open", labels, body: "no ask" })).toBe("Backlog");
+    expect(
+      boardStatus({ title: "x", state: "open", labels, body: "", user: { login: "ejclark" } }),
+    ).toBe("Blocked");
   });
 
   it("prints one scan-able row per issue", () => {
@@ -91,5 +103,25 @@ describe("issues cli: edits", () => {
     expect(matches(issue, "dependabot deploy")).toBe(false);
     expect(matches(issue, "", { label: "needs-eric" })).toBe(true);
     expect(matches(issue, "", { label: "ready" })).toBe(false);
+  });
+});
+
+describe("issues cli: followUps (slices as sub-issues)", () => {
+  const child = { id: 9001, number: 42 };
+
+  it("links to the parent, adds each blocker, then closes a shipped slice — in that order", () => {
+    const ops = followUps({ child, parentNumber: 7, blockers: [{ id: 11 }], closed: true });
+    expect(ops.map((o) => `${o.method} ${o.path}`)).toEqual([
+      "POST issues/7/sub_issues",
+      "POST issues/42/dependencies/blocked_by",
+      "PATCH issues/42",
+    ]);
+    expect(ops[0]?.payload).toEqual({ sub_issue_id: 9001 });
+    expect(ops[1]?.payload).toEqual({ issue_id: 11 });
+    expect(ops[2]?.payload).toEqual({ state: "closed", state_reason: "completed" });
+  });
+
+  it("writes nothing for a plain filing", () => {
+    expect(followUps({ child })).toEqual([]);
   });
 });

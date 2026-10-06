@@ -13,10 +13,15 @@
  */
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
+import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import { bootPublishingActivityStore } from "../observatory/activity-publishing.js";
+import {
+  bootPublishingActivityStore,
+  publishingFeedback,
+  publishingMergedPullRequests,
+} from "../observatory/activity-publishing.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -34,14 +39,20 @@ import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
+import { wireAlertDelivery } from "./dashboard-alert-delivery.js";
 import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
-import { wireAccountDeskAccess, wireDeskTrading } from "./dashboard-desk-wiring.js";
+import {
+  wireAccountDeskAccess,
+  wireDeskTrading,
+  wireQuoteStream,
+} from "./dashboard-desk-wiring.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
@@ -87,7 +98,11 @@ async function main(): Promise<void> {
     dataSource.mode,
   );
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
-  const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
+  const {
+    onActivity,
+    sweep: sweepLadderProgress,
+    readAll: readAllLadderProgress,
+  } = wireLadderProgress(process.env, activity, activityEventBus);
   void reconcileBrokerActivity(activity, initial.participants)
     .then((n) => {
       if (n > 0) console.log(`[activity] banked ${n} order update(s) from the broker window`);
@@ -140,13 +155,27 @@ async function main(): Promise<void> {
   });
 
   // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
+  // Removing an account closes BOTH of its sockets — the fill stream and (if it is streaming a
+  // quote right now) its market-data one, so a departed member's credential stops being used the
+  // moment they leave. Declared before the hub it reads, and only ever called after boot.
   const { accounts, liveRoster, findParticipant, clientFor } = wireAccountDeskAccess({
     hub,
     store,
     envRoster,
     owners,
     clientFactory: dataSource.clientFactory,
-    stopParticipantStream: (id) => dataSource.stopParticipantStream(id),
+    stopParticipantStream: (id) => {
+      dataSource.stopParticipantStream(id);
+      quoteStream.stopDesk(id);
+    },
+  });
+
+  // The underlying quote, pushed rather than polled (#3407 P4) — one market-data socket per member
+  // on that member's own credential. Never the host's: the bot loop holds that account's single
+  // allowed connection (`quote-stream-hub.ts` carries the full reason).
+  const quoteStream = wireQuoteStream({
+    findParticipant,
+    optionsClientFactory: dataSource.optionsClientFactory,
   });
 
   // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
@@ -154,6 +183,7 @@ async function main(): Promise<void> {
     allowlist,
     botControls,
     council,
+    filingComments,
     subscriptions,
     savedPositions,
     knownPersonaIds,
@@ -191,6 +221,19 @@ async function main(): Promise<void> {
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
+  // Feedback as the bus's second kind (#784 slice 2): a filing publishes `feedback.filed`, and the
+  // GitHub status poll publishes `feedback.status-changed` on a real transition. Both wrap here
+  // rather than in `setupFeedback` because the bus is booted above, with the trade ledger's.
+  // Built ONCE at boot, not per request — the status wrapper remembers what it last published.
+  const feedbackSinks = publishingFeedback(activityEventBus, { feedbackLog, feedbackStatus });
+  // Development as the bus's third kind (#784 slice 4): a merged pull request publishes
+  // `development.pr-merged`. A poll, not a webhook — nothing in this app receives one, and three
+  // read-only GitHub polls already exist on this token. Built ONCE at boot like the status emitter
+  // above, because the wrapper remembers which merges it has already published.
+  const mergedPullRequests = resolveDevelopmentActivity(process.env);
+  const developmentSink = mergedPullRequests
+    ? publishingMergedPullRequests(mergedPullRequests, activityEventBus)
+    : undefined;
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -207,6 +250,22 @@ async function main(): Promise<void> {
     // The same per-participant resolver the server config gets below — the recommender tool reads
     // its chain through the member's OWN linked options client, never a shared one.
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+  });
+
+  // Alert delivery (#3407 P4 slice 3) — the member's own switch, durable; plus the two triggers
+  // that reach them when the Alerts strip is not on screen. Off (and said so in words) until the
+  // mail credential is set, which is the one step that is Eric's.
+  const alertDismissals = createAlertDismissals(process.env);
+  const alertDelivery = wireAlertDelivery({
+    env: process.env,
+    activityEvents: activityEventBus,
+    ownerEmailFor,
+    deps: () => ({
+      hub,
+      optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+      activityLog: activityEventBus,
+      alertDismissals,
+    }),
   });
 
   createDashboardServer({
@@ -260,9 +319,9 @@ async function main(): Promise<void> {
     ...(opsStatus ? { opsStatus } : {}), // #666 — dashboard-ops-status.ts owns the wiring + gate
     ...(feedback ? { submitFeedback: feedback } : {}),
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
-    recordFeedback: (entry) => feedbackLog.record(entry),
+    recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
-    ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
+    ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),
@@ -274,9 +333,20 @@ async function main(): Promise<void> {
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
-    // `/wire`'s cross-participant feed: the same stores, called with no id.
+    // `/wire`'s cross-participant feed: the same stores, called with no id. Activity's trade rows
+    // are built from the bus's `ActivityEvent` envelope (#784 slice 1); the ledger rides alongside
+    // it because the event log only starts at #1211's deploy and older fills live only on the
+    // ledger (`mergeLedgerIntoEvents` dedupes the overlap on the deterministic event id).
+    readAllActivityEvents: () => activityEventBus.list(),
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
+    // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
+    readAllLadderProgress,
+    readAllOrderAudit: () => orderAudit.list(),
+    // Absent without a GitHub token: the feed then renders no development kind and says so, rather
+    // than letting an empty list imply the league has never merged anything.
+    ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
     // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {
@@ -288,6 +358,21 @@ async function main(): Promise<void> {
           ...(playbookId ? { playbookId } : {}),
         });
       },
+      retract: (week, memberId) => {
+        council.retract(week, memberId);
+      },
+    },
+    // Comments on another member's filing (issue #2224 shape 3): the app's own store plus the
+    // app's own feedback log — deliberately no GitHub client in reach.
+    filingComments: {
+      load: () => filingComments.load(),
+      add: (issue, comment) => {
+        filingComments.add(issue, comment);
+      },
+      remove: (issue, commentId, authorId) => {
+        filingComments.remove(issue, commentId, authorId);
+      },
+      readFilings: () => feedbackLog.list(),
     },
     progression: progressionService,
     // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
@@ -303,6 +388,7 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    ...(insightsBridge.findSpreadLeg ? { findSpreadLeg: insightsBridge.findSpreadLeg } : {}),
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
@@ -310,6 +396,7 @@ async function main(): Promise<void> {
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
+    readCondScout: insightsBridge.readCondScout,
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
@@ -317,8 +404,14 @@ async function main(): Promise<void> {
     activityEvents: activityEventBus,
     activityLog: activityEventBus,
     // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
-    alertDismissals: createAlertDismissals(process.env),
+    alertDismissals,
+    alertDeliveryStore: alertDelivery.store,
+    ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
+    // The names a member chose to watch — member-authored truth nothing re-derives, so it is
+    // durable on the same volume (#4332).
+    watchlist: createWatchlist(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).

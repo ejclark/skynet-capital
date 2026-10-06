@@ -1,3 +1,5 @@
+import type { OrderStatus } from "../domain/types.js";
+import type { GuardRefusalReason } from "../engine/guards.js";
 import { isRecord } from "../storage/parse-guards.js";
 import type { DecisionRecord } from "./decision-record.js";
 import {
@@ -24,9 +26,59 @@ import {
  * `kind: "decision.v1"` is versioned from day one: the two apps can run different commits after
  * the deploy split (bots ≤ app always — the listener side must ship first), so a future wire
  * change adds a new kind rather than silently reinterpreting this one.
+ *
+ * `decision.v2` is that new kind: a record carrying anything a v1 dashboard would silently drop or
+ * reject — an option order, a limit, a client order id, an `unfilled`/`working` result, leg fills,
+ * leg order ids, or a refusal reason v1 never knew. An older dashboard refuses a v2 batch outright rather than
+ * store "SELL 1 CRWV at market" for a sold put. The kind is decided PER RECORD (`recordWireKind`)
+ * and the sender splits each batch by it, because a refused batch is not resent until the bots
+ * restart (`decision-replication-client.ts`'s ascending cursor advances regardless): mixing the
+ * two would cost an older dashboard its share records too. The parser reads both kinds the same.
  */
 
 export const DECISION_BATCH_KIND = "decision.v1";
+export const DECISION_BATCH_KIND_V2 = "decision.v2";
+const DECISION_BATCH_KINDS: readonly string[] = [DECISION_BATCH_KIND, DECISION_BATCH_KIND_V2];
+
+/** Exactly what a v1 dashboard can store faithfully. */
+const V1_STATUSES: ReadonlySet<OrderStatus> = new Set(["filled", "rejected"]);
+const V1_REFUSALS: ReadonlySet<GuardRefusalReason> = new Set([
+  "ladder-block",
+  "s2-print",
+  "e1-open",
+  "subscription-filter",
+  "no-quote",
+  "insufficient-cash",
+  "position-cap",
+  "subscription-budget",
+  "nothing-held",
+]);
+
+/** v2 iff the record holds a field an older dashboard would silently drop or reject. */
+export function recordWireKind(
+  record: DecisionRecord,
+): typeof DECISION_BATCH_KIND | typeof DECISION_BATCH_KIND_V2 {
+  const refusals = record.refusals ?? [];
+  const intents = [
+    ...record.rawIntents,
+    ...record.guardedIntents,
+    ...record.outcomes.map((o) => o.intent),
+    ...refusals.map((r) => r.intent),
+  ];
+  const v2 =
+    intents.some(
+      (i) => i.option !== undefined || i.type !== "market" || i.clientOrderId !== undefined,
+    ) ||
+    record.outcomes.some(
+      (o) =>
+        o.result !== undefined &&
+        (!V1_STATUSES.has(o.result.status) ||
+          o.result.legFills !== undefined ||
+          o.result.legOrders !== undefined),
+    ) ||
+    refusals.some((r) => !V1_REFUSALS.has(r.reason));
+  return v2 ? DECISION_BATCH_KIND_V2 : DECISION_BATCH_KIND;
+}
 
 /** Bounded per POST — matches `DecisionDb`'s own `MAX_PAGE`, so one lagging persona can never make
  *  a single replication call unboundedly large. */
@@ -94,13 +146,15 @@ export interface DecisionBatch {
 }
 
 /**
- * Validates the whole `POST /decisions` body: `{ kind: "decision.v1", personaId, records }`, every
- * record belonging to the SAME persona the envelope names (defense against a malformed sender
- * mixing personas into one batch), bounded to `MAX_DECISION_BATCH`.
+ * Validates the whole `POST /decisions` body: `{ kind: "decision.v1" | "decision.v2", personaId,
+ * records }`, every record belonging to the SAME persona the envelope names (defense against a
+ * malformed sender mixing personas into one batch), bounded to `MAX_DECISION_BATCH`.
  */
 export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   if (!isRecord(value)) return undefined;
-  if (value.kind !== DECISION_BATCH_KIND) return undefined;
+  if (typeof value.kind !== "string" || !DECISION_BATCH_KINDS.includes(value.kind)) {
+    return undefined;
+  }
   const { personaId, records } = value;
   if (typeof personaId !== "string" || personaId.length === 0) return undefined;
   if (personaId.length > MAX_PERSONA_ID_LENGTH) return undefined;
@@ -108,8 +162,13 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
     return undefined;
   }
   const parsed = records.map(parseDecisionRecord);
-  if (parsed.some((r) => !r || r.personaId !== personaId)) return undefined;
-  return { personaId, records: parsed as DecisionRecord[] };
+  // A record naming another persona is an identity fault on the bridge: refuse the whole batch.
+  if (parsed.some((r) => r !== undefined && r.personaId !== personaId)) return undefined;
+  // A record this build cannot read (a bug that emitted a malformed option, say) is dropped ALONE.
+  // Refusing the batch lost every record beside it, because the bots' ascending cursor moves on
+  // whatever the answer — and the preview leg would resend the same poisoned batch every poll.
+  const kept = parsed.filter((r): r is DecisionRecord => r !== undefined);
+  return kept.length > 0 ? { personaId, records: kept } : undefined;
 }
 
 /** `GET /controls`'s additive `decisionsCursor` field — a plain `{ personaId: epochMs }` map, the

@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { type CommunityCelebration, claimCommunityMilestones } from "../live/feedback";
+import { flareTower } from "./tower-bus";
 
 /**
  * THE COMMUNITY UNLOCK BANNER (#567) — the same fanfare treatment the trade ladder's milestones
@@ -27,8 +28,11 @@ export function CommunityUnlockBanner({
     setError(undefined);
     try {
       const answer = await claimCommunityMilestones(celebrations.map((c) => c.milestoneId));
-      if (answer.ok) onClaimed();
-      else setError(answer.error);
+      if (answer.ok) {
+        // The tower answers the member's own claim once (#3977 slice 3), as `unlock-gate.tsx` does.
+        flareTower("milestone");
+        onClaimed();
+      } else setError(answer.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

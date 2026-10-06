@@ -57,13 +57,16 @@ async function tripsFor(
 
 /** Each fill tagged by its OWN order id (found 2026-09-24): an indexed lookup per order, so a trip
  *  opened months ago is attributed as surely as today's. Reading decisions and indexing their
- *  outcomes only ever covered the store's newest page, a few minutes of a busy bot's passes. */
+ *  outcomes only ever covered the store's newest page, a few minutes of a busy bot's passes.
+ *  Looked up once per unique order id, not once per fill — a partial fill posts several journal
+ *  lines for the same order (#4612 slice 7, defect #8). */
 function tagsByOrder(
   fills: readonly { readonly orderId: string }[],
   findByOrderId: NonNullable<PlaybookPerformanceDeps["findByOrderId"]>,
 ): PlaybookTagsByOrder {
   const tags: PlaybookTag[] = [];
-  for (const { orderId } of fills) {
+  const orderIds = new Set(fills.map((f) => f.orderId));
+  for (const orderId of orderIds) {
     const intent = findByOrderId(orderId)?.intent;
     if (!intent?.playbookId) continue;
     tags.push({

@@ -155,6 +155,18 @@ describe("readAccountDecisionsPage — the whole history, not the newest default
     expect(new Set(seen).size).toBe(150);
   });
 
+  it("pages a legacy reader's whole audit trail even past the engine's argument limit (#4615)", async () => {
+    // The JSONL fallback hands back a persona's whole audit file; finding that page's oldest pass
+    // with Math.min(...ats) threw RangeError once the file passed ~121k cycles.
+    const all = Array.from({ length: 130_000 }, (_, i) => decision({ at: i + 1 }));
+    const deps = { readDecisions: () => Promise.resolve(all) };
+
+    const page = await readAccountDecisionsPage("sauron", deps, { limit: 100 });
+
+    expect(page?.horizon).toBe(1);
+    expect(page?.records).toHaveLength(130_000);
+  });
+
   it("is undefined when no decision trail is wired", async () => {
     expect(await readAccountDecisionsPage("sauron", {}, { limit: 100 })).toBeUndefined();
   });

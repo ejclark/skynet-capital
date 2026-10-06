@@ -56,7 +56,22 @@ export interface DeskPosition {
   readonly worst?: string;
   /** The next dated thing that can move it (`src/observatory/position-event.ts`). */
   readonly nextEvent?: PositionEvent;
+  /** The underlying's next earnings print, whenever it lands (#3977 slice 4). Not the same as a
+   *  stock-scope `nextEvent`: that one names the print only before an option's expiry, and can be
+   *  a named non-earnings event. Optional so an older payload still renders. */
+  readonly nextPrint?: NextPrint;
 }
+
+/** Mirrors the server's `NextPrint`. `unknown` carries no date — never guess one. */
+export type NextPrint =
+  | {
+      readonly status: "confirmed" | "estimate";
+      readonly at: string;
+      /** "Earnings Oct 28", or "Earnings Oct 28 (estimated)". */
+      readonly label: string;
+      readonly window?: { readonly start: string; readonly end: string };
+    }
+  | { readonly status: "unknown"; readonly label: string };
 
 /** Mirrors the server's `NextEvent`: "Earnings Oct 28" and whether it lands before expiry. */
 export interface PositionEvent {
@@ -98,6 +113,19 @@ export interface Decision {
   };
   /** A glossary term the card opens in place ("What is IV crush?"); unknown terms are dropped. */
   readonly learn?: { readonly term: string; readonly label: string };
+  /** The day to decide by (#3977 slice 4) — the stock's own event while it can still move the
+   *  position, else the option's expiry. Absent when there is no such day (and on ideas). */
+  readonly due?: DecisionDue;
+}
+
+/** Mirrors `DecisionDue` in `src/observatory/decisions-view.ts`. */
+export interface DecisionDue {
+  /** `YYYY-MM-DD`. */
+  readonly at: string;
+  readonly reason: "event" | "expiry";
+  /** "Earnings Oct 28", "Expires Oct 17". */
+  readonly label: string;
+  readonly estimated?: true;
 }
 
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
@@ -253,8 +281,11 @@ export function toggleQualifier(query: string, qualifier: string): string {
  *  `unknown` is the honest default — a bot desk, or an order outside the log's coverage. */
 export type OrderOrigin = "desk" | "alpaca-direct" | "unknown";
 
-export interface DeskActivityEvent {
+/** One order's line — every Activity row's own fields, and every leg's of a spread. Mirrors the
+ *  server's `DeskActivityLine`. */
+export interface DeskActivityLine {
   readonly orderId: string;
+  /** The broker's own symbol: a ticker, an OCC contract, or none ("") for a multi-leg order. */
   readonly symbol: string;
   readonly display: string;
   readonly side: "buy" | "sell";
@@ -265,6 +296,9 @@ export interface DeskActivityEvent {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+}
+
+export interface DeskActivityEvent extends DeskActivityLine {
   /** Realized P/L on a closing fill — absent on opening fills. */
   readonly realizedPl?: string;
   /** Return percentage on a closing fill — absent on opening fills. */
@@ -274,6 +308,27 @@ export interface DeskActivityEvent {
   /** The decision that placed this order — bot accounts only, when the audit trail resolves it
    *  (#3687 slice 4). Absent means none was found, never an empty placeholder. */
   readonly reasoning?: ActivityReasoning;
+  /** A bot's spread only (#4650): the whole order's net cash, once — "$335.00 paid". */
+  readonly net?: string;
+  /** A bot's spread only: each leg's own fill, shown beneath the spread's row. */
+  readonly legs?: readonly DeskActivityLeg[];
+  /** A bot's spread only: a leg it placed whose line the ledger does not hold yet. Until none is
+   *  missing, the spread row carries no result (nothing filled, no P/L). */
+  readonly missingLegs?: readonly DeskMissingLeg[];
+}
+
+/** One leg of a spread, as the account filled it — a whole order line of its own, for the ticket of
+ *  its contract. Mirrors the server's `DeskActivityLeg`. */
+export interface DeskActivityLeg extends DeskActivityLine {
+  /** "$510.00 paid — 1 contract × 100 shares × $5.10" — absent until it fills at a price. */
+  readonly cost?: string;
+}
+
+/** A leg a spread placed that the ledger does not hold yet. Mirrors the server's `DeskMissingLeg`. */
+export interface DeskMissingLeg {
+  /** The contract in words — "NVDA $200 CALL · 13 NOV 26". */
+  readonly display: string;
+  readonly side: "buy" | "sell";
 }
 
 export interface ActivityReasoning {
@@ -291,6 +346,12 @@ export interface ActivityReasoning {
   /** That round's funnel — intents the persona raised → how many survived the guards. */
   readonly rawCount?: number;
   readonly guardedCount?: number;
+  /** An option order as a whole, in words — a spread as the spread, not one leg. */
+  readonly contract?: string;
+  /** A filled option order's dollars, and how they add up ("$205.00 received — 1 contract × …"). */
+  readonly cost?: string;
+  /** What would prove the trade wrong, in the playbook's own words. */
+  readonly invalidator?: string;
 }
 
 export interface DeskActivity {
@@ -328,6 +389,10 @@ export interface DecisionOutcome {
   readonly forecast?: DecisionForecast;
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
+  /** The result in words when the status alone would mislead — a limit that never filled. */
+  readonly resultLabel?: string;
+  /** An option order's contracts and limit in one line; absent for shares. */
+  readonly contract?: string;
   readonly fill?: string;
   /** The cycle's market context at this symbol, when captured — see `decision-json-view.ts`. */
   readonly momentum?: number;
@@ -346,6 +411,10 @@ export interface RefusedIntent {
   readonly strategy?: string;
   readonly reason: string;
   readonly expectation?: string;
+  /** Which risk check refused it, in plain words; absent on a record that predates the capture. */
+  readonly guardReason?: string;
+  /** An option order's contracts and limit in one line; absent for shares. */
+  readonly contract?: string;
 }
 
 export interface DecisionCycle {
@@ -445,10 +514,36 @@ export interface ThesisData {
   readonly markers: readonly ThesisMarker[];
 }
 
+/** What one safeguard stage does to a play's position today (#3194 slice 6a). The word IS the
+ *  signal — the stylesheet's border pattern rides alongside it, never instead of it. */
+export type SafeguardState = "off" | "watching" | "alert-only" | "enforcing";
+
+export interface SafeguardStage {
+  readonly stage: 1 | 2;
+  readonly name: string;
+  readonly state: SafeguardState;
+  readonly does: string;
+}
+
+export interface SafeguardLadderEntry {
+  /** Absent for a desk this session does not own — a bot's play names are its owner's (#885). */
+  readonly playbookId?: string;
+  readonly mode: "conservative" | "standard" | "aggressive";
+  /** Null when the house roster does not know this play, which is never "it has no safeguards". */
+  readonly stages: readonly SafeguardStage[] | null;
+}
+
 export interface DeskThesis {
   readonly available: boolean;
   readonly kind: "human" | "bot";
   readonly thesis?: ThesisData;
+  /** Null when no decision pass on hand said which plays this bot ran — an absence, never an
+   *  empty list posing as "this bot has no safeguards". Absent on a human desk. */
+  readonly ladder?: readonly SafeguardLadderEntry[] | null;
+  /** ISO-8601 — when the pass the ladder was read from ran. Absent alongside a null ladder. The
+   *  page prints it: nothing bounds how old that pass is, and an undated safety readout reads as
+   *  current. */
+  readonly ladderAsOf?: string;
 }
 
 export async function fetchDeskThesis(id: string): Promise<DeskThesis> {

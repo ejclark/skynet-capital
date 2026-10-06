@@ -386,3 +386,90 @@ describe("issue lint — the state block's top half", () => {
     expect(lint(template as string).notes.join("\n")).not.toContain("top half");
   });
 });
+
+// #3913 criterion 5: the Status row is typed once while the labels and the board move on — #3748's
+// row said ready with no `ready` label, #3407's said needs-eric with no such label. The note points
+// at the stale first word; it never fails the gate (drift is advisory, the gate doctrine).
+describe("issue lint — the Status row against the labels", () => {
+  const withStatus = (row: string) =>
+    [
+      "**One-line ask.**",
+      "",
+      "| | |",
+      "|---|---|",
+      `| **Status** | ${row} |`,
+      "",
+      "- A talking point.",
+    ].join("\n");
+
+  const run = (body: string, labels?: string) => {
+    const args = ["scripts/issue-lint.mjs", "--stdin", "--json"];
+    if (labels !== undefined) args.push("--labels", labels);
+    try {
+      const out = execFileSync("node", args, { input: body, encoding: "utf8" });
+      return { code: 0, ...JSON.parse(out) } as {
+        code: number;
+        problems: string[];
+        notes: string[];
+      };
+    } catch (error) {
+      const e = error as { status?: number; stdout?: Buffer };
+      return {
+        code: e.status ?? -1,
+        ...JSON.parse(e.stdout?.toString() || '{"problems":[],"notes":[]}'),
+      } as { code: number; problems: string[]; notes: string[] };
+    }
+  };
+  const drift = (notes: string[]) => notes.filter((n) => n.startsWith("Status row says"));
+
+  it("notes a row that says Ready when the issue has no `ready` label, without failing", () => {
+    const { code, problems, notes } = run(withStatus("Ready · plan, no decision needed"), "plan");
+    expect(drift(notes)).toHaveLength(1);
+    expect(drift(notes)[0]).toContain("Status row says Ready");
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it("reads the label spellings older rows used — `needs-eric` claims Blocked", () => {
+    const { notes } = run(withStatus("needs-eric — waiting on the fork"), "plan");
+    expect(drift(notes)[0]).toContain("Status row says Blocked");
+  });
+
+  it("notes a Backlog row after the ready flip", () => {
+    const { notes } = run(withStatus("**Backlog** · proposed"), "plan,ready");
+    expect(drift(notes)[0]).toContain("Status row says Backlog");
+  });
+
+  it("stays silent when the labels agree", () => {
+    expect(drift(run(withStatus("Ready · plan"), "plan,ready").notes)).toEqual([]);
+    expect(drift(run(withStatus("Blocked · a decision"), "needs-info").notes)).toEqual([]);
+    expect(drift(run(withStatus("In Progress · slice 2"), "in-progress").notes)).toEqual([]);
+    expect(drift(run(withStatus("Building now · slice 4"), "in-progress").notes)).toEqual([]);
+    expect(drift(run(withStatus("Backlog · proposed"), "idea").notes)).toEqual([]);
+  });
+
+  it("reads a row typed before the rename as the building column (#4393 slice 4)", () => {
+    const { notes } = run(withStatus("In Progress · slice 2"), "plan,ready");
+    expect(drift(notes)[0]).toContain("Status row says Building now");
+  });
+
+  it("treats a Ready row on an issue being built as behind, not wrong", () => {
+    // The row is typed once; Building now is transient. A note on every in-flight issue is noise.
+    expect(drift(run(withStatus("Ready · plan"), "plan,ready,in-progress").notes)).toEqual([]);
+  });
+
+  it("leaves free-text rows and unlabelled bodies alone", () => {
+    expect(drift(run(withStatus("proposed · waiting on Eric's ready flip"), "plan").notes)).toEqual(
+      [],
+    );
+    // Linted before filing: no labels yet, so there is nothing to contradict.
+    expect(drift(run(withStatus("Ready · plan")).notes)).toEqual([]);
+  });
+
+  it("reports the row's drift count in the audit", () => {
+    const out = audit("status-drift.json");
+    expect(out).toContain(
+      "status    2/3 rows lead with a board Status · 1 contradict their labels",
+    );
+  });
+});

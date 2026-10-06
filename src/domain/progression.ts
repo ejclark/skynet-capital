@@ -173,3 +173,23 @@ export function lockedOnLadder(
 ): boolean {
   return Boolean(view?.wheels) && !view?.unlocked.has(code);
 }
+
+/**
+ * THE ONE LOCKED-RUNG SENTENCE (#469) — every ticket refusal and the locked panel read this, so
+ * the reason a member sees on the ticket and the reason the server refuses with can't drift. It
+ * names the remedy that actually exists: while the feedback gate holds, that's saying hello;
+ * otherwise, filling the rung below. It never offers "turn the wheels off" — #1671 removed that
+ * door (`POST /api/trade/wheels` refuses an early flip), and a remedy the server refuses is a lie.
+ */
+export function ladderLockedReason(code: TradeTypeCode, gated: boolean): string {
+  if (gated) return `Training wheels are on. ${LADDER_GATE_NOTE}`;
+  const prev = ladderNeighbor(code, -1);
+  return `Training wheels are on, and course ${code} hasn't been unlocked yet${
+    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
+  }.`;
+}
+
+/** A server refusal for a locked rung: the reason, plus the fact that nothing reached the broker. */
+export function ladderRefusal(code: TradeTypeCode, gated: boolean): string {
+  return `${ladderLockedReason(code, gated)} Nothing was sent.`;
+}

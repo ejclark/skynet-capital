@@ -15,8 +15,8 @@
  *      much of the capsule arrived, marked `partial` with the truncation named as an assumption —
  *      a shortened draft the member can edit beats a loop, and the honesty rail still holds.
  *   2. **Structured output never reaches a member.** Anything JSON-shaped that cannot be salvaged
- *      becomes a plain-English recovery line. Prose (a model that ignored the format) still passes
- *      through, because that IS readable.
+ *      becomes a plain-English recovery line. Prose (a refusal — the one reply the enforced schema
+ *      does not bind) still passes through, because that IS readable.
  *   3. **A repeat is a stall, not a turn.** When the model returns the question it just asked,
  *      `stalledDraft` ends the conversation with the member's own words in the form instead of
  *      asking them to answer the same thing again.
@@ -173,13 +173,11 @@ export function salvageTruncatedDraft(text: string): { title: string; details: s
   return { title, details: balanceFold(readJsonString(text, "details")?.trim() ?? "") };
 }
 
-/** Parse the model's reply: strict JSON, tolerating a code fence. Failures degrade in the order
- *  salvage → recovery line → prose-as-question, so a member is never shown structured output. */
+/** Parse the model's reply: schema-enforced JSON (`output_config.format`, feedback-coach.ts).
+ *  Failures degrade in the order salvage → recovery line → prose-as-question, so a member is never
+ *  shown structured output. */
 export function parseCoachReply(text: string, rounds = 0): CoachResult {
-  const stripped = text
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "");
+  const stripped = text.trim();
   try {
     const parsed = JSON.parse(stripped) as {
       question?: unknown;

@@ -12,9 +12,9 @@ set -euo pipefail
 #   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify]
 #       verify locally (fail fast) → incident preflight → push → open a PR over REST (core
 #       bucket). Prints the
-#       PR number + URL. THEN, per .claude/skills/ship/SKILL.md: make ONE
-#       `enable_pr_auto_merge` MCP call (the only GraphQL-only step — 1 call/PR, trivial)
-#       for walk-away merge-on-green, and STOP. Do not poll.
+#       PR number + URL, then STOP. Do NOT arm auto-merge by hand: pipeline.yml's `arm auto-merge`
+#       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
+#       fallback for a PR that job can't reach, and it refuses until integration tests passed.
 #
 #   scripts/ship.sh platter {open|board|ledger|landed} …
 #       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
@@ -77,6 +77,58 @@ promote_ready() {
   grep -q '"isDraft":false' <<<"$rgql" && return 0
   rresp="$(api POST "/pulls/$1/ccr/ready_for_review")"
   [ "$(http_of "$rresp")" = 200 ] && grep -q '"draft":false' <<<"$(body_of "$rresp")"
+}
+
+# checkverify — is the head's latest `verify` check a REAL run? A pure verdict over a check-runs
+# JSON document on stdin (GET /commits/<sha>/check-runs), so the spec pins it with no network.
+# Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
+# skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
+# created them in, which is the order branch protection reads.
+cmd_checkverify() {
+  python3 -c '
+import sys, json
+runs = [r for r in json.load(sys.stdin).get("check_runs", []) if r.get("name") == "verify"]
+if not runs:
+    print("none"); sys.exit(0)
+latest = max(runs, key=lambda r: r.get("id", 0))
+if latest.get("status") != "completed":
+    print("pending")
+elif latest.get("conclusion") in ("skipped", "cancelled"):
+    print("stale")
+else:
+    print("real")
+'
+}
+
+# A held PR's verify can end as a skipped check read as a PASS (#4168). `open --hold` fires
+# `opened` (draft) and `ready_for_review` about a second apart, both in one cancel-in-progress
+# concurrency group; on #4166 the draft run was created second and cancelled the real verify,
+# leaving its own skipped verify as the latest word — the #322 hole, on every held PR. The root
+# fix is a per-draft concurrency group in pipeline.yml (Eric's to merge); this is the in-envelope
+# net: ONE delayed read (not a poll) once both runs have registered, and if the latest verify is
+# skipped/cancelled/absent, an `edited` event (a body marker — an unchanged PATCH fires nothing)
+# starts a real run. The event carries hold-merge, so the arm job still skips it.
+reverify_held() {
+  local num="$1" sha="$2" body="$3" wait="${SHIP_REVERIFY_WAIT:-20}" cresp verdict
+  sleep "$wait"
+  cresp="$(api GET "/commits/$sha/check-runs?check_name=verify&filter=all&per_page=100")"
+  if [ "$(http_of "$cresp")" != 200 ]; then
+    echo "ship: could not read #$num's verify check (HTTP $(http_of "$cresp")) — check it is a real run, not skipped (#4168)." >&2
+    return 0
+  fi
+  verdict="$(body_of "$cresp" | cmd_checkverify)"
+  case "$verdict" in
+    real|pending) echo "ship: #$num's latest verify is a real run ($verdict)." ;;
+    *)
+      local marker='<!-- ship: re-verify, the draft run left verify skipped (#4168) -->' patch presp
+      patch="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1] + '\n\n' + sys.argv[2]}))" "$body" "$marker")"
+      presp="$(api PATCH "/pulls/$num" "$patch")"
+      if [ "$(http_of "$presp")" = 200 ]; then
+        echo "ship: #$num's latest verify was $verdict (a late draft run cancelled it) — fired an edited event so a real verify runs (#4168)."
+      else
+        echo "ship: #$num's latest verify is $verdict and the re-trigger PATCH failed (HTTP $(http_of "$presp")) — edit the PR body by hand to re-run verify; skipped reads as a PASS (#4168)." >&2
+      fi ;;
+  esac
 }
 
 # checkbody — the picture/format contract as a pure, testable linter (no network, no git writes).
@@ -148,6 +200,23 @@ $mm"
   echo "ship checkbody: ✓ body passes the picture/format contract."
 }
 
+# pinshots <bodyfile> <sha> — print the body with every docs/shots/ raw URL pinned to <sha>.
+# The ref is everything between owner/repo/ and /docs/shots/ (non-greedy, no whitespace/quotes),
+# so slashed branches (feat/x) pin too — a one-segment ref group missed them (#4193). Refs that
+# are already a 40-hex SHA pass through untouched. Pure (no git), so the spec drives it directly.
+cmd_pinshots() {
+  python3 - "$1" "$2" <<'PY'
+import re, sys
+body = open(sys.argv[1]).read()
+sha = sys.argv[2]
+def pin(m):
+    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
+        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
+sys.stdout.write(re.sub(
+    r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^\s)\"'<>]+?)/docs/shots/", pin, body))
+PY
+}
+
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
@@ -188,16 +257,8 @@ cmd_open() {
 
   # SHA-pin docs/shots/ raw URLs to HEAD (the commit about to be pushed — tree is clean, so HEAD
   # is exactly what ships). Branch-form URLs 404 at squash-merge; already-pinned SHAs pass through.
-  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
-  python3 - "$bodyfile" "$sha" > "$pinned" <<'PY'
-import re, sys
-body = open(sys.argv[1]).read()
-sha = sys.argv[2]
-def pin(m):
-    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
-        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
-sys.stdout.write(re.sub(r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^/\s)]+)/docs/shots/", pin, body))
-PY
+  local pinned; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
+  cmd_pinshots "$bodyfile" "$(git rev-parse HEAD)" > "$pinned"
   bodyfile="$pinned"
 
   # The picture/format contract — fail fast, before spending verify or a push.
@@ -255,6 +316,28 @@ EOF_SHOTS
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
     echo "ship: verify green."
+    # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
+    # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
+    # red. Same classification as CI's "Detect non-docs changes": a docs-only diff skips it there,
+    # so it skips here. Chromium is preinstalled in cloud sessions (PLAYWRIGHT_BROWSERS_PATH).
+    # Only when the PINNED browser build is on disk: screenshots are baselined on CI's exact Chromium,
+    # and a cloud session ships a different build (2026-09-30: 1194 on disk vs 1234 pinned) that it
+    # must not re-download — a mismatched run is false-red, not signal. Then the pipeline's arm job
+    # is the gate (it waits for `integration tests`), and this says so rather than passing silently.
+    # Same reasoning for the PLATFORM (2026-10-02, PR #4519): screenshot baselines are
+    # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
+    # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
+    if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
+      if [ "$(uname -s)" != "Linux" ]; then
+        echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
+      elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
+        echo "ship: local integration tests (npm run test:e2e)…"
+        npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
+        echo "ship: integration tests green."
+      else
+        echo "ship: ⚠ local integration tests NOT run — the pinned Chromium build isn't installed here. CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
+      fi
+    fi
   fi
 
   # Worktree-freshness advisory (docs/LESSONS.md, 2026-08-30): the scans below read LIVE GitHub
@@ -294,6 +377,10 @@ EOF_SHOTS
   # `Closes #N`, which left #928 and #885 open long after they were done. Advisory only — most
   # slices of a multi-slice plan should NOT close the issue yet.
   node scripts/plan-closure-scan.mjs "$branch" "$bodyfile" 2>/dev/null || true
+
+  # PR-provenance advisory (#4393 criterion 8): a PR that names no issue is invisible to the
+  # Orchestration board, so the in-flight cap cannot count it. Lane branches are exempt by class.
+  node scripts/pr-provenance-scan.mjs --pr "$branch" "$title" "$bodyfile" 2>/dev/null || true
 
   # Test-quality advisory (Eric, 2026-08-30: tests as acceptance criteria): flags a new spec
   # asserting on call counts or spying on internals — docs/ENGINEERING.md's BDD rule already
@@ -346,6 +433,7 @@ EOF_SHOTS
       fi
       if promote_ready "$num" "$(printf '%s' "$body" | json_field node_id)"; then
         echo "ship: promoted #$num to ready — the ready_for_review event carries hold-merge, so nothing arms it."
+        reverify_held "$num" "$(printf '%s' "$body" | python3 -c "import sys,json; print(json.load(sys.stdin)['head']['sha'])")" "$(printf '%s' "$payload" | json_field body)"
         echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
       else
         echo "ship: labelled #$num but could NOT promote it from draft — mark it ready by hand (verify won't run on a draft)." >&2
@@ -366,7 +454,7 @@ sys.exit(1 if hits else 0)
       printf '%s\n' "$opened_hits"
       echo "ship: NEXT — say on the PR what the protected touch is, and hand #$num to Eric. STOP."
     else
-      echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call (or \`scripts/ship.sh automerge $num\` when the MCP tool is unavailable), then STOP. No polling."
+      echo "ship: NEXT — nothing. Do NOT arm auto-merge by hand: pipeline.yml's \`arm auto-merge\` job arms #$num itself once verify AND integration tests pass (#4094). STOP. No polling."
     fi
   else
     echo "ship: REST open returned HTTP $http (proxy may block writes). Body:" >&2
@@ -448,6 +536,31 @@ cmd_automerge() {
     exit 5
   fi
   cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
+
+  # NEVER ARM PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
+  # checks, and only `verify` was required then — so arming here the moment a PR opened let #4151, #4155
+  # and #4158 merge while `integration tests` was still running (two went red). pipeline.yml's own
+  # `arm auto-merge` job already waits for it; this is the fallback for a PR that job can't arm
+  # (e.g. a re-push, where `opened` won't fire again), so it must hold the same line. Skipped counts
+  # as passed: CI skips the job on a docs-only diff.
+  local head_sha cresp chttp cbody e2e_state
+  head_sha="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["head"]["sha"])')"
+  cresp="$(api GET "/commits/$head_sha/check-runs?check_name=integration%20tests&per_page=10")"
+  chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
+  [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
+  e2e_state="$(printf '%s' "$cbody" | python3 -c '
+import sys, json
+runs = json.load(sys.stdin).get("check_runs", [])
+if not runs: print("not reported yet")
+else:
+    r = max(runs, key=lambda r: r.get("started_at") or "")
+    print(r.get("conclusion") or r.get("status"))
+')"
+  case "$e2e_state" in
+    success|skipped) ;;
+    *) echo "ship automerge: integration tests on #$num are '$e2e_state' — refusing to arm. Only a passed (or skipped) run may merge (#4094)." >&2; exit 6 ;;
+  esac
+
   local q payload gql
   q='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }'
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
@@ -850,7 +963,9 @@ case "${1:-}" in
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
+  pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
+  checkverify) shift; cmd_checkverify "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac

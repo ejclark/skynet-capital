@@ -48,6 +48,10 @@ export class JsonlActivityStore implements ActivityStore {
   list(participantId?: string): Promise<TradeActivityRecord[]> {
     return this.store.list(participantId);
   }
+
+  latest(participantId: string): Promise<TradeActivityRecord | undefined> {
+    return this.store.latest(participantId);
+  }
 }
 
 /** Build the activity store from the environment (`SKYNET_ACTIVITY_DIR`, default `data/activity`). */

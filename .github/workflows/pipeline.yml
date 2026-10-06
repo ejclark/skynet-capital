@@ -127,8 +127,10 @@ jobs:
 
       - name: Detect non-docs changes
         id: changes
+        # Three dots: the PR's own changes since it branched. Two dots also list everything that
+        # landed on main since, so a docs PR behind a code commit read as code (#4430's arm job).
         run: |
-          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} \
+          if git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
                | grep -qvE '\.md$'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -279,14 +281,34 @@ jobs:
     # instead (already provisioned: vars.APP_CLIENT_ID, same as claude.yml/moneypenny-events.yml/moneypenny-repair.yml).
     # A session (or Eric) that wants a specific PR held despite being green applies the `hold-merge`
     # label — that's the one signal this job can't derive from the diff itself.
+    # `synchronize` too (#4094, 2026-09-30): the arm job is now the ONLY arming path — sessions and
+    # lanes stopped arming by hand, because native auto-merge honours only required checks and that
+    # let three PRs merge mid-integration-tests. A fix pushed after opening must re-arm here too.
+    #
+    # `edited` too (#4477, 2026-10-02): the action list below must cover every action in this
+    # workflow's own `types:` list, or the one it omits becomes a permanent stranding. `edited` was
+    # the omission, and it is not rare — `types:` carries it so a corrected PR title can re-run
+    # commitlint, and `scripts/ship.sh` FIRES one deliberately as #4168's recovery path when a late
+    # draft run cancelled the real `verify`. Since pull_request runs are `cancel-in-progress` per
+    # branch (see `concurrency:` above), an `edited` arriving seconds after `opened` kills the
+    # `opened` run, and the only run that reaches this job is the one action it refused to arm on.
+    # PR #4449 sat green, mergeable and unarmed for 29 hours that way. Keep this list and `types:`
+    # in sync: the check still earns its place as a guard against a FUTURE `types:` addition (a
+    # `labeled` event would arm off stale check results), which is why it is widened, not deleted.
     needs: [verify, e2e]
+    # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
+    # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
+    # function — so the `skipped` branch below never ran and docs PRs were never armed. With sessions
+    # and lanes no longer arming by hand, that would strand every research PR. The explicit
+    # `needs.verify.result == 'success'` keeps the gate the implicit success() check provided.
     if: >-
-      ${{ github.event_name == 'pull_request' && needs.verify.result == 'success' &&
+      ${{ !cancelled() && github.event_name == 'pull_request' && needs.verify.result == 'success' &&
           (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
           github.event.pull_request.draft == false &&
-          contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
+          contains(fromJSON('["opened","reopened","ready_for_review","synchronize","edited"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 50 # room for two capped rate-limit waits (#4351)
     permissions:
       contents: read # checkout only — the merge and the label read use the app token minted below
     steps:
@@ -305,13 +327,35 @@ jobs:
       # snapshot (ship.sh --hold used to label just after `opened`, which is how #3735 merged
       # unreviewed — docs/LESSONS.md) is invisible to it. Re-read the LIVE labels right before
       # arming; a failed read fails the job, so nothing arms unchecked.
+      # #4351 (2026-09-30): a burst of ~120 issue writes spent the App's hourly budget and both of
+      # this job's API calls 403'd — two green PRs sat unarmed with nothing to re-arm them. Each call
+      # below goes through this wrapper: on a rate-limit error it waits for the reset (capped at 15
+      # min, 3 tries) instead of failing. Any other error still fails at once, unchanged.
+      - name: Rate-limit retry helper
+        run: |
+          cat > "$RUNNER_TEMP/gh-retry.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -uo pipefail
+          for i in 1 2 3; do
+            if out=$("$@" 2>&1); then printf '%s\n' "$out"; exit 0; fi
+            printf '%s\n' "$out" >&2
+            grep -qiE 'rate limit|HTTP 429' <<<"$out" || exit 1
+            [ "$i" = 3 ] && exit 1
+            reset=$(gh api rate_limit --jq '[.resources.core.reset, .resources.graphql.reset] | max' 2>/dev/null || echo 0)
+            wait=$(( reset - $(date +%s) + 5 )); [ "$wait" -lt 30 ] && wait=30; [ "$wait" -gt 900 ] && wait=900
+            echo "rate-limited (try $i/3) — waiting ${wait}s for the reset" >&2
+            sleep "$wait"
+          done
+          EOF
+          chmod +x "$RUNNER_TEMP/gh-retry.sh"
+
       - name: Still unheld? (live labels, not the event snapshot)
         id: hold
         if: ${{ steps.app-token.outputs.token != '' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          LABELS=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
+          LABELS=$("$RUNNER_TEMP/gh-retry.sh" gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
           if printf '%s\n' "$LABELS" | grep -qx 'hold-merge'; then
             echo "hold-merge is on the PR now — not arming"; echo "held=true" >> "$GITHUB_OUTPUT"
           else
@@ -353,12 +397,21 @@ jobs:
 
       - name: Is the diff protected?
         id: envelope
+        # Three dots, or a PR behind main inherits main's newer protected paths as its own and is
+        # silently never armed: #4430 sat clean and unarmed because #4425's Dockerfile/fly.toml
+        # landed after it branched. A refusal is a notice, never a quiet green.
         run: |
-          FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
+          FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
           echo "changed files:"; echo "$FILES"
-          BLOCKING=$(node scripts/envelope-scan.mjs --check $FILES --base "${{ github.event.pull_request.base.sha }}" \
-            | jq '[.[] | select(.blocking)] | length > 0')
-          echo "blocking=$BLOCKING" >> "$GITHUB_OUTPUT"
+          # Fail closed: a crashed scan or unparseable output fails this step (bash -e), never arms.
+          SCAN=$(node scripts/envelope-scan.mjs --check $FILES --base "${{ github.event.pull_request.base.sha }}")
+          HITS=$(printf '%s' "$SCAN" | jq -er '[.[] | select(.blocking) | .path] | join(" ")')
+          if [ -n "$HITS" ]; then
+            echo "::notice::not arming — protected paths need Eric's merge: $HITS"
+            echo "blocking=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocking=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Arm auto-merge (or merge directly if already green)
         if: ${{ steps.envelope.outputs.blocking == 'false' && steps.hold.outputs.held == 'false' }}
@@ -366,11 +419,11 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           PR="${{ github.event.pull_request.number }}"
-          if ! OUT=$(gh pr merge --auto --squash "$PR" 2>&1); then
+          if ! OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --auto --squash "$PR" 2>&1); then
             if echo "$OUT" | grep -qi "clean status"; then
               echo "$OUT"
               echo "already green — merging directly instead of arming"
-              gh pr merge --squash "$PR"
+              "$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR"
             else
               echo "$OUT" >&2
               exit 1
@@ -479,7 +532,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy to Fly
-        run: flyctl deploy --remote-only
+        # A shim: scripts/fly-deploy.mjs owns the retry decision and is specced. The bare
+        # `flyctl deploy` this replaced had no second attempt, so on run 37094550247 (#4523) one
+        # closed socket on Fly's first app lookup (`api.machines.dev … : EOF`, six seconds in, no
+        # build started) failed the release and left `main` merged-but-undeployed. Connection-level
+        # failures only — an auth refusal, a build error or failed health checks still fail at once.
+        run: node scripts/fly-deploy.mjs --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -501,7 +559,7 @@ jobs:
         if: ${{ failure() && steps.smoke.conclusion == 'failure' && steps.prev.outputs.image != '' }}
         run: |
           echo "smoke failed — rolling back to ${{ steps.prev.outputs.image }}"
-          flyctl deploy -a skynet-capital --image "${{ steps.prev.outputs.image }}"
+          node scripts/fly-deploy.mjs -a skynet-capital --image "${{ steps.prev.outputs.image }}"
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -615,7 +673,7 @@ jobs:
           sed "/^\[env\]/a\\
             GIT_SHA = \"${{ github.sha }}\"" fly.bots.toml > /tmp/fly.bots.deploy.toml
           grep -A2 '^\[env\]' /tmp/fly.bots.deploy.toml
-          flyctl deploy --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
+          node scripts/fly-deploy.mjs --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
@@ -632,6 +690,6 @@ jobs:
         if: ${{ failure() && steps.smoke-bots.conclusion == 'failure' && steps.prev-bots.outputs.image != '' }}
         run: |
           echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
-          flyctl deploy --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
+          node scripts/fly-deploy.mjs --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}

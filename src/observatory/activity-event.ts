@@ -1,3 +1,7 @@
+import type { EarnedMilestone } from "../domain/progression.js";
+import type { FeedbackLogEntry } from "../server/feedback-log.js";
+import type { FeedbackStatus } from "../server/feedback-status.js";
+import type { LadderProgressEntry, LadderProgressEvidence } from "../server/ladder-progress-log.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
@@ -145,6 +149,240 @@ export function activityEventFromAuditRecord(record: OrderAuditRecord): Activity
       ...(record.intent ? { intent: record.intent } : {}),
     },
   };
+}
+
+// --- feedback (#784 slice 2) ---------------------------------------------------------------------
+//
+// The second KIND on the bus, and the first that is not a trade. Both translators key the event's
+// identity off the issue number, which is what a filing and every later observation of it have in
+// common — `correlationId: "feedback:<n>"` is therefore the chain a slice-3 feed row groups on,
+// exactly as an order id chains a fill to its submission.
+//
+// ONE THING A LATER SLICE MUST NOT ASSUME: `actor.participantId` here is NOT a hub participant id.
+// A filing's actor is the member's `opaqueMemberId` (`feedback-attribution.ts`) and a status
+// observation's actor is `"system"`; neither will ever match a trade event's `participantId`. The
+// two id spaces are deliberately separate — the attribution ruling (Eric, 2026-08-19) is that a
+// filing correlates pseudonymously and nothing finer. A one-feed slice joins these kinds by
+// `target`, never by actor.
+
+/** Who a status observation is attributed to. GitHub changed the state and the app noticed; no
+ *  member acted, so inventing one would be a lie. Also the bus's file key, which is why it is one
+ *  constant and not a per-issue id — `JsonlActivityEventBus` writes one file per
+ *  `actor.participantId`, and a file per filing would be a directory that grows without bound. */
+const SYSTEM_ACTOR = "system";
+
+/**
+ * One member filing → one bus event. `visibility: "public"` matches today's `/api/wire` pulse
+ * exactly (every member's filings, cross-member, pseudonymous) — this slice changes the schema,
+ * not who sees what, the same posture `activityEventFromTradeRecord` took in slice 1.
+ *
+ * Carrying `opaqueMemberId` on a public-tier event is no new exposure: that same id is already
+ * written into the GitHub issue's own public body and its `member-<id>` label
+ * (`feedback-attribution.ts`). The pulse still never renders it — the envelope captures what the
+ * source honestly knows, and a narrower audience is a narrower subscription (#1211 settled forks).
+ */
+export function activityEventFromFeedbackEntry(entry: FeedbackLogEntry): ActivityEvent {
+  return {
+    id: `feedback:${entry.issueNumber}:feedback.filed:${entry.filedAt}`,
+    eventType: "feedback.filed",
+    actor: { participantId: entry.opaqueMemberId, kind: "human" },
+    target: { kind: "feedback", id: String(entry.issueNumber) },
+    at: entry.filedAt,
+    correlationId: `feedback:${entry.issueNumber}`,
+    source: "app",
+    outcome: "success",
+    visibility: "public",
+    payload: {
+      issueNumber: entry.issueNumber,
+      kind: entry.kind,
+      title: entry.title,
+      url: entry.url,
+    },
+  };
+}
+
+/**
+ * One observed change in a filing's state → one bus event. `at` is when the APP observed the
+ * status, not when GitHub changed it: the poll (`feedback-status.ts`) reads a current state, and
+ * labels carry no timestamp, so a change time would be invented. The id includes `at` for that
+ * reason too — a filing that is shipped, reopened, then shipped again is three honest observations,
+ * and an id keyed on the status alone would silently collapse the second shipping into the first.
+ *
+ * Only a real transition is published (`publishingFeedbackStatuses`); a filing sitting in the queue
+ * does not re-emit on every poll.
+ */
+export function activityEventFromFeedbackStatus(
+  issueNumber: number,
+  status: FeedbackStatus,
+  at: string,
+): ActivityEvent {
+  return {
+    id: `feedback:${issueNumber}:feedback.status-changed:${status}:${at}`,
+    eventType: "feedback.status-changed",
+    actor: { participantId: SYSTEM_ACTOR, kind: "system" },
+    target: { kind: "feedback", id: String(issueNumber) },
+    at,
+    correlationId: `feedback:${issueNumber}`,
+    // GitHub is the source of truth for a filing's state and stays external to this app
+    // (`feedback-status.ts`) — the provenance of this line is the poll, not the app's own write.
+    source: "github",
+    outcome: "success",
+    visibility: "public",
+    payload: { issueNumber, status },
+  };
+}
+
+// --- development (#784 slice 4) ------------------------------------------------------------------
+//
+// The third KIND, and the first whose source is not inside this app at all. A merged pull request is
+// the league's own record of what got built, which this issue's original notes named and nothing
+// ever emitted ("the list/collection of records should contain all activity for skynet capital —
+// transactions, feedback, development", Eric 2026-08-28).
+//
+// WHERE IT COMES FROM, AND WHY NOT A WEBHOOK. #784's brief guessed this would ride "the same GitHub
+// webhook infra already wired for Moneypenny's PR-activity subscriptions" and left a build session
+// to confirm. There is no such infrastructure: nothing in `src/` receives an inbound GitHub webhook.
+// What does exist is three read-only POLLS on the token the app already holds — `feedback-status.ts`,
+// `work-status.ts`, `ops-status-deploy-lag.ts` — so this kind is a fourth one
+// (`development-activity.ts`), demoted to an emitter exactly as `publishingFeedbackStatuses` demoted
+// the feedback status poll. No new credential and no new inbound surface, which is also why it needs
+// no bridge: there is no local development ledger that predates the bus, and GitHub itself holds the
+// history the poll's window reads.
+
+/** What the merged-PR poll honestly knows about one merge (`development-activity.ts` narrows the
+ *  GitHub payload into exactly this, so nothing downstream reads a raw API body). Every field is
+ *  something the payload SAID — a merge with no `merged_at`, number, title or URL never becomes an
+ *  event, because the row would have to invent what it is about. */
+export interface MergedPullRequestInfo {
+  readonly number: number;
+  readonly title: string;
+  /** The GitHub login that opened it, or absent when the payload carried none (a deleted account).
+   *  Never defaulted to a person: an unattributed merge is honest, a wrong name is not. */
+  readonly author?: string;
+  readonly url: string;
+  readonly mergedAt: string;
+}
+
+/**
+ * One merged pull request → one bus event. `at` is the merge instant GitHub reported, not when the
+ * poll noticed — unlike a filing's status, a merge HAS a timestamp in the payload, so there is
+ * nothing to invent and the row sorts into the feed at the moment it actually happened.
+ *
+ * `actor` is the system, not the PR's author, for both of the reasons the feedback status emitter
+ * gives: no member of this league acted (GitHub merged it, the app observed it), and
+ * `JsonlActivityEventBus` writes one file per `actor.participantId`, so a file per GitHub login would
+ * be a directory that grows with the contributor list. The author's login rides in the payload,
+ * where it is a fact about the merge rather than a claim about a participant.
+ *
+ * `visibility: "public"` — a merged PR in a public repo is already public, and the whole league's
+ * record is what this kind exists to complete.
+ */
+export function activityEventFromMergedPullRequest(info: MergedPullRequestInfo): ActivityEvent {
+  return {
+    // No `at` in the id: a merge happens ONCE, so the PR number alone is its identity, and keying on
+    // the instant too would let a re-read with a reformatted timestamp publish the same merge twice.
+    id: `development:${info.number}:development.pr-merged`,
+    eventType: "development.pr-merged",
+    actor: { participantId: SYSTEM_ACTOR, kind: "system" },
+    target: { kind: "development", id: String(info.number) },
+    at: info.mergedAt,
+    correlationId: `development:${info.number}`,
+    source: "github",
+    outcome: "success",
+    visibility: "public",
+    payload: {
+      pullRequest: info.number,
+      title: info.title,
+      ...(info.author ? { author: info.author } : {}),
+      url: info.url,
+    },
+  };
+}
+
+// --- milestones (#784 slice 5) -------------------------------------------------------------------
+//
+// The fourth KIND, and the one with two honest regimes underneath it — which is why it has two
+// translators onto ONE event type rather than one:
+//
+// - **Logged** (`activityEventFromLadderEntry`): the ladder detector's two outcome milestones, an OTM
+//   expiry and a first realized profit. A fill alone cannot prove either, so the detector writes a
+//   durable row once it has (`ladder-progress-log.ts`), and that write is what publishes.
+// - **Derived** (`activityEventFromEarnedMilestone`): the trade ladder (first buy, first covered
+//   call…). These are NEVER stored — `domain/progression.ts` re-derives them from the fill + audit
+//   ledgers on every read, Eric's 2026-08-25 ruling that a stored verdict only invites drift. So this
+//   translator runs at READ time over those same ledgers and its events are never published: writing
+//   them to the bus would be exactly the stored "earned" record that ruling forbids.
+//
+// Both key identity on (participant, milestone) and nothing else — a milestone is earned ONCE, so an
+// instant in the id would let a detector re-log, or a backfilled earlier fill, mint a second row for
+// the same earn. The fold (`milestone-event-feed.ts`) keeps the earliest instant, the same rule
+// `earliestPerMilestone` and `deriveEarned` both use.
+//
+// `actor.participantId` IS a hub participant id here, unlike a filing's: the ladder is keyed on the
+// roster id (`ladder-progress-log.ts`), so a milestone row can name who earned it the way a trade row
+// names who traded.
+
+/** What one earn says, whichever regime proved it. `orderId` is the evidence — the fill, expiry or
+ *  closing trade that proved the milestone — never a claim. */
+interface MilestoneEarnedInfo {
+  readonly participantId: string;
+  readonly milestoneId: string;
+  readonly orderId: string;
+  readonly evidence: LadderProgressEvidence["kind"];
+  readonly at: string;
+}
+
+function activityEventFromMilestone(info: MilestoneEarnedInfo, source: string): ActivityEvent {
+  const identity = `${info.participantId}:${info.milestoneId}`;
+  return {
+    id: `milestone:${identity}:milestone.earned`,
+    eventType: "milestone.earned",
+    actor: { participantId: info.participantId },
+    target: { kind: "milestone", id: identity },
+    at: info.at,
+    correlationId: `milestone:${identity}`,
+    source,
+    outcome: "success",
+    // Public, said with what it costs: an option rung is classified from the ticket's play tag, which
+    // `activityEventFromAuditRecord` keeps owner-only, so "Sell your first covered call" tells the
+    // league a strategy that a bare SELL row does not. That is in bounds. The cross-member feed sits
+    // behind the invite gate (`serveAuthorizedRoute`), where pooling members' trades is what the
+    // invite agreement authorizes (`CLAUDE.md` → shared-universe data mixing). The audit line stays
+    // owner-only for what it carries that this event never does: the confirming member's email.
+    visibility: "public",
+    payload: { milestoneId: info.milestoneId, orderId: info.orderId, evidence: info.evidence },
+  };
+}
+
+/** One ladder-detector row → one bus event; the write half `publishingLadderProgressLog` rides. */
+export function activityEventFromLadderEntry(entry: LadderProgressEntry): ActivityEvent {
+  return activityEventFromMilestone(
+    {
+      participantId: entry.participantId,
+      milestoneId: entry.milestoneId,
+      orderId: entry.evidence.orderId,
+      evidence: entry.evidence.kind,
+      at: entry.at,
+    },
+    "ladder-detector",
+  );
+}
+
+/** One fill-derived ladder earn → one event, built at read time and never published (see above). */
+export function activityEventFromEarnedMilestone(
+  participantId: string,
+  earned: EarnedMilestone,
+): ActivityEvent {
+  return activityEventFromMilestone(
+    {
+      participantId,
+      milestoneId: earned.milestoneId,
+      orderId: earned.orderId,
+      evidence: "fill",
+      at: earned.at,
+    },
+    "derived",
+  );
 }
 
 /** One bot order the broker actually accepted. A structural (not imported) shape — mirrors

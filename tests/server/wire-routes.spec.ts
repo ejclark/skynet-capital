@@ -1,5 +1,13 @@
 import type { ServerResponse } from "node:http";
 
+import {
+  activityEventFromAuditRecord,
+  activityEventFromFeedbackEntry,
+  activityEventFromFeedbackStatus,
+  activityEventFromLadderEntry,
+  activityEventFromMergedPullRequest,
+  activityEventFromTradeRecord,
+} from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
@@ -100,6 +108,79 @@ describe("serveWireJson", () => {
     expect(trade.who).toBe("Sauron");
   });
 
+  // #784 slice 1 — the trade feed is built from the activity bus's own envelope. The ledger stays
+  // wired alongside it because the event log only begins at #1211's deploy; these four hold the
+  // bar that neither source loses a fill and the overlap is never counted twice.
+  describe("the trade feed's source (#784 slice 1)", () => {
+    const tradesFrom = (body: string): Array<{ symbol: string; who: string; when: string }> =>
+      JSON.parse(body).wire.trades;
+
+    it("renders a fill the bus published with no ledger wired at all", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(record())]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(1);
+      expect(tradesFrom(out.body)[0]?.symbol).toBe("NVDA");
+    });
+
+    it("keeps a pre-bus ledger fill the event log never saw", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () =>
+          Promise.resolve([activityEventFromTradeRecord(record({ orderId: "on-bus" }))]),
+        readAllTradeActivity: () =>
+          Promise.resolve([record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(2);
+    });
+
+    it("counts a fill on BOTH the bus and the ledger exactly once", async () => {
+      const { res, out } = capture();
+      const both = record();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(both)]),
+        readAllTradeActivity: () => Promise.resolve([both]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(1);
+    });
+
+    it("never puts an owner-only order.submitted line on the cross-member feed", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () =>
+          Promise.resolve([
+            activityEventFromAuditRecord({
+              participantId: "sauron",
+              orderId: "ord-1",
+              at: "2026-08-19T14:29:00.000Z",
+              ownerEmail: "member@example.com",
+              symbol: "NVDA",
+              side: "buy",
+            }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toEqual([]);
+      expect(out.body).not.toContain("member@example.com");
+    });
+  });
+
   it("renders every member's filed feedback, not just one member's own", async () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
@@ -111,6 +192,61 @@ describe("serveWireJson", () => {
 
     const [feedback] = JSON.parse(out.body).wire.feedback;
     expect(feedback.title).toBe("Shared idea");
+  });
+
+  it("renders a filing that reached the bus but is not on the log — the pulse reads the envelope", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () =>
+        Promise.resolve([activityEventFromFeedbackEntry(entry({ title: "Bus-only idea" }))]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0].title).toBe("Bus-only idea");
+  });
+
+  it("shows a filing's open/shipped state off the bus with no status fetcher wired", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () =>
+        Promise.resolve([
+          activityEventFromFeedbackEntry(entry()),
+          activityEventFromFeedbackStatus(1, "shipped", "2026-08-21T00:00:00.000Z"),
+        ]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0]).toMatchObject({ statusKey: "shipped" });
+  });
+
+  it("never double-counts a filing the bus and the log both hold", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () => Promise.resolve([activityEventFromFeedbackEntry(entry())]),
+      readAllFeedback: () => Promise.resolve([entry()]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback).toHaveLength(1);
+  });
+
+  it("a just-polled status reaches this render, not the next one", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllFeedback: () => Promise.resolve([entry()]),
+      fetchFeedbackStatus: () => Promise.resolve(new Map([[1, "needs-info" as const]])),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0]).toMatchObject({ statusKey: "needs-info" });
   });
 
   it("fetches live status only for the feedback it actually renders", async () => {
@@ -145,6 +281,173 @@ describe("serveWireJson", () => {
     await serveWireJson(res, "/api/wire", deps, true);
 
     expect(called).toBe(false);
+  });
+
+  // #784 slice 4 — the development kind. The one source that is not a local ledger, so the route's
+  // job is narrower: poll, fold what the poll said in on the same schema, and tell an unwired read
+  // apart from a league that has merged nothing.
+  describe("merged pull requests", () => {
+    const merge = {
+      number: 4272,
+      title: "feat(activity): development events for merged PRs",
+      author: "claude",
+      url: "https://github.com/x/y/pull/4272",
+      mergedAt: "2026-10-02T12:00:00.000Z",
+    };
+
+    it("renders a merge the poll returned, even before anything reaches the bus", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readMergedPullRequests: () => Promise.resolve([merge]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { development, developmentEnabled } = JSON.parse(out.body).wire;
+      expect(developmentEnabled).toBe(true);
+      expect(development).toHaveLength(1);
+      expect(development[0]).toMatchObject({ pullRequest: 4272, kindLabel: "Merged" });
+    });
+
+    it("renders a merge the bus already holds without re-polling it into a second row", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () => Promise.resolve([activityEventFromMergedPullRequest(merge)]),
+        readMergedPullRequests: () => Promise.resolve([merge]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      expect(JSON.parse(out.body).wire.development).toHaveLength(1);
+    });
+
+    it("says the development read is off when it is unwired, rather than sending an empty list", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = { hub: hubWith([snapshot()]) };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { development, developmentEnabled } = JSON.parse(out.body).wire;
+      expect(developmentEnabled).toBe(false);
+      expect(development).toEqual([]);
+    });
+
+    it("bounds the development rows by the same per_page every other kind rides", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readMergedPullRequests: () =>
+          Promise.resolve(
+            Array.from({ length: 5 }, (_, i) => ({
+              ...merge,
+              number: 4000 + i,
+              mergedAt: `2026-10-0${i + 1}T12:00:00.000Z`,
+            })),
+          ),
+      };
+
+      await serveWireJson(res, "/api/wire?per_page=2", deps, false);
+
+      expect(JSON.parse(out.body).wire.development).toHaveLength(2);
+    });
+  });
+
+  // #784 slice 5 — the milestone kind, and the plan's falsifier end to end: an earn produces exactly
+  // one row, and a milestone nobody earned produces none.
+  describe("earned milestones", () => {
+    const member = snapshot({ id: "eric", displayName: "Eric", kind: "human" });
+    const logged = {
+      uuid: "u-1",
+      participantId: "eric",
+      milestoneId: "first-realized-profit",
+      evidence: { kind: "realized-profit" as const, orderId: "ord-9" },
+      at: "2026-10-02T15:00:00.000Z",
+    };
+    const wired = (over: Partial<WireRouteDeps> = {}): WireRouteDeps => ({
+      hub: hubWith([member]),
+      readAllLadderProgress: () => Promise.resolve([]),
+      readAllOrderAudit: () => Promise.resolve([]),
+      ...over,
+    });
+    const milestonesOf = async (deps: WireRouteDeps, url = "/api/wire") => {
+      const { res, out } = capture();
+      await serveWireJson(res, url, deps, false);
+      return JSON.parse(out.body).wire;
+    };
+
+    it("shows one row for a member's first fill, derived from the ledger the Learn page reads", async () => {
+      const { milestones, milestonesEnabled } = await milestonesOf(
+        wired({ readAllTradeActivity: () => Promise.resolve([record({ participantId: "eric" })]) }),
+      );
+
+      expect(milestonesEnabled).toBe(true);
+      expect(milestones).toEqual([
+        expect.objectContaining({
+          who: "Eric",
+          title: "Buy your first stock",
+          kindLabel: "Earned",
+        }),
+      ]);
+    });
+
+    it("shows NO row for a member with no fills — nothing was earned", async () => {
+      const { milestones } = await milestonesOf(wired());
+
+      expect(milestones).toEqual([]);
+    });
+
+    it("shows a logged earn once, whether it reached the bus, the log, or both", async () => {
+      const { milestones } = await milestonesOf(
+        wired({
+          readAllActivityEvents: () => Promise.resolve([activityEventFromLadderEntry(logged)]),
+          readAllLadderProgress: () => Promise.resolve([logged]),
+        }),
+      );
+
+      expect(milestones).toEqual([expect.objectContaining({ title: "Book your first profit" })]);
+    });
+
+    it("leaves a bot's first fill off — the ladder is a member's curriculum", async () => {
+      const { milestones } = await milestonesOf(
+        wired({
+          hub: hubWith([snapshot()]),
+          readAllTradeActivity: () => Promise.resolve([record()]),
+        }),
+      );
+
+      expect(milestones).toEqual([]);
+    });
+
+    it("says the kind is off when either source is unwired, rather than sending an empty list", async () => {
+      const noAudit = await milestonesOf({
+        hub: hubWith([member]),
+        readAllLadderProgress: () => Promise.resolve([logged]),
+      });
+
+      expect(noAudit.milestonesEnabled).toBe(false);
+      expect(noAudit.milestones).toEqual([]);
+    });
+
+    it("bounds the milestone rows by the same per_page every other kind rides", async () => {
+      const fills = [
+        record({ orderId: "b", participantId: "eric", side: "buy" }),
+        record({
+          orderId: "s",
+          participantId: "eric",
+          side: "sell",
+          at: "2026-08-20T14:30:00.000Z",
+        }),
+      ];
+
+      const { milestones } = await milestonesOf(
+        wired({ readAllTradeActivity: () => Promise.resolve(fills) }),
+        "/api/wire?per_page=1",
+      );
+
+      expect(milestones).toHaveLength(1);
+    });
   });
 
   // #2017 Phase 1 slice 12 — the who-else-traded row's server-side symbol scoping.

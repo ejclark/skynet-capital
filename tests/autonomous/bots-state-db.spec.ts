@@ -105,6 +105,84 @@ describe("BotsStateDb", () => {
 
 // Issue #1181: the restore has to REPORT what it did, not just do it — that count is what the
 // health stamp carries, and it is the only way a deploy proves the volume actually worked.
+describe("BotsStateDb — COND-SCOUT shadow ledger", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "bots-state-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const probe = {
+    id: "AMD@1000",
+    symbol: "AMD",
+    hypothesis: "oversold-rebound",
+    condition: "oversold",
+    triggers: ["RSI 22.0 ≤ 30"],
+    forecast: { direction: "up", horizonMs: 5 * 86_400_000, invalidator: "below 95.00" },
+    openedAt: 1000,
+    entryPrice: 100,
+    entryQuote: { bid: 99.9, ask: 100, last: 100, asOf: "2026-09-30T14:00:00Z" },
+    quantity: 50,
+    notional: 5000,
+    stopPrice: 95,
+    expiresAt: 1000 + 5 * 86_400_000,
+  } as const;
+
+  it("keeps an open probe across a restart, then moves it to the closes when it closes", () => {
+    const path = join(dir, "bots.db");
+    const first = openBotsStateDb(path);
+    first.saveShadowProbe(probe);
+    first.close();
+
+    const second = openBotsStateDb(path);
+    expect(second.loadShadowProbes()).toEqual([probe]);
+    const close = {
+      probe,
+      closedAt: 2000,
+      reason: "horizon" as const,
+      exitPrice: 104,
+      exitQuote: { bid: 104, ask: 104.1, last: 104, asOf: "2026-10-05T14:00:00Z" },
+      realized: 200,
+      roi: 0.04,
+      daysHeld: 5,
+      roiPerDay: 0.008,
+    };
+    second.closeShadowProbe(close);
+    expect(second.loadShadowProbes()).toEqual([]);
+    expect(second.listShadowCloses(10)).toEqual([close]);
+    second.close();
+  });
+
+  it("keeps a probe's snapshots in time order", () => {
+    const db = openBotsStateDb(join(dir, "bots.db"));
+    const snap = (at: number) => ({
+      probeId: probe.id,
+      symbol: "AMD",
+      at,
+      quote: { bid: 99, ask: 99.1, last: 99, asOf: "2026-09-30T15:00:00Z" },
+      markRoi: -0.01,
+    });
+    db.saveShadowSnapshot(snap(3000));
+    db.saveShadowSnapshot(snap(2000));
+    expect(db.listShadowSnapshots(probe.id).map((s) => s.at)).toEqual([2000, 3000]);
+    expect(db.listShadowSnapshots("other")).toEqual([]);
+    db.close();
+  });
+
+  it("keeps retros newest first, one per probe", () => {
+    const db = openBotsStateDb(join(dir, "bots.db"));
+    const retro = (probeId: string, closedAt: number) =>
+      ({ probeId, closedAt, symbol: "AMD", roi: 0.01 }) as never;
+    db.saveShadowRetro(retro("a", 1000));
+    db.saveShadowRetro(retro("b", 2000));
+    db.saveShadowRetro(retro("a", 1000));
+    expect(db.listShadowRetros(10).map((r) => r.probeId)).toEqual(["b", "a"]);
+    db.close();
+  });
+});
+
 describe("restoreBotsState", () => {
   /** The only part of a bot this call reads: which persona's cooldown rows to count. */
   const bot = (id: string) => ({ persona: { id } });

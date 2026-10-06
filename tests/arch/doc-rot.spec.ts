@@ -42,18 +42,12 @@ describe("doc-rot budget (advisory)", () => {
   });
 });
 
-// Unlike the budget above, structural-graph staleness is a real, blocking gate — see
-// scripts/doc-rot-scan.mjs's header comment for why. Runs against the real repo (not a fixture):
-// the fact being checked is "is docs/STRUCTURE-graph.md actually stale right now", which only the
-// real repo can answer. Exit code 2 is the scanner's distinct signal for this check.
-describe("structural graph freshness (blocking)", () => {
-  it("docs/STRUCTURE-graph.md is not stale — run `npm run graph:refresh` if this fails", () => {
-    try {
-      execFileSync("node", [SCRIPT], { encoding: "utf8" });
-    } catch (err) {
-      const e = err as { status?: number; stdout?: string; stderr?: string };
-      expect(e.status).not.toBe(2);
-    }
+// Structural-graph staleness is advisory too since 2026-09-30 (#4074): it measured an ambient
+// property of `main`, not the diff, so it turned unrelated PRs red almost daily — see
+// scripts/doc-rot-scan.mjs's header. Still printed on every run.
+describe("structural graph freshness (advisory)", () => {
+  it("reports docs/STRUCTURE-graph.md staleness without blocking CI", () => {
+    advisoryScan(SCRIPT);
   });
 });
 
@@ -91,6 +85,27 @@ describe("structural graph freshness — honest degradation (seeded fixtures)", 
     });
     expect(status).toBe(2);
     expect(out).toContain("51 commits");
+  });
+
+  it("measures from the commit that landed the snapshot when a squash orphaned the stamp", () => {
+    const { status, out } = scanFixture((root) => {
+      const env = hermeticGitEnv();
+      const git = (...args: string[]) =>
+        execFileSync(
+          "git",
+          ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args],
+          { cwd: root, env, encoding: "utf8" },
+        ).trim();
+      git("init", "-q");
+      writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));
+      writeFileSync(join(root, "docs", "STRUCTURE-graph.md"), graphDoc("deadbeef"));
+      git("add", "-A");
+      git("commit", "-q", "-m", "squash-merged refresh");
+      for (let i = 0; i < 51; i += 1) git("commit", "-q", "--allow-empty", "-m", `c${i}`);
+    });
+    expect(status).toBe(2);
+    expect(out).toContain("51 commits");
+    expect(out).toContain("landed in");
   });
 
   it("passes a map whose commit is reachable and within both thresholds", () => {

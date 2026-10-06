@@ -13,6 +13,7 @@ import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCouncilStore } from "../server/council-store.js";
+import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import {
   createOwnerLinkStore,
   ownerEmailFor,
@@ -25,6 +26,7 @@ export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
   council: ReturnType<typeof createCouncilStore>;
+  filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
   knownPersonaIds: Set<string>;
@@ -57,6 +59,9 @@ export function setupAccess(
   // The Sunday Council's weekly thesis lines (issue #2224 shape 1) — a sibling file next to
   // bot-controls.json, no new env var, no fly.toml change (envelope-protected).
   const council = createCouncilStore(env, (m) => console.error(m));
+  // Comments on another member's filing (issue #2224 shape 3) — the council's sibling, same file
+  // posture; kept in the app so they never reach the GitHub thread a build reads.
+  const filingComments = createFilingCommentsStore(env, (m) => console.error(m));
   // Playbook Store subscriptions (issue #885), on the volume beside the other member data
   // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
   // account's own playbook picks and capital sub-allocations, not a secret.
@@ -103,6 +108,7 @@ export function setupAccess(
     allowlist,
     botControls,
     council,
+    filingComments,
     subscriptions,
     savedPositions,
     knownPersonaIds,
