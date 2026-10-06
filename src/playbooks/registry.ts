@@ -9,20 +9,15 @@
  * subscriptions (plan #4535).
  */
 import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
-import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
-import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
+import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { CRWV_WHEEL } from "./crwv-wheel.js";
 import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
-import {
-  type EnabledPlaybook,
-  type Playbook,
-  POST_PRINT_FLAT_DAYS,
-  printSessionWindow,
-} from "./playbook.js";
+import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
+import { eventPlay, prePrintRunUp } from "./templates.js";
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
@@ -31,9 +26,9 @@ import type { TacticalRule } from "./tactical-playbook.js";
  * research counts them and NVDA-CALL-SPREAD trades them (#4776); a date confirmed inside the
  * window opens it on the next cycle, wherever that lands.
  */
-export const S1_NVDA: Playbook = {
-  id: "S1-NVDA",
-  symbols: ["NVDA"],
+export const S1_NVDA: Playbook = prePrintRunUp({
+  symbol: "NVDA",
+  window: { unit: "sessions", enter: 20, exit: { kind: "before", count: 5 } },
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
@@ -43,23 +38,7 @@ export const S1_NVDA: Playbook = {
   // it also carries the strongest evidence line of the roster. Pausing entries on a reading is
   // step 5b-ii, gated on the detector's falsifier (30 observations or 2026-11-30).
   mixedSignals: { action: "observe" },
-  keyedOn: "earnings",
-  desiredState(asOfIso, calendar) {
-    if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
-      return "flat";
-    }
-    const w = printSessionWindow("NVDA", asOfIso, calendar);
-    if (!w) {
-      return "no-window";
-    }
-    if (w.sessions >= 6 && w.sessions <= 20) {
-      // Date policy: only a confirmed IR date opens the window; an estimate stays dark.
-      return w.confirmed ? "long" : "no-window";
-    }
-    // Inside D-5 (or past the print): whatever we hold, we should not — the play is over.
-    return w.sessions <= 5 ? "flat" : "no-window";
-  },
-};
+});
 
 /**
  * G1-GOOG — the sweep's sole surviving pre-print long outside NVDA, with a deliberately
@@ -68,31 +47,18 @@ export const S1_NVDA: Playbook = {
  * hard next-day failsafe). Opens no earlier than D-20 in TRADING SESSIONS, the unit its research
  * ledger counts in (#4776).
  */
-export const G1_GOOG: Playbook = {
-  id: "G1-GOOG",
-  symbols: ["GOOG"],
+export const G1_GOOG: Playbook = prePrintRunUp({
+  symbol: "GOOG",
+  window: {
+    unit: "sessions",
+    enter: 20,
+    exit: { kind: "print-day-close", etCutoff: "15:45" },
+  },
   thesis: "pre-print run-up held to the close of print day, flat before the release",
   evidence:
     "docs/research/multi-symbol-sweep.md G1: pooled 37/43 positive, p=0.0008 at measured base; net-of-QQQ positive all eras",
   size: { conservative: 0.01, standard: 0.015, aggressive: 0.02 },
-  keyedOn: "earnings",
-  desiredState(asOfIso, calendar) {
-    if (recentPrint("GOOG", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
-      return "flat"; // failsafe: the close exit was missed — exit on the first post-print cycle
-    }
-    const w = printSessionWindow("GOOG", asOfIso, calendar);
-    if (!w) {
-      return "no-window";
-    }
-    if (w.sessions === 0) {
-      // Print day: ride to the close, exit before it (release is after hours).
-      return etTimeOf(asOfIso) >= "15:45" ? "flat" : w.confirmed ? "long" : "flat";
-    }
-    return w.sessions <= 20 && w.confirmed ? "long" : "no-window";
-  },
-};
-
-const TACO_SYMBOL = "DJT";
+});
 
 /**
  * TACO-DJT — the event-driven counterpart to the two date-keyed plays above ("TACO
@@ -124,9 +90,12 @@ const TACO_SYMBOL = "DJT";
  * next name's evidence: add it to `TACO_DJT.symbols` if it should share this play's window/sizing,
  * or register a separate `TACO-<SYMBOL>` playbook if it deserves its own.
  */
-export const TACO_DJT: Playbook = {
-  id: "TACO-DJT",
-  symbols: [TACO_SYMBOL],
+export const TACO_DJT: Playbook = eventPlay({
+  symbol: "DJT",
+  // At least one event exists but none is still live → flat, the same post-event hygiene S1/G1
+  // apply after a print. `holdMinutes` is the total life; the 15-minute entry window inside it
+  // (`TACO_TIMING.entryMinutes`) is not a separate state, since `desiredState` is holdings-blind.
+  holdMinutes: TACO_TIMING.holdMinutes,
   thesis:
     `decisive entry within ${TACO_TIMING.entryMinutes}m of a Trump-linked pump story, decisive ` +
     `exit by ${TACO_TIMING.holdMinutes}m before the "no substance" reversion`,
@@ -138,22 +107,7 @@ export const TACO_DJT: Playbook = {
   // Below S1-NVDA (0.01-0.03) and G1-GOOG (0.01-0.02): an unvalidated, event-driven play sized
   // more cautiously than the evidence-backed date-keyed ones until a backtest earns it more.
   size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
-  keyedOn: "event",
-  desiredState(asOfIso, _calendar, events = []) {
-    const own = events.filter((event) => event.symbol === TACO_SYMBOL);
-    if (own.length === 0) {
-      // Never signaled: correctly dark, exactly like a date-keyed play with no upcoming print.
-      return "no-window";
-    }
-    const stillLive = own.some((event) => {
-      const window = tacoWindow(event, asOfIso);
-      return window === "enter" || window === "hold";
-    });
-    // At least one event exists but none is still live: converge to flat — the same post-event
-    // hygiene S1/G1 apply after a print, so a position never silently rides past its window.
-    return stillLive ? "long" : "flat";
-  },
-};
+});
 
 /** Hardcore Sauron's exact thresholds (`HARDCORE_SAURON_CONFIG`), translated into the tactic
  *  chain's four generic kinds, in the same priority order `SauronHardcorePersona.decideSymbol`
