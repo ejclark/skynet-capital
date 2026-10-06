@@ -175,10 +175,13 @@ export function betaScoutIntents(
  * there" — a small tracked Set, mirroring how `AutonomousTrader` already tracks per-symbol
  * cooldowns. Called once per new trading day, BEFORE any new picks are considered, so a scout
  * position is never held longer than one day: it is a mechanics probe, not a position to manage.
+ * `mode` is the host subscription's, so the sell carries the mode the buy did (`conservative` with
+ * no subscription on).
  */
 export function betaScoutExitIntents(
   portfolio: Portfolio,
   scoutOwnedSymbols: ReadonlySet<string>,
+  mode: PlaybookMode = "conservative",
 ): OrderIntent[] {
   const intents: OrderIntent[] = [];
   for (const symbol of scoutOwnedSymbols) {
@@ -190,7 +193,7 @@ export function betaScoutExitIntents(
         quantity: held,
         type: "market",
         playbookId: BETA_SCOUT_ID,
-        playbookMode: "conservative",
+        playbookMode: mode,
         reason: "BETA-PHASE FORCED PICK exit — one trading day held, per the scout's own rule.",
       });
     }

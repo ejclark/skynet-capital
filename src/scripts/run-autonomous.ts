@@ -44,7 +44,7 @@ import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
-import { LiveCycleRunner } from "../autonomous/live-cycle.js";
+import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
@@ -345,8 +345,9 @@ async function runLive(): Promise<void> {
   // Persona (which the contract requires to be pure — "same inputs, same intents"); this is
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
-  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off). Armed, it still opens only
-  // while its host bot is subscribed to BETA-SCOUT (#4642 slice 10).
+  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off), which stops new picks only:
+  // the picks it holds are still sold on the next trading day. Armed, it still opens only while its
+  // host bot is subscribed to BETA-SCOUT (#4642 slice 10).
   const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
@@ -396,6 +397,14 @@ async function runLive(): Promise<void> {
       risk,
       mode,
       subscriptions: () => botRosters[0]?.subscriptions ?? [],
+      // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
+      // under its own persona id, never the host's.
+      ...(decisionDb
+        ? {
+            realizedPlForPlaybook: (playbookId: string) =>
+              decisionDb.realizedPlForPlaybook(BETA_SCOUT_PERSONA_ID, playbookId),
+          }
+        : {}),
     }),
     onResult: logResult,
     onDecision,

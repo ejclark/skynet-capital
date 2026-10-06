@@ -213,7 +213,9 @@ function logHardcore(roster: ReturnType<typeof applyHardcore>): void {
   }
 }
 
-/** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet.
+/** The beta scout's config, or `undefined` when no bot account exists yet. Built disarmed too
+ *  (`maxPicks` 0): it then picks nothing, but still sells the picks it holds on the next trading
+ *  day, so switching `SKYNET_BETA_FORCING` off never strands one (review of #4642 slice 10).
  *  `subscriptions` reads its host bot's subscriptions as they stand now (a Store change swaps them
  *  in place), so its picks open only while that bot is subscribed to it (#4642 slice 10). */
 export function buildScoutDeps(
@@ -225,12 +227,13 @@ export function buildScoutDeps(
     risk: RiskConfig;
     mode: TraderMode;
     subscriptions: () => readonly PlaybookSubscription[];
+    realizedPlForPlaybook?: (playbookId: string) => number;
   },
 ): BetaScoutDeps | undefined {
-  if (betaForcingMaxPicks <= 0 || !scoutBroker) {
+  if (!scoutBroker) {
     return undefined;
   }
-  return { maxPicks: betaForcingMaxPicks, broker: scoutBroker, ...opts };
+  return { maxPicks: Math.max(0, betaForcingMaxPicks), broker: scoutBroker, ...opts };
 }
 
 /** One bot's resolved roster: the house roster plus its own subscriptions layered on top. */
