@@ -71,6 +71,14 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **Services wage stickiness at t+1 as a ≥-series-average test, registered High on a 95% base rate
+  (FT-dallas-fed-tssos-2026-09-29-1)** — added 2026-10-06 from the
+  [dallas-fed-tssos-2026-09-29 forward-test scoring](events/dallas-fed-tssos-2026-09-29.md). The
+  September 2026 TSSOS wages & benefits index printed **15.1** against the 15.4 line (Aug 18.8), a
+  0.3-point miss on a 3.7-point drop. Do not re-register a High-confidence test whose threshold is
+  the series average itself: the margin is smaller than one month's σ, so a 95% historical rate
+  carries no cushion. A threshold needs a stated margin below the mean.
+
 - **ISM Services Employment sub-50 as a survey-internal reading that persists against positive
   payrolls (FT-ism-services-2026-10-05-1)** — added 2026-10-06 from the
   [ism-services-2026-10-05 close-out](events/ism-services-2026-10-05.md). Registered as a joint
