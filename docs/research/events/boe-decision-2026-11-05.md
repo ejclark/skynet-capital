@@ -6,38 +6,35 @@
 
 ## At a glance
 
-**TL;DR.** **This is the one live rate decision on the UK strip — and every forecaster the Bank
-itself asks disagrees with the price.** November is priced **54.2% hike / 45.9% hold / 0.0% cut**
-(implied **3.89%**), against a **93.1%** settled hold on 09-17 and **94.6%** *cumulative* by 12-17 —
-so December is conditional on this meeting and September is not information. Three independent reads
-say hold. The Bank's **own Market Participants Survey** (BoE primary, 15–17 July, 78 respondents)
-has an **end-2026 median of 3.75%** and then **cuts** — 3.50% / 3.25% / 3.25% at one, two and three
-years. A **Reuters poll of 64 economists** (13–18 Aug) has **56 of 64** expecting no change for the
-rest of 2026. And the **July MPR's own modal path** — CPI peaking **3.2%** in Q4 2026, then **1.7%**
-at two years and **1.9%** at three — **undershoots the target** while conditioned on a curve carrying
-roughly **two hikes by Q3 2027**. November is where that arithmetic gets refreshed in public, which
-is why the **forecast round is this meeting's payload** exactly as the annual QT review is
-September's; there is **no balance-sheet decision here**. **None of this is ours to trade** —
-`symbols: []`, no house playbook is rates- or sterling-keyed. Date is **estimate**; it widens caution
-and licenses nothing.
+**TL;DR.** **The Bank moved to the strip — the 09-09 "take the under" call is withdrawn.** November is
+now priced **84.6% hike / 15.4% hold / 0.0% cut** (implied **3.96%**, centralbank.watch, data
+**2026-10-02**; was 54.2% on 09-08). Cause: the **17 Sep** MPC held **6–3** but reset its own
+arithmetic — CPI now **~3¾% in 2026 Q4** (July Report: 3.2%) and **slightly above 4% in 2027 Q1**,
+risks "tilted to the upside", the Committee "stands ready to act". The two hold-side reads that
+anchored the old call (**Reuters poll 4–8 Sep: 57 of 65** for no change in 2026; the Bank's own
+**Market Participants Survey 2–4 Sep: 60.4% hold / 37.7% hike** on 11-05) **both pre-date that reset**.
+New lean: **a 25bp hike to 4.00%**, Medium — a hike still needs **two of the six** hold voters to
+switch, and the data under it is mostly fuel (**core 2.6%, services 3.4%**, both unchanged in August;
+vacancies **702k**, lowest ex-pandemic since 2014). **None of this is ours to trade** — `symbols: []`,
+no rates- or sterling-keyed playbook. Date is **estimate**; it widens caution and licenses nothing.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
 | Today | **Stand aside** — nothing here is ours to hold | High | `symbols: []`, no rates-keyed playbook, and at **D-57** there is no position this event could be sized into | A tracked name (NVDA/AVGO/MRVL/CRWV) moving **>2%** in the **07:00–09:30 ET** window on **2026-11-05** attributable to the BoE — the "no price channel" premise would be false and this doc is rebuilt |
-| This week | **Read the 09-17 meeting as this event's leading indicator, not as its own story** | Medium | September is a 93.1%-priced hold with no forecast round, so its only two informative outputs — the **vote split** and the **annual QT number** — are both inputs to *November*; a fourth dissenter on 09-17 is the single fastest way this ledger's call dies | The **2026-09-17** minutes showing **four or more** members voting for an increase — the dissent stops being a stable minority seven weeks before this vote and the hold case weakens materially |
-| This month | **Watch the two ONS mornings and the Budget, in that order — they are the whole run-in** | Medium | The MPC's last data before it votes is **labour market 2026-10-20 07:00 London** (gov.uk, "confirmed") and **September CPI 2026-10-21 07:00 London** (ONS, "not yet published"), then the **28 October Budget + OBR EFO**; unlike September's 48-hour scramble this committee gets two full weeks to digest, and a tax-raising Budget is a *disinflationary* input to the forecast round eight days later | **Services CPI** re-accelerating above the July MPR's path in the **2026-10-21** print, or the **2026-10-28** Budget landing net-expansionary — either flips the run-in from disinflationary to the reverse and the hold case has to be re-argued |
-| This quarter | **Take the under on the strip at 11-05 — expect a hold at 3.75%, against a 54.2% hike price** | Medium | Two surveys and the Bank's own conditional forecast all say hold; a 0.0% cut tail means the strip has no two-sided distribution, only a one-sided one; and a committee whose own modal CPI undershoots 2% at both the two- and three-year horizons on a curve *lower* than today's does not ratify that curve | **Bank Rate at 4.00% or above** immediately after the **2026-11-05** decision (**FT-…-1**) — the strip beat three independent forecaster reads and the energy shock became a cycle |
+| This week | **Stand aside; the lean is set and the next BoE-specific information is two weeks out** | Medium | The 17 Sep minutes have been read and the stance revised on them; between now and the two ONS mornings (**10-20, 10-21**) the strip moves on energy and the long end, not on anything this ledger can add | An MPC member's speech or a Bank statement dated **before 2026-10-13** that explicitly rules out — or pre-commits to — a November move; either would push the strip toward 0% or 100% and this lean with it |
+| This month | **Watch the two ONS mornings and the Budget — they decide whether the 15% hold tail lives** | Medium | The MPC's last data before it votes is **labour market 2026-10-20 07:00 London** (gov.uk, "confirmed") and **September CPI 2026-10-21 07:00 London** (ONS, "not yet published"), then the **28 October Budget + OBR EFO**; the strip needs services to *not* soften and the Budget to *not* be net-expansionary | **Services CPI** printing **below August's 3.4%** on **2026-10-21** with unemployment at or above **5.0%** on **2026-10-20**, or the **2026-10-28** Budget landing net-expansionary — the hold tail revives and the 84.6% unwinds |
+| This quarter | **Lean hike — expect Bank Rate 4.00% after 11-05, in line with the strip; no position** | Medium | The Bank itself reset its arithmetic on 17 Sep (CPI ~3¾% Q4, >4% Q1-27, "stands ready to act"); the strip prices 84.6%; the hold evidence pre-dates the reset. Against it: two switchers needed from six, and the shock is fuel with flat core and services | **Bank Rate unchanged at 3.75%** (or any cut) after the **2026-11-05** decision (**FT-…-4** is the mirror of FT-…-1: exactly one passes) |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never** — no entry, exit, hedge or size is keyed to 07:00 ET on 2026-11-05. A `medium`-tiered `estimate` event on a foreign central bank with `symbols: []` licenses nothing.
 - **The two numbers to read on the day** — the **modal CPI projection at the two-year horizon** (July had **1.7%**; below 2.0% again says the Bank is still telling the market its curve is too high) and the **conditioning path** it was run on. A forecast round is judged by its arithmetic, not its adjectives.
-- **The second read** — the **vote split** against July's **6–3** (Greene, Mann, Pill for +25bp). A hike needs **two switchers**. A 6–3 hold is continuity; **5–4** is a different December.
-- **The best available early update** — the **next Market Participants Survey**, published around the 09-17 round. Its end-2026 median is **3.75%** today; if that median moves off 3.75%, the survey side is capitulating to the strip and this ledger's central call weakens *before* any price moves.
-- **The staleness caveat, stated as a condition** — the MaPS is **15–17 July** and the Reuters poll **13–18 Aug**; the strip is **09-08**. Both surveys pre-date the September gilt blow-out. This is why the call is **medium**, not high.
-- **What is NOT here** — no annual QT review (the **19 June 2026** APF market notice puts it at **09-17**) and no balance-sheet decision of any kind. A pulse that goes looking for September's payload at this meeting will find nothing.
+- **The second read** — the **vote split** against September's **6–3** (Greene, Mann, Pill for +25bp, again). A hike needs **two switchers**; which of the six hold voters would is press-relayed only, not in the primary minutes. A 6–3 *hold* now reads as the surprise, not continuity.
+- **Already read — the September Market Participants Survey** (BoE primary, 2–4 Sep, 92 respondents): 11-05 at **3.75% 60.4% · 4.00% 35.0% · 4.25% 2.4%**, taken *before* the 17 Sep reset. The next survey (date not fetched) is the cleanest like-for-like update: 11-05 hike mass moving above ~60% confirms the strip from the survey side.
+- **The staleness caveat, now pointing the other way** — the MaPS is **2–4 Sep** and the Reuters poll **4–8 Sep**; the strip is **10-02** and the Bank's reset is **09-17**. The hold-side evidence is the stale side. This is why the lean is **medium**, not high.
+- **What is NOT here** — no balance-sheet decision of any kind: the **09-17** meeting replaced the annual QT review with a multi-year plan (see the [`boe-decision-2026-09-17`](boe-decision-2026-09-17.md) close-out), so there is no annual review to await either. A pulse that goes looking for a QT payload at this meeting will find nothing.
 - **The attribution rule (harder than September's)** — **25** tracked events sit within five days, including the **US midterm elections 11-03**, **ISM manufacturing 11-02**, **ISM services 11-04**, the **Treasury quarterly refunding 11-04**, **jobs 11-06**, **CPI 11-10** and the **US–China tariff truce expiry 11-10**. Any global long-end or risk move that week has at least four candidate explanations ranked above the BoE. Check the gilt tape before crediting it, and check the midterms before crediting the gilt tape.
-- **Watch (dated)** — **BoE 09-17** (est) · UK labour market **10-20** (est, proposed here) · UK CPI **10-21** (est, proposed here) · **Autumn Budget + OBR EFO 10-28** (est, `NEWS:`, proposed by the 09-17 lane) · **OPEC+ 11-01** · **US midterms 11-03** · **this decision 11-05** (est) · **jobs 11-06** · **BoE 12-17** (est, proposed here), where FT-…-1's residual gets settled.
+- **Watch (dated)** — UK labour market **10-20** (est) · UK CPI **10-21** (est) · **Autumn Budget + OBR EFO 10-28** (est, `NEWS:`) · **OPEC+ 11-01** · **US midterms 11-03** · **this decision 11-05** (est) · **jobs 11-06** · **BoE 12-17** (est), the residual if November holds.
 
 ## Initial research
 
@@ -249,7 +246,18 @@ that *nothing* connects; a null claim fails silently.
 
 ## Stance & kill switches
 
-**Stance (date `estimate`):** **stand aside completely, and take the under on the strip.** This book
+**Revised 2026-10-06 (receipt: the 2026-10-06 ledger row) — the paragraph below is the 09-09 stance and
+is superseded on its central call.** The lean is now **a 25bp hike to 4.00% on 11-05, Medium, no
+position** (registered as **FT-boe-decision-2026-11-05-4**, the mirror of -1: exactly one passes). What
+moved it: the Bank's own **17 Sep** summary reset CPI to **~3¾% in 2026 Q4** and **slightly above 4% in
+2027 Q1**, the strip followed to **84.6%**, and the hold-side evidence turned out to pre-date the reset.
+What did **not** move: no position, no play, `symbols: []`; the anti-attribution rule; the hawkish bloc
+still **three**, not four. The 09-09 call was wrong-footed by an energy shock that re-escalated *after*
+its evidence closed — the honest reading is a stale-evidence miss, which is exactly the objection leg 6
+named, not a refutation of the method. FT-…-1 stays registered and `_open_` as written; it scores at
+close-out, and this revision does not edit it.
+
+**Stance (date `estimate`) — as of 2026-09-09, superseded above:** **stand aside completely, and take the under on the strip.** This book
 holds nothing with a sterling-rates channel and none is proposed. The ledger's substantive positions
 are **analytical**, not positional. First and centrally, it expects a **hold at 3.75% on 2026-11-05**
 against a price of **54.2% higher** — because the Bank's own market panel (end-2026 median 3.75%,
@@ -267,7 +275,7 @@ three have been ruled out. The call is **medium**, not high, for one stated reas
 closed before the September gilt blow-out that the strip has seen.** Estimates widen caution and
 license nothing.
 
-**Kill switches:**
+**Kill switches** (status at 2026-10-06 in the block after the list):
 
 - **Channel kill (the one that would rebuild this doc):** a tracked name (NVDA/AVGO/MRVL/CRWV) moving
   **>2%** in the **07:00–09:30 ET** window on **2026-11-05** in a way the tape attributes to the BoE.
@@ -306,9 +314,23 @@ license nothing.
 - **Date kill:** the BoE moving the 11-05 announcement, or the meeting producing no Monetary Policy
   Report. Breaks the header and removes the payload. Re-check every pulse.
 
-Three forward tests registered in
+**Status at 2026-10-06:** **Priced kill — FIRED** (84.6% > ~80%, centralbank.watch data 10-02): the event
+is no longer two-sided on the hold side and leg 1's framing is replaced by the revision above; the
+entry is re-derived, not patched. **Early-warning kill (≥4 hike votes on 09-17) — not fired**, 6–3.
+**Survey-capitulation kill — not fired on its letter** (September MaPS end-2026 median reads **3.50%**,
+not above 3.75%; note that figure sits oddly next to 3.75% for 11-05 and a year out, so it is not
+leaned on), but the 11-05 distribution carries **37.7%** on a hike. **Provenance kill — fired and
+re-stated:** the BoE's own July MPR (PDF, Table 3.B, fetched 2026-10-06) has central CPI **2.9 / 2.6 /
+1.8 / 1.9%** at 2026 / 27 / 28 / 29 Q3, peaking **3.2% in 2026 Q4**, conditioned on the market curve to
+20 July (Bank Rate **3.8 / 4.2 / 4.2 / 4.2%**) — so the two-year baseline for FT-…-2 is **1.8% (2028 Q3),
+not 1.7%** (1.7% is the milder scenario). The 2.0% threshold stands and the registered row is not
+edited. **Forecast kill risk has risen:** the September nowcast adds roughly a point to near-term CPI,
+and the two-year figure depends on the energy path the Bank conditions on. **Fiscal, channel and date
+kills — not fired.**
+
+Four forward tests registered in
 [`forward-tests/boe-decision-2026-11-05.md`](../forward-tests/boe-decision-2026-11-05.md) —
-**-1** (the rate itself), **-2** (the MPR's two-year modal CPI) and **-3** (the vote split). No
+**-1** (the rate itself, hold), **-2** (the MPR's two-year modal CPI), **-3** (the vote split) and **-4** (the rate itself, hike — registered 2026-10-06). No
 market-shaped test is registered because the stance takes no position and this book has no instrument
 that would price one.
 
@@ -317,6 +339,7 @@ that would price one.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-09 | D-57 | Initial research banked (above), on an id that existed only as `proposals/boe-decision-2026-11-05.from-boe-decision-2026-09-17.json` — read in full first, its placement finding carried into the canonical `src/domain/market-events/boe-decision-2026-11-05.json` written in this PR. **Headline finding: this is the only two-sided rate decision on the UK strip, and every forecaster the Bank itself asks disagrees with the price.** centralbank.watch (**fetched**, data 09-08): 11-05 **hold 45.9% / hike 54.2% / cut 0.0%**, implied **3.89%**, against 09-17 at **93.1% hold** and 12-17 at **94.6% higher** — the December number is **cumulative**, so the strip's ~37bp is one question asked twice and *this* meeting is where it is tested. **Three independent reads say hold.** (i) The BoE's **own Market Participants Survey** (**BoE primary, fetched**; 15–17 July 2026, **78 respondents**): 30 July 3.75% · **end-2026 3.75%** · 1y **3.50%** · 2y **3.25%** · 3y **3.25%**, >90% on hold after July — and its APF median of **£50bn** independently corroborates from a primary the figure the 09-17 ledger could only press-cite. (ii) **Reuters poll 13–18 Aug, 64 economists: 56 of 64** expect no change for the rest of 2026 (up from 83% the prior month), six a hike, two a cut, none a change at September — ~**9%** on any 2026 hike against the strip's 94.6%. (iii) The **July 2026 MPR's own modal path** — CPI **peaks 3.2% Q4 2026**, **1.7% Q1 2028** (2y), **1.9% Q3 2029** (3y); GDP 1.1% / 1.1% / 1.7% / 1.6% — **undershoots the target** while conditioned on a curve carrying *"a high chance of two rate hikes by Q3 2027 as priced by financial markets."* The curve has since moved **up**, so a November round should undershoot **more**. **November is a Monetary Policy Report month** (BoE dates page, fetched: MPR = Feb/Apr/Jul/Nov; 5 Nov row verbatim *"November MPC Summary and minutes and November Monetary Policy Report"*), so the **forecast round is the payload** exactly as the annual QT review is September's — and there is **no balance-sheet decision here** (the 19 June APF notice puts the annual review at 09-17). **Rate-side arithmetic:** July was **6–3** (Greene, Mann, Pill for +25bp), so a hike needs **two switchers** from the majority, whose stated premise is *"little evidence so far"* of second-round effects against a risk assessment *"tilted to the upside."* **Honest counterweight, kept on the record:** both surveys are **older than the tape** — MaPS 15–17 Jul, Reuters closed 18 Aug, strip 08 Sep, and the 28-year-high gilt blow-out sits in between; the call is registered **medium** for exactly that reason. Adjacency sweep: **peers** — none, `symbols: []`. **Macro** — the MPC's last inputs before it votes are **UK labour market 2026-10-20 07:00 London** (gov.uk, verbatim *"(confirmed)"*) and **UK CPI, September data, 2026-10-21 07:00 London** (ONS, *"not yet published"*), both **fetched today**, both **proposed here**; the November labour release (11-10) and October-data CPI (11-18) land *after* the vote. **Volatility** — VIX **15.72** (09-08 close, Yahoo `^VIX`); no sterling-vol instrument available here. **Geopolitical** — the **28 Oct Budget + OBR EFO** is previewed as tax-raising (Labour's third after £41.5bn in 2024 and £26bn in Nov 2025, OBR growth ~1.4%), i.e. **fiscal tightening eight days before a forecast round**; press sources **contradict each other on the Chancellor's name** (Healey vs Reeves), so the direction is carried and the name is not. **Event tape** — **25 tracked events within 5 days**, and the BoE is not close to top of the list: **US midterms 11-03**, ISM mfg 11-02, ISM services 11-04, **Treasury refunding 11-04**, **jobs 11-06**, **CPI 11-10**, **US–China tariff truce expiry 11-10**. This entry's practical rule is therefore an **anti-attribution** one: check the midterms before crediting the gilt tape, and the gilt tape before crediting the Bank. **Three dated adjacencies PROPOSED (`estimate`, own-owner files):** `uk-labour-market-2026-10-20` and `uk-cpi-2026-10-21` (gov.uk / ONS primaries fetched direct), and `boe-decision-2026-12-17` (BoE primary — the conditional half of the same two-meeting question, and the scoring venue for the sibling lane's FT-boe-decision-2026-09-17-3). The BoE's **2027 provisional** dates were read in the same fetch and **deliberately not proposed** — the Bank labels them provisional, and eight speculative entries would be noise, not coverage. **Three forward tests registered:** FT-1 (hold at 3.75% on 11-05, against 54.2% priced higher), FT-2 (the November MPR's 2y modal CPI prints below 2.0%), FT-3 (the hawkish bloc stays at three or fewer — scored separately so a 5–4 hold reads as the warning it is). **Named weakness, up front:** two fetches of the BoE's July MPR page returned **200 with no projection numbers** (they live in a 6.5MB PDF the fetcher could not parse), so leg 4's 3.2% / 1.7% / 1.9% path is read from a **fetched, dated (2026-07-30) press factbox**, not a BoE page — not a blocked fetch, and therefore the *less* visible failure; FT-2 is registered against those numbers and the first pulse should try to upgrade them. `blocked` is empty. | — (stance set: stand aside, no position, no play; four analytical commitments — take the under on the strip and expect a hold at 3.75%, expect the MPR's 2y modal CPI below 2.0%, expect the hawkish bloc to stay at three or fewer, and rule out the midterms and the refunding before crediting the Bank with any 11-05 move) | 2026-09-30 (medium, 31+d band: every 21d — which lands at D-36, still inside the same band; the pulse after that is the first with the 09-17 vote split and QT number in hand) |
+| 2026-10-06 | D-30 | **Headline: the Bank moved to the strip — the 09-09 "take the under" call is withdrawn and the priced kill fired.** centralbank.watch (**fetched**, data **10-02**): 11-05 **hike 84.6% / hold 15.4% / cut 0.0%**, implied **3.96%**; 12-17 **92.7%** cumulative (09-08: 54.2%). Cause: the **17 Sep MPC** (BoE primary, fetched) held **6–3** again (Greene, Mann, Pill) but reset CPI to **~3¾% in 2026 Q4** (July Report: 3.2%) and **slightly above 4% in 2027 Q1** on energy at 14 Sep (Brent $106, gas 207p), risks "tilted to the upside", "stands ready to act". Early-warning kill (≥4 hike votes) **not fired**. **Both hold-side reads pre-date the reset:** Reuters 4–8 Sep, **57 of 65** no change in 2026 (press); BoE Market Participants Survey 2–4 Sep (BoE primary, 92 resp.) 11-05 **3.75% 60.4% / 4.00% 35.0% / 4.25% 2.4%**, end-2026 median reads **3.50%** (odd beside 3.75% for 11-05 and a year out; not leaned on). **Leg-4 provenance upgraded to a BoE primary** (July MPR PDF, Table 3.B): central CPI **2.9 / 2.6 / 1.8 / 1.9%** at Q3 2026-29, peak **3.2% 2026 Q4**, on the market curve to 20 Jul (Bank Rate **3.8 / 4.2 / 4.2 / 4.2%**) — FT-…-2's baseline is **1.8%, not 1.7%** (the milder scenario); provenance kill fired and is **re-stated, not re-based**, threshold 2.0% stands. Counterweights: **Aug CPI 3.1%** (ONS, fetched) is fuel (motor fuel +23.0%) with **core 2.6% and services 3.4% unchanged**; Sept DMP (press) wage expectations **3.4%**, own-price **3.7%**; vacancies **702k**, lowest ex-pandemic since 2014 (press). Which hold voters might switch is press-relayed only. Adjacency: **peers** none (`symbols: []`); **macro** — no UK print before 10-20; **VIX 15.52** (10-05, Yahoo; 09-08: 15.72); **geopolitical** — Middle East conflict is the transmission, Budget 10-28 with gilts near 6% (Chancellor's name still not primary-checked); **tape** — 30 tracked events within 5 days, midterms 11-03 still outrank the BoE. Nothing new proposed: UK 10-20/10-21/10-28 and BoE 12-17 are already on the calendar. **FT-…-4 registered** (mirror of FT-…-1). | **Revised** — lean flips from hold to a **25bp hike to 4.00%** (Medium); still no position (Stance section is the receipt) | 2026-10-13 (medium, 8+d band: every 7d; the pulse after the 10-20/10-21 ONS prints is the informative one) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -327,3 +350,6 @@ every row; a dated adjacent event found gets proposed as a new
 in the same PR — your own file, never another event's canonical one (#1717). Close-out fills
 `## Outcome` below from re-run instrument data (cache busted first), never from memory — after
 which this doc goes quiet.
+
+**Last assessed:** 2026-10-06
+<!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-11-04","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0,"blocked":[]} -->
