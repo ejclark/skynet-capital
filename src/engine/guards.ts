@@ -443,7 +443,7 @@ export function applyGuardsWithVerdicts(
   // An open no subscribed playbook placed is refused before anything sizes it, so the batch ledger
   // never counts it either. With the rule off, or every open subscribed, this is exactly the batch
   // as handed in.
-  const unsubscribed = (intent: OrderIntent) => refusedAsUnsubscribed(intent, portfolio, config);
+  const unsubscribed = (intent: OrderIntent) => refusedAsUnsubscribed(intent, config);
   const sized = intents.filter((intent) => !unsubscribed(intent));
   const batch: OptionBatch = { ledger: openLedger(sized, book, portfolio, openSells), book };
   for (const intent of intents) {

@@ -293,8 +293,10 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
     );
   }
-  // An env-roster playbook with no subscription still runs its exits, but opens nothing (#4642
-  // slice 10) — said once per roster, so a quiet playbook never reads as a quiet market.
+  // An env-roster playbook with no subscription opens nothing (#4642 slice 10): it takes the shape a
+  // paused one has — exits only, its names kept, no verdict — so the roll call never calls it armed,
+  // expiry hygiene buys back a short it would otherwise hold into assignment, and it emits no open
+  // only to have the guards refuse it. Said once per roster, so it never reads as a quiet market.
   const held = new Set(subscriptions.map((s) => s.playbookId));
   const ungranted = houseEnabled.filter((e) => !held.has(e.playbook.id));
   if (ungranted.length > 0) {
@@ -302,7 +304,10 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} is not subscribed to ${ungranted.map((e) => e.playbook.id).join(", ")} (named in SKYNET_PLAYBOOKS) — they open nothing on it, exits still run; subscribe in the Store`,
     );
   }
-  const merged = mergeRosters(houseEnabled, [...acctRoster.enabled, ...paused]);
+  const house = houseEnabled.map((e) =>
+    held.has(e.playbook.id) ? e : { ...e, exitsOnly: true as const },
+  );
+  const merged = mergeRosters(house, [...acctRoster.enabled, ...paused]);
   return { bot, subscriptions, enabled: ownedRoster(bot.persona.id, merged) };
 }
 

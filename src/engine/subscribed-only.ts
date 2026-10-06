@@ -1,5 +1,4 @@
-import { heldQuantity } from "../domain/portfolio.js";
-import type { OrderIntent, PlaybookSubscription, Portfolio } from "../domain/types.js";
+import type { OrderIntent, PlaybookSubscription } from "../domain/types.js";
 
 /**
  * ONLY A SUBSCRIBED PLAYBOOK OPENS A POSITION (#4642 slice 10, criterion 1; Eric's brief: "All
@@ -12,13 +11,12 @@ import type { OrderIntent, PlaybookSubscription, Portfolio } from "../domain/typ
  * exit-safety trip and a paused playbook's exits all pass whatever they carry — the rest of the
  * guards still size them exactly as before.
  *
- * What counts as an open, decided here once:
- *  - a share buy, and an option order whose effect is `open` (a sold put opens risk: the effect
- *    decides, never the side) — `opensRisk`. The bots trade long only and no rule of theirs buys
- *    to cover a short, so a share buy is always an open;
- *  - a share sell of a name the account holds none of — it could only open a short. A sell bigger
- *    than what is held is NOT refused: the held part is an exit, and the guards already clamp a
- *    sell to the shares held, so the part past them never reaches a broker.
+ * What counts as an open, decided here once: a share buy, and an option order whose effect is
+ * `open` (a sold put opens risk: the effect decides, never the side) — `opensRisk`. The bots trade
+ * long only and no rule of theirs buys to cover a short, so a share buy is always an open. A share
+ * sell never is: the guards already refuse a sell of shares not held (`nothing-held`, the honest
+ * reason — the holding may simply have gone, a sell having filled mid-cycle) and clamp a bigger one
+ * to the holding, so no sell can open a short.
  *
  * Who may open:
  *  - a playbook with an ENABLED subscription on the account (an env-roster entry with no
@@ -30,9 +28,8 @@ import type { OrderIntent, PlaybookSubscription, Portfolio } from "../domain/typ
  * Opt-in by construction (`RiskConfig.subscribedOnly`): the live bots and the forced daily pick set
  * it; evals, the readiness gate and the desk never do, so they are untouched.
  */
-export function opensExposure(intent: OrderIntent, portfolio: Portfolio): boolean {
-  if (intent.option) return intent.option.effect === "open";
-  return intent.side === "buy" || heldQuantity(portfolio, intent.symbol) <= 0;
+export function opensExposure(intent: OrderIntent): boolean {
+  return intent.option ? intent.option.effect === "open" : intent.side === "buy";
 }
 
 /** Whether the account's subscriptions let this intent's playbook open it. */
@@ -49,7 +46,6 @@ export function subscriptionAllowsOpen(
 /** The rule as the guards ask it: refuse this intent as `unsubscribed`? */
 export function refusedAsUnsubscribed(
   intent: OrderIntent,
-  portfolio: Portfolio,
   config: {
     readonly subscribedOnly?: boolean;
     readonly subscriptions?: readonly PlaybookSubscription[];
@@ -57,7 +53,7 @@ export function refusedAsUnsubscribed(
 ): boolean {
   return (
     config.subscribedOnly === true &&
-    opensExposure(intent, portfolio) &&
+    opensExposure(intent) &&
     !subscriptionAllowsOpen(intent, config.subscriptions)
   );
 }

@@ -9,8 +9,9 @@ import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.js";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { enabledPlaybooks } from "../../src/playbooks/registry.js";
+import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
-import { aContext, aSubscription } from "../support/builders.js";
+import { aContext, aPortfolio, aPosition, aSubscription } from "../support/builders.js";
 
 /**
  * ONLY A SUBSCRIBED PLAYBOOK OPENS (#4642 slice 10) on a live bot, end to end: the roster the bots
@@ -96,6 +97,47 @@ describe("a playbook named only in SKYNET_PLAYBOOKS", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  // Review of slice 10, finding 10: it stayed a running entry, so the roll call called it armed
+  // ("On … a confirmed date opens a position") while the guards refused every open it made. It now
+  // takes the paused shape: exits only, its names kept, no verdict.
+  describe("runs exits-only: off on the roll call, no opens, its exits kept", () => {
+    const quiet: Bot = {
+      persona: { id: "quiet", name: "Quiet", thesis: "t", decide: () => [] },
+      credentials: { apiKey: "k", apiSecret: "s" },
+    };
+    const PRINT = [
+      { symbol: "NVDA", date: "2026-08-07", status: "confirmed", source: "t" },
+    ] as const;
+    const roster = () => {
+      const warn = rstest.spyOn(console, "warn").mockImplementation(() => undefined);
+      try {
+        const house = enabledPlaybooks({ SKYNET_PLAYBOOKS: "S1-NVDA" }).enabled;
+        return resolveBotRoster(quiet, house, []);
+      } finally {
+        warn.mockRestore();
+      }
+    };
+    const composed = () => withPlaybooks(quiet.persona, roster().enabled, PRINT);
+
+    it("is exits-only on the roster and reads off on the roll call", () => {
+      expect(roster().enabled).toMatchObject([{ playbook: { id: "S1-NVDA" }, exitsOnly: true }]);
+      const inWindow = aContext({ NVDA: { last: 100 } }, "2026-07-24T15:00:00Z");
+      const verdicts = composed().playbookVerdicts?.(inWindow) ?? [];
+      const line = playbookRollCall(verdicts).find((l) => l.playbookId === "S1-NVDA");
+      expect(line?.status).toBe("off");
+    });
+
+    it("opens nothing inside its window, and still sells what it holds once the window closes", () => {
+      const inWindow = aContext({ NVDA: { last: 100 } }, "2026-07-24T15:00:00Z");
+      expect(composed().decide(inWindow, aPortfolio())).toEqual([]);
+      const closing = aContext({ NVDA: { last: 100 } }, "2026-08-04T15:00:00Z");
+      const held = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 12 })] });
+      expect(composed().decide(closing, held)).toMatchObject([
+        { symbol: "NVDA", side: "sell", quantity: 12, playbookId: "S1-NVDA" },
+      ]);
+    });
   });
 });
 

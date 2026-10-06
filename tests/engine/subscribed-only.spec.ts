@@ -130,9 +130,16 @@ describe("a bot with no subscriptions opens nothing", () => {
       reasons(run([buy({ playbookId: "S1-NVDA", playbookMode: "standard" })], holds(), none)),
     ).toEqual(["unsubscribed"]);
   });
+});
 
-  it("refuses a sell of a name it holds none of: it could only open a short", () => {
-    expect(reasons(run([sell("AAPL", 5)], holds(), none))).toEqual(["unsubscribed"]);
+// Review of slice 10, finding 12: a sell of shares no longer held (a sell that filled mid-cycle) is
+// an exit that found nothing, never an open — it says "nothing held to sell", the same words with
+// or without a subscription, and never sends the owner to the Store.
+describe("a sell of shares not held", () => {
+  it("is refused as nothing held, never as not from a subscribed playbook", () => {
+    expect(reasons(run([sell("AAPL", 5)], holds(), live([])))).toEqual(["nothing-held"]);
+    const paused = sell("AAPL", 5, { playbookId: "CRWV-WHEEL", playbookMode: "standard" });
+    expect(reasons(run([paused], holds(), live([WHEEL_PAUSED])))).toEqual(["nothing-held"]);
   });
 });
 
@@ -194,13 +201,12 @@ describe("who may open", () => {
 });
 
 describe("what counts as an open", () => {
-  it("a buy, an option open, and a sell of nothing held; never a sell of shares held or a close", () => {
-    const book = holds(["AAPL", 1]);
-    expect(opensExposure(buy(), book)).toBe(true);
-    expect(opensExposure(sellPut, book)).toBe(true);
-    expect(opensExposure(sell("MSFT", 1), book)).toBe(true);
-    expect(opensExposure(sell("AAPL", 5), book)).toBe(false);
-    expect(opensExposure(closeLong, book)).toBe(false);
+  it("a buy and an option open; never a share sell (held or not) or a close", () => {
+    expect(opensExposure(buy())).toBe(true);
+    expect(opensExposure(sellPut)).toBe(true);
+    expect(opensExposure(sell("MSFT", 1))).toBe(false);
+    expect(opensExposure(sell("AAPL", 5))).toBe(false);
+    expect(opensExposure(closeLong)).toBe(false);
   });
 });
 

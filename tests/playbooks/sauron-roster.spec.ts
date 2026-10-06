@@ -75,20 +75,25 @@ describe("review of 9a: his rules run once, even from a duplicated env roster", 
 
   // Re-review of ddf1c39c: the filter above held only on Sauron's account. The roster now resolves
   // to one entry per playbook id on every bot, so a repeated token never runs twice anywhere.
-  it("a repeated SAURON token resolves to one entry on a non-Sauron bot — one buy, not two", () => {
+  // Since #4642 slice 10 an env-named playbook the bot is not subscribed to runs exits-only, so the
+  // one entry is pinned on what it still places — its sells — instead of a buy it no longer makes.
+  it("a repeated SAURON token resolves to one entry on a non-Sauron bot — one sell, not two", () => {
     const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON,SAURON:aggressive" });
     const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, []);
     expect(roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`)).toEqual(["SAURON:standard"]);
-    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
-    const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio());
+    const euphoria = aContext({ AAPL: { sentiment: 0.8, momentum: -0.01 } });
+    const held = aPortfolio({ positions: [aPosition({ symbol: "AAPL", quantity: 7 })] });
+    const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(euphoria, held);
     expect(intents.map((i) => `${i.side} ${i.symbol} ${i.playbookId}:${i.playbookMode}`)).toEqual([
-      "buy AAPL SAURON:standard",
+      "sell AAPL SAURON:standard",
     ]);
   });
 
   it("the rule is per playbook, not per SAURON — HC-SAURON,HC-SAURON trades once per symbol", () => {
     const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON,HC-SAURON" });
-    const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, []);
+    const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, [
+      subscribed("futurist", "HC-SAURON"),
+    ]);
     expect(roster.enabled).toHaveLength(1);
     const panic = aContext({ NVDA: { sentiment: -0.5, momentum: 0.01 } });
     const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio());
@@ -296,6 +301,7 @@ describe("Pause stops new opens; ownership and exits are unchanged", () => {
     }
   });
 
+  // Only the env naming it (no subscription) resolves exits-only since #4642 slice 10, like a pause.
   it("that is the same sell it makes running, or when only the env names it", () => {
     const running = resolveBotRoster(botOf(quietBot("sauron")), envS1, [
       subscribed("sauron", "S1-NVDA", { mode: "conservative" }),
@@ -303,12 +309,14 @@ describe("Pause stops new opens; ownership and exits are unchanged", () => {
     expect(ids(running)).toEqual(["S1-NVDA:conservative"]);
     expect(decideOn(running, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
     const envOnly = resolveBotRoster(botOf(quietBot("sauron")), envS1, []);
-    expect(ids(envOnly)).toEqual(["S1-NVDA:standard"]);
+    expect(ids(envOnly)).toEqual(["S1-NVDA:standard (paused)"]);
     expect(decideOn(envOnly, atD5, holds20)).toEqual(["sell 20 NVDA S1-NVDA"]);
   });
 
   it("paused, it never opens: inside its window and flat it buys nothing", () => {
-    const running = resolveBotRoster(botOf(quietBot("sauron")), envS1, []);
+    const running = resolveBotRoster(botOf(quietBot("sauron")), envS1, [
+      subscribed("sauron", "S1-NVDA"),
+    ]);
     expect(decideOn(running, atD16, aPortfolio())).toEqual([
       expect.stringMatching(/^buy \d+ NVDA S1-NVDA$/),
     ]);
