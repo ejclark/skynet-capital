@@ -90,3 +90,5 @@ export function claimPlan(
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
+/** The pure router: an event (and its gathered deps) in, the intents to execute out. */
+export function route(ctx: unknown, deps?: unknown): Record<string, unknown>[];

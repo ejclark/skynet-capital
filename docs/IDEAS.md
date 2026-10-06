@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Fold a stale-echo run into its capsule's drafted lesson.** `lesson-draft.mjs` (#4212) drafts a
+  capsule's LESSONS entry at the close, but repair.mjs posts a stale echo (a run that started before
+  the fix merged) only after the close, so that run's sha never reaches the entry's `COVERS:` and
+  stays in `digest-scan --learning`'s count. Cheapest fix: the stale-echo intent also appends its
+  sha to the open `lesson/capsule-<n>` PR's entry, or comments it for the next `/retro`. Worth doing
+  if the learning line stops reaching zero because of echoes alone.
+  _(src: Claude · while: building #4056 slice 7, from its /code-review)_
+
 - **The two lane prompts still name the board's "In Progress" column.** #4393 slice 4 renamed it
   Building now. `.github/prompts/plan-build.md:130` and `feedback-build.md:165` say "the board's In
   Progress column and the admission gate's cap both count it". The meaning is unchanged; only the

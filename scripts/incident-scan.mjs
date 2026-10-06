@@ -17,6 +17,12 @@
 //   node scripts/incident-scan.mjs --candidate # the oldest unlearned incident as JSON
 //   node scripts/incident-scan.mjs --days 14   # lookback window (default 14)
 //   node scripts/incident-scan.mjs --json      # every real failed run + `learned`, for fix-held.mjs
+//   node scripts/incident-scan.mjs --count     # {openEntries, unlearnedRuns} for the digest line
+//
+// `--count` is the one mode that does not stop at a malformed ledger (#4212): an entry left
+// `STATUS: open` used to blind the remote half entirely, so the digest could report "the open
+// entry" and never the failed runs behind it. It reports both, always exits 0, and says `null`
+// for the runs when it cannot reach GitHub — unknown, never zero.
 //
 // Resource doctrine (docs/COACHES.md): REST *core* bucket only — one request per 100 runs (paged,
 // capped by incident-runs.mjs; a single 50-run page once hid a 76-run outage), no polling, no
@@ -26,6 +32,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PER_PAGE, readAllPages } from "./incident-runs.mjs";
+import { learnedIn } from "./moneypenny/lesson-draft.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
@@ -115,11 +122,7 @@ const ledger = readFileSync(LEDGER_FILE, "utf8");
  * (docs/LESSONS.md, 2026-08-30 — 10 "Moneypenny Events" runs re-flagged after their shared root
  * cause was already diagnosed and fixed).
  */
-const isLearned = (sha) => {
-  // Non-greedy through to the next bullet or blank line — a `COVERS:` list commonly wraps.
-  const fields = ledger.match(/\*\*(?:SHA|COVERS):\*\*[\s\S]*?(?=\n- \*\*|\n\n|$)/g) ?? [];
-  return fields.some((field) => new RegExp(`\\b${sha}\\b`).test(field));
-};
+const isLearned = (sha) => learnedIn(ledger, sha);
 
 const budget = JSON.parse(readFileSync(BUDGET_FILE, "utf8"));
 
@@ -143,8 +146,49 @@ function auditLedger() {
   return problems;
 }
 
+/** The ledger entries still `STATUS: open`, by title — the digest names them, the gate fails on them. */
+const openEntries = () =>
+  ledger
+    .split(/^### /m)
+    .slice(1)
+    .filter((entry) => /\*\*STATUS:\*\*\s*open/i.test(entry))
+    .map((entry) => entry.split("\n")[0].trim());
+
+/** Real failed runs on main (one per sha, phantoms dropped) and which of them are unlearned. */
+async function scanRuns() {
+  const runs = await failedMainRuns();
+  // One incident per commit: a re-run of the same sha is the same gap, not a new one.
+  const bySha = new Map();
+  for (const run of runs) if (run.sha && !bySha.has(run.sha)) bySha.set(run.sha, run);
+
+  // Drop zero-job phantom runs (see hasZeroJobs above) before anything downstream sees them.
+  const candidates = [...bySha.values()];
+  const zeroJob = await Promise.all(candidates.map((r) => hasZeroJobs(r.id)));
+  const realRuns = candidates.filter((_, i) => !zeroJob[i]);
+  return {
+    realRuns,
+    phantomCount: candidates.length - realRuns.length,
+    unlearned: realRuns.filter((r) => !isLearned(r.sha)),
+  };
+}
+
+/** `--count`: both halves of "unlearned", whatever the ledger's state. */
+async function count() {
+  let unlearnedRuns = null;
+  if (token) {
+    try {
+      unlearnedRuns = (await scanRuns()).unlearned.length;
+    } catch (err) {
+      console.error(`incident-scan: could not reach GitHub (${err.message}) — runs unknown.`);
+    }
+  }
+  console.log(JSON.stringify({ days, openEntries: openEntries(), unlearnedRuns }));
+  return 0;
+}
+
 async function main() {
   reexecWithProxy();
+  if (flag("--count")) return count();
   const problems = auditLedger();
   if (problems.length > 0) {
     console.error("incident-scan: docs/LESSONS.md is not well-formed:");
@@ -159,26 +203,16 @@ async function main() {
     return 0;
   }
 
-  let runs;
+  let scan;
   try {
-    runs = await failedMainRuns();
+    scan = await scanRuns();
   } catch (err) {
     console.log(
       `incident-scan: could not reach GitHub (${err.message}) — skipping (offline no-op).`,
     );
     return 0;
   }
-
-  // One incident per commit: a re-run of the same sha is the same gap, not a new one.
-  const bySha = new Map();
-  for (const run of runs) if (run.sha && !bySha.has(run.sha)) bySha.set(run.sha, run);
-
-  // Drop zero-job phantom runs (see hasZeroJobs above) before anything downstream sees them.
-  const candidates = [...bySha.values()];
-  const zeroJob = await Promise.all(candidates.map((r) => hasZeroJobs(r.id)));
-  const realRuns = candidates.filter((_, i) => !zeroJob[i]);
-  const phantomCount = candidates.length - realRuns.length;
-  const unlearned = realRuns.filter((r) => !isLearned(r.sha));
+  const { realRuns, phantomCount, unlearned } = scan;
 
   if (flag("--json")) {
     console.log(

@@ -30,6 +30,7 @@
      e.g. "6 structural PRs auto-merged · 2 gate catches self-corrected · 3 pulse checks, no stance change" -->
 
 -
+- <`node scripts/digest-scan.mjs --learning`, verbatim — unlearned incidents are a count here, never a Needs-you item (#4212).>
 - <`npm run rank -- --digest` line 1: "Rank since …: N moved up · M retired · K new.">
 - <`npm run thrash:scan -- --digest --file` Noise lines, verbatim; its Needs-you lines go above.>
 
