@@ -2,6 +2,7 @@ import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
+import { type ActivityNarrowOptions, narrowActivity } from "./activity-filter.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
 import {
@@ -330,8 +331,12 @@ export interface DeskActivityEvent extends DeskActivityLine {
 export interface DeskActivityPage {
   readonly activity: DeskActivityEvent[];
   /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
-   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+   *  Absent means this page wasn't full, so there's nothing further back to fetch. Under a filter it
+   *  is the oldest MATCHING row's, so the next page continues the filtered list. */
   readonly nextCursor?: string;
+  /** Every playbook the whole ledger's rows were placed under (`narrowActivity`) — present only
+   *  when the caller handed in `playbookOf`, which it does for the bot's owner alone (#885). */
+  readonly playbooks?: string[];
 }
 
 /** The desk's recent activity as data (`/api/desk/:id/activity`): journal lines collapsed to the
@@ -340,7 +345,8 @@ export interface DeskActivityPage {
  *  handed in. `realizedByOrder` carries the per-order realized P/L the round-trip matcher computed
  *  from the full ledger — attached to closing fills so the activity table shows what each close
  *  earned, absent on opens. `spreadOf` (a bot's desk) folds a spread's leg fills into one row
- *  BEFORE paging, so a spread is never split across two pages. */
+ *  BEFORE paging, so a spread is never split across two pages. `keep` (`activity-filter.ts`) narrows
+ *  the folded rows before paging too, so a filtered page is a page OF the filtered list. */
 export function deskActivityView(
   records: readonly TradeActivityRecord[],
   origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
@@ -352,15 +358,15 @@ export function deskActivityView(
       { readonly realized: number; readonly returnPct: number }
     >;
     readonly spreadOf?: SpreadOf | undefined;
-  } = {},
+  } & ActivityNarrowOptions = {},
 ): DeskActivityPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
   const sorted = collapseActivity(records).sort((a, b) => (a.at < b.at ? 1 : -1));
-  const { items, nextCursor } = paginateDesc(
-    foldSpreadLegs(sorted, opts.spreadOf),
-    (item) => item.at,
-    { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
-  );
+  const narrowed = narrowActivity(foldSpreadLegs(sorted, opts.spreadOf), opts);
+  const { items, nextCursor } = paginateDesc(narrowed.rows, (item) => item.at, {
+    limit,
+    ...(opts.before !== undefined ? { before: opts.before } : {}),
+  });
   const activity = items.map((item): DeskActivityEvent => {
     if (item.kind === "spread") return spreadActivityEvent(item, origins, opts.realizedByOrder);
     const { record } = item;
@@ -376,5 +382,5 @@ export function deskActivityView(
         : {}),
     };
   });
-  return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}) };
+  return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}), ...narrowed.facets };
 }

@@ -1,0 +1,51 @@
+/* An account's Activity, narrowed and walked back (#4650; `activity-filter-bar.tsx`,
+   `routes/u.$id.activity.tsx`). The box and the chips are desk.css's `filter-bar` / `filter-chip`;
+   only what this page adds lives here. */
+
+/* The playbook chips sit in a fieldset (a labelled group of buttons): reset the browser's frame so
+   it lays out exactly like `.filter-chips`, its group name as a small caps word leading the row. */
+.activity-playbooks {
+  align-items: center;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.filter-chips-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+/* Pressed carries a shape as well as the accent: a ✓ in a slot that is always there, so the label
+   never shifts and the state is never hue alone (a standing reader is red/green colourblind). */
+.activity-playbooks .filter-chip {
+  padding-left: 8px;
+}
+.filter-chip-check {
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+}
+
+/* A new filter's rows are on their way: the last filter's stay, stepped back, until they land. */
+.ledger-refreshing {
+  opacity: 0.55;
+}
+
+/* "No orders on NVDA … — Clear the filter": the way out sits on the sentence that needs it. Two
+   classes deep, because gate.css's `.btn` (width: 100%) loads after this sheet. */
+.activity-no-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+.activity-no-match .activity-clear {
+  width: auto;
+  font-size: 11.5px;
+  padding: 6px 12px;
+}
