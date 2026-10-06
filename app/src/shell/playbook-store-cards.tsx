@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { Fragment, type ReactElement } from "react";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
@@ -214,6 +214,12 @@ export function PlaybookCard({
         <dd>{card.exitCutLosses}</dd>
         <dt>Hold</dt>
         <dd>{card.hold}</dd>
+        {card.notes?.map((note) => (
+          <Fragment key={note.label}>
+            <dt>{note.label}</dt>
+            <dd>{note.text}</dd>
+          </Fragment>
+        ))}
       </dl>
       <footer className="pb-card-evidence">
         <span className="num">{card.evidence}</span>

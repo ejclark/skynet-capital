@@ -128,9 +128,11 @@ describe("playbookStoreCatalog", () => {
       if (!entry) throw new Error("SAURON is not in the catalog");
       return entry;
     };
+    const note = (label: string) => card().notes?.find((n) => n.label === label)?.text ?? "";
     const copy = () => {
       const c = card();
-      return [c.description, c.enter, c.exitTakeProfit, c.exitCutLosses, c.hold].join(" ");
+      const rows = [c.description, c.enter, c.exitTakeProfit, c.exitCutLosses, c.hold];
+      return [...rows, ...(c.notes ?? []).map((n) => n.text)].join(" ");
     };
 
     it("shows the ten names it trades and no invented window, size or study link", () => {
@@ -152,41 +154,54 @@ describe("playbookStoreCatalog", () => {
       expect(card().evidenceHref).toBeUndefined();
     });
 
-    it("says plainly whose rules it trades, on which account, and that mode leaves his sizing alone", () => {
-      expect(card().description).toContain("Sauron's own trading rules");
+    // Phone-first (owner, 2026-10-06): two short sentences, then the rules, then the exceptions
+    // under their own names — never a long paragraph above the rules.
+    it("opens with two short sentences and puts the exceptions in labelled rows after the rules", () => {
+      const sentences = card().description.split(/(?<=\.)\s+/);
+      expect(sentences).toHaveLength(2);
+      expect(card().description.split(/\s+/).length).toBeLessThanOrEqual(60);
+      expect(card().notes?.map((n) => n.label)).toEqual([
+        "On another bot",
+        "Research settings",
+        "Pause",
+      ]);
+    });
+
+    it("says whose rules it trades, and that his own orders are held to the limits you set", () => {
+      expect(card().description).toContain("Sauron's own trading rules as a playbook");
       expect(card().description).toContain(
-        "On Sauron's own account it places exactly the share orders his rules already place",
+        "it places the orders his rules already place, labelled as this playbook's and held to " +
+          "any capital or symbol limit you set",
       );
-      expect(card().description).toContain("runs his standard rules on that bot's own account");
+      expect(copy()).not.toContain("exactly the share orders");
       expect(card().enter).toContain("The mode you pick does not change that");
       expect(card().enter).toContain("The capital you allocate caps his buys");
+      expect(card().enter).toContain("A symbol filter you set refuses his buys on the names it");
       // The persona's dollar size is what it ASKS for; the position cap still clamps the fill.
       expect(card().enter).toContain("asks for $120,000");
       expect(card().enter).toContain("the risk guards then cap any one position");
       expect(card().exitCutLosses).toContain("no stop-loss");
     });
 
-    // #4651 review: on another bot it takes over shares the bot already held, with no stop, and the
-    // bot's own rules (its stop-losses included) go quiet on every name the bots trade.
-    it("says plainly what subscribing another bot does to the shares it already holds", () => {
-      expect(card().description).toContain(
-        "takes over every share that bot already holds in these ten names, whoever bought it",
+    // On another bot it takes over the shares the bot already holds — except a name another
+    // playbook on the bot trades — and the bot's own rules, stop-losses included, go quiet.
+    it("says what subscribing another bot does to the shares it already holds", () => {
+      const other = note("On another bot");
+      expect(other).toContain("runs his standard rules on that bot's own account");
+      expect(other).toContain(
+        "takes over every share the bot already holds in these ten names, whoever bought it — " +
+          "except a name another playbook on the bot trades, which stays that playbook's",
       );
-      expect(card().description).toContain(
-        "so that bot's own rules stop trading altogether while it is subscribed",
-      );
+      expect(other).toContain("the bot's own rules stop trading altogether while it is subscribed");
+      expect(other).toContain("its stop-losses included");
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
-      expect(card().exitCutLosses).toContain("already on the bot when it subscribed");
-      expect(card().exitCutLosses).toContain(
-        "that bot's own stop-losses no longer sell these names",
-      );
     });
 
     // A member cannot see which build runs, and HC-SAURON's card carries no numbers to point at.
     it("describes his research settings in its own words rather than pointing at another card", () => {
       expect(copy()).not.toContain("HC-SAURON");
-      expect(card().description).toContain("this card cannot show which his account runs");
-      expect(card().description).toContain("a momentum stop that closes the position");
+      expect(note("Research settings")).toContain("This card cannot show which his account runs");
+      expect(note("Research settings")).toContain("a momentum stop that closes the position");
     });
 
     // The card cites docs/BOTS-SAURON.md as its evidence; the two must state the same ceiling.
@@ -196,6 +211,7 @@ describe("playbookStoreCatalog", () => {
       const callSheet = dossier.slice(0, dossier.indexOf("## Adaptation ledger"));
       expect(callSheet).toContain("asks for $156,000");
       expect(callSheet).not.toContain("($120,000 → $240,000)");
+      expect(callSheet).not.toContain("it's the only sizing discipline plain Sauron has");
     });
 
     // One position, one playbook: SAURON yields every name another playbook on the bot trades.
@@ -208,8 +224,8 @@ describe("playbookStoreCatalog", () => {
     // Until slice 10 refuses unlabelled orders, pausing on his own account only removes the label —
     // the card must not claim it stops his trades there.
     it("says what pausing does today: option playbooks keep running, his rules keep trading unlabelled", () => {
-      expect(card().hold).toContain("Pausing it never stops an option playbook");
-      expect(card().hold).toContain(
+      expect(note("Pause")).toContain("Pausing it never stops an option playbook");
+      expect(note("Pause")).toContain(
         "Paused or unsubscribed, his rules still trade Sauron's own account",
       );
       expect(copy()).not.toMatch(/paus\w* (it )?stops his/i);

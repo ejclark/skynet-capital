@@ -15,7 +15,11 @@ import { applyHardcore } from "../../src/personas/registry.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
 import { betaScoutIntents } from "../../src/playbooks/beta-scout.js";
-import { claimOptionUnderlyings, yieldPersonaRules } from "../../src/playbooks/option-ownership.js";
+import {
+  claimOptionUnderlyings,
+  onePerPlaybook,
+  yieldPersonaRules,
+} from "../../src/playbooks/option-ownership.js";
 import { type EnabledPlaybook, playbookVerdicts } from "../../src/playbooks/playbook.js";
 import {
   CRWV_WHEEL,
@@ -372,6 +376,60 @@ describe("review of 9a: his rules run once, even from a duplicated env roster", 
     expect(composed.decide(panic, aPortfolio())).toEqual(
       stamped(hardcore.decide(panic, aPortfolio()), "standard"),
     );
+  });
+
+  // Re-review of ddf1c39c: the filter above held only on Sauron's account. The roster now resolves
+  // to one entry per playbook id on every bot, so a repeated token never runs twice anywhere.
+  it("a repeated SAURON token resolves to one entry on a non-Sauron bot — one buy, not two", () => {
+    const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON,SAURON:aggressive" });
+    const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, []);
+    expect(roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`)).toEqual(["SAURON:standard"]);
+    const panic = aContext({ AAPL: { sentiment: -0.8, momentum: 0.01 } });
+    const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio());
+    expect(intents.map((i) => `${i.side} ${i.symbol} ${i.playbookId}:${i.playbookMode}`)).toEqual([
+      "buy AAPL SAURON:standard",
+    ]);
+  });
+
+  it("the rule is per playbook, not per SAURON — HC-SAURON,HC-SAURON trades once per symbol", () => {
+    const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON,HC-SAURON" });
+    const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, []);
+    expect(roster.enabled).toHaveLength(1);
+    const panic = aContext({ NVDA: { sentiment: -0.5, momentum: 0.01 } });
+    const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio());
+    expect(intents.map((i) => `${i.side} ${i.symbol} ${i.playbookId}`)).toEqual([
+      "buy NVDA HC-SAURON",
+    ]);
+  });
+
+  it("the account's own subscription is the one entry that runs beside a repeated env token", () => {
+    const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "SAURON,SAURON:aggressive" });
+    const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, [
+      subscribed("futurist", "SAURON", { mode: "conservative" }),
+    ]);
+    expect(roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`)).toEqual([
+      "SAURON:conservative",
+    ]);
+  });
+
+  it("onePerPlaybook keeps the first entry per id and refuses each repeat out loud", () => {
+    const log: string[] = [];
+    const kept = onePerPlaybook(
+      [
+        { playbook: SAURON, mode: "standard" },
+        { playbook: S1_NVDA, mode: "standard" },
+        { playbook: SAURON, mode: "aggressive" },
+      ],
+      (line) => log.push(line),
+    );
+    expect(kept.map((e) => `${e.playbook.id}:${e.mode}`)).toEqual([
+      "SAURON:standard",
+      "S1-NVDA:standard",
+    ]);
+    expect(log).toEqual([
+      "SAURON:aggressive refused — SAURON:standard is already on this bot's roster, and a " +
+        "playbook runs once",
+    ]);
   });
 
   it("managedSymbols leaves out only the base persona's own rules", () => {

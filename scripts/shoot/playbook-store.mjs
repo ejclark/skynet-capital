@@ -308,7 +308,7 @@ groups["sauron-rules"] = [
   sauronFrame("phone-1-sauron-card"),
   sauronFrame("phone-2-sauron-rules", {
     act: undefined,
-    scrollTo: "Sells the whole position when news sentiment",
+    scrollTo: "Between extremes, or while an extreme is still building",
   }),
   sauronFrame("phone-3-sauron-subscribed-fixture", { view: views.sauronRules, path: undefined }),
   sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),

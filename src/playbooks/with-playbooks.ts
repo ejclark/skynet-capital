@@ -94,8 +94,10 @@ export function withPlaybooks(
     return base;
   }
   // The base persona's own rules, when enabled as a playbook — run as the base, never as a play.
-  // EVERY such entry leaves the plays (a duplicated env token must not run them a second time);
-  // the first one names the stamp.
+  // A live roster holds one entry per playbook (`onePerPlaybook`, applied where it resolves, which
+  // is what stops a repeated env token running any playbook twice on any bot). Dropping EVERY
+  // own-rules entry here also keeps a hand-built roster from running his rules a second time; the
+  // first one names the stamp.
   const own = enabled.find((e) => e.playbook.rulesOf === base.id);
   const others = own ? enabled.filter((e) => e.playbook.rulesOf !== base.id) : enabled;
   const managed = managedSymbols(base.id, enabled);

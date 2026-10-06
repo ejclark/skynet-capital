@@ -335,3 +335,35 @@ describe("the deck, for an owned account", () => {
     expect(screen.queryByText(/capital under management/)).not.toBeInTheDocument();
   });
 });
+
+/** A card's own labelled rows (#4651): what the four rules have no place for goes below them under
+ *  its own name, so a phone reader meets a short description first, never a long paragraph. */
+describe("a card's labelled rows after the rules", () => {
+  const rowNames = () =>
+    [...document.querySelectorAll(".pb-card-triggers dt")].map((dt) => dt.textContent);
+
+  it("draws each note as a labelled row after Hold, in the server's order", () => {
+    mount({
+      ...card(["AAPL"]),
+      notes: [
+        { label: "On another bot", text: "other-bot rule" },
+        { label: "Pause", text: "pause rule" },
+      ],
+    });
+    expect(rowNames()).toEqual([
+      "Enter",
+      "Exit — take profit",
+      "Exit — cut losses",
+      "Hold",
+      "On another bot",
+      "Pause",
+    ]);
+    expect(precedes(screen.getByText("hold rule"), screen.getByText("other-bot rule"))).toBe(true);
+    expect(precedes(screen.getByText("other-bot rule"), screen.getByText("pause rule"))).toBe(true);
+  });
+
+  it("draws only the four rule rows on a card with no notes", () => {
+    mount(card(["AAPL"]));
+    expect(rowNames()).toEqual(["Enter", "Exit — take profit", "Exit — cut losses", "Hold"]);
+  });
+});

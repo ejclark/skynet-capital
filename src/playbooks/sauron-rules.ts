@@ -15,8 +15,10 @@ const STANDARD_RULES = new SauronPersona();
  * called: `withPlaybooks` runs the bot's own persona exactly as it does today — whichever build is
  * armed, hardcore included — and stamps each reflex with this playbook's id and the subscription's
  * mode. The symbols every OTHER enabled playbook trades stay that playbook's, as they always were.
- * So subscribing changes nothing about what he trades; it makes his share orders attributable, which
- * is what lets a Store pause act on them once unattributed orders are refused (slice 10).
+ * So an uncapped, unfiltered subscription changes nothing about what he trades; it makes his share
+ * orders attributable, which is what lets a Store pause act on them once unattributed orders are
+ * refused (slice 10). An owner-set capital cap or symbol filter then clamps or refuses his buys
+ * through the guards, as for any playbook (`subscriptionTerms`).
  *
  * ON ANY OTHER BOT it is an ordinary `decide` playbook: the standard rules on that bot's own
  * account, kept to the bots' universe and stamped by `playbookIntents`.
