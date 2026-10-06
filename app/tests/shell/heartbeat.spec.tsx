@@ -192,6 +192,30 @@ describe("RollCallList — an On line says what it is waiting for", () => {
     expect(screen.getAllByText(/^Next window: /)).toHaveLength(1);
   });
 
+  // #4650: a playbook paused in the Store, or subscribed a moment ago, read "Off" like one nobody
+  // subscribed to. Each now says what it is, with its own glyph and word — never hue alone.
+  it("says Paused and Starts next pass with a glyph and a word of their own", async () => {
+    const lines: Heartbeat["rollCall"] = [
+      { playbookId: "CRWV-WHEEL", status: "paused", reason: "Paused: it opens nothing new." },
+      { playbookId: "NVDA-CALL-SPREAD", status: "starting", reason: "Subscribed and on." },
+      ...(staleHeartbeat.rollCall ?? []),
+    ];
+    next = { available: true, heartbeat: { ...staleHeartbeat, rollCall: lines } };
+    const { container } = render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(await screen.findByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText("Starts next pass")).toBeInTheDocument();
+    const statusOf = (id: string) =>
+      screen.getByText(id).closest("li")?.getAttribute("data-status") ?? null;
+    expect(statusOf("CRWV-WHEEL")).toBe("paused");
+    expect(statusOf("NVDA-CALL-SPREAD")).toBe("starting");
+    // Every status on the roll call reads apart by its glyph alone, too.
+    const glyphs = [...container.querySelectorAll(".hb-roll-head [aria-hidden]")].map(
+      (g) => g.textContent,
+    );
+    const byStatus = new Map(lines.map((line, i) => [line.status, glyphs[i]] as const));
+    expect(new Set(byStatus.values()).size).toBe(byStatus.size);
+  });
+
   // #4777 AC7: a lot the stream keeps priced but nothing on the bot will sell is said out loud.
   it("lists a held ticker nothing on this bot will sell, with a glyph and a word", async () => {
     next = { available: true, heartbeat: { ...staleHeartbeat, unmanaged: ["GOOG"] } };

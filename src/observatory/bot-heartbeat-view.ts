@@ -1,9 +1,15 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { unmanagedTickers } from "../domain/bots-universe.js";
 import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import type { PlaybookMode, PlaybookVerdict, PlaybookVerdictState } from "../domain/types.js";
+import type {
+  PlaybookMode,
+  PlaybookSubscription,
+  PlaybookVerdict,
+  PlaybookVerdictState,
+} from "../domain/types.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
+import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { readPlaybookWindow } from "./playbook-window.js";
 
@@ -49,7 +55,7 @@ export interface HeartbeatView {
   /** Null when the newest verdict-carrying pass is absent (records predate capture, or no
    *  playbooks run on this account) — an absence, never an empty list posing as "none active". */
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
-  /** Every house playbook plus any the bot ran, each armed, off or blocked (#4450 slice 1). */
+  /** Every house playbook plus any the bot ran or holds a subscription to (#4450 slice 1, #4650). */
   readonly rollCall: readonly RollCallLine[];
   /** Share tickers this bot holds that nothing on it will sell (#4777, `unmanagedHoldings`).
    *  Absent when there was nothing to judge from — never an empty list posing as "all managed". */
@@ -72,6 +78,8 @@ export interface BotHoldings {
  * A playbook counts as managing its basket if the bot's newest verdict pass ran it (the env house
  * roster included) OR the bot holds a subscription to it at all: a PAUSED playbook records no
  * verdict, yet its exits still run (#4651), so verdicts alone would call a paused G1's lot orphaned.
+ * So does one the bots app's own playbook setting names with no subscription (`exitsOnly`, #4650):
+ * it opens nothing on the bot, and its exit rules still sell what it holds.
  * Null — no claim — when any of those ids is not a house playbook: a Store play authored on its
  * owner's account has a basket this process cannot read, and guessing would be the false alarm.
  */
@@ -79,9 +87,14 @@ export function unmanagedHoldings(
   holdings: BotHoldings,
   verdicts: readonly PlaybookVerdict[] | null,
   house: readonly Playbook[] = registeredPlaybooks(),
+  exitsOnly: readonly string[] = [],
 ): string[] | null {
   const byId = new Map(house.map((playbook) => [playbook.id, playbook]));
-  const ids = new Set([...(verdicts ?? []).map((v) => v.playbookId), ...holdings.subscribedIds]);
+  const ids = new Set([
+    ...(verdicts ?? []).map((v) => v.playbookId),
+    ...holdings.subscribedIds,
+    ...exitsOnly,
+  ]);
   const managed = new Set<string>();
   for (const id of ids) {
     const playbook = byId.get(id);
@@ -101,16 +114,41 @@ export function unmanagedHoldings(
  * verdict pass, so "off" is said out loud.
  *
  * - `armed` — the bot's newest verdict pass ran it.
- * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot.
+ * - `paused` — the bot holds a subscription to it, switched off (#4650). It opens nothing new and
+ *   still runs its exits, so it records no verdict (`withPlaybooks`) — read from passes alone it
+ *   said "off", like one nobody subscribed to, while the Store said "Paused". The subscription
+ *   wins over a verdict: a pass recorded just before the pause still carries one.
+ * - `starting` — subscribed and on, but no pass on hand ran it yet: the bots pick a subscription
+ *   up on their next `/controls` poll and run it from the pass after.
+ * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot. Said
+ *   differently when the bots app's own playbook setting names it and the bot holds no
+ *   subscription (exits only, `resolveBotRoster`), and when the bot is subscribed to an id no
+ *   playbook answers to (the bots refuse it, `subscriptionRoster`).
  * - `blocked` — registered, but the live wiring cannot make it fire (`PLAYBOOK_WIRING_GAPS`).
- *   Blocked wins over armed: a playbook that runs but can never trade is not online.
+ *   Blocked wins over everything: a playbook that runs but can never trade is not online.
  *
  * AN ARMED LINE SAYS WHAT IT IS WAITING FOR, not just that it is on (criterion 1's second half:
  * "an armed one carries its next possible entry date where it has one"). One shared sentence for
  * every armed playbook would have read as reassurance on the very day the calendar held no
  * confirmed NVDA print — see `playbook-window.ts`, which owns that read and its honesty rules.
  */
-export type RollCallStatus = "armed" | "off" | "blocked";
+export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked";
+
+/** What the dashboard knows of a bot's roster beyond its passes (#4650). */
+export interface RollCallRoster {
+  /** Every Store subscription the bot holds, on or paused. */
+  readonly subscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled">[];
+  /** The playbook ids the bots app's own playbook setting (`SKYNET_PLAYBOOKS`) runs on this bot,
+   *  as its latest `/controls` poll reported them (`house-roster-wire.ts`). Absent when it reported
+   *  none. One the bot holds no subscription to opens nothing and still runs its exits. */
+  readonly envNamed?: readonly string[];
+}
+
+/** The env-named playbooks this bot holds no subscription to: exits only (`resolveBotRoster`). */
+function exitsOnlyIds(roster: RollCallRoster | undefined): string[] {
+  const held = new Set(roster?.subscriptions.map((s) => s.playbookId));
+  return (roster?.envNamed ?? []).filter((id) => !held.has(id));
+}
 
 export interface RollCallLine {
   readonly playbookId: string;
@@ -127,6 +165,42 @@ const OFF_REASON = "Not switched on for this bot — no recorded pass ran it.";
 /** The fallback for an armed playbook whose definition is not on hand: a Store playbook, authored
  *  on its owner's account, whose rule this process cannot read to say more than this. */
 const ARMED_REASON = "Checked on every pass; it trades when its own condition holds.";
+/** What Pause does — the Store's own note under a paused subscription (`PAUSED_NOTE`,
+ *  `playbook-subscription-row.tsx`), cut to what a roll-call line has room for. */
+const PAUSED_REASON =
+  "Paused: it opens nothing new and keeps managing what it holds — it sells on its own exit " +
+  "rules and closes any option before it expires (a wheel still sells covered calls on shares " +
+  "it was assigned).";
+/** Subscribed and on, no pass yet: the poll (30s) picks it up, a pass (15s) runs it, and the
+ *  pass reaches this dashboard on a later poll — about two minutes, and only while passes run. */
+const STARTING_REASON =
+  "Subscribed and on, but no recorded pass has run it yet. It starts on the bot's next pass — " +
+  "usually within two minutes of the change while the market is open, otherwise at the open.";
+/** The bots app's boot line for the same case, said to the owner (`resolveBotRoster`). */
+const EXITS_ONLY_REASON =
+  "Not subscribed, but the bots app's own playbook setting names it, so on this bot it opens " +
+  "nothing and its exit rules still sell what it holds. Subscribe this bot to it to let it open " +
+  "positions.";
+/** No playbook answers to the id, so the bots refuse the subscription (`subscriptionRoster`) and a
+ *  paused one runs no exits either (`pausedRoster`). Authored plays are not wired to run yet. */
+const UNKNOWN_REASON =
+  "Subscribed, but the bots find no playbook by this id, so nothing on this bot runs it.";
+
+/** A line no pass on hand ran and no pause explains: why, most specific cause first. */
+function idleLine(
+  playbookId: string,
+  playbook: Playbook | undefined,
+  held: { readonly subscribed: boolean; readonly exitsOnly: boolean },
+): RollCallLine {
+  if (held.subscribed && !playbook) return { playbookId, status: "off", reason: UNKNOWN_REASON };
+  // A playbook with its own off-reason (the forced daily pick: one bot, one setting) keeps it —
+  // a subscription alone never makes it run, so "starts next pass" would be a promise.
+  if (held.subscribed && !playbook?.whenOff) {
+    return { playbookId, status: "starting", reason: STARTING_REASON };
+  }
+  if (held.exitsOnly) return { playbookId, status: "off", reason: EXITS_ONLY_REASON };
+  return { playbookId, status: "off", reason: playbook?.whenOff ?? OFF_REASON };
+}
 
 export function playbookRollCall(
   verdicts: readonly PlaybookVerdict[] | null,
@@ -134,18 +208,33 @@ export function playbookRollCall(
   house: readonly Playbook[] = registeredPlaybooks(),
   gaps: Readonly<Record<string, string>> = PLAYBOOK_WIRING_GAPS,
   calendar: readonly EarningsPrint[] = UPCOMING_PRINTS,
+  /** The bot's subscriptions and env-named playbooks. Absent — the store unwired or unreadable —
+   *  and every line is judged from the passes alone, exactly as before #4650. */
+  roster?: RollCallRoster,
 ): RollCallLine[] {
   const ran = verdicts ?? [];
   const byId = new Map(house.map((playbook) => [playbook.id, playbook]));
-  // House roster first in its own order, then anything else the bot ran (a Store play).
-  const ids = [...byId.keys(), ...ran.map((v) => v.playbookId).filter((id) => !byId.has(id))];
+  const subscribed = roster?.subscriptions.map((s) => s.playbookId) ?? [];
+  const paused = pausedPlaybookIds(roster?.subscriptions ?? []);
+  const exitsOnly = new Set(exitsOnlyIds(roster));
+  // House roster first in its own order, then anything else the bot ran (a Store play), then any
+  // other id it holds a subscription to — a paused one runs no pass, so it would otherwise vanish.
+  const ids = [...byId.keys(), ...ran.map((v) => v.playbookId), ...subscribed];
   return [...new Set(ids)].map((playbookId): RollCallLine => {
     const verdict = ran.find((v) => v.playbookId === playbookId);
     const mode = verdict ? { mode: verdict.mode } : {};
     const gap = gaps[playbookId];
     if (gap) return { playbookId, status: "blocked", ...mode, reason: gap };
     const playbook = byId.get(playbookId);
-    if (!verdict) return { playbookId, status: "off", reason: playbook?.whenOff ?? OFF_REASON };
+    if (paused.has(playbookId) && playbook) {
+      return { playbookId, status: "paused", reason: PAUSED_REASON };
+    }
+    if (!verdict) {
+      return idleLine(playbookId, playbook, {
+        subscribed: subscribed.includes(playbookId),
+        exitsOnly: exitsOnly.has(playbookId),
+      });
+    }
     if (!playbook) {
       return { playbookId, status: "armed", ...mode, reason: ARMED_REASON };
     }
@@ -201,19 +290,25 @@ function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbea
 }
 
 /** `records` newest first, as `DecisionDb.listByPersona` returns them. `holdings` absent — the
- *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off. */
+ *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off; `roster`
+ *  absent judges the roll call from the passes alone. */
 export function botHeartbeatView(
   records: readonly DecisionRecord[],
   now: Date,
   marketOpen: boolean,
   holdings?: BotHoldings,
+  roster?: RollCallRoster,
 ): HeartbeatView {
   const verdicts = latestVerdictPass(records)?.verdicts ?? null;
-  const orphans = holdings ? unmanagedHoldings(holdings, verdicts) : null;
+  const house = registeredPlaybooks();
+  const orphans = holdings
+    ? unmanagedHoldings(holdings, verdicts, house, exitsOnlyIds(roster))
+    : null;
   const base = {
     marketOpen,
     cadenceMs: PASS_CADENCE_MS,
     staleAfterMs: STALE_AFTER_MS,
+    rollCall: playbookRollCall(verdicts, now, house, PLAYBOOK_WIRING_GAPS, UPCOMING_PRINTS, roster),
     ...(orphans ? { unmanaged: orphans } : {}),
   };
   const newest = records[0];
@@ -224,7 +319,6 @@ export function botHeartbeatView(
       lastPassAt: null,
       sinceLastPassMs: null,
       playbooks: null,
-      rollCall: playbookRollCall(null, now),
     };
   }
   const sinceLastPassMs = Math.max(0, now.getTime() - newest.at);
@@ -240,6 +334,5 @@ export function botHeartbeatView(
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
     playbooks: playbookLines(records),
-    rollCall: playbookRollCall(verdicts, now),
   };
 }

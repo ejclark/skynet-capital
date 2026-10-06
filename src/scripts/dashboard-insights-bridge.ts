@@ -21,6 +21,7 @@ import {
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
+import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -87,6 +88,9 @@ export interface InsightsBridgeHandle {
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
   /** COND-SCOUT's latest snapshot (#3651 slice 7a) — memory only, refilled by the next poll. */
   readonly readCondScout: () => CondScoutSnapshot | undefined;
+  /** The bots app's env house roster as its most recent poll reported it (#4650) — re-read from
+   *  every poll like `botsGate`, so a bots build that stops reporting stops being quoted. */
+  readonly readHouseRoster: () => HouseRosterReport | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -121,6 +125,7 @@ export function startInsightsBridge(
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let houseRoster: HouseRosterReport | undefined;
   let condScout: CondScoutSnapshot | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
@@ -153,6 +158,7 @@ export function startInsightsBridge(
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
+      houseRoster = report.houseRoster;
       for (const line of seed(report)) console.log(line);
     },
     ...(credentialsDeps && botCredentialsSecret
@@ -172,6 +178,7 @@ export function startInsightsBridge(
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
     readCondScout: () => condScout,
+    readHouseRoster: () => houseRoster,
     ...(decisionDb
       ? {
           readDecisions: async (personaId, page) =>

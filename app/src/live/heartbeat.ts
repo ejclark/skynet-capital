@@ -25,14 +25,15 @@ export interface Heartbeat {
   readonly staleAfterMs: number;
   readonly halted?: string;
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
-  /** Every house playbook, armed · off · blocked (#4450). Absent for a non-owner. */
+  /** Every house playbook plus any this bot ran or is subscribed to (#4450, #4650). Absent for a
+   *  non-owner. */
   readonly rollCall?: readonly RollCallLine[];
   /** Share tickers held that nothing on this bot will sell (#4777). Absent for a non-owner, and
    *  when the server could not read the bot's book or subscriptions. */
   readonly unmanaged?: readonly string[];
 }
 
-export type RollCallStatus = "armed" | "off" | "blocked";
+export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked";
 
 export interface RollCallLine {
   readonly playbookId: string;
@@ -54,12 +55,18 @@ export function entryDateText(date: string): string {
   });
 }
 
-/** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). */
+/** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). Each
+ *  glyph is unique on the page (#4650): "Paused" takes the pause bars, not the Store row's ○,
+ *  because ○ already means Off here and ◐ means Market closed on the state card above; "Starts next
+ *  pass" is the play mark beside them — a dotted ◌ read as ○ at this size, and the quarter-filled
+ *  circles fall back to a speck in common fonts. */
 export const ROLL_CALL_WORDS: Record<
   RollCallStatus,
   { readonly glyph: string; readonly word: string }
 > = {
   armed: { glyph: "●", word: "On" },
+  paused: { glyph: "‖", word: "Paused" },
+  starting: { glyph: "▷", word: "Starts next pass" },
   off: { glyph: "○", word: "Off" },
   blocked: { glyph: "⊘", word: "Can't fire" },
 };

@@ -397,6 +397,7 @@ async function main(): Promise<void> {
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
     readCondScout: insightsBridge.readCondScout,
+    readHouseRoster: insightsBridge.readHouseRoster,
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
