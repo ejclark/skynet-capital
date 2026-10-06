@@ -156,40 +156,91 @@ describe("CycleRow", () => {
   });
 
   // #4650: what the broker said about the result, beside the label — the owner's alone.
+  // #4650: an order that never traded is told ONCE, in the broker's words, in place of the generic
+  // label — on the owner's view only, and never added to a fill.
   describe("the broker's words on a result", () => {
-    const canceled = cycle({
-      outcomes: [
-        {
-          symbol: "CRWV",
-          side: "sell",
-          quantity: 1,
-          action: "placed",
-          reason: "sell a put a month out",
-          contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
-          resultStatus: "unfilled",
-          resultLabel: "limit not reached — canceled",
-          brokerReason: "limit $2.10 not reached in 15s; canceled",
-        },
-      ],
+    const notTraded = (status: string, brokerReason?: string) =>
+      cycle({
+        outcomes: [
+          {
+            symbol: "CRWV",
+            side: "sell",
+            quantity: 1,
+            action: "rejected",
+            reason: "sell a put a month out",
+            contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+            resultStatus: status,
+            ...(status === "unfilled" ? { resultLabel: "limit not reached — canceled" } : {}),
+            ...(brokerReason ? { brokerReason } : {}),
+          },
+        ],
+      });
+    const said = (container: HTMLElement) =>
+      container.querySelectorAll(".cycle-fill, .cycle-broker");
+
+    it("says once, in the broker's words, why an order never traded", () => {
+      const { container } = render(
+        <CycleRow cycle={notTraded("unfilled", "limit $2.10 not reached in 15s; canceled")} />,
+      );
+      open();
+      expect(
+        screen.getByText("not filled — broker: limit $2.10 not reached in 15s; canceled"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("limit not reached — canceled")).not.toBeInTheDocument();
+      expect(said(container)).toHaveLength(1);
     });
 
-    it("says what the broker said beside the result label", () => {
-      render(<CycleRow cycle={canceled} />);
+    it("reads the same way for a rejection", () => {
+      const { container } = render(
+        <CycleRow cycle={notTraded("rejected", "insufficient buying power")} />,
+      );
+      open();
+      expect(
+        screen.getByText("not filled — broker: insufficient buying power"),
+      ).toBeInTheDocument();
+      expect(said(container)).toHaveLength(1);
+    });
+
+    it("adds nothing to a fill, whatever words arrive with it", () => {
+      render(
+        <CycleRow
+          cycle={cycle({
+            outcomes: [
+              {
+                symbol: "CRWV",
+                side: "sell",
+                quantity: 2,
+                action: "placed",
+                reason: "sell puts a month out",
+                fill: "1 @ $2.12",
+                resultStatus: "filled",
+                brokerReason: "partial fill; remainder canceled",
+              },
+            ],
+          })}
+        />,
+      );
+      open();
+      expect(screen.getByText("1 @ $2.12")).toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/partial fill/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the generic label on a non-owner's view, and when the broker said nothing", () => {
+      render(
+        <CycleRow
+          cycle={notTraded("unfilled", "limit $2.10 not reached in 15s; canceled")}
+          showPlaybooks={false}
+        />,
+      );
       open();
       expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
-      expect(
-        screen.getByText("broker said: limit $2.10 not reached in 15s; canceled"),
-      ).toBeInTheDocument();
-    });
-
-    it("draws nothing on a bot the viewer does not own, or for a result with no words", () => {
-      render(<CycleRow cycle={canceled} showPlaybooks={false} />);
-      open();
-      expect(screen.queryByText(/broker said/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
       cleanup();
-      render(<CycleRow cycle={cycle()} />);
+      render(<CycleRow cycle={notTraded("unfilled")} />);
       open();
-      expect(screen.queryByText(/broker said/)).not.toBeInTheDocument();
+      expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
     });
   });
 

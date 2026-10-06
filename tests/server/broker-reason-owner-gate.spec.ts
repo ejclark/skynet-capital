@@ -2,30 +2,31 @@ import type { ServerResponse } from "node:http";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
+import { attachWireReasoning } from "../../src/observatory/wire-reasoning.js";
 import { serveContentApi } from "../../src/server/content-api-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /**
- * What the broker said about a bot's order (#4650 leftover, plan #4642) — "partial fill; remainder
- * canceled", a rejection's cause — is its owner's alone: a broker's message can name the account's
- * specifics. Every route that reads a bot's order carries it to the owner and withholds it from
- * anyone else, the way the playbook's name is withheld (#885, `desk-owner-gate.ts`): the pass log
- * (`/decisions`), Activity's why (`/activity`), the Thesis markers (`/thesis`) and the league Wire.
+ * What the broker said about a bot's order (#4650 leftover, plan #4642) — "limit $2.10 not reached
+ * in 15s; canceled", a rejection's cause — is its owner's alone: a broker's message can name the
+ * account's specifics. Every route that reads a bot's order carries it to the owner and withholds it
+ * from anyone else, the way the playbook's name is withheld (#885, `desk-owner-gate.ts`): the pass
+ * log (`/decisions`), Activity's why (`/activity`), the Thesis markers (`/thesis`) and the league
+ * Wire. The words ride only on an order that never traded (`brokerWordsFor`), so the two surfaces
+ * that list fills alone — the Wire and the Thesis markers — are gated, not shown.
  */
 
 const PUT = "CRWV261113P00085000";
-const WORDS = "partial fill; remainder canceled";
+const WORDS = "limit $2.10 not reached in 15s; canceled";
 
 const sold: OrderIntent = {
-  ...anOptionIntent({
-    quantity: 2,
-    option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] },
-  }),
+  ...anOptionIntent({ option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] } }),
   clientOrderId: "sk1-sauron-CRWV-k9x2-0",
 };
 
+// An unfilled order is recorded as rejected downstream (`option-cycle.ts`'s `actionFor`).
 const pass: DecisionRecord = {
   at: Date.parse("2026-10-07T14:30:00.000Z"),
   personaId: "sauron",
@@ -35,28 +36,19 @@ const pass: DecisionRecord = {
   outcomes: [
     {
       intent: sold,
-      action: "placed",
-      result: {
-        intent: sold,
-        status: "filled",
-        orderId: "opt-1",
-        filledQuantity: 1,
-        filledPrice: 2.12,
-        legFills: [{ occSymbol: PUT, filledQuantity: 1, filledPrice: 2.12 }],
-        reason: WORDS,
-      },
+      action: "rejected",
+      result: { intent: sold, status: "unfilled", orderId: "opt-1", reason: WORDS },
     },
   ],
 };
 
-const fill: TradeActivityRecord = {
+const canceled: TradeActivityRecord = {
   orderId: "opt-1",
   participantId: "sauron",
   symbol: PUT,
   side: "sell",
-  quantity: 2,
-  filledQuantity: 1,
-  price: 2.12,
+  quantity: 1,
+  filledQuantity: 0,
   status: "canceled",
   at: "2026-10-07T14:30:16.000Z",
   source: "stream",
@@ -74,15 +66,17 @@ const sauron = {
 
 const session = (email: string) => ({ email, provider: "google" as const, exp: 0 });
 
+const findByOrderId = (orderId: string) =>
+  orderId === "opt-1" ? { record: pass, intent: sold } : undefined;
+
 const config = {
   hub: { getState: () => ({ generatedAt: "t", participants: [sauron], collisions: [] }) },
   auth: {},
   resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
   readDecisions: () => Promise.resolve([pass]),
-  readTradeActivity: async () => [fill],
-  readAllTradeActivity: async () => [fill],
-  findByOrderId: (orderId: string) =>
-    orderId === "opt-1" ? { record: pass, intent: sold } : undefined,
+  readTradeActivity: async () => [canceled],
+  readAllTradeActivity: async () => [canceled],
+  findByOrderId,
 } as unknown as DashboardServerConfig;
 
 function capture(): { res: ServerResponse; body: () => string } {
@@ -114,15 +108,11 @@ async function wire(who?: string): Promise<string> {
 }
 
 describe("the broker's words on a bot's order are its owner's alone", () => {
-  it("gives the owner the words on the pass log, Activity's why, the Thesis marker and the Wire", async () => {
+  it("gives the owner the words on the pass log and Activity's why", async () => {
     const decisions = JSON.parse(await desk("decisions", "owner@x"));
     expect(decisions.cycles[0].outcomes[0].brokerReason).toBe(WORDS);
     const activity = JSON.parse(await desk("activity", "owner@x"));
     expect(activity.activity[0].reasoning.brokerReason).toBe(WORDS);
-    const thesis = JSON.parse(await desk("thesis", "owner@x"));
-    expect(thesis.thesis.markers[0].reasoning.brokerReason).toBe(WORDS);
-    const league = JSON.parse(await wire("owner@x"));
-    expect(league.wire.trades[0].reasoning.brokerReason).toBe(WORDS);
   });
 
   it("withholds them from a member who does not own the bot, and from a signed-out read", async () => {
@@ -134,11 +124,12 @@ describe("the broker's words on a bot's order are its owner's alone", () => {
       }
       expect(await wire(who)).not.toContain(WORDS);
     }
-    // The rest of the order still rides: the fill and the bot's own sentence.
+    // The rest of the order still rides: its result and the bot's own sentence.
     const decisions = JSON.parse(await desk("decisions", "guest@x"));
     expect(decisions.cycles[0].outcomes[0]).toMatchObject({
-      action: "placed",
-      resultStatus: "filled",
+      action: "rejected",
+      resultStatus: "unfilled",
+      resultLabel: "limit not reached — canceled",
     });
     const activity = JSON.parse(await desk("activity", "guest@x"));
     expect(activity.activity[0].reasoning).toMatchObject({
@@ -147,34 +138,22 @@ describe("the broker's words on a bot's order are its owner's alone", () => {
     });
   });
 
-  it("never attaches a working order's words to the why, which the row's own status outlives", async () => {
-    const working: DecisionRecord = {
-      ...pass,
-      outcomes: [
-        {
-          intent: sold,
-          action: "placed",
-          result: {
-            intent: sold,
-            status: "working",
-            orderId: "opt-1",
-            reason: "cancel not confirmed — rechecked next cycle",
-          },
-        },
-      ],
+  it("gates the Wire's why per account the same way", () => {
+    const row = {
+      participantId: "sauron",
+      participantName: "Sauron",
+      kind: "bot" as const,
+      symbol: PUT,
+      side: "sell" as const,
+      quantity: 1,
+      at: canceled.at,
+      reconstructed: false,
+      orderId: "opt-1",
     };
-    const { res, body } = capture();
-    const path = "/api/desk/sauron/activity";
-    await serveDeskJson(
-      res,
-      path,
-      path,
-      {
-        ...config,
-        findByOrderId: () => ({ record: working, intent: sold }),
-      } as DashboardServerConfig,
-      session("owner@x"),
-    );
-    expect(JSON.parse(body()).activity[0].reasoning).not.toHaveProperty("brokerReason");
+    const owned = attachWireReasoning([row], { findByOrderId, ownsAccount: () => true });
+    expect(owned[0]?.reasoning?.brokerReason).toBe(WORDS);
+    const other = attachWireReasoning([row], { findByOrderId, ownsAccount: () => false });
+    expect(other[0]?.reasoning).not.toHaveProperty("brokerReason");
+    expect(other[0]?.reasoning?.reason).toBe(sold.reason);
   });
 });

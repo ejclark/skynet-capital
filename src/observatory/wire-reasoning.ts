@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { brokerWordsFor } from "./broker-words.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
@@ -23,8 +24,9 @@ import type { WireTradeRow } from "./wire-data.js";
  * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time —
  * and an option order's dollar cost, which is read only off a `filled` result: written once the
  * broker has ended the order (`alpaca-option-result.ts`, or a late settlement), so it can never
- * move again. What the broker said about the result rides on the same terms: only once the order
- * has ended, never a `working` order's "cancel not confirmed", which its row's own status outlives.
+ * move again. What the broker said about the result rides only where the order never traded
+ * (`brokerWordsFor`): that answer is written once the order has ended, and a fill's or a working
+ * order's words would only restate the row's own status.
  */
 
 export interface WireTradeReasoning {
@@ -56,8 +58,8 @@ export interface WireTradeReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words (`OrderForecast.invalidator`). */
   readonly invalidator?: string;
-  /** What the broker said about the order's result once it ended, as the decision stored it —
-   *  "partial fill; remainder canceled", a rejection's cause. The owner's alone
+  /** What the broker said about an order that never traded, as the decision stored it — "limit
+   *  $2.10 not reached in 15s; canceled", a rejection's cause (`brokerWordsFor`). The owner's alone
    *  (`withoutOwnerReasoning`). */
   readonly brokerReason?: string;
 }
@@ -109,6 +111,7 @@ export function reasoningForOrder(
   // The store hands back the outcome's own intent, so its result is found by identity.
   const result = record.outcomes.find((o) => o.intent === intent)?.result;
   const cost = optionFillCost(intent, result);
+  const brokerReason = brokerWordsFor(result);
   const invalidator = intent.forecast?.invalidator;
   // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
   // the two must match character for character or the link from a fill lands on no row.
@@ -127,7 +130,7 @@ export function reasoningForOrder(
     ...(contract ? { contract } : {}),
     ...(cost ? { cost: optionFillCostWords(cost) } : {}),
     ...(invalidator ? { invalidator } : {}),
-    ...(result?.reason && result.status !== "working" ? { brokerReason: result.reason } : {}),
+    ...(brokerReason ? { brokerReason } : {}),
   };
 }
 

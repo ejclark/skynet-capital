@@ -17,6 +17,7 @@ import {
   recordWireKind,
   storeDecisionBatch,
 } from "../../src/autonomous/decision-wire.ts";
+import { actionFor } from "../../src/autonomous/option-cycle.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
 import { AT, filledRecord, HIGH, LOW, PUT, sold } from "./option-fill-fixture.mjs";
 import { openShell } from "./shell.mjs";
@@ -38,7 +39,9 @@ const canceled = settledOptionResult(
 );
 const pass = {
   ...filledRecord,
-  outcomes: filledRecord.outcomes.map((o) => (o.intent === sold ? { ...o, result: canceled } : o)),
+  outcomes: filledRecord.outcomes.map((o) =>
+    o.intent === sold ? { ...o, action: actionFor(canceled), result: canceled } : o,
+  ),
 };
 
 const bots = openDecisionDb(":memory:");
@@ -138,16 +141,16 @@ for (const sub of ["activity", "decisions"]) {
 await page.setViewportSize({ width: 390, height: 844 });
 
 // Heartbeat's pass log, arriving from the put's "the whole pass" link: the round opens with its
-// trades, the put's line saying what the broker said beside its result.
+// trades, the put's line telling once, in the broker's words, why it never traded.
 await page.goto(`${origin}/app/u/bot-sauron/decisions#cycle-${AT}`);
-const said = page.getByText(/^broker said:/);
+const said = page.getByText(/^not filled — broker:/);
 await said.waitFor();
 await page.waitForTimeout(700);
 await page.locator(".cycle-outcome", { has: said }).evaluate((el) => {
   el.scrollIntoView({ block: "start" });
   window.scrollBy(0, -170); // the round's head above it, clear of the sticky header
 });
-await shoot("pass-log-broker-said-phone");
+await shoot("pass-log-not-filled-phone");
 
 // Activity, the canceled put opened to its why: "Broker said" beside the order it describes.
 await page.goto(`${origin}/app/u/bot-sauron/activity`);

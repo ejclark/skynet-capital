@@ -4,6 +4,7 @@ import type { OrderForecast, OrderStatus, PlaybookMode } from "../domain/types.j
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
+import { brokerWordsFor } from "./broker-words.js";
 import { formatPrice } from "./desk-data.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import { optionContractLine } from "./option-contract-line.js";
@@ -37,9 +38,10 @@ interface CycleOutcomeView {
   readonly resultStatus?: string;
   /** The result in words when its status alone would mislead — a limit that never filled. */
   readonly resultLabel?: string;
-  /** What the broker said about the result ("limit $2.10 not reached in 15s; canceled"), as stored
-   *  (`decision-db-results.ts`). The owner's alone — a broker's message can name the account's
-   *  specifics (`desk-owner-gate.ts`). Absent when it said nothing, or on an older record. */
+  /** What the broker said about an order that never traded ("limit $2.10 not reached in 15s;
+   *  canceled"), as stored (`decision-db-results.ts`, `brokerWordsFor`) — said in place of
+   *  `resultLabel`, never beside it. The owner's alone: a broker's message can name the account's
+   *  specifics (`desk-owner-gate.ts`). Absent on a fill, when it said nothing, or on an older record. */
   readonly brokerReason?: string;
   /** An option order's contracts and limit, in one line (`optionContractLine`); absent for shares. */
   readonly contract?: string;
@@ -198,6 +200,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
   const guardDelta = guardDeltaFor(record, outcome.intent);
   const contract = optionContractLine(outcome.intent);
   const resultLabel = resultLabelFor(outcome);
+  const brokerReason = brokerWordsFor(outcome.result);
   return {
     symbol: outcome.intent.symbol,
     side: outcome.intent.side,
@@ -213,7 +216,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
     action: outcome.action,
     ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
     ...(resultLabel ? { resultLabel } : {}),
-    ...(outcome.result?.reason ? { brokerReason: outcome.result.reason } : {}),
+    ...(brokerReason ? { brokerReason } : {}),
     ...(contract ? { contract } : {}),
     ...fillOf(outcome),
     ...(record.context?.momentum?.[outcome.intent.symbol] !== undefined

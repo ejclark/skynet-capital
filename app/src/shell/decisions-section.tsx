@@ -42,33 +42,34 @@ function PlaybookChip({
   );
 }
 
-/** The result in words when its status alone would mislead, and what the broker said about it
- *  (#4650) — the latter only on the owner's view (`showBroker`), and never a placeholder. */
+/** An order that never traded: the result statuses whose broker's words answer "why not". */
+const NOT_FILLED = new Set(["unfilled", "rejected"]);
+
+/** The result in words when its status alone would mislead — said ONCE (#4650). On the owner's view
+ *  (`showBroker`) an order that never traded is told in the broker's own words, attributed, in place
+ *  of the generic label; anywhere else, or with no words (an older record), the label as before. The
+ *  status is checked here too, so words a server sent for a fill are never read as "not filled". */
 function ResultWords({
   outcome,
   showBroker,
 }: {
   readonly outcome: DecisionCycle["outcomes"][number];
   readonly showBroker: boolean;
-}): ReactElement {
-  return (
-    <>
-      {outcome.resultStatus && (!outcome.fill || outcome.resultStatus === "working") ? (
-        <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
-      ) : null}
-      {showBroker && outcome.brokerReason ? (
-        <span className="cycle-broker">broker said: {outcome.brokerReason}</span>
-      ) : null}
-    </>
-  );
+}): ReactElement | null {
+  const words =
+    showBroker && NOT_FILLED.has(outcome.resultStatus ?? "") ? outcome.brokerReason : undefined;
+  if (words) return <span className="cycle-broker">not filled — broker: {words}</span>;
+  return outcome.resultStatus && (!outcome.fill || outcome.resultStatus === "working") ? (
+    <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
+  ) : null;
 }
 
 /** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
  *  rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
  *  (#885: "we do not show what playbooks others are using") — the server already withholds it
  *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. What
- *  the broker said about the result rides the same gate: a broker's message can name the account's
- *  specifics (#4650). */
+ *  the broker said about an order that never traded rides the same gate: a broker's message can
+ *  name the account's specifics (#4650). */
 export function OutcomeLine({
   outcome,
   showPlaybook = true,
