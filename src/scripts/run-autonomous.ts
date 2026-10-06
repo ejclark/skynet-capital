@@ -35,6 +35,7 @@ import {
   restoreBotsState,
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
+import { followBotsStream } from "../autonomous/bots-stream.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
@@ -48,6 +49,7 @@ import { guardAccountCollisions } from "../bots/account-guard.js";
 import { botTradingClient } from "../bots/bot-broker.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
+import { BOTS_UNIVERSE as UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
@@ -79,10 +81,6 @@ import {
 import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
-// The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
-// claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
-// adding a claim to the Prospector without adding it here is a silent no-op.
-const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
@@ -297,10 +295,21 @@ async function runLive(): Promise<void> {
     const broker = traders[i]?.broker;
     if (broker instanceof SwappableBotBroker) brokerHolders.set(bot.persona.id, broker);
   });
+  // The stream follows what the rosters trade and the bots hold (#4777): the ten names, plus a
+  // playbook's own tickers, re-subscribed in place on every swap below — never a restart.
+  const botsStream = followBotsStream({
+    stream: marketDataStream,
+    tracker,
+    universe: UNIVERSE,
+    rosters: () => botRosters,
+    log: console.log,
+  });
+  botsStream.refresh();
   // ONE swap path (Store change, options-level change), so every later read sees what is traded.
   const swapIn = (i: number, next: BotRoster) => {
     botRosters[i] = next;
     traders[i]?.trader.swapRoster(rosterFor(next));
+    botsStream.refresh();
   };
   optionLevels.follow(botRosters, swapIn);
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
@@ -374,6 +383,7 @@ async function runLive(): Promise<void> {
     onResult: logResult,
     onDecision,
     onEquityReadError: (error) => console.error("[equity] read failed:", error),
+    onPortfolios: (portfolios) => botsStream.observeHoldings(portfolios),
     onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
     onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
     onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
@@ -418,7 +428,7 @@ async function runLive(): Promise<void> {
   marketDataStream.start();
 
   console.log(
-    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
+    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; streaming: ${botsStream.symbols().join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
   );
 }
 

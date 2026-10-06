@@ -1,4 +1,4 @@
-import type { MarketContext, OrderIntent, OrderResult } from "../domain/types.js";
+import type { MarketContext, OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
 import type { GuardRefusal, RiskConfig } from "../engine/guards.js";
 import { applyGuards, applyGuardsWithVerdicts } from "../engine/guards.js";
 import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
@@ -65,6 +65,9 @@ export interface LiveCycleDeps {
   /** The scout's own per-cycle decision record (bots emit theirs via their own `AutonomousTrader`). */
   readonly onDecision?: (record: DecisionRecord) => void;
   readonly onEquityReadError?: (error: unknown) => void;
+  /** Every bot's portfolio from the cycle's equity read, in `traders` order — what the price stream
+   *  reads to keep a held ticker priced (#4777). Not called when the read failed. */
+  readonly onPortfolios?: (portfolios: readonly Portfolio[]) => void;
   readonly onEvalError?: (personaName: string, error: unknown) => void;
   readonly onBetaScoutError?: (error: unknown) => void;
   readonly onScoutHalted?: (reason: string) => void;
@@ -122,6 +125,7 @@ export class LiveCycleRunner {
     try {
       const portfolios = await Promise.all(traders.map((t) => t.broker.getPortfolio()));
       safety.recordEquity(fleetEquity(portfolios, context));
+      this.deps.onPortfolios?.(portfolios);
     } catch (error) {
       this.deps.onEquityReadError?.(error);
     }
