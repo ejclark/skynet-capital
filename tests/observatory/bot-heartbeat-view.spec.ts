@@ -5,6 +5,7 @@ import {
   PASS_CADENCE_MS,
   playbookRollCall,
   STALE_AFTER_MS,
+  unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
@@ -173,5 +174,55 @@ describe("playbookRollCall — every house playbook is accounted for, never sile
     const view = botHeartbeatView([pass(20_000)], NOW, true);
     expect(view.rollCall.length).toBeGreaterThan(0);
     expect(view.rollCall.every((l) => l.status !== "armed")).toBe(true);
+  });
+});
+
+/** #4777 AC7 — a lot the stream keeps priced but nothing on the bot will ever sell is said out
+ *  loud, never left silently frozen on the book. */
+describe("unmanagedHoldings — a held lot no rule on this bot will exit", () => {
+  const lot = (symbol: string, quantity = 10) => ({ symbol, quantity });
+  const g1 = (state: PlaybookVerdict["state"]): PlaybookVerdict => ({
+    playbookId: "G1-GOOG",
+    mode: "standard",
+    state,
+  });
+
+  it("WHEN G1-GOOG is unsubscribed while its bot holds GOOG, names GOOG unmanaged", () => {
+    const holdings = { positions: [lot("GOOG"), lot("NVDA")], subscribedIds: [] };
+    expect(unmanagedHoldings(holdings, [s1("long")])).toEqual(["GOOG"]);
+    // A bot that runs no playbook at all records no verdicts — the lot is still named.
+    expect(unmanagedHoldings(holdings, null)).toEqual(["GOOG"]);
+  });
+
+  it("leaves GOOG managed while G1-GOOG runs, and while it is merely PAUSED (no verdict, exits still run)", () => {
+    expect(
+      unmanagedHoldings({ positions: [lot("GOOG")], subscribedIds: [] }, [g1("long")]),
+    ).toEqual([]);
+    expect(
+      unmanagedHoldings({ positions: [lot("GOOG")], subscribedIds: ["G1-GOOG"] }, null),
+    ).toEqual([]);
+  });
+
+  it("never flags the ten names the base persona trades, an option contract, or a closed line", () => {
+    const holdings = {
+      positions: [lot("NVDA"), lot("CRWV261120P00080000", -1), lot("GOOG", 0)],
+      subscribedIds: [],
+    };
+    expect(unmanagedHoldings(holdings, null)).toEqual([]);
+  });
+
+  it("makes no claim when the bot runs a playbook whose basket this process cannot read", () => {
+    const holdings = { positions: [lot("GOOG")], subscribedIds: ["U-eric-custom"] };
+    expect(unmanagedHoldings(holdings, null)).toBeNull();
+  });
+
+  it("rides the heartbeat only when the dashboard could read the bot's book", () => {
+    const records = [pass(20_000, [s1("long")])];
+    expect(botHeartbeatView(records, NOW, true).unmanaged).toBeUndefined();
+    const view = botHeartbeatView(records, NOW, true, {
+      positions: [lot("GOOG")],
+      subscribedIds: [],
+    });
+    expect(view.unmanaged).toEqual(["GOOG"]);
   });
 });

@@ -1,8 +1,10 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { unmanagedTickers } from "../domain/bots-universe.js";
 import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookMode, PlaybookVerdict, PlaybookVerdictState } from "../domain/types.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
+import { isOccSymbol } from "../trading/option-symbols.js";
 import { readPlaybookWindow } from "./playbook-window.js";
 
 /**
@@ -49,6 +51,47 @@ export interface HeartbeatView {
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
   /** Every house playbook plus any the bot ran, each armed, off or blocked (#4450 slice 1). */
   readonly rollCall: readonly RollCallLine[];
+  /** Share tickers this bot holds that nothing on it will sell (#4777, `unmanagedHoldings`).
+   *  Absent when there was nothing to judge from — never an empty list posing as "all managed". */
+  readonly unmanaged?: readonly string[];
+}
+
+/** What the dashboard knows of a bot's book and roster beyond its passes: the lots its broker read
+ *  shows, and every playbook id the bot holds a Store subscription to, enabled or paused. */
+export interface BotHoldings {
+  readonly positions: readonly { readonly symbol: string; readonly quantity: number }[];
+  readonly subscribedIds: readonly string[];
+}
+
+/**
+ * THE UNMANAGED LOTS (#4777) — a lot priced by the stream but sold by nothing. The bots process
+ * streams every ticker a bot holds, so an orphan keeps a live price; but a base persona sees only
+ * the ten names, so a GOOG lot left behind when G1-GOOG is unsubscribed would otherwise sit on the
+ * book with no line anywhere saying no rule will ever exit it. The roll call says it out loud.
+ *
+ * A playbook counts as managing its basket if the bot's newest verdict pass ran it (the env house
+ * roster included) OR the bot holds a subscription to it at all: a PAUSED playbook records no
+ * verdict, yet its exits still run (#4651), so verdicts alone would call a paused G1's lot orphaned.
+ * Null — no claim — when any of those ids is not a house playbook: a Store play authored on its
+ * owner's account has a basket this process cannot read, and guessing would be the false alarm.
+ */
+export function unmanagedHoldings(
+  holdings: BotHoldings,
+  verdicts: readonly PlaybookVerdict[] | null,
+  house: readonly Playbook[] = registeredPlaybooks(),
+): string[] | null {
+  const byId = new Map(house.map((playbook) => [playbook.id, playbook]));
+  const ids = new Set([...(verdicts ?? []).map((v) => v.playbookId), ...holdings.subscribedIds]);
+  const managed = new Set<string>();
+  for (const id of ids) {
+    const playbook = byId.get(id);
+    if (!playbook) return null;
+    for (const symbol of playbook.symbols) managed.add(symbol);
+  }
+  const held = holdings.positions
+    .filter((p) => p.quantity !== 0 && !isOccSymbol(p.symbol))
+    .map((p) => p.symbol);
+  return unmanagedTickers(held, managed);
 }
 
 /**
@@ -157,13 +200,22 @@ function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbea
   });
 }
 
-/** `records` newest first, as `DecisionDb.listByPersona` returns them. */
+/** `records` newest first, as `DecisionDb.listByPersona` returns them. `holdings` absent — the
+ *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off. */
 export function botHeartbeatView(
   records: readonly DecisionRecord[],
   now: Date,
   marketOpen: boolean,
+  holdings?: BotHoldings,
 ): HeartbeatView {
-  const base = { marketOpen, cadenceMs: PASS_CADENCE_MS, staleAfterMs: STALE_AFTER_MS };
+  const verdicts = latestVerdictPass(records)?.verdicts ?? null;
+  const orphans = holdings ? unmanagedHoldings(holdings, verdicts) : null;
+  const base = {
+    marketOpen,
+    cadenceMs: PASS_CADENCE_MS,
+    staleAfterMs: STALE_AFTER_MS,
+    ...(orphans ? { unmanaged: orphans } : {}),
+  };
   const newest = records[0];
   if (!newest) {
     return {
@@ -188,6 +240,6 @@ export function botHeartbeatView(
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
     playbooks: playbookLines(records),
-    rollCall: playbookRollCall(latestVerdictPass(records)?.verdicts ?? null, now),
+    rollCall: playbookRollCall(verdicts, now),
   };
 }

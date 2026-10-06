@@ -1,3 +1,4 @@
+import { unmanagedTickers } from "../domain/bots-universe.js";
 import type { Portfolio } from "../domain/types.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
@@ -92,9 +93,7 @@ export function followBotsStream(deps: {
       const roster = rosters[i];
       if (!roster) return [];
       const managed = new Set(roster.enabled.flatMap((e) => e.playbook.symbols));
-      const orphans = heldShareSymbols(portfolio).filter(
-        (s) => !(deps.universe.includes(s) || managed.has(s)),
-      );
+      const orphans = unmanagedTickers(heldShareSymbols(portfolio), managed, deps.universe);
       return orphans.length > 0 ? [`${roster.bot.persona.id} holds ${orphans.join(", ")}`] : [];
     });
     const key = lines.join("; ");

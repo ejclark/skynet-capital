@@ -29,15 +29,16 @@ export function ownsDesk(
   return resolveOwnedIds(session, config).includes(id);
 }
 
-type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall"> & {
+type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall" | "unmanaged"> & {
   readonly playbooks: readonly Omit<PlaybookHeartbeat, "playbookId">[] | null;
 };
 
 /** The heartbeat without each verdict line's id: the verdict, its mode and how long it has held
  *  are the bot's health; which playbook it is stays the owner's. */
 export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldHeartbeat {
-  // The roll call is nothing but playbook names, so a non-owner gets none of it.
-  const { rollCall: _rollCall, ...rest } = heartbeat;
+  // The roll call is nothing but playbook names, so a non-owner gets none of it — nor the lots it
+  // flags as unmanaged, which say which baskets this bot's playbooks do NOT cover (#4777).
+  const { rollCall: _rollCall, unmanaged: _unmanaged, ...rest } = heartbeat;
   return {
     ...rest,
     playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
