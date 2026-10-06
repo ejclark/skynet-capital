@@ -241,7 +241,7 @@ const PAIRS: readonly Pair[] = [
     symbols: [],
     evidence: {
       status: "not-studied",
-      call: "On a day nothing else traded, a few small picks ranked on whatever signal exists, sold the next trading day. A test of the order path, not a call on any name.",
+      call: "The first time in a session no bot has traded yet, a few small picks ranked on whatever signal exists, sold the next trading day. A test of the order path, not a call on any name.",
     },
   },
 ];

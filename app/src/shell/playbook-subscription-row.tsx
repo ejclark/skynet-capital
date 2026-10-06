@@ -57,7 +57,7 @@ export const PAUSED_NOTE =
   "and closes any option before it expires, except a covered call, kept so the shares can be " +
   "called away (a wheel still sells covered calls on shares it was assigned). Its names stay its " +
   "own until you unsubscribe. Only a playbook the bot is subscribed to and has on opens anything " +
-  "new on it.";
+  "new on it, apart from that covered call.";
 
 function stateOf(sub: SubscriptionView, human: boolean) {
   if (human) return { glyph: "◌", word: "Saved, never trades", key: "idle" };

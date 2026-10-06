@@ -74,27 +74,32 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
   // tests/discovery/playbook-store.spec.ts.
   "BETA-SCOUT": {
     description:
-      "The forced daily pick: on a day no bot placed a trade, it buys a few small picks ranked " +
-      "on whatever news and price signal already exists — a test that the order path works, " +
-      "not a call on any name. Its results are kept apart from every other playbook's.",
+      "The forced daily pick: the first time in a session that no bot has traded yet, it buys a " +
+      "few small picks ranked on whatever news and price signal already exists — a test that the " +
+      "order path works, not a call on any name. Its results are kept apart from every other " +
+      "playbook's.",
     enter:
-      "Once a day, after every bot has had its turn, if none placed a trade that day: it ranks the " +
-      "bots' ten names by the strength of their news sentiment and price momentum together, " +
-      "skips a name the bot already holds or another playbook on it trades, and buys the " +
-      "strongest few that point up — 0.5% of the bot's cash each. The mode you pick does not " +
-      "change that size; the capital you allocate caps a day's picks together.",
+      "At its first check of a session in which no bot has traded yet — usually just after 10:00 " +
+      "ET, when the guards first allow a buy — it ranks the bots' ten names by the strength of " +
+      "their news sentiment and price momentum together, skips a name the bot already holds or " +
+      "another playbook on it trades (Sauron's own rules excepted: it can pick any of his ten " +
+      "names), and buys the strongest few that point up — 0.5% of the bot's cash each. The mode " +
+      "you pick does not change that size; the capital you allocate caps a day's picks together, " +
+      "and compounding grows or shrinks that cap by what its picks have realized.",
     exitTakeProfit: "No price target: every pick is sold on the next trading day, up or down.",
     exitCutLosses: "No stop: a pick is held for one trading day, then sold, up or down.",
     hold:
-      "On a day anything else traded, or when no name points up, it buys nothing. Paused, it " +
-      "buys nothing new and still sells yesterday's picks.",
+      "Once any bot has traded that session it buys nothing more that day, and a trade after its " +
+      "pick does not undo the pick. When no name points up, it buys nothing and looks again at " +
+      "the next check. Paused, it buys nothing new and still sells yesterday's picks.",
     notes: [
       {
         label: "Two switches",
         text:
           "It buys only while both are on: the forced-pick setting in operations, and this " +
-          "subscription. It runs on one bot, the first one the bots app runs (Sauron today); " +
-          "subscribed on any other bot, it places nothing.",
+          "subscription. Switching the setting off stops new picks only — picks it holds are " +
+          "still sold on the next trading day. It runs on one bot, the first one the bots app " +
+          "runs (Sauron today); subscribed on any other bot, it places nothing.",
       },
       {
         label: "Not subscribed",

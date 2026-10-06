@@ -1,10 +1,16 @@
 import { readFileSync } from "node:fs";
+import { InMemoryBroker } from "../../src/adapters/in-memory-broker.js";
+import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
+import { LiveCycleRunner } from "../../src/autonomous/live-cycle.js";
+import { SafetyController } from "../../src/autonomous/safety.js";
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
+import type { OrderIntent } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { betaScoutIntents } from "../../src/playbooks/beta-scout.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
+import { scoutSkipSymbols } from "../../src/scripts/autonomous-scout-staging.js";
 import { aContext, aPortfolio, aPosition, aSubscription } from "../support/builders.js";
 
 describe("playbookStoreCatalog", () => {
@@ -186,6 +192,94 @@ describe("playbookStoreCatalog", () => {
       expect(note("Not subscribed")).toContain("Picks it already holds are still sold");
       expect(card().hold).toContain(
         "Paused, it buys nothing new and still sells yesterday's picks",
+      );
+    });
+
+    // Review of slice 10, finding 2: the card said it bought only on a day nothing else traded. It
+    // buys at the first check in which no bot has traded yet, and a later trade does not undo it —
+    // checked here against the live cycle, not only the copy.
+    describe("when it buys, as the live cycle runs it", () => {
+      const q = (symbol: string) => ({ symbol, bid: 100, ask: 100, last: 100, asOf: "t" });
+      function day() {
+        const broker = new InMemoryBroker(1_000_000, [q("MSFT"), q("AMD")]);
+        let buysAmd = false;
+        const persona = {
+          id: "host",
+          name: "Host",
+          thesis: "t",
+          decide: (): OrderIntent[] =>
+            buysAmd
+              ? [{ symbol: "AMD", side: "buy", quantity: 5, type: "market", reason: "t" }]
+              : [],
+        };
+        const runner = new LiveCycleRunner({
+          traders: [
+            {
+              personaName: "Host",
+              broker,
+              trader: new AutonomousTrader({ persona, broker, risk: { maxPositionPct: 0.5 } }),
+            },
+          ],
+          safety: new SafetyController(),
+          blockedReason: () => null,
+          scout: {
+            maxPicks: 1,
+            broker,
+            universe: ["MSFT"],
+            managedSymbols: new Set(),
+            risk: { maxPositionPct: 0.5 },
+            mode: "live",
+            subscriptions: () => [aSubscription("host", "BETA-SCOUT")],
+          },
+        });
+        const held = async () => (await broker.getPortfolio()).positions.map((p) => p.symbol);
+        return { runner, held, botTrades: () => (buysAmd = true) };
+      }
+      const at = (time: string) =>
+        aContext({ MSFT: { last: 100, sentiment: 0.9 }, AMD: { last: 100 } }, time);
+
+      it("buys at the first check no bot has traded yet, and a later trade does not undo it", async () => {
+        expect(card().description).toContain(
+          "the first time in a session that no bot has traded yet",
+        );
+        expect(card().hold).toContain("a trade after its pick does not undo the pick");
+        const { runner, held, botTrades } = day();
+        await runner.runCycle(at("2026-07-24T14:00:00Z"));
+        botTrades();
+        await runner.runCycle(at("2026-07-24T19:00:00Z"));
+        expect((await held()).sort()).toEqual(["AMD", "MSFT"]);
+      });
+
+      it("once a bot has traded that session, it buys nothing more that day", async () => {
+        expect(card().hold).toContain(
+          "Once any bot has traded that session it buys nothing more that day",
+        );
+        const { runner, held, botTrades } = day();
+        botTrades();
+        await runner.runCycle(at("2026-07-24T14:00:00Z"));
+        await runner.runCycle(at("2026-07-24T19:00:00Z"));
+        expect(await held()).toEqual(["AMD"]);
+      });
+    });
+
+    // Finding 11: the card said it skips every name another playbook trades; SAURON's ten are not
+    // skipped — the scout and his rules share them, exactly as `scoutSkipSymbols` decides.
+    it("says it can pick any of Sauron's ten names, as the skip list it reads decides", () => {
+      expect(card().enter).toContain(
+        "Sauron's own rules excepted: it can pick any of his ten names",
+      );
+      const roster = resolveBotRoster(
+        { persona: new SauronPersona(), credentials: { apiKey: "k", apiSecret: "s" } },
+        [],
+        [aSubscription("sauron", "SAURON")],
+      );
+      expect([...scoutSkipSymbols(roster)]).toEqual([]);
+    });
+
+    // Finding 1: switching the setting off used to strand its picks; now it stops new ones only.
+    it("says switching the setting off stops new picks only", () => {
+      expect(note("Two switches")).toContain(
+        "Switching the setting off stops new picks only — picks it holds are still sold",
       );
     });
   });

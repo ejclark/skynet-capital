@@ -101,8 +101,8 @@ export function playbookRollCall(
     const mode = verdict ? { mode: verdict.mode } : {};
     const gap = gaps[playbookId];
     if (gap) return { playbookId, status: "blocked", ...mode, reason: gap };
-    if (!verdict) return { playbookId, status: "off", reason: OFF_REASON };
     const playbook = byId.get(playbookId);
+    if (!verdict) return { playbookId, status: "off", reason: playbook?.whenOff ?? OFF_REASON };
     if (!playbook) {
       return { playbookId, status: "armed", ...mode, reason: ARMED_REASON };
     }

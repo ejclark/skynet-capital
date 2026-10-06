@@ -176,6 +176,10 @@ describe("the forced daily pick on the roll call", () => {
 
   it("reads off on a bot it never runs on, or while unarmed, even when subscribed", () => {
     expect(lineFor(false)).toMatchObject({ status: "off" });
+    // Review of slice 10, finding 3: not "not switched on" — the member may well have switched it on.
+    expect(lineFor(false)?.reason).toBe(
+      "Not running here: it runs only on the first bot the bots app runs, and only while the forced-pick setting is on in operations.",
+    );
   });
 
   it("places nothing through the bot's own roster: its picks come from the live cycle", () => {

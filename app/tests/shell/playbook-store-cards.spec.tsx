@@ -208,7 +208,7 @@ describe("a subscribed card", () => {
     // #4642 slice 10: nothing opens without a subscribed playbook that is on — so a paused SAURON
     // on Sauron's own account no longer leaves his rules buying.
     expect(PAUSED_NOTE).toContain(
-      "Only a playbook the bot is subscribed to and has on opens anything new on it",
+      "Only a playbook the bot is subscribed to and has on opens anything new on it, apart from that covered call",
     );
     expect(PAUSED_NOTE).not.toContain("hand them back to the bot's own rules");
   });

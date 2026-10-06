@@ -38,8 +38,9 @@ const BETA_SCOUT_SIZE_PCT = 0.005;
  * - **No names of its own** (`symbols: []`). It picks among the bots' ten names on the day, minus
  *   any another playbook trades, so it must never take a name from a bot's own rules or from
  *   another playbook — an empty basket claims nothing anywhere a basket is read.
- * - **No window** (`keyedOn: "event"`): what opens it is a day nothing else traded, which no date
- *   predicts. Its verdict is always "no window", and the roll call says it watches for its signal.
+ * - **No window** (`keyedOn: "event"`): what opens it is the first check of a session in which no
+ *   bot has traded yet, which no date predicts. Its verdict is always "no window", and the roll
+ *   call says it watches for its signal — or, where it does not run, why (`whenOff`).
  * - **Mode never changes its size** (every mode is the same 0.5% of cash per pick); the mode an
  *   owner picks is stamped on its orders, as for any playbook.
  */
@@ -47,8 +48,11 @@ export const BETA_SCOUT: Playbook = {
   id: BETA_SCOUT_ID,
   symbols: [],
   thesis:
-    "on a day nothing else traded, a few small forced picks ranked on whatever signal exists — a " +
-    "test of the order path, not a conviction call",
+    "the first time in a session no bot has traded yet, a few small forced picks ranked on " +
+    "whatever signal exists — a test of the order path, not a conviction call",
+  whenOff:
+    "Not running here: it runs only on the first bot the bots app runs, and only while the " +
+    "forced-pick setting is on in operations.",
   evidence:
     "Eric's beta-phase directive (2026-08-13): exercise the machinery rather than wait for a " +
     "signal. No docs/research/ study stands behind its picks; they are kept apart from every " +
