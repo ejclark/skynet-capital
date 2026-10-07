@@ -105,10 +105,15 @@ export function spanOf(probe: WindowProbe): string {
     : `${opensAt} to ${closesAt} sessions before the print`;
 }
 
+/** The research doc a citation names, as its route on the existing research shelf. */
+export function researchHref(citation: string): string | undefined {
+  const slug = citation.match(/docs\/research\/([\w./-]+)\.md/)?.[1];
+  return slug ? `/research/${slug}` : undefined;
+}
+
 /** The research doc a play cites, as its route on the existing research shelf. */
 export function evidenceHref(playbook: Playbook): string | undefined {
-  const slug = playbook.evidence.match(/docs\/research\/([\w./-]+)\.md/)?.[1];
-  return slug ? `/research/${slug}` : undefined;
+  return researchHref(playbook.evidence);
 }
 
 /** A short, checkable claim about the play — derived by the probe, never hand-typed. */
