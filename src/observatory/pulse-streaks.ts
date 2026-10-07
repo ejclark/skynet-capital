@@ -1,5 +1,10 @@
 import type { TradeStats } from "../trading/trade-stats.js";
-import { currentStreakIn, type DayStreak, dailyChanges, longestStreakIn } from "./day-trophies.js";
+import {
+  currentStreakIn,
+  type DayStreak,
+  dailyChangesOf,
+  longestStreakIn,
+} from "./day-trophies.js";
 import { formatPctOrDash } from "./desk-data.js";
 import type { EquitySample } from "./history-store.js";
 import { formatSigned } from "./render-atoms.js";
@@ -55,9 +60,12 @@ function dayRow(label: string, streak: DayStreak | null): PulseStreakRow | null 
   };
 }
 
-/** The three day rows share one keying of the history: each sample is put in its day once. */
+/**
+ * The three day rows share one keying of the history: each sample is put in its day once.
+ * `samples` must already be in ascending `at` order — see `pulseStreaks`.
+ */
 function dayRows(samples: readonly EquitySample[], timezone: string | undefined): PulseStreakRow[] {
-  const changes = dailyChanges(samples, timezone);
+  const changes = dailyChangesOf(samples, timezone);
   const current = currentStreakIn(changes);
   return [
     dayRow(current?.direction === "red" ? "Running red" : "Running green", current),
@@ -97,7 +105,11 @@ function tradeRows(stats: TradeStats): PulseStreakRow[] {
   return rows;
 }
 
-/** Both run families for one desk, each group carrying its own empty state. */
+/**
+ * Both run families for one desk, each group carrying its own empty state. `samples` must already
+ * be in ascending `at` order — `deskPulseView` sorts once for the whole Pulse request and this is
+ * one of the sections that reuses it (#4612 slice 7).
+ */
 export function pulseStreaks(
   samples: readonly EquitySample[],
   stats: TradeStats,

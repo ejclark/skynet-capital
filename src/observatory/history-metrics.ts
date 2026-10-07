@@ -74,7 +74,12 @@ export function changeOver(
  * measured against (docs/BACKLOG.md: recorded at onboarding). Null with no history.
  */
 export function seedBaseline(samples: readonly EquitySample[]): EquitySample | null {
-  return ordered(samples)[0] ?? null;
+  return seedBaselineOf(ordered(samples));
+}
+
+/** `seedBaseline` over samples already in ascending `at` order — skips the sort (#4612 slice 7). */
+export function seedBaselineOf(sorted: readonly EquitySample[]): EquitySample | null {
+  return sorted[0] ?? null;
 }
 
 /**
@@ -86,7 +91,14 @@ export function reachedMultipleAt(
   samples: readonly EquitySample[],
   multiple: number,
 ): EquitySample | null {
-  const sorted = ordered(samples);
+  return reachedMultipleAtOf(ordered(samples), multiple);
+}
+
+/** `reachedMultipleAt` over samples already in ascending `at` order — skips the sort. */
+export function reachedMultipleAtOf(
+  sorted: readonly EquitySample[],
+  multiple: number,
+): EquitySample | null {
   const seed = sorted[0];
   if (!seed || seed.equity <= 0) return null;
   return sorted.find((s) => s.equity >= seed.equity * multiple) ?? null;
@@ -95,6 +107,11 @@ export function reachedMultipleAt(
 /** The first instant this participant's equity reached 2× its seed baseline, or null. */
 export function doubledAt(samples: readonly EquitySample[]): EquitySample | null {
   return reachedMultipleAt(samples, 2);
+}
+
+/** `doubledAt` over samples already in ascending `at` order — skips the sort. */
+export function doubledAtOf(sorted: readonly EquitySample[]): EquitySample | null {
+  return reachedMultipleAtOf(sorted, 2);
 }
 
 /** A race trophy: who earned it and when. Awarded once — earliest instant wins. */

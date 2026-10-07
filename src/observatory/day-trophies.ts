@@ -41,7 +41,8 @@ export interface DayChange {
 
 /**
  * The last sample of each recorded day, oldest day first. Intraday noise collapses to the close.
- * Runs over a desk's whole history, so the zone's formatter is resolved once (`marketDayKeyer`).
+ * `samples` must already be in ascending `at` order — `dailyChangesOf`'s per-participant groups
+ * inherit that order from `byParticipant`'s stable partition, so there is nothing left to sort here.
  */
 function dayCloses(
   samples: readonly EquitySample[],
@@ -49,7 +50,7 @@ function dayCloses(
 ): { day: string; at: string; equity: number }[] {
   const closes = new Map<string, { day: string; at: string; equity: number }>();
   const dayOf = marketDayKeyer(timezone);
-  for (const s of ordered(samples)) {
+  for (const s of samples) {
     const day = dayOf(s.at);
     closes.set(day, { day, at: s.at, equity: s.equity });
   }
@@ -66,8 +67,20 @@ export function dailyChanges(
   samples: readonly EquitySample[],
   timezone: string = MARKET_TIMEZONE,
 ): DayChange[] {
+  return dailyChangesOf(ordered(samples), timezone);
+}
+
+/**
+ * `dailyChanges` over samples already in ascending `at` order — skips the sort. A desk's Pulse
+ * view needs the same order for its curve and drawdown too, so the request sorts once and every
+ * section reuses it (#4612 slice 7).
+ */
+export function dailyChangesOf(
+  orderedSamples: readonly EquitySample[],
+  timezone: string = MARKET_TIMEZONE,
+): DayChange[] {
   const changes: DayChange[] = [];
-  for (const [participantId, group] of byParticipant(samples)) {
+  for (const [participantId, group] of byParticipant(orderedSamples)) {
     const closes = dayCloses(group, timezone);
     for (let i = 1; i < closes.length; i += 1) {
       const prior = closes[i - 1];
