@@ -18,6 +18,8 @@
 //                playbooks open (#4642 slice 10, #4652).
 //   · `initiators` — who started the bots' closed trades: a playbook, the forced pick or a bot's
 //                own rules, the account's split above every bot's (#4450 slice 4).
+//   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
+//                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -152,6 +154,8 @@ async function frame({ tag, view, account = SAURON, expect, scrollTo, path, act,
   await close();
 }
 
+// The subscribe form sits behind its row's "Subscribe" disclosure (#4469 slice 3b).
+const openSubscribe = (page) => page.locator(".pb-subscribe-disclosure > summary").first().click();
 const PHONE = { width: 390, height: 844 };
 const STORE = "/app/research?section=playbooks";
 const groups = {
@@ -191,11 +195,17 @@ const groups = {
     {
       tag: "phone-delegation-earned",
       view: views.fresh,
-      expect: "Capital to delegate",
+      expect: "Subscribe",
       viewport: PHONE,
+      act: openSubscribe,
     },
     { tag: "delegation-locked", view: views.fogged, expect: "Delegating capital opens after" },
-    { tag: "delegation-earned", view: views.fresh, expect: "Capital to delegate" },
+    {
+      tag: "delegation-earned",
+      view: views.fresh,
+      expect: "Subscribe",
+      act: openSubscribe,
+    },
   ],
   // Who started the bots' closed trades (#4450 slice 4): the account's split, then every bot's.
   initiators: [
@@ -236,7 +246,7 @@ const groups = {
       view: views.sauron,
       expect: "Paused",
       viewport: PHONE,
-      scrollTo: "S1-NVDA",
+      scrollTo: "The pre-print run-up",
     },
     {
       tag: "phone-4-human-door",
@@ -280,24 +290,24 @@ groups.options = [
   {
     tag: "phone-option-crwv-wheel",
     view: views.catalog,
-    expect: "CRWV-WHEEL",
+    expect: "The wheel",
     viewport: PHONE,
-    scrollTo: "CRWV-WHEEL",
+    scrollTo: "The wheel",
     path: STORE,
   },
   {
     tag: "phone-option-nvda-spread",
     view: views.catalog,
-    expect: "NVDA-CALL-SPREAD",
+    expect: "The call spread",
     viewport: PHONE,
-    scrollTo: "NVDA-CALL-SPREAD",
+    scrollTo: "The call spread",
     path: STORE,
   },
   {
     tag: "desktop-option-plays",
     view: views.catalog,
-    expect: "CRWV-WHEEL",
-    scrollTo: "CRWV-WHEEL",
+    expect: "The wheel",
+    scrollTo: "The wheel",
     path: STORE,
   },
 ];
@@ -376,6 +386,42 @@ groups["subscribed-only"] = [
     viewport: undefined,
     quality: 48,
   }),
+];
+
+// #4469 slice 3b: the Store by strategy. Sauron holds the wheel on CRWV (the owner's conviction) and
+// the run-up on NVDA, so those two strategy cards lead with his pairs; the catalog frame is the same
+// deck with no account. The wheel and run-up rows, then the tactical card's folded "? not studied".
+views.byStrategy = withCounts(
+  playbookStoreView([
+    subscription("CRWV-WHEEL", { mode: "aggressive", capitalAllocated: 75_000 }),
+    subscription("S1-NVDA", { capitalAllocated: 50_000, compoundAllocation: true }),
+  ]),
+  { ...COUNTS, "CRWV-WHEEL": 1 },
+);
+const toStrategy = (name) => (page) =>
+  page.locator(".pb-strategy").filter({ hasText: name }).first().evaluate(underHeader);
+const strategyFrame = (tag, over = {}) => ({
+  tag,
+  view: views.byStrategy,
+  expect: "The wheel",
+  viewport: PHONE,
+  path: STORE,
+  ...over,
+});
+groups.strategies = [
+  strategyFrame("phone-1-owner-pairs", { path: undefined, act: toStrategy("The wheel") }),
+  strategyFrame("phone-2-rows-by-evidence", {
+    path: undefined,
+    expect: "The pre-print run-up",
+    act: toStrategy("The pre-print run-up"),
+  }),
+  strategyFrame("phone-3-folded-line", {
+    view: views.catalog,
+    expect: "Hardcore Sauron's tactics",
+    act: toStrategy("Hardcore Sauron's tactics"),
+  }),
+  strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
+  strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),
 ];
 
 const only = process.env.FRAMES;

@@ -35,6 +35,9 @@ export interface Strategy {
   readonly id: StrategyId;
   /** Read as "<name> on <TICKER>" wherever a pair is named to its owner (criterion 14). */
   readonly name: string;
+  /** What it does, in one line a phone shows under the card's name — said of the strategy, never of
+   *  one ticker (the pair's own `call` carries the ticker's claim). */
+  readonly summary: string;
   /** The free screen that answers "does this ticker fit", with `<SYM>` for the ticker. */
   readonly screen?: string;
   /** Why there is no screen, when there is none — said, never left blank. */
@@ -53,6 +56,8 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   "pre-print-run-up": {
     id: "pre-print-run-up",
     name: "the pre-print run-up",
+    summary:
+      "Buys shares in the weeks before a confirmed earnings report and sells by it; each ticker has its own measured exit.",
     instrument: "shares",
     dateKeyed: true,
     screen: "node scripts/research/earnings-cycle.mjs <SYM>",
@@ -60,12 +65,15 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   wheel: {
     id: "wheel",
     name: "the wheel",
+    summary:
+      "Sells one cash-secured put about a month out, then covered calls on any shares it is assigned.",
     instrument: "options",
     screen: "node scripts/research/premium-fit.mjs <SYM>",
   },
   "call-spread": {
     id: "call-spread",
     name: "the call spread",
+    summary: "The run-up as a call debit spread: out before the report, on the run-up's evidence.",
     instrument: "options",
     dateKeyed: true,
     // The spread trades the run-up's window, so the run-up's screen is its fit test; its own P/L
@@ -75,24 +83,30 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   event: {
     id: "event",
     name: "the TACO event play",
+    summary: "Trades a news-driven pump story; dark until a news feed is wired to it.",
     instrument: "shares",
     noScreen: "Its trigger is a news story, and no news feed is wired to it yet.",
   },
   tactical: {
     id: "tactical",
     name: "hardcore Sauron's tactics",
+    summary: "Small tranches at every extreme and every run across a basket of ten names.",
     instrument: "shares",
     noScreen: "It trades as research, measured by trade volume, not by a backtest.",
   },
   "persona-rules": {
     id: "persona-rules",
     name: "Sauron's own rules",
+    summary:
+      "Sauron's own rules over the bots' ten names: sell euphoria that has rolled over, buy panic that has stopped falling.",
     instrument: "shares",
     noScreen: "It is a persona's whole rule set, not a fit test for one ticker.",
   },
   "forced-pick": {
     id: "forced-pick",
     name: "the forced daily pick",
+    summary:
+      "A few small picks on a quiet session, sold the next trading day, to test the order path.",
     instrument: "shares",
     noScreen: "It tests the order path on a quiet day; no ticker is chosen for fit.",
   },

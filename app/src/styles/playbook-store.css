@@ -380,3 +380,91 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* The Store by strategy (#4469 slice 3b). A strategy card holds the owner's own pairs first, the
+   strategy in one line, then a row per ticker. A row is set off by a hairline, never a second
+   card, so a phone scrolls one card per strategy. The status word rides with its glyph; nothing
+   here means anything by hue (a standing reader is red/green colorblind). */
+.pb-yours {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pb-yours-h {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pb-pairs {
+  display: flex;
+  flex-direction: column;
+}
+
+.pb-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.pb-pair-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.pb-pair-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pb-pair-call,
+.pb-pair-note,
+.pb-pair-facts {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-pair-note,
+.pb-pair-facts {
+  color: var(--muted);
+}
+
+.pb-pair-facts a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.pb-pair-rules > summary,
+.pb-subscribe-disclosure > summary,
+.pb-folded > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.pb-pair-rules[open] > summary {
+  margin-bottom: 6px;
+}
+
+.pb-pair-rules[open],
+.pb-subscribe-disclosure[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pb-folded {
+  border-top: 1px solid var(--border);
+}

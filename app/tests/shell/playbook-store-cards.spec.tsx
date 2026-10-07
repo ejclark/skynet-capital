@@ -1,18 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
+  PairRowView,
   PlaybookStoreCardView,
   PlaybookStoreView,
+  StrategyCardView,
   SubscriptionView,
 } from "../../src/live/playbook-store";
-import { PlaybookCard } from "../../src/shell/playbook-store-cards";
+import { StrategyCard } from "../../src/shell/playbook-strategy-cards";
 import { PAUSED_NOTE } from "../../src/shell/playbook-subscription-row";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
 /**
- * The Store card's controls (#4642 slice 7, #4649; #4610):
+ * The Store strategy card's controls (#4642 slice 7, #4649; #4610):
  *  - WHEN an owner edits a bot's subscription, the card SHALL post mode, capital and symbols to
  *    configure — never resubscribe, so a paused subscription stays paused.
  *  - The symbols filter SHALL be chips drawn from the card's basket (shown only for a basket of
@@ -78,20 +80,47 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+/** A pair row for a card, as the server would send it: researched, with the card's subscription. */
+const pairOf = (c: PlaybookStoreCardView, over: Partial<PairRowView> = {}): PairRowView => ({
+  id: c.id,
+  symbols: c.symbols,
+  status: "researched",
+  statusLabel: "✓ researched",
+  stale: false,
+  call: "The call.",
+  ...(c.subscription ? { subscription: c.subscription } : {}),
+  ...over,
+});
+
+const strategyOf = (pairs: readonly PairRowView[]): StrategyCardView => ({
+  strategy: "pre-print-run-up",
+  name: "the pre-print run-up",
+  instrument: "shares",
+  summary: "One line on the strategy.",
+  pairs,
+});
+
 function mount(
   c: PlaybookStoreCardView,
-  over: { delegation?: DelegationGateView; botsOnly?: BotsOnlyGateView } = {},
+  over: {
+    delegation?: DelegationGateView;
+    botsOnly?: BotsOnlyGateView;
+    pair?: Partial<PairRowView>;
+  } = {},
 ) {
   const onChanged = rstest.fn();
   render(
-    <PlaybookCard
+    <StrategyCard
       accountId="sauron"
-      card={c}
+      strategy={strategyOf([pairOf(c, over.pair)])}
+      cardsById={new Map([[c.id, c]])}
       canManage
       delegation={over.delegation ?? OPEN}
       botsOnly={over.botsOnly ?? BOT}
       onChanged={onChanged}
       accountName="Sauron"
+      metricsFor={() => undefined}
+      houseFor={() => undefined}
     />,
   );
   return onChanged;
@@ -296,9 +325,7 @@ describe("a subscribed card", () => {
     expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
     expect(screen.queryByText(/On$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    const section = screen.getByText("S1-NVDA").closest("section");
-    if (!(section instanceof HTMLElement)) throw new Error("no card");
-    fireEvent.click(within(section).getByRole("button", { name: "Unsubscribe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe" }));
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toEqual({
       url: "/api/playbook-store/unsubscribe",
@@ -326,27 +353,36 @@ describe("the deck, for an owned account", () => {
     id,
   });
 
-  it("leads with the playbooks the account is subscribed to, catalog order otherwise", async () => {
+  it("leads with the strategies the account holds a pair of, catalog order otherwise", async () => {
+    const cards = [
+      named("A-FIRST", ["NVDA"]),
+      named("B-ON", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: true }),
+      named("C-PLAIN", ["NVDA"]),
+      named("D-PAUSED", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: false }),
+    ];
     mountSection({
-      cards: [
-        named("A-FIRST", ["NVDA"]),
-        named("B-ON", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: true }),
-        named("C-PLAIN", ["NVDA"]),
-        named("D-PAUSED", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: false }),
-      ],
+      cards,
+      strategies: cards.map((c) => ({
+        ...strategyOf([pairOf(c)]),
+        strategy: c.id,
+        name: `the ${c.id.toLowerCase()}`,
+      })),
       capitalUnderManagement: 1,
       canManage: true,
       delegation: OPEN,
       botsOnly: BOT,
     });
-    await screen.findByText("B-ON");
-    const order = [...document.querySelectorAll(".pb-card-id")].map((el) => el.textContent);
-    expect(order).toEqual(["B-ON", "D-PAUSED", "A-FIRST", "C-PLAIN"]);
+    await screen.findByText("The b-on");
+    const order = [...document.querySelectorAll(".pb-strategy .pb-card-id")].map(
+      (el) => el.textContent,
+    );
+    expect(order).toEqual(["The b-on", "The d-paused", "The a-first", "The c-plain"]);
   });
 
   it("says the bots-only rule once at the top on a human account", async () => {
     mountSection({
       cards: [named("S1-NVDA", ["NVDA"])],
+      strategies: [strategyOf([pairOf(named("S1-NVDA", ["NVDA"]))])],
       capitalUnderManagement: 0,
       canManage: true,
       delegation: OPEN,
