@@ -378,6 +378,8 @@ export function claimFeedbackReply(
   // `admission.edit` is this lane's one injected write, same reason `gateAdmission` injects its own:
   // the refusal path's label fix-up is a behaviour worth a spec, not a side effect to discover live.
   const edit = admission.edit ?? editLabels;
+  // #3959 slice 2 — a PLAN issue's lane is woken by the unpark itself, see `resumePlanOnReply`.
+  if (intent.lane === "plan") return resumePlanOnReply(issue, intent, edit);
   const gate = gateAdmission(issue, admission); // #3960 — the same gate as every other claim
   if (!gate.admit) {
     unpark(issue.number, intent.answered, edit); // see WHY THE REFUSAL PATH UNPARKS TOO, above
@@ -409,6 +411,37 @@ export function claimFeedbackReply(
   unpark(issue.number, intent.answered, edit);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model, reply, replyAt };
+}
+
+/**
+ * THE PLAN LANE'S DOOR (#3959 slice 2, sub-issue #4301). A reply on a blocked `plan` issue does the
+ * one thing a human would do by hand — takes the answered label off — and leaves the rest to the
+ * machinery that already exists for exactly that event: `moneypenny-events.yml`'s plan gate wakes on
+ * `unlabeled` of a parking label, and `labelEventReady` → `claimPlan` then runs the SAME admission
+ * gate, lease, `in-progress` and model tier as every other plan claim. No second claim path, so no
+ * second place for the plan lane's rules to drift.
+ *
+ * The App token's label writes DO start workflow runs (a GITHUB_TOKEN's do not) — the same fact
+ * slice 1's feedback path leans on for the board's live Blocked → In Progress move.
+ *
+ * What it deliberately does NOT do: take a lease or hand the build a reply id. The plan build reads
+ * every trusted comment as step 0 and the reply is one of them; `plan-build.md`'s resume section
+ * makes its receipt say what that reply decided, which is criterion 3's forcing function. A downstream
+ * refusal (spigot, cap) leaves the issue `ready` and un-parked with the queue note — the retry
+ * sweep's contract, the same one `claimFeedbackReply`'s refusal path restores by hand.
+ */
+function resumePlanOnReply(issue, intent, edit) {
+  unpark(issue.number, intent.answered, edit);
+  console.log(
+    `::notice::unparked plan #${issue.number} (\`${intent.answered}\` answered) — the plan gate's unlabeled path claims it`,
+  );
+  return {
+    claimed: false,
+    unparked: true,
+    lane: "plan",
+    number: issue.number,
+    reason: intent.reason,
+  };
 }
 
 /**

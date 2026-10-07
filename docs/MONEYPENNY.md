@@ -103,8 +103,9 @@ you" tier is a dated snapshot of the same query, never a second list to reconcil
 - **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout stays out of
   Blocked until the ask is written (#3913) — an unwritten ask is not an open ask yet.
 - **From a session, without GraphQL:** `node scripts/issues.mjs show <n>` prints the column the
-  rule yields. Answering is a comment on the Blocked issue itself; once #3959's resume path lands
-  (slice 1 is #4605), an authorized reply restarts the waiting lane without a session noticing it.
+  rule yields. Answering is a comment on the Blocked issue itself: an authorized reply on a
+  `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
+  noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
 
 ## Authority — she drives the architecture, within the same fence as everyone else
 
