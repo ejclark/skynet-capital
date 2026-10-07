@@ -14,8 +14,8 @@ test("the playbook cards carry the retired plays' evidence and window", async ({
   await page.goto("/app/research?section=playbooks");
   const cards = page.locator(".pb-card");
   await expect(cards.first()).toBeVisible();
-  // Every card keeps its evidence line (the Plays card's footer); a strategic card also keeps its
+  // Every strategy card keeps its rows' evidence line (the Plays card's footer); a row also keeps its
   // window — a tactical one honestly shows none, so assert at least one card carries it.
-  await expect(cards.first().locator(".pb-card-evidence")).not.toBeEmpty();
+  await expect(cards.first().locator(".pb-card-evidence").first()).not.toBeEmpty();
   await expect(page.locator(".pb-card-facts dt", { hasText: "Window" }).first()).toBeVisible();
 });
