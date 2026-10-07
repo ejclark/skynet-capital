@@ -7,6 +7,7 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
@@ -47,6 +48,12 @@ import {
  * here can gate a bot's own trading. Unsubscribe and set-enabled pass ownership only — on every
  * owned account, human or bot — because restricting how someone leaves or pauses a position would
  * be a safety bug, not a lesson.
+ *
+ * A NEW subscription then passes what its pair needs (#4469 slice 3a, criterion 9,
+ * `subscriptions/subscribe-eligibility.ts`): an id something resolves, current research, a print on
+ * file for a date-keyed window, a ticker no same-kind pair on the bot already trades. A subscription
+ * the account already holds is never re-checked — Edit, Pause, Unsubscribe and a replacing
+ * re-subscribe go through as before.
  */
 
 const BODY_CAP_BYTES = 4_096;
@@ -136,6 +143,9 @@ function subscriberCounts(
   return counts;
 }
 
+const asOfIso = (config: DashboardServerConfig): string =>
+  (config.now?.() ?? new Date()).toISOString();
+
 async function serveStoreIndex(
   req: IncomingMessage,
   res: ServerResponse,
@@ -154,6 +164,7 @@ async function serveStoreIndex(
     await viewerDelegationLocked(config, session),
     [],
     Boolean(owns && id && isHumanAccount(config, id)),
+    asOfIso(config),
   );
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state
@@ -166,6 +177,10 @@ async function serveStoreIndex(
       ? {
           ...view,
           cards: view.cards.map((card) => ({ ...card, subscribers: counts.get(card.id) ?? 0 })),
+          strategies: view.strategies.map((card) => ({
+            ...card,
+            pairs: card.pairs.map((row) => ({ ...row, subscribers: counts.get(row.id) ?? 0 })),
+          })),
         }
       : view,
   );
@@ -187,13 +202,19 @@ async function handleSubscribe(
     sendJson(res, 400, { error: "malformed subscribe body" });
     return;
   }
-  const refusal = await delegationRefusal(
-    body.id,
-    ownedIds,
-    "You can only subscribe your own account.",
-    config,
-    session,
-  );
+  const refusal =
+    (await delegationRefusal(
+      body.id,
+      ownedIds,
+      "You can only subscribe your own account.",
+      config,
+      session,
+    )) ??
+    newSubscriptionRefusal({
+      playbookId: body.playbookId,
+      subscriptions: store.load()[body.id] ?? [],
+      asOfIso: asOfIso(config),
+    });
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });
     return;

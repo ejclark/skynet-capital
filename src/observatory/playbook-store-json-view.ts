@@ -10,29 +10,66 @@ import {
   type PlaybookStoreEntry,
   playbookStoreCatalog,
 } from "../discovery/playbook-store.js";
+import {
+  type PairRowEntry,
+  type StrategyCardEntry,
+  strategyCatalog,
+} from "../discovery/playbook-store-strategies.js";
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription } from "../domain/types.js";
+import { findPair, type Pair } from "../playbooks/pair-table.js";
+import {
+  handOffNote,
+  newSubscriptionRefusal,
+  notTradingNote,
+  subscribedPairs,
+} from "../subscriptions/subscribe-eligibility.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 
+interface SubscriptionView {
+  readonly mode: PlaybookSubscription["mode"];
+  /** Absent = uncapped (no subscription budget — #4535's seeded house roster). */
+  readonly capitalAllocated?: number;
+  readonly enabled: boolean;
+  /** Symbol-targeting filter (#885) — absent means unrestricted. */
+  readonly symbols?: readonly string[];
+  /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
+   *  #3527 slice 3) — absent means off, the flat-budget default every subscription had before
+   *  this field existed. */
+  readonly compoundAllocation?: boolean;
+}
+
+/** The old per-playbook card — kept one release beside `strategies` (#4469 slice 3a). */
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
-  readonly subscription?: {
-    readonly mode: PlaybookSubscription["mode"];
-    /** Absent = uncapped (no subscription budget — #4535's seeded house roster). */
-    readonly capitalAllocated?: number;
-    readonly enabled: boolean;
-    /** Symbol-targeting filter (#885) — absent means unrestricted. */
-    readonly symbols?: readonly string[];
-    /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
-     *  #3527 slice 3) — absent means off, the flat-budget default every subscription had before
-     *  this field existed. */
-    readonly compoundAllocation?: boolean;
-  };
+  readonly subscription?: SubscriptionView;
+}
+
+/** One pair on a strategy card, joined to the viewer's own account. */
+interface PairRowView extends PairRowEntry {
+  /** The account's subscription to this pair id, on or paused. */
+  readonly subscription?: SubscriptionView;
+  /** Why a NEW subscription to this pair would be refused — the API's own sentence (criterion 9).
+   *  Only for a viewer who may manage the account and holds no subscription to it. */
+  readonly subscribeRefusal?: string;
+  /** A share pair whose ticker an option pair on this bot takes: "the call spread trades NVDA on
+   *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
+  readonly handOff?: string;
+  /** An option pair the bot refuses because another option pair it reads first owns the ticker:
+   *  "not trading — the call spread owns NVDA". */
+  readonly notTrading?: string;
+}
+
+interface StrategyCardView extends Omit<StrategyCardEntry, "pairs"> {
+  readonly pairs: readonly PairRowView[];
 }
 
 export interface PlaybookStoreView {
+  /** One card per playbook id — the shape the app renders today, kept one release (#4469 3a). */
   readonly cards: readonly PlaybookStoreCardView[];
+  /** One card per strategy, a row per pair — what slice 3b moves the Store onto. */
+  readonly strategies: readonly StrategyCardView[];
   /** Sum of capitalAllocated across this account's ENABLED subscriptions (Eric, #885: "the
    *  summation of money being managed under playbooks could be an interesting metric"). An
    *  uncapped subscription has no allocation to add, so it contributes nothing. */
@@ -64,6 +101,45 @@ function whipsawMetric(stats: ReturnType<typeof whipsawStatsByPlaybook>[number])
   return { label: "Whipsaw rate", value };
 }
 
+function subscriptionView(sub: PlaybookSubscription): SubscriptionView {
+  return {
+    mode: sub.mode,
+    ...(sub.capitalAllocated !== undefined ? { capitalAllocated: sub.capitalAllocated } : {}),
+    enabled: sub.enabled,
+    ...(sub.symbols ? { symbols: sub.symbols } : {}),
+    ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
+  };
+}
+
+/** What the bot does with a pair it subscribes to, beyond running it: yield its ticker to an option
+ *  pair, or be refused because another option pair owns the ticker. */
+function subscribedNotes(id: string, onBot: readonly Pair[]): Partial<PairRowView> {
+  const pair = findPair(id);
+  const handOff = pair ? handOffNote(pair, onBot) : undefined;
+  const notTrading = pair ? notTradingNote(pair, onBot) : undefined;
+  return { ...(handOff ? { handOff } : {}), ...(notTrading ? { notTrading } : {}) };
+}
+
+/** The strategy cards with the viewer's own account joined on each row's pair id. A viewer who
+ *  does not manage the account (no `subscriptions`) gets the bare rows. */
+function strategyCardsView(
+  subscriptions: readonly PlaybookSubscription[] | undefined,
+  asOfIso: string,
+): StrategyCardView[] {
+  const byPairId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
+  const onBot = subscribedPairs(subscriptions ?? [], findPair);
+  const rowView = (row: PairRowEntry): PairRowView => {
+    const sub = byPairId.get(row.id);
+    if (sub)
+      return { ...row, subscription: subscriptionView(sub), ...subscribedNotes(row.id, onBot) };
+    const refusal = subscriptions
+      ? newSubscriptionRefusal({ playbookId: row.id, subscriptions, asOfIso })
+      : undefined;
+    return refusal ? { ...row, subscribeRefusal: refusal } : row;
+  };
+  return strategyCatalog(asOfIso).map((card) => ({ ...card, pairs: card.pairs.map(rowView) }));
+}
+
 export function playbookStoreView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
   delegationLocked = false,
@@ -74,6 +150,8 @@ export function playbookStoreView(
   roundTrips: readonly RoundTrip[] = [],
   /** The selected account is a human account the viewer owns (#4610). Defaults to open. */
   humanAccount = false,
+  /** When the rows are read — a ✓ past its shelf date is stale from the next market day. */
+  asOfIso: string = new Date().toISOString(),
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -85,19 +163,7 @@ export function playbookStoreView(
     return {
       ...entry,
       ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw)] } : {}),
-      ...(sub
-        ? {
-            subscription: {
-              mode: sub.mode,
-              ...(sub.capitalAllocated !== undefined
-                ? { capitalAllocated: sub.capitalAllocated }
-                : {}),
-              enabled: sub.enabled,
-              ...(sub.symbols ? { symbols: sub.symbols } : {}),
-              ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
-            },
-          }
-        : {}),
+      ...(sub ? { subscription: subscriptionView(sub) } : {}),
     };
   });
   const capitalUnderManagement = (subscriptions ?? [])
@@ -105,6 +171,7 @@ export function playbookStoreView(
     .reduce((sum, s) => sum + (s.capitalAllocated ?? 0), 0);
   return {
     cards,
+    strategies: strategyCardsView(subscriptions, asOfIso),
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),

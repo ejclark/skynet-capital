@@ -2,8 +2,10 @@ import { existsSync } from "node:fs";
 import {
   EVIDENCE_STATUS,
   findPair,
+  isStale,
   type Pair,
   pairFor,
+  pairName,
   pairTable,
   STRATEGIES,
   statusLabel,
@@ -172,5 +174,52 @@ describe("a status reads as a glyph plus a word (criterion 10)", () => {
     expect(labelOf("G1-GOOG")).toBe("✓ researched");
     expect(labelOf("CRWV-WHEEL")).toBe("◆ conviction");
     expect(labelOf("TACO-DJT")).toBe("– can't run");
+  });
+});
+
+describe("each strategy declares what it trades, and the registry agrees", () => {
+  it("calls a pair options exactly when its playbook trades options", () => {
+    for (const pair of pairTable()) {
+      const options = Boolean(findPlaybook(pair.id)?.options);
+      expect(STRATEGIES[pair.strategy].instrument === "options", pair.id).toBe(options);
+    }
+  });
+
+  it("keys the run-up and the call spread on a print, and nothing else", () => {
+    const dateKeyed = Object.values(STRATEGIES)
+      .filter((strategy) => strategy.dateKeyed)
+      .map((strategy) => strategy.id);
+    expect(dateKeyed).toEqual(["pre-print-run-up", "call-spread"]);
+  });
+});
+
+describe("a pair is named by what it does, never by its id (criterion 14)", () => {
+  it("reads as the strategy on its ticker, and a basket as its strategy", () => {
+    const nameOf = (id: string) => {
+      const pair = findPair(id);
+      return pair ? pairName(pair) : undefined;
+    };
+    expect(nameOf("CRWV-WHEEL")).toBe("the wheel on CRWV");
+    expect(nameOf("S1-NVDA")).toBe("the pre-print run-up on NVDA");
+    expect(nameOf("HC-SAURON")).toBe("hardcore Sauron's tactics");
+  });
+});
+
+describe("a ✓ verdict has a shelf life (criterion 4)", () => {
+  const evidenceOf = (id: string) => {
+    const pair = findPair(id);
+    if (!pair) throw new Error(id);
+    return pair.evidence;
+  };
+
+  it("is current through its shelf date and stale the market day after", () => {
+    expect(isStale(evidenceOf("S1-NVDA"), "2027-03-31T20:00:00.000Z")).toBe(false);
+    expect(isStale(evidenceOf("S1-NVDA"), "2027-04-01T14:00:00.000Z")).toBe(true);
+  });
+
+  it("never stales a conviction or a row with no verdict", () => {
+    const later = "2030-01-01T14:00:00.000Z";
+    expect(isStale(evidenceOf("CRWV-WHEEL"), later)).toBe(false);
+    expect(isStale(evidenceOf("SAURON"), later)).toBe(false);
   });
 });
