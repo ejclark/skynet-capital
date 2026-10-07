@@ -44,6 +44,7 @@ function outpostPerformanceView(
       readTradeActivity: config.readTradeActivity,
       readDecisions: config.readDecisions,
       findByOrderId: config.findByOrderId,
+      findSpreadLeg: config.findSpreadLeg,
     },
   );
 }

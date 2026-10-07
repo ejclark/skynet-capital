@@ -55,11 +55,12 @@ export interface PlaybookPerformanceView {
   /** Null when none of the requested accounts is readable — an absence, not zero trades. */
   readonly mine: readonly PlaybookMetricsView[] | null;
   readonly accounts: readonly string[];
-  /** Bot accounts only, the same two groupings kept apart. */
+  /** Bot accounts only, the same two groupings kept apart; `mine` is null with no bot account in
+   *  scope. Null as a whole where the server cannot trace trips to decisions — then nothing draws. */
   readonly byInitiator?: {
     readonly house: InitiatorSplitView;
     readonly mine: InitiatorSplitView | null;
-  };
+  } | null;
 }
 
 /** With no account (catalog-only), `mine` covers every owned account — callers render only `house`. */
