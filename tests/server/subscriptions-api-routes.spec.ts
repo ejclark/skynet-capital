@@ -47,10 +47,14 @@ function get(url: string): IncomingMessage {
 
 const session = { email: "eric@example.com", name: "Eric Clark" } as never;
 
+/** A fixed "today", so a pair's shelf date or the calendar's last print can never age a spec red. */
+const TODAY = () => new Date("2026-10-07T15:00:00.000Z");
+
 function configWith(over: Record<string, unknown> = {}): DashboardServerConfig {
   return {
     auth: { providerIds: ["google"] },
     resolveOwnerIds: () => ["acct-mine"],
+    now: TODAY,
     ...over,
   } as unknown as DashboardServerConfig;
 }
@@ -551,5 +555,116 @@ describe("serveSubscriptionsApi", () => {
       session,
     );
     expect(answered(out)).toMatchObject({ ok: false });
+  });
+
+  describe("a new subscription takes what its pair needs (#4469 slice 3a)", () => {
+    const PAST_SHELF = () => new Date("2027-04-01T15:00:00.000Z");
+    const held = (playbookId: string) => ({
+      playbookId,
+      mode: "standard",
+      capitalAllocated: 50_000,
+      enabled: true,
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const storeHolding = (calls: unknown[], ...ids: string[]) =>
+      ({
+        ...(storeWith(calls) as object),
+        load: () => ({ "acct-mine": ids.map(held) }),
+        configure: (id: string, playbookId: string, tuning: unknown) => {
+          calls.push({ op: "configure", id, playbookId, tuning });
+          return true;
+        },
+      }) as never;
+    const write = async (path: string, body: unknown, config: DashboardServerConfig) => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(post(body), res, path, config, session);
+      return answered(out);
+    };
+
+    it("refuses an id nothing resolves, in words, and never writes it", async () => {
+      const calls: unknown[] = [];
+      const answer = await write(
+        "/api/playbook-store/subscribe",
+        { id: "acct-mine", playbookId: "NOPE-1", mode: "standard", capitalAllocated: 1_000 },
+        configWith({ subscriptions: storeWith(calls) }),
+      );
+      expect(answer).toEqual({ ok: false, error: "No playbook is called NOPE-1." });
+      expect(calls).toEqual([]);
+    });
+
+    it("subscribes the wheel on CRWV under CRWV-WHEEL, and a bot to SAURON", async () => {
+      for (const playbookId of ["CRWV-WHEEL", "SAURON"]) {
+        const calls: unknown[] = [];
+        const answer = await write(
+          "/api/playbook-store/subscribe",
+          { id: "acct-mine", playbookId, mode: "standard", capitalAllocated: 75_000 },
+          configWith({ subscriptions: storeWith(calls) }),
+        );
+        expect(answer, playbookId).toEqual({ ok: true });
+        expect(calls).toMatchObject([{ op: "subscribe", sub: { playbookId } }]);
+      }
+    });
+
+    it("refuses a new subscription to a ✓ pair past its shelf date", async () => {
+      const calls: unknown[] = [];
+      const answer = await write(
+        "/api/playbook-store/subscribe",
+        { id: "acct-mine", playbookId: "G1-GOOG", mode: "standard", capitalAllocated: 1_000 },
+        configWith({ subscriptions: storeWith(calls), now: PAST_SHELF }),
+      );
+      expect(answer.ok).toBe(false);
+      expect(answer.error).toMatch(/ran past its shelf date/);
+      expect(calls).toEqual([]);
+    });
+
+    it("never refuses Edit, Pause, Unsubscribe or a re-subscribe on a pair the bot holds", async () => {
+      const calls: unknown[] = [];
+      const config = configWith({ subscriptions: storeHolding(calls, "S1-NVDA"), now: PAST_SHELF });
+      const ref = { id: "acct-mine", playbookId: "S1-NVDA" };
+      expect(
+        await write(
+          "/api/playbook-store/subscribe",
+          { ...ref, mode: "standard", capitalAllocated: 50_000, compoundAllocation: true },
+          config,
+        ),
+      ).toEqual({ ok: true });
+      expect(
+        await write(
+          "/api/playbook-store/configure",
+          { ...ref, mode: "standard", capitalAllocated: 40_000 },
+          config,
+        ),
+      ).toEqual({ ok: true });
+      expect(
+        await write("/api/playbook-store/set-enabled", { ...ref, enabled: false }, config),
+      ).toEqual({ ok: true });
+      expect(await write("/api/playbook-store/unsubscribe", ref, config)).toEqual({ ok: true });
+      expect(calls.map((call) => (call as { op: string }).op)).toEqual([
+        "subscribe",
+        "configure",
+        "setEnabled",
+        "unsubscribe",
+      ]);
+    });
+
+    it("serves one card per strategy, each row counted and keyed on its pair id", async () => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        get("/api/playbook-store?id=acct-mine"),
+        res,
+        "/api/playbook-store",
+        configWith({ subscriptions: storeHolding([], "CRWV-WHEEL") }),
+        session,
+      );
+      const strategies = answered(out).strategies as {
+        strategy: string;
+        pairs: { id: string; subscribers?: number; subscription?: unknown }[];
+      }[];
+      const wheel = strategies.find((card) => card.strategy === "wheel");
+      expect(wheel?.pairs).toMatchObject([
+        { id: "CRWV-WHEEL", subscribers: 1, subscription: { mode: "standard" } },
+      ]);
+    });
   });
 });
