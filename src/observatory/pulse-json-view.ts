@@ -97,10 +97,8 @@ const dayLabel = (iso: string): string =>
   formatDateTime(new Date(iso), "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 /** `samples` and `drawdown` both come from the caller's single sort of the whole request
- *  (`deskPulseView`'s `orderedSamples`) — not a fresh sort here, and not a second drawdown scan.
- *  Five independent full sorts of the same array collapsed to the caller's one (#4612 slice 7) —
- *  a real redundant-work fix, but measured not to close the 150 ms Pulse budget on its own; see
- *  `equity-sparkline.ts`'s `equityDrawdownOf` for what the budget run actually showed. */
+ *  (`deskPulseView`'s `orderedSamples`) — not a fresh sort here, and not a second drawdown scan
+ *  (#4612 slice 7). */
 function pulseCurve(
   samples: readonly EquitySample[],
   drawdown: ReturnType<typeof equityDrawdownOf>,

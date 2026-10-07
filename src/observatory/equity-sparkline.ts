@@ -15,10 +15,7 @@ export function equityDrawdown(
 /**
  * `equityDrawdown` over samples already in ascending `at` order — skips the sort. A desk's Pulse
  * view needs the same order for its curve, streaks and doubling race too, so the request sorts once
- * and every section reuses it (#4612 slice 7). Measured: removing these five redundant sorts alone
- * did not close the 150 ms Pulse budget at 180 days — reading and parsing the file is the larger
- * cost (`src/storage/jsonl-store.ts`'s `list()`, not yet bounded) — so this is a real but partial
- * win, left on #4619 alongside that larger one.
+ * and every section reuses it (#4612 slice 7).
  */
 export function equityDrawdownOf(
   sorted: readonly EquitySample[],
