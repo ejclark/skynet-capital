@@ -9,6 +9,7 @@ import type {
 import type { MetricsScope } from "./playbook-metrics";
 import { PairRow, pairTitle } from "./playbook-store-cards";
 import { SubscriptionRow } from "./playbook-subscription-row";
+import { TickerPicker } from "./playbook-ticker-picker";
 
 /**
  * THE STORE BY STRATEGY (#4469 slice 3b) — one card per strategy, a row per pair (a strategy on a
@@ -20,6 +21,10 @@ import { SubscriptionRow } from "./playbook-subscription-row";
  * and Unsubscribe — then the strategy in one line, then its tickers by evidence, then each row's
  * rules. ✓ researched, ◆ conviction and subscribed rows stay open; everything else (~ ✗ ? –) folds
  * into one counted line, because a ticker we cannot back is a row to find, not one to scroll past.
+ *
+ * An owner who manages the account also gets "Pick a ticker": a bottom sheet over EVERY ticker the
+ * strategy runs on, a disabled one naming its reason, with "Check first" and "ask for research"
+ * (`playbook-ticker-picker.tsx`, slice 3b part 2).
  *
  * Every join keys on the row's pair id (criterion 8): the rules and numbers come from `cards` by
  * `pair.id`, and a subscription posts that same id — "the wheel on CRWV" still posts `CRWV-WHEEL`.
@@ -122,6 +127,16 @@ export function StrategyCard({
       ))}
       <p className="pb-card-description">{strategy.summary}</p>
       <div className="pb-pairs">{open.map(row)}</div>
+      {canManage ? (
+        <TickerPicker
+          accountId={accountId}
+          strategy={strategy}
+          cardsById={cardsById}
+          delegation={delegation}
+          {...(botsOnly ? { botsOnly } : {})}
+          onChanged={onChanged}
+        />
+      ) : null}
       {folded.length > 0 ? (
         <details className="pb-folded">
           <summary>{foldedLine(folded.map(({ pair }) => pair))}</summary>

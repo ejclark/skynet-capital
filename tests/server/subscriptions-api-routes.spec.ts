@@ -710,6 +710,69 @@ describe("serveSubscriptionsApi", () => {
       });
     });
 
+    describe("and the Store's preflight asks first, writing nothing (#4469 slice 3b part 2)", () => {
+      const ask = "id=acct-mine&playbookId=CRWV-WHEEL&mode=standard&capital=75000";
+      const preflight = async (query: string, config: DashboardServerConfig) => {
+        const { res, out } = fakeRes();
+        await serveSubscriptionsApi(
+          get(`/api/playbook-store/preflight?${query}`),
+          res,
+          "/api/playbook-store/preflight",
+          config,
+          session,
+        );
+        return { status: out.status, body: answered(out) };
+      };
+      const brokerFor = (price: number | undefined, level: number) => ({
+        optionsClientFor: () => ({
+          getUnderlyingPrice: async () => price,
+          getExpirations: async () => [],
+          getChain: async () => [],
+          getContractSnapshots: async () => new Map(),
+        }),
+        tradingClientFor: () => ({ getAccount: async () => ({ options_trading_level: level }) }),
+      });
+
+      it("says the same sentence subscribe would, and never writes", async () => {
+        const calls: unknown[] = [];
+        const config = configWith({ subscriptions: storeWith(calls), ...brokerFor(undefined, 1) });
+        expect((await preflight(ask, config)).body).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(/gave no price for CRWV/),
+        });
+        expect(calls).toEqual([]);
+      });
+
+      it("clears a pair the feed and the account can take", async () => {
+        const config = configWith({ subscriptions: storeWith(), ...brokerFor(80, 1) });
+        // The wheel sells options, so the client can say its contract is judged at the open.
+        expect((await preflight(ask, config)).body).toEqual({ ok: true, options: true });
+        expect((await preflight(ask.replace("CRWV-WHEEL", "S1-NVDA"), config)).body).toEqual({
+          ok: true,
+        });
+      });
+
+      it("answers an account that is not the viewer's with a sentence, never a read", async () => {
+        const config = configWith({ subscriptions: storeWith(), ...brokerFor(80, 1) });
+        const answer = await preflight(ask.replace("acct-mine", "acct-theirs"), config);
+        expect(answer.body).toEqual({ ok: false, error: "You can only check your own account." });
+      });
+
+      it("clears a pair the account already holds without reading the broker", async () => {
+        const config = configWith({
+          subscriptions: storeHolding([], "CRWV-WHEEL"),
+          ...brokerFor(undefined, 0),
+        });
+        expect((await preflight(ask, config)).body).toEqual({ ok: true });
+      });
+
+      it("refuses a malformed query with 400", async () => {
+        const config = configWith({ subscriptions: storeWith() });
+        expect((await preflight("id=acct-mine&playbookId=CRWV-WHEEL", config)).status).toBe(400);
+        expect((await preflight(ask.replace("standard", "wild"), config)).status).toBe(400);
+      });
+    });
+
     it("serves one card per strategy, each row counted and keyed on its pair id", async () => {
       const { res, out } = fakeRes();
       await serveSubscriptionsApi(
