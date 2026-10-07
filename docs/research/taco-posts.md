@@ -39,14 +39,14 @@ clears the line, and the day-2 dip is not robust (below). From `scripts/research
 
 - **Never** — buy a Trump-named stock at the open after an overnight post; call 4 says it is already priced.
 - **Watch** — re-run this script each quarter on posts after 2026-10-06 only; calls 1 and 2 reopen on the falsifiers above, not on an anecdote.
-- **Not tested here** — tariff threats against countries and the index rebound after a climb-down (the original "TACO"). That is #4820's next slice.
+- **Not tested here** — tariff threats against countries and the index rebound after a climb-down (the original "TACO"): that is [`taco-index.md`](taco-index.md), which refused too.
 
 ## What this means for #4820
 
 The plan's own rule fires: no company-post kind beats costs after our delay, so the live path for
 company posts (feed, detector, wiring, exits — slices 2 to 5) does not get built, and TACO-DJT
-stays dark. The plan stays open for the other family: tariff threats against the index, which
-move over days rather than minutes, so a minutes-late reader is not automatically last.
+stays dark. The other family, tariff threats against the index, which move over days rather than
+minutes, was tested next and refused too: see [`taco-index.md`](taco-index.md).
 
 ## Sample
 
