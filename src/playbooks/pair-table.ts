@@ -5,10 +5,10 @@
  * their pairs, so every subscription, verdict, guard and compounding record keyed on them keeps
  * its key (the plan's call 1: nothing migrates).
  *
- * DATA ONLY. Nothing that trades reads this table yet — the registry still decides; slices 2b–2d
- * teach each strategy to take its ticker, and 3a puts these rows on the Store card and turns the
- * shelf date into a stop on new entries. A spec holds the table to the registry until then, so a
- * playbook added without a row (or a row whose tickers drift from its playbook's) fails the build.
+ * The templates read it for their settings (2b–2d); the Store draws one card per strategy from it
+ * and refuses a new subscription a row says cannot run, including a ✓ row past its shelf date (3a,
+ * `subscriptions/subscribe-eligibility.ts`). A spec holds the table to the registry, so a playbook
+ * added without a row (or a row whose tickers drift from its playbook's) fails the build.
  *
  * AN ID IS LOOKED UP, NEVER BUILT (criterion 8). `S1-NVDA` puts the strategy first and
  * `NVDA-CALL-SPREAD` puts the ticker first; no rule composes both, and splitting either on `-`
@@ -18,6 +18,8 @@
  * Evidence is data, never engine text — a claim true of NVDA must not read as a claim about the
  * strategy (the same rule as `src/research/print-evidence.ts`). Every row cites its study.
  */
+
+import { marketDayKey } from "../domain/market-day.js";
 
 /** A strategy is the playbook with its ticker taken out: what it does, not what it trades. */
 export type StrategyId =
@@ -37,6 +39,13 @@ export interface Strategy {
   readonly screen?: string;
   /** Why there is no screen, when there is none — said, never left blank. */
   readonly noScreen?: string;
+  /** What its orders buy. Two option pairs on one ticker never share a bot; an option pair over a
+   *  share pair takes the ticker and the share pair yields it (#4645's hand-off, criterion 9). A
+   *  spec holds this to each registry playbook's `options`. */
+  readonly instrument: "shares" | "options";
+  /** Its window counts toward an earnings print, so a pair needs that ticker's next print on file
+   *  and a window a study measured before it takes a new subscription (criterion 9). */
+  readonly dateKeyed?: true;
 }
 
 /** Each strategy declares its screen (slice 1: one run costs 0.74 s and zero tokens). */
@@ -44,16 +53,21 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   "pre-print-run-up": {
     id: "pre-print-run-up",
     name: "the pre-print run-up",
+    instrument: "shares",
+    dateKeyed: true,
     screen: "node scripts/research/earnings-cycle.mjs <SYM>",
   },
   wheel: {
     id: "wheel",
     name: "the wheel",
+    instrument: "options",
     screen: "node scripts/research/premium-fit.mjs <SYM>",
   },
   "call-spread": {
     id: "call-spread",
     name: "the call spread",
+    instrument: "options",
+    dateKeyed: true,
     // The spread trades the run-up's window, so the run-up's screen is its fit test; its own P/L
     // is a separate question no screen answers yet.
     screen: "node scripts/research/earnings-cycle.mjs <SYM>",
@@ -61,21 +75,25 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   event: {
     id: "event",
     name: "the TACO event play",
+    instrument: "shares",
     noScreen: "Its trigger is a news story, and no news feed is wired to it yet.",
   },
   tactical: {
     id: "tactical",
     name: "hardcore Sauron's tactics",
+    instrument: "shares",
     noScreen: "It trades as research, measured by trade volume, not by a backtest.",
   },
   "persona-rules": {
     id: "persona-rules",
     name: "Sauron's own rules",
+    instrument: "shares",
     noScreen: "It is a persona's whole rule set, not a fit test for one ticker.",
   },
   "forced-pick": {
     id: "forced-pick",
     name: "the forced daily pick",
+    instrument: "shares",
     noScreen: "It tests the order path on a quiet day; no ticker is chosen for fit.",
   },
 };
@@ -261,6 +279,26 @@ export function findPair(id: string): Pair | undefined {
 export function pairFor(strategy: StrategyId, symbol: string): Pair | undefined {
   const ticker = symbol.toUpperCase();
   return PAIRS.find((pair) => pair.strategy === strategy && pair.symbols.includes(ticker));
+}
+
+/**
+ * A ✓ verdict past its shelf date with no new one (criterion 4): the pair takes no new entries until
+ * it is re-researched. Read on the ET market day, so the shelf date is the last day it still counts.
+ * A conviction is never stale — it carries a check date instead (criterion 12, slice 3c).
+ */
+export function isStale(evidence: PairEvidence, asOfIso: string): boolean {
+  return (
+    evidence.status === "researched" &&
+    evidence.shelfOn !== undefined &&
+    marketDayKey(asOfIso) > evidence.shelfOn
+  );
+}
+
+/** "the wheel on CRWV" — how a pair is named to its owner, never by its id (criterion 14). A basket
+ *  reads as its strategy alone: ten tickers are not a name. */
+export function pairName(pair: Pair): string {
+  const { name } = STRATEGIES[pair.strategy];
+  return pair.symbols.length === 1 ? `${name} on ${pair.symbols[0]}` : name;
 }
 
 /** "✓ researched, weakened" — the status as a glyph plus words. */
