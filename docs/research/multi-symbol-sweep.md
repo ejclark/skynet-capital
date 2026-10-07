@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Capital goods is the largest-magnitude import end-use mover" as a one-month bet on a 2026 regime
+  (FT-intl-trade-full-report-2026-10-06-3)** — added 2026-10-07 from the
+  [intl-trade-full-report-2026-10-06 close-out](events/intl-trade-full-report-2026-10-06.md). Registered
+  on a 71% in-regime base rate (5 of the last 7 months); August 2026 data printed industrial supplies
+  **+$9,130M** (crude oil +$3,324M, nonmonetary gold +$3,104M) over capital goods **+$6,152M**, and the
+  AI-hardware trio (computers, accessories, semiconductors) netted only **+$351M** against 102% of the
+  move in July. A "largest of six" claim inherits the volatility of the two commodity-driven lines
+  (crude, gold) that can swamp any single month; do not re-register it as a one-month test without
+  conditioning on them. The stance's own two-print version stays open until the 11-04 report.
+
 - **Services wage stickiness at t+1 as a ≥-series-average test, registered High on a 95% base rate
   (FT-dallas-fed-tssos-2026-09-29-1)** — added 2026-10-06 from the
   [dallas-fed-tssos-2026-09-29 forward-test scoring](events/dallas-fed-tssos-2026-09-29.md). The
