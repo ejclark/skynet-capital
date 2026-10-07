@@ -1,10 +1,18 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import {
+  carriedOnResubscribe,
   EMPTY_SUBSCRIPTIONS,
   parseSubscriptionsState,
   type SubscriptionsState,
 } from "../subscriptions/subscription-state.js";
+import {
+  type AllocationsState,
+  allocationsIn,
+  EMPTY_ALLOCATIONS,
+  readsWhole,
+  rewrite,
+} from "../subscriptions/subscriptions-file.js";
 
 /**
  * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions.v1
@@ -23,23 +31,49 @@ export type SubscriptionTuning = Pick<
  * Plain JSON, deliberately NOT encrypted, same reasoning as `bot-controls-store.ts`: no
  * credentials, no personal data. Backed by the same `JsonFileStore` primitive: atomic
  * tmp+rename writes, total reads (a missing or malformed file is just `EMPTY_SUBSCRIPTIONS`,
- * reported once).
+ * reported once). Every write keeps what this build could not read (#4772,
+ * `subscriptions-file.ts`).
  */
 export class SubscriptionStore {
   private readonly file: JsonFileStore<SubscriptionsState>;
+  /** The same file, read for its `$allocations` key only; never written through. */
+  private readonly allocations: JsonFileStore<AllocationsState>;
 
   constructor(path: string, onReadError?: (message: string) => void) {
+    const report = onReadError ?? (() => undefined);
     this.file = new JsonFileStore({
       path,
       parse: (raw) => parseSubscriptionsState(raw) ?? undefined,
       empty: EMPTY_SUBSCRIPTIONS,
       label: "subscriptions",
-      ...(onReadError ? { onReadError } : {}),
+      onReadError: report,
+      readsWhole,
+      serialize: (state, onDisk) => {
+        const { document, notes } = rewrite(state, onDisk);
+        if (notes.length > 0) {
+          report(
+            `[subscriptions] ${path}: rewrote around what this build could not read — ${notes.join("; ")}`,
+          );
+        }
+        return document;
+      },
+    });
+    // No reporter: a torn file is already reported by the subscriptions read of the same path.
+    this.allocations = new JsonFileStore({
+      path,
+      parse: (raw) => (parseSubscriptionsState(raw) ? allocationsIn(raw) : undefined),
+      empty: EMPTY_ALLOCATIONS,
+      label: "allocations",
     });
   }
 
   load(): SubscriptionsState {
     return this.file.load();
+  }
+
+  /** Each account's allocation per strategy (#4469 slice 3c). Read only until part 3 writes it. */
+  loadAllocations(): AllocationsState {
+    return this.allocations.load();
   }
 
   /** `load`, but `undefined` for a file that exists and cannot be read — the seeders' read, so a
@@ -50,7 +84,8 @@ export class SubscriptionStore {
 
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
-   * existing subscription preserves its original `createdAt`.
+   * existing subscription preserves its original `createdAt`, and every field a subscribe does not
+   * set — a conviction, a newer build's field (#4772).
    */
   subscribe(
     accountId: string,
@@ -61,6 +96,7 @@ export class SubscriptionStore {
     const existing = state[accountId] ?? [];
     const prior = existing.find((s) => s.playbookId === sub.playbookId);
     const next: PlaybookSubscription = {
+      ...(prior ? carriedOnResubscribe(prior) : {}),
       ...sub,
       accountId,
       createdAt: prior?.createdAt ?? at.toISOString(),
