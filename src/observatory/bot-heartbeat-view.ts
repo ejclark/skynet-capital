@@ -7,8 +7,10 @@ import type {
   PlaybookVerdict,
   PlaybookVerdictState,
 } from "../domain/types.js";
+import { findPair, type Pair } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
+import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-eligibility.js";
 import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { readPlaybookWindow } from "./playbook-window.js";
@@ -186,6 +188,11 @@ const EXITS_ONLY_REASON =
 const UNKNOWN_REASON =
   "Subscribed, but the bots find no playbook by this id, so nothing on this bot runs it.";
 
+/** Why a pair the bot is subscribed to records no pass: the bots drop the later of two option pairs
+ *  on one ticker (`claimOptionUnderlyings`), so "starting" would be a promise nothing keeps. */
+const NOT_TRADING_WHY =
+  "A bot runs one option playbook per ticker; this one is skipped until the other is paused or removed.";
+
 /** A line no pass on hand ran and no pause explains: why, most specific cause first. */
 function idleLine(
   playbookId: string,
@@ -211,12 +218,15 @@ export function playbookRollCall(
   /** The bot's subscriptions and env-named playbooks. Absent — the store unwired or unreadable —
    *  and every line is judged from the passes alone, exactly as before #4650. */
   roster?: RollCallRoster,
+  /** Test seam: the pair rows the bot's ids resolve through (`findPair`). */
+  lookup: (id: string) => Pair | undefined = findPair,
 ): RollCallLine[] {
   const ran = verdicts ?? [];
   const byId = new Map(house.map((playbook) => [playbook.id, playbook]));
   const subscribed = roster?.subscriptions.map((s) => s.playbookId) ?? [];
   const paused = pausedPlaybookIds(roster?.subscriptions ?? []);
   const exitsOnly = new Set(exitsOnlyIds(roster));
+  const onBot = subscribedPairs(roster?.subscriptions ?? [], lookup, roster?.envNamed);
   // House roster first in its own order, then anything else the bot ran (a Store play), then any
   // other id it holds a subscription to — a paused one runs no pass, so it would otherwise vanish.
   const ids = [...byId.keys(), ...ran.map((v) => v.playbookId), ...subscribed];
@@ -230,6 +240,12 @@ export function playbookRollCall(
       return { playbookId, status: "paused", reason: PAUSED_REASON };
     }
     if (!verdict) {
+      const pair = lookup(playbookId);
+      const owned = pair ? notTradingNote(pair, onBot) : undefined;
+      if (owned) {
+        const sentence = owned.charAt(0).toUpperCase() + owned.slice(1);
+        return { playbookId, status: "off", reason: `${sentence}. ${NOT_TRADING_WHY}` };
+      }
       return idleLine(playbookId, playbook, {
         subscribed: subscribed.includes(playbookId),
         exitsOnly: exitsOnly.has(playbookId),

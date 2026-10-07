@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { BOTS_ONLY_NOTE } from "../domain/playbook-bots-only.js";
 import {
@@ -8,6 +9,7 @@ import {
 } from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
 import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
+import { liveNeedsRefusal } from "../subscriptions/subscribe-live-needs.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
@@ -15,6 +17,7 @@ import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
+import { subscribeLiveReads } from "./subscribe-live-reads.js";
 import {
   parseConfigureBody,
   parsePlaybookRefBody,
@@ -165,6 +168,7 @@ async function serveStoreIndex(
     [],
     Boolean(owns && id && isHumanAccount(config, id)),
     asOfIso(config),
+    id ? envNamedFor(config.readHouseRoster?.(), id) : undefined,
   );
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state
@@ -202,19 +206,32 @@ async function handleSubscribe(
     sendJson(res, 400, { error: "malformed subscribe body" });
     return;
   }
+  const envNamed = envNamedFor(config.readHouseRoster?.(), body.id);
+  const held = store.load()[body.id] ?? [];
+  const delegation = await delegationRefusal(
+    body.id,
+    ownedIds,
+    "You can only subscribe your own account.",
+    config,
+    session,
+  );
+  const needs = {
+    playbookId: body.playbookId,
+    subscriptions: held,
+    asOfIso: asOfIso(config),
+    ...(envNamed ? { envNamed } : {}),
+  };
   const refusal =
-    (await delegationRefusal(
-      body.id,
-      ownedIds,
-      "You can only subscribe your own account.",
-      config,
-      session,
-    )) ??
-    newSubscriptionRefusal({
-      playbookId: body.playbookId,
-      subscriptions: store.load()[body.id] ?? [],
-      asOfIso: asOfIso(config),
-    });
+    delegation ??
+    newSubscriptionRefusal(needs) ??
+    // The live reads cost broker calls, so they run last and only for a subscription the account
+    // does not already hold — a replacing re-subscribe is never re-judged.
+    (held.some((sub) => sub.playbookId === body.playbookId)
+      ? undefined
+      : await liveNeedsRefusal(
+          { ...needs, mode: body.mode, capitalAllocated: body.capitalAllocated },
+          subscribeLiveReads(config, body.id),
+        ));
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });
     return;

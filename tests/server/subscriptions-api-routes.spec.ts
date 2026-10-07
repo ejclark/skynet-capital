@@ -648,6 +648,68 @@ describe("serveSubscriptionsApi", () => {
       ]);
     });
 
+    describe("and what the live market and the account say (#4469 slice 3a part 2)", () => {
+      const ask = { id: "acct-mine", playbookId: "CRWV-WHEEL", mode: "standard" };
+      /** The account's own broker clients, as `optionsClientFor` / `tradingClientFor` hand them out. */
+      const brokerFor = (price: number | undefined, level: string | number | undefined) => ({
+        optionsClientFor: () => ({
+          getUnderlyingPrice: async () => price,
+          getExpirations: async () => [],
+          getChain: async () => [],
+          getContractSnapshots: async () => new Map(),
+        }),
+        tradingClientFor: () => ({ getAccount: async () => ({ options_trading_level: level }) }),
+      });
+
+      it("refuses a ticker the account's feed has no price for, and never writes it", async () => {
+        const calls: unknown[] = [];
+        const answer = await write(
+          "/api/playbook-store/subscribe",
+          { ...ask, capitalAllocated: 75_000 },
+          configWith({ subscriptions: storeWith(calls), ...brokerFor(undefined, 1) }),
+        );
+        expect(answer.ok).toBe(false);
+        expect(answer.error).toMatch(/gave no price for CRWV/);
+        expect(calls).toEqual([]);
+      });
+
+      it("refuses an account below the options level, in words", async () => {
+        const answer = await write(
+          "/api/playbook-store/subscribe",
+          { ...ask, capitalAllocated: 75_000 },
+          configWith({ subscriptions: storeWith(), ...brokerFor(80, "0") }),
+        );
+        expect(answer).toEqual({
+          ok: false,
+          error: "The wheel on CRWV needs options level 1 on this account, and it is at level 0.",
+        });
+      });
+
+      it("subscribes once the price and the level are there", async () => {
+        const calls: unknown[] = [];
+        const answer = await write(
+          "/api/playbook-store/subscribe",
+          { ...ask, capitalAllocated: 75_000 },
+          configWith({ subscriptions: storeWith(calls), ...brokerFor(80, 1) }),
+        );
+        expect(answer).toEqual({ ok: true });
+        expect(calls).toMatchObject([{ op: "subscribe", sub: { playbookId: "CRWV-WHEEL" } }]);
+      });
+
+      it("never reads the broker for a re-subscribe on a pair the account already holds", async () => {
+        const calls: unknown[] = [];
+        const answer = await write(
+          "/api/playbook-store/subscribe",
+          { ...ask, capitalAllocated: 60_000 },
+          configWith({
+            subscriptions: storeHolding(calls, "CRWV-WHEEL"),
+            ...brokerFor(undefined, 0),
+          }),
+        );
+        expect(answer).toEqual({ ok: true });
+      });
+    });
+
     it("serves one card per strategy, each row counted and keyed on its pair id", async () => {
       const { res, out } = fakeRes();
       await serveSubscriptionsApi(

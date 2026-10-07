@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import { activityNarrowing, type PlaybookOf } from "../observatory/activity-filter.js";
@@ -173,10 +174,7 @@ function botRoster(
 ): RollCallRoster | undefined {
   const state = config.subscriptions?.loadIfReadable();
   if (!state) return undefined;
-  const report = config.readHouseRoster?.();
-  const envNamed = report?.accounts.includes(found.id)
-    ? report.roster.map((e) => e.playbookId)
-    : undefined;
+  const envNamed = envNamedFor(config.readHouseRoster?.(), found.id);
   return { subscriptions: state[found.id] ?? [], ...(envNamed ? { envNamed } : {}) };
 }
 

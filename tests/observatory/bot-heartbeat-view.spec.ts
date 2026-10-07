@@ -7,9 +7,15 @@ import {
   STALE_AFTER_MS,
   unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
 const NOW = new Date("2026-09-24T15:00:00Z");
+const pair = (id: string): Pair => {
+  const found = findPair(id);
+  if (!found) throw new Error(`no pair ${id}`);
+  return found;
+};
 const pass = (
   agoMs: number,
   verdicts?: readonly PlaybookVerdict[],
@@ -253,6 +259,34 @@ describe("playbookRollCall — reads the bot's own subscriptions", () => {
       expect(line).toMatchObject({ status: "off" });
       expect(line.reason).toMatch(/find no playbook by this id/);
     }
+  });
+
+  it("WHEN a second option pair holds a ticker another owns, says it is not trading — never starting", () => {
+    const wheelNvda: Pair = { ...pair("CRWV-WHEEL"), id: "NVDA-WHEEL", symbols: ["NVDA"] };
+    const lookup = (id: string) => (id === wheelNvda.id ? wheelNvda : findPair(id));
+    const withWheel = [...house, play("NVDA-WHEEL")];
+    const roll = (roster: NonNullable<Parameters<typeof playbookRollCall>[5]>) =>
+      playbookRollCall(null, NOW, withWheel, gaps, [], roster, lookup).find(
+        (l) => l.playbookId === "NVDA-WHEEL",
+      );
+    const subscribed = roll({ subscriptions: [sub("NVDA-CALL-SPREAD"), sub("NVDA-WHEEL")] });
+    expect(subscribed).toMatchObject({ status: "off" });
+    expect(subscribed?.reason).toMatch(/^Not trading — the call spread owns NVDA\. /);
+    // The bots app's own roster owns it just the same, with no subscription behind it.
+    const envOwned = roll({ subscriptions: [sub("NVDA-WHEEL")], envNamed: ["NVDA-CALL-SPREAD"] });
+    expect(envOwned?.reason).toMatch(/^Not trading — the call spread owns NVDA/);
+    // The first in the bot's order is not the one skipped.
+    expect(
+      playbookRollCall(
+        null,
+        NOW,
+        withWheel,
+        gaps,
+        [],
+        { subscriptions: [sub("NVDA-WHEEL")] },
+        lookup,
+      ).find((l) => l.playbookId === "NVDA-WHEEL"),
+    ).toMatchObject({ status: "starting" });
   });
 
   it("WHEN the bots app's own setting names one this bot holds no subscription to, says its exits still run", () => {
