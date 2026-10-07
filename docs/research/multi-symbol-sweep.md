@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Capital goods is the largest-magnitude import end-use mover" as a one-month bet on a 2026 regime
+  (FT-intl-trade-full-report-2026-10-06-3)** — added 2026-10-07 from the
+  [intl-trade-full-report-2026-10-06 close-out](events/intl-trade-full-report-2026-10-06.md). Registered
+  on a 71% in-regime base rate (5 of the last 7 months); August 2026 data printed industrial supplies
+  **+$9,130M** (crude oil +$3,324M, nonmonetary gold +$3,104M) over capital goods **+$6,152M**, and the
+  AI-hardware trio (computers, accessories, semiconductors) netted only **+$351M** against 102% of the
+  move in July. A "largest of six" claim inherits the volatility of the two commodity-driven lines
+  (crude, gold) that can swamp any single month; do not re-register it as a one-month test without
+  conditioning on them. The stance's own two-print version stays open until the 11-04 report.
+
 - **"Duration discount": MRVL underperforming NVDA over the three weeks after the 9/14 AI-pacing shock (FT-mrvl-investor-day-2026-10-06-3)** — added 2026-10-07 from the
   [mrvl-investor-day-2026-10-06 close-out](events/mrvl-investor-day-2026-10-06.md). Registered on one shock day plus one quarter of cross-section: the complex sorted by how back-loaded each name's disclosed revenue was. Over close 2026-09-15 → close 2026-10-06 MRVL returned **+29.46%** against NVDA's **+12.76%** (Yahoo adjusted daily bars, cache busted), the opposite ordering. The row itself named beta as an unresolved confound; the window confirms it dominates. Do not re-register a relative-return ordering built on a single-day sort of a high-beta name against a low-beta one without a beta-adjusted benchmark.
 
