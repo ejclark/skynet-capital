@@ -19,7 +19,11 @@ import type { OptionMarketPort } from "../ports/option-market.js";
  * criterion 9) — the half of "what a pair needs" that `subscribe-eligibility.ts` cannot say from the
  * code and the calendar. Same contract: NEW subscriptions only, a sentence a member can act on, and
  * a read that could not be made is "unknown", never a refusal — Edit, Pause and Unsubscribe never
- * come here, and neither does a pair the account already holds.
+ * come here, and neither does a pair the account already holds. THE ONE EXCEPTION IS THE PRICE: the
+ * client's read is fail-soft, so a ticker the feed does not know and a feed that is down both come
+ * back as no price. A subscription to a ticker with no price trades nothing, so it is refused, in
+ * words that say to try again — never saved as a pair that sits idle. A server with no market-data
+ * client at all (offline, a test) has no price read and skips the check.
  *
  * In order an owner can act on it:
  *   1. the feed has a price for the ticker (a symbol the data host does not know prices nothing, and
