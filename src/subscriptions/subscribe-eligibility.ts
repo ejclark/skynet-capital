@@ -11,9 +11,9 @@ import { findPlaybook } from "../playbooks/registry.js";
  * Edit, Pause, Unsubscribe and a re-subscribe that replaces it go through untouched, so a rule added
  * later can never strand a live subscription (both of Eric's — `CRWV-WHEEL`, `S1-NVDA` — included).
  *
- * The checks that need only the code and the calendar live here; the ones that need a live quote
- * (a liquid chain, one contract's collateral against the budget, the feed streaming the ticker) and
- * the account's options level are the next part of 3a. A confirmed date and a live price stay
+ * The checks that need only the code and the calendar live here; the ones that need a live quote or
+ * the account (a price on the feed, an options level, a liquid chain, one contract's collateral
+ * against the budget) are `subscribe-live-needs.ts`. A confirmed date and a live price stay
  * entry-time checks, as the guards already make them.
  */
 
@@ -37,25 +37,28 @@ type HeldSubscription = Pick<PlaybookSubscription, "playbookId"> &
   Partial<Pick<PlaybookSubscription, "enabled">>;
 
 /**
- * The bot's subscriptions (on or paused — a paused pair keeps its names, #4651) resolved to pairs,
- * in the order the bot reads them: enabled ones first, then paused, each in stored order
- * (`autonomous-live-wiring.ts`: `mergeRosters(house, [...enabled, ...paused])`). An id no row names
- * (an authored play) claims nothing here.
+ * The pairs a bot runs, in the order the bot reads them (`resolveBotRoster`): the bots app's own
+ * roster (`SKYNET_PLAYBOOKS`, `envNamed`) first, in its order — a subscription to one of those ids
+ * replaces it in place, so it keeps its turn — then the bot's other subscriptions, enabled before
+ * paused, each in stored order (`mergeRosters(house, [...enabled, ...paused])`). An env-named id with
+ * no subscription still holds its names (exits only since #4642 slice 10), so it counts: it can make
+ * an option pair the bots refuse. An id no row names (an authored play) claims nothing here.
  *
- * Not seen from here: a house playbook the bots' env roster runs on a bot WITHOUT a subscription
- * (exits only since #4651). Bot accounts are seeded with their roster's subscriptions (#4535), so
- * this is the unseeded edge; the API keeps that roster in memory, and the next part of 3a joins it.
+ * `envNamed` absent means the bots reported no roster for this bot; the subscriptions alone are then
+ * all that is known.
  */
 export function subscribedPairs(
   subscriptions: readonly HeldSubscription[],
   lookup: (id: string) => Pair | undefined,
+  envNamed: readonly string[] = [],
 ): Pair[] {
   const inBotOrder = [
-    ...subscriptions.filter((sub) => sub.enabled !== false),
-    ...subscriptions.filter((sub) => sub.enabled === false),
-  ];
-  return inBotOrder.flatMap((sub) => {
-    const pair = lookup(sub.playbookId);
+    ...envNamed,
+    ...subscriptions.filter((sub) => sub.enabled !== false).map((sub) => sub.playbookId),
+    ...subscriptions.filter((sub) => sub.enabled === false).map((sub) => sub.playbookId),
+  ].filter((id, index, ids) => ids.indexOf(id) === index);
+  return inBotOrder.flatMap((id) => {
+    const pair = lookup(id);
     return pair ? [pair] : [];
   });
 }
@@ -93,6 +96,9 @@ export interface EligibilityInput {
   readonly playbookId: string;
   /** The bot's own subscriptions, on or paused. */
   readonly subscriptions: readonly HeldSubscription[];
+  /** The playbook ids the bots app's own setting runs on this bot (`house-roster-wire.ts`), when it
+   *  reported them. One with no subscription opens nothing but still holds its tickers. */
+  readonly envNamed?: readonly string[];
   readonly asOfIso: string;
   /** The caller's own authored plays (#809) — nothing persists one yet, so callers pass none. */
   readonly authoredIds?: readonly string[];
@@ -112,6 +118,7 @@ export function newSubscriptionRefusal(input: EligibilityInput): string | undefi
   const {
     playbookId,
     subscriptions,
+    envNamed,
     asOfIso,
     authoredIds = [],
     prints = UPCOMING_PRINTS,
@@ -143,7 +150,7 @@ export function newSubscriptionRefusal(input: EligibilityInput): string | undefi
       return `${capitalized(name)} needs ${missing}'s next earnings date on file, and the calendar has none.`;
     }
   }
-  const claim = takenBy(pair, subscribedPairs(subscriptions, lookup));
+  const claim = takenBy(pair, subscribedPairs(subscriptions, lookup, envNamed));
   if (claim) {
     const kind = instrumentOf(pair) === "options" ? "option" : "share";
     return `${capitalized(STRATEGIES[claim.by.strategy].name)} already trades ${claim.symbol} ${kind}s on this bot; a bot runs one ${kind} playbook per symbol.`;

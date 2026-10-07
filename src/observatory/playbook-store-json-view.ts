@@ -125,15 +125,21 @@ function subscribedNotes(id: string, onBot: readonly Pair[]): Partial<PairRowVie
 function strategyCardsView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
   asOfIso: string,
+  envNamed: readonly string[] | undefined,
 ): StrategyCardView[] {
   const byPairId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
-  const onBot = subscribedPairs(subscriptions ?? [], findPair);
+  const onBot = subscribedPairs(subscriptions ?? [], findPair, envNamed);
   const rowView = (row: PairRowEntry): PairRowView => {
     const sub = byPairId.get(row.id);
     if (sub)
       return { ...row, subscription: subscriptionView(sub), ...subscribedNotes(row.id, onBot) };
     const refusal = subscriptions
-      ? newSubscriptionRefusal({ playbookId: row.id, subscriptions, asOfIso })
+      ? newSubscriptionRefusal({
+          playbookId: row.id,
+          subscriptions,
+          ...(envNamed ? { envNamed } : {}),
+          asOfIso,
+        })
       : undefined;
     return refusal ? { ...row, subscribeRefusal: refusal } : row;
   };
@@ -152,6 +158,9 @@ export function playbookStoreView(
   humanAccount = false,
   /** When the rows are read — a ✓ past its shelf date is stale from the next market day. */
   asOfIso: string = new Date().toISOString(),
+  /** What the bots app's own setting runs on the viewed bot (`envNamedFor`): those playbooks hold
+   *  their tickers though nothing is subscribed. Absent when the bots reported none. */
+  envNamed?: readonly string[],
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -171,7 +180,7 @@ export function playbookStoreView(
     .reduce((sum, s) => sum + (s.capitalAllocated ?? 0), 0);
   return {
     cards,
-    strategies: strategyCardsView(subscriptions, asOfIso),
+    strategies: strategyCardsView(subscriptions, asOfIso, envNamed),
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),

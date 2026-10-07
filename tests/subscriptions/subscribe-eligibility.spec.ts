@@ -249,3 +249,58 @@ describe("what the Store draws on a subscribed row", () => {
     );
   });
 });
+
+describe("the bots app's own roster holds tickers too (#4469 slice 3a part 2)", () => {
+  const lookup = withWheelNvda;
+
+  it("reads the env-named ids first, in their order, and a subscription keeps that turn", () => {
+    const onBot = subscribedPairs(
+      [
+        { playbookId: WHEEL_NVDA.id, enabled: true },
+        { playbookId: "NVDA-CALL-SPREAD", enabled: true },
+      ],
+      lookup,
+      ["NVDA-CALL-SPREAD", "S1-NVDA"],
+    );
+    expect(onBot.map((p) => p.id)).toEqual(["NVDA-CALL-SPREAD", "S1-NVDA", WHEEL_NVDA.id]);
+  });
+
+  it("refuses a second option pair on a ticker the env roster's option pair holds, unsubscribed", () => {
+    expect(
+      newSubscriptionRefusal({
+        playbookId: WHEEL_NVDA.id,
+        subscriptions: [],
+        envNamed: ["NVDA-CALL-SPREAD"],
+        asOfIso: TODAY,
+        lookup,
+        runnable: () => true,
+      }),
+    ).toBe(
+      "The call spread already trades NVDA options on this bot; a bot runs one option playbook per symbol.",
+    );
+  });
+
+  it("takes the env-named pair itself — subscribing it is what arms it", () => {
+    expect(
+      newSubscriptionRefusal({
+        playbookId: "NVDA-CALL-SPREAD",
+        subscriptions: [],
+        envNamed: ["NVDA-CALL-SPREAD"],
+        asOfIso: TODAY,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("says the later option pair is not trading when the env roster's owns the ticker", () => {
+    const onBot = subscribedPairs([{ playbookId: WHEEL_NVDA.id, enabled: true }], lookup, [
+      "NVDA-CALL-SPREAD",
+    ]);
+    expect(notTradingNote(WHEEL_NVDA, onBot)).toBe("not trading — the call spread owns NVDA");
+  });
+
+  it("is unchanged when the bots reported no roster", () => {
+    expect(
+      subscribedPairs([{ playbookId: "S1-NVDA", enabled: true }], lookup).map((p) => p.id),
+    ).toEqual(["S1-NVDA"]);
+  });
+});
