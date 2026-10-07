@@ -19,9 +19,18 @@ set -euo pipefail
 # never touches your working tree, so a stale or dirty local branch does not matter. Idempotent: if
 # `main` already carries the trigger it says so and exits 0 without opening anything.
 #
-# What it does, in order: clone main shallow-ish → apply the hunk below (3-way, so an unrelated edit
-# to the same file still merges) → run `node scripts/workflow-lint.mjs` as its own proof → commit →
-# push a branch → open a PR labelled `hold-merge` so nothing arms it → print the URL to merge.
+# What it does, in order: clone main (blobless) → fetch the patch's base blob → apply the hunk below
+# (3-way, so an unrelated edit to the same file still merges) → run `node scripts/workflow-lint.mjs`
+# as its own proof → commit → push a branch → open a PR labelled `hold-merge` so nothing arms it →
+# print the URL to merge.
+#
+# WHY THE BASE BLOB IS FETCHED BY HAND (2026-10-07). The first version cloned `--depth 50`, and a
+# 3-way apply needs the blob the patch was cut from — two days of platters later that blob was
+# outside the window, `git apply -3` fell back to a plain apply, and the paste-able line failed on
+# its first real run. A blobless clone has the whole history but no file contents, and `git apply`
+# does not lazy-fetch on its own, so the script asks for the one base blob (the patch carries full
+# ids — cut it with `git diff --full-index`) before applying. If someone edits the very lines the
+# hunk touches, 3-way still conflicts: then a session regenerates the patch, Eric re-pastes.
 
 DRY=0
 [ "${1:-}" = "--dry-run" ] && DRY=1
@@ -34,7 +43,7 @@ trap 'rm -rf "$TMP"' EXIT
 say() { printf '%s\n' "$*"; }
 
 say "· cloning $REPO main into $TMP"
-git clone --quiet --depth 50 --branch main "https://github.com/$REPO.git" "$TMP/repo"
+git clone --quiet --filter=blob:none --branch main "https://github.com/$REPO.git" "$TMP/repo"
 cd "$TMP/repo"
 
 if grep -q 'claim-feedback-reply' .github/workflows/moneypenny-events.yml; then
@@ -44,7 +53,7 @@ fi
 
 cat > "$TMP/trigger.patch" <<'SKYNET_PATCH_EOF'
 diff --git a/.github/workflows/moneypenny-events.yml b/.github/workflows/moneypenny-events.yml
-index 8862c80d..9c308874 100644
+index c7e438a9b4716178e1127c2bf06d74a78483b4fd..2fb7d8c05cc1487de4f387716b40c3475e5383f6 100644
 --- a/.github/workflows/moneypenny-events.yml
 +++ b/.github/workflows/moneypenny-events.yml
 @@ -177,8 +177,15 @@ jobs:
@@ -101,10 +110,10 @@ index 8862c80d..9c308874 100644
        # THE PLAN LANE'S GATE (#823) — mirrors the feedback gate immediately above, one authorization
        # boundary down. A plan issue's `ready` is a COMMENT, not a label, so the boundary is WHO
        # commented rather than who applied a label: `author_association` must be OWNER, MEMBER, or
-@@ -720,12 +756,19 @@ jobs:
-           # written in this file could only be tuned by spending his attention; as repo content it
-           # is an ordinary auto-merging PR. `.github/prompts/**` is in envelope.json, so no lane can
-           # rewrite its own orders.
+@@ -721,12 +757,19 @@ jobs:
+           # The triage rules and the build envelope live in .github/prompts/feedback-build.md,
+           # not here. `.github/prompts/**` is envelope-protected (blocking), so the prompt merges
+           # through Eric like this file, but no lane can rewrite its own orders.
 +          # `Resume reply comment id` (#3959 slice 1) is the ONE run-shaped input beyond the issue
 +          # number: the id of the authorized reply that woke this lane, or `none` on every other
 +          # path. feedback-build.md owns what to do with it (read that comment first; acknowledge it
@@ -121,7 +130,7 @@ index 8862c80d..9c308874 100644
        # THE MECHANICAL "DID ANYTHING VISIBLE HAPPEN?" GUARD (#1028). The session's own contract
        # (feedback-build.md: "exactly one of four visible endings, always, never silence") is a
        # prompt's promise — #1020's run 172 broke it silently (9 turns, $0.37, `is_error: false`,
-@@ -748,6 +791,10 @@ jobs:
+@@ -749,6 +792,10 @@ jobs:
        - if: needs.route.outputs.feedback_issue != ''
          env:
            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,7 +144,14 @@ index 8862c80d..9c308874 100644
 SKYNET_PATCH_EOF
 
 say "· applying the trigger hunk"
-git apply -3 --verbose "$TMP/trigger.patch" 2>&1 | sed 's/^/  /'
+BASE="$(sed -n 's/^index \([0-9a-f]\{40\}\)\.\..*/\1/p' "$TMP/trigger.patch" | head -1)"
+git cat-file blob "$BASE" >/dev/null
+git apply -3 --verbose "$TMP/trigger.patch" 2>&1 | sed 's/^/  /' || {
+  say ""
+  say "✗ the hunk no longer applies to main — someone edited the lines it touches."
+  say "  Nothing was pushed. Ask a session to regenerate the patch in this script (#3959), then re-paste."
+  exit 1
+}
 
 say "· proving it parses as a workflow"
 node scripts/workflow-lint.mjs
@@ -157,7 +173,8 @@ Slice 1 of #3959 — the one hunk the App identity cannot push (GitHub withholds
 \`workflows\` from it by this repo's own envelope). Everything it calls merged
 with the slice; this is the wake-up.
 
-Part of #3959"
+Part of #3959
+Closes #4852"
 
 say "· pushing $BRANCH"
 git push -q -u origin "$BRANCH"
@@ -171,6 +188,7 @@ Picture: waived — the picture is on the slice's own PR; this is the one hunk t
 ## Summary
 
 - Adds the \`reply\` step and its two outputs to the events router. Part of #3959.
+- Closes #4852 — which unblocks slice 2 (#4301) for the continuation sweep.
 - Workflow file: never auto-merges. Labelled \`hold-merge\`; merge it when you are ready.
 - Everything it calls is already on main, specced and green.
 ")"
