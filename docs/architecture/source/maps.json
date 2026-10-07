@@ -319,7 +319,7 @@
       {
         "from": "ci",
         "to": "fly",
-        "label": "Builds one image, deploys skynet-capital on every push to main, deploys skynet-capital-bots only when bot-relevant, sets secrets, pulls logs",
+        "label": "Builds one image, restarts skynet-capital only when a push changes what the image ships (dashboard-deploy-preflight), deploys skynet-capital-bots only when bot-relevant, sets secrets, pulls logs",
         "technology": "flyctl deploy --remote-only / --image, flyctl secrets, flyctl logs",
         "evidence": ".github/workflows/pipeline.yml deploy + deploy-bots jobs; autonomy-ops.yml; fly-logs.yml; scripts/bot-relevant.mjs, scripts/bots-deploy-preflight.mjs."
       },
@@ -1189,7 +1189,7 @@
       {
         "from": "pipeline",
         "to": "dashboard",
-        "label": "Deploys every push, smokes, rolls back",
+        "label": "Deploys when the push changes the image (preflight), smokes, rolls back",
         "technology": "flyctl deploy --remote-only; scripts/smoke.sh",
         "evidence": "pipeline.yml deploy job"
       },
