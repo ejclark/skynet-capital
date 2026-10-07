@@ -177,3 +177,49 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{"AMZN":251.52},"vix":15.31,"daysBand":"low:0+","adjacentIds":["apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-07, D+1 — day 2 of the event's 48 hours is still in progress).** Promotional-sale
+mode runs no `earnings-cycle` / `intraday-edges` instrument (no print date to key them to — see Honest
+limits above); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The tape is from Yahoo daily bars pulled
+today; the event facts from aboutamazon.com's own page, re-fetched today (HTTP 200). Date label:
+**estimate** (EST:), unchanged — no IR primary appeared (ir.aboutamazon.com's release index renders no
+listing to a plain fetcher, so this is *not found*, not *confirmed absent*; press.aboutamazon.com is the
+newsroom, not an IR source).
+
+**What happened vs the stance.** The event ran **2026-10-06/07** as stated — 48 hours, 22 countries, deal
+drops at midnight / 8 a.m. / 1 p.m. PDT — so Leg 1 (no cross-month base effect: the fall event stayed inside
+October, one day off 2025's 10-07/08) **held as a calendar fact**. No kill switch fired: no reschedule or
+extension across the October/November boundary, no pre-event IR release, no ≥5% AMZN move in the run-up
+(the largest daily move 09-28 → 10-05 was −1.41%). Adobe's own tally of the event's online spend was **not
+published** at this close-out; the nonstore read-through it feeds belongs to `retail-sales-2026-11-17`,
+not to this document.
+
+| Day-1 tape (Yahoo bars, 10-05 → 10-06) | 10-05 close | 10-06 close | Δ |
+|---|---|---|---|
+| AMZN | 251.40 | **256.29** | **+1.95%** |
+| Nasdaq Composite | 27,477.31 | 27,599.89 | +0.45% |
+| S&P 500 | 7,773.95 | 7,818.93 | +0.58% |
+| XRT (retail ETF) | 82.92 | 82.95 | +0.04% |
+| VIX | 15.52 | 15.01 | −0.51 |
+
+**The stance, scored.** *Stand aside on AMZN* made no prediction about direction or size, so there is
+nothing to score right or wrong: AMZN gained +1.95% on day 1 against Nasdaq +0.45%, about **+1.5pp of
+excess**, which a stand-aside forwent. That is one session, on an event this document refused to trade
+for want of any playbook that keys to a non-disclosure date (S1 killed on AMZN; S3 earnings-only) — it is
+an observation, never a base rate, and **attribution to the sale is impossible by construction**: the same
+session carried the corridor's `eia-steo-2026-10-06`, `intl-trade-full-report-2026-10-06`, the Treasury
+3-year auction and `mrvl-investor-day-2026-10-06`, and the broad tape was up too. The retail ETF being flat
+(+0.04%) is the one clean contrast: whatever moved AMZN did not lift the sector. Day 2 (10-07) had not
+closed when this ran and is not scored. Nothing here changes the *refuse a date-keyed AMZN position* rule;
+the open earnings question belongs to [`amzn-2026-10-29-print.md`](amzn-2026-10-29-print.md).
+
+**Forward tests.** None registered (the initial research made no prediction with a score-by date), so
+nothing to score and no sweep kill-list entry. **Beyond the horizon, noted not proposed:** none found —
+the corridor above is already fully tracked, and `--on-date=2026-10-07` lists only
+`consumer-credit-2026-10-07`, `fomc-minutes-2026-10-07` and `treasury-10y-note-2026-10-07`.
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{"AMZN":256.29},"vix":15.01,"daysBand":"low:0+","adjacentIds":["apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0,"blocked":[]} -->
