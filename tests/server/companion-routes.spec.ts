@@ -34,6 +34,7 @@ function fakeRes() {
     end: (body?: string) => {
       if (body !== undefined) out.body = body;
     },
+    once: () => res, // openSseStream registers for the shutdown drain on the response's close
   } as unknown as ServerResponse;
   return { res, out };
 }
