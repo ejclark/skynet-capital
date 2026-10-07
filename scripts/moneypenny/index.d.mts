@@ -59,15 +59,22 @@ export function claimFeedback(
   sha?: string,
   admission?: AdmissionDeps,
 ): ClaimResult;
-/** #3959 slice 1: an authorized reply on a `needs-info` feedback issue resumes its build. Takes the
- *  same lease, sets `in-progress`, clears `needs-info`, and reports the reply's comment id. */
+/** #3959 slices 1–2: an authorized reply on a blocked issue resumes the lane that owns it. A
+ *  `feedback` issue takes the same lease, sets `in-progress`, clears the answered label, and reports
+ *  the reply's comment id; a `plan` issue is only unparked (`unparked: true`) and the plan gate's
+ *  `unlabeled` path does the claim. */
 export function claimFeedbackReply(
   ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
   /** `edit` is this lane's injected label write — see the function's refusal-path note. */
   admission?: AdmissionDeps & { edit?: (n: number, args: string[]) => boolean },
-): ClaimResult & { reply?: number | string; replyAt?: string };
+): ClaimResult & {
+  reply?: number | string;
+  replyAt?: string;
+  unparked?: boolean;
+  lane?: "feedback" | "plan";
+};
 /** The #3960 retry sweep: claim the oldest admissible `ready` issue (plan or feedback lane). */
 export function claimNext(
   nowMs?: number,

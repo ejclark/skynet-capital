@@ -118,7 +118,7 @@ one queue — and the third got buried under the first two.
 | Needs the member to clarify | `needs-info` | **the member** |
 | A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
 
-### Replying to `needs-info` restarts the build (#3959 slice 1)
+### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
 `needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
 until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
@@ -130,7 +130,15 @@ what happens next, so the thread still reads as a complete record.
 The board follows along without anyone touching it: clearing `needs-info` and applying
 `in-progress` are the two label events the Orchestration board's Status sync already listens to, so
 the issue moves Blocked → In Progress as the build starts. A reply on an issue that is *also*
-`needs-eric` does **not** resume — that one is still Eric's, and still waits.
+`needs-eric` does **not** resume — one reply answers one question, and the other still waits.
+
+**Slice 2 (#4301): any blocked lane.** The same door now serves `needs-eric` too, and a `plan`
+issue as well as a `feedback` one. The lane is read off the issue's own labels (`feedback` or
+`plan`) — nothing is recorded — and an issue with neither has no lane waiting, so a reply there
+stays a plain comment. A `feedback` reply builds in that run as above; a `plan` reply only takes the
+label off, and the plan lane's existing unpark path claims it. `needs-design` and `hold-merge` are
+not answerable by a comment (a design session, a merge click). A reply that decided nothing ends the
+resumed run with the label put back — one session per reply, never a loop.
 
 ### Is it working? — `npm run feedback:scan`
 
