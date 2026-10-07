@@ -31,6 +31,7 @@ import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
+import { memoPerKey } from "../storage/ttl-memo.js";
 
 /**
  * Opens the app-side decision store — this listener's own copy of what `bots` replicates over
@@ -78,6 +79,9 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** Which personas decided these orders, ids only — the Decisions tab's cross-persona join
+   *  without a decision record per order (#4612 slice 7). */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
   /** A spread leg's order id → its spread — the same store, filled by the same replicated
    *  records, so a leg resolves the moment its decision has landed. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
@@ -99,6 +103,8 @@ export interface CredentialsBridgeDeps {
   /** The live roster resolver every other credential seam in this app already uses. */
   readonly findParticipant: (id: string) => Participant | undefined;
 }
+
+const FUNNEL_TTL_MS = 30_000;
 
 /** Start the internal insights listener; logs the port it bound once it's up. */
 export function startInsightsBridge(
@@ -187,8 +193,13 @@ export function startInsightsBridge(
               ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
-          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
+          // Remembered for 30 s: a grouped scan of the persona's whole history (~190 ms at 180
+          // days) that no viewer can tell is half a minute old (#4612 slice 7).
+          funnelFor: memoPerKey(FUNNEL_TTL_MS, (personaId: string) =>
+            decisionDb.funnelFor(personaId),
+          ),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.
