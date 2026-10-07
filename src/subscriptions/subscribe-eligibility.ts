@@ -33,13 +33,28 @@ const instrumentOf = (pair: Pair) => STRATEGIES[pair.strategy].instrument;
 
 const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
-/** The bot's subscriptions (on or paused — a paused pair keeps its names, #4651) resolved to pairs,
- *  in the order the bot reads them. An id no row names (an authored play) claims nothing here. */
+type HeldSubscription = Pick<PlaybookSubscription, "playbookId"> &
+  Partial<Pick<PlaybookSubscription, "enabled">>;
+
+/**
+ * The bot's subscriptions (on or paused — a paused pair keeps its names, #4651) resolved to pairs,
+ * in the order the bot reads them: enabled ones first, then paused, each in stored order
+ * (`autonomous-live-wiring.ts`: `mergeRosters(house, [...enabled, ...paused])`). An id no row names
+ * (an authored play) claims nothing here.
+ *
+ * Not seen from here: a house playbook the bots' env roster runs on a bot WITHOUT a subscription
+ * (exits only since #4651). Bot accounts are seeded with their roster's subscriptions (#4535), so
+ * this is the unseeded edge; the API keeps that roster in memory, and the next part of 3a joins it.
+ */
 export function subscribedPairs(
-  subscriptions: readonly Pick<PlaybookSubscription, "playbookId">[],
+  subscriptions: readonly HeldSubscription[],
   lookup: (id: string) => Pair | undefined,
 ): Pair[] {
-  return subscriptions.flatMap((sub) => {
+  const inBotOrder = [
+    ...subscriptions.filter((sub) => sub.enabled !== false),
+    ...subscriptions.filter((sub) => sub.enabled === false),
+  ];
+  return inBotOrder.flatMap((sub) => {
     const pair = lookup(sub.playbookId);
     return pair ? [pair] : [];
   });
@@ -77,7 +92,7 @@ export function handOffNote(pair: Pair, others: readonly Pair[]): string | undef
 export interface EligibilityInput {
   readonly playbookId: string;
   /** The bot's own subscriptions, on or paused. */
-  readonly subscriptions: readonly Pick<PlaybookSubscription, "playbookId">[];
+  readonly subscriptions: readonly HeldSubscription[];
   readonly asOfIso: string;
   /** The caller's own authored plays (#809) — nothing persists one yet, so callers pass none. */
   readonly authoredIds?: readonly string[];

@@ -4,6 +4,7 @@ import {
   handOffNote,
   newSubscriptionRefusal,
   notTradingNote,
+  subscribedPairs,
   takenBy,
 } from "../../src/subscriptions/subscribe-eligibility.js";
 
@@ -231,5 +232,20 @@ describe("what the Store draws on a subscribed row", () => {
     const onBot = [pair("NVDA-CALL-SPREAD"), WHEEL_NVDA];
     expect(notTradingNote(WHEEL_NVDA, onBot)).toBe("not trading — the call spread owns NVDA");
     expect(notTradingNote(pair("NVDA-CALL-SPREAD"), onBot)).toBeUndefined();
+  });
+
+  it("reads the bot's pairs in the bot's order — enabled first, then paused", () => {
+    const lookup = withWheelNvda;
+    const onBot = subscribedPairs(
+      [
+        { playbookId: "NVDA-CALL-SPREAD", enabled: false },
+        { playbookId: WHEEL_NVDA.id, enabled: true },
+      ],
+      lookup,
+    );
+    expect(onBot.map((p) => p.id)).toEqual([WHEEL_NVDA.id, "NVDA-CALL-SPREAD"]);
+    expect(notTradingNote(pair("NVDA-CALL-SPREAD"), onBot)).toBe(
+      "not trading — the wheel owns NVDA",
+    );
   });
 });
