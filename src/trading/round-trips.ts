@@ -36,6 +36,7 @@
  */
 
 import type { PlaybookMode } from "../domain/types.js";
+import type { Initiator } from "./initiator.js";
 import { isOccSymbol } from "./option-symbols.js";
 
 /** One executed fill — the narrow shape round-tripping needs, independent of any broker payload. */
@@ -69,6 +70,9 @@ export interface TradeFill {
   readonly playbookId?: string;
   /** The mode the playbook ran in. Meaningless without `playbookId`. */
   readonly playbookMode?: PlaybookMode;
+  /** Who started the order (#4450 slice 4, `initiator.ts`) — joined in beside `playbookId`, and
+   *  absent wherever no bot decision accounts for the fill. */
+  readonly initiator?: Initiator;
   /**
    * The broker order id — carried from the CLOSING fill (unlike `playbookId`, which rides the
    * opening lot). Used by `desk-json-view.ts` to join realized P/L back onto the activity row
@@ -112,6 +116,8 @@ export interface RoundTrip {
    *  whichever playbook opened it, not whatever later closed it. */
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  /** Who started the OPENING order, like `playbookId` — see `TradeFill.initiator`. */
+  readonly initiator?: Initiator;
   /** The closing order's broker id — from the CLOSING fill, used to join P/L to activity rows. */
   readonly orderId?: string;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
@@ -130,6 +136,7 @@ export interface OpenLot {
   /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  readonly initiator?: Initiator;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
   readonly entryIntentId?: number;
 }
@@ -165,6 +172,7 @@ interface Lot {
   /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
   playbookId?: string;
   playbookMode?: PlaybookMode;
+  initiator?: Initiator;
   /** Carried from the opening fill (#2287 PR 7) — see `RoundTrip.entryIntentId`. */
   entryIntentId?: number;
 }
@@ -184,17 +192,19 @@ function holdMs(openedAt: string, closedAt: string): number {
  *  what lets one lot queue serve both directions instead of a parallel short-lot structure. */
 type LotDirection = "long" | "short";
 
-/** The attribution fields shared by `Lot`/`OpenLot`/`RoundTrip` — playbook (#885) and entry-intent
- *  (#2287 PR 7) — pulled out so `matchSymbol` doesn't spend its own cognitive-complexity budget on
- *  optional-field spreads. */
+/** The attribution fields shared by `Lot`/`OpenLot`/`RoundTrip` — playbook (#885), initiator
+ *  (#4450) and entry-intent (#2287 PR 7) — pulled out so `matchSymbol` doesn't spend its own
+ *  cognitive-complexity budget on optional-field spreads. */
 function attributionOf(source: {
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  readonly initiator?: Initiator;
   readonly entryIntentId?: number;
-}): Pick<Lot, "playbookId" | "playbookMode" | "entryIntentId"> {
+}): Pick<Lot, "playbookId" | "playbookMode" | "initiator" | "entryIntentId"> {
   return {
     ...(source.playbookId ? { playbookId: source.playbookId } : {}),
     ...(source.playbookMode ? { playbookMode: source.playbookMode } : {}),
+    ...(source.initiator ? { initiator: source.initiator } : {}),
     ...(source.entryIntentId !== undefined ? { entryIntentId: source.entryIntentId } : {}),
   };
 }

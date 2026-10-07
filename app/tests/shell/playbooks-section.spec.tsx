@@ -27,6 +27,24 @@ const row = (playbookId: string, trades: number, netRealized: number): PlaybookM
   byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
 });
 
+const split = (playbook: number, forced: number, persona: number) => ({
+  rows: (
+    [
+      ["playbook", playbook],
+      ["forced", forced],
+      ["persona", persona],
+    ] as const
+  ).map(([initiator, trades]) => ({
+    initiator,
+    trades,
+    wins: trades,
+    losses: 0,
+    winRate: trades > 0 ? 100 : null,
+    netRealized: trades * 10,
+  })),
+  untraced: 0,
+});
+
 const card = (id: string, subscribers?: number) => ({
   id,
   symbol: "NVDA",
@@ -66,6 +84,11 @@ rstest.mock("../../src/live/playbook-performance", () => ({
       mine: [row("S1-NVDA", 2, 100)],
       house: [row("S1-NVDA", 7, 900)],
       accounts: ["human-joe"],
+      // Who started the bots' trades (#4450 slice 4): the house's split, and the account's own.
+      byInitiator: {
+        house: split(0, 11, 4),
+        mine: split(1, 0, 0),
+      },
     });
   },
 }));
@@ -124,6 +147,28 @@ describe("PlaybooksSection metric blocks", () => {
     expect(
       cardOf("HC-SAURON").getByText(/No account has closed a trade on this playbook yet/),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Who started the bots' closed trades (#4450 slice 4, EARS 4) — one split for every bot, drawn
+ * above the deck even in catalog-only mode, and the selected account's own beside it only when
+ * the viewer manages that account. Never inside a playbook card.
+ */
+describe("PlaybooksSection initiator split", () => {
+  it("shows every bot's split in catalog-only mode, and no account's", async () => {
+    mount(undefined);
+    const house = await screen.findByRole("region", { name: /every bot/ });
+    expect(within(house).getByText("11 closed trades")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Uncle Joe's closed trades/ })).toBeNull();
+    expect(cardOf("S1-NVDA").queryByText(/forced daily pick/)).toBeNull();
+  });
+
+  it("adds the managed account's own split, kept apart from every bot's", async () => {
+    mount("human-joe");
+    const mine = await screen.findByRole("region", { name: /Uncle Joe's closed trades/ });
+    expect(within(mine).getByText("1 closed trade")).toBeInTheDocument();
+    expect(within(mine).queryByText("11 closed trades")).toBeNull();
   });
 });
 

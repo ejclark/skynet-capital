@@ -205,6 +205,60 @@ describe("playbookPerformanceView — mine vs. the house, never blended (#3665)"
   });
 });
 
+describe("playbookPerformanceView — who started each trade (#4450 slice 4)", () => {
+  // Sauron's ledger: one S1-NVDA trip (+10), one forced pick (+20), one reflex of his own (+30),
+  // and one trip no decision accounts for (+40). A human's ledger beside it, untagged (+50).
+  const trip = (prefix: string, exit: number) => [
+    fill({ orderId: `${prefix}-buy`, side: "buy", price: 100 }),
+    fill({ orderId: `${prefix}-sell`, side: "sell", price: exit, at: "2026-01-02T00:00:00Z" }),
+  ];
+  const ledgers: Record<string, TradeActivityRecord[]> = {
+    sauron: [
+      ...trip("pb", 101),
+      ...trip("fp", 102).map((f) => ({ ...f, symbol: "AMD" })),
+      ...trip("own", 103).map((f) => ({ ...f, symbol: "TSLA" })),
+      ...trip("ghost", 104).map((f) => ({ ...f, symbol: "MSFT" })),
+    ] as TradeActivityRecord[],
+    eric: trip("h", 105),
+  };
+  const records: Record<string, DecisionRecord> = {
+    "pb-buy": decision([buyOutcome("pb-buy", "S1-NVDA")]),
+    "fp-buy": { ...decision([buyOutcome("fp-buy", "BETA-SCOUT")]), personaId: "beta-scout" },
+    "own-buy": decision([buyOutcome("own-buy", "SAURON")]),
+  };
+  const deps = {
+    readTradeActivity: async (id: string) => ledgers[id] ?? [],
+    readDecisions: async () => [],
+    findByOrderId: (orderId: string) => {
+      const record = records[orderId];
+      return record ? { record, intent: record.outcomes[0]?.intent as never } : undefined;
+    },
+  };
+  const people = [participant({ id: "sauron" }), participant({ id: "eric", kind: "human" })];
+
+  it("splits the bots' trips by initiator and counts the untraced one apart", async () => {
+    const { byInitiator } = await playbookPerformanceView(people, ["sauron"], deps);
+    expect(
+      byInitiator.house.rows.map((r) => [r.initiator, r.trades, Math.round(r.netRealized)]),
+    ).toEqual([
+      ["playbook", 1, 10],
+      ["forced", 1, 20],
+      ["persona", 1, 30],
+    ]);
+    // The ghost trip; the human's trip is not a bot's, so it is in neither the rows nor this count.
+    expect(byInitiator.house.untraced).toBe(1);
+    expect(byInitiator.mine?.untraced).toBe(1);
+  });
+
+  it("keeps the forced pick out of every playbook's own numbers", async () => {
+    const view = await playbookPerformanceView(people, [], deps);
+    const s1 = view.house.find((r) => r.playbookId === "S1-NVDA");
+    expect(s1).toMatchObject({ trades: 1 });
+    expect(Math.round(s1?.netRealized ?? 0)).toBe(10);
+    expect(view.byInitiator.mine).toBeNull();
+  });
+});
+
 describe("selectAccounts — a selection narrows, never widens", () => {
   it("defaults to every owned account", () => {
     expect(selectAccounts(["a", "b"], null)).toEqual(["a", "b"]);

@@ -30,11 +30,36 @@ export interface PlaybookMetricsView {
   };
 }
 
+/** Who started a bot's trade (#4450 slice 4) — mirrors `src/trading/initiator.ts`. */
+export type Initiator = "playbook" | "forced" | "persona";
+
+/** The slice of `InitiatorStats` (`src/trading/trade-stats.ts`) the split renders. */
+export interface InitiatorRowView {
+  readonly initiator: Initiator;
+  readonly trades: number;
+  readonly wins: number;
+  readonly losses: number;
+  readonly winRate: number | null;
+  readonly netRealized: number;
+}
+
+export interface InitiatorSplitView {
+  /** Always all three initiators — a zero is a row reading 0, never a missing row. */
+  readonly rows: readonly InitiatorRowView[];
+  /** Bot trips no recorded decision accounts for — counted, never folded into a row. */
+  readonly untraced: number;
+}
+
 export interface PlaybookPerformanceView {
   readonly house: readonly PlaybookMetricsView[];
   /** Null when none of the requested accounts is readable — an absence, not zero trades. */
   readonly mine: readonly PlaybookMetricsView[] | null;
   readonly accounts: readonly string[];
+  /** Bot accounts only, the same two groupings kept apart. */
+  readonly byInitiator?: {
+    readonly house: InitiatorSplitView;
+    readonly mine: InitiatorSplitView | null;
+  };
 }
 
 /** With no account (catalog-only), `mine` covers every owned account — callers render only `house`. */

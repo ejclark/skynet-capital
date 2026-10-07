@@ -1,5 +1,6 @@
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { initiatorOf } from "../playbooks/initiator.js";
 import {
   indexPlaybookTags,
   type PlaybookTag,
@@ -7,7 +8,12 @@ import {
   playbookTagsFromOutcomes,
 } from "../trading/playbook-attribution.js";
 import type { RoundTrip } from "../trading/round-trips.js";
-import { type PlaybookStats, statsByPlaybook } from "../trading/trade-stats.js";
+import {
+  type InitiatorSplit,
+  type PlaybookStats,
+  statsByInitiator,
+  statsByPlaybook,
+} from "../trading/trade-stats.js";
 import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-account-view.js";
 
 /**
@@ -59,7 +65,8 @@ async function tripsFor(
  *  opened months ago is attributed as surely as today's. Reading decisions and indexing their
  *  outcomes only ever covered the store's newest page, a few minutes of a busy bot's passes.
  *  Looked up once per unique order id, not once per fill — a partial fill posts several journal
- *  lines for the same order (#4612 slice 7, defect #8). */
+ *  lines for the same order (#4612 slice 7, defect #8). Every order a decision accounts for gets
+ *  its initiator (#4450 slice 4), playbook or not; one none does stays untagged. */
 function tagsByOrder(
   fills: readonly { readonly orderId: string }[],
   findByOrderId: NonNullable<PlaybookPerformanceDeps["findByOrderId"]>,
@@ -67,12 +74,14 @@ function tagsByOrder(
   const tags: PlaybookTag[] = [];
   const orderIds = new Set(fills.map((f) => f.orderId));
   for (const orderId of orderIds) {
-    const intent = findByOrderId(orderId)?.intent;
-    if (!intent?.playbookId) continue;
+    const found = findByOrderId(orderId);
+    if (!found) continue;
+    const { intent, record } = found;
     tags.push({
       orderId,
-      playbookId: intent.playbookId,
+      ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
       ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
+      initiator: initiatorOf(intent.playbookId, record.personaId),
     });
   }
   return indexPlaybookTags(tags);
@@ -99,9 +108,16 @@ export interface PlaybookPerformanceView {
   readonly mine: PlaybookStats[] | null;
   /** The accounts `mine` actually covers, so a reader can see what "mine" means. */
   readonly accounts: readonly string[];
+  /** Who started the bots' closed trades (#4450 slice 4), the same two groupings kept apart.
+   *  Bot accounts only: a member's own orders carry no decision, and counting them as untraced
+   *  would bury the number this split exists to show. */
+  readonly byInitiator: {
+    readonly house: InitiatorSplit;
+    readonly mine: InitiatorSplit | null;
+  };
 }
 
-/** Each participant's ledger is read and tagged once; both groupings slice the same trips. */
+/** Each participant's ledger is read and tagged once; every grouping slices the same trips. */
 export async function playbookPerformanceView(
   participants: readonly ParticipantSnapshot[],
   scope: readonly string[],
@@ -110,11 +126,19 @@ export async function playbookPerformanceView(
   const live = participants.filter((p) => !p.error);
   const tripLists = await Promise.all(live.map((p) => tripsFor(p, deps)));
   const accounts = live.map((p) => p.id).filter((id) => scope.includes(id));
-  const mine = live.flatMap((p, i) => (accounts.includes(p.id) ? (tripLists[i] ?? []) : []));
+  const inScope = (p: ParticipantSnapshot) => accounts.includes(p.id);
+  const tripsOf = (keep: (p: ParticipantSnapshot) => boolean) =>
+    live.flatMap((p, i) => (keep(p) ? (tripLists[i] ?? []) : []));
+  const isBot = (p: ParticipantSnapshot) => p.kind === "bot";
+  const mine = tripsOf(inScope);
   return {
     house: statsByPlaybook(tripLists.flat()),
     mine: accounts.length > 0 ? statsByPlaybook(mine) : null,
     accounts,
+    byInitiator: {
+      house: statsByInitiator(tripsOf(isBot)),
+      mine: accounts.length > 0 ? statsByInitiator(tripsOf((p) => isBot(p) && inScope(p))) : null,
+    },
   };
 }
 

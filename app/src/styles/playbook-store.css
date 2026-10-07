@@ -365,6 +365,16 @@
   grid-column: 1 / -1;
 }
 
+/* Who started the bots' closed trades (#4450 slice 4): above the deck, one cell per initiator —
+   stacked at phone width, three across once there is room. Rows differ by their words, never hue. */
+.pb-initiators {
+  margin: 0 0 12px;
+}
+
+.pb-initiators-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
 .pb-metrics-empty {
   margin: 0;
   font-size: 12px;

@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { fetchPlaybookPerformance, type PlaybookMetricsView } from "../live/playbook-performance";
 import { fetchPlaybookStore, type PlaybookStoreView } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { InitiatorSplit } from "./initiator-split";
 import type { MetricsScope } from "./playbook-metrics";
 import { PlaybookCard } from "./playbook-store-cards";
 
@@ -144,6 +145,20 @@ export function PlaybooksSection({
             : "Viewing the catalog — pick a bot account under Subscribe as to subscribe."}
         </p>
       )}
+      {performance.data?.byInitiator ? (
+        <>
+          {manages && performance.data.byInitiator.mine ? (
+            <InitiatorSplit
+              heading={`Who started ${accountName ?? accountId}'s closed trades`}
+              split={performance.data.byInitiator.mine}
+            />
+          ) : null}
+          <InitiatorSplit
+            heading="Who started the bots' closed trades — every bot"
+            split={performance.data.byInitiator.house}
+          />
+        </>
+      ) : null}
       <div className="pb-deck">
         {cards.map((card) => (
           <PlaybookCard
