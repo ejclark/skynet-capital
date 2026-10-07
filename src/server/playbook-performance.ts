@@ -1,5 +1,7 @@
+import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { initiatorOf } from "../playbooks/initiator.js";
 import {
   indexPlaybookTags,
   type PlaybookTag,
@@ -7,7 +9,12 @@ import {
   playbookTagsFromOutcomes,
 } from "../trading/playbook-attribution.js";
 import type { RoundTrip } from "../trading/round-trips.js";
-import { type PlaybookStats, statsByPlaybook } from "../trading/trade-stats.js";
+import {
+  type InitiatorSplit,
+  type PlaybookStats,
+  statsByInitiator,
+  statsByPlaybook,
+} from "../trading/trade-stats.js";
 import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-account-view.js";
 
 /**
@@ -29,7 +36,11 @@ import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-acco
  * honestly by excluding untagged trips rather than inventing a "human" bucket.
  */
 
-export type PlaybookPerformanceDeps = AccountDecisionsDeps;
+export interface PlaybookPerformanceDeps extends AccountDecisionsDeps {
+  /** A spread leg's own order id → its spread's order (`DecisionDb.findSpreadLeg`): a leg's fill
+   *  carries the leg's id, which `findByOrderId` never matches. */
+  readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
+}
 
 /** One participant's contribution to the house-wide trip pool — playbook-tagged when the
  *  participant is a bot with a decision audit trail wired, untagged otherwise. Tags come from every
@@ -44,7 +55,8 @@ async function tripsFor(
   if (!durable) return [];
   if (participant.kind !== "bot") return deskLedger(participant, durable).trips;
   if (deps.findByOrderId) {
-    return deskLedger(participant, durable, tagsByOrder(durable, deps.findByOrderId)).trips;
+    const tags = tagsByOrder(durable, deps.findByOrderId, deps.findSpreadLeg);
+    return deskLedger(participant, durable, tags).trips;
   }
   // Legacy path, for a deployment without the order-id join: only the decisions a page-less read
   // returns can tag, so older trips go untagged there.
@@ -59,21 +71,40 @@ async function tripsFor(
  *  opened months ago is attributed as surely as today's. Reading decisions and indexing their
  *  outcomes only ever covered the store's newest page, a few minutes of a busy bot's passes.
  *  Looked up once per unique order id, not once per fill — a partial fill posts several journal
- *  lines for the same order (#4612 slice 7, defect #8). */
+ *  lines for the same order (#4612 slice 7, defect #8). Every order a decision accounts for gets
+ *  its initiator (#4450 slice 4), playbook or not; one none does stays untagged.
+ *
+ *  A spread leg reaches its decision through its spread's order (`findSpreadLeg`) and takes the
+ *  initiator only, never the playbook id: per-playbook stats keep leaving legs out, as they always
+ *  have (`DecisionDb.findSpreadLeg`'s note), while the initiator split counts them the way the
+ *  account's own trade list does — one trip per leg. */
 function tagsByOrder(
   fills: readonly { readonly orderId: string }[],
   findByOrderId: NonNullable<PlaybookPerformanceDeps["findByOrderId"]>,
+  findSpreadLeg: PlaybookPerformanceDeps["findSpreadLeg"],
 ): PlaybookTagsByOrder {
   const tags: PlaybookTag[] = [];
   const orderIds = new Set(fills.map((f) => f.orderId));
   for (const orderId of orderIds) {
-    const intent = findByOrderId(orderId)?.intent;
-    if (!intent?.playbookId) continue;
-    tags.push({
-      orderId,
-      playbookId: intent.playbookId,
-      ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
-    });
+    const found = findByOrderId(orderId);
+    if (found) {
+      const { intent, record } = found;
+      tags.push({
+        orderId,
+        ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
+        ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
+        initiator: initiatorOf(intent.playbookId, record.personaId),
+      });
+      continue;
+    }
+    const parentOrderId = findSpreadLeg?.(orderId)?.parentOrderId;
+    const spread = parentOrderId ? findByOrderId(parentOrderId) : undefined;
+    if (spread) {
+      tags.push({
+        orderId,
+        initiator: initiatorOf(spread.intent.playbookId, spread.record.personaId),
+      });
+    }
   }
   return indexPlaybookTags(tags);
 }
@@ -99,9 +130,18 @@ export interface PlaybookPerformanceView {
   readonly mine: PlaybookStats[] | null;
   /** The accounts `mine` actually covers, so a reader can see what "mine" means. */
   readonly accounts: readonly string[];
+  /** Who started the bots' closed trades (#4450 slice 4), the same two groupings kept apart.
+   *  Bot accounts only: a member's own orders carry no decision, and counting them as untraced
+   *  would bury the number this split exists to show — so `mine` is null with no bot account in
+   *  scope. The whole split is null where the order-id join isn't wired: without it no trip can
+   *  be traced, and three zero rows would be a false answer, not an absent one. */
+  readonly byInitiator: {
+    readonly house: InitiatorSplit;
+    readonly mine: InitiatorSplit | null;
+  } | null;
 }
 
-/** Each participant's ledger is read and tagged once; both groupings slice the same trips. */
+/** Each participant's ledger is read and tagged once; every grouping slices the same trips. */
 export async function playbookPerformanceView(
   participants: readonly ParticipantSnapshot[],
   scope: readonly string[],
@@ -110,11 +150,22 @@ export async function playbookPerformanceView(
   const live = participants.filter((p) => !p.error);
   const tripLists = await Promise.all(live.map((p) => tripsFor(p, deps)));
   const accounts = live.map((p) => p.id).filter((id) => scope.includes(id));
-  const mine = live.flatMap((p, i) => (accounts.includes(p.id) ? (tripLists[i] ?? []) : []));
+  const inScope = (p: ParticipantSnapshot) => accounts.includes(p.id);
+  const tripsOf = (keep: (p: ParticipantSnapshot) => boolean) =>
+    live.flatMap((p, i) => (keep(p) ? (tripLists[i] ?? []) : []));
+  const isBot = (p: ParticipantSnapshot) => p.kind === "bot";
+  const myBot = (p: ParticipantSnapshot) => isBot(p) && inScope(p);
+  const mine = tripsOf(inScope);
   return {
     house: statsByPlaybook(tripLists.flat()),
     mine: accounts.length > 0 ? statsByPlaybook(mine) : null,
     accounts,
+    byInitiator: deps.findByOrderId
+      ? {
+          house: statsByInitiator(tripsOf(isBot)),
+          mine: live.some(myBot) ? statsByInitiator(tripsOf(myBot)) : null,
+        }
+      : null,
   };
 }
 

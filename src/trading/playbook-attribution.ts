@@ -1,4 +1,5 @@
 import type { PlaybookMode } from "../domain/types.js";
+import type { Initiator } from "./initiator.js";
 
 /**
  * PLAYBOOK ATTRIBUTION — closing the gap issue #885 named: `OrderIntent.playbookId`/`playbookMode`
@@ -34,11 +35,14 @@ export interface AttributableOutcome {
 }
 
 /** One order's playbook tag, keyed by the broker's own order id — the join key shared with
- *  `ActivityView.orderId`/`TradeActivityRecord.orderId`. */
+ *  `ActivityView.orderId`/`TradeActivityRecord.orderId`. A tag may name only its `initiator`
+ *  (#4450 slice 4): a bot order with no playbook behind it is still a traced order, and its trip
+ *  counts as the bot's own rules rather than going unaccounted. */
 export interface PlaybookTag {
   readonly orderId: string;
-  readonly playbookId: string;
+  readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  readonly initiator?: Initiator;
 }
 
 /**

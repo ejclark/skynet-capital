@@ -16,6 +16,8 @@
 //   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
 //   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
 //                playbooks open (#4642 slice 10, #4652).
+//   · `initiators` — who started the bots' closed trades: a playbook, the forced pick or a bot's
+//                own rules, the account's split above every bot's (#4450 slice 4).
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -194,6 +196,23 @@ const groups = {
     },
     { tag: "delegation-locked", view: views.fogged, expect: "Delegating capital opens after" },
     { tag: "delegation-earned", view: views.fresh, expect: "Capital to delegate" },
+  ],
+  // Who started the bots' closed trades (#4450 slice 4): the account's split, then every bot's.
+  initiators: [
+    {
+      tag: "phone-initiators",
+      view: views.fresh,
+      expect: "Who started the bots' closed trades",
+      viewport: PHONE,
+      scrollTo: "Who started Sauron's closed trades",
+    },
+    {
+      tag: "desktop-initiators",
+      view: views.fresh,
+      expect: "Who started the bots' closed trades",
+      scrollTo: "Who started Sauron's closed trades",
+      quality: 60,
+    },
   ],
   tune: [
     // The owner's question first: what does this bot run? Subscribed cards lead, state first.

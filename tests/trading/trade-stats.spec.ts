@@ -1,6 +1,7 @@
 import type { RoundTrip } from "../../src/trading/round-trips.js";
 import {
   realizedByDay,
+  statsByInitiator,
   statsByPlaybook,
   statsBySymbol,
   tradeStats,
@@ -189,6 +190,34 @@ describe("statsBySymbol", () => {
     expect(rows.map((r) => r.symbol)).toEqual(["AAPL", "TSLA"]);
     expect(rows[0]).toMatchObject({ trades: 2, wins: 2, winRate: 100, netRealized: 60 });
     expect(rows[1]?.netRealized).toBe(-20);
+  });
+});
+
+describe("statsByInitiator (#4450 slice 4, EARS 4)", () => {
+  it("splits trips by who started them, and never blends the forced pick into a playbook", () => {
+    const { rows } = statsByInitiator([
+      trip(50, { playbookId: "S1-NVDA", initiator: "playbook" }),
+      trip(-20, { playbookId: "BETA-SCOUT", initiator: "forced" }),
+      trip(-5, { playbookId: "BETA-SCOUT", initiator: "forced" }),
+      trip(7, { initiator: "persona" }),
+    ]);
+    expect(rows.map((r) => [r.initiator, r.trades, r.netRealized])).toEqual([
+      ["playbook", 1, 50],
+      ["forced", 2, -25],
+      ["persona", 1, 7],
+    ]);
+  });
+
+  it("always reports all three, so no playbook trades reads as a zero row, not a missing one", () => {
+    const { rows } = statsByInitiator([trip(10, { initiator: "forced" })]);
+    expect(rows.map((r) => r.initiator)).toEqual(["playbook", "forced", "persona"]);
+    expect(rows[0]).toMatchObject({ trades: 0, winRate: null, netRealized: 0 });
+  });
+
+  it("counts a trip with no initiator as untraced, never folded into a row", () => {
+    const split = statsByInitiator([trip(10, { initiator: "persona" }), trip(99), trip(-1)]);
+    expect(split.untraced).toBe(2);
+    expect(split.rows.reduce((n, r) => n + r.trades, 0)).toBe(1);
   });
 });
 
