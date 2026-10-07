@@ -58,6 +58,7 @@ function fakeResponse(): {
     end(chunk?: string) {
       if (chunk) out.chunks.push(chunk);
     },
+    once: () => res, // openSseStream registers for the shutdown drain on the response's close
   } as unknown as ServerResponse;
   return { res, out };
 }

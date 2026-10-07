@@ -40,6 +40,7 @@ import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
+import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
@@ -278,7 +279,7 @@ async function main(): Promise<void> {
     }),
   });
 
-  createDashboardServer({
+  const server = createDashboardServer({
     hub,
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
@@ -427,7 +428,11 @@ async function main(): Promise<void> {
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
     ...(spotChecks ? { spotChecks } : {}),
-  }).listen(PORT, () => {
+  });
+  // Fly's deploy sends SIGTERM to the old machine: stop accepting, end SSE with a retry hint,
+  // exit 0 inside kill_timeout (#4616).
+  installGracefulShutdown(server, { log: (line) => console.log(line) });
+  server.listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
       `Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate} — feedback: ${feedback ? "on" : "off"}`,
