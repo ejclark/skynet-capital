@@ -66,3 +66,13 @@ describe("strategyCatalog", () => {
     expect(catalog.flatMap((c) => c.pairs).every((row) => !row.stale)).toBe(true);
   });
 });
+
+describe("strategyCatalog summaries", () => {
+  it("gives every card a one-line summary of the strategy, never of a ticker", () => {
+    for (const c of catalog) {
+      expect(c.summary.length).toBeGreaterThan(20);
+      expect(c.summary).not.toContain("\n");
+    }
+    expect(card("wheel")?.summary).toMatch(/cash-secured put/);
+  });
+});

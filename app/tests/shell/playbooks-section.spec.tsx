@@ -60,12 +60,32 @@ const card = (id: string, subscribers?: number) => ({
   ...(subscribers === undefined ? {} : { subscribers }),
 });
 
+/** One strategy per fixture card, named for its id, so a test finds the card by its heading. */
+const strategyOf = (c: ReturnType<typeof card>) => ({
+  strategy: c.id,
+  name: `the ${c.id.toLowerCase()}`,
+  instrument: "shares" as const,
+  summary: "One line.",
+  pairs: [
+    {
+      id: c.id,
+      symbols: c.symbols,
+      status: "researched" as const,
+      statusLabel: "✓ researched",
+      stale: false,
+      call: "The call.",
+    },
+  ],
+});
+const fixtureCards = [card("S1-NVDA", 3), card("HC-SAURON", 0), card("E1-AMD", 1), card("G1-NONE")];
+
 const requested: (string | undefined)[] = [];
 
 rstest.mock("../../src/live/playbook-store", () => ({
   fetchPlaybookStore: (accountId: string) =>
     Promise.resolve({
-      cards: [card("S1-NVDA", 3), card("HC-SAURON", 0), card("E1-AMD", 1), card("G1-NONE")],
+      cards: fixtureCards,
+      strategies: fixtureCards.map(strategyOf),
       capitalUnderManagement: 0,
       canManage: accountId !== "",
       delegation: { locked: true, unlocksAfter: "102", unlocksAfterName: "Sell stock", note: "" },
@@ -108,7 +128,7 @@ function mount(accountId?: string) {
 }
 
 const cardOf = (id: string) => {
-  const section = screen.getByText(id).closest(".pb-card");
+  const section = screen.getByText(`The ${id.toLowerCase()}`).closest(".pb-card");
   if (!(section instanceof HTMLElement)) throw new Error(`no card ${id}`);
   return within(section);
 };

@@ -71,8 +71,58 @@ export interface BotsOnlyGateView {
   readonly note: string;
 }
 
+/** How a pair's evidence reads — mirrors `EvidenceStatus` in `src/playbooks/pair-table.ts`. */
+export type PairStatus =
+  | "researched"
+  | "conviction"
+  | "screened"
+  | "stand-aside"
+  | "not-studied"
+  | "cant-run";
+
+/** One pair (a strategy on a ticker) on a strategy card — mirrors `PairRowView` in
+ *  `src/observatory/playbook-store-json-view.ts`. `id` is the playbook id every subscription and
+ *  write keys on (criterion 8): the client looks it up in `cards`, never builds or splits it. */
+export interface PairRowView {
+  readonly id: string;
+  readonly symbols: readonly string[];
+  readonly status: PairStatus;
+  /** "✓ researched, weakened" — glyph plus words, "· past its shelf date" once stale. */
+  readonly statusLabel: string;
+  readonly stale: boolean;
+  readonly call: string;
+  readonly confidence?: "high" | "medium" | "low";
+  readonly measuredExit?: string;
+  readonly number?: string;
+  readonly verdictOn?: string;
+  readonly shelfOn?: string;
+  readonly checkOn?: string;
+  readonly reason?: string;
+  readonly studyHref?: string;
+  readonly subscription?: SubscriptionView;
+  /** Why a NEW subscription would be refused, in the server's own sentence (criterion 9). */
+  readonly subscribeRefusal?: string;
+  /** "the call spread trades NVDA on this bot; the run-up yields it" — a hand-off, not a refusal. */
+  readonly handOff?: string;
+  /** "not trading — the call spread owns NVDA" — the bots skip this held pair. */
+  readonly notTrading?: string;
+}
+
+/** One strategy and the pairs it runs on, ✓ first — mirrors `StrategyCardView`. */
+export interface StrategyCardView {
+  readonly strategy: string;
+  /** Read as "<name> on <TICKER>": lower-case, with its article ("the wheel"). */
+  readonly name: string;
+  readonly instrument: "shares" | "options";
+  readonly summary: string;
+  readonly pairs: readonly PairRowView[];
+}
+
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
+  /** One card per strategy, a row per pair — what the Store draws (#4469 slice 3b). `cards` stays
+   *  beside it as the rules and numbers each row joins on its pair id. */
+  readonly strategies: readonly StrategyCardView[];
   readonly capitalUnderManagement: number;
   readonly canManage: boolean;
   readonly delegation: DelegationGateView;

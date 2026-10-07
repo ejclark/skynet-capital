@@ -1,11 +1,15 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { fetchPlaybookPerformance, type PlaybookMetricsView } from "../live/playbook-performance";
-import { fetchPlaybookStore, type PlaybookStoreView } from "../live/playbook-store";
+import {
+  fetchPlaybookStore,
+  type PlaybookStoreView,
+  type StrategyCardView,
+} from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { InitiatorSplit } from "./initiator-split";
 import type { MetricsScope } from "./playbook-metrics";
-import { PlaybookCard } from "./playbook-store-cards";
+import { StrategyCard } from "./playbook-strategy-cards";
 
 /**
  * R&D → PLAYBOOKS (#3623) — the one home for house playbooks. The Playbook Store (#885) used to
@@ -109,22 +113,23 @@ export function PlaybooksSection({
 
   const view = store.data;
   const human = view.botsOnly?.locked === true;
-  // An owner who opens an account is asking what it runs, so its subscriptions lead the deck
-  // (#4649). A stable sort: the catalog's own order holds inside each group.
-  const cards = manages
-    ? [...view.cards].sort(
-        (a, b) => Number(b.subscription !== undefined) - Number(a.subscription !== undefined),
-      )
-    : view.cards;
+  // An owner who opens an account is asking what it runs, so the strategies it holds a pair of
+  // lead the deck (#4649). A stable sort: the catalog's own order holds inside each group.
+  const holds = (strategy: StrategyCardView) =>
+    Number(strategy.pairs.some((pair) => pair.subscription !== undefined));
+  const strategies = manages
+    ? [...view.strategies].sort((a, b) => holds(b) - holds(a))
+    : view.strategies;
+  const cardsById = new Map(view.cards.map((card) => [card.id, card]));
   return (
     <>
       <header className="page-header">
         <h1>Playbooks</h1>
         <p>
-          Every house playbook: what it does, when it enters, both exits. Pick one of your bot
-          accounts under <b>Subscribe as</b>, then back one playbook — or several, as separate
-          experiments — with that bot's own capital. A subscription never touches another account's
-          capital.
+          Every house strategy and the tickers it runs on: what it does, when it enters, both exits,
+          and the evidence behind each ticker. Pick one of your bot accounts under{" "}
+          <b>Subscribe as</b>, then back one ticker — or several, as separate experiments — with
+          that bot's own capital. A subscription never touches another account's capital.
         </p>
       </header>
       {subscribeAs}
@@ -160,18 +165,19 @@ export function PlaybooksSection({
         </>
       ) : null}
       <div className="pb-deck">
-        {cards.map((card) => (
-          <PlaybookCard
-            key={card.id}
+        {strategies.map((strategy) => (
+          <StrategyCard
+            key={strategy.strategy}
             accountId={accountId ?? ""}
-            card={card}
+            strategy={strategy}
+            cardsById={cardsById}
             canManage={manages}
             delegation={view.delegation}
             {...(view.botsOnly ? { botsOnly: view.botsOnly } : {})}
             onChanged={onChanged}
             accountName={accountName ?? accountId ?? ""}
-            metrics={metricsFor(card.id)}
-            house={houseFor(card.id)}
+            metricsFor={metricsFor}
+            houseFor={houseFor}
           />
         ))}
       </div>
