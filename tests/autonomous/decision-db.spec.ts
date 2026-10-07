@@ -263,6 +263,55 @@ describe("DecisionDb", () => {
     expect(db.findByOrderId("no-such-order")).toBeUndefined();
   });
 
+  it("names the personas behind a batch of order ids without building a record per order", () => {
+    const placed = (at: number, personaId: string, orderId: string): DecisionRecord => {
+      const raw = intent();
+      return {
+        at,
+        personaId,
+        mode: "live",
+        rawIntents: [raw],
+        guardedIntents: [raw],
+        outcomes: [
+          {
+            intent: raw,
+            action: "placed",
+            result: { intent: raw, status: "filled", orderId },
+          },
+        ],
+      };
+    };
+    db.record(placed(1, "sauron", "ord-1"));
+    db.record(placed(2, "beta-scout", "ord-2"));
+
+    expect(db.personasOfOrders(["ord-1", "ord-2", "no-such-order"]).sort()).toEqual([
+      "beta-scout",
+      "sauron",
+    ]);
+    expect(db.personasOfOrders(["ord-2"])).toEqual(["beta-scout"]);
+    expect(db.personasOfOrders([])).toEqual([]);
+  });
+
+  it("asks in chunks, so a ledger longer than SQLite's variable limit still resolves", () => {
+    const raw = intent();
+    db.record({
+      at: 1,
+      personaId: "beta-scout",
+      mode: "live",
+      rawIntents: [raw],
+      guardedIntents: [raw],
+      outcomes: [
+        {
+          intent: raw,
+          action: "placed",
+          result: { intent: raw, status: "filled", orderId: "last" },
+        },
+      ],
+    });
+    const ids = Array.from({ length: 40_000 }, (_, i) => `ord-${i}`);
+    expect(db.personasOfOrders([...ids, "last"])).toEqual(["beta-scout"]);
+  });
+
   it("is idempotent on (personaId, at) — re-recording the same cycle never duplicates intents", () => {
     const entry: DecisionRecord = {
       at: 1,

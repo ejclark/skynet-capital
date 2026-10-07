@@ -64,6 +64,12 @@ export interface DecisionDb {
   /** The exact `orderId` join `playbook-attribution.ts` wants — O(1) via the `intents.order_id`
    *  index, never `decision-context.ts`'s fuzzy symbol+side+time match. */
   findByOrderId(orderId: string): { record: DecisionRecord; intent: OrderIntent } | undefined;
+  /** Which personas decided these orders — only the ids, with no decision record built. The
+   *  Decisions tab asks "who else trades on this account" once per unique order in a ledger that
+   *  grows daily; `findByOrderId` assembles a whole record per order to answer it, which cost
+   *  1.5 s a request at 180 days (#4612 slice 7). Same join as `findByOrderId`: the intent's own
+   *  order id, or a working order's settlement. */
+  personasOfOrders(orderIds: readonly string[]): string[];
   /** A spread leg's own broker order id → the spread order it belongs to. The account
    *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
    *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
@@ -299,6 +305,28 @@ export function openDecisionDb(path: string): DecisionDb {
       JOIN order_settlements s ON s.client_order_id = o.client_order_id WHERE s.order_id = ?1))
     LIMIT 1
   `);
+  // `personasOfOrders` binds one `?` per id, so a long ledger is asked for in chunks that stay under
+  // SQLite's variable limit (32766 in node:sqlite's build, 999 on older ones — this stays under both).
+  const PERSONAS_CHUNK = 500;
+  function personasOfOrderChunk(ids: readonly string[], into: Set<string>): void {
+    const marks = ids.map(() => "?").join(",");
+    const direct = db
+      .prepare(
+        `SELECT DISTINCT decisions.persona_id AS persona_id FROM intents
+         JOIN decisions ON decisions.id = intents.decision_id WHERE intents.order_id IN (${marks})`,
+      )
+      .all(...ids) as { persona_id: string }[];
+    // A working order recorded without an id and filled later is found through its settlement.
+    const settled = db
+      .prepare(
+        `SELECT DISTINCT decisions.persona_id AS persona_id FROM order_settlements s
+         JOIN intent_options o ON o.client_order_id = s.client_order_id
+         JOIN intents ON intents.id = o.intent_id AND intents.order_id IS NULL
+         JOIN decisions ON decisions.id = intents.decision_id WHERE s.order_id IN (${marks})`,
+      )
+      .all(...ids) as { persona_id: string }[];
+    for (const row of [...direct, ...settled]) into.add(row.persona_id);
+  }
   // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
   // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
   // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
@@ -749,6 +777,13 @@ export function openDecisionDb(path: string): DecisionDb {
       );
       const matched = record.outcomes.find((o) => o.result?.orderId === orderId);
       return matched ? { record, intent: matched.intent } : undefined;
+    },
+
+    personasOfOrders(orderIds) {
+      const found = new Set<string>();
+      for (let i = 0; i < orderIds.length; i += PERSONAS_CHUNK)
+        personasOfOrderChunk(orderIds.slice(i, i + PERSONAS_CHUNK), found);
+      return [...found];
     },
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),

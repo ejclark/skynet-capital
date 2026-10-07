@@ -137,6 +137,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
   /**
+   * Which personas decided these orders — ids only, no decision record built (#4612 slice 7). The
+   * Decisions tab's "who else trades on this account" join; falls back to `findByOrderId` per
+   * order when unset. Same dark-when-unset posture.
+   */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
+  /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
    * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
    * whether the bot is even firing. Omit to leave the panel with no funnel section, same dark-when-
