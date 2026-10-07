@@ -7,6 +7,12 @@
 # app.process.skynet-capital.internal the bots app dials for the controls/insight bridge.
 app = "skynet-capital"
 primary_region = "ord"  # Chicago — closest to Iowa
+# A deploy stops the old machine with SIGTERM and SIGKILLs it kill_timeout later. The server drains
+# on SIGTERM (src/server/graceful-shutdown.ts: stop accepting, end SSE streams with a `retry:` hint,
+# finish in-flight requests, exit 0) inside an 8 s budget — kept under this timeout so the exit is
+# one the server chose, not one Fly forced (#4616, slice 4 of #4612).
+kill_signal = "SIGTERM"
+kill_timeout = "10s"
 
 [build]
 
@@ -90,10 +96,24 @@ primary_region = "ord"  # Chicago — closest to Iowa
   auto_start_machines = true
   min_machines_running = 1
   processes = ["app"]  # the dashboard is this app's only process; scoping kept as documentation
+
   # Note: the app process ALSO listens on 8788 for the internal-only insight bridge (dialed by
   # the bots app via fly.bots.toml's SKYNET_INSIGHTS_BRIDGE_URL). It is intentionally absent from
   # this block — only ports declared here are forwarded by Fly's public proxy, so 8788 is
   # unreachable from the internet.
+
+  # A release only counts once the server answers. Without a check Fly called a machine healthy the
+  # moment its process started, so a boot that crashed or hung after listen() reached smoke, not the
+  # deploy; with one, `flyctl deploy` waits for it and FAILS the deploy when it never passes
+  # (the pipeline's smoke + rollback steps then own recovery). /pulse is the cheapest public route —
+  # in-memory aggregate JSON, no auth, no disk — until slice 6 adds /healthz. grace_period covers a
+  # cold boot's history rehydrate.
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    method = "GET"
+    path = "/pulse"
+    timeout = "5s"
 
 # Persistent volume for the self-service participant store (a Fly volume attaches to a single
 # machine; the sibling bots app deliberately has none — its durable writes relay over the bridge).
