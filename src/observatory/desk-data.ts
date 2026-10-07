@@ -80,8 +80,9 @@ export function fillsFrom(
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
-        ...(tag ? { playbookId: tag.playbookId } : {}),
+        ...(tag?.playbookId ? { playbookId: tag.playbookId } : {}),
         ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
+        ...(tag?.initiator ? { initiator: tag.initiator } : {}),
         ...(row.orderId ? { orderId: row.orderId } : {}),
       };
     });
