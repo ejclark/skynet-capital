@@ -59,4 +59,26 @@ export const performance = {
     }),
   ],
   accounts: ["sauron"],
+  // Who started the bots' closed trades (#4450 slice 4): the shape Eric's brief described — the
+  // forced pick fills the tape, playbooks have barely fired, plus a few trips no decision explains.
+  byInitiator: {
+    house: initiatorSplit([2, 1, 0, 140.5], [31, 12, 19, -212.4], [9, 5, 4, 61.2], 3),
+    mine: initiatorSplit([1, 1, 0, 88], [14, 6, 8, -97.15], [9, 5, 4, 61.2], 0),
+  },
 };
+
+/** `[trades, wins, losses, netRealized]` per initiator, in the server's order. */
+function initiatorSplit(playbook, forced, persona, untraced) {
+  const rowOf = (initiator, [trades, wins, losses, netRealized]) => ({
+    initiator,
+    trades,
+    wins,
+    losses,
+    winRate: wins + losses > 0 ? (wins / (wins + losses)) * 100 : null,
+    netRealized,
+  });
+  return {
+    rows: [rowOf("playbook", playbook), rowOf("forced", forced), rowOf("persona", persona)],
+    untraced,
+  };
+}
