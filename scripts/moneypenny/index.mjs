@@ -8,6 +8,7 @@
 //   node scripts/moneypenny/index.mjs --dry-run --event f.json # print the intents, touch nothing
 //   node scripts/moneypenny/index.mjs --triage-feedback        # a fresh feedback issue: self-ready or Backlog
 //   node scripts/moneypenny/index.mjs --claim-feedback         # claim the ready-flipped feedback issue + pick its model
+//   node scripts/moneypenny/index.mjs --claim-feedback-reply   # resume a needs-info feedback build from a reply (#3959)
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/moneypenny/index.mjs --claim-next              # retry sweep: top-ranked admissible ready issue (#3960)
 //   node scripts/moneypenny/index.mjs --peek-next               # dry run: has_next=true|false, claims nothing (push pass)
@@ -92,6 +93,7 @@ import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
+import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -330,6 +332,111 @@ export function claimFeedback(
   setInProgress(issue.number, true);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * THE REPLY-RESUME CLAIM (#3959 slice 1, sub-issue #4299). `claimFeedback`'s twin for the other
+ * door into this lane: not "the issue was readied" but "the question we asked got answered". The
+ * pure half is `replyResumeIntent` (reply-resume.mjs) — the workflow's `author_association` gate
+ * already settled WHO may speak.
+ *
+ * Three writes, in this order, and the order is the design:
+ *   1. the SAME `claim/feedback-<n>` lease the label path takes — so a double-posted reply, or the
+ *      `unlabeled` event step 3 below emits, is a safe no-op rather than a second build;
+ *   2. `in-progress`, BEFORE the park comes off, so the `unlabeled` event's own payload already
+ *      shows the issue as building and the unpark claim refuses on the cheap read instead of the
+ *      lease;
+ *   3. `unpark` — `needs-info` off and `ready` on. Which is also the answer to the brief's second
+ *      open question: the board's Blocked → In Progress move needs no new code, because
+ *      `sync-project` already reacts to both label events (the App token's writes DO start workflow
+ *      runs; GITHUB_TOKEN's do not).
+ *
+ * WHY THE REFUSAL PATH UNPARKS TOO. The admission gate's documented contract (#3960) is that a
+ * refused claim leaves its issue `ready` and lease-free, with one queue note, and a later tick asks
+ * again through the retry sweep. A reply-resumed claim can only reach that state by unparking: the
+ * sweep pulls what the board shows in READY (`notPullableReason`), so leaving the answer on a
+ * still-parked issue would strand it behind a queue note promising a retry that could never fire.
+ * The reply is on the thread either way, and step 0 of the build reads every trusted comment, so
+ * the sweep's later pickup loses only the forced acknowledgment, never the answer.
+ *
+ * The reply's comment id goes to `$GITHUB_OUTPUT` as `reply=`, never its body: the workflow
+ * interpolates that output into the build's prompt, and a comment body interpolated into YAML is
+ * both an injection seam and unnecessary — the session has a token and can read the one comment.
+ */
+export function claimFeedbackReply(
+  ctx,
+  nowMs = Date.now(),
+  sha = process.env.GITHUB_SHA ?? "",
+  admission = {},
+) {
+  const intent = replyResumeIntent(ctx);
+  if (!intent.resume) {
+    console.log(`::notice::not resuming a feedback build — ${intent.reason}`);
+    return { claimed: false, reason: intent.reason };
+  }
+  const issue = intent.issue;
+  // `admission.edit` is this lane's one injected write, same reason `gateAdmission` injects its own:
+  // the refusal path's label fix-up is a behaviour worth a spec, not a side effect to discover live.
+  const edit = admission.edit ?? editLabels;
+  const gate = gateAdmission(issue, admission); // #3960 — the same gate as every other claim
+  if (!gate.admit) {
+    unpark(issue.number, intent.answered, edit); // see WHY THE REFUSAL PATH UNPARKS TOO, above
+    return { claimed: false, reason: gate.reason };
+  }
+  const result = claimHandoff(`feedback-${issue.number}`, sha, nowMs);
+  if (!result.claimed) {
+    // Deliberately leaves the park ON: a held lease means something IS building this, so the
+    // question's label is still the honest state of the thread until that run ends.
+    console.log(`::notice::not resuming feedback #${issue.number} — ${result.reason}`);
+    return result;
+  }
+  const reply = ctx.payload?.comment?.id ?? "";
+  // The reply's timestamp is the baseline #1028's stall guard needs on this path: "more than one
+  // comment" is trivially true on an issue that already holds a receipt, a question and an answer.
+  const replyAt = ctx.payload?.comment?.created_at ?? "";
+  const tier = modelTier(issue.body ?? "");
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) {
+    appendFileSync(
+      out,
+      `number=${issue.number}\nmodel=${tier.model}\nreply=${reply}\nreply_at=${replyAt}\n`,
+    );
+  }
+  console.log(
+    `::notice::resuming feedback #${issue.number} from reply ${reply} — building in this run`,
+  );
+  setInProgress(issue.number, true);
+  unpark(issue.number, intent.answered, edit);
+  console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
+  return { ...result, number: issue.number, model: tier.model, reply, replyAt };
+}
+
+/**
+ * The answered question's label off and `ready` on, in one call — what "this is no longer blocked"
+ * means to every reader there is: the board's Blocked column, `notPullableReason`'s pull rule, and
+ * the retry sweep. BOTH halves are needed, not just the removal: a `needs-info` issue that never
+ * carried `ready` (a hand-triaged filing) would otherwise come out of this with neither label, which
+ * is Backlog — invisible to the sweep, so a resume that then crashed would strand it for good.
+ *
+ * Best-effort, `setInProgress`'s doctrine (labels.mjs): the LEASE is what makes a build safe, so a
+ * failed label write warns and lets the build proceed rather than killing a claim that already won.
+ */
+function unpark(number, answered, edit = editLabels) {
+  edit(number, ["--add-label", LABELS.ready.name]);
+  if (answered) edit(number, ["--remove-label", answered]);
+}
+
+function editLabels(number, args) {
+  if (!number) return false;
+  try {
+    sh("gh", ["issue", "edit", String(number), ...args]);
+    return true;
+  } catch (err) {
+    console.log(
+      `::warning::could not \`${args.join(" ")}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+    return false;
+  }
 }
 
 /**
@@ -1341,6 +1448,35 @@ function executeOne(i, stallRepairs = []) {
   return `❓ unknown intent kind ${i.kind}`;
 }
 
+/**
+ * `--guard-feedback-outcome <n>`'s two acts, kept out of `runCliFlag`'s own complexity count for the
+ * reason that function's header gives.
+ *
+ * `RESUME_SINCE` (#3959 slice 1) is the reply timestamp a resumed run started from — read from the
+ * environment rather than argv so the workflow never has to build a conditional command line, and
+ * so a payload-supplied string is never interpolated into a `run:` block.
+ *
+ * Then the lease: a build that ended on `needs-info` is WAITING, not running, so its lease goes back
+ * — see `guardFeedbackOutcome`'s own note for the two restart paths that unblocks. `releaseClaim`,
+ * not `releaseBuild`: the latter also strips `in-progress`, which the session itself already removed
+ * at its ending, and this step holds GITHUB_TOKEN, whose label writes start no workflow run.
+ */
+function guardThenRelease(issueNumber) {
+  const runUrl =
+    process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+      ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : undefined;
+  const guarded = guardFeedbackOutcome(issueNumber, runUrl, process.env.RESUME_SINCE || undefined);
+  if (!guarded.waitingOnMember) return guarded;
+  const slug = `feedback-${Number(issueNumber)}`;
+  console.log(
+    releaseClaim(slug)
+      ? `::notice::released ${slug} — the build ended waiting on the member, not running`
+      : `::notice::no lease held for ${slug} — nothing to release`,
+  );
+  return guarded;
+}
+
 // The narrow, single-purpose CLI flags — each one does its own thing and exits, never reaching
 // `route()`. Split out of `main` (2026-08-29, #823's `--claim-plan` pushed it over the cognitive
 // complexity budget) purely to keep that dispatch table's branches out of `main`'s own count; no
@@ -1400,6 +1536,8 @@ function runCliFlag(argv, ctx) {
   // `--peek-next` is its dry run for the push pass (claims nothing — see `peekNext`).
   const claimers = {
     "--claim-feedback": claimFeedback,
+    // #3959 slice 1: the feedback lane's second door — an authorized reply on a `needs-info` issue.
+    "--claim-feedback-reply": claimFeedbackReply,
     "--claim-plan": claimPlan,
     "--claim-next": () => claimNext(),
     "--peek-next": () => peekNext(),
@@ -1417,11 +1555,7 @@ function runCliFlag(argv, ctx) {
   // when the promise is broken and the run left nothing visible behind.
   const guardIdx = argv.indexOf("--guard-feedback-outcome");
   if (guardIdx >= 0 && argv[guardIdx + 1]) {
-    const runUrl =
-      process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
-        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-        : undefined;
-    guardFeedbackOutcome(argv[guardIdx + 1], runUrl);
+    guardThenRelease(argv[guardIdx + 1]);
     return true;
   }
 

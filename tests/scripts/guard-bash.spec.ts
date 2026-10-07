@@ -42,6 +42,43 @@ describe("guard-bash — the verdict", () => {
     }
   });
 
+  it("refuses a hand-run moneypenny claim flag — it takes a real lease and writes real labels", () => {
+    for (const cmd of [
+      "node scripts/moneypenny/index.mjs --claim-feedback",
+      "node scripts/moneypenny/index.mjs --claim-feedback-reply --event /tmp/ev.json",
+      "GITHUB_OUTPUT=/tmp/o node scripts/moneypenny/index.mjs --claim-plan --event f.json",
+      "node scripts/moneypenny/index.mjs --claim-next",
+    ]) {
+      const v = guardVerdict(bash(cmd));
+      expect(v.allow, cmd).toBe(false);
+      if (!v.allow) expect(v.reason).toContain("docs/LESSONS.md");
+    }
+  });
+
+  it("allows the read-only and repair flags on the same script", () => {
+    for (const cmd of [
+      "node scripts/moneypenny/index.mjs --check-claim feedback-4299",
+      "node scripts/moneypenny/index.mjs --peek-next",
+      "node scripts/moneypenny/index.mjs --release feedback-4299",
+      "node scripts/moneypenny/index.mjs --dry-run --event f.json",
+      "node scripts/moneypenny/admission.mjs --check 4299",
+    ]) {
+      expect(guardVerdict(bash(cmd)).allow, cmd).toBe(true);
+    }
+  });
+
+  // The rule's first use refused a `cat > body.md` whose text merely NAMED the flag. A gate that
+  // fires on prose about a command is a UX defect on our own tooling, not a safety win.
+  it("allows a command that only mentions a claim flag as text", () => {
+    for (const cmd of [
+      'echo "run node scripts/moneypenny/index.mjs --claim-plan" >> notes.md',
+      "cat > body.md <<'EOF'\nnew_cli_flag: node scripts/moneypenny/index.mjs --claim-feedback-reply\nEOF",
+      "grep -rn -- --claim-feedback scripts/",
+    ]) {
+      expect(guardVerdict(bash(cmd)).allow, cmd).toBe(true);
+    }
+  });
+
   it("ignores tools other than Bash", () => {
     expect(guardVerdict({ tool_name: "Edit", tool_input: { file_path: "git stash" } }).allow).toBe(
       true,

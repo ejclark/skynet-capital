@@ -30,6 +30,23 @@ export const BANNED = [
     reason:
       "`git stash` is banned here (CLAUDE.md → Ship loop: it has silently dropped edits; docs/LESSONS.md 2026-08-13). Branch first instead: `git fetch origin main && git checkout -B <branch> origin/main`, or set work aside with a temporary WIP commit.",
   },
+  {
+    // 2026-10-05: a session smoke-testing a new claim path by hand created a real lease tag and
+    // labelled a real issue `in-progress` — the session's token is the App's, so every write landed.
+    // The claim flags are the lane's IMPURE half; a spec or the workflow is where they belong. The
+    // read-only and repair flags (`--check-claim`, `--peek-next`, `--release`, `--model-tier`,
+    // `--dry-run`) are legitimately hand-run and deliberately not matched.
+    // Anchored to a COMMAND position, like the `git stash` rule above and for the same reason: the
+    // first draft matched the string anywhere, so writing a PR body that merely NAMED the flag was
+    // refused (caught on its own first use, 2026-10-05). An env prefix still counts as the command.
+    name: "moneypenny --claim-* by hand",
+    test: (cmd) =>
+      /(^|[;&|]\s*)(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*node\s+\S*scripts\/moneypenny\/index\.mjs[^;&|\n]*\s--claim-(feedback|plan|next)\b/m.test(
+        cmd,
+      ),
+    reason:
+      "A `--claim-*` flag takes a real lease and writes real labels under this session's App token (docs/LESSONS.md 2026-10-05: a fixture smoke-test labelled a live issue `in-progress`). Exercise the claim path through its spec (tests/scripts/moneypenny/) or let the workflow run it; `--check-claim`, `--peek-next` and `--release` are the hand-runnable ones.",
+  },
 ];
 
 /** Pure verdict over one hook payload. */

@@ -23,7 +23,9 @@ export function triageFeedbackDecision(issue?: { labels?: string[] }): {
 export type ClaimCtx = {
   payload?: {
     issue?: { number?: number; state?: string; body?: string; labels?: Array<{ name?: string }> };
-    comment?: { body?: string };
+    /** `id`/`created_at` are read only by `claimFeedbackReply` — the reply pointer it hands the
+     *  build, and the baseline the stall guard measures that run's silence from. */
+    comment?: { body?: string; id?: number; created_at?: string };
     action?: string;
     label?: { name?: string };
   };
@@ -57,6 +59,15 @@ export function claimFeedback(
   sha?: string,
   admission?: AdmissionDeps,
 ): ClaimResult;
+/** #3959 slice 1: an authorized reply on a `needs-info` feedback issue resumes its build. Takes the
+ *  same lease, sets `in-progress`, clears `needs-info`, and reports the reply's comment id. */
+export function claimFeedbackReply(
+  ctx: ClaimCtx,
+  nowMs?: number,
+  sha?: string,
+  /** `edit` is this lane's injected label write — see the function's refusal-path note. */
+  admission?: AdmissionDeps & { edit?: (n: number, args: string[]) => boolean },
+): ClaimResult & { reply?: number | string; replyAt?: string };
 /** The #3960 retry sweep: claim the oldest admissible `ready` issue (plan or feedback lane). */
 export function claimNext(
   nowMs?: number,

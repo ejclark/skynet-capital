@@ -97,6 +97,14 @@ Eric-sourced.
   and the storage half, a keyset bound at `JsonlKeyedStore` rather than after the join, is now a
   `bottleneck` issue with its own `Before:` row.
   _(src: Claude · while: building #784 slices 1 and 2, the trade feed and the pulse moving onto the bus)_
+- **A `--dry-run` that reaches `runCliFlag`, so proving CLI wiring is a free diagnostic.** Today
+  `--dry-run` only short-circuits `route()`; every `--claim-*` flag returns before it, so the only
+  way to answer "does the event-file plumbing actually reach this flag?" is to run the impure path —
+  which is how a smoke test took a real lease and labelled a live issue (docs/LESSONS.md
+  2026-10-05). The guard-bash rule now blocks the hazard; it does not answer the question. Threading
+  `dry` into the claim functions (decide, print, write nothing) would make the probe cost zero, and
+  would let a spec drive the whole CLI branch rather than just the pure half.
+  _(src: Claude · while: building #3959 slice 1, after reverting the stray lease)_
 - **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
   refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
   rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches

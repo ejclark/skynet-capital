@@ -55,6 +55,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A smoke test of a new claim path took a real lease and labelled a real issue
+- **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed
+- **SIGNAL:** immediate, and only because the run's own `::notice::` said "resuming feedback #4299 … building in this run" — a line that can only print if the lease was actually taken. Checked within a minute: `refs/tags/claim/feedback-4299` existed on the repo and #4299 (a `plan` sub-issue, whose number the new fixture had borrowed) carried `in-progress`. Both reverted with `--release feedback-4299`; nothing else had read either.
+- **ROOT CAUSE:** a build session (#3959 slice 1) smoke-tested its new `--claim-feedback-reply` flag by hand against a fixture payload, to prove the CLI wiring. The claim flags are the lane's *impure* half — they take the lease and write labels — and a session in this repo runs with the App installation token already exported as `GH_TOKEN`, so every write succeeded against the live repo exactly as a workflow run's would. The three earlier smoke tests in the same session were refusals, which return before any write, so the pattern looked safe right up to the one call that was admitted. CLAUDE.md's "never spend a state-destroying action as a probe" names this class; the diagnostic looked free because the refusing cases were.
+- **PREVENTION:** gate (rank 1) — `scripts/hooks/guard-bash.mjs` now refuses `scripts/moneypenny/index.mjs --claim-{feedback,plan,next}…` before it runs, naming the spec and the workflow as the places that path belongs. `--check-claim`, `--peek-next`, `--release`, `--model-tier` and `--dry-run` stay hand-runnable on purpose: they read, or they repair. 2 specs in `tests/scripts/guard-bash.spec.ts` pin both halves.
+- **SIDE QUESTS:** the smoke test was answering a real question the specs could not — "does `main`'s own event-file plumbing reach this flag?" `--dry-run` answers it for `route()` but not for a `runCliFlag` branch; a `--dry-run`-respecting claim path would make that probe genuinely free. Not built here (→ docs/IDEAS.md).
+
+---
+
 ### A spent GraphQL hour still turned the board sync — a display — into a red run on `main`
 - **SHA:** 3c72dc5   **DATE:** 2026-10-04   **STATUS:** closed
 - **SIGNAL:** run 36808329767 (`Moneypenny Events`, `issues`, 2026-10-01T02:58:24Z) failed `sync project status` for #3960 with `gh project` masked as `unknown owner type`; #3914's probe in the same log said `API rate limit already exceeded for user ID 3472134`. `incident-scan.mjs` held it as the one unlearned incident over a budget of 0, printed on every `ship.sh` run until #4438 was filed.
