@@ -24,6 +24,7 @@ import {
   parseSetEnabledBody,
   parseSubscribeBody,
 } from "./subscriptions-api-bodies.js";
+import { servePreflight } from "./subscriptions-preflight-route.js";
 
 /**
  * THE PLAYBOOK STORE API (issue #885) — an account's own subscriptions, never another's.
@@ -31,6 +32,8 @@ import {
  *   GET  /api/playbook-store?id=<accountId>   → the catalog, merged with that account's own
  *                                                subscriptions IF the session owns it — otherwise
  *                                                the bare catalog (no cross-account visibility).
+ *   GET  /api/playbook-store/preflight        → what Subscribe would say to a pair at a budget,
+ *                                                asked first, writing nothing (`subscriptions-preflight-route.ts`).
  *   POST /api/playbook-store/subscribe        → SubscriptionStore.subscribe (create or replace).
  *   POST /api/playbook-store/configure        → SubscriptionStore.configure — re-tune an existing
  *                                                subscription, never touching enabled (#4649).
@@ -308,6 +311,10 @@ export async function serveSubscriptionsApi(
 ): Promise<boolean> {
   if (path === "/api/playbook-store") {
     await serveStoreIndex(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/playbook-store/preflight") {
+    await servePreflight(req, res, config, session);
     return true;
   }
   if (!WRITE_PATHS.includes(path)) return false;

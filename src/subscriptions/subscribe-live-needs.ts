@@ -88,15 +88,22 @@ const flatContext = (asOf: string, symbol: string, spot: number, options: Option
     options,
   }) satisfies MarketContext;
 
+/** What the live reads said: the sentence a new subscription is refused with, and — when a chain was
+ *  read and the playbook would open — the cash one contract ties up right now. */
+export interface LiveNeedsVerdict {
+  readonly refusal?: string;
+  readonly oneContractCash?: number;
+}
+
 /** One chain read as the playbook would ask for it right now, then what it would open there. */
-async function chainRefusal(
+async function chainVerdict(
   input: LiveNeedsInput,
   market: OptionMarketPort,
   playbook: Playbook,
   symbol: string,
   spot: number,
   name: string,
-): Promise<string | undefined> {
+): Promise<LiveNeedsVerdict> {
   const { asOfIso, mode, calendar = UPCOMING_PRINTS, capitalAllocated } = input;
   const flat = { cash: capitalAllocated, positions: [] };
   let chains = 0;
@@ -110,18 +117,57 @@ async function chainRefusal(
       return demand ?? NO_OPTION_DEMAND;
     },
   });
-  if (!read || chains === 0) return undefined;
+  if (!read || chains === 0) return {};
   const quotes = Object.values(read.contracts);
   if (quotes.length > 0 && !quotes.some((quote) => liquid(quote, asOfIso))) {
-    return `${capitalized(name)} can't be taken yet: ${symbol}'s options have no liquid contract right now (a real bid, a tight spread, a fresh quote).`;
+    return {
+      refusal: `${capitalized(name)} can't be taken yet: ${symbol}'s options have no liquid contract right now (a real bid, a tight spread, a fresh quote).`,
+    };
   }
   const intent = playbook
     .decide?.(flatContext(asOfIso, symbol, spot, read), flat, calendar, mode)
     .find((candidate) => candidate.option?.effect === "open");
   const cash = intent ? oneContractCash(intent) : 0;
+  const measured = cash > 0 ? { oneContractCash: cash } : {};
   return cash > capitalAllocated
-    ? `One contract of ${name} ties up about ${dollars(cash)} right now, and the budget is ${dollars(capitalAllocated)}. Raise the budget to at least that.`
-    : undefined;
+    ? {
+        ...measured,
+        refusal: `One contract of ${name} ties up about ${dollars(cash)} right now, and the budget is ${dollars(capitalAllocated)}. Raise the budget to at least that.`,
+      }
+    : measured;
+}
+
+/** What the live market and the account say about a NEW subscription: the refusal, and one
+ *  contract's cash when a chain could be read. Nothing read = an empty verdict, which takes it.
+ *  The Store's preflight shows this before the owner submits; subscribe judges the same thing. */
+export async function liveNeeds(
+  input: LiveNeedsInput,
+  reads: LiveNeedsReads,
+): Promise<LiveNeedsVerdict> {
+  const { lookup = findPair, resolve = findPlaybook } = input;
+  const pair = lookup(input.playbookId);
+  const playbook = resolve(input.playbookId);
+  const symbol = pair?.symbols.length === 1 ? pair.symbols[0] : undefined;
+  if (!(pair && playbook && symbol)) return {};
+  const name = pairName(pair);
+  const spot = await reads.price?.(symbol);
+  if (reads.price && spot === undefined) {
+    return {
+      refusal: `The market-data feed gave no price for ${symbol} just now, so ${name} can't be taken yet. Try again in a minute.`,
+    };
+  }
+  const traits = playbook.options;
+  if (!traits) return {};
+  const level = await reads.optionsLevel?.();
+  if (level !== undefined && level < traits.requiredLevel) {
+    return {
+      refusal: `${capitalized(name)} needs options level ${traits.requiredLevel} on this account, and it is at level ${level}.`,
+    };
+  }
+  const open = input.sessionOpen ?? regularSessionOpen(new Date(input.asOfIso));
+  return open && reads.optionMarket && spot !== undefined
+    ? chainVerdict(input, reads.optionMarket, playbook, symbol, spot, name)
+    : {};
 }
 
 /** The sentence a NEW subscription is refused with for what the live market or the account says,
@@ -130,24 +176,5 @@ export async function liveNeedsRefusal(
   input: LiveNeedsInput,
   reads: LiveNeedsReads,
 ): Promise<string | undefined> {
-  const { lookup = findPair, resolve = findPlaybook } = input;
-  const pair = lookup(input.playbookId);
-  const playbook = resolve(input.playbookId);
-  const symbol = pair?.symbols.length === 1 ? pair.symbols[0] : undefined;
-  if (!(pair && playbook && symbol)) return undefined;
-  const name = pairName(pair);
-  const spot = await reads.price?.(symbol);
-  if (reads.price && spot === undefined) {
-    return `The market-data feed gave no price for ${symbol} just now, so ${name} can't be taken yet. Try again in a minute.`;
-  }
-  const traits = playbook.options;
-  if (!traits) return undefined;
-  const level = await reads.optionsLevel?.();
-  if (level !== undefined && level < traits.requiredLevel) {
-    return `${capitalized(name)} needs options level ${traits.requiredLevel} on this account, and it is at level ${level}.`;
-  }
-  const open = input.sessionOpen ?? regularSessionOpen(new Date(input.asOfIso));
-  return open && reads.optionMarket && spot !== undefined
-    ? chainRefusal(input, reads.optionMarket, playbook, symbol, spot, name)
-    : undefined;
+  return (await liveNeeds(input, reads)).refusal;
 }

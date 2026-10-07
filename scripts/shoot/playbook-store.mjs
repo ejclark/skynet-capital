@@ -20,6 +20,8 @@
 //                own rules, the account's split above every bot's (#4450 slice 4).
 //   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
 //                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
+//   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
+//                disabled row's reason in words, and "Check first" stating one contract's cash.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -129,7 +131,17 @@ const underHeader = (el) =>
 
 // `shell` passes `viewport` and `quality` (a dense frame's lower JPEG quality, under the ~100KB cap)
 // straight to openShell; either left undefined keeps its default.
-async function frame({ tag, view, account = SAURON, expect, scrollTo, path, act, ...shell }) {
+async function frame({
+  tag,
+  view,
+  account = SAURON,
+  expect,
+  scrollTo,
+  path,
+  act,
+  extraStubs = {},
+  ...shell
+}) {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
     ...shell,
@@ -141,6 +153,7 @@ async function frame({ tag, view, account = SAURON, expect, scrollTo, path, act,
       [`/api/desk/${account.id}/heartbeat`]: heartbeat,
       [`/api/desk/${account.id}/probes`]: { available: false },
       [`/api/desk/${account.id}/decisions`]: { available: true, kind: account.kind, cycles: [] },
+      ...extraStubs,
     },
   });
   const to = path ?? `/app/u/${account.id}/playbooks`;
@@ -422,6 +435,49 @@ groups.strategies = [
   }),
   strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
   strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),
+];
+
+// #4469 slice 3b part 2: the ticker picker. The run-up's list is the richest one (Sauron holds NVDA,
+// GOOG can be taken, DJT can't run); the wheel's frame picks CRWV, types the budget and checks first.
+// The preflight answer is a fixture (its shape is `PreflightAnswer`); the wheel's $8,000 is the
+// figure the 3a spec measures on the CRWV wheel's own fixtures.
+const inCard = (page, name) => page.locator(".pb-strategy").filter({ hasText: name }).first();
+const openPicker = (name) => async (page) => {
+  await inCard(page, name)
+    .getByRole("button", { name: /Pick a ticker/ })
+    .click();
+  await page.locator("dialog[open]").waitFor();
+  // The sheet rises over 180ms (`pb-sheet-rise`); a frame taken inside it is translucent.
+  await page.waitForTimeout(400);
+};
+const checkCrwv = async (page) => {
+  await openPicker("The wheel")(page);
+  const sheet = page.locator("dialog[open]");
+  await sheet.getByRole("button", { name: /CRWV/ }).click();
+  await sheet.getByLabel("Capital to delegate ($)").fill("75000");
+  await sheet.getByRole("button", { name: "Check first" }).click();
+  await sheet.getByText(/One contract ties up/).waitFor();
+};
+const PREFLIGHT = {
+  "/api/playbook-store/preflight": {
+    ok: true,
+    options: true,
+    oneContractCash: 8000,
+    idleShare: 0.893,
+  },
+};
+groups.picker = [
+  strategyFrame("phone-1-picker-list", {
+    path: undefined,
+    expect: "The pre-print run-up",
+    act: openPicker("The pre-print run-up"),
+  }),
+  strategyFrame("phone-2-check-first", {
+    view: views.fresh,
+    path: undefined,
+    act: checkCrwv,
+    extraStubs: PREFLIGHT,
+  }),
 ];
 
 const only = process.env.FRAMES;

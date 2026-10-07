@@ -4,6 +4,7 @@ import type { OptionContractQuote } from "../../src/domain/types.js";
 import type { OptionMarketPort } from "../../src/ports/option-market.js";
 import {
   type LiveNeedsReads,
+  liveNeeds,
   liveNeedsRefusal,
 } from "../../src/subscriptions/subscribe-live-needs.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
@@ -182,5 +183,22 @@ describe("a new subscription takes what the live market and the account say", ()
     expect(
       await liveNeedsRefusal({ ...wheelInput, playbookId: "NOPE-1" }, healthy()),
     ).toBeUndefined();
+  });
+});
+
+describe("the preflight reports what a contract ties up, not only whether it is refused", () => {
+  it("gives one contract's cash for a budget that fits, so the Store can state the idle share", async () => {
+    expect(await liveNeeds(wheelInput, healthy())).toEqual({ oneContractCash: 8_000 });
+  });
+
+  it("gives the cash beside the refusal when the budget falls short", async () => {
+    const verdict = await liveNeeds({ ...wheelInput, capitalAllocated: 5_000 }, healthy());
+    expect(verdict.oneContractCash).toBe(8_000);
+    expect(verdict.refusal).toMatch(/ties up about \$8,000/);
+  });
+
+  it("gives no cash when no chain was judged (outside the session, or a share pair)", async () => {
+    expect(await liveNeeds({ ...wheelInput, sessionOpen: false }, healthy())).toEqual({});
+    expect(await liveNeeds({ ...wheelInput, playbookId: "S1-NVDA" }, healthy())).toEqual({});
   });
 });

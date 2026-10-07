@@ -4,6 +4,8 @@ import {
   configureRequest,
   type PlaybookMode,
   type PlaybookStoreCardView,
+  type PreflightAnswer,
+  preflightRequest,
   type SubscriptionView,
   type SubscriptionWriteResult,
   subscribeRequest,
@@ -19,7 +21,35 @@ import {
  * typed ticker could save a subscription that never opens anything. The chips appear only when
  * the basket has more than one symbol. The copy says the filter limits new entries only: exits
  * still manage whatever the playbook already holds.
+ *
+ * A NEW subscription also offers "Check first" (#4469 slice 3b part 2): it asks the server what
+ * Subscribe would say at this mode and budget — the live price, the options level, a liquid chain —
+ * and for an options pair states what one contract ties up and how much of the budget that leaves
+ * idle. Said in words with a glyph, written nowhere, and discarded the moment the mode or budget
+ * changes, because an answer to a different question is worse than none.
  */
+
+const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
+
+/** The preflight in words: what a clear pair costs, or the server's own sentence for a refusal. */
+export function preflightLine(answer: PreflightAnswer): { glyph: string; text: string } {
+  if (!answer.ok) return { glyph: "–", text: answer.error };
+  if (answer.oneContractCash !== undefined) {
+    const idle = Math.round((answer.idleShare ?? 0) * 100);
+    return {
+      glyph: "✓",
+      text: `Clear. One contract ties up about ${dollars(answer.oneContractCash)}, which leaves ${
+        idle > 0 ? `${idle}% of this budget idle` : "none of this budget idle"
+      }.`,
+    };
+  }
+  return answer.options
+    ? {
+        glyph: "✓",
+        text: "Clear so far. What one contract ties up is priced from a live chain while the market is open, and checked again when you subscribe.",
+      }
+    : { glyph: "✓", text: "Clear: the feed has a price and the account can take it." };
+}
 
 /** Toggle chips for the symbols filter. None picked = the whole basket, said in words. */
 function SymbolAim({
@@ -88,6 +118,11 @@ export function SubscribeForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // The preflight answer is keyed on the question it answered; a changed mode or budget hides it.
+  const [checked, setChecked] = useState<
+    { readonly key: string; readonly answer: PreflightAnswer } | undefined
+  >();
+  const [checking, setChecking] = useState(false);
   const modeId = useId();
   const capitalId = useId();
   const uncappedId = useId();
@@ -136,6 +171,26 @@ export function SubscribeForm({
       setBusy(false);
     }
   };
+
+  const question = `${mode}|${capital}`;
+  const check = async () => {
+    setChecking(true);
+    setError(undefined);
+    try {
+      const answer = await preflightRequest({
+        id: accountId,
+        playbookId: card.id,
+        mode,
+        capitalAllocated,
+      });
+      setChecked({ key: question, answer });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setChecking(false);
+    }
+  };
+  const verdict = checked?.key === question ? preflightLine(checked.answer) : undefined;
 
   const label = editing ? (busy ? "Saving…" : "Save changes") : busy ? "Subscribing…" : "Subscribe";
   return (
@@ -215,12 +270,27 @@ export function SubscribeForm({
         >
           {label}
         </button>
+        {editing ? null : (
+          <button
+            type="button"
+            className="btn mc-btn"
+            disabled={busy || checking || !valid || uncapped}
+            onClick={() => void check()}
+          >
+            {checking ? "Checking…" : "Check first"}
+          </button>
+        )}
         {onCancel ? (
           <button type="button" className="btn mc-btn" disabled={busy} onClick={onCancel}>
             Cancel
           </button>
         ) : null}
       </div>
+      {verdict ? (
+        <p className="pb-form-note pb-preflight" data-clear={verdict.glyph === "✓" || undefined}>
+          <span aria-hidden="true">{verdict.glyph}</span> {verdict.text}
+        </p>
+      ) : null}
       {error ? <span className="set-err">{error}</span> : null}
     </div>
   );

@@ -174,3 +174,36 @@ export const setSubscriptionEnabledRequest = (input: {
   readonly playbookId: string;
   readonly enabled: boolean;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/set-enabled", input);
+
+/** What the Store's preflight says about a NEW subscription at this budget (criterion 9) — mirrors
+ *  `src/server/subscriptions-preflight-route.ts`. Never a write: Subscribe says the same sentence. */
+export type PreflightAnswer =
+  | {
+      readonly ok: true;
+      /** The pair sells options: its contract is priced from a live chain, so out of session there
+       *  is no cash to show and the answer says it is judged at the open. */
+      readonly options?: true;
+      /** What one contract ties up right now, and the share of the budget that leaves idle. */
+      readonly oneContractCash?: number;
+      readonly idleShare?: number;
+    }
+  | { readonly ok: false; readonly error: string };
+
+/** Ask what Subscribe would say, before submitting. A read the owner taps for, not one the page
+ *  makes: the live half spends broker calls. */
+export async function preflightRequest(input: {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly mode: PlaybookMode;
+  readonly capitalAllocated: number;
+}): Promise<PreflightAnswer> {
+  const query = new URLSearchParams({
+    id: input.id,
+    playbookId: input.playbookId,
+    mode: input.mode,
+    capital: String(input.capitalAllocated),
+  });
+  const res = await fetch(`/api/playbook-store/preflight?${query}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`preflight ${res.status}`);
+  return (await res.json()) as PreflightAnswer;
+}
