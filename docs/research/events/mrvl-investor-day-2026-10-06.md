@@ -307,3 +307,56 @@ never from memory — after which this doc goes quiet.
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{"MRVL":272.29,"NVDA":233.95},"vix":15.31,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
 
+## Outcome
+
+**Close-out (written 2026-10-07, after the 2026-10-06 regular session settled).** Scored from a
+cache-busted re-run (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`;
+split/dividend-adjusted Yahoo daily bars through `scripts/research/market-data.mjs`, EDGAR through
+`earningsDates()`). `product-launch` runs no earnings-cycle price study, so the bars were pulled
+directly and nothing below is from memory of the tape. Event content is **NEWS:**-grade — Marvell's
+IR press-release index (fetched 2026-10-07) carries no 10/6 release yet, so the targets below are
+secondary-sourced (Investing.com, Benzinga headline, Rolling Out, GuruFocus snippets, which agree
+on every figure quoted) and are not an `IR:` primary.
+
+**What happened vs the stance — the call was "Watch, no position"; the stock paid the quantified near half.**
+- **The bull tell fired.** The stance said the only content the tape would pay for was *quantifying
+  the near half* of the four-to-five-year roadmap. Marvell gave dollar figures at every horizon:
+  FY28 revenue **~$20B** (vs the ~$18B FY28 guide from the 8/27 call, +11%), FY29 Custom **$12B+**,
+  FY31 revenue **$70–90B** (~$80B midpoint; Street ~$47B), FY31 non-GAAP EPS **>$30** (Street ~$19),
+  a ~**$400B** 2030 TAM. The RBC bar the 10/5 row cited (≥$2B FY29 AI-revenue raise) was cleared by a
+  wide margin on the long-dated end.
+- **Reaction.** MRVL **$271.25 → $287.01, +5.81%**, after trading from about −3% to about +10%
+  intraday (Investing.com); NVDA +0.14%, SMH −0.22%, QQQ +0.46%, AVGO +3.67% over the same session —
+  so ~5.7pts of the move was MRVL-specific, not sector. VIX 15.52 → 15.01. MRVL now sits **−9.27%**
+  below its 6/4 high ($316.35) and **+31.16%** above the 9/14 shock close ($218.82).
+- **The "beat-but-sold" pattern stopped at three.** MRVL (8/27), AVGO (9/2–9/3) and MU (9/30) were
+  sold on good news; an event that *raised* the ceiling and quantified the near half was rewarded.
+  That is the falsifier the 10/5 row named for the this-month call ("an Oct-6 raise that is rewarded
+  with a positive D+1" — D+1 itself, 10/7, is not settled yet; the event-day reaction is the evidence).
+- **No position was taken, so no P&L.** S1 stays killed on MRVL; the stance's refusal to chase a
+  pre-event long into 10/6 cost nothing and earned nothing. A $271 → $287 day is a miss only for a
+  position this lane never licensed.
+
+**Forward tests — scored and left open, with reasons.**
+- **FT-3 scored `kill`.** MRVL **+29.46%** vs NVDA **+12.76%** over close 9/15 → close 10/6; MRVL
+  outperformed by 16.70pts, the registered kill. The duration-discount ordering is retired (see the
+  sweep doc's kill list); it did not survive the quarter, and the beta confound the row declared is
+  the likelier explanation for the 9/14 sort.
+- **FT-4 left open on purpose.** Its score-by is 2026-10-09 and the 10/7 close it keys on is not in
+  the feed yet (last bar 10/6). Antecedent read on today's evidence: near-term quantification **was**
+  given (FY28 ~$20B, FY29 Custom $12B+), which would make the row *not applicable*, not a pass — but
+  "attached to the H2 FY27 Custom acceleration" is a reading of the transcript, and the transcript
+  is not in hand. Scored on 10/9 or after by the `forward-test-due` mode against the webcast/IR
+  primary and the settled 10/7 close.
+- **FT-1 / FT-2 untested, left open (score-by 2026-12-08).** EDGAR's submissions feed through
+  today shows the last Marvell 8-K as 2026-09-25 (Item 8.01/9.01) — **no October filing of any item
+  yet**, and the 10/6 release is absent from the IR index, so the antecedent (an Item-2.02 8-K
+  dated 10/1–10/31) is unobserved, not false. `earningsDates("MRVL")` re-run today returns
+  `…2026-05-27, 2026-08-27`, both real prints intact. These two rows settle against the FQ3 FY27
+  print (~2026-12-01) and the `forward-test-due` mode owns them from 2026-12-08.
+
+**Stance returned.** Watch-only with no instrument stands; the next live question is whether D+1
+(10/7) holds the gap — the tape adjudicates, this ledger does not.
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{"MRVL":287.01,"NVDA":239.24},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
