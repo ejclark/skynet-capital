@@ -476,14 +476,10 @@ jobs:
       # itself through this gate; `replyResumeIntent`'s footer check is the second, independent guard
       # on the same loop (criterion 3 makes the lane comment on the very issue it listens to).
       #
-      # SLICE 2 (#4301) — any blocked lane. The lane (`feedback` or `plan`, derived from the issue's
-      # own labels) and the answered label (`needs-info` or `needs-eric`) are decided inside
-      # `claimFeedbackReply` (scripts/moneypenny/reply-resume.mjs — pure, fixture-specced), along with
-      # the parking guards, so this `if:` still carries only the cheap github-context filters, same
-      # division as both gates around it. A `feedback` reply builds in THIS run (the `reply` outputs
-      # below); a `plan` reply only takes the label off and the plan gate's `unlabeled` path below
-      # claims it — no second claim path, so nothing to add to the build job.
-      - name: Resume the blocked lane when an authorized member replies on needs-info / needs-eric
+      # The `needs-info` + `feedback` checks and the parking guards live inside
+      # `claimFeedbackReply` (scripts/moneypenny/reply-resume.mjs — pure, fixture-specced), so this
+      # `if:` carries only the cheap github-context filters, same division as both gates around it.
+      - name: Resume a feedback build when an authorized member replies on needs-info
         id: reply
         if: >-
           github.event_name == 'issue_comment' && github.event.action == 'created' &&
