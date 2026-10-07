@@ -5,6 +5,7 @@ import {
   parseSubscriptionsState,
   type SubscriptionsState,
 } from "../subscriptions/subscription-state.js";
+import { type AllocationsState, parseAllocations } from "../subscriptions/subscriptions-file.js";
 
 /**
  * THE SUBSCRIPTIONS WIRE — how the Playbook Store's saved subscriptions reach the `bots` process
@@ -28,6 +29,11 @@ import {
  * future wire change that adds a BEHAVIORAL field must add a new kind rather than silently
  * reinterpreting this one, because `subscriptionsVersion` below is computed over exactly the
  * behavioral fields this version knows about.
+ *
+ * Carried, not yet behavioral (#4469 slice 3c part 1): each subscription's `conviction`, any field a
+ * newer build put on a record (#4772), and `allocations`, each account's capital per strategy. The
+ * version names its fields, so none of these moves it, and no bot reads them yet; part 2 brings
+ * the ones a bot acts on into the fingerprint, once, so a spec can show only they moved.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
@@ -57,6 +63,8 @@ export interface SubscriptionsSnapshot {
   readonly version: string;
   /** Every account's subscriptions, keyed by `accountId` (a bot's `persona.id`). */
   readonly accounts: SubscriptionsState;
+  /** Each account's allocation per strategy; omitted when none is set. Outside `version`. */
+  readonly allocations?: AllocationsState;
 }
 
 /**
@@ -98,12 +106,14 @@ export function subscriptionsVersion(state: SubscriptionsState): string {
 export function buildSubscriptionsSnapshot(
   state: SubscriptionsState,
   at: number,
+  allocations?: AllocationsState,
 ): SubscriptionsSnapshot {
   return {
     kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
     at,
     version: subscriptionsVersion(state),
     accounts: state,
+    ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }
 
@@ -131,6 +141,7 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
  * reproduce the app's own claim about it, and is otherwise read as "not reported" — never as a
  * partial roster. (A payload carrying EXTRA junk that parses away to exactly the claimed version
  * passes, and correctly so: what is applied is then precisely the roster the version describes.)
+ * `allocations` sits outside the version, so it is read leniently and never sinks a snapshot.
  */
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
@@ -141,5 +152,12 @@ export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapsho
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
   if (!parsed || subscriptionsVersion(parsed) !== version) return undefined;
-  return { kind: SUBSCRIPTIONS_SNAPSHOT_KIND, at, version, accounts: parsed };
+  const allocations = parseAllocations(value.allocations);
+  return {
+    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
+    at,
+    version,
+    accounts: parsed,
+    ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
+  };
 }

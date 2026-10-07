@@ -173,3 +173,43 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
     ).toBeUndefined();
   });
 });
+
+describe("carried, not yet behavioral (#4469 slice 3c part 1)", () => {
+  const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+  const allocations = {
+    sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-07T00:00:00.000Z" } },
+  };
+
+  it("the version does not move for a conviction, a newer build's field, or the allocations", () => {
+    const plain = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT);
+    const carried = buildSubscriptionsSnapshot(
+      { sauron: [{ ...sub({ conviction }), window: { from: "D-20" } } as PlaybookSubscription] },
+      AT,
+      allocations,
+    );
+    expect(carried.version).toBe(plain.version);
+  });
+
+  it("a conviction and the allocations survive the bridge to the bots", () => {
+    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT, allocations);
+    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
+    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
+    expect(parsed?.allocations).toEqual(allocations);
+  });
+
+  it("leaves the allocations off a snapshot that has none — the wire is unchanged for today's store", () => {
+    expect(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, {})).not.toHaveProperty(
+      "allocations",
+    );
+  });
+
+  it("garbled allocations never sink a snapshot: the roster still applies, the allocations drop", () => {
+    const snapshot = {
+      ...buildSubscriptionsSnapshot({ sauron: [sub()] }, AT),
+      allocations: "junk",
+    };
+    const parsed = parseSubscriptionsSnapshot(snapshot);
+    expect(parsed?.accounts).toEqual({ sauron: [sub()] });
+    expect(parsed).not.toHaveProperty("allocations");
+  });
+});

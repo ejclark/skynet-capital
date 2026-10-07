@@ -159,7 +159,8 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    subscriptions: () => buildSubscriptionsSnapshot(subscriptions.load(), Date.now()),
+    subscriptions: () =>
+      buildSubscriptionsSnapshot(subscriptions.load(), Date.now(), subscriptions.loadAllocations()),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;

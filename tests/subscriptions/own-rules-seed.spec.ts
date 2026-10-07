@@ -297,7 +297,6 @@ describe("seeding Sauron's own rules as his subscription", () => {
       const broken = [
         { ...sub("S1-NVDA"), capitalAllocated: "50000" },
         { ...sub("S1-NVDA"), mode: "custom" },
-        { ...sub("S1-NVDA"), addedByANewerBuild: true },
       ];
       for (const record of broken) {
         const file = `${JSON.stringify({ sauron: [sub("CRWV-WHEEL"), record] }, null, 2)}\n`;
@@ -311,6 +310,19 @@ describe("seeding Sauron's own rules as his subscription", () => {
           expect(existsSync(markersPath)).toBe(false);
         }
         expect(errors.at(-1)).toContain("left untouched");
+      }
+    });
+
+    it("a newer build's field on a record and its allocations key ride through a seed unchanged (#4772)", () => {
+      const newer = { ...sub("S1-NVDA"), addedByANewerBuild: { window: "D-20" } };
+      const allocations = { sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "x" } } };
+      for (const { seed } of bothSeeds(new SubscriptionStore(path))) {
+        writeFileSync(path, JSON.stringify({ sauron: [newer], $allocations: allocations }), "utf8");
+
+        expect(seed().added).toEqual(["sauron"]);
+        const written = JSON.parse(readFileSync(path, "utf8"));
+        expect(written.sauron).toContainEqual(newer);
+        expect(written.$allocations).toEqual(allocations);
       }
     });
 

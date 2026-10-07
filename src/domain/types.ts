@@ -338,6 +338,22 @@ export interface PlaybookSubscription {
    * today.
    */
   readonly compoundAllocation?: boolean;
+  /**
+   * The owner's labelled, dated conviction (#4469 criteria 2, 11 and 12): the verdict a pair
+   * trades on when the house study did not say ✓, as Eric's wheel on CRWV does (#4642: "CRWV runs
+   * as Eric's conviction, against the study's stand-aside"). Absent = no conviction on record.
+   * Slice 3c part 1 only reads and carries it — nothing writes it until part 3, and it stays
+   * outside `subscriptionsVersion` until part 2 teaches the bots to act on it.
+   */
+  readonly conviction?: SubscriptionConviction;
+}
+
+/** An owner's conviction on one pair — why they hold it, and the market day it is checked. */
+export interface SubscriptionConviction {
+  /** In the owner's words; never empty. */
+  readonly reason: string;
+  /** `YYYY-MM-DD`: the day its net P/L and its strategy's retire test are read (criterion 12). */
+  readonly checkOn: string;
 }
 
 /** `unfilled`: was live, ended with nothing filled. `working`: still live at the broker, so it may
