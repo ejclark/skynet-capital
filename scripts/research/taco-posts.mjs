@@ -34,140 +34,31 @@
  * Offline research tooling: no broker credential, touches no trading path, places nothing.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  barAt,
+  bonferroni,
+  bp,
+  CACHE,
+  etClock,
+  fiveMinute,
+  hourly,
+  pct,
+  posts,
+  REGULAR_CLOSE,
+  REGULAR_OPEN,
+  sessionClose,
+  summary,
+} from "./taco-common.mjs";
 import { companiesIn } from "./taco-companies.mjs";
 
-const CACHE = join(process.cwd(), "node_modules", ".cache", "taco-posts");
 const LABELS = join(process.cwd(), "docs", "research", "taco-posts-labels.json");
-const ARCHIVE = "https://ix.cnn.io/data/truth-social/truth_archive.json";
-const UA = "skynet-capital research (ejclark83@gmail.com)";
 const KINDS = ["praise", "attack", "tariff", "deal", "policy"];
 /** Two of the same ticker inside this window are one story: only the first post counts. */
 const SAME_STORY_MS = 24 * 3_600_000;
 /** Below this many events a cell is printed but never called. */
 const MIN_N = 15;
-
-async function cachedJson(name, url) {
-  mkdirSync(CACHE, { recursive: true });
-  const path = join(CACHE, name);
-  if (existsSync(path)) return JSON.parse(readFileSync(path, "utf8"));
-  const res = await fetch(url, { headers: { "User-Agent": UA } });
-  if (!res.ok) throw new Error(`${url} -> ${res.status} ${res.statusText}`);
-  const body = await res.json();
-  writeFileSync(path, JSON.stringify(body));
-  return body;
-}
-
-function plainText(html) {
-  return (html ?? "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Original posts with text since `fromIso`; reposts ("RT: …", "RT @…") are copies and dropped. */
-async function posts(fromIso) {
-  const raw = await cachedJson("truth_archive.json", ARCHIVE);
-  return raw
-    .filter((p) => p.created_at >= fromIso)
-    .map((p) => ({ id: p.id, at: p.created_at, url: p.url, text: plainText(p.content) }))
-    .filter((p) => p.text && !/^RT[: ]/.test(p.text));
-}
-
-// ── prices ─────────────────────────────────────────────────────────────────────────────────────
-
-const ET = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  hourCycle: "h23",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-/** ET calendar date and minutes-after-midnight for an epoch-ms instant. */
-function etClock(ms) {
-  const parts = Object.fromEntries(ET.formatToParts(ms).map((p) => [p.type, p.value]));
-  return {
-    date: `${parts.year}-${parts.month}-${parts.day}`,
-    minute: Number(parts.hour) * 60 + Number(parts.minute),
-  };
-}
-
-const REGULAR_OPEN = 9 * 60 + 30;
-const REGULAR_CLOSE = 16 * 60;
-
-/**
- * Bars with pre/post-market, each tagged with its ET date and whether it is regular hours. Yahoo
- * serves 60-minute bars back ~730 days and 5-minute bars back 60.
- */
-async function yahooBars(symbol, interval, range) {
-  const url =
-    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}` +
-    `?interval=${interval}&range=${range}&includePrePost=true`;
-  // A delisted ticker (US Steel after its 2025 sale) 404s: no bars, and the event is counted as skipped.
-  const raw = await cachedJson(`${symbol}-${interval}.json`, url).catch((e) => {
-    if (String(e.message).includes("404")) return {};
-    throw e;
-  });
-  const r = raw.chart?.result?.[0];
-  if (!r?.timestamp) return [];
-  const q = r.indicators.quote[0];
-  const out = [];
-  for (let i = 0; i < r.timestamp.length; i++) {
-    if (q.open[i] == null || q.close[i] == null) continue;
-    const t = r.timestamp[i] * 1000;
-    const { date, minute } = etClock(t);
-    out.push({
-      t,
-      date,
-      regular: minute >= REGULAR_OPEN && minute < REGULAR_CLOSE,
-      open: q.open[i],
-      close: q.close[i],
-    });
-  }
-  return out;
-}
-
-const hourly = (symbol) => yahooBars(symbol, "60m", "730d");
-const fiveMinute = (symbol) => yahooBars(symbol, "5m", "60d");
-
-/** Index of the last bar starting at or before `t`, or -1. */
-function barAt(bars, t) {
-  let lo = 0;
-  let hi = bars.length - 1;
-  let found = -1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (bars[mid].t <= t) {
-      found = mid;
-      lo = mid + 1;
-    } else hi = mid - 1;
-  }
-  return found;
-}
-
-/**
- * Index of the closing bar (the last regular-hours bar) of the first session ending at or after
- * `fromIndex`, then `sessionsAhead` sessions further on; -1 past the data.
- */
-function sessionClose(bars, fromIndex, sessionsAhead) {
-  let seen = 0;
-  for (let i = fromIndex; i < bars.length; i++) {
-    const closing =
-      bars[i].regular &&
-      (i + 1 >= bars.length || bars[i + 1].date !== bars[i].date || !bars[i + 1].regular);
-    if (!closing) continue;
-    if (seen === sessionsAhead) return i;
-    seen++;
-  }
-  return -1;
-}
 
 /**
  * The price path one event offers, as indexes into `bars`: the bar the post sits in (or the last
@@ -224,7 +115,12 @@ async function firstHour(ev, spy5) {
     const s = spyPrice(spy5, bars[i].t, f);
     return s === undefined ? undefined : ev.direction * (bars[i][f] / from - 1 - (s / spyFrom - 1));
   };
-  const row = { at: ev.at, ticker: ev.ticker, kind: ev.kind, source: ev.source };
+  const row = {
+    at: ev.at,
+    ticker: ev.ticker,
+    kind: ev.kind,
+    source: ev.source,
+  };
   for (const m of FINE) {
     let i = at + 1;
     while (i < bars.length && bars[i].t < ev.ms + m * 60_000) i++;
@@ -237,21 +133,6 @@ async function firstHour(ev, spy5) {
 
 // ── stats ──────────────────────────────────────────────────────────────────────────────────────
 
-function summary(xs) {
-  const n = xs.length;
-  if (n === 0) return { n };
-  const mean = xs.reduce((s, x) => s + x, 0) / n;
-  const sorted = [...xs].sort((a, b) => a - b);
-  const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
-  const sd = n > 1 ? Math.sqrt(xs.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1)) : 0;
-  const t = sd > 0 ? mean / (sd / Math.sqrt(n)) : 0;
-  const win = xs.filter((x) => x > 0).length / n;
-  return { n, mean, median, t, win };
-}
-
-const bp = (x) => (x === undefined ? "—" : `${(x * 10_000).toFixed(0)}`);
-const pct = (x) => `${Math.round(x * 100)}%`;
-
 // ── stages ─────────────────────────────────────────────────────────────────────────────────────
 
 const STUDY_FROM = "2023-11-07";
@@ -261,7 +142,13 @@ async function candidates() {
   const out = [];
   for (const p of all) {
     for (const hit of companiesIn(p.text, p.at)) {
-      out.push({ id: p.id, at: p.at, ticker: hit.ticker, matched: hit.matched, text: p.text });
+      out.push({
+        id: p.id,
+        at: p.at,
+        ticker: hit.ticker,
+        matched: hit.matched,
+        text: p.text,
+      });
     }
   }
   const dir = join(CACHE, "label-batches");
@@ -321,12 +208,19 @@ async function events() {
     const post = byId.get(l.id);
     out.push({ ...l, ms: t, url: post.url, source: sourceOf(post) });
   }
-  return { labelled: labels.length, about: labels.filter((l) => l.about).length, events: out };
+  return {
+    labelled: labels.length,
+    about: labels.filter((l) => l.about).length,
+    events: out,
+  };
 }
 
 /** The rows of every table: each kind on his own words, then all of them, then the two controls. */
 const GROUPS = [
-  ...KINDS.map((k) => ({ name: k, has: (r) => r.source === "own" && r.kind === k })),
+  ...KINDS.map((k) => ({
+    name: k,
+    has: (r) => r.source === "own" && r.kind === k,
+  })),
   { name: "**all own words**", has: (r) => r.source === "own" },
   { name: "control: shared links", has: (r) => r.source === "link" },
   { name: "control: lists", has: (r) => r.source === "list" },
@@ -355,7 +249,12 @@ function pricedRow(ev, bars, spy, entry) {
   const jumpSpy = spyReturn(spy, beforeBar.t, p.beforeField, entryBar.t, "open");
   if (jumpSpy === undefined) return undefined;
   const marketOpen = postedWhileOpen(ev.ms);
-  const row = { ...ev, entry, marketOpen, jump: ev.direction * (jumpRaw - jumpSpy) };
+  const row = {
+    ...ev,
+    entry,
+    marketOpen,
+    jump: ev.direction * (jumpRaw - jumpSpy),
+  };
   for (const exit of EXITS) {
     const x = p.exits[exit];
     if (x < p.entry) continue;
@@ -516,46 +415,6 @@ async function study(showEvents) {
     `\n${cells} cells above. With that many looks, a |t| near 2 turns up by chance a few times; ` +
       `only |t| ≥ ${bonferroni(cells).toFixed(1)} survives a Bonferroni correction at 5%.`,
   );
-}
-
-/** Two-sided normal critical value for 5% / cells (Bonferroni), by bisection on the tail. */
-function bonferroni(cells) {
-  const target = 0.05 / cells / 2;
-  const tail = (z) => 0.5 * erfc(z / Math.SQRT2);
-  let lo = 0;
-  let hi = 10;
-  for (let i = 0; i < 60; i++) {
-    const mid = (lo + hi) / 2;
-    if (tail(mid) > target) lo = mid;
-    else hi = mid;
-  }
-  return hi;
-}
-
-/** Complementary error function (Numerical Recipes erfcc, |error| < 1.2e-7). */
-function erfc(x) {
-  const z = Math.abs(x);
-  const t = 1 / (1 + 0.5 * z);
-  const r =
-    t *
-    Math.exp(
-      -z * z -
-        1.26551223 +
-        t *
-          (1.00002368 +
-            t *
-              (0.37409196 +
-                t *
-                  (0.09678418 +
-                    t *
-                      (-0.18628806 +
-                        t *
-                          (0.27886807 +
-                            t *
-                              (-1.13520398 +
-                                t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))),
-    );
-  return x >= 0 ? r : 2 - r;
 }
 
 const [stage] = process.argv.slice(2).filter((a) => !a.startsWith("--"));

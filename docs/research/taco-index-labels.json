@@ -1,0 +1,4169 @@
+[
+  {
+    "id": "111421163828014106",
+    "at": "2023-11-16T16:27:15.953Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "References past Fentanyl deal with China that lapsed.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111438038372811561",
+    "at": "2023-11-19T15:58:41.070Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Vows to kill Asia trade deal; no specific tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111449839105574293",
+    "at": "2023-11-21T17:59:45.962Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "References past Fentanyl deal with China that lapsed.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111455158594606498",
+    "at": "2023-11-22T16:32:34.912Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "References past Fentanyl deal with China that lapsed.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111472255903480087",
+    "at": "2023-11-25T17:00:39.157Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on Forbes magazine ownership and China.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111648408077303962",
+    "at": "2023-12-26T19:38:28.087Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares headline only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111694019787411726",
+    "at": "2024-01-03T20:58:07.517Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quote predicting Trump reelection and tougher China policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111802659111963419",
+    "at": "2024-01-23T01:26:32.020Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Anecdote about Otto Warmbier's release from North Korea.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "111836879573790815",
+    "at": "2024-01-29T02:29:14.822Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Attacks UAW leader, EV policy; tariff rhetoric, no specific rate.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112146627197839599",
+    "at": "2024-03-23T19:22:08.519Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112191063708040571",
+    "at": "2024-03-31T15:42:55.810Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112214379997539250",
+    "at": "2024-04-04T18:32:34.197Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112219179746731068",
+    "at": "2024-04-05T14:53:12.562Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112258860825454067",
+    "at": "2024-04-12T15:04:37.766Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112320061756751047",
+    "at": "2024-04-23T10:28:49.905Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on yen strength and past currency policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112646786043233417",
+    "at": "2024-06-20T03:19:06.877Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Historical tariff commentary; McKinley reference, not new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "112950179475851383",
+    "at": "2024-08-12T17:16:03.198Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Polling commentary; unrelated to tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113068789834559202",
+    "at": "2024-09-02T16:00:13.637Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "First term recap; past achievements, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113177876160672329",
+    "at": "2024-09-21T22:22:18.877Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113190878617543628",
+    "at": "2024-09-24T05:29:00.624Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares URL link only; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113193907095203231",
+    "at": "2024-09-24T18:19:11.526Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Comparison of tariff stance vs. Harris; policy rhetoric, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113193929001379065",
+    "at": "2024-09-24T18:24:45.789Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Pitch to companies; general tariff policy, not a new announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113280528220604106",
+    "at": "2024-10-10T01:28:05.007Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Proposes corporate tax rate; tariff language is general policy, not specific.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113284442514435141",
+    "at": "2024-10-10T18:03:32.397Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "First term trade achievements recap; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113318559611914853",
+    "at": "2024-10-16T18:39:57.984Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Bloomberg interview recap; past tariff effects, no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113358155534960871",
+    "at": "2024-10-23T18:29:43.822Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Campaign politics about Democrat senators; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113364109602414765",
+    "at": "2024-10-24T19:43:55.681Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends tariff policy against NST criticism; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113546215051155542",
+    "at": "2024-11-25T23:35:44.310Z",
+    "kind": "threat",
+    "target": "Mexico, Canada",
+    "confidence": 0.99,
+    "reason": "Announces 25% tariff on both countries effective January 20.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113546215408213585",
+    "at": "2024-11-25T23:35:49.759Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 0.98,
+    "reason": "Announces additional 10% tariff on China over fentanyl.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113573130299319701",
+    "at": "2024-11-30T17:40:38.411Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.98,
+    "reason": "Threatens 100% tariffs on BRICS if they challenge dollar.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113573136856113648",
+    "at": "2024-11-30T17:42:18.453Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Trudeau meeting discussion; addresses trade and immigration, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113586503722263487",
+    "at": "2024-12-03T02:21:40.649Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.75,
+    "reason": "Opposes foreign acquisition; mentions tariffs as tool but no specific rate.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113595332278320772",
+    "at": "2024-12-04T15:46:53.719Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Continues Navarro announcement; describes role, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113595333429088742",
+    "at": "2024-12-04T15:47:11.278Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces Peter Navarro appointment; past trade policy, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113595537708751383",
+    "at": "2024-12-04T16:39:08.339Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting AMAC news link about tariff agenda.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113615912452824634",
+    "at": "2024-12-08T07:00:42.267Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on Syria, Russia, Iran, Ukraine military situation.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113618971897649513",
+    "at": "2024-12-08T19:58:45.684Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting AMAC news link about tariff agenda.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113626786987358864",
+    "at": "2024-12-10T05:06:14.493Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Dinner with Trudeau to discuss tariffs; scheduling only.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113683654440040843",
+    "at": "2024-12-20T06:08:22.958Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.9,
+    "reason": "Threatens tariffs on EU if they don't buy US oil/gas.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113755116467958801",
+    "at": "2025-01-01T21:02:06.966Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Historical commentary on tariffs and wealth; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113778957475969583",
+    "at": "2025-01-06T02:05:11.876Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Mentions tariffs in legislative bill context; no specific action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113781647532063909",
+    "at": "2025-01-06T13:29:18.879Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.88,
+    "reason": "Commentary on U.S. Steel value with tariffs; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113781828670659948",
+    "at": "2025-01-06T14:15:22.832Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Denies tariff policy pared back; defends existing policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113782682597333035",
+    "at": "2025-01-06T17:52:32.723Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Canada and tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113788624491419802",
+    "at": "2025-01-07T19:03:38.826Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting WSJ opinion link about tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113827650534234057",
+    "at": "2025-01-14T16:28:28.986Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.88,
+    "reason": "Announces External Revenue Service for tariff collection.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113839800612338060",
+    "at": "2025-01-16T19:58:24.460Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Nomination for USDA trade role; unrelated to tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113872782548137314",
+    "at": "2025-01-22T15:46:08.868Z",
+    "kind": "threat",
+    "target": "Russia",
+    "confidence": 0.85,
+    "reason": "Threatens high tariffs on Russia if Ukraine war not settled.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115956946816324221",
+    "at": "2025-01-25T17:36:31.805Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Canada's economic situation; no new trade action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113896070273857964",
+    "at": "2025-01-26T18:28:31.355Z",
+    "kind": "threat",
+    "target": "Colombia",
+    "confidence": 0.98,
+    "reason": "Threatens 25% immediate tariff, 50% in one week on Colombia.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113920366067218393",
+    "at": "2025-01-31T01:27:15.742Z",
+    "kind": "threat",
+    "target": "BRICS",
+    "confidence": 0.95,
+    "reason": "Threatens 100% tariffs on BRICS if they challenge dollar.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113928759847321475",
+    "at": "2025-02-01T13:01:54.662Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Praise for talking heads; unrelated to tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113931044424714413",
+    "at": "2025-02-01T22:42:54.547Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.98,
+    "reason": "Implements 25% on Mexico/Canada, 10% additional on China.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113931196721633756",
+    "at": "2025-02-01T23:21:38.414Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Single-word exclamation; too vague for classification.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113934450227067577",
+    "at": "2025-02-02T13:09:02.972Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.88,
+    "reason": "Attacks tariff critics; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113934520197790682",
+    "at": "2025-02-02T13:26:50.640Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Canada trade and tariffs; no concrete action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113936920653240968",
+    "at": "2025-02-02T23:37:18.678Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Defends tariffs generally; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113940711907400754",
+    "at": "2025-02-03T15:41:28.685Z",
+    "kind": "climbdown",
+    "target": "Mexico",
+    "confidence": 0.98,
+    "reason": "Pauses anticipated tariffs on Mexico for one month.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113942189236610107",
+    "at": "2025-02-03T21:57:10.881Z",
+    "kind": "climbdown",
+    "target": "Canada",
+    "confidence": 0.98,
+    "reason": "Pauses previously announced tariffs on Canada for 30 days.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113975743103667550",
+    "at": "2025-02-09T20:10:22.260Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting CNBC link about Putin and tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113991030846598649",
+    "at": "2025-02-12T12:58:14.709Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Speculation about interest rates and upcoming tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113996410955252842",
+    "at": "2025-02-13T11:46:28.648Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Hype for reciprocal tariff announcement; not concrete action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113996895642654410",
+    "at": "2025-02-13T13:49:44.395Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces news conference on reciprocal tariffs; not action itself.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "113998250121701192",
+    "at": "2025-02-13T19:34:12.101Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.95,
+    "reason": "Announces reciprocal tariff policy applied globally.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114000079822145063",
+    "at": "2025-02-14T03:19:31.114Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting White House fact sheet about reciprocal plan.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114000082796162721",
+    "at": "2025-02-14T03:20:16.494Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting White House link about reciprocal trade.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114004145997692054",
+    "at": "2025-02-14T20:33:36.033Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting CNBC link about reciprocal tariff plan.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114004152174148558",
+    "at": "2025-02-14T20:35:10.275Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting Daily Mail link about tariff plan.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114004158227642314",
+    "at": "2025-02-14T20:36:42.643Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting NY Post link about reciprocal tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114004160299941382",
+    "at": "2025-02-14T20:37:14.264Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting Fox News link about tariff benefits.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114009160733381255",
+    "at": "2025-02-15T17:47:28.323Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting Fox News link about tariff benefits.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114009155065149039",
+    "at": "2025-02-15T17:47:28.333Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting news about reciprocal tariff plan.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114009175266247925",
+    "at": "2025-02-15T17:52:36.577Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.95,
+    "reason": "Announces reciprocal tariff policy: match any country's charges.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114015154260594234",
+    "at": "2025-02-16T19:13:08.790Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Nomination for EXIM Bank; unrelated to tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114017223431326844",
+    "at": "2025-02-17T03:59:21.830Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting news link about automaker tariff talks.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114027413104887073",
+    "at": "2025-02-18T23:10:43.910Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Reposting news link about tariffs and Canada.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114036638899167319",
+    "at": "2025-02-20T14:16:58.362Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts tariff revenue will fund budget; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114059930426328863",
+    "at": "2025-02-24T17:00:18.864Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces Ukraine and Russia economic partnership deals.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114067029529937308",
+    "at": "2025-02-25T23:05:42.700Z",
+    "kind": "threat",
+    "target": "copper",
+    "confidence": 0.85,
+    "reason": "Requests study on copper imports with stated intent of tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114070038526458197",
+    "at": "2025-02-26T11:50:56.231Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Defends auto tariffs already announced, not announcing new ones.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114072703621092444",
+    "at": "2025-02-26T23:08:42.349Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Hypothetical discussion about Canada as 51st State; no concrete action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114076153524132682",
+    "at": "2025-02-27T13:46:03.692Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Announces 10% additional tariff on China effective March 4.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114099930171583950",
+    "at": "2025-03-03T18:32:46.580Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.95,
+    "reason": "Announces tariffs on external agricultural products effective April 2.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114104810698249053",
+    "at": "2025-03-04T15:13:57.511Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.98,
+    "reason": "Explains tariff incentive for production in US, not announcing action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114105388432604284",
+    "at": "2025-03-04T17:40:52.987Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.9,
+    "reason": "Threatens to raise reciprocal tariff if Canada retaliates.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114111155189097825",
+    "at": "2025-03-05T18:07:26.753Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.92,
+    "reason": "Reports call with Trudeau about fentanyl; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114116271026986660",
+    "at": "2025-03-06T15:48:28.248Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on Trudeau using tariff issue for politics, no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114116432894994278",
+    "at": "2025-03-06T16:29:38.108Z",
+    "kind": "climbdown",
+    "target": "Mexico",
+    "confidence": 0.95,
+    "reason": "Exempts Mexico USMCA goods from tariffs through April 2.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114121576367163341",
+    "at": "2025-03-07T14:17:41.314Z",
+    "kind": "threat",
+    "target": "Russia",
+    "confidence": 0.85,
+    "reason": "Threatens large-scale sanctions and tariffs on Russia until Ukraine ceasefire reached.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114121736384220932",
+    "at": "2025-03-07T14:58:22.977Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes UAW head supporting tariffs as correction for NAFTA losses.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114124071552960368",
+    "at": "2025-03-08T00:52:14.781Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Complains about Canada's dairy tariffs; implies retaliation with 'Enjoy it while you can'.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114127524757533399",
+    "at": "2025-03-08T15:30:26.502Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares Senator Tuberville op-ed on tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114127525534456705",
+    "at": "2025-03-08T15:30:38.355Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion article on permanent steel tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114138908675656528",
+    "at": "2025-03-10T15:45:31.304Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion article defending tariffs against inflation claim.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114138921250313300",
+    "at": "2025-03-10T15:48:43.179Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Shares article on businesses building in US to avoid tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140114550876423",
+    "at": "2025-03-10T20:52:11.500Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion article defending tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140136536134546",
+    "at": "2025-03-10T20:57:46.968Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about Honda moving production to Indiana.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140137696773138",
+    "at": "2025-03-10T20:58:04.678Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares USA Today opinion on aluminum/steel tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140138456645081",
+    "at": "2025-03-10T20:58:16.273Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article predicting tariffs will create jobs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140337210541557",
+    "at": "2025-03-10T21:48:49.017Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about Apple investment due to tariff policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140387895836687",
+    "at": "2025-03-10T22:01:42.414Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares Newsmax link on tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140391776092862",
+    "at": "2025-03-10T22:02:41.621Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about automaker response to tariff talks.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140396629848436",
+    "at": "2025-03-10T22:03:55.683Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about Hyundai/Kia boosting US production.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114140414861699638",
+    "at": "2025-03-10T22:08:33.880Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about UAW backing tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114141631976318293",
+    "at": "2025-03-11T03:18:05.624Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Defends reciprocal tariffs on Canada; references April 2 but no new specific action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114144217763824399",
+    "at": "2025-03-11T14:15:41.562Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.98,
+    "reason": "Raises steel/aluminum tariff on Canada to 50% effective March 12 due to electricity surcharge.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114145789343616234",
+    "at": "2025-03-11T20:55:21.968Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares news article on tariffs strengthening jobs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114151280603984689",
+    "at": "2025-03-12T20:11:51.949Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes steel manufacturers welcoming Section 232 tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114151300866147161",
+    "at": "2025-03-12T20:17:01.128Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes Commerce Secretary on tariffs bringing manufacturing home.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114155003492555395",
+    "at": "2025-03-13T11:58:38.721Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.95,
+    "reason": "Threatens 200% tariff on EU wines/champagne if 50% whisky tariff not lifted.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114155230513269064",
+    "at": "2025-03-13T12:56:22.784Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Boasts tariff revenue coming in; attacks EU and media.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114186496532193203",
+    "at": "2025-03-19T01:27:44.369Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes op-ed praising steel tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114186506719638528",
+    "at": "2025-03-19T01:30:19.817Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares White House article about steel tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114192326899482441",
+    "at": "2025-03-20T02:10:28.764Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Fed rate cuts as tariffs ease into economy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114200269495299138",
+    "at": "2025-03-21T11:50:23.160Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Post about judges and presidential authority; no tariff content.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114217914259825110",
+    "at": "2025-03-24T14:37:40.893Z",
+    "kind": "threat",
+    "target": "Venezuela",
+    "confidence": 0.95,
+    "reason": "Announces 25% secondary tariff on Venezuela oil buyers effective April 2.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114232829948632918",
+    "at": "2025-03-27T05:50:56.198Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.9,
+    "reason": "Threatens large-scale tariffs on EU and Canada if they work together economically.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114235085105377425",
+    "at": "2025-03-27T15:24:27.239Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes autoworker supporting tariffs forcing US production.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114240963084616958",
+    "at": "2025-03-28T16:19:18.005Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares news about UAW praising 25% auto tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259542142808960",
+    "at": "2025-03-31T23:04:11.933Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion on tariffs and American industry.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259542358563425",
+    "at": "2025-03-31T23:04:15.228Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article arguing tariffs are good for China policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259542983472949",
+    "at": "2025-03-31T23:04:24.762Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion article on aluminum/steel tariffs helping workers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259546197388041",
+    "at": "2025-03-31T23:05:13.804Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Shares headline about Europe deal; no announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259775317961958",
+    "at": "2025-04-01T00:02:58.350Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Shares article about tariffs on Venezuelan oil buyers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259773249991583",
+    "at": "2025-04-01T00:02:58.350Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about companies expanding US operations to avoid tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259776229298213",
+    "at": "2025-04-01T00:03:43.810Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares article about UAW praising auto tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259778682053280",
+    "at": "2025-04-01T00:04:21.237Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts that auto tariffs mark victory for autoworkers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114259779281266692",
+    "at": "2025-04-01T00:04:30.380Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares news link about tariffs strengthening jobs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114263016425726800",
+    "at": "2025-04-01T13:47:45.285Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares opinion link on tariffs boosting small business.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114263461013940328",
+    "at": "2025-04-01T15:40:49.161Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Defends Fentanyl tariffs on Canada; attacks political opponents.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114266599439835683",
+    "at": "2025-04-02T04:58:57.787Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Defends Fentanyl tariffs on Canada against Democratic opposition.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114269214484216882",
+    "at": "2025-04-02T16:04:00.152Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts that tariffs are saving steel industry.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114269516381007191",
+    "at": "2025-04-02T17:20:46.731Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares White House article defending tariff effectiveness.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114275641914968162",
+    "at": "2025-04-03T19:18:34.961Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares news link about worker support for tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114275644780357671",
+    "at": "2025-04-03T19:19:18.683Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Link to Liberation Day tariffs article; no specific announcement in post text.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114280292618523684",
+    "at": "2025-04-04T15:01:19.068Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Vietnam proposes cutting tariffs to zero; positive deal discussion.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114280893859636366",
+    "at": "2025-04-04T17:34:13.278Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "TikTok deal negotiation; reciprocal tariffs mentioned but not new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114282305980898453",
+    "at": "2025-04-04T23:33:20.538Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts about tariffs being permanent; defends existing policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114287485415940651",
+    "at": "2025-04-05T21:30:32.444Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quotes Gordon Chang on China tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114293581018893404",
+    "at": "2025-04-06T23:20:44.014Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discusses tariff benefits on deficits; no new tariff rate.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114296287858068040",
+    "at": "2025-04-07T10:49:07.100Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Comments on prices and China's tariff retaliation; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114297149364879462",
+    "at": "2025-04-07T14:28:12.604Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quotes Wyoming rancher on tariff impacts; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114297331052690348",
+    "at": "2025-04-07T15:14:24.983Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 1,
+    "reason": "Threatens additional 50% tariff on China effective April 9 if no withdrawal.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114302479432515341",
+    "at": "2025-04-08T13:03:42.982Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares article link; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114302499965852704",
+    "at": "2025-04-08T13:08:56.344Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discusses South Korea negotiations; no new tariff announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114307832213562859",
+    "at": "2025-04-09T11:44:59.938Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Encourages companies to move to US with zero tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114308228615083777",
+    "at": "2025-04-09T13:25:48.545Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quotes Dimon on tariffs; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114309144289505174",
+    "at": "2025-04-09T17:18:40.629Z",
+    "kind": "climbdown",
+    "target": "global",
+    "confidence": 0.9,
+    "reason": "Same post raises China to 125% and pauses all other reciprocal tariffs 90 days at 10%; the pause is the news.",
+    "by": "hand"
+  },
+  {
+    "id": "114316141098255318",
+    "at": "2025-04-10T22:58:03.457Z",
+    "kind": "threat",
+    "target": "Mexico",
+    "confidence": 1,
+    "reason": "Threatens tariffs and sanctions against Mexico over water treaty.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114319533589155171",
+    "at": "2025-04-11T13:20:48.760Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General commentary on tariff policy success; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114332337028519855",
+    "at": "2025-04-13T19:36:53.741Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Discusses ongoing national security tariff investigations; no rate announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114342518862792060",
+    "at": "2025-04-15T14:46:16.202Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discusses past China deal and Biden violations; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114345526663892197",
+    "at": "2025-04-16T03:31:11.605Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts tariff revenue and price declines; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114347128422370864",
+    "at": "2025-04-16T10:18:32.500Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announces Japan negotiation meeting; no new tariff rate.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114352766082542122",
+    "at": "2025-04-17T10:12:16.366Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes Fed; comments on economic conditions.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114372085732582216",
+    "at": "2025-04-20T20:05:30.832Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Defends tariff policy; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114372350378942829",
+    "at": "2025-04-20T21:12:49.017Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "References Liberation Day announcement; discusses negotiation framework.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114372351596556599",
+    "at": "2025-04-20T21:13:07.593Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Lists non-tariff trade barriers; commentary, no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114399870830051429",
+    "at": "2025-04-25T17:51:37.816Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Praises Fox analyst; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114410073592204291",
+    "at": "2025-04-27T13:06:19.612Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discusses tariff impacts on jobs and taxes; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114415618596069518",
+    "at": "2025-04-28T12:36:29.612Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Hypothetical pitch for Canada statehood; not actual policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114421883134626921",
+    "at": "2025-04-29T15:09:38.887Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares headline; no concrete tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114427089568235019",
+    "at": "2025-04-30T13:13:42.804Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Contrasts Biden and Trump performance; no new tariff announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114438304481024140",
+    "at": "2025-05-02T12:45:48.792Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts about price declines and tariff revenue; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114452117143235155",
+    "at": "2025-05-04T23:18:33.245Z",
+    "kind": "threat",
+    "target": "entertainment",
+    "confidence": 1,
+    "reason": "Authorizes 100% tariff on foreign-produced movies effective immediately.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114461333871544277",
+    "at": "2025-05-06T14:22:29.359Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quotes Commerce Secretary about trade deals; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114462406492811838",
+    "at": "2025-05-06T18:55:16.305Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares news headline about tariffs; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114469488580251681",
+    "at": "2025-05-08T00:56:20.339Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Teases upcoming trade deal announcement; no concrete tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114471750357100883",
+    "at": "2025-05-08T10:31:32.314Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes Fed; comments on prices and tariff revenue.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114472802068018414",
+    "at": "2025-05-08T14:59:00.195Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces UK trade deal with 10% tariffs; deal framework, no rate change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114477628854583525",
+    "at": "2025-05-09T11:26:31.067Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Comments 80% tariff on China seems right; defers to Scott B.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114477930037382424",
+    "at": "2025-05-09T12:43:06.752Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General rhetoric about trade deals in pipeline; no concrete tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114478160839858570",
+    "at": "2025-05-09T13:41:48.518Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Attacks MSNBC coverage; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114478780390671313",
+    "at": "2025-05-09T16:19:22.116Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discusses UK trade deal announcement; no tariff rate change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114486066663976973",
+    "at": "2025-05-10T23:12:21.866Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Announces 'total reset negotiated' with China in friendly manner.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114490604608562822",
+    "at": "2025-05-11T18:26:25.407Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts about capital inflow due to tariff policy; no new tariff announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114495946485549840",
+    "at": "2025-05-12T17:04:55.982Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Discusses tax bill and drug prices; references tariff revenue but no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114496449002706232",
+    "at": "2025-05-12T19:12:43.782Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares article link; no original tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114523638623110397",
+    "at": "2025-05-17T14:27:24.420Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes Walmart; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114556874484491575",
+    "at": "2025-05-23T11:19:43.418Z",
+    "kind": "threat",
+    "target": "semiconductors",
+    "confidence": 0.9,
+    "reason": "Threatens 25% tariff on Apple iPhones if not US-manufactured.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114556968834547173",
+    "at": "2025-05-23T11:43:43.085Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 1,
+    "reason": "Recommends 50% tariff on EU starting June 1, 2025.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114558783827880495",
+    "at": "2025-05-23T19:25:17.732Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announces US Steel deal with Nippon Steel; no tariff change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114570775887793036",
+    "at": "2025-05-25T22:15:01.999Z",
+    "kind": "climbdown",
+    "target": "EU",
+    "confidence": 1,
+    "reason": "Extends EU tariff deadline from June 1 to July 9 after Leyen call.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114573960971600808",
+    "at": "2025-05-26T11:45:02.521Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General rhetoric about countries wanting trade deals; no concrete action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114580018376822663",
+    "at": "2025-05-27T13:25:31.190Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Comments on existing EU tariff; EU called for talks, framed positively.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114582050209637823",
+    "at": "2025-05-27T22:02:14.548Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Restores US fishing rights in Maine waters; domestic policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114593880455063168",
+    "at": "2025-05-30T00:10:49.717Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Attacks court rulings and judges; no new tariff action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114596705340367716",
+    "at": "2025-05-30T12:09:14.104Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Recounts past deal with China and its alleged violation; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114599330494282325",
+    "at": "2025-05-30T23:16:50.715Z",
+    "kind": "threat",
+    "target": "steel",
+    "confidence": 1,
+    "reason": "Raises steel and aluminum tariffs from 25% to 50% effective June 4.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114609401400916551",
+    "at": "2025-06-01T17:58:00.605Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Defends tariffs, attacks judges; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114616351910119498",
+    "at": "2025-06-02T23:25:36.959Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Rhetoric defending tariffs as survival necessity; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114617666432673584",
+    "at": "2025-06-03T04:59:54.980Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Brief boast about tariff-driven economy boom; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114623632387180206",
+    "at": "2025-06-04T06:17:08.220Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Personal commentary on Xi being tough negotiator.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114626396219930564",
+    "at": "2025-06-04T18:00:00.961Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about judges blocking tariffs; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114631295762726849",
+    "at": "2025-06-05T14:46:02.049Z",
+    "kind": "other",
+    "target": "China",
+    "confidence": 0.9,
+    "reason": "Discusses already-agreed China trade deal on call with Xi.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114631479329996984",
+    "at": "2025-06-05T15:32:43.019Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Reports CBO finding tariffs reduce deficit $2.8T; defending policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114636826069773755",
+    "at": "2025-06-06T14:12:27.838Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts job numbers and stock gains alongside tariff revenue.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114637838750311907",
+    "at": "2025-06-06T18:30:00.071Z",
+    "kind": "other",
+    "target": "China",
+    "confidence": 0.9,
+    "reason": "Announces trade meeting with China; no tariff action taken.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114643067742659701",
+    "at": "2025-06-07T16:39:48.163Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about tariffs and tax relief bill; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114656372641493203",
+    "at": "2025-06-10T01:03:24.806Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about automakers returning to Michigan; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114664317659540633",
+    "at": "2025-06-11T10:43:56.212Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Reports appeals court rules tariffs legal; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114664632971715644",
+    "at": "2025-06-11T12:04:07.488Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.8,
+    "reason": "China deal: US gets 55% tariffs, China gets 10% plus rare earths.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114671982391481893",
+    "at": "2025-06-12T19:13:10.734Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Promotes rescissions bill; tariffs mentioned alongside other spending cuts.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114687664442020232",
+    "at": "2025-06-15T13:41:19.839Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on Middle East peace efforts using trade leverage.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114717929371967424",
+    "at": "2025-06-20T21:58:06.059Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Attacks Powell and defends tariff income; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114756567645919781",
+    "at": "2025-06-27T17:44:19.289Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.9,
+    "reason": "Terminates Canada trade talks over digital services tax; tariff coming.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114758739525947038",
+    "at": "2025-06-28T02:56:39.553Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Attacks CNN commentator on tariff coverage; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114763496131667376",
+    "at": "2025-06-28T23:06:19.549Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about economist on tariff strategy; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114764131885531801",
+    "at": "2025-06-29T01:48:00.426Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on tax policy and debt extension.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114774593071456633",
+    "at": "2025-06-30T22:08:25.411Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Post shows only headline quote about tariff revenue; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114779394158777330",
+    "at": "2025-07-01T18:29:24.190Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Promotes omnibus bill with lower taxes; tariffs mentioned as revenue source.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114783440783668830",
+    "at": "2025-07-02T11:38:30.784Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts about growth and tariff revenue, attacks Democrats; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114784098546698642",
+    "at": "2025-07-02T14:25:47.453Z",
+    "kind": "other",
+    "target": "Vietnam",
+    "confidence": 0.9,
+    "reason": "Brief trade deal announcement with no tariff details provided.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114784170652465525",
+    "at": "2025-07-02T14:44:07.699Z",
+    "kind": "climbdown",
+    "target": "Vietnam",
+    "confidence": 0.85,
+    "reason": "Vietnam deal: 20% tariff on exports, zero US tariffs, market fully open.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114809528606729733",
+    "at": "2025-07-07T02:12:59.423Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Announces tariff letters will be delivered July 7; no details given.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114809574296066307",
+    "at": "2025-07-07T02:24:36.588Z",
+    "kind": "threat",
+    "target": "BRICS",
+    "confidence": 0.95,
+    "reason": "Announces additional 10% tariff on countries aligning with BRICS.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114818149310161097",
+    "at": "2025-07-08T14:45:20.916Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.9,
+    "reason": "Confirms tariff letters to countries; August 1 deadline, no extensions.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114819184205071380",
+    "at": "2025-07-08T19:08:32.161Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "CEA study claims tariffs have zero inflation impact; defends policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114825046600516465",
+    "at": "2025-07-09T19:59:25.063Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News item about aluminum plant expansion amid tariffs; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114826107762484260",
+    "at": "2025-07-10T00:29:17.214Z",
+    "kind": "threat",
+    "target": "Copper",
+    "confidence": 0.95,
+    "reason": "Announces 50% tariff on copper, effective August 1, 2025.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114829408208555940",
+    "at": "2025-07-10T14:28:38.068Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts market highs and tariff revenue; urges Fed rate cut.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114841565274628116",
+    "at": "2025-07-12T18:00:20.131Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about $100B customs duties milestone; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114841568204031318",
+    "at": "2025-07-12T18:01:04.831Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link about Treasury surplus from tariff receipts; no action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114858589029028619",
+    "at": "2025-07-15T18:09:42.009Z",
+    "kind": "climbdown",
+    "target": "Indonesia",
+    "confidence": 0.85,
+    "reason": "Indonesia deal: opens entire market to US, pays 19%, US at zero tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114863410012919913",
+    "at": "2025-07-16T14:35:44.386Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts tariff revenue record $113B and $27B in June; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114898069194751986",
+    "at": "2025-07-22T17:30:01.581Z",
+    "kind": "climbdown",
+    "target": "Philippines",
+    "confidence": 0.85,
+    "reason": "Philippines opens market with zero tariffs to US, pays 19%.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114898507608732258",
+    "at": "2025-07-22T19:21:31.247Z",
+    "kind": "climbdown",
+    "target": "Indonesia",
+    "confidence": 0.85,
+    "reason": "Indonesia eliminates 99% tariff barriers, opens market, pays 19%.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114899417740854572",
+    "at": "2025-07-22T23:12:58.709Z",
+    "kind": "climbdown",
+    "target": "Japan",
+    "confidence": 0.8,
+    "reason": "Japan deal: 15% reciprocal tariff, market opens to US cars and agriculture.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114902743574618008",
+    "at": "2025-07-23T13:18:46.953Z",
+    "kind": "climbdown",
+    "target": "Japan",
+    "confidence": 0.85,
+    "reason": "Japan opens market to US for first time; tariff leverage achievement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114902777792812157",
+    "at": "2025-07-23T13:27:29.085Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Policy statement on reciprocal tariffs; no specific new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114902814296069974",
+    "at": "2025-07-23T13:36:46.080Z",
+    "kind": "climbdown",
+    "target": "Japan",
+    "confidence": 0.85,
+    "reason": "Japan market opens; will lower tariffs for countries opening to US.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114906015389311775",
+    "at": "2025-07-24T03:10:50.839Z",
+    "kind": "other",
+    "target": "Japan",
+    "confidence": 0.85,
+    "reason": "News link about Japan deal; no independent announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114920242180121128",
+    "at": "2025-07-26T15:28:54.484Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Links trade deals to war cessation; no tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114926827953437897",
+    "at": "2025-07-27T19:23:45.440Z",
+    "kind": "other",
+    "target": "EU",
+    "confidence": 0.85,
+    "reason": "Headline-only announce of EU trade deal; no details on tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114934191239714896",
+    "at": "2025-07-29T02:36:20.193Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Mentions EU deal completion; no specific tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114934232969144109",
+    "at": "2025-07-29T02:46:56.936Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Denies seeking summit with Xi; commentary only.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114942106248731470",
+    "at": "2025-07-30T12:09:13.692Z",
+    "kind": "threat",
+    "target": "India",
+    "confidence": 0.95,
+    "reason": "Announces India will pay 25% tariff plus penalty, effective August 1.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114943927434273211",
+    "at": "2025-07-30T19:52:22.728Z",
+    "kind": "climbdown",
+    "target": "South Korea",
+    "confidence": 0.8,
+    "reason": "South Korea offers to buy down from 25% tariff; Pakistan oil deal announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114944494894008041",
+    "at": "2025-07-30T22:16:41.475Z",
+    "kind": "climbdown",
+    "target": "South Korea",
+    "confidence": 0.8,
+    "reason": "Trade deal with reciprocal 15% tariff; market opens to US goods.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114945847973193713",
+    "at": "2025-07-31T04:00:47.874Z",
+    "kind": "other",
+    "target": "India",
+    "confidence": 0.9,
+    "reason": "Commentary on India and Russia tariffs; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114945962278773358",
+    "at": "2025-07-31T04:29:52.036Z",
+    "kind": "other",
+    "target": "Canada",
+    "confidence": 0.9,
+    "reason": "Commentary about Palestine statehood complicating Canada trade; no tariff change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114947373855664074",
+    "at": "2025-07-31T10:28:50.995Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Rhetoric boasting tariffs make America great; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114947427321891876",
+    "at": "2025-07-31T10:42:26.819Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Defends tariffs as self-defense tool; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114948452793702817",
+    "at": "2025-07-31T15:03:14.284Z",
+    "kind": "other",
+    "target": "Mexico",
+    "confidence": 0.85,
+    "reason": "Extends Mexico deal 90 days at identical rates; maintains existing policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114951250321324818",
+    "at": "2025-08-01T02:54:41.161Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "News link re-share about Canada tariffs; no new announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114953595203270237",
+    "at": "2025-08-01T12:51:01.177Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts about tariff revenue, attacks Powell; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114971053091282290",
+    "at": "2025-08-04T14:50:47.408Z",
+    "kind": "threat",
+    "target": "India",
+    "confidence": 0.95,
+    "reason": "Announces substantially raising tariff on India for Russian oil purchases.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114985420201139599",
+    "at": "2025-08-07T03:44:32.105Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces reciprocal tariffs taking effect at midnight; restates policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114985474632707201",
+    "at": "2025-08-07T03:58:22.664Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces reciprocal tariffs effective midnight tonight; restates policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114987271488966063",
+    "at": "2025-08-07T11:35:20.523Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on tariff revenue levels; boasting about policy impact.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114989330714602000",
+    "at": "2025-08-07T20:19:01.811Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Attacks WSJ editorial board for negativity on tariff policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114993652992825116",
+    "at": "2025-08-08T14:38:14.581Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Long commentary defending tariffs against court challenges.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "114995779410398631",
+    "at": "2025-08-08T23:39:01.180Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Quotes news headline about tariff revenue collected; no new policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115010049469121326",
+    "at": "2025-08-11T12:08:04.955Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "General rhetoric about tariffs strengthening country.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115011325631302905",
+    "at": "2025-08-11T17:32:37.647Z",
+    "kind": "climbdown",
+    "target": "global",
+    "confidence": 0.9,
+    "reason": "Exempts gold from tariffs with explicit statement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115012849265805680",
+    "at": "2025-08-12T00:00:06.468Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Extends tariff suspension on China for another 90 days.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115016246479417087",
+    "at": "2025-08-12T14:24:03.830Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on tariff revenue and criticism of Goldman Sachs prediction.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115055649201137901",
+    "at": "2025-08-19T13:24:41.603Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares news link about S&P credit rating; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115074267817502694",
+    "at": "2025-08-22T20:19:39.188Z",
+    "kind": "threat",
+    "target": "furniture",
+    "confidence": 0.9,
+    "reason": "Announces furniture tariff investigation to conclude within 50 days.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115074268844516691",
+    "at": "2025-08-22T20:19:54.864Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Cites CBO analysis of tariff benefits; defends existing policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115092243259973570",
+    "at": "2025-08-26T00:31:02.671Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.9,
+    "reason": "Threatens substantial tariffs on countries with discriminatory digital tax policies.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115114339832960282",
+    "at": "2025-08-29T22:10:29.620Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends tariffs against appeals court ruling; restates existing policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115120881794624188",
+    "at": "2025-08-31T01:54:11.988Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Expresses optimism about tariff court approval; no new announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115124685956430001",
+    "at": "2025-08-31T18:01:38.887Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends tariffs against court challenges; restates policy necessity.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115126384708348116",
+    "at": "2025-09-01T01:13:39.833Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on prices and energy costs despite tariffs; no new policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115126499944858986",
+    "at": "2025-09-01T01:42:58.202Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on tariff revenue and investment; warns against court strikes.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115129261076571259",
+    "at": "2025-09-01T13:25:09.726Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Notes India offered to cut tariffs to nothing but dismisses as too late.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115146507881082331",
+    "at": "2025-09-04T14:31:15.038Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares whitehouse.gov article link; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115196697263809382",
+    "at": "2025-09-13T11:15:04.243Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 0.85,
+    "reason": "Proposes 50-100% China tariffs conditional on NATO sanctions coordination.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115208260926006345",
+    "at": "2025-09-15T12:15:51.765Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Trade meeting with China 'gone VERY WELL'; deal reached.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115214622379049350",
+    "at": "2025-09-16T15:13:39.866Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Shares WSJ article link about tariff case; no direct announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115231649861246548",
+    "at": "2025-09-19T15:23:58.553Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.9,
+    "reason": "Productive call with Xi; announces TikTok deal approval and trade progress.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115267382531822964",
+    "at": "2025-09-25T22:51:15.539Z",
+    "kind": "threat",
+    "target": "autos",
+    "confidence": 0.95,
+    "reason": "Announces 25% tariff on heavy trucks from overseas starting Oct 1.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115267459188661048",
+    "at": "2025-09-25T23:10:45.529Z",
+    "kind": "threat",
+    "target": "furniture",
+    "confidence": 0.95,
+    "reason": "Announces 50% on cabinets and 30% on upholstered furniture starting Oct 1.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115267512131958759",
+    "at": "2025-09-25T23:24:13.379Z",
+    "kind": "threat",
+    "target": "pharma",
+    "confidence": 0.95,
+    "reason": "Announces 100% pharma tariff starting Oct 1 unless manufacturing in US.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115287691323395767",
+    "at": "2025-09-29T12:56:03.406Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.95,
+    "reason": "Announces 100% tariff on movies made outside the United States.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115287723938349086",
+    "at": "2025-09-29T13:04:21.071Z",
+    "kind": "threat",
+    "target": "furniture",
+    "confidence": 0.95,
+    "reason": "Announces substantial tariffs on furniture from non-US sources.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115300187189696754",
+    "at": "2025-10-01T17:53:55.197Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces tariff revenue aid to farmers; references China's non-buying negotiation.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115327091437197645",
+    "at": "2025-10-06T11:56:01.431Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on prices and inflation with tariffs; no new policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115328463321928109",
+    "at": "2025-10-06T17:44:54.773Z",
+    "kind": "threat",
+    "target": "autos",
+    "confidence": 0.95,
+    "reason": "Announces 25% tariff on medium/heavy duty trucks starting Nov 1.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115345041705180674",
+    "at": "2025-10-09T16:01:00.781Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "General rhetoric about tariffs being necessary for national power.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115350455734003647",
+    "at": "2025-10-10T14:57:52.308Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 0.75,
+    "reason": "States massive China tariff increase under calculation without finalized rate.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115351840469973590",
+    "at": "2025-10-10T20:50:01.702Z",
+    "kind": "threat",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Announces 100% additional tariff on China effective Nov 1, 2025.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115362196088273474",
+    "at": "2025-10-12T16:43:35.898Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "De-escalating reassurance: 'Don't worry about China, it will all be fine!'",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115418834028774105",
+    "at": "2025-10-22T16:42:09.380Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Credits existing tariffs with cattle ranchers' success.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115418813519600271",
+    "at": "2025-10-22T16:42:09.380Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "References past 50% Brazil tariff; restates accomplished policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115418866635313882",
+    "at": "2025-10-22T16:55:39.866Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Auto CEOs thanking for existing truck tariffs; defends policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115426823727952497",
+    "at": "2025-10-24T02:39:15.467Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Terminates trade negotiations with Canada; doesn't announce tariff change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115426967566430347",
+    "at": "2025-10-24T03:15:50.222Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Terminates trade negotiations with Canada; doesn't announce tariff change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115428798659352209",
+    "at": "2025-10-24T11:01:30.545Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasting about stock impact from existing truck tariffs; no new policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115428874684902595",
+    "at": "2025-10-24T11:20:50.601Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Canada's tariff fraud and historical charges; no new threat.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115428907096790566",
+    "at": "2025-10-24T11:29:05.167Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "General rhetoric about tariffs strengthening US; no new tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115428915165145135",
+    "at": "2025-10-24T11:31:08.298Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on stock market strength driven by existing tariff policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115436697060819133",
+    "at": "2025-10-25T20:30:10.525Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.95,
+    "reason": "Announces raising Canada tariff 10% over current rate for fraud.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115459538588191547",
+    "at": "2025-10-29T21:19:04.570Z",
+    "kind": "climbdown",
+    "target": "South Korea",
+    "confidence": 0.95,
+    "reason": "South Korea pays 350B for lowering of US tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115459650821125830",
+    "at": "2025-10-29T21:47:37.150Z",
+    "kind": "climbdown",
+    "target": "South Korea",
+    "confidence": 0.95,
+    "reason": "South Korea pays 350B for lowering of US tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115462098072054944",
+    "at": "2025-10-30T08:09:59.238Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Xi authorizes China to purchase massive amounts of US farm products.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115466450476422202",
+    "at": "2025-10-31T02:36:51.615Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Trip recap with general praise for trade outcomes; no specific tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115482797655964985",
+    "at": "2025-11-02T23:54:09.782Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on Supreme Court tariff case; restates policy benefits without new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115493671705492320",
+    "at": "2025-11-04T21:59:34.646Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends tariffs as essential for national security; restates established policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115511090849508843",
+    "at": "2025-11-07T23:49:29.651Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Discussing Xi meeting; China agreed to tariffs, not new US threat.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115519726463094783",
+    "at": "2025-11-09T12:25:38.658Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General statements about tariff benefits and wealth.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115519740341195886",
+    "at": "2025-11-09T12:29:10.422Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Short statement about tariffs without specific action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115519951705472870",
+    "at": "2025-11-09T13:22:55.586Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Rhetorical questions about tariff authority.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115526165519672797",
+    "at": "2025-11-10T15:43:10.867Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announcing use of tariff revenue for national debt.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115527159095475127",
+    "at": "2025-11-10T19:55:51.630Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing payback numbers in Supreme Court case.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115529446165908851",
+    "at": "2025-11-11T05:37:29.552Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing Supreme Court tariff decision implications.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115560015527988460",
+    "at": "2025-11-16T15:11:40.999Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "RealClearPolitics link about tariff effects.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115577053608486130",
+    "at": "2025-11-19T15:24:41.481Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quote from Jensen Huang on US chip manufacturing.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115578499574800494",
+    "at": "2025-11-19T21:32:25.171Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Federalist link about tariff authority.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115596544162295527",
+    "at": "2025-11-23T02:01:23.727Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about tariff revenue and stopped wars.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115602969458348561",
+    "at": "2025-11-24T05:15:25.963Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Nearly identical to prior post; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115604240580797202",
+    "at": "2025-11-24T10:38:41.755Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing tariff revenue and inventory dynamics.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115605897178712132",
+    "at": "2025-11-24T17:39:59.431Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.9,
+    "reason": "Announces good deal for farmers on soybeans; signals strong US-China relationship.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115632959311037868",
+    "at": "2025-11-29T12:22:14.837Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General statements about tariffs making nation strong.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115651205810603262",
+    "at": "2025-12-02T17:42:34.456Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Federalist link about tariff authority; no tariff content.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115652356733049190",
+    "at": "2025-12-02T22:35:16.010Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Call with Brazil discussing trade; no specific tariff announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115680021178321608",
+    "at": "2025-12-07T19:50:41.942Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General discussion of tariff methods for national security.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115686072737425841",
+    "at": "2025-12-08T21:29:41.369Z",
+    "kind": "climbdown",
+    "target": "China",
+    "confidence": 0.95,
+    "reason": "Allows NVIDIA H200 chip shipments to China; lifts export restrictions.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115686410399815717",
+    "at": "2025-12-08T22:55:33.691Z",
+    "kind": "threat",
+    "target": "Mexico",
+    "confidence": 1,
+    "reason": "Threatening 5% tariff on Mexico if water not released by Dec 31.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115688461364044258",
+    "at": "2025-12-09T07:37:08.959Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing Supreme Court tariff decision threat.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115688492399516072",
+    "at": "2025-12-09T07:45:02.519Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General statement on tariffs and national security.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115702382320619583",
+    "at": "2025-12-11T18:37:25.862Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing economic achievements including tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115713058860389475",
+    "at": "2025-12-13T15:52:36.967Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Quote from Art Laffer praising tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115731785428395132",
+    "at": "2025-12-16T23:15:01.678Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Reporting tariffs reduced trade deficit; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115744349172803672",
+    "at": "2025-12-19T04:30:09.205Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "News link about economic results; no tariff content.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115769302680506780",
+    "at": "2025-12-23T14:16:09.512Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Stating tariffs responsible for economic numbers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115769520157248739",
+    "at": "2025-12-23T15:11:27.946Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Reporting Q3 GDP and crediting tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115777270368444049",
+    "at": "2025-12-25T00:02:26.827Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Christmas message boasting about economic achievements.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115791817694825755",
+    "at": "2025-12-27T13:42:01.374Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General commentary on tariff benefits and trade results.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115810913167120058",
+    "at": "2025-12-30T22:38:15.150Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Washington Post link; no tariff content.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115815971019162695",
+    "at": "2025-12-31T20:04:31.850Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing factories built due to tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115825932077745763",
+    "at": "2026-01-02T14:17:45.540Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Washington Post link; no tariff content.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115825951172960005",
+    "at": "2026-01-02T14:22:36.909Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "General rhetoric defending tariff benefits.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115842866197248103",
+    "at": "2026-01-05T14:04:19.699Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Reporting tariff revenue collected; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115848329193521599",
+    "at": "2026-01-06T13:13:38.407Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about stock market and tariff benefits.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115855894695940909",
+    "at": "2026-01-07T21:17:38.852Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announcing military budget increase; no tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115862109893187989",
+    "at": "2026-01-08T23:38:15.193Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Reporting trade deficit and GDP numbers; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115867385857410443",
+    "at": "2026-01-09T22:00:00.092Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Promoting a book about tariff economic policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115883475463948362",
+    "at": "2026-01-12T18:11:47.973Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Discussing hypothetical Supreme Court payback scenario.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115884319075881590",
+    "at": "2026-01-12T21:46:20.466Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 1,
+    "reason": "25% tariff effective immediately on countries doing business with Iran.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115888260399895701",
+    "at": "2026-01-13T14:28:40.263Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Commentary on inflation and criticizing Fed Chair Powell.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115901513827848128",
+    "at": "2026-01-15T22:39:11.522Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about tariff revenue and economic results.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115911344443637897",
+    "at": "2026-01-17T16:19:14.858Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Rhetoric about Denmark and national security; no concrete rate announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115934734335579278",
+    "at": "2026-01-21T19:27:36.247Z",
+    "kind": "climbdown",
+    "target": "global",
+    "confidence": 1,
+    "reason": "Not imposing tariffs scheduled to go into effect February 1st.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115941252213747451",
+    "at": "2026-01-22T23:05:11.174Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Attacking opponents of tariff litigation in Supreme Court.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115942147803684675",
+    "at": "2026-01-23T02:52:56.790Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces TikTok investment deal with American group.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115950424403894234",
+    "at": "2026-01-24T13:57:47.686Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 1,
+    "reason": "Threatening 100% tariff on Canada if it makes deal with China.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115963633972056786",
+    "at": "2026-01-26T21:57:09.740Z",
+    "kind": "threat",
+    "target": "South Korea",
+    "confidence": 1,
+    "reason": "Increasing South Korean tariffs from 15% to 25% on autos, pharma, lumber.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115978487020569325",
+    "at": "2026-01-29T12:54:29.234Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Attacking Fed Chair Powell on interest rates.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115980983698005555",
+    "at": "2026-01-29T23:29:25.548Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 1,
+    "reason": "Threatening 50% tariff on Canadian aircraft sales.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "115995786512051662",
+    "at": "2026-02-01T14:13:58.529Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Sharing news article about US steel production vs Japan.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116002095109616255",
+    "at": "2026-02-02T16:58:20.088Z",
+    "kind": "climbdown",
+    "target": "India",
+    "confidence": 1,
+    "reason": "Lowering reciprocal tariff from 25% to 18% on India.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116019257556623305",
+    "at": "2026-02-05T17:42:58.245Z",
+    "kind": "other",
+    "target": "Japan",
+    "confidence": 1,
+    "reason": "Endorsement of Japanese PM and existing trade deal.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116019511106186158",
+    "at": "2026-02-05T18:47:27.104Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on military rebuilding and nuclear policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116026828636501753",
+    "at": "2026-02-07T01:48:23.794Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about tariff-driven market gains.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116037631258027415",
+    "at": "2026-02-08T23:35:38.677Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about tariff-driven market gains.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116043090074364624",
+    "at": "2026-02-09T22:43:53.607Z",
+    "kind": "other",
+    "target": "Canada",
+    "confidence": 0.8,
+    "reason": "Threatens to block bridge, demands compensation, not tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116054542648712986",
+    "at": "2026-02-11T23:16:26.060Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Political defense of tariffs, not new tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116054544240272433",
+    "at": "2026-02-11T23:16:50.344Z",
+    "kind": "other",
+    "target": "Canada",
+    "confidence": 0.85,
+    "reason": "Defends tariffs on Canada, not announcing new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116065576451150055",
+    "at": "2026-02-13T22:02:28.528Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Commentary on voter ID and political topics.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116069904214662301",
+    "at": "2026-02-14T16:23:04.916Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Personal anecdote about Bill Maher dinner.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116087827602935657",
+    "at": "2026-02-17T20:21:14.120Z",
+    "kind": "other",
+    "target": "Japan",
+    "confidence": 0.9,
+    "reason": "Announces Japan trade deal with investments, no tariff change.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116094375393499963",
+    "at": "2026-02-19T00:06:25.512Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasting about trade deficit reduction from tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116099815931734129",
+    "at": "2026-02-19T23:10:01.497Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Praising tariff results and company prosperity.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116104407604484915",
+    "at": "2026-02-20T18:37:44.901Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Commentary on Supreme Court ruling and available powers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116105594741987893",
+    "at": "2026-02-20T23:39:39.183Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 1,
+    "reason": "Announces signing global 10% tariff effective almost immediately.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116105691693335080",
+    "at": "2026-02-21T00:04:18.542Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Commentary on Supreme Court ruling and tariff adjustment process.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116105858701679073",
+    "at": "2026-02-21T00:46:46.888Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.8,
+    "reason": "Commentary on upcoming tariffs following Supreme Court decision.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116109447886304328",
+    "at": "2026-02-21T15:27:40.965Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 1,
+    "reason": "Announces raising worldwide tariff from 10% to 15% immediately.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116109322546516945",
+    "at": "2026-02-21T15:27:40.965Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares news article about Supreme Court tariff decision.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116110654345152184",
+    "at": "2026-02-21T21:06:22.561Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Political endorsement withdrawal, not tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116119845947410324",
+    "at": "2026-02-23T12:03:55.320Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.75,
+    "reason": "Commentary on Supreme Court ruling and available powers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116119857222583140",
+    "at": "2026-02-23T12:06:47.327Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.75,
+    "reason": "Commentary on Supreme Court ruling and available powers.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116120439459742948",
+    "at": "2026-02-23T14:34:51.600Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.85,
+    "reason": "Threatens much higher tariff on countries playing games.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116120496650075903",
+    "at": "2026-02-23T14:49:24.256Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Defending tariff authority, not announcing new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116144013017188538",
+    "at": "2026-02-27T18:29:55.498Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Praising company's tariff-driven investment decision.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116144649664906576",
+    "at": "2026-02-27T21:11:49.971Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Supreme Court ruling, not new tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116164778986524540",
+    "at": "2026-03-03T10:30:59.044Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares news article about trade results.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116167496865556148",
+    "at": "2026-03-03T22:02:10.587Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on crypto regulation and banking.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116183067945192625",
+    "at": "2026-03-06T16:02:06.444Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares news article about tariff impacts.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116206958726200848",
+    "at": "2026-03-10T21:17:50.795Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces US oil refinery investment with India.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116211753106602288",
+    "at": "2026-03-11T17:37:07.272Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Praising company investment, defending existing tariff policy.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116236559151421767",
+    "at": "2026-03-16T02:45:37.478Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.85,
+    "reason": "Commentary on Supreme Court ruling, not new tariff announcement.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116257827130389641",
+    "at": "2026-03-19T20:54:21.047Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shares news article, not announcing new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116291185984825094",
+    "at": "2026-03-25T18:17:56.771Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announces diplomatic visit with China, not a tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116317726153845042",
+    "at": "2026-03-30T10:47:27.612Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Discusses birthright citizenship; tariffs mentioned peripherally",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116329590740337581",
+    "at": "2026-04-01T13:04:46.834Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Praises Nissan's US expansion via tariff policy",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116342994589318293",
+    "at": "2026-04-03T21:53:33.335Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Celebrates economic growth, jobs from tariff policy",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116346686438015338",
+    "at": "2026-04-04T13:32:26.478Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Boasts about trade deficit reduction from tariffs",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116355984273646320",
+    "at": "2026-04-06T04:57:00.226Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Criticizes Supreme Court; mentions past tariff ruling",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116368825638596650",
+    "at": "2026-04-08T11:22:43.906Z",
+    "kind": "climbdown",
+    "target": "Iran",
+    "confidence": 0.8,
+    "reason": "Announces tariff, sanctions relief framework with Iran",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116368854361048135",
+    "at": "2026-04-08T11:30:02.177Z",
+    "kind": "threat",
+    "target": "Iran",
+    "confidence": 0.95,
+    "reason": "Announces 50% tariff on countries supplying Iran weapons",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116404544522100081",
+    "at": "2026-04-14T18:46:30.779Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Political endorsement; reiterates existing tariff policy",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116415864463373443",
+    "at": "2026-04-16T18:45:19.374Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Discusses White House ballroom; not tariff-related",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116433033991904343",
+    "at": "2026-04-19T19:31:45.589Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Link to Wall Street Journal opinion on tariffs",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116438239629407600",
+    "at": "2026-04-20T17:35:37.313Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends Iran nuclear deal termination; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116438260195246849",
+    "at": "2026-04-20T17:40:51.123Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Commentary on Iran military matters and deal-making.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116445354771430027",
+    "at": "2026-04-21T23:45:05.766Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.9,
+    "reason": "Political attack; references past tariff court decision",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116445894900653474",
+    "at": "2026-04-22T02:02:27.480Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Link to Washington Post article about tariffs",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116448643198694972",
+    "at": "2026-04-22T13:41:23.183Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Attacks Supreme Court over tariff decision; no action",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116461251395384536",
+    "at": "2026-04-24T19:07:48.997Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Commentary on past Supreme Court tariff refund decision",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116495078448348822",
+    "at": "2026-04-30T18:30:28.863Z",
+    "kind": "climbdown",
+    "target": "UK",
+    "confidence": 0.95,
+    "reason": "Removing tariffs on Scottish whiskey, bourbon trade",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116500111621281950",
+    "at": "2026-05-01T15:50:28.985Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.95,
+    "reason": "Announces 25% tariff increase on EU cars, trucks",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116523629527303097",
+    "at": "2026-05-05T19:31:23.754Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Political endorsement mentioning existing tariff policy",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116534681802624852",
+    "at": "2026-05-07T18:22:08.087Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Discusses trade meeting with Brazil; no action announced",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116534860307993853",
+    "at": "2026-05-07T19:07:31.864Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.95,
+    "reason": "Threatens higher tariffs unless EU fulfills trade deal",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116542198092493172",
+    "at": "2026-05-09T02:13:37.570Z",
+    "kind": "climbdown",
+    "target": "UK",
+    "confidence": 0.9,
+    "reason": "Removing tariff restrictions on Scottish whiskey trade",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116552084797839159",
+    "at": "2026-05-10T20:07:56.760Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Defends existing tariff policies; no new action announced",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116552244024465774",
+    "at": "2026-05-10T20:48:26.328Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "One-liner criticizing court tariff decision.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116552659719497289",
+    "at": "2026-05-10T22:34:09.330Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes justices for tariff ruling; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116575104401917058",
+    "at": "2026-05-14T21:42:08.007Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Commentary on US decline vs Trump era gains.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116610177964428920",
+    "at": "2026-05-21T02:21:48.136Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news about Toyota and tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116659174350335809",
+    "at": "2026-05-29T18:02:13.618Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news about EU trade deal.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116664181157116570",
+    "at": "2026-05-30T15:15:31.422Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Complains about past court tariff ruling; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116700093262063892",
+    "at": "2026-06-05T23:28:26.660Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Announces drug discount program via tariff leverage.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116769225357410422",
+    "at": "2026-06-18T04:29:38.755Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Describes semiconductor manufacturing strategy; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116817320899062447",
+    "at": "2026-06-26T16:20:58.479Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.9,
+    "reason": "Threatens 100% tariff on countries imposing digital services tax.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116825706034291064",
+    "at": "2026-06-28T03:53:25.491Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about energy boom.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116853791867694191",
+    "at": "2026-07-03T02:56:01.261Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Vague complaint about non-reciprocal relationship.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116878664308977613",
+    "at": "2026-07-07T12:21:24.593Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts Toyota moved to US due to tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116899360552761411",
+    "at": "2026-07-11T04:04:44.212Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces better deal for Canada bridge project.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116914697761678481",
+    "at": "2026-07-13T21:05:11.446Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Political endorsement mentioning steel tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116936952365066409",
+    "at": "2026-07-17T19:24:49.747Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Threatens costs for forest pollution; no concrete tariff amount.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116936972968744613",
+    "at": "2026-07-17T19:30:04.133Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts about TSMC and semiconductor investment.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116960425128744506",
+    "at": "2026-07-21T22:54:15.696Z",
+    "kind": "threat",
+    "target": "pharma",
+    "confidence": 0.9,
+    "reason": "Announces generic drug tariffs raised to 100% then 200%.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116975941256357814",
+    "at": "2026-07-24T16:40:13.016Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Describes bridge deal profit restructuring; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116976043318889040",
+    "at": "2026-07-24T17:06:10.365Z",
+    "kind": "threat",
+    "target": "EU",
+    "confidence": 0.9,
+    "reason": "Anticipates substantial tariff on EU for fining US companies.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "116998766458372558",
+    "at": "2026-07-28T17:24:57.958Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news about Toyota moving to Texas.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117005562901056692",
+    "at": "2026-07-29T22:13:23.449Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes court for past tariff ruling; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117037739319710599",
+    "at": "2026-08-04T14:36:16.632Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news about UAW and tariff-driven hiring.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117039619696525479",
+    "at": "2026-08-04T22:34:28.905Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Endorses book about tariffs; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117050488103108270",
+    "at": "2026-08-06T20:38:27.627Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about tariff weapons.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117089653850664292",
+    "at": "2026-08-13T18:38:49.507Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Celebrates court win closing de minimis loophole; past action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117091934703272898",
+    "at": "2026-08-14T04:18:52.556Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about tariff evasion.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117099535440653927",
+    "at": "2026-08-15T12:31:50.605Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about transshipment scam.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117105403616486905",
+    "at": "2026-08-16T13:24:11.862Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news about court ruling on tariffs.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117105407858063694",
+    "at": "2026-08-16T13:25:16.584Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about tariff evasion scam.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117119761850520698",
+    "at": "2026-08-19T02:15:41.128Z",
+    "kind": "climbdown",
+    "target": "Canada",
+    "confidence": 0.95,
+    "reason": "Pauses 50% Canada tariffs for three-day negotiation period.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117133120342300539",
+    "at": "2026-08-21T10:52:55.535Z",
+    "kind": "climbdown",
+    "target": "beef",
+    "confidence": 0.85,
+    "reason": "Allows 300k tons beef imports tariff-free for 90 days.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117134593867089115",
+    "at": "2026-08-21T17:07:39.744Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about tariff evasion.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117143083340259038",
+    "at": "2026-08-23T05:06:38.819Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Rhetoric about Canada's entitlement; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117150758113256193",
+    "at": "2026-08-24T13:38:26.562Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.95,
+    "reason": "Announces 50% tariffs on autos, parts, steel effective Jan 1, 2027.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117151536426663116",
+    "at": "2026-08-24T16:56:22.682Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Shared news link about tariff effects.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117156429202842827",
+    "at": "2026-08-25T13:40:40.521Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes Canada's tariffs on US goods; no new US action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117174462557932061",
+    "at": "2026-08-28T18:06:47.683Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Re-shared news on trade deficit statistics.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117175211787368815",
+    "at": "2026-08-28T21:17:20.018Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Political criticism; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117184422478750334",
+    "at": "2026-08-30T12:19:44.016Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces oil deal with Venezuela.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117185823993660126",
+    "at": "2026-08-30T18:16:09.434Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Criticizes Canada; restates existing tariff position.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117185864353206503",
+    "at": "2026-08-30T18:26:25.271Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Describes offer of zero tariffs for companies moving to US.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117187278603098753",
+    "at": "2026-08-31T00:26:05.013Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts existing tariffs brought business back.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117213056648777213",
+    "at": "2026-09-04T13:41:46.774Z",
+    "kind": "threat",
+    "target": "global",
+    "confidence": 0.65,
+    "reason": "Threatens to stop trading with deficit countries.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117215120604420966",
+    "at": "2026-09-04T22:26:40.238Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts tariffs drove job growth; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117237309084360726",
+    "at": "2026-09-08T20:29:29.573Z",
+    "kind": "threat",
+    "target": "Canada",
+    "confidence": 0.9,
+    "reason": "Directs GSA to remove Canadian products from schedules.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117275286602582454",
+    "at": "2026-09-15T13:27:40.513Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Defends tariffs and attacks court; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117276639949770622",
+    "at": "2026-09-15T19:11:50.954Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Endorses book on tariffs; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117298741939724787",
+    "at": "2026-09-19T16:52:40.554Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Attacks court's tariff decisions; no new action announced.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117309573610238654",
+    "at": "2026-09-21T14:47:18.730Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces potash purchase deal from Belarus.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117362870737690439",
+    "at": "2026-10-01T00:41:28.355Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Describes execution of already-made Korea deal; no new tariff.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117371353802794328",
+    "at": "2026-10-02T12:38:49.656Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 0.95,
+    "reason": "Announces oil recovery investment deal with Korea.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117379305275420977",
+    "at": "2026-10-03T22:20:59.500Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Boasts of past pharma tariff-driven investments; no new action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117383899651030960",
+    "at": "2026-10-04T17:49:24.109Z",
+    "kind": "other",
+    "target": null,
+    "confidence": 1,
+    "reason": "Re-shared news link; no new tariff action.",
+    "by": "haiku-4.5"
+  },
+  {
+    "id": "117391801119298224",
+    "at": "2026-10-06T03:18:50.947Z",
+    "kind": "threat",
+    "target": "pharma",
+    "confidence": 0.85,
+    "reason": "Announces medical device tariffs will be in place by year-end.",
+    "by": "haiku-4.5"
+  }
+]
