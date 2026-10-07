@@ -71,6 +71,9 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Duration discount": MRVL underperforming NVDA over the three weeks after the 9/14 AI-pacing shock (FT-mrvl-investor-day-2026-10-06-3)** — added 2026-10-07 from the
+  [mrvl-investor-day-2026-10-06 close-out](events/mrvl-investor-day-2026-10-06.md). Registered on one shock day plus one quarter of cross-section: the complex sorted by how back-loaded each name's disclosed revenue was. Over close 2026-09-15 → close 2026-10-06 MRVL returned **+29.46%** against NVDA's **+12.76%** (Yahoo adjusted daily bars, cache busted), the opposite ordering. The row itself named beta as an unresolved confound; the window confirms it dominates. Do not re-register a relative-return ordering built on a single-day sort of a high-beta name against a low-beta one without a beta-adjusted benchmark.
+
 - **Services wage stickiness at t+1 as a ≥-series-average test, registered High on a 95% base rate
   (FT-dallas-fed-tssos-2026-09-29-1)** — added 2026-10-06 from the
   [dallas-fed-tssos-2026-09-29 forward-test scoring](events/dallas-fed-tssos-2026-09-29.md). The
