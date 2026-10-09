@@ -4,7 +4,8 @@ import { join } from "node:path";
 /**
  * WHO OWNS EACH ALPACA MARKET-DATA SOCKET (#4864's retro, docs/LESSONS.md).
  *
- * Alpaca allows ONE concurrent market-data websocket per paper account. A second socket on the
+ * Alpaca allows ONE concurrent market-data websocket per USER LOGIN per endpoint — every paper
+ * account under one login shares it (Alpaca docs, streaming-market-data → Connection limit). A second socket on the
  * same key is refused (`406 connection limit exceeded`) or evicts the first, and the loser goes
  * silent. The bots app's eval loop runs only on a price tick, so losing its socket means no trades.
  *
@@ -18,8 +19,6 @@ import { join } from "node:path";
 const OWNERS: Record<string, string> = {
   "src/scripts/autonomous-data-connections.ts":
     "bots app — the bot's own credential (bots[0]). The one owner of every bot account's socket.",
-  "src/runtime/data-source.ts":
-    "dashboard held-symbol stream — a MEMBER's credential via heldPriceStreamPlan, never a bot's; idles otherwise.",
   "src/scripts/dashboard-desk-wiring.ts":
     "dashboard quote hub — the requesting member's own credential, one socket per member (quote-stream-hub.ts).",
 };
@@ -41,9 +40,11 @@ describe("Alpaca market-data socket ownership (one connection per account)", () 
     expect(openers).toEqual(Object.keys(OWNERS).sort());
   });
 
-  it("keeps the dashboard's held-symbol stream off the roster's first entry (a bot)", () => {
-    const source = readFileSync("src/runtime/data-source.ts", "utf8");
-    expect(source).not.toMatch(/participants\[0\]\??\.credentials/);
-    expect(source).toContain("heldPriceStreamPlan(");
+  it("keeps the dashboard from opening its own held-symbol price socket", () => {
+    // 2026-10-09: the limit is per USER LOGIN per endpoint (Alpaca docs → Connection limit), so
+    // even a member's key on the bots' login starved them. The dashboard opens none.
+    expect(readFileSync("src/runtime/data-source.ts", "utf8")).not.toContain(
+      "new AlpacaMarketDataStream(",
+    );
   });
 });
