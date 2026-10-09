@@ -80,6 +80,32 @@ describe("MapLens", () => {
     expect(screen.getByText("NVDA Dec 18 130 Call")).toBeInTheDocument();
     expect(screen.getByText(/true share of your account is 10.0%/)).toBeInTheDocument();
   });
+
+  // #4964: a sold option is owed, so the note names the liability instead of a "0.0%" share.
+  const sold = pos({
+    symbol: "TSLA261017P00400000",
+    display: "TSLA Oct 17 400 Put",
+    isOption: true,
+    quantity: "-2",
+    value: "-$1,240",
+    weightPct: 0,
+  });
+
+  it("names what a book of sold options owes, never a 0.0% share", () => {
+    const soldOnly = { ...allocation, optionsPct: 0, optionsSold: "-$1,240" };
+    render(<MapLens positions={[pos({}), sold]} allocation={soldOnly} decisions={[]} />);
+    const note = screen.getByText(/Sold options are owed, not held/);
+    expect(note).toHaveTextContent(/-\$1,240 to buy them back/);
+    expect(note).not.toHaveTextContent(/0\.0%/);
+  });
+
+  it("gives held options their share and names what the sold ones owe, side by side", () => {
+    const mixed = { ...allocation, optionsSold: "-$1,240" };
+    render(<MapLens positions={[pos({}), call, sold]} allocation={mixed} decisions={[]} />);
+    expect(screen.getByText(/Held options' share of your account is 10\.0%/)).toHaveTextContent(
+      /Sold ones are owed: -\$1,240 to buy them back/,
+    );
+  });
 });
 
 describe("RunwayLens", () => {

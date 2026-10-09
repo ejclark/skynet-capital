@@ -89,6 +89,21 @@ type MapItem =
 
 const pct = (x: number) => `${x}%`;
 
+/** The legend's line on the options strip. `optionsPct` counts held options only, so a book of
+ *  sold ones read "Its true share of your account is 0.0%", as though nothing were owed (#4964).
+ *  A liability is no share of the account: it is named, signed as the positions table shows it. */
+function optionsNote(allocation: DeskAllocation): string {
+  const held = allocation.optionsPct > 0;
+  const sold = allocation.optionsSold;
+  if (sold === undefined || held) {
+    const share = `The options strip is scaled up so you can read it. ${
+      sold === undefined ? "Its true share" : "Held options' share"
+    } of your account is ${allocation.optionsPct.toFixed(1)}%.`;
+    return sold === undefined ? share : `${share} Sold ones are owed: ${sold} to buy them back.`;
+  }
+  return `Sold options are owed, not held, so they take no share of your account: ${sold} to buy them back.`;
+}
+
 function PositionTile({
   p,
   style,
@@ -183,10 +198,7 @@ export function MapLens({
             <span>+40%</span>
           </span>
           {options.length > 0 ? (
-            <span className="map-legend-note">
-              The options strip is scaled up so you can read it. Its true share of your account is{" "}
-              {allocation.optionsPct.toFixed(1)}%.
-            </span>
+            <span className="map-legend-note">{optionsNote(allocation)}</span>
           ) : null}
         </div>
       </div>
