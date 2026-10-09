@@ -1,0 +1,11 @@
+{
+  "id": "warsh-imf-fireside-2026-10-15",
+  "kind": "macro-print",
+  "title": "Fed Chair Warsh — fireside chat with IMF Managing Director Georgieva (Bangkok), 11:30 p.m. ET, the last scheduled Chair voice before the 10-17 blackout",
+  "date": "2026-10-15",
+  "status": "confirmed",
+  "source": "FED: federalreserve.gov/newsevents/2026-october.htm, raw HTML fetched direct 2026-10-09 by this event's own initial research (HTTP 200, 106,747 bytes — the same size the proposing sweep recorded) and the Speeches table row read in place: '11:30 p.m. | Discussion - Chairman Kevin Warsh | Watch Live | Conversation between IMF Managing Director Georgieva and Federal Reserve Chaiman Warsh | At the Fireside Chat with International Monetary Fund (IMF) Managing Director Kristalina Georgieva, Bangkok, Thailand | 15'. Times on that page are Eastern, so 11:30 p.m. ET on Thu 10-15 is 10:30 a.m. Fri 10-16 in Bangkok (UTC+7). Promoted estimate -> confirmed 2026-10-09 by its own initial-research session, which re-read the primary itself; the no-self-confirm limit binds the proposing sweep, not the researching session. A Board speaking slot can still be pulled on short notice, so the ledger's first kill switch is the row disappearing from that page, checked 2026-10-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "THE CHAIR'S ONLY SCHEDULED PUBLIC VOICE BETWEEN THE 09-16 PRESS CONFERENCE AND THE 10-28 ONE (no other Warsh row on the October Board calendar), and it lands AFTER the whole October inflation run: CPI + Beige Book 10-14, PPI + retail sales 10-15 (about 15 hours before). CORRECTION to the proposing sweep: it is NOT 30 minutes before the blackout. The gate opens 12:00 a.m. ET Sat 10-17 (fomc-blackout-start-2026-10-17), about 24.5 hours after this slot ends; 10-16 is the last legal Fed-speak day and this chat falls on its Asian morning. US cash equities and Treasuries are closed at the time, so the first reaction is futures and Asian/European hours into the 10-16 US open, which is also monthly opex, import/export prices and industrial production. FORMAT MATTERS: both measured Warsh reactions (Jackson Hole keynote 08-28, 09-16 press conference) moved the front end; a moderated Q&A at a global venue is untested (n=0). symbols: [] and no house playbook attaches. Nothing here licenses an entry."
+}
