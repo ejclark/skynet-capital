@@ -9,6 +9,9 @@ import { createHash } from "node:crypto";
 
 /** The one folder a pinned run takes from today's checkout. Everything else is the pin's own. */
 export const HARNESS = "scripts/study/";
+/** What `prepare` writes into a pin besides the harness: its record, and the composed run. */
+export const RECORD = ".study-pin.json";
+export const RUN = ".study-run";
 
 const USAGE =
   "usage: pin.mjs prepare --commit <sha> --dir <abs dir>  |  pin.mjs remove --dir <abs dir>";
@@ -90,11 +93,53 @@ export function cloneAttempts(from, to) {
 }
 
 /**
- * May `prepare` use this directory? It creates a missing one, reuses a worktree already checked
- * out at the pin (a re-run), and refuses anything else — a directory holding other work is never
- * overwritten.
- * @param {{exists: boolean, worktreeHead?: string}} seen  worktreeHead: the HEAD of a registered
- *   worktree at exactly this path, if there is one
+ * The paths in `git status --porcelain -z` output — a rename or copy by its new name (with -z
+ * its source follows as a field of its own). -z also keeps git from quoting unusual names.
+ * @param {string} z
+ */
+function statusPaths(z) {
+  const fields = z.split("\0");
+  const out = [];
+  for (let i = 0; i < fields.length; i++) {
+    const entry = fields[i];
+    if (entry.length < 4) continue;
+    out.push(entry.slice(3));
+    if (entry[0] === "R" || entry[0] === "C") i++;
+  }
+  return out;
+}
+
+/**
+ * How many harness files differ from the harness commit — edited, deleted, untracked or ignored
+ * alike, since the overlay copies what is on disk whichever it is. Input: `git status --porcelain
+ * -z --ignored --untracked-files=all -- scripts/study/` in the running checkout.
+ * @param {string} z
+ */
+export function uncommittedHarness(z) {
+  return statusPaths(z).filter(isHarnessPath).length;
+}
+
+/**
+ * What a pin carries besides the harness and prepare's own output — anything here means the build
+ * under test is no longer exactly the commit (an earlier experiment, a hand fix). Input: `git
+ * status --porcelain -z --untracked-files=all` in the pin; ignored files (installs, the app build)
+ * are the pin's own output and are not listed.
+ * @param {string} z
+ */
+export function strayChanges(z) {
+  return statusPaths(z).filter(
+    (path) => !path.startsWith(HARNESS) && path !== RECORD && !path.startsWith(`${RUN}/`),
+  );
+}
+
+/**
+ * May `prepare` use this directory? It creates a missing one, reuses a worktree it made earlier
+ * that is still exactly at the pin (a re-run), and refuses anything else — a directory holding
+ * other work is never overwritten, and the overlay never replaces the harness of the main or the
+ * running checkout.
+ * @param {{exists: boolean, worktreeHead?: string, isMain?: boolean, isSelf?: boolean,
+ *   hasPinRecord?: boolean, stray?: string[]}} seen  worktreeHead: the HEAD of a registered
+ *   worktree at exactly this path, if there is one; stray: strayChanges() of that worktree
  * @param {string} commit  the full sha the pin resolves to
  */
 export function prepareVerdict(seen, commit) {
@@ -102,10 +147,50 @@ export function prepareVerdict(seen, commit) {
   if (!seen.worktreeHead) {
     return { action: "refuse", why: "it exists and is not a worktree of this repo" };
   }
+  if (seen.isMain) return { action: "refuse", why: "it is the repo's main checkout" };
+  if (seen.isSelf) return { action: "refuse", why: "it is the checkout running this command" };
   if (seen.worktreeHead.toLowerCase() !== commit.toLowerCase()) {
     return { action: "refuse", why: `it is a worktree at ${seen.worktreeHead.slice(0, 12)}` };
   }
+  if (!seen.hasPinRecord) {
+    return { action: "refuse", why: `it has no ${RECORD} — pin.mjs did not make it` };
+  }
+  const stray = seen.stray ?? [];
+  if (stray.length > 0) {
+    const shown =
+      stray.slice(0, 5).join(", ") + (stray.length > 5 ? ` (+${stray.length - 5})` : "");
+    return {
+      action: "refuse",
+      why: `it has changes outside ${HARNESS}, so it is no longer the commit: ${shown}`,
+    };
+  }
   return { action: "reuse" };
+}
+
+/**
+ * May `prepare` give the pin this install? `from` is the running checkout's, `to` the pin's
+ * (lstat-shaped: does the path exist, and is it a symlink). A real install already in the pin is
+ * kept; a missing one is cloned — but never from a symlink, since `cp -R` copies a link named on
+ * its command line as a link, and the pin would share the install it points at.
+ * @param {{exists: boolean, link: boolean}} from
+ * @param {{exists: boolean, link: boolean}} to
+ */
+export function installVerdict(from, to) {
+  if (to.link) {
+    return {
+      action: "refuse",
+      why: "the pin's copy is a symlink — remove the link (rm, not rm -r)",
+    };
+  }
+  if (to.exists) return { action: "keep" };
+  if (!from.exists) return { action: "refuse", why: "this checkout has none to clone" };
+  if (from.link) {
+    return {
+      action: "refuse",
+      why: "this checkout's is a symlink — cloning it would hand the pin the linked install; give this checkout a real install first",
+    };
+  }
+  return { action: "clone" };
 }
 
 /**
@@ -118,7 +203,7 @@ export function removeVerdict(seen) {
   if (seen.isMain) return { ok: false, why: "it is the repo's main checkout" };
   if (seen.isSelf) return { ok: false, why: "it is the checkout running this command" };
   if (!seen.hasPinRecord)
-    return { ok: false, why: "it has no .study-pin.json — pin.mjs did not make it" };
+    return { ok: false, why: `it has no ${RECORD} — pin.mjs did not make it` };
   return { ok: true };
 }
 

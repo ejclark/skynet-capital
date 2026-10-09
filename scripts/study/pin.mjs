@@ -11,13 +11,15 @@
 // builders, the gates) is the pin's; only the instrument is today's.
 //
 // prepare:
-//  1. `git worktree add --detach <dir> <sha>` — refused if <dir> exists and is not that commit
-//     (a worktree already at the pin is reused, so a re-run is cheap);
+//  1. `git worktree add --detach <dir> <sha>`, recorded at once — refused if <dir> exists and is
+//     not a pin this script made that is still exactly that commit (one is reused, so a re-run is
+//     cheap); never the main or the running checkout;
 //  2. overlays the harness and records what it overlaid in <dir>/.study-pin.json: the harness
 //     commit, whether its folder had uncommitted edits, a sha256 per file and one tree hash;
 //  3. gives <dir> its own installs — an APFS clone of this checkout's node_modules and
-//     app/node_modules, never a symlink (an `npm ci` through a link empties the linked install,
-//     docs/LESSONS.md 2026-10-09). A lockfile that differs at the pin is recorded and warned;
+//     app/node_modules, never a symlink, and never cloned FROM one (an `npm ci` through a link
+//     empties the linked install, docs/LESSONS.md 2026-10-09). A lockfile that differs at the pin
+//     is recorded and warned;
 //  4. `npm run build --prefix app` in <dir>;
 //  5. composes every world into <dir>/.study-run and runs parity there, saving the table to
 //     <dir>/.study-run/parity.txt. The exit status is parity's.
@@ -44,16 +46,19 @@ import { basename, dirname, join, relative } from "node:path";
 import {
   cloneAttempts,
   HARNESS,
+  installVerdict,
   isHarnessPath,
   overlayManifest,
   pinArgs,
   prepareVerdict,
+  RECORD,
+  RUN,
   removeVerdict,
+  strayChanges,
+  uncommittedHarness,
   worktreesFrom,
 } from "./pin-plan.mjs";
 
-const RECORD = ".study-pin.json";
-const RUN = ".study-run";
 const INSTALLS = ["node_modules", "app/node_modules"];
 const LOCKS = ["package-lock.json", "app/package-lock.json"];
 
@@ -66,6 +71,8 @@ function sh(cmd, args, opts = {}) {
   return out;
 }
 const git = (args, cwd) => sh("git", args, { cwd }).stdout.trim();
+/** `git status --porcelain -z` untrimmed — a status line's leading space is part of its format. */
+const statusZ = (args, cwd) => sh("git", ["status", "--porcelain", "-z", ...args], { cwd }).stdout;
 
 /** A path as git prints it: symlinks resolved (macOS /tmp is /private/tmp), even if missing. */
 function canonical(path) {
@@ -101,27 +108,39 @@ function overlay(dir) {
     return { path, sha256: createHash("sha256").update(bytes).digest("hex") };
   });
   const manifest = overlayManifest(files);
-  const dirty = git(["status", "--porcelain", "--", HARNESS], SELF);
+  // --ignored too: the walk above copies an ignored file like any other, so it counts like one.
+  const dirty = statusZ(["--ignored", "--untracked-files=all", "--", HARNESS], SELF);
   return {
     commit: git(["rev-parse", "HEAD"], SELF),
-    uncommitted: dirty ? dirty.split("\n").length : 0,
+    uncommitted: uncommittedHarness(dirty),
     tree: manifest.tree,
     files: manifest.files,
   };
+}
+
+/** lstat as installVerdict reads it: a dangling link still exists, and is still a link. */
+function seenPath(path) {
+  const stat = lstatSync(path, { throwIfNoEntry: false });
+  return { exists: stat !== undefined, link: stat?.isSymbolicLink() ?? false };
 }
 
 /** Clone one install into the pin, best method first; a real directory already there is kept. */
 function cloneInstall(rel, dir) {
   const from = join(SELF, rel);
   const to = join(dir, rel);
-  if (lstatSync(to, { throwIfNoEntry: false })?.isSymbolicLink()) {
-    throw new Error(`pin: ${to} is a symlink — remove the link (rm, not rm -r) and re-run`);
-  }
-  if (existsSync(to)) return "kept";
-  if (!existsSync(from)) throw new Error(`pin: this checkout has no ${rel} to clone`);
+  const verdict = installVerdict(seenPath(from), seenPath(to));
+  if (verdict.action === "refuse") throw new Error(`pin: ${rel}: ${verdict.why}, then re-run`);
+  if (verdict.action === "keep") return "kept";
   for (const attempt of cloneAttempts(from, to)) {
     const out = sh(attempt[0], attempt.slice(1), { soft: true });
-    if (out.status === 0) return attempt.slice(1, -2).join(" ");
+    if (out.status === 0) {
+      // Belt and braces: whatever cp did, the pin must not end up holding a link.
+      if (seenPath(to).link) {
+        rmSync(to, { force: true });
+        throw new Error(`pin: ${attempt.join(" ")} left a symlink at ${to}; removed it`);
+      }
+      return attempt.slice(1, -2).join(" ");
+    }
     rmSync(to, { recursive: true, force: true });
   }
   throw new Error(`pin: could not copy ${rel} by any method`);
@@ -149,13 +168,24 @@ function step(label, cmd, args, dir) {
 function prepare({ commit: given, dir: asked }) {
   const commit = git(["rev-parse", "--verify", `${given}^{commit}`], SELF);
   const dir = canonical(asked);
+  const seen = worktrees().get(dir);
   const verdict = prepareVerdict(
-    { exists: existsSync(dir), worktreeHead: worktrees().get(dir)?.head },
+    {
+      exists: existsSync(dir),
+      worktreeHead: seen?.head,
+      isMain: seen?.main ?? false,
+      isSelf: dir === canonical(SELF),
+      hasPinRecord: existsSync(join(dir, RECORD)),
+      stray: seen ? strayChanges(statusZ(["--untracked-files=all"], dir)) : [],
+    },
     commit,
   );
   if (verdict.action === "refuse") throw new Error(`pin: refusing ${dir}: ${verdict.why}`);
-  if (verdict.action === "create") git(["worktree", "add", "--detach", dir, commit], SELF);
-  else console.log(`pin: ${dir} is already a worktree at ${commit.slice(0, 12)} — reusing it`);
+  if (verdict.action === "create") {
+    git(["worktree", "add", "--detach", dir, commit], SELF);
+    // Mark it ours at once, so a prepare that fails past here leaves a worktree `remove` clears.
+    writeRecord(dir, { pin: commit, made: new Date().toISOString() });
+  } else console.log(`pin: ${dir} is already a worktree at ${commit.slice(0, 12)} — reusing it`);
 
   const before = existsSync(join(dir, RECORD))
     ? JSON.parse(readFileSync(join(dir, RECORD), "utf8"))

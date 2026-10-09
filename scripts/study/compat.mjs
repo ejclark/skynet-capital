@@ -16,9 +16,19 @@ import * as steps from "../crawl/steps.mjs";
 /** Fallbacks in use in this process, `name: why` — printed under a pinned parity table. */
 export const FALLBACKS = [];
 
-const pick = (mod, name, fallback, why) => {
-  if (typeof mod[name] === "function") return mod[name];
-  FALLBACKS.push(`${name}: ${why}`);
+/**
+ * The pin's own `mod[name]` when it has one; otherwise `fallback`, named in `into` (FALLBACKS).
+ * @template {Function} F
+ * @param {Record<string, unknown>} mod  a module namespace — a missing name reads as undefined
+ * @param {string} name
+ * @param {F} fallback
+ * @param {string} why
+ * @param {string[]} [into]
+ * @returns {F}
+ */
+export const pick = (mod, name, fallback, why, into = FALLBACKS) => {
+  if (typeof mod[name] === "function") return /** @type {F} */ (mod[name]);
+  into.push(`${name}: ${why}`);
   return fallback;
 };
 
