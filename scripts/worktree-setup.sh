@@ -17,6 +17,11 @@ set -euo pipefail
 # No cleanup step: node_modules/ is gitignored, so the symlink is invisible to git and
 # `git worktree remove` clears it with the rest.
 #
+# The app has its own install (app/package.json): `npm run verify` runs typecheck:app and test:app,
+# which need app/node_modules (@testing-library/jest-dom types, rstest's React adapters). A fresh
+# worktree has none — or only a tool-created app/node_modules/.cache — so verify failed there with
+# TS2688 until an athlete hand-linked it (2026-10-09, #4943's fix track). Link it the same way.
+#
 # Idempotent; safe to run repeatedly, and a no-op in the primary checkout.
 
 cd "$(git rev-parse --show-toplevel)"
@@ -25,9 +30,29 @@ PRIMARY="$(cd "$(dirname "$(git rev-parse --path-format=absolute --git-common-di
 HERE="$PWD"
 
 have_shims() { [ -x node_modules/.bin/biome ] && [ -x node_modules/.bin/rstest ]; }
+have_app_modules() { [ -d app/node_modules/@testing-library ]; }
+
+# The app's install, borrowed like the root one. A directory holding only `.cache` (tools create it
+# on first run) is not an install, so it is replaced; anything else real is left alone.
+link_app_modules() {
+  have_app_modules && return 0
+  [ "$PRIMARY" = "$HERE" ] && return 0
+  [ -d "$PRIMARY/app/node_modules" ] || { echo "worktree-setup: primary has no app/node_modules; run 'npm ci --prefix app' there."; return 1; }
+  if [ -d app/node_modules ] && [ ! -L app/node_modules ]; then
+    if [ -n "$(ls -A app/node_modules | grep -vx '.cache')" ]; then
+      echo "worktree-setup: a real app/node_modules exists; leaving it alone."
+      return 0
+    fi
+    rm -rf app/node_modules
+  fi
+  rm -f app/node_modules
+  ln -s "$PRIMARY/app/node_modules" app/node_modules
+  echo "worktree-setup: linked app/node_modules → $PRIMARY/app/node_modules."
+}
 
 if have_shims; then
-  echo "worktree-setup: node_modules already usable — nothing to do."
+  link_app_modules
+  echo "worktree-setup: node_modules already usable."
   exit 0
 fi
 
@@ -59,3 +84,4 @@ if ! have_shims; then
 fi
 
 echo "worktree-setup: linked node_modules → $PRIMARY/node_modules (shims verified)."
+link_app_modules

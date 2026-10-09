@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useCallback, useId, useState } from "react";
 import {
   entryDateText,
   fetchDeskHeartbeat,
@@ -15,6 +15,7 @@ import {
 import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
 import { ShadowProbes } from "./shadow-probes";
+import { useDismiss } from "./use-dismiss";
 
 /**
  * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a chip in the account
@@ -145,21 +146,29 @@ export function HeartbeatChip({
 }): ReactElement | null {
   const query = useHeartbeat(deskId);
   const [open, setOpen] = useState(false);
+  const tableId = useId();
+  // Closes like the status pill beside it (#4949) — Escape or a click outside, not only a re-tap.
+  const { wrapRef, buttonRef } = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
   if (!query.data?.available) return null;
   const { heartbeat } = query.data;
   return (
-    <div className="hb-chip-wrap">
+    <div className="hb-chip-wrap" ref={wrapRef}>
       <button
+        ref={buttonRef}
         type="button"
         className="hb-chip"
         data-state={heartbeat.state}
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        aria-controls={tableId}
+        onClick={() => setOpen((was) => !was)}
       >
         <StateText heartbeat={heartbeat} />
       </button>
       {open ? (
-        <div className="hb-pop">
+        <div className="hb-pop" id={tableId}>
           <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
         </div>
       ) : null}
@@ -199,7 +208,7 @@ export function HeartbeatSection({
         </p>
         <p className="note">
           Passes run at most every {cadence}s while the market is open. Stale means no pass for{" "}
-          {stale} min during market hours.
+          {stale} min during market hours, or none in all of the last session while it is closed.
         </p>
       </section>
       {showPlaybooks && heartbeat.rollCall ? (
