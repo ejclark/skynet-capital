@@ -97,6 +97,40 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
   table. A surface that exists only at some commits declares `strikeUnless` (the composed answer
   decides), so it renders at the pin and is struck, out loud, where the build no longer serves it.
 
+## The machine-made inputs: census, harvest, facts sheet
+
+Three model-free tools make the blind roles' packets, so nobody chooses what an evaluator sees:
+
+```sh
+npx tsx scripts/study/census.mjs --run <compose dir> --world <world> --viewer <who> --out <fresh dir> \
+  [--viewport phone,desktop] [--cap 60] [--route <path> …]
+node scripts/study/harvest.mjs --out <dir> [--facts <facts.json>] <census dir> [<census dir> …]
+npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--viewer <who> …] --out <facts.json>
+```
+
+- **Census** (the experts' input). For each route the world's surfaces list names for that viewer,
+  it walks the page screen by screen and lists every control from Chromium's accessibility tree
+  that is on screen at some scroll position — in tree order, nothing hand-picked. Then each one is
+  operated once from a fresh load (storage cleared): its screen, a frame before, one tap at the
+  centre of its visible part through the recorder's own `act`, the recorder's frame after. A
+  control whose activation would leave the app is recorded as skipped, with why; past the cap
+  (default 60 a route) controls are logged as dropped, never silently. A control the tree holds but
+  no screen shows is listed as `offscreen`. Out: `census.json`, `walk.json`, and a recorder run dir
+  per route × viewport.
+- **Harvest** (the words pass's input, and the leak check's label list). From the walk:
+  `labels.txt` — every control's accessible name (off-screen ones and those an operated control
+  revealed too) and every heading, once each — for `lint.mjs --labels`; `strings.json` — visible
+  text by route and kind (heading · button/link · label · short status · long text).
+- **Facts sheet** (the task author's input). Facts with a stable name each, taken from the composed
+  payloads a viewer's page is served (never the inputs JSON), with the oracle's answer shape and an
+  `answerRegion` — text the page prints where the fact is shown. `weak` marks a region that is a bare
+  short number. `harvest.mjs --facts` says which regions the walk actually saw; a fact whose region
+  shows only after a control is operated is found in the census's revealed text, and one no screen
+  shows cannot be graded.
+
+The census, like a member session, runs against the pinned build: `pin.mjs prepare`, then run it in
+the pin's directory with `--run .study-run`.
+
 ## Grading (Hartson, Andre & Williges 2001)
 
 - **Match:** same place *and* same mechanism; 0.5 for the same place with a vaguer mechanism.
@@ -156,3 +190,7 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
 - 2026-10-09 · parallel workflow agents can share one scratchpad directory; a run dir named
   `run` or `smoke2` got a second agent's session appended to its trace. Give every run dir a name
   only this run would pick, and the driver refuses an `--out` that already holds a run.
+- 2026-10-09 · the recorder counted a page's held-open quote stream as a request in flight, so
+  after one visit to a page with a live feed every later settle waited out its 5s cap twice
+  (22s an action, `settled: false`). Every EventSource is now ignored, and a fresh load forgets
+  the old page's requests.

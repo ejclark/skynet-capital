@@ -59,10 +59,18 @@ import { loadWorld, openComposed, rerunUnderTsx } from "./session-world.mjs";
 const SETTLE_MS = 1000;
 const IDLE_MAX_MS = 5000;
 
-/** Requests in flight, minus the event stream the shell holds open forever. */
+/**
+ * Requests in flight, minus the event streams the world holds open forever — the board's
+ * `/events` and any other EventSource (its Accept header says so; a quote or order stream). A
+ * held stream counted here would keep every later settle from ever going idle.
+ */
 function trackRequests(page) {
   const inflight = new Set();
-  const live = (r) => !/\/events(\?|$)/.test(r.url());
+  const live = (r) =>
+    !(
+      /\/events(\?|$)/.test(r.url()) ||
+      String(r.headers().accept ?? "").includes("text/event-stream")
+    );
   page.on("request", (r) => live(r) && inflight.add(r));
   page.on("requestfinished", (r) => inflight.delete(r));
   page.on("requestfailed", (r) => inflight.delete(r));
@@ -78,9 +86,9 @@ async function idle(session) {
 
 /**
  * Network idle, then the settle window (debounced jumps land inside it), then idle again. False
- * when the network never went quiet, so the "after" may be mid-load.
+ * when the network never went quiet, so the "after" may be mid-load. Exported for session-fresh.mjs.
  */
-async function settle(session) {
+export async function settle(session) {
   const first = await idle(session);
   await session.page.waitForTimeout(SETTLE_MS);
   return (await idle(session)) && first;
