@@ -86,6 +86,9 @@ interface DeskPositionView extends PlainPosition {
   readonly totalPlRaw: number;
   readonly returnPct: string;
   readonly totalTone: Tone;
+  /** This position's share of what's HELD (long value), the same base the allocation's slices use,
+   *  so the map can scale it by `sharesPct + optionsPct`. A written contract holds none of it: 0,
+   *  and `allocation.optionsSold` names what it owes (#4964). */
   readonly weightPct: number;
   /** Present only when the fill ledger's open lots for this symbol are all long and their
    *  quantities sum exactly to the position's own — see `lotsFor`. */
@@ -192,6 +195,9 @@ export function deskView(
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
   const dayTotal = snapshot.positions.reduce((sum, p) => sum + dayPl(p).amount, 0);
+  // Not `invested`: that nets a sold option's liability, so beside one every held weight
+  // overshot (1,000 in stock next to a -900 put read 1,000%) and the map's tiles crowded out cash.
+  const held = snapshot.positions.reduce((sum, p) => sum + Math.max(0, p.marketValue), 0);
   const forConsiderations: PositionForConsiderations[] = [];
   const positions = [...snapshot.positions]
     .sort((a, b) => b.marketValue - a.marketValue)
@@ -235,7 +241,7 @@ export function deskView(
         totalPlRaw: pl,
         returnPct: basis > 0 ? pct((pl / basis) * 100) : "—",
         totalTone: plClass(pl),
-        weightPct: invested > 0 ? (Math.max(0, position.marketValue) / invested) * 100 : 0,
+        weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...(lots ? { lots } : {}),
       };
     });

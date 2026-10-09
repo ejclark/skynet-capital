@@ -126,6 +126,26 @@ describe("deskView allocation (#3689 slice 5)", () => {
     // The short still counts toward exposure: 100 − 10 shares.
     expect(allocation.shareCount).toBe(90);
   });
+
+  // #4964: the map scales each weight by `sharesPct + optionsPct`, so weights must share the
+  // bar's long-only base. Over net invested, the stock below read 1,000% beside a -900 sold put.
+  it("weighs each position against what's held, so a sold option can't inflate the rest", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AAPL", quantity: 10, avgPrice: 100, marketValue: 1_000 },
+          { symbol: "TSLA261017P00400000", quantity: -1, avgPrice: 9, marketValue: -900 },
+        ],
+        cash: 9_000,
+      }),
+    );
+    const [aapl, put] = view.positions;
+    expect(aapl?.weightPct).toBeCloseTo(100, 10);
+    expect(put?.weightPct).toBe(0);
+    // Stock's share of the whole account, as the map computes it: 1,000 of 10,000.
+    const investedShare = view.allocation.sharesPct + view.allocation.optionsPct;
+    expect(((aapl?.weightPct ?? 0) / 100) * investedShare).toBeCloseTo(10, 10);
+  });
 });
 
 describe("deskView lots", () => {
