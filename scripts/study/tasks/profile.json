@@ -86,10 +86,10 @@
     "the positions your accounts hold, with ways to narrow the list",
     "positions that may need a decision from you, one at a time",
     "your accounts' history: the orders that filled and why an automated account placed them",
-    "a calendar of market events coming up that touch what you hold",
+    "market events coming up, by date, that touch what you hold",
     "the status of the automated strategies a bot account runs",
     "a bot account's own public page: how it is doing, what it did, its health and its reasoning",
-    "where these pages hand you off: a page to act on one position with guidance about it, and a bot's full history"
+    "where these pages send you next: a page to act on one position, with advice about it, and a bot's full history"
   ],
   "census": [
     { "world": "profile-today", "viewer": "eric", "for": ["experts", "labels"] },
