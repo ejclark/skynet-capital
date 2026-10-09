@@ -136,22 +136,29 @@ export function findingId(f) {
 }
 
 /**
- * Every finding, normalised and given an id (a repeat of an id gets `-2`, `-3` …), and the
+ * Every finding, normalised and given an id (repeats of an id get `-2`, `-3` …), and the
  * id → class map kept apart. `{findings, classes}`.
  */
 export function collectFindings(groups) {
-  const seen = new Map();
-  const findings = groups.flat().map((f) => {
-    const base = findingId(f);
-    const n = (seen.get(base) ?? 0) + 1;
-    seen.set(base, n);
+  const all = groups.flat();
+  const bases = all.map(findingId);
+  // Repeats of one id are numbered by a hash of the whole record, not by collection order — the
+  // order runs analysts, experts 1…k, words, instruments, so `-2` would otherwise say "later source".
+  const rank = all.map((f) => createHash("sha256").update(JSON.stringify(f)).digest("hex"));
+  const byBase = new Map();
+  for (const [i, base] of bases.entries()) byBase.set(base, [...(byBase.get(base) ?? []), i]);
+  const ids = new Array(all.length);
+  for (const [base, idx] of byBase) {
+    const ordered = [...idx].sort((a, b) =>
+      rank[a] < rank[b] ? -1 : rank[a] > rank[b] ? 1 : a - b,
+    );
+    ordered.forEach((i, n) => {
+      ids[i] = n === 0 ? base : `${base}-${n + 1}`;
+    });
+  }
+  const findings = all.map((f, i) => {
     const { severityRaw, ...rest } = f;
-    return {
-      id: n === 1 ? base : `${base}-${n}`,
-      ...rest,
-      severity: severityOf(severityRaw),
-      severityRaw,
-    };
+    return { id: ids[i], ...rest, severity: severityOf(severityRaw), severityRaw };
   });
   const classes = Object.fromEntries(findings.map((f) => [f.id, f.class]));
   return { findings, classes };
