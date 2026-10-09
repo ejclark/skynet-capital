@@ -181,6 +181,8 @@ function copyFor(
   basis: number,
 ): { title: string; caption: string; why: string; learn?: DecisionLearn } {
   const display = humanizeOptionSymbol(p.symbol);
+  const sold = p.plain.expiresInDays !== undefined && p.quantity < 0;
+  if (kind === "lock-in" && sold) return soldWinnerCopy(p, display, pl, basis);
   if (kind === "lock-in") {
     return {
       title: `Up ${ret.toFixed(0)}%: consider locking some of it in`,
@@ -192,7 +194,7 @@ function copyFor(
   const days = p.plain.expiresInDays;
   const late = days !== undefined && days <= DECAY_WINDOW_DAYS;
   const left = days === 0 ? "no time" : p.plain.expiresIn;
-  if (days !== undefined && p.quantity < 0) return soldCopy(p, display, pl, basis, late, left);
+  if (sold) return soldCopy(p, display, pl, basis, late, left);
   return {
     title: late
       ? `Down ${Math.abs(ret).toFixed(0)}% with ${left} left`
@@ -232,6 +234,26 @@ function soldCopy(
       ? `✦ each day that passes works for a seller, but this one has moved against you. with ${left} left, decide on purpose: buy it back, or say why you're holding.`
       : "✦ closing this now costs more than it brought in. worth deciding on purpose: buy it back, or say why you're holding.",
     learn: { term: "breakeven", label: "What is a breakeven?" },
+  };
+}
+
+/**
+ * A SOLD option in the LOCK IN PROFIT band (#4947). Same seller's numbers as `soldCopy` — what came
+ * in and what closing costs — because "has made $163 on $263" is a buyer's sentence: the $263 was
+ * paid to the member, not spent by them. Buying back now keeps the difference.
+ */
+function soldWinnerCopy(
+  p: Held,
+  display: string,
+  pl: number,
+  collected: number,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const buyBack = formatCurrency(Math.abs(p.marketValue));
+  return {
+    title: `Collected ${formatCurrency(collected)}; buying back costs ${buyBack}`,
+    caption: `${display} brought in ${formatCurrency(collected)}. Buying it back now costs ${buyBack}, which keeps ${formatCurrency(pl)} of it.`,
+    why: "✦ most of the premium is already yours on paper. buying it back now locks that in and ends the risk; holding on chases what's left.",
+    learn: { term: "lockedIn", label: "What does “locked in” mean?" },
   };
 }
 

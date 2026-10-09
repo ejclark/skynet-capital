@@ -78,6 +78,18 @@ describe("decisionsFor", () => {
         "/app/trade?desk=eric&symbol=NVDA&section=orders&manage=NVDA261009C00180000",
       );
     });
+
+    it("keeps the seller's numbers when it's a winner worth locking in", () => {
+      // 1 AMD Nov 20 $150 put sold for $263, now $100 to buy back (+62% of the premium).
+      const [d] = decisionsFor("eric", [held("AMD261120P00150000", -1, 263, -100)], []);
+      expect(d).toMatchObject({
+        kind: "lock-in",
+        title: "Collected $263; buying back costs $100",
+        caption: expect.stringContaining("Buying it back now costs $100, which keeps $163 of it."),
+        learn: { term: "lockedIn" },
+      });
+      expect(`${d?.title} ${d?.caption}`).not.toMatch(/has made|Up \d+%/);
+    });
   });
 
   it("suggests locking in a big winner, with a lower bar for shares than options", () => {
