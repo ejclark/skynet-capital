@@ -20,6 +20,10 @@ import type { RunMarker } from "./run-marker.js";
 export const INCIDENT_LABEL = "incident";
 export const INCIDENT_TITLE = "Dashboard restarted without a clean shutdown";
 export const REPORT_COOLDOWN_MS = 30 * 60_000;
+/** Mirrors `scripts/moneypenny/labels.mjs`'s `incident` entry — one vocabulary. */
+const INCIDENT_LABEL_COLOR = "b60205";
+const INCIDENT_LABEL_DESCRIPTION =
+  "Production stopped uncleanly: an OOM kill or crash, awaiting a /retro";
 
 type DoFetch = typeof fetchJson;
 
@@ -47,7 +51,7 @@ export function describeUncleanExit(previous: RunMarker): string {
       : `rss ${previous.lastRssMb} MB (peak ${previous.peakRssMb ?? previous.lastRssMb} MB)`;
   return (
     `[run-marker] the last run did not exit cleanly — booted ${previous.bootedAt}` +
-    ` (${previous.gitSha ?? "sha unknown"}), last seen ${previous.lastSeenAt}, ${memory}`
+    ` (${previous.gitSha ?? "build unknown"}), last seen ${previous.lastSeenAt}, ${memory}`
   );
 }
 
@@ -57,7 +61,7 @@ const row = (label: string, value: string): string => `| ${label} | ${value} |`;
 export function occurrenceTable(previous: RunMarker, bootedAgainAt: Date): string {
   const rss =
     previous.lastRssMb === undefined
-      ? "no reading (died inside its first minute)"
+      ? "no reading (it never reached its first gauge tick)"
       : `${previous.lastRssMb} MB last, ${previous.peakRssMb ?? previous.lastRssMb} MB peak` +
         (Math.max(previous.lastRssMb, previous.peakRssMb ?? 0) > RSS_ALARM_MB
           ? ` — over the ${RSS_ALARM_MB} MB alarm line, so an OOM kill is the likely cause`
@@ -65,7 +69,7 @@ export function occurrenceTable(previous: RunMarker, bootedAgainAt: Date): strin
   return [
     "| | |",
     "|---|---|",
-    row("**Run booted**", `${previous.bootedAt} · \`${previous.gitSha ?? "sha unknown"}\``),
+    row("**Run booted**", `${previous.bootedAt} · \`${previous.gitSha ?? "build unknown"}\``),
     row("**Last seen alive**", previous.lastSeenAt),
     row("**Memory**", rss),
     row(
@@ -96,7 +100,19 @@ function issueBody(previous: RunMarker, now: Date): string {
   ].join("\n");
 }
 
-/** The open incident this reporter filed, if any. */
+/** The open incident this reporter filed, if any. A failed search THROWS rather than answering
+ *  "none open" — reading a 403 or a 502 as "nothing open" would file a duplicate. */
+/** Create the label with its registered colour and description (`labels.mjs`) when it does not
+ *  exist yet — the first apply would otherwise mint it grey and blank. 422 = it already exists. */
+async function ensureIncidentLabel(config: IncidentConfig, doFetch: DoFetch): Promise<void> {
+  await doFetch(
+    "POST",
+    `https://api.github.com/repos/${config.repo}/labels`,
+    githubHeaders(config.token),
+    { name: INCIDENT_LABEL, color: INCIDENT_LABEL_COLOR, description: INCIDENT_LABEL_DESCRIPTION },
+  ).catch(() => undefined);
+}
+
 async function findOpenIncident(
   config: IncidentConfig,
   doFetch: DoFetch,
@@ -106,7 +122,7 @@ async function findOpenIncident(
     `https://api.github.com/repos/${config.repo}/issues?labels=${INCIDENT_LABEL}&state=open&per_page=50`,
     githubHeaders(config.token),
   );
-  if (res.status !== 200 || !Array.isArray(res.body)) return undefined;
+  if (res.status !== 200 || !Array.isArray(res.body)) throw new Error(githubErrorMessage(res));
   const open = (res.body as readonly { number?: number; title?: string }[]).find(
     (issue) => issue.title === INCIDENT_TITLE,
   );
@@ -162,10 +178,21 @@ export async function reportUncleanRestart(
     });
     const number = (res.body as { number?: number } | null)?.number;
     if (res.status !== 201 || !number) throw new Error(githubErrorMessage(res));
-    // A separate call, as `feedback-service.ts` does: a label baked into the create never fires
-    // `issues.labeled`, which is the event every lane listens for.
-    await doFetch("POST", `${base}/${number}/labels`, headers, { labels: [INCIDENT_LABEL] });
+    // Filed is filed: hold the cooldown even if labelling fails below, so a retry cannot double it.
     deps.reported(now);
+    // A separate call, as `feedback-service.ts` does: a label baked into the create never fires
+    // `issues.labeled`, which is the event every lane listens for. The dedupe search reads this
+    // label, so a failure here is said out loud rather than swallowed.
+    await ensureIncidentLabel(config, doFetch);
+    const labelled = await doFetch("POST", `${base}/${number}/labels`, headers, {
+      labels: [INCIDENT_LABEL],
+    });
+    if (labelled.status !== 200) {
+      log(
+        `[run-marker] filed incident #${number} but could not label it: ${githubErrorMessage(labelled)}`,
+      );
+      return "filed";
+    }
     log(`[run-marker] filed incident #${number}`);
     return "filed";
   } catch (error) {

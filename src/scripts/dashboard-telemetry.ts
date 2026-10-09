@@ -20,7 +20,10 @@ export function bootTelemetry(
   mode: "live" | "offline",
   log: (line: string) => void = (line) => console.log(line),
 ): { listening: () => void; cleanExit: () => void } {
-  const marker = openRunMarker(runMarkerPath(env), env.GIT_SHA ?? null, undefined, log);
+  // The dashboard deploy does not stamp GIT_SHA yet (only the bots app's does); Fly's own image
+  // ref still names the deploy that died, which beats "unknown".
+  const build = env.GIT_SHA ?? env.FLY_IMAGE_REF ?? null;
+  const marker = openRunMarker(runMarkerPath(env), build, undefined, log);
   const mount = dirname(env.SKYNET_HISTORY_DIR ?? "data/history");
 
   return {

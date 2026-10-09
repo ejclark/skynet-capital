@@ -131,4 +131,39 @@ describe("reporting an unclean restart", () => {
       repo: "ejclark/skynet-capital",
     });
   });
+
+  it("treats a failed search as a failure, never as 'nothing open' — no duplicate issue", async () => {
+    const calls: string[] = [];
+    const doFetch = ((method: string, url: string) => {
+      calls.push(`${method} ${url}`);
+      return Promise.resolve({ status: 403, body: { message: "secondary rate limit" } });
+    }) as never;
+    const d = deps({ doFetch });
+    expect(await reportUncleanRestart(previous, d.deps)).toBe("failed");
+    expect(calls.filter((c) => c.startsWith("POST"))).toEqual([]);
+    expect(d.reported).toEqual([]);
+  });
+
+  it("creates the label with its registered colour before applying it", async () => {
+    const gh = github();
+    await reportUncleanRestart(previous, deps({ doFetch: gh.doFetch }).deps);
+    expect(gh.calls).toContainEqual(
+      expect.objectContaining({
+        url: "https://api.github.com/repos/o/r/labels",
+        body: expect.objectContaining({ name: INCIDENT_LABEL, color: "b60205" }),
+      }),
+    );
+  });
+
+  it("holds the cooldown and says so when the issue is filed but labelling fails", async () => {
+    const doFetch = ((method: string, url: string) => {
+      if (method === "GET") return Promise.resolve({ status: 200, body: [] });
+      if (url.endsWith("/issues")) return Promise.resolve({ status: 201, body: { number: 7 } });
+      return Promise.resolve({ status: 403, body: { message: "no" } });
+    }) as never;
+    const d = deps({ doFetch });
+    expect(await reportUncleanRestart(previous, d.deps)).toBe("filed");
+    expect(d.reported).toEqual([NOW]);
+    expect(d.logs.at(-1)).toContain("could not label it");
+  });
 });
