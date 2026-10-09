@@ -518,6 +518,7 @@ by `offer book ÷ announced maximum` against a **2.50x** line, and that this ope
 | 2026-10-03 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (-1.0pt since last), band unchanged (medium:0+), 25 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-05 |
 | 2026-10-05 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (+0.0pt since last), band unchanged (medium:0+), 25 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-07 |
 | 2026-10-07 | D-1 | **Pulse. Two new primary prints; the 10-01 lean-to-under-fill is withdrawn to no lean.** **(1) 2026-10-01 10Y-20Y** (`buybacks_operations`, HTTP 200): cap **$6B**, offered **$46.391B** (cover **7.73x**), accepted **$6.000B = 100%** from **2 of 41** issues (**$4.95B** 912810TH1 2042-05-15 + **$1.05B** 912810SY5) — the same cap and bucket that under-filled at 1.75x on 09-10; book **4.4x** 09-10's. The thin-book regime is not programme-wide. **(2) 2026-10-06 2Y-3Y**: cap **$4B**, offered **$14.763B** (cover **3.69x**), accepted **$1.327B = 33.2%**, largest clip **$250M**, 12 of 33 issues — an under-fill above the 2.56x floor: cover is necessary, not sufficient (belly bucket, price-constrained; not this bucket's regime). **(3) This bucket's evidence is still n=1 under the open cap** (09-24, $10.468B, 1.74x, 68.0%); at a $6B cap the 2.50x line is a **$15.0B** book. **The 10-07 announcement had not published when this ran** — max unknown; schedule re-fetched direct, HTTP 200, **89,250 bytes**, md5 `c49a5351…`, unrevised since 09-09; row still `= or > $4 billion`. **Adjacency — peers:** n/a (`symbols: []`). **Macro:** Sep payrolls (10-02) **+29K vs ~90K expected**, unemployment **4.2%**, prior two months revised down (NEWS: tradingeconomics via search); 10Y touched **5.175%** intraday then closed **5.277%**, 30Y **5.63%**, 2Y +4bp — the long end shrugged off the miss on inflation/oil/borrowing; Fed-hike bets faded. Next macro: FOMC minutes and the 10Y reopening **10-07**, then this operation, the 30Y reopening and the ECB account **10-08**, CPI **10-14**. **Rates:** 10Y **5.269** · 30Y **5.641** (`^TNX`/`^TYX`, 10-06 close) vs 5.293/5.638 on 09-30 — flat. **Volatility:** VIX **15.01** vs 16.34 on 09-30 (−1.33). **Geopolitical:** nothing new touching this operation. **Adjacency — 26 tracked entries in the ±5-day corridor (1 confirmed high/critical, unchanged: `ism-services-2026-10-05`); NOTHING new proposed:** `opec-momr-2026-10-13` is new to the corridor and already a tracked event; every dated item seen is tracked. **No forward test registered:** `FT-…-1`/`-3`/`-4` already bracket the outcome and score 2026-10-09. | **Base case 10-01 "lean under-fill" withdrawn to no lean (low confidence)** — read-not-trade stands; cover rule demoted from predictor to necessary condition | 2026-10-09 (close-out; the operation runs 10-08) |
+| 2026-10-09 | D+1 | **Close-out.** Cap **$6.000B** (announced 10-07), offered **$14.886B** (cover **2.481x**), accepted **$6.000B = 100%**, 10 of 34 issues, largest clip **$2,623M**. `FT-…-1`, `-2` pass; `FT-…-3` (cover ≥ 2.50x) and `FT-…-4` (under-fill) **killed**. Cover floor now 1 of 20 below 2.56x. See `## Outcome`. | — (closed) | — |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -544,3 +545,87 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0} -->
+
+
+## Outcome
+
+**Assessed 2026-10-09 (D+1, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument caches were busted (`rm -rf`) and
+nothing needed re-running; recorded rather than skipped. Every number below is a fresh pull this
+session: `api.fiscaldata.treasury.gov` `buybacks_operations` and `buybacks_security_details` (plain
+curl, HTTP 200), `auctions_query` for the same-day 30-Year, and Yahoo `^VIX`/`^TNX`/`^TYX` daily
+closes. The treasurydirect.gov `BBA_`/`BBR_20261008174000.xml` paths returned 404 to a plain fetch, so
+the announced maximum is read from fiscaldata's `max_par_amt_redeemed`, not the release PDF. The
+calendar entry stays `estimate`: the confirmed-prefix table has no Treasury-buyback prefix and this
+lane may not self-confirm an event it discovered in-sweep.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** (tentative schedule: `= or > $4 billion`) |
+| Total par offered | **$14,886,000,000** (09-24: $10.468B; 10-01 10Y-20Y: $46.391B) |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **2.481x** |
+| Fill (accepted ÷ max) | **100%** |
+| Issues | **10 accepted of 34 eligible** |
+| Largest clip | **$2,623M**, 2049-08-15 (43.7% of accepted) |
+
+Accepted par by line: 2049-08-15 **$2,623M**, 2051-08-15 **$1,851M**, 2051-05-15 **$701M**, 2051-02-15
+**$501M**, 2049-02-15 **$316M**, then five odd-lot lines of $1–2M. Five lines carried 99.9% of
+the cap. The operation ran at **D+0**: the 29-Year-10-Month reopening (912810UW6, $22B) printed a high
+yield of **5.618%** at **2.54x** bid-to-cover 40 minutes earlier (09-10's ran at 5.308%).
+
+### Forward tests scored
+
+- **`FT-…-1` — PASS.** Full announced maximum accepted. Largely the 25-of-28 base rate re-printing,
+  as the row said it would; the 09-10 10Y-20Y under-fill at D+0 already withdrew D+0 as protective,
+  and one more full fill at D+0 does not restore it.
+- **`FT-…-2` — PASS** on the full-fill half: largest clip $2,623M, ≥ $312M. The under-fill half did not
+  occur and stays untested; its 09-15 refutation (09-10: a $1,703M clip inside an under-fill) stands.
+- **`FT-…-3` — KILL**, on its own clause. Cover printed **2.481x**, under the 2.50x line, and the
+  operation filled in full: *"cover printing below 2.50x with a full fill → the 2.56x floor is an
+  artifact."* The miss is 0.019x, and the kill is taken as written — no rounding in the rule's favour.
+- **`FT-…-4` — KILL.** Accepting ≥ 95% of the announced maximum was its stated kill. The 10-01
+  amendment's own caution held: the offer book moved $10.468B → $14.886B (+42%) in two weeks.
+
+### The finding: the cover floor leaks at 2.48x — it is a gradient, not a cliff
+
+Re-computed over all nominal liquidity-support operations at caps ≥ $4B and cover ≥ 1.2x (the
+restriction the 2Y-3Y close-out used): **cover ≥ 2.56x → 14 of 20 full fills; cover < 2.56x → 1 of 20**,
+the one being this operation. Before today the same cut read 0 of 19. What sits below the line is
+otherwise unchanged (a 2.54x → 46.5% fill on 08-20, 2.44x → 59.6% on 09-17), so the rule survives as
+a *very strong* low-side filter, no longer an exceptionless one. The ones that matter for the next
+two prints: this bucket now stands at **1 of 2** full fills at a $6B cap, split by 2.48x vs 1.74x.
+Stated the other way — at a $6B cap, a full fill needed a **$14.9B** book and got one; 09-24's
+$10.5B did not clear it. The fitted threshold sits between 1.74x and 2.48x in this bucket, which is
+all the data supports.
+
+### Kill switches, adjudicated against the close-out data
+
+- **The operation pulled, moved, or re-sectored off the schedule** — did not fire; it ran 10-08
+  1:40–2:00pm ET, 20Y to 30Y, settled 10-09, exactly as scheduled.
+- **The announcement publishing no maximum** — did not fire; maximum $6.000B.
+- **Accepting materially below the announced maximum (`FT-…-1`'s kill)** — did not fire.
+- **The 10-01 amendment's inversion trigger (a book under $15.0B at a $6B cap, then an under-fill)** —
+  did not fire: the book was **$14.886B**, 0.8% *under* that arithmetic line, and the operation still
+  filled. The line was an approximation fitted to two buckets; today is the evidence it is soft by
+  about 1%.
+
+### Tape, for the record (no attribution claimed)
+
+10Y **5.231%** (-4.6bp vs the 10-07 close of 5.277%), 30Y **5.606%** (-5.5bp vs 5.661%), VIX **15.41**
+(+0.33). The long end rallied on a day carrying a 30Y reopening, this operation, the ECB account
+and JGB 30Y auction, so any single cause would be a guess. Next dated items: CPI **10-14**
+(`high`), the 10Y-20Y operation **10-15**, this bucket's next operation **10-27**. All three are already on
+the calendar, so nothing is proposed.
+
+### What this closes
+
+The cover rule graduates from "never failed on the low side" to "failed once, by 0.019x". The 10-27
+20Y-30Y operation is the next free test of it in this bucket; it scores under that
+event's own fragment, not this file. Paper-only,
+educational; `symbols: []`, no trade implication.
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0} -->
