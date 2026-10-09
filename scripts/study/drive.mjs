@@ -3,7 +3,8 @@
 //
 //   node scripts/study/drive.mjs --run <compose run dir> --world <name> --viewer <viewer>
 //        --viewport phone|desktop --task <task.json> --card <card.md>
-//        --actor scripted:<actions.json>|sealed --out <dir> [--dry-run]
+//        --actor scripted:<actions.json>|sealed --out <dir> [--dry-run] [--stub <dir>]
+//        [--roles <dir>]
 //
 // THE LOOP: frame (the viewport JPEG) → the actor's turn → that action through the recorder →
 // append the turn and the trace record → repeat, until the member says `done` or `give_up`, or the
@@ -22,34 +23,37 @@
 // comes from the file) — the no-model run that proves the harness and replays across builds.
 // `sealed` is the blind member (actor-sealed.mjs); it refuses to start while the standalone CLI is
 // signed out. `--dry-run` with `sealed` builds the first turn's message and the half-scale frame,
-// writes them, and stops before any call — what the member would see, inspectable.
+// writes them, and stops before any call — what the member would see, inspectable. `--stub <dir>`
+// plays the sealed actor from canned answers (`<dir>/actor/<n>.json`, `<dir>/ease/<n>.json` —
+// sealed.mjs → makeCaller), recording each request it would have sent under <out>/requests/; no
+// sign-in needed. `--roles <dir>` reads the role prompt from another checkout's
+// docs/members/study/roles (a pinned run's tree may predate them; scripts/study/round.mjs passes
+// its own).
 //
 // Needs a built app (`npm run build --prefix app`) and a compose run; run from the repo root. It
 // re-runs itself under tsx (the world server imports the server's TypeScript).
 
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { VIEWPORTS } from "../crawl/steps.mjs";
-import { actorMessage, easeMessage, halfFrame, sealedCall, signedIn } from "./actor-sealed.mjs";
+import { actorMessage, easeMessage } from "./actor-sealed.mjs";
 import { easeProblems, parseScript, toAction, turnProblems } from "./actor-turn.mjs";
 import { textTarget } from "./measure-text.mjs";
 import { taskMetrics } from "./metrics.mjs";
 import { grade } from "./oracle.mjs";
+import { halfFrame, makeCaller, ROLES, readSchema, signedIn } from "./sealed.mjs";
 import { act, close, open, readTrace } from "./session.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";
 import { actionCap, deviceLine, parseTask } from "./task-file.mjs";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROLE = resolve(HERE, "../../docs/members/study/roles/actor.md");
-const schema = (name) =>
-  JSON.stringify(JSON.parse(readFileSync(join(HERE, "schemas", `${name}.json`), "utf8")));
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 
 const USAGE =
   "usage: drive.mjs --run <dir> --world <name> --viewer <who> --viewport phone|desktop " +
-  "--task <task.json> --card <card.md> --actor scripted:<actions.json>|sealed --out <dir> [--dry-run]";
+  "--task <task.json> --card <card.md> --actor scripted:<actions.json>|sealed --out <dir> [--dry-run] " +
+  "[--stub <dir>] [--roles <dir>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 function driveArgs(argv) {
@@ -67,6 +71,8 @@ function driveArgs(argv) {
     actor: get("--actor"),
     out: get("--out"),
     dryRun: argv.includes("--dry-run"),
+    stub: get("--stub"),
+    roles: get("--roles") ?? ROLES,
   };
   const missing = ["run", "world", "viewer", "task", "card", "actor", "out"].filter(
     (k) => !opts[k],
@@ -76,6 +82,7 @@ function driveArgs(argv) {
   if (!(opts.actor === "sealed" || opts.actor.startsWith("scripted:")))
     throw new Error(`--actor must be scripted:<actions.json> or sealed\n${USAGE}`);
   if (opts.dryRun && opts.actor !== "sealed") throw new Error("--dry-run is for --actor sealed");
+  if (opts.stub && opts.actor !== "sealed") throw new Error("--stub is for --actor sealed");
   return opts;
 }
 
@@ -98,8 +105,8 @@ function scriptedActor(file, session) {
 }
 
 /** The sealed actor: one blind call per turn, one for the ease question. */
-function sealedActor({ card, device, scenario, size, browser }) {
-  const turnSchema = schema("actor-turn");
+function sealedActor({ card, device, scenario, size, browser, call, rolePath }) {
+  const turnSchema = readSchema("actor-turn");
   return {
     async message({ turns, frame, prevFrame, remaining }) {
       const prev = prevFrame ? await halfFrame(browser, readFileSync(prevFrame)) : null;
@@ -121,7 +128,7 @@ function sealedActor({ card, device, scenario, size, browser }) {
       const message = await this.message(ctx);
       let turn;
       try {
-        turn = await sealedCall({ rolePath: ROLE, schema: turnSchema, message });
+        turn = await call({ role: "actor", rolePath, schema: turnSchema, message });
       } catch (e) {
         return { as_member: "(no answer)", expect: "", refused: e.message };
       }
@@ -132,9 +139,10 @@ function sealedActor({ card, device, scenario, size, browser }) {
     },
     async ease({ turns }) {
       try {
-        return await sealedCall({
-          rolePath: ROLE,
-          schema: schema("ease"),
+        return await call({
+          role: "ease",
+          rolePath,
+          schema: readSchema("ease"),
           message: easeMessage({ card, device, scenario, turns }),
         });
       } catch (e) {
@@ -182,6 +190,7 @@ function summarise({ opts, task, world, session, cap, turns, ease, texts }) {
     run: world.run,
     task: task.id,
     actor: opts.actor,
+    ...(opts.stub ? { stub: resolve(opts.stub) } : {}),
     cap,
     turns: turns.length,
     refusedTurns: turns.filter((t) => t.refused).length,
@@ -201,7 +210,7 @@ function summarise({ opts, task, world, session, cap, turns, ease, texts }) {
 
 async function main(argv) {
   const opts = driveArgs(argv);
-  if (opts.actor === "sealed" && !opts.dryRun) {
+  if (opts.actor === "sealed" && !opts.dryRun && !opts.stub) {
     const auth = signedIn();
     if (!auth.ok) {
       console.error(`drive: refusing the sealed actor — ${auth.why}`);
@@ -236,6 +245,11 @@ async function main(argv) {
             scenario: task.scenario,
             size: vp.viewport,
             browser: session.page.context().browser(),
+            call: makeCaller({
+              stub: opts.stub && resolve(opts.stub),
+              record: join(out, "requests"),
+            }),
+            rolePath: join(resolve(opts.roles), "actor.md"),
           })
         : scriptedActor(opts.actor.slice("scripted:".length), session);
     if (opts.dryRun) return await dryRun(actor, session, out, cap);

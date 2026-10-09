@@ -1,0 +1,116 @@
+{
+  "area": "profile",
+  "about": "The area config for one study round over the signed-in profile (#4943). Read by scripts/study/round.mjs; everything area-specific about a round lives here or in scripts/study/worlds/, never in the round's code.",
+  "cutoff": "2026-10-08",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "profile-bad-day": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "profile-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "eric",
+      "world": "profile-bad-day",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "returning-trader",
+      "world": "profile-today",
+      "viewer": "eric",
+      "viewports": ["desktop"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "returning-trader",
+      "world": "profile-bad-day",
+      "viewer": "eric",
+      "viewports": ["desktop"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "profile-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/u/sauron"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "profile-bad-day",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/u/sauron"
+    },
+    {
+      "member": "phone-only",
+      "world": "profile-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "phone-only",
+      "world": "profile-bad-day",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "invited-friend",
+      "world": "profile-today",
+      "viewer": "jordan",
+      "viewports": ["desktop"],
+      "start": "/app/accounts",
+      "note": "a non-owner: their own small account, and the owner's bot page by the app's own links"
+    },
+    {
+      "member": "first-timer",
+      "world": "no-account",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/accounts"
+    }
+  ],
+  "pages": [
+    "your accounts' overview: what everything is worth, the cash you have, how your record looks, and where your money sits",
+    "the positions your accounts hold, with ways to narrow the list",
+    "positions that may need a decision from you, one at a time",
+    "your accounts' history: the orders that filled and why an automated account placed them",
+    "market events coming up, by date, that touch what you hold",
+    "the status of the automated strategies a bot account runs",
+    "a bot account's own public page: how it is doing, what it did, its health and its reasoning",
+    "where these pages send you next: a page to act on one position, with advice about it, and a bot's full history"
+  ],
+  "census": [
+    { "world": "profile-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "profile-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    {
+      "world": "profile-today",
+      "viewer": "eric",
+      "routes": [
+        "/app/trade?desk=sauron&symbol=CRWV&strike=80&exp=2026-11-06",
+        "/app/u/sauron/activity"
+      ],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "profile-bad-day", "viewer": "eric", "for": ["labels"] },
+    { "world": "no-account", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "profile-today",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/accounts?account=sauron"
+  }
+}

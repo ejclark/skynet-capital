@@ -1,0 +1,21 @@
+{
+  "as_member": "As this member, I am looking for the number I came for.",
+  "noticed": "stub: a page of numbers",
+  "candidates": [
+    {
+      "target": "the list further down",
+      "confidence": 40
+    }
+  ],
+  "expect": "more of the page, with the list I need",
+  "last_expectation": {
+    "verdict": "match",
+    "note": "first turn"
+  },
+  "confusion": 1,
+  "action": {
+    "type": "scroll",
+    "dir": "down",
+    "screens": 1
+  }
+}

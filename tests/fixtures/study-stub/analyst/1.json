@@ -1,0 +1,42 @@
+{
+  "tasks": [
+    {
+      "session": "S1",
+      "outcome": "failure",
+      "path": "scrolled once, then guessed",
+      "wrong_turns": ["guessed instead of finding the number"],
+      "confusion": [
+        {
+          "frame": "F1",
+          "quote": "I did not find it"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "what": "stub: the member could not tell where the number lives on the first screen",
+      "frames": ["F1"],
+      "quote": "I did not find it",
+      "voice": "member-voiced",
+      "level": "structural",
+      "severity": "High",
+      "frequency": {
+        "hit": 1,
+        "of": 1
+      }
+    },
+    {
+      "what": "stub: the page moved on its own after a scroll",
+      "frames": ["F1"],
+      "quote": "",
+      "voice": "instrument-only",
+      "level": "surface",
+      "severity": "Moderate",
+      "frequency": {
+        "hit": 1,
+        "of": 1
+      }
+    }
+  ]
+}

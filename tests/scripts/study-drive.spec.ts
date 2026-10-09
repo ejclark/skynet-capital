@@ -4,9 +4,6 @@ import type { UserMessage } from "../../scripts/study/actor-sealed.mjs";
 import {
   actorMessage,
   easeMessage,
-  parseResult,
-  sealedArgs,
-  signedIn,
   stepsLine,
   turnLine,
 } from "../../scripts/study/actor-sealed.mjs";
@@ -17,6 +14,7 @@ import {
   toAction,
   turnProblems,
 } from "../../scripts/study/actor-turn.mjs";
+import { parseResult, sealedArgs, signedIn } from "../../scripts/study/sealed.mjs";
 import { actionCap, deviceLine, parseTask, taskProblems } from "../../scripts/study/task-file.mjs";
 
 // The member-session driver's pure halves (scripts/study/drive.mjs runs them): the task file and

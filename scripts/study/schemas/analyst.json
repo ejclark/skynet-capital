@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Analyst — one member's sessions, summed up",
+  "description": "docs/members/study/roles/analyst.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tasks", "findings"],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session", "outcome", "path", "wrong_turns", "confusion"],
+        "properties": {
+          "session": {
+            "type": "string",
+            "description": "The session's label, as given (S1, S2, …)."
+          },
+          "outcome": {
+            "type": "string",
+            "enum": ["success", "partial", "failure", "gave up"]
+          },
+          "path": {
+            "type": "string",
+            "description": "The path taken, in a line."
+          },
+          "wrong_turns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confusion": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["frame", "quote"],
+              "properties": {
+                "frame": {
+                  "type": "string",
+                  "description": "A frame label, as given (F1, F2, …)."
+                },
+                "quote": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Merged duplicates. Empty when every task went smoothly.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["what", "frames", "quote", "voice", "level", "severity", "frequency"],
+        "properties": {
+          "what": {
+            "type": "string",
+            "description": "The problem, in plain words, at a specific place in the app."
+          },
+          "frames": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "description": "A frame label, as given (F1, F2, …)."
+            }
+          },
+          "quote": {
+            "type": "string",
+            "description": "The member's own words, if any; empty for instrument-only."
+          },
+          "voice": {
+            "type": "string",
+            "enum": ["member-voiced", "instrument-only"]
+          },
+          "level": {
+            "type": "string",
+            "description": "structural = where something lives, what a page is for, how pages connect, what is grouped with what; surface = a single control, label, copy or visual detail",
+            "enum": ["structural", "surface"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["Critical", "High", "Moderate", "Low"]
+          },
+          "frequency": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["hit", "of"],
+            "properties": {
+              "hit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "of": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

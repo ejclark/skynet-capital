@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Member-type audit — who is missing",
+  "description": "docs/members/study/roles/member-type-audit.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposals"],
+  "properties": {
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["who", "rank", "trying_to_do", "how_they_decide", "would_leave", "guesses"],
+        "properties": {
+          "who": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1 = a design could go most wrong without them."
+          },
+          "trying_to_do": {
+            "type": "array",
+            "description": "Ranked.",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "how_they_decide": {
+            "type": "string"
+          },
+          "would_leave": {
+            "type": "string"
+          },
+          "guesses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Anything here the cards do not support, marked as a guess."
+            }
+          }
+        }
+      }
+    }
+  }
+}

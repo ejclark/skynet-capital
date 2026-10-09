@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expert — one batch of census frames",
+  "description": "docs/members/study/roles/expert.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["first_impression", "findings"],
+  "properties": {
+    "first_impression": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "about", "main_thing", "first_tap", "confusing"],
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "about": {
+            "type": "string"
+          },
+          "main_thing": {
+            "type": "string"
+          },
+          "first_tap": {
+            "type": "string"
+          },
+          "confusing": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Most severe first. No preferences; write 'test this' when unsure.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "principle",
+          "why",
+          "fix",
+          "frames",
+          "page",
+          "severity",
+          "level",
+          "member"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "description": "What's wrong."
+          },
+          "principle": {
+            "type": "string",
+            "description": "Which principle it breaks (H1–H10, an excise kind, or an information-architecture system)."
+          },
+          "why": {
+            "type": "string",
+            "description": "Why it matters to this person."
+          },
+          "fix": {
+            "type": "string",
+            "description": "The fix."
+          },
+          "frames": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "description": "A frame label, as given (F1, F2, …)."
+            }
+          },
+          "page": {
+            "type": "string",
+            "description": "The page, as given."
+          },
+          "severity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "level": {
+            "type": "string",
+            "description": "structural = where something lives, what a page is for, how pages connect, what is grouped with what; surface = a single control, label, copy or visual detail",
+            "enum": ["structural", "surface"]
+          },
+          "member": {
+            "type": "string",
+            "description": "Which member it hurts."
+          }
+        }
+      }
+    }
+  }
+}

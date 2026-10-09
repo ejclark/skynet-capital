@@ -208,7 +208,50 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
 - **Scripted actor:** the no-model run. A tap may name on-screen text instead of a point, so one
   script replays on two builds. `scripts/study/tasks/proof/` is the harness proof, not a study task.
 - **Sealed actor:** refuses to start while the standalone `claude` is signed out. `--dry-run`
-  writes the first turn's message and a half-scale frame without calling it.
+  writes the first turn's message and a half-scale frame without calling it. `--stub <dir>` plays
+  it from canned answers instead (`<dir>/actor/<n>.json`, `<dir>/ease/<n>.json`); `--roles <dir>`
+  reads the role prompt from another checkout (a pin may predate the roles).
+
+## Running a round
+
+`scripts/study/round.mjs` runs every blind role of one round, in order, against a pinned build.
+Run it from today's checkout; the members' sessions, the census and the facts sheet run inside the
+pin (`pin.mjs prepare`), and a pin whose harness is not this checkout's is prepared again first.
+
+```sh
+node scripts/study/round.mjs --pin <pin dir> --out <fresh dir> --sealed <answer-key dir> \
+  [--profile scripts/study/tasks/<area>.json] [--thin] [--dry-run] [--concurrency N]
+```
+
+```mermaid
+flowchart LR
+  P["0 preflight<br/>pin · census · facts · harvest"] --> C["1 cards<br/>+ lint"] --> K["2 canary<br/>every blind role"]
+  K --> F["3 framer"] --> T["4 tasks<br/>lint loop · freeze"] --> S["5 sessions<br/>N at once"]
+  S --> A["6 analysts"] --> E["7 experts ×3"] --> W["8 words"] --> M["9 member types"] --> X["10 findings.jsonl<br/>+ classes.json"]
+```
+
+- **The area config** (`scripts/study/tasks/<area>.json`) holds everything area-specific: the
+  cutoff, the members × worlds × viewports table (each member's viewer and start page), runs and
+  tasks per pairing, the census cap and list, the framer's page list in plain words, the thin cut.
+- **Every blind call** goes through `scripts/study/sealed.mjs` with its role prompt and its schema
+  (`scripts/study/schemas/`). Each call's request (images as sha256 + size) and answer is kept in
+  `<out>/<step>/requests/`.
+- **The lint loop:** the task author hears back only the lint's `rewrite <file> item N (<kind>)`
+  lines (plus `unknown-fact` when a task cites no fact on the sheet), at most three times; then
+  the round stops. Tasks are frozen with their sha256 in `<out>/frozen.json`.
+- **Findings:** `<out>/findings.jsonl` holds every finding with a stable id, its class, level,
+  severity, surface (route + viewport) and evidence frames; `<out>/classes.json` keeps id → class
+  apart, and `findings-unlabelled.jsonl` is what a matcher gets: id, what, level, severity and
+  surface only, sorted by id — no class, no detail, no evidence paths and no source order, since
+  each of those names its source. Ids hash surface + what, never the class.
+- **`--dry-run`** answers every call from `tests/fixtures/study-stub/` (or `--stub <dir>`) — no
+  sign-in, no model; `--only-world` and `--cap` narrow it. `--thin` is the area's thin slice.
+- **Resuming:** a step whose `done.json` exists is skipped; `log.jsonl` only ever grows. A resume
+  must use the mode the out dir was made with (`<out>/round.json`: profile and its hash, pin,
+  sealed dir, thin, stub, `--only-world`, `--cap`) — any other is refused. Sessions check
+  `tasks.json` against `frozen.json`, and a session dir is kept only when its `task.sha256` matches
+  the task it is planned for. A pin whose harness is not the checkout's is refused with its
+  `pin.mjs prepare` command, never re-prepared under another round.
 
 ## Starting a new area — checklist
 

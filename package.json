@@ -119,6 +119,7 @@
     "study:census": "tsx scripts/study/census.mjs",
     "study:harvest": "node scripts/study/harvest.mjs",
     "study:facts": "tsx scripts/study/worlds/facts.mjs",
+    "study:round": "node scripts/study/round.mjs",
     "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth && npm run test:e2e:ct",
     "test:e2e:update": "playwright test --update-snapshots",
