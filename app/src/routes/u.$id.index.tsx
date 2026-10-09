@@ -54,7 +54,8 @@ function DeskPage(): ReactElement {
     }, 300);
   };
 
-  // The frame and head are the layout's (`u.$id.tsx`, #4951); these notes sit under the head.
+  // The frame and head are the layout's (`u.$id.tsx`, #4951), which renders this section only
+  // once the shared desk read has data, so these guards narrow the type and never show.
   if (desk.isPending) return <p className="note">Reading the account…</p>;
   if (desk.isError)
     return <p className="note">This account is unreachable — {String(desk.error)}</p>;

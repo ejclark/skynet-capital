@@ -27,7 +27,7 @@ function AccountLayout(): ReactElement {
   if (desk.isError)
     return (
       <PageFrame>
-        <p className="note">This account is unreachable — {String(desk.error)}</p>
+        <p className="note">This account is unreachable.</p>
       </PageFrame>
     );
   const { landmark } = desk.data;

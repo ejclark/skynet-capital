@@ -25,7 +25,8 @@ function HeartbeatPage(): ReactElement {
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const isOwn = useOwnsAccount(id);
 
-  // The frame and head are the layout's (`u.$id.tsx`, #4951); these notes sit under the head.
+  // The frame and head are the layout's (`u.$id.tsx`, #4951), which renders this section only
+  // once the shared desk read has data, so these guards narrow the type and never show.
   if (desk.isPending) return <p className="note">Listening for the heartbeat…</p>;
   if (desk.isError) return <p className="note">This account is unreachable.</p>;
 
