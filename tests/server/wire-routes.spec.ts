@@ -590,13 +590,22 @@ describe("serveWireJson", () => {
           orderId === "ord-bot" ? { record: decision, intent } : undefined,
       };
 
-      await serveWireJson(res, "/api/wire", deps, false);
+      // The bot's owner reads it — a non-owner's copy loses the strategy tag (#4971), below.
+      await serveWireJson(res, "/api/wire", deps, false, () => true);
 
       const { trades } = JSON.parse(out.body).wire;
       const bot = trades.find((t: { whoId: string }) => t.whoId === "sauron");
       const human = trades.find((t: { whoId: string }) => t.whoId === "eric");
       expect(bot.reasoning).toMatchObject({ reason: "panic fade", strategy: "sauron-panic-claim" });
       expect(human.reasoning).toBeUndefined();
+
+      const other = capture();
+      await serveWireJson(other.res, "/api/wire", deps, false);
+      const otherBot = JSON.parse(other.out.body).wire.trades.find(
+        (t: { whoId: string }) => t.whoId === "sauron",
+      );
+      expect(otherBot.reasoning.reason).toBe("panic fade");
+      expect(otherBot.reasoning).not.toHaveProperty("strategy");
     });
 
     it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {

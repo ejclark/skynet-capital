@@ -166,7 +166,7 @@ const FRIEND = [
     act: [click("button", `Why ${PUT} was sold`)],
     // The owner's copy names it as "CRWV-WHEEL · aggressive" under Playbook; the gate strips it.
     // Any rendering of the id counts (getByText: case-insensitive substring) — a strategy tag too.
-    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true, knownBug: "#4971" })],
+    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true })],
   },
 ].map((s) => ({ viewer: "jordan", ...s }));
 
