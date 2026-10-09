@@ -52,7 +52,7 @@ describe("member cards", () => {
   });
 
   it("drops hypothesis bullets, including their continuation lines, and keeps the next bullet", () => {
-    const out = dropHypotheses(sections(member)["1"]);
+    const out = dropHypotheses(sections(member)["1"] ?? "");
     expect(out).not.toContain("hypothesis");
     expect(out).not.toContain("evening visit");
     expect(out).toContain("They read the first line only.");
