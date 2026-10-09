@@ -342,8 +342,9 @@ export interface PlaybookSubscription {
    * The owner's labelled, dated conviction (#4469 criteria 2, 11 and 12): the verdict a pair
    * trades on when the house study did not say ✓, as Eric's wheel on CRWV does (#4642: "CRWV runs
    * as Eric's conviction, against the study's stand-aside"). Absent = no conviction on record.
-   * Slice 3c part 1 only reads and carries it — nothing writes it until part 3, and it stays
-   * outside `subscriptionsVersion` until part 2 teaches the bots to act on it.
+   * The Store writes it (slice 3c part 3: on subscribe, or `setConviction`), a ◆ pair's row carries
+   * its own onto a subscription that states none (`row-conviction.ts`), and `subscriptions.v2`
+   * fingerprints it, so the bots stop new entries when its check fails (`with-conviction-gate.ts`).
    */
   readonly conviction?: SubscriptionConviction;
 }

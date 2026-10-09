@@ -105,7 +105,10 @@ describe("playbookStoreCatalog", () => {
     expect(wheel?.description).toContain("about 89%");
     expect(wheel?.description).toContain("below $0 on 2027-01-29");
     expect(wheel?.description).toContain("more than 1 in 3 of its sold puts");
-    expect(wheel?.description).toContain("nothing switches it off automatically");
+    // From #4469 slice 3c part 3 the check is the bots' own (`with-conviction-gate.ts`), on every
+    // subscription to the pair: the ◆ row's conviction rides on each one (`row-conviction.ts`).
+    expect(wheel?.description).toContain("stops selling new puts on its own");
+    expect(wheel?.description).not.toContain("by hand");
     expect(wheel?.exitCutLosses).toContain("The real loss is owning a falling stock");
     expect(wheel?.exitCutLosses).toContain("ride through an earnings print");
   });
