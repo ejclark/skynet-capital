@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Framer — the jobs this area is hired for",
+  "description": "docs/members/study/roles/framer.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobs", "job_map", "measure", "differences"],
+  "properties": {
+    "jobs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["member", "main_job", "emotional_job", "social_job"],
+        "properties": {
+          "member": {
+            "type": "string"
+          },
+          "main_job": {
+            "type": "string",
+            "description": "Solution-agnostic: what they are trying to get done."
+          },
+          "emotional_job": {
+            "type": "string"
+          },
+          "social_job": {
+            "type": "string",
+            "description": "Empty if none."
+          }
+        }
+      }
+    },
+    "job_map": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "served", "outcomes"],
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "Define",
+              "Locate",
+              "Prepare",
+              "Confirm",
+              "Execute",
+              "Monitor",
+              "Modify",
+              "Conclude"
+            ]
+          },
+          "served": {
+            "type": "boolean",
+            "description": "Should this area of the app serve this stage?"
+          },
+          "outcomes": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "description": "[minimize/maximize] + [measure] + [object] + [clarifier]"
+            }
+          }
+        }
+      }
+    },
+    "measure": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["outcome", "category", "why"],
+        "properties": {
+          "outcome": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["Happiness", "Engagement", "Adoption", "Retention", "Task success"]
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "differences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["member", "stages", "note"],
+        "properties": {
+          "member": {
+            "type": "string"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Define",
+                "Locate",
+                "Prepare",
+                "Confirm",
+                "Execute",
+                "Monitor",
+                "Modify",
+                "Conclude"
+              ]
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

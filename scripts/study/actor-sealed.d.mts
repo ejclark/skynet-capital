@@ -2,16 +2,10 @@
 
 import type { Turn } from "./actor-turn.mjs";
 
-export type Block =
-  | { type: "text"; text: string }
-  | { type: "image"; source: { type: "base64"; media_type: "image/jpeg"; data: string } };
+import type { UserMessage } from "./sealed.mjs";
 
-export interface UserMessage {
-  type: "user";
-  message: { role: "user"; content: Block[] };
-}
+export type { Block, UserMessage } from "./sealed.mjs";
 
-export function sealedArgs(opts: { rolePath: string; schema: string }): string[];
 export function turnLine(
   turn: Partial<Turn> & Pick<Turn, "as_member" | "expect">,
   i: number,
@@ -33,18 +27,3 @@ export function easeMessage(args: {
   scenario: string;
   turns: (Partial<Turn> & Pick<Turn, "as_member" | "expect">)[];
 }): UserMessage;
-export function parseResult(stdout: string | null | undefined): Record<string, unknown>;
-export function signedIn(
-  run?: (
-    cmd: string,
-    args: string[],
-    opts: { encoding: "utf8" },
-  ) => { stdout?: string; error?: Error | null },
-): { ok: boolean; why: string };
-export function sealedCall(args: {
-  rolePath: string;
-  schema: string;
-  message: UserMessage;
-  timeoutMs?: number;
-}): Promise<Record<string, unknown>>;
-export function halfFrame(browser: unknown, jpeg: Uint8Array): Promise<string>;

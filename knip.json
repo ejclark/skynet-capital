@@ -11,6 +11,7 @@
     "scripts/study/pin.mjs",
     "scripts/study/census.mjs",
     "scripts/study/harvest.mjs",
+    "scripts/study/round.mjs",
     "scripts/study/worlds/*.mjs",
     "tests/**/*.spec.ts"
   ],

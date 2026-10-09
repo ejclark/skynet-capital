@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Words pass — the text people read",
+  "description": "docs/members/study/roles/words.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "route", "where", "standard", "why", "member", "rewrite", "severity"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The text, quoted exactly."
+          },
+          "route": {
+            "type": "string",
+            "description": "The page it sits on, as given."
+          },
+          "where": {
+            "type": "string",
+            "enum": ["heading", "buttonOrLink", "label", "shortStatus", "longText"]
+          },
+          "standard": {
+            "type": "string",
+            "enum": [
+              "purposeful",
+              "concise",
+              "conversational",
+              "clear",
+              "misleading",
+              "inconsistent",
+              "dense"
+            ]
+          },
+          "why": {
+            "type": "string",
+            "description": "Why it matters, to which member."
+          },
+          "member": {
+            "type": "string"
+          },
+          "rewrite": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["High", "Moderate", "Low"]
+          }
+        }
+      }
+    }
+  }
+}

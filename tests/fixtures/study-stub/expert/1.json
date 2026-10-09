@@ -1,0 +1,24 @@
+{
+  "first_impression": [
+    {
+      "page": "stub page",
+      "about": "stub",
+      "main_thing": "stub",
+      "first_tap": "stub",
+      "confusing": ""
+    }
+  ],
+  "findings": [
+    {
+      "what": "stub: a control's result appears far from the control",
+      "principle": "H1 visibility of system status",
+      "why": "stub",
+      "fix": "stub",
+      "frames": ["F1"],
+      "page": "stub page",
+      "severity": 2,
+      "level": "structural",
+      "member": "every member"
+    }
+  ]
+}

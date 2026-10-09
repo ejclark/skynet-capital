@@ -1,0 +1,31 @@
+{
+  "findings": [
+    {
+      "what": "stub: a control's result appears far from the control",
+      "principle": "H1 visibility of system status",
+      "why": "stub",
+      "fix": "stub",
+      "from": ["B1.1"],
+      "viewport": "both",
+      "page": "stub page",
+      "severity": 2,
+      "level": "structural",
+      "member": "every member"
+    }
+  ],
+  "excise": [
+    {
+      "page": "stub page",
+      "task": "stub",
+      "interactions": 3,
+      "toward_goal": 1,
+      "waste": ["navigational"]
+    }
+  ],
+  "posture": [
+    {
+      "page": "stub page",
+      "note": "stub"
+    }
+  ]
+}

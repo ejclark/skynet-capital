@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expert — consolidating every batch into one review",
+  "description": "docs/members/study/roles/expert.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings", "excise", "posture"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "Your batch findings, merged and re-ranked, most severe first.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "principle",
+          "why",
+          "fix",
+          "from",
+          "viewport",
+          "page",
+          "severity",
+          "level",
+          "member"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "description": "What's wrong."
+          },
+          "principle": {
+            "type": "string",
+            "description": "Which principle it breaks (H1–H10, an excise kind, or an information-architecture system)."
+          },
+          "why": {
+            "type": "string",
+            "description": "Why it matters to this person."
+          },
+          "fix": {
+            "type": "string",
+            "description": "The fix."
+          },
+          "from": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "description": "A batch finding's id, as given (B1.2, …)."
+            }
+          },
+          "viewport": {
+            "type": "string",
+            "enum": ["phone", "desktop", "both"]
+          },
+          "page": {
+            "type": "string",
+            "description": "The page, as given."
+          },
+          "severity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "level": {
+            "type": "string",
+            "description": "structural = where something lives, what a page is for, how pages connect, what is grouped with what; surface = a single control, label, copy or visual detail",
+            "enum": ["structural", "surface"]
+          },
+          "member": {
+            "type": "string",
+            "description": "Which member it hurts."
+          }
+        }
+      }
+    },
+    "excise": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "task", "interactions", "toward_goal", "waste"],
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "interactions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "toward_goal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "waste": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["navigational", "modal", "cognitive", "memory"]
+            }
+          }
+        }
+      }
+    },
+    "posture": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "note"],
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

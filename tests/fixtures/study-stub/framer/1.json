@@ -1,0 +1,66 @@
+{
+  "jobs": [
+    {
+      "member": "every member",
+      "main_job": "know whether anything I hold needs me today",
+      "emotional_job": "feel in control without watching all day",
+      "social_job": ""
+    }
+  ],
+  "job_map": [
+    {
+      "stage": "Define",
+      "served": false,
+      "outcomes": []
+    },
+    {
+      "stage": "Locate",
+      "served": false,
+      "outcomes": []
+    },
+    {
+      "stage": "Prepare",
+      "served": false,
+      "outcomes": []
+    },
+    {
+      "stage": "Confirm",
+      "served": true,
+      "outcomes": []
+    },
+    {
+      "stage": "Execute",
+      "served": false,
+      "outcomes": []
+    },
+    {
+      "stage": "Monitor",
+      "served": true,
+      "outcomes": ["minimize the time it takes to know whether anything needs my attention today"]
+    },
+    {
+      "stage": "Modify",
+      "served": true,
+      "outcomes": []
+    },
+    {
+      "stage": "Conclude",
+      "served": false,
+      "outcomes": []
+    }
+  ],
+  "measure": [
+    {
+      "outcome": "minimize the time it takes to know whether anything needs my attention today",
+      "category": "Task success",
+      "why": "a short study measures success first"
+    }
+  ],
+  "differences": [
+    {
+      "member": "every member",
+      "stages": ["Monitor"],
+      "note": "stub: one line for all"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "findings": [
+    {
+      "text": "Skip to content",
+      "route": "/app/accounts?account=sauron",
+      "where": "buttonOrLink",
+      "standard": "purposeful",
+      "why": "stub",
+      "member": "every member",
+      "rewrite": "stub",
+      "severity": "Low"
+    }
+  ]
+}

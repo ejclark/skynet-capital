@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task author — goal tasks for one member in one world",
+  "description": "docs/members/study/roles/task-author.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tasks"],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "description": "Ordered easy to hard; the most important one second.",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scenario", "answer", "answerRegion", "outcome"],
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "description": "Two or three sentences, second person, as the member would hear it: a reason and a goal, never steps, places or the app's own words."
+          },
+          "answer": {
+            "type": "string",
+            "description": "The fact from the fact sheet that proves success, as the member would report it, with an acceptable tolerance."
+          },
+          "answerRegion": {
+            "type": "string",
+            "description": "The fact sheet's id for that fact, exactly as listed."
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Which desired outcome from the job map this task tests."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "tasks": [
+    {
+      "scenario": "Your automated helper has been buying a well-known chip maker. Before dinner you want to know how many units of it the helper now holds. Report that number.",
+      "answer": "the number of units of the chip maker the helper holds",
+      "answerRegion": "sauron.NVDA.quantity",
+      "outcome": "minimize the time it takes to know what I hold"
+    },
+    {
+      "scenario": "A friend asked what your helper paid, on average, for each unit of the chip maker, the zeppelin of your book. You want to tell them the figure in dollars.",
+      "answer": "the average price paid per unit, in dollars, to the cent",
+      "answerRegion": "sauron.NVDA.average-cost",
+      "outcome": "minimize the time it takes to know what I paid"
+    },
+    {
+      "scenario": "You remember the helper sold a contract that pays off if a cloud company falls. You want to know the date that contract runs out.",
+      "answer": "the date the contract runs out",
+      "answerRegion": "sauron.option.CRWV261106P00080000.expiry",
+      "outcome": "minimize the chance of missing a date that matters"
+    }
+  ]
+}
