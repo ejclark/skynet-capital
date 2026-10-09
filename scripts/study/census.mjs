@@ -13,7 +13,8 @@
 //     end, a clipped box). The visible text of every screen is kept for harvest.mjs → walk.json.
 //  2. OPERATE — each listed control, in tree order, up to the cap (the rest are logged as
 //     dropped): a FRESH load (`reopen` — storage cleared), its screen's scroll position, the same
-//     control found again (role + name, nearest where the walk saw it), a frame BEFORE, one tap at
+//     control found again (role + name, nearest where the walk saw it; brought to the middle when
+//     that screen leaves its centre covered or off screen), a frame BEFORE, one tap at
 //     the centre of its visible part through the recorder's own `act` (so every per-action
 //     measurement is session.mjs's, never re-implemented here), and the recorder's frame AFTER. A
 //     control whose activation would leave the app's origin is recorded as skipped, with why.
@@ -151,6 +152,13 @@ async function revealed(session, cdp) {
   };
 }
 
+/** Where to tap a measured control in this frame, and what a tap there would land on. */
+async function aimAt(page, pick, viewport) {
+  const point = pick.box && onScreen(pick, viewport) ? tapPoint(pick.box, viewport) : null;
+  const cover = point ? await page.evaluate(page$.coverAt, [pick.i, point.x, point.y]) : null;
+  return { point, cover };
+}
+
 /** Step 2 for one control: fresh load, its screen, frame, tap, frame. */
 async function operate(session, cdp, route, c, viewport, out) {
   const { page } = session;
@@ -170,16 +178,20 @@ async function operate(session, cdp, route, c, viewport, out) {
       findings: censusFindings({ ...c, operated: "not-found" }),
     };
   }
-  let rescrolled = false;
-  if (!(onScreen(pick, viewport) && tapPoint(pick.box, viewport))) {
+  // At its screen's scroll position first, as the walk saw it. A control off screen there, or
+  // covered at its centre (half under a sticky head), is brought to the middle and aimed at again,
+  // so `control-covered` is reported only for something that covers it wherever it sits.
+  let aim = await aimAt(page, pick, viewport);
+  const atScreen = aim.cover;
+  const rescrolled = !(aim.point && aim.cover?.inside);
+  if (rescrolled) {
     await page.evaluate(page$.centreAdopted, pick.i);
     await page.waitForTimeout(SCREEN_MS);
     pick = { i: pick.i, ...(await page.evaluate(page$.measureAdopted))[pick.i] };
-    rescrolled = true;
+    aim = await aimAt(page, pick, viewport);
   }
-  const point = pick.box && onScreen(pick, viewport) ? tapPoint(pick.box, viewport) : null;
+  const { point, cover } = aim;
   if (!point) return { ...base, status: "not-tappable", rescrolled, findings: censusFindings(c) };
-  const cover = await page.evaluate(page$.coverAt, [pick.i, point.x, point.y]);
   await remark(session);
   const before = await frame(session);
   const record = await act(session, { kind: "tap", ...point });
@@ -192,6 +204,7 @@ async function operate(session, cdp, route, c, viewport, out) {
     rescrolled,
     tapAt: point,
     cover,
+    ...(rescrolled && atScreen ? { coverAtScreen: atScreen } : {}),
     frames: { before: relative(out, before), after: after ? relative(out, after) : null },
     measurements,
     findings: [...findings, ...censusFindings({ ...c, cover })],
