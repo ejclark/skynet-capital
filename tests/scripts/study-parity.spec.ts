@@ -5,6 +5,7 @@ import {
   type ParityRow,
   parityArgs,
   parityTable,
+  strikeFor,
   worstExit,
 } from "../../scripts/study/parity-judge.mjs";
 
@@ -158,5 +159,44 @@ describe("worstExit", () => {
   it("ignores a struck surface's frames", () => {
     const struck = row({ surface: { label: "s", struck: "why" }, phone: { miss: "x", notes: [] } });
     expect(worstExit([struck])).toBe(0);
+  });
+});
+
+describe("strikeFor — a surface the composed build may or may not serve", () => {
+  const rule = {
+    read: "/api/desk/a",
+    holds: (body: unknown) => (body as { ideas?: number } | undefined)?.ideas === 1,
+    why: "#1 — no idea composed",
+  };
+  const surface = { label: "an idea card", strikeUnless: rule };
+
+  it("leaves the surface in play when the composed answer holds", () => {
+    expect(strikeFor(surface, () => ({ ideas: 1 })).struck).toBeUndefined();
+  });
+
+  it("strikes it, with the declared reason, when the composed answer does not", () => {
+    expect(strikeFor(surface, () => ({ ideas: 0 })).struck).toBe("#1 — no idea composed");
+  });
+
+  it("strikes it out loud when the read was never composed", () => {
+    expect(strikeFor(surface, () => undefined).struck).toBe(
+      "#1 — no idea composed (/api/desk/a not composed)",
+    );
+  });
+
+  it("asks the composed answer for exactly the declared read", () => {
+    const asked: string[] = [];
+    strikeFor(surface, (read) => {
+      asked.push(read);
+      return { ideas: 1 };
+    });
+    expect(asked).toEqual(["/api/desk/a"]);
+  });
+
+  it("keeps a fixed strike, and passes a surface with no rule through untouched", () => {
+    const fixed = { label: "x", struck: "never here", strikeUnless: rule };
+    expect(strikeFor(fixed, () => ({ ideas: 1 })).struck).toBe("never here");
+    const plain = { label: "y" };
+    expect(strikeFor(plain, () => undefined)).toBe(plain);
   });
 });
