@@ -1,0 +1,9 @@
+{
+  "$comment": "World 'no-account' (#4943 slice 2), layered over profile-today: the league is the same, and one more member, signed in, owns no account at all.",
+  "base": "profile-today",
+  "members": [
+    { "email": "eric@study.world", "name": "Eric", "owns": ["eric", "sauron"] },
+    { "email": "jordan@study.world", "name": "Jordan", "owns": ["jordan"] },
+    { "email": "casey@study.world", "name": "Casey", "owns": [] }
+  ]
+}

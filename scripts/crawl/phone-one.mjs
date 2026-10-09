@@ -21,16 +21,7 @@ import { locate } from "./locate.mjs";
 import { mintSession } from "./mint-session.ts";
 import { phoneArgs, probePhone, servedFinding } from "./phone.mjs";
 import { bootServer, CRAWL_EMAIL, CRAWL_SECRET } from "./server.mjs";
-import { sessionCookie, VIEWPORTS } from "./steps.mjs";
-
-/** Enough to render the route; a page holding an SSE open never idles, so idle is best-effort. */
-async function settle(page) {
-  await page.waitForLoadState("load");
-  await page.waitForLoadState("networkidle", { timeout: 1500 }).catch(() => {
-    /* a held-open stream — the short wait below is the fallback */
-  });
-  await page.waitForTimeout(300);
-}
+import { sessionCookie, settle, VIEWPORTS } from "./steps.mjs";
 
 const pad = (s, n) => (s.length >= n ? s : s + " ".repeat(n - s.length));
 
