@@ -234,9 +234,10 @@ export function censusPlan(p, { thin = false, onlyWorld } = {}) {
   return configCensuses(p).filter((c) => !onlyWorld || c.world === onlyWorld);
 }
 
-const LINT_LINE = /^rewrite \S+ item \d+ \([a-z-]+\)$/;
+// Only an interface-label line may name words (a screen label, never the key): lint.mjs → rewriteLine.
+const LINT_LINE = /^rewrite \S+ item \d+ \((?:[a-z-]+|interface-label: "[^"]+"(?:, "[^"]+")*)\)$/;
 
-/** From lint.mjs's stdout, ONLY its "rewrite <file> item N (<kind>)" lines — nothing else. */
+/** From lint.mjs's stdout, ONLY its "rewrite <file> item N (<kind>[: "label", …])" lines. */
 export function lintFeedback(stdout) {
   return String(stdout ?? "")
     .split("\n")

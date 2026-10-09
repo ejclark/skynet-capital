@@ -199,6 +199,18 @@ describe("what the task author hears back", () => {
     expect(lintFeedback("lint: clean")).toEqual([]);
   });
 
+  it("passes a label-naming line through, but never a sealed-word line that names a word", () => {
+    const out = [
+      'rewrite tasks.json item 3 (interface-label: "options", "trade")',
+      'rewrite tasks.json item 2 (sealed-word: "secret")',
+      "rewrite tasks.json item 1 (overlap)",
+    ].join("\n");
+    expect(lintFeedback(out)).toEqual([
+      'rewrite tasks.json item 3 (interface-label: "options", "trade")',
+      "rewrite tasks.json item 1 (overlap)",
+    ]);
+  });
+
   it("puts the previous tasks and only those lines in a rewrite", () => {
     const text = taskAuthorText({
       card: "# card",
