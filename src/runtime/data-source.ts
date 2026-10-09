@@ -7,7 +7,6 @@ import {
 import { parseEventsJsonl, ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
@@ -17,7 +16,6 @@ import type { ObservatoryEvent } from "../observatory/events.js";
 import { loadParticipants } from "../participants/load-participants.js";
 import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
-import { isOccSymbol } from "../trading/option-symbols.js";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -142,20 +140,16 @@ function liveDataSource(env: Env): DataSource {
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
     stopParticipantStream,
-    startStreams: ({ participants, heldSymbols, sink, onActivity, onStatus }) => {
-      const plan = heldPriceStreamPlan(participants, heldSymbols);
-      if (plan.credentials && plan.symbols.length > 0) {
-        new AlpacaMarketDataStream({
-          apiKey: plan.credentials.apiKey,
-          apiSecret: plan.credentials.apiSecret,
-          symbols: plan.symbols,
-          onEvent: sink,
-          onStatus: (status) => onStatus?.("market-data", status),
-        }).start();
-        onStatus?.("market-data", `streaming ${plan.symbols.join(", ")}`);
-      } else {
-        onStatus?.("market-data", plan.idleReason);
-      }
+    startStreams: ({ participants, sink, onActivity, onStatus }) => {
+      // No held-symbol price socket here, by design (#4864). Alpaca allows ONE market-data
+      // connection per USER LOGIN per endpoint — not per paper account — and the bots app holds
+      // that login's for its eval loop (no tick → no evaluation → no trades). Any socket this app
+      // opens on a key under the same login is refused or starves the bots, and a key can't say
+      // which login owns it. Held prices still move on the broker re-sync (60s).
+      onStatus?.(
+        "market-data",
+        "off — the bots app owns the login's one price connection; prices refresh on broker re-sync",
+      );
 
       for (const participant of participants) {
         startParticipantStream(participant, sink, onStatus, onActivity);
@@ -163,36 +157,6 @@ function liveDataSource(env: Env): DataSource {
       onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
     },
   };
-}
-
-/**
- * Which credential and symbols the dashboard's held-symbol price stream may use (#4864).
- *
- * Never a bot's credential: Alpaca allows ONE market-data socket per account, and the bots app
- * (`autonomous-data-connections.ts`) holds the bot account's for its eval loop. The roster lists
- * bots first, so the old `participants[0]` was Sauron's key — the dashboard's socket evicted the
- * bots' (`406 connection limit exceeded`) and, with no price ticks, the bots never evaluated.
- *
- * Never an OCC option symbol either: the stock feed rejects the whole subscribe frame
- * (`400 invalid syntax`) when one is in it, so a single held option silenced every stock tick.
- */
-export function heldPriceStreamPlan(
-  participants: readonly Participant[],
-  heldSymbols: readonly string[],
-): { credentials?: Participant["credentials"]; symbols: string[]; idleReason: string } {
-  const symbols = heldSymbols.filter((symbol) => !isOccSymbol(symbol));
-  const credentials = participants.find((p) => p.kind !== "bot")?.credentials;
-  if (symbols.length === 0) {
-    return { symbols, idleReason: "no open stock positions yet — price stream idle" };
-  }
-  if (!credentials) {
-    return {
-      symbols,
-      idleReason:
-        "no member credential to stream on (bot accounts' feeds belong to the bots app) — price stream idle",
-    };
-  }
-  return { credentials, symbols, idleReason: "" };
 }
 
 // --- offline ---------------------------------------------------------------
