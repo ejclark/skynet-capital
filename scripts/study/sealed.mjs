@@ -221,7 +221,8 @@ export function redactImages(message) {
 /**
  * A caller: `call({role, rolePath, schema, message, timeoutMs?})` → the structured answer. Real
  * (the sealed CLI) unless `stub` names a directory. Each call is recorded as
- * `<record>/<role>-<nnn>.json` when `record` is set.
+ * `<record>/<role>-<nnn>.json` when `record` is set, and a recorded answer to the identical message
+ * is replayed instead of asked again (a resumed round pays only for what it has not got).
  */
 export function makeCaller({ stub, record } = {}) {
   const counts = new Map();
@@ -230,12 +231,20 @@ export function makeCaller({ stub, record } = {}) {
     counts.set(role, n);
     const entry = { role, n, rolePath, args: sealedArgs({ rolePath, schema: "<schema>" }) };
     entry.message = redactImages(message);
+    const file = record ? join(record, `${role}-${String(n).padStart(3, "0")}.json`) : null;
     const save = (extra) => {
-      if (!record) return;
+      if (!file) return;
       mkdirSync(record, { recursive: true });
-      const file = join(record, `${role}-${String(n).padStart(3, "0")}.json`);
       writeFileSync(file, `${JSON.stringify({ ...entry, ...extra }, null, 1)}\n`);
     };
+    // A resumed round replays an answer it already paid for: same role, same call number, the very
+    // same message (images compared by hash). The first full round's controls lost nothing but their
+    // last call to a timeout, and re-asking 35 expert batches would have cost ~95 minutes each.
+    const prior = file && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
+    if (prior?.answer && JSON.stringify(prior.message) === JSON.stringify(entry.message)) {
+      save({ ...prior, replayed: true });
+      return prior.answer;
+    }
     try {
       const answer = stub
         ? stubAnswer(stub, role, n, schema)
