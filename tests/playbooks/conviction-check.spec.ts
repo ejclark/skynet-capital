@@ -54,14 +54,16 @@ describe("netPl — the ledger plus what the open positions are worth against co
     expect(netPl(WHEEL, ledger(), open, quotes(82))).toBe(80);
   });
 
-  it("reads an unmarked contract at cost, and a share with no quote at cost, so neither moves it", () => {
-    const open = aPortfolio({
-      positions: [
-        aPosition({ symbol: PUT, quantity: -1, avgPrice: 2.3 }),
-        aPosition({ symbol: "CRWV", quantity: 100, avgPrice: 80 }),
-      ],
+  it("is unread, not flat, while a held contract or a held share has no mark", () => {
+    const unmarkedPut = aPortfolio({
+      positions: [aPosition({ symbol: PUT, quantity: -1, avgPrice: 2.3 })],
     });
-    expect(netPl(WHEEL, ledger({ realizedPl: 10 }), open, {})).toBe(10);
+    const unquotedShares = aPortfolio({
+      positions: [aPosition({ symbol: "CRWV", quantity: 100, avgPrice: 80 })],
+    });
+    expect(netPl(WHEEL, ledger({ realizedPl: 10 }), unmarkedPut, quotes(80))).toBeUndefined();
+    expect(netPl(WHEEL, ledger({ realizedPl: 10 }), unquotedShares, {})).toBeUndefined();
+    expect(netPl(WHEEL, ledger({ realizedPl: 10 }), unquotedShares, quotes(0))).toBeUndefined();
   });
 
   it("ignores positions in other tickers", () => {

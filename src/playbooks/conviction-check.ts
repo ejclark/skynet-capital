@@ -53,33 +53,40 @@ export function putStrategyTag(pair: Pair): string | undefined {
 const dollars = (x: number): string => `${x < 0 ? "-" : ""}$${Math.abs(x).toFixed(2)}`;
 
 /** Unrealized P/L on one ticker's book: shares against what they cost, contracts against the
- *  premium taken or paid. A mark that is missing is cost, so it adds nothing. */
-function unrealized(book: OptionBook, last: number | undefined): number {
-  const shares =
-    book.shares > 0 && book.shareCost !== undefined && last !== undefined && last > 0
-      ? book.shares * (last - book.shareCost)
-      : 0;
-  const contracts = book.contracts.reduce((sum, c) => {
+ *  premium taken or paid. `undefined` when a held position has no mark to read — a missing mark is
+ *  not a flat one, and a check latched on it would pass or fail on a gap in the feed. */
+function unrealized(book: OptionBook, last: number | undefined): number | undefined {
+  let shares = 0;
+  if (book.shares > 0 && book.shareCost !== undefined) {
+    if (last === undefined || !Number.isFinite(last) || last <= 0) return undefined;
+    shares = book.shares * (last - book.shareCost);
+  }
+  let contracts = 0;
+  for (const c of book.contracts) {
+    if (c.marketValue === undefined || !Number.isFinite(c.marketValue)) return undefined;
     const size = Math.abs(c.quantity) * OPTION_MULTIPLIER;
     const premium = c.avgPrice * size;
     // Alpaca marks a short contract negative; the cost to close is its size either way.
-    const mark = c.marketValue === undefined ? premium : Math.abs(c.marketValue);
-    return sum + (c.quantity < 0 ? premium - mark : mark - premium);
-  }, 0);
+    const mark = Math.abs(c.marketValue);
+    contracts += c.quantity < 0 ? premium - mark : mark - premium;
+  }
   return shares + contracts;
 }
 
-/** The pair's net P/L now: its ledger plus what its open positions are worth against their cost. */
+/** The pair's net P/L now: its ledger plus what its open positions are worth against their cost,
+ *  or `undefined` while any of them cannot be marked. */
 export function netPl(
   pair: Pair,
   ledger: PairLedger,
   portfolio: Portfolio,
   quotes: Readonly<Record<string, Quote>>,
-): number {
-  const open = pair.symbols.reduce(
-    (sum, symbol) => sum + unrealized(optionBook(portfolio, symbol), quotes[symbol]?.last),
-    0,
-  );
+): number | undefined {
+  let open = 0;
+  for (const symbol of pair.symbols) {
+    const book = unrealized(optionBook(portfolio, symbol), quotes[symbol]?.last);
+    if (book === undefined) return undefined;
+    open += book;
+  }
   return Math.round((ledger.realizedPl + open) * 100) / 100;
 }
 

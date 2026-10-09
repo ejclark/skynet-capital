@@ -32,8 +32,9 @@ import { pausedMayPlace } from "./playbook.js";
  * is not "until its owner sets a new date". The latch lives in this process: a restart reads the
  * book again, which fails again unless its P/L recovered in between.
  *
- * With no ledger (the decision store is dark) a due check cannot be read, and an unread check is
- * not a failed one: entries continue, said once, and nothing is latched.
+ * With no ledger (the decision store is dark), or a held position the feed has no mark for, a due
+ * check cannot be read, and an unread check is neither passed nor failed: entries continue, said
+ * once, nothing is latched, and the next cycle reads it again.
  */
 export interface ConvictionGateDeps {
   /** The bot's own subscriptions — the convictions ride on them. */
@@ -71,12 +72,17 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
       return undefined;
     }
     const ledger = deps.ledgerOf(sub.playbookId, putStrategyTag(pair));
-    const verdict = checkConviction(
-      pair,
-      checkOn,
-      ledger,
-      netPl(pair, ledger, portfolio, context.quotes),
-    );
+    const net = netPl(pair, ledger, portfolio, context.quotes);
+    if (net === undefined) {
+      if (!unread.has(`${key}|marks`)) {
+        unread.add(`${key}|marks`);
+        log(
+          `conviction check due ${checkOn} for ${sub.playbookId} but a held position has no mark yet — reading it next cycle`,
+        );
+      }
+      return undefined;
+    }
+    const verdict = checkConviction(pair, checkOn, ledger, net);
     latched.set(key, verdict);
     log(
       verdict.pass

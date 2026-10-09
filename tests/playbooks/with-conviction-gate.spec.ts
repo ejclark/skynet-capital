@@ -143,6 +143,24 @@ describe("withConvictionGate", () => {
     expect(log).toHaveBeenCalledTimes(1);
   });
 
+  it("an unmarked held position leaves the check unread: entries continue, nothing latches, the next cycle reads it", () => {
+    const log = rstest.fn();
+    const shares = aPortfolio({
+      positions: [{ symbol: "CRWV", quantity: 100, avgPrice: 80 }],
+    });
+    const gated = withConvictionGate(inner([put]), {
+      subscriptions: [sub],
+      ledgerOf: () => ledger({ realizedPl: 230 }),
+      log,
+    });
+    const unquoted: MarketContext = { ...at(CHECK_DAY), quotes: {} };
+    expect(gated.decide(unquoted, shares)).toEqual([put]);
+    expect(gated.decide(unquoted, shares)).toEqual([put]);
+    expect(log).toHaveBeenCalledTimes(1);
+    // The mark arrives: shares bought at 80 now at 76.5 lose $350 against $230 of premium.
+    expect(gated.decide(aContext({ CRWV: { last: 76.5 } }, CHECK_DAY), shares)).toEqual([]);
+  });
+
   it("leaves a disabled subscription's conviction alone, and passes the persona's other seams through", () => {
     const optionUnderlyings = ["CRWV"];
     const persona: Persona = { ...inner(), optionUnderlyings };
