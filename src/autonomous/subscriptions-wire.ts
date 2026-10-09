@@ -30,13 +30,25 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * reinterpreting this one, because `subscriptionsVersion` below is computed over exactly the
  * behavioral fields this version knows about.
  *
- * Carried, not yet behavioral (#4469 slice 3c part 1): each subscription's `conviction`, any field a
- * newer build put on a record (#4772), and `allocations`, each account's capital per strategy. The
- * version names its fields, so none of these moves it, and no bot reads them yet; part 2 brings
- * the ones a bot acts on into the fingerprint, once, so a spec can show only they moved.
+ * Carried, never behavioral (#4469 slice 3c): any field a newer build put on a record (#4772), and
+ * `allocations`, each account's capital per strategy (the app checks budgets against them). The
+ * version names its fields, so neither moves it.
+ *
+ * `subscriptions.v2` (#4469 slice 3c part 2) is the one wire change that adds a behavioral field:
+ * a subscription's `conviction` (its reason and check date), which a bot acts on (criteria 11 and
+ * 12, `conviction-check.ts`). It fingerprints v1's fields plus that one and nothing else, so a spec
+ * can show only the added field moved. EXPAND FIRST: the bots read both kinds from this build on,
+ * and the app keeps sending v1 until part 3 writes a conviction, so an app that deploys ahead of
+ * its bots never sends a kind they cannot read. A v1 snapshot's version does not describe a
+ * conviction, so the bots drop the one it carries rather than act on a field the version never
+ * vouched for.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V2 = "subscriptions.v2";
+export type SubscriptionsSnapshotKind =
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -52,7 +64,7 @@ const MAX_SUBSCRIPTIONS_PER_ACCOUNT = 64;
 const VERSION = /^[0-9a-f]{16}$/;
 
 export interface SubscriptionsSnapshot {
-  readonly kind: typeof SUBSCRIPTIONS_SNAPSHOT_KIND;
+  readonly kind: SubscriptionsSnapshotKind;
   /**
    * Epoch ms, stamped by the APP as it read its own store. The ordering the bots side uses to
    * refuse a snapshot older than the one already in force — a reordered response, or an app that
@@ -73,8 +85,11 @@ export interface SubscriptionsSnapshot {
  * back on is the same roster with newer timestamps. Bumping the version there would churn a swap
  * (and, from slice 2, every `DecisionRecord`'s `subscriptionsVersion`) for no behavioral change.
  */
-function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
-  return [
+function behavioralFields(
+  sub: PlaybookSubscription,
+  kind: SubscriptionsSnapshotKind,
+): readonly unknown[] {
+  const v1 = [
     sub.playbookId,
     sub.mode,
     sub.capitalAllocated,
@@ -82,6 +97,8 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
     sub.symbols ? [...sub.symbols].sort() : null,
     sub.compoundAllocation === true,
   ];
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND) return v1;
+  return [...v1, sub.conviction ? [sub.conviction.reason, sub.conviction.checkOn] : null];
 }
 
 /**
@@ -90,14 +107,17 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
  * filters sorted) so the same roster written in a different order is the same version — otherwise
  * a rewrite of the store file would look like a change and swap every bot's roster for nothing.
  */
-export function subscriptionsVersion(state: SubscriptionsState): string {
+export function subscriptionsVersion(
+  state: SubscriptionsState,
+  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
+): string {
   const canonical = Object.keys(state)
     .sort()
     .map((accountId) => [
       accountId,
       [...(state[accountId] ?? [])]
         .sort((a, b) => a.playbookId.localeCompare(b.playbookId))
-        .map(behavioralFields),
+        .map((sub) => behavioralFields(sub, kind)),
     ]);
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 16);
 }
@@ -107,14 +127,25 @@ export function buildSubscriptionsSnapshot(
   state: SubscriptionsState,
   at: number,
   allocations?: AllocationsState,
+  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
 ): SubscriptionsSnapshot {
   return {
-    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
+    kind,
     at,
-    version: subscriptionsVersion(state),
+    version: subscriptionsVersion(state, kind),
     accounts: state,
     ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
+}
+
+/** The state with every conviction left off — what a v1 version vouches for. */
+function withoutConvictions(state: SubscriptionsState): SubscriptionsState {
+  return Object.fromEntries(
+    Object.entries(state).map(([accountId, subs]) => [
+      accountId,
+      subs.map(({ conviction: _conviction, ...rest }) => rest),
+    ]),
+  );
 }
 
 /** Bounds check on the RAW payload, before any parsing — so an oversized body is refused by shape
@@ -145,19 +176,22 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
  */
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
-  if (value.kind !== SUBSCRIPTIONS_SNAPSHOT_KIND) return undefined;
-  const { at, version, accounts } = value;
+  const { kind, at, version, accounts } = value;
+  if (kind !== SUBSCRIPTIONS_SNAPSHOT_KIND && kind !== SUBSCRIPTIONS_SNAPSHOT_KIND_V2) {
+    return undefined;
+  }
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed) !== version) return undefined;
+  if (!parsed || subscriptionsVersion(parsed, kind) !== version) return undefined;
   const allocations = parseAllocations(value.allocations);
   return {
-    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
+    kind,
     at,
     version,
-    accounts: parsed,
+    // A v1 version does not describe a conviction, so none of its convictions is applied.
+    accounts: kind === SUBSCRIPTIONS_SNAPSHOT_KIND ? withoutConvictions(parsed) : parsed,
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }

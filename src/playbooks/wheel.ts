@@ -77,6 +77,11 @@ export interface WheelSetting {
   readonly studySays: string;
 }
 
+/** The strategy tag a wheel order carries on its decision record — `crwv-wheel-put`. One definition,
+ *  so the conviction check can find a pair's sold puts by the tag they were stamped with. */
+export const wheelStrategyTag = (symbol: string, type: "put" | "call"): string =>
+  `${symbol.toLowerCase()}-wheel-${type}`;
+
 /** What the helpers below read: the ticker, and the words its pair row settles. */
 interface Wheel {
   readonly symbol: string;
@@ -275,7 +280,7 @@ function wheelIntents(
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     assignment: "intended",
-    strategy: `${symbol.toLowerCase()}-wheel-${sale.type}`,
+    strategy: wheelStrategyTag(symbol, sale.type),
     ...saleText(wheel, sale, pick.quote.occSymbol, pick.quote.strike, limitPrice, shareCost),
     selection: {
       rule: `wheel-${sale.type}-by-delta`,

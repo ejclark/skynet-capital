@@ -302,7 +302,24 @@ async function runLive(): Promise<void> {
       optionLevels.risk(r.bot.persona.id, risk),
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
-      { runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id },
+      {
+        runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
+        // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
+        ...(decisionDb
+          ? {
+              ledgerOf: (playbookId: string, putStrategy: string | undefined) => {
+                const puts = putStrategy
+                  ? decisionDb.putOutcomesForPlaybook(r.bot.persona.id, playbookId, putStrategy)
+                  : { closed: 0, assigned: 0 };
+                return {
+                  realizedPl: decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId),
+                  putsClosed: puts.closed,
+                  putsAssigned: puts.assigned,
+                };
+              },
+            }
+          : {}),
+      },
     );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {

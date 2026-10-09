@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { openIntentResults } from "./decision-db-results.js";
@@ -102,6 +102,15 @@ export interface DecisionDb {
    *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
    *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** How the sold puts one playbook opened under one strategy tag have ended for one persona
+   *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
+   *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
+   *  still open is neither. */
+  putOutcomesForPlaybook(
+    personaId: string,
+    playbookId: string,
+    strategy: string,
+  ): { readonly closed: number; readonly assigned: number };
   /** The broker's option expiry/assignment reports for one persona's account (#4642 slice 8),
    *  stored once each by activity id; an expiry or assignment closes the contract it names at $0.
    *  Returns how many were new. One transaction; throws only if the store itself fails. */
@@ -386,6 +395,16 @@ export function openDecisionDb(path: string): DecisionDb {
     JOIN intents ON intents.id = retrospectives.entry_intent_id
     JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ?
+  `);
+
+  const selectPutOutcomes = db.prepare(`
+    SELECT COUNT(*) AS closed,
+           COALESCE(SUM(CASE WHEN retrospectives.exit_reason = ? THEN 1 ELSE 0 END), 0) AS assigned
+    FROM retrospectives
+    JOIN intents ON intents.id = retrospectives.entry_intent_id
+    JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.strategy = ?
+      AND retrospectives.exit_reason IN (?, ?)
   `);
 
   /**
@@ -752,6 +771,19 @@ export function openDecisionDb(path: string): DecisionDb {
         total: number | null;
       };
       return row.total ?? 0;
+    },
+
+    putOutcomesForPlaybook(personaId, playbookId, strategy) {
+      const assigned = LIFECYCLE_STATUS.OPASN;
+      const row = selectPutOutcomes.get(
+        assigned,
+        playbookId,
+        personaId,
+        strategy,
+        assigned,
+        LIFECYCLE_STATUS.OPEXP,
+      ) as { closed: number; assigned: number };
+      return { closed: row.closed, assigned: row.assigned };
     },
 
     findByOrderId(orderId) {
