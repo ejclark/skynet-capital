@@ -24,7 +24,11 @@ feeding thoughts; work moves underneath.
    one un-merged PR.
 2. **Isolation & disposability.** Each agent works in its own worktree with no shared mutable state. A
    failed, stuck, or wrong agent blocks nothing — it's abandoned, not merged. Agents don't run forever;
-   they complete and notify.
+   they complete and notify. **An agent that finds shared state broken** — the primary checkout's
+   install, `main`'s build, a lockfile — **stops and reports it as an incident, never repairs around
+   it silently**: the one that did on 2026-10-09 left everyone else broken for most of an hour
+   (`docs/LESSONS.md`). A worktree's `node_modules` is a clone of the primary's, never a link
+   (`scripts/worktree-setup.sh`).
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
