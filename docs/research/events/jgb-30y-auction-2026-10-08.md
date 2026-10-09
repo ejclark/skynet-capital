@@ -468,6 +468,7 @@ Four predictions carry score-by dates and are registered in
 | 2026-09-08 | D-30 | Initial research banked (above); canonical `src/domain/market-events/jgb-30y-auction-2026-10-08.json` written from the 40-year lane's proposal, which is now shadowed. **The framework transfers, the calibration does not.** The 30-year IS multiple-price (2026-09-03 page: avg 98.93 / **4.079%** against a 98.65 / **4.100%** low — a **2.1bp** tail), so the 09-15 sibling's method applies where it could not at the 40-year; but across **202** multiple-price auctions the tail runs mean **0.82bp**, median 0.60, sd 0.82, p90 **1.69**, and only **7.4%** reach 2bp against **10.5%** at the 20-year, while the 40-year's "+3bp cheap" rule would flag **44 of 202 (22%)** here (this tenor clears mean **+1.55bp** cheap, sd **3.79**). **MOF converted this tenor once** — the 25 auctions 1999-09-02 → **2007-01-18** print `―` in both average columns, all 200 since **2007-04-17** print real numbers — making the 40-year ledger's format kill switch a precedent, not an exotic (`FT-1`). **The load-bearing result is a refuted test that looks significant:** 10-08 is the only same-tenor, same-day match on the calendar (`treasury-30y-bond-2026-10-08`), and across **197** auctions matched to the same-date US 30Y CMT soft (tail ≥2bp, n=15) precedes **+3.00bp** vs firm **+0.18bp**, diff **+2.82bp**, **t = +2.62**, corr **+0.169** (t = +2.39), stable in sign across 2020+ and 2023+ subsamples and **not outlier-driven** (dropping the 3 largest \|US move\| days raises t to **+2.69**; jackknife over the 15 soft obs leaves t **2.27–2.94**). But corr(tail, **same-date JGB 30Y par move**) = **+0.328, t = +4.85**, corr(JGB move, US move) = +0.208 (t = +2.97), and the **partial** corr(tail, US \| JGB) = **+0.109, t = +1.52**, with D+1 **+0.082 (t = +1.15)**, D+2 nil and no D−1 pre-trend. Common factor, not transmission (`FT-2`). **BoJ gap the 40-year ledger flagged is CLOSED** (`statistics/boj/fm/ope/m_release`, 16 monthly files 2024-01 → 2026-08): **25y+ flat at ¥150bn every month for 32 months** (2 ops × ¥75bn, never varied) while **10–25y fell ¥450bn → ¥200bn (−55%)**, ops 3 → 2. With MOF's cuts, BoJ's share of 25y+ coupon supply **rose ~12% → ~20%** while its 20-year share **fell ~45% → ~29%** (`FT-3`). **The curve kink sits on that bucket boundary:** **20s30s +25.8bp = 73.7th percentile** (median +21.3) against **30s40s +0.4bp = 1.7th** — the super-long has not flattened, one segment collapsed and the other is steeper than usual, and the 30-year is the pivot (`FT-4`; offered as association + mechanism, no counterfactual). **Three nulls banked:** a flat 30s40s does not break this auction — **n=48** flat-regime auctions vs 151, tail **+0.17bp (t = 1.13)**, cover **−0.053 (t = −0.65)**, upgrading the sibling's self-flagged **n=2**; **no October fiscal-H2 effect** (n=19, neighbour-controlled cover **+0.091, t = +0.73**, tail −0.13bp, t = −1.01, from a 12-month family where 2 of 36 tests exceed \|t\|=2 as chance predicts); and **2026 is not a deterioration year** — mean tail **1.36bp** vs 2025's **1.56bp**, **t = −0.49**, the real step being 2022→2023 — despite three consecutively worse prints (0.3 → 1.5 → 2.1bp) and falling bids (¥2,070bn → ¥1,761bn → **¥1,728bn**). **Correction to both siblings' supply tables:** the taper is deeper than recorded — 30Y **¥900bn → ¥600bn (−33%**, not −14%) and 40Y **¥700bn → ¥300bn (−57%**, not −40%) since 2024-01, because both windows begin mid-taper; the 20Y's −30% agrees. **Rates (MOF par, primary):** 30Y **4.131% on 09-01**, **4.009%** on 09-07. **Hedge gap:** JGB 30Y minus hedged US 30Y **+283bp** (2023-09) → +295 → +173 → +133 → +147 → **+114bp** (09-07); it read **+109bp** on 09-04, **identical to the 40-year's**, because 30s40s was +0.1bp — the extra ten years are currently free. **Process:** MOF's 10-08 calendar row carries **NO announcement href** on 09-08 while the 09-15 20Y row does — **¥600bn is anticipated, not announced**, terms due **~2026-10-01**, the same day as the BoJ Tankan. **Volatility / FX (Yahoo, secondary):** VIX **15.72** (09-08 intraday, ten-session range 14.32–16.34, no regime change); USD/JPY **160.196 (09-01) → 153.988 (09-08)**, −3.9%. **Peers:** n/a, `symbols: []`. **Adjacency:** 18 tracked ids in the ±5d corridor, headed by **`treasury-30y-bond-2026-10-08` on the same date**, plus `treasury-buyback-20y30y-2026-10-08`, `fomc-minutes-2026-10-07`, `treasury-10y-note-2026-10-07` and `ism-services-2026-10-05`; the auction is **D+20 from `boj-decision-2026-09-18`** and D-22 from `boj-decision-2026-10-30`. **Two new dated events PROPOSED (`estimate`), both off MOF's own October calendar:** `jgb-20y-auction-2026-10-20` (the tapered bucket — the cleanest falsifier for the leg-5 mechanism) and `jgb-liquidity-enhancement-11-39y-2026-10-27` (the only JGB supply event straddling both BoJ buckets). **Blocked and flagged:** two BoJ index pages 404'd while hunting a **forward** purchase plan, recorded in `probe-ref.blocked`; every BoJ figure here is an actual through 2026-08 and no forward plan is claimed. | Initial stance set — **stand aside permanently**; the entry is a trap-marker and a calibration instrument, not a signal | 2026-09-23 (low band; interval tightens from 30d to 7d once inside 15 days of the event) |
 | 2026-09-24 | D-14 | **Two real rate hikes landed since the last row, both bigger than the "estimate" the initial ledger's watch list carried.** The Fed raised the funds rate **25bp to 3.75%–4%** on **2026-09-16** (12-0, first hike since 2023 — CNBC/Advisor Perspectives), and the BoJ raised its policy rate **25bp to 1.25%**, a **31-year high**, on **2026-09-18** (7-2, two dissents — BOJ's own release `k260918a.pdf`, corroborated by CNBC and The Japan Times). Neither breaks a kill switch: no tracked name (NVDA/AVGO/MRVL/CRWV) moved on a JGB/yen headline (KS1 holds), and neither hike is itself a 30-year auction metric. **Reaction (secondary, dated):** JGB 10Y fell **−4.9bp to 2.947%** on the BoJ hike day — a "sell the rumor" move, not the naive-expectation rise — while US 30Y CMT rose **~3bp to ~5.331%** on the Fed's. No 30-year-specific JGB yield was found this session; recorded as a limit, not filled from memory. USD/JPY **157.85 (09-24)** against **153.988 (09-08)**, a **+2.5%** re-weakening that reverses most of the initial ledger's −3.9% slide — press describes an initial yen pop on the BoJ announcement that has since round-tripped; flagged, not resolved, given conflicting secondary snippets. **Peer print (adjacency #1):** the 20-year JGB auction, **2026-09-15** (Bloomberg, secondary) — cover **4.01** (vs 3.98 prior, 12-mo avg 3.73), tail **0.15bp** (vs 0.17bp) — demand in the *tapered* 10–25y bucket held up on this one print, which does not yet show the deterioration leg 5's mechanism predicts; one print, no trend claimed. **No 30-year print since 09-03** — the next one is the event itself, so KS2/KS3/KS6 stay untestable. **MOF's 10-08 row still carries no confirmed announced size** as of 09-24 (four days before the KS7 threshold of 09-28) — consistent with the ~10-01 expected timing, KS7 has not fired. **VIX 14.21 (2026-09-24, Yahoo secondary)**, cross-checked against two sibling ledgers pulsed the same week (`consumer-credit-2026-10-07` 14.87 on 09-23, `ecb-account-2026-10-08` 14.21 on 09-24) — down from 15.72 on 09-08, no regime shift. **Adjacency #2 (corridor, ±5d of 10-08):** grew from 18 to 24 tracked ids; genuinely new since the initial pulse: `jgb-10y-auction-2026-10-06` (a new JGB tenor print, D-2, another peer-read opportunity), `sp-global-services-pmi-2026-10-05`, `amzn-prime-big-deal-days-2026-10-06`, `sudan-sanctions-regime-expiry-2026-10-09`, `pjm-iras-ferc-deadline-2026-10-12`, `sp-global-investment-manager-index-2026-10-13`. `adjacentStrongIds` unchanged (`ism-services-2026-10-05`, confirmed/high). No new dated event outside the existing calendar found this sweep — nothing proposed. **Geopolitical:** nothing found touching JPY/JGB supply or this event's (empty) symbol set. | None — **stand aside, permanently** holds; two real hikes are macro context, not a channel into a tracked name or a house playbook | 2026-10-01 (low band, D-14 inside the 15-day threshold → 7-day interval; also MOF's expected announcement date) |
 | 2026-10-01 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 16.3 (+2.1pt since last), band unchanged (low:0+), 25 adjacent event(s) tracked, new in corridor since last pulse: `bobl-5y-auction-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-08 |
+| 2026-10-09 | D+1 | **Close-out (session).** MOF primaries re-fetched direct: terms `auct20261001e.htm` (10-01, 7-day lead) → **¥600bn**, maturity **2056-09-20**; result `eresul20261008.htm` → cover **3.88x**, avg yield **4.109%**, tail **1.2bp**. **Identity miss: this opened NEW issue 92 (4.2%), not the "reopening of issue 91" this ledger's title and TL;DR carried** (the 11-10 sibling had it right). No weak-print line crossed; FT-1 pass, FT-2 VOID (tail <2bp), FT-3/-4 stay open to Jan 2027, FT-5 registered. | None — stand-aside held | Closed (no further pulse) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -483,3 +484,87 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-09, D+1).** Rates mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here
+reads it. Every figure below was re-fetched direct today, never carried from an earlier row. All MOF
+fetches returned HTTP 200; `probe-ref.blocked` is empty.
+
+### What happened
+
+MOF primaries. The announcement `calendar/announcement/auct20261001e.htm` (dated **October 1, 2026**,
+the 7-day lead) names Auction Date 2026-10-08, Issue Date 2026-10-09, Maturity **September 20, 2056**,
+Offering Amount **About 600 billion yen**. The October calendar `2610e.htm` prints `30-year(92)`. The
+result page `eresul/eresul20261008.htm` (cross-checked against the NPC-II page `eresul20261008a.htm`)
+prints issue **92**, nominal coupon **4.2%**, competitive bids **¥1,747.2bn** against **¥450.7bn**
+accepted (**cover 3.877x**), lowest accepted price 101.05 (yield 4.121%), weighted average 101.21
+(yield **4.109%**) — **tail 1.2bp** — allotment at the low **40.5%**, NPC I ¥148.9bn, NPC II ¥2.4bn
+(total ¥602.0bn, the announced size). Cover is competitive bids ÷ competitive accepted, the convention
+every earlier row used (09-03: 1,728.1 / 456.2 = 3.788).
+
+**The miss.** This ledger's title, TL;DR and event file called the auction a "reopening of issue 91".
+It opened **issue 92** — a new 4.2% bond maturing three months after issue 91's 2056-06-20, the
+quarter-opening step the `jgb-30y-auction-2026-11-10` ledger had already documented (33 consecutive
+issues, +3 months in 32 of 32). The size, date and format calls were unaffected; only the label was
+wrong, and no registered forward test depended on it. The event file's title is corrected in this PR.
+
+**Against this tenor's own calibration** (201 multiple-price auctions in MOF's workbook plus the 09-03
+page, today's added by hand; tail and cover both rank at the 77.7th percentile of 203): tail **1.2bp**
+against median 0.60 and p90 1.69, so mid-pack and short of the 1.7bp weak line; cover **3.877x**
+against the 3.0x weak line and the 3.8x strong line. Not weak, and not "strong" either — the strong
+print needed a tail under 0.6bp. Against 09-03: cover 3.788 → 3.877, tail 2.1 → 1.2bp, average yield
+4.079% → 4.109% (+3.0bp; different issue and coupon, so compare yields, not prices).
+
+**Curve (MOF par, `jgbcm.csv`).** 30Y **4.136%** on 10-08, −1.2bp on the day, +12.7bp from 4.009% on
+09-07; 20Y 3.916%, 40Y 4.134%. **20s30s +22.0bp** (+25.8 on 09-07; median +21.3), **30s40s −0.2bp**
+(+0.4 on 09-07). US Treasury par (primary): 30Y **5.60%** on 10-08, −7bp from 5.67%; the 10-09 reading
+is not yet published.
+
+### Forward tests
+
+- **FT-1 (real average-price columns) — PASS.** Weighted average 101.21 and yield 4.109% both printed.
+- **FT-2 (tail ≥2bp and no D+1 US 30Y rise ≥5bp) — VOID.** Tail was 1.2bp, so the trigger never fired;
+  re-registered at the 11-10 auction as **FT-5** (score by 2026-11-13). The 10-09 CMT did not exist
+  at scoring time, and would not have been scored regardless.
+- **FT-3 (BoJ >25y purchases at ¥150bn, Oct–Dec) — left open, score by 2027-01-15.** Inside the
+  close-out window only the plan can be read: the 2026-09-30 Q4 schedule keeps >25y at 1,500
+  (¥100mn/month) per `boj-jgb-purchase-schedule-q4-2026-09-30`. Actual operation files score it.
+- **FT-4 (20s30s ≥ +21.3bp, 30s40s < +10bp on 2026-12-31) — left open, score by 2027-01-08.** Context
+  only: both legs hold today (+22.0bp, −0.2bp), the first by 0.7bp.
+
+### Kill switches, re-adjudicated at close
+
+- **KS1 (no-price-channel premise) — not fired.** Tracked names moved >2% on many sessions between
+  09-08 and 10-08 (Yahoo, secondary, direct `curl`; on 10-08: NVDA −2.9%, AVGO −4.3%, MRVL −3.5%,
+  CRWV −7.8%), but USD/JPY never moved 2% on a day, JGB 30Y par was −1.2bp on 10-08 and the US 30Y
+  rallied 7bp. A web search for a cause returned only articles from other dates, so none was used:
+  this is "no JGB or yen attribution found", not proof there was none.
+- **KS2 (format) — not fired.** Average-price columns printed.
+- **KS3 (D+1 effect) — not armed.** Tail 1.2bp is under the 2bp trigger.
+- **KS4 / KS5 — open** (FT-3 / FT-4).
+- **KS6 (calibration) — not fired.** Cover 3.877x ≥3.0x and tail 1.2bp <1.7bp.
+- **KS7 (terms/cadence) — not fired.** ¥600bn, 10-08, terms published 10-01 (after 09-28).
+
+### The stance calls, scored
+
+- **Today / this week (stand aside) — CORRECT.** Nothing was traded; no position was keyed to the day.
+- **Do not run the naive same-date test (this week) — CONSISTENT.** The firm JGB print coincided with a
+  7bp US 30Y rally; no transmission story is needed, and no D+1 data exists yet.
+- **Judge the print against the 30-year's own calibration (this month) — CORRECT.** The 20-year line
+  (tail ≥2bp) and 40-year line (+3bp cheap) would have said nothing useful; the tenor's own lines placed
+  the print mid-pack.
+- **Track the BoJ >25y line (this quarter, Medium) — OPEN** until the Oct–Dec files publish.
+
+### Honest limits
+
+- The title error above was caught only at close-out; the 11-10 ledger had it from 09-09.
+- Percentiles come from MOF's workbook plus the 09-03 result page; today's print is added by hand.
+- VIX **15.41** and USD/JPY ~158.1 are Yahoo (secondary).
+- A web search for a secondary account of the auction returned 2025 articles (¥525bn, 3.64x) and was
+  discarded; the MOF pages are the only evidence for the result.
