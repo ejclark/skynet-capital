@@ -138,10 +138,7 @@ async function main(): Promise<void> {
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
   const auditDir = process.env.SKYNET_AUDIT_DIR;
 
-  const heldSymbols = [
-    ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
-  ];
-  dataSource.startStreams({ participants: roster, heldSymbols, sink, onActivity, onStatus });
+  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus });
 
   const owners = ownerEmails(process.env);
   const service = new ParticipantService({
