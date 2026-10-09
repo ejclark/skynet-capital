@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: read board fields without gh's owner lookup
+- **SHA:** b95b1d5   **DATE:** 2026-10-09   **STATUS:** closed
+- **COVERS:** 49eb85d
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [37881706331](https://github.com/ejclark/skynet-capital/actions/runs/37881706331) at 2026-10-09T03:58:25Z. Repair capsule #4933 filed 2026-10-09T03:59:11Z, closed 10m later by #4937.
+- **ROOT CAUSE:** `sync project status` went red on `main` (run 37881706331): `gh project field-list 2 --owner ejclark` failed three times in ~8s with `unknown owner type`, while a direct GraphQL call on the same token succeeded seconds later. A parallel run four seconds later went green. So the token was fine; the failure was in gh's own owner lookup. That string comes from gh's `UserOrgOwner` query (cli/cli `queries.go`, `OwnerIDAndType`). It asks for **both** `user(login)` and `organization(login)` and expects the org half to fail with exactly `NOT_FOUND`. Any other error shape on either half becomes `unknown owner type`, with GitHub's real message thrown away. Every `gh project --owner` call pays for thi…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-owner-lookup.spec.ts` (#4937).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy bots` red on main: retry a registry 404 once fly's api has found the image
 - **SHA:** f72d873   **DATE:** 2026-10-06   **STATUS:** closed
 - **COVERS:** 43d3f5c
