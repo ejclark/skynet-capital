@@ -6,8 +6,10 @@ import {
   type BoardSnapshot,
   type ComparePick,
   fetchBoard,
+  isOtherRun,
 } from "./board";
 import { useConnection } from "./connection";
+import { openReconnectingSource } from "./reconnecting-source";
 
 /**
  * The SSE → Query seam (#738 phase 0; per-metric since phase 2).
@@ -20,8 +22,12 @@ import { useConnection } from "./connection";
  *   hello  → the channel's head; a cache that is behind it re-anchors with a fresh snapshot.
  *   patch  → applied when it is exactly `seq + 1`; anything else is a gap → resnapshot.
  *   resync → the server's own admission that replay fell out of its buffer; same recovery.
- * The browser's native reconnect carries `Last-Event-ID` (each patch's seq is its SSE id), so a
- * dropped socket replays exactly what was missed — or resyncs, honestly.
+ * The browser's native reconnect carries `Last-Event-ID` (each patch's `boot:seq` is its SSE id),
+ * so a dropped socket replays exactly what was missed — or resyncs, honestly. A server restart
+ * renumbers its seqs from 1, so every frame also names the server's `boot`: a hello or patch from
+ * a different boot than the cached snapshot re-anchors it, instead of reading as "already applied"
+ * forever. A reconnect the edge refuses (502 mid-restart) closes the EventSource for good, so the
+ * source is opened through `openReconnectingSource`, which reopens it (#4620).
  */
 
 export const boardQueryKey = (metric: BoardMetric, pick: ComparePick = {}) =>
@@ -48,9 +54,7 @@ export function connectBoardChannel(
   pick: ComparePick = {},
 ): () => void {
   const key = boardQueryKey(metric, pick);
-  const source = new EventSource(`/events?by=${metric}`, { withCredentials: true });
-  const connection = useConnection.getState();
-  connection.setStatus("connecting");
+  useConnection.getState().setStatus("connecting");
 
   const recover = () => {
     useConnection.getState().setStatus("resyncing");
@@ -59,36 +63,40 @@ export function connectBoardChannel(
       .then(() => useConnection.getState().setStatus("live"));
   };
 
-  source.addEventListener("hello", (event) => {
-    const head = (JSON.parse((event as MessageEvent<string>).data) as { seq: number }).seq;
-    const cached = queryClient.getQueryData<BoardSnapshot>(key);
-    // A warm cache from an earlier visit may be behind the channel's head — re-anchor it rather
-    // than letting the first patch read as a gap.
-    if (cached && cached.seq < head) recover();
-    else useConnection.getState().setStatus("live");
+  return openReconnectingSource(`/events?by=${metric}`, (source) => {
+    source.addEventListener("hello", (event) => {
+      const hello = JSON.parse((event as MessageEvent<string>).data) as {
+        seq: number;
+        boot?: string;
+      };
+      const cached = queryClient.getQueryData<BoardSnapshot>(key);
+      // A warm cache from an earlier visit may be behind the channel's head — or from before a
+      // server restart — so re-anchor it rather than letting the first patch read as a gap (or as
+      // already applied).
+      if (cached && (cached.seq < hello.seq || isOtherRun(cached.boot, hello.boot))) recover();
+      else useConnection.getState().setStatus("live");
+    });
+
+    source.addEventListener("resync", recover);
+
+    source.addEventListener("patch", (event) => {
+      const patch = JSON.parse((event as MessageEvent<string>).data) as BoardPatch;
+      const current = queryClient.getQueryData<BoardSnapshot>(key);
+      if (!current) return; // first snapshot still in flight; it will land at or past this seq
+      const next = applyPatch(current, patch);
+      if (next === null) {
+        recover();
+        return;
+      }
+      if (next !== current) {
+        queryClient.setQueryData(key, next);
+        useConnection.getState().setSeq(next.seq);
+      }
+    });
+
+    source.onerror = () => {
+      // The browser is reconnecting with Last-Event-ID (or the wrapper is reopening); say so.
+      useConnection.getState().setStatus("connecting");
+    };
   });
-
-  source.addEventListener("resync", recover);
-
-  source.addEventListener("patch", (event) => {
-    const patch = JSON.parse((event as MessageEvent<string>).data) as BoardPatch;
-    const current = queryClient.getQueryData<BoardSnapshot>(key);
-    if (!current) return; // first snapshot still in flight; it will land at or past this seq
-    const next = applyPatch(current, patch);
-    if (next === null) {
-      recover();
-      return;
-    }
-    if (next !== current) {
-      queryClient.setQueryData(key, next);
-      useConnection.getState().setSeq(next.seq);
-    }
-  });
-
-  source.onerror = () => {
-    // The browser is already reconnecting with Last-Event-ID; just say so honestly.
-    useConnection.getState().setStatus("connecting");
-  };
-
-  return () => source.close();
 }

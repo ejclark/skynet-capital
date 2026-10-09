@@ -152,7 +152,10 @@ describe("streamBoardPatches", () => {
     const { res, out } = fakeResponse();
     streamBoardPatches(request(), res, channel, "equity", {});
     expect(out.headers).toMatchObject({ "content-type": "text/event-stream" });
-    expect(frames(out.chunks)[0]).toEqual({ event: "hello", data: { seq: 0 } });
+    expect(frames(out.chunks)[0]).toEqual({
+      event: "hello",
+      data: { boot: channel.boot, seq: 0 },
+    });
   });
 
   it("never carries HTML — only seq-numbered ops", () => {
@@ -178,7 +181,7 @@ describe("streamBoardPatches", () => {
     const { res, out } = fakeResponse();
     streamBoardPatches(request(), res, channel, "equity", {});
     hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-26T15:00:01.000Z" });
-    expect(out.chunks.join("")).toContain("id: 1\n");
+    expect(out.chunks.join("")).toContain(`id: ${channel.boot}:1\n`);
   });
 
   it("replays exactly what a reconnecting client missed", () => {
@@ -189,16 +192,57 @@ describe("streamBoardPatches", () => {
     hub.apply({ type: "price", symbol: "NVDA", price: 800, at: "2026-08-26T15:00:02.000Z" });
 
     const { res, out } = fakeResponse();
-    streamBoardPatches(request({ "last-event-id": "1" }), res, channel, "equity", {});
+    streamBoardPatches(
+      request({ "last-event-id": `${channel.boot}:1` }),
+      res,
+      channel,
+      "equity",
+      {},
+    );
     const wire = frames(out.chunks);
-    expect(wire[0]).toEqual({ event: "hello", data: { seq: 1 } });
+    expect(wire[0]).toEqual({ event: "hello", data: { boot: channel.boot, seq: 1 } });
     expect(wire.slice(1).map((f) => f.data.seq)).toEqual([2]);
   });
 
   it("tells a client whose position fell out of the buffer to resync rather than half-patching", () => {
     const channel = createBoardChannel();
     const { res, out } = fakeResponse();
-    streamBoardPatches(request({ "last-event-id": "42" }), res, channel, "equity", {});
-    expect(frames(out.chunks)[0]).toEqual({ event: "resync", data: { seq: 0 } });
+    streamBoardPatches(
+      request({ "last-event-id": `${channel.boot}:42` }),
+      res,
+      channel,
+      "equity",
+      {},
+    );
+    expect(frames(out.chunks)[0]).toEqual({
+      event: "resync",
+      data: { boot: channel.boot, seq: 0 },
+    });
+  });
+
+  it("resyncs a client from an earlier boot even when its seq sits inside the new buffer (#4620)", () => {
+    const hub = new ObservatoryHub(data(snap()));
+    const channel = createBoardChannel();
+    driveBoardChannel(hub, channel);
+    hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-26T15:00:01.000Z" });
+    hub.apply({ type: "price", symbol: "NVDA", price: 800, at: "2026-08-26T15:00:02.000Z" });
+
+    const { res, out } = fakeResponse();
+    streamBoardPatches(
+      request({ "last-event-id": "before-restart:1" }),
+      res,
+      channel,
+      "equity",
+      {},
+    );
+    // seq 1 exists in this buffer, but it is a different run's seq 1 — replaying 2 would lie.
+    expect(frames(out.chunks)).toEqual([{ event: "resync", data: { boot: channel.boot, seq: 2 } }]);
+  });
+
+  it("resyncs a pre-boot-id client (a bare numeric Last-Event-ID) instead of trusting it", () => {
+    const channel = createBoardChannel();
+    const { res, out } = fakeResponse();
+    streamBoardPatches(request({ "last-event-id": "1" }), res, channel, "equity", {});
+    expect(frames(out.chunks)[0]?.event).toBe("resync");
   });
 });
