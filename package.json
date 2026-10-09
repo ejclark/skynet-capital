@@ -113,6 +113,8 @@
     "stability:budget": "tsx scripts/stability/budget-run.mjs",
     "crawl:coverage": "node scripts/crawl/coverage.mjs",
     "phone": "tsx scripts/crawl/phone-one.mjs",
+    "study:compose": "tsx scripts/study/worlds/compose.mjs",
+    "study:parity": "tsx scripts/study/parity.mjs",
     "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth && npm run test:e2e:ct",
     "test:e2e:update": "playwright test --update-snapshots",

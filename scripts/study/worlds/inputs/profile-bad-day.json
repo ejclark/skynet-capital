@@ -1,0 +1,36 @@
+{
+  "$comment": "World 'profile-bad-day' (#4943 slice 2), layered over profile-today: the bot's last pass ran Tuesday at the open — it sold its NVDA shares — and none has run since (so it never sold the put). CRWV has fallen ~12% under its cost, and nothing else asks for a decision. Same people, same accounts.",
+  "base": "profile-today",
+  "participants": {
+    "sauron": {
+      "cash": 998512,
+      "realizedPl": 1016,
+      "lastEquity": 1003240,
+      "positions": [
+        { "symbol": "CRWV", "quantity": 55, "avgPrice": 90.1, "mark": 79.3, "lastday": 80.4 }
+      ]
+    }
+  },
+  "bot": {
+    "passesBefore": "@-2d 09:35",
+    "prependPasses": [
+      {
+        "at": "@-2d 09:35",
+        "verdicts": true,
+        "placed": [
+          {
+            "orderId": "sauron-nvda-4",
+            "symbol": "NVDA",
+            "side": "sell",
+            "quantity": 130,
+            "price": 227.4,
+            "playbookId": "SAURON",
+            "mode": "aggressive",
+            "strategy": "sauron-euphoria-sell",
+            "reason": "NVDA euphoria +0.61 has rolled over at the open; selling the position into strength."
+          }
+        ]
+      }
+    ]
+  }
+}

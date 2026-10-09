@@ -3,6 +3,7 @@
   "entry": [
     "src/scripts/*.ts",
     "scripts/*.mjs",
+    "scripts/study/parity.mjs",
     "scripts/study/session.mjs",
     "scripts/study/packets.mjs",
     "scripts/study/lint.mjs",
