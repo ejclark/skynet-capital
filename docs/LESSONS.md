@@ -35,6 +35,25 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### An athlete's `npm ci` emptied the primary checkout's install through the worktree symlink
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The primary checkout's `node_modules` and `app/node_modules` were found empty (0 entries each) while reading a slice-2 athlete's report for #4943. Timeline (UTC):
+  - 05:38 — the first detectable moment: a fix-track athlete ran a plain `npm ci` inside its isolated worktree.
+  - 05:39 — another athlete noticed the primary was empty, installed its own copy and carried on.
+  - ~06:33 — the foreground session saw it, ~55 min after the cause.
+  - Meanwhile every worktree linked to the primary, and the primary itself, had no install. Restored with `npm ci` + `npm ci --prefix app` from the lockfiles.
+- **ROOT CAUSE:** `scripts/worktree-setup.sh` gave each isolated worktree a *symlink* to the primary checkout's `node_modules`, extended to `app/node_modules` the same morning (#4954).
+  - Git isolation is not filesystem isolation: the link made one shared, mutable install look private.
+  - `npm ci` deletes `node_modules` first, so run in a linked worktree it deleted the primary's install through the link.
+  - What else crosses this system: the primary checkout (dev server, husky hooks, Eric's terminal), every other session's linked worktrees, and the workflow agents that run without isolation and so use the primary as their working directory.
+  - The second failure is detection. The athlete that saw the empty install treated it as its own environment quirk and worked around it, so a shared outage stayed silent for most of an hour.
+- **PREVENTION:** script — `scripts/worktree-setup.sh` now gives each worktree a copy-on-write *clone* (APFS `cp -c`, `--reflink` elsewhere, ~5s), never a link, and converts any old link it finds.
+  - Tested by running `npm ci` and `npm ci --prefix app` inside a set-up worktree: the primary kept all 416 + 79 packages.
+  - Doctrine for the detection half: `docs/DELEGATION.md` rail 2 now says an athlete that finds shared state broken (the primary's install, `main`'s build) stops and reports it, never repairs around it silently.
+- **SIDE QUESTS:** → docs/IDEAS.md: other shared mutable state an unisolated workflow agent can clobber in the primary (`app/dist` used by the shoot scripts, the primary's branch); worktrees left by older sessions still carry links until their next setup run.
+
+---
+
 ### A filter chip jumped the Profile page to the top — Trade's 2026-09-22 fix stayed per call site
 - **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
 - **SIGNAL:** The profile member study (#4943) caught a chip tap scrolling the page to the top ~300ms later, the filter's debounce. Detection lag: the same symptom was reported and fixed on Trade on 2026-09-22 ("the same effect as extreme content shift"); every other page with a filter, lens or calendar range kept it for ~17 days.
