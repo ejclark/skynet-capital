@@ -7,10 +7,9 @@ import type {
 } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts } from "../../src/engine/guards.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { CRWV_WHEEL } from "../../src/playbooks/crwv-wheel.js";
 import { hygieneDemand, hygieneIntents } from "../../src/playbooks/option-hygiene.js";
 import type { EnabledPlaybook, Playbook } from "../../src/playbooks/playbook.js";
-import { enabledPlaybooks } from "../../src/playbooks/registry.js";
+import { CRWV_WHEEL, enabledPlaybooks } from "../../src/playbooks/registry.js";
 import { withOptionSafety } from "../../src/playbooks/with-option-safety.js";
 import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
 import { resolveBotRoster } from "../../src/scripts/autonomous-live-wiring.js";

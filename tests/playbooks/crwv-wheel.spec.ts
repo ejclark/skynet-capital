@@ -13,8 +13,9 @@ import {
 } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { CRWV_WHEEL, WHEEL_DELTAS, wheelPhase } from "../../src/playbooks/crwv-wheel.js";
 import { type EnabledPlaybook, playbookIntents } from "../../src/playbooks/playbook.js";
+import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
+import { WHEEL_DELTAS, wheelPhase } from "../../src/playbooks/wheel.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";

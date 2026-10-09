@@ -622,7 +622,7 @@ follows the print rule · "ex-dip" = the dip-time level, dip day excluded.
 
 | What | Where |
 |---|---|
-| Wheel's 30-day floor and window | `src/playbooks/crwv-wheel.ts` — `MIN_DTE = 30` (l.61), `saleWindow` (l.108), `WHEEL_DELTAS` (l.70) |
+| Wheel's 30-day floor and window | `src/playbooks/wheel.ts` — `MIN_DTE = 30` (l.65), `saleWindow` (l.150), `WHEEL_DELTAS` (l.112) |
 | CRWV print window | `src/domain/earnings-calendar.ts` l.115–119 (11-09..11-16, estimate 11-10) |
 | Print guard | `src/engine/option-guards.ts` `printProblem` (l.170), called by `clampOpen` (l.216) on every open, bought or sold: `option-spans-print`, `option-print-unknown` |
 | Collateral guard | same file, `coverProblem` (l.190) |
