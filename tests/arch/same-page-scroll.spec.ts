@@ -22,11 +22,11 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   // Whether some of them should keep the scroll is a design call held by #4943, not #4944.
   "app/src/routes/accounts.tsx": [
     ["account: id === fallbackId", "account switch (held by #4943)"],
-    ["(prev: ProfileSearch)", "section switch (held by #4943)"],
+    ["section: next === opening ? undefined : next", "section switch (held by #4943)"],
   ],
   "app/src/routes/activity.tsx": [['next === "feed"', "section switch (held by #4943)"]],
   "app/src/routes/research.tsx": [
-    ["account: id", "Playbooks' subscribe-as account switch (held by #4943)"],
+    ["({ ...prev, account: id })", "Playbooks' subscribe-as account switch (held by #4943)"],
     ['next === "board"', "section switch (held by #4943)"],
   ],
   "app/src/routes/settings.tsx": [['next === "preferences"', "section switch (held by #4943)"]],
@@ -54,12 +54,12 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
     ['chapter: "playbooks" as const', "Overview's door into Milestones, a section switch"],
   ],
   // The compare toggles render their result ABOVE the field, so keeping the scroll would hide
-  // it (#4944's non-goals); the rank chips re-sort the field from the top. Held by #4943.
+  // it — #4944's non-goals, held by #4943. (The rank chips are filter chips: they keep the scroll.)
   "app/src/routes/leaderboard.tsx": [
-    ["({ by: prev.by })", "compare cancel (held by #4943)"],
+    ['aria-label="Cancel compare"', "compare cancel, on the armed row (held by #4943)"],
+    ['className="cmp-clear"', "compare cancel, in the hint above the field (held by #4943)"],
     ["b: rowKey", "compare pick (held by #4943)"],
     ["a: rowKey", "compare arm (held by #4943)"],
-    ["search={{ by: m.key }}", "rank chip re-sorts the field (held by #4943)"],
     ["search: { by }", "compare clear (held by #4943)"],
   ],
 };
@@ -189,12 +189,19 @@ describe("same-page refinements keep the scroll position (#4944)", () => {
     expect(unlisted).toEqual([]);
   });
 
-  it("keeps the ledger honest: every entry still names a navigation that resets the scroll", () => {
-    const stale = Object.entries(RESETS).flatMap(([file, entries]) =>
+  it("keeps the ledger honest: every entry names exactly one navigation that resets the scroll", () => {
+    // Exactly one, not "at least one": a snippet is a substring match, so a later reset in the
+    // same file whose text happens to contain an entry's snippet would otherwise ride that entry
+    // through the gate without a line (and a reason) of its own.
+    const off = Object.entries(RESETS).flatMap(([file, entries]) =>
       entries
-        .filter(([snippet]) => !resets.some((r) => r.file === file && r.text.includes(snippet)))
-        .map(([snippet]) => `${file}: ${snippet}`),
+        .map(([snippet]) => ({
+          snippet,
+          hits: resets.filter((r) => r.file === file && r.text.includes(snippet)).length,
+        }))
+        .filter(({ hits }) => hits !== 1)
+        .map(({ snippet, hits }) => `${file}: ${snippet} (${hits} matches)`),
     );
-    expect(stale).toEqual([]);
+    expect(off).toEqual([]);
   });
 });
