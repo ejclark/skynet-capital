@@ -19,13 +19,16 @@
  */
 export function seenText(snippets) {
   const squash = (s) => (s ?? "").toLowerCase().replace(/\s+/g, "");
+  // The matched element's OWN overflow clips its text too: a screen-reader-only label
+  // (`.visually-hidden` — a 1px box, overflow hidden) holds its text in line boxes far wider than
+  // the 1px it shows, so skipping the element itself would measure the label as fully seen.
   const clipBoxes = (el) => {
     const boxes = [{ left: 0, top: 0, right: innerWidth, bottom: innerHeight }];
-    for (let a = el; a?.parentElement; a = a.parentElement) {
-      if (getComputedStyle(a).position === "fixed") break;
-      const cs = getComputedStyle(a.parentElement);
+    for (let a = el; a; a = a.parentElement) {
+      const cs = getComputedStyle(a);
       if (cs.overflowX !== "visible" || cs.overflowY !== "visible")
-        boxes.push(a.parentElement.getBoundingClientRect());
+        boxes.push(a.getBoundingClientRect());
+      if (cs.position === "fixed") break;
     }
     return boxes;
   };
@@ -39,8 +42,10 @@ export function seenText(snippets) {
     return { vis: Math.max(0, rr - l) * Math.max(0, b - t), x: (l + rr) / 2, y: (t + b) / 2 };
   };
   const measureOne = (el) => {
-    if (typeof el.checkVisibility === "function" && !el.checkVisibility({ opacityProperty: true }))
-      return { ratio: 0, covered: false };
+    const shown =
+      typeof el.checkVisibility !== "function" ||
+      el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
+    if (!shown) return { ratio: 0, covered: false };
     const range = document.createRange();
     range.selectNodeContents(el);
     const clips = clipBoxes(el);

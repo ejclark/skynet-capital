@@ -46,5 +46,5 @@ export function sealedCall(args: {
   schema: string;
   message: UserMessage;
   timeoutMs?: number;
-}): Record<string, unknown>;
+}): Promise<Record<string, unknown>>;
 export function halfFrame(browser: unknown, jpeg: Uint8Array): Promise<string>;

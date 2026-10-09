@@ -7,6 +7,7 @@ export const SEEN_MIN: number;
 export const MAX_NUMBERS: number;
 
 export function numbersIn(text: string | null | undefined): number[];
+export function hedged(text: string | null | undefined): boolean;
 export function tokens(text: string | null | undefined): string[];
 export function withinTolerance(
   n: number,

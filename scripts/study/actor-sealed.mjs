@@ -14,7 +14,7 @@
 // (tests/scripts/study-drive.spec.ts) with fixtures. The process half refuses to start when the
 // standalone CLI is signed out (`claude auth status`), with the one command that fixes it.
 
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -160,19 +160,39 @@ export function signedIn(run = spawnSync) {
   };
 }
 
-/** One sealed call from an empty temp dir; returns its structured output. */
-export function sealedCall({ rolePath, schema, message, timeoutMs = 180_000 }) {
+/**
+ * One sealed call from an empty temp dir; resolves to its structured output, rejects with the
+ * reason. ASYNC on purpose: a synchronous spawn would freeze the event loop for the whole call —
+ * and with it the page's route handlers, so in-page requests would queue and land as drift in the
+ * next record.
+ */
+export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_000 }) {
   const cwd = mkdtempSync(join(tmpdir(), "study-sealed-"));
   try {
-    const out = spawnSync("claude", sealedArgs({ rolePath, schema }), {
-      cwd,
-      input: `${JSON.stringify(message)}\n`,
-      encoding: "utf8",
-      timeout: timeoutMs,
-      maxBuffer: 1 << 26,
+    const stdout = await new Promise((done, fail) => {
+      const child = spawn("claude", sealedArgs({ rolePath, schema }), {
+        cwd,
+        stdio: ["pipe", "pipe", "ignore"],
+      });
+      let out = "";
+      child.stdout.setEncoding("utf8").on("data", (chunk) => {
+        out += chunk;
+      });
+      const timer = setTimeout(() => {
+        child.kill("SIGKILL");
+        fail(new Error(`sealed call: timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      child.on("error", (e) => {
+        clearTimeout(timer);
+        fail(new Error(`sealed call: ${e.message}`));
+      });
+      child.on("close", () => {
+        clearTimeout(timer);
+        done(out);
+      });
+      child.stdin.end(`${JSON.stringify(message)}\n`);
     });
-    if (out.error) throw new Error(`sealed call: ${out.error.message}`);
-    return parseResult(out.stdout);
+    return parseResult(stdout);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

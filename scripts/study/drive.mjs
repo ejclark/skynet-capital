@@ -115,20 +115,32 @@ function sealedActor({ card, device, scenario, size, browser }) {
         remaining,
       });
     },
+    // A failed call (timeout, error result, schema not honoured) is a counted refused turn, the
+    // same as a malformed one — never a throw that loses the session and its summary.
     async turn(ctx) {
       const message = await this.message(ctx);
-      const turn = sealedCall({ rolePath: ROLE, schema: turnSchema, message });
+      let turn;
+      try {
+        turn = await sealedCall({ rolePath: ROLE, schema: turnSchema, message });
+      } catch (e) {
+        return { as_member: "(no answer)", expect: "", refused: e.message };
+      }
       const problems = turnProblems(turn);
       return problems.length > 0
         ? { ...turn, refused: `malformed turn: ${problems.join("; ")}` }
         : turn;
     },
-    ease: async ({ turns }) =>
-      sealedCall({
-        rolePath: ROLE,
-        schema: schema("ease"),
-        message: easeMessage({ card, device, scenario, turns }),
-      }),
+    async ease({ turns }) {
+      try {
+        return await sealedCall({
+          rolePath: ROLE,
+          schema: schema("ease"),
+          message: easeMessage({ card, device, scenario, turns }),
+        });
+      } catch (e) {
+        return { score: null, reason: e.message };
+      }
+    },
   };
 }
 

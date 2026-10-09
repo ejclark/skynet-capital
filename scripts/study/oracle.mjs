@@ -20,20 +20,52 @@ export const SEEN_MIN = 0.5;
 export const MAX_NUMBERS = 4;
 
 const MINUS = /[-−–]/;
-const NUMBER = /([-−–]\s*)?\$?\s*([-−–]\s*)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*([km](?![a-z]))?/gi;
+// A minus counts only when it TOUCHES the number ("-$412", "$-3", "−8.3%"): a spaced dash is
+// punctuation ("CRWV – $412"), and a number glued to a word or digit before it is not a fresh
+// number ("400-412" is a range, not 400 and −412; "Q3" is no 3).
+const NUMBER =
+  /(?<![\w.])([-−–])?(?:\$\s*([-−–])?)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*([km](?![a-z]))?(\s*%)?/gi;
+// Dates and clock times are never the amount a task asks for, and split into numbers they would
+// push a right answer ("bought 10/01, down $412") over MAX_NUMBERS.
+const DATE_OR_TIME =
+  /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,4}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
 
-/** Every number written in a free-text answer: "$1,056", "-$412", "−8.32%", "1.2k", "$-3". */
-export function numbersIn(text) {
-  const out = [];
-  for (const m of String(text ?? "").matchAll(NUMBER)) {
+/** Every number in an answer with its unit ("$", "%" or "") and where it sits. */
+function numberHits(text) {
+  const hits = [];
+  const clean = String(text ?? "").replace(DATE_OR_TIME, (d) => " ".repeat(d.length));
+  for (const m of clean.matchAll(NUMBER)) {
     const negative = MINUS.test(m[1] ?? "") || MINUS.test(m[2] ?? "");
     let n = Number(`${m[3].replace(/,/g, "")}${m[4] ?? ""}`);
     const scale = (m[5] ?? "").toLowerCase();
     if (scale === "k") n *= 1_000;
     if (scale === "m") n *= 1_000_000;
-    out.push(negative ? -n : n);
+    const unit = m[0].includes("$") ? "$" : m[6] ? "%" : "";
+    hits.push({ n: negative ? -n : n, unit, start: m.index, end: m.index + m[0].length });
   }
-  return out;
+  return { hits, clean };
+}
+
+/** Every number written in a free-text answer: "$1,056", "-$412", "−8.32%", "1.2k", "$-3". */
+export function numbersIn(text) {
+  return numberHits(text).hits.map((h) => h.n);
+}
+
+/**
+ * Two numbers of the same unit joined only by "or" — "$412 or $500" — are a guess between them,
+ * not an answer. Different units are one fact said two ways ("down $412, or 8.3%").
+ */
+export function hedged(text) {
+  const { hits, clean } = numberHits(text);
+  return hits.some((h, i) => {
+    const next = hits[i + 1];
+    return (
+      next !== undefined &&
+      next.unit === h.unit &&
+      next.n !== h.n &&
+      /^[\s,;(]*or[\s(]*$/i.test(clean.slice(h.end, next.start))
+    );
+  });
 }
 
 /** Lower-cased word tokens (letters and digits), accents folded. */
@@ -70,6 +102,7 @@ export function gradeAnswer(given, expected) {
         why: `${found.length} numbers in one answer — it lists, it does not answer`,
       };
     }
+    if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
     const hit = found.find((n) => withinTolerance(n, expected));
     return hit === undefined
       ? { matched: false, why: `${found.join(", ")} not within tolerance of ${expected.value}` }

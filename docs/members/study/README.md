@@ -50,7 +50,8 @@ their own column: whoever designs them has seen the answer key, so they never co
 --system-prompt-file <role> --json-schema <schema> --input-format stream-json --output-format
 stream-json --verbose --no-session-persistence`, run from an empty temporary directory.
 
-- It loads no CLAUDE.md, memory, plugins, hooks or MCP.
+- It loads no CLAUDE.md, memory, plugins, hooks or MCP. Admin-managed policy still applies under
+  `--safe-mode`; whether a managed CLAUDE.md slips through is unconfirmed, so the canary asks.
 - Its only tool is the structured answer.
 - It signs in with the owner's subscription (the standalone `claude` must be logged in: `claude auth login`).
 

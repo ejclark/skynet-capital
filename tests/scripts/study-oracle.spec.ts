@@ -3,6 +3,7 @@ import type { Seen } from "../../scripts/study/metrics.mjs";
 import {
   grade,
   gradeAnswer,
+  hedged,
   MAX_NUMBERS,
   numbersIn,
   regionSeen,
@@ -38,6 +39,13 @@ describe("numbersIn — every number a free-text answer writes", () => {
   it("finds none in words", () => {
     expect(numbersIn("no idea")).toEqual([]);
   });
+  it("reads a spaced dash as punctuation and a range as two positive numbers", () => {
+    expect(numbersIn("CRWV – $412")).toEqual([412]);
+    expect(numbersIn("400-412")).toEqual([400, 412]);
+  });
+  it("skips dates, clock times and digits glued to a word", () => {
+    expect(numbersIn("bought 10/01 at 9:45 on 2026-10-01, Q3: $412")).toEqual([412]);
+  });
 });
 
 describe("withinTolerance — absolute or relative, either holds", () => {
@@ -65,6 +73,19 @@ describe("gradeAnswer — the fact the member reports", () => {
   });
   it(`refuses an answer that lists more than ${MAX_NUMBERS} numbers — it lists, it does not answer`, () => {
     expect(gradeAnswer("1, 2, 3, 412, 5", NUMBER_TASK.answer).matched).toBe(false);
+  });
+  it("keeps a right answer that also carries a date, a share count and a percentage", () => {
+    const given = "I hold 3 CRWV shares bought 10/01, down $412 (−8.3%)";
+    expect(gradeAnswer(given, { kind: "number", value: 412, abs: 1 }).matched).toBe(true);
+  });
+  it("refuses a guess between numbers of one unit, keeps one fact said in two units", () => {
+    expect(hedged("maybe $100, $200, $412 or $500")).toBe(true);
+    expect(gradeAnswer("maybe $100, $200, $412 or $500", NUMBER_TASK.answer)).toEqual({
+      matched: false,
+      why: "it offers a choice of numbers — a guess",
+    });
+    expect(hedged("down $412, or 8.3%")).toBe(false);
+    expect(gradeAnswer("down $412, or 8.3%", NUMBER_TASK.answer).matched).toBe(true);
   });
   it("matches text when every token of the value is present, case-blind", () => {
     const answer = { kind: "text" as const, value: "Wheel aggressive" };

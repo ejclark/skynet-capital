@@ -161,7 +161,7 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
     waitUntil: "domcontentloaded",
   });
   session.settled = await settle(session);
-  session.opening = { frame: await frame(session), seen: await seen(session) };
+  session.opening = await framed(session);
   // Where the gap-free log starts: every later `since` begins exactly where the last one ended.
   session.mark = await page.evaluate(marks);
   return session;
@@ -178,6 +178,20 @@ function seen(session) {
   return session.watch.length > 0
     ? session.page.evaluate(seenText, session.watch)
     : Promise.resolve([]);
+}
+
+/**
+ * The frame and what it shows. The JPEG and the text measurement are separate round trips, so a
+ * late jump can land between them; measuring on BOTH sides of the capture and keeping each
+ * snippet's worse reading credits only what was on screen for the whole capture.
+ */
+async function framed(session) {
+  const pre = await seen(session);
+  const shot = await frame(session);
+  const post = await seen(session);
+  const score = (s) => (s.covered ? 0 : s.ratio);
+  const worse = (s, i) => (pre[i] && score(pre[i]) < score(s) ? pre[i] : s);
+  return { frame: shot, seen: post.map(worse) };
 }
 
 /** In-page: is there an earlier same-origin entry? Back on the first page would leave the app. */
@@ -284,8 +298,7 @@ export async function act(session, action) {
       top === null
         ? null
         : { name, top, screens: landingScreens(top, after.scrollY, after.innerHeight) },
-    frame: terminal ? null : await frame(session),
-    seen: terminal ? [] : await seen(session),
+    ...(terminal ? { frame: null, seen: [] } : await framed(session)),
   };
   record.findings = actionFindings(record);
   appendFileSync(session.trace, `${JSON.stringify(record)}\n`);
