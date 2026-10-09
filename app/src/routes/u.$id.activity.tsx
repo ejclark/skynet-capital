@@ -2,12 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import { fetchDesk, fetchDeskActivity } from "../live/desk";
+import { fetchDeskActivity } from "../live/desk";
 import { useRefineSearch } from "../live/refine-search";
-import { AccountPage, useOwnsAccount } from "../shell/account-head";
+import { useOwnsAccount } from "../shell/account-head";
 import { ActivityFilterBar } from "../shell/activity-filter-bar";
 import { ActivityTable } from "../shell/activity-table";
-import { PageFrame } from "../shell/frame";
 import { type ActivityPages, useActivityPages } from "../shell/use-activity-pages";
 
 /**
@@ -105,7 +104,6 @@ function ActivityPage(): ReactElement {
   const { symbol, playbook } = search;
   const refine = useRefineSearch<typeof search>();
   const isOwn = useOwnsAccount(id);
-  const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const narrowed = symbol !== undefined || playbook !== undefined;
   const activity = useQuery({
     // Unnarrowed, the key every other reader of this ledger shares (the Trade page's strips).
@@ -135,22 +133,9 @@ function ActivityPage(): ReactElement {
     narrow({ symbol: undefined, playbook: undefined });
   };
 
-  if (desk.isPending)
-    return (
-      <PageFrame>
-        <p className="note">Reading the account…</p>
-      </PageFrame>
-    );
-  if (desk.isError)
-    return (
-      <PageFrame>
-        <p className="note">This account is unreachable.</p>
-      </PageFrame>
-    );
-
-  const d = desk.data.desk;
+  // The frame and head are the layout's (`u.$id.tsx`, #4951) — only the ledger reads here.
   return (
-    <AccountPage desk={d}>
+    <>
       <header className="page-header">
         <h2>Activity</h2>
         <p>Every order this account placed, newest first — what it did, at what price, and why.</p>
@@ -180,7 +165,7 @@ function ActivityPage(): ReactElement {
           />
         </>
       )}
-    </AccountPage>
+    </>
   );
 }
 

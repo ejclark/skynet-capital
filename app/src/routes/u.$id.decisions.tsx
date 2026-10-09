@@ -2,8 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
-import { AccountPage, useOwnsAccount } from "../shell/account-head";
-import { PageFrame } from "../shell/frame";
+import { useOwnsAccount } from "../shell/account-head";
 import { HeartbeatSection } from "../shell/heartbeat";
 
 /**
@@ -26,22 +25,14 @@ function HeartbeatPage(): ReactElement {
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const isOwn = useOwnsAccount(id);
 
-  if (desk.isPending)
-    return (
-      <PageFrame>
-        <p className="note">Listening for the heartbeat…</p>
-      </PageFrame>
-    );
-  if (desk.isError)
-    return (
-      <PageFrame>
-        <p className="note">This account is unreachable.</p>
-      </PageFrame>
-    );
+  // The frame and head are the layout's (`u.$id.tsx`, #4951), which renders this section only
+  // once the shared desk read has data, so these guards narrow the type and never show.
+  if (desk.isPending) return <p className="note">Listening for the heartbeat…</p>;
+  if (desk.isError) return <p className="note">This account is unreachable.</p>;
 
   const d = desk.data.desk;
   return (
-    <AccountPage desk={d}>
+    <>
       <header className="page-header">
         <h2>Heartbeat</h2>
         <p>
@@ -57,7 +48,7 @@ function HeartbeatPage(): ReactElement {
       ) : (
         <HeartbeatSection deskId={id} showPlaybooks={isOwn} />
       )}
-    </AccountPage>
+    </>
   );
 }
 
