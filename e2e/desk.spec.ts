@@ -24,30 +24,6 @@ test.describe("the any-account page", () => {
     await expect(page.getByText("click a symbol for its fill timeline")).toHaveCount(0);
   });
 
-  // #4945: the positions table's action column once collapsed to 0px between 1100 and 1199 (a
-  // media rule hit its `<col>` elements) and `.btn`'s `width: 100%` stretched the row's buttons
-  // past the table's right edge. Layout, so it needs a real browser — day-trader holds shares, so
-  // every row carries a Guidance link.
-  for (const width of [1024, 1100, 1280, 1440]) {
-    test(`keeps each position row's actions inside the table at ${width}px`, async ({ page }) => {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto("/app/u/day-trader");
-      const table = page.locator("table.blotter-fixed");
-      await expect(table.locator("td.act-col .btn").first()).toBeVisible();
-      // A label wider than its box (a squeezed button) overflows past the box's own right edge,
-      // so the button's right is wherever its content ends, not its border box.
-      const past = await table.evaluate((t) => {
-        const edge = t.getBoundingClientRect().right;
-        return [...t.querySelectorAll<HTMLElement>("td.act-col .btn")].map((b) => {
-          const box = b.getBoundingClientRect();
-          return Math.round((box.left + Math.max(box.width, b.scrollWidth) - edge) * 10) / 10;
-        });
-      });
-      expect(past.length).toBeGreaterThan(0);
-      for (const px of past) expect(px).toBeLessThanOrEqual(0);
-    });
-  }
-
   test("renders an account's heartbeat at the decisions route", async ({ page }) => {
     await page.goto("/app/u/day-trader/decisions");
     await expect(page.getByRole("heading", { name: "Heartbeat", exact: true })).toBeVisible();

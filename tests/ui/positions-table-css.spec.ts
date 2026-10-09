@@ -10,9 +10,9 @@ import { join } from "node:path";
  * width one column left, and left the action column 0px wide at 1280. The rule that shows the
  * cells must name `th`/`td`; the one that shows the column says `table-column`.
  *
- * The layout outcome itself — every row's buttons inside the table's right edge at 1024/1100/
- * 1280/1440 — is held by a real browser in `e2e/desk.spec.ts`; this is the mechanical half that
- * runs in `npm test`.
+ * The layout outcome itself — every owner row's buttons inside their own cell and the table's
+ * right edge at 1024/1100/1280/1440, on both `/app/accounts` and `/app/u/:id` — is held by a real
+ * browser in `e2e/positions-table.spec.ts`; this is the mechanical half that runs in `npm test`.
  */
 
 const STYLES = "app/src/styles";
