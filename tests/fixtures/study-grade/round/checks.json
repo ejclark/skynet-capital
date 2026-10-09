@@ -1,0 +1,9 @@
+[
+  { "finding": "F5", "verdict": "real" },
+  { "finding": "F7", "verdict": "real" },
+  { "finding": "F8", "verdict": "real", "same_as": "F7" },
+  { "finding": "F9", "verdict": "real" },
+  { "finding": "F10", "verdict": "real" },
+  { "finding": "F11", "verdict": "world-artifact" },
+  { "finding": "F12", "verdict": "false" }
+]
