@@ -494,15 +494,19 @@ describe("collecting findings", () => {
     },
   ]);
 
-  it("classes analyst findings by voice, and resolves the frames they cite", () => {
-    expect(analyst.map((f) => f.class)).toEqual(["member-voiced", "instrument-only"]);
+  it("puts every analyst finding in the members class, its voice kept beside it", () => {
+    expect(analyst.map((f) => [f.class, f.voice])).toEqual([
+      ["members", "member-voiced"],
+      ["members", "instrument-only"],
+    ]);
     expect(analyst[0]?.surface).toEqual({ route: "/a", viewport: "phone" });
     expect(analyst[0]?.evidence).toEqual(["s/frames/000.jpg"]);
   });
 
   it("gives an expert finding the frames of every batch finding it came from", () => {
     expect(expert[0]).toMatchObject({
-      class: "expert-2",
+      class: "experts",
+      expert: 2,
       surface: { route: "/b", viewport: "both" },
       evidence: ["c/1.jpg", "c/2.jpg"],
     });
@@ -537,7 +541,10 @@ describe("collecting findings", () => {
     expect(new Set(a.findings.map((f) => f.id)).size).toBe(a.findings.length);
     expect(a.findings.at(-1)?.id).toBe(`${findingId(first)}-2`);
     expect(Object.keys(a.classes)).toEqual(a.findings.map((f) => f.id));
-    expect(a.classes[a.findings[2]?.id ?? ""]).toBe("expert-2");
+    expect(a.classes[a.findings[2]?.id ?? ""]).toBe("experts");
+    expect(new Set(Object.values(a.classes))).toEqual(
+      new Set(["members", "experts", "words", "instruments"]),
+    );
     const stripped = stripClasses(a.findings);
     for (const f of stripped) {
       expect(Object.keys(f).sort()).toEqual(["id", "level", "severity", "surface", "what"]);
@@ -546,7 +553,7 @@ describe("collecting findings", () => {
     const ids = stripped.map((f) => f.id);
     expect(ids).toEqual([...ids].sort());
     // The id never hashes the class, so trying each class against what + surface recovers nothing.
-    expect(findingId({ ...first, class: "expert-1" })).toBe(findingId(first));
+    expect(findingId({ ...first, class: "experts" })).toBe(findingId(first));
     for (const f of a.findings) {
       expect(f).toEqual(
         expect.objectContaining({

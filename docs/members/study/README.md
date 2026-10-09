@@ -161,13 +161,22 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   known gaps, `S1`… defects only the readers found) and `primes.json` (member → the ids their card
   hints at). `grade.json` carries ids, never the key's wording; the readout shows wording only with
   `--reveal`.
-- **A round directory** (layout in `scripts/study/round-files.mjs`): `findings.jsonl`,
-  `classes.json` (finding → members · experts · words · instruments, kept apart so the matchers
-  never see it), `matches-1.json` + `matches-2.json` (+ `tiebreak.json`), `checks.json` (real ·
-  false · world-artifact, with `same_as` to merge one problem reported twice), `struck.json` (read
-  when `--struck` is not given), `touches.json` (which key surfaces any trace reached) and
-  `sessions/<member>/<run>/` (drive.mjs runs). A control round holds findings, the matcher files
-  and `control.json` `{expect: [ids]}`.
+- **A round directory** is exactly what `round.mjs --out` writes. Its layout, the finding record
+  and the class vocabulary live in ONE module, `scripts/study/round-contract.mjs`, which the round
+  writes through and the grader and readout read through; `tests/scripts/study-round-e2e.spec.ts`
+  runs a stub round, grades it and reads it out, so a drift between them fails the build.
+  - Written by the round: `findings.jsonl`, `classes.json` (finding → members · experts · words ·
+    instruments, kept apart so the matchers never see it) and
+    `5-sessions/<member>/<world>/<viewport>/<task>/run-<n>/` (drive.mjs runs).
+  - The classes: an analyst's findings are **members**, whether the member said it or the analyst
+    read it from the trace (`voice`: member-voiced · instrument-only); every expert's are
+    **experts** (`expert`: 1…N); the recorder's and census's own measurements are **instruments**,
+    in their own column and never blind.
+  - Written after it by the aware roles: `matches-1.json` + `matches-2.json` (+ `tiebreak.json`),
+    `checks.json` (real · false · world-artifact, with `same_as` to merge one problem reported
+    twice), `struck.json` (read when `--struck` is not given), `touches.json` (which key surfaces
+    any trace reached).
+  - A control round holds findings, the matcher files and `control.json` `{expect: [ids]}`.
 - **Disputes are never settled kindly:** where the matchers disagree and no tie-break is given, the
   finding counts as no match and its row is marked for the owner.
 - **The arithmetic** (`grade-core.mjs`, specced in `tests/scripts/study-grade.spec.ts`): found at
@@ -246,6 +255,8 @@ flowchart LR
   each of those names its source. Ids hash surface + what, never the class.
 - **`--dry-run`** answers every call from `tests/fixtures/study-stub/` (or `--stub <dir>`) — no
   sign-in, no model; `--only-world` and `--cap` narrow it. `--thin` is the area's thin slice.
+  The stub's stand-in key (`sealed/`) carries made-up items and `primes.json`, so a dry round can
+  be graded and read out too.
 - **Resuming:** a step whose `done.json` exists is skipped; `log.jsonl` only ever grows. A resume
   must use the mode the out dir was made with (`<out>/round.json`: profile and its hash, pin,
   sealed dir, thin, stub, `--only-world`, `--cap`) — any other is refused. Sessions check

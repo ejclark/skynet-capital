@@ -5,9 +5,7 @@
 // sealed folder, and the readout shows it only when asked to (`readout.mjs --reveal`).
 
 import {
-  BLIND,
   bestScores,
-  CLASSES,
   consensus,
   controlVerdict,
   cycleGate,
@@ -18,6 +16,7 @@ import {
   validity,
   verdictOf,
 } from "./grade-core.mjs";
+import { BLIND, CLASSES, classProblems } from "./round-contract.mjs";
 
 const LEVELS = ["structural", "surface"];
 const VERDICTS = ["real", "false", "world-artifact"];
@@ -93,7 +92,7 @@ export function gradeRound(input) {
     if (seen.has(f.id)) problems.push(`finding ${f.id} appears twice`);
     seen.add(f.id);
     const cls = classes[f.id];
-    if (!CLASSES.includes(cls)) problems.push(`finding ${f.id} has no class (${cls ?? "missing"})`);
+    problems.push(...classProblems(f, cls));
     if (!LEVELS.includes(f.level)) problems.push(`finding ${f.id} level is "${f.level}"`);
     return { ...f, class: cls };
   });
@@ -182,6 +181,8 @@ export function gradeRound(input) {
         id: f.id,
         class: f.class,
         member: f.member ?? null,
+        voice: f.voice ?? null,
+        expert: f.expert ?? null,
         level: f.level,
         gold: c.gold,
         score: c.score,

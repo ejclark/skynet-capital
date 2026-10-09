@@ -1,7 +1,8 @@
 // Type surface for grade-core.mjs — scripts/ is plain ESM with `allowJs` off, so the spec that
 // imports it needs this (same arrangement as metrics.d.mts).
 
-export type EvaluatorClass = "members" | "experts" | "words" | "instruments";
+import type { EvaluatorClass, Voice } from "./round-contract.mjs";
+
 export type Level = "structural" | "surface";
 export type CheckVerdict = "real" | "false" | "world-artifact";
 
@@ -25,6 +26,8 @@ export interface Finding {
   level: Level | string;
   class?: EvaluatorClass | string;
   member?: string | null;
+  voice?: Voice | string;
+  expert?: number;
   [key: string]: unknown;
 }
 export interface Interval {
@@ -76,9 +79,6 @@ export interface Gate {
   checks: { name: string; need: string; value: unknown; pass: boolean }[];
   kill: { met: boolean; why: string[] };
 }
-
-export const CLASSES: EvaluatorClass[];
-export const BLIND: EvaluatorClass[];
 
 export function parseGold(md: string): GoldItem[];
 export function wilson(k: number, n: number, z?: number): Interval | null;

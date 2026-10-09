@@ -1,10 +1,11 @@
 // A study round's review steps (#4943): the analysts (6), the experts (7), the words pass (8), the
 // member-type audit (9) and the collection of every finding (10). Each blind role reads only the
 // packet built here from earlier steps' files; the decisions are round-plan.mjs's, the shapes
-// round-findings.mjs's.
+// round-findings.mjs's, the file names and classes round-contract.mjs's.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { classProblems, FILES, SESSIONS } from "./round-contract.mjs";
 import {
   collectFindings,
   fromAnalyst,
@@ -37,7 +38,7 @@ const members = (ctx) => [...new Set(ctx.matrix.map((r) => r.member))];
 
 /** One session's files, as the analyst step reads them. */
 function readSession(ctx, s) {
-  const dir = join(ctx.out, "5-sessions", s.dir);
+  const dir = join(ctx.out, SESSIONS, s.dir);
   const task = readJson(join(ctx.out, "4-tasks", "tasks", `${s.task}.json`));
   return {
     ...s,
@@ -54,7 +55,7 @@ function readSession(ctx, s) {
 export async function analysts(ctx) {
   const step = "6-analysts";
   const dir = ctx.dir(step);
-  const plan = readJson(join(ctx.out, "5-sessions", "sessions.json"));
+  const plan = readJson(join(ctx.out, SESSIONS, "sessions.json"));
   const call = ctx.call(step);
   const counts = {};
   for (const member of members(ctx)) {
@@ -237,9 +238,9 @@ const routeOf = (snap) => (snap ? `${snap.pathname}${snap.search ?? ""}` : null)
 /** The recorder's and the census's own findings, with where each fired. */
 function instrumentRaw(ctx) {
   const raw = [];
-  const plan = readJson(join(ctx.out, "5-sessions", "sessions.json"));
+  const plan = readJson(join(ctx.out, SESSIONS, "sessions.json"));
   for (const s of plan) {
-    const dir = join(ctx.out, "5-sessions", s.dir);
+    const dir = join(ctx.out, SESSIONS, s.dir);
     for (const r of readLines(join(dir, "trace.jsonl"))) {
       for (const f of r.findings ?? []) {
         raw.push({
@@ -293,10 +294,13 @@ export function collect(ctx) {
   }
   groups.push(fromInstruments(instrumentRaw(ctx)));
   const { findings, classes } = collectFindings(groups);
+  // The graders refuse a finding outside the contract; refuse it here first, where it was made.
+  const broken = findings.flatMap((f) => classProblems(f));
+  if (broken.length > 0) throw new Error(`findings outside the contract: ${broken.join("; ")}`);
   const lines = (list) => list.map((f) => JSON.stringify(f)).join("\n");
-  writeFileSync(join(ctx.out, "findings.jsonl"), `${lines(findings)}\n`);
-  writeFileSync(join(ctx.out, "findings-unlabelled.jsonl"), `${lines(stripClasses(findings))}\n`);
-  writeJson(join(ctx.out, "classes.json"), classes);
+  writeFileSync(join(ctx.out, FILES.findings), `${lines(findings)}\n`);
+  writeFileSync(join(ctx.out, FILES.unlabelled), `${lines(stripClasses(findings))}\n`);
+  writeJson(join(ctx.out, FILES.classes), classes);
   const byClass = {};
   for (const c of Object.values(classes)) byClass[c] = (byClass[c] ?? 0) + 1;
   ctx.log(step, "findings", { total: findings.length, byClass });

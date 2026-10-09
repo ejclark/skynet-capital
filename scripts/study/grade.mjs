@@ -7,7 +7,7 @@
 //
 // The sealed key is read ONLY from the --sealed directory given (gold.md + primes.json), never a
 // default path: the key lives outside every repo, and a grader that reached for it on its own
-// would be one stray run from leaking it. The round's layout is round-files.mjs's header; the
+// would be one stray run from leaking it. The round's layout is round-contract.mjs's header; the
 // matcher, checker, touch and strike files default to their names inside the round. `--struck` is
 // the list of key items parity proved cannot render (a JSON array or one id a line); without it the
 // round's own struck.json is read when there is one.
@@ -21,6 +21,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseGold } from "./grade-core.mjs";
 import { gradeRound } from "./grade-round.mjs";
+import { FILES } from "./round-contract.mjs";
 import { findSessions, readJson, readJsonl, readList, readOptional } from "./round-files.mjs";
 
 const USAGE =
@@ -57,13 +58,13 @@ export function gradeArgs(argv) {
 /** A control round: its findings, matcher files and what it expects (control.json). */
 function loadControl(dir) {
   if (!dir) return null;
-  const control = readJson(join(dir, "control.json"));
+  const control = readJson(join(dir, FILES.control));
   return {
     expect: control.expect,
-    findings: readJsonl(join(dir, "findings.jsonl")),
-    m1: readJson(join(dir, "matches-1.json")),
-    m2: readJson(join(dir, "matches-2.json")),
-    tiebreak: readOptional(join(dir, "tiebreak.json"), []),
+    findings: readJsonl(join(dir, FILES.findings)),
+    m1: readJson(join(dir, FILES.m1)),
+    m2: readJson(join(dir, FILES.m2)),
+    tiebreak: readOptional(join(dir, FILES.tiebreak), []),
   };
 }
 
@@ -73,7 +74,7 @@ function loadControl(dir) {
  */
 function struckList(given, round) {
   if (given) return readList(given);
-  const own = join(round, "struck.json");
+  const own = join(round, FILES.struck);
   return existsSync(own) ? readList(own) : [];
 }
 
@@ -88,13 +89,13 @@ export function loadRound(opts) {
   return {
     gold: parseGold(readFileSync(goldPath, "utf8")),
     primes: readJson(primesPath),
-    findings: readJsonl(join(round, "findings.jsonl")),
-    classes: readJson(join(round, "classes.json")),
-    m1: readJson(at("m1", "matches-1.json")),
-    m2: readJson(at("m2", "matches-2.json")),
-    tiebreak: readOptional(at("tiebreak", "tiebreak.json"), []),
-    checks: readOptional(at("checks", "checks.json"), []),
-    touches: readOptional(at("touches", "touches.json"), null),
+    findings: readJsonl(join(round, FILES.findings)),
+    classes: readJson(join(round, FILES.classes)),
+    m1: readJson(at("m1", FILES.m1)),
+    m2: readJson(at("m2", FILES.m2)),
+    tiebreak: readOptional(at("tiebreak", FILES.tiebreak), []),
+    checks: readOptional(at("checks", FILES.checks), []),
+    touches: readOptional(at("touches", FILES.touches), null),
     struck: struckList(opts.struck, round),
     sessions: findSessions(round).map((s) => ({
       member: s.member,
@@ -111,7 +112,7 @@ const pct = (x) => (x === null ? "n/a" : `${Math.round(x * 100)}%`);
 function main(argv) {
   const opts = gradeArgs(argv);
   const grade = gradeRound(loadRound(opts));
-  const out = resolve(opts.out ?? join(opts.round, "grade.json"));
+  const out = resolve(opts.out ?? join(opts.round, FILES.grade));
   writeFileSync(out, `${JSON.stringify(grade, null, 2)}\n`);
   const h = grade.headline;
   const b = grade.classes.blind;
