@@ -133,7 +133,7 @@ const TODAY = [
     label: "trade guidance hand-off landing",
     route: SAURON,
     act: [
-      { ...click("link", "Review on Trade ↗"), knownBug: "#4970" },
+      click("link", "Review on Trade ↗"),
       { ...click("button", "Guidance", { exact: true }), only: "phone" },
       { ...click("link", "Guidance for this stock"), only: "desktop" },
     ],
@@ -166,7 +166,7 @@ const FRIEND = [
     act: [click("button", `Why ${PUT} was sold`)],
     // The owner's copy names it as "CRWV-WHEEL · aggressive" under Playbook; the gate strips it.
     // Any rendering of the id counts (getByText: case-insensitive substring) — a strategy tag too.
-    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true, knownBug: "#4971" })],
+    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true })],
   },
 ].map((s) => ({ viewer: "jordan", ...s }));
 

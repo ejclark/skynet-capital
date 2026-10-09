@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Unisolated workflow agents share the primary checkout's mutable state.** Review and ship
+  agents run without `isolation: worktree`, so their working directory is the primary. An `npm ci`,
+  an `npm run build --prefix app` (rewrites the `app/dist` the shoot scripts read) or a branch
+  checkout there lands on everyone. Worktrees made by older sessions also still carry
+  `node_modules` links until their next `worktree-setup.sh` run. Cheapest guard: a `guard-bash.mjs`
+  rule that refuses `npm ci`/`npm install` when the target `node_modules` is a symlink, plus a note
+  in `docs/DELEGATION.md` that review/ship agents `cd` into the worktree they act on.
+  _(src: Claude · while: retro on the 2026-10-09 emptied install)_
+
 - **Make the crawl's report stop saying more than it checked.** Two quiet false passes found while
   writing up why the member tests missed the profile breakage (#4943). The friction ledger's
   `judge` column says `pending (grind)` on every row, and no lane schedules that grind, so it reads
