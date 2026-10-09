@@ -35,7 +35,8 @@ describe("decisionsFor", () => {
       clocks: ["Expires in 24 days", "Jobs report Oct 2", "8 contracts · worth $5,040"],
       primary: {
         label: "Review on Trade ↗",
-        href: "/app/trade?desk=eric&symbol=TSLA&strike=400&exp=2026-10-17",
+        // the held contract, never a new-order preset (#4947)
+        href: "/app/trade?desk=eric&symbol=TSLA&section=orders&manage=TSLA261017P00400000",
       },
       range: { type: "put", side: "long", strike: 400, breakeven: 385.9 },
     });
@@ -47,6 +48,36 @@ describe("decisionsFor", () => {
     expect(d?.title).toBe("Down 60% with 16 days left");
     expect(d?.why).toMatch(/last three weeks/);
     expect(d?.learn?.term).toBe("timeDecay");
+  });
+
+  describe("a sold option (#4947): the member was paid, so the copy is a seller's", () => {
+    it("states what came in and what buying back costs, never 'from what you paid'", () => {
+      // 1 AMD Nov 20 $150 put sold for $263, now $555 to buy back (−111% of the premium).
+      const [d] = decisionsFor("eric", [held("AMD261120P00150000", -1, 263, -555)], []);
+      expect(d).toMatchObject({
+        kind: "at-risk",
+        title: "Collected $263; buying back costs $555",
+        caption: expect.stringContaining("Buying it back now costs $555, $292 more than that."),
+        primary: {
+          label: "Review on Trade ↗",
+          href: "/app/trade?desk=eric&symbol=AMD&section=orders&manage=AMD261120P00150000",
+        },
+        range: { type: "put", side: "short", strike: 150 },
+      });
+      expect(`${d?.title} ${d?.caption} ${d?.why}`).not.toMatch(/what you paid|it cost|from cost/);
+    });
+
+    it("never says time works against it in the last three weeks", () => {
+      // 2 NVDA Oct 9 $180 calls sold for $300, now $900 to buy back, 16 days left.
+      const [d] = decisionsFor("eric", [held("NVDA261009C00180000", -2, 300, -900)], []);
+      expect(d?.title).toBe("Collected $600; buying back costs $900");
+      expect(d?.why).not.toMatch(/working against|loses value fastest/);
+      expect(d?.why).toMatch(/works for a seller/);
+      expect(d?.learn?.term).not.toBe("timeDecay");
+      expect(d?.primary.href).toBe(
+        "/app/trade?desk=eric&symbol=NVDA&section=orders&manage=NVDA261009C00180000",
+      );
+    });
   });
 
   it("suggests locking in a big winner, with a lower bar for shares than options", () => {

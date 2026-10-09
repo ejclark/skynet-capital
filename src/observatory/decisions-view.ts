@@ -192,6 +192,7 @@ function copyFor(
   const days = p.plain.expiresInDays;
   const late = days !== undefined && days <= DECAY_WINDOW_DAYS;
   const left = days === 0 ? "no time" : p.plain.expiresIn;
+  if (days !== undefined && p.quantity < 0) return soldCopy(p, display, pl, basis, late, left);
   return {
     title: late
       ? `Down ${Math.abs(ret).toFixed(0)}% with ${left} left`
@@ -206,6 +207,31 @@ function copyFor(
       : days !== undefined
         ? { learn: { term: "breakeven", label: "What is a breakeven?" } as const }
         : {}),
+  };
+}
+
+/**
+ * A SOLD option that's AT RISK (#4947). The member was paid the premium up front, so "from what
+ * you paid" is false (a $263 put now $555 to buy back read "Down 111% from what you paid"), and
+ * the last three weeks' decay works FOR a seller, not against. The numbers that matter are what
+ * came in and what closing costs now.
+ */
+function soldCopy(
+  p: Held,
+  display: string,
+  pl: number,
+  collected: number,
+  late: boolean,
+  left: string,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const buyBack = formatCurrency(Math.abs(p.marketValue));
+  return {
+    title: `Collected ${formatCurrency(collected)}; buying back costs ${buyBack}`,
+    caption: `${display} brought in ${formatCurrency(collected)}. Buying it back now costs ${buyBack}, ${formatCurrency(Math.abs(pl))} more than that. Worst case from here: ${p.plain.worst}.`,
+    why: late
+      ? `✦ each day that passes works for a seller, but this one has moved against you. with ${left} left, decide on purpose: buy it back, or say why you're holding.`
+      : "✦ closing this now costs more than it brought in. worth deciding on purpose: buy it back, or say why you're holding.",
+    learn: { term: "breakeven", label: "What is a breakeven?" },
   };
 }
 
@@ -228,11 +254,14 @@ function dueFor(p: Held): DecisionDue | undefined {
   return undefined;
 }
 
+/** An option opens Trade on the HELD contract — the Orders pane with its Close / Roll row marked,
+ *  the same `section=orders&manage=<OCC>` hand-off as the app's `manageSearch` (#4947). A strike
+ *  and expiry preset would seed a new order instead. Shares open on their ticker. */
 function tradeHref(deskId: string, symbol: string): string {
   const desk = encodeURIComponent(deskId);
   const occ = parseOccSymbol(symbol);
   return occ
-    ? `/app/trade?desk=${desk}&symbol=${occ.underlying}&strike=${occ.strike}&exp=${occ.expiration}`
+    ? `/app/trade?desk=${desk}&symbol=${occ.underlying}&section=orders&manage=${symbol}`
     : `/app/trade?desk=${desk}&symbol=${encodeURIComponent(symbol)}`;
 }
 

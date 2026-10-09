@@ -214,7 +214,7 @@ const ericDecisions = [
     learn: { term: "ivCrush", label: "What is IV crush?" },
     primary: {
       label: "Review on Trade ↗",
-      href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
+      href: "/app/trade?desk=human-eric&symbol=NVDA&section=orders&manage=NVDA260918C00180000",
     },
     secondary: { label: "Show in table", href: "#pos-NVDA260918C00180000" },
     stakeRaw: 2226,
