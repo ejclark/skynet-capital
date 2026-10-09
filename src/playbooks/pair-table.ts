@@ -49,6 +49,10 @@ export interface Strategy {
   /** Its window counts toward an earnings print, so a pair needs that ticker's next print on file
    *  and a window a study measured before it takes a new subscription (criterion 9). */
   readonly dateKeyed?: true;
+  /** Its rules never read a study, so an owner's labelled, dated conviction may run it where the
+   *  study says stand aside (criterion 2; #4642 settled the wheel on CRWV this way). A strategy
+   *  without this flag acts on its study, so a stand-aside is a refusal there. */
+  readonly runsOnConviction?: true;
 }
 
 /** Each strategy declares its screen (slice 1: one run costs 0.74 s and zero tokens). */
@@ -68,6 +72,7 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     summary:
       "Sells one cash-secured put about a month out, then covered calls on any shares it is assigned.",
     instrument: "options",
+    runsOnConviction: true,
     screen: "node scripts/research/premium-fit.mjs <SYM>",
   },
   "call-spread": {

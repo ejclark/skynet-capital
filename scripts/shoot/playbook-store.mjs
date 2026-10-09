@@ -22,6 +22,9 @@
 //                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
 //   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
 //                disabled row's reason in words, and "Check first" stating one contract's cash.
+//   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the
+//                CRWV wheel states its reason and check day with "Set a new date", and the card says
+//                what is budgeted inside the allocation.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -477,6 +480,46 @@ groups.picker = [
     path: undefined,
     act: checkCrwv,
     extraStubs: PREFLIGHT,
+  }),
+];
+
+// #4469 slice 3c part 3b: Sauron's CRWV wheel states its conviction, and the wheel has a $100,000
+// allocation with $75,000 budgeted. Built by the server's own view, so the sentence is the real one.
+views.conviction = withCounts(
+  playbookStoreView(
+    [
+      subscription("CRWV-WHEEL", {
+        mode: "aggressive",
+        capitalAllocated: 75_000,
+        conviction: {
+          reason: "Premium is cheap, but I want the shares at this strike.",
+          checkOn: "2027-01-29",
+        },
+      }),
+    ],
+    false,
+    [],
+    false,
+    undefined,
+    undefined,
+    { wheel: { capitalAllocated: 100_000 } },
+  ),
+  { ...COUNTS, "CRWV-WHEEL": 1 },
+);
+const openConviction = async (page) => {
+  await inCard(page, "The wheel").getByRole("button", { name: "Set a new date" }).click();
+  await toStrategy("The wheel")(page);
+};
+groups.conviction = [
+  strategyFrame("phone-1-conviction-and-allocation", {
+    view: views.conviction,
+    path: undefined,
+    act: toStrategy("The wheel"),
+  }),
+  strategyFrame("phone-2-set-a-new-date", {
+    view: views.conviction,
+    path: undefined,
+    act: openConviction,
   }),
 ];
 

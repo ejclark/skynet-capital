@@ -10,6 +10,7 @@ import {
   type SubscriptionWriteResult,
   subscribeRequest,
 } from "../live/playbook-store";
+import { ConvictionFields, convictionOf } from "./playbook-conviction";
 
 /**
  * THE PLAYBOOK STORE's one form (#885), for both writes: a new subscription posts to subscribe,
@@ -21,6 +22,11 @@ import {
  * typed ticker could save a subscription that never opens anything. The chips appear only when
  * the basket has more than one symbol. The copy says the filter limits new entries only: exits
  * still manage whatever the playbook already holds.
+ *
+ * A pair the study does not back, on a strategy that runs on conviction (`needsConviction`, #4469
+ * slice 3c part 3b), asks for the owner's reason and check day first and will not save without them
+ * (criterion 2). The row's own call stays above the form, so the study's word is read before the
+ * owner's overrides it.
  *
  * A NEW subscription also offers "Check first" (#4469 slice 3b part 2): it asks the server what
  * Subscribe would say at this mode and budget — the live price, the options level, a liquid chain —
@@ -92,6 +98,7 @@ export function SubscribeForm({
   card,
   editing,
   reduceOnly = false,
+  needsConviction = false,
   onSaved,
   onCancel,
 }: {
@@ -101,6 +108,8 @@ export function SubscribeForm({
   readonly editing?: SubscriptionView;
   /** Behind the delegation fog: an edit may only lower exposure (the server enforces it). */
   readonly reduceOnly?: boolean;
+  /** The pair's study does not back it: a new subscription must state a conviction. */
+  readonly needsConviction?: boolean;
   readonly onSaved: () => void;
   readonly onCancel?: () => void;
 }): ReactElement {
@@ -116,6 +125,8 @@ export function SubscribeForm({
   const [compoundAllocation, setCompoundAllocation] = useState(
     editing?.compoundAllocation === true,
   );
+  const [reason, setReason] = useState("");
+  const [checkOn, setCheckOn] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // The preflight answer is keyed on the question it answered; a changed mode or budget hides it.
@@ -128,9 +139,13 @@ export function SubscribeForm({
   const uncappedId = useId();
   const compoundId = useId();
   const capitalAllocated = Number(capital);
+  // An edit never asks: the owner's conviction is stated and re-dated on the row (`ConvictionPanel`).
+  const asksConviction = needsConviction && !editing;
+  const conviction = asksConviction ? convictionOf(reason, checkOn) : undefined;
   const valid =
-    uncapped ||
-    (capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0);
+    (uncapped ||
+      (capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0)) &&
+    (!asksConviction || conviction !== undefined);
   // Basket order, whatever order they were tapped in.
   const symbols = card.symbols.filter((s) => picked.includes(s));
   // A saved filter naming symbols the basket no longer holds (an API subscribe, a retired ticker)
@@ -156,6 +171,7 @@ export function SubscribeForm({
           capitalAllocated,
           ...(symbols.length > 0 ? { symbols } : {}),
           ...(compoundAllocation ? { compoundAllocation: true } : {}),
+          ...(conviction ? { conviction } : {}),
         });
 
   const save = async () => {
@@ -172,7 +188,7 @@ export function SubscribeForm({
     }
   };
 
-  const question = `${mode}|${capital}`;
+  const question = `${mode}|${capital}|${conviction ? "conviction" : ""}`;
   const check = async () => {
     setChecking(true);
     setError(undefined);
@@ -182,6 +198,7 @@ export function SubscribeForm({
         playbookId: card.id,
         mode,
         capitalAllocated,
+        ...(conviction ? { conviction: true } : {}),
       });
       setChecked({ key: question, answer });
     } catch (err) {
@@ -195,6 +212,20 @@ export function SubscribeForm({
   const label = editing ? (busy ? "Saving…" : "Save changes") : busy ? "Subscribing…" : "Subscribe";
   return (
     <div className="pb-subscribe-form">
+      {asksConviction ? (
+        <>
+          <p className="pb-form-note">
+            The study does not back this one. It runs only as your own conviction, against that
+            study.
+          </p>
+          <ConvictionFields
+            reason={reason}
+            checkOn={checkOn}
+            onReason={setReason}
+            onCheckOn={setCheckOn}
+          />
+        </>
+      ) : null}
       <div className="field">
         <label htmlFor={modeId}>Mode</label>
         <select id={modeId} value={mode} onChange={(e) => setMode(e.target.value as PlaybookMode)}>

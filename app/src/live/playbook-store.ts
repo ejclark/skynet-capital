@@ -54,6 +54,16 @@ export interface SubscriptionView {
   /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
    *  #3527 slice 3) — absent means off, the flat-budget default. */
   readonly compoundAllocation?: boolean;
+  /** The owner's conviction on this pair (#4469 slice 3c): why, and the market day it is checked.
+   *  Absent = none stated. A failed check stops the pair's NEW entries; exits never stop. */
+  readonly conviction?: ConvictionView;
+}
+
+/** An owner's conviction — mirrors `SubscriptionConviction` in `src/domain/types.ts`. */
+export interface ConvictionView {
+  readonly reason: string;
+  /** `YYYY-MM-DD`. */
+  readonly checkOn: string;
 }
 
 /** The delegation fog (#1707) — mirrors `DelegationGateView`. The server owns the copy. */
@@ -102,6 +112,9 @@ export interface PairRowView {
   readonly subscription?: SubscriptionView;
   /** Why a NEW subscription would be refused, in the server's own sentence (criterion 9). */
   readonly subscribeRefusal?: string;
+  /** The study does not back this pair, but its strategy runs on conviction: a NEW subscription
+   *  needs the owner's reason and check day (criterion 2). `subscribeRefusal` assumes they are given. */
+  readonly needsConviction?: true;
   /** "the call spread trades NVDA on this bot; the run-up yields it" — a hand-off, not a refusal. */
   readonly handOff?: string;
   /** "not trading — the call spread owns NVDA" — the bots skip this held pair. */
@@ -116,6 +129,15 @@ export interface StrategyCardView {
   readonly instrument: "shares" | "options";
   readonly summary: string;
   readonly pairs: readonly PairRowView[];
+  /** The account's allocation for this strategy, once its owner sets one (#4469 slice 3c). */
+  readonly allocation?: StrategyAllocationView;
+}
+
+/** What the account gives one strategy, and what its tickers' budgets add up to inside it. */
+export interface StrategyAllocationView {
+  readonly capitalAllocated: number;
+  /** The budgets set on this strategy's pairs, on or paused; compounded gains ride on top. */
+  readonly budgeted: number;
 }
 
 export interface PlaybookStoreView {
@@ -151,7 +173,25 @@ export const subscribeRequest = (input: {
   readonly capitalAllocated: number;
   readonly symbols?: readonly string[];
   readonly compoundAllocation?: boolean;
+  /** Required by a pair the study does not back (`PairRowView.needsConviction`). */
+  readonly conviction?: ConvictionView;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/subscribe", input);
+
+/** State a conviction on a pair the account holds, or set its next check day: the whole conviction
+ *  each time (#4469 slice 3c). The server refuses a check day that is not still to come. */
+export const convictionRequest = (input: {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly conviction: ConvictionView;
+}): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/conviction", input);
+
+/** What the account gives one strategy; `capitalAllocated: null` clears it. The server refuses an
+ *  allocation below the budgets already set inside it. */
+export const allocationRequest = (input: {
+  readonly id: string;
+  readonly strategy: string;
+  readonly capitalAllocated: number | null;
+}): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/allocation", input);
 
 /** Re-tune an existing subscription without touching whether it runs (#4649). Every field is the
  *  whole new value: `capitalAllocated: null` is uncapped, `symbols: []` is the whole basket. */
@@ -196,12 +236,15 @@ export async function preflightRequest(input: {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly capitalAllocated: number;
+  /** The form has a conviction filled in, which a pair needing one is judged as having. */
+  readonly conviction?: boolean;
 }): Promise<PreflightAnswer> {
   const query = new URLSearchParams({
     id: input.id,
     playbookId: input.playbookId,
     mode: input.mode,
     capital: String(input.capitalAllocated),
+    ...(input.conviction ? { conviction: "1" } : {}),
   });
   const res = await fetch(`/api/playbook-store/preflight?${query}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`preflight ${res.status}`);

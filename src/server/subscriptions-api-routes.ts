@@ -242,6 +242,7 @@ async function handleSubscribe(
     playbookId: body.playbookId,
     subscriptions: held,
     asOfIso: asOfIso(config),
+    ...(body.conviction ? { conviction: true } : {}),
     ...(envNamed ? { envNamed } : {}),
   };
   const refusal =

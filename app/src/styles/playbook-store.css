@@ -639,3 +639,34 @@
 .pb-preflight {
   font-weight: 600;
 }
+
+/* An owner's conviction and a strategy's allocation (#4469 slice 3c part 3b). Each is a status line
+   in the owner's block with one control under it, and a form that opens in place — the same shape
+   Edit uses, so a phone scrolls one block, not a second surface. The ◆ / ◇ glyph and the words
+   carry the state; nothing here means anything by hue. */
+.pb-conviction,
+.pb-allocation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pb-conviction-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.pb-conviction-fields legend {
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pb-conviction-fields textarea {
+  resize: vertical;
+}

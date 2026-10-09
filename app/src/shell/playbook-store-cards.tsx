@@ -56,12 +56,15 @@ function NewSubscription({
   delegation,
   botsOnly,
   refusal,
+  needsConviction,
   onChanged,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
   readonly delegation: DelegationGateView;
   readonly botsOnly?: BotsOnlyGateView;
+  /** The study does not back this pair: Subscribe asks for the owner's conviction first. */
+  readonly needsConviction?: boolean;
   /** Why the server would refuse a new subscription to this pair (criterion 9) — said in words. */
   readonly refusal?: string;
   readonly onChanged: () => void;
@@ -86,7 +89,12 @@ function NewSubscription({
   return (
     <details className="pb-subscribe-disclosure">
       <summary>Subscribe</summary>
-      <SubscribeForm accountId={accountId} card={card} onSaved={onChanged} />
+      <SubscribeForm
+        accountId={accountId}
+        card={card}
+        needsConviction={needsConviction === true}
+        onSaved={onChanged}
+      />
     </details>
   );
 }
@@ -246,6 +254,7 @@ export function PairRow({
           delegation={delegation}
           {...(botsOnly ? { botsOnly } : {})}
           {...(pair.subscribeRefusal ? { refusal: pair.subscribeRefusal } : {})}
+          {...(pair.needsConviction ? { needsConviction: true } : {})}
           onChanged={onChanged}
         />
       ) : null}
