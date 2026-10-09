@@ -1,5 +1,6 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { openReconnectingSource } from "./reconnecting-source";
 
 /**
  * THE DESK'S EVENT CHANNEL (#3407 P4 slice 1) — the SSE → Query seam for one account's order
@@ -46,17 +47,18 @@ export function connectDeskEvents(
   onEvent?: (event: DeskOrderEvent) => void,
 ): () => void {
   if (typeof EventSource === "undefined") return () => undefined;
-  const source = new EventSource(`/api/trade/events?participantId=${encodeURIComponent(deskId)}`, {
-    withCredentials: true,
-  });
-  // A (re)connect may have missed frames — the bus keeps no replay — so re-read everything once.
-  source.addEventListener("hello", () => invalidateDesk(queryClient, deskId));
-  source.addEventListener("order", (raw) => {
-    const event = JSON.parse((raw as MessageEvent<string>).data) as DeskOrderEvent;
-    invalidateDesk(queryClient, deskId);
-    onEvent?.(event);
-  });
-  return () => source.close();
+  return openReconnectingSource(
+    `/api/trade/events?participantId=${encodeURIComponent(deskId)}`,
+    (source) => {
+      // A (re)connect may have missed frames — the bus keeps no replay — so re-read everything once.
+      source.addEventListener("hello", () => invalidateDesk(queryClient, deskId));
+      source.addEventListener("order", (raw) => {
+        const event = JSON.parse((raw as MessageEvent<string>).data) as DeskOrderEvent;
+        invalidateDesk(queryClient, deskId);
+        onEvent?.(event);
+      });
+    },
+  );
 }
 
 /** Mount the channel for the desk a surface shows; nothing for an empty desk id. The listener

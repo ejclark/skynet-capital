@@ -36,8 +36,10 @@ interface BoardPatchContext {
 
 export type BoardPatchChannel = WorldPatchChannel<BoardPatchContext>;
 
-export function createBoardChannel(): BoardPatchChannel {
-  return new WorldPatchChannel<BoardPatchContext>();
+/** `boot` is pinned only where payloads are hashed for determinism (the study worlds); a server
+ *  leaves it unset so every process start names a new run of seqs (#4620). */
+export function createBoardChannel(boot?: string): BoardPatchChannel {
+  return new WorldPatchChannel<BoardPatchContext>(boot === undefined ? {} : { boot });
 }
 
 /** A derived ceremony transition, flattened onto the wire. Detail is carried verbatim. */
@@ -93,24 +95,39 @@ export function driveBoardChannel(
   };
 }
 
-/** `Last-Event-ID` (the browser's own reconnect header), or undefined when this is a fresh connect. */
-function lastEventId(req: IncomingMessage): number | undefined {
+/** The SSE id a patch carries: `boot:seq`, so a browser's own reconnect header names the run too. */
+const eventId = (boot: string, seq: number) => `${boot}:${seq}`;
+
+/**
+ * `Last-Event-ID` (the browser's own reconnect header) as `{ boot, seq }`, or undefined when this is
+ * a fresh connect. An id that is not `boot:seq` (a pre-boot-id client, a mangled header) parses to a
+ * boot nothing matches, which resolves to a resync — never to a guess.
+ */
+function lastEventId(req: IncomingMessage): { boot: string; seq: number } | undefined {
   const raw = req.headers["last-event-id"];
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return undefined;
-  const seq = Number.parseInt(value, 10);
-  return Number.isInteger(seq) ? seq : undefined;
+  const cut = value.lastIndexOf(":");
+  const seq = Number.parseInt(value.slice(cut + 1), 10);
+  return { boot: cut < 0 ? "" : value.slice(0, cut), seq: Number.isInteger(seq) ? seq : -1 };
 }
 
 function writePatch(
   res: ServerResponse,
+  channel: BoardPatchChannel,
   patch: WorldPatch<BoardPatchContext>,
   opts: StandingsPatchOptions,
 ): void {
   const ops = [...patch.ops, ...standingsFieldOps(patch.context.prev, patch.context.next, opts)];
   // Written even when empty: the seq run must stay gapless, or the next patch reads as a gap and
   // costs the viewer a needless full frame.
-  res.write(sseFrame(JSON.stringify({ seq: patch.seq, at: patch.at, ops }), "patch", patch.seq));
+  res.write(
+    sseFrame(
+      JSON.stringify({ boot: channel.boot, seq: patch.seq, at: patch.at, ops }),
+      "patch",
+      eventId(channel.boot, patch.seq),
+    ),
+  );
 }
 
 /**
@@ -128,21 +145,24 @@ export function streamBoardPatches(
   openSseStream(res);
   const opts: StandingsPatchOptions = { metric, ...compare };
   const resumeAt = lastEventId(req);
+  const { boot } = channel;
 
   if (resumeAt === undefined) {
-    res.write(sseFrame(JSON.stringify({ seq: channel.head }), "hello"));
+    res.write(sseFrame(JSON.stringify({ boot, seq: channel.head }), "hello"));
   } else {
-    const replay = channel.since(resumeAt);
-    if (replay.ok) {
-      res.write(sseFrame(JSON.stringify({ seq: resumeAt }), "hello"));
-      for (const patch of replay.patches) writePatch(res, patch, opts);
+    // A client from an earlier run of this server (a restart) holds seqs that mean nothing here, even
+    // when they happen to fall inside the new buffer — the id's boot is checked before its seq.
+    const replay = resumeAt.boot === boot ? channel.since(resumeAt.seq) : undefined;
+    if (replay?.ok) {
+      res.write(sseFrame(JSON.stringify({ boot, seq: resumeAt.seq }), "hello"));
+      for (const patch of replay.patches) writePatch(res, channel, patch, opts);
     } else {
       // An honest admission, not a partial history: the client takes one fresh frame instead of
       // patching around a hole. No cue from the missed window is replayed, so nothing double-fires.
-      res.write(sseFrame(JSON.stringify({ seq: replay.head }), "resync"));
+      res.write(sseFrame(JSON.stringify({ boot, seq: channel.head }), "resync"));
     }
   }
 
-  const unsubscribe = channel.subscribe((patch) => writePatch(res, patch, opts));
+  const unsubscribe = channel.subscribe((patch) => writePatch(res, channel, patch, opts));
   req.on("close", unsubscribe);
 }

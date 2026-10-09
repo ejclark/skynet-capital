@@ -1,6 +1,7 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { Quote } from "./quote";
+import { openReconnectingSource } from "./reconnecting-source";
 
 /**
  * THE QUOTE'S PUSH CHANNEL (#3407 P4) — the SSE → Query seam for one symbol's underlying quote,
@@ -19,7 +20,8 @@ import type { Quote } from "./quote";
  * Where the server declines — no hub, no linked session, an OAuth link with no key/secret pair, the
  * symbol budget full — it answers JSON instead of a stream, the EventSource errors once, and the
  * surface shows the commit-time price exactly as it did before. Nothing here has to know which case
- * it was.
+ * it was. (A stream that DID open and is then refused on reconnect — the edge's 502 while a machine
+ * restarts — is reopened by `reconnecting-source.ts`; one that never opened is left alone.)
  */
 
 /** A pushed frame: the REST answer's own shape, plus when the feed made the tick behind it. */
@@ -36,16 +38,17 @@ export function connectQuoteStream(
 ): () => void {
   if (typeof EventSource === "undefined") return () => undefined;
   const asked = (typeof symbols === "string" ? [symbols] : symbols).join(",");
-  const source = new EventSource(`/api/trade/quote-stream?symbol=${encodeURIComponent(asked)}`, {
-    withCredentials: true,
-  });
-  source.addEventListener("quote", (raw) => {
-    const quote = JSON.parse((raw as MessageEvent<string>).data) as StreamedQuote;
-    // The server's OWN symbol field decides which query this lands in — never the caller's prop,
-    // the same rule `quote-header.tsx` renders by. A frame for another symbol is not this one's.
-    queryClient.setQueryData(["quote", quote.symbol], quote);
-  });
-  return () => source.close();
+  return openReconnectingSource(
+    `/api/trade/quote-stream?symbol=${encodeURIComponent(asked)}`,
+    (source) => {
+      source.addEventListener("quote", (raw) => {
+        const quote = JSON.parse((raw as MessageEvent<string>).data) as StreamedQuote;
+        // The server's OWN symbol field decides which query this lands in — never the caller's prop,
+        // the same rule `quote-header.tsx` renders by. A frame for another symbol is not this one's.
+        queryClient.setQueryData(["quote", quote.symbol], quote);
+      });
+    },
+  );
 }
 
 /** Mount the channel while a surface is showing a committed symbol; nothing for an empty one, and
