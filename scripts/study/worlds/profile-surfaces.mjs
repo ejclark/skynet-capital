@@ -17,6 +17,7 @@ const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
 const click = (r, name, extra = {}) => ({ click: role(r, name, extra) });
 const SECTIONS = 'nav[aria-label="Sections"]';
+const PAGER = 'section[aria-label="Needs a decision"]';
 
 /** The owner's book on a normal day, plus the invited friend's non-owner view of the bot. */
 const TODAY = [
@@ -49,9 +50,26 @@ const TODAY = [
     id: "decision-idea",
     label: "decision: an idea card",
     route: SAURON,
-    struck:
-      "#4961 — ideas skip a playbook the account already subscribes to, and this bot subscribes" +
-      " to every windowed playbook on a symbol it holds; an idea needs an input change",
+    // Before #4961 this book's desk carries an idea; after it, ideas skip a playbook the account
+    // already subscribes to, and this bot subscribes to every windowed playbook on a symbol it
+    // holds — so the composed desk decides, and a pinned run of an older commit shows the card.
+    strikeUnless: {
+      read: "/api/desk/sauron",
+      holds: (body) => body?.desk?.decisions?.some((d) => d.kind === "idea") ?? false,
+      why:
+        "#4961 — the composed desk has no idea: ideas skip a playbook the account already" +
+        " subscribes to, and this bot subscribes to every windowed playbook on a symbol it holds",
+    },
+    // Decisions page one at a time, most money at stake first: the put leads, the idea is next.
+    // The pager's arrows sit in its head on desktop and inside the card at 390.
+    act: [
+      { ...click("button", "Next decision", { within: `${PAGER} > header` }), only: "desktop" },
+      {
+        ...click("button", "Next decision", { within: `${PAGER} article` }),
+        only: "phone",
+        knownBug: "#4970",
+      },
+    ],
     expect: [role("article", "Idea:")],
   },
   {

@@ -31,6 +31,15 @@ export function worstExit(
   unstubbed?: string[],
   opts?: { strict?: boolean },
 ): 0 | 1;
+export interface StrikeRule {
+  read: string;
+  holds: (body: unknown) => boolean;
+  why: string;
+}
+export function strikeFor<S extends object>(
+  surface: S & { struck?: string; strikeUnless?: StrikeRule },
+  bodyOf: (read: string) => unknown,
+): S & { struck?: string };
 export function parityArgs(args: string[]): {
   runDir: string | undefined;
   strict: boolean;
