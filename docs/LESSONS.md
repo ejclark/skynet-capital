@@ -35,6 +35,28 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### Stub-only dry runs passed a study harness that failed its first real call three ways
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's first real thin slice (#4943).
+  - **Earlier:** the round had passed a full end-to-end dry run of 54 sessions on stand-in answers (#4985, #4986).
+  - **Then it stopped three times before any member ran:**
+    1. at the canary in 0.6s ("no result event");
+    2. at task writing, after four blind rewrites;
+    3. at the canary again, on CLI boilerplate.
+  - **Detection lag:** none past the first real call. The thin slice exists for exactly this.
+- **ROOT CAUSE:** stubs answer at the result-parsing layer. So the dry run proved the plumbing and never the contract with the real `claude -p`. Three things lay outside that contract test:
+  1. **Schema validity:** a `$schema` 2020-12 key the CLI's validator rejects, reported only on a stderr the code discarded.
+  2. **Real model behaviour against a blind lint:** the lint hid every word, so the author could not learn which everyday word was also an on-screen label.
+  3. **Context the CLI injects even under `--safe-mode`:** the account email, the environment block and tool-use instructions, worded differently on every call.
+- **PREVENTION:** doctrine: `docs/members/study/README.md` → Lessons: no full round before a real thin slice completes. Stubs prove plumbing, never the CLI contract. Each gap was also fixed where it lives:
+  - schemas carry no draft key, and stderr is kept (#4988);
+  - lint names screen labels and reads only what members read (#4989);
+  - the canary classifies context by kind (#4988, #4990).
+  - A planted note still fails the canary in a real call.
+- **SIDE QUESTS:** the native `<select>` blind spot and the test world's placeholder pages, both found by the same thin slice, are being fixed in the recorder and the world (README Lessons).
+
+---
+
 ### An athlete's `npm ci` emptied the primary checkout's install through the worktree symlink
 - **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
 - **SIGNAL:** The primary checkout's `node_modules` and `app/node_modules` were found empty (0 entries each) while reading a slice-2 athlete's report for #4943. Timeline (UTC):

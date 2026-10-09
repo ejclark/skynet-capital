@@ -281,6 +281,23 @@ flowchart LR
 - 2026-10-09 · parallel workflow agents can share one scratchpad directory; a run dir named
   `run` or `smoke2` got a second agent's session appended to its trace. Give every run dir a name
   only this run would pick, and the driver refuses an `--out` that already holds a run.
+- 2026-10-09 · **the first real thin slice stopped three times before a member ever ran — each on
+  something a stub dry run cannot see.** (1) Every role schema declared the 2020-12 `$schema`; the
+  CLI rejects it before answering and says so only on stderr (#4988). (2) A leak check that hid
+  every word made the blind task author guess four times which everyday word was also a button;
+  hide only sealed words, name screen labels, and check only what the member reads (#4989). (3) The
+  CLI injects three kinds of context even under `--safe-mode` (the account's email, the environment
+  block, its own tool-use instructions) in different words every call; the canary classifies by
+  kind, never by wording (#4988, #4990). Rule: no full round before a real thin slice completes.
+- 2026-10-09 · **a headless screenshot never draws a native `<select>` popup.** The first real member
+  tapped the account picker four times, saw nothing open, and gave up at ease 1/7 — the harness's
+  blindness, not the app's. The recorder draws a platform-faithful stand-in for native pickers.
+- 2026-10-09 · **links out of the area meet test-world placeholders** ("not the shell", "Tuning in…")
+  that then come back as findings and cost validity. Parity covers every one-tap destination, and
+  anything still unfaithful is listed for the checker before the run.
+- 2026-10-09 · one blind expert over one route produced 40 findings, 23 structural — the expert pass
+  is cheap and dense; the member sessions are the expensive, sparse half. Budget the full round
+  accordingly.
 - 2026-10-09 · the recorder counted a page's held-open quote stream as a request in flight, so
   after one visit to a page with a live feed every later settle waited out its 5s cap twice
   (22s an action, `settled: false`). Every EventSource is now ignored, and a fresh load forgets
