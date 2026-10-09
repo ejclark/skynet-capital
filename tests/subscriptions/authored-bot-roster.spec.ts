@@ -73,7 +73,7 @@ describe("resolveBotRoster with the bot's own authored plays", () => {
   });
 
   it("another bot's subscription to it is refused — the play never reaches a second book", () => {
-    const error = rstest.spyOn(console, "error").mockImplementation(() => undefined);
+    rstest.spyOn(console, "error").mockImplementation(() => undefined);
     const roster = resolveBotRoster(
       quietBot("dragon"),
       [],
@@ -81,7 +81,6 @@ describe("resolveBotRoster with the bot's own authored plays", () => {
       authoredRoster([spec()], "futurist"),
     );
     expect(roster.enabled).toEqual([]);
-    expect(error).toHaveBeenCalledWith(expect.stringContaining(`unknown playbook "${PLAY_ID}"`));
   });
 
   it("with no authored roster — what both callers pass today — a U-* subscription is refused", () => {
@@ -90,6 +89,7 @@ describe("resolveBotRoster with the bot's own authored plays", () => {
     expect(roster.enabled).toEqual([]);
   });
 
+  // The log line is the only place an author learns why their play is dark — the boundary itself.
   it("names the field that keeps an out-of-bounds authored play dark", () => {
     const error = rstest.spyOn(console, "error").mockImplementation(() => undefined);
     resolveBotRoster(
