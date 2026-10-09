@@ -102,17 +102,17 @@ export class AlpacaMarketDataStream {
       );
     });
     socket.addEventListener("message", (event) => this.onMessage(event.data));
-    socket.addEventListener("close", () => {
+    socket.addEventListener("close", (event) => {
       // A closed socket can carry no subscription, so a resubscribe across the gap must record
       // the set rather than send a frame into a dead connection — the next handshake sends it.
       const current = this.socket === socket;
       if (current) this.authenticated = false;
-      this.config.onStatus?.("closed");
+      this.config.onStatus?.(withDetail("closed", closeDetail(event)));
       if (current) this.scheduleReconnect();
     });
-    socket.addEventListener("error", () => {
+    socket.addEventListener("error", (event) => {
       if (this.socket === socket) this.authenticated = false;
-      this.config.onStatus?.("error");
+      this.config.onStatus?.(withDetail("error", errorDetail(event)));
     });
   }
 
@@ -151,6 +151,13 @@ export class AlpacaMarketDataStream {
     }
 
     for (const message of messages) {
+      if (message.T === "error") {
+        // Alpaca's in-band refusal (#4864): `{T:"error", code:406, msg:"connection limit
+        // exceeded"}` and friends. Unlogged, a refused feed read as a bare "error"/"closed" loop.
+        const { code, msg } = message as { code?: unknown; msg?: unknown };
+        this.config.onStatus?.(withDetail("rejected", [code, msg].filter(Boolean).join(" ")));
+        continue;
+      }
       if (message.T === "success" && "msg" in message) {
         if ((message as { msg?: string }).msg === "authenticated") {
           this.authenticated = true;
@@ -189,4 +196,24 @@ export class AlpacaMarketDataStream {
       }),
     );
   }
+}
+
+/** `status` alone, or `status — detail` when the socket said why (#4864). */
+function withDetail(status: string, detail: string): string {
+  return detail ? `${status} — ${detail}` : status;
+}
+
+/** A close's code and reason (a refused upgrade reads 1006; Alpaca's own refusals carry a reason). */
+function closeDetail(event: unknown): string {
+  const { code, reason } = (event ?? {}) as { code?: unknown; reason?: unknown };
+  if (typeof code !== "number") return "";
+  return typeof reason === "string" && reason ? `code ${code}: ${reason}` : `code ${code}`;
+}
+
+/** Node's WebSocket error event carries the failure as `message` or a nested `error` (e.g. an
+ *  HTTP status on a rejected upgrade); a browser's carries neither, and the status stays bare. */
+function errorDetail(event: unknown): string {
+  const { message, error } = (event ?? {}) as { message?: unknown; error?: unknown };
+  if (typeof message === "string" && message) return message;
+  return error instanceof Error ? error.message : "";
 }
