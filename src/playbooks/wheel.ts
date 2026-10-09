@@ -298,7 +298,8 @@ function wheelIntents(
  *  and 8). `lookup` is the table's `pairFor`, a seam so a spec can offer a row the real table does
  *  not carry yet. */
 export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): Playbook {
-  const { symbol } = setting;
+  // Quotes, positions and chains key on the upper-case ticker; a lower-case one would never trade.
+  const symbol = setting.symbol.toUpperCase();
   const pair = lookup("wheel", symbol);
   if (!pair) throw new Error(`no pair-table row for wheel × ${symbol}; add its evidence row first`);
   const verdict = verdictOf(pair.evidence);
