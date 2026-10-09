@@ -11,7 +11,11 @@
 // `unknown`), the bot funnel/expectancy, the alert and council stores, and every admin store.
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
 
+import { regularSessionOpen } from "../../../src/domain/market-session.ts";
+import { INSTANT } from "./instant.mjs";
 import { marketClient } from "./market.mjs";
+
+const AT = new Date(INSTANT);
 
 /** Alpaca's history periods, newest point last; a window is the tail of the month we hold. */
 const PERIOD_POINTS = { "1W": 6, "1M": 23, "3M": 23, "1A": 23 };
@@ -34,7 +38,7 @@ function tradingClient(book, id) {
   const samples = book.history[id] ?? [];
   if (samples.length === 0) return undefined;
   return {
-    isMarketOpen: async () => true,
+    isMarketOpen: async () => regularSessionOpen(AT),
     // The broker's order list is the ledger's filled orders, newest first — none working.
     listOrders: async () =>
       [...(book.activity[id] ?? [])]
@@ -94,7 +98,7 @@ export function serverConfig(book) {
       subscribe: () => () => undefined,
     },
     auth: {},
-    now: () => new Date(),
+    now: () => new Date(AT),
     resolveOwnerIds: (email) => owners.get(email) ?? [],
     resolveOwnerId: (email) => owners.get(email)?.[0],
     rosterIds: () => new Set(book.participants.map((p) => p.id)),

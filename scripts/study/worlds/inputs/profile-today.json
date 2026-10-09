@@ -1,5 +1,9 @@
 {
   "$comment": "World 'profile-today' (#4943 slice 2). Snapshot-shaped inputs: what a broker read, the activity ledger, the decision store and the subscriptions file would hold. Values are sanitized (same shape and magnitudes, not anyone's real numbers). Times are tokens relative to scripts/study/worlds/instant.mjs; dates of expiries and prints are calendar facts. The composer runs the real builders over these; nothing here is a rendered payload.",
+  "corpus": {
+    "$comment": "The commit whose docs/research and src/domain/market-events this world reads (compose.mjs): the last to touch them before INSTANT.",
+    "commit": "dccf617c00a86a2852fbbaa79c30d5fa5482ac9d"
+  },
   "members": [
     { "email": "eric@study.world", "name": "Eric", "owns": ["eric", "sauron"] },
     { "email": "jordan@study.world", "name": "Jordan", "owns": ["jordan"] }
@@ -82,14 +86,14 @@
   "bot": {
     "id": "sauron",
     "subscribedAt": "@-14d 09:00",
-    "verdicts": [
-      { "playbookId": "S1-NVDA", "mode": "standard", "state": "no-window" },
-      { "playbookId": "CRWV-WHEEL", "mode": "aggressive", "state": "long" },
-      { "playbookId": "NVDA-CALL-SPREAD", "mode": "aggressive", "state": "no-window" },
-      { "playbookId": "G1-GOOG", "mode": "standard", "state": "no-window" },
-      { "playbookId": "HC-SAURON", "mode": "standard", "state": "tactical" },
-      { "playbookId": "SAURON", "mode": "aggressive", "state": "tactical" },
-      { "playbookId": "TACO-DJT", "mode": "standard", "state": "no-window" }
+    "subscribed": [
+      { "playbookId": "S1-NVDA", "mode": "standard" },
+      { "playbookId": "CRWV-WHEEL", "mode": "aggressive" },
+      { "playbookId": "NVDA-CALL-SPREAD", "mode": "aggressive" },
+      { "playbookId": "G1-GOOG", "mode": "standard" },
+      { "playbookId": "HC-SAURON", "mode": "standard" },
+      { "playbookId": "SAURON", "mode": "aggressive" },
+      { "playbookId": "TACO-DJT", "mode": "standard" }
     ],
     "passes": [
       { "at": "@-20s", "verdicts": true },

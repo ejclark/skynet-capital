@@ -1,5 +1,6 @@
 // A study world's browser floor (#4943 slice 2) — the real built shell, every `/api` answer a
-// function of the FULL request, and nothing able to leave the machine. Area-agnostic: a world
+// function of the FULL request, and nothing able to leave the machine: every request off the
+// local origin (a tapped external link, a popup, a font CDN) is aborted and listed (`offsite`). Area-agnostic: a world
 // (scripts/study/worlds/*) hands in its answers; this file never names a surface.
 //
 // WHY NOT `scripts/shoot/shell.mjs` AS IT STANDS (it is the model, and its static half is reused
@@ -87,7 +88,8 @@ function startServer(dist, streams) {
  * @param {string} opts.at              the world's pinned instant (ISO), also the page's clock
  * @param {{viewport: {width: number, height: number}, hasTouch: boolean}} opts.frame  a VIEWPORTS entry
  * @param {string} [opts.out]           where `shoot(tag)` writes frames
- * @returns {Promise<{page, origin, shoot, session: {unstubbed: string[], writes: object[]},
+ * @returns {Promise<{page, origin, shoot,
+ *                    session: {unstubbed: string[], writes: object[], offsite: string[]},
  *                    reframe: (frame) => Promise<void>, close: () => Promise<void>}>}
  */
 export async function openWorld({
@@ -110,7 +112,7 @@ export async function openWorld({
     ...(exe ? { executablePath: exe } : {}),
     args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });
-  const session = { unstubbed: [], writes: [] };
+  const session = { unstubbed: [], writes: [], offsite: [] };
   let context;
   let page;
 
@@ -119,9 +121,17 @@ export async function openWorld({
     context = await browser.newContext({ ...next, colorScheme, timezoneId, locale: "en-US" });
     page = await context.newPage();
     await page.clock.setFixedTime(new Date(at));
-    await page.route("**/api/**", (route) => {
+    // Every request of every page in the context — popups included — passes here: anything off
+    // the local origin is aborted and recorded, `/api` is answered by the world, the rest is the
+    // local shell server.
+    await context.route("**/*", (route) => {
       const request = route.request();
       const url = new URL(request.url());
+      if (url.origin !== origin) {
+        session.offsite.push(`${request.method()} ${url.origin}${url.pathname}`);
+        return route.abort("blockedbyclient");
+      }
+      if (!url.pathname.startsWith("/api/")) return route.continue();
       const decided = routeRequest(
         { method: request.method(), url, accept: request.headers().accept },
         answer,

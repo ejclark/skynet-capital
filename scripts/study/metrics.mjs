@@ -67,7 +67,7 @@ export function actionRefusal(action, frame) {
 
 /**
  * Where the member is: path + every search param (sorted — the app keys a view on more than
- * `section`, e.g. `?desk=…&symbol=NVDA&section=guidance`) + which screen (scrollY ÷ height). A
+ * `section`, e.g. `?desk=…&symbol=…&section=guidance`) + which screen (scrollY ÷ height). A
  * snapshot without `search` falls back to `section` alone.
  */
 export function viewKey({ pathname, search, section, scrollY, innerHeight }) {

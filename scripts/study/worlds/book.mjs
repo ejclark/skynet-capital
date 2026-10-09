@@ -7,7 +7,8 @@
 // input. So the order's reason, expectation and invalidator are the playbook's own words at this
 // commit — never text copied into a fixture that would go stale the day the wheel's copy changes.
 // If the playbook sells nothing from that chain the compose fails loudly rather than inventing an
-// order.
+// order. Likewise a pass's playbook verdicts are the playbooks' own (`playbookVerdicts`) at that
+// pass's time — never typed — so a stopped bot's stale pass says what it said then.
 //
 // Equity is derived, never typed twice: a participant's equity is cash + Σ market value, and the
 // last history point ("@now") is overwritten with it, so the chart, the header and the blotter
@@ -15,6 +16,7 @@
 // simplification the study does not measure (no surface plots cash over time).
 
 import { UPCOMING_PRINTS } from "../../../src/domain/earnings-calendar.ts";
+import { playbookVerdicts } from "../../../src/playbooks/playbook.ts";
 import { findPlaybook } from "../../../src/playbooks/registry.ts";
 import {
   buildOccSymbol,
@@ -22,7 +24,7 @@ import {
   parseOccSymbol,
 } from "../../../src/trading/option-symbols.ts";
 import { loadInput } from "./inputs.mjs";
-import { msOf, resolveTokens } from "./instant.mjs";
+import { INSTANT, msOf, resolveTokens } from "./instant.mjs";
 
 /** True when a symbol is an option contract. */
 const isOption = (symbol) => parseOccSymbol(symbol) !== undefined;
@@ -101,6 +103,18 @@ function placedOrder(order, at, personaId, participantId) {
   return { outcome: { intent, action: "placed", result }, fill, personaId };
 }
 
+/** What each subscribed playbook said at that pass — the runner's own pure call
+ *  (`with-playbooks.ts`: the print calendar, no external events), so a stale pass reads stale. */
+function verdictsAt(bot, at) {
+  const enabled = bot.subscribed.map((s) => ({
+    playbook: findPlaybook(s.playbookId),
+    mode: s.mode,
+  }));
+  const unknown = bot.subscribed.filter((_, i) => !enabled[i].playbook);
+  if (unknown.length > 0) throw new Error(`book: no playbook ${unknown[0].playbookId}`);
+  return playbookVerdicts(enabled, new Date(at).toISOString(), UPCOMING_PRINTS, []);
+}
+
 /** The bot's decision store (newest first) and the fills its placed orders wrote. */
 function botRecords(bot) {
   const records = [];
@@ -124,7 +138,7 @@ function botRecords(bot) {
       rawIntents: intents,
       guardedIntents: intents,
       outcomes: orders.map((o) => o.outcome),
-      ...(pass.verdicts ? { playbookVerdicts: bot.verdicts } : {}),
+      ...(pass.verdicts ? { playbookVerdicts: verdictsAt(bot, at) } : {}),
     });
     fills.push(...orders.map((o) => o.fill));
   }
@@ -190,7 +204,7 @@ export function buildBook(name) {
   }
   const subscriptions = input.bot
     ? {
-        [input.bot.id]: input.bot.verdicts.map((v) => ({
+        [input.bot.id]: input.bot.subscribed.map((v) => ({
           accountId: input.bot.id,
           playbookId: v.playbookId,
           mode: v.mode,
@@ -216,7 +230,7 @@ export function buildBook(name) {
   }
   const lastEquity = Object.fromEntries(input.participants.map((p) => [p.id, p.lastEquity]));
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt: new Date(INSTANT).toISOString(),
     members: input.members,
     participants,
     activity,

@@ -3,24 +3,21 @@
 // members saw, and two runs on two commits can be diffed payload by payload. Area-agnostic: it
 // knows requests and bodies, never a surface.
 //
-// THE KEY IS THE FULL REQUEST, CANONICALISED. Path plus every query parameter, sorted, minus the
-// paging knobs a client tunes freely (`per_page`). `?playbook=<id>` and no filter are two
-// different answers; `?per_page=30` and `?per_page=50` on page one are the same answer. A request
-// whose key was never composed is not guessed at — the world reports it as unstubbed.
+// THE KEY IS THE FULL REQUEST, CANONICALISED: path plus every query parameter, sorted. Nothing is
+// dropped — `?playbook=<id>` and no filter are two answers, and so are `?per_page=30` and
+// `?per_page=50` (the server's page size picks the rows and the cursor, src/server/pagination.ts).
+// A request whose key was never composed is not guessed at — the world reports it as unstubbed.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Query parameters that never change which answer a request gets. */
-const PAGING = new Set(["per_page"]);
-
 /** `path?sorted&params` for a URL (string, relative, or URL object). */
 export function canonicalUrl(input) {
   const url = input instanceof URL ? input : new URL(input, "http://world");
-  const params = [...url.searchParams]
-    .filter(([k]) => !PAGING.has(k))
-    .sort(([a, av], [b, bv]) => a.localeCompare(b) || av.localeCompare(bv));
+  const params = [...url.searchParams].sort(
+    ([a, av], [b, bv]) => a.localeCompare(b) || av.localeCompare(bv),
+  );
   const query = new URLSearchParams(params).toString();
   return query ? `${url.pathname}?${query}` : url.pathname;
 }
@@ -49,15 +46,14 @@ export function writeViewer(dir, viewer, answers) {
 }
 
 /**
- * The answer function a world page routes through, from one viewer's composed file. Reads
- * (GET) are looked up by canonical key; writes get the composed write answer when the world
- * composed one for that path, else the router's benign default.
+ * The answer function a world page routes through, from one viewer's composed file. Reads (GET)
+ * are looked up by canonical key. A world composes reads only, so a write gets nothing here and
+ * the router's benign default (routing.mjs).
  */
 export function answerFrom(dir, viewer) {
   const entries = JSON.parse(readFileSync(join(dir, `${viewer}.json`), "utf8"));
   return (req) => {
-    const hit =
-      req.method === "GET" ? entries[canonicalUrl(req.url)] : entries[`WRITE ${req.path}`];
+    const hit = req.method === "GET" ? entries[canonicalUrl(req.url)] : undefined;
     return hit && { status: hit.status, body: hit.body };
   };
 }

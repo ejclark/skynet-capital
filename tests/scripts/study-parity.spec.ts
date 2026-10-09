@@ -3,6 +3,7 @@ import {
   interceptorOf,
   judgeVisible,
   type ParityRow,
+  parityArgs,
   parityTable,
   worstExit,
 } from "../../scripts/study/parity-judge.mjs";
@@ -29,6 +30,18 @@ describe("judgeVisible", () => {
     const below = judgeVisible({ box: box(10, 900), viewport, hitInside: true });
     expect(below).toEqual({ ok: false, why: "is outside the viewport after scrolling to it" });
     expect(judgeVisible({ box: box(395, 300), viewport, hitInside: true }).ok).toBe(false);
+  });
+
+  it("refuses a box CSS hides, and one a container clips away", () => {
+    const hidden = judgeVisible({ box: box(10, 300), viewport, hitInside: true, shown: false });
+    expect(hidden).toEqual({ ok: false, why: "is hidden by CSS (display, visibility or opacity)" });
+    const clipped = judgeVisible({
+      box: box(10, 300, 0, 0),
+      viewport,
+      hitInside: false,
+      clipped: true,
+    });
+    expect(clipped).toEqual({ ok: false, why: "is clipped away by a container" });
   });
 
   it("refuses a box something else sits on top of", () => {
@@ -84,9 +97,57 @@ describe("parityTable", () => {
   });
 });
 
+describe("parityTable faults", () => {
+  it("fails a frame whose tap was taken, and names a declared bug as bug, never ok", () => {
+    const table = parityTable([
+      row({
+        surface: { label: "blocked" },
+        phone: { miss: null, notes: [], faults: ["tap taken"] },
+      }),
+      row({ surface: { label: "declared" }, phone: { miss: null, notes: [], known: ["#1: x"] } }),
+    ]);
+    expect(table).toMatch(/blocked\s+\| FAIL \| ok\s+\| tap taken/);
+    expect(table).toMatch(/declared\s+\| bug\s+\| ok\s+\| #1: x/);
+  });
+});
+
+describe("parityArgs", () => {
+  it("keeps every world name when there is no --run", () => {
+    expect(parityArgs(["profile-today"])).toEqual({
+      runDir: undefined,
+      strict: false,
+      names: ["profile-today"],
+    });
+    expect(parityArgs(["a", "b"]).names).toEqual(["a", "b"]);
+  });
+
+  it("takes --run's directory out of the names, wherever it sits", () => {
+    expect(parityArgs(["a", "--run", "/tmp/r", "b", "--strict"])).toEqual({
+      runDir: "/tmp/r",
+      strict: true,
+      names: ["a", "b"],
+    });
+    expect(() => parityArgs(["--run"])).toThrow(/needs a directory/);
+  });
+});
+
 describe("worstExit", () => {
-  it("is 0 when every surface rendered, notes included", () => {
+  it("is 0 when every surface rendered, notes and declared bugs included", () => {
     expect(worstExit([row(), row({ phone: { miss: null, notes: ["n"] } })])).toBe(0);
+    expect(worstExit([row({ phone: { miss: null, notes: [], known: ["#1"] } })])).toBe(0);
+  });
+
+  it("is 1 on a fault — a tap something else took is not a pass", () => {
+    expect(worstExit([row({ phone: { miss: null, notes: [], faults: ["tap taken"] } })])).toBe(1);
+  });
+
+  it("under --strict, also fails a note and a declared bug", () => {
+    const strict = { strict: true };
+    expect(worstExit([row({ phone: { miss: null, notes: ["n"] } })], [], strict)).toBe(1);
+    expect(worstExit([row({ phone: { miss: null, notes: [], known: ["#1"] } })], [], strict)).toBe(
+      1,
+    );
+    expect(worstExit([row()], [], strict)).toBe(0);
   });
 
   it("is 1 on any miss, and on any unstubbed read", () => {

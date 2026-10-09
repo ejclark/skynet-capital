@@ -12,6 +12,7 @@
 
 const SAURON = "/app/accounts?account=sauron";
 const PUT = "CRWV $80 PUT · 6 NOV 26";
+const PUT_ROW = "#pos-CRWV261106P00080000";
 const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
 const click = (r, name, extra = {}) => ({ click: role(r, name, extra) });
@@ -48,8 +49,10 @@ const TODAY = [
     id: "decision-idea",
     label: "decision: an idea card",
     route: SAURON,
-    act: [click("button", "Next decision")],
-    expect: [role("article", "Idea: NVDA")],
+    struck:
+      "#4961 — ideas skip a playbook the account already subscribes to, and this bot subscribes" +
+      " to every windowed playbook on a symbol it holds; an idea needs an input change",
+    expect: [role("article", "Idea:")],
   },
   {
     id: "positions-rows",
@@ -68,11 +71,14 @@ const TODAY = [
     id: "positions-actions",
     label: "positions: row actions",
     route: SAURON,
+    // At 390 a position is a card, and the card itself is the action: tapping it opens Trade.
+    act: [{ ...click("link", PUT), only: "phone" }],
     expect: [
       role("button", "Close all", { only: "desktop" }),
-      role("button", "Close", { exact: true, only: "desktop" }),
-      // At 390 a position is a card, and the card itself is the action: it opens Trade.
-      role("link", PUT, { only: "phone" }),
+      // The put's own Close, not any Close on the page (a dialog's, a toast's): inside its row,
+      // whose anchor is the one the decision card's "Show in table" links to.
+      role("button", "Close", { exact: true, within: PUT_ROW, only: "desktop" }),
+      { url: "/app/trade", only: "phone" },
     ],
   },
   {
@@ -94,7 +100,12 @@ const TODAY = [
     label: "bot chip: playbook table (opened)",
     route: SAURON,
     act: [click("button", "Beating · last pass")],
-    expect: [role("row", "CRWV-WHEEL aggressive wants to hold"), role("row", "TACO-DJT standard")],
+    // Verdicts are the playbooks' own at the newest pass (book.mjs): a Thursday is outside the
+    // wheel's sale window.
+    expect: [
+      role("row", "CRWV-WHEEL aggressive waiting for its window"),
+      role("row", "TACO-DJT standard"),
+    ],
   },
   {
     id: "activity-row",
@@ -122,7 +133,7 @@ const TODAY = [
     label: "trade guidance hand-off landing",
     route: SAURON,
     act: [
-      click("link", "Review on Trade ↗"),
+      { ...click("link", "Review on Trade ↗"), knownBug: "#4970" },
       { ...click("button", "Guidance", { exact: true }), only: "phone" },
       { ...click("link", "Guidance for this stock"), only: "desktop" },
     ],
@@ -143,7 +154,10 @@ const FRIEND = [
     label: "friend: chip verdicts, no playbook ids",
     route: "/app/u/sauron",
     act: [click("button", "Beating · last pass")],
-    expect: [role("row", "aggressive wants to hold"), text("CRWV-WHEEL", { absent: true })],
+    expect: [
+      role("row", "aggressive waiting for its window"),
+      text("CRWV-WHEEL", { absent: true }),
+    ],
   },
   {
     id: "friend-activity",
@@ -151,7 +165,8 @@ const FRIEND = [
     route: "/app/u/sauron/activity",
     act: [click("button", `Why ${PUT} was sold`)],
     // The owner's copy names it as "CRWV-WHEEL · aggressive" under Playbook; the gate strips it.
-    expect: [text("Decided by"), text("CRWV-WHEEL · aggressive", { exact: true, absent: true })],
+    // Any rendering of the id counts (getByText: case-insensitive substring) — a strategy tag too.
+    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true, knownBug: "#4971" })],
   },
 ].map((s) => ({ viewer: "jordan", ...s }));
 
@@ -173,7 +188,13 @@ const BAD_DAY = [
     id: "bad-decision",
     label: "decision: the losing shares, alone",
     route: SAURON,
-    expect: [role("article", "At risk: CRWV"), role("article", "Idea:", { absent: true })],
+    // `name` matches a substring, so the shares' card is told from the put's by the put's absence.
+    expect: [
+      role("article", "At risk: CRWV"),
+      role("article", "At risk: CRWV $", { absent: true }),
+      role("article", "At risk: NVDA", { absent: true }),
+      role("article", "Idea:", { absent: true }),
+    ],
   },
   {
     id: "bad-positions",

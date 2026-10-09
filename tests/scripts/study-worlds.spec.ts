@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import { answerFrom, canonicalUrl, writeViewer } from "../../scripts/study/payloads.mjs";
 import { routeRequest, wantsEventStream } from "../../scripts/study/routing.mjs";
@@ -37,10 +37,15 @@ describe("the pinned instant", () => {
 });
 
 describe("canonicalUrl", () => {
-  it("keeps a filter distinct and ignores the paging knob", () => {
-    expect(canonicalUrl("/api/desk/x/activity?per_page=30")).toBe("/api/desk/x/activity");
+  it("keeps every parameter — a filter and a page size each pick a different answer", () => {
+    expect(canonicalUrl("/api/desk/x/activity?playbook=P")).not.toBe(
+      canonicalUrl("/api/desk/x/activity"),
+    );
+    expect(canonicalUrl("/api/desk/x/activity?per_page=30")).not.toBe(
+      canonicalUrl("/api/desk/x/activity?per_page=50"),
+    );
     expect(canonicalUrl("/api/desk/x/activity?playbook=P&per_page=50")).toBe(
-      "/api/desk/x/activity?playbook=P",
+      "/api/desk/x/activity?per_page=50&playbook=P",
     );
   });
 
@@ -68,6 +73,8 @@ describe("a composed viewer on disk", () => {
     expect(answer(req("/api/a?a=1&b=2"))).toEqual({ status: 200, body: { x: 1 } });
     expect(answer(req("/api/gone"))).toEqual({ status: 404, body: { error: "no" } });
     expect(answer(req("/api/a?a=1"))).toBeUndefined();
+    // A world composes reads only: a write to a path it holds still gets nothing from it.
+    expect(answer(req("/api/gone", "POST"))).toBeUndefined();
   });
 });
 
@@ -129,9 +136,14 @@ describe("edgarAnswer", () => {
 describe("only scripts/study/worlds/ knows the area under study", () => {
   // The method must generalise: the router, the payload store, the server-read chain and the parity
   // check may not name a member, an account, a ticker or a route of the profile.
-  const AREA = /\b(eric|sauron|jordan|casey|CRWV|NVDA|AAPL|MSFT)\b|\/app\/(accounts|u\/)/i;
+  // Members and routes in any case; tickers as tickers (`import.meta` is not META).
+  const AREA = /\b(eric|sauron|jordan|casey)\b|\/app\/(accounts|u\/)/i;
+  const TICKERS = /\b(CRWV|NVDA|AAPL|MSFT|SPY|AMZN|TSLA|META|GOOG)\b/;
   const dir = join(import.meta.dirname, "../../scripts/study");
-  const files = readdirSync(dir).filter((f) => f.endsWith(".mjs") || f.endsWith(".d.mts"));
+  // Every module under scripts/study/ at any depth, except the worlds themselves.
+  const files = (readdirSync(dir, { recursive: true }) as string[])
+    .filter((f) => !f.split(sep).includes("worlds"))
+    .filter((f) => f.endsWith(".mjs") || f.endsWith(".d.mts"));
 
   it("finds the area-agnostic files", () => {
     expect(files).toEqual(expect.arrayContaining(["parity.mjs", "world-route.mjs", "routing.mjs"]));
@@ -140,7 +152,7 @@ describe("only scripts/study/worlds/ knows the area under study", () => {
   for (const file of files) {
     it(`${file} names no profile specific`, () => {
       const code = readFileSync(join(dir, file), "utf8");
-      expect(code.match(AREA)?.[0] ?? null).toBeNull();
+      expect(code.match(AREA)?.[0] ?? code.match(TICKERS)?.[0] ?? null).toBeNull();
     });
   }
 });

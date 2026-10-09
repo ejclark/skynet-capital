@@ -4,11 +4,16 @@ export interface Measured {
   box: { left: number; top: number; width: number; height: number };
   viewport: { width: number; height: number };
   hitInside: boolean;
+  shown?: boolean;
+  clipped?: boolean;
+  inSticky?: boolean;
 }
 
 export interface FrameResult {
   miss: string | null;
   notes: string[];
+  faults?: string[];
+  known?: string[];
 }
 
 export interface ParityRow {
@@ -21,4 +26,13 @@ export interface ParityRow {
 export function judgeVisible(m: Measured): { ok: true } | { ok: false; why: string };
 export function interceptorOf(log: string): string | undefined;
 export function parityTable(rows: ParityRow[]): string;
-export function worstExit(rows: ParityRow[], unstubbed?: string[]): 0 | 1;
+export function worstExit(
+  rows: ParityRow[],
+  unstubbed?: string[],
+  opts?: { strict?: boolean },
+): 0 | 1;
+export function parityArgs(args: string[]): {
+  runDir: string | undefined;
+  strict: boolean;
+  names: string[];
+};
