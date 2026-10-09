@@ -6,4 +6,5 @@ Made-up items, so a dry round can be graded end to end (`tests/scripts/study-rou
 
 - A1 the lighthouse lamp is lit from a room far below it
 - A2 the tide table sits behind the keeper's door
+- A3 the brass rail is loose on the top landing (only the measurements reach it)
 - B1 a known gap: the foghorn sounds twice on one press

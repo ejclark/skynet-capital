@@ -9,6 +9,7 @@ import {
   CLASSES,
   classProblems,
   FILES,
+  membersClass,
   parseSessionDir,
   SESSIONS,
   sessionDir,
@@ -180,11 +181,17 @@ const fake = (script: string, args: string[], logFile: string) => {
   return 0;
 };
 
-/** Synthetic aware-role files: the matchers label, the checker confirms what no key item holds. */
+/**
+ * Synthetic aware-role files: the matchers label, the checker confirms what no key item holds.
+ * One measurement is matched to A3, a key item no blind finding reaches — so a grader that let the
+ * measurements into the blind count would show it in the headline.
+ */
 function judge(round: string, findings: Finding[]) {
+  const firstInstrument = findings.find((f) => f.class === "instruments")?.id;
   const label = (f: Finding, second: boolean) => {
     if (f.class === "experts") return { gold: "A1", score: 1 };
     if (f.voice === "instrument-only") return { gold: "A2", score: second ? 0.5 : 1 };
+    if (f.id === firstInstrument) return { gold: "A3", score: 1 };
     return { gold: null, score: 0 };
   };
   json(
@@ -233,6 +240,9 @@ describe("the round contract", () => {
     expect(
       classProblems({ id: "x", class: "members", member: "eric", voice: "member-voiced" }),
     ).toEqual([]);
+    // A drifted analyst voice reaches the check and is refused — never coerced to instrument-only.
+    const drifted = { id: "x", member: "eric", ...membersClass("member_voiced") };
+    expect(classProblems(drifted)[0]).toMatch(/no voice/);
   });
 });
 
@@ -316,8 +326,11 @@ describe("a stub round, graded and read out — one contract from writer to read
     expect(graded.stderr).toBe("");
     expect(graded.status).toBe(0);
     const grade = JSON.parse(readFileSync(join(round, FILES.grade), "utf8"));
-    expect(grade.headline).toMatchObject({ found: 2, renders: 2, structural: 1 });
-    expect(grade.classes.instruments.thoroughness.found).toBe(0);
+    // A3 is reached only by a measurement: it counts for the instruments, never the headline.
+    expect(grade.headline).toMatchObject({ found: 2, renders: 3, structural: 1, smaller: 0 });
+    expect(grade.classes.instruments.thoroughness.ids).toEqual(["A3"]);
+    expect(grade.classes.blind.thoroughness.ids).toEqual(["A1", "A2"]);
+    expect(grade.classes.blind.validity.reported).toBe(3);
     expect(grade.classes.members.thoroughness.ids).toEqual(["A2"]);
     expect(grade.classes.experts.thoroughness.ids).toEqual(["A1"]);
     expect(grade.diagnostics.easyMode.sessions).toBe(1);
@@ -328,10 +341,12 @@ describe("a stub round, graded and read out — one contract from writer to read
       .split("\n")
       .filter((l) => l.startsWith("## "))
       .map((l) => l.slice(3));
+    // SECTIONS itself is pinned to the plan's literal order in study-readout.spec.ts.
     expect(heads).toEqual(SECTIONS);
     expect(readout).toContain("The eric member on a phone, at their most confused");
     expect(readout).toContain("### 1. stub: the member could not tell where the number lives");
     expect(readout).toContain("_Found by simulated members (eric)");
+    expect(readout).not.toContain("(not named)");
     expect(readout).toMatch(/!\[frame\]\([^)]*5-sessions-eric-profile-today-phone[^)]*\.jpg\)/);
     expect(readout).toContain("| Measurements (not blind) |");
     expect(readout).toContain("Hired for: every member: know whether anything I hold needs me");

@@ -81,7 +81,8 @@ export function parseSessionDir(rel) {
 
 /** An analyst's finding: the members class, its voice kept beside it. */
 export function membersClass(voice) {
-  return { class: "members", voice: VOICES.includes(voice) ? voice : "instrument-only" };
+  // Passed through unchanged: a drifted voice must reach classProblems and be refused, not coerced.
+  return { class: "members", voice };
 }
 
 /** Problems with one finding's class fields; [] when it keeps the contract. */

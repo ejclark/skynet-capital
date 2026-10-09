@@ -31,7 +31,7 @@ export interface SessionParts {
 }
 export function sessionDir(s: SessionParts): string;
 export function parseSessionDir(rel: string): SessionParts | null;
-export function membersClass(voice: unknown): { class: "members"; voice: Voice };
+export function membersClass<V>(voice: V): { class: "members"; voice: V };
 export function classProblems(
   f: { id: string; class?: string; member?: string | null; voice?: unknown },
   cls?: string,

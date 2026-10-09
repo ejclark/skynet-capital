@@ -200,8 +200,8 @@ function structural({ structural: items, grade }) {
         ...strip,
         "",
         ...(f.quote ? [`> "${oneLine(f.quote)}"`, ""] : []),
-        formulaSentence(f),
-        "",
+        // A member's finding carries a quote, not a principle/why/fix — no empty formula for it.
+        ...(f.principle || f.why || f.fix ? [formulaSentence(f), ""] : []),
         `_Found by ${who}${f.severity ? ` · ${sev(f.severity)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}._`,
         "",
       ];
