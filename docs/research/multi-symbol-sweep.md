@@ -81,6 +81,19 @@ robust, alpha fragile — is the finding.
   yield or restricting it to the yield range the evidence covers. The companion mean-reversion fit
   (FT-3, passed on its threshold) lost its support in the same print: corr(R1,R2) −0.506 → −0.070.
 
+- **"A $4B-or-larger buyback fills on cover ≥ 2.50x" as a two-sided 20Y-30Y call
+  (FT-treasury-buyback-20y30y-2026-10-08-3)** — added 2026-10-09 from the
+  [treasury-buyback-20y30y-2026-10-08 close-out](events/treasury-buyback-20y30y-2026-10-08.md). The
+  operation filled its `$6.000B` cap in full on cover **2.481x** (`$14.886B` offered), the row's own
+  kill clause (*cover below 2.50x with a full fill*). The sub-2.56x record at caps ≥ $4B goes from 0 of 19
+  to 1 of 20; do not re-register the floor as exceptionless, and do not set a threshold finer than the
+  1.74x–2.48x gap this bucket has observed.
+
+- **"The 09-24 under-fill is the new normal for the 20Y-30Y bucket" (FT-treasury-buyback-20y30y-2026-10-08-4)**
+  — added 2026-10-09 from the same close-out. Registered at D-7 on one in-bucket print (`$10.468B` book,
+  68.0%); the 10-08 book was `$14.886B` (+42% in two weeks) and the cap filled at 100%. One offer book
+  is not a regime; do not re-register a regime call on a single operation's book.
+
 - **"Capital goods is the largest-magnitude import end-use mover" as a one-month bet on a 2026 regime
   (FT-intl-trade-full-report-2026-10-06-3)** — added 2026-10-07 from the
   [intl-trade-full-report-2026-10-06 close-out](events/intl-trade-full-report-2026-10-06.md). Registered

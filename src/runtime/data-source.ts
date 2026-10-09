@@ -17,6 +17,7 @@ import type { ObservatoryEvent } from "../observatory/events.js";
 import { loadParticipants } from "../participants/load-participants.js";
 import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
+import { isOccSymbol } from "../trading/option-symbols.js";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -142,18 +143,18 @@ function liveDataSource(env: Env): DataSource {
     startParticipantStream,
     stopParticipantStream,
     startStreams: ({ participants, heldSymbols, sink, onActivity, onStatus }) => {
-      const dataCreds = participants[0]?.credentials;
-      if (heldSymbols.length > 0 && dataCreds) {
+      const plan = heldPriceStreamPlan(participants, heldSymbols);
+      if (plan.credentials && plan.symbols.length > 0) {
         new AlpacaMarketDataStream({
-          apiKey: dataCreds.apiKey,
-          apiSecret: dataCreds.apiSecret,
-          symbols: heldSymbols,
+          apiKey: plan.credentials.apiKey,
+          apiSecret: plan.credentials.apiSecret,
+          symbols: plan.symbols,
           onEvent: sink,
           onStatus: (status) => onStatus?.("market-data", status),
         }).start();
-        onStatus?.("market-data", `streaming ${heldSymbols.join(", ")}`);
+        onStatus?.("market-data", `streaming ${plan.symbols.join(", ")}`);
       } else {
-        onStatus?.("market-data", "no open positions yet — price stream idle");
+        onStatus?.("market-data", plan.idleReason);
       }
 
       for (const participant of participants) {
@@ -162,6 +163,36 @@ function liveDataSource(env: Env): DataSource {
       onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
     },
   };
+}
+
+/**
+ * Which credential and symbols the dashboard's held-symbol price stream may use (#4864).
+ *
+ * Never a bot's credential: Alpaca allows ONE market-data socket per account, and the bots app
+ * (`autonomous-data-connections.ts`) holds the bot account's for its eval loop. The roster lists
+ * bots first, so the old `participants[0]` was Sauron's key — the dashboard's socket evicted the
+ * bots' (`406 connection limit exceeded`) and, with no price ticks, the bots never evaluated.
+ *
+ * Never an OCC option symbol either: the stock feed rejects the whole subscribe frame
+ * (`400 invalid syntax`) when one is in it, so a single held option silenced every stock tick.
+ */
+export function heldPriceStreamPlan(
+  participants: readonly Participant[],
+  heldSymbols: readonly string[],
+): { credentials?: Participant["credentials"]; symbols: string[]; idleReason: string } {
+  const symbols = heldSymbols.filter((symbol) => !isOccSymbol(symbol));
+  const credentials = participants.find((p) => p.kind !== "bot")?.credentials;
+  if (symbols.length === 0) {
+    return { symbols, idleReason: "no open stock positions yet — price stream idle" };
+  }
+  if (!credentials) {
+    return {
+      symbols,
+      idleReason:
+        "no member credential to stream on (bot accounts' feeds belong to the bots app) — price stream idle",
+    };
+  }
+  return { credentials, symbols, idleReason: "" };
 }
 
 // --- offline ---------------------------------------------------------------

@@ -390,6 +390,86 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-10-09, D+2).** Rates-auction mode runs no `earnings-cycle` / `intraday-edges`
+instrument (`symbols: []` by design); the caches were busted anyway as the protocol requires, and
+everything below was re-fetched **this session**, never from memory of the tape: Treasury's
+`auctions_query` (all 46 completed nominal 10-Years since 2023-01, TIPS excluded via
+`inflation_index_security`), Treasury's daily par yield curve CSVs (2023-2026), and the Fed's
+published minutes page. No intraday bars were pulled, so the auction-vs-minutes split of the
+session's move was **not** attempted — consistent with the reading rule, which said it could not be.
+
+**Verdict: both registered tests pass, the reading rule held, and the pooled yardstick's upper edge
+broke for the second print running.** The sale was the strongest 10-Year on the modern record by
+both statistics this doc tracks, and the session's yield move was one basis point.
+
+| Metric | 2026-10-07 (this sale) | 2026-09-09 (r1, same CUSIP) | Pooled n=46 | Read |
+|---|---|---|---|---|
+| Offering / CUSIP | **$39B** · 91282CRF0 | $39B | — | as announced 10-01; the terms forward test (`FT-treasury-coupon-announcement-2026-10-01-1`) owns this |
+| High yield | **5.300%** | 4.834% | — | +46.6bp vs r1, +61.7bp vs the 08-12 new issue; the sale cleared into a 5%+ tape |
+| **Bid-to-cover** | **2.77** | 2.71 | floor 2.32 · median 2.53 · **max 2.77** | **new maximum of 46**; 36 of 46 clear 2.45 |
+| Indirect / direct | **80.34% / 17.12%** | 79.18% / 16.51% | — | competitive base (indirect + direct + dealer) |
+| **Primary dealers** | **2.54%** ($984.0M) | 4.31% | — | **lowest of 46**, under the 4.21% prior low; 25 of 46 under 13% |
+| 10Y CMT, session | **5.27 → 5.28 (+1bp)** | 4.80 → 4.83 (+3bp) | — | next day 5.22 (**-6bp**); 2Y 4.79 → 4.77 (-2bp) |
+
+**Forward tests.** `FT-…-1` (bid-to-cover >= 2.45): **pass**, 2.77. `FT-…-2` (dealer share < 13.0%):
+**pass**, 2.54%. Both are filled in the fragment. Neither kill line (< 2.32; >= 15.0%) was near. No
+kill is scored, so nothing moves to the sweep doc's kill list.
+
+**Kill switches, each read against the numbers above:**
+
+- **Single-session move > 13bp:** not fired — **+1bp**. The pairing stayed an attribution problem
+  rather than a variance event (the n=9 variance null is not re-run here).
+- **Bid-to-cover < 2.32:** not fired — 2.77.
+- **Dealer > 15%:** not fired — 2.54%.
+- **Dealer <= ~6% arriving with a same-sign move as 09-09's (+3bp): fires on its letter.** 2.54% is
+  well under 6% and the move was +1bp, the same sign. Read it at its weight: +1bp is the CMT's own
+  rounding step, the minutes landed an hour after the sale, and the switch asked for a sign-flipped
+  *relationship*, which two observations cannot establish. It stays a flag, not a finding. The
+  switch said such a relationship "would need its own registration"; no row is registered here
+  because a close-out does not re-open the assessment, and the next 10-Year sale
+  ([`treasury-10y-note-2026-11-10`](treasury-10y-note-2026-11-10.md)) is the first place a third
+  observation can arrive — its owner's next pulse is the right place to decide whether to register.
+- **Two consecutive prints outside the pooled range, same direction: fires.** 09-09 set the max at
+  2.71; **2.77 is outside 2.32-2.71, on the same (high) side.** The switch's stated consequence is
+  that the slot taxonomy "would reopen for real," so the leg-4 tests were re-run at n=46: reopening
+  vs its own new issue is now **21 of 30, mean +0.060, t = 2.11** (was 20/29, t = 1.87) — the first
+  time that test crosses conventional significance (one of three slot tests, no multiple-comparison
+  correction, and t = 2.11 sits barely over the n=30 critical value of 2.05). The other leg, first-
+  to-second reopening within one CUSIP, adds a win (2.71 -> 2.77) to the earlier 6 of 14 — about
+  **7 of 15**, still no signal. **Honest read:** the "slot taxonomy is inert" claim is now *weakened,
+  not refuted* — it is the reopening-vs-new-issue contrast, not the slot position, that is leaking,
+  and the cause of the higher reopening covers is not identified here. The pooled yardstick
+  widens again to **floor 2.32 · median 2.53 · max 2.77** (mean 2.523), and a future owner should
+  treat 2.45 as a floor for a reopening, not a median.
+- **A hawkish 09-16 FOMC / hot CPI reopening the long end:** spent. The Fed's published minutes of the
+  September 15-16 meeting (fetched direct 2026-10-09, federalreserve.gov) record that **all
+  participants supported the 25bp hike to 3-3/4-4%**, with inflation "elevated" and risks to it
+  "tilted to the upside." That is the hawkish tone the doc expected; the 10Y moved +1bp on the day and
+  **-6bp** the next, so nothing here re-opened the long end. The minutes' release time (2:00pm ET, per
+  the Fed's October page read on 10-07) was not re-verified from a timestamp this session.
+
+**The dealer-takedown correlation, second out-of-sample point.** Recomputed on n=46 from the same
+sources as the 09-15 row: corr(dealer%, same-day 10Y move) = **+0.252 (t = 1.73)**, from +0.282
+(t = 1.93) at n=45 and +0.327 (t = 2.24) at n=44; corr(bid-to-cover, move) = **-0.152 (t = -1.02)**.
+The relationship predicts that a record-low dealer share rides a falling-yield session; this one
+rode +1bp — a near-miss of ~zero rather than a contradiction, but the second consecutive observation
+on the wrong side of the claim. **Not promoted; one pre-registered point remains** (the next 10-Year
+in the sample). The dealer share stays what it mechanically is — the end-user-demand residual.
+
+**What this changes:** nothing about the grading rule (auction statistics or nothing), and nothing
+about the stance — read-don't-trade, `symbols: []`, date still `estimate` (this lane may not
+self-confirm, and the primary schedule is tentative by construction). It changes the yardstick: 2.77
+is now the number a reopening of this CUSIP has to beat, and the slot-inertness claim should be
+re-tested by whoever reads the next 10-Year sale rather than carried as settled.
+
+**Honest limits.** The tail (stop-through or tail vs when-issued) is **not** reported: fiscaldata
+publishes no when-issued yield and no secondary tracker was reached this session. The session's 1bp
+move is a close-to-close CMT difference rounded to 0.01%, so it cannot separate the 1:00pm sale from
+the 2:00pm minutes — by design. Everything is a rates-auction observation about a yardstick; none of
+it is a rate view or a trade. This doc goes quiet here.
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":1} -->
 
@@ -407,3 +487,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0,"blocked":[]} -->
