@@ -16,20 +16,33 @@
 /** Init script: install the listeners once per document. */
 export function instrument() {
   if (window.__study) return;
-  const s = { doc: Math.random().toString(36).slice(2), scroll: [], shifts: [], urls: [] };
+  const s = {
+    doc: Math.random().toString(36).slice(2),
+    scroll: [],
+    shifts: [],
+    urls: [],
+    picker: [],
+  };
   window.__study = s;
   const now = () => Math.round(performance.now());
   addEventListener("scroll", () => s.scroll.push({ t: now(), y: scrollY, x: scrollX }), {
     passive: true,
   });
+  // A shift whose every moved node is the recorder's own overlay (measure-picker.mjs) is not the app's.
+  const ours = (src) => {
+    const n = src.node;
+    const el = n?.nodeType === 1 ? n : n?.parentElement;
+    return Boolean(el?.closest?.("[data-study-overlay]"));
+  };
   try {
     new PerformanceObserver((list) => {
       for (const e of list.getEntries())
-        s.shifts.push({
-          t: Math.round(e.startTime),
-          value: e.value,
-          hadRecentInput: e.hadRecentInput,
-        });
+        if (!(e.sources?.length && e.sources.every(ours)))
+          s.shifts.push({
+            t: Math.round(e.startTime),
+            value: e.value,
+            hadRecentInput: e.hadRecentInput,
+          });
     }).observe({ type: "layout-shift", buffered: true });
   } catch {
     s.shiftsUnsupported = true;
@@ -58,6 +71,7 @@ export function marks() {
     scroll: s.scroll.length,
     shifts: s.shifts.length,
     urls: s.urls.length,
+    picker: s.picker.length,
     y: Math.round(scrollY),
     at: location.pathname + location.search,
   };
@@ -76,11 +90,13 @@ export function since(mark) {
     scroll: s.scroll.slice(from("scroll")).map(({ t, y }) => ({ t, y })),
     shifts: s.shifts.slice(from("shifts")),
     urls: s.urls.slice(from("urls")),
+    picker: s.picker.slice(from("picker")),
     next: {
       doc: s.doc,
       scroll: s.scroll.length,
       shifts: s.shifts.length,
       urls: s.urls.length,
+      picker: s.picker.length,
       y: Math.round(scrollY),
       at: location.pathname + location.search,
     },
@@ -170,7 +186,8 @@ function visibleHash() {
   }
   const STATES = ["aria-pressed", "aria-selected", "aria-expanded", "aria-current", "aria-checked"];
   for (const el of document.querySelectorAll(`[${STATES.join("], [")}], input, select, textarea`)) {
-    if (!inView(el.getBoundingClientRect())) continue;
+    // The native picker's stand-in (measure-picker.mjs) is the recorder's, never the app's state.
+    if (el.closest("[data-study-overlay]") || !inView(el.getBoundingClientRect())) continue;
     const states = STATES.map((a) => el.getAttribute(a) ?? "").join("|");
     parts.push(`§${states}|${el.value ?? ""}|${el.checked ?? ""}`);
   }

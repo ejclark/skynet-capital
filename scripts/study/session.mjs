@@ -25,6 +25,14 @@
 // `session.opening.seen`, each later one on its record's `seen`. The oracle needs it — a fact counts
 // only if the place it lives was on screen.
 //
+// NATIVE PICKERS: headless Chromium never paints a <select>'s popup into a frame, so a tap on one
+// would show the member nothing (the thin slice's member gave up on the account picker, ease 1/7).
+// An init script (measure-picker.mjs, rules in picker.mjs) draws the platform's picker in the page
+// — a sheet at phone width, a dropdown at desktop — and the record says what it did
+// (`nativePicker`: opened · chose · dismissed, its options and value). The overlay sits outside
+// <body>, so the recorder's own measurements never count it as the app's — except watched text,
+// where an option the member reads in the open list counts as seen.
+//
 // Stubs fail CLOSED: any request off the shell's origin — a tapped external link, a `target=_blank`
 // popup — is aborted before it leaves the machine and listed on the record (`blocked`).
 //
@@ -43,6 +51,7 @@ import { VIEWPORTS } from "../crawl/steps.mjs";
 import { shooter } from "../shoot/lib.mjs";
 import { openShell } from "../shoot/shell.mjs";
 import { instrument, marks, since, snapshot } from "./measure.mjs";
+import { pickerInitScript } from "./measure-picker.mjs";
 import { landingTop, onScreenControl, probeTap, tapRect } from "./measure-tap.mjs";
 import { seenText } from "./measure-text.mjs";
 import {
@@ -53,6 +62,7 @@ import {
   taskMetrics,
   viewKey,
 } from "./metrics.mjs";
+import { nativePickerOf, pickerMode } from "./picker.mjs";
 import { printSession } from "./session-report.mjs";
 import { loadWorld, openComposed, rerunUnderTsx } from "./session-world.mjs";
 
@@ -148,6 +158,9 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
   const blocked = [];
   await guardOrigin(page, shell.origin, blocked);
   await page.addInitScript(instrument);
+  // Headless Chromium never paints a native <select> popup into a frame: draw the platform's
+  // picker in the page instead (measure-picker.mjs), so the member sees what a phone would show.
+  await page.addInitScript({ content: pickerInitScript(pickerMode(vp.hasTouch)) });
   const session = {
     page,
     shell,
@@ -271,6 +284,7 @@ export async function act(session, action) {
   const urlChanged = before.href !== after.href;
   const name = tap?.hit?.name;
   const top = urlChanged && name ? await page.evaluate(landingTop, name) : null;
+  const nativePicker = nativePickerOf(log.picker);
   const record = {
     step: session.step++,
     ms: Date.now() - session.t0,
@@ -300,6 +314,7 @@ export async function act(session, action) {
       rectBefore,
       rectAfter: await page.evaluate(tapRect),
     },
+    ...(nativePicker ? { nativePicker } : {}),
     shifts: log.shifts,
     overflow: terminal ? null : after.overflow,
     landing:

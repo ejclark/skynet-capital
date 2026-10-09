@@ -1,0 +1,9 @@
+{
+  "id": "proof-native-picker",
+  "purpose": "harness proof for the native picker's stand-in (scripts/study/measure-picker.mjs) with the scripted actor — NOT a study task; no member ever reads it",
+  "scenario": "Switch the profile to the other account you hold and report what that account is worth.",
+  "start": "/app/accounts",
+  "optimal": 3,
+  "answer": { "kind": "number", "value": 996966, "abs": 1 },
+  "answerRegion": ["$996,966"]
+}

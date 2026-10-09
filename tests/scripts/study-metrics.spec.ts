@@ -314,6 +314,40 @@ describe("no visible effect", () => {
   });
 });
 
+describe("a tap the native picker's stand-in took (scripts/study/picker.mjs)", () => {
+  // The overlay lives outside <body>, so opening it leaves the text hash unchanged — the record's
+  // `nativePicker` is what says the tap did something.
+  const same = { to: { textHash: "aaaa" } };
+  const opened = {
+    event: "opened" as const,
+    name: "Account",
+    options: ["All accounts", "Eric · Human"],
+    value: "eric",
+    label: "Eric · Human",
+  };
+  it("opening it from the select's label is not 'no visible effect'", () => {
+    const label = tapOn("Account", { hit: hit("Account", "label") });
+    const r = rec({ kind: "tap", x: 50, y: 216 }, { tap: label, nativePicker: opened, ...same });
+    expect(noVisibleEffect(r)).toBe(false);
+    expect(kinds(r)).not.toContain("no-visible-effect");
+    // The same label tap with no picker moment (a desktop label only focuses) still is.
+    expect(noVisibleEffect(rec({ kind: "tap", x: 50, y: 216 }, { tap: label, ...same }))).toBe(
+      true,
+    );
+  });
+  it("closing it with a tap on the dimmed page counts as a hit, never a dead tap", () => {
+    const backdrop = tapOn("", { hit: null, nearest: null, under: "div" });
+    const dismissed = { ...opened, event: "dismissed" as const, via: "outside" };
+    const r = rec(
+      { kind: "tap", x: 50, y: 216 },
+      { tap: backdrop, nativePicker: dismissed, ...same },
+    );
+    expect(tapResult(r)).toBe("hit");
+    expect(taskMetrics([r]).deadTaps).toBe(0);
+    expect(tapResult(rec({ kind: "tap", x: 50, y: 216 }, { tap: backdrop, ...same }))).toBe("dead");
+  });
+});
+
 describe("layout shift", () => {
   it("totals entries split by hadRecentInput and flags a total over 0.05", () => {
     const shifts = [

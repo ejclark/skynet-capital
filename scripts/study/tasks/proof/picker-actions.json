@@ -1,0 +1,18 @@
+{
+  "purpose": "the scripted actor for tasks/proof/picker-task.json at phone width: tap the account select (the thin slice's own tap point), see the stand-in sheet, choose the other account, read its worth",
+  "turns": [
+    {
+      "expect": "the account picker opens as a sheet over the page",
+      "action": { "type": "tap", "x": 68, "y": 210 }
+    },
+    {
+      "expect": "the profile switches to the bot's account",
+      "action": { "type": "tap", "text": "Sauron · Bot" }
+    },
+    { "action": { "type": "done", "answer": "Sauron is worth $996,966" } }
+  ],
+  "ease": {
+    "score": 6,
+    "reason": "scripted: fixed answer so the drive records an ease path"
+  }
+}

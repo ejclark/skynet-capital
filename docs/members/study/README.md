@@ -220,6 +220,18 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
   writes the first turn's message and a half-scale frame without calling it. `--stub <dir>` plays
   it from canned answers instead (`<dir>/actor/<n>.json`, `<dir>/ease/<n>.json`); `--roles <dir>`
   reads the role prompt from another checkout (a pin may predate the roles).
+- **Native pickers are drawn by the recorder.** Headless Chromium never paints a `<select>`'s
+  popup into a screenshot, so a member who taps one sees nothing open — the harness's blindness,
+  not the app's failure. The recorder draws a plain, system-styled stand-in in the page instead
+  (`scripts/study/measure-picker.mjs`; its rules are `picker.mjs`, specced without a browser): a
+  bottom sheet at phone width, the current row checked; a dropdown under the select at desktop
+  width. A row sets the select and fires `input` + `change`, as a person's choice does; a tap
+  elsewhere or Escape closes it unchanged. The label opens it on a phone only, as on iOS. Each
+  moment lands on the trace record as `nativePicker` (`opened` · `chose` · `dismissed`, the
+  options, the value). The overlay sits outside `<body>`, so the text hash, overflow, sticky-head
+  and shift measurements never count it; a census operating a select frames it open. Proof:
+  `scripts/study/tasks/proof/picker-*.json`. Date and time inputs get no stand-in yet: none sits on
+  the profile's routes.
 
 ## Running a round
 
