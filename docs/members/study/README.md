@@ -86,7 +86,10 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
 - **What is the pin's:** everything outside `scripts/study/` — `src/`, `app/`, the builders, the gates.
 - **What is today's:** the harness. `<dir>/.study-pin.json` records its commit, any uncommitted
   edits, and a sha256 per file plus one tree hash, so two runs can say they used the same instrument.
-- **Installs are clones** (`cp -c`), never symlinks; a lockfile that differs at the pin is warned and recorded.
+- **Installs are clones** (`cp -c`), never symlinks — and never cloned *from* one: a checkout whose
+  `node_modules` is a link is refused. A lockfile that differs at the pin is warned and recorded.
+- **Reuse is strict:** a re-run reuses only a worktree `prepare` made, still at the commit, with no
+  changes outside `scripts/study/`; the main and the running checkout are always refused.
 - **The parity table** lands in `<dir>/.study-run/parity.txt`; the run exits with parity's status.
 - **When the harness outgrows the pin:** a helper it imports from outside its folder that the pin
   lacks is feature-detected in `scripts/study/compat.mjs`, and the fallback is printed under the
