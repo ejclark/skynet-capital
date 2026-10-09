@@ -14,6 +14,7 @@ import {
 } from "../live/activity-feed";
 import { fetchCouncil } from "../live/council";
 import { fetchFilingComments } from "../live/filing-comments";
+import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
 import { CouncilCompose } from "../shell/council-compose";
 import { FilingOnramp } from "../shell/filing-onramp";
@@ -338,6 +339,7 @@ function FeedSection({
 function WirePage(): ReactElement {
   const { q, section: asked } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const refine = useRefineSearch<ReturnType<typeof readSearch>>();
   const wire = useQuery({
     queryKey: ["wire"],
     queryFn: () => fetchWire(),
@@ -367,19 +369,18 @@ function WirePage(): ReactElement {
       .catch(() => setLoadMoreError(true))
       .finally(() => setLoadingMore(false));
   };
-  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
+  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace, and
+  // the page keeps its place (#4944).
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(
+      () => refine((prev) => ({ ...prev, q: next.trim() === "" ? undefined : next })),
+      300,
+    );
   };
   const section = resolveSection(SECTIONS, asked);
   const setSection = (next: ActivitySection) =>

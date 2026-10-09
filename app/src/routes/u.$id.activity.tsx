@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDesk, fetchDeskActivity } from "../live/desk";
+import { useRefineSearch } from "../live/refine-search";
 import { AccountPage, useOwnsAccount } from "../shell/account-head";
 import { ActivityFilterBar } from "../shell/activity-filter-bar";
 import { ActivityTable } from "../shell/activity-table";
@@ -102,7 +103,7 @@ function ActivityPage(): ReactElement {
   const { id } = Route.useParams();
   const search = Route.useSearch();
   const { symbol, playbook } = search;
-  const navigate = Route.useNavigate();
+  const refine = useRefineSearch<typeof search>();
   const isOwn = useOwnsAccount(id);
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const narrowed = symbol !== undefined || playbook !== undefined;
@@ -117,12 +118,11 @@ function ActivityPage(): ReactElement {
   const pages = useActivityPages(id, symbol, playbook, activity.data, activity.isPlaceholderData);
 
   // The box is immediate locally; the URL (and so the read) follows a beat behind, replaced, never
-  // pushed — the league Activity page's discipline.
+  // pushed, and the page keeps its place (#4944) — the league Activity page's discipline.
   const [symbolText, setSymbolText] = useState(symbol ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
-  const narrow = (next: ActivitySearch) =>
-    void navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+  const narrow = (next: ActivitySearch) => refine((prev) => ({ ...prev, ...next }));
   const typeSymbol = (next: string) => {
     setSymbolText(next);
     clearTimeout(urlTimer.current);

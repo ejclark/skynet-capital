@@ -10,6 +10,7 @@ import {
 } from "../live/desk";
 import { parseOn } from "../live/horizon-params";
 import { fetchNetWorth } from "../live/networth";
+import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
@@ -99,6 +100,9 @@ const asId = (raw: unknown): string | undefined =>
 function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
+  // The filter and the picked day refine the page in place (#4944); the section and account
+  // switches below change the whole view and keep the router's scroll reset (held by #4943).
+  const refine = useRefineSearch<typeof search>();
   const { account: asked, q } = search;
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
@@ -112,12 +116,10 @@ function AccountsPage(): ReactElement {
   const onFilterChange = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(
+      () => refine((prev) => ({ ...prev, q: next.trim() === "" ? undefined : next })),
+      300,
+    );
   };
 
   if (settings.isPending || settings.isError)
@@ -174,9 +176,7 @@ function AccountsPage(): ReactElement {
       }
       onJoined={() => void queryClient.invalidateQueries({ queryKey: ["settings"] })}
       pinnedDay={search.events}
-      onPickDay={(day) =>
-        void navigate({ search: (prev) => ({ ...prev, events: day }), replace: true })
-      }
+      onPickDay={(day) => refine((prev) => ({ ...prev, events: day }))}
       onSelectSection={(next) => {
         // Overview's filter means nothing on Events, and a stale one must not resurface on the
         // way back (the switch spec proves the blotter's count survives the round trip): crossing

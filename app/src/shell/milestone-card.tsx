@@ -61,6 +61,8 @@ export function MilestoneCard({
       to="/accounts"
       search={(prev) => ({ ...prev, section: "milestones" as const, chapter })}
       replace
+      // The chapter opens beneath the cards you just tapped — the page stays put (#4944).
+      resetScroll={false}
       className={`mc mc-${state}${open ? " mc-open" : ""}`}
       aria-current={open ? "page" : undefined}
     >

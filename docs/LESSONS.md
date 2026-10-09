@@ -35,6 +35,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A filter chip jumped the Profile page to the top — Trade's 2026-09-22 fix stayed per call site
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study (#4943) caught a chip tap scrolling the page to the top ~300ms later, the filter's debounce. Detection lag: the same symptom was reported and fixed on Trade on 2026-09-22 ("the same effect as extreme content shift"); every other page with a filter, lens or calendar range kept it for ~17 days.
+- **ROOT CAUSE:** TanStack Router resets the window's scroll after every navigation unless the call says `resetScroll: false` (router-core: `resetScroll ?? true`), a same-page search refinement included. The 2026-09-22 fix wrote `resetScroll: false` into Trade's own calls; nothing named the class, so the Profile page's filter, the positions lens, the calendar range, R&D's filter, both Activity filters and the milestone cards each still reset.
+- **PREVENTION:** gate (rank 1) — `tests/arch/same-page-scroll.spec.ts` reads every `navigate({...})` and `<Link search=…>` under `app/src` that targets the page it's on, and fails one that resets the scroll unless its ledger says why (a section or account switch, a jump to a ticket). The fix is one helper, `useRefineSearch()` (`app/src/live/refine-search.ts`), every refinement routed through it; `app/tests/live/refine-search.spec.tsx` asserts the outcome (#4944).
+- **SIDE QUESTS:** whether section and account switches, and the leaderboard's compare toggles, should also keep the scroll is a design call held by #4943, not this fix.
+
+---
+
 ### `sync project status` red on main: read board fields without gh's owner lookup
 - **SHA:** b95b1d5   **DATE:** 2026-10-09   **STATUS:** closed
 - **COVERS:** 49eb85d

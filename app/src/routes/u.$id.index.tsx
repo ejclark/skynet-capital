@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDesk } from "../live/desk";
+import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings } from "../live/settings";
 import { AccountPage, useOwnsAccount } from "../shell/account-head";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
@@ -33,7 +34,7 @@ import { useTowerColumn } from "../shell/use-tower-column";
 function DeskPage(): ReactElement {
   const { id } = Route.useParams();
   const { q } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const refine = useRefineSearch<{ q?: string }>();
   const desk = useQuery({
     queryKey: ["desk", id],
     queryFn: () => fetchDesk(id),
@@ -44,19 +45,15 @@ function DeskPage(): ReactElement {
   const canTrade = useOwnsAccount(id);
   const towerColumn = useTowerColumn();
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
-  // a beat behind (replace, no history spam) — so a refresh or a shared link keeps the filter.
+  // a beat behind (replace, no history spam, no jump to the top: #4944) — so a refresh or a shared
+  // link keeps the filter.
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: next.trim() === "" ? {} : { q: next },
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(() => refine(next.trim() === "" ? {} : { q: next }), 300);
   };
 
   if (desk.isPending)
