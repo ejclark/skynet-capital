@@ -1,6 +1,7 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import type { CSSProperties, ReactElement } from "react";
 import type { Decision, DeskAllocation, DeskPosition } from "../live/desk";
+import { useRefineSearch } from "../live/refine-search";
 import { squarify } from "./treemap";
 
 /**
@@ -25,20 +26,14 @@ const LENSES: ReadonlyArray<{ id: Lens; label: string }> = [
 export const parseLens = (raw: unknown): Lens | undefined =>
   raw === "map" || raw === "runway" || raw === "list" ? raw : undefined;
 
-/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean). */
+/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean)
+ *  without moving the page: a lens is a view of the list you're already scrolled to (#4944). */
 export function useLens(): readonly [Lens, (next: Lens) => void] {
   const search = useSearch({ strict: false }) as { lens?: unknown };
-  const navigate = useNavigate();
+  const refine = useRefineSearch();
   const lens = parseLens(search.lens) ?? "list";
   const set = (next: Lens) =>
-    void navigate({
-      to: ".",
-      search: ((prev: Record<string, unknown>) => ({
-        ...prev,
-        lens: next === "list" ? undefined : next,
-      })) as never,
-      replace: true,
-    });
+    refine((prev) => ({ ...prev, lens: next === "list" ? undefined : next }));
   return [lens, set] as const;
 }
 

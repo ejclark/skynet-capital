@@ -281,7 +281,8 @@ function FieldLadder({
   );
 }
 
-/** The metric chips: one metric ranks the whole field, chosen right above the ladder it re-ranks. */
+/** The metric chips: one metric ranks the whole field, chosen right above the ladder it re-ranks.
+ *  A filter chip, so it keeps the page where it is (#4944): the re-ranked ladder is right below. */
 function RankChips({ active }: { readonly active: BoardMetric }): ReactElement {
   return (
     <nav className="fchips" aria-label="Rank the field by">
@@ -291,7 +292,13 @@ function RankChips({ active }: { readonly active: BoardMetric }): ReactElement {
             {m.label}
           </span>
         ) : (
-          <Link key={m.key} from={Route.fullPath} search={{ by: m.key }} className="fchip">
+          <Link
+            key={m.key}
+            from={Route.fullPath}
+            search={{ by: m.key }}
+            resetScroll={false}
+            className="fchip"
+          >
             {m.label}
           </Link>
         ),
