@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
+  stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
+  [treasury-30y-bond-2026-10-08 close-out](events/treasury-30y-bond-2026-10-08.md). The 2026-10-08 second
+  reopening cleared **2.54** at **5.618%**, the first second reopening of 19 cycles outside the band and
+  the second print in a row above it (09-10 R1: 2.61 at 5.308%). The two band breaks are the two
+  highest-yield prints in the modern $22B series, and across its 22 prints corr(yield, bid-to-cover) is
+  +0.413. Do not re-register a pooled band, or a "steadiest leg" claim, without conditioning on clearing
+  yield or restricting it to the yield range the evidence covers. The companion mean-reversion fit
+  (FT-3, passed on its threshold) lost its support in the same print: corr(R1,R2) −0.506 → −0.070.
+
 - **"A $4B-or-larger buyback fills on cover ≥ 2.50x" as a two-sided 20Y-30Y call
   (FT-treasury-buyback-20y30y-2026-10-08-3)** — added 2026-10-09 from the
   [treasury-buyback-20y30y-2026-10-08 close-out](events/treasury-buyback-20y30y-2026-10-08.md). The
