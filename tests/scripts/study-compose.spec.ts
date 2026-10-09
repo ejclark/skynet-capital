@@ -176,6 +176,36 @@ describe("serverRead", () => {
     expect(read?.body).toMatchObject({ desk: { id: "sauron" } });
   });
 
+  // The pages one tap from the profile, answered as production answers them behind sign-in —
+  // never as a deployment with the service switched off (the thin slice's world holes).
+  const read = async (url: string, as = session) =>
+    (await serverRead(url, config, createBoardChannel(), as))?.body as Record<string, unknown>;
+
+  it("serves the Activity feed and an empty Council, both switched on", async () => {
+    const wire = (await read("/api/wire")).wire as { trades: unknown[]; feedbackEnabled: boolean };
+    expect(wire.trades.length).toBeGreaterThan(0);
+    expect(wire.feedbackEnabled).toBe(true);
+    expect(await read("/api/council")).toMatchObject({ enabled: true, entries: [] });
+  });
+
+  it("wires account management, and answers the owner's cards as a non-owner", async () => {
+    expect(await read("/api/settings")).toMatchObject({ authConfigured: true, adminWired: true });
+    expect(await read("/api/admin/invite")).toEqual({ owner: false });
+    expect(await read("/api/controls")).toEqual({ owner: false });
+  });
+
+  it("serves the fleet panel: a stopped bot's process has not polled since its last pass", async () => {
+    const ops = (await read("/api/ops-status")) as {
+      available: boolean;
+      status: { degraded: boolean; signals: { id: string; verdict: string }[] };
+    };
+    expect(ops.available).toBe(true);
+    expect(ops.status.degraded).toBe(false);
+    const verdict = (id: string) => ops.status.signals.find((s) => s.id === id)?.verdict;
+    expect(verdict("deploy-app")).toBe("ok");
+    expect(verdict("bridge")).toBe("attention");
+  });
+
   it("is undefined for a path no handler claims", async () => {
     expect(await serverRead("/api/no-such-read", config, createBoardChannel(), session)).toBe(
       undefined,
@@ -211,6 +241,15 @@ describe("a composed world", () => {
     const a = hashes(alone, "profile-bad-day");
     expect(Object.keys(a).length).toBeGreaterThan(100);
     expect(hashes(after, "profile-bad-day")).toEqual(a);
+  });
+
+  it("writes the world's known artifacts beside the run, declared rows first", () => {
+    const known = JSON.parse(
+      readFileSync(join(alone, "profile-bad-day-artifacts.json"), "utf8"),
+    ) as { route: string; source: string }[];
+    expect(known.length).toBeGreaterThan(0);
+    expect(known.every((a) => a.source === "declared" || a.source === "compose")).toBe(true);
+    expect(known.map((a) => a.route)).toContain("/login");
   });
 
   it("serves no research assessed after its instant", () => {

@@ -7,6 +7,8 @@
 import { profileFixtures } from "./fixtures.mjs";
 import { profileReads } from "./profile-reads.mjs";
 import { profileSurfaces } from "./profile-surfaces.mjs";
+import { SHELL_ARTIFACTS } from "./shell-artifacts.mjs";
+import { shellSurfaces } from "./shell-surfaces.mjs";
 
 export default {
   name: "profile-today",
@@ -15,4 +17,8 @@ export default {
   reads: profileReads,
   fixtures: profileFixtures,
   surfaces: profileSurfaces("today"),
+  // One tap from the profile (app nav, header icons): parity proves them; the census does not
+  // walk them (they are not this area). What the world still cannot show: `artifacts`.
+  oneTap: shellSurfaces("eric"),
+  artifacts: SHELL_ARTIFACTS,
 };

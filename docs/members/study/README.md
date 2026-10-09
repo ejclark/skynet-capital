@@ -44,7 +44,7 @@ their own column: whoever designs them has seen the answer key, so they never co
 | Words pass | blind | `roles/words.md` | harvested visible text · member cards |
 | Member-type audit | blind | `roles/member-type-audit.md` | member cards |
 | Matcher ×2 + tie-break | aware | — | sealed key + findings with class labels stripped |
-| Checker | aware | — | every non-key finding; may re-run the recorder |
+| Checker | aware | — | every non-key finding; the world's known artifacts (`<run>/<world>-artifacts.json`); may re-run the recorder |
 
 **Blind** means a sealed call: `claude -p --safe-mode --restricted --tools "" --strict-mcp-config
 --system-prompt-file <role> --json-schema <schema> --input-format stream-json --output-format
@@ -92,6 +92,19 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
 - **Reuse is strict:** a re-run reuses only a worktree `prepare` made, still at the commit, with no
   changes outside `scripts/study/`; the main and the running checkout are always refused.
 - **The parity table** lands in `<dir>/.study-run/parity.txt`; the run exits with parity's status.
+- **One tap away is part of the world.** Members and experts leave the area through the app nav and
+  the header's icons, so each world also lists those destinations (`oneTap`,
+  `worlds/shell-surfaces.mjs`) and parity proves them: a page stuck on a loading line, a service
+  shown as "not wired", a bare error after Sign out is a MISS before the run, never a finding after.
+  The services production always wires behind sign-in (the feed, the Council, account management,
+  the fleet panel, feedback) are filled from the book (`worlds/league-services.mjs`); Sign out goes
+  through the real auth gate to a declared plain page.
+- **Known world artifacts.** What a world still cannot show as production would (the sign-in
+  page, the fund owner's cards, writes that never come back…) is declared once
+  (`worlds/shell-artifacts.mjs`) and written to `<dir>/.study-run/<world>-artifacts.json` by
+  compose, then rewritten by parity with every struck surface and unanswered read or page (a MISS
+  is not listed: it may be the app's own defect, and it fails parity instead). The checker
+  marks a finding that matches a row `world-artifact`.
 - **When the harness outgrows the pin:** a helper it imports from outside its folder that the pin
   lacks is feature-detected in `scripts/study/compat.mjs`, and the fallback is printed under the
   table. A surface that exists only at some commits declares `strikeUnless` (the composed answer
@@ -281,6 +294,11 @@ flowchart LR
 - 2026-10-09 · parallel workflow agents can share one scratchpad directory; a run dir named
   `run` or `smoke2` got a second agent's session appended to its trace. Give every run dir a name
   only this run would pick, and the driver refuses an `--out` that already holds a run.
+- 2026-10-09 · the thin slice's member and expert left the profile through the app nav and the
+  header and came back with world holes as findings: "not the shell" after Sign out, "No ops panel
+  is wired", Activity stuck on "Tuning in…", Settings' account section "isn't wired". Parity only
+  covered the area's own surfaces. Every one-tap destination is now a parity surface, and a world
+  writes its known artifacts for the checker.
 - 2026-10-09 · the recorder counted a page's held-open quote stream as a request in flight, so
   after one visit to a page with a live feed every later settle waited out its 5s cap twice
   (22s an action, `settled: false`). Every EventSource is now ignored, and a fresh load forgets

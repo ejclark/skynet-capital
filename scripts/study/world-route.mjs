@@ -31,13 +31,28 @@ import { chromium } from "playwright-core";
 import { parseLeaderMetric } from "../../src/observatory/standings-metric.ts";
 import { isAppShellPath, serveAppShell } from "../../src/server/app-shell-routes.ts";
 import { createBoardChannel, streamBoardPatches } from "../../src/server/board-patch-routes.ts";
+import { gateRequest } from "../../src/server/dashboard-auth-gate.ts";
 import { resolveChromium, shooter } from "../shoot/lib.mjs";
 import { routeRequest, wantsEventStream } from "./routing.mjs";
+import { SIGNED_OUT_PAGE } from "./signed-out.mjs";
 
 const SCENE = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" };
 
-/** The static half: the production shell handler, plus held-open empty event streams. */
-function startServer(dist, streams) {
+/**
+ * Sign-in's own routes, answered by the server's REAL auth gate (`gateRequest`): `/logout` is its
+ * 302 to `/login` with the cookie cleared, `/login` its sign-in page. The page is the one thing
+ * declared (signed-out.mjs): production's is the provider sign-in, which leaves the machine.
+ */
+const WORLD_AUTH = {
+  loginPage: () => SIGNED_OUT_PAGE,
+  clearCookie: () => "skynet_session=; Path=/; Max-Age=0",
+  handleAuthRoute: async () => false,
+  sessionFrom: () => undefined,
+};
+
+/** The static half: the production shell handler, plus held-open empty event streams. A path
+ *  neither serves is flagged in `session.unstubbed` (`PAGE <path>`) like an uncomposed read. */
+function startServer(dist, streams, session) {
   const channel = createBoardChannel();
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
@@ -66,6 +81,16 @@ function startServer(dist, streams) {
       return;
     }
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
+    if (path === "/login" || path === "/logout") {
+      void gateRequest(req, res, path, req.url ?? path, { auth: WORLD_AUTH });
+      return;
+    }
+    // The front door (`dashboard-server.ts` serveHomePage): a bare visit lands in the shell.
+    if (path === "/" || path === "/index.html") {
+      res.writeHead(302, { location: `/app/${url.search}` });
+      res.end();
+      return;
+    }
     // The landmark portrait embeds the real `/tower` scene, served as shell.mjs serves it — when
     // its bundle is built (`npm run build:scene`); otherwise the frame stays the night background.
     const scene = SCENE[path];
@@ -74,8 +99,9 @@ function startServer(dist, streams) {
       res.writeHead(200, { "content-type": type });
       return res.end(readFileSync(scene));
     }
-    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-    res.end("not the shell");
+    session.unstubbed.push(`PAGE ${path}`);
+    res.writeHead(404, { "content-type": "text/html; charset=utf-8" });
+    res.end("<!doctype html><title>Not found</title><h1>Not found</h1>");
   });
   return new Promise((ok) => server.listen(0, "127.0.0.1", () => ok(server)));
 }
@@ -105,14 +131,14 @@ export async function openWorld({
     throw new Error("study world: app/dist missing — run `npm run build --prefix app` first");
   }
   const streams = new Set();
-  const server = await startServer(dist, streams);
+  const session = { unstubbed: [], writes: [], offsite: [] };
+  const server = await startServer(dist, streams, session);
   const origin = `http://127.0.0.1:${server.address().port}`;
   const exe = resolveChromium();
   const browser = await chromium.launch({
     ...(exe ? { executablePath: exe } : {}),
     args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });
-  const session = { unstubbed: [], writes: [], offsite: [] };
   let context;
   let page;
 

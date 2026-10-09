@@ -19,9 +19,14 @@
 // covered at its own position), or any `/api` read no composed answer covered (`unstubbed`), exits
 // non-zero. A fault the app is known to have is declared on its act/expect as `knownBug: "#<n>"`
 // and printed as `bug` with that issue — passing, but never as `ok`.
+//
+// A world's `oneTap` list (every destination one tap from the area: app nav, header icons) is
+// checked beside its own surfaces, so a page the world cannot render faithfully is a row here
+// before a run, never a member's finding after it. Each world's known artifacts — declared, struck,
+// unanswered (never a miss: it fails the run) — go to `<run>/<world>-artifacts.json`.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expectHolds, locatorFor, VIEWPORTS } from "../crawl/steps.mjs";
@@ -35,6 +40,7 @@ import {
   worstExit,
 } from "./parity-judge.mjs";
 import { answerFrom } from "./payloads.mjs";
+import { worldArtifacts } from "./world-artifacts.mjs";
 import { openWorld } from "./world-route.mjs";
 import { WORLDS } from "./worlds/index.mjs";
 import { INSTANT } from "./worlds/instant.mjs";
@@ -224,16 +230,18 @@ async function frameAt(open, surfaces, frameName, results, framesDir) {
   }
 }
 
-/** Every surface of one world, phone then desktop, one browser per viewer. */
+/** Every surface of one world (its own, then one tap away), phone then desktop, one browser per
+ *  viewer. */
 async function checkWorld(world, runDir) {
   const rows = [];
   const unstubbed = [];
   const offsite = [];
   const writes = [];
-  for (const viewer of new Set(world.surfaces.map((s) => s.viewer))) {
+  const surfaces = [...world.surfaces, ...(world.oneTap ?? [])];
+  for (const viewer of new Set(surfaces.map((s) => s.viewer))) {
     const answer = answerFrom(join(runDir, world.name), viewer);
     const bodyOf = (read) => answer({ method: "GET", url: read })?.body;
-    const mine = world.surfaces.filter((s) => s.viewer === viewer).map((s) => strikeFor(s, bodyOf));
+    const mine = surfaces.filter((s) => s.viewer === viewer).map((s) => strikeFor(s, bodyOf));
     const open = await openWorld({
       answer,
       at: INSTANT,
@@ -273,8 +281,19 @@ async function main() {
   const unstubbed = [];
   const offsite = [];
   const writes = [];
+  const { payloads } = JSON.parse(readFileSync(join(runDir, "manifest.json"), "utf8"));
   for (const world of chosen) {
     const result = await checkWorld(world, runDir);
+    const known = worldArtifacts({
+      declared: world.artifacts,
+      payloads: payloads.filter((p) => p.world === world.name),
+      rows: result.rows,
+      unstubbed: result.unstubbed,
+    });
+    writeFileSync(
+      join(runDir, `${world.name}-artifacts.json`),
+      `${JSON.stringify(known, null, 1)}\n`,
+    );
     rows.push(...result.rows);
     unstubbed.push(...result.unstubbed.map((u) => `${world.name} ${u}`));
     offsite.push(...result.offsite.map((u) => `${world.name} ${u}`));

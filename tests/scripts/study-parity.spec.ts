@@ -8,6 +8,7 @@ import {
   strikeFor,
   worstExit,
 } from "../../scripts/study/parity-judge.mjs";
+import { worldArtifacts } from "../../scripts/study/world-artifacts.mjs";
 
 /**
  * The study's parity check (#4943 slice 2) measures in the browser and judges here: a surface
@@ -198,5 +199,48 @@ describe("strikeFor — a surface the composed build may or may not serve", () =
     expect(strikeFor(fixed, () => ({ ideas: 1 })).struck).toBe("never here");
     const plain = { label: "y" };
     expect(strikeFor(plain, () => undefined)).toBe(plain);
+  });
+});
+
+describe("worldArtifacts — the list the checker reads before calling a finding real", () => {
+  const declared = [{ route: "/login", sees: "a plain page", why: "the provider is off-machine" }];
+
+  it("keeps every declared row, tagged as declared", () => {
+    expect(worldArtifacts({ declared })).toEqual([{ ...declared[0], source: "declared" }]);
+  });
+
+  it("names each fixture-backed read once, with the fixture's own reason", () => {
+    const payloads = [
+      { key: "/api/a", source: "builder" },
+      { key: "/api/b", source: "fixture: no store for b" },
+      { key: "/api/b", source: "fixture: no store for b" },
+    ];
+    expect(worldArtifacts({ payloads })).toEqual([
+      {
+        route: "/api/b",
+        sees: "a declared fixture, not the server's answer",
+        why: "no store for b",
+        source: "compose",
+      },
+    ]);
+  });
+
+  it("lists a struck surface with its reason, and never a miss (it may be the app's own bug)", () => {
+    const rows = [
+      { surface: { label: "fine", route: "/r" }, phone: { miss: null }, desktop: { miss: null } },
+      { surface: { label: "gone", route: "/g", struck: "#1 — not served" } },
+      { surface: { label: "leaks a name", route: "/b" }, phone: { miss: "text is shown" } },
+    ];
+    expect(worldArtifacts({ rows }).map((a) => [a.route, a.source, a.why])).toEqual([
+      ["/g", "parity: struck", "#1 — not served"],
+    ]);
+  });
+
+  it("turns an unanswered read or page into one row each", () => {
+    const got = worldArtifacts({
+      unstubbed: ["v: GET /api/x?y=1", "v: GET /api/x?y=1", "v: PAGE /nowhere"],
+    });
+    expect(got.map((a) => a.route)).toEqual(["GET /api/x?y=1", "/nowhere"]);
+    expect(got[1]?.sees).toMatch(/Not found/);
   });
 });

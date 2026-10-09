@@ -6,13 +6,16 @@
 //
 // Market data (quotes, chains, greeks, bars — the SPY benchmark included) comes from market.mjs's
 // client over the world's `market` input; the broker's account, history and order list from the
-// book. Seams left unwired on purpose answer as production does when they are absent ("not
-// available"): the COND-SCOUT probe ledger, the order audit log (so a human row's origin reads
-// `unknown`), the bot funnel/expectancy, the alert and council stores, and every admin store.
+// book. The services production always wires behind sign-in (the feed, feedback, the Council,
+// account management, the fleet panel) come from league-services.mjs. Seams left unwired on
+// purpose answer as production does when they are absent ("not available"): the COND-SCOUT probe
+// ledger, the order audit log (so a human row's origin reads `unknown`), the bot
+// funnel/expectancy, the alert store, and the fund owner's stores (shell-artifacts.mjs says so).
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
 
 import { regularSessionOpen } from "../../../src/domain/market-session.ts";
 import { INSTANT } from "./instant.mjs";
+import { leagueServices } from "./league-services.mjs";
 import { marketClient } from "./market.mjs";
 
 const AT = new Date(INSTANT);
@@ -109,6 +112,7 @@ export function serverConfig(book) {
     subscriptions: { load: () => book.subscriptions, loadIfReadable: () => book.subscriptions },
     tradingClientFor: (id) => tradingClient(book, id),
     optionsClientFor: () => marketClient(book.market),
+    ...leagueServices(book),
   };
 }
 
