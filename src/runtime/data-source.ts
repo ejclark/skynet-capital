@@ -25,8 +25,6 @@ type ActivitySink = (record: TradeActivityRecord) => void;
 
 interface StartStreamsInput {
   readonly participants: readonly Participant[];
-  /** Symbols currently held — what the live market-data stream subscribes to. */
-  readonly heldSymbols: readonly string[];
   readonly sink: EventSink;
   /** Durable trade-activity capture, fed by each account's trade_updates stream (live mode only). */
   readonly onActivity?: ActivitySink;
@@ -51,7 +49,7 @@ export interface DataSource {
   readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
   /** The roster (live: env; offline: fixture file). */
   loadParticipants(): Participant[];
-  /** Start the realtime price/fill streams, pushing into `sink`. */
+  /** Start the realtime streams, pushing into `sink` — live: fills only, no price socket (#4864). */
   startStreams(input: StartStreamsInput): void;
   /**
    * Start one account's fill stream — used when a participant is added at runtime. Live

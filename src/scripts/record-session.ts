@@ -7,7 +7,8 @@
  *   npm run record:session -- path/to/out.jsonl  # custom path
  *
  * Runs the real (live) wiring, captures the initial board as a leading `snapshot` event,
- * then appends every price tick and fill as it arrives. Replay it with
+ * then appends every fill as it arrives — no price ticks: the live data source opens no price
+ * socket, since one would take the bots' single market-data slot (#4864). Replay it with
  * `SKYNET_OFFLINE_FIXTURES` pointed at a dir whose events.jsonl is this file. Ctrl-C to stop.
  */
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -43,12 +44,8 @@ async function main(): Promise<void> {
     }
   };
 
-  const heldSymbols = [
-    ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
-  ];
   dataSource.startStreams({
     participants,
-    heldSymbols,
     sink: record,
     onStatus: (channel, status) => console.log(`[${channel}] ${status}`),
   });

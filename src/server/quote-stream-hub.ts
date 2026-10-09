@@ -9,11 +9,13 @@ import { type QuoteView, quoteView } from "../trading/quote-view.js";
  * first subscriber and closes on the last.
  *
  * WHY PER MEMBER, and not one shared stream for the whole app (priced on #3407, 2026-10-01):
- *  - Alpaca allows ONE concurrent market-data connection per account, and the bot loop already
- *    holds the host account's (`run-autonomous.ts` → `autonomous-data-connections.ts`, all ten
- *    universe symbols). A second socket on that credential is not a cap problem, it is the
- *    outage written up in `market-data-stream.ts`'s own header: Alpaca kills one as a duplicate
- *    and BOTH readers go quiet.
+ *  - Alpaca allows ONE concurrent market-data connection per USER LOGIN, per endpoint — not per
+ *    paper account, so every key under one login shares it (#4864) — and the bot loop already
+ *    holds the bots' login's (`run-autonomous.ts` → `autonomous-data-connections.ts`, all ten
+ *    universe symbols). A second socket there is not a cap problem, it is the outage written up
+ *    in `market-data-stream.ts`'s own header: Alpaca refuses or kills one and a reader goes
+ *    quiet. OPEN RISK (#4992): a member whose key sits under the bots' login takes their slot for
+ *    as long as this hub holds that member's socket — per-member keys alone don't prevent it.
  *  - The trade surface's identity doctrine is already per-requester — `quote-route.ts` and
  *    `option-chain-route.ts` read "through the REQUESTER'S OWN options client only". A shared
  *    stream would price the header from a different account than the chain beside it.
