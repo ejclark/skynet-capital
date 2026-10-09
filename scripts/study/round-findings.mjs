@@ -154,5 +154,16 @@ export function collectFindings(groups) {
   return { findings, classes };
 }
 
-/** Findings as a matcher receives them: no class. */
-export const stripClasses = (findings) => findings.map(({ class: _c, ...rest }) => rest);
+/**
+ * Findings as a matcher receives them: what, where, how bad, how deep — and nothing that says who
+ * found it. The class goes, and so do the detail and the evidence paths, which name their source
+ * (an analyst's member, a census folder, an expert's principle). The checker reads the full record.
+ */
+export const stripClasses = (findings) =>
+  findings.map((f) => ({
+    id: f.id,
+    what: f.what,
+    level: f.level,
+    severity: f.severity,
+    surface: f.surface,
+  }));

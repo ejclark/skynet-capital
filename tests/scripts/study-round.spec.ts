@@ -453,7 +453,7 @@ describe("collecting findings", () => {
     ]);
   });
 
-  it("ids are stable and unique; classes are kept apart and stripped for the matchers", () => {
+  it("ids are stable and unique; classes kept apart; matchers get no trace of who found it", () => {
     const first = analyst[0] as (typeof analyst)[number];
     const groups = [analyst, expert, words, instruments, [first]];
     const a = collectFindings(groups);
@@ -463,7 +463,9 @@ describe("collecting findings", () => {
     expect(a.findings.at(-1)?.id).toBe(`${findingId(first)}-2`);
     expect(Object.keys(a.classes)).toEqual(a.findings.map((f) => f.id));
     expect(a.classes[a.findings[2]?.id ?? ""]).toBe("expert-2");
-    for (const f of stripClasses(a.findings)) expect("class" in f).toBe(false);
+    for (const f of stripClasses(a.findings)) {
+      expect(Object.keys(f).sort()).toEqual(["id", "level", "severity", "surface", "what"]);
+    }
     for (const f of a.findings) {
       expect(f).toEqual(
         expect.objectContaining({

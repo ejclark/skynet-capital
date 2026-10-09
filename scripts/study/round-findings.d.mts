@@ -39,4 +39,6 @@ export function collectFindings(groups: Finding[][]): {
   findings: Collected[];
   classes: Record<string, string>;
 };
-export function stripClasses(findings: Collected[]): Omit<Collected, "class">[];
+export function stripClasses(
+  findings: Collected[],
+): Pick<Collected, "id" | "what" | "level" | "severity" | "surface">[];

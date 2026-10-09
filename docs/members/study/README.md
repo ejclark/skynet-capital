@@ -213,7 +213,8 @@ flowchart LR
   the round stops. Tasks are frozen with their sha256 in `<out>/frozen.json`.
 - **Findings:** `<out>/findings.jsonl` holds every finding with a stable id, its class, level,
   severity, surface (route + viewport) and evidence frames; `<out>/classes.json` keeps id → class
-  apart, and `findings-unlabelled.jsonl` is the same list with the class stripped, for matchers.
+  apart, and `findings-unlabelled.jsonl` is what a matcher gets: id, what, level, severity and
+  surface only — no class, no detail, no evidence paths, since each of those names its source.
 - **`--dry-run`** answers every call from `tests/fixtures/study-stub/` (or `--stub <dir>`) — no
   sign-in, no model; `--only-world` and `--cap` narrow it. `--thin` is the area's thin slice.
 - **Resuming:** a step whose `done.json` exists is skipped; `log.jsonl` only ever grows.

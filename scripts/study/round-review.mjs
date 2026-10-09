@@ -4,7 +4,7 @@
 // round-findings.mjs's.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { join } from "node:path";
 import {
   collectFindings,
   fromAnalyst,
@@ -300,9 +300,5 @@ export function collect(ctx) {
   const byClass = {};
   for (const c of Object.values(classes)) byClass[c] = (byClass[c] ?? 0) + 1;
   ctx.log(step, "findings", { total: findings.length, byClass });
-  return {
-    total: findings.length,
-    byClass,
-    dir: relative(ctx.out, dirname(join(ctx.out, "findings.jsonl"))) || ".",
-  };
+  return { total: findings.length, byClass };
 }
