@@ -4,7 +4,7 @@ import {
   grade,
   gradeAnswer,
   hedged,
-  MAX_NUMBERS,
+  MAX_RIVALS,
   numbersIn,
   regionSeen,
   SEEN_MIN,
@@ -71,8 +71,13 @@ describe("gradeAnswer — the fact the member reports", () => {
     const r = gradeAnswer("down $295", NUMBER_TASK.answer);
     expect(r).toEqual({ matched: false, why: "295 not within tolerance of 412" });
   });
-  it(`refuses an answer that lists more than ${MAX_NUMBERS} numbers — it lists, it does not answer`, () => {
-    expect(gradeAnswer("1, 2, 3, 412, 5", NUMBER_TASK.answer).matched).toBe(false);
+  it(`refuses more than ${MAX_RIVALS} other amount the size of the answer — a list of candidates`, () => {
+    expect(gradeAnswer("$380, $412, $455", NUMBER_TASK.answer).matched).toBe(false);
+  });
+  it("keeps a right total that also gives its breakdown — the first full round's real answer", () => {
+    const given =
+      "About $1.1 million — $1,095,445 across both accounts (my own at $98,479 plus the Sauron bot at $996,966), up $1,880 on the day.";
+    expect(gradeAnswer(given, { kind: "number", value: 1095445, abs: 500 }).matched).toBe(true);
   });
   it("keeps a right answer that also carries a date, a share count and a percentage", () => {
     const given = "I hold 3 CRWV shares bought 10/01, down $412 (−8.3%)";

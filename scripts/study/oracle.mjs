@@ -16,8 +16,15 @@
 
 /** A snippet counts as seen when at least this share of its text is inside the viewport. */
 export const SEEN_MIN = 0.5;
-/** More distinct numbers than this in one answer is a list of everything, which answers nothing. */
-export const MAX_NUMBERS = 4;
+/**
+ * An answer that names more than this many OTHER amounts of the same size as the one asked for (within
+ * a factor of two) is a list of candidates — a guess. A breakdown is not: "$1,095,445 — my own $98,479
+ * plus the bot's $996,966, up $1,880 today" names one rival-sized amount and answers. The first full
+ * round (2026-10-09) graded exactly that answer a failure under the old rule ("more than 4 numbers").
+ */
+export const MAX_RIVALS = 1;
+/** How close in size another amount must be to count as a rival candidate. */
+const RIVAL_FACTOR = 2;
 
 const MINUS = /[-−–]/;
 // A minus counts only when it TOUCHES the number ("-$412", "$-3", "−8.3%"): a spaced dash is
@@ -26,7 +33,7 @@ const MINUS = /[-−–]/;
 const NUMBER =
   /(?<![\w.])([-−–])?(?:\$\s*([-−–])?)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*([km](?![a-z]))?(\s*%)?/gi;
 // Dates and clock times are never the amount a task asks for, and split into numbers they would
-// push a right answer ("bought 10/01, down $412") over MAX_NUMBERS.
+// push a right answer ("bought 10/01, down $412") toward looking like a list.
 const DATE_OR_TIME =
   /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,4}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
 
@@ -96,13 +103,23 @@ export function gradeAnswer(given, expected) {
   if (expected?.kind === "number") {
     const found = [...new Set(numbersIn(given))];
     if (found.length === 0) return { matched: false, why: "no number in the answer" };
-    if (found.length > MAX_NUMBERS) {
+    if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
+    const want = Math.abs(expected.value);
+    const rivals = found.filter((n) => {
+      const size = Math.abs(n);
+      return (
+        !withinTolerance(n, expected) &&
+        want > 0 &&
+        size >= want / RIVAL_FACTOR &&
+        size <= want * RIVAL_FACTOR
+      );
+    });
+    if (rivals.length > MAX_RIVALS) {
       return {
         matched: false,
-        why: `${found.length} numbers in one answer — it lists, it does not answer`,
+        why: `${rivals.length} other amounts the size of the answer — it lists candidates, it does not answer`,
       };
     }
-    if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
     const hit = found.find((n) => withinTolerance(n, expected));
     return hit === undefined
       ? { matched: false, why: `${found.join(", ")} not within tolerance of ${expected.value}` }
