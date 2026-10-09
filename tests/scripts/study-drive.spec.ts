@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import type { UserMessage } from "../../scripts/study/actor-sealed.mjs";
 import {
@@ -14,7 +15,7 @@ import {
   toAction,
   turnProblems,
 } from "../../scripts/study/actor-turn.mjs";
-import { parseResult, sealedArgs, signedIn } from "../../scripts/study/sealed.mjs";
+import { parseResult, readSchema, sealedArgs, signedIn } from "../../scripts/study/sealed.mjs";
 import { actionCap, deviceLine, parseTask, taskProblems } from "../../scripts/study/task-file.mjs";
 
 // The member-session driver's pure halves (scripts/study/drive.mjs runs them): the task file and
@@ -240,6 +241,24 @@ describe("parseResult — the final result event's structured output", () => {
     const bare = stream({ type: "result", subtype: "success", result: "plain text" });
     expect(() => parseResult(bare)).toThrow(/no structured_output/);
     expect(() => parseResult(stream(init))).toThrow(/no result event/);
+  });
+  it("names the CLI's own reason when the call died before any result", () => {
+    const stderr =
+      'warming up\nError: --json-schema is not a valid JSON Schema: no schema with key or ref "x"\n';
+    expect(() => parseResult("", stderr)).toThrow(
+      /no result event in the output — Error: --json-schema is not a valid JSON Schema/,
+    );
+  });
+});
+
+describe("readSchema — what --json-schema is handed", () => {
+  // The CLI's validator rejects a 2020-12 `$schema` URI and exits before answering (2026-10-09).
+  it("never passes a draft declaration, for every role schema", () => {
+    for (const name of readdirSync(join(import.meta.dirname, "../../scripts/study/schemas"))) {
+      const schema = JSON.parse(readSchema(name.replace(/\.json$/, "")));
+      expect(schema.$schema, name).toBeUndefined();
+      expect(schema.type, name).toBe("object");
+    }
   });
 });
 

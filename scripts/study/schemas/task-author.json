@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Task author — goal tasks for one member in one world",
   "description": "docs/members/study/roles/task-author.md",
   "type": "object",

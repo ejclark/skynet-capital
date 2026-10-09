@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "One simulated member turn",
   "description": "What the member says and does in one turn. Field meanings: docs/members/study/roles/actor.md.",
   "type": "object",

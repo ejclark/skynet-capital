@@ -264,13 +264,22 @@ export function canaryQuestion(markdown) {
   return lines.join(" ");
 }
 
-/** A canary answer passes only when it knows nothing and was told nothing else. */
+/**
+ * A canary answer passes only when it knows nothing and every context block it was handed is one
+ * the CLI always adds even under --safe-mode: the signed-in account's email (`account-identity`)
+ * or its environment block (`environment`). Anything of kind `other` fails (roles/canary.md).
+ */
 export function canaryVerdict(answer) {
   const knows = String(answer?.knowledge ?? "").trim();
-  const told = String(answer?.other_instructions ?? "").trim();
   if (knows) return { ok: false, why: "it named knowledge about the app" };
-  if (told) return { ok: false, why: "it quoted instructions beyond its role prompt" };
-  return { ok: true, why: "empty" };
+  const context = Array.isArray(answer?.context) ? answer.context : [];
+  const other = context.filter((c) => c?.kind !== "account-identity" && c?.kind !== "environment");
+  if (other.length > 0) return { ok: false, why: "it was handed context beyond its role prompt" };
+  const kinds = [...new Set(context.map((c) => c.kind))];
+  return {
+    ok: true,
+    why: kinds.length ? `empty (CLI context only: ${kinds.join(", ")})` : "empty",
+  };
 }
 
 /**

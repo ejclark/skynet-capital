@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Framer — the jobs this area is hired for",
   "description": "docs/members/study/roles/framer.md",
   "type": "object",
