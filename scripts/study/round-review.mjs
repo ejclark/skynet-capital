@@ -192,7 +192,8 @@ export async function experts(ctx) {
       rolePath: join(ctx.roles, "expert.md"),
       schema: readSchema("expert-consolidation"),
       message: userMessage(expertConsolidationText({ cards, batchFindings, impressions })),
-      timeoutMs: 600_000,
+      // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
+      timeoutMs: 1_800_000,
     });
     writeJson(join(dir, `expert-${k}.json`), {
       k,
