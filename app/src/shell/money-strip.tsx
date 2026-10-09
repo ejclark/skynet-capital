@@ -103,7 +103,7 @@ export function MoneyStrip({
             </li>
           )}
           {allocation.optionsSold ? (
-            <li>
+            <li className="money-legend-sold">
               Sold options <b className="num">{allocation.optionsSold}</b>
             </li>
           ) : null}

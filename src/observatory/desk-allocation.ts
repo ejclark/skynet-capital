@@ -28,6 +28,7 @@ export function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
   let shares = 0;
   let options = 0;
   let optionsSold = 0;
+  let anySold = false;
   let shareCount = 0;
   for (const p of snapshot.positions) {
     const long = Math.max(0, p.marketValue);
@@ -36,6 +37,9 @@ export function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
       // A written contract's market value is negative: the liability, signed as the positions
       // table shows it. Clamping it to 0 alone is how a sold put read "Options $0" (#4948).
       optionsSold += Math.min(0, p.marketValue);
+      // Whether one is written comes from the position's sign, not the summed value: a contract
+      // marked at 0 (no quote, or worthless near expiry) is still owed, never "Options $0".
+      if (p.quantity < 0 || p.marketValue < 0) anySold = true;
     } else {
       shares += long;
       shareCount += p.quantity;
@@ -47,7 +51,8 @@ export function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
   return {
     shares: formatCurrency(shares),
     options: formatCurrency(options),
-    ...(optionsSold < 0 ? { optionsSold: formatCurrency(optionsSold) } : {}),
+    // Rounded first, so a liability under 50 cents reads "$0" rather than "-$0".
+    ...(anySold ? { optionsSold: formatCurrency(Math.round(optionsSold) || 0) } : {}),
     cash: formatCurrency(snapshot.cash),
     sharesPct: share(shares),
     optionsPct: share(options),

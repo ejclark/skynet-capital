@@ -43,6 +43,11 @@ describe("allocationOf", () => {
     expect(allocation.sharesPct + allocation.optionsPct + allocation.cashPct).toBeCloseTo(100, 10);
   });
 
+  it("still names a written contract whose mark is 0, and never reads '-$0'", () => {
+    expect(allocationOf(snapshot([{ ...soldPut, marketValue: 0 }])).optionsSold).toBe("$0");
+    expect(allocationOf(snapshot([{ ...soldPut, marketValue: -0.3 }])).optionsSold).toBe("$0");
+  });
+
   it("carries no sold line while nothing is written", () => {
     expect(allocationOf(snapshot([heldCall])).optionsSold).toBeUndefined();
     expect(allocationOf(snapshot([])).optionsSold).toBeUndefined();

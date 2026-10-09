@@ -80,6 +80,8 @@ describe("MoneyStrip", () => {
     await screen.findByRole("region", { name: "Where your money is" });
     const sold = screen.getByText("-$310");
     expect(sold.closest("li")).toHaveTextContent("Sold options -$310");
+    // The phone card hides the rest of the legend but keeps this line (the bar can't draw it).
+    expect(sold.closest("li")).toHaveClass("money-legend-sold");
     expect(screen.queryByText("$0")).not.toBeInTheDocument();
   });
 
