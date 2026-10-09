@@ -9,7 +9,12 @@
 //   card        — a member card is the member's own pre-dated words: keyword and label hits are
 //                 COUNTED as priming (reported primed vs. unprimed later), never masked or failed.
 //   every kind  — any five-word run shared with the sealed key fails.
-// Problems name the file and item number only ("rewrite task 3"), so fixing a packet never teaches
+// A sealed-word or overlap problem names the file and item number only ("rewrite task 3"), so
+// fixing a packet never teaches the fixer the key. An interface-label problem ALSO names the label
+// (first real run, 2026-10-09: an author guessed blind four times at which everyday word — "trade",
+// "options" — was also a button). A screen label says nothing about the key, and only what the
+// member reads (a task's scenario, never its answer, which the oracle needs verbatim) is checked
+// for labels. Originally:
 // the fixer the key (docs/members/study/README.md → "Rules that keep a study honest").
 //
 // Usage: node scripts/study/lint.mjs --sealed <dir> --kind task|role|card [--labels <file>]
@@ -61,26 +66,49 @@ export function itemsOf(name, raw) {
   return raw.split(/\n\s*\n/).filter((p) => p.trim());
 }
 
+/** Which of `terms` occur in `text` as whole words or phrases — sorted, de-duplicated. */
+export function matchedTerms(text, terms) {
+  const t = ` ${norm(text)} `;
+  return [
+    ...new Set(terms.filter((term) => new RegExp(`(^|\\s)${escapeRe(norm(term))}(\\s|$)`).test(t))),
+  ].sort();
+}
+
+/** What a member actually reads of each item: a task's scenario only; any other packet, all of it. */
+export function shownOf(name, raw) {
+  if (name.endsWith(".json")) return JSON.parse(raw).map((t) => String(t.scenario ?? ""));
+  return itemsOf(name, raw);
+}
+
 /**
- * Lint one packet. Returns { problems: [{file, item, kind}], primes } — `kind` is one of
- * `sealed-word` · `interface-label` · `overlap`; never the word itself.
+ * Lint one packet. Returns { problems: [{file, item, kind, words?}], primes } — `kind` is one of
+ * `sealed-word` · `interface-label` · `overlap`. Only an interface-label problem carries `words`
+ * (the labels hit); a sealed-word or overlap problem never names anything.
  */
 export function lintPacket({ file, raw, kind, keywords, labels = [], keyShingles, allow = [] }) {
   const words = keywords.filter((k) => !allow.includes(k));
   const problems = [];
   let primes = 0;
+  const shown = shownOf(file, raw);
   itemsOf(file, raw).forEach((text, i) => {
     const item = i + 1;
     if (overlapsKey(text, keyShingles)) problems.push({ file, item, kind: "overlap" });
     const kw = countHits(text, words);
-    const lb = kind === "role" ? 0 : countHits(text, labels);
-    if (kind === "card") primes += kw + lb;
-    else {
-      if (kw) problems.push({ file, item, kind: "sealed-word" });
-      if (kind === "task" && lb) problems.push({ file, item, kind: "interface-label" });
+    if (kind === "card") {
+      primes += kw + countHits(text, labels);
+      return;
     }
+    if (kw) problems.push({ file, item, kind: "sealed-word" });
+    const hit = kind === "task" ? matchedTerms(shown[i] ?? "", labels) : [];
+    if (hit.length) problems.push({ file, item, kind: "interface-label", words: hit });
   });
   return { problems, primes };
+}
+
+/** One problem as the line an author is handed back. */
+export function rewriteLine(p) {
+  const named = p.kind === "interface-label" && p.words?.length;
+  return `rewrite ${p.file} item ${p.item} (${p.kind}${named ? `: ${p.words.map((w) => `"${w}"`).join(", ")}` : ""})`;
 }
 
 function main(argv) {
@@ -108,7 +136,7 @@ function main(argv) {
       keyShingles,
       allow,
     });
-    for (const p of problems) console.log(`rewrite ${p.file} item ${p.item} (${p.kind})`);
+    for (const p of problems) console.log(rewriteLine(p));
     if (kind === "card") console.log(`${basename(f)}: ${primes} priming hit(s) logged`);
     failed += problems.length;
   }

@@ -3,6 +3,7 @@ import {
   countHits,
   lintPacket,
   overlapsKey,
+  rewriteLine,
   shingles,
   termList,
 } from "../../scripts/study/lint.mjs";
@@ -121,8 +122,25 @@ describe("the leak check", () => {
     });
     expect(problems).toEqual([
       { file: "t.json", item: 2, kind: "sealed-word" },
-      { file: "t.json", item: 3, kind: "interface-label" },
+      { file: "t.json", item: 3, kind: "interface-label", words: ["overview"] },
     ]);
+    expect(problems.map(rewriteLine)).toEqual([
+      "rewrite t.json item 2 (sealed-word)",
+      'rewrite t.json item 3 (interface-label: "overview")',
+    ]);
+  });
+
+  it("checks only what the member reads for labels — never a task's answer", () => {
+    const raw = JSON.stringify([{ scenario: "Find what you hold.", answer: "Overview total $10" }]);
+    const { problems } = lintPacket({
+      file: "t.json",
+      raw,
+      kind: "task",
+      keywords,
+      labels: ["overview"],
+      keyShingles,
+    });
+    expect(problems).toEqual([]);
   });
 
   it("lets a role prompt use an allowed action name and nothing else", () => {
