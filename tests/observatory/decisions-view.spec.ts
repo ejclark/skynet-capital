@@ -18,7 +18,7 @@ const idea: ConsiderationChip = {
   delta: "D-20 to D-6",
   deltaTone: "flat",
   reason: "Long into the earnings print, out before the number lands.",
-  action: { label: "View playbook", href: "/app/research?section=playbooks" },
+  action: { label: "View playbook", href: "/app/research?section=playbooks&account=eric" },
 };
 
 describe("decisionsFor", () => {
