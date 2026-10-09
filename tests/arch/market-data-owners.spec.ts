@@ -19,8 +19,6 @@ import { join } from "node:path";
 const OWNERS: Record<string, string> = {
   "src/scripts/autonomous-data-connections.ts":
     "bots app — the bot's own credential (bots[0]). The one owner of every bot account's socket.",
-  "src/scripts/dashboard-desk-wiring.ts":
-    "dashboard quote hub — the requesting member's own credential, one socket per member (quote-stream-hub.ts).",
 };
 
 function sourceFiles(dir: string): string[] {
@@ -40,11 +38,12 @@ describe("Alpaca market-data socket ownership (one connection per account)", () 
     expect(openers).toEqual(Object.keys(OWNERS).sort());
   });
 
-  it("keeps the dashboard from opening its own held-symbol price socket", () => {
+  it("keeps the dashboard app from opening any market-data socket", () => {
     // 2026-10-09: the limit is per USER LOGIN per endpoint (Alpaca docs → Connection limit), so
     // even a member's key on the bots' login starved them. The dashboard opens none.
-    expect(readFileSync("src/runtime/data-source.ts", "utf8")).not.toContain(
-      "new AlpacaMarketDataStream(",
-    );
+    for (const path of ["src/runtime/data-source.ts", "src/scripts/dashboard-desk-wiring.ts"]) {
+      // The trade page's quote hub polls REST snapshots instead (#5001, src/server/quote-poller.ts).
+      expect(readFileSync(path, "utf8")).not.toContain("new AlpacaMarketDataStream(");
+    }
   });
 });

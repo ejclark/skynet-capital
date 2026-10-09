@@ -3,6 +3,10 @@ import type { MarketQuoteTick } from "../alpaca/market-data-stream-events.js";
 import { type QuoteView, quoteView } from "../trading/quote-view.js";
 
 /**
+ * SUPERSEDED UPSTREAM (#5001): the hub's "socket" is now `quote-poller.ts` — REST snapshots, never a
+ * market-data websocket, because Alpaca's one socket is per LOGIN and belongs to the bots app. The
+ * per-member shape and frame rules below still hold; read "socket" as "the member's poller".
+ *
  * THE QUOTE STREAM'S UPSTREAM (#3407 P4, the last capability slice) — one market-data socket per
  * MEMBER, on that member's own credential, carrying only the symbols that member is actually
  * looking at. Every surface-facing SSE connection rents a reference to it; the socket opens on the
@@ -61,7 +65,7 @@ export const STREAM_BUDGET_FULL = `This account is already streaming ${SYMBOLS_P
 export type QuoteListener = (quote: StreamedQuote) => void;
 
 /** The upstream socket, narrowed to what this hub drives — so a spec supplies a fake and the hub
- *  needs no network. `AlpacaMarketDataStream` satisfies it structurally. */
+ *  needs no network. `createQuotePoller` (quote-poller.ts) implements it in production. */
 export interface QuoteStreamSocket {
   start(): void;
   stop(): void;
