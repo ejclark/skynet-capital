@@ -1,6 +1,7 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { unmanagedTickers } from "../domain/bots-universe.js";
 import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { lastClosedSessionOpen } from "../domain/market-session.js";
 import type {
   PlaybookMode,
   PlaybookSubscription,
@@ -338,8 +339,12 @@ export function botHeartbeatView(
     };
   }
   const sinceLastPassMs = Math.max(0, now.getTime() - newest.at);
+  // A closed market explains silence only back to the last session (#4949): a bot with no pass in
+  // all of it stopped, and "market closed · idle" would let that read as fine until the next open.
   const state: HeartbeatState = !marketOpen
-    ? "market-closed"
+    ? newest.at < lastClosedSessionOpen(now).getTime()
+      ? "stale"
+      : "market-closed"
     : sinceLastPassMs > STALE_AFTER_MS
       ? "stale"
       : "beating";
