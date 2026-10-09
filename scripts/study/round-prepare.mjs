@@ -5,7 +5,15 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { memberCard } from "./packets.mjs";
 import { isHarnessPath, overlayManifest } from "./pin-plan.mjs";
@@ -18,7 +26,7 @@ import {
   primingCounts,
   profileProblems,
 } from "./round-plan.mjs";
-import { readSchema, signedIn, userMessage } from "./sealed.mjs";
+import { readSchema, userMessage } from "./sealed.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -39,7 +47,12 @@ function harnessTree(root) {
   return overlayManifest(listed).tree;
 }
 
-/** The pin must carry this checkout's harness and a composed run; prepare it again if not. */
+/**
+ * The pin must carry this checkout's harness and a composed run. A pin with no composed run is
+ * prepared here (nothing can be reading it); a pin whose harness differs is REFUSED with the
+ * command, never re-prepared in place — pins are shared, and another round may be reading its
+ * .study-run right now.
+ */
 function checkPin(ctx, step, dir) {
   const recordPath = join(ctx.pin, ".study-pin.json");
   if (!existsSync(recordPath)) {
@@ -50,15 +63,21 @@ function checkPin(ctx, step, dir) {
   let record = readJson(recordPath);
   const tree = harnessTree(ctx.here);
   const composed = existsSync(join(ctx.run, "manifest.json"));
-  if (record.harness?.tree !== tree || !composed) {
-    const why = composed ? "the pin's harness is not this checkout's" : "no composed run";
-    ctx.log(step, "prepare", { note: `${why} — pin.mjs prepare`, pin: record.pin });
+  if (composed && record.harness?.tree !== tree) {
+    throw new Error(
+      `the pin's harness is not this checkout's — once no other round is reading ${ctx.pin}: ` +
+        `node scripts/study/pin.mjs prepare --commit ${record.pin} --dir ${ctx.pin}`,
+    );
+  }
+  if (!composed) {
+    ctx.log(step, "prepare", { note: "no composed run — pin.mjs prepare", pin: record.pin });
     const fd = openSync(join(dir, "prepare.log"), "w");
     const args = [join(ctx.here, "scripts/study/pin.mjs"), "prepare", "--commit", record.pin];
     const res = spawnSync(process.execPath, [...args, "--dir", ctx.pin], {
       cwd: ctx.here,
       stdio: ["ignore", fd, fd],
     });
+    closeSync(fd);
     record = readJson(recordPath);
     // prepare exits with parity's status; a parity row out of bar is reported, not fatal here.
     ctx.log(step, "prepared", { parity: res.status });
@@ -129,12 +148,8 @@ export function preflight(ctx) {
   const dir = ctx.dir(step);
   const problems = profileProblems(ctx.p);
   if (problems.length > 0) throw new Error(`area config: ${problems.join("; ")}`);
+  // The sign-in is checked by round.mjs on every start, resumed or not — not only here.
   if (ctx.stub) ctx.log(step, "stub", { note: `every call answered from ${ctx.stub}` });
-  else {
-    const auth = signedIn();
-    if (!auth.ok) throw new Error(`refusing the round — ${auth.why}`);
-    ctx.log(step, "signed-in");
-  }
   for (const f of ["keywords.txt", "gold.md"]) {
     if (!existsSync(join(ctx.sealed, f))) throw new Error(`--sealed ${ctx.sealed} holds no ${f}`);
   }

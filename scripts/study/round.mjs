@@ -5,11 +5,13 @@
 //        [--concurrency N] [--only-world <name>] [--cap N]
 //
 // Run from today's checkout (the harness and the role prompts); everything the members see runs
-// in the pin (`pin.mjs prepare`), whose harness must be this checkout's — a mismatch re-prepares.
+// in the pin (`pin.mjs prepare`), whose harness must be this checkout's — a mismatch is refused
+// with the prepare command (a pin is shared; re-preparing it in place would pull .study-run out
+// from under another round), and a pin with no composed run is prepared.
 // The answer key is read ONLY through `--sealed <dir>` (keywords.txt + gold.md, for the lint).
 //
 // THE STEPS, each into <out>/<step>/ and each logged to the append-only <out>/log.jsonl:
-//   0 preflight   refuse unless stubbed or the CLI is signed in; the pin's record, a composed run;
+//   0 preflight   the area config; the pin's record (its harness must be this checkout's), a composed run;
 //                 census + facts + harvest at the area's cap, if absent       (round-prepare.mjs)
 //   1 cards       member cards by script (packets.mjs), linted as cards (priming counted); the
 //                 page list linted as a role packet                            (round-prepare.mjs)
@@ -22,7 +24,10 @@
 //   8 words       the harvested strings
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
-// A step whose <out>/<step>/done.json exists is skipped, so a round resumes where it stopped.
+// A step whose <out>/<step>/done.json exists is skipped, so a round resumes where it stopped —
+// but only under the mode the out dir was made with (<out>/round.json: the profile and its hash,
+// the pin, the sealed dir, thin, the stub, --only-world, --cap); any other mode is refused. A real
+// round checks the sign-in on every start, resumed or not.
 //
 // --thin: the area's thin cut (one member · one task · one viewport · one run · one expert over
 // one route; no words pass or audit). --dry-run: every call answered from a stub directory
@@ -31,8 +36,10 @@
 // dry run; a real round uses the area config's numbers.
 
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
+  closeSync,
   existsSync,
   mkdirSync,
   openSync,
@@ -43,11 +50,18 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
-import { censusPlan, roundArgs, STEPS, selectMatrix } from "./round-plan.mjs";
+import {
+  censusPlan,
+  modeChanges,
+  roundArgs,
+  roundMode,
+  STEPS,
+  selectMatrix,
+} from "./round-plan.mjs";
 import { canary, cards, preflight } from "./round-prepare.mjs";
 import { analysts, audit, collect, experts, words } from "./round-review.mjs";
 import { framer, sessions, tasks } from "./round-steps.mjs";
-import { halfFrame, makeCaller, ROLES } from "./sealed.mjs";
+import { halfFrame, makeCaller, ROLES, signedIn } from "./sealed.mjs";
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -77,7 +91,11 @@ function pinned(ctx, script, args) {
 function tool(ctx, script, args, logFile) {
   const fd = openSync(logFile, "w");
   const [cmd, argv, opts] = pinned(ctx, script, args);
-  return spawnSync(cmd, argv, { ...opts, stdio: ["ignore", fd, fd] }).status ?? 1;
+  try {
+    return spawnSync(cmd, argv, { ...opts, stdio: ["ignore", fd, fd] }).status ?? 1;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function toolAsync(ctx, script, args, logFile) {
@@ -85,8 +103,17 @@ function toolAsync(ctx, script, args, logFile) {
   const [cmd, argv, opts] = pinned(ctx, script, args);
   return new Promise((done) => {
     const child = spawn(cmd, argv, { ...opts, stdio: ["ignore", fd, fd] });
+    // The child holds its own copy of the descriptor; ours closes once it has started.
+    child.on("spawn", () => closeSync(fd));
     child.on("close", (code) => done(code ?? 1));
-    child.on("error", () => done(1));
+    child.on("error", () => {
+      try {
+        closeSync(fd);
+      } catch {
+        // already closed after spawn
+      }
+      done(1);
+    });
   });
 }
 
@@ -149,6 +176,31 @@ function context(opts) {
   return ctx;
 }
 
+/** The out dir's mode, recorded on first start and held on every resume. */
+function holdMode(ctx) {
+  const profile = resolve(ctx.opts.profile);
+  const sha = createHash("sha256").update(readFileSync(profile)).digest("hex");
+  const now = roundMode(
+    { ...ctx.opts, profile, pin: ctx.pin, sealed: ctx.sealed, stub: ctx.stub },
+    sha,
+  );
+  const file = join(ctx.out, "round.json");
+  if (existsSync(file)) {
+    const changed = modeChanges(JSON.parse(readFileSync(file, "utf8")), now);
+    if (changed.length > 0) {
+      throw new Error(
+        `${ctx.out} was made under another mode (${changed.join(", ")}) — resume with the same flags, or start a fresh --out`,
+      );
+    }
+    return;
+  }
+  const finished = STEPS.filter((step) => existsSync(join(ctx.out, step, "done.json")));
+  if (finished.length > 0) {
+    throw new Error(`${ctx.out} holds finished steps but no round.json — start a fresh --out`);
+  }
+  writeFileSync(file, `${JSON.stringify(now, null, 1)}\n`);
+}
+
 async function main(argv) {
   const opts = roundArgs(argv, {
     defaultStub: join(HERE, "tests/fixtures/study-stub"),
@@ -157,6 +209,12 @@ async function main(argv) {
   const ctx = context(opts);
   ctx.log("round", "start", { argv, thin: opts.thin, dryRun: opts.dryRun, stub: ctx.stub });
   try {
+    holdMode(ctx);
+    if (!ctx.stub) {
+      const auth = signedIn();
+      if (!auth.ok) throw new Error(`refusing the round — ${auth.why}`);
+      ctx.log("round", "signed-in");
+    }
     for (const step of STEPS) {
       const done = join(ctx.out, step, "done.json");
       if (existsSync(done)) {

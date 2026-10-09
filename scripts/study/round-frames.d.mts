@@ -18,7 +18,7 @@ export function keyFrames(args: {
 export function capFrames<S extends { frames: KeyFrame[] }>(
   sessions: S[],
   max?: number,
-): { sessions: S[]; dropped: number };
+): { sessions: S[]; dropped: number; coreDropped: number };
 
 export interface Batch {
   source: string;

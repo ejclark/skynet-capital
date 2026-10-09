@@ -242,10 +242,16 @@ flowchart LR
 - **Findings:** `<out>/findings.jsonl` holds every finding with a stable id, its class, level,
   severity, surface (route + viewport) and evidence frames; `<out>/classes.json` keeps id → class
   apart, and `findings-unlabelled.jsonl` is what a matcher gets: id, what, level, severity and
-  surface only — no class, no detail, no evidence paths, since each of those names its source.
+  surface only, sorted by id — no class, no detail, no evidence paths and no source order, since
+  each of those names its source. Ids hash surface + what, never the class.
 - **`--dry-run`** answers every call from `tests/fixtures/study-stub/` (or `--stub <dir>`) — no
   sign-in, no model; `--only-world` and `--cap` narrow it. `--thin` is the area's thin slice.
-- **Resuming:** a step whose `done.json` exists is skipped; `log.jsonl` only ever grows.
+- **Resuming:** a step whose `done.json` exists is skipped; `log.jsonl` only ever grows. A resume
+  must use the mode the out dir was made with (`<out>/round.json`: profile and its hash, pin,
+  sealed dir, thin, stub, `--only-world`, `--cap`) — any other is refused. Sessions check
+  `tasks.json` against `frozen.json`, and a session dir is kept only when its `task.sha256` matches
+  the task it is planned for. A pin whose harness is not the checkout's is refused with its
+  `pin.mjs prepare` command, never re-prepared under another round.
 
 ## Starting a new area — checklist
 

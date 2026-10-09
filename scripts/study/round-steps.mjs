@@ -14,6 +14,7 @@ const REWRITES = 3;
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const writeJson = (path, v) => writeFileSync(path, `${JSON.stringify(v, null, 1)}\n`);
+const sha256 = (v) => createHash("sha256").update(v).digest("hex");
 
 /** Every card this round wrote, member → text. */
 export function readCards(ctx, members) {
@@ -51,7 +52,9 @@ async function authorUnit(ctx, unit, { jobMap, facts, call }) {
   const step = "4-tasks";
   const card = readFileSync(join(ctx.out, "1-cards", `${unit.member}.md`), "utf8");
   const own = facts.filter((f) => f.world === unit.world && f.viewer === unit.viewer);
-  const file = `${unit.key}.json`;
+  // The lint names the file in its rewrite lines, and those go back to the author: a neutral name,
+  // never the unit key, which says the member and the world ("…--profile-bad-day").
+  const file = "tasks.json";
   let previous = null;
   let feedback = [];
   for (let round = 0; round <= REWRITES; round++) {
@@ -63,14 +66,16 @@ async function authorUnit(ctx, unit, { jobMap, facts, call }) {
         taskAuthorText({ card, jobMap, facts: own, tasksPer: ctx.p.tasksPer, previous, feedback }),
       ),
     });
-    const lintDir = join(ctx.out, step, "lint", `r${round}`);
+    const lintDir = join(ctx.out, step, "lint", unit.key, `r${round}`);
     mkdirSync(lintDir, { recursive: true });
     writeJson(join(lintDir, file), answer.tasks);
     const linted = ctx.lint("task", [join(lintDir, file)]);
     const resolved = resolveTasks({ drafts: answer.tasks, facts: own, unit, file });
     feedback = [...lintFeedback(linted.stdout), ...resolved.problems];
     if (linted.status !== 0 && lintFeedback(linted.stdout).length === 0) {
-      throw new Error(`lint failed without a rewrite line for ${file}: ${linted.stdout.trim()}`);
+      throw new Error(
+        `lint failed without a rewrite line for ${unit.key}: ${linted.stdout.trim()}`,
+      );
     }
     ctx.log(step, feedback.length === 0 ? "lint-clean" : "lint-feedback", {
       unit: unit.key,
@@ -98,14 +103,37 @@ export async function tasks(ctx) {
   for (const t of all) writeJson(join(dir, "tasks", `${t.id}.json`), t);
   const text = `${JSON.stringify(all, null, 1)}\n`;
   writeFileSync(join(dir, "tasks.json"), text);
-  const sha256 = createHash("sha256").update(text).digest("hex");
+  const sha = sha256(text);
   writeJson(join(ctx.out, "frozen.json"), {
     tasks: all.length,
-    sha256,
+    sha256: sha,
     at: new Date().toISOString(),
   });
-  ctx.log(step, "frozen", { tasks: all.length, sha256 });
-  return { tasks: all.length, sha256 };
+  ctx.log(step, "frozen", { tasks: all.length, sha256: sha });
+  return { tasks: all.length, sha256: sha };
+}
+
+/**
+ * The frozen task set, held to its freeze: tasks.json must hash to frozen.json's sha256, and every
+ * per-task file drive.mjs reads must equal its entry. → id → that task's own sha256.
+ */
+function checkFreeze(ctx) {
+  const text = readFileSync(join(ctx.out, "4-tasks", "tasks.json"), "utf8");
+  const frozen = readJson(join(ctx.out, "frozen.json"));
+  if (sha256(text) !== frozen.sha256) {
+    throw new Error(
+      `4-tasks/tasks.json no longer hashes to frozen.json (${frozen.sha256.slice(0, 12)}) — start a fresh --out`,
+    );
+  }
+  const shas = {};
+  for (const t of JSON.parse(text)) {
+    const file = join(ctx.out, "4-tasks", "tasks", `${t.id}.json`);
+    const same = existsSync(file) && JSON.stringify(readJson(file)) === JSON.stringify(t);
+    if (!same)
+      throw new Error(`4-tasks/tasks/${t.id}.json is not the frozen task — start a fresh --out`);
+    shas[t.id] = sha256(JSON.stringify(t));
+  }
+  return { frozen: frozen.sha256, shas };
 }
 
 /** Run `fn` over `items`, at most `n` at once; results in item order. */
@@ -126,19 +154,28 @@ export async function pool(items, n, fn) {
 export async function sessions(ctx) {
   const step = "5-sessions";
   const dir = ctx.dir(step);
+  const { frozen: frozenSha, shas } = checkFreeze(ctx);
   const frozen = readJson(join(ctx.out, "4-tasks", "tasks.json"));
   const tasksByUnit = {};
   for (const t of frozen) {
     const key = `${t.member}--${t.world}`;
     tasksByUnit[key] = [...(tasksByUnit[key] ?? []), t.id];
   }
-  const plan = planSessions({ p: ctx.p, matrix: ctx.matrix, tasksByUnit, thin: ctx.opts.thin });
+  const plan = planSessions({ p: ctx.p, matrix: ctx.matrix, tasksByUnit, thin: ctx.opts.thin }).map(
+    (s) => ({ ...s, taskSha: shas[s.task] }),
+  );
   writeJson(join(dir, "plan.json"), plan);
   const n = ctx.opts.concurrency ?? ctx.p.concurrency;
-  ctx.log(step, "plan", { sessions: plan.length, concurrency: n });
+  ctx.log(step, "plan", { sessions: plan.length, concurrency: n, frozen: frozenSha });
   const results = await pool(plan, n, async (s) => {
     const out = join(dir, s.dir);
-    if (existsSync(join(out, "summary.json"))) return { ...s, status: 0, kept: true };
+    // A session is kept only when it ran this exact task: the dir name is positional (t1, t2 …),
+    // so a re-authored task set would otherwise inherit sessions recorded against other scenarios.
+    const stamp = join(out, "task.sha256");
+    const ran = existsSync(stamp) ? readFileSync(stamp, "utf8").trim() : null;
+    if (existsSync(join(out, "summary.json")) && ran === s.taskSha) {
+      return { ...s, status: 0, kept: true };
+    }
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
     const args = ["--run", ctx.run, "--world", s.world, "--viewer", s.viewer];
@@ -155,6 +192,7 @@ export async function sessions(ctx) {
     const summary = existsSync(join(out, "summary.json"))
       ? readJson(join(out, "summary.json"))
       : null;
+    if (status === 0) writeFileSync(stamp, `${s.taskSha}\n`);
     ctx.log(step, status === 0 ? "session" : "session-failed", {
       session: s.dir,
       status,

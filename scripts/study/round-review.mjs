@@ -69,7 +69,7 @@ export async function analysts(ctx) {
         start: s.start,
       }),
     }));
-    const { sessions, dropped } = capFrames(withFrames);
+    const { sessions, dropped, coreDropped } = capFrames(withFrames);
     const frames = {};
     const images = [];
     for (const s of sessions) {
@@ -87,7 +87,7 @@ export async function analysts(ctx) {
       rolePath: join(ctx.roles, "analyst.md"),
       schema: readSchema("analyst"),
       message: userMessage(
-        analystText({ card: readCards(ctx, [member])[member], sessions, dropped }),
+        analystText({ card: readCards(ctx, [member])[member], sessions, dropped, coreDropped }),
         images,
       ),
       timeoutMs: 600_000,

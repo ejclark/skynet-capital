@@ -52,6 +52,17 @@ export function taskAuthorText({ card, jobMap, facts, tasksPer, previous, feedba
   return parts.join("\n\n");
 }
 
+/**
+ * A recorder finding as an analyst reads it: what kind, how bad, and the on-screen text it sat
+ * near. Never its `what` (which names the box by its CSS selector, text from the source, not the
+ * screen) or its fix size.
+ */
+export const recorderView = (f) => ({
+  kind: f.kind,
+  severity: f.severity,
+  ...(f.snippet ? { near: f.snippet } : {}),
+});
+
 /** One session as an analyst reads it: label, task, outcome, measurements, then every turn. */
 function sessionBlock(s) {
   const turns = s.turns.map((t) => {
@@ -72,21 +83,25 @@ function sessionBlock(s) {
     `### ${s.label} — ${s.viewport}, task "${s.scenario}"`,
     `Outcome: ${sum.oracle?.success ? "success" : "not a success"} (${sum.oracle?.reason}); ended by ${sum.oracle?.endedBy}; ease ${sum.ease?.score ?? "none"}${sum.ease?.reason ? ` — "${sum.ease.reason}"` : ""}.`,
     `Measurements: ${json(sum.metrics)}`,
-    `Recorder findings: ${json(sum.findings ?? [])}`,
+    `Recorder findings: ${json((sum.findings ?? []).map(recorderView))}`,
     `Frames shown below for this session: ${s.frames.map((f) => `${f.label} (${f.why.join(", ")}${f.turns.length ? `; turn ${f.turns.join(", ")}` : ""})`).join(" · ") || "none"}`,
     `Turns:\n${turns.map((t) => json(t)).join("\n")}`,
   ].join("\n");
 }
 
 /** An analyst, over one member's sessions. */
-export function analystText({ card, sessions, dropped }) {
+export function analystText({ card, sessions, dropped, coreDropped = 0 }) {
+  const firstLast =
+    coreDropped > 0
+      ? `${coreDropped} first or last frame(s) are among them.`
+      : "every first and last frame is here.";
   return [
     "## The member",
     card.trim(),
     "## Their sessions",
     sessions.map(sessionBlock).join("\n\n"),
     dropped > 0
-      ? `(${dropped} further key frame(s) were left out to keep this message under the image limit; every first and last frame is here.)`
+      ? `(${dropped} further key frame(s) were left out to keep this message under the image limit; ${firstLast})`
       : "",
     "## Your answer",
     "Turn these sessions into findings, per your instructions. Cite sessions by label (S1…) and frames by label (F1…).",

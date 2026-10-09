@@ -160,6 +160,13 @@ export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_00
         clearTimeout(timer);
         done(out);
       });
+      // A CLI that exits before reading (bad flags, signed out) breaks the pipe mid-write; with no
+      // listener that EPIPE is an uncaught exception that kills the whole round, unlogged.
+      child.stdin.on("error", (e) => {
+        clearTimeout(timer);
+        child.kill("SIGKILL");
+        fail(new Error(`sealed call: the CLI stopped reading its message — ${e.message}`));
+      });
       child.stdin.end(`${JSON.stringify(message)}\n`);
     });
     return parseResult(stdout);

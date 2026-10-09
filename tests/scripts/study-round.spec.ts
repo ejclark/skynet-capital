@@ -17,7 +17,12 @@ import {
   capFrames,
   keyFrames,
 } from "../../scripts/study/round-frames.mjs";
-import { expertBatchText, taskAuthorText } from "../../scripts/study/round-messages.mjs";
+import {
+  analystText,
+  expertBatchText,
+  recorderView,
+  taskAuthorText,
+} from "../../scripts/study/round-messages.mjs";
 import {
   type AreaConfig,
   BLIND_ROLES,
@@ -26,11 +31,13 @@ import {
   censusPlan,
   lintFeedback,
   mergeFacts,
+  modeChanges,
   planSessions,
   primingCounts,
   profileProblems,
   resolveTasks,
   roundArgs,
+  roundMode,
   runsFor,
   selectMatrix,
   taskUnits,
@@ -135,12 +142,45 @@ describe("planning the session matrix", () => {
     expect(new Set(units.map((u) => u.key)).size).toBe(units.length);
   });
 
-  it("thin takes one census of one route at one width", () => {
-    const [c, ...rest] = censusPlan(profile, { thin: true });
-    expect(rest).toEqual([]);
+  it("thin takes one expert census of one route, and its viewer's label censuses, at one width", () => {
+    const [c, ...labels] = censusPlan(profile, { thin: true });
     expect(c?.routes).toEqual([profile.thin.expertRoute]);
     expect(c?.viewports).toEqual([profile.thin.viewport]);
     expect(c?.for).toContain("experts");
+    // The task lint checks against every label the thin member can reach, not one route's.
+    const viewer = selectMatrix(profile, { thin: true })[0]?.viewer;
+    const wanted = (profile.census ?? []).filter(
+      (x) => x.world === profile.thin.world && x.viewer === viewer && x.for.includes("labels"),
+    );
+    expect(labels.length).toBe(wanted.length);
+    expect(labels.length).toBeGreaterThan(0);
+    for (const l of labels) {
+      expect(l.for).toEqual(["labels"]);
+      expect(l.viewports).toEqual([profile.thin.viewport]);
+      expect(l.world).toBe(profile.thin.world);
+    }
+    expect(new Set(censusPlan(profile, { thin: true }).map((x) => x.key)).size).toBe(
+      labels.length + 1,
+    );
+  });
+});
+
+describe("resuming a round", () => {
+  const base = { profile: "/p.json", pin: "/pin", sealed: "/s" };
+
+  it("resumes only under the mode the out dir was made with", () => {
+    const made = roundMode({ ...base, thin: false, stub: "/stub", concurrency: 2 }, "abc");
+    expect(modeChanges(made, roundMode({ ...base, stub: "/stub", concurrency: 9 }, "abc"))).toEqual(
+      [],
+    );
+    expect(modeChanges(made, roundMode({ ...base }, "abc"))).toEqual(["stub"]);
+    expect(modeChanges(made, roundMode({ ...base, stub: "/stub", thin: true }, "abc"))).toEqual([
+      "thin",
+    ]);
+    expect(modeChanges(made, roundMode({ ...base, stub: "/stub", cap: 5 }, "def"))).toEqual([
+      "profileSha",
+      "cap",
+    ]);
   });
 });
 
@@ -288,10 +328,45 @@ describe("key frames for the analyst", () => {
     ];
     const capped = capFrames(sessions, 5);
     expect(capped.dropped).toBe(1);
+    expect(capped.coreDropped).toBe(0);
     expect(capped.sessions.map((s) => s.frames.map((x) => x.path))).toEqual([
       ["a0", "a1", "a2"],
       ["b0", "b2"],
     ]);
+  });
+
+  it("says so when even the firsts and lasts did not fit", () => {
+    const f = (path: string, why: string[]) => ({ path, route: null, why, turns: [] });
+    const sessions = [
+      { frames: [f("a0", ["first"]), f("a1", ["last"])] },
+      { frames: [f("b0", ["first"]), f("b1", ["last"])] },
+    ];
+    const capped = capFrames(sessions, 3);
+    expect([capped.dropped, capped.coreDropped]).toEqual([1, 1]);
+    const say = (coreDropped: number) =>
+      analystText({ card: "c", sessions: [], dropped: 1, coreDropped });
+    expect(say(0)).toContain("every first and last frame is here");
+    expect(say(1)).not.toContain("every first and last frame is here");
+    expect(say(1)).toContain("1 first or last frame(s) are among them");
+  });
+
+  it("hands the analyst a recorder finding's kind, severity and on-screen text — no selector", () => {
+    const raw = {
+      kind: "container-overflow",
+      what: ".cockpit-nav scrolls sideways inside its box (57px out of view)",
+      snippet: "On this page",
+      severity: "low",
+      fix: "S",
+    };
+    expect(recorderView(raw)).toEqual({
+      kind: "container-overflow",
+      severity: "low",
+      near: "On this page",
+    });
+    expect(recorderView({ ...raw, snippet: "" })).toEqual({
+      kind: "container-overflow",
+      severity: "low",
+    });
   });
 });
 
@@ -463,9 +538,15 @@ describe("collecting findings", () => {
     expect(a.findings.at(-1)?.id).toBe(`${findingId(first)}-2`);
     expect(Object.keys(a.classes)).toEqual(a.findings.map((f) => f.id));
     expect(a.classes[a.findings[2]?.id ?? ""]).toBe("expert-2");
-    for (const f of stripClasses(a.findings)) {
+    const stripped = stripClasses(a.findings);
+    for (const f of stripped) {
       expect(Object.keys(f).sort()).toEqual(["id", "level", "severity", "surface", "what"]);
     }
+    // Collection order is by source; the matcher's order must not be.
+    const ids = stripped.map((f) => f.id);
+    expect(ids).toEqual([...ids].sort());
+    // The id never hashes the class, so trying each class against what + surface recovers nothing.
+    expect(findingId({ ...first, class: "expert-1" })).toBe(findingId(first));
     for (const f of a.findings) {
       expect(f).toEqual(
         expect.objectContaining({

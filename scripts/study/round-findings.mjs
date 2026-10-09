@@ -126,9 +126,12 @@ export function fromInstruments(raw) {
   }));
 }
 
-/** A finding's stable id: its class, surface and words, hashed — the same inputs, the same id. */
+/**
+ * A finding's stable id: its surface and words, hashed — the same inputs, the same id. Never its
+ * class: a matcher could hash the handful of classes against what + surface and read the source.
+ */
 export function findingId(f) {
-  const basis = [f.class, f.surface?.route, f.surface?.viewport, f.what].join("\n");
+  const basis = [f.surface?.route, f.surface?.viewport, f.what].join("\n");
   return `F-${createHash("sha256").update(basis).digest("hex").slice(0, 10)}`;
 }
 
@@ -157,13 +160,17 @@ export function collectFindings(groups) {
 /**
  * Findings as a matcher receives them: what, where, how bad, how deep — and nothing that says who
  * found it. The class goes, and so do the detail and the evidence paths, which name their source
- * (an analyst's member, a census folder, an expert's principle). The checker reads the full record.
+ * (an analyst's member, a census folder, an expert's principle). Sorted by id, because collection
+ * order is by source (analysts, experts, words, instruments) and position would name it. The
+ * checker reads the full record.
  */
 export const stripClasses = (findings) =>
-  findings.map((f) => ({
-    id: f.id,
-    what: f.what,
-    level: f.level,
-    severity: f.severity,
-    surface: f.surface,
-  }));
+  findings
+    .map((f) => ({
+      id: f.id,
+      what: f.what,
+      level: f.level,
+      severity: f.severity,
+      surface: f.surface,
+    }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

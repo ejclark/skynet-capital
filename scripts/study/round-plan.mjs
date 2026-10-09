@@ -74,6 +74,32 @@ export function roundArgs(argv, { defaultStub, defaultProfile }) {
   return out;
 }
 
+/**
+ * What a round's out dir was made under — everything that changes what a step writes. A resume
+ * (a step skipped on its done.json) is only honest under the same mode; `--concurrency` is left
+ * out, since it changes how fast, not what. `profileSha` is the area config's sha256.
+ */
+export function roundMode(opts, profileSha) {
+  return {
+    profile: opts.profile,
+    profileSha,
+    pin: opts.pin,
+    sealed: opts.sealed,
+    thin: Boolean(opts.thin),
+    stub: opts.stub ?? null,
+    onlyWorld: opts.onlyWorld ?? null,
+    cap: opts.cap ?? null,
+  };
+}
+
+/** The mode keys that differ between an out dir's recorded mode and this run's; [] = resumable. */
+export function modeChanges(recorded, now) {
+  const keys = [...new Set([...Object.keys(recorded ?? {}), ...Object.keys(now)])];
+  return keys.filter(
+    (k) => JSON.stringify(recorded?.[k] ?? null) !== JSON.stringify(now[k] ?? null),
+  );
+}
+
 const isText = (v) => typeof v === "string" && v.trim().length > 0;
 const VIEWPORTS = ["phone", "desktop"];
 
@@ -173,10 +199,29 @@ export function planSessions({ p, matrix, tasksByUnit, thin = false }) {
   return out;
 }
 
-/** The censuses this round takes: the config's list (one world's, when asked), or the thin cut. */
+/** The config's censuses, each with its key. */
+const configCensuses = (p) =>
+  (p.census ?? []).map((c, i) => ({
+    key: `census-${c.world}-${c.viewer}-${i + 1}`,
+    world: c.world,
+    viewer: c.viewer,
+    routes: c.routes ?? [],
+    viewports: c.viewports ?? VIEWPORTS,
+    for: c.for,
+  }));
+
+/**
+ * The censuses this round takes: the config's list (one world's, when asked), or the thin cut —
+ * one expert census of one route at one width, PLUS the config's label censuses for the thin
+ * member's world and viewer at that width. The task lint checks against the labels these harvest,
+ * and the thin member can walk to every page its viewer reaches, not only the expert's route.
+ */
 export function censusPlan(p, { thin = false, onlyWorld } = {}) {
   if (thin) {
     const row = selectMatrix(p, { thin: true })[0];
+    const labels = configCensuses(p)
+      .filter((c) => c.world === row.world && c.viewer === row.viewer && c.for.includes("labels"))
+      .map((c) => ({ ...c, key: `${c.key}-thin`, viewports: [p.thin.viewport], for: ["labels"] }));
     return [
       {
         key: `census-${row.world}-${row.viewer}-thin`,
@@ -186,19 +231,10 @@ export function censusPlan(p, { thin = false, onlyWorld } = {}) {
         viewports: [p.thin.viewport],
         for: ["experts", "labels"],
       },
+      ...labels,
     ];
   }
-  return (p.census ?? [])
-    .map((c, i) => ({ ...c, i }))
-    .filter((c) => !onlyWorld || c.world === onlyWorld)
-    .map((c) => ({
-      key: `census-${c.world}-${c.viewer}-${c.i + 1}`,
-      world: c.world,
-      viewer: c.viewer,
-      routes: c.routes ?? [],
-      viewports: c.viewports ?? VIEWPORTS,
-      for: c.for,
-    }));
+  return configCensuses(p).filter((c) => !onlyWorld || c.world === onlyWorld);
 }
 
 const LINT_LINE = /^rewrite \S+ item \d+ \([a-z-]+\)$/;

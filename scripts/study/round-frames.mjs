@@ -42,7 +42,8 @@ export function keyFrames({ turns, trace, opening, start }) {
 
 /**
  * Hold a member's key frames to `max`: every session's first and last are kept before any other,
- * then the rest in session order. `{sessions: [{…, frames}], dropped}`.
+ * then the rest in session order. `{sessions: [{…, frames}], dropped, coreDropped}` — coreDropped
+ * counts firsts and lasts that did not fit either (only past max/2 sessions).
  */
 export function capFrames(sessions, max = MAX_IMAGES) {
   const all = sessions.flatMap((s, si) =>
@@ -60,6 +61,7 @@ export function capFrames(sessions, max = MAX_IMAGES) {
       frames: s.frames.filter((_, fi) => keep.has(`${si}:${fi}`)),
     })),
     dropped: all.length - keep.size,
+    coreDropped: all.filter((x) => x.core && !keep.has(`${x.si}:${x.fi}`)).length,
   };
 }
 

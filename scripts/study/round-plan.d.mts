@@ -51,6 +51,24 @@ export function roundArgs(
   argv: string[],
   defaults: { defaultStub: string; defaultProfile: string },
 ): RoundArgs;
+export interface RoundMode {
+  profile: string;
+  profileSha: string;
+  pin: string;
+  sealed: string;
+  thin: boolean;
+  stub: string | null;
+  onlyWorld: string | null;
+  cap: number | null;
+}
+export function roundMode(
+  opts: Partial<RoundArgs> & { profile: string; pin: string; sealed: string },
+  profileSha: string,
+): RoundMode;
+export function modeChanges(
+  recorded: Partial<RoundMode> | null | undefined,
+  now: RoundMode,
+): string[];
 export function profileProblems(p: unknown): string[];
 export function selectMatrix(
   p: AreaConfig,

@@ -9,10 +9,18 @@ export function taskAuthorText(args: {
   previous?: unknown;
   feedback?: string[];
 }): string;
+export function recorderView(f: {
+  kind: string;
+  severity: string;
+  snippet?: string;
+  what?: string;
+  fix?: string;
+}): { kind: string; severity: string; near?: string };
 export function analystText(args: {
   card: string;
   sessions: Record<string, unknown>[];
   dropped: number;
+  coreDropped?: number;
 }): string;
 export function expertBatchText(args: {
   cards: Record<string, string>;
