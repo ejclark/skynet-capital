@@ -12,7 +12,8 @@ import type { ObservatoryEvent } from "../../src/observatory/events.js";
  * the frames it sends and the events/statuses it reports — never through internals.
  */
 
-type SocketListener = (event: { data?: unknown }) => void;
+type SocketEvent = { data?: unknown; code?: number; reason?: string; message?: string };
+type SocketListener = (event: SocketEvent) => void;
 
 /** A fake global WebSocket: records the url and sent frames, lets specs emit server events. */
 class FakeSocket {
@@ -42,7 +43,7 @@ class FakeSocket {
     this.emit("close");
   }
 
-  emit(type: string, event: { data?: unknown } = {}): void {
+  emit(type: string, event: SocketEvent = {}): void {
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
     }
@@ -229,6 +230,30 @@ describe("AlpacaMarketDataStream", () => {
       socket.emit("error");
 
       expect(statuses).toContain("error");
+    });
+
+    it("says why a socket errored when the runtime reports a reason (#4864)", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("error", { message: "Unexpected server response: 429" });
+
+      expect(statuses).toContain("error — Unexpected server response: 429");
+    });
+
+    it("reports a close's code and reason", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("close", { code: 1008, reason: "connection limit exceeded" });
+
+      expect(statuses).toContain("closed — code 1008: connection limit exceeded");
+    });
+
+    it("reports Alpaca's in-band refusal frame instead of swallowing it", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("message", frame([{ T: "error", code: 406, msg: "connection limit exceeded" }]));
+
+      expect(statuses).toContain("rejected — 406 connection limit exceeded");
     });
   });
 
