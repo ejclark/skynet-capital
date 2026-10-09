@@ -2,7 +2,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type DecisionDb, openDecisionDb } from "../../src/autonomous/decision-db.js";
-import { migrateAuditToDecisionDb } from "../../src/autonomous/decision-db-migration.js";
+import {
+  MIGRATION_CHUNK,
+  migrateAuditToDecisionDb,
+} from "../../src/autonomous/decision-db-migration.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { JsonlAuditStore } from "../../src/autonomous/jsonl-audit-store.js";
 
@@ -48,6 +51,28 @@ describe("migrateAuditToDecisionDb", () => {
     await migrateAuditToDecisionDb(audit, db); // "the next boot"
 
     expect(db.listByPersona("sauron")).toHaveLength(1);
+  });
+
+  it("on a later boot writes only cycles past each persona's newest stored one, and says so", async () => {
+    await audit.record(decision({ at: 1 }));
+    await audit.record(decision({ at: 2 }));
+    await migrateAuditToDecisionDb(audit, db);
+    await audit.record(decision({ at: 3 }));
+    await audit.record(decision({ at: 1, personaId: "beta-scout" }));
+
+    const count = await migrateAuditToDecisionDb(audit, db); // "the next boot"
+
+    expect(count).toBe(2); // sauron's at:3 and beta-scout's first — not the 4-record file
+    expect(db.listByPersona("sauron")).toHaveLength(3);
+  });
+
+  it("writes a large backlog in chunks, all of it landing", async () => {
+    for (let at = 1; at <= MIGRATION_CHUNK + 7; at += 1) await audit.record(decision({ at }));
+
+    const count = await migrateAuditToDecisionDb(audit, db);
+
+    expect(count).toBe(MIGRATION_CHUNK + 7);
+    expect(db.maxAtAll().sauron).toBe(MIGRATION_CHUNK + 7); // the last chunk landed too
   });
 
   it("returns 0 on an empty (or never-written) audit trail, writing nothing", async () => {
