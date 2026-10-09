@@ -171,7 +171,17 @@ export function ConvictionPanel({
         </div>
       ) : (
         <div className="pb-subscription-actions">
-          <button type="button" className="btn mc-btn" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            className="btn mc-btn"
+            onClick={() => {
+              // Seeded on every open: a conviction the server replaced meanwhile must not be posted back over.
+              setReason(conviction?.reason ?? "");
+              setCheckOn("");
+              setError(undefined);
+              setOpen(true);
+            }}
+          >
             {conviction ? "Set a new date" : "State a conviction"}
           </button>
         </div>

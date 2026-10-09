@@ -154,13 +154,12 @@ describe("subscribing to a pair the study does not back", () => {
 });
 
 function mountCard(strategy: StrategyCardView, botsOnlyLocked = false) {
-  const cards = strategy.pairs.map((p) => cardOf(p.id, p.symbols[0] ?? ""));
   const onChanged = rstest.fn();
-  render(
+  const element = (next: StrategyCardView) => (
     <StrategyCard
       accountId="sauron"
-      strategy={strategy}
-      cardsById={new Map(cards.map((c) => [c.id, c]))}
+      strategy={next}
+      cardsById={new Map(next.pairs.map((p) => [p.id, cardOf(p.id, p.symbols[0] ?? "")] as const))}
       canManage
       delegation={OPEN}
       {...(botsOnlyLocked ? { botsOnly: { locked: true, note: "Bots only." } } : {})}
@@ -168,9 +167,10 @@ function mountCard(strategy: StrategyCardView, botsOnlyLocked = false) {
       accountName="Sauron"
       metricsFor={() => undefined}
       houseFor={() => undefined}
-    />,
+    />
   );
-  return { onChanged };
+  const view = render(element(strategy));
+  return { onChanged, update: (next: StrategyCardView) => view.rerender(element(next)) };
 }
 
 const HELD = pair("CRWV-WHEEL", "CRWV", {
@@ -207,6 +207,25 @@ describe("the owner's conviction on their row", () => {
       conviction: { reason: "Run it against the study.", checkOn: "2027-04-30" },
     });
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("reopens with the reason now on record, never one left over from before a change elsewhere", () => {
+    const strategy = wheel([HELD]);
+    const { update } = mountCard(strategy);
+    fireEvent.click(screen.getByRole("button", { name: "Set a new date" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    const newer = pair("CRWV-WHEEL", "CRWV", {
+      status: "conviction",
+      subscription: {
+        mode: "aggressive",
+        capitalAllocated: 75_000,
+        enabled: true,
+        conviction: { reason: "Re-dated from my phone.", checkOn: "2027-02-26" },
+      },
+    });
+    update(wheel([newer]));
+    fireEvent.click(screen.getByRole("button", { name: "Set a new date" }));
+    expect(screen.getByLabelText("Why you are taking it")).toHaveValue("Re-dated from my phone.");
   });
 
   it("shows the server's own sentence when it refuses the day", async () => {
@@ -279,6 +298,16 @@ describe("a strategy's allocation", () => {
   it("offers none on a strategy the account holds nothing on, nor to a human account", () => {
     mountCard(wheel([pair("CRWV-WHEEL", "CRWV", { status: "conviction" })]));
     expect(screen.queryByRole("button", { name: "Set an allocation" })).not.toBeInTheDocument();
+  });
+
+  it("reopens with the amount now on record, never one left over from before a clear", () => {
+    const strategy = wheel([HELD], { allocation: { capitalAllocated: 100_000, budgeted: 75_000 } });
+    const { update } = mountCard(strategy);
+    fireEvent.click(screen.getByRole("button", { name: "Change allocation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    update({ ...strategy, allocation: { capitalAllocated: 40_000, budgeted: 25_000 } });
+    fireEvent.click(screen.getByRole("button", { name: "Change allocation" }));
+    expect(screen.getByLabelText(/Allocation for the wheel/)).toHaveValue(40_000);
   });
 
   it("is not offered on a human account", () => {

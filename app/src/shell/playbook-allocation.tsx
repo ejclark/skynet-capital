@@ -127,7 +127,16 @@ export function AllocationPanel({
         </div>
       ) : (
         <div className="pb-subscription-actions">
-          <button type="button" className="btn mc-btn" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            className="btn mc-btn"
+            onClick={() => {
+              // Seeded on every open: a clear, or a change made elsewhere, must not leave a stale amount to save back.
+              setAmount(allocation === undefined ? "" : String(allocation.capitalAllocated));
+              setError(undefined);
+              setOpen(true);
+            }}
+          >
             {allocation ? "Change allocation" : "Set an allocation"}
           </button>
         </div>
