@@ -132,7 +132,8 @@ function startServer(dist, streams, session) {
  * @param {string} [opts.out]           where `shoot(tag)` writes frames
  * @returns {Promise<{page, origin, shoot,
  *                    session: {unstubbed: string[], writes: object[], offsite: string[]},
- *                    reframe: (frame) => Promise<void>, close: () => Promise<void>}>}
+ *                    reframe: (frame) => Promise<void>, signIn: () => Promise<void>,
+ *                    close: () => Promise<void>}>}
  */
 export async function openWorld({
   answer,
@@ -208,6 +209,10 @@ export async function openWorld({
     session,
     shoot: undefined,
     reframe,
+    // The member is signed in again after a harness-made fresh start (session-fresh.mjs clears
+    // cookies with the rest of the origin's state). Without it every census load after the first
+    // was signed out, and the first full round operated 0 of 856 controls (2026-10-09).
+    signIn: () => context.addCookies([{ ...SESSION_COOKIE, url: origin }]),
     close: async () => {
       for (const res of streams) res.end();
       await browser.close();

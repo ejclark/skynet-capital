@@ -80,7 +80,14 @@ export async function openComposed(world, frame, out) {
     frame,
     out,
   });
-  return { page: handle.page, origin: handle.origin, close: handle.close, log: handle.session };
+  // signIn rides along: a census fresh load clears cookies and must land the member signed in again.
+  return {
+    page: handle.page,
+    origin: handle.origin,
+    close: handle.close,
+    log: handle.session,
+    signIn: handle.signIn,
+  };
 }
 
 /**
