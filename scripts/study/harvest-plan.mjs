@@ -112,6 +112,7 @@ export function regionCoverage(facts, walks) {
   return {
     judged: judged.length,
     covered: judged.filter((r) => r.seen.length > 0).length,
-    missing: judged.filter((r) => r.seen.length === 0).map((r) => r.id),
+    // Ids repeat across viewers (two viewers can see one account), so a miss names its viewer.
+    missing: judged.filter((r) => r.seen.length === 0).map((r) => `${r.viewer}:${r.id}`),
   };
 }

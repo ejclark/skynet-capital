@@ -113,7 +113,7 @@ describe("answer regions against what the walk saw", () => {
       ],
       [seen as Walk & { viewer: string }],
     );
-    expect(out).toEqual({ judged: 4, covered: 3, missing: ["d"] });
+    expect(out).toEqual({ judged: 4, covered: 3, missing: ["member:d"] });
   });
 
   it("judges a fact only against its own viewer's walks", () => {
