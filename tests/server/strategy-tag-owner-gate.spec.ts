@@ -19,7 +19,9 @@ const PUT = "CRWV261113P00085000";
 const TAG = "crwv-wheel-put";
 
 const sold: OrderIntent = {
-  ...anOptionIntent({ option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] } }),
+  ...anOptionIntent({
+    option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] },
+  }),
   strategy: TAG,
   expectation: "CRWV stays above $80 into expiry",
   clientOrderId: "sk1-sauron-CRWV-k9x2-0",
@@ -27,7 +29,9 @@ const sold: OrderIntent = {
 
 // A second idea the same pass raised and the guards refused outright — the pass log lists it too.
 const refused: OrderIntent = {
-  ...anOptionIntent({ option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] } }),
+  ...anOptionIntent({
+    option: { legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }] },
+  }),
   quantity: 5,
   strategy: TAG,
   reason: "a second put at the same strike",
@@ -78,10 +82,20 @@ const sauron = {
   activity: [],
 };
 
-const session = (email: string) => ({ email, provider: "google" as const, exp: 0 });
+const session = (email: string) => ({
+  email,
+  provider: "google" as const,
+  exp: 0,
+});
 
 const config = {
-  hub: { getState: () => ({ generatedAt: "t", participants: [sauron], collisions: [] }) },
+  hub: {
+    getState: () => ({
+      generatedAt: "t",
+      participants: [sauron],
+      collisions: [],
+    }),
+  },
   auth: {},
   resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
   readDecisions: () => Promise.resolve([pass]),
@@ -142,23 +156,26 @@ describe("a bot's strategy tag is its owner's alone (#4971)", () => {
     }
   });
 
-  it("keeps the order's own words for the non-owner — only the tag goes", async () => {
-    const activity = JSON.parse(await desk("activity", "guest@x"));
-    expect(activity.activity[0].reasoning).toMatchObject({
-      reason: sold.reason,
-      expectation: sold.expectation,
-      personaId: "sauron",
-    });
-    const decisions = JSON.parse(await desk("decisions", "guest@x"));
-    expect(decisions.cycles[0].outcomes[0]).toMatchObject({
-      reason: sold.reason,
-      action: "placed",
-    });
-    expect(decisions.cycles[0].refusedIntents[0]).toMatchObject({
-      reason: refused.reason,
-      guardReason: "not enough free cash to secure the sold put",
-    });
-    const thesis = JSON.parse(await desk("thesis", "guest@x"));
-    expect(thesis.thesis.markers[0].reasoning.reason).toBe(sold.reason);
-  });
+  it.each(["guest@x", undefined])(
+    "keeps the order's own words for a non-owner (%s) — only the tag goes",
+    async (who) => {
+      const activity = JSON.parse(await desk("activity", who));
+      expect(activity.activity[0].reasoning).toMatchObject({
+        reason: sold.reason,
+        expectation: sold.expectation,
+        personaId: "sauron",
+      });
+      const decisions = JSON.parse(await desk("decisions", who));
+      expect(decisions.cycles[0].outcomes[0]).toMatchObject({
+        reason: sold.reason,
+        action: "placed",
+      });
+      expect(decisions.cycles[0].refusedIntents[0]).toMatchObject({
+        reason: refused.reason,
+        guardReason: "not enough free cash to secure the sold put",
+      });
+      const thesis = JSON.parse(await desk("thesis", who));
+      expect(thesis.thesis.markers[0].reasoning.reason).toBe(sold.reason);
+    },
+  );
 });

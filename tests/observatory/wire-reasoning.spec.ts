@@ -39,7 +39,9 @@ describe("attachWireReasoning", () => {
   });
 
   it("leaves a bot row with no reasoning when no decision resolves — never fabricated", () => {
-    const rows = attachWireReasoning([row()], { findByOrderId: () => undefined });
+    const rows = attachWireReasoning([row()], {
+      findByOrderId: () => undefined,
+    });
     expect(rows[0]).not.toHaveProperty("reasoning");
   });
 
@@ -88,7 +90,10 @@ describe("attachWireReasoning", () => {
       outcomes: [{ intent: guarded[0] as ReturnType<typeof intent>, action: "placed" }],
     };
     const rows = attachWireReasoning([row()], {
-      findByOrderId: () => ({ record, intent: guarded[0] as ReturnType<typeof intent> }),
+      findByOrderId: () => ({
+        record,
+        intent: guarded[0] as ReturnType<typeof intent>,
+      }),
     });
     expect(rows[0]?.reasoning?.cycleAt).toBe("2026-09-22T18:59:00.000Z");
     expect(rows[0]?.reasoning?.rawCount).toBe(3);
@@ -181,7 +186,10 @@ describe("attachWireReasoning", () => {
 
 describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", () => {
   it("carries the playbook and whose decision it was, which need not be the account's own", () => {
-    const scouted = intent({ playbookId: "BETA-SCOUT", playbookMode: "conservative" });
+    const scouted = intent({
+      playbookId: "BETA-SCOUT",
+      playbookMode: "conservative",
+    });
     const record: DecisionRecord = {
       at: 1,
       personaId: "beta-scout",
@@ -222,13 +230,21 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
       ...deps,
       ownsAccount: (id) => id === "sauron",
     });
-    expect(own?.reasoning).toMatchObject({ playbookId: "S1-NVDA", strategy: "s1-nvda-fade" });
-    expect(other?.reasoning).toMatchObject({ reason: "panic fade", personaId: "sauron" });
+    expect(own?.reasoning).toMatchObject({
+      playbookId: "S1-NVDA",
+      strategy: "s1-nvda-fade",
+    });
+    expect(other?.reasoning).toMatchObject({
+      reason: "panic fade",
+      personaId: "sauron",
+    });
     expect(other?.reasoning).not.toHaveProperty("playbookId");
     expect(other?.reasoning).not.toHaveProperty("playbookMode");
     // The strategy tag is the playbook's own slug, so it would name it all the same (#4971).
     expect(other?.reasoning).not.toHaveProperty("strategy");
     // No ownership answer at all reads as owning nothing.
-    expect(attachWireReasoning(rows, deps)[0]?.reasoning).not.toHaveProperty("playbookId");
+    const unanswered = attachWireReasoning(rows, deps)[0]?.reasoning;
+    expect(unanswered).not.toHaveProperty("playbookId");
+    expect(unanswered).not.toHaveProperty("strategy");
   });
 });
