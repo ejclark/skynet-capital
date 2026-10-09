@@ -227,6 +227,8 @@ export function deskView(
   playbooks: readonly PlaybookStoreEntry[] = [],
   /** The clock for "expires in N days" (#3689 slice 6); the server's `config.now`, pinned in specs. */
   clock: () => Date = () => new Date(),
+  /** Playbooks this account already subscribes to, left out of its ideas (#4950). */
+  subscribed: ReadonlySet<string> = new Set(),
 ): DeskView {
   const now = clock();
   const invested = participantInvested(snapshot);
@@ -280,7 +282,10 @@ export function deskView(
         ...(lots ? { lots } : {}),
       };
     });
-  const considerations = considerationsFor(forConsiderations, playbooks);
+  const considerations = considerationsFor(forConsiderations, playbooks, {
+    id: snapshot.id,
+    subscribed,
+  });
   return {
     id: snapshot.id,
     name: snapshot.displayName,

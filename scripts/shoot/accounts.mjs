@@ -263,7 +263,7 @@ const ericConsiderations = [
     delta: "D-20 to D-6",
     deltaTone: "flat",
     reason: "Long AAPL into the earnings print — out of the market by the time the number lands.",
-    action: { label: "View playbook", href: "/app/research?section=playbooks" },
+    action: { label: "View playbook", href: "/app/research?section=playbooks&account=human-eric" },
   },
 ];
 
