@@ -51,6 +51,9 @@ import type { WireRouteDeps } from "./wire-routes.js";
  */
 export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps {
   readonly hub: ObservatoryHub;
+  /** Where an operational line lands — the shell's error beacon today (#4618). The composition
+   *  root passes stdout; omitted (specs), lines go to `process.emitWarning`. */
+  readonly logLine?: (line: string) => void;
   /**
    * Derived ceremony transitions (`ceremony-channel.ts`). When wired, each one rides the board's
    * seq-numbered patch stream as a fire-once cue, so a celebration can never be delivered twice —

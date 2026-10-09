@@ -34,6 +34,19 @@ function fakeHub(participants: unknown[]): ObservatoryHub {
 }
 
 describe("servePublicRoute", () => {
+  it("answers the health check with ok and nothing about members or money (#4618)", () => {
+    const { res, out } = fakeResponse();
+    const hub = fakeHub([{ kind: "human", equity: 100, error: false }]);
+
+    expect(servePublicRoute("/healthz", res, hub)).toBe(true);
+
+    expect(out.status).toBe(200);
+    expect(out.headers?.["cache-control"]).toBe("no-store");
+    const body = JSON.parse(out.chunks.join(""));
+    expect(Object.keys(body).sort()).toEqual(["ok", "uptimeS"]);
+    expect(body.ok).toBe(true);
+  });
+
   it("serves the aggregate cohort pulse without exposing individual accounts", () => {
     const { res, out } = fakeResponse();
     const hub = fakeHub([

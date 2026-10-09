@@ -1,0 +1,7 @@
+{
+  "world": "made-up-house",
+  "viewport": "phone",
+  "task": "t1",
+  "oracle": { "success": false, "endedBy": "give_up" },
+  "ease": { "score": 3, "reason": "the list kept moving" }
+}

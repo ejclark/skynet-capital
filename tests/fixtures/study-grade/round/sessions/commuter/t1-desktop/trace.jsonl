@@ -1,0 +1,2 @@
+{"step":0,"action":{"kind":"tap","x":300,"y":200},"tap":{"hit":{"role":"link","name":"Stairs"}},"frame":"/elsewhere/frames/001.jpg"}
+{"step":1,"action":{"kind":"done"},"frame":null}

@@ -11,6 +11,7 @@ import {
   driveBoardChannel,
   streamBoardPatches,
 } from "./board-patch-routes.js";
+import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
@@ -169,6 +170,7 @@ async function serveWriteApis(
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;
+  if (await serveClientErrorApi(req, res, path, session, config.logLine)) return true;
   return serveJoinApi(req, res, path, config, session);
 }
 

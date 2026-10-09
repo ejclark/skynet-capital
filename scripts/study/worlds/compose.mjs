@@ -55,7 +55,8 @@ import { INSTANT, pinProcessClock } from "./instant.mjs";
 async function composeWorld(world, runDir, server) {
   const book = server.buildBook(world.input);
   const config = server.serverConfig(book);
-  const channel = server.createBoardChannel();
+  // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
+  const channel = server.createBoardChannel("study");
   const fixtures = world.fixtures(book);
   const manifest = [];
   const missing = [];

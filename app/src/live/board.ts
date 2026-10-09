@@ -84,6 +84,8 @@ export interface BoardCompare {
 }
 
 export interface BoardSnapshot {
+  /** Which run of the server's seqs `seq` belongs to; a restart renumbers from 1 (#4620). */
+  readonly boot?: string;
   readonly seq: number;
   readonly generatedAt: string;
   readonly metric: string;
@@ -111,12 +113,14 @@ interface ReframeOp {
 export type PatchOp = FieldOp | ReframeOp | { readonly kind: string };
 
 export interface BoardPatch {
+  readonly boot?: string;
   readonly seq: number;
   readonly at: string;
   readonly ops: readonly PatchOp[];
 }
 
 interface ApiBoard {
+  readonly boot?: string;
   readonly seq: number;
   readonly generatedAt: string;
   readonly metric: string;
@@ -143,6 +147,7 @@ export async function fetchBoard(
   if (!res.ok) throw new Error(`GET /api/board → ${res.status}`);
   const body = (await res.json()) as ApiBoard;
   return {
+    ...(body.boot ? { boot: body.boot } : {}),
     seq: body.seq,
     generatedAt: body.generatedAt,
     metric: body.metric,
@@ -152,6 +157,10 @@ export async function fetchBoard(
     opsApplied: 0,
   };
 }
+
+/** True when both sides name a run and the names differ (a side that predates boot ids matches). */
+export const isOtherRun = (held: string | undefined, seen: string | undefined): boolean =>
+  held !== undefined && seen !== undefined && held !== seen;
 
 const isField = (op: PatchOp): op is FieldOp => op.kind === "field";
 
@@ -181,9 +190,12 @@ function applyBlockOp(block: BoardBlock, op: FieldOp): BoardBlock {
 /**
  * Apply one seq-numbered patch. Returns the moved snapshot, or `null` when the honest answer is a
  * fresh fetch: a seq gap (this patch is not the next one), or a `reframe` (the server itself said
- * the page's structure moved beyond what ops can express).
+ * the page's structure moved beyond what ops can express), or a patch from another run of the
+ * server — after a restart its seqs restart too, and "already reflected" would silently swallow
+ * every new patch under a live label.
  */
 export function applyPatch(snapshot: BoardSnapshot, patch: BoardPatch): BoardSnapshot | null {
+  if (isOtherRun(snapshot.boot, patch.boot)) return null;
   if (patch.seq <= snapshot.seq) return snapshot; // already reflected in the fetched snapshot
   if (patch.seq !== snapshot.seq + 1) return null; // gap — recover with a snapshot, never guess
   if (patch.ops.some((op) => op.kind === "reframe")) return null;
