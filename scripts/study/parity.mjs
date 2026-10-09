@@ -14,7 +14,8 @@
 // of scripts/crawl/phone.mjs, specced in tests/scripts/study-parity.spec.ts.
 //
 // A surface a world cannot render is declared `struck: "<reason>"` in its list and printed as
-// STRUCK — never silently dropped. Any miss, any FAULT (a tap something else took; a surface
+// STRUCK — never silently dropped; one that renders only when the composed build serves it says so
+// with `strikeUnless` (parity-judge.mjs → strikeFor), so a pinned run can show it. Any miss, any FAULT (a tap something else took; a surface
 // covered at its own position), or any `/api` read no composed answer covered (`unstubbed`), exits
 // non-zero. A fault the app is known to have is declared on its act/expect as `knownBug: "#<n>"`
 // and printed as `bug` with that issue — passing, but never as `ok`.
@@ -23,12 +24,14 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expectHolds, locatorFor, settle, VIEWPORTS } from "../crawl/steps.mjs";
+import { expectHolds, locatorFor, VIEWPORTS } from "../crawl/steps.mjs";
+import { FALLBACKS, settle } from "./compat.mjs";
 import {
   interceptorOf,
   judgeVisible,
   parityArgs,
   parityTable,
+  strikeFor,
   worstExit,
 } from "./parity-judge.mjs";
 import { answerFrom } from "./payloads.mjs";
@@ -228,9 +231,11 @@ async function checkWorld(world, runDir) {
   const offsite = [];
   const writes = [];
   for (const viewer of new Set(world.surfaces.map((s) => s.viewer))) {
-    const mine = world.surfaces.filter((s) => s.viewer === viewer);
+    const answer = answerFrom(join(runDir, world.name), viewer);
+    const bodyOf = (read) => answer({ method: "GET", url: read })?.body;
+    const mine = world.surfaces.filter((s) => s.viewer === viewer).map((s) => strikeFor(s, bodyOf));
     const open = await openWorld({
-      answer: answerFrom(join(runDir, world.name), viewer),
+      answer,
       at: INSTANT,
       frame: VIEWPORTS.phone,
     });
@@ -279,6 +284,8 @@ async function main() {
   if (unstubbed.length > 0) console.log(`\nunstubbed /api reads:\n  ${unstubbed.join("\n  ")}`);
   if (offsite.length > 0) console.log(`\nblocked off-origin requests:\n  ${offsite.join("\n  ")}`);
   if (writes.length > 0) console.log(`\nwrites recorded (never sent):\n  ${writes.join("\n  ")}`);
+  if (FALLBACKS.length > 0)
+    console.log(`\nharness fallbacks (compat.mjs):\n  ${FALLBACKS.join("\n  ")}`);
   console.log(`\nrun dir: ${runDir}`);
   process.exitCode = worstExit(rows, unstubbed, { strict });
 }

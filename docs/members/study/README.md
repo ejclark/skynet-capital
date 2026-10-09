@@ -72,6 +72,27 @@ Every blind role first passes `roles/canary.md`.
 - **Primes are tagged in advance.** A member card quote that hints at a key item is reported as primed recall, separately.
 - **Fixes after the pin don't spend the test.** The study runs against a pinned commit, and the fixed build is the negative control.
 
+## Running against a pinned commit
+
+Worlds compose from the checked-out tree's own server code, so a world composed on main shows
+main's fixes. A study of the pin runs in a worktree **at the pin**, with only today's harness
+(`scripts/study/**`) copied over it:
+
+```sh
+node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir>   # worktree, harness, installs, build, compose, parity
+node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a worktree prepare made
+```
+
+- **What is the pin's:** everything outside `scripts/study/` — `src/`, `app/`, the builders, the gates.
+- **What is today's:** the harness. `<dir>/.study-pin.json` records its commit, any uncommitted
+  edits, and a sha256 per file plus one tree hash, so two runs can say they used the same instrument.
+- **Installs are clones** (`cp -c`), never symlinks; a lockfile that differs at the pin is warned and recorded.
+- **The parity table** lands in `<dir>/.study-run/parity.txt`; the run exits with parity's status.
+- **When the harness outgrows the pin:** a helper it imports from outside its folder that the pin
+  lacks is feature-detected in `scripts/study/compat.mjs`, and the fallback is printed under the
+  table. A surface that exists only at some commits declares `strikeUnless` (the composed answer
+  decides), so it renders at the pin and is struck, out loud, where the build no longer serves it.
+
 ## Grading (Hartson, Andre & Williges 2001)
 
 - **Match:** same place *and* same mechanism; 0.5 for the same place with a vaguer mechanism.

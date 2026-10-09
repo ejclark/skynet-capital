@@ -98,6 +98,24 @@ export function worstExit(rows, unstubbed = [], { strict = false } = {}) {
   return failed || unstubbed.length > 0 ? 1 : 0;
 }
 
+/**
+ * A surface that exists only when the composed build serves it declares `strikeUnless: {read,
+ * holds, why}` instead of a fixed `struck`. The world is composed from the checked-out tree, so the
+ * same world may carry the thing at one commit and not at another (a pinned run, pin.mjs): the
+ * composed answer to `read` decides. Struck with `why` when `holds(body)` is false, and when `read`
+ * was never composed (said so) — a strike is always printed, never a silent skip.
+ * @param {{struck?: string, strikeUnless?: {read: string, holds: (body: unknown) => boolean,
+ *          why: string}}} surface
+ * @param {(read: string) => unknown} bodyOf  the composed body for a read, undefined if none
+ */
+export function strikeFor(surface, bodyOf) {
+  const rule = surface.strikeUnless;
+  if (!rule || surface.struck) return surface;
+  const body = bodyOf(rule.read);
+  if (body === undefined) return { ...surface, struck: `${rule.why} (${rule.read} not composed)` };
+  return rule.holds(body) ? surface : { ...surface, struck: rule.why };
+}
+
 /** `[--run <dir>] [--strict] [world …]` → what to check, and where the composed run lives. */
 export function parityArgs(args) {
   const runAt = args.indexOf("--run");

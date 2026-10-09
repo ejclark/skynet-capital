@@ -7,6 +7,7 @@
     "scripts/study/session.mjs",
     "scripts/study/packets.mjs",
     "scripts/study/lint.mjs",
+    "scripts/study/pin.mjs",
     "scripts/study/worlds/*.mjs",
     "tests/**/*.spec.ts"
   ],
