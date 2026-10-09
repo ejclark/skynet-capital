@@ -52,7 +52,11 @@
 }
 .cockpit-nav-btn[aria-pressed="true"] {
   color: var(--accent);
-  font-weight: 600;
+  /* weight 500, same as the resting tab — 600 widens the label and shifts every tab after it on
+     each switch (#4946). text-shadow reads bolder without touching glyph metrics; the underline
+     carries "current" beside the hue (the stage-controls.css pattern). */
+  font-weight: 500;
+  text-shadow: 0 0 0.35px currentColor;
   border-bottom-color: var(--accent);
 }
 
@@ -197,7 +201,9 @@
 }
 .acct-switch a[aria-current="page"] {
   color: var(--accent);
-  font-weight: 600;
+  /* same no-reflow treatment as .cockpit-nav-btn's pressed state above (#4946) */
+  font-weight: 500;
+  text-shadow: 0 0 0.35px currentColor;
   border-bottom-color: var(--accent);
 }
 @media (max-width: 860px) {
@@ -222,8 +228,10 @@
 
 /* The book in the Overview grid's left column (`u.$id.index.tsx`): at ≥1200 the character card
  * takes 384px on the right, so the blotter reads as it does below 1100 — detail columns folded
- * behind each row's chevron — and the Position column gives up 40px, so the table fits the ~800px
- * column at 1280 instead of scrolling (the `<col>` widths are inline, hence the !important). */
+ * behind each row's chevron — and the Position column gives up 40px (the `<col>` widths are
+ * inline, hence the !important). That is 854px against the ~806px column at 1280 since the action
+ * column grew to hold its buttons (#4945), so the table scrolls ~48px there; which columns stand
+ * beside the tower is a design call held by #4943, not settled here. */
 @media (min-width: 1200px) {
   .acct-book col.col-detail,
   .acct-book th.col-detail,

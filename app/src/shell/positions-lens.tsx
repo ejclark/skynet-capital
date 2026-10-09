@@ -1,6 +1,7 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import type { CSSProperties, ReactElement } from "react";
 import type { Decision, DeskAllocation, DeskPosition } from "../live/desk";
+import { useRefineSearch } from "../live/refine-search";
 import { squarify } from "./treemap";
 
 /**
@@ -25,20 +26,14 @@ const LENSES: ReadonlyArray<{ id: Lens; label: string }> = [
 export const parseLens = (raw: unknown): Lens | undefined =>
   raw === "map" || raw === "runway" || raw === "list" ? raw : undefined;
 
-/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean). */
+/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean)
+ *  without moving the page: a lens is a view of the list you're already scrolled to (#4944). */
 export function useLens(): readonly [Lens, (next: Lens) => void] {
   const search = useSearch({ strict: false }) as { lens?: unknown };
-  const navigate = useNavigate();
+  const refine = useRefineSearch();
   const lens = parseLens(search.lens) ?? "list";
   const set = (next: Lens) =>
-    void navigate({
-      to: ".",
-      search: ((prev: Record<string, unknown>) => ({
-        ...prev,
-        lens: next === "list" ? undefined : next,
-      })) as never,
-      replace: true,
-    });
+    refine((prev) => ({ ...prev, lens: next === "list" ? undefined : next }));
   return [lens, set] as const;
 }
 
@@ -88,6 +83,21 @@ type MapItem =
   | { readonly kind: "position"; readonly weight: number; readonly p: DeskPosition };
 
 const pct = (x: number) => `${x}%`;
+
+/** The legend's line on the options strip. `optionsPct` counts held options only, so a book of
+ *  sold ones read "Its true share of your account is 0.0%", as though nothing were owed (#4964).
+ *  A liability is no share of the account: it is named, signed as the positions table shows it. */
+function optionsNote(allocation: DeskAllocation): string {
+  const held = allocation.optionsPct > 0;
+  const sold = allocation.optionsSold;
+  if (sold === undefined || held) {
+    const share = `The options strip is scaled up so you can read it. ${
+      sold === undefined ? "Its true share" : "Held options' share"
+    } of your account is ${allocation.optionsPct.toFixed(1)}%.`;
+    return sold === undefined ? share : `${share} Sold ones are owed: ${sold} to buy them back.`;
+  }
+  return `Sold options are owed, not held, so they take no share of your account: ${sold} to buy them back.`;
+}
 
 function PositionTile({
   p,
@@ -183,10 +193,7 @@ export function MapLens({
             <span>+40%</span>
           </span>
           {options.length > 0 ? (
-            <span className="map-legend-note">
-              The options strip is scaled up so you can read it. Its true share of your account is{" "}
-              {allocation.optionsPct.toFixed(1)}%.
-            </span>
+            <span className="map-legend-note">{optionsNote(allocation)}</span>
           ) : null}
         </div>
       </div>

@@ -2,17 +2,19 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
+import { manageSearch } from "../live/manage-handoff";
 import { positionAnchor } from "./position-anchor";
 
-/** Trade's search for a held position: the contract (underlying, strike, expiry) for an option,
- *  the ticker for shares. Trade's `?symbol=` takes tickers only. */
-function tradeSearch(
-  deskId: string,
-  symbol: string,
-): { desk: string; symbol: string; strike?: string; exp?: string } {
+/** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
+ *  Close / Roll row marked — #4947; a strike/expiry preset would seed a new order instead), shares
+ *  on their ticker. Trade's `?symbol=` takes tickers only. */
+function tradeSearch(deskId: string, symbol: string) {
   const occ = parseOccSymbol(symbol);
   return occ
-    ? { desk: deskId, symbol: occ.underlying, strike: String(occ.strike), exp: occ.expiration }
+    ? manageSearch<{ desk: string; symbol: string; section?: string }>(
+        { desk: deskId, symbol: occ.underlying },
+        { occ: symbol },
+      )
     : { desk: deskId, symbol };
 }
 

@@ -11,6 +11,7 @@ import {
   type PositionForConsiderations,
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
+import { allocationOf, type DeskAllocation } from "./desk-allocation.js";
 import { formatPrice } from "./desk-data.js";
 import { NO_ORIGIN_EVIDENCE, type OrderOriginIndex } from "./order-origin.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
@@ -85,6 +86,9 @@ interface DeskPositionView extends PlainPosition {
   readonly totalPlRaw: number;
   readonly returnPct: string;
   readonly totalTone: Tone;
+  /** This position's share of what's HELD (long value), the same base the allocation's slices use,
+   *  so the map can scale it by `sharesPct + optionsPct`. A written contract holds none of it: 0,
+   *  and `allocation.optionsSold` names what it owes (#4964). */
   readonly weightPct: number;
   /** Present only when the fill ledger's open lots for this symbol are all long and their
    *  quantities sum exactly to the position's own — see `lotsFor`. */
@@ -164,50 +168,6 @@ interface DeskTiles {
   readonly cashRaw: number;
 }
 
-/** Where the money is (#3689 slice 5): long market value split into shares and options, plus cash.
- *  Percentages are of that three-way total (shorts and a negative cash balance are left out of the
- *  bar, since a bar can't draw a negative slice), so the three always add to 100. */
-export interface DeskAllocation {
-  readonly shares: string;
-  readonly options: string;
-  readonly cash: string;
-  readonly sharesPct: number;
-  readonly optionsPct: number;
-  readonly cashPct: number;
-  /** "32.9%" — cash's share, for the "cash ready to use" line. */
-  readonly cashShare: string;
-  /** Signed shares held across every stock position. Their delta, which the Money strip adds to
-   *  the option book's delta for "market exposure". */
-  readonly shareCount: number;
-}
-
-function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
-  let shares = 0;
-  let options = 0;
-  let shareCount = 0;
-  for (const p of snapshot.positions) {
-    const long = Math.max(0, p.marketValue);
-    if (isOccSymbol(p.symbol)) options += long;
-    else {
-      shares += long;
-      shareCount += p.quantity;
-    }
-  }
-  const cash = Math.max(0, snapshot.cash);
-  const total = shares + options + cash;
-  const share = (x: number) => (total > 0 ? (x / total) * 100 : 0);
-  return {
-    shares: formatCurrency(shares),
-    options: formatCurrency(options),
-    cash: formatCurrency(snapshot.cash),
-    sharesPct: share(shares),
-    optionsPct: share(options),
-    cashPct: share(cash),
-    cashShare: `${share(cash).toFixed(1)}%`,
-    shareCount,
-  };
-}
-
 export interface DeskView {
   readonly id: string;
   readonly name: string;
@@ -227,12 +187,17 @@ export function deskView(
   playbooks: readonly PlaybookStoreEntry[] = [],
   /** The clock for "expires in N days" (#3689 slice 6); the server's `config.now`, pinned in specs. */
   clock: () => Date = () => new Date(),
+  /** Playbooks this account already subscribes to, left out of its ideas (#4950). */
+  subscribed: ReadonlySet<string> = new Set(),
 ): DeskView {
   const now = clock();
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
   const dayTotal = snapshot.positions.reduce((sum, p) => sum + dayPl(p).amount, 0);
+  // Not `invested`: that nets a sold option's liability, so beside one every held weight
+  // overshot (1,000 in stock next to a -900 put read 1,000%) and the map's tiles crowded out cash.
+  const held = snapshot.positions.reduce((sum, p) => sum + Math.max(0, p.marketValue), 0);
   const forConsiderations: PositionForConsiderations[] = [];
   const positions = [...snapshot.positions]
     .sort((a, b) => b.marketValue - a.marketValue)
@@ -276,11 +241,14 @@ export function deskView(
         totalPlRaw: pl,
         returnPct: basis > 0 ? pct((pl / basis) * 100) : "—",
         totalTone: plClass(pl),
-        weightPct: invested > 0 ? (Math.max(0, position.marketValue) / invested) * 100 : 0,
+        weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...(lots ? { lots } : {}),
       };
     });
-  const considerations = considerationsFor(forConsiderations, playbooks);
+  const considerations = considerationsFor(forConsiderations, playbooks, {
+    id: snapshot.id,
+    subscribed,
+  });
   return {
     id: snapshot.id,
     name: snapshot.displayName,

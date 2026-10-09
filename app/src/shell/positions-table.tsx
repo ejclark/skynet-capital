@@ -59,7 +59,13 @@ export function PositionsTable({
             <col className="col-detail" style={{ width: 96 }} />
             <col className="col-detail" style={{ width: 130 }} />
             <col className="col-detail" style={{ width: 150 }} />
-            <col style={{ width: 128 }} />
+            {/* The action column, sized for its widest row: an option buy the viewer owns —
+                "Close this buy" + "Roll", ~159px of buttons (macOS system font) in the 160px left
+                after the cell's 24px padding. A share row's "Guidance" + "Close all" is ~153px.
+                Under fixed layout this width is the column's ONLY size (a cell's `min-width` is
+                ignored), so anything narrower pushes a button out of its cell (#4945); the e2e
+                `positions-table.spec.ts` measures both rows at four widths. */}
+            <col style={{ width: 184 }} />
           </colgroup>
           <thead>
             <tr>

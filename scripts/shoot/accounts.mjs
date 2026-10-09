@@ -214,7 +214,7 @@ const ericDecisions = [
     learn: { term: "ivCrush", label: "What is IV crush?" },
     primary: {
       label: "Review on Trade ↗",
-      href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
+      href: "/app/trade?desk=human-eric&symbol=NVDA&section=orders&manage=NVDA260918C00180000",
     },
     secondary: { label: "Show in table", href: "#pos-NVDA260918C00180000" },
     stakeRaw: 2226,
@@ -263,7 +263,7 @@ const ericConsiderations = [
     delta: "D-20 to D-6",
     deltaTone: "flat",
     reason: "Long AAPL into the earnings print — out of the market by the time the number lands.",
-    action: { label: "View playbook", href: "/app/research?section=playbooks" },
+    action: { label: "View playbook", href: "/app/research?section=playbooks&account=human-eric" },
   },
 ];
 
@@ -1074,13 +1074,16 @@ const sauronProbes = {
   ],
 };
 
+// A bot that sat out the whole last session (#4949) — the closed-market stale the server returns
+// once the newest pass predates that session's open. Its own frames, then back to the live loop.
+let sauronSatOut = false;
 const sauronHeartbeat = () => {
-  const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
+  const lastAgo = sauronSatOut ? 3 * 86_400_000 : sessionOpen ? 22_000 : 16 * 3_600_000;
   return {
     available: true,
     heartbeat: {
-      state: sessionOpen ? "beating" : "market-closed",
-      marketOpen: sessionOpen,
+      state: sauronSatOut ? "stale" : sessionOpen ? "beating" : "market-closed",
+      marketOpen: sauronSatOut ? false : sessionOpen,
       lastPassAt: new Date(Date.now() - lastAgo).toISOString(),
       sinceLastPassMs: lastAgo,
       cadenceMs: 15_000,
@@ -1470,7 +1473,20 @@ await page.locator(".cycle-placed .cycle-body").waitFor();
 await page.locator(".cycle-placed").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-heartbeat-traded-round-phone");
 tradedPassesIncluded = false;
+// The chip on a bot that made no pass all last session (#4949): "Stale · no pass last session",
+// never "idle", with its playbook table open — phone first, then desktop. Escape closes it.
+sauronSatOut = true;
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.locator(".hb-chip").click();
+await page.locator(".hb-pop").waitFor();
+await shootCockpit("accounts-heartbeat-chip-stale-phone");
+await page.keyboard.press("Escape");
+await page.locator(".hb-pop").waitFor({ state: "detached" });
 await page.setViewportSize({ width: 1280, height: 900 });
+await page.locator(".hb-chip").click();
+await page.locator(".hb-pop").waitFor();
+await shootCockpit("accounts-heartbeat-chip-stale-desktop");
+sauronSatOut = false;
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.locator(".hb-chip").click();
 await page.locator(".hb-pop").waitFor();

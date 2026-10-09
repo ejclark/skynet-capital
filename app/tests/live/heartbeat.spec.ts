@@ -35,6 +35,15 @@ describe("heartbeatLine — a glyph and a word for every state, never hue alone"
     });
   });
 
+  // #4949: the server calls a closed market stale once the bot sat out the whole last session.
+  it("stale with the market closed says the bot missed the last session, never idle", () => {
+    const line = heartbeatLine(
+      hb({ state: "stale", marketOpen: false, sinceLastPassMs: 3 * 86_400_000 }),
+    );
+    expect(line).toMatchObject({ glyph: "▲", word: "Stale", detail: "no pass last session" });
+    expect(line.detail).not.toMatch(/idle/);
+  });
+
   it("market-closed says idle, and leaves the open time to the topbar clock", () => {
     const line = heartbeatLine(hb({ state: "market-closed", sinceLastPassMs: 16 * 3_600_000 }));
     expect(line).toMatchObject({

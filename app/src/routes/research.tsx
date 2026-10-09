@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { liftHorizonTokens } from "../live/horizon-params";
+import { useRefineSearch } from "../live/refine-search";
 import { DEFAULT_LENS } from "../live/research";
 import { useBoardView } from "../shell/board-section";
 import { PageFrame } from "../shell/frame";
@@ -48,21 +49,21 @@ const SECTIONS: readonly PageSection<ResearchSection>[] = [
 function ResearchPage(): ReactElement {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const refine = useRefineSearch<typeof search>();
   const section = resolveSection(SECTIONS, search.section);
 
-  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
+  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace, and
+  // the page keeps its place (#4944).
   const [query, setQuery] = useState(search.q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(
+      () => refine((prev) => ({ ...prev, q: next.trim() === "" ? undefined : next })),
+      300,
+    );
   };
 
   // ONE MODEL, TWO CARRIERS (#3807 slice 2·1): an `on:` / `lens:` token typed into the box is
@@ -73,16 +74,13 @@ function ResearchPage(): ReactElement {
     const lifted = liftHorizonTokens(search.q ?? "");
     if (lifted.on === undefined && lifted.lens === undefined) return;
     setQuery(lifted.rest);
-    void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: lifted.rest === "" ? undefined : lifted.rest,
-        ...(lifted.on ? { on: lifted.on } : {}),
-        ...(lifted.lens ? { span: lifted.lens === DEFAULT_LENS ? undefined : lifted.lens } : {}),
-      }),
-      replace: true,
-    });
-  }, [search.q, navigate]);
+    refine((prev) => ({
+      ...prev,
+      q: lifted.rest === "" ? undefined : lifted.rest,
+      ...(lifted.on ? { on: lifted.on } : {}),
+      ...(lifted.lens ? { span: lifted.lens === DEFAULT_LENS ? undefined : lifted.lens } : {}),
+    }));
+  }, [search.q, refine]);
 
   const board = useBoardView({ active: section === "board", query, setFilter });
 

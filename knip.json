@@ -4,7 +4,10 @@
     "src/scripts/*.ts",
     "scripts/*.mjs",
     "scripts/study/parity.mjs",
-    "scripts/study/worlds/compose.mjs",
+    "scripts/study/session.mjs",
+    "scripts/study/packets.mjs",
+    "scripts/study/lint.mjs",
+    "scripts/study/worlds/*.mjs",
     "tests/**/*.spec.ts"
   ],
   "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/**/*.mjs"],

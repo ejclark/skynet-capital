@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-router";
 import { configure, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import type { DeskActivity, DeskActivityEvent, DeskActivityQuery } from "../../src/live/desk";
 import { Route } from "../../src/routes/u.$id.activity";
 import { FIND_PAGES } from "../../src/shell/use-activity-pages";
@@ -28,15 +27,12 @@ let answer: (query: DeskActivityQuery) => DeskActivity = () => ({ available: tru
 const calls: DeskActivityQuery[] = [];
 
 rstest.mock("../../src/live/desk", () => ({
-  fetchDesk: (id: string) =>
-    Promise.resolve({ desk: { id, name: "Sauron", kind: "bot", positions: [] } }),
   fetchDeskActivity: (_id: string, query: DeskActivityQuery = {}) => {
     calls.push(query);
     return Promise.resolve(answer(query));
   },
 }));
 rstest.mock("../../src/shell/account-head", () => ({
-  AccountPage: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   useOwnsAccount: () => true,
 }));
 
