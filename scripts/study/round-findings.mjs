@@ -1,15 +1,13 @@
 // Collecting a round's findings (#4943) — PURE, specced in tests/scripts/study-round.spec.ts.
 //
 // Every finding any evaluator produced lands in one shape, with a stable id, so grading can hand
-// matchers the findings without saying who found them:
-//   {id, class, level, severity, severityRaw, surface: {route, viewport}, evidence: [frame paths],
-//    what, detail}
-// `class` is who found it: `member-voiced` / `instrument-only` (an analyst, by whether the member
-// said it), `expert-<k>`, `words`, or `instrument` (the recorder's and the census's own
-// measurements — designed by someone who saw the answer key, so never counted as discovery).
-// `classes.json` keeps id → class apart from the findings for exactly that reason.
+// matchers the findings without saying who found them. The record and the class vocabulary
+// (members · experts · words · instruments, with `voice` and `expert` kept as fields) are
+// round-contract.mjs's — the same module grade.mjs and readout.mjs read them through.
+// `classes.json` keeps id → class apart from the findings, because the matchers get the findings.
 
 import { createHash } from "node:crypto";
+import { membersClass } from "./round-contract.mjs";
 
 const SCALE = ["none", "low", "moderate", "high", "critical"];
 
@@ -39,18 +37,22 @@ function surfaceOf(frames, fallback = {}) {
 /** Ids → the frames they name; unknown ids are dropped (and counted by the caller's log). */
 const framesFor = (ids, map) => ids.map((id) => map[id]).filter(Boolean);
 
-/** An analyst's findings. `frames`: label → {path, route, viewport}. */
+/**
+ * An analyst's findings: the members class, whoever voiced it — the member, or the analyst reading
+ * the trace (`voice`). `frames`: label → {path, route, viewport}.
+ */
 export function fromAnalyst({ member, answer, frames }) {
   return (answer.findings ?? []).map((f) => {
     const cited = framesFor(f.frames ?? [], frames);
     return {
-      class: f.voice === "member-voiced" ? "member-voiced" : "instrument-only",
+      ...membersClass(f.voice),
+      member,
       level: f.level,
       severityRaw: f.severity,
       surface: surfaceOf(cited),
       evidence: cited.map((c) => c.path),
       what: f.what,
-      detail: { member, quote: f.quote, frequency: f.frequency, frames: f.frames },
+      detail: { quote: f.quote, frequency: f.frequency, frames: f.frames },
     };
   });
 }
@@ -61,7 +63,8 @@ export function fromExpert({ k, answer, batch }) {
     const cited = (f.from ?? []).flatMap((id) => batch[id]?.frames ?? []);
     const surface = surfaceOf(cited);
     return {
-      class: `expert-${k}`,
+      class: "experts",
+      expert: k,
       level: f.level,
       severityRaw: f.severity,
       surface: { route: surface.route, viewport: f.viewport ?? surface.viewport },
@@ -116,7 +119,7 @@ export function fromInstruments(raw) {
     groups.set(key, g);
   }
   return [...groups.values()].map((g) => ({
-    class: "instrument",
+    class: "instruments",
     level: "surface",
     severityRaw: g.severity,
     surface: { route: g.route, viewport: g.viewport },

@@ -96,6 +96,8 @@ export interface Grade {
     id: string;
     class: string;
     member: string | null;
+    voice: string | null;
+    expert: number | null;
     level: string;
     gold: string | null;
     score: number;

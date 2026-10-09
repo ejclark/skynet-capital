@@ -170,6 +170,15 @@ function notCounted(y) {
   ];
 }
 
+/** Which member or expert, and whether the member said it — round-contract.mjs → findingView. */
+function whoWords(f) {
+  if (f.member) {
+    const said = f.voice === "instrument-only" ? ", read from the trace, not said" : "";
+    return ` (${f.member}${said})`;
+  }
+  return f.expert ? ` (expert ${f.expert})` : "";
+}
+
 function structural({ structural: items, grade }) {
   const rest = notCounted(grade.structural);
   const tail = rest.length ? ["", "Not counted as new:", "", ...rest] : [];
@@ -184,15 +193,15 @@ function structural({ structural: items, grade }) {
             `| ${s.frames.map((p) => img("frame", p)).join(" | ")} |`,
           ]
         : ["_No frames were recorded with this finding._"];
-      const who = `${CLASS_WORDS[s.class] ?? s.class}${f.member ? ` (${f.member})` : ""}`;
+      const who = `${CLASS_WORDS[s.class] ?? s.class}${whoWords(f)}`;
       return [
         `### ${i + 1}. ${f.what}`,
         "",
         ...strip,
         "",
-        ...(f.evidence?.quote ? [`> "${oneLine(f.evidence.quote)}"`, ""] : []),
-        formulaSentence(f),
-        "",
+        ...(f.quote ? [`> "${oneLine(f.quote)}"`, ""] : []),
+        // A member's finding carries a quote, not a principle/why/fix — no empty formula for it.
+        ...(f.principle || f.why || f.fix ? [formulaSentence(f), ""] : []),
         `_Found by ${who}${f.severity ? ` · ${sev(f.severity)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}._`,
         "",
       ];
@@ -296,6 +305,7 @@ function jobMap({ jobMap: j }) {
   if (!j) return ["No job map was given."];
   if (j.kind === "md") return [j.text.trim().replace(/^(#{1,4}) /gm, "#### ")];
   return [
+    ...(j.jobs?.length ? [`Hired for: ${j.jobs.map(cell).join(" · ")}.`, ""] : []),
     "| Stage | What members want from it | What the area holds |",
     "|---|---|---|",
     ...j.stages.map(

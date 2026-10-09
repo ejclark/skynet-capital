@@ -133,7 +133,20 @@ describe("buildReadout — the made-up round, rendered", () => {
       .split("\n")
       .filter((l) => l.startsWith("## "))
       .map((l) => l.slice(3));
-    expect(heads).toEqual(SECTIONS);
+    // Pinned literally (docs/members/study/README.md → "The readout"): comparing against SECTIONS
+    // alone would pass on any reorder, since the renderer loops over that same list.
+    const planOrder = [
+      "A member, stuck",
+      "What it found",
+      "New structural problems",
+      "Your items, one by one",
+      "The design battle-test",
+      "What members hire this area for",
+      "What it missed",
+      "One question",
+    ];
+    expect(SECTIONS).toEqual(planOrder);
+    expect(heads).toEqual(planOrder);
   });
 
   it("opens on the member's worst moment, beside a slot for the owner's own shot", () => {

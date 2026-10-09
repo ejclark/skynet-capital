@@ -1,7 +1,12 @@
 // Type surface for round-findings.mjs (`allowJs` is off).
 
+import type { EvaluatorClass, Voice } from "./round-contract.mjs";
+
 export interface Finding {
-  class: string;
+  class: EvaluatorClass;
+  member?: string;
+  voice?: Voice;
+  expert?: number;
   level: string;
   severityRaw: unknown;
   surface: { route: string | null; viewport: string | null };

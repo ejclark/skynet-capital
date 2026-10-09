@@ -32,7 +32,7 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 /** The tree hash of a checkout's harness, exactly as pin.mjs records an overlay's. */
-function harnessTree(root) {
+export function harnessTree(root) {
   const files = [];
   const walk = (abs) => {
     for (const e of readdirSync(abs, { withFileTypes: true })) {

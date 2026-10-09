@@ -5,7 +5,10 @@
 // (tests/scripts/study-round.spec.ts).
 //
 // Area-agnostic: members, worlds, viewers and routes arrive in the area config
-// (scripts/study/tasks/<area>.json); nothing here names one.
+// (scripts/study/tasks/<area>.json); nothing here names one. The round directory's layout is
+// round-contract.mjs's, shared with the readers (grade.mjs, readout.mjs).
+
+import { SESSIONS, sessionDir } from "./round-contract.mjs";
 
 /** The steps, in order — each writes into <out>/<dir>/. */
 export const STEPS = [
@@ -14,7 +17,7 @@ export const STEPS = [
   "2-canary",
   "3-framer",
   "4-tasks",
-  "5-sessions",
+  SESSIONS,
   "6-analysts",
   "7-experts",
   "8-words",
@@ -172,7 +175,8 @@ export function taskUnits(matrix) {
 
 /**
  * Every session of the round: member × world × viewport × task × run, each with its own directory
- * name — nothing shared. `tasksByUnit`: unit key → its frozen task ids, in order.
+ * under the sessions folder (round-contract.mjs → sessionDir) — nothing shared. `tasksByUnit`:
+ * unit key → its frozen task ids, in order.
  */
 export function planSessions({ p, matrix, tasksByUnit, thin = false }) {
   const out = [];
@@ -183,15 +187,8 @@ export function planSessions({ p, matrix, tasksByUnit, thin = false }) {
     for (const viewport of r.viewports) {
       for (const task of tasks) {
         for (let run = 1; run <= runs; run++) {
-          out.push({
-            member: r.member,
-            world: r.world,
-            viewer: r.viewer,
-            viewport,
-            task,
-            run,
-            dir: `${r.member}/${r.world}/${viewport}/${task}/run-${run}`,
-          });
+          const s = { member: r.member, world: r.world, viewer: r.viewer, viewport, task, run };
+          out.push({ ...s, dir: sessionDir(s) });
         }
       }
     }

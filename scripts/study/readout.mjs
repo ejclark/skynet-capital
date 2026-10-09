@@ -32,6 +32,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import { pathToFileURL } from "node:url";
 import { parseGold } from "./grade-core.mjs";
 import { renderReadout, worstMoment } from "./readout-core.mjs";
+import { FILES, findingView } from "./round-contract.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 
 export const FRAME_CAP = 100 * 1024;
@@ -149,6 +150,19 @@ function choosePicture(round, sessions, only) {
   return best;
 }
 
+/**
+ * A job map as the readout lays it out ({jobs?, stages, measure: [text]}): the framer's own answer
+ * (round.mjs → 3-framer/job-map.json: job_map, measure [{outcome, category}], jobs), or a file
+ * already in that shape.
+ */
+export function jobMapOf(j) {
+  const measure = (j.measure ?? []).map((m) =>
+    typeof m === "string" ? m : `${m.outcome}${m.category ? ` (${m.category})` : ""}`,
+  );
+  const jobs = (j.jobs ?? []).map((x) => `${x.member}: ${x.main_job}`);
+  return { stages: j.stages ?? j.job_map ?? [], measure, jobs };
+}
+
 /** Everything the page shows, gathered, with frames copied into the shots folder. */
 export function buildReadout(opts) {
   const root = resolve(opts.root);
@@ -176,21 +190,22 @@ export function buildReadout(opts) {
   const picture = pick && {
     ...pick.m,
     member: pick.s.member,
-    viewport: pick.s.summary.viewport ?? "phone",
+    viewport: pick.s.viewport,
     before: shot(pick.s.dir, pick.m.before),
     after: pick.m.after && shot(pick.s.dir, pick.m.after),
   };
 
-  const text = new Map(readJsonl(join(round, "findings.jsonl")).map((f) => [f.id, f]));
+  const text = new Map(readJsonl(join(round, FILES.findings)).map((f) => [f.id, f]));
   const graded = new Map(grade.findings.map((f) => [f.id, f]));
+  // A finding's evidence is frame paths relative to the round (round-contract.mjs).
+  const evidenceShot = (rel) => {
+    const src = join(round, rel);
+    if (!existsSync(src)) return null;
+    return link(copySmall(src, join(shots, `${slug(rel.replace(/\.[a-z]+$/i, ""))}.jpg`)));
+  };
   const structural = Object.values(grade.structural.groups).map((ids) => {
-    const f = text.get(ids[0]);
-    const ev = f.evidence ?? {};
-    const frames = ev.session
-      ? (ev.frames ?? [])
-          .map((n) => shot(join(round, ev.session), `${String(n).padStart(3, "0")}.jpg`))
-          .filter(Boolean)
-      : [];
+    const f = findingView(text.get(ids[0]));
+    const frames = f.frames.map(evidenceShot).filter(Boolean);
     return { finding: f, class: graded.get(f.id)?.class, also: ids.length - 1, frames };
   });
 
@@ -224,7 +239,7 @@ export function buildReadout(opts) {
   if (opts.jobMap) {
     const raw = readFileSync(opts.jobMap, "utf8");
     jobMap = opts.jobMap.endsWith(".json")
-      ? { kind: "json", ...JSON.parse(raw) }
+      ? { kind: "json", ...jobMapOf(JSON.parse(raw)) }
       : { kind: "md", text: raw };
   }
   const titles = opts.reveal

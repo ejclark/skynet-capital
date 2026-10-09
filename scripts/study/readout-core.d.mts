@@ -16,6 +16,7 @@ export interface ReadoutModel {
   picture: (Moment & { member: string; viewport: string }) | null;
   ownerShot: string | null;
   structural: {
+    /** round-contract.mjs → findingView */
     finding: Record<string, unknown> & { what: string };
     class?: string;
     also: number;
@@ -41,6 +42,7 @@ export interface ReadoutModel {
         kind: "json";
         stages: { stage: string; served?: boolean; outcomes?: string[]; holds?: string }[];
         measure?: string[];
+        jobs?: string[];
       }
     | null;
   nextArea: string;

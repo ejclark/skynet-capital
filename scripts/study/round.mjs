@@ -24,6 +24,8 @@
 //   8 words       the harvested strings
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
+// The out dir is a round directory exactly as grade.mjs and readout.mjs read it: its layout, the
+// finding record and the classes are round-contract.mjs's, owned there for writer and readers both.
 // A step whose <out>/<step>/done.json exists is skipped, so a round resumes where it stopped —
 // but only under the mode the out dir was made with (<out>/round.json: the profile and its hash,
 // the pin, the sealed dir, thin, the stub, --only-world, --cap); any other mode is refused. A real
@@ -50,6 +52,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
+import { FILES, SESSIONS } from "./round-contract.mjs";
 import {
   censusPlan,
   modeChanges,
@@ -71,7 +74,7 @@ const RUN = {
   "2-canary": canary,
   "3-framer": framer,
   "4-tasks": tasks,
-  "5-sessions": sessions,
+  [SESSIONS]: sessions,
   "6-analysts": analysts,
   "7-experts": experts,
   "8-words": words,
@@ -125,8 +128,12 @@ function lint(ctx, kind, files) {
   return { status: res.status ?? 1, stdout: res.stdout ?? "" };
 }
 
-/** The round's shared state: options, area config, paths, callers, the log, the tools. */
-function context(opts) {
+/**
+ * The round's shared state: options, area config, paths, callers, the log, the tools. `seams`
+ * replace the pinned tools (`tool`, `toolAsync`), the frame scaler (`half`) and the console line
+ * (`say`) — for a stub round only, so the end-to-end spec runs with no build and no browser.
+ */
+function context(opts, seams = {}) {
   const p = JSON.parse(readFileSync(resolve(opts.profile), "utf8"));
   const out = resolve(opts.out);
   mkdirSync(out, { recursive: true });
@@ -152,7 +159,7 @@ function context(opts) {
     log: (step, event, data = {}) => {
       const line = { at: new Date().toISOString(), step, event, ...data };
       appendFileSync(join(out, "log.jsonl"), `${JSON.stringify(line)}\n`);
-      console.log(`round ${step} · ${event}${data.note ? ` · ${data.note}` : ""}`);
+      (seams.say ?? console.log)(`round ${step} · ${event}${data.note ? ` · ${data.note}` : ""}`);
     },
     /** One caller per step (the stub counts per role), recording under <step>/requests/. */
     call: (step) => {
@@ -161,17 +168,20 @@ function context(opts) {
       }
       return callers.get(step);
     },
-    tool: (script, args, logFile) => tool(ctx, script, args, logFile),
-    toolAsync: (script, args, logFile) => toolAsync(ctx, script, args, logFile),
+    tool: seams.tool ?? ((script, args, logFile) => tool(ctx, script, args, logFile)),
+    toolAsync:
+      seams.toolAsync ?? ((script, args, logFile) => toolAsync(ctx, script, args, logFile)),
     lint: (kind, files) => lint(ctx, kind, files),
     /** A frame at half scale, base64 — one browser for the round, opened on first use. */
-    half: async (path) => {
-      if (!ctx.browser) {
-        const exe = resolveChromium();
-        ctx.browser = await chromium.launch(exe ? { executablePath: exe } : {});
-      }
-      return halfFrame(ctx.browser, readFileSync(path));
-    },
+    half:
+      seams.half ??
+      (async (path) => {
+        if (!ctx.browser) {
+          const exe = resolveChromium();
+          ctx.browser = await chromium.launch(exe ? { executablePath: exe } : {});
+        }
+        return halfFrame(ctx.browser, readFileSync(path));
+      }),
   };
   return ctx;
 }
@@ -201,12 +211,16 @@ function holdMode(ctx) {
   writeFileSync(file, `${JSON.stringify(now, null, 1)}\n`);
 }
 
-async function main(argv) {
+/** One round, start or resume; the exit status. `seams`: see context() — a stub round only. */
+export async function runRound(argv, seams = {}) {
   const opts = roundArgs(argv, {
     defaultStub: join(HERE, "tests/fixtures/study-stub"),
     defaultProfile: join(HERE, "scripts/study/tasks/profile.json"),
   });
-  const ctx = context(opts);
+  if (Object.keys(seams).length > 0 && !opts.stub) {
+    throw new Error("a round with its tools replaced must be a stub round (--dry-run or --stub)");
+  }
+  const ctx = context(opts, seams);
   ctx.log("round", "start", { argv, thin: opts.thin, dryRun: opts.dryRun, stub: ctx.stub });
   try {
     holdMode(ctx);
@@ -233,12 +247,12 @@ async function main(argv) {
   } finally {
     await ctx.browser?.close();
   }
-  ctx.log("round", "complete", { findings: "findings.jsonl", classes: "classes.json" });
+  ctx.log("round", "complete", { findings: FILES.findings, classes: FILES.classes });
   return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main(process.argv.slice(2)).then(
+  runRound(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;
     },

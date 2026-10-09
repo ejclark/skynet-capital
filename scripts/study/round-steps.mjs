@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { SESSIONS } from "./round-contract.mjs";
 import { framerText, taskAuthorText } from "./round-messages.mjs";
 import { lintFeedback, planSessions, resolveTasks, taskUnits } from "./round-plan.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
@@ -152,7 +153,7 @@ export async function pool(items, n, fn) {
 
 /** Step 5: every session through drive.mjs --actor sealed, each in its own directory. */
 export async function sessions(ctx) {
-  const step = "5-sessions";
+  const step = SESSIONS;
   const dir = ctx.dir(step);
   const { frozen: frozenSha, shas } = checkFreeze(ctx);
   const frozen = readJson(join(ctx.out, "4-tasks", "tasks.json"));

@@ -27,9 +27,10 @@
 //                 counted, until a tie-break settles it — the kinder reading would count it new.
 // Area-agnostic: item ids are whatever the sealed key names; nothing here knows the area.
 
-export const CLASSES = ["members", "experts", "words", "instruments"];
-/** The classes that never saw the key; the instruments were designed after reading it. */
-export const BLIND = ["members", "experts", "words"];
+// The evaluator classes are the round contract's (round-contract.mjs), shared with the round that
+// writes them; the instruments were designed after reading the key, so they are never blind.
+import { BLIND } from "./round-contract.mjs";
+
 const FOUND_MIN = 0.5;
 const Z95 = 1.959964;
 const SCORES = [0, 0.5, 1];
