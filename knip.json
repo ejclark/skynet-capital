@@ -9,6 +9,8 @@
     "scripts/study/packets.mjs",
     "scripts/study/lint.mjs",
     "scripts/study/pin.mjs",
+    "scripts/study/census.mjs",
+    "scripts/study/harvest.mjs",
     "scripts/study/worlds/*.mjs",
     "tests/**/*.spec.ts"
   ],
