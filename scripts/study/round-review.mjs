@@ -140,6 +140,10 @@ export async function experts(ctx) {
     const index = {};
     for (const [b, batch] of batches.entries()) {
       const frames = batchFrames(batch.entries);
+      // An expert reviews pictures; a batch with none is a broken census, never a text-only review.
+      if (frames.length === 0) {
+        throw new Error(`expert batch ${b + 1} (${batch.source} ${batch.route}) has no frames`);
+      }
       const images = [];
       for (const f of frames) {
         images.push({

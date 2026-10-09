@@ -66,6 +66,7 @@ function census(args: string[]) {
         role: "button",
         name: "Lantern switch",
         screen: 0,
+        status: "operated",
         frames: { before: `${at}-before.jpg`, after: `${at}-after.jpg` },
         findings: [{ kind: "overflow", what: "a box wider than the screen — ×2", severity: "low" }],
       };

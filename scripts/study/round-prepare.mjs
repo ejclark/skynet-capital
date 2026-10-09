@@ -106,6 +106,12 @@ function takeCensuses(ctx, step, dir) {
     const status = ctx.tool("census.mjs", args, `${cdir}.log`);
     if (status !== 0) throw new Error(`census ${c.key} exited ${status} — ${cdir}.log`);
     const census = readJson(join(cdir, "census.json"));
+    const reach = censusReach(census.controls);
+    if (!reach.ok) {
+      throw new Error(
+        `census ${c.key} operated ${reach.operated} of ${reach.eligible} controls (${reach.why}) — ${cdir}.log`,
+      );
+    }
     const unstubbed = [...new Set(census.routes.flatMap((r) => r.world?.unstubbed ?? []))];
     ctx.log(step, "census", { key: c.key, controls: census.controls.length, cap, unstubbed });
   }
@@ -193,6 +199,23 @@ export function cards(ctx) {
 }
 
 /** Step 2: every blind role, asked what it knows, before it is shown anything. */
+
+/** The share of listed controls a census must actually operate before experts are shown it. */
+const MIN_OPERATED = 0.8;
+
+/**
+ * Did a census operate what it listed? Skipped controls (they leave the app) don't count against
+ * it. The first full round's census listed 856 controls and operated none — every fresh load had
+ * signed the member out — and preflight still said done (2026-10-09). Never again silently.
+ */
+export function censusReach(controls) {
+  const eligible = controls.filter((c) => c.status !== "skipped").length;
+  const operated = controls.filter((c) => c.status === "operated").length;
+  if (eligible === 0) return { ok: false, operated, eligible, why: "nothing to operate" };
+  const ok = operated / eligible >= MIN_OPERATED;
+  return { ok, operated, eligible, why: ok ? "ok" : `under ${MIN_OPERATED * 100}%` };
+}
+
 export async function canary(ctx) {
   const step = "2-canary";
   const dir = ctx.dir(step);
