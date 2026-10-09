@@ -18,6 +18,11 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Alert when the bots' price feed is down during market hours.** #4864: the feed failed for days
+  and a human noticing "no trades" was the only detector. A market-hours check that the bots app
+  logged `authenticated` and saw a tick in the last N minutes (health.json already stamps) would
+  page on day one. _(src: Claude · while: retro on #4864)_
+
 - **Fold a stale-echo run into its capsule's drafted lesson.** `lesson-draft.mjs` (#4212) drafts a
   capsule's LESSONS entry at the close, but repair.mjs posts a stale echo (a run that started before
   the fix merged) only after the close, so that run's sha never reaches the entry's `COVERS:` and
