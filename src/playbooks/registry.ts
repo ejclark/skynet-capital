@@ -14,11 +14,11 @@ import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
-import { CRWV_WHEEL } from "./crwv-wheel.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
 import { eventPlay, prePrintRunUp } from "./templates.js";
+import { wheel } from "./wheel.js";
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
@@ -195,11 +195,31 @@ export const NVDA_CALL_SPREAD: Playbook = callSpread({
     "since 2023 (P=0.0032, docs/research/events/nvda-2026-11-18-print.md); D-5→D a coin flip",
 });
 
-/** The option plays, Sauron's own rules and the forced daily pick live in their own files
- *  (`crwv-wheel.ts`, `call-spread.ts`, `sauron-rules.ts`, `beta-scout.ts`); re-exported here
- *  because the Store catalog and the roll call read the house roster off what this module exports.
- *  None is on any default roster: an owner subscribes their own bot to one in the Store. */
-export { BETA_SCOUT, CRWV_WHEEL, SAURON };
+/**
+ * CRWV-WHEEL (#4642 slice 5) — the wheel on CRWV, RUN AGAINST OUR OWN STUDY, ON PURPOSE.
+ * `docs/research/crwv-premium-fit.md` found CRWV's option premium underpays its moves (implied
+ * 69.9% vs a median 88.7% realized; Δ0.20 puts priced 19.4% to assign against 33.3% delivered) and
+ * called "stand aside". The play exists because its owner holds the opposite conviction, so it
+ * carries the study's numbers and a dated falsifier on every order rather than pretending to an
+ * edge. Its pair row is a ◆ conviction checked on 2027-01-29, and that row, not this file, is where
+ * the order copy's framing, citation and retire date come from (#4469 slice 2c).
+ */
+export const CRWV_WHEEL: Playbook = wheel({
+  symbol: "CRWV",
+  thesis:
+    "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
+    "— run on its owner's conviction, against our own study of CRWV's premium.",
+  findings:
+    "AGAINST this play: implied 69.9% vs a median 88.7% realized (6th percentile); Δ0.20 puts " +
+    "priced 19.4% to assign vs 33.3% delivered.",
+  studySays: "our study found CRWV's option premium underpays its moves",
+});
+
+/** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,
+ *  `beta-scout.ts`); re-exported here because the Store catalog and the roll call read the house
+ *  roster off what this module exports. None of the option plays, nor these, is on any default
+ *  roster: an owner subscribes their own bot to one in the Store. */
+export { BETA_SCOUT, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,

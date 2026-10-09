@@ -30,39 +30,81 @@ import {
   occStrikeLabel,
 } from "../trading/option-symbols.js";
 import { optionOpenIntent } from "./option-intent.js";
+import { type PairEvidence, pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
 
 /**
- * CRWV-WHEEL (#4642 slice 5) — the wheel on CRWV: sell one cash-secured put about a month out; if
- * CRWV finishes below the strike the put is assigned and the bot owns 100 shares, so it sells one
- * covered call on them until they are called away; then it starts again.
+ * THE WHEEL (#4642 slice 5; a template on a ticker since #4469 slice 2c) — sell one cash-secured
+ * put about a month out; if the ticker finishes below the strike the put is assigned and the bot
+ * owns 100 shares, so it sells one covered call on them until they are called away; then it starts
+ * again. One contract at a time, whatever the budget. `CRWV-WHEEL` (registry.ts) is one call of
+ * `wheel`.
  *
- * IT RUNS AGAINST OUR OWN STUDY, ON PURPOSE. `docs/research/crwv-premium-fit.md` found CRWV's
- * option premium underpays its moves (implied 69.9% vs a median 88.7% realized; Δ0.20 puts priced
- * 19.4% to assign against 33.3% delivered) and called "stand aside". The play exists because its
- * owner holds the opposite conviction, so it carries the study's numbers and a dated falsifier on
- * every order rather than pretending to an edge: it retires if its net P/L is below 0 on
- * 2027-01-29, or if more than 1 in 3 of its sold puts finish in the money.
+ * IT TRADES ON A VERDICT, AND SAYS WHICH ONE ON EVERY ORDER. The pair row (`pair-table.ts`) is
+ * the one source of the evidence the orders state: its status picks the framing (the owner's
+ * conviction, or the house's research), its study is the citation, and its dated test — a
+ * conviction's check date, a ✓ verdict's shelf date — is the date in the retire rule each order
+ * carries. A pair with neither verdict has no business selling puts, so the template refuses to
+ * build one (criterion 1; code, not copy, enforces what a ticker needs — the plan's call 4).
+ * What the study found about the ticker is the setting's to say: a claim true of CRWV must never
+ * read as a claim about the wheel.
  *
  * STATE COMES FROM THE POSITIONS ALONE (`wheelPhase`) — nothing is persisted, so an early
  * assignment, a partial lot or a restart reads correctly on the next cycle. It never closes or
  * rolls in this version: puts and calls are held into expiry (`holdsShortToExpiry`), and expiry
  * hygiene still closes them if the wheel is paused or a print moves under one.
  *
- * Every open must clear CRWV's next print blackout (window + the session after — CRWV's move lands
- * the next session): the expiry is the LATEST listed 30–45 days out that ends before it. Assigned
- * shares are the honest exception — they ride a print when no print-clean call exists, which is
- * why the Store card names owning a falling stock as the real loss.
+ * Every open must clear the ticker's next print blackout (window + the session after — the move
+ * lands the next session): the expiry is the LATEST listed 30–45 days out that ends before it.
+ * Assigned shares are the honest exception — they ride a print when no print-clean call exists,
+ * which is why the Store card names owning a falling stock as the real loss.
  */
 
-const WHEEL_SYMBOL = "CRWV";
 /** Days to expiry the wheel sells — about a month: enough premium to be worth the collateral,
- *  short enough to fit between CRWV's prints. */
+ *  short enough to fit between a ticker's prints. */
 const MIN_DTE = 30;
 const MAX_DTE = 45;
-/** The falsifier, stated on every order so the record can grade the play by it. */
-const RETIRE_RULE =
-  "the play retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money";
+
+/** One ticker's wheel. Its id, verdict, study and dated test come from the pair row, never from
+ *  here; these are the words only the ticker's own study can supply. */
+export interface WheelSetting {
+  readonly symbol: string;
+  readonly thesis: string;
+  /** What the study measured, said on the descriptor between its citation and the retire rule. */
+  readonly findings: string;
+  /** What the study found, said on every put after its framing ("our study found CRWV's option
+   *  premium underpays its moves"). */
+  readonly studySays: string;
+}
+
+/** What the helpers below read: the ticker, and the words its pair row settles. */
+interface Wheel {
+  readonly symbol: string;
+  /** "Run on its owner's conviction — <studySays>." */
+  readonly basis: string;
+  /** The falsifier, stated on every order so the record can grade the play by it. */
+  readonly retireRule: string;
+}
+
+/** The wheel's retire test (criterion 12) on the pair's dated check. */
+const retireTest = (date: string): string =>
+  `net P/L is below 0 on ${date} or more than 1 in 3 sold puts finish in the money`;
+
+/** How the pair's verdict frames the sale, and the date its retire rule is checked on — or a
+ *  refusal naming what the row lacks. */
+function verdictOf(evidence: PairEvidence): { framing: string; date: string } | string {
+  if (evidence.status === "conviction") {
+    return evidence.checkOn
+      ? { framing: "Run on its owner's conviction", date: evidence.checkOn }
+      : "a conviction with no check date";
+  }
+  if (evidence.status === "researched") {
+    return evidence.shelfOn
+      ? { framing: "Run on the house's research", date: evidence.shelfOn }
+      : "a verdict with no shelf date";
+  }
+  return `no verdict (${evidence.status})`;
+}
 
 /** |delta| of the strike sold, by mode — roughly the market's odds it finishes in the money. These
  *  are targets: the pick may sit up to `DELTA_MISS` from one, and never above `MAX_SHORT_DELTA`
@@ -73,14 +115,14 @@ export const WHEEL_DELTAS: Readonly<Record<PlaybookMode, { put: number; call: nu
   aggressive: { put: 0.25, call: 0.3 },
 };
 
-/** How far the sold strike's |delta| may sit from the mode's target. CRWV's wide quotes can leave
+/** How far the sold strike's |delta| may sit from the mode's target. Wide quotes (CRWV's) can leave
  *  only near-the-money strikes tradeable; selling one of those would be a coin flip, not the
  *  "1-in-5" the Store card states, so the wheel sells nothing that cycle instead. */
 const DELTA_MISS = 0.05;
 
 /**
- * Where the wheel is, read off CRWV's positions:
- *   foreign   — a long CRWV contract or short shares: not the wheel's book; it does nothing
+ * Where the wheel is, read off the ticker's positions:
+ *   foreign   — a long contract on the ticker or short shares: not the wheel's book; it does nothing
  *               (hygiene closes the contract before expiry);
  *   put-open  — a sold put is out: hold it into expiry, assignment intended;
  *   assigned  — 100+ shares not already written on: sell one covered call;
@@ -106,10 +148,11 @@ export function wheelPhase(book: OptionBook): WheelPhase {
  *  file, today inside the blackout, or no expiry 30+ days out can end before it. An expiry is
  *  always a session, so the latest one that can is the last session before the blackout. */
 function saleWindow(
+  symbol: string,
   asOfIso: string,
   calendar: readonly EarningsPrint[],
 ): PrintBlackout | undefined {
-  const blackout = optionPrintBlackout(WHEEL_SYMBOL, asOfIso, calendar);
+  const blackout = optionPrintBlackout(symbol, asOfIso, calendar);
   if (!blackout) return undefined;
   const today = marketDayKey(asOfIso);
   if (today >= blackout.start) return undefined;
@@ -125,14 +168,15 @@ interface WheelSale {
 
 /** What this cycle would sell, if anything — the one answer `optionDemand` and `decide` share. */
 function nextSale(
+  symbol: string,
   asOfIso: string,
   portfolio: Portfolio,
   listed: readonly string[],
   calendar: readonly EarningsPrint[],
 ): WheelSale | undefined {
-  const phase = wheelPhase(optionBook(portfolio, WHEEL_SYMBOL));
+  const phase = wheelPhase(optionBook(portfolio, symbol));
   if (phase !== "flat" && phase !== "assigned") return undefined;
-  const blackout = saleWindow(asOfIso, calendar);
+  const blackout = saleWindow(symbol, asOfIso, calendar);
   if (!blackout) return undefined;
   const expiration = eligibleExpirations(listed, marketDayKey(asOfIso), {
     minDte: MIN_DTE,
@@ -147,12 +191,14 @@ const cents = (x: number): string => `$${x.toFixed(2)}`;
 
 /** The words and the forecast for one sale — a put or a call, honest about what assignment means. */
 function saleText(
+  wheel: Wheel,
   sale: WheelSale,
   occSymbol: string,
   strike: number,
   premium: number,
   shareCost: number | undefined,
 ): Pick<OrderIntent, "reason" | "expectation" | "forecast"> {
+  const { symbol, retireRule } = wheel;
   const name = humanizeOptionSymbol(occSymbol);
   const k = occStrikeLabel(strike);
   const paid = `${cents(premium)} a share ($${Math.round(premium * OPTION_MULTIPLIER)} for the contract)`;
@@ -161,44 +207,46 @@ function saleText(
     return {
       reason:
         `Selling one cash-secured ${name} for about ${paid}: $${collateral} stays ` +
-        `set aside in case CRWV finishes below ${k} and the shares are put to the bot. Run on its ` +
-        "owner's conviction — our study found CRWV's option premium underpays its moves.",
+        `set aside in case ${symbol} finishes below ${k} and the shares are put to the bot. ` +
+        wheel.basis,
       expectation:
-        `CRWV stays above ${k} to ${sale.expiration}: the put expires and the premium is kept. Below ` +
+        `${symbol} stays above ${k} to ${sale.expiration}: the put expires and the premium is kept. Below ` +
         `it, the bot buys 100 shares at ${k} and sells covered calls on them next.`,
       forecast: {
         direction: "up",
-        invalidator: `CRWV settles below ${k} on ${sale.expiration} — the wheel buys 100 shares at ${k}; ${RETIRE_RULE}`,
+        invalidator: `${symbol} settles below ${k} on ${sale.expiration} — the wheel buys 100 shares at ${k}; ${retireRule}`,
       },
     };
   }
   const cost = shareCost === undefined ? "cost" : `${cents(shareCost)} cost`;
   return {
     reason:
-      `Selling one covered ${name} for about ${paid} against 100 CRWV shares ` +
-      `the bot owns: if CRWV finishes above ${k} the shares are sold at ${k}, at or above their ${cost}.`,
+      `Selling one covered ${name} for about ${paid} against 100 ${symbol} shares ` +
+      `the bot owns: if ${symbol} finishes above ${k} the shares are sold at ${k}, at or above their ${cost}.`,
     expectation:
-      `CRWV stays below ${k} to ${sale.expiration}: the call expires, the premium is kept and the ` +
+      `${symbol} stays below ${k} to ${sale.expiration}: the call expires, the premium is kept and the ` +
       `shares stay for the next call. Above it, they are called away at ${k}.`,
     forecast: {
       direction: "up",
-      invalidator: `CRWV settles below the shares' ${cost} on ${sale.expiration} — the call expires and the shares are underwater; ${RETIRE_RULE}`,
+      invalidator: `${symbol} settles below the shares' ${cost} on ${sale.expiration} — the call expires and the shares are underwater; ${retireRule}`,
     },
   };
 }
 
 /** One sale, priced inside its quote — or nothing, when no strike is liquid and in bounds. */
 function wheelIntents(
+  wheel: Wheel,
   context: MarketContext,
   portfolio: Portfolio,
   calendar: readonly EarningsPrint[],
   mode: PlaybookMode,
 ): OrderIntent[] {
-  const listed = context.options?.listed[WHEEL_SYMBOL] ?? [];
-  const sale = nextSale(context.asOf, portfolio, listed, calendar);
-  const spot = context.quotes[WHEEL_SYMBOL]?.last;
+  const { symbol } = wheel;
+  const listed = context.options?.listed[symbol] ?? [];
+  const sale = nextSale(symbol, context.asOf, portfolio, listed, calendar);
+  const spot = context.quotes[symbol]?.last;
   if (!(sale && spot !== undefined && spot > 0)) return [];
-  const { shareCost } = optionBook(portfolio, WHEEL_SYMBOL);
+  const { shareCost } = optionBook(portfolio, symbol);
   const target = WHEEL_DELTAS[mode][sale.type];
   // A call is struck at or above what the shares cost, so being called away never locks in a loss;
   // the picker keeps it above spot (out of the money) too.
@@ -207,7 +255,7 @@ function wheelIntents(
     maxDeltaMiss: DELTA_MISS,
     maxAbsDelta: MAX_SHORT_DELTA,
   };
-  const rows = chainQuotes(context.options, WHEEL_SYMBOL, sale.expiration, sale.type);
+  const rows = chainQuotes(context.options, symbol, sale.expiration, sale.type);
   const pick = pickByDelta(rows, target, spot, context.asOf, bounds);
   if (!pick) return [];
   const { bid, ask, quotedAt } = pick.quote;
@@ -221,14 +269,14 @@ function wheelIntents(
   );
   if (limitPrice === undefined) return [];
   const intent = optionOpenIntent({
-    underlying: WHEEL_SYMBOL,
+    underlying: symbol,
     structure: sale.type === "put" ? "cash-secured-put" : "covered-call",
     legs: [{ occSymbol: pick.quote.occSymbol, side: "sell" }],
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     assignment: "intended",
-    strategy: `crwv-wheel-${sale.type}`,
-    ...saleText(sale, pick.quote.occSymbol, pick.quote.strike, limitPrice, shareCost),
+    strategy: `${symbol.toLowerCase()}-wheel-${sale.type}`,
+    ...saleText(wheel, sale, pick.quote.occSymbol, pick.quote.strike, limitPrice, shareCost),
     selection: {
       rule: `wheel-${sale.type}-by-delta`,
       phase: sale.phase,
@@ -245,35 +293,53 @@ function wheelIntents(
   return intent ? [intent] : [];
 }
 
-export const CRWV_WHEEL: Playbook = {
-  id: "CRWV-WHEEL",
-  symbols: [WHEEL_SYMBOL],
-  thesis:
-    "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
-    "— run on its owner's conviction, against our own study of CRWV's premium.",
-  evidence:
-    "docs/research/crwv-premium-fit.md — AGAINST this play: implied 69.9% vs a median 88.7% " +
-    "realized (6th percentile); Δ0.20 puts priced 19.4% to assign vs 33.3% delivered. Retires if " +
-    "net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money.",
-  // Unused, as on HC-SAURON: the wheel is sized by its Store allocation, one contract at a time.
-  size: { conservative: 0, standard: 0, aggressive: 0 },
-  keyedOn: "earnings",
-  options: { underlyings: [WHEEL_SYMBOL], holdsShortToExpiry: ["put", "call"], requiredLevel: 1 },
-  // The verdict is the sale window alone; what the wheel sells inside it depends on the book.
-  desiredState: (asOfIso, calendar) => (saleWindow(asOfIso, calendar) ? "long" : "no-window"),
-  optionDemand(
-    asOfIso: string,
-    portfolio: Portfolio,
-    listed: ListedExpirations,
-    calendar: readonly EarningsPrint[],
-  ): OptionDemand {
-    const sale = nextSale(asOfIso, portfolio, listed[WHEEL_SYMBOL] ?? [], calendar);
-    return sale
-      ? {
-          chains: [{ underlying: WHEEL_SYMBOL, expiration: sale.expiration, type: sale.type }],
-          contracts: [],
-        }
-      : NO_OPTION_DEMAND;
-  },
-  decide: wheelIntents,
-};
+/** The wheel on one ticker — `CRWV-WHEEL` is one call of this. Its id and verdict are looked up in
+ *  the pair table; a ticker with no wheel row, or a row with no dated verdict, throws (criteria 1
+ *  and 8). `lookup` is the table's `pairFor`, a seam so a spec can offer a row the real table does
+ *  not carry yet. */
+export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): Playbook {
+  // Quotes, positions and chains key on the upper-case ticker; a lower-case one would never trade.
+  const symbol = setting.symbol.toUpperCase();
+  const pair = lookup("wheel", symbol);
+  if (!pair) throw new Error(`no pair-table row for wheel × ${symbol}; add its evidence row first`);
+  const verdict = verdictOf(pair.evidence);
+  const { study } = pair.evidence;
+  if (typeof verdict === "string" || !study) {
+    const lacks = typeof verdict === "string" ? verdict : "no study to cite";
+    throw new Error(`wheel × ${symbol} cannot sell puts on ${lacks}`);
+  }
+  const spec: Wheel = {
+    symbol,
+    basis: `${verdict.framing} — ${setting.studySays}.`,
+    retireRule: `the play retires if its ${retireTest(verdict.date)}`,
+  };
+  return {
+    id: pair.id,
+    symbols: [symbol],
+    thesis: setting.thesis,
+    evidence: `${study} — ${setting.findings} Retires if ${retireTest(verdict.date)}.`,
+    // Unused, as on HC-SAURON: the wheel is sized by its Store allocation, one contract at a time.
+    size: { conservative: 0, standard: 0, aggressive: 0 },
+    keyedOn: "earnings",
+    options: { underlyings: [symbol], holdsShortToExpiry: ["put", "call"], requiredLevel: 1 },
+    // The verdict is the sale window alone; what the wheel sells inside it depends on the book.
+    desiredState: (asOfIso, calendar) =>
+      saleWindow(symbol, asOfIso, calendar) ? "long" : "no-window",
+    optionDemand(
+      asOfIso: string,
+      portfolio: Portfolio,
+      listed: ListedExpirations,
+      calendar: readonly EarningsPrint[],
+    ): OptionDemand {
+      const sale = nextSale(symbol, asOfIso, portfolio, listed[symbol] ?? [], calendar);
+      return sale
+        ? {
+            chains: [{ underlying: symbol, expiration: sale.expiration, type: sale.type }],
+            contracts: [],
+          }
+        : NO_OPTION_DEMAND;
+    },
+    decide: (context, portfolio, calendar, mode) =>
+      wheelIntents(spec, context, portfolio, calendar, mode),
+  };
+}

@@ -55,6 +55,13 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### The dashboard took the bots' one Alpaca price-feed connection, so Sauron never traded
+- **SHA:** b668953d   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** Eric asked "no trades made today?" on 2026-10-08 21:14 CT. The bots app had logged a bare `[market-data] error` / `closed` loop for days; #4774 (2026-10-05) saw the same drop and added a reconnect without finding the cause. Detection lag: the opener landed 2026-07-24 (`4ac30090`, `participants[0]`) and was latent until a held position made the dashboard stream start; observable from at least 2026-10-05; root cause named 2026-10-09 02:33Z, minutes after #4865 made the socket log Alpaca's refusal (`406 connection limit exceeded`).
+- **ROOT CAUSE:** Alpaca allows one market-data websocket per paper account. Three files open one; the dashboard's held-symbol stream used `participants[0]`, and `loadParticipants` lists bots first, so it opened on Sauron's key and evicted the bots app's socket. No ticks → no eval cycle → no trades, in live mode. The rule was already written in `src/server/quote-stream-hub.ts`'s header and `docs/architecture/runtime-api.md` — for the quote hub only; nobody enumerated the *other* consumers of that one connection ("what else crosses this system?"). The socket also swallowed its failure reason, which is why #4774 treated a symptom.
+- **PREVENTION:** gate (rank 1) — `tests/arch/market-data-owners.spec.ts` lists every file that constructs `AlpacaMarketDataStream` with whose credential it uses; a new opener fails CI until its owner is stated, and the dashboard stream is pinned off `participants[0]`. Detection: `market-data-stream.ts` now logs close code/reason, the runtime error, and Alpaca's `T:"error"` frame (#4865). Fix: `heldPriceStreamPlan` (#4872).
+- **SIDE QUESTS:** a market-hours "feed down for N minutes" alert would have caught this on day one instead of by a human noticing no trades (#4864 slice 3, → docs/IDEAS.md). The local Alpaca MCP also returned 401 the same evening — likely a separate stale local key, unverified.
+
 ### A smoke test of a new claim path took a real lease and labelled a real issue
 - **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed
 - **SIGNAL:** immediate, and only because the run's own `::notice::` said "resuming feedback #4299 … building in this run" — a line that can only print if the lease was actually taken. Checked within a minute: `refs/tags/claim/feedback-4299` existed on the repo and #4299 (a `plan` sub-issue, whose number the new fixture had borrowed) carried `in-progress`. Both reverted with `--release feedback-4299`; nothing else had read either.
