@@ -94,6 +94,15 @@ export interface TraceRecord {
   shifts: Shift[];
   overflow: Overflow | null;
   landing?: { name: string; top: number; screens: number | null } | null;
+  /** Each watched snippet's share inside this record's frame (measure-text.mjs → `seenText`). */
+  seen?: Seen[];
+}
+
+export interface Seen {
+  text: string;
+  ratio: number;
+  covered: boolean;
+  matched?: boolean;
 }
 
 export const SCROLL_TOL: number;

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "One simulated member turn",
+  "description": "What the member says and does in one turn. Field meanings: docs/members/study/roles/actor.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "as_member",
+    "noticed",
+    "candidates",
+    "expect",
+    "last_expectation",
+    "confusion",
+    "action"
+  ],
+  "properties": {
+    "as_member": {
+      "type": "string",
+      "description": "One line in character: 'As <name>, I…' — what you are trying to do right now."
+    },
+    "noticed": {
+      "type": "string",
+      "description": "At most 60 words, quoted or paraphrased from what is on the screen."
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 3,
+      "description": "Two or three things on the screen you might use next.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target", "confidence"],
+        "properties": {
+          "target": { "type": "string" },
+          "confidence": { "type": "integer", "minimum": 0, "maximum": 100 }
+        }
+      }
+    },
+    "expect": {
+      "type": "string",
+      "description": "Before acting: what you think will happen, and where on the screen you will see it."
+    },
+    "last_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "note"],
+      "description": "Did your previous expectation hold? On your first turn: verdict match, note 'first turn'.",
+      "properties": {
+        "verdict": { "type": "string", "enum": ["match", "partial", "surprise"] },
+        "note": { "type": "string" }
+      }
+    },
+    "confusion": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "description": "Exactly one action. tap/hover: x, y in screenshot pixels. scroll: dir + screens (0.5 or 1). type: text. key: Enter or Escape. done: answer. give_up: why.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["tap", "scroll", "type", "key", "back", "hover", "done", "give_up"]
+        },
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "dir": { "type": "string", "enum": ["up", "down"] },
+        "screens": { "type": "number", "enum": [0.5, 1] },
+        "text": { "type": "string" },
+        "key": { "type": "string", "enum": ["Enter", "Escape"] },
+        "answer": { "type": "string" },
+        "why": { "type": "string" }
+      }
+    }
+  }
+}

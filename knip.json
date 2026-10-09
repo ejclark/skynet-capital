@@ -5,6 +5,7 @@
     "scripts/*.mjs",
     "scripts/study/parity.mjs",
     "scripts/study/session.mjs",
+    "scripts/study/drive.mjs",
     "scripts/study/packets.mjs",
     "scripts/study/lint.mjs",
     "scripts/study/worlds/*.mjs",

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The after-task ease question",
+  "description": "Overall, how easy or difficult was this task? 1 = very difficult, 7 = very easy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["score", "reason"],
+  "properties": {
+    "score": { "type": "integer", "minimum": 1, "maximum": 7 },
+    "reason": {
+      "type": "string",
+      "description": "One or two sentences on why, when the score is 5 or lower; empty otherwise."
+    }
+  }
+}
