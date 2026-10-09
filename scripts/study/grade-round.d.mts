@@ -13,6 +13,7 @@ import type {
   Thoroughness,
   Validity,
 } from "./grade-core.mjs";
+import type { ControlRecord } from "./round-contract.mjs";
 
 export interface ControlRound {
   expect: string[];
@@ -20,6 +21,8 @@ export interface ControlRound {
   m1: MatchEntry[];
   m2: MatchEntry[];
   tiebreak?: MatchEntry[];
+  /** control.json as a control round wrote it (round-contract.mjs → controlRecord). */
+  record?: Partial<ControlRecord> | null;
 }
 export interface RoundInput {
   gold: GoldItem[];
@@ -35,6 +38,8 @@ export interface RoundInput {
   sessions?: { member?: string; success: boolean; ease: number | null }[];
   negative?: ControlRound | null;
   positive?: ControlRound | null;
+  /** The main round's frozen.json sha256; each control must have run those tasks. */
+  frozen?: string | null;
 }
 export interface ClassGrade {
   thoroughness: Thoroughness;

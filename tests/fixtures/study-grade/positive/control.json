@@ -1,1 +1,1 @@
-{ "expect": ["P1", "P2"] }
+{ "kind": "positive", "expect": ["P1", "P2"] }

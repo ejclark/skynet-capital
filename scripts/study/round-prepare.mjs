@@ -17,10 +17,12 @@ import {
 import { join, relative } from "node:path";
 import { memberCard } from "./packets.mjs";
 import { isHarnessPath, overlayManifest } from "./pin-plan.mjs";
+import { checkCards } from "./round-control.mjs";
 import {
   BLIND_ROLES,
   canaryQuestion,
   canaryVerdict,
+  isControl,
   lintFeedback,
   mergeFacts,
   primingCounts,
@@ -172,6 +174,8 @@ export function cards(ctx) {
     hashes[m] = card.sha256;
   }
   writeFileSync(join(dir, "hashes.json"), `${JSON.stringify(hashes, null, 2)}\n`);
+  // A control round asks the main round's questions of the main round's members, verbatim.
+  if (isControl(ctx.opts)) checkCards(ctx, hashes);
   const files = members.map((m) => join(dir, `${m}.md`));
   const linted = ctx.lint("card", files);
   const priming = primingCounts(linted.stdout);

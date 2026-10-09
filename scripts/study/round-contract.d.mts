@@ -17,7 +17,8 @@ export const FILES: Record<
   | "touches"
   | "struck"
   | "control"
-  | "grade",
+  | "grade"
+  | "frozen",
   string
 >;
 export const SESSIONS: string;
@@ -51,3 +52,25 @@ export function findingView(f: Record<string, unknown>): {
   where: string | null;
   frames: string[];
 };
+
+export type ControlKind = "negative" | "positive";
+export interface ControlRecord {
+  kind: ControlKind;
+  source: string;
+  frozen: string;
+  pin: string | null;
+  sourcePin: string | null;
+  expect: string[];
+}
+export function controlRecord(r: {
+  kind: ControlKind;
+  source: string;
+  frozen: string;
+  pin?: string | null;
+  sourcePin?: string | null;
+  expect: string[];
+}): ControlRecord;
+export function controlProblems(
+  record: Partial<ControlRecord> | null | undefined,
+  opts: { kind: ControlKind; frozen?: string | null },
+): string[];

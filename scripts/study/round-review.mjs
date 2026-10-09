@@ -6,6 +6,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { classProblems, FILES, SESSIONS } from "./round-contract.mjs";
+import { writeControl } from "./round-control.mjs";
 import {
   collectFindings,
   fromAnalyst,
@@ -22,6 +23,7 @@ import {
   expertConsolidationText,
   wordsText,
 } from "./round-messages.mjs";
+import { expertCount, isControl, reviewSkip } from "./round-plan.mjs";
 import { readCards } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
@@ -128,7 +130,7 @@ export async function experts(ctx) {
   const dir = ctx.dir(step);
   const cards = readCards(ctx, members(ctx));
   const { main, handoff, dirOf } = expertBatches(ctx);
-  const n = ctx.opts.thin ? 1 : ctx.p.experts;
+  const n = expertCount(ctx.p, ctx.opts);
   const call = ctx.call(step);
   const out = {};
   for (let k = 1; k <= n; k++) {
@@ -205,7 +207,7 @@ export async function experts(ctx) {
 export async function words(ctx) {
   const step = "8-words";
   const dir = ctx.dir(step);
-  if (ctx.opts.thin) return { skipped: "thin" };
+  if (reviewSkip(ctx.opts)) return { skipped: reviewSkip(ctx.opts) };
   const strings = readJson(join(ctx.out, "0-preflight", "harvest", "strings.json"));
   const answer = await ctx.call(step)({
     role: "words",
@@ -222,7 +224,7 @@ export async function words(ctx) {
 export async function audit(ctx) {
   const step = "9-member-types";
   const dir = ctx.dir(step);
-  if (ctx.opts.thin) return { skipped: "thin" };
+  if (reviewSkip(ctx.opts)) return { skipped: reviewSkip(ctx.opts) };
   const answer = await ctx.call(step)({
     role: "member-type-audit",
     rolePath: join(ctx.roles, "member-type-audit.md"),
@@ -282,7 +284,7 @@ export function collect(ctx) {
     const a = readJson(join(ctx.out, "6-analysts", `${member}.json`));
     groups.push(fromAnalyst({ member, answer: a.answer, frames: a.frames }));
   }
-  const n = ctx.opts.thin ? 1 : ctx.p.experts;
+  const n = expertCount(ctx.p, ctx.opts);
   for (let k = 1; k <= n; k++) {
     const e = readJson(join(ctx.out, "7-experts", `expert-${k}.json`));
     groups.push(fromExpert({ k, answer: e.answer, batch: e.index }));
@@ -304,5 +306,9 @@ export function collect(ctx) {
   const byClass = {};
   for (const c of Object.values(classes)) byClass[c] = (byClass[c] ?? 0) + 1;
   ctx.log(step, "findings", { total: findings.length, byClass });
+  if (isControl(ctx.opts)) {
+    const { kind, pin } = writeControl(ctx);
+    return { total: findings.length, byClass, control: { kind, pin } };
+  }
   return { total: findings.length, byClass };
 }

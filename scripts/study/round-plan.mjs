@@ -38,9 +38,19 @@ export const BLIND_ROLES = [
 
 const USAGE =
   "usage: round.mjs --pin <pin dir> --out <dir> --sealed <dir> [--profile <area.json>] " +
-  "[--thin] [--dry-run] [--stub <dir>] [--concurrency N] [--only-world <name>] [--cap N]";
+  "[--thin] [--dry-run] [--stub <dir>] [--concurrency N] [--only-world <name>] [--cap N] " +
+  "[--runs N] [--experts N] " +
+  "[--frozen-from <main round dir> --control negative|positive --expect <key ids file>]";
 
-/** The command line, checked. `--stub` implies a dry run; `--dry-run` alone uses `defaultStub`. */
+/** The two control rounds a study grades its main round against (grade.mjs --negative/--positive). */
+export const CONTROL_KINDS = ["negative", "positive"];
+
+/**
+ * The command line, checked. `--stub` implies a dry run; `--dry-run` alone uses `defaultStub`.
+ * `--frozen-from <main round>` makes a CONTROL round (round-control.mjs): it needs `--control` and
+ * `--expect`, and takes its thin cut and world from the main round — so `--thin` and
+ * `--only-world` are refused beside it.
+ */
 export function roundArgs(argv, { defaultStub, defaultProfile }) {
   const out = { thin: false, dryRun: false, profile: defaultProfile };
   const takes = {
@@ -52,6 +62,11 @@ export function roundArgs(argv, { defaultStub, defaultProfile }) {
     "--concurrency": "concurrency",
     "--only-world": "onlyWorld",
     "--cap": "cap",
+    "--runs": "runs",
+    "--experts": "experts",
+    "--frozen-from": "frozenFrom",
+    "--control": "control",
+    "--expect": "expect",
   };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
@@ -66,7 +81,7 @@ export function roundArgs(argv, { defaultStub, defaultProfile }) {
   for (const k of ["pin", "out", "sealed"]) {
     if (!out[k]) throw new Error(`--${k} is required\n${USAGE}`);
   }
-  for (const k of ["concurrency", "cap"]) {
+  for (const k of ["concurrency", "cap", "runs", "experts"]) {
     if (out[k] === undefined) continue;
     const n = Number(out[k]);
     if (!(Number.isInteger(n) && n > 0)) throw new Error(`--${k} must be a positive integer`);
@@ -74,8 +89,36 @@ export function roundArgs(argv, { defaultStub, defaultProfile }) {
   }
   if (out.stub) out.dryRun = true;
   else if (out.dryRun) out.stub = defaultStub;
+  checkControlFlags(out);
   return out;
 }
+
+/** A control round's flags: all three or none, a known kind, and no thin cut or world of its own. */
+function checkControlFlags(out) {
+  const given = ["frozenFrom", "control", "expect"].filter((k) => out[k] !== undefined);
+  if (given.length > 0 && given.length < 3) {
+    throw new Error(`a control round needs --frozen-from, --control and --expect\n${USAGE}`);
+  }
+  if (out.control !== undefined && !CONTROL_KINDS.includes(out.control)) {
+    throw new Error(`--control must be ${CONTROL_KINDS.join(" or ")}`);
+  }
+  if (out.frozenFrom && (out.thin || out.onlyWorld)) {
+    throw new Error("a control round takes --thin and --only-world from its --frozen-from round");
+  }
+}
+
+/** True for a control round (`--frozen-from`). */
+export const isControl = (opts) => Boolean(opts?.frozenFrom);
+
+/** The runs per task a round overrides with: `--runs`, else 1 in a control round, else none. */
+export const runsOverride = (opts) => opts.runs ?? (isControl(opts) ? 1 : undefined);
+
+/** How many experts review: `--experts`, else 1 in a thin or a control round, else the config's. */
+export const expertCount = (p, opts) =>
+  opts.experts ?? (opts.thin || isControl(opts) ? 1 : p.experts);
+
+/** Why the words pass and the member-type audit are skipped (`control`, else `thin`), or null. */
+export const reviewSkip = (opts) => (isControl(opts) ? "control" : opts.thin ? "thin" : null);
 
 /**
  * What a round's out dir was made under — everything that changes what a step writes. A resume
@@ -83,6 +126,15 @@ export function roundArgs(argv, { defaultStub, defaultProfile }) {
  * out, since it changes how fast, not what. `profileSha` is the area config's sha256.
  */
 export function roundMode(opts, profileSha) {
+  // A control round's source and its freeze, and the key ids it expects (read from --expect).
+  const control = isControl(opts)
+    ? {
+        kind: opts.control,
+        from: opts.frozenFrom,
+        frozen: opts.sourceFrozen ?? null,
+        expect: opts.expectIds ?? null,
+      }
+    : null;
   return {
     profile: opts.profile,
     profileSha,
@@ -92,6 +144,11 @@ export function roundMode(opts, profileSha) {
     stub: opts.stub ?? null,
     onlyWorld: opts.onlyWorld ?? null,
     cap: opts.cap ?? null,
+    // Added with control rounds: null on a main round without them, so a round.json written
+    // before they existed still resumes (modeChanges reads an absent key as null).
+    runs: opts.runs ?? null,
+    experts: opts.experts ?? null,
+    control,
   };
 }
 
@@ -176,14 +233,14 @@ export function taskUnits(matrix) {
 /**
  * Every session of the round: member × world × viewport × task × run, each with its own directory
  * under the sessions folder (round-contract.mjs → sessionDir) — nothing shared. `tasksByUnit`:
- * unit key → its frozen task ids, in order.
+ * unit key → its frozen task ids, in order. `runs` overrides the runs per task (runsOverride).
  */
-export function planSessions({ p, matrix, tasksByUnit, thin = false }) {
+export function planSessions({ p, matrix, tasksByUnit, thin = false, runs: override }) {
   const out = [];
   for (const r of matrix) {
     const ids = tasksByUnit[`${r.member}--${r.world}`] ?? [];
     const tasks = thin ? ids.slice(p.thin.task - 1, p.thin.task) : ids;
-    const runs = thin ? 1 : runsFor(p, r.world);
+    const runs = override ?? (thin ? 1 : runsFor(p, r.world));
     for (const viewport of r.viewports) {
       for (const task of tasks) {
         for (let run = 1; run <= runs; run++) {

@@ -55,11 +55,18 @@ export function gradeArgs(argv) {
   return opts;
 }
 
-/** A control round: its findings, matcher files and what it expects (control.json). */
+/**
+ * A control round (round.mjs --frozen-from … --control <kind>): its findings, matcher files and
+ * control.json — what it expects, and the record gradeRound holds to the contract (its kind, the
+ * main round's freeze). A dir with no control.json is refused: it is not a control round.
+ */
 function loadControl(dir) {
   if (!dir) return null;
-  const control = readJson(join(dir, FILES.control));
+  const file = join(dir, FILES.control);
+  if (!existsSync(file)) throw new Error(`${dir} holds no ${FILES.control} — not a control round`);
+  const control = readJson(file);
   return {
+    record: control,
     expect: control.expect,
     findings: readJsonl(join(dir, FILES.findings)),
     m1: readJson(join(dir, FILES.m1)),
@@ -104,6 +111,7 @@ export function loadRound(opts) {
     })),
     negative: loadControl(opts.negative),
     positive: loadControl(opts.positive),
+    frozen: readOptional(join(round, FILES.frozen), null)?.sha256 ?? null,
   };
 }
 

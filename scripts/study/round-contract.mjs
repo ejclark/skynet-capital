@@ -16,7 +16,13 @@
 //   checks.json?   [{finding, verdict: real|false|world-artifact, same_as?: <finding id>}]
 //   touches.json?  {<key id>: true | <count> | [<session dir>…]} — which key surfaces a trace touched
 //   struck.json?   [<key id>…] — key items parity proved cannot render
-// A CONTROL ROUND holds findings.jsonl, the matcher files and control.json {expect: [<key id>…]}.
+// A CONTROL ROUND (round.mjs --frozen-from <main round> --control <kind> --expect <ids>) is a round
+// directory like any other — findings.jsonl, classes.json, the sessions — run on the MAIN round's
+// frozen tasks against another build, plus control.json (controlRecord below):
+//   {kind: negative|positive, source: <main round dir>, frozen: <its frozen.json sha256>,
+//    pin: <this build's commit>, sourcePin: <the main round's>, expect: [<key id>…]}
+// Negative = the fixed build: none of `expect` may be reported. Positive = planted defects: every
+// one must be. The matcher files are written after it, as for the main round.
 //
 // A FINDING (findings.jsonl):
 //   {id, class, level: structural|surface, severity, severityRaw, what,
@@ -53,6 +59,7 @@ export const FILES = {
   struck: "struck.json",
   control: "control.json",
   grade: "grade.json",
+  frozen: "frozen.json",
 };
 
 /** The sessions step's folder — also the round step that writes it. */
@@ -92,6 +99,32 @@ export function classProblems(f, cls = f.class) {
   if (cls === "members" && !VOICES.includes(f.voice))
     return [`members finding ${f.id} has no voice (${VOICES.join(" | ")})`];
   return [];
+}
+
+/** control.json, as a control round writes it. */
+export function controlRecord({ kind, source, frozen, pin, sourcePin, expect }) {
+  return { kind, source, frozen, pin: pin ?? null, sourcePin: sourcePin ?? null, expect };
+}
+
+/**
+ * Problems with a control round's control.json, read as the `kind` it was passed for; [] when it
+ * keeps the contract. `frozen` is the main round's frozen.json sha256 — when the main round has
+ * one, the control must have run exactly those tasks (a control on other tasks controls nothing).
+ */
+export function controlProblems(record, { kind, frozen = null }) {
+  const out = [];
+  if (record?.kind !== kind) {
+    out.push(`control.json is a ${record?.kind ?? "kindless"} control, passed as --${kind}`);
+  }
+  if (!(Array.isArray(record?.expect) && record.expect.length > 0)) {
+    out.push("control.json names no key ids to expect");
+  }
+  if (frozen && record?.frozen !== frozen) {
+    out.push(
+      `control.json ran tasks frozen as ${String(record?.frozen ?? "none").slice(0, 12)}, not the main round's ${frozen.slice(0, 12)}`,
+    );
+  }
+  return out;
 }
 
 /** What a reader shows of a finding: its words, who found it, and its frames. */

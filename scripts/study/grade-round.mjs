@@ -16,7 +16,7 @@ import {
   validity,
   verdictOf,
 } from "./grade-core.mjs";
-import { BLIND, CLASSES, classProblems } from "./round-contract.mjs";
+import { BLIND, CLASSES, classProblems, controlProblems } from "./round-contract.mjs";
 
 const LEVELS = ["structural", "surface"];
 const VERDICTS = ["real", "false", "world-artifact"];
@@ -35,9 +35,22 @@ function checkIndex(checks, ids, problems) {
   return out;
 }
 
-/** A control round ({expect, findings, m1, m2, tiebreak}) → its verdict. */
-function control(kind, round, problems) {
+/**
+ * A control round ({expect, findings, m1, m2, tiebreak, record?}) → its verdict. `record` is its
+ * control.json as the round wrote it, held to the contract (its kind, the main round's freeze);
+ * a hand-made control may carry only `expect`.
+ */
+function control(kind, round, problems, frozen) {
   if (!round) return controlVerdict(kind, null);
+  if (round.record) {
+    problems.push(
+      ...controlProblems(round.record, { kind, frozen }).map((x) => `${kind} control: ${x}`),
+    );
+  }
+  if (!round.expect?.length) {
+    if (!round.record) problems.push(`${kind} control: control.json names no key ids to expect`);
+    return { kind, ran: true, pass: false, expect: [], found: [], why: "names nothing to expect" };
+  }
   const { byId, problems: p } = consensus({
     ids: round.findings.map((f) => f.id),
     m1: round.m1,
@@ -81,7 +94,8 @@ function perMember(fs, byId, renderIds, primes) {
  * Grade one round. Input: the parsed key (`gold`), `primes` (member → key ids its card hints at),
  * `findings` (+ `classes`: id → class), the two matcher files and an optional tie-break, the
  * checker's verdicts, `struck` key ids, `touches` (key id → touched; null when not recorded), the
- * member sessions ({member, success, ease}), and the two control rounds (null when not run).
+ * member sessions ({member, success, ease}), the two control rounds (null when not run), and
+ * `frozen` — the main round's frozen.json sha256, which each control must have run.
  */
 export function gradeRound(input) {
   const { gold, primes = {}, classes, m1, m2, tiebreak = [], checks = [], struck = [] } = input;
@@ -137,8 +151,8 @@ export function gradeRound(input) {
     };
   });
   const controls = {
-    negative: control("negative", negative, problems),
-    positive: control("positive", positive, problems),
+    negative: control("negative", negative, problems, input.frozen ?? null),
+    positive: control("positive", positive, problems, input.frozen ?? null),
   };
   const blind = classesOut.blind;
   return {
