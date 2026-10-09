@@ -22,6 +22,7 @@ import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
   handOffNote,
+  needsConviction,
   newSubscriptionRefusal,
   notTradingNote,
   subscribedPairs,
@@ -64,6 +65,10 @@ interface PairRowView extends PairRowEntry {
   /** Why a NEW subscription to this pair would be refused — the API's own sentence (criterion 9).
    *  Only for a viewer who may manage the account and holds no subscription to it. */
   readonly subscribeRefusal?: string;
+  /** The study does not back this pair and its strategy runs on conviction (criterion 2): a new
+   *  subscription needs the owner's reason and check day. `subscribeRefusal` is judged as if they
+   *  were given, so the row is offered and the form asks for them. */
+  readonly needsConviction?: true;
   /** A share pair whose ticker an option pair on this bot takes: "the call spread trades NVDA on
    *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
   readonly handOff?: string;
@@ -154,11 +159,15 @@ function strategyCardsView(
       ? newSubscriptionRefusal({
           playbookId: row.id,
           subscriptions,
+          conviction: true,
           ...(envNamed ? { envNamed } : {}),
           asOfIso,
         })
       : undefined;
-    return refusal ? { ...row, subscribeRefusal: refusal } : row;
+    const pair = findPair(row.id);
+    const asks =
+      subscriptions && pair && needsConviction(pair) ? { needsConviction: true as const } : {};
+    return { ...row, ...asks, ...(refusal ? { subscribeRefusal: refusal } : {}) };
   };
   return strategyCatalog(asOfIso).map((card) => {
     const allocation = subscriptions ? allocations?.[card.strategy] : undefined;

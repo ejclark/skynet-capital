@@ -44,7 +44,9 @@ const parseQuery = (url: URL) => {
     url.searchParams.get("capital") !== null &&
     Number.isFinite(capital) &&
     capital >= 0;
-  return valid ? { id, playbookId, mode, capital } : undefined;
+  // A conviction the form has filled in; its text is judged when Subscribe is pressed, not here.
+  const conviction = url.searchParams.get("conviction") === "1";
+  return valid ? { id, playbookId, mode, capital, conviction } : undefined;
 };
 
 export async function servePreflight(
@@ -73,6 +75,7 @@ export async function servePreflight(
     playbookId: query.playbookId,
     subscriptions: held,
     asOfIso: (config.now?.() ?? new Date()).toISOString(),
+    ...(query.conviction ? { conviction: true } : {}),
     ...(envNamed ? { envNamed } : {}),
   };
   const refusal =
