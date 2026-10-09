@@ -38,7 +38,9 @@ import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import { withQuoteUniverse } from "../personas/universe-view.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
+import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
@@ -295,6 +297,14 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
     );
   }
+  // Criterion 11 (#4469): a pair the house never marked ✓ keeps trading without a stated conviction,
+  // and says so — a label, never a stop.
+  const unstated = subscriptions.filter(isConvictionNotStated);
+  if (unstated.length > 0) {
+    console.log(
+      `[playbooks] ${bot.persona.id} runs ${unstated.map((s) => s.playbookId).join(", ")} — ${CONVICTION_NOT_STATED}; still trading`,
+    );
+  }
   // An env-roster playbook with no subscription opens nothing (#4642 slice 10): it takes the shape a
   // paused one has — exits only, its names kept, no verdict — so the roll call never calls it armed,
   // expiry hygiene buys back a short it would otherwise hold into assignment, and it emits no open
@@ -338,7 +348,14 @@ export function tradingRoster(
   full: BotRoster,
   baseRisk: RiskConfig,
   realizedPlForPlaybook?: (playbookId: string) => number,
-  { runsScout = false }: { readonly runsScout?: boolean } = {},
+  {
+    runsScout = false,
+    ledgerOf,
+  }: {
+    readonly runsScout?: boolean;
+    /** Each pair's history on this bot, for the conviction check — absent when the store is dark. */
+    readonly ledgerOf?: ConvictionGateDeps["ledgerOf"];
+  } = {},
 ): TradingRoster {
   const roster = runsScout
     ? full
@@ -354,13 +371,22 @@ export function tradingRoster(
     // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
     // bot, a bot with no playbook included.
     persona: withOptionSafety(
-      withPlaybooks(
-        withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-        roster.enabled,
-        UPCOMING_PRINTS,
-        [],
-        console,
-        (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+      // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+      // hygiene around it, so the gate sits between the two.
+      withConvictionGate(
+        withPlaybooks(
+          withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+          roster.enabled,
+          UPCOMING_PRINTS,
+          [],
+          console,
+          (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+        ),
+        {
+          subscriptions: roster.subscriptions,
+          ...(ledgerOf ? { ledgerOf } : {}),
+          log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+        },
       ),
       roster.enabled,
       UPCOMING_PRINTS,

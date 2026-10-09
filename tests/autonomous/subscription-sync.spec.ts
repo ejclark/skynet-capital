@@ -4,6 +4,7 @@ import {
 } from "../../src/autonomous/subscription-sync.js";
 import {
   buildSubscriptionsSnapshot,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
   type SubscriptionsSnapshot,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -140,5 +141,27 @@ describe("createSubscriptionSync", () => {
     expect(sync.accept(snapshot({ sauron: [sub()] }))).toBe("applied");
     expect(errors).toEqual(["sauron"]);
     expect(healthy.applied).toEqual([[]]);
+  });
+});
+
+describe("a conviction on the swap (#4469 slice 3c part 2)", () => {
+  const conviction = { reason: "my call", checkOn: "2027-01-29" };
+  const v2 = (state: SubscriptionsState, at = AT) =>
+    buildSubscriptionsSnapshot(state, at, undefined, SUBSCRIPTIONS_SNAPSHOT_KIND_V2);
+
+  it("a v2 snapshot that adds a conviction is a swap, and the bot gets the conviction", () => {
+    const sauron = recorder("sauron");
+    const sync = createSubscriptionSync({ bots: [sauron.bot] });
+    sync.accept(v2({ sauron: [sub()] }));
+    expect(sync.accept(v2({ sauron: [sub({ conviction })] }, AT + 1_000))).toBe("applied");
+    expect(sauron.applied.at(-1)?.[0]?.conviction).toEqual(conviction);
+  });
+
+  it("a v1 snapshot that only adds a conviction is not a swap: its version never covered one", () => {
+    const sauron = recorder("sauron");
+    const sync = createSubscriptionSync({ bots: [sauron.bot] });
+    sync.accept(snapshot({ sauron: [sub()] }));
+    expect(sync.accept(snapshot({ sauron: [sub({ conviction })] }, AT + 1_000))).toBe("unchanged");
+    expect(sauron.applied).toHaveLength(1);
   });
 });
