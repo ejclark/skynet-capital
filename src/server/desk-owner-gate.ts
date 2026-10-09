@@ -13,7 +13,8 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  * table, the decision outcome chips and Activity's "Playbook" row onto any member's view of any
  * bot, so the desk JSON family strips the playbook key before it leaves the server for a session
  * that does not own the account. Verdicts, modes, reasons and fills still ride — only the name of
- * the playbook is withheld. The league Wire (`/api/wire`) lists every account's fills with the same
+ * the playbook is withheld, and with it the intent's strategy tag, a playbook's own slug that names
+ * it by inference (#4971). The league Wire (`/api/wire`) lists every account's fills with the same
  * decisions attached, so it asks `ownsDesk` per row (`attachWireReasoning`'s `ownsAccount`).
  *
  * The same strips withhold what the broker said about an order's result (#4650): a broker's message
@@ -58,19 +59,29 @@ export function withoutLadderPlaybookIds(
 }
 
 type Outcome = DecisionCycleView["outcomes"][number];
+type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
-/** Decision cycles with each outcome's `playbook · mode` chip and the broker's words removed. */
+/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag and the broker's
+ *  words removed — and each refused idea's strategy tag. The tag is a playbook's own slug
+ *  (`crwv-wheel-put`), so it names the playbook as plainly as the chip does (#4971). */
 export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
-  "outcomes"
+  "outcomes" | "refusedIntents"
 > & {
-  readonly outcomes: readonly Omit<Outcome, "playbook" | "playbookMode" | "brokerReason">[];
+  readonly outcomes: readonly Omit<
+    Outcome,
+    "playbook" | "playbookMode" | "strategy" | "brokerReason"
+  >[];
+  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy">[];
 })[] {
-  return cycles.map((cycle) => ({
+  return cycles.map(({ refusedIntents, ...cycle }) => ({
     ...cycle,
     outcomes: cycle.outcomes.map(
-      ({ playbook: _p, playbookMode: _m, brokerReason: _b, ...outcome }) => outcome,
+      ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
     ),
+    ...(refusedIntents
+      ? { refusedIntents: refusedIntents.map(({ strategy: _s, ...idea }) => idea) }
+      : {}),
   }));
 }
 

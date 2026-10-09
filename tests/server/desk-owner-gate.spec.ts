@@ -73,15 +73,38 @@ describe("the playbook strips", () => {
             quantity: 1,
             playbook: "S1-NVDA",
             playbookMode: "standard",
+            strategy: "s1-nvda-fade",
             reason: "fade",
             action: "placed",
           },
+        ],
+        refusedIntents: [
+          { symbol: "NVDA", side: "buy", quantity: 5, strategy: "s1-nvda-fade", reason: "fade" },
         ],
       },
     ]);
     expect(cycle?.outcomes).toEqual([
       { symbol: "NVDA", side: "buy", quantity: 1, reason: "fade", action: "placed" },
     ]);
+    // The strategy tag is the playbook's own slug, so it names the playbook too (#4971).
+    expect(cycle?.refusedIntents).toEqual([
+      { symbol: "NVDA", side: "buy", quantity: 5, reason: "fade" },
+    ]);
+  });
+
+  it("leaves a cycle with no refused ideas without the key", () => {
+    const [cycle] = withoutCycleOwnerFields([
+      {
+        at: "2026-09-22T15:00:00Z",
+        mode: "live",
+        status: "quiet",
+        headline: "nothing fired",
+        rawCount: 0,
+        guardedCount: 0,
+        outcomes: [],
+      },
+    ]);
+    expect(cycle).not.toHaveProperty("refusedIntents");
   });
 
   it("drops a decision's playbook and keeps who decided and why", () => {
@@ -93,5 +116,20 @@ describe("the playbook strips", () => {
         playbookMode: "standard",
       }),
     ).toEqual({ reason: "fade", personaId: "sauron" });
+  });
+
+  it("drops a decision's strategy tag, which names its playbook, and keeps its expectation", () => {
+    expect(
+      withoutOwnerReasoning({
+        reason: "sell a put a month out",
+        personaId: "sauron",
+        strategy: "crwv-wheel-put",
+        expectation: "CRWV stays above $80",
+      }),
+    ).toEqual({
+      reason: "sell a put a month out",
+      personaId: "sauron",
+      expectation: "CRWV stays above $80",
+    });
   });
 });

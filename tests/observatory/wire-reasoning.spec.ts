@@ -56,9 +56,11 @@ describe("attachWireReasoning", () => {
       guardedIntents: [guardedIntent],
       outcomes: [{ intent: guardedIntent, action: "placed" }],
     };
+    // The account's owner reads it: a non-owner's copy loses the strategy tag (#4971).
     const rows = attachWireReasoning([row()], {
       findByOrderId: (orderId) =>
         orderId === "ord-1" ? { record, intent: guardedIntent } : undefined,
+      ownsAccount: () => true,
     });
     expect(rows[0]?.reasoning).toEqual({
       personaId: "sauron",
@@ -201,7 +203,11 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
   });
 
   it("withholds the playbook on every account the viewer does not own, keeping the why (#885)", () => {
-    const fired = intent({ playbookId: "S1-NVDA", playbookMode: "standard" });
+    const fired = intent({
+      playbookId: "S1-NVDA",
+      playbookMode: "standard",
+      strategy: "s1-nvda-fade",
+    });
     const record: DecisionRecord = {
       at: 1,
       personaId: "sauron",
@@ -216,10 +222,12 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
       ...deps,
       ownsAccount: (id) => id === "sauron",
     });
-    expect(own?.reasoning).toMatchObject({ playbookId: "S1-NVDA" });
+    expect(own?.reasoning).toMatchObject({ playbookId: "S1-NVDA", strategy: "s1-nvda-fade" });
     expect(other?.reasoning).toMatchObject({ reason: "panic fade", personaId: "sauron" });
     expect(other?.reasoning).not.toHaveProperty("playbookId");
     expect(other?.reasoning).not.toHaveProperty("playbookMode");
+    // The strategy tag is the playbook's own slug, so it would name it all the same (#4971).
+    expect(other?.reasoning).not.toHaveProperty("strategy");
     // No ownership answer at all reads as owning nothing.
     expect(attachWireReasoning(rows, deps)[0]?.reasoning).not.toHaveProperty("playbookId");
   });
