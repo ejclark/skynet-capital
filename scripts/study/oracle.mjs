@@ -21,7 +21,7 @@ export const MAX_NUMBERS = 4;
 
 const MINUS = /[-−–]/;
 // A minus counts only when it TOUCHES the number ("-$412", "$-3", "−8.3%"): a spaced dash is
-// punctuation ("CRWV – $412"), and a number glued to a word or digit before it is not a fresh
+// punctuation ("Total – $412"), and a number glued to a word or digit before it is not a fresh
 // number ("400-412" is a range, not 400 and −412; "Q3" is no 3).
 const NUMBER =
   /(?<![\w.])([-−–])?(?:\$\s*([-−–])?)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*([km](?![a-z]))?(\s*%)?/gi;
