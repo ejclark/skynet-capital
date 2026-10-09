@@ -37,9 +37,10 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * `subscriptions.v2` (#4469 slice 3c part 2) is the one wire change that adds a behavioral field:
  * a subscription's `conviction` (its reason and check date), which a bot acts on (criteria 11 and
  * 12, `conviction-check.ts`). It fingerprints v1's fields plus that one and nothing else, so a spec
- * can show only the added field moved. EXPAND FIRST: the bots read both kinds from this build on,
- * and the app keeps sending v1 until part 3 writes a conviction, so an app that deploys ahead of
- * its bots never sends a kind they cannot read. A v1 snapshot's version does not describe a
+ * can show only the added field moved. EXPAND FIRST: the bots read both kinds from part 2 on, and
+ * the app sent v1 until part 3 writes a conviction, so an app that deployed ahead of its bots never
+ * sent a kind they could not read. The app sends v2 from part 3 (`dashboard-insights-bridge.ts`),
+ * once the bots with part 2 were live; v1 stays readable for a rollback. A v1 snapshot's version does not describe a
  * conviction, so the bots drop the one it carries rather than act on a field the version never
  * vouched for.
  */

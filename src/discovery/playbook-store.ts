@@ -224,9 +224,11 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "they are called away. It runs on its owner's conviction, AGAINST our own study: CRWV's " +
       "options imply about 70% volatility while the stock has delivered a median of about 89% " +
       "over the last year, and its 0.20-delta puts are priced to be assigned 19% of the time " +
-      "against 33% in CRWV's own history — the premium has underpaid the moves. It retires if " +
-      "its net P/L is below $0 on 2027-01-29, or if more than 1 in 3 of its sold puts finish in " +
-      "the money — a check made on that date by hand: nothing switches it off automatically.",
+      "against 33% in CRWV's own history — the premium has underpaid the moves. It is checked on " +
+      "2027-01-29: if its net P/L is below $0 on 2027-01-29, or more than 1 in 3 of its sold puts " +
+      "have finished in the money, it stops selling new puts on its own until its owner sets a " +
+      "new check date. A put still open runs to expiry, and assigned shares keep selling covered " +
+      "calls until they are called away.",
     enter:
       "Sells one put at the strike nearest 0.20 delta — roughly a 1-in-5 chance the market " +
       "prices for finishing in the money (0.15 conservative, 0.25 aggressive) — on the latest " +
