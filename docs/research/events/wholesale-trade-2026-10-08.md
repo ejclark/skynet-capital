@@ -490,3 +490,66 @@ this doc goes quiet.
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":1} -->
+
+
+## Outcome
+
+**Close-out (2026-10-09, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from Census's own
+release (CB26-152, `census.gov/wholesale/current/index.html`, plus `currentwhl.xlsx` and
+`timeseries1.xlsx`, fetched direct 2026-10-09); the *nowcast* from the Atlanta Fed GDPNow workbook
+(`ContribHistory`, fetched direct 2026-10-09); the *tape* from Yahoo 5-minute SPY and `^VIX` bars pulled
+fresh the same day. Date label: still **estimate** in the header (the release landed on the day filed, but
+this lane does not self-confirm). No August consensus was reachable, so "vs expectations" is not claimed.
+
+| Measure | Aug 2026 | Line | Result |
+|---|---|---|---|
+| **Inventories m/m, full report** | **+0.5%** (±0.2), $964.2B | advance (09-30) **+0.7%**; kill line > 0.1pp revision | **FT-3 kill** (−0.2pp) |
+| **GDPNow Q3 change-in-inventory-investment** | **2.0748 → 1.9796 = −0.0952pp** | kill at ≥ 0.10pp | **FT-1 pass**, at 95% of the line |
+| GDPNow net-exports contribution, same vintage | −2.6852 → −2.6852 (0.0000) | — | solo vintage moved inventories only |
+| Sales m/m | **+1.8%** (±0.2), $817.5B, +15.6% y/y | June→July revised +0.8% → +1.0% | not registered |
+| Inventories/sales ratio | **1.18** | Aug 2025 1.28 | not registered |
+| **SPY 10:00–11:00 ET** | **+0.012%** (10:00 bar +0.03%) | session class null | consistent with the stance |
+| **FT-2** (level vs the 10-26 restatement) | baseline **$964,199M** | settles 10-26 | **still open**, below |
+
+**What happened vs the stance.** The stance — stand aside, expect a small nowcast move and an ordinary
+session, read 09-30 rather than 10-08 — held on two of three legs and cracked on the third.
+
+- **The nowcast stayed under its line, but with the least room an August edition has ever left.** The solo
+  10-08 vintage moved the inventories contribution **−0.0952pp** (total GDPNow 3.684% → 3.586%). The
+  six prior August editions topped out at 0.0652pp (carried from the initial research, not re-derived:
+  `ContribArchives` ends 2026-07-28), so with this one n=7, median **0.0413pp**, 7 of 7 under 0.10pp. The
+  quiet-cell claim survives as a threshold, not as a comfortable margin.
+- **The "read 09-30, not 10-08" rule was tested by its own exception and took a dent.** The full report
+  revised the advance m/m from +0.7% to +0.5%, and that same revision is the likeliest source of the
+  −0.0952pp (the vintage moved nothing else of size; PCE −0.0012, residential −0.0018, net exports 0.0000).
+  One observation, so no stance change — but the 09-30 advance number was not the whole story for the last
+  report before a benchmark restatement. The ledger's own caveat — "no August pair has ever been observed" —
+  was the right one to carry.
+- **The tape was an ordinary session.** SPY open-to-close **−0.12%** on a **0.86%** range; the 10:00 hour
+  **+0.012%**, the 11:00–13:00 hours −0.12% to −0.16% (the 30-year auction and buyback share that
+  afternoon; not attributed). VIX **15.41** against 15.08 the day before and 16.34 at the 10-01 screen.
+- **The shelf-life frame is intact.** Census's intention-to-revise notice is unchanged on
+  `census.gov/wholesale/index.html` (read 2026-10-09): revised estimates on the 2023 and 2024 AIES
+  "tentatively scheduled for release on October 26, 2026 at 10:00 a.m. EDT". `timeseries1.xlsx` is
+  stamped "October 8, 2026" and will be replaced by the restated series.
+- **None of the stance's five kill switches fired.** GDPNow move ≥ 0.10pp: no (0.0952). Notice amended:
+  no. Reference month suspended: no. 09-30 advance report omitting August wholesale: no (it printed
+  +0.7%). Macro-keyed playbook landing: no (`trade-playbooks.md` has zero wholesale/inventory hits).
+
+**FT-2 is left open on purpose, and its baseline is pinned.** Scoring it needs the restated August level
+from the 2026-10-26 release, which does not exist yet; filling the cell now would be falsification, and an
+`unscoreable` verdict would end the re-dispatch that exists to catch it. The comparison base is the
+preliminary August total-inventories level **$964,199M** (SA, from `currentwhl.xlsx` Table 1) beside revised
+July **$959,769M**; the 0.05% line is **±$482M** on that base. After 10-26 the old file is gone, so the
+number lives here. The scanner re-opens this row as `forward-test-due` on 2026-10-27.
+
+Forward tests: `FT-wholesale-trade-2026-10-08-1` **pass**, `-3` **kill**, `-2` open, all in
+[`forward-tests/wholesale-trade-2026-10-08.md`](../forward-tests/wholesale-trade-2026-10-08.md). The `-3`
+kill moves to the [sweep doc's kill list](../multi-symbol-sweep.md). Next on the series: September data
+**2026-11-09** — [wholesale-trade-2026-11-09](wholesale-trade-2026-11-09.md) owns it; its advance→full
+sample now has a ninth pair (this one) to read against.
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"https://www.atlantafed.org/-/media/documents/cqer/researchcq/gdpnow/GDPTrackingModelDataAndForecasts.xlsx","status":"404_PAGE_SERVED_AS_200","at":"2026-10-09"},{"url":"https://www.atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/GDPTrackingModelDataAndForecasts.xlsx","status":"404_PAGE_SERVED_AS_200","at":"2026-10-09"},{"url":"https://www.census.gov/indicator/www/advance/index.html","status":"404","at":"2026-10-09"}]} -->

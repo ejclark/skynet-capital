@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The full wholesale report revises the advance inventories m/m by 0.1pp or less" as a flat one-month
+  bet (FT-wholesale-trade-2026-10-08-3)** — added 2026-10-09 from the
+  [wholesale-trade-2026-10-08 close-out](events/wholesale-trade-2026-10-08.md). Registered on a 6-of-8
+  modal bound (75%) with no August pair in the sample; August 2026 printed **+0.7% advance → +0.5% full**,
+  a **−0.2pp** revision, the first miss of that bound (sample now 9 pairs: ≤0.1pp **6 of 9**, max still
+  0.3pp). It landed in the last cycle before the 2026-10-26 AIES restatement, where the same revision also
+  moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
+  not read it as a regime without a second pre-benchmark edition.
+
 - **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
   stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
   [treasury-30y-bond-2026-10-08 close-out](events/treasury-30y-bond-2026-10-08.md). The 2026-10-08 second
