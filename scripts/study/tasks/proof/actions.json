@@ -1,0 +1,16 @@
+{
+  "purpose": "the scripted actor for tasks/proof/task.json: scroll to the positions, narrow them with a filter, read the loss",
+  "turns": [
+    { "action": { "type": "scroll", "dir": "down", "screens": 1 } },
+    { "action": { "type": "scroll", "dir": "down", "screens": 1 } },
+    {
+      "expect": "only the positions that are losing stay in the list",
+      "action": { "type": "tap", "text": "Losing" }
+    },
+    { "action": { "type": "done", "answer": "CRWV shares are down $412" } }
+  ],
+  "ease": {
+    "score": 5,
+    "reason": "scripted: fixed answer so the drive records an ease reason path"
+  }
+}

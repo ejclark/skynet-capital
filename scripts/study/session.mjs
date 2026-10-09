@@ -12,16 +12,26 @@
 // (`settled: false`). The page side only measures (`measure.mjs`); every judgement is a pure
 // function in `metrics.mjs`. Area-agnostic: routes, fixtures and clocks come from the world.
 //
-// A world is `{ name, startPath, pinnedInstant?, stubs?, install?(page) }` (scripts/study/worlds/):
-// `stubs` go to openShell's `/api/**` handler, `install` may add its own `page.route`s (registered
-// later, so they win). The clock is pinned with `page.clock.setFixedTime` from `pinnedInstant`;
-// a world without one is refused — an unpinned clock is a run nobody can replay.
+// A world is one of two shapes (session-world.mjs → `loadWorld`). A SCRIPTED world is
+// `{ name, startPath, pinnedInstant?, stubs?, install?(page) }`: `stubs` go to openShell's `/api/**`
+// handler, `install` may add its own `page.route`s (registered later, so they win). A COMPOSED world
+// is `{ name, run, viewer, pinnedInstant }`: a compose run directory (worlds/compose.mjs), served
+// through world-route.mjs so the page gets exactly the payloads the run's manifest hashes. Either
+// way the clock is pinned with `page.clock.setFixedTime`; a world without an instant is refused — an
+// unpinned clock is a run nobody can replay.
+//
+// WATCHED TEXT: `open({watch})` names snippets (a task's answer region) whose share inside the
+// viewport is measured on EVERY frame (measure-text.mjs → `seenText`): the opening frame lands on
+// `session.opening.seen`, each later one on its record's `seen`. The oracle needs it — a fact counts
+// only if the place it lives was on screen.
 //
 // Stubs fail CLOSED: any request off the shell's origin — a tapped external link, a `target=_blank`
 // popup — is aborted before it leaves the machine and listed on the record (`blocked`).
 //
 //   node scripts/study/session.mjs --smoke                       # open · scroll 1 · tap · summary
 //   node scripts/study/session.mjs --world <name> --actions a.json [--viewport desktop] [--out dir]
+//   node scripts/study/session.mjs --world <name> --run <compose dir> [--viewer <who>] --start <path>
+//                                  --actions a.json        # a composed world (re-runs under tsx)
 //
 // Needs a built app (`npm run build --prefix app`); run from the repo root.
 
@@ -33,7 +43,8 @@ import { VIEWPORTS } from "../crawl/steps.mjs";
 import { shooter } from "../shoot/lib.mjs";
 import { openShell } from "../shoot/shell.mjs";
 import { instrument, marks, since, snapshot } from "./measure.mjs";
-import { landingTop, probeTap, tapRect } from "./measure-tap.mjs";
+import { landingTop, onScreenControl, probeTap, tapRect } from "./measure-tap.mjs";
+import { seenText } from "./measure-text.mjs";
 import {
   actionFindings,
   actionRefusal,
@@ -42,6 +53,8 @@ import {
   taskMetrics,
   viewKey,
 } from "./metrics.mjs";
+import { printSession } from "./session-report.mjs";
+import { loadWorld, openComposed, rerunUnderTsx } from "./session-world.mjs";
 
 const SETTLE_MS = 1000;
 const IDLE_MAX_MS = 5000;
@@ -95,19 +108,25 @@ function view(snap) {
   return { ...rest, view: viewKey(snap) };
 }
 
-/** Open a world at a viewport, pin the clock, instrument the page and land on the start path. */
-export async function open({ world, viewport = "phone", pinnedInstant, startPath, runDir }) {
-  const vp = VIEWPORTS[viewport];
-  if (!vp) throw new Error(`unknown viewport ${viewport} — one of ${Object.keys(VIEWPORTS)}`);
-  const out = runDir ?? join(tmpdir(), `skynet-study-${world.name}-${Date.now()}`);
-  mkdirSync(join(out, "frames"), { recursive: true });
-  const shell = await openShell({
+/** The scripted world's shell, or the composed world's routed page — one handle either way. */
+function openPage(world, vp, out) {
+  if (world.run) return openComposed(world, vp, out);
+  return openShell({
     name: `study-${world.name}`,
     stubs: world.stubs ?? {},
     viewport: vp.viewport,
     hasTouch: vp.hasTouch,
     out,
   });
+}
+
+/** Open a world at a viewport, pin the clock, instrument the page and land on the start path. */
+export async function open({ world, viewport = "phone", pinnedInstant, startPath, runDir, watch }) {
+  const vp = VIEWPORTS[viewport];
+  if (!vp) throw new Error(`unknown viewport ${viewport} — one of ${Object.keys(VIEWPORTS)}`);
+  const out = runDir ?? join(tmpdir(), `skynet-study-${world.name}-${Date.now()}`);
+  mkdirSync(join(out, "frames"), { recursive: true });
+  const shell = await openPage(world, vp, out);
   const { page } = shell;
   // Frames and waits get twice Playwright's 30s: a study batch runs many sessions on one machine.
   page.setDefaultTimeout(60_000);
@@ -134,13 +153,15 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
     t0: Date.now(),
     inflight: trackRequests(page),
     blocked,
+    watch: watch ?? [],
+    worldLog: shell.log ?? null,
     shoot: shooter(page, join(out, "frames"), { fullPage: false }),
   };
   await page.goto(`${shell.origin}${startPath ?? world.startPath ?? "/app"}`, {
     waitUntil: "domcontentloaded",
   });
   session.settled = await settle(session);
-  await frame(session);
+  session.opening = { frame: await frame(session), seen: await seen(session) };
   // Where the gap-free log starts: every later `since` begins exactly where the last one ended.
   session.mark = await page.evaluate(marks);
   return session;
@@ -150,6 +171,13 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
 export function frame(session) {
   const n = String(session.frames++).padStart(3, "0");
   return session.shoot(n);
+}
+
+/** How much of each watched snippet the frame as it stands shows (empty when nothing is watched). */
+function seen(session) {
+  return session.watch.length > 0
+    ? session.page.evaluate(seenText, session.watch)
+    : Promise.resolve([]);
 }
 
 /** In-page: is there an earlier same-origin entry? Back on the first page would leave the app. */
@@ -257,6 +285,7 @@ export async function act(session, action) {
         ? null
         : { name, top, screens: landingScreens(top, after.scrollY, after.innerHeight) },
     frame: terminal ? null : await frame(session),
+    seen: terminal ? [] : await seen(session),
   };
   record.findings = actionFindings(record);
   appendFileSync(session.trace, `${JSON.stringify(record)}\n`);
@@ -275,38 +304,6 @@ export function readTrace(runDir) {
     .map((l) => JSON.parse(l));
 }
 
-/** A world module from scripts/study/worlds/ by name: its `world` (or default) export, resolved. */
-export async function loadWorld(name) {
-  if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`bad world name ${name}`);
-  const mod = await import(new URL(`./worlds/${name}.mjs`, import.meta.url).href);
-  const w = mod.world ?? mod.default;
-  return typeof w === "function" ? await w() : w;
-}
-
-function printSummary(trace, metrics) {
-  for (const r of trace) {
-    const a = r.action;
-    const what =
-      a.kind === "tap"
-        ? `tap (${a.x}, ${a.y}) → ${r.tap?.hit ? `${r.tap.hit.role} "${r.tap.hit.name}"` : `miss, nearest ${r.tap?.nearest?.distance}px`}`
-        : a.kind === "scroll"
-          ? `scroll ${a.dir} ${a.screens}`
-          : a.kind;
-    console.log(`  #${r.step} ${what}`);
-    console.log(
-      `     view ${r.before.view} → ${r.after.view} · scrollY ${r.scroll.before} → ${r.scroll.after} (${r.scroll.samples.length} samples) · shifts ${r.shifts.length} · text ${r.before.textHash === r.after.textHash ? "unchanged" : "changed"}${r.landing ? ` · landed ${r.landing.screens} screens from "${r.landing.name}"` : ""}`,
-    );
-    if (!r.settled) console.log("     network never went idle — the after may be mid-load");
-    for (const u of r.blocked) console.log(`     blocked off-origin request: ${u}`);
-    for (const f of r.findings) console.log(`     ${f.severity} ${f.kind}: ${f.what}`);
-  }
-  const { findings, ...numbers } = metrics;
-  console.log(`  task: ${JSON.stringify(numbers)}`);
-  console.log(
-    `  findings: ${findings.length} (${[...new Set(findings.map((f) => f.kind))].join(", ") || "none"})`,
-  );
-}
-
 const arg = (argv, flag) => {
   const i = argv.indexOf(flag);
   return i >= 0 ? argv[i + 1] : undefined;
@@ -317,7 +314,10 @@ async function main(argv) {
   const smoke = argv.includes("--smoke");
   const worldName = arg(argv, "--world") ?? (smoke ? "smoke" : undefined);
   if (!worldName) throw new Error("--world <name> (scripts/study/worlds/) or --smoke");
-  const world = await loadWorld(worldName);
+  const world = await loadWorld(worldName, {
+    run: arg(argv, "--run"),
+    viewer: arg(argv, "--viewer"),
+  });
   const viewport = arg(argv, "--viewport") ?? "phone";
   const session = await open({
     world,
@@ -344,28 +344,18 @@ async function main(argv) {
   console.log(
     `study session: ${world.name} @${viewport} — ${trace.length} action(s) → ${session.runDir}`,
   );
-  printSummary(trace, taskMetrics(trace, { startPath: session.startPath }));
+  printSession(trace, taskMetrics(trace, { startPath: session.startPath }), session.worldLog);
   if (smoke && trace.length !== 2) process.exitCode = 1;
 }
 
-/** Smoke only: the centre of the first uncovered operable control in <main> inside the frame. */
-function onScreenControl() {
-  const els = document.querySelectorAll("main button, main a[href], main [role=tab], main summary");
-  for (const el of els) {
-    const r = el.getBoundingClientRect();
-    const x = Math.round(r.x + r.width / 2);
-    const y = Math.round(r.y + r.height / 2);
-    const inside = r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth;
-    // Uncovered too: a control slid under a sticky head is in the frame but not tappable.
-    if (r.width >= 8 && r.height >= 8 && inside && el.contains(document.elementFromPoint(x, y)))
-      return { x, y };
-  }
-  return null;
-}
-
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main(process.argv.slice(2)).catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  const argv = process.argv.slice(2);
+  // A composed world's server imports TypeScript: under plain node, re-run under tsx.
+  const rerun = arg(argv, "--run") ? rerunUnderTsx(import.meta.url, argv) : null;
+  if (rerun !== null) process.exitCode = rerun;
+  else
+    main(argv).catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }

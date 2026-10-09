@@ -94,6 +94,26 @@ Every blind role first passes `roles/canary.md`.
 
 Then the study **stops** for the owner.
 
+## Running one member session
+
+`scripts/study/drive.mjs` joins a composed world (a `worlds/compose.mjs` run directory), the
+recorder (`session.mjs`) and an actor, then grades the run with the oracle (`oracle.mjs`):
+
+```sh
+npx tsx scripts/study/worlds/compose.mjs <run-dir> <world>
+node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> --viewport phone \
+  --task <task.json> --card <card.md> --actor scripted:<actions.json>|sealed --out <fresh dir>
+```
+
+- **Out:** `turns.jsonl` (the member's turns, `scripts/study/schemas/actor-turn.json`),
+  `trace.jsonl` + `frames/` (the recorder's), `summary.json` (task metrics, the oracle's verdict,
+  the ease answer, the world's log, the sha256 of the task and card).
+- **Cap:** min(2.5 × the task's `optimal`, 15) actions; a refused action still counts.
+- **Scripted actor:** the no-model run. A tap may name on-screen text instead of a point, so one
+  script replays on two builds. `scripts/study/tasks/proof/` is the harness proof, not a study task.
+- **Sealed actor:** refuses to start while the standalone `claude` is signed out. `--dry-run`
+  writes the first turn's message and a half-scale frame without calling it.
+
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
@@ -108,3 +128,6 @@ Then the study **stops** for the owner.
 
 - 2026-10-09 · the standalone `claude` CLI can be signed out while the desktop session works; check
   `claude auth status` before a run, or the sealed calls fail with "OAuth session expired".
+- 2026-10-09 · parallel workflow agents can share one scratchpad directory; a run dir named
+  `run` or `smoke2` got a second agent's session appended to its trace. Give every run dir a name
+  only this run would pick, and the driver refuses an `--out` that already holds a run.

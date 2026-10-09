@@ -114,3 +114,18 @@ export function landingTop(name) {
   }
   return null;
 }
+
+/** Smoke only: the centre of the first uncovered operable control in <main> inside the frame. */
+export function onScreenControl() {
+  const els = document.querySelectorAll("main button, main a[href], main [role=tab], main summary");
+  for (const el of els) {
+    const r = el.getBoundingClientRect();
+    const x = Math.round(r.x + r.width / 2);
+    const y = Math.round(r.y + r.height / 2);
+    const inside = r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth;
+    // Uncovered too: a control slid under a sticky head is in the frame but not tappable.
+    if (r.width >= 8 && r.height >= 8 && inside && el.contains(document.elementFromPoint(x, y)))
+      return { x, y };
+  }
+  return null;
+}
