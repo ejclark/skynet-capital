@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Analyst — one member's sessions, summed up",
   "description": "docs/members/study/roles/analyst.md",
   "type": "object",

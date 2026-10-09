@@ -269,12 +269,27 @@ describe("the canary", () => {
     expect(() => canaryQuestion("no quote")).toThrow();
   });
 
-  it("fails on any knowledge or any other instructions", () => {
-    expect(canaryVerdict({ knowledge: "", other_instructions: " " }).ok).toBe(true);
-    expect(canaryVerdict({ knowledge: "it is a trading app", other_instructions: "" }).ok).toBe(
-      false,
-    );
-    expect(canaryVerdict({ knowledge: "", other_instructions: "# CLAUDE.md" }).ok).toBe(false);
+  it("fails on any knowledge or any context of kind other", () => {
+    expect(canaryVerdict({ knowledge: "", context: [] }).ok).toBe(true);
+    expect(canaryVerdict({ knowledge: "it is a trading app", context: [] }).ok).toBe(false);
+    expect(
+      canaryVerdict({ knowledge: "", context: [{ kind: "other", first_line: "# CLAUDE.md" }] }).ok,
+    ).toBe(false);
+  });
+
+  it("allows only the context the CLI always adds, and says which", () => {
+    const cli = [
+      { kind: "account-identity", first_line: "The user's email address is a@b.c." },
+      { kind: "environment", first_line: "# Environment" },
+    ];
+    const ok = canaryVerdict({ knowledge: "", context: cli });
+    expect(ok.ok).toBe(true);
+    expect(ok.why).toMatch(/account-identity, environment/);
+    const plus = [...cli, { kind: "other", first_line: "the owner dislikes the calendar" }];
+    expect(canaryVerdict({ knowledge: "", context: plus }).ok).toBe(false);
+    expect(
+      canaryVerdict({ knowledge: "", context: [{ kind: "made-up", first_line: "x" }] }).ok,
+    ).toBe(false);
   });
 
   it("covers every blind role", () => {

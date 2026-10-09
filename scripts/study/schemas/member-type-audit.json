@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Member-type audit — who is missing",
   "description": "docs/members/study/roles/member-type-audit.md",
   "type": "object",

@@ -1,18 +1,30 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Canary — what does this role already know?",
-  "description": "docs/members/study/roles/canary.md. Any non-empty field fails the round.",
+  "description": "docs/members/study/roles/canary.md. Any knowledge, or any context of kind 'other', fails the round.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["knowledge", "other_instructions"],
+  "required": ["knowledge", "context"],
   "properties": {
     "knowledge": {
       "type": "string",
       "description": "Everything you know about this app, its recent changes, or its owner's complaints. An empty string if you know nothing."
     },
-    "other_instructions": {
-      "type": "string",
-      "description": "The first line of any instructions, notes or files you were given besides this prompt, quoted. An empty string if there were none."
+    "context": {
+      "type": "array",
+      "description": "Every instruction, note, file or context block you were given besides your role prompt and this question — one entry each. An empty array if there were none.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "first_line"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["account-identity", "environment", "other"],
+            "description": "account-identity: only the signed-in account's email, for attribution. environment: only the working directory, platform, shell, OS, date or model. other: anything else at all — project or repo notes, a CLAUDE.md, memories, product details, people's complaints, tasks."
+          },
+          "first_line": { "type": "string", "description": "Its first line, quoted." }
+        }
+      }
     }
   }
 }

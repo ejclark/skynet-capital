@@ -88,10 +88,7 @@ describe("makeCaller with a stub", () => {
   const setup = () => {
     const dir = mkdtempSync(join(tmpdir(), "study-stub-spec-"));
     mkdirSync(join(dir, "canary"));
-    writeFileSync(
-      join(dir, "canary", "1.json"),
-      JSON.stringify({ knowledge: "", other_instructions: "" }),
-    );
+    writeFileSync(join(dir, "canary", "1.json"), JSON.stringify({ knowledge: "", context: [] }));
     mkdirSync(join(dir, "framer"));
     writeFileSync(join(dir, "framer", "1.json"), JSON.stringify({ knowledge: 7 }));
     return dir;
@@ -104,7 +101,7 @@ describe("makeCaller with a stub", () => {
       const message = userMessage("q", [{ b64: "QQ==" }]);
       const one = await call({ role: "canary", rolePath: "/roles/a.md", schema, message });
       const two = await call({ role: "canary", rolePath: "/roles/b.md", schema, message });
-      expect(one).toEqual({ knowledge: "", other_instructions: "" });
+      expect(one).toEqual({ knowledge: "", context: [] });
       expect(two).toEqual(one);
       expect(readdirSync(join(dir, "rec")).sort()).toEqual(["canary-001.json", "canary-002.json"]);
       const rec = JSON.parse(readFileSync(join(dir, "rec", "canary-002.json"), "utf8"));

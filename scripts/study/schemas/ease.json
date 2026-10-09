@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "The after-task ease question",
   "description": "Overall, how easy or difficult was this task? 1 = very difficult, 7 = very easy.",
   "type": "object",

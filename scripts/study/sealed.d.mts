@@ -18,7 +18,10 @@ export function readSchema(name: string): string;
 export function sealedArgs(opts: { rolePath: string; schema: string }): string[];
 export function imageBlock(b64: string): Block;
 export function userMessage(text: string, images?: { label?: string; b64: string }[]): UserMessage;
-export function parseResult(stdout: string | null | undefined): Record<string, unknown>;
+export function parseResult(
+  stdout: string | null | undefined,
+  stderr?: string,
+): Record<string, unknown>;
 export function signedIn(
   run?: (
     cmd: string,

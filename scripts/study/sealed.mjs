@@ -39,9 +39,16 @@ import { schemaProblems } from "./schema-check.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 /** The role prompts, in the checkout this file belongs to. */
 export const ROLES = resolve(HERE, "../../docs/members/study/roles");
-/** A role's JSON schema, as the one-line string `--json-schema` takes. */
+/**
+ * A role's JSON schema, as the one-line string `--json-schema` takes. A top-level `$schema` is
+ * dropped: the CLI's validator rejects the 2020-12 draft URI ("no schema with key or ref"), exits at
+ * once and prints only to stderr — the first real thin slice on 2026-10-09 died on it in 0.6s.
+ */
 export function readSchema(name) {
-  return JSON.stringify(JSON.parse(readFileSync(join(HERE, "schemas", `${name}.json`), "utf8")));
+  const { $schema: _draft, ...schema } = JSON.parse(
+    readFileSync(join(HERE, "schemas", `${name}.json`), "utf8"),
+  );
+  return JSON.stringify(schema);
 }
 
 /** The exact flag set of a blind call (docs/members/study/README.md → Blind and aware roles). */
@@ -88,9 +95,10 @@ export function userMessage(text, images = []) {
 /**
  * The structured answer from a call's stream-json stdout: the LAST `result` event's
  * `structured_output`. Throws with the reason when there is none — an error result, a result with
- * no structured output (the schema was not honoured), or no result at all (the call died).
+ * no structured output (the schema was not honoured), or no result at all (the call died — then
+ * the CLI's own stderr tail, when given, is the reason).
  */
-export function parseResult(stdout) {
+export function parseResult(stdout, stderr = "") {
   const events = String(stdout ?? "")
     .split("\n")
     .map((l) => l.trim())
@@ -103,7 +111,14 @@ export function parseResult(stdout) {
       }
     });
   const result = events.findLast((e) => e.type === "result");
-  if (!result) throw new Error("sealed call: no result event in the output");
+  if (!result) {
+    const why = String(stderr ?? "")
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .at(-1);
+    throw new Error(`sealed call: no result event in the output${why ? ` — ${why}` : ""}`);
+  }
   if (result.is_error || (result.subtype && result.subtype !== "success")) {
     throw new Error(
       `sealed call: ${result.subtype ?? "error"} — ${String(result.result ?? "").slice(0, 200)}`,
@@ -138,15 +153,20 @@ export function signedIn(run = spawnSync) {
  */
 export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_000 }) {
   const cwd = mkdtempSync(join(tmpdir(), "study-sealed-"));
+  let err = "";
   try {
     const stdout = await new Promise((done, fail) => {
       const child = spawn("claude", sealedArgs({ rolePath, schema }), {
         cwd,
-        stdio: ["pipe", "pipe", "ignore"],
+        stdio: ["pipe", "pipe", "pipe"],
       });
       let out = "";
       child.stdout.setEncoding("utf8").on("data", (chunk) => {
         out += chunk;
+      });
+      // The CLI reports a bad flag or schema ONLY on stderr; keep its tail so the failure says why.
+      child.stderr.setEncoding("utf8").on("data", (chunk) => {
+        err = `${err}${chunk}`.slice(-800);
       });
       const timer = setTimeout(() => {
         child.kill("SIGKILL");
@@ -169,7 +189,7 @@ export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_00
       });
       child.stdin.end(`${JSON.stringify(message)}\n`);
     });
-    return parseResult(stdout);
+    return parseResult(stdout, err);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
