@@ -293,10 +293,11 @@ describe("the canary", () => {
     const cli = [
       { kind: "account-identity", first_line: "The user's email address is a@b.c." },
       { kind: "environment", first_line: "# Environment" },
+      { kind: "harness", first_line: "If you intend to call multiple tools…" },
     ];
     const ok = canaryVerdict({ knowledge: "", context: cli });
     expect(ok.ok).toBe(true);
-    expect(ok.why).toMatch(/account-identity, environment/);
+    expect(ok.why).toMatch(/account-identity, environment, harness/);
     const plus = [...cli, { kind: "other", first_line: "the owner dislikes the calendar" }];
     expect(canaryVerdict({ knowledge: "", context: plus }).ok).toBe(false);
     expect(

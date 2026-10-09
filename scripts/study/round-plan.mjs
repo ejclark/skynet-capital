@@ -267,14 +267,17 @@ export function canaryQuestion(markdown) {
 
 /**
  * A canary answer passes only when it knows nothing and every context block it was handed is one
- * the CLI always adds even under --safe-mode: the signed-in account's email (`account-identity`)
- * or its environment block (`environment`). Anything of kind `other` fails (roles/canary.md).
+ * the CLI always adds even under --safe-mode: the signed-in account's email (`account-identity`),
+ * its environment block (`environment`), or its own general tool-use instructions (`harness` —
+ * first seen 2026-10-09: "If you intend to call multiple tools…"). Anything of kind `other` fails
+ * (roles/canary.md); `knowledge` is the second net for anything mislabelled.
  */
+const CLI_CONTEXT = new Set(["account-identity", "environment", "harness"]);
 export function canaryVerdict(answer) {
   const knows = String(answer?.knowledge ?? "").trim();
   if (knows) return { ok: false, why: "it named knowledge about the app" };
   const context = Array.isArray(answer?.context) ? answer.context : [];
-  const other = context.filter((c) => c?.kind !== "account-identity" && c?.kind !== "environment");
+  const other = context.filter((c) => !CLI_CONTEXT.has(c?.kind));
   if (other.length > 0) return { ok: false, why: "it was handed context beyond its role prompt" };
   const kinds = [...new Set(context.map((c) => c.kind))];
   return {

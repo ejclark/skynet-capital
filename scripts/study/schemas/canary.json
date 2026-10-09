@@ -19,10 +19,13 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["account-identity", "environment", "other"],
-            "description": "account-identity: only the signed-in account's email, for attribution. environment: only the working directory, platform, shell, OS, date or model. other: anything else at all — project or repo notes, a CLAUDE.md, memories, product details, people's complaints, tasks."
+            "enum": ["account-identity", "environment", "harness", "other"],
+            "description": "account-identity: only the signed-in account's email, for attribution. environment: only the working directory, platform, shell, OS, date or model. harness: only the tool's own general instructions about calling tools or formatting answers — nothing about any app, project, repository, product or person. other: anything else at all — project or repo notes, a CLAUDE.md, memories, product details, people's complaints, tasks."
           },
-          "first_line": { "type": "string", "description": "Its first line, quoted." }
+          "first_line": {
+            "type": "string",
+            "description": "Its first line, quoted."
+          }
         }
       }
     }
