@@ -302,6 +302,27 @@ export function lintFeedback(stdout) {
     .filter((l) => LINT_LINE.test(l));
 }
 
+/**
+ * After the last rewrite, keep the tasks the lint no longer names and drop the rest. A task that
+ * still trips the lint is never used; one stubborn task no longer voids the whole round (first full
+ * round, 2026-10-09: one bad-day task kept reaching for a sealed word for unused cash, which the
+ * lint rightly never names). → {kept, dropped: [{item, kinds}]} — kinds only, never a word.
+ */
+export function keepClean(tasks, feedback) {
+  const failing = new Map();
+  for (const line of feedback) {
+    const m = /^rewrite \S+ item (\d+) \(([a-z-]+)/.exec(line);
+    if (!m) continue;
+    const item = Number(m[1]);
+    failing.set(item, [...new Set([...(failing.get(item) ?? []), m[2]])]);
+  }
+  const itemOf = (t) => Number(/--t(\d+)$/.exec(t.id)?.[1]);
+  return {
+    kept: tasks.filter((t) => !failing.has(itemOf(t))),
+    dropped: [...failing].map(([item, kinds]) => ({ item, kinds })).sort((a, b) => a.item - b.item),
+  };
+}
+
 /** From lint.mjs --kind card's stdout: priming hits per card file. */
 export function primingCounts(stdout) {
   const out = {};

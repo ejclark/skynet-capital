@@ -18,8 +18,10 @@ import {
 } from "./round-plan.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
-/** How many rewrites the task author gets before the round stops. */
+/** How many rewrites the task author gets before its still-failing tasks are dropped. */
 const REWRITES = 3;
+/** The fewest clean tasks a member × world may keep; fewer stops the round. */
+const MIN_TASKS = 2;
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const writeJson = (path, v) => writeFileSync(path, `${JSON.stringify(v, null, 1)}\n`);
@@ -94,9 +96,17 @@ async function authorUnit(ctx, unit, { jobMap, facts, call }) {
       lines: feedback,
     });
     if (feedback.length === 0) return resolved.tasks;
+    if (round === REWRITES) {
+      const { kept, dropped } = keepClean(resolved.tasks, feedback);
+      ctx.log(step, "dropped", { unit: unit.key, dropped, kept: kept.length });
+      if (kept.length >= Math.min(MIN_TASKS, ctx.p.tasksPer)) return kept;
+      throw new Error(
+        `task author for ${unit.key} kept only ${kept.length} clean task(s) after ${REWRITES} rewrites`,
+      );
+    }
     previous = answer.tasks;
   }
-  throw new Error(`task author for ${unit.key} still failed the lint after ${REWRITES} rewrites`);
+  throw new Error(`task author for ${unit.key}: unreachable`);
 }
 
 /** Step 4: tasks per member × world, then frozen with their sha256. */
