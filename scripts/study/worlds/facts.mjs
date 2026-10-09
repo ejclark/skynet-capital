@@ -9,11 +9,17 @@
 // each with the oracle's answer shape and an `answerRegion` — the text the page prints where the
 // fact is shown. The rules are facts-sheet.mjs (pure, specced); this file reads the run and hands
 // in the app's own formatter where the run's checkout exports it, recording which one it used.
+// "The run's checkout" is the one that COMPOSED it (manifest.json → checkout, commit; for an older
+// run, the git checkout holding the run dir), never the checkout this script runs from — and it
+// must still be at the composed commit. Also writes `dataNames`, the world's own names in the
+// payloads, so harvest.mjs can tell data on screen from the interface's words.
 // Check the regions against what a member can actually see with harvest.mjs --facts.
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { factSheet, VERDICT_WORDS_MIRROR } from "./facts-sheet.mjs";
+import { pathToFileURL } from "node:url";
+import { dataNames, factSheet, VERDICT_WORDS_MIRROR } from "./facts-sheet.mjs";
 
 const USAGE =
   "usage: facts.mjs --run <compose dir> --world <name> [--viewer <who> …] --out <facts.json>";
@@ -33,11 +39,34 @@ function args(argv) {
   return out;
 }
 
-/** The app's own verdict words when the checkout's app exports them (it is TypeScript: this
- *  works under tsx or a Node that strips types), else the specced mirror. */
-async function verdictWords() {
+const git = (dir, args) => {
+  const out = spawnSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+  return out.status === 0 ? out.stdout.trim() : null;
+};
+
+/**
+ * The checkout that composed the run, at the commit it composed: manifest.json's record, or for a
+ * run that predates it, the git checkout holding the run dir. Refused when that checkout has
+ * moved off the composed commit — its words may no longer be the run's.
+ */
+function composedCheckout(run, manifest) {
+  const checkout = manifest.checkout ?? git(run, ["rev-parse", "--show-toplevel"]);
+  if (!checkout) throw new Error(`facts: cannot tell which checkout composed ${run}`);
+  const head = git(checkout, ["rev-parse", "HEAD"]);
+  if (manifest.commit && head !== manifest.commit) {
+    throw new Error(
+      `facts: ${checkout} is at ${head?.slice(0, 8)}, but composed ${run} at ${manifest.commit.slice(0, 8)} — check that commit out there, or compose again`,
+    );
+  }
+  return { checkout, commit: head, recorded: Boolean(manifest.commit) };
+}
+
+/** The app's own verdict words when the composing checkout's app exports them (it is
+ *  TypeScript: this works under tsx or a Node that strips types), else the specced mirror. */
+async function verdictWords(at) {
+  const file = join(at.checkout, "app", "src", "live", "heartbeat.ts");
   try {
-    const app = await import("../../../app/src/live/heartbeat.ts");
+    const app = await import(pathToFileURL(file).href);
     if (app.VERDICT_WORDS) return { words: app.VERDICT_WORDS, from: "app/src/live/heartbeat.ts" };
   } catch {
     // fall through to the mirror
@@ -60,10 +89,13 @@ async function main() {
   const viewers = opts.viewers.length > 0 ? opts.viewers : composed;
   const missing = viewers.filter((v) => !existsSync(join(dir, `${v}.json`)));
   if (missing.length > 0) throw new Error(`no composed viewer ${missing} (have: ${composed})`);
-  const fmt = await verdictWords();
+  const at = composedCheckout(run, manifest);
+  const fmt = await verdictWords(at);
+  const names = new Set();
   const facts = viewers.flatMap((viewer) => {
     const entries = JSON.parse(readFileSync(join(dir, `${viewer}.json`), "utf8"));
     const payloads = Object.fromEntries(Object.entries(entries).map(([k, v]) => [k, v.body]));
+    for (const n of dataNames(payloads)) names.add(n);
     return factSheet({ viewer, instant: manifest.instant, payloads, verdictWords: fmt.words });
   });
   const dupes = facts.map((f) => `${f.viewer}:${f.id}`).filter((k, i, all) => all.indexOf(k) !== i);
@@ -73,13 +105,21 @@ async function main() {
     world: opts.world,
     run,
     instant: manifest.instant,
-    formatters: { verdictWords: fmt.from },
+    formatters: {
+      verdictWords: fmt.from,
+      checkout: at.checkout,
+      commit: at.commit,
+      ...(at.recorded
+        ? {}
+        : { note: "the run predates manifest.commit; checkout found from the run dir" }),
+    },
+    dataNames: [...names].sort(),
     facts,
   };
   writeFileSync(resolve(opts.out), `${JSON.stringify(sheet, null, 1)}\n`);
   const per = viewers.map((v) => `${v} ${facts.filter((f) => f.viewer === v).length}`).join(" · ");
   console.log(
-    `facts: ${facts.length} facts (${per}) · verdict words from ${fmt.from} → ${opts.out}`,
+    `facts: ${facts.length} facts (${per}) · verdict words from ${fmt.from} at ${at.commit?.slice(0, 8)} · ${names.size} data names → ${opts.out}`,
   );
 }
 

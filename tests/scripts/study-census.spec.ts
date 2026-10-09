@@ -12,8 +12,11 @@ import {
   nearest,
   nextScreen,
   onScreen,
+  reachVerdict,
   routeSlug,
   routesFor,
+  screenFor,
+  struckRoutes,
   tapPoint,
   treeOrder,
   walkOrder,
@@ -138,6 +141,37 @@ describe("on screen", () => {
   });
 });
 
+describe("what no screen showed, once scrolled into view", () => {
+  const vp = { width: 390, height: 844 };
+  const box = { left: 10, top: 300, width: 80, height: 40 };
+  it("lists a sideways scroller's far end a swipe brings on screen", () => {
+    expect(reachVerdict({ shown: true, box }, vp, false)).toBe("reached");
+  });
+
+  it("calls it clipped when a box a member cannot scroll keeps it out of view", () => {
+    const cut = { shown: true, clipped: true, box: { ...box, width: 0 } };
+    expect(reachVerdict(cut, vp, false)).toBe("clipped");
+    // Shown only because the script scrolled an `overflow: hidden` box: a finger could not.
+    expect(reachVerdict({ shown: true, box }, vp, true)).toBe("clipped");
+    expect(censusFindings({ name: "Close", role: "button", reach: "clipped" })[0]?.kind).toBe(
+      "control-clipped",
+    );
+  });
+
+  it("leaves off screen what nothing reaches (a skip link placed off the page)", () => {
+    expect(reachVerdict({ shown: true, box: { ...box, left: -999 } }, vp, false)).toBe("offscreen");
+    expect(reachVerdict({ gone: true }, vp, false)).toBe("offscreen");
+    expect(reachVerdict(null, vp, false)).toBe("offscreen");
+  });
+
+  it("files a reached control under the walk screen that holds its top", () => {
+    expect(screenFor(900, [0, 844, 1500], 844)).toBe(1);
+    expect(screenFor(10, [0, 844], 844)).toBe(0);
+    // Past every screen (a page that grew): the nearest.
+    expect(screenFor(5000, [0, 844, 1500], 844)).toBe(2);
+  });
+});
+
 describe("where the tap lands", () => {
   const vp = { width: 390, height: 844 };
   it("is the centre of the control's visible part", () => {
@@ -235,6 +269,16 @@ describe("routes and arguments", () => {
       { viewer: "a", route: "/w" },
     ];
     expect(routesFor(surfaces, "a")).toEqual(["/x", "/w"]);
+  });
+
+  it("names a route left out because its only surfaces are struck, with why", () => {
+    const surfaces = [
+      { viewer: "a", route: "/x" },
+      { viewer: "a", route: "/x", struck: "one of two" },
+      { viewer: "a", route: "/z", struck: "cannot render" },
+      { viewer: "b", route: "/q", struck: "not this viewer" },
+    ];
+    expect(struckRoutes(surfaces, "a")).toEqual([{ route: "/z", why: "cannot render" }]);
   });
 
   it("turns a route into a folder name", () => {

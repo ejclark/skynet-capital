@@ -6,24 +6,45 @@
 import { marks } from "./measure.mjs";
 import { settle } from "./session.mjs";
 
+/** A blank page on the app's own origin, answered by the harness — no app code ever runs on it. */
+const BLANK = "/__study-fresh-start";
+
 /**
  * A FRESH load of `path` on the session's page — the origin's storage and cookies cleared, the
  * page loaded and settled, the log re-marked — so the next `act` measures from a clean start, as a
  * new member would land. The machine census (census.mjs) operates each control this way.
+ *
+ * The old document is left FIRST, for a blank page on the same origin: storage is cleared there,
+ * where no timer of the old page is left to write after the clear. What the guard blocked during
+ * the load is handed back (`blocked`), never left for the next `act` to record as its own.
  */
 export async function reopen(session, path) {
   const { page } = session;
-  await page.evaluate(clearStorage).catch(() => null);
+  const origin = session.shell.origin;
+  if (!session.freshStart) {
+    // Registered last, so it answers before the origin guard and the world's own routes.
+    await page.route(`${origin}${BLANK}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!doctype html><title></title>",
+      }),
+    );
+    session.freshStart = true;
+  }
+  await page.goto(`${origin}${BLANK}`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(clearStorage);
   await page.context().clearCookies();
-  const url = new URL(path, session.shell.origin);
+  const url = new URL(path, origin);
   session.startPath = url.pathname;
-  // The old document's requests die with it; one the browser never reported finished must not
+  // The old document's requests died with it; one the browser never reported finished must not
   // hold the new load's settle open.
   session.inflight.clear();
+  session.blocked.length = 0;
   await page.goto(url.href, { waitUntil: "domcontentloaded" });
   session.settled = await settle(session);
   session.mark = await page.evaluate(marks);
-  return session.settled;
+  return { settled: session.settled, blocked: session.blocked.splice(0) };
 }
 
 /** In-page: forget whatever an earlier action persisted in this origin's storage. */

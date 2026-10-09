@@ -8,11 +8,15 @@
 // PER ROUTE × VIEWPORT (the routes are the world's surfaces list, for that viewer):
 //  1. WALK — open the composed world (session.mjs → `open`), then screen by screen from the top:
 //     scroll, read the accessibility tree (CDP), hand each control's element to the page and
-//     measure it. A control is LISTED when some part of it is inside the viewport at some screen;
-//     one the tree holds but no screen shows is kept as `offscreen` (a horizontal scroller's far
-//     end, a clipped box). The visible text of every screen is kept for harvest.mjs → walk.json.
+//     measure it. A control is LISTED when some part of it is inside the viewport at some screen.
+//     One the tree holds but no screen shows is scrolled into view (the page and every box it
+//     sits in, sideways too): on screen then — a sideways scroller's far end — it is listed as
+//     `reach: "scrolled-into-view"`; kept out of view by a box a member cannot scroll, it is
+//     `clipped` (a finding); still nowhere, it is `offscreen` (a skip link placed off the page).
+//     The visible text of every screen is kept for harvest.mjs → walk.json.
 //  2. OPERATE — each listed control, in tree order, up to the cap (the rest are logged as
-//     dropped): a FRESH load (`reopen` — storage cleared), its screen's scroll position, the same
+//     dropped): a FRESH load (`reopen` — storage cleared), its screen's scroll position (settled,
+//     so what the harness scroll set off is not charged to the tap), the same
 //     control found again (role + name, nearest where the walk saw it; brought to the middle when
 //     that screen leaves its centre covered or off screen), a frame BEFORE, one tap at
 //     the centre of its visible part through the recorder's own `act` (so every per-action
@@ -21,136 +25,30 @@
 //
 // Out: <out>/census.json (one entry per control), <out>/walk.json (harvest.mjs's input), and per
 // route × viewport a recorder run dir (<out>/<viewport>/<route slug>/: trace.jsonl + frames/).
-// Measures in the browser; every judgement is census-plan.mjs (specced, tests/scripts/).
+// Measures in the browser (the walk: census-walk.mjs); every judgement is census-plan.mjs (specced,
+// tests/scripts/).
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import * as page$ from "./census-page.mjs";
 import {
-  axPick,
   capControls,
   censusArgs,
   censusFindings,
-  keyed,
   leaveReason,
   MAX_SCREENS,
   nearest,
-  nextScreen,
   onScreen,
   routeSlug,
   routesFor,
+  struckRoutes,
   tapPoint,
-  treeOrder,
-  walkOrder,
 } from "./census-plan.mjs";
-import { act, close, frame, open } from "./session.mjs";
+import { measured, readTree, revealed, SCREEN_MS, walk } from "./census-walk.mjs";
+import { act, close, frame, open, settle } from "./session.mjs";
 import { remark, reopen } from "./session-fresh.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";
-
-/** After a harness scroll: long enough for a lazy section to paint before it is read. */
-const SCREEN_MS = 300;
-
-/** The accessibility tree's controls and headings, in tree order. */
-async function readTree(cdp) {
-  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
-  return axPick(treeOrder(nodes));
-}
-
-/** Hand each node's element to the page (`adoptSelf`); its index there, or null if unresolved. */
-async function adopt(session, cdp, nodes) {
-  await session.page.evaluate(page$.resetAdopted);
-  const out = [];
-  for (const n of nodes) {
-    try {
-      const { object } = await cdp.send("DOM.resolveNode", { backendNodeId: n.backendId });
-      const { result } = await cdp.send("Runtime.callFunctionOn", {
-        objectId: object.objectId,
-        functionDeclaration: page$.adoptSelf.toString(),
-        returnByValue: true,
-      });
-      out.push(result.value);
-      await cdp.send("Runtime.releaseObject", { objectId: object.objectId });
-    } catch {
-      out.push(null);
-    }
-  }
-  return out;
-}
-
-/** The tree's controls measured at this scroll position: `[{node, m}]`. */
-async function measured(session, cdp, nodes) {
-  const idx = await adopt(session, cdp, nodes);
-  const ms = await session.page.evaluate(page$.measureAdopted);
-  return nodes.map((node, i) => ({ node, i: idx[i], m: idx[i] === null ? null : ms[idx[i]] }));
-}
-
-/** Step 1: walk the page from the top, screen by screen. */
-async function walk(session, cdp, viewport) {
-  const found = new Map();
-  const tree = new Map();
-  const headings = new Set();
-  const units = new Map();
-  let lastRead = [];
-  let y = 0;
-  let screen = 0;
-  let cut = false;
-  for (;;) {
-    const at = await session.page.evaluate(page$.scrollPageTo, y);
-    await session.page.waitForTimeout(SCREEN_MS);
-    const read = await readTree(cdp);
-    for (const h of read.headings) headings.add(h.name);
-    lastRead = read.controls.map((n) => n.backendId);
-    for (const { node, m } of await measured(session, cdp, read.controls)) {
-      tree.set(node.backendId, node);
-      if (found.has(node.backendId) || !onScreen(m, viewport)) continue;
-      found.set(node.backendId, {
-        ...node,
-        screen,
-        scrollY: at,
-        box: m.box,
-        doc: m.doc,
-        link: m.link,
-        pinned: m.pinned,
-      });
-    }
-    for (const u of await session.page.evaluate(page$.visibleTextUnits)) {
-      if (!units.has(u.id)) units.set(u.id, { kind: u.kind, text: u.text, screen });
-    }
-    const next = nextScreen(at, await session.page.evaluate(page$.pageExtent));
-    if (next === null) break;
-    if (++screen >= MAX_SCREENS) {
-      cut = true;
-      break;
-    }
-    y = next;
-  }
-  const listed = keyed(walkOrder([...found.values()], lastRead));
-  const offscreen = [...tree.values()].filter((n) => !found.has(n.backendId));
-  return {
-    screens: screen + 1,
-    cut,
-    listed,
-    offscreen,
-    headings: [...headings],
-    text: [...units.values()],
-  };
-}
-
-/**
- * What operating a control put on screen without leaving the page — an opened sheet, an expanded
- * row: its controls' and headings' names (still the interface's words) and its visible text.
- */
-async function revealed(session, cdp) {
-  const read = await readTree(cdp);
-  return {
-    names: [...new Set([...read.controls, ...read.headings].map((n) => n.name).filter(Boolean))],
-    text: (await session.page.evaluate(page$.visibleTextUnits)).map(({ kind, text }) => ({
-      kind,
-      text,
-    })),
-  };
-}
 
 /** Where to tap a measured control in this frame, and what a tap there would land on. */
 async function aimAt(page, pick, viewport) {
@@ -159,13 +57,34 @@ async function aimAt(page, pick, viewport) {
   return { point, cover };
 }
 
+/** The listed shape of a control, for every record that names one. */
+const named = (c) => ({
+  role: c.role,
+  name: c.name,
+  screen: c.screen,
+  rect: c.box ?? null,
+  doc: c.doc ?? null,
+  ...(c.reach ? { reach: c.reach } : {}),
+});
+
+/** A harness scroll, then the page settled — so what the scroll set off (a lazy section's
+ *  paint, a shift) lands before the tap's log is marked, never in its measurements. */
+async function harnessScroll(session, fn, arg) {
+  const before = await session.page.evaluate(() => Math.round(scrollY));
+  const out = await session.page.evaluate(fn, arg);
+  await session.page.waitForTimeout(SCREEN_MS);
+  const after = await session.page.evaluate(() => Math.round(scrollY));
+  if (fn !== page$.scrollPageTo || after !== before) await settle(session);
+  return out;
+}
+
 /** Step 2 for one control: fresh load, its screen, frame, tap, frame. */
 async function operate(session, cdp, route, c, viewport, out) {
   const { page } = session;
-  const base = { route, name: c.name, role: c.role, screen: c.screen };
-  await reopen(session, route);
-  await page.evaluate(page$.scrollPageTo, c.scrollY);
-  await page.waitForTimeout(SCREEN_MS);
+  const base = { route, ...named(c) };
+  const load = await reopen(session, route);
+  const loadBlocked = load.blocked.length > 0 ? { loadBlocked: load.blocked } : {};
+  await harnessScroll(session, page$.scrollPageTo, c.scrollY);
   const same = (await readTree(cdp)).controls.filter((n) => n.role === c.role && n.name === c.name);
   const candidates = (await measured(session, cdp, same))
     .filter((x) => x.m && !x.m.gone)
@@ -174,32 +93,42 @@ async function operate(session, cdp, route, c, viewport, out) {
   if (!pick) {
     return {
       ...base,
+      ...loadBlocked,
       status: "not-found",
       findings: censusFindings({ ...c, operated: "not-found" }),
     };
   }
-  // At its screen's scroll position first, as the walk saw it. A control off screen there, or
-  // covered at its centre (half under a sticky head), is brought to the middle and aimed at again,
-  // so `control-covered` is reported only for something that covers it wherever it sits.
+  // At its screen's scroll position first, as the walk saw it. A control off screen there (a
+  // sideways scroller's far end), or covered at its centre (half under a sticky head), is brought
+  // to the middle and aimed at again, so `control-covered` is reported only for something that
+  // covers it wherever it sits.
   let aim = await aimAt(page, pick, viewport);
   const atScreen = aim.cover;
   const rescrolled = !(aim.point && aim.cover?.inside);
   if (rescrolled) {
-    await page.evaluate(page$.centreAdopted, pick.i);
-    await page.waitForTimeout(SCREEN_MS);
+    await harnessScroll(session, page$.centreAdopted, pick.i);
     pick = { i: pick.i, ...(await page.evaluate(page$.measureAdopted))[pick.i] };
     aim = await aimAt(page, pick, viewport);
   }
   const { point, cover } = aim;
-  if (!point) return { ...base, status: "not-tappable", rescrolled, findings: censusFindings(c) };
+  if (!point)
+    return {
+      ...base,
+      ...loadBlocked,
+      status: "not-tappable",
+      rescrolled,
+      findings: censusFindings(c),
+    };
   await remark(session);
   const before = await frame(session);
   const record = await act(session, { kind: "tap", ...point });
-  if (record.refused) return { ...base, status: "refused", why: record.refused, findings: [] };
+  if (record.refused)
+    return { ...base, ...loadBlocked, status: "refused", why: record.refused, findings: [] };
   const { action: _a, findings, frame: after, seen: _s, ...measurements } = record;
   return {
     ...base,
-    revealed: record.url.changed ? null : await revealed(session, cdp),
+    ...loadBlocked,
+    revealed: record.url.changed ? null : await revealed(session, cdp, viewport),
     status: "operated",
     rescrolled,
     tapAt: point,
@@ -224,34 +153,40 @@ async function censusRoute(world, route, viewportName, opts) {
     for (const c of kept) {
       const reason = leaveReason(c.link, session.shell.origin);
       const entry = reason
-        ? {
-            route,
-            name: c.name,
-            role: c.role,
-            screen: c.screen,
-            status: "skipped",
-            reason,
-            findings: [],
-          }
+        ? { route, ...named(c), status: "skipped", reason, findings: [] }
         : await operate(session, cdp, route, c, viewport, opts.out);
       entries.push({ viewport: viewportName, order: entries.length, ...entry });
       process.stderr.write(
         `census ${viewportName} ${route} ${entries.length}/${kept.length} ${entry.status} ${c.role} "${c.name.slice(0, 40)}"\n`,
       );
     }
-    const name = (c) => ({ role: c.role, name: c.name, screen: c.screen });
+    // A control only a box a member cannot scroll keeps from view: listed, never operated.
+    for (const c of walked.clipped) {
+      entries.push({
+        viewport: viewportName,
+        order: entries.length,
+        route,
+        ...named(c),
+        status: "clipped",
+        findings: censusFindings({ ...c, reach: "clipped" }),
+      });
+    }
+    const placedOnly = (n) => ({ role: n.role, name: n.name, rect: n.box, doc: n.doc });
     const walkOut = {
       route,
       viewport: viewportName,
-      controls: walked.listed.map(name),
-      offscreen: walked.offscreen.map((n) => ({ role: n.role, name: n.name })),
+      controls: walked.listed.map(named),
+      clipped: walked.clipped.map(placedOnly),
+      offscreen: walked.offscreen.map(placedOnly),
       headings: walked.headings,
+      treeHeadings: walked.treeHeadings,
       text: walked.text,
       revealed: entries
         .filter((e) => e.revealed)
         .map((e) => ({
           via: `${e.role} "${e.name}"`,
           names: e.revealed.names,
+          treeNames: e.revealed.treeNames,
           text: e.revealed.text,
         })),
     };
@@ -271,10 +206,12 @@ async function censusRoute(world, route, viewportName, opts) {
           .filter((e) => e.status === "skipped")
           .map((e) => ({ name: e.name, role: e.role, reason: e.reason })),
         unoperated: entries
-          .filter((e) => !["operated", "skipped"].includes(e.status))
+          .filter((e) => !["operated", "skipped", "clipped"].includes(e.status))
           .map((e) => ({ name: e.name, role: e.role, status: e.status })),
-        dropped: dropped.map(name),
-        offscreen: walked.offscreen.map((n) => ({ role: n.role, name: n.name })),
+        reached: walked.listed.filter((c) => c.reach).length,
+        clipped: walked.clipped.map(placedOnly),
+        dropped: dropped.map(named),
+        offscreen: walked.offscreen.map(placedOnly),
         world: session.worldLog && {
           unstubbed: [...new Set(session.worldLog.unstubbed)],
           offsite: [...new Set(session.worldLog.offsite)],
@@ -289,6 +226,37 @@ async function censusRoute(world, route, viewportName, opts) {
   }
 }
 
+/** The routes to census: `--route`s as given, else the world's list for this viewer — saying
+ *  out loud what each choice leaves out or adds. */
+async function censusRoutes(opts, viewer) {
+  const { WORLDS } = await import("./worlds/index.mjs");
+  const surfaces = WORLDS.find((w) => w.name === opts.world)?.surfaces ?? [];
+  const listed = routesFor(surfaces, viewer);
+  const routes = opts.routes.length > 0 ? opts.routes : listed;
+  if (routes.length === 0) throw new Error(`world ${opts.world} names no routes for ${viewer}`);
+  for (const r of opts.routes.filter((r) => !listed.includes(r)))
+    console.log(`census: --route ${r} is not one of ${opts.world}'s routes for ${viewer}`);
+  if (opts.routes.length === 0) {
+    for (const s of struckRoutes(surfaces, viewer))
+      console.log(`census: left out ${s.route} — its only surfaces are struck: ${s.why}`);
+  }
+  return routes;
+}
+
+/** One route's line, then everything it did not operate — never silently. */
+function logRoute(s, cap) {
+  console.log(
+    `census: ${s.viewport} ${s.route} — ${s.listed} listed (${s.reached} scrolled into view) · ${s.operated} operated · ${s.skipped.length} skipped · ${s.dropped.length} dropped by the cap · ${s.clipped.length} clipped · ${s.offscreen.length} never on screen`,
+  );
+  if (s.screensCut)
+    console.log(
+      `  cut: the walk stopped at ${MAX_SCREENS} screens — controls below were never listed`,
+    );
+  for (const c of s.clipped) console.log(`  clipped (finding): ${c.role} "${c.name}"`);
+  for (const d of s.dropped) console.log(`  dropped (cap ${cap}): ${d.role} "${d.name}"`);
+  for (const k of s.skipped) console.log(`  skipped: ${k.role} "${k.name}" — ${k.reason}`);
+}
+
 async function main(argv) {
   const opts = censusArgs(argv);
   opts.out = resolve(opts.out);
@@ -298,12 +266,7 @@ async function main(argv) {
   const world = await loadWorld(opts.world, { run: opts.run, viewer: opts.viewer });
   if (!world.run)
     throw new Error(`census runs over a composed world (--run); ${opts.world} is scripted`);
-  const { WORLDS } = await import("./worlds/index.mjs");
-  const def = WORLDS.find((w) => w.name === opts.world);
-  const routes =
-    opts.routes.length > 0 ? opts.routes : routesFor(def?.surfaces ?? [], world.viewer);
-  if (routes.length === 0)
-    throw new Error(`world ${opts.world} names no routes for ${world.viewer}`);
+  const routes = await censusRoutes(opts, world.viewer);
   const summaries = [];
   const controls = [];
   const walks = [];
@@ -313,12 +276,7 @@ async function main(argv) {
       summaries.push(r.summary);
       controls.push(...r.entries);
       walks.push(r.walk);
-      const s = r.summary;
-      console.log(
-        `census: ${viewportName} ${route} — ${s.listed} listed · ${s.operated} operated · ${s.skipped.length} skipped · ${s.dropped.length} dropped by the cap · ${s.offscreen.length} never on screen`,
-      );
-      for (const d of s.dropped) console.log(`  dropped (cap ${opts.cap}): ${d.role} "${d.name}"`);
-      for (const k of s.skipped) console.log(`  skipped: ${k.role} "${k.name}" — ${k.reason}`);
+      logRoute(r.summary, opts.cap);
     }
   }
   const head = {

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "@rstest/core";
 import { VERDICT_WORDS } from "../../app/src/live/heartbeat";
 import {
+  dataNames,
   type Fact,
   factSheet,
+  nyDate,
   occParts,
   parseAmount,
+  rowStamp,
   shortDate,
   VERDICT_WORDS_MIRROR,
   weakRegion,
@@ -42,6 +45,13 @@ describe("reading the server's formatted values", () => {
     expect(shortDate("2026-11-06")).toBe("Nov 6");
     // 01:30 UTC on Oct 7 is still Oct 6 in New York, where the world's page reads it.
     expect(shortDate("2026-10-07T01:30:00.000Z")).toBe("Oct 6");
+    expect(nyDate("2026-10-07T01:30:00.000Z")).toBe("2026-10-06");
+  });
+
+  it("stamps an order as the activity ledger does, on New York's clock", () => {
+    // ICU may space "AM" with a narrow no-break space; the oracle's match is whitespace-blind.
+    expect(rowStamp("2026-10-05T15:20:00.000Z").replace(/\s/g, " ")).toBe("Oct 5, 11:20 AM");
+    expect(rowStamp("2026-10-05T13:05:00.000Z").replace(/\s/g, " ")).toBe("Oct 5, 09:05 AM");
   });
 
   it("mirrors the app's verdict words exactly", () => {
@@ -204,9 +214,10 @@ describe("the sheet", () => {
     expect(byId("bot.activity.o1.playbook")?.answerRegion).toEqual(["P-ONE · aggressive"]);
   });
 
-  it("finds an order's quantity by its row up to the Qty cell, as the ledger prints it", () => {
-    expect(byId("bot.activity.o1.quantity")?.answerRegion).toEqual([
-      "ABC $80 PUT · 6 NOV 26 SELL 1",
+  it("finds an order's quantity by its row, from its date-and-time cell to the Qty cell", () => {
+    const blank = (r?: string[]) => r?.map((x) => x.replace(/\s/g, " "));
+    expect(blank(byId("bot.activity.o1.quantity")?.answerRegion)).toEqual([
+      "Oct 6, 10:31 AM ABC $80 PUT · 6 NOV 26 SELL 1",
     ]);
     const partial = factSheet({
       viewer: "member",
@@ -228,9 +239,63 @@ describe("the sheet", () => {
         },
       },
     });
-    expect(partial.find((f) => f.id === "bot.activity.p.quantity")).toMatchObject({
-      answer: { value: 4 },
-      answerRegion: ["ABC BUY 4/10"],
+    const p = partial.find((f) => f.id === "bot.activity.p.quantity");
+    expect(p?.answer).toMatchObject({ value: 4 });
+    expect(blank(p?.answerRegion)).toEqual(["Oct 8, 03:00 PM ABC BUY 4/10"]);
+  });
+
+  it("tells two orders of one symbol, side and size apart by their stamp", () => {
+    const row = (orderId: string, at: string) => ({
+      orderId,
+      display: "NVDA",
+      side: "buy",
+      quantity: 40,
+      filled: 40,
+      price: "$226.10",
+      at,
+    });
+    const two = factSheet({
+      viewer: "member",
+      instant: INSTANT,
+      payloads: {
+        "/api/desk/bot": { desk: { id: "bot", positions: [] } },
+        "/api/desk/bot/activity": {
+          activity: [row("a", "2026-10-05T15:20:00.000Z"), row("b", "2026-10-02T18:05:00.000Z")],
+        },
+      },
+    });
+    const regions = (id: string) => two.find((f) => f.id === id)?.answerRegion;
+    for (const fact of ["side", "quantity", "price", "date"]) {
+      expect(regions(`bot.activity.a.${fact}`)).not.toEqual(regions(`bot.activity.b.${fact}`));
+      expect(two.find((f) => f.id === `bot.activity.a.${fact}`)?.weak).toBe(false);
+    }
+  });
+
+  it("answers an order's date as the New York day the ledger shows, not the UTC one", () => {
+    const late = factSheet({
+      viewer: "member",
+      instant: INSTANT,
+      payloads: {
+        "/api/desk/bot": { desk: { id: "bot", positions: [] } },
+        "/api/desk/bot/activity": {
+          activity: [
+            {
+              orderId: "late",
+              display: "ABC",
+              side: "buy",
+              quantity: 1,
+              filled: 1,
+              price: "$1.00",
+              // 9:30pm EDT on Oct 5 — already Oct 6 in UTC.
+              at: "2026-10-06T01:30:00.000Z",
+            },
+          ],
+        },
+      },
+    });
+    expect(late.find((f) => f.id === "bot.activity.late.date")).toMatchObject({
+      answer: { value: "2026-10-05" },
+      display: "Oct 5",
     });
   });
 
@@ -239,6 +304,39 @@ describe("the sheet", () => {
     expect(sheet.filter((f) => f.account === "calendar").map((f) => f.id)).toEqual([
       "calendar.soon.date",
     ]);
+  });
+
+  it("reads the calendar window on New York's days at both ends", () => {
+    // 10:30pm EDT on Oct 7: the window is Oct 7 – Oct 14 in New York, though UTC is already Oct 8.
+    const evening = factSheet({
+      viewer: "member",
+      instant: "2026-10-08T02:30:00.000Z",
+      payloads: {
+        "/api/research/calendar": {
+          events: [
+            { id: "first", title: "Day one", date: "2026-10-07" },
+            { id: "last", title: "Day seven", date: "2026-10-14" },
+            { id: "after", title: "Day eight", date: "2026-10-15" },
+          ],
+        },
+      },
+    });
+    expect(evening.map((f) => f.id)).toEqual(["calendar.first.date", "calendar.last.date"]);
+  });
+
+  it("names the world's own data — accounts, tickers, contracts, playbooks, events", () => {
+    expect(dataNames(payloads)).toEqual(
+      expect.arrayContaining([
+        "bot",
+        "Bot",
+        "ABC",
+        "ABC261106P00080000",
+        "ABC $80 PUT · 6 NOV 26",
+        "P-ONE",
+        "Earnings Nov 1",
+        "CPI release",
+      ]),
+    );
   });
 
   it("marks a desk the viewer does not own", () => {

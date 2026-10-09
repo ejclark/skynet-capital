@@ -162,7 +162,18 @@ async function composeAll(runDir, names) {
     missing.push(...part.missing);
     network[world.name] = part.network;
   }
-  const manifest = { instant: INSTANT, worlds: chosen.map((w) => w.name), network, payloads };
+  // The checkout whose code composed the run, and its commit: what reads the run later (the
+  // facts sheet's formatters) takes the app's code from here, never from wherever it runs.
+  const checkout = fileURLToPath(new URL("../../../", import.meta.url)).replace(/\/$/, "");
+  const commit = run("git", ["-C", checkout, "rev-parse", "HEAD"]);
+  const manifest = {
+    instant: INSTANT,
+    checkout,
+    commit,
+    worlds: chosen.map((w) => w.name),
+    network,
+    payloads,
+  };
   writeFileSync(join(runDir, "manifest.json"), `${JSON.stringify(manifest, null, 1)}\n`);
   const fixtures = payloads.filter((r) => r.source.startsWith("fixture")).length;
   const refused = Object.values(network).reduce((n, w) => n + w.refused.length, 0);

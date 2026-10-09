@@ -22,6 +22,9 @@ export function occParts(
   symbol: unknown,
 ): { root: string; expiry: string; type: "put" | "call"; strike: number } | null;
 export function shortDate(iso: string): string;
+export function nyDate(iso: string): string;
+export function rowStamp(iso: string): string;
+export function dataNames(payloads: Record<string, unknown>): string[];
 export function weakRegion(snippet: unknown): boolean;
 export function factSheet(opts: {
   viewer: string;

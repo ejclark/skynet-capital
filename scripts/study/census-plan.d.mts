@@ -43,6 +43,16 @@ export function routesFor(
   surfaces: { viewer: string; route: string; struck?: string }[],
   viewer: string,
 ): string[];
+export function struckRoutes(
+  surfaces: { viewer: string; route: string; struck?: string }[],
+  viewer: string,
+): { route: string; why: string }[];
+export function reachVerdict(
+  m: { gone?: boolean; shown?: boolean; clipped?: boolean; box?: Box } | null | undefined,
+  viewport: Viewport,
+  forced: boolean,
+): "reached" | "clipped" | "offscreen";
+export function screenFor(docY: number, starts: number[], innerHeight: number): number;
 export function treeOrder(nodes: AxNode[]): TreeNode[];
 export function axPick(ordered: TreeNode[]): { controls: TreeNode[]; headings: TreeNode[] };
 export function nextScreen(
@@ -71,6 +81,7 @@ export function censusFindings(args: {
   role: string;
   cover?: { inside: boolean; by?: string | null } | null;
   operated?: string;
+  reach?: string;
 }): Finding[];
 export function routeSlug(route: string): string;
 export function walkOrder<T extends { backendId: number }>(found: T[], lastRead: number[]): T[];

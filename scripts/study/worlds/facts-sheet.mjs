@@ -49,6 +49,33 @@ export function shortDate(iso) {
   });
 }
 
+/** An instant's calendar day on the world's New York clock — the day the page shows: "2026-10-05". */
+export function nyDate(iso) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "America/New_York",
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/** An order's date and time as the activity ledger stamps it (activity-table.tsx → rowStamp, in
+ *  the study browser's en-US locale on the New York clock): "Oct 5, 11:20 AM". */
+export function rowStamp(iso) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+  });
+}
+
 /** The app's verdict words (app/src/live/heartbeat.ts → VERDICT_WORDS), mirrored for a pin whose
  *  app does not export them; the CLI prefers the app's own. */
 export const VERDICT_WORDS_MIRROR = {
@@ -225,7 +252,9 @@ function playbookFacts(base, heartbeat, words) {
 
 /** The newest activity rows (date · symbol · BUY/SELL · Qty · price — the phone hides the price
  *  column, so a quantity's region stops at the Qty cell), with the playbook that
- *  placed the order when the viewer's copy carries it — the gate strips it for a non-owner. */
+ *  placed the order when the viewer's copy carries it — the gate strips it for a non-owner.
+ *  Every region of a row starts at its date-and-time cell, so two orders of one symbol and side
+ *  (or one day) never share a region: the oracle can tell which row was on screen. */
 function activityFacts(base, rows, max) {
   return rows.slice(0, max).flatMap((r) => {
     const id = `activity.${r.orderId}`;
@@ -235,44 +264,48 @@ function activityFacts(base, rows, max) {
     // The ledger's Qty cell: "filled/ordered" for a partial fill (activity-table.tsx), else the count.
     const qty =
       r.filled > 0 && r.filled !== r.quantity ? `${r.filled}/${r.quantity}` : `${r.quantity}`;
+    // A lifecycle row stamps its day in its own words; the row is pinned by the symbol alone then.
+    const stamp = r.lifecycle ? "" : `${rowStamp(r.at)} `;
+    const symbol = `${stamp}${r.display}${r.net ? ` net ${r.net}` : ""}`;
+    const day = shortDate(r.at);
     return [
       fact(
         base,
         `${id}.side`,
-        `whether the ${r.display} order of ${shortDate(r.at)} bought or sold`,
+        `whether the ${r.display} order of ${day} bought or sold`,
         txt(r.side),
         side,
-        [`${r.display} ${side}`],
+        [`${symbol} ${side}`],
       ),
       fact(
         base,
         `${id}.quantity`,
-        `how many ${r.display} the ${shortDate(r.at)} order ${r.side === "buy" ? "bought" : "sold"}`,
+        `how many ${r.display} the ${day} order ${r.side === "buy" ? "bought" : "sold"}`,
         { kind: "number", value: r.filled || r.quantity, abs: 0 },
         qty,
-        [`${r.display} ${side} ${qty}`],
+        [`${symbol} ${side} ${qty}`],
       ),
       fact(
         base,
         `${id}.price`,
-        `the price of the ${r.display} order of ${shortDate(r.at)}`,
+        `the price of the ${r.display} order of ${day}`,
         num(r.price, { abs: 0.01 }),
         r.price,
-        [`${side} ${qty} ${r.price}`, r.price],
+        [`${symbol} ${side} ${qty} ${r.price}`],
       ),
       fact(
         base,
         `${id}.date`,
         `when the ${r.display} ${r.side} order filled`,
-        txt(String(r.at).slice(0, 10)),
-        shortDate(r.at),
-        [shortDate(r.at)],
+        txt(nyDate(r.at)),
+        day,
+        [`${symbol} ${side}`],
       ),
       pb
         ? fact(
             base,
             `${id}.playbook`,
-            `which playbook placed the ${r.display} order of ${shortDate(r.at)}`,
+            `which playbook placed the ${r.display} order of ${day}`,
             txt(pb),
             pbText,
             [pbText],
@@ -284,8 +317,9 @@ function activityFacts(base, rows, max) {
 
 /** Calendar events in the `days` after the instant: title and date. */
 function calendarFacts(viewer, events, instant, days) {
-  const from = String(instant).slice(0, 10);
-  const until = new Date(Date.parse(instant) + days * 86_400_000).toISOString().slice(0, 10);
+  // Both ends are New York calendar days, as the page reads the instant.
+  const from = nyDate(instant);
+  const until = nyDate(new Date(Date.parse(instant) + days * 86_400_000).toISOString());
   const base = { viewer, account: "calendar", own: true };
   return (events ?? [])
     .filter((e) => e.date >= from && e.date <= until)
@@ -336,4 +370,31 @@ export function factSheet({
     ...calendarFacts(viewer, payloads["/api/research/calendar"]?.events, instant, calendarDays),
   );
   return out.filter(Boolean);
+}
+
+/**
+ * The world's own names in one viewer's payloads — accounts, desks, tickers, contracts, playbooks,
+ * events — so the harvest can tell data printed on screen from the interface's words
+ * (harvest-plan.mjs → setAsideWhy). Taken from the same payloads as the facts.
+ * @param {Record<string, any>} payloads
+ */
+export function dataNames(payloads) {
+  const out = new Set();
+  const add = (...names) => {
+    for (const n of names) if (typeof n === "string" && n.trim()) out.add(n.trim());
+  };
+  for (const a of payloads["/api/accounts/networth"]?.accounts ?? []) add(a.id, a.name);
+  for (const key of Object.keys(payloads)) {
+    const body = payloads[key];
+    if (/^\/api\/desk\/[^/?]+$/.test(key) && body?.desk) {
+      add(body.desk.id, body.desk.name);
+      for (const p of body.desk.positions ?? []) {
+        add(p.symbol, p.display, occParts(p.symbol)?.root, p.nextEvent?.label);
+      }
+    }
+    for (const r of body?.activity ?? []) add(r.display, r.symbol, r.reasoning?.playbookId);
+    for (const p of body?.heartbeat?.playbooks ?? []) add(p.playbookId);
+  }
+  for (const e of payloads["/api/research/calendar"]?.events ?? []) add(e.title);
+  return [...out].sort();
 }

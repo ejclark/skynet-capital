@@ -21,13 +21,17 @@ export function resetAdopted() {
 /**
  * Every adopted element as it stands at this scroll position: its box cut to every ancestor that
  * clips overflow (a fixed box escapes them), whether the browser shows it, where it sits in the
- * document, and the link it would follow.
+ * document, and the link it would follow. `clipped` says a box a member cannot scroll
+ * (`overflow: hidden` or `clip`) is what cuts it away entirely, while uncut it would be on screen.
  */
 export function measureAdopted() {
+  const sealed = (v) => v === "hidden" || v === "clip";
   return (window.__census || []).map((el) => {
     if (!el?.isConnected) return { gone: true };
     const r = el.getBoundingClientRect();
     let [left, top, right, bottom] = [r.left, r.top, r.right, r.bottom];
+    // The same cut, by the boxes a member cannot scroll only.
+    let [hl, ht, hr, hb] = [r.left, r.top, r.right, r.bottom];
     let fixed = false;
     for (let a = el; a; a = a.parentElement) {
       const cs = getComputedStyle(a);
@@ -41,7 +45,11 @@ export function measureAdopted() {
         [left, right] = [Math.max(left, c.left), Math.min(right, c.right)];
       if (ps.overflowY !== "visible")
         [top, bottom] = [Math.max(top, c.top), Math.min(bottom, c.bottom)];
+      if (sealed(ps.overflowX)) [hl, hr] = [Math.max(hl, c.left), Math.min(hr, c.right)];
+      if (sealed(ps.overflowY)) [ht, hb] = [Math.max(ht, c.top), Math.min(hb, c.bottom)];
     }
+    const inView = (l, t, rr, b) =>
+      rr - l > 0 && b - t > 0 && l < innerWidth && rr > 0 && t < innerHeight && b > 0;
     const shown =
       typeof el.checkVisibility !== "function" ||
       el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
@@ -49,6 +57,7 @@ export function measureAdopted() {
     return {
       shown,
       pinned: fixed,
+      clipped: inView(r.left, r.top, r.right, r.bottom) && !inView(hl, ht, hr, hb),
       box: {
         left: Math.round(left),
         top: Math.round(top),
@@ -74,10 +83,22 @@ export function scrollPageTo(y) {
   return Math.round(scrollY);
 }
 
-/** Bring adopted element `i` to the middle of the viewport (when its screen no longer shows it). */
+/**
+ * Bring adopted element `i` to the middle of the viewport — the page and every box it scrolls
+ * inside, sideways too. `forced` is true when that moved a box a member cannot scroll
+ * (`overflow: hidden` or `clip`): a script can, a finger cannot, so what it showed does not count.
+ */
 export function centreAdopted(i) {
-  window.__census?.[i]?.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
-  return Math.round(scrollY);
+  const el = window.__census?.[i];
+  const sealed = [];
+  for (let a = el?.parentElement; a; a = a.parentElement) {
+    const cs = getComputedStyle(a);
+    if (["hidden", "clip"].includes(cs.overflowX) || ["hidden", "clip"].includes(cs.overflowY))
+      sealed.push([a, a.scrollLeft, a.scrollTop]);
+  }
+  el?.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+  const forced = sealed.some(([a, x, y]) => a.scrollLeft !== x || a.scrollTop !== y);
+  return { scrollY: Math.round(scrollY), forced };
 }
 
 /** What a tap at (x, y) would land on, relative to adopted element `i`. */
@@ -101,7 +122,9 @@ export function coverAt([i, x, y]) {
  * The visible text on this screen, in units a reader would read as one string: a heading, a
  * control, a label, or else the nearest block's own run of text. Each unit keeps one id for the
  * life of the document, so the walk can union screens. Text clipped away by an `overflow: hidden`
- * ancestor (a screen-reader-only label) is not visible text.
+ * ancestor (a screen-reader-only label) is not visible text. `groups` are the ids of the unit's
+ * nearest enclosing blocks (a table cell's row, a card) — the elements whose text the oracle's
+ * single-element match could read a region from that spans units.
  */
 export function visibleTextUnits() {
   if (!window.__censusUnits) window.__censusUnits = { map: new WeakMap(), next: 0 };
@@ -134,6 +157,21 @@ export function visibleTextUnits() {
     }
     return !(r - l > 1 && b - t > 1) || b <= 0 || t >= innerHeight;
   };
+  const GROUP_LEVELS = 3;
+  const idOf = (el) => {
+    if (!ids.map.has(el)) ids.map.set(el, ids.next++);
+    return ids.map.get(el);
+  };
+  const groupsOf = (unit) => {
+    const out = [];
+    for (let a = unit.parentElement; a && a !== document.body && out.length < GROUP_LEVELS; ) {
+      const b = blockOf(a);
+      if (b === document.body) break;
+      out.push(idOf(b));
+      a = b.parentElement;
+    }
+    return out;
+  };
   const units = new Map();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -155,9 +193,8 @@ export function visibleTextUnits() {
     const label = head || control ? null : parent.closest(LABEL);
     const unit = head || control || label || blockOf(parent);
     const kind = head ? "heading" : control ? "control" : label ? "label" : "text";
-    if (!ids.map.has(unit)) ids.map.set(unit, ids.next++);
-    const id = ids.map.get(unit);
-    const u = units.get(id) || { id, kind, parts: [], last: null };
+    const id = idOf(unit);
+    const u = units.get(id) || { id, kind, groups: groupsOf(unit), parts: [], last: null };
     // Two text nodes of one element run together ("$" + "962"); across elements they are two words.
     u.parts.push(u.last && u.last !== parent ? ` ${text}` : text);
     u.last = parent;
@@ -166,6 +203,7 @@ export function visibleTextUnits() {
   return [...units.values()].map((u) => ({
     id: u.id,
     kind: u.kind,
+    groups: u.groups,
     text: u.parts.join("").replace(/\s+/g, " ").trim(),
   }));
 }

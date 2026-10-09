@@ -55,6 +55,20 @@ export function routesFor(surfaces, viewer) {
 }
 
 /**
+ * The routes a world names for this viewer only through struck surfaces — left out of the census,
+ * and said so: `[{route, why}]`.
+ */
+export function struckRoutes(surfaces, viewer) {
+  const live = new Set(routesFor(surfaces, viewer));
+  const out = [];
+  for (const s of surfaces) {
+    if (s.viewer !== viewer || !s.struck || live.has(s.route)) continue;
+    if (!out.some((r) => r.route === s.route)) out.push({ route: s.route, why: s.struck });
+  }
+  return out;
+}
+
+/**
  * The accessibility tree in document order (depth-first from the root) — CDP returns nodes in no
  * promised order. Each node: `{backendId, role, name, ignored, owned}`, `owned` when an ancestor
  * owns its operation (an option inside a closed select).
@@ -115,6 +129,34 @@ export function onScreen(m, viewport) {
   const { left, top, width, height } = m.box;
   if (!(width > 0 && height > 0)) return false;
   return left < viewport.width && left + width > 0 && top < viewport.height && top + height > 0;
+}
+
+/**
+ * A control no screen of the walk showed, after the walk scrolled it into view (the page and
+ * every box it sits in, sideways too):
+ *  - `reached` — on screen now: a member gets there by swiping a scroller, so it is listed;
+ *  - `clipped` — a box a member cannot scroll (`overflow: hidden`) keeps it out of view, or only
+ *    a script's scroll of such a box showed it: a finding, never operated;
+ *  - `offscreen` — still nowhere on screen (placed off the page until focused, a skip link).
+ */
+export function reachVerdict(m, viewport, forced) {
+  if (!m || m.gone || !m.shown) return "offscreen";
+  if (forced || (m.clipped && !onScreen(m, viewport))) return "clipped";
+  return onScreen(m, viewport) ? "reached" : "offscreen";
+}
+
+/**
+ * The walk screen a reached control belongs to: the first whose viewport holds its top in the
+ * document (`starts` are the screens' scroll positions), else the nearest one.
+ */
+export function screenFor(docY, starts, innerHeight) {
+  const at = starts.findIndex((y) => docY >= y && docY < y + innerHeight);
+  if (at >= 0) return at;
+  let best = 0;
+  starts.forEach((y, i) => {
+    if (Math.abs(y - docY) < Math.abs(starts[best] - docY)) best = i;
+  });
+  return best;
 }
 
 /** Where to tap a control: the centre of its part inside the viewport, rounded to the pixel. */
@@ -179,7 +221,7 @@ export function nearest(candidates, want) {
 }
 
 /** The census's own findings on one operated control, in the probe-finding shape. */
-export function censusFindings({ name, role, cover, operated }) {
+export function censusFindings({ name, role, cover, operated, reach }) {
   const out = [];
   const label = name || `(unnamed ${role})`;
   if (!name) {
@@ -198,6 +240,15 @@ export function censusFindings({ name, role, cover, operated }) {
       snippet: name,
       severity: "high",
       fix: "keep overlays off the control, or move it clear",
+    });
+  }
+  if (reach === "clipped") {
+    out.push({
+      kind: "control-clipped",
+      what: `"${label}" sits in a box that cannot be scrolled, out of view`,
+      snippet: name,
+      severity: "high",
+      fix: "let the box scroll (overflow: auto) or bring the control inside it",
     });
   }
   if (operated === "not-found") {
@@ -225,9 +276,10 @@ export function routeSlug(route) {
 
 const USAGE =
   "usage: census.mjs --run <compose dir> --world <name> --viewer <who> --out <fresh dir>" +
-  " [--viewport phone,desktop] [--cap 60] [--route <path> …]";
+  " [--viewport phone,desktop] [--cap 60] [--route <path> …  (replaces the world's routes)]";
 
-/** Parse the census CLI. Viewports default to both frames; `--route` narrows the world's list. */
+/** Parse the census CLI. Viewports default to both frames; `--route` (repeatable) replaces the
+ *  world's list with the paths given — any path of the app, a route outside the list included. */
 export function censusArgs(argv) {
   const out = { viewports: ["phone", "desktop"], cap: DEFAULT_CAP, routes: [] };
   for (let i = 0; i < argv.length; i += 2) {
