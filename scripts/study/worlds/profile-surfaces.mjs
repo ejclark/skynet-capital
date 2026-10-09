@@ -133,7 +133,7 @@ const TODAY = [
     label: "trade guidance hand-off landing",
     route: SAURON,
     act: [
-      { ...click("link", "Review on Trade ↗"), knownBug: "#4970" },
+      click("link", "Review on Trade ↗"),
       { ...click("button", "Guidance", { exact: true }), only: "phone" },
       { ...click("link", "Guidance for this stock"), only: "desktop" },
     ],
