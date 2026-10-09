@@ -701,3 +701,47 @@ describe("/heartbeat — the roll call reads the bot's subscriptions", () => {
     }
   });
 });
+
+/** #4950: the Overview's idea cards skip a playbook the bot already runs — on the owner's copy only,
+ *  since a non-owner's copy missing exactly those ideas would name them (#885). */
+describe("the desk's ideas skip a playbook the account already subscribes to", () => {
+  const subscribedTo = (...ids: string[]) =>
+    ({
+      loadIfReadable: () => ({
+        sauron: ids.map((playbookId) => ({ playbookId, enabled: false, accountId: "sauron" })),
+      }),
+    }) as unknown as DashboardServerConfig["subscriptions"];
+  const ideasFor = async (who: string, subscriptions = subscribedTo()) => {
+    const { res, out } = fakeRes();
+    const gated = configWith({
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      subscriptions,
+    });
+    await serveDeskJson(res, "/api/desk/sauron", "/api/desk/sauron", gated, {
+      email: who,
+      provider: "google",
+      exp: 0,
+    });
+    const desk = answered(out).desk as {
+      considerations: { id: string; action: { href: string } }[];
+    };
+    return desk.considerations;
+  };
+
+  it("pitches the NVDA playbook until the owner's bot subscribes, even paused", async () => {
+    const before = await ideasFor("owner@x");
+    const nvda = before.filter((c) => c.id.endsWith("-NVDA"));
+    expect(nvda.length).toBeGreaterThan(0);
+    const ids = nvda.map((c) => c.id.replace(/^opportunity-/, "").replace(/-NVDA$/, ""));
+    expect(await ideasFor("owner@x", subscribedTo(...ids))).toEqual([]);
+    expect(nvda[0]?.action.href).toBe("/app/research?section=playbooks&account=sauron");
+  });
+
+  it("filters nothing on a non-owner's copy", async () => {
+    const owners = await ideasFor("owner@x");
+    expect(owners.length).toBeGreaterThan(0);
+    const ids = owners.map((c) => c.id.replace(/^opportunity-/, "").replace(/-NVDA$/, ""));
+    expect(await ideasFor("guest@x", subscribedTo(...ids))).toEqual(owners);
+  });
+});
