@@ -26,7 +26,8 @@ import {
  * subscription, so one number caps every ticker's budget on that strategy. Its own key rather than
  * its own file so the budgets and the allocation they must fit inside are written in one atomic
  * rename. Builds before this one skip a non-array key, so the key is invisible to them; from this
- * build on it survives every rewrite. Part 1 reads and carries it; nothing writes it until part 3.
+ * build on it survives every rewrite. Part 1 read and carried it; part 3 writes it
+ * (`withAllocations`), and the budgets it caps are checked in `strategy-budgets.ts`.
  */
 
 export const ALLOCATIONS_KEY = `${RESERVED_KEY_PREFIX}allocations`;
@@ -78,6 +79,37 @@ export function parseAllocations(raw: unknown): AllocationsState {
 /** The allocations in a whole subscriptions file. */
 export function allocationsIn(file: unknown): AllocationsState {
   return parseAllocations(isRecord(file) ? file[ALLOCATIONS_KEY] : undefined);
+}
+
+/**
+ * The file with `allocations` laid over its `$allocations` key, everything else as it is on disk —
+ * the allocation write. Same rule as `rewrite`: an entry this build cannot read (a strategy it does
+ * not know, a malformed record) goes back unchanged; an entry it reads is replaced by `allocations`,
+ * so one it reads and `allocations` no longer holds is the one being cleared.
+ */
+export function withAllocations(
+  allocations: AllocationsState,
+  onDisk: unknown,
+): Record<string, unknown> {
+  const disk = isRecord(onDisk) ? onDisk : {};
+  const before = isRecord(disk[ALLOCATIONS_KEY]) ? disk[ALLOCATIONS_KEY] : {};
+  const merged: Record<string, unknown> = {};
+  for (const accountId of new Set([...Object.keys(before), ...Object.keys(allocations)])) {
+    const raw = before[accountId];
+    if (raw !== undefined && !isRecord(raw) && allocations[accountId] === undefined) {
+      merged[accountId] = raw;
+      continue;
+    }
+    const unread = isRecord(raw)
+      ? Object.entries(raw).filter(
+          ([strategy, entry]) => !(isStrategyId(strategy) && parseAllocation(entry)),
+        )
+      : [];
+    const entries = { ...Object.fromEntries(unread), ...(allocations[accountId] ?? {}) };
+    if (Object.keys(entries).length > 0) merged[accountId] = entries;
+  }
+  const { [ALLOCATIONS_KEY]: _old, ...rest } = disk;
+  return Object.keys(merged).length > 0 ? { ...rest, [ALLOCATIONS_KEY]: merged } : rest;
 }
 
 export interface Rewrite {

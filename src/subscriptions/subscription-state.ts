@@ -42,7 +42,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
 ]);
 
 /** The fields a subscribe sets; a re-subscribe carries everything else forward from the record it
- *  replaces — a conviction (nothing on this build writes one yet) and any newer build's field. */
+ *  replaces — a conviction (unless the subscribe states its own) and any newer build's field. */
 const SET_BY_SUBSCRIBE: ReadonlySet<string> = new Set([
   "accountId",
   "playbookId",

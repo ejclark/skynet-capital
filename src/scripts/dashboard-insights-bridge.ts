@@ -23,7 +23,10 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
-import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
+import {
+  buildSubscriptionsSnapshot,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+} from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
@@ -159,8 +162,16 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
+    // v2 carries each subscription's conviction in its version (#4469 slice 3c part 3). Sent only
+    // once the bots that read v2 (part 2, #4901) were deployed: a bots build that predates it would
+    // read v2 as "not reported" and keep the roster it had.
     subscriptions: () =>
-      buildSubscriptionsSnapshot(subscriptions.load(), Date.now(), subscriptions.loadAllocations()),
+      buildSubscriptionsSnapshot(
+        subscriptions.load(),
+        Date.now(),
+        subscriptions.loadAllocations(),
+        SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+      ),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;

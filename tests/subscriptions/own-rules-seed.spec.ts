@@ -23,6 +23,7 @@ import {
   seedMarkersPathFrom,
 } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
+import { carryRowConvictions } from "../../src/subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
   SEEDED_FROM_OWN_RULES,
@@ -357,11 +358,15 @@ describe("seeding Sauron's own rules as his subscription", () => {
     let store: SubscriptionStore;
     let seed: ReturnType<typeof pollSeedsFromEnv>;
 
+    /** Eric's live state once the ◆ carry has run: the CRWV wheel holds its row's conviction, so the
+     *  seeds below are the only writes a poll makes. */
+    const POLLED = carryRowConvictions(LIVE_STATE, AT).state;
+
     beforeEach(() => {
       dir = mkdtempSync(join(tmpdir(), "own-rules-poll-"));
       path = join(dir, "playbook-subscriptions.json");
       store = new SubscriptionStore(path);
-      store.replace(LIVE_STATE);
+      store.replace(POLLED);
       // The dashboard's own wiring, pointed at a temp file the way fly.toml points it at /data.
       seed = pollSeedsFromEnv({ SKYNET_SUBSCRIPTIONS_FILE: path });
     });
@@ -388,7 +393,10 @@ describe("seeding Sauron's own rules as his subscription", () => {
     it("seeds sauron from the gate verdicts every bots build already sends, and no other bot", () => {
       const lines = seed(poll([verdict("futurist"), verdict("sauron"), verdict("day-trader")]), AT);
 
-      expect(store.load()).toEqual({ ...LIVE_STATE, sauron: [...ERICS_LIVE, SEEDED_SAURON] });
+      expect(store.load()).toEqual({
+        ...POLLED,
+        sauron: [...(POLLED.sauron ?? []), SEEDED_SAURON],
+      });
       expect(lines).toHaveLength(1);
       expect(lines[0]).toContain("sauron");
     });
@@ -424,7 +432,16 @@ describe("seeding Sauron's own rules as his subscription", () => {
 
     it("a poll with no gate verdicts — an older bots build, no live bots — seeds nothing", () => {
       expect(seed(controlsPollReport({}), AT)).toEqual([]);
-      expect(store.load()).toEqual(LIVE_STATE);
+      expect(store.load()).toEqual(POLLED);
+    });
+
+    it("carries the wheel's ◆ conviction onto Eric's live CRWV wheel on the first poll, once (#4469 3c part 3)", () => {
+      store.replace(LIVE_STATE);
+      expect(seed(controlsPollReport({}), AT)).toEqual([
+        "[subscriptions] carried the ◆ row's conviction onto each subscription stating none (checked on its row's date): sauron/CRWV-WHEEL",
+      ]);
+      expect(store.load()).toEqual(POLLED);
+      expect(seed(controlsPollReport({}), LATER)).toEqual([]);
     });
   });
 
