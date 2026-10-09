@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The full wholesale report revises the advance inventories m/m by 0.1pp or less" as a flat one-month
+  bet (FT-wholesale-trade-2026-10-08-3)** — added 2026-10-09 from the
+  [wholesale-trade-2026-10-08 close-out](events/wholesale-trade-2026-10-08.md). Registered on a 6-of-8
+  modal bound (75%) with no August pair in the sample; August 2026 printed **+0.7% advance → +0.5% full**,
+  a **−0.2pp** revision, the first miss of that bound (sample now 9 pairs: ≤0.1pp **6 of 9**, max still
+  0.3pp). It landed in the last cycle before the 2026-10-26 AIES restatement, where the same revision also
+  moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
+  not read it as a regime without a second pre-benchmark edition.
+
 - **"A $4B-or-larger buyback fills on cover ≥ 2.50x" as a two-sided 20Y-30Y call
   (FT-treasury-buyback-20y30y-2026-10-08-3)** — added 2026-10-09 from the
   [treasury-buyback-20y30y-2026-10-08 close-out](events/treasury-buyback-20y30y-2026-10-08.md). The
