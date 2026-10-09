@@ -18,9 +18,13 @@
 //                 readers' own defects) at ≥ 0.5, or the checker's `real`. A checker's
 //                 `world-artifact` (a stub's doing, not the app's) leaves the denominator and is
 //                 counted; an unchecked finding stays in the denominator as not real.
-//   yield       — real findings at a level (structural | surface) not matched to the main list,
-//                 counted once per checker `same_as` group, so three classes reporting one problem
-//                 is one problem.
+//   yield       — real findings at a level (structural | surface) not on the key, counted once
+//                 per checker `same_as` group (chains and loops resolved to one group), so three
+//                 classes reporting one problem is one problem. A group is not new when any finding
+//                 in it — even one outside the classes being counted — matches a key item at ≥ 0.5:
+//                 a main-list match is recall, a known-gap or readers-only match is reported apart
+//                 as re-found. A group with an unsettled dispute naming a key item is HELD, not
+//                 counted, until a tie-break settles it — the kinder reading would count it new.
 // Area-agnostic: item ids are whatever the sealed key names; nothing here knows the area.
 
 export const CLASSES = ["members", "experts", "words", "instruments"];
@@ -217,19 +221,75 @@ export function validity(findings, byId, checks) {
   };
 }
 
-/** Real findings at `level` not matched to the main list, one per checker `same_as` group. */
+/**
+ * One representative per checker `same_as` group. Each finding names at most one `same_as`, so a
+ * group has either one finding naming none (its representative) or a loop (its earliest id in
+ * `order`). Returns finding id → representative id, for every id in `order` and every id named.
+ */
+function sameAsRoots(order, checks) {
+  const next = (id) => checks.get(id)?.same_as ?? null;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  const byRank = (a, b) =>
+    (rank.get(a) ?? Infinity) - (rank.get(b) ?? Infinity) || (a < b ? -1 : 1);
+  const root = new Map();
+  for (const start of order) {
+    const path = [];
+    let id = start;
+    while (id && !root.has(id) && !path.includes(id)) {
+      path.push(id);
+      id = next(id);
+    }
+    const rep = !id
+      ? path.at(-1)
+      : root.has(id)
+        ? root.get(id)
+        : path.slice(path.indexOf(id)).sort(byRank)[0];
+    for (const p of path) root.set(p, rep);
+  }
+  return root;
+}
+
+/** Key items an unsettled dispute names (either matcher, score > 0); empty when settled. */
+const heldOn = (c) =>
+  c?.resolvedBy === "unresolved" ? [c.m1, c.m2].filter((m) => labelOf(m)).map((m) => m.gold) : [];
+
+/** One `same_as` group: recall (null), re-found on the key, held on a dispute, or new. */
+function classifyGroup(all, ids, byId, mainIds) {
+  const keyed = all
+    .map((id) => byId.get(id))
+    .filter((c) => c?.gold && c.score >= FOUND_MIN)
+    .map((c) => c.gold);
+  if (keyed.some((g) => mainIds.includes(g))) return [null];
+  if (keyed.length) return ["refound", { ids, gold: [...new Set(keyed)] }];
+  const candidates = [...new Set(all.flatMap((id) => heldOn(byId.get(id))))];
+  return candidates.length ? ["held", { ids, candidates }] : ["groups", ids];
+}
+
+/**
+ * Real findings at `level` not on the key, one per checker `same_as` group. `findings` are the ones
+ * being counted; `byId` and `checks` cover the whole round, so a group whose other half sits in
+ * another class or level still answers for it. Returns the new groups (counted), the groups that
+ * re-found a known gap or readers-only item ({ids, gold}), and the groups held on a dispute
+ * ({ids, candidates}).
+ */
 export function newProblems({ findings, byId, checks, mainIds, level }) {
-  const groups = new Map();
+  const roots = sameAsRoots([...byId.keys()], checks);
+  const members = new Map();
+  for (const [id, rep] of roots) members.set(rep, [...(members.get(rep) ?? []), id]);
+  const counted = new Map();
   for (const f of findings) {
     if (f.level !== level) continue;
     const v = verdictOf(f, byId, checks);
     if (!(v === "matched" || v === "real")) continue;
-    const c = byId.get(f.id);
-    if (c?.gold && mainIds.includes(c.gold) && c.score >= FOUND_MIN) continue;
-    const key = checks.get(f.id)?.same_as ?? f.id;
-    groups.set(key, [...(groups.get(key) ?? []), f.id]);
+    const rep = roots.get(f.id) ?? f.id;
+    counted.set(rep, [...(counted.get(rep) ?? []), f.id]);
   }
-  return { count: groups.size, groups: Object.fromEntries(groups) };
+  const out = { groups: {}, refound: {}, held: {} };
+  for (const [rep, ids] of counted) {
+    const [kind, entry] = classifyGroup(members.get(rep) ?? ids, ids, byId, mainIds);
+    if (kind) out[kind][rep] = entry;
+  }
+  return { count: Object.keys(out.groups).length, ...out };
 }
 
 /** Success ≥ 90% with median ease ≥ 6 means the members found it too easy: calibration fails. */
@@ -246,12 +306,12 @@ export function easyMode(sessions) {
       ? eases[mid]
       : (eases[mid - 1] + eases[mid]) / 2
     : null;
-  const successRate = n ? round3(ok / n) : null;
   return {
     sessions: n,
-    successRate,
+    successRate: n ? round3(ok / n) : null,
     medianEase: median,
-    flagged: n > 0 && successRate >= 0.9 && median !== null && median >= 6,
+    // The raw rate, never the rounded one: 89.96% is not 90%.
+    flagged: n > 0 && ok / n >= 0.9 && median !== null && median >= 6,
   };
 }
 

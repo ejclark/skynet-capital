@@ -12,3 +12,4 @@
 {"id":"F12","level":"surface","severity":"1","what":"The doormat is the wrong colour"}
 {"id":"F13","member":"commuter","level":"structural","severity":"High","what":"Nothing tells you the attic is upstairs","principle":"navigation","why":"the attic is never found","fix":"a sign at the stairs","evidence":{"session":"sessions/commuter/t1-desktop","frames":[2],"quote":"Is there an upstairs?"}}
 {"id":"F14","level":"surface","severity":"1","what":"The coat hook is a little low"}
+{"id":"F15","member":"commuter","level":"structural","severity":"Moderate","what":"The cellar is only reachable through the garden","principle":"match between the house and the real world","why":"nobody looks for a cellar outdoors","fix":"a cellar door off the kitchen","evidence":{"session":"sessions/commuter/t1-desktop","frames":[1],"quote":"Where is the cellar?\nI checked every door inside."}}

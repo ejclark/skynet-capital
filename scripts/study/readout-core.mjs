@@ -33,6 +33,8 @@ const cell = (s) =>
   String(s ?? "")
     .replace(/\|/g, "\\|")
     .replace(/\n+/g, " ");
+/** Free text inside a one-line blockquote: a newline would end the quote, so it becomes a space. */
+const oneLine = (s) => String(s ?? "").replace(/\s*\n\s*/g, " ");
 
 /** How a member's action reads in a caption. */
 export function actionWords(action, record) {
@@ -102,21 +104,40 @@ function picture({ picture: p, ownerShot }) {
     "|---|---|---|---|",
     `| ${img("before", p.before)} | ${cell(p.action)} | ${img("after", p.after)} | ${yours} |`,
     "",
-    `> "${p.quote}" — ${p.member}`,
+    `> "${oneLine(p.quote)}" — ${p.member}`,
   ];
 }
 
 function headline({ grade }) {
   const h = grade.headline;
   const t = grade.classes.blind.thoroughness;
+  const partly = t.partial ? ` (${t.partial} only partly)` : "";
   const lines = [
-    `**Found ${h.found} of your ${h.renders} without seeing them · ${h.structural} new structural problems · ${h.smaller} new smaller ones.**`,
+    `**Found ${h.found} of your ${h.renders} without seeing them${partly} · ${plural(h.structural, "new structural problem", "new structural problems")} · ${plural(h.smaller, "new smaller one", "new smaller ones")}.**`,
     "",
+    ...(t.partial
+      ? [
+          `Partly means the right place with a vaguer reason; the bar counts it as found. Full matches alone: ${t.full} of ${h.renders} (${pct(h.renders ? t.full / h.renders : null)}).`,
+          "",
+        ]
+      : []),
     `With ${h.renders} items the range is wide: ${h.found} of ${h.renders} is anywhere from ${t.wilson ? `${pct(t.wilson.lo)} to ${pct(t.wilson.hi)}` : "n/a"} (95% confidence).` +
       (h.struck
         ? ` ${h.struck} of your ${h.total} could not be shown in the test world and ${h.struck === 1 ? "was" : "were"} struck before the run.`
         : ""),
   ];
+  const aside = [
+    ["structural", grade.structural],
+    ["smaller", grade.smaller],
+  ].flatMap(([word, y]) => {
+    const re = Object.keys(y?.refound ?? {}).length;
+    const held = Object.keys(y?.held ?? {}).length;
+    return [
+      ...(re ? [`${re} ${word} already on your key (re-found, not new)`] : []),
+      ...(held ? [`${held} ${word} held until a matcher dispute is settled`] : []),
+    ];
+  });
+  if (aside.length) lines.push("", `Not counted as new: ${aside.join(" · ")}.`);
   const failed = grade.gate.checks
     .filter((c) => !c.pass)
     .map((c) => `${c.name} (${c.value ?? "n/a"}, needs ${c.need})`);
@@ -134,30 +155,50 @@ function headline({ grade }) {
   return lines;
 }
 
-function structural({ structural: items }) {
-  if (!items.length) return ["None that a checker confirmed."];
-  return items.flatMap((s, i) => {
-    const f = s.finding;
-    const strip = s.frames.length
-      ? [
-          `| ${s.frames.map((_, n) => `Frame ${n + 1}`).join(" | ")} |`,
-          `|${"---|".repeat(s.frames.length)}`,
-          `| ${s.frames.map((p) => img("frame", p)).join(" | ")} |`,
-        ]
-      : ["_No frames were recorded with this finding._"];
-    const who = `${CLASS_WORDS[s.class] ?? s.class}${f.member ? ` (${f.member})` : ""}`;
-    return [
-      `### ${i + 1}. ${f.what}`,
-      "",
-      ...strip,
-      "",
-      ...(f.evidence?.quote ? [`> "${f.evidence.quote}"`, ""] : []),
-      formulaSentence(f),
-      "",
-      `_Found by ${who}${f.severity ? ` · ${sev(f.severity)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}._`,
-      "",
-    ];
-  });
+/** The structural groups that were not counted as new, and why, by finding id. */
+function notCounted(y) {
+  const ids = (g) => g.ids.join(", ");
+  return [
+    ...Object.values(y?.refound ?? {}).map(
+      (g) =>
+        `- ${ids(g)}: already on your key (${g.gold.join(", ")}), so re-found, not new — not counted.`,
+    ),
+    ...Object.values(y?.held ?? {}).map(
+      (g) =>
+        `- ${ids(g)}: one matcher tied it to ${g.candidates.join(" or ")} and the other did not; held out of the count until a tie-break settles it.`,
+    ),
+  ];
+}
+
+function structural({ structural: items, grade }) {
+  const rest = notCounted(grade.structural);
+  const tail = rest.length ? ["", "Not counted as new:", "", ...rest] : [];
+  if (!items.length) return ["None that a checker confirmed.", ...tail];
+  return [
+    ...items.flatMap((s, i) => {
+      const f = s.finding;
+      const strip = s.frames.length
+        ? [
+            `| ${s.frames.map((_, n) => `Frame ${n + 1}`).join(" | ")} |`,
+            `|${"---|".repeat(s.frames.length)}`,
+            `| ${s.frames.map((p) => img("frame", p)).join(" | ")} |`,
+          ]
+        : ["_No frames were recorded with this finding._"];
+      const who = `${CLASS_WORDS[s.class] ?? s.class}${f.member ? ` (${f.member})` : ""}`;
+      return [
+        `### ${i + 1}. ${f.what}`,
+        "",
+        ...strip,
+        "",
+        ...(f.evidence?.quote ? [`> "${oneLine(f.evidence.quote)}"`, ""] : []),
+        formulaSentence(f),
+        "",
+        `_Found by ${who}${f.severity ? ` · ${sev(f.severity)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}._`,
+        "",
+      ];
+    }),
+    ...tail,
+  ];
 }
 
 const mark = (score, primed) =>
@@ -224,9 +265,10 @@ function scorecard({ grade, titles }) {
   if (e.sessions)
     lines.push(
       "",
-      e.flagged
+      (e.flagged
         ? `Too easy: members succeeded in ${pct(e.successRate)} of ${e.sessions} sessions with a middle ease of ${e.medianEase} of 7, so they are stronger than the people they stand in for.`
-        : `Members succeeded in ${pct(e.successRate)} of ${e.sessions} sessions; middle ease ${e.medianEase ?? "n/a"} of 7.`,
+        : `Members succeeded in ${pct(e.successRate)} of ${e.sessions} sessions; middle ease ${e.medianEase ?? "n/a"} of 7.`) +
+        " (Counted over every session, not only the tasks you found hard, so this is a rough check, not the plan's calibration test.)",
     );
   return lines;
 }

@@ -144,14 +144,24 @@ describe("buildReadout — the made-up round, rendered", () => {
 
   it("states the headline in the plan's words, with its range", () => {
     expect(markdown).toContain(
-      "**Found 4 of your 6 without seeing them · 3 new structural problems · 2 new smaller ones.**",
+      "**Found 4 of your 6 without seeing them (2 only partly) · 3 new structural problems · 1 new smaller one.**",
+    );
+    expect(markdown).toContain("Full matches alone: 2 of 6 (33%).");
+    expect(markdown).toContain(
+      "Not counted as new: 1 structural already on your key (re-found, not new) · 1 smaller held until a matcher dispute is settled.",
     );
     expect(markdown).toContain("anywhere from 30% to 90% (95% confidence)");
     expect(markdown).toContain("1 of your 7 could not be shown in the test world and was struck");
   });
 
   it("lists every structural problem with its frames, words and one-sentence formula", () => {
-    expect(markdown).toContain("### 3. Nothing tells you the attic is upstairs");
+    expect(markdown).toContain("### 3. The cellar is only reachable through the garden");
+    expect(markdown).not.toContain("### 4.");
+    expect(markdown).toContain(
+      "- F13: already on your key (B1), so re-found, not new — not counted.",
+    );
+    // A quote with a newline stays inside its blockquote.
+    expect(markdown).toContain('> "Where is the cellar? I checked every door inside."');
     expect(markdown).toContain("reported 1 more time");
     expect(markdown).toContain("this breaks consistency and standards");
   });
@@ -186,6 +196,16 @@ describe("buildReadout — the made-up round, rendered", () => {
     expect(markdown).not.toContain("the lamp switch sits far");
     const revealed = render(["--reveal", "--sealed", join(FIX, "sealed")]).markdown;
     expect(revealed).toContain("| A1 — the lamp switch sits far from the lamp it lights |");
+  });
+
+  it("refuses an owner's screenshot outside the repo, whose link would break once committed", () => {
+    expect(() => render(["--owner-shot", join(tmpdir(), "elsewhere.png")])).toThrow(
+      /outside .*put it in the repo/,
+    );
+  });
+
+  it("says the easy-mode check is rough: it counts every session", () => {
+    expect(markdown).toContain("Counted over every session, not only the tasks you found hard");
   });
 
   it("says why the battle-test did not run when no results are given", () => {

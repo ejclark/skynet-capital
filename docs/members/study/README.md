@@ -145,7 +145,7 @@ the pin's directory with `--run .study-run`.
 - **Match:** same place *and* same mechanism; 0.5 for the same place with a vaguer mechanism.
 - **Thoroughness** per evaluator class and for the blind classes combined, with Wilson intervals.
 - **Validity:** verified-real ÷ reported.
-- **Structural yield:** verified findings about where things live, what a page is for and how pages connect, not on the key.
+- **Structural yield:** verified findings about where things live, what a page is for and how pages connect, not on the key. A finding that re-finds a known gap or a readers-only item is reported apart and never counted; one whose matchers dispute a key item is held until a tie-break settles it.
 - **Controls:** the fixed build must not report fixed items; planted defects must be found.
 - **Easy-mode flag:** success ≥ 90% with ease ≥ 6 where the owner struggled fails calibration.
 
@@ -164,9 +164,10 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
 - **A round directory** (layout in `scripts/study/round-files.mjs`): `findings.jsonl`,
   `classes.json` (finding → members · experts · words · instruments, kept apart so the matchers
   never see it), `matches-1.json` + `matches-2.json` (+ `tiebreak.json`), `checks.json` (real ·
-  false · world-artifact, with `same_as` to merge one problem reported twice), `touches.json` (which
-  key surfaces any trace reached) and `sessions/<member>/<run>/` (drive.mjs runs). A control round
-  holds findings, the matcher files and `control.json` `{expect: [ids]}`.
+  false · world-artifact, with `same_as` to merge one problem reported twice), `struck.json` (read
+  when `--struck` is not given), `touches.json` (which key surfaces any trace reached) and
+  `sessions/<member>/<run>/` (drive.mjs runs). A control round holds findings, the matcher files
+  and `control.json` `{expect: [ids]}`.
 - **Disputes are never settled kindly:** where the matchers disagree and no tie-break is given, the
   finding counts as no match and its row is marked for the owner.
 - **The arithmetic** (`grade-core.mjs`, specced in `tests/scripts/study-grade.spec.ts`): found at

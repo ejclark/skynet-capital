@@ -122,7 +122,16 @@ export function newProblems(args: {
   checks: Map<string, Check>;
   mainIds: string[];
   level: Level;
-}): { count: number; groups: Record<string, string[]> };
+}): NewProblems;
+export interface NewProblems {
+  count: number;
+  /** New problems: representative finding id → the counted finding ids in its `same_as` group. */
+  groups: Record<string, string[]>;
+  /** Groups that re-found a known gap or readers-only key item — not new, not counted. */
+  refound: Record<string, { ids: string[]; gold: string[] }>;
+  /** Groups an unsettled dispute ties to a key item — not counted until settled. */
+  held: Record<string, { ids: string[]; candidates: string[] }>;
+}
 export function easyMode(sessions: { success: boolean; ease: number | null }[]): {
   sessions: number;
   successRate: number | null;

@@ -19,6 +19,7 @@ export interface ReadoutOptions {
 export const FRAME_CAP: number;
 export function readoutArgs(argv: string[]): ReadoutOptions;
 export function copySmall(src: string, dest: string): string;
+export function insideRoot(root: string, path: string): string;
 export function buildReadout(opts: ReadoutOptions): {
   page: string;
   shots: string;

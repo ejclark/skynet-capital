@@ -9,6 +9,7 @@ import type {
   GoldItem,
   Interval,
   MatchEntry,
+  NewProblems,
   Thoroughness,
   Validity,
 } from "./grade-core.mjs";
@@ -70,8 +71,8 @@ export interface Grade {
     unprimedWilson: Interval | null;
   };
   perMember: Record<string, Thoroughness & { primed: string[] }>;
-  structural: { count: number; groups: Record<string, string[]> };
-  smaller: { count: number; groups: Record<string, string[]> };
+  structural: NewProblems;
+  smaller: NewProblems;
   agreement: Agreement & {
     disputed: {
       finding: string;

@@ -225,14 +225,69 @@ describe("validity and new problems", () => {
     });
   });
 
-  it("counts real structural findings off the main list once per same_as group", () => {
+  it("counts real structural findings off the key once per same_as group; re-finds apart", () => {
     const y = newProblems({ findings, byId, checks, mainIds: ["A1"], level: "structural" });
-    expect(y).toEqual({ count: 2, groups: { b: ["b", "e"], g: ["g"] } });
+    expect(y).toEqual({
+      count: 1,
+      groups: { b: ["b", "e"] },
+      refound: { g: { ids: ["g"], gold: ["B1"] } },
+      held: {},
+    });
+  });
+
+  // The three ways a duplicate or a dispute could pass for a new problem (code review, #4943).
+  it("never counts a duplicate of a key match, a dispute over a key item, or a loop twice", () => {
+    const disputed = (m1: MatchEntry, m2: MatchEntry): Consensus => ({
+      gold: null,
+      score: 0,
+      disputed: true,
+      resolvedBy: "unresolved",
+      m1: { gold: m1.gold, score: m1.score },
+      m2: { gold: m2.gold, score: m2.score },
+      tiebreak: null,
+    });
+    const byId = new Map([
+      ["x", agreed("A1", 1)],
+      ["z", agreed(null, 0)],
+      ["w", agreed(null, 0)],
+      ["y", disputed(m("y", "A2", 1), m("y", null, 0))],
+      ["p", agreed(null, 0)],
+      ["q", agreed(null, 0)],
+      ["r", agreed(null, 0)],
+      ["n", agreed(null, 0)],
+    ]);
+    const checks = new Map<string, Check>([
+      // z → w → x: a chain whose root is matched to the main list.
+      ["z", { finding: "z", verdict: "real", same_as: "w" }],
+      ["w", { finding: "w", verdict: "real", same_as: "x" }],
+      ["y", { finding: "y", verdict: "real" }],
+      // p ⇄ q: a two-way same_as, one problem; r joins it.
+      ["p", { finding: "p", verdict: "real", same_as: "q" }],
+      ["q", { finding: "q", verdict: "real", same_as: "p" }],
+      ["r", { finding: "r", verdict: "real", same_as: "q" }],
+      ["n", { finding: "n", verdict: "real" }],
+    ]);
+    const ids = ["x", "z", "w", "y", "p", "q", "r", "n"];
+    // x itself is outside the counted set (another class), and still answers for its group.
+    const counted = ids.filter((id) => id !== "x").map((id) => ({ id, level: "structural" }));
+    const y = newProblems({
+      findings: counted,
+      byId,
+      checks,
+      mainIds: ["A1", "A2"],
+      level: "structural",
+    });
+    expect(y).toEqual({
+      count: 2,
+      groups: { p: ["p", "q", "r"], n: ["n"] },
+      refound: {},
+      held: { y: { ids: ["y"], candidates: ["A2"] } },
+    });
   });
 });
 
 describe("easyMode — members that find everything easy fail calibration", () => {
-  it("flags success ≥ 90% with median ease ≥ 6", () => {
+  it("flags success ≥ 90% with median ease ≥ 6, on the raw rate", () => {
     const easy = Array.from({ length: 10 }, (_, i) => ({ success: i > 0, ease: 6 + (i % 2) }));
     expect(easyMode(easy)).toEqual({
       sessions: 10,
@@ -246,6 +301,9 @@ describe("easyMode — members that find everything easy fail calibration", () =
         { success: false, ease: 2 },
       ]).flagged,
     ).toBe(false);
+    // 8996 of 10000 rounds to 0.9 but is under it.
+    const near = Array.from({ length: 10000 }, (_, i) => ({ success: i < 8996, ease: 7 }));
+    expect(easyMode(near)).toMatchObject({ successRate: 0.9, flagged: false });
     expect(easyMode([])).toEqual({
       sessions: 0,
       successRate: null,
@@ -334,7 +392,7 @@ describe("gradeRound — the made-up round, end to end from disk", () => {
       total: 7,
       struck: 1,
       structural: 3,
-      smaller: 2,
+      smaller: 1,
     });
     expect(g.classes.blind.thoroughness).toMatchObject({
       full: 2,
@@ -354,19 +412,44 @@ describe("gradeRound — the made-up round, end to end from disk", () => {
 
   it("scores validity, matcher agreement and the disputed rows", () => {
     expect(g.classes.blind.validity).toEqual({
-      reported: 12,
-      real: 10,
+      reported: 13,
+      real: 11,
       worldArtifacts: 1,
       false: 1,
       unchecked: 1,
-      rate: 0.833,
+      rate: 0.846,
     });
-    expect(g.agreement.kappa).toBe(0.791);
+    expect(g.agreement.kappa).toBe(0.796);
     expect(g.agreement.disputed.map((d) => [d.finding, d.resolvedBy])).toEqual([
       ["F4", "tie-break"],
       ["F5", "unresolved"],
     ]);
     expect(g.gold.filter((r) => r.disputed).map((r) => r.id)).toEqual(["A3", "A5", "A6"]);
+  });
+
+  it("counts a known gap re-found as not new, and holds a disputed finding out of the yield", () => {
+    expect(Object.keys(g.structural.groups)).toEqual(["F7", "F9", "F15"]);
+    expect(g.structural.refound).toEqual({ F13: { ids: ["F13"], gold: ["B1"] } });
+    expect(g.smaller.held).toEqual({ F5: { ids: ["F5"], candidates: ["A5", "A6"] } });
+  });
+
+  it("marks a row disputed only where a matcher claimed it, never on a score of 0", () => {
+    const fs = [{ id: "f", level: "surface" }];
+    const one = gradeRound({
+      gold: parseGold("A3 three\nA7 seven"),
+      classes: { f: "experts" },
+      findings: fs,
+      m1: [m("f", "A3", 1)],
+      m2: [m("f", "A7", 0)],
+    });
+    expect(one.gold.filter((r) => r.disputed).map((r) => r.id)).toEqual(["A3"]);
+  });
+
+  it("reads the round's own struck.json when --struck is not given", () => {
+    const own = loadRound(
+      gradeArgs(["--sealed", join(FIX, "sealed"), "--round", join(FIX, "round")]),
+    );
+    expect(own.struck).toEqual(["A6"]);
   });
 
   it("records which items a trace touched, and passes the bar with both controls", () => {

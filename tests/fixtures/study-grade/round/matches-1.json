@@ -12,5 +12,6 @@
   { "finding": "F11", "gold": null, "score": 0 },
   { "finding": "F12", "gold": null, "score": 0 },
   { "finding": "F13", "gold": "B1", "score": 1 },
-  { "finding": "F14", "gold": null, "score": 0 }
+  { "finding": "F14", "gold": null, "score": 0 },
+  { "finding": "F15", "gold": null, "score": 0 }
 ]

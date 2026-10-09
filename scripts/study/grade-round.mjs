@@ -116,8 +116,11 @@ export function gradeRound(input) {
   const smaller = level("surface");
   const primed = primedSplit({ renderIds, findings: fs, byId, primes });
   const disputed = [...byId].filter(([, c]) => c.disputed);
+  // A row is disputed only where some matcher claimed it — a score of 0 is no claim (labelOf).
   const disputedGold = new Set(
-    disputed.flatMap(([, c]) => [c.m1?.gold, c.m2?.gold, c.tiebreak?.gold].filter(Boolean)),
+    disputed.flatMap(([, c]) =>
+      [c.m1, c.m2, c.tiebreak].filter((m) => m?.gold && m.score > 0).map((m) => m.gold),
+    ),
   );
 
   const rows = gold.map((g) => {

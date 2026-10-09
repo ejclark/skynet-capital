@@ -11,8 +11,9 @@
 //
 // THE PICTURE is the member session with the most confused turn (a failed session first on a tie;
 // `--picture` names one instead): the frame before, what they did, the frame after — beside the
-// owner's own screenshot (`--owner-shot`, linked, never copied). STRUCTURAL FINDINGS are the ones
-// grade.json counted as new, one per checker `same_as` group, each with its evidence frames.
+// owner's own screenshot (`--owner-shot`, linked, never copied, refused outside `--root`).
+// STRUCTURAL FINDINGS are the ones grade.json counted as new, one per checker `same_as` group, each
+// with its evidence frames; the groups not counted (re-found on the key, held on a dispute) follow.
 // The battle file is {fork, least?, shapes: [{name, success, wrongTurns, involuntaryScroll, ease,
 // frame?}]} (frame paths relative to the file); without it the section says why it did not run.
 // Key item wording appears only with `--reveal`, read from the sealed folder given — a readout
@@ -107,6 +108,22 @@ export function copySmall(src, dest) {
     if (statSync(dest).size <= FRAME_CAP) return dest;
   }
   throw new Error(`${src} stays over ${FRAME_CAP / 1024}KB even at 400px`);
+}
+
+/**
+ * The owner's screenshot, which is linked, never copied: it may show more than the page needs, so
+ * whether it goes in the repo is the owner's call. A path outside the repo would be a link that
+ * climbs out of it and shows as a broken image once committed, so it is refused.
+ */
+export function insideRoot(root, path) {
+  const abs = resolve(path);
+  const rel = relative(root, abs);
+  if (!rel || rel.startsWith("..") || isAbsolute(rel))
+    throw new Error(
+      `--owner-shot ${path} is outside ${root}; put it in the repo (e.g. docs/shots/) so the link renders`,
+    );
+  if (!existsSync(abs)) throw new Error(`--owner-shot ${path} does not exist`);
+  return abs;
 }
 
 /** The picture: the most confused turn across member sessions, or the session `--picture` names. */
@@ -215,7 +232,7 @@ export function buildReadout(opts) {
         parseGold(readFileSync(join(opts.sealed, "gold.md"), "utf8")).map((g) => [g.id, g.title]),
       )
     : null;
-  const ownerShot = opts.ownerShot ? link(resolve(opts.ownerShot)) : null;
+  const ownerShot = opts.ownerShot ? link(insideRoot(root, opts.ownerShot)) : null;
 
   const markdown = renderReadout({
     study: opts.study,

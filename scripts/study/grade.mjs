@@ -8,8 +8,9 @@
 // The sealed key is read ONLY from the --sealed directory given (gold.md + primes.json), never a
 // default path: the key lives outside every repo, and a grader that reached for it on its own
 // would be one stray run from leaking it. The round's layout is round-files.mjs's header; the
-// matcher, checker and touch files default to their names inside the round. `--struck` is the list
-// of key items parity proved cannot render (a JSON array or one id a line).
+// matcher, checker, touch and strike files default to their names inside the round. `--struck` is
+// the list of key items parity proved cannot render (a JSON array or one id a line); without it the
+// round's own struck.json is read when there is one.
 //
 // What it decides is grade-round.mjs (the assembly) over grade-core.mjs (the arithmetic). It writes
 // grade.json even when the inputs have problems (an unlabelled finding, an unknown id), prints
@@ -66,6 +67,16 @@ function loadControl(dir) {
   };
 }
 
+/**
+ * The struck key items: `--struck` when given, else the round's own struck.json when it has one.
+ * A strike left behind would keep an item that cannot render in the denominator, silently.
+ */
+function struckList(given, round) {
+  if (given) return readList(given);
+  const own = join(round, "struck.json");
+  return existsSync(own) ? readList(own) : [];
+}
+
 /** Every input gradeRound takes, read from disk. */
 export function loadRound(opts) {
   const round = resolve(opts.round);
@@ -84,7 +95,7 @@ export function loadRound(opts) {
     tiebreak: readOptional(at("tiebreak", "tiebreak.json"), []),
     checks: readOptional(at("checks", "checks.json"), []),
     touches: readOptional(at("touches", "touches.json"), null),
-    struck: opts.struck ? readList(opts.struck) : [],
+    struck: struckList(opts.struck, round),
     sessions: findSessions(round).map((s) => ({
       member: s.member,
       success: !!s.summary.oracle?.success,
