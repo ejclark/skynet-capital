@@ -1,0 +1,11 @@
+{
+  "id": "warsh-imf-fireside-2026-10-15",
+  "kind": "macro-print",
+  "title": "Fed Chair Warsh — fireside chat with IMF Managing Director Georgieva (Bangkok), 11:30 p.m. ET, the last scheduled Chair voice before the 10-17 blackout",
+  "date": "2026-10-15",
+  "status": "estimate",
+  "source": "EST: federalreserve.gov/newsevents/2026-october.htm, raw HTML parsed direct 2026-10-09 (HTTP 200, 106,747 bytes) — the Speeches table carries the row \"11:30 p.m. | Discussion - Chairman Kevin Warsh | Watch Live | Conversation between IMF Managing Director Georgieva and Federal Reserve Chaiman Warsh | At the Fireside Chat with International Monetary Fund (IMF) Managing Director Kristalina Georgieva, Bangkok, Thailand | 15\". Primary-sourced but filed estimate: this lane may not self-confirm an event it discovered in-sweep, and Board speaking slots are added and pulled on short notice. The page lists times in Eastern, so 11:30 p.m. ET on 10-15 is the morning of 10-16 in Bangkok; checked 2026-10-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED during the beige-book-2026-10-14 pulse-check adjacency sweep (2026-10-09). Why it is worth a row: it is the Chair's only scheduled public appearance between now and the 10-28 decision, it lands about 33 hours after the 10-14 Beige Book and CPI and about 12 hours after retail sales and PPI (all 10-15), and it falls 30 minutes before the 12:00 a.m. ET 10-17 blackout starts (fomc-blackout-start-2026-10-17). Warsh argued on 2026-08-28 for 'a quieter Fed', so the content may be thin, but Oct-28 hike odds have swung from ~71% to ~21% in two weeks, which makes any Chair framing of that CPI/PPI/retail-sales run the last repricing channel before the gate. A discussion format (Q&A with Georgieva) widens the range of what gets said relative to prepared remarks. Same-week Board slots seen on the same page and left in the beige-book ledger row rather than filed: Waller 10-13 3:45 a.m. ET (Bloomberg New Economy Forum, New Delhi) and Bowman 10-14 5:40 a.m. ET (IIF summit, Bangkok) and 10-14 10:55 p.m. ET (Bangkok Economic Festival). symbols: [] and no house playbook attaches. Proposed as an estimate; nothing here licenses an entry."
+}
