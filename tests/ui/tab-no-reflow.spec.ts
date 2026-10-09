@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * The profile's tabs stay put when one is selected (#4946). EARS: WHEN a member switches profile
@@ -37,4 +38,30 @@ describe("profile tabs do not reflow on selection (#4946)", () => {
       expect(block(current)).toMatch(/border-bottom-color:\s*var\(--accent\)/);
     });
   }
+});
+
+/** Every stylesheet under app/src, so a later or more specific rule elsewhere can't sneak 600 back. */
+function stylesheets(dir = "app/src"): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return stylesheets(p);
+    return e.name.endsWith(".css") ? [p] : [];
+  });
+}
+
+describe("no other rule re-weights the profile tabs (#4946)", () => {
+  it("every rule naming .cockpit-nav-btn or .acct-switch keeps font-weight 500 or leaves it alone", () => {
+    const offenders: string[] = [];
+    for (const file of stylesheets()) {
+      // innermost `selector { decls }` pairs — @media/@supports wrappers fall away on their own
+      for (const [, sel = "", decls = ""] of readFileSync(file, "utf8").matchAll(
+        /([^{}]+)\{([^{}]*)\}/g,
+      )) {
+        if (!/\.cockpit-nav-btn|\.acct-switch/.test(sel)) continue;
+        const w = weight(decls);
+        if (w !== undefined && w !== "500") offenders.push(`${file}: ${sel.trim()} → ${w}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
