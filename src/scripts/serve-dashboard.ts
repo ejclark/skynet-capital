@@ -58,6 +58,7 @@ import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
 import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
+import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
 
 const PORT = resolvePort(process.env);
@@ -65,6 +66,9 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
+  // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
+  // run marker for this one (#4618). The gauge and any incident start once we are listening.
+  const telemetry = bootTelemetry(process.env, dataSource.mode);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
   const roster = mergeRoster(envRoster, store.load());
@@ -281,6 +285,7 @@ async function main(): Promise<void> {
 
   const server = createDashboardServer({
     hub,
+    logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
     password,
@@ -433,14 +438,21 @@ async function main(): Promise<void> {
     ...(spotChecks ? { spotChecks } : {}),
   });
   // Fly's deploy sends SIGTERM to the old machine: stop accepting, end SSE with a retry hint,
-  // exit 0 inside kill_timeout (#4616).
-  installGracefulShutdown(server, { log: (line) => console.log(line) });
+  // exit 0 inside kill_timeout (#4616). The one exit that clears the run marker (#4618).
+  installGracefulShutdown(server, {
+    log: (line) => console.log(line),
+    exit: (code) => {
+      telemetry.cleanExit();
+      process.exit(code);
+    },
+  });
   server.listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
       `Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate} — feedback: ${feedback ? "on" : "off"}`,
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
+    telemetry.listening();
   });
 }
 
