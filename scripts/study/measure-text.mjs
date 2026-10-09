@@ -92,7 +92,8 @@ export function textTarget([text, nth = 0]) {
   const squash = (s) => (s ?? "").toLowerCase().replace(/\s+/g, "");
   const want = squash(text);
   const hits = [];
-  for (const el of document.querySelectorAll("body *")) {
+  // The native picker's stand-in sits outside <body> (measure-picker.mjs): a script taps its rows.
+  for (const el of document.querySelectorAll("body *, [data-study-overlay] *")) {
     if (squash(el.textContent) !== want) continue;
     if ([...el.children].some((c) => squash(c.textContent) === want)) continue;
     const r = el.getBoundingClientRect();

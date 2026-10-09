@@ -250,14 +250,19 @@ function pageChanged(rec) {
  * it worked, on something with no role (a clickable `<tr>`) — an accessibility gap, not a miss.
  */
 export function tapResult(rec) {
-  const outcome = tapOutcome(rec.tap);
+  // A tap the native picker's stand-in took (it opened, chose a row, or closed it) did something.
+  const outcome = rec.nativePicker && rec.tap ? "hit" : tapOutcome(rec.tap);
   return outcome && outcome !== "hit" && pageChanged(rec) ? "unlabelled" : outcome;
 }
 
-/** True when an operated control changed nothing visible: same text, same URL, same scroll. */
+/**
+ * True when an operated control changed nothing visible: same text, same URL, same scroll. A tap
+ * the native picker took is never one — opening, choosing or closing it is what the frame shows,
+ * though the overlay is kept out of the text hash.
+ */
 export function noVisibleEffect(rec) {
   // Taps on a control only: a key with nothing open, or a text field taking focus, is no control.
-  if (rec.action.kind !== "tap") return false;
+  if (rec.action.kind !== "tap" || rec.nativePicker) return false;
   if (tapOutcome(rec.tap) !== "hit" || FIELD_ROLES.has(rec.tap.hit.role)) return false;
   return (
     rec.before.textHash === rec.after.textHash &&

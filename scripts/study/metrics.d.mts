@@ -3,6 +3,7 @@
 // record session.mjs writes, one JSON line per action.
 
 import type { PhoneFinding, Rect } from "../crawl/phone.mjs";
+import type { NativePickerMoment } from "./picker.mjs";
 
 export type Finding = PhoneFinding;
 
@@ -94,6 +95,8 @@ export interface TraceRecord {
   shifts: Shift[];
   overflow: Overflow | null;
   landing?: { name: string; top: number; screens: number | null } | null;
+  /** What the native picker's stand-in did on this action (picker.mjs → `nativePickerOf`). */
+  nativePicker?: NativePickerMoment;
   /** Each watched snippet's share inside this record's frame (measure-text.mjs → `seenText`). */
   seen?: Seen[];
 }
@@ -125,7 +128,7 @@ export function scrollSplit(rec: Pick<TraceRecord, "scroll" | "action">): {
 };
 export function lateScroll(rec: Pick<TraceRecord, "scroll">): number;
 export function tapResult(
-  rec: Pick<TraceRecord, "tap" | "before" | "after">,
+  rec: Pick<TraceRecord, "tap" | "before" | "after" | "nativePicker">,
 ): "hit" | "covered" | "near-miss" | "dead" | "unlabelled" | null;
 export function tapOutcome(
   tap: Pick<Tap, "hit" | "nearest"> | null,
