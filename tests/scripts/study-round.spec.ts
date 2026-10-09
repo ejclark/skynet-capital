@@ -29,6 +29,7 @@ import {
   canaryQuestion,
   canaryVerdict,
   censusPlan,
+  keepClean,
   lintFeedback,
   mergeFacts,
   modeChanges,
@@ -197,6 +198,17 @@ describe("what the task author hears back", () => {
       "rewrite eric--today.json item 3 (interface-label)",
     ]);
     expect(lintFeedback("lint: clean")).toEqual([]);
+  });
+
+  it("keeps the tasks the last lint no longer names, and drops the rest by kind only", () => {
+    const tasks = [1, 2, 3].map((n) => ({ id: `eric--today--t${n}` }));
+    const { kept, dropped } = keepClean(tasks, [
+      "rewrite tasks.json item 2 (sealed-word)",
+      'rewrite tasks.json item 2 (interface-label: "week")',
+    ]);
+    expect(kept.map((t) => t.id)).toEqual(["eric--today--t1", "eric--today--t3"]);
+    expect(dropped).toEqual([{ item: 2, kinds: ["sealed-word", "interface-label"] }]);
+    expect(JSON.stringify(dropped)).not.toMatch(/week/);
   });
 
   it("passes a label-naming line through, but never a sealed-word line that names a word", () => {

@@ -164,3 +164,9 @@ export function mergeFacts(sheets: { world: string; facts: Fact[]; dataNames?: s
   facts: Fact[];
   dataNames: string[];
 };
+
+/** After the last rewrite: keep tasks the lint no longer names; drop the rest (kinds only). */
+export function keepClean<T extends { id: string }>(
+  tasks: T[],
+  feedback: string[],
+): { kept: T[]; dropped: { item: number; kinds: string[] }[] };
