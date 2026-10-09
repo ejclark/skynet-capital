@@ -20,7 +20,7 @@ const decision = (over: Partial<Decision>): Decision => ({
   clocks: ["Expires in 24 days", "8 contracts · worth $5,040"],
   primary: {
     label: "Review on Trade ↗",
-    href: "/app/trade?desk=eric&symbol=TSLA&strike=400&exp=2026-10-17",
+    href: "/app/trade?desk=eric&symbol=TSLA&section=orders&manage=TSLA261017P00400000",
   },
   secondary: { label: "Show in table", href: "#pos-TSLA261017P00400000" },
   stakeRaw: 5040,
@@ -62,7 +62,7 @@ describe("DecisionPager", () => {
     wrap(<DecisionPager accountId="eric" decisions={[decision({})]} />);
     expect(screen.getByRole("link", { name: "Review on Trade ↗" })).toHaveAttribute(
       "href",
-      "/app/trade?desk=eric&symbol=TSLA&strike=400&exp=2026-10-17",
+      "/app/trade?desk=eric&symbol=TSLA&section=orders&manage=TSLA261017P00400000",
     );
   });
 

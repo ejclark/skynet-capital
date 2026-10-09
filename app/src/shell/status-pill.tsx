@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { useConnection } from "../live/connection";
 import {
   fetchOpsStatus,
@@ -10,6 +10,7 @@ import {
   opsAttentionCount,
   opsAttentionLabel,
 } from "../live/ops-status";
+import { useDismiss } from "./use-dismiss";
 
 /**
  * THE STATUS PILL — one mark in the topbar for "is this page current, and is the fleet healthy".
@@ -87,37 +88,6 @@ function OpsPanel({
       ) : null}
     </section>
   );
-}
-
-/** Escape and a click outside both close the popover; Escape hands focus back to the pill. */
-function useDismiss(
-  open: boolean,
-  close: () => void,
-): {
-  readonly wrapRef: React.RefObject<HTMLDivElement | null>;
-  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
-} {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        close();
-        buttonRef.current?.focus();
-      }
-    };
-    const onPointer = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) close();
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointer);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open, close]);
-  return { wrapRef, buttonRef };
 }
 
 export function StatusPill(): ReactElement {

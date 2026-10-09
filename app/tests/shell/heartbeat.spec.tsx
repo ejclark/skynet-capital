@@ -93,6 +93,49 @@ describe("HeartbeatChip", () => {
     expect(screen.getByText("waiting for its window")).toBeInTheDocument();
     expect(screen.getByText(/^at least since/)).toBeInTheDocument();
   });
+
+  // #4949 — the table opened but only a second tap on the chip closed it.
+  it("closes on Escape and hands focus back to the chip", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatChip deskId="sauron" />));
+    const chip = await screen.findByRole("button", { name: /Stale/ });
+    fireEvent.click(chip);
+    const table = screen.getByRole("table");
+    expect(chip.getAttribute("aria-controls")).toBe(table.parentElement?.id);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(chip.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(chip);
+  });
+
+  it("closes on a click outside, and stays open on a click inside the table", async () => {
+    next = staleDesk;
+    render(
+      withClient(
+        <>
+          <HeartbeatChip deskId="sauron" />
+          <p>elsewhere</p>
+        </>,
+      ),
+    );
+    const chip = await screen.findByRole("button", { name: /Stale/ });
+    fireEvent.click(chip);
+    fireEvent.pointerDown(screen.getByText("waiting for its window"));
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByText("elsewhere"));
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("reads stale, not idle, when a closed market follows a session with no pass", async () => {
+    next = {
+      available: true,
+      heartbeat: { ...staleHeartbeat, marketOpen: false, sinceLastPassMs: 3 * 86_400_000 },
+    };
+    render(withClient(<HeartbeatChip deskId="sauron" />));
+    const chip = await screen.findByRole("button", { name: /Stale/ });
+    expect(chip.textContent).toContain("Stale · no pass last session");
+    expect(chip.textContent).not.toContain("idle");
+  });
 });
 
 describe("HeartbeatSection", () => {
