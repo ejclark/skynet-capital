@@ -1,0 +1,11 @@
+{
+  "id": "umich-sentiment-final-2026-10-23",
+  "kind": "macro-print",
+  "title": "University of Michigan consumer sentiment — final (Oct 2026), the baseline the Nov 6 preliminary is measured against",
+  "date": "2026-10-23",
+  "status": "confirmed",
+  "source": "UMICH: the Surveys of Consumers' own 2026 scheduling documents, both re-fetched direct 2026-10-09 by this event's own never-assessed research and decoded locally from their PDF text layers — `2026 Release Dates` (data.sca.isr.umich.edu/fetchdoc.php?docid=79628, HTTP 200, 132,710 bytes) lists \"October 23 / October Final\", and `2026 Interview Dates` (docid=79629, HTTP 200, 89,846 bytes) reads \"September 22 IW Begins / October 5 Prelim Ends / October 19 IW Ends\" for October, the final's window closing on the Monday before the release. Byte counts match the 2026-10-07 reads recorded by the proposing lane exactly. No clock time appears in either document and the apex host sca.isr.umich.edu did not resolve (curl exit 6, recorded in the ledger's probe-ref.blocked), so 10:00 ET stays customary, not sourced; the date alone is confirmed. Promoted estimate -> confirmed 2026-10-09 by this event's own research, the closing path the no-self-confirm limit leaves open to a proposing sweep (as umich-sentiment-final-2026-09-25 did)",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Promoted from the 2026-10-07 proposal (proposals/umich-sentiment-final-2026-10-23.from-umich-sentiment-prelim-2026-11-06.json, now inert). WHY IT HAS STANDING: the 11-06 prelim's month-over-month change, its 6.60-point kill bar and FT-umich-sentiment-prelim-2026-11-06-1/-2 are all measured against October's final, a number no other calendar entry owns. The final's exclusive collection stretch is 2026-10-06 -> 10-19 and carries cpi-2026-10-14 (confirmed, high), retail sales / PPI 10-15 and the 10-16 opex; the 10-23 release date itself has no tracked high-impact event on it and sits inside the 10-17 -> 10-29 FOMC blackout. Read-it-do-not-trade-it: symbols: []."
+}
