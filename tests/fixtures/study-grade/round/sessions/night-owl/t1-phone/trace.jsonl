@@ -1,0 +1,4 @@
+{"step":0,"action":{"kind":"tap","x":120,"y":300},"tap":{"hit":{"role":"link","name":"Hallway"}},"frame":"/elsewhere/frames/001.jpg"}
+{"step":1,"action":{"kind":"tap","x":80,"y":420},"tap":{"hit":{"role":"button","name":"Red rug"}},"frame":"/elsewhere/frames/002.jpg"}
+{"step":2,"action":{"kind":"scroll","dir":"down","screens":1},"frame":"/elsewhere/frames/003.jpg"}
+{"step":3,"action":{"kind":"give_up"},"frame":null}

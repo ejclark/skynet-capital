@@ -145,9 +145,37 @@ the pin's directory with `--run .study-run`.
 - **Match:** same place *and* same mechanism; 0.5 for the same place with a vaguer mechanism.
 - **Thoroughness** per evaluator class and for the blind classes combined, with Wilson intervals.
 - **Validity:** verified-real ÷ reported.
-- **Structural yield:** verified findings about where things live, what a page is for and how pages connect, not on the key.
+- **Structural yield:** verified findings about where things live, what a page is for and how pages connect, not on the key. A finding that re-finds a known gap or a readers-only item is reported apart and never counted; one whose matchers dispute a key item is held until a tie-break settles it.
 - **Controls:** the fixed build must not report fixed items; planted defects must be found.
 - **Easy-mode flag:** success ≥ 90% with ease ≥ 6 where the owner struggled fails calibration.
+
+```sh
+node scripts/study/grade.mjs --sealed <key dir> --round <round dir> [--struck <parity strikes>] \
+  --negative <fixed-build round> --positive <planted-defects round>          # → <round>/grade.json
+node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --study <name> \
+  --next-area "<area>" --cost "<predicted cost>" [--owner-shot <png>] [--battle <battle.json>] \
+  [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
+```
+
+- **The key is read only from `--sealed`.** `gold.md` (lines starting `A1`… the main list, `B1`…
+  known gaps, `S1`… defects only the readers found) and `primes.json` (member → the ids their card
+  hints at). `grade.json` carries ids, never the key's wording; the readout shows wording only with
+  `--reveal`.
+- **A round directory** (layout in `scripts/study/round-files.mjs`): `findings.jsonl`,
+  `classes.json` (finding → members · experts · words · instruments, kept apart so the matchers
+  never see it), `matches-1.json` + `matches-2.json` (+ `tiebreak.json`), `checks.json` (real ·
+  false · world-artifact, with `same_as` to merge one problem reported twice), `struck.json` (read
+  when `--struck` is not given), `touches.json` (which key surfaces any trace reached) and
+  `sessions/<member>/<run>/` (drive.mjs runs). A control round holds findings, the matcher files
+  and `control.json` `{expect: [ids]}`.
+- **Disputes are never settled kindly:** where the matchers disagree and no tie-break is given, the
+  finding counts as no match and its row is marked for the owner.
+- **The arithmetic** (`grade-core.mjs`, specced in `tests/scripts/study-grade.spec.ts`): found at
+  ≥ 0.5 with partial credit apart; Wilson 95% ranges; primed = found only by members hinted at it;
+  world artifacts leave the validity denominator; new problems count once per `same_as` group;
+  kappa over the two matchers' labels; the cycle gate and the stop rule.
+- **The readout's frames** are copied ≤ 100KB to `docs/shots/study-<name>/` (macOS `sips` shrinks a
+  larger one). The worked example is `tests/fixtures/study-grade/` — a made-up house, not an app.
 
 ## The readout (one shape, every time)
 
