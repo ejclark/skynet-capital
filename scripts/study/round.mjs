@@ -2,7 +2,12 @@
 //
 //   node scripts/study/round.mjs --pin <pin dir> --out <dir> --sealed <dir>
 //        [--profile scripts/study/tasks/<area>.json] [--thin] [--dry-run] [--stub <dir>]
-//        [--concurrency N] [--only-world <name>] [--cap N]
+//        [--concurrency N] [--only-world <name>] [--cap N] [--runs N] [--experts N]
+//        [--frozen-from <main round> --control negative|positive --expect <key ids file>]
+//
+// With --frozen-from it is a CONTROL round (round-control.mjs): the main round's frozen tasks,
+// re-verified and copied in, against this --pin — no framer, no task author, no words pass or
+// audit, 1 run and 1 expert unless told otherwise, and <out>/control.json for the grader.
 //
 // Run from today's checkout (the harness and the role prompts); everything the members see runs
 // in the pin (`pin.mjs prepare`), whose harness must be this checkout's — a mismatch is refused
@@ -53,8 +58,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
 import { FILES, SESSIONS } from "./round-contract.mjs";
+import { adoptSource } from "./round-control.mjs";
 import {
   censusPlan,
+  isControl,
   modeChanges,
   roundArgs,
   roundMode,
@@ -223,6 +230,8 @@ export async function runRound(argv, seams = {}) {
   const ctx = context(opts, seams);
   ctx.log("round", "start", { argv, thin: opts.thin, dryRun: opts.dryRun, stub: ctx.stub });
   try {
+    // A control round plans from its main round (thin cut, world), so it reads it before the mode.
+    if (isControl(opts)) adoptSource(ctx);
     holdMode(ctx);
     if (!ctx.stub) {
       const auth = signedIn();

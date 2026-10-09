@@ -73,6 +73,8 @@ export interface ControlResult {
   why: string;
   expect?: string[];
   found?: string[];
+  /** The control's own sessions, and how many succeeded — when they were recorded. */
+  sessions?: { sessions: number; succeeded: number };
 }
 export interface Gate {
   pass: boolean;
@@ -140,7 +142,12 @@ export function easyMode(sessions: { success: boolean; ease: number | null }[]):
 };
 export function controlVerdict(
   kind: "negative" | "positive",
-  control: { expect: string[]; findings: Finding[]; byId: Map<string, Consensus> } | null,
+  control: {
+    expect: string[];
+    findings: Finding[];
+    byId: Map<string, Consensus>;
+    sessions?: { success: boolean }[];
+  } | null,
 ): ControlResult;
 export function cycleGate(args: {
   recall: number | null;

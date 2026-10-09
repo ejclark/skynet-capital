@@ -189,7 +189,13 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
     `checks.json` (real · false · world-artifact, with `same_as` to merge one problem reported
     twice), `struck.json` (read when `--struck` is not given), `touches.json` (which key surfaces
     any trace reached).
-  - A control round holds findings, the matcher files and `control.json` `{expect: [ids]}`.
+  - A control round is a round directory too (`round.mjs --frozen-from`, below), plus the matcher
+    files and `control.json` `{kind, source, frozen, pin, sourcePin, expect: [ids]}`. The grader
+    holds it to the flag it is passed under (`--negative` takes only a negative control), to
+    the main round's `frozen.json` and to another pin than the main round's — a control that asked
+    other questions, or asked them of the same build, controls nothing. A negative control's ids
+    must be on the key, and it fails when none of its sessions succeeded (silence from a build it
+    never reached proves nothing). A control round passed as `--round` is refused.
 - **Disputes are never settled kindly:** where the matchers disagree and no tie-break is given, the
   finding counts as no match and its row is marked for the owner.
 - **The arithmetic** (`grade-core.mjs`, specced in `tests/scripts/study-grade.spec.ts`): found at
@@ -288,6 +294,34 @@ flowchart LR
   `tasks.json` against `frozen.json`, and a session dir is kept only when its `task.sha256` matches
   the task it is planned for. A pin whose harness is not the checkout's is refused with its
   `pin.mjs prepare` command, never re-prepared under another round.
+
+## The control rounds
+
+Two more rounds, each on the main round's **frozen** tasks against another pinned build: the
+fixed build (negative — it must not report what the fixes removed) and a build with planted
+defects (positive — they must be found).
+
+```sh
+node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answer-key dir> \
+  --frozen-from <main round dir> --control negative|positive --expect <key ids file> \
+  [--runs N] [--experts N]
+```
+
+- **Nothing is re-authored.** The framer and the task author never run: the main round's
+  `tasks.json`, per-task files and `frozen.json` are copied in, and refused unless `tasks.json`
+  still hashes to its freeze. The member cards are rebuilt and refused unless each hashes to the
+  main round's. The main round must have run its sessions on that freeze, under the same stub
+  or sealed mode and the same `--sealed` key.
+- **The main round's shape:** its members × worlds × viewports, its thin cut, its world — so
+  `--thin` and `--only-world` are refused beside `--frozen-from`, and the area config must be the
+  one it ran (same sha256). A control of a control is refused.
+- **The build's own inputs:** census, facts sheet and harvest come from the control pin. A frozen
+  task whose fact this build serves differently is logged as `fact-drift`, never refused.
+- **Cheaper:** 1 run a task and 1 expert unless `--runs` / `--experts` say otherwise; no words
+  pass or member-type audit.
+- **`--expect`** is the key ids the control is about (a JSON array or one id a line) — ids only,
+  never wording, and no blind role reads them. They land in `control.json` and `round.json`; a
+  resume under another kind, source or list is refused.
 
 ## Starting a new area — checklist
 

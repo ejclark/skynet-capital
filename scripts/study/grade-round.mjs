@@ -16,7 +16,7 @@ import {
   validity,
   verdictOf,
 } from "./grade-core.mjs";
-import { BLIND, CLASSES, classProblems } from "./round-contract.mjs";
+import { BLIND, CLASSES, classProblems, controlProblems } from "./round-contract.mjs";
 
 const LEVELS = ["structural", "surface"];
 const VERDICTS = ["real", "false", "world-artifact"];
@@ -35,9 +35,29 @@ function checkIndex(checks, ids, problems) {
   return out;
 }
 
-/** A control round ({expect, findings, m1, m2, tiebreak}) → its verdict. */
-function control(kind, round, problems) {
+/**
+ * A control round ({expect, findings, m1, m2, tiebreak, record?, sessions?}) → its verdict.
+ * `record` is its control.json as the round wrote it, held to the contract (its kind, the main
+ * round's freeze, another pin); a hand-made control may carry only `expect`. A negative control's
+ * ids must be on the key (`goldIds`): an id it never could find would pass it for nothing. A
+ * positive control's may be planted defects outside the key — an unknown one fails it, loudly.
+ */
+function control(kind, round, problems, { frozen, goldIds }) {
   if (!round) return controlVerdict(kind, null);
+  if (round.record) {
+    problems.push(
+      ...controlProblems(round.record, { kind, frozen }).map((x) => `${kind} control: ${x}`),
+    );
+  }
+  if (!round.expect?.length) {
+    if (!round.record) problems.push(`${kind} control: control.json names no key ids to expect`);
+    return { kind, ran: true, pass: false, expect: [], found: [], why: "names nothing to expect" };
+  }
+  if (kind === "negative") {
+    for (const id of round.expect) {
+      if (!goldIds.has(id)) problems.push(`negative control: expect names unknown ${id}`);
+    }
+  }
   const { byId, problems: p } = consensus({
     ids: round.findings.map((f) => f.id),
     m1: round.m1,
@@ -45,7 +65,8 @@ function control(kind, round, problems) {
     tiebreak: round.tiebreak,
   });
   problems.push(...p.map((x) => `${kind} control: ${x}`));
-  return controlVerdict(kind, { expect: round.expect, findings: round.findings, byId });
+  const { expect, findings, sessions } = round;
+  return controlVerdict(kind, { expect, findings, byId, sessions });
 }
 
 /** Per class (and the blind classes together): thoroughness, validity, new problems by level. */
@@ -81,7 +102,8 @@ function perMember(fs, byId, renderIds, primes) {
  * Grade one round. Input: the parsed key (`gold`), `primes` (member → key ids its card hints at),
  * `findings` (+ `classes`: id → class), the two matcher files and an optional tie-break, the
  * checker's verdicts, `struck` key ids, `touches` (key id → touched; null when not recorded), the
- * member sessions ({member, success, ease}), and the two control rounds (null when not run).
+ * member sessions ({member, success, ease}), the two control rounds (null when not run), and
+ * `frozen` — the main round's frozen.json sha256, which each control must have run.
  */
 export function gradeRound(input) {
   const { gold, primes = {}, classes, m1, m2, tiebreak = [], checks = [], struck = [] } = input;
@@ -137,8 +159,8 @@ export function gradeRound(input) {
     };
   });
   const controls = {
-    negative: control("negative", negative, problems),
-    positive: control("positive", positive, problems),
+    negative: control("negative", negative, problems, { frozen: input.frozen ?? null, goldIds }),
+    positive: control("positive", positive, problems, { frozen: input.frozen ?? null, goldIds }),
   };
   const blind = classesOut.blind;
   return {

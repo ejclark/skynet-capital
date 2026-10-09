@@ -55,16 +55,25 @@ export function gradeArgs(argv) {
   return opts;
 }
 
-/** A control round: its findings, matcher files and what it expects (control.json). */
+/**
+ * A control round (round.mjs --frozen-from … --control <kind>): its findings, matcher files,
+ * sessions (whether each reached its build) and control.json — what it expects, and the record
+ * gradeRound holds to the contract (its kind, the main round's freeze, another pin). A dir with no
+ * control.json is refused: it is not a control round.
+ */
 function loadControl(dir) {
   if (!dir) return null;
-  const control = readJson(join(dir, FILES.control));
+  const file = join(dir, FILES.control);
+  if (!existsSync(file)) throw new Error(`${dir} holds no ${FILES.control} — not a control round`);
+  const control = readJson(file);
   return {
+    record: control,
     expect: control.expect,
     findings: readJsonl(join(dir, FILES.findings)),
     m1: readJson(join(dir, FILES.m1)),
     m2: readJson(join(dir, FILES.m2)),
     tiebreak: readOptional(join(dir, FILES.tiebreak), []),
+    sessions: findSessions(dir).map((s) => ({ success: !!s.summary.oracle?.success })),
   };
 }
 
@@ -78,9 +87,16 @@ function struckList(given, round) {
   return existsSync(own) ? readList(own) : [];
 }
 
-/** Every input gradeRound takes, read from disk. */
+/**
+ * Every input gradeRound takes, read from disk. A control round passed as `--round` is refused:
+ * one run, one expert, another build — its recall is no headline.
+ */
 export function loadRound(opts) {
   const round = resolve(opts.round);
+  const mode = readOptional(join(round, "round.json"), null);
+  if (existsSync(join(round, FILES.control)) || mode?.control) {
+    throw new Error(`${round} is a control round — pass it as --negative or --positive`);
+  }
   const at = (key, name) => opts.files?.[key] ?? join(round, name);
   const goldPath = join(opts.sealed, "gold.md");
   const primesPath = join(opts.sealed, "primes.json");
@@ -104,6 +120,7 @@ export function loadRound(opts) {
     })),
     negative: loadControl(opts.negative),
     positive: loadControl(opts.positive),
+    frozen: readOptional(join(round, FILES.frozen), null)?.sha256 ?? null,
   };
 }
 

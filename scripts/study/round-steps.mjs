@@ -6,8 +6,16 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SESSIONS } from "./round-contract.mjs";
+import { adoptTasks } from "./round-control.mjs";
 import { framerText, taskAuthorText } from "./round-messages.mjs";
-import { lintFeedback, planSessions, resolveTasks, taskUnits } from "./round-plan.mjs";
+import {
+  isControl,
+  lintFeedback,
+  planSessions,
+  resolveTasks,
+  runsOverride,
+  taskUnits,
+} from "./round-plan.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
 /** How many rewrites the task author gets before the round stops. */
@@ -27,6 +35,8 @@ export function readCards(ctx, members) {
 /** Step 3: the framer reads every card and the page list → the job map. */
 export async function framer(ctx) {
   const step = "3-framer";
+  // A control round re-asks the main round's frozen tasks; the job map only fed their authoring.
+  if (isControl(ctx.opts)) return { skipped: "control", from: ctx.source.dir };
   const dir = ctx.dir(step);
   const cards = readCards(ctx, [...new Set(ctx.matrix.map((r) => r.member))]);
   const answer = await ctx.call(step)({
@@ -92,6 +102,7 @@ async function authorUnit(ctx, unit, { jobMap, facts, call }) {
 /** Step 4: tasks per member × world, then frozen with their sha256. */
 export async function tasks(ctx) {
   const step = "4-tasks";
+  if (isControl(ctx.opts)) return adoptTasks(ctx);
   const dir = ctx.dir(step);
   const jobMap = readJson(join(ctx.out, "3-framer", "job-map.json"));
   const { facts } = readJson(join(ctx.out, "0-preflight", "facts.json"));
@@ -124,6 +135,12 @@ function checkFreeze(ctx) {
   if (sha256(text) !== frozen.sha256) {
     throw new Error(
       `4-tasks/tasks.json no longer hashes to frozen.json (${frozen.sha256.slice(0, 12)}) — start a fresh --out`,
+    );
+  }
+  // A control's copy must still be the main round's freeze, resumed or not (round-control.mjs).
+  if (isControl(ctx.opts) && frozen.sha256 !== ctx.source.frozen) {
+    throw new Error(
+      `frozen.json (${frozen.sha256.slice(0, 12)}) is not the --frozen-from round's freeze — start a fresh --out`,
     );
   }
   const shas = {};
@@ -162,9 +179,13 @@ export async function sessions(ctx) {
     const key = `${t.member}--${t.world}`;
     tasksByUnit[key] = [...(tasksByUnit[key] ?? []), t.id];
   }
-  const plan = planSessions({ p: ctx.p, matrix: ctx.matrix, tasksByUnit, thin: ctx.opts.thin }).map(
-    (s) => ({ ...s, taskSha: shas[s.task] }),
-  );
+  const plan = planSessions({
+    p: ctx.p,
+    matrix: ctx.matrix,
+    tasksByUnit,
+    thin: ctx.opts.thin,
+    runs: runsOverride(ctx.opts),
+  }).map((s) => ({ ...s, taskSha: shas[s.task] }));
   writeJson(join(dir, "plan.json"), plan);
   const n = ctx.opts.concurrency ?? ctx.p.concurrency;
   ctx.log(step, "plan", { sessions: plan.length, concurrency: n, frozen: frozenSha });

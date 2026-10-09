@@ -45,7 +45,22 @@ export interface RoundArgs {
   concurrency?: number;
   onlyWorld?: string;
   cap?: number;
+  runs?: number;
+  experts?: number;
+  /** A control round: the main round whose frozen tasks it runs, its kind, the --expect file. */
+  frozenFrom?: string;
+  control?: "negative" | "positive";
+  expect?: string;
+  /** Set by round-control.mjs once the main round is read. */
+  sourceFrozen?: string;
+  expectIds?: string[];
 }
+
+export const CONTROL_KINDS: ("negative" | "positive")[];
+export function isControl(opts: Partial<RoundArgs> | null | undefined): boolean;
+export function runsOverride(opts: Partial<RoundArgs>): number | undefined;
+export function expertCount(p: AreaConfig, opts: Partial<RoundArgs>): number;
+export function reviewSkip(opts: Partial<RoundArgs>): "thin" | "control" | null;
 
 export function roundArgs(
   argv: string[],
@@ -60,6 +75,14 @@ export interface RoundMode {
   stub: string | null;
   onlyWorld: string | null;
   cap: number | null;
+  runs: number | null;
+  experts: number | null;
+  control: {
+    kind: "negative" | "positive";
+    from: string;
+    frozen: string | null;
+    expect: string[] | null;
+  } | null;
 }
 export function roundMode(
   opts: Partial<RoundArgs> & { profile: string; pin: string; sealed: string },
@@ -99,6 +122,7 @@ export function planSessions(args: {
   matrix: MatrixRow[];
   tasksByUnit: Record<string, string[]>;
   thin?: boolean;
+  runs?: number;
 }): PlannedSession[];
 
 export interface PlannedCensus {

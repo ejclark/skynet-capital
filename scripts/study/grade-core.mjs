@@ -319,25 +319,33 @@ export function easyMode(sessions) {
 /**
  * A control round's verdict. Negative (the fixed build): none of `expect` may be found. Positive
  * (planted defects): every one must be. Findings of any class count. Not given → not run, failed.
+ * `sessions` ([{success}], when recorded): a negative control none of whose sessions succeeded
+ * never showed the fixed build was reached, so its silence proves nothing — it fails.
  */
 export function controlVerdict(kind, control) {
   if (!control) return { kind, ran: false, pass: false, why: "not run" };
-  const { expect, findings, byId } = control;
+  const { expect, findings, byId, sessions } = control;
   if (!expect?.length) throw new Error(`the ${kind} control names nothing to expect`);
   const found = [...bestScores(findings, byId, null)]
     .filter(([, s]) => s >= FOUND_MIN)
     .map(([id]) => id);
   const hit = expect.filter((id) => found.includes(id));
-  const pass = kind === "negative" ? hit.length === 0 : hit.length === expect.length;
+  const ran = Array.isArray(sessions)
+    ? { sessions: sessions.length, succeeded: sessions.filter((s) => s.success).length }
+    : null;
+  const unreached = kind === "negative" && ran !== null && ran.succeeded === 0;
+  const pass = kind === "negative" ? hit.length === 0 && !unreached : hit.length === expect.length;
   const why =
     kind === "negative"
-      ? pass
-        ? "none of the fixed items was reported"
-        : `still reported: ${hit.join(", ")}`
+      ? hit.length > 0
+        ? `still reported: ${hit.join(", ")}`
+        : unreached
+          ? `no session succeeded (0 of ${ran.sessions}) — the fixed build was never shown reached`
+          : "none of the fixed items was reported"
       : pass
         ? "every planted defect was found"
         : `missed: ${expect.filter((id) => !hit.includes(id)).join(", ")}`;
-  return { kind, ran: true, pass, expect, found: hit, why };
+  return { kind, ran: true, pass, expect, found: hit, why, ...(ran ? { sessions: ran } : {}) };
 }
 
 /** The cycle gate (recall ≥ 0.6 at validity ≥ 0.5, ≥ 3 structural, both controls) and the kill rule. */
