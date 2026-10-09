@@ -7,6 +7,8 @@ export interface PickerOption {
   value: string;
   label: string;
   disabled?: boolean;
+  /** Not displayed (the `hidden` attribute, display:none) — a native popup leaves it out. */
+  hidden?: boolean;
 }
 
 export interface PickerState {

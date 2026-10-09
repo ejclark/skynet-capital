@@ -100,8 +100,8 @@ describe("pickerStep — the stand-in's state machine", () => {
     }
   });
 
-  it("a tap elsewhere, Escape, or a scroll closes it with no change and says how", () => {
-    for (const via of ["outside", "escape", "scroll", "navigation"]) {
+  it("a tap elsewhere, Escape, Tab, or a scroll closes it with no change and says how", () => {
+    for (const via of ["outside", "escape", "tab", "scroll", "navigation"]) {
       const r = pickerStep(openState(2), { type: "dismiss", via });
       expect(r.state).toBeNull();
       expect(r.set).toBeNull();
@@ -127,6 +127,19 @@ describe("pickerStep — the stand-in's state machine", () => {
       event: "dismissed",
       via: "enter",
       value: null,
+    });
+  });
+
+  it("leaves a hidden option out, as the native popup does: never listed, never chosen", () => {
+    const options = [...OPTIONS.slice(0, 3), { value: "x", label: "Hidden", hidden: true }];
+    const s = pickerStep(null, { type: "open", mode: "sheet", name: "A", options, index: 1 });
+    expect(s.moment?.options).toEqual(["All accounts", "Eric · Human", "Sauron · Bot"]);
+    const tap = pickerStep(s.state, { type: "choose", index: 3 });
+    expect(tap).toEqual({ state: s.state, moment: null, set: null });
+    const onHidden = pickerStep(null, { type: "open", mode: "sheet", options, index: 3 });
+    expect(pickerStep(onHidden.state, { type: "confirm" }).moment).toMatchObject({
+      event: "dismissed",
+      via: "enter",
     });
   });
 

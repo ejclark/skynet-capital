@@ -30,7 +30,8 @@
 // An init script (measure-picker.mjs, rules in picker.mjs) draws the platform's picker in the page
 // — a sheet at phone width, a dropdown at desktop — and the record says what it did
 // (`nativePicker`: opened · chose · dismissed, its options and value). The overlay sits outside
-// <body>, so the recorder's own measurements never count it as the app's.
+// <body>, so the recorder's own measurements never count it as the app's — except watched text,
+// where an option the member reads in the open list counts as seen.
 //
 // Stubs fail CLOSED: any request off the shell's origin — a tapped external link, a `target=_blank`
 // popup — is aborted before it leaves the machine and listed on the record (`blocked`).

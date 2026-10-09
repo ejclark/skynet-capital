@@ -32,7 +32,9 @@ export function opensPicker(target, mode) {
 
 /**
  * One event through the picker. `state`: null (closed) or {mode, name, options: [{value, label,
- * disabled}], index} — `index` the select's selectedIndex when it opened. Events:
+ * disabled, hidden}], index} — `index` the select's selectedIndex when it opened, so `options` keeps
+ * every option in the select's order; a `hidden` one (display:none) is one the native popup leaves
+ * out, so it is never drawn, listed in a moment, or chosen. Events:
  *   {type: "open", mode, name, options, index} · {type: "choose", index} ·
  *   {type: "confirm"} (Enter: the current row) · {type: "dismiss", via}
  * Returns {state, moment, set}: `moment` is the trace's record of it (null when nothing happened),
@@ -40,15 +42,15 @@ export function opensPicker(target, mode) {
  *  - open while closed → opened; open while open (the select tapped again) → dismissed, via select
  *  - choose an enabled row → chose, `changed` false when it is the current one (no events fire,
  *    as natively); a disabled or missing row takes no tap and the picker stays open
- *  - confirm → chose the current row; with no current row, dismissed via enter
- *  - dismiss → dismissed with its `via` (outside · escape · scroll · navigation)
+ *  - confirm → chose the current row; with no current (or a hidden current) row, dismissed via enter
+ *  - dismiss → dismissed with its `via` (outside · escape · tab · scroll · navigation)
  *  - anything but open while closed → nothing
  */
 export function pickerStep(state, event) {
   const moment = (s, kind, index, extra) => ({
     event: kind,
     name: s.name,
-    options: s.options.map((o) => o.label),
+    options: s.options.filter((o) => !o.hidden).map((o) => o.label),
     value: s.options[index]?.value ?? null,
     label: s.options[index]?.label ?? null,
     ...extra,
@@ -72,12 +74,13 @@ export function pickerStep(state, event) {
   if (!state) return none;
   if (event.type === "dismiss")
     return closed("dismissed", state.index, { via: event.via ?? "outside" });
-  if (event.type === "confirm" && !state.options[state.index])
+  const current = state.options[state.index];
+  if (event.type === "confirm" && (!current || current.hidden))
     return closed("dismissed", state.index, { via: "enter" });
   if (event.type !== "choose" && event.type !== "confirm") return none;
   const index = event.type === "confirm" ? state.index : event.index;
   const row = state.options[index];
-  if (!row || row.disabled) return none;
+  if (!row || row.disabled || row.hidden) return none;
   const changed = index !== state.index;
   return {
     state: null,
