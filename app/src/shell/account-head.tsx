@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
 import { PageFrame } from "./frame";
 import { HeartbeatChip } from "./heartbeat";
+import { SauronCard } from "./sauron-card";
 
 /**
  * THE ANY-ACCOUNT PAGE'S HEAD (#3807 slice 2d; docs/IA.md §8) — `/u/:id` is the page for ANY
@@ -81,7 +82,8 @@ export function AccountHead({
 }
 
 /** The page chrome every `/u/:id` child shares: the frame, the head, then the section's body —
- *  one wrapper so the five sections read identically (`.acct-page` scopes the card's glance). */
+ *  rendered once by the layout route (`u.$id.tsx`, #4951), so the head stays put while a section
+ *  reads, and the five sections read identically (`.acct-page` scopes the card's glance). */
 export function AccountPage({
   desk,
   tower,
@@ -99,6 +101,30 @@ export function AccountPage({
         {children}
       </div>
     </PageFrame>
+  );
+}
+
+/** The account's league card on its Overview: under the frame's tower from the bench width (the
+ *  layout stands it there, `under`), boxed in the page's own flow below it. One component for both
+ *  places so the two never disagree on whose league it is. */
+export function AccountLeague({
+  landmark,
+  under,
+}: {
+  /** The account's landmark dials, when it has one (persona-mapped bots). */
+  readonly landmark?: { readonly power: number; readonly health: number } | undefined;
+  readonly under: boolean;
+}): ReactElement {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const owned = settings.data?.accounts ?? [];
+  return (
+    <SauronCard
+      {...(landmark ? { landmark } : {})}
+      ownedIds={owned.map((a) => a.id)}
+      meId={owned.find((a) => a.kind === "human")?.id}
+      scope=".acct-page"
+      under={under}
+    />
   );
 }
 

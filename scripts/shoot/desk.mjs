@@ -7,7 +7,8 @@
 // frozen, the crawl's own boot (scripts/crawl/server.mjs) — instead of a hand-written copy, so the
 // frame shows what the offline app shows. Only `/api/settings` is stubbed: a signed-in member who
 // owns one human account of their own, never `sauron` or `human-eric`, so both pages render
-// their "not yours" state — no Close, no New trade, one plain line beside the blotter.
+// their "not yours" state — no Close, no New trade, one plain line beside the blotter. The last
+// frame per viewport taps Pulse with its read held open, the head kept over a pending section.
 //
 // Phone first (390, docs/PICTURES.md), then desktop (1280). JPEG under the ~100KB commit ceiling.
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/desk.mjs [outdir]
@@ -52,6 +53,17 @@ try {
       await page.waitForTimeout(600);
       console.log(await shoot(`${name}-${tag}`));
     }
+    // A section mid-read (#4951): the head and its section switch stay; only the body waits.
+    await page.goto(`${origin}/app/u/sauron`);
+    await page.locator(".acct-head h1").waitFor();
+    await page.route("**/api/desk/*/pulse", () => {
+      // Deliberately empty: the pulse read is held open, never answered, so the frame shows what
+      // a member sees while it loads.
+    });
+    await page.getByRole("link", { name: "Pulse" }).click();
+    await page.getByText("Taking the pulse…").waitFor();
+    await page.locator(".acct-head h1").waitFor();
+    console.log(await shoot(`sauron-pulse-reading-${tag}`));
     await shell.close();
   }
 } finally {
