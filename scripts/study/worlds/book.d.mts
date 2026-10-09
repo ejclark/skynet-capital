@@ -10,6 +10,7 @@ export interface BookPosition {
 
 export interface BookParticipant {
   id: string;
+  kind: "human" | "bot";
   cash: number;
   equity: number;
   positions: BookPosition[];
@@ -26,7 +27,7 @@ export interface Book {
   generatedAt: string;
   members: { email: string; owns: string[] }[];
   participants: BookParticipant[];
-  activity: Record<string, { orderId: string; at: string }[]>;
+  activity: Record<string, { orderId: string; symbol: string; at: string }[]>;
   decisions: Record<string, BookDecision[]>;
   history: Record<string, { at: string; equity: number }[]>;
   market: {

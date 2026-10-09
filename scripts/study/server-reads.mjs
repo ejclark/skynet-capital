@@ -4,15 +4,19 @@
 //
 // The chain is `dashboard-server.ts`'s own dispatch order for the families that answer GETs
 // (`serveJsonApi`, then its `serveWriteApis` families), minus the auth gate — the session is handed in
-// directly, which is exactly what the gate would have handed each route. Streams, posts and admin
-// families are left out: a study world composes reads, and records writes without sending them.
+// directly, which is exactly what the gate would have handed each route. Streams and posts are
+// left out: a study world composes reads, and records writes without sending them. The admin
+// family answers its GETs (the owner's cards read `{owner:false}` for a member).
 
+import { serveAdminApi } from "../../src/server/admin-api-routes.ts";
 import { serveAlertDeliveryApi } from "../../src/server/alert-delivery-route.ts";
 import { serveCompanionApi } from "../../src/server/companion-routes.ts";
 import { serveJsonApi } from "../../src/server/content-api-routes.ts";
 import { serveControlsApi } from "../../src/server/controls-api-routes.ts";
 import { serveCouncilApi } from "../../src/server/council-api-routes.ts";
 import { serveDeskAlertsApi } from "../../src/server/desk-alerts-route.ts";
+import { serveFeedbackApi } from "../../src/server/feedback-api-routes.ts";
+import { serveFilingCommentsApi } from "../../src/server/filing-comments-api-routes.ts";
 import { serveJoinApi } from "../../src/server/join-api-routes.ts";
 import { serveLearnApi } from "../../src/server/learn-api-routes.ts";
 import { serveOnboardingApi } from "../../src/server/onboarding-api-routes.ts";
@@ -67,7 +71,11 @@ const FAMILIES = [
   servePlaybooksApi,
   serveControlsApi,
   (req, res, path, config, session) => serveCouncilApi(req, res, path, config.council, session),
+  (req, res, path, config, session) =>
+    serveFilingCommentsApi(req, res, path, config.filingComments, session),
+  serveFeedbackApi,
   serveCompanionApi,
+  serveAdminApi,
   serveJoinApi,
 ];
 

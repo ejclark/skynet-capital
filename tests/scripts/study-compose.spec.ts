@@ -176,6 +176,50 @@ describe("serverRead", () => {
     expect(read?.body).toMatchObject({ desk: { id: "sauron" } });
   });
 
+  // The pages one tap from the profile, answered as production answers them behind sign-in —
+  // never as a deployment with the service switched off (the thin slice's world holes).
+  const read = async (url: string, as = session) =>
+    (await serverRead(url, config, createBoardChannel(), as))?.body as Record<string, unknown>;
+
+  it("serves the Activity feed and an empty Council, both switched on", async () => {
+    const wire = (await read("/api/wire")).wire as { trades: unknown[]; feedbackEnabled: boolean };
+    expect(wire.trades.length).toBeGreaterThan(0);
+    expect(wire.feedbackEnabled).toBe(true);
+    expect(await read("/api/council")).toMatchObject({ enabled: true, entries: [] });
+  });
+
+  it("wires account management, and answers the owner's cards as a non-owner", async () => {
+    expect(await read("/api/settings")).toMatchObject({ authConfigured: true, adminWired: true });
+    expect(await read("/api/admin/invite")).toEqual({ owner: false });
+    expect(await read("/api/controls")).toEqual({ owner: false });
+  });
+
+  it("serves the fleet panel: the bots process polls whether or not a bot decided", async () => {
+    const ops = (await read("/api/ops-status")) as {
+      available: boolean;
+      status: { degraded: boolean; signals: { id: string; verdict: string }[] };
+    };
+    expect(ops.available).toBe(true);
+    expect(ops.status.degraded).toBe(false);
+    const verdict = (id: string) => ops.status.signals.find((s) => s.id === id)?.verdict;
+    expect(verdict("deploy-app")).toBe("ok");
+    // A stopped bot is a quiet bot, never a downed process: the poll is alive on every world.
+    expect(verdict("bridge")).toBe("ok");
+    expect(verdict("persona-gate")).toBe("ok");
+  });
+
+  it("refuses a member's option fill the book has no order audit for, never a bot's", async () => {
+    type Audit = () => Promise<unknown[]>;
+    expect(await (config.readAllOrderAudit as Audit)()).toEqual([]);
+    const human = book.participants.find((p) => p.kind === "human")?.id ?? "";
+    const withPut = structuredClone(book);
+    withPut.activity[human] = [
+      { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
+    ];
+    const audit = serverConfig(withPut).readAllOrderAudit as Audit;
+    await expect(audit()).rejects.toThrow(/member's option fill/);
+  });
+
   it("is undefined for a path no handler claims", async () => {
     expect(await serverRead("/api/no-such-read", config, createBoardChannel(), session)).toBe(
       undefined,
@@ -211,6 +255,15 @@ describe("a composed world", () => {
     const a = hashes(alone, "profile-bad-day");
     expect(Object.keys(a).length).toBeGreaterThan(100);
     expect(hashes(after, "profile-bad-day")).toEqual(a);
+  });
+
+  it("writes the world's known artifacts beside the run, declared rows first", () => {
+    const known = JSON.parse(
+      readFileSync(join(alone, "profile-bad-day-artifacts.json"), "utf8"),
+    ) as { route: string; source: string }[];
+    expect(known.length).toBeGreaterThan(0);
+    expect(known.every((a) => a.source === "declared" || a.source === "compose")).toBe(true);
+    expect(known.map((a) => a.route)).toContain("/login");
   });
 
   it("serves no research assessed after its instant", () => {
