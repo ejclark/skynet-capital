@@ -33,6 +33,7 @@ export interface Tap {
   hit: Control | null;
   nearest: (Control & { distance: number }) | null;
   under?: string | null;
+  underText?: string;
   rectBefore: Rect | null;
   rectAfter: Rect | null;
 }
@@ -40,6 +41,7 @@ export interface Tap {
 export interface View {
   href: string;
   pathname: string;
+  search?: string;
   section: string | null;
   scrollY: number;
   innerWidth: number;
@@ -56,6 +58,7 @@ export interface Container {
   scrollWidth: number;
   clientWidth: number;
   scrollLeft?: number;
+  reachable?: boolean;
   inView: boolean;
   table: { clipped: boolean; sticky: boolean; label: string } | null;
 }
@@ -74,6 +77,8 @@ export interface Shift {
 export interface TraceRecord {
   step: number;
   action: Action;
+  settled?: boolean;
+  blocked?: string[];
   refused?: string;
   before: View;
   after: View;
@@ -83,6 +88,7 @@ export interface TraceRecord {
     maxY?: number;
     intended: number | null;
     samples: { t?: number; y: number }[];
+    drift?: { from: number; to: number; samples: { t?: number; y: number }[] } | null;
   };
   tap: Tap | null;
   shifts: Shift[];
@@ -91,10 +97,6 @@ export interface TraceRecord {
 }
 
 export const SCROLL_TOL: number;
-export const DISPLACE_TOL: number;
-export const SHIFT_TOL: number;
-export const NEAR_PX: number;
-export const FRAME_TOL: number;
 
 export function actionRefusal(
   action: Action | null | undefined,
@@ -102,6 +104,7 @@ export function actionRefusal(
 ): string | null;
 export function viewKey(v: {
   pathname: string;
+  search?: string;
   section: string | null;
   scrollY: number;
   innerHeight: number;
@@ -111,6 +114,10 @@ export function scrollSplit(rec: Pick<TraceRecord, "scroll" | "action">): {
   voluntary: number;
   involuntary: number;
 };
+export function lateScroll(rec: Pick<TraceRecord, "scroll">): number;
+export function tapResult(
+  rec: Pick<TraceRecord, "tap" | "before" | "after">,
+): "hit" | "covered" | "near-miss" | "dead" | "unlabelled" | null;
 export function tapOutcome(
   tap: Pick<Tap, "hit" | "nearest"> | null,
 ): "hit" | "covered" | "near-miss" | "dead" | null;
@@ -141,6 +148,7 @@ export interface TaskMetrics {
   firstTapCorrect: boolean | null;
   deadTaps: number;
   nearMisses: number;
+  unlabelledTaps: number;
   gaveUp: boolean;
   answer: string | null;
   findings: Finding[];

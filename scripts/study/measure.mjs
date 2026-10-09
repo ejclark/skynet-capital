@@ -47,13 +47,26 @@ export function instrument() {
   );
 }
 
-/** Where each log stands now, so `since` can return only what one action caused. */
+/**
+ * Where each log stands now, so `since` can return only what came after — plus the scroll position
+ * and place at that instant, the start of the path a later `since` measures.
+ */
 export function marks() {
   const s = window.__study;
-  return { doc: s.doc, scroll: s.scroll.length, shifts: s.shifts.length, urls: s.urls.length };
+  return {
+    doc: s.doc,
+    scroll: s.scroll.length,
+    shifts: s.shifts.length,
+    urls: s.urls.length,
+    y: Math.round(scrollY),
+    at: location.pathname + location.search,
+  };
 }
 
-/** Everything logged after `mark`; a new document (a full load) means everything it holds. */
+/**
+ * Everything logged after `mark`, and a fresh mark taken in the same tick (`next`) so consecutive
+ * calls tile the log with no gap. A new document (a full load) means everything it holds.
+ */
 export function since(mark) {
   const s = window.__study;
   const same = s.doc === mark.doc;
@@ -63,15 +76,27 @@ export function since(mark) {
     scroll: s.scroll.slice(from("scroll")).map(({ t, y }) => ({ t, y })),
     shifts: s.shifts.slice(from("shifts")),
     urls: s.urls.slice(from("urls")),
+    next: {
+      doc: s.doc,
+      scroll: s.scroll.length,
+      shifts: s.shifts.length,
+      urls: s.urls.length,
+      y: Math.round(scrollY),
+      at: location.pathname + location.search,
+    },
   };
 }
 
-/** Where the page is: URL, section, scroll and frame size. */
-export function place() {
+/** Where the page is: URL, the search params (sorted — they carry identity), scroll and frame. */
+function place() {
+  const params = new URLSearchParams(location.search);
+  params.sort();
+  const search = params.toString();
   return {
     href: location.href,
     pathname: location.pathname,
-    section: new URLSearchParams(location.search).get("section"),
+    search: search ? `?${search}` : "",
+    section: params.get("section"),
     scrollY: Math.round(scrollY),
     maxY: Math.max(0, document.documentElement.scrollHeight - innerHeight),
     innerWidth,
@@ -80,7 +105,7 @@ export function place() {
 }
 
 /** The sticky head's height (sticky/fixed boxes at the top, ≥ half wide) + the first content top. */
-export function frameEdges() {
+function frameEdges() {
   let head = 0;
   for (const el of document.querySelectorAll("body *")) {
     const pos = getComputedStyle(el).position;
@@ -98,8 +123,13 @@ export function frameEdges() {
   return { head, contentTop };
 }
 
-/** Visible text + the states a toggle changes, hashed (FNV-1a): equal hashes = nothing changed. */
-export function visibleHash() {
+/**
+ * Visible text + the states a toggle changes, hashed (FNV-1a): equal hashes = nothing changed.
+ * "Visible" walks the ancestors too: text inside a faded (opacity 0) or hidden container, or cut
+ * off by an ancestor's overflow (a collapsed max-height accordion), is not counted — so revealing
+ * it changes the hash.
+ */
+function visibleHash() {
   const inView = (r) =>
     r.width >= 1 &&
     r.height >= 1 &&
@@ -107,6 +137,26 @@ export function visibleHash() {
     r.top < innerHeight &&
     r.right > 0 &&
     r.left < innerWidth;
+  // Each ancestor that clips its overflow, with its box: text outside any of them is cut off.
+  const clips = new Map();
+  const clipsOf = (el) => {
+    if (!el || el === document.body) return [];
+    if (clips.has(el)) return clips.get(el);
+    const cs = getComputedStyle(el);
+    const own =
+      cs.overflowX !== "visible" || cs.overflowY !== "visible" ? [el.getBoundingClientRect()] : [];
+    const all = [...own, ...clipsOf(el.parentElement)];
+    clips.set(el, all);
+    return all;
+  };
+  const insideClips = (r, el) =>
+    clipsOf(el).every(
+      (c) => r.right > c.left && r.left < c.right && r.bottom > c.top && r.top < c.bottom,
+    );
+  const shown = (el) =>
+    typeof el.checkVisibility === "function"
+      ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+      : getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).opacity !== "0";
   const parts = [];
   const range = document.createRange();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -115,9 +165,8 @@ export function visibleHash() {
     const p = n.parentElement;
     if (!(t && p) || p.closest("script, style, noscript")) continue;
     range.selectNodeContents(n);
-    if (!inView(range.getBoundingClientRect())) continue;
-    const cs = getComputedStyle(p);
-    if (cs.visibility !== "hidden" && cs.opacity !== "0") parts.push(t);
+    const r = range.getBoundingClientRect();
+    if (inView(r) && shown(p) && insideClips(r, p)) parts.push(t);
   }
   const STATES = ["aria-pressed", "aria-selected", "aria-expanded", "aria-current", "aria-checked"];
   for (const el of document.querySelectorAll(`[${STATES.join("], [")}], input, select, textarea`)) {
@@ -132,11 +181,15 @@ export function visibleHash() {
 }
 
 /**
- * Sideways overflow at page level and inside every box that scrolls sideways on its own — the
- * auto/scroll boxes scripts/crawl/phone.mjs exempts as contained — with, for a table inside one,
- * whether its first (identity) column is cut off at the box edge, and whether it is pinned (sticky).
+ * Sideways overflow at page level and inside every box that holds more than it shows — both halves
+ * of what scripts/crawl/phone.mjs exempts as contained: auto/scroll boxes (reachable by a sideways
+ * pan) and hidden/clip boxes (`reachable: false` — the cut-off content cannot be reached at all).
+ * An ellipsis truncation, a form field (its text scrolls with the caret) or a sub-8px box (a
+ * visually-hidden label) is a deliberate clip, skipped.
+ * For a table inside one: whether its first (identity) column is cut off at the box edge at the
+ * current scrollLeft, and whether it is pinned (sticky) so a pan keeps it in view.
  */
-export function sideways(tolerance) {
+function sideways(tolerance) {
   const firstLine = (el) =>
     (el.innerText ?? "")
       .split("\n")
@@ -159,9 +212,14 @@ export function sideways(tolerance) {
   const containers = [];
   for (const el of document.querySelectorAll("body *")) {
     if (el.scrollWidth - el.clientWidth <= tolerance) continue;
-    const ox = getComputedStyle(el).overflowX;
+    const cs = getComputedStyle(el);
+    const ox = cs.overflowX;
     const r = el.getBoundingClientRect();
-    if ((ox !== "auto" && ox !== "scroll") || r.width < 1 || r.height < 1) continue;
+    if (ox === "visible" || r.width < 8 || r.height < 8) continue;
+    const reachable = ox === "auto" || ox === "scroll";
+    // A field scrolls its own text with the caret; an ellipsis is a deliberate, signalled clip.
+    if (!reachable && (cs.textOverflow === "ellipsis" || el.matches("input, textarea, select")))
+      continue;
     const tbl = el.querySelector("table");
     containers.push({
       name: nameOf(el),
@@ -169,6 +227,7 @@ export function sideways(tolerance) {
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
       scrollLeft: Math.round(el.scrollLeft),
+      reachable,
       inView: r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth,
       table: tbl ? firstColumn(tbl, r) : null,
     });

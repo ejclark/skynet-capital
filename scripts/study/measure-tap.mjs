@@ -65,6 +65,8 @@ export function probeTap([x, y]) {
   window.__study.tapEl = control;
   const under = at ? at.tagName.toLowerCase() : null;
   if (control) return { hit: describe(control), nearest: null, under };
+  // What the thumb DID land on, as visible text locate.mjs can grep: an unlabelled control's tell.
+  const underText = clean(at?.innerText).slice(0, 60);
   let nearest = null;
   for (const el of document.querySelectorAll(SEL)) {
     const r = el.getBoundingClientRect();
@@ -74,7 +76,7 @@ export function probeTap([x, y]) {
     const distance = Math.round(Math.hypot(dx, dy));
     if (!nearest || distance < nearest.distance) nearest = { ...describe(el), distance };
   }
-  return { hit: null, nearest, under };
+  return { hit: null, nearest, under, underText };
 }
 
 /** Where the tapped control is now, or null if it left the document. */
@@ -87,7 +89,9 @@ export function tapRect() {
 
 /**
  * The document top (px) of the first heading or named region whose text matches `name` — where a
- * member who tapped "<name>" is looking for the answer. Navigation chrome is skipped. Null if none.
+ * member who tapped "<name>" is looking for the answer. A match is the same words, or one side's
+ * words appearing whole inside the other's, the shorter side at least 4 characters: "Overview"
+ * never lands on "View", "Show all positions" never on "All". Navigation chrome is skipped.
  */
 export function landingTop(name) {
   const norm = (s) =>
@@ -97,14 +101,15 @@ export function landingTop(name) {
       .trim();
   const want = norm(name);
   if (want.length < 3) return null;
+  const within = (inner, outer) => inner.length >= 4 && ` ${outer} `.includes(` ${inner} `);
   const sel = "h1, h2, h3, h4, h5, h6, [role=heading], [role=region], section[aria-label]";
   for (const el of document.querySelectorAll(sel)) {
     if (el.closest("nav, header, [role=tablist], [role=navigation]")) continue;
     if (el === window.__study?.tapEl) continue;
     const text = norm(el.getAttribute("aria-label") || (el.innerText ?? "").split("\n")[0]);
-    if (text.length < 3 || !(text === want || text.includes(want) || want.includes(text))) continue;
+    if (text.length < 3 || !(text === want || within(want, text) || within(text, want))) continue;
     const r = el.getBoundingClientRect();
-    if (r.width < 1 && r.height < 1) continue;
+    if (r.width < 1 || r.height < 1) continue;
     return Math.round(r.top + scrollY);
   }
   return null;

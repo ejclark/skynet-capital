@@ -4,14 +4,21 @@
 // WHY: the acceptance journeys reload every step and frame BEFORE the act, so a page that jumps,
 // shifts or overflows after a tap is never observed. Here a session opens a world once, then each
 // `act` measures before, performs one member action, waits for the page to settle (network idle +
-// 1000ms — in-page debounces run ~300ms, so a jump they cause lands inside the window), measures
-// after, appends one JSON line to <runDir>/trace.jsonl and writes the viewport frame to
-// <runDir>/frames/NNN.jpg. The page side only measures (`measure.mjs`); every judgement is a pure
+// 1000ms — in-page debounces run ~300ms, so a jump they cause usually lands inside the window),
+// measures after, appends one JSON line to <runDir>/trace.jsonl and writes the viewport frame to
+// <runDir>/frames/NNN.jpg. A jump that lands AFTER the window is not lost: the scroll log is read
+// end to end with no gap between actions, and whatever moved in between is the next record's
+// `scroll.drift` (metrics.mjs → `lateScroll`). A settle whose network never went idle says so
+// (`settled: false`). The page side only measures (`measure.mjs`); every judgement is a pure
 // function in `metrics.mjs`. Area-agnostic: routes, fixtures and clocks come from the world.
 //
 // A world is `{ name, startPath, pinnedInstant?, stubs?, install?(page) }` (scripts/study/worlds/):
 // `stubs` go to openShell's `/api/**` handler, `install` may add its own `page.route`s (registered
-// later, so they win). The clock is pinned with `page.clock.setFixedTime` from `pinnedInstant`.
+// later, so they win). The clock is pinned with `page.clock.setFixedTime` from `pinnedInstant`;
+// a world without one is refused — an unpinned clock is a run nobody can replay.
+//
+// Stubs fail CLOSED: any request off the shell's origin — a tapped external link, a `target=_blank`
+// popup — is aborted before it leaves the machine and listed on the record (`blocked`).
 //
 //   node scripts/study/session.mjs --smoke                       # open · scroll 1 · tap · summary
 //   node scripts/study/session.mjs --world <name> --actions a.json [--viewport desktop] [--out dir]
@@ -36,7 +43,7 @@ import {
   viewKey,
 } from "./metrics.mjs";
 
-export const SETTLE_MS = 1000;
+const SETTLE_MS = 1000;
 const IDLE_MAX_MS = 5000;
 
 /** Requests in flight, minus the event stream the shell holds open forever. */
@@ -49,16 +56,37 @@ function trackRequests(page) {
   return inflight;
 }
 
+/** Wait for no requests in flight; false when IDLE_MAX_MS ran out first. */
 async function idle(session) {
   const until = Date.now() + IDLE_MAX_MS;
   while (session.inflight.size > 0 && Date.now() < until) await session.page.waitForTimeout(50);
+  return session.inflight.size === 0;
 }
 
-/** Network idle, then the settle window (debounced jumps land inside it), then idle again. */
+/**
+ * Network idle, then the settle window (debounced jumps land inside it), then idle again. False
+ * when the network never went quiet, so the "after" may be mid-load.
+ */
 async function settle(session) {
-  await idle(session);
+  const first = await idle(session);
   await session.page.waitForTimeout(SETTLE_MS);
-  await idle(session);
+  return (await idle(session)) && first;
+}
+
+/**
+ * Fail closed: abort every request whose origin is not the shell's, and remember it. On the page
+ * (registered last, so it runs before the shell's and the world's own routes) and on the context
+ * (which is all a popup has).
+ */
+async function guardOrigin(page, origin, blocked) {
+  const guard = (route) => {
+    const url = route.request().url();
+    if (new URL(url).origin === origin) return route.fallback();
+    blocked.push(url.slice(0, 200));
+    return route.abort("blockedbyclient");
+  };
+  await page.context().route("**", guard);
+  await page.route("**", guard);
 }
 
 /** The compact half of a snapshot every record keeps for before and after. */
@@ -85,7 +113,13 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
   page.setDefaultTimeout(60_000);
   if (world.install) await world.install(page);
   const instant = pinnedInstant ?? world.pinnedInstant;
-  if (instant) await page.clock.setFixedTime(new Date(instant));
+  if (!instant || Number.isNaN(new Date(instant).getTime())) {
+    await shell.close();
+    throw new Error(`world ${world.name} has no valid pinnedInstant — a study never runs unpinned`);
+  }
+  await page.clock.setFixedTime(new Date(instant));
+  const blocked = [];
+  await guardOrigin(page, shell.origin, blocked);
   await page.addInitScript(instrument);
   const session = {
     page,
@@ -99,13 +133,16 @@ export async function open({ world, viewport = "phone", pinnedInstant, startPath
     frames: 0,
     t0: Date.now(),
     inflight: trackRequests(page),
+    blocked,
     shoot: shooter(page, join(out, "frames"), { fullPage: false }),
   };
   await page.goto(`${shell.origin}${startPath ?? world.startPath ?? "/app"}`, {
     waitUntil: "domcontentloaded",
   });
-  await settle(session);
+  session.settled = await settle(session);
   await frame(session);
+  // Where the gap-free log starts: every later `since` begins exactly where the last one ended.
+  session.mark = await page.evaluate(marks);
   return session;
 }
 
@@ -167,14 +204,20 @@ export async function act(session, action) {
     (action.kind === "back" && !(await page.evaluate(canGoBack)) && "back: no earlier page here");
   if (refused) return { refused, action };
   const terminal = action.kind === "done" || action.kind === "give_up";
+  // What happened since the last action ended — a jump that missed its settle window lands here.
+  const gap = await page.evaluate(since, session.mark);
+  const drift =
+    gap.reloaded || gap.next.at !== session.mark.at
+      ? null
+      : { from: session.mark.y, to: gap.next.y, samples: gap.scroll };
   const before = await snapshot(page, SCROLL_TOL);
-  const mark = await page.evaluate(marks);
   const tap = action.kind === "tap" ? await page.evaluate(probeTap, [action.x, action.y]) : null;
   const rectBefore = tap?.hit?.rect ?? null;
   const intended = terminal ? null : await perform(session, action, before);
-  if (!terminal) await settle(session);
+  const settled = terminal ? true : await settle(session);
   const after = terminal ? before : await snapshot(page, SCROLL_TOL);
-  const log = await page.evaluate(since, mark);
+  const log = await page.evaluate(since, gap.next);
+  session.mark = log.next;
   const urlChanged = before.href !== after.href;
   const name = tap?.hit?.name;
   const top = urlChanged && name ? await page.evaluate(landingTop, name) : null;
@@ -182,6 +225,8 @@ export async function act(session, action) {
     step: session.step++,
     ms: Date.now() - session.t0,
     action,
+    settled,
+    blocked: session.blocked.splice(0),
     before: view(before),
     after: view(after),
     url: {
@@ -196,6 +241,7 @@ export async function act(session, action) {
       maxY: before.maxY,
       intended,
       samples: log.scroll,
+      drift,
     },
     tap: tap && {
       x: action.x,
@@ -250,6 +296,8 @@ function printSummary(trace, metrics) {
     console.log(
       `     view ${r.before.view} → ${r.after.view} · scrollY ${r.scroll.before} → ${r.scroll.after} (${r.scroll.samples.length} samples) · shifts ${r.shifts.length} · text ${r.before.textHash === r.after.textHash ? "unchanged" : "changed"}${r.landing ? ` · landed ${r.landing.screens} screens from "${r.landing.name}"` : ""}`,
     );
+    if (!r.settled) console.log("     network never went idle — the after may be mid-load");
+    for (const u of r.blocked) console.log(`     blocked off-origin request: ${u}`);
     for (const f of r.findings) console.log(`     ${f.severity} ${f.kind}: ${f.what}`);
   }
   const { findings, ...numbers } = metrics;

@@ -3,11 +3,13 @@
   "entry": [
     "src/scripts/*.ts",
     "scripts/*.mjs",
-    "scripts/study/*.mjs",
-    "scripts/study/**/*.mjs",
+    "scripts/study/session.mjs",
+    "scripts/study/packets.mjs",
+    "scripts/study/lint.mjs",
+    "scripts/study/worlds/*.mjs",
     "tests/**/*.spec.ts"
   ],
-  "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/*.mjs", "scripts/study/**/*.mjs"],
+  "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/**/*.mjs"],
   "ignore": ["scripts/duel-log.mjs", "src/server/trade-service.ts"],
   "ignoreDependencies": ["@commitlint/config-conventional", "husky", "playwright-core"]
 }

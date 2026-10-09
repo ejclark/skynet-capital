@@ -5,6 +5,7 @@ import {
   actionRefusal,
   displacement,
   landingScreens,
+  lateScroll,
   lostness,
   matchesTarget,
   noVisibleEffect,
@@ -12,6 +13,7 @@ import {
   scrollSplit,
   shiftTotals,
   tapOutcome,
+  tapResult,
   taskMetrics,
   viewKey,
 } from "../../scripts/study/metrics.mjs";
@@ -98,12 +100,18 @@ describe("actionRefusal — the member acts only inside its own frame", () => {
   });
 });
 
-describe("viewKey — path, section and which screen", () => {
+describe("viewKey — path, search and which screen", () => {
   it("indexes the screen by scrollY ÷ innerHeight", () => {
     expect(viewKey({ pathname: "/a", section: null, scrollY: 0, innerHeight: H })).toBe("/a#0");
     expect(viewKey({ pathname: "/a", section: "x", scrollY: 1700, innerHeight: H })).toBe(
       "/a?section=x#2",
     );
+  });
+  it("keeps every search param, so the same section for two symbols is two views", () => {
+    const at = (search: string) =>
+      viewKey({ pathname: "/a", search, section: "guidance", scrollY: 0, innerHeight: H });
+    expect(at("?section=guidance&symbol=NVDA")).not.toBe(at("?section=guidance&symbol=TSLA"));
+    expect(at("?section=guidance&symbol=NVDA")).toBe("/a?section=guidance&symbol=NVDA#0");
   });
 });
 
@@ -151,6 +159,26 @@ describe("involuntary scroll", () => {
     );
     expect(kinds(away)).not.toContain("involuntary-scroll");
   });
+  it("catches a jump that landed between actions, after the settle window", () => {
+    const drift = { from: 800, to: 0, samples: [{ y: 400 }, { y: 0 }] };
+    const r = rec(
+      { kind: "scroll", dir: "down", screens: 1 },
+      { scroll: { before: 0, after: H, intended: H, samples: [], drift } },
+    );
+    expect(lateScroll(r)).toBe(800);
+    expect(kinds(r)).toEqual(["late-scroll"]);
+    const done = rec(
+      { kind: "done" },
+      { scroll: { before: 0, after: 0, intended: null, samples: [], drift } },
+    );
+    expect(kinds(done)).toEqual(["late-scroll"]);
+    expect(taskMetrics([r]).involuntaryScroll).toBe(800);
+    const reset = rec(
+      { kind: "done" },
+      { scroll: { before: 0, after: 0, intended: null, samples: [], drift: null } },
+    );
+    expect(lateScroll(reset)).toBe(0);
+  });
 });
 
 describe("tapped-control displacement", () => {
@@ -173,6 +201,27 @@ describe("tapped-control displacement", () => {
     expect(kinds(scrolled)).not.toContain("tap-displacement");
     const gone = rec({ kind: "tap", x: 50, y: 216 }, { tap: tapOn("Tab", { rectAfter: null }) });
     expect(displacement(gone)).toBeNull();
+  });
+});
+
+describe("a tap that worked on something with no role", () => {
+  const miss = tapOn("", {
+    hit: null,
+    nearest: { ...hit("A"), distance: 40 },
+    under: "td",
+    underText: "485 C",
+  });
+  it("is an unlabelled control, not a dead tap, when the page changed", () => {
+    const r = rec({ kind: "tap", x: 50, y: 216 }, { tap: miss });
+    expect(tapResult(r)).toBe("unlabelled");
+    expect(actionFindings(r).find((f) => f.kind === "unlabelled-control")?.snippet).toBe("485 C");
+    const m = taskMetrics([r]);
+    expect([m.deadTaps, m.unlabelledTaps]).toEqual([0, 1]);
+  });
+  it("stays a dead tap when nothing changed", () => {
+    const r = rec({ kind: "tap", x: 50, y: 216 }, { tap: miss, to: { textHash: "aaaa" } });
+    expect(tapResult(r)).toBe("dead");
+    expect(taskMetrics([r]).deadTaps).toBe(1);
   });
 });
 
@@ -210,18 +259,35 @@ describe("sideways overflow — page and container", () => {
     expect(kinds(withOverflow([box()]))).toEqual(["container-overflow"]);
     expect(kinds(withOverflow([box({ inView: false })]))).toEqual([]);
   });
-  it("calls out a table whose first column is clipped or scrolls away", () => {
+  it("calls out a table whose first column is clipped or would scroll away", () => {
     const clipped = actionFindings(
       withOverflow([box({ table: { clipped: true, sticky: false, label: "ABC" } })]),
     );
-    expect(clipped.map((f) => f.kind)).toEqual(["clipped-identity-column", "container-overflow"]);
-    expect(clipped[1]?.what).toMatch(/first column scrolls away/);
-    expect(clipped[1]?.severity).toBe("medium");
+    expect(clipped.map((f) => f.kind)).toEqual([
+      "clipped-identity-column",
+      "identity-column-unpinned",
+      "container-overflow",
+    ]);
+    expect(clipped[1]?.what).toMatch(/not pinned/);
+    expect(clipped[2]?.severity).toBe("medium");
+    const unpinned = actionFindings(
+      withOverflow([box({ table: { clipped: false, sticky: false, label: "ABC" } })]),
+    );
+    expect(unpinned.map((f) => f.kind)).toEqual(["identity-column-unpinned", "container-overflow"]);
     const pinned = actionFindings(
       withOverflow([box({ table: { clipped: false, sticky: true, label: "ABC" } })]),
     );
     expect(pinned.map((f) => f.kind)).toEqual(["container-overflow"]);
-    expect(pinned[0]?.what).not.toMatch(/scrolls away/);
+  });
+  it("reports content cut off by a hidden overflow, which no pan can reach", () => {
+    const hidden = actionFindings(withOverflow([box({ reachable: false })]));
+    expect(hidden.map((f) => f.kind)).toEqual(["clipped-overflow"]);
+    expect(hidden[0]?.severity).toBe("medium");
+    const table = { clipped: true, sticky: false, label: "ABC" };
+    expect(kinds(withOverflow([box({ reachable: false, table })]))).toEqual([
+      "clipped-identity-column",
+      "clipped-overflow",
+    ]);
   });
 });
 
@@ -353,6 +419,28 @@ describe("taskMetrics — one task's numbers", () => {
     );
     expect(folded).toHaveLength(1);
     expect(folded[0]?.what).toMatch(/×2/);
+  });
+  it("does not count the page's own jump as the member backtracking", () => {
+    const t = taskMetrics([
+      rec(
+        { kind: "scroll", dir: "down", screens: 1 },
+        { to: { scrollY: H }, scroll: { before: 0, after: H, intended: H, samples: [] } },
+      ),
+      rec(
+        { kind: "tap", x: 50, y: 216 },
+        { tap: tapOn("Overview"), from: { scrollY: H }, to: { scrollY: 0 } },
+      ),
+      rec(
+        { kind: "scroll", dir: "down", screens: 1 },
+        {
+          from: { scrollY: 0 },
+          to: { scrollY: H },
+          scroll: { before: 0, after: H, intended: H, samples: [] },
+        },
+      ),
+    ]);
+    expect(t.backtracks).toBe(0);
+    expect([t.uniqueViews, t.totalViews]).toEqual([2, 2]);
   });
   it("splits voluntary from involuntary scroll across the task", () => {
     const t = taskMetrics([

@@ -13,24 +13,27 @@
 //  - `actionFindings(record)` — findings on the probe contract (scripts/crawl/probes.mjs):
 //    {kind, what, snippet, severity, fix}, `snippet` being visible text locate.mjs can grep.
 //  - `taskMetrics(trace, opts)` — one task's numbers: steps, backtracks, views, lostness (Smith
-//    1996), voluntary vs involuntary scroll, navigations away, first-tap correctness, dead taps.
+//    1996), voluntary vs involuntary scroll, navigations away, first-tap correctness, dead taps,
+//    and taps that worked on something not exposed as a control.
 
 import { dedupe } from "../crawl/phone.mjs";
 
 /** Scroll movement under this many px is jitter, not a jump. */
 export const SCROLL_TOL = 4;
 /** A tapped control that moves more than this (layout, not scroll) slid out from under the thumb. */
-export const DISPLACE_TOL = 8;
+const DISPLACE_TOL = 8;
 /** Layout-shift total (CLS units) above which a shift is reported. */
-export const SHIFT_TOL = 0.05;
+const SHIFT_TOL = 0.05;
 /** A tap within this many px of a control's box is a near miss; further is a dead tap. */
-export const NEAR_PX = 12;
+const NEAR_PX = 12;
 /** Head height / first-content top moving more than this between sections is a frame shift. */
-export const FRAME_TOL = 8;
+const FRAME_TOL = 8;
 
 const KINDS = ["tap", "scroll", "type", "key", "back", "hover", "done", "give_up"];
 const KEYS = ["Enter", "Escape"];
 const TERMINAL = new Set(["done", "give_up"]);
+/** The actions whose own job is to change which screen the member is on. */
+const MEMBER_MOVES = new Set(["scroll", "back"]);
 const FIELD_ROLES = new Set(["textbox", "searchbox", "combobox", "spinbutton"]);
 
 const clip = (s, n = 60) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : (s ?? ""));
@@ -62,11 +65,19 @@ export function actionRefusal(action, frame) {
   return ARG_RULES[action.kind]?.(action) ?? null;
 }
 
-/** Where the member is: path + the `section` search param + which screen (scrollY ÷ height). */
-export function viewKey({ pathname, section, scrollY, innerHeight }) {
+/**
+ * Where the member is: path + every search param (sorted — the app keys a view on more than
+ * `section`, e.g. `?desk=…&symbol=NVDA&section=guidance`) + which screen (scrollY ÷ height). A
+ * snapshot without `search` falls back to `section` alone.
+ */
+export function viewKey({ pathname, search, section, scrollY, innerHeight }) {
   const screen = Math.floor(Math.max(0, scrollY) / Math.max(1, innerHeight));
-  return `${pathname}${section ? `?section=${section}` : ""}#${screen}`;
+  const query = search ?? (section ? `?section=${section}` : "");
+  return `${pathname}${query}#${screen}`;
 }
+
+/** A view key without its screen index: the page itself, wherever it is scrolled. */
+const pageOf = (view) => view.replace(/#\d+$/, "");
 
 /** Total distance travelled (px) from `start` through every sample, whatever the direction. */
 export function scrollPath(start, samples) {
@@ -94,6 +105,18 @@ export function scrollSplit(rec) {
   }
   if (kind === "back" || TERMINAL.has(kind)) return { voluntary: 0, involuntary: 0 };
   return { voluntary: 0, involuntary: path };
+}
+
+/**
+ * Scroll the page did on its own BETWEEN actions — after the previous action's settle window
+ * closed, before this one began (a late refetch, a slow smooth-scroll). `scroll.drift` is the
+ * unbroken log from the previous action's end mark to this one's start; null when the document
+ * was replaced or the route changed in between (a reset, not a jump).
+ */
+export function lateScroll(rec) {
+  const d = rec.scroll?.drift;
+  if (!d) return 0;
+  return scrollPath(d.from, [...(d.samples ?? []), { y: d.to }]);
 }
 
 /**
@@ -161,6 +184,43 @@ const finding = (kind, what, snippet, severity, fix = "S") => ({
   fix,
 });
 
+/** One sideways-overflowing box: a clipped or unpinned identity column, then the overflow itself. */
+function containerFindings(c) {
+  const hidden = c.scrollWidth - c.clientWidth;
+  if (!c.inView || hidden <= SCROLL_TOL) return [];
+  const out = [];
+  const label = c.table?.label ? ` ("${clip(c.table.label, 40)}")` : "";
+  const snippet = c.table?.label || c.text;
+  if (c.table?.clipped) {
+    out.push(
+      finding(
+        "clipped-identity-column",
+        `the first column of the table in ${c.name} is cut off at its box's edge${label}`,
+        snippet,
+        "high",
+      ),
+    );
+  }
+  if (c.reachable === false) {
+    const what = `${c.name} cuts off ${hidden}px of its content sideways, and its overflow is hidden — there is no way to scroll to it`;
+    out.push(finding("clipped-overflow", what, c.text, c.table ? "high" : "medium"));
+    return out;
+  }
+  if (c.table && !c.table.sticky) {
+    out.push(
+      finding(
+        "identity-column-unpinned",
+        `the first column of the table in ${c.name} is not pinned — panning sideways scrolls the row names out of view${label}`,
+        snippet,
+        "medium",
+      ),
+    );
+  }
+  const what = `${c.name} scrolls sideways inside its box (${hidden}px out of view)`;
+  out.push(finding("container-overflow", what, c.text, c.table ? "medium" : "low"));
+  return out;
+}
+
 function overflowFindings(overflow) {
   if (!overflow) return [];
   const out = [];
@@ -176,30 +236,22 @@ function overflowFindings(overflow) {
       ),
     );
   }
-  for (const c of containers) {
-    const hidden = c.scrollWidth - c.clientWidth;
-    if (!c.inView || hidden <= SCROLL_TOL) continue;
-    if (c.table?.clipped) {
-      out.push(
-        finding(
-          "clipped-identity-column",
-          `the first column of the table in ${c.name} is cut off at its box's edge${c.table.label ? ` ("${clip(c.table.label, 40)}")` : ""}`,
-          c.table.label || c.text,
-          "high",
-        ),
-      );
-    }
-    const away = c.table && !c.table.sticky ? " — its first column scrolls away with the rest" : "";
-    out.push(
-      finding(
-        "container-overflow",
-        `${c.name} scrolls sideways inside its box (${hidden}px out of view)${away}`,
-        c.text,
-        c.table ? "medium" : "low",
-      ),
-    );
-  }
+  for (const c of containers) out.push(...containerFindings(c));
   return out;
+}
+
+/** Did the action change the page: its URL or its visible text and control states? */
+function pageChanged(rec) {
+  return rec.before.href !== rec.after.href || rec.before.textHash !== rec.after.textHash;
+}
+
+/**
+ * `tapOutcome`, except a tap that reached no exposed control yet changed the page is `unlabelled`:
+ * it worked, on something with no role (a clickable `<tr>`) — an accessibility gap, not a miss.
+ */
+export function tapResult(rec) {
+  const outcome = tapOutcome(rec.tap);
+  return outcome && outcome !== "hit" && pageChanged(rec) ? "unlabelled" : outcome;
 }
 
 /** True when an operated control changed nothing visible: same text, same URL, same scroll. */
@@ -214,11 +266,23 @@ export function noVisibleEffect(rec) {
   );
 }
 
-/** Every finding one recorded action produces. */
-export function actionFindings(rec) {
-  if (rec.refused || TERMINAL.has(rec.action.kind)) return [];
+/** The page moving on its own: between actions (late) or during this one (involuntary). */
+function scrollFindings(rec, name) {
   const out = [];
-  const name = rec.tap?.hit?.name ?? "";
+  const late = lateScroll(rec);
+  if (late > SCROLL_TOL) {
+    const d = rec.scroll.drift;
+    out.push(
+      finding(
+        "late-scroll",
+        `the page scrolled ${Math.round(late)}px on its own after the previous action had settled, before ${actionLabel(rec)} (${d.from} → ${d.to})`,
+        "",
+        "high",
+      ),
+    );
+  }
+  // A drift before `done` is still the page's doing; nothing else is judged on a terminal action.
+  if (TERMINAL.has(rec.action.kind)) return out;
   const { involuntary } = scrollSplit(rec);
   if (involuntary > SCROLL_TOL && rec.before.pathname === rec.after.pathname) {
     out.push(
@@ -227,6 +291,23 @@ export function actionFindings(rec) {
         `${actionLabel(rec)} scrolled the page ${Math.round(involuntary)}px on its own (${rec.before.scrollY} → ${rec.after.scrollY})`,
         name,
         "high",
+      ),
+    );
+  }
+  return out;
+}
+
+/** What the tap landed on: a working control with no role, or a control that slid away. */
+function tapFindings(rec, name) {
+  const out = [];
+  if (tapResult(rec) === "unlabelled") {
+    const t = rec.tap;
+    out.push(
+      finding(
+        "unlabelled-control",
+        `tapping (${rec.action.x}, ${rec.action.y}) changed the page, but nothing there is exposed as a control (a <${t.under ?? "?"}> with no role)`,
+        t.underText ?? "",
+        "medium",
       ),
     );
   }
@@ -241,6 +322,16 @@ export function actionFindings(rec) {
       ),
     );
   }
+  return out;
+}
+
+/** Every finding one recorded action produces. */
+export function actionFindings(rec) {
+  if (rec.refused) return [];
+  const name = rec.tap?.hit?.name ?? "";
+  const out = scrollFindings(rec, name);
+  if (TERMINAL.has(rec.action.kind)) return out;
+  out.push(...tapFindings(rec, name));
   const shifts = shiftTotals(rec.shifts);
   if (shifts.total > SHIFT_TOL) {
     out.push(
@@ -311,16 +402,24 @@ export function taskMetrics(trace, { startPath, optimal, expectFirst } = {}) {
   let involuntaryScroll = 0;
   for (const r of recs) {
     const moved = r.after.view !== r.before.view;
-    if (r.action.kind === "back" || (moved && seen.has(r.after.view))) backtracks += 1;
-    push(r.after.view);
-    seen.add(r.after.view);
+    // The page's own jump (a tap or key that only changed the screen index) is not the member
+    // navigating: it is neither a view they chose nor a backtrack — the scroll finding owns it.
+    const pageMoved =
+      moved && !MEMBER_MOVES.has(r.action.kind) && pageOf(r.after.view) === pageOf(r.before.view);
+    if (!pageMoved) {
+      // Returning to the view the member was last on (after a page jump) is recovery, not a revisit.
+      const revisit = moved && r.after.view !== views.at(-1) && seen.has(r.after.view);
+      if (r.action.kind === "back" || revisit) backtracks += 1;
+      push(r.after.view);
+      seen.add(r.after.view);
+    }
     if (r.before.pathname === start && r.after.pathname !== start) navigationsAway += 1;
     const split = scrollSplit(r);
     voluntaryScroll += split.voluntary;
-    involuntaryScroll += split.involuntary;
+    involuntaryScroll += split.involuntary + lateScroll(r);
   }
   const taps = recs.filter((r) => r.action.kind === "tap");
-  const outcomes = taps.map((r) => tapOutcome(r.tap));
+  const outcomes = taps.map(tapResult);
   const end = recs.findLast((r) => TERMINAL.has(r.action.kind));
   const uniqueViews = new Set(views).size;
   return {
@@ -336,6 +435,7 @@ export function taskMetrics(trace, { startPath, optimal, expectFirst } = {}) {
     // A covered tap reaches nothing operable either: the member tapped what was on top.
     deadTaps: outcomes.filter((o) => o === "dead" || o === "covered").length,
     nearMisses: outcomes.filter((o) => o === "near-miss").length,
+    unlabelledTaps: outcomes.filter((o) => o === "unlabelled").length,
     gaveUp: end?.action.kind === "give_up",
     answer: end?.action.kind === "done" ? (end.action.answer ?? "") : null,
     findings: dedupe(recs.flatMap((r) => actionFindings(r))),
