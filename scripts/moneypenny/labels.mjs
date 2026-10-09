@@ -224,6 +224,13 @@ export const LABELS = {
     color: "5319e7",
     description: "CI failures are piling up and the repair lane is not running",
   },
+  // Owned by the dashboard server's run marker (#4618): it files one when a boot finds the last run
+  // ended without its clean shutdown (an OOM kill, a crash). Closed once `/retro` banks the lesson.
+  incident: {
+    name: "incident",
+    color: "b60205",
+    description: "Production stopped uncleanly: an OOM kill or crash, awaiting a /retro",
+  },
 };
 
 /** The labels this file applies and therefore guarantees. The rest are registered for lookup. */
