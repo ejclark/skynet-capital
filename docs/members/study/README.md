@@ -233,6 +233,18 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
   writes the first turn's message and a half-scale frame without calling it. `--stub <dir>` plays
   it from canned answers instead (`<dir>/actor/<n>.json`, `<dir>/ease/<n>.json`); `--roles <dir>`
   reads the role prompt from another checkout (a pin may predate the roles).
+- **Native pickers are drawn by the recorder.** Headless Chromium never paints a `<select>`'s
+  popup into a screenshot, so a member who taps one sees nothing open — the harness's blindness,
+  not the app's failure. The recorder draws a plain, system-styled stand-in in the page instead
+  (`scripts/study/measure-picker.mjs`; its rules are `picker.mjs`, specced without a browser): a
+  bottom sheet at phone width, the current row checked; a dropdown under the select at desktop
+  width. A row sets the select and fires `input` + `change`, as a person's choice does; a tap
+  elsewhere or Escape closes it unchanged. The label opens it on a phone only, as on iOS. Each
+  moment lands on the trace record as `nativePicker` (`opened` · `chose` · `dismissed`, the
+  options, the value). The overlay sits outside `<body>`, so the text hash, overflow, sticky-head
+  and shift measurements never count it; a census operating a select frames it open. Proof:
+  `scripts/study/tasks/proof/picker-*.json`. Date and time inputs get no stand-in yet: none sits on
+  the profile's routes.
 
 ## Running a round
 
@@ -294,11 +306,23 @@ flowchart LR
 - 2026-10-09 · parallel workflow agents can share one scratchpad directory; a run dir named
   `run` or `smoke2` got a second agent's session appended to its trace. Give every run dir a name
   only this run would pick, and the driver refuses an `--out` that already holds a run.
-- 2026-10-09 · the thin slice's member and expert left the profile through the app nav and the
-  header and came back with world holes as findings: "not the shell" after Sign out, "No ops panel
-  is wired", Activity stuck on "Tuning in…", Settings' account section "isn't wired". Parity only
-  covered the area's own surfaces. Every one-tap destination is now a parity surface, and a world
-  writes its known artifacts for the checker.
+- 2026-10-09 · **the first real thin slice stopped three times before a member ever ran — each on
+  something a stub dry run cannot see.** (1) Every role schema declared the 2020-12 `$schema`; the
+  CLI rejects it before answering and says so only on stderr (#4988). (2) A leak check that hid
+  every word made the blind task author guess four times which everyday word was also a button;
+  hide only sealed words, name screen labels, and check only what the member reads (#4989). (3) The
+  CLI injects three kinds of context even under `--safe-mode` (the account's email, the environment
+  block, its own tool-use instructions) in different words every call; the canary classifies by
+  kind, never by wording (#4988, #4990). Rule: no full round before a real thin slice completes.
+- 2026-10-09 · **a headless screenshot never draws a native `<select>` popup.** The first real member
+  tapped the account picker four times, saw nothing open, and gave up at ease 1/7 — the harness's
+  blindness, not the app's. The recorder draws a platform-faithful stand-in for native pickers.
+- 2026-10-09 · **links out of the area meet test-world placeholders** ("not the shell", "Tuning in…")
+  that then come back as findings and cost validity. Parity covers every one-tap destination, and
+  anything still unfaithful is listed for the checker before the run.
+- 2026-10-09 · one blind expert over one route produced 40 findings, 23 structural — the expert pass
+  is cheap and dense; the member sessions are the expensive, sparse half. Budget the full round
+  accordingly.
 - 2026-10-09 · the recorder counted a page's held-open quote stream as a request in flight, so
   after one visit to a page with a live feed every later settle waited out its 5s cap twice
   (22s an action, `settled: false`). Every EventSource is now ignored, and a fresh load forgets

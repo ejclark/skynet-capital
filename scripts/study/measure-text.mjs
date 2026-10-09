@@ -16,6 +16,8 @@
  * For each snippet: the best `ratio` (0–1) of its text's line boxes inside the viewport, cut to
  * every ancestor that clips overflow, and whether what sits at the visible part's centre is
  * something else (`covered` — a sticky bar or an overlay on top of it). A hidden match counts 0.
+ * The native picker's stand-in (measure-picker.mjs, outside <body>) is searched too — an option a
+ * member reads in its list is seen — and a desktop dropdown's clear backdrop is looked through.
  */
 export function seenText(snippets) {
   const squash = (s) => (s ?? "").toLowerCase().replace(/\s+/g, "");
@@ -60,7 +62,11 @@ export function seenText(snippets) {
       if (part.vis > 0 && (!best || part.vis > best.vis)) best = part;
     }
     if (total === 0) return { ratio: 0, covered: false };
-    const hit = best ? document.elementFromPoint(best.x, best.y) : null;
+    const hit = best
+      ? document
+          .elementsFromPoint(best.x, best.y)
+          .find((h) => !h.matches('[data-study-backdrop="clear"]'))
+      : null;
     const covered = Boolean(best) && !(hit && (el.contains(hit) || hit.contains(el)));
     return { ratio: Math.round((inside / total) * 100) / 100, covered };
   };
@@ -68,7 +74,7 @@ export function seenText(snippets) {
     const want = squash(text);
     let found = { ratio: 0, covered: false, matched: false };
     if (!want) return { text, ...found };
-    const deepest = [...document.querySelectorAll("body *")].filter(
+    const deepest = [...document.querySelectorAll("body *, [data-study-overlay] *")].filter(
       (el) =>
         !el.closest("script, style, noscript") &&
         squash(el.textContent).includes(want) &&
@@ -92,7 +98,8 @@ export function textTarget([text, nth = 0]) {
   const squash = (s) => (s ?? "").toLowerCase().replace(/\s+/g, "");
   const want = squash(text);
   const hits = [];
-  for (const el of document.querySelectorAll("body *")) {
+  // The native picker's stand-in sits outside <body> (measure-picker.mjs): a script taps its rows.
+  for (const el of document.querySelectorAll("body *, [data-study-overlay] *")) {
     if (squash(el.textContent) !== want) continue;
     if ([...el.children].some((c) => squash(c.textContent) === want)) continue;
     const r = el.getBoundingClientRect();

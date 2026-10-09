@@ -40,6 +40,7 @@ import {
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import { followBotsStream } from "../autonomous/bots-stream.js";
+import { createCycleWatch } from "../autonomous/cycle-watch.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
@@ -475,10 +476,18 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = contextNow();
-    await runner.runCycle(context);
+    // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
+    await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
     evaluating = false;
   };
+  // Halts, stalls and a market-hours heartbeat, in the logs (#4995) — a quiet bot is now legible.
+  const cycleWatch = createCycleWatch({
+    isMarketOpen: () => marketClock.isOpen(),
+    blockedReason,
+    log: console.log,
+  });
+  setInterval(() => cycleWatch.tick(), 60_000);
   // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
   if (betaForcing.stageAfterClose && scoutBroker) {
     armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
