@@ -389,7 +389,7 @@
             "id": "hub",
             "label": "Observatory hub and patch channel",
             "path": "src/server/observatory-hub.ts, src/observatory/reduce.ts, src/server/board-patch-routes.ts, src/server/sse.ts, src/universe/patch-channel.ts, src/universe/world-patch.ts, src/observatory/ceremony-channel.ts",
-            "responsibility": "Single in-memory DashboardData folded by a pure reducer; one board diff per hub tick shared by every SSE viewer with seq ids, hello/patch/resync events and Last-Event-ID replay."
+            "responsibility": "Single in-memory DashboardData folded by a pure reducer; one board diff per hub tick shared by every SSE viewer with `boot:seq` ids, hello/patch/resync events and Last-Event-ID replay; a per-process `boot` id makes a restart's renumbered seqs resync instead of replay (#4620)."
           },
           {
             "id": "datasource",
