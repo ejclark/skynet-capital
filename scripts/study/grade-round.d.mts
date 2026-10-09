@@ -23,6 +23,8 @@ export interface ControlRound {
   tiebreak?: MatchEntry[];
   /** control.json as a control round wrote it (round-contract.mjs → controlRecord). */
   record?: Partial<ControlRecord> | null;
+  /** Its own sessions; a negative control none of which succeeded fails. */
+  sessions?: { success: boolean }[];
 }
 export interface RoundInput {
   gold: GoldItem[];

@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "@rstest/core";
@@ -106,16 +107,37 @@ describe("a control round's command line and counts", () => {
 describe("what a control may run from", () => {
   const source = { profileSha: "abc", thin: true };
 
+  const ok = { source, frozen: { sha256: SHA }, ranFrozen: SHA, profileSha: "abc" };
+
   it("refuses a dir that is not a round, a control of a control, another config, no freeze", () => {
     expect(sourceProblems({ source: null, frozen: null, profileSha: "abc" })[0]).toMatch(
       /not a round/,
     );
-    expect(sourceProblems({ source, frozen: { sha256: SHA }, profileSha: "abc" })).toEqual([]);
+    expect(sourceProblems(ok)).toEqual([]);
     const ctl = { ...source, control: { kind: "negative" } };
-    expect(sourceProblems({ source: ctl, frozen: { sha256: SHA }, profileSha: "abc" })).toEqual([
+    expect(sourceProblems({ ...ok, source: ctl })).toEqual([
       "the --frozen-from round is itself a control round",
     ]);
     expect(sourceProblems({ source, frozen: null, profileSha: "def" })).toHaveLength(2);
+  });
+
+  it("refuses a main round whose sessions never ran, or ran on another freeze than frozen.json", () => {
+    expect(sourceProblems({ ...ok, ranFrozen: null })).toEqual([
+      "the --frozen-from round never ran its sessions on its frozen tasks",
+    ]);
+    expect(sourceProblems({ ...ok, ranFrozen: "b".repeat(64) })[0]).toMatch(/re-frozen since/);
+  });
+
+  it("refuses a main round run as a stub when this one is not, either way, or on another key", () => {
+    expect(sourceProblems({ ...ok, source: { ...source, stub: "/stub" } })[0]).toMatch(
+      /was a stub round and this one is not/,
+    );
+    expect(sourceProblems({ ...ok, stub: "/stub" })[0]).toMatch(
+      /was not a stub round and this one is/,
+    );
+    const both = { ...ok, source: { ...source, stub: "/stub", sealed: "/s" }, stub: "/x" };
+    expect(sourceProblems({ ...both, sealed: "/s" })).toEqual([]);
+    expect(sourceProblems({ ...both, sealed: "/other" })[0]).toMatch(/another --sealed/);
   });
 
   it("names every card that is not the main round's, either way round", () => {
@@ -145,16 +167,36 @@ describe("what a control may run from", () => {
     expect(() => expectIds(["the lamp is lit from below"])).toThrow(/ids only/);
   });
 
+  const rec = {
+    kind: "positive" as const,
+    expect: ["P1"],
+    frozen: SHA,
+    pin: "planted",
+    sourcePin: "today",
+  };
+
   it("holds control.json to the kind it is passed as and to the main round's freeze", () => {
-    const rec = { kind: "positive" as const, expect: ["P1"], frozen: SHA };
     expect(controlProblems(rec, { kind: "positive", frozen: SHA })).toEqual([]);
     expect(controlProblems(rec, { kind: "negative", frozen: SHA })[0]).toMatch(/passed as --neg/);
     expect(controlProblems(rec, { kind: "positive", frozen: "b".repeat(64) })[0]).toMatch(
       /not the main round's/,
     );
-    expect(controlProblems({ kind: "positive" }, { kind: "positive" })).toEqual([
+    expect(controlProblems(rec, { kind: "positive" })[0]).toMatch(/main round has no frozen.json/);
+    const bare = { kind: "positive" as const, pin: "planted", sourcePin: "today" };
+    expect(controlProblems(bare, { kind: "positive" })).toEqual([
       "control.json names no key ids to expect",
     ]);
+  });
+
+  it("refuses a control on the main round's own build, or one that cannot show which it ran", () => {
+    expect(controlProblems({ ...rec, pin: "today" }, { kind: "positive", frozen: SHA })).toEqual([
+      "control.json ran the main round's own pin (today)",
+    ]);
+    for (const off of [{ pin: null }, { sourcePin: null }]) {
+      expect(controlProblems({ ...rec, ...off }, { kind: "positive", frozen: SHA })[0]).toMatch(
+        /does not name both pins/,
+      );
+    }
   });
 });
 
@@ -293,6 +335,24 @@ describe("a positive control on the stub, from a thin main round, graded beside 
     const out = join(tmp, "control-other-cards");
     expect(await run(planted, out, other)).toBe(1);
     expect(lastStop(out)).toMatch(/member cards differ.*eric/);
+  });
+
+  it("refuses a resumed control whose copied freeze is no longer the main round's", async () => {
+    const moved = join(tmp, "control-refrozen");
+    cpSync(ctl, moved, { recursive: true });
+    rmSync(join(moved, SESSIONS, "done.json"));
+    const text = `${read(join(ctl, "4-tasks/tasks.json"))} `;
+    writeFileSync(join(moved, "4-tasks/tasks.json"), text);
+    const sha = createHash("sha256").update(text).digest("hex");
+    writeFileSync(join(moved, FILES.frozen), JSON.stringify({ sha256: sha }));
+    expect(await run(planted, moved, main)).toBe(1);
+    expect(lastStop(moved)).toMatch(/not the --frozen-from round's freeze/);
+  });
+
+  it("makes the grader refuse a control round passed as the main round", () => {
+    const g = node("grade.mjs", ["--sealed", sealed, "--round", ctl, "--positive", ctl]);
+    expect(g.status).toBe(1);
+    expect(g.stderr).toMatch(/is a control round — pass it as --negative or --positive/);
   });
 
   it("makes the grader refuse a control passed as the wrong kind", () => {

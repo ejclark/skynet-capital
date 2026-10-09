@@ -323,6 +323,16 @@ describe("controls and the cycle gate", () => {
     expect(missed).toMatchObject({ pass: false, why: "missed: P2" });
   });
 
+  it("fails a negative control none of whose sessions succeeded — its silence proves nothing", () => {
+    const none = [{ success: false }, { success: false }];
+    const cold = controlVerdict("negative", { expect: ["Q9"], findings, byId, sessions: none });
+    expect(cold).toMatchObject({ pass: false, sessions: { sessions: 2, succeeded: 0 } });
+    expect(cold.why).toMatch(/no session succeeded/);
+    const one = [{ success: false }, { success: true }];
+    const warm = controlVerdict("negative", { expect: ["Q9"], findings, byId, sessions: one });
+    expect(warm).toMatchObject({ pass: true, sessions: { sessions: 2, succeeded: 1 } });
+  });
+
   it("fails a negative control that still reports a fixed item, and one that never ran", () => {
     expect(controlVerdict("negative", { expect: ["P1"], findings, byId }).pass).toBe(false);
     expect(controlVerdict("negative", null)).toEqual({
@@ -469,6 +479,19 @@ describe("gradeRound — the made-up round, end to end from disk", () => {
   it("keeps the key's wording out of grade.json", () => {
     const text = JSON.stringify(g);
     for (const item of input.gold) expect(text).not.toContain(item.title);
+  });
+
+  it("reports a negative control's own sessions, and an expected id the key never had", () => {
+    expect(g.controls.negative.sessions).toEqual({ sessions: 1, succeeded: 1 });
+    const typo = input.negative && { ...input.negative, expect: ["S9"] };
+    expect(gradeRound({ ...input, negative: typo }).problems).toEqual([
+      "negative control: expect names unknown S9",
+    ]);
+  });
+
+  it("refuses a control round passed as the main round", () => {
+    const opts = gradeArgs(["--sealed", join(FIX, "sealed"), "--round", join(FIX, "negative")]);
+    expect(() => loadRound(opts)).toThrow(/is a control round/);
   });
 
   it("refuses to grade without the sealed folder named", () => {

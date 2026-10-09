@@ -36,11 +36,13 @@ function checkIndex(checks, ids, problems) {
 }
 
 /**
- * A control round ({expect, findings, m1, m2, tiebreak, record?}) → its verdict. `record` is its
- * control.json as the round wrote it, held to the contract (its kind, the main round's freeze);
- * a hand-made control may carry only `expect`.
+ * A control round ({expect, findings, m1, m2, tiebreak, record?, sessions?}) → its verdict.
+ * `record` is its control.json as the round wrote it, held to the contract (its kind, the main
+ * round's freeze, another pin); a hand-made control may carry only `expect`. A negative control's
+ * ids must be on the key (`goldIds`): an id it never could find would pass it for nothing. A
+ * positive control's may be planted defects outside the key — an unknown one fails it, loudly.
  */
-function control(kind, round, problems, frozen) {
+function control(kind, round, problems, { frozen, goldIds }) {
   if (!round) return controlVerdict(kind, null);
   if (round.record) {
     problems.push(
@@ -51,6 +53,11 @@ function control(kind, round, problems, frozen) {
     if (!round.record) problems.push(`${kind} control: control.json names no key ids to expect`);
     return { kind, ran: true, pass: false, expect: [], found: [], why: "names nothing to expect" };
   }
+  if (kind === "negative") {
+    for (const id of round.expect) {
+      if (!goldIds.has(id)) problems.push(`negative control: expect names unknown ${id}`);
+    }
+  }
   const { byId, problems: p } = consensus({
     ids: round.findings.map((f) => f.id),
     m1: round.m1,
@@ -58,7 +65,8 @@ function control(kind, round, problems, frozen) {
     tiebreak: round.tiebreak,
   });
   problems.push(...p.map((x) => `${kind} control: ${x}`));
-  return controlVerdict(kind, { expect: round.expect, findings: round.findings, byId });
+  const { expect, findings, sessions } = round;
+  return controlVerdict(kind, { expect, findings, byId, sessions });
 }
 
 /** Per class (and the blind classes together): thoroughness, validity, new problems by level. */
@@ -151,8 +159,8 @@ export function gradeRound(input) {
     };
   });
   const controls = {
-    negative: control("negative", negative, problems, input.frozen ?? null),
-    positive: control("positive", positive, problems, input.frozen ?? null),
+    negative: control("negative", negative, problems, { frozen: input.frozen ?? null, goldIds }),
+    positive: control("positive", positive, problems, { frozen: input.frozen ?? null, goldIds }),
   };
   const blind = classesOut.blind;
   return {

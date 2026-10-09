@@ -108,8 +108,9 @@ export function controlRecord({ kind, source, frozen, pin, sourcePin, expect }) 
 
 /**
  * Problems with a control round's control.json, read as the `kind` it was passed for; [] when it
- * keeps the contract. `frozen` is the main round's frozen.json sha256 — when the main round has
- * one, the control must have run exactly those tasks (a control on other tasks controls nothing).
+ * keeps the contract. `frozen` is the main round's frozen.json sha256 — the control must have run
+ * exactly those tasks (a control on other tasks controls nothing), and on another pinned build
+ * than the main round's (a control on the same build controls nothing either).
  */
 export function controlProblems(record, { kind, frozen = null }) {
   const out = [];
@@ -123,6 +124,15 @@ export function controlProblems(record, { kind, frozen = null }) {
     out.push(
       `control.json ran tasks frozen as ${String(record?.frozen ?? "none").slice(0, 12)}, not the main round's ${frozen.slice(0, 12)}`,
     );
+  } else if (!frozen && record?.frozen) {
+    out.push(
+      `control.json ran tasks frozen as ${String(record.frozen).slice(0, 12)}, but the main round has no frozen.json to hold it to`,
+    );
+  }
+  if (!(record?.pin && record?.sourcePin)) {
+    out.push("control.json does not name both pins — that it ran another build cannot be shown");
+  } else if (record.pin === record.sourcePin) {
+    out.push(`control.json ran the main round's own pin (${String(record.pin).slice(0, 12)})`);
   }
   return out;
 }

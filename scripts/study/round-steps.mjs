@@ -137,6 +137,12 @@ function checkFreeze(ctx) {
       `4-tasks/tasks.json no longer hashes to frozen.json (${frozen.sha256.slice(0, 12)}) — start a fresh --out`,
     );
   }
+  // A control's copy must still be the main round's freeze, resumed or not (round-control.mjs).
+  if (isControl(ctx.opts) && frozen.sha256 !== ctx.source.frozen) {
+    throw new Error(
+      `frozen.json (${frozen.sha256.slice(0, 12)}) is not the --frozen-from round's freeze — start a fresh --out`,
+    );
+  }
   const shas = {};
   for (const t of JSON.parse(text)) {
     const file = join(ctx.out, "4-tasks", "tasks", `${t.id}.json`);

@@ -191,8 +191,11 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
     any trace reached).
   - A control round is a round directory too (`round.mjs --frozen-from`, below), plus the matcher
     files and `control.json` `{kind, source, frozen, pin, sourcePin, expect: [ids]}`. The grader
-    holds it to the flag it is passed under (`--negative` takes only a negative control) and to
-    the main round's `frozen.json` — a control that asked other questions controls nothing.
+    holds it to the flag it is passed under (`--negative` takes only a negative control), to
+    the main round's `frozen.json` and to another pin than the main round's — a control that asked
+    other questions, or asked them of the same build, controls nothing. A negative control's ids
+    must be on the key, and it fails when none of its sessions succeeded (silence from a build it
+    never reached proves nothing). A control round passed as `--round` is refused.
 - **Disputes are never settled kindly:** where the matchers disagree and no tie-break is given, the
   finding counts as no match and its row is marked for the owner.
 - **The arithmetic** (`grade-core.mjs`, specced in `tests/scripts/study-grade.spec.ts`): found at
@@ -307,7 +310,8 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 - **Nothing is re-authored.** The framer and the task author never run: the main round's
   `tasks.json`, per-task files and `frozen.json` are copied in, and refused unless `tasks.json`
   still hashes to its freeze. The member cards are rebuilt and refused unless each hashes to the
-  main round's.
+  main round's. The main round must have run its sessions on that freeze, under the same stub
+  or sealed mode and the same `--sealed` key.
 - **The main round's shape:** its members × worlds × viewports, its thin cut, its world — so
   `--thin` and `--only-world` are refused beside `--frozen-from`, and the area config must be the
   one it ran (same sha256). A control of a control is refused.

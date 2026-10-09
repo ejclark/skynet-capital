@@ -21,7 +21,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { controlRecord, FILES } from "./round-contract.mjs";
+import { controlRecord, FILES, SESSIONS } from "./round-contract.mjs";
 import { readList } from "./round-files.mjs";
 import { censusPlan, selectMatrix } from "./round-plan.mjs";
 
@@ -31,17 +31,34 @@ const readIf = (path) => (existsSync(path) ? readJson(path) : null);
 
 /**
  * Why a control round may not run from this main round — [] when it may. `source` is the main
- * round's round.json (null when absent), `frozen` its frozen.json, `profileSha` this run's config.
+ * round's round.json (null when absent), `frozen` its frozen.json, `ranFrozen` the freeze its
+ * sessions were planned on (its log), and `profileSha`, `stub`, `sealed` this run's own.
  */
-export function sourceProblems({ source, frozen, profileSha }) {
+export function sourceProblems({ source, frozen, ranFrozen = null, profileSha, stub, sealed }) {
   if (!source) return ["the --frozen-from dir holds no round.json — not a round"];
   const out = [];
   if (source.control) out.push("the --frozen-from round is itself a control round");
   if (source.profileSha !== profileSha) {
     out.push("the area config is not the one the --frozen-from round ran (its sha256 differs)");
   }
-  if (!/^[0-9a-f]{64}$/.test(frozen?.sha256 ?? "")) {
+  // A stub-authored task set re-asked with sealed calls (or the reverse) is not the same question.
+  if (Boolean(source.stub) !== Boolean(stub)) {
+    out.push(
+      `the --frozen-from round was ${source.stub ? "" : "not "}a stub round and this one is${stub ? "" : " not"}`,
+    );
+  }
+  if ((source.sealed ?? null) !== (sealed ?? null)) {
+    out.push("the --frozen-from round ran under another --sealed answer key");
+  }
+  const sha = frozen?.sha256 ?? "";
+  if (!/^[0-9a-f]{64}$/.test(sha)) {
     out.push("the --frozen-from round never froze its tasks (no frozen.json)");
+  } else if (ranFrozen !== sha) {
+    out.push(
+      ranFrozen
+        ? `the --frozen-from round's sessions ran tasks frozen as ${ranFrozen.slice(0, 12)}, not its frozen.json's ${sha.slice(0, 12)} — re-frozen since`
+        : "the --frozen-from round never ran its sessions on its frozen tasks",
+    );
   }
   return out;
 }
@@ -78,13 +95,32 @@ export function expectIds(list) {
   return [...new Set(ids)];
 }
 
+/** A round's log events, in order; a torn line (a crash mid-append) is skipped, not fatal. */
+function logEvents(round) {
+  const log = join(round, "log.jsonl");
+  if (!existsSync(log)) return [];
+  return readFileSync(log, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .flatMap((l) => {
+      try {
+        return [JSON.parse(l)];
+      } catch {
+        return [];
+      }
+    });
+}
+
 /** A round's pin commit, from its own preflight log line (the pin dir may have moved on since). */
 function loggedPin(round) {
-  const log = join(round, "log.jsonl");
-  if (!existsSync(log)) return null;
-  const lines = readFileSync(log, "utf8").split("\n").filter(Boolean);
-  const pins = lines.map((l) => JSON.parse(l)).filter((l) => l.step === "0-preflight" && l.pin);
+  const pins = logEvents(round).filter((l) => l.step === "0-preflight" && l.pin);
   return pins.at(-1)?.pin ?? null;
+}
+
+/** The freeze a round's sessions were last planned on, from its log; null when they never ran. */
+function ranFrozen(round) {
+  const plans = logEvents(round).filter((l) => l.step === SESSIONS && l.event === "plan");
+  return plans.at(-1)?.frozen ?? null;
 }
 
 /**
@@ -97,7 +133,14 @@ export function adoptSource(ctx) {
   const source = readIf(join(dir, "round.json"));
   const frozen = readIf(join(dir, FILES.frozen));
   const profileSha = sha256(readFileSync(resolve(ctx.opts.profile)));
-  const problems = sourceProblems({ source, frozen, profileSha });
+  const problems = sourceProblems({
+    source,
+    frozen,
+    ranFrozen: ranFrozen(dir),
+    profileSha,
+    stub: ctx.stub,
+    sealed: ctx.sealed,
+  });
   if (problems.length > 0) throw new Error(`refusing the control — ${problems.join("; ")}`);
   Object.assign(ctx.opts, {
     frozenFrom: dir,
@@ -163,17 +206,18 @@ export function adoptTasks(ctx) {
 
 /** Step 10, control round: control.json, beside the findings it describes. */
 export function writeControl(ctx) {
-  const pinRecord = readIf(join(ctx.pin, ".study-pin.json"));
   const record = controlRecord({
     kind: ctx.opts.control,
     source: ctx.source.dir,
     frozen: ctx.source.frozen,
-    pin: pinRecord?.pin ?? null,
+    // Both pins from their round's own preflight log line, taken the same way.
+    pin: loggedPin(ctx.out),
     sourcePin: ctx.source.pin,
     expect: ctx.opts.expectIds,
   });
   writeFileSync(join(ctx.out, FILES.control), `${JSON.stringify(record, null, 1)}\n`);
   if (record.pin && record.pin === record.sourcePin) {
+    // Allowed here (a stub round may), refused by the grader (controlProblems).
     ctx.log("10-collect", "same-build", { note: `the control ran the main round's own pin` });
   }
   ctx.log("10-collect", "control", { kind: record.kind, pin: record.pin, from: record.source });
