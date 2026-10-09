@@ -222,8 +222,10 @@
 
 /* The book in the Overview grid's left column (`u.$id.index.tsx`): at ≥1200 the character card
  * takes 384px on the right, so the blotter reads as it does below 1100 — detail columns folded
- * behind each row's chevron — and the Position column gives up 40px, so the table fits the ~800px
- * column at 1280 instead of scrolling (the `<col>` widths are inline, hence the !important). */
+ * behind each row's chevron — and the Position column gives up 40px (the `<col>` widths are
+ * inline, hence the !important). That is 854px against the ~806px column at 1280 since the action
+ * column grew to hold its buttons (#4945), so the table scrolls ~48px there; which columns stand
+ * beside the tower is a design call held by #4943, not settled here. */
 @media (min-width: 1200px) {
   .acct-book col.col-detail,
   .acct-book th.col-detail,

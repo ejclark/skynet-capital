@@ -337,12 +337,21 @@ table.blotter {
   margin: 0 0 10px;
 }
 
-/* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict) */
+/* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict).
+   The positions table's `<col>` elements carry `col-detail` too (positions-table.tsx), so the
+   wide rule names its element types: a bare `.col-detail { display: table-cell }` also matched
+   `col.col-detail`, and a non-column child of a `<colgroup>` is treated as `display: none` — the
+   four detail widths dropped out of the colgroup, every later width slid one column left, and the
+   action column was left with no width at all (0px at 1280, #4945). */
 .col-detail {
   display: none;
 }
 @media (min-width: 1100px) {
-  .col-detail {
+  col.col-detail {
+    display: table-column;
+  }
+  th.col-detail,
+  td.col-detail {
     display: table-cell;
   }
   .fold-col,
@@ -352,16 +361,19 @@ table.blotter {
 }
 
 /* close action column + inline close panel (#738 — close from the portfolio) */
+/* Its width is the last `<col>` in positions-table.tsx: under `table-layout: fixed` a cell's
+   `min-width` is ignored, so a width set here would only look like it made room (#4945). */
 .act-col {
-  /* `width: 1%` is the usual "shrink to content" trick for a table-layout: auto column, but it
-     stops working once a cell holds a flex row of un-shrinkable buttons (the lot row's "Close
-     lot" + "Roll"): the browser treats 1% as a hard preference and squeezes the column below its
-     content's real width instead, and the buttons render outside the cell rather than growing it.
-     A `min-width` sized for the widest cell in this column (two buttons) sidesteps the algorithm
-     entirely — the parent row's single "Close all" button just has more room to its left. */
-  min-width: 160px;
   white-space: nowrap;
   text-align: right;
+}
+/* The same `.btn` `width: 100%` trap `.lot-actions .btn` (above) closes, on the parent row: there
+   the stretched "Guidance" link filled the whole cell and shoved "Close all" past the table's
+   right edge (#4945). */
+.act-col .btn {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .close-btn {
   font-size: 11px;

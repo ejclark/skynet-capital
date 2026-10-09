@@ -59,7 +59,12 @@ export function PositionsTable({
             <col className="col-detail" style={{ width: 96 }} />
             <col className="col-detail" style={{ width: 130 }} />
             <col className="col-detail" style={{ width: 150 }} />
-            <col style={{ width: 128 }} />
+            {/* The action column: its widest row is a share position the viewer owns with lots —
+                "Guidance" + "Close all" side by side, ~153px of buttons plus the cell's 24px
+                padding, and a few px for font metrics. Under fixed layout this width is the
+                column's ONLY size (a cell's `min-width` is ignored), so anything narrower pushes
+                "Close all" past the table's right edge (#4945). */}
+            <col style={{ width: 184 }} />
           </colgroup>
           <thead>
             <tr>
