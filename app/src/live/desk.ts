@@ -161,11 +161,14 @@ export interface DeskTiles {
   readonly cashRaw: number;
 }
 
-/** Where the money is (#3689 slice 5) — mirrors `DeskAllocation` in desk-json-view.ts. The three
+/** Where the money is (#3689 slice 5) — mirrors `DeskAllocation` in desk-allocation.ts. The three
  *  percentages are of long shares + long options + cash, and add to 100. */
 export interface DeskAllocation {
   readonly shares: string;
+  /** Options held — the long side the bar draws. */
   readonly options: string;
+  /** "-$1,240": the open sold options' buy-back cost, present only while one is open (#4948). */
+  readonly optionsSold?: string;
   readonly cash: string;
   readonly sharesPct: number;
   readonly optionsPct: number;

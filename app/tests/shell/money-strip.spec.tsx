@@ -58,9 +58,9 @@ describe("MoneyStrip", () => {
     shareCount: 3200,
   };
 
-  it("names every slice in words and points idle cash at the Playbooks chapter", async () => {
+  const renderStrip = (a: DeskAllocation) => {
     const rootRoute = createRootRoute({
-      component: () => <MoneyStrip accountId="eric" allocation={allocation} hasOptions={false} />,
+      component: () => <MoneyStrip accountId="eric" allocation={a} hasOptions={false} />,
     });
     const profile = createRoute({ getParentRoute: () => rootRoute, path: "/accounts" });
     const router = createRouter({
@@ -72,6 +72,26 @@ describe("MoneyStrip", () => {
         <RouterProvider router={router as never} />
       </QueryClientProvider>,
     );
+  };
+
+  // #4948: a written put used to read "Options $0" here, as though nothing were owed.
+  it("names a sold option's liability in words, never 'Options $0'", async () => {
+    renderStrip({ ...allocation, options: "$0", optionsPct: 0, optionsSold: "-$310" });
+    await screen.findByRole("region", { name: "Where your money is" });
+    const sold = screen.getByText("-$310");
+    expect(sold.closest("li")).toHaveTextContent("Sold options -$310");
+    expect(screen.queryByText("$0")).not.toBeInTheDocument();
+  });
+
+  it("shows held and sold options side by side when the book has both", async () => {
+    renderStrip({ ...allocation, optionsSold: "-$310" });
+    await screen.findByRole("region", { name: "Where your money is" });
+    expect(screen.getByText("$27,300").closest("li")).toHaveTextContent("Options $27,300");
+    expect(screen.getByText("-$310").closest("li")).toHaveTextContent("Sold options -$310");
+  });
+
+  it("names every slice in words and points idle cash at the Playbooks chapter", async () => {
+    renderStrip(allocation);
     expect(await screen.findByRole("region", { name: "Where your money is" })).toBeInTheDocument();
     expect(screen.getByText("$580,120")).toBeInTheDocument();
     expect(screen.getByText("36.1% of your account")).toBeInTheDocument();
