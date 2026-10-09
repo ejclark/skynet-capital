@@ -4,7 +4,7 @@ import type { Action, Seen } from "./metrics.mjs";
 import type { Task, TaskAnswer } from "./task-file.mjs";
 
 export const SEEN_MIN: number;
-export const MAX_NUMBERS: number;
+export const MAX_RIVALS: number;
 
 export function numbersIn(text: string | null | undefined): number[];
 export function hedged(text: string | null | undefined): boolean;

@@ -8,6 +8,7 @@
     "scripts/study/drive.mjs",
     "scripts/study/packets.mjs",
     "scripts/study/lint.mjs",
+    "scripts/study/rescore.mjs",
     "scripts/study/pin.mjs",
     "scripts/study/census.mjs",
     "scripts/study/harvest.mjs",
