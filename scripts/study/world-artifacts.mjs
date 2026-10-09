@@ -7,8 +7,9 @@
 // Three sources, each row tagged with where it came from:
 //  - `declared` — the world says so itself (worlds/*: `artifacts`), with the reason;
 //  - `compose`  — a read answered by a declared fixture instead of a real handler;
-//  - `parity`   — a surface the world struck, a read or page it left unanswered. compose.mjs
-//                 writes the first two; parity.mjs rewrites the file with all three.
+//  - `parity`   — a surface the world struck, a read or page it left unanswered, a request off the
+//                 machine it aborted. compose.mjs writes the first two; parity.mjs rewrites the
+//                 file with all three.
 //
 // NOT a parity MISS: a surface that did not render is either a world hole or the app's own defect
 // (an absent-expect that the app shows — a real bug at the pin), and parity cannot tell which. It
@@ -23,9 +24,16 @@
  * @param {{key: string, source: string}[]} [input.payloads]  manifest rows of this world
  * @param {{surface: {label: string, route?: string, struck?: string}}[]} [input.rows]
  * @param {string[]} [input.unstubbed]  "<viewer>: GET <url>" or "<viewer>: PAGE <path>"
+ * @param {string[]} [input.offsite]    "<viewer>: GET <origin><path>" — aborted off-origin requests
  * @returns {WorldArtifact[]}
  */
-export function worldArtifacts({ declared = [], payloads = [], rows = [], unstubbed = [] }) {
+export function worldArtifacts({
+  declared = [],
+  payloads = [],
+  rows = [],
+  unstubbed = [],
+  offsite = [],
+}) {
   const out = declared.map((d) => ({ ...d, source: "declared" }));
   const fixtures = new Map();
   for (const p of payloads) {
@@ -53,10 +61,18 @@ export function worldArtifacts({ declared = [], payloads = [], rows = [], unstub
     out.push({
       route: page ? page[1] : u.replace(/^[^:]*: /, ""),
       sees: page
-        ? "a bare “Not found” page"
+        ? "a bare “not found” page"
         : "the page's own error or empty state (the read answers 404)",
       why: `the world has no answer for it (${u})`,
       source: "parity: unstubbed",
+    });
+  }
+  for (const o of new Set(offsite.map((u) => u.replace(/^[^:]*: /, "")))) {
+    out.push({
+      route: o,
+      sees: "nothing: the link or request goes nowhere (aborted)",
+      why: "a study world lets nothing leave the machine; production reaches it",
+      source: "parity: off-origin",
     });
   }
   return out;

@@ -69,7 +69,14 @@ const SURFACES = [
     id: "header-status",
     label: "header: Status panel",
     act: [click("button", "Status", { within: ACTIONS })],
-    expect: [role("region", "Ops status"), text("Controls bridge"), ...UNWIRED.map(off)],
+    // The bridge's verdict, not only its label: the world's bots process is up (league-services).
+    expect: [
+      role("region", "Ops status"),
+      text("Controls bridge"),
+      text("Bots process polled Mission Control"),
+      off("No poll from the bots process"),
+      ...UNWIRED.map(off),
+    ],
   },
   {
     id: "header-settings",

@@ -241,6 +241,15 @@ describe("worldArtifacts — the list the checker reads before calling a finding
       unstubbed: ["v: GET /api/x?y=1", "v: GET /api/x?y=1", "v: PAGE /nowhere"],
     });
     expect(got.map((a) => a.route)).toEqual(["GET /api/x?y=1", "/nowhere"]);
-    expect(got[1]?.sees).toMatch(/Not found/);
+    expect(got[1]?.sees).toMatch(/not found/);
+  });
+
+  it("lists each aborted off-origin request once, whichever viewer met it", () => {
+    const got = worldArtifacts({
+      offsite: ["a: GET https://github.com/x", "b: GET https://github.com/x"],
+    });
+    expect(got.map((a) => [a.route, a.source])).toEqual([
+      ["GET https://github.com/x", "parity: off-origin"],
+    ]);
   });
 });

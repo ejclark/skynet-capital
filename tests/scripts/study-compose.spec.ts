@@ -194,7 +194,7 @@ describe("serverRead", () => {
     expect(await read("/api/controls")).toEqual({ owner: false });
   });
 
-  it("serves the fleet panel: a stopped bot's process has not polled since its last pass", async () => {
+  it("serves the fleet panel: the bots process polls whether or not a bot decided", async () => {
     const ops = (await read("/api/ops-status")) as {
       available: boolean;
       status: { degraded: boolean; signals: { id: string; verdict: string }[] };
@@ -203,7 +203,21 @@ describe("serverRead", () => {
     expect(ops.status.degraded).toBe(false);
     const verdict = (id: string) => ops.status.signals.find((s) => s.id === id)?.verdict;
     expect(verdict("deploy-app")).toBe("ok");
-    expect(verdict("bridge")).toBe("attention");
+    // A stopped bot is a quiet bot, never a downed process: the poll is alive on every world.
+    expect(verdict("bridge")).toBe("ok");
+    expect(verdict("persona-gate")).toBe("ok");
+  });
+
+  it("refuses a member's option fill the book has no order audit for, never a bot's", async () => {
+    type Audit = () => Promise<unknown[]>;
+    expect(await (config.readAllOrderAudit as Audit)()).toEqual([]);
+    const human = book.participants.find((p) => p.kind === "human")?.id ?? "";
+    const withPut = structuredClone(book);
+    withPut.activity[human] = [
+      { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
+    ];
+    const audit = serverConfig(withPut).readAllOrderAudit as Audit;
+    await expect(audit()).rejects.toThrow(/member's option fill/);
   });
 
   it("is undefined for a path no handler claims", async () => {

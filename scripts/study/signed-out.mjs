@@ -1,8 +1,9 @@
 // The page a study world shows at `/login` (#4943) — where the real auth gate sends a member who
-// signs out. Production's sign-in page offers the identity provider's buttons, which leave the
-// machine (a study world aborts every off-origin request), so the world declares this plain page
-// instead and lists it as a known world artifact (worlds/shell-artifacts.mjs). Area-agnostic: it
-// says the member is signed out and nothing about any surface.
+// signs out. Production's /login is the app's own page (`Authenticator.loginPage`), but every
+// button on it hands off to an identity provider, off the machine (a study world aborts every
+// off-origin request), so nothing past it could work here; the world shows this plain page instead
+// and lists it as a known world artifact (worlds/shell-artifacts.mjs). Area-agnostic: it says the
+// member is signed out and nothing about any surface.
 
 export const SIGNED_OUT_PAGE = `<!doctype html>
 <html lang="en">

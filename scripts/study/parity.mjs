@@ -169,12 +169,70 @@ const describe = (e) =>
   e.url ? `url ${e.url}` : e.text ? `text "${e.text}"` : `${e.role}${e.name ? ` "${e.name}"` : ""}`;
 
 /**
- * Click an act's target the way a member taps it. When the page lets something else take the tap
- * (an overlay over the control), the surface is still reached by keyboard so its expects can be
- * checked, and the blocked tap is a FAULT (the frame fails) unless the act declares its issue.
+ * Scroll the PAGE (never an inner strip) until an act's target is mid-viewport — the one scroll
+ * every member makes — and name the strip that still cuts it off, if any: the nearest ancestor
+ * whose content overflows it on an axis the target sits outside of. `swipes` says whether a member
+ * can move that strip (overflow auto/scroll) or not (hidden/clip).
+ */
+const pageScrollTo = (locator) =>
+  locator.evaluate(
+    (el) => {
+      const r0 = el.getBoundingClientRect();
+      window.scrollBy(0, r0.top + r0.height / 2 - window.innerHeight / 2);
+      const r = el.getBoundingClientRect();
+      const root = document.scrollingElement;
+      for (let a = el.parentElement; a && a !== root; a = a.parentElement) {
+        const cs = getComputedStyle(a);
+        const c = a.getBoundingClientRect();
+        const outX = a.scrollWidth > a.clientWidth && (r.left < c.left || r.right > c.right);
+        const outY = a.scrollHeight > a.clientHeight && (r.top < c.top || r.bottom > c.bottom);
+        const flow = outX ? cs.overflowX : cs.overflowY;
+        if ((outX || outY) && flow !== "visible") {
+          return { strip: true, swipes: flow === "auto" || flow === "scroll" };
+        }
+      }
+      return { strip: false, swipes: false };
+    },
+    undefined,
+    { timeout: 3000 },
+  );
+
+/** The reasons an act's target can start out of a member's reach that a scroll could fix. */
+const SCROLL_FIXABLE = new Set(["is clipped away by a container", OUT_OF_VIEW]);
+
+/**
+ * Record where an act's target stands before the harness centres it — nothing when it is wholly
+ * in reach. Cut off by a strip a member can swipe: a note (the frame stays `ok*`
+ * and its picture is kept). Out of reach with nothing a member can scroll: a fault.
+ */
+async function reachBeforeTap(target, a, frameName, result) {
+  const strip = await pageScrollTo(target);
+  const start = judgeVisible(await measure(target));
+  const out = !start.ok && SCROLL_FIXABLE.has(start.why);
+  if (!(strip.strip || out)) return;
+  const what = out
+    ? start.why.replace(" after scrolling to it", "")
+    : "is partly cut off by its strip";
+  const reach = strip.swipes
+    ? "a swipe of its strip brings it in"
+    : "nothing a member scrolls brings it in";
+  const said = `${describe(a.click)} ${what} at ${frameName} before the tap; ${reach}`;
+  if (out && !strip.swipes) fault(result, a, said);
+  else result.notes.push(said);
+}
+
+/**
+ * Click an act's target the way a member taps it. Its reach is judged where a page scroll leaves
+ * it, BEFORE the harness centres it (`reachBeforeTap`): `centre` also scrolls strips sideways,
+ * including ones no gesture moves, and would otherwise report a cut-off control as ok. When the
+ * page lets something else take the tap (an overlay over the control), the surface is still
+ * reached by keyboard so its expects can be checked, and the blocked tap is a FAULT (the frame
+ * fails) unless the act declares its issue.
  */
 async function act(page, a, frameName, result) {
   const target = locatorFor(page, a.click).first();
+  await target.waitFor({ state: "attached", timeout: 2500 });
+  await reachBeforeTap(target, a, frameName, result);
   await centre(target);
   try {
     await target.click({ timeout: 2500 });
@@ -289,6 +347,7 @@ async function main() {
       payloads: payloads.filter((p) => p.world === world.name),
       rows: result.rows,
       unstubbed: result.unstubbed,
+      offsite: result.offsite,
     });
     writeFileSync(
       join(runDir, `${world.name}-artifacts.json`),

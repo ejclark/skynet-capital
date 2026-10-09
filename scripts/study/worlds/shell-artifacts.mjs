@@ -12,10 +12,19 @@
 export const SHELL_ARTIFACTS = [
   {
     route: "/login",
-    sees: "After Sign out: a plain page reading “You're signed out”, with no way to sign back in.",
+    sees:
+      "After Sign out: a plain page reading “You're signed out”, with no way to sign back in;" +
+      " Back or any app link returns to it.",
     why:
-      "The real auth gate answers /logout (302 to /login, cookie cleared); production's /login is" +
-      " the identity provider's sign-in, which leaves the machine, so the world shows a plain page.",
+      "The real auth gate answers /logout (302 to /login, cookie cleared) and sends every page" +
+      " to /login once signed out, as production does. Production's /login is the app's own" +
+      " sign-in page with a “Continue with …” button per provider; each button hands off to the" +
+      " identity provider, off the machine, so the world shows a plain page with no buttons.",
+  },
+  {
+    route: "any link off the app (e.g. Status → “Open Actions” on github.com)",
+    sees: "Nothing: the tap goes nowhere, or a blank tab.",
+    why: "A study world aborts every request that would leave the machine; production opens it.",
   },
   {
     route: "Status (header) → Live stream",

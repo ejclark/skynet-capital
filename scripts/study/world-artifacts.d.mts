@@ -12,4 +12,5 @@ export function worldArtifacts(input: {
   payloads?: { key: string; source: string }[];
   rows?: { surface: { label: string; route?: string; struck?: string } }[];
   unstubbed?: string[];
+  offsite?: string[];
 }): WorldArtifact[];

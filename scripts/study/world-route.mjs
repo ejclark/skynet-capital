@@ -30,6 +30,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
 import { parseLeaderMetric } from "../../src/observatory/standings-metric.ts";
 import { isAppShellPath, serveAppShell } from "../../src/server/app-shell-routes.ts";
+import { clearSessionCookie, sessionTokenFromCookies } from "../../src/server/auth/session.ts";
 import { createBoardChannel, streamBoardPatches } from "../../src/server/board-patch-routes.ts";
 import { gateRequest } from "../../src/server/dashboard-auth-gate.ts";
 import { resolveChromium, shooter } from "../shoot/lib.mjs";
@@ -38,25 +39,51 @@ import { SIGNED_OUT_PAGE } from "./signed-out.mjs";
 
 const SCENE = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" };
 
+/** The session cookie every world context starts with: the member is signed in. Its value is
+ *  never verified — the world answers `/api` per viewer itself — only its presence is the gate. */
+const SESSION_COOKIE = {
+  name: "skynet_session",
+  value: "study-world",
+  httpOnly: true,
+  sameSite: "Lax",
+};
+
+/** True while the request still carries the world's session cookie (not cleared by Sign out). */
+const signedIn = (cookieHeader) => Boolean(sessionTokenFromCookies(cookieHeader));
+
 /**
- * Sign-in's own routes, answered by the server's REAL auth gate (`gateRequest`): `/logout` is its
- * 302 to `/login` with the cookie cleared, `/login` its sign-in page. The page is the one thing
- * declared (signed-out.mjs): production's is the provider sign-in, which leaves the machine.
+ * The server's REAL auth gate (`gateRequest`) in front of every page and stream, as production's
+ * `dashboard-server.ts` puts it: `/logout` is its 302 to `/login` with the real cleared cookie,
+ * and once the cookie is gone every gated path answers 302 `/login` (a stream 401) — so Back or
+ * any `/app` link after Sign out lands where production's does. `/login` is the one declared
+ * page (signed-out.mjs, shell-artifacts.mjs).
  */
 const WORLD_AUTH = {
   loginPage: () => SIGNED_OUT_PAGE,
-  clearCookie: () => "skynet_session=; Path=/; Max-Age=0",
+  clearCookie: clearSessionCookie,
   handleAuthRoute: async () => false,
-  sessionFrom: () => undefined,
+  sessionFrom: (req) =>
+    signedIn(req.headers.cookie) ? { email: "", provider: "google" } : undefined,
 };
 
 /** The static half: the production shell handler, plus held-open empty event streams. A path
  *  neither serves is flagged in `session.unstubbed` (`PAGE <path>`) like an uncomposed read. */
 function startServer(dist, streams, session) {
   const channel = createBoardChannel();
-  const server = createServer((req, res) => {
+  const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const path = url.pathname;
+    // The landmark portrait embeds the real `/tower` scene, served as shell.mjs serves it — when
+    // its bundle is built (`npm run build:scene`); unbuilt, `/three/scene.js` is flagged below.
+    // Public, as production's `servePublicRoute` serves it ahead of the gate.
+    const scene = SCENE[path];
+    if (scene && existsSync(scene)) {
+      const type = path.endsWith(".js") ? "application/javascript" : "text/html; charset=utf-8";
+      res.writeHead(200, { "content-type": type });
+      return res.end(readFileSync(scene));
+    }
+    const gate = await gateRequest(req, res, path, req.url ?? path, { auth: WORLD_AUTH });
+    if (gate.handled) return;
     if (path === "/events") {
       streams.add(res);
       req.on("close", () => streams.delete(res));
@@ -81,27 +108,16 @@ function startServer(dist, streams, session) {
       return;
     }
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
-    if (path === "/login" || path === "/logout") {
-      void gateRequest(req, res, path, req.url ?? path, { auth: WORLD_AUTH });
-      return;
-    }
     // The front door (`dashboard-server.ts` serveHomePage): a bare visit lands in the shell.
     if (path === "/" || path === "/index.html") {
       res.writeHead(302, { location: `/app/${url.search}` });
       res.end();
       return;
     }
-    // The landmark portrait embeds the real `/tower` scene, served as shell.mjs serves it — when
-    // its bundle is built (`npm run build:scene`); otherwise the frame stays the night background.
-    const scene = SCENE[path];
-    if (scene && existsSync(scene)) {
-      const type = path.endsWith(".js") ? "application/javascript" : "text/html; charset=utf-8";
-      res.writeHead(200, { "content-type": type });
-      return res.end(readFileSync(scene));
-    }
+    // Production's own 404 (`dashboard-server.ts` serveAuthorizedRoute), flagged as a world hole.
     session.unstubbed.push(`PAGE ${path}`);
-    res.writeHead(404, { "content-type": "text/html; charset=utf-8" });
-    res.end("<!doctype html><title>Not found</title><h1>Not found</h1>");
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end("not found");
   });
   return new Promise((ok) => server.listen(0, "127.0.0.1", () => ok(server)));
 }
@@ -145,12 +161,13 @@ export async function openWorld({
   async function reframe(next) {
     if (context) await context.close();
     context = await browser.newContext({ ...next, colorScheme, timezoneId, locale: "en-US" });
+    await context.addCookies([{ ...SESSION_COOKIE, url: origin }]);
     page = await context.newPage();
     await page.clock.setFixedTime(new Date(at));
     // Every request of every page in the context — popups included — passes here: anything off
     // the local origin is aborted and recorded, `/api` is answered by the world, the rest is the
     // local shell server.
-    await context.route("**/*", (route) => {
+    await context.route("**/*", async (route) => {
       const request = route.request();
       const url = new URL(request.url());
       if (url.origin !== origin) {
@@ -158,6 +175,10 @@ export async function openWorld({
         return route.abort("blockedbyclient");
       }
       if (!url.pathname.startsWith("/api/")) return route.continue();
+      // The gate stands in front of `/api` too: signed out, every read and write is its 302.
+      if (!signedIn(await request.headerValue("cookie"))) {
+        return route.fulfill({ status: 302, headers: { location: "/login" } });
+      }
       const decided = routeRequest(
         { method: request.method(), url, accept: request.headers().accept },
         answer,
