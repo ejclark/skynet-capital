@@ -20,7 +20,8 @@
 //     app/node_modules, never a symlink, and never cloned FROM one (an `npm ci` through a link
 //     empties the linked install, docs/LESSONS.md 2026-10-09). A lockfile that differs at the pin
 //     is recorded and warned;
-//  4. `npm run build --prefix app` in <dir>;
+//  4. `npm run build --prefix app` in <dir>, and the 3D landmark's bundle (`npm run build:scene`,
+//     when the pin has it) — production serves it, so a world without it is not production's;
 //  5. composes every world into <dir>/.study-run and runs parity there, saving the table to
 //     <dir>/.study-run/parity.txt. The exit status is parity's.
 // remove: `git worktree remove --force` — only a registered, non-main worktree carrying
@@ -213,8 +214,10 @@ function prepare({ commit: given, dir: asked }) {
   }
   writeRecord(dir, record);
 
+  const scripts = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).scripts ?? {};
   const steps = [
     ["build", "npm", ["run", "build", "--prefix", "app"]],
+    ...(scripts["build:scene"] ? [["scene", "npm", ["run", "build:scene"]]] : []),
     ["compose", "npx", ["tsx", "scripts/study/worlds/compose.mjs", join(dir, RUN)]],
   ];
   record.steps = {};

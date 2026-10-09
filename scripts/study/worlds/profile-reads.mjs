@@ -47,6 +47,15 @@ const SHELL = [
   "/api/playbooks",
   "/api/playbook-store",
   "/api/join",
+  // One tap from the profile (the app nav, the header's icons): Activity's feed and the Council
+  // beside it, Moneypenny's feedback, Settings' owner-gated cards (a non-owner gets `{owner:false}`
+  // from the real handler, as in production).
+  "/api/wire",
+  "/api/feedback",
+  "/api/feedback/comments",
+  "/api/admin/invite",
+  "/api/admin/claim",
+  "/api/controls",
   ...BOARD_METRICS.map((m) => `/api/board?by=${m}`),
 ];
 
@@ -67,6 +76,8 @@ const perAccountTrade = (id) =>
 /** The trade page's per-symbol reads. */
 function perSymbolTrade(symbol) {
   const reads = [`/api/trade/quote?symbol=${symbol}`, `/api/trade/guidance?symbol=${symbol}`];
+  // The options ticket's "who else traded this" row reads the feed scoped to one underlying.
+  reads.push(`/api/wire?symbol=${symbol}`);
   for (const d of BAR_DAYS) reads.push(`/api/trade/bars?symbol=${symbol}&days=${d}`);
   return reads;
 }

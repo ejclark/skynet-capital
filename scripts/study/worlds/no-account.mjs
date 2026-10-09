@@ -6,6 +6,8 @@
 import { profileFixtures } from "./fixtures.mjs";
 import { profileReads } from "./profile-reads.mjs";
 import { profileSurfaces } from "./profile-surfaces.mjs";
+import { SHELL_ARTIFACTS } from "./shell-artifacts.mjs";
+import { NO_ACCOUNT_SETTINGS, shellSurfaces } from "./shell-surfaces.mjs";
 
 export default {
   name: "no-account",
@@ -14,4 +16,8 @@ export default {
   reads: profileReads,
   fixtures: profileFixtures,
   surfaces: profileSurfaces("no-account"),
+  // One tap from the profile (app nav, header icons): parity proves them; the census does not
+  // walk them (they are not this area). What the world still cannot show: `artifacts`.
+  oneTap: shellSurfaces("casey", NO_ACCOUNT_SETTINGS),
+  artifacts: SHELL_ARTIFACTS,
 };

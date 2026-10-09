@@ -39,6 +39,10 @@
 // real handler. A world's `fixtures` hook (fixtures.mjs) is where one would go, recorded in the
 // manifest as `fixture: <why>`. A read neither answers is MISSING and the composer exits non-zero:
 // a world never ships a hole it did not declare.
+//
+// WHAT IS STILL NOT PRODUCTION'S: each world's declared `artifacts` plus every fixture-backed read
+// land in `<run-dir>/<world>-artifacts.json` (../world-artifacts.mjs), the list the checker reads;
+// parity.mjs rewrites it with what it struck or left unanswered.
 
 process.env.TZ = "UTC";
 
@@ -48,6 +52,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guardNetwork } from "../no-network.mjs";
 import { canonicalUrl, writeViewer } from "../payloads.mjs";
+import { worldArtifacts } from "../world-artifacts.mjs";
 import { edgarAnswer, loadInput } from "./inputs.mjs";
 import { INSTANT, pinProcessClock } from "./instant.mjs";
 
@@ -176,6 +181,14 @@ async function composeAll(runDir, names) {
     payloads,
   };
   writeFileSync(join(runDir, "manifest.json"), `${JSON.stringify(manifest, null, 1)}\n`);
+  for (const world of chosen) {
+    const own = payloads.filter((p) => p.world === world.name);
+    const known = worldArtifacts({ declared: world.artifacts, payloads: own });
+    writeFileSync(
+      join(runDir, `${world.name}-artifacts.json`),
+      `${JSON.stringify(known, null, 1)}\n`,
+    );
+  }
   const fixtures = payloads.filter((r) => r.source.startsWith("fixture")).length;
   const refused = Object.values(network).reduce((n, w) => n + w.refused.length, 0);
   console.log(
