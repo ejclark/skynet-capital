@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Make the crawl's report stop saying more than it checked.** Two quiet false passes found while
+  writing up why the member tests missed the profile breakage (#4943). The friction ledger's
+  `judge` column says `pending (grind)` on every row, and no lane schedules that grind, so it reads
+  as a check that is coming and never does. `scripts/crawl/coverage.mjs` labels a screen `covered`
+  when a step only loaded it. Cheapest fix: rename `covered` to `visited`, and have the ledger
+  headline say how old the ungraded rows are. Or drop the column until something runs it.
+  _(src: Claude · while: retro on the 2026-10-08 profile report)_
+
 - **Alert when the bots' price feed is down during market hours.** #4864: the feed failed for days
   and a human noticing "no trades" was the only detector. A market-hours check that the bots app
   logged `authenticated` and saw a tick in the last N minutes (health.json already stamps) would
