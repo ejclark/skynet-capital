@@ -130,7 +130,11 @@ export function heartbeatLine(h: Heartbeat): {
     h.state === "beating"
       ? `last pass ${ago} ago`
       : h.state === "stale"
-        ? `no pass for ${ago}`
+        ? // Stale with the market closed means no pass in the whole last session (#4949) — "for
+          // 3 days" would blur a stopped bot with a weekend's ordinary quiet.
+          h.marketOpen
+          ? `no pass for ${ago}`
+          : "no pass last session"
         : h.state === "market-closed"
           ? ago
             ? `idle, last pass ${ago} ago`

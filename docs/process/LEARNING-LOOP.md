@@ -119,5 +119,6 @@ finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
 | Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-10 — first falsifier; the second is 2026-10-31 |
 | Research kill list | Does each killed hypothesis stay dead? (`docs/research/multi-symbol-sweep.md`) | #3955 | running | on each sweep Eric names tickers for — a kill reopens only on its stated condition |
 | Capability adoption | Does a full-adoption pass cost what we predicted? (#3748, #3769 differed 13× in tokens) | #3769 | running | before the next run — write its predicted token cost first |
+| Member studies | Do simulated members find what a real member struggled with, without seeing it — and anything structural he missed? (`docs/members/study/README.md`) | #4943 | piloting | 2026-10-16 — graded profile round; killed if recall < 0.35 or zero structural findings by 2026-10-23 |
 | Bot readiness evals | Does each bot pass its fixed scenario set? (`src/evals/`) | README phase 6 | blocked-on-fix | when the evals are live-verified — the bot learning loop's own plan owns it |
 | Haiku eval replay | Can Haiku/Sonnet do Layer 1 research as well as Opus? | #3264 | pivoted (#3300) | none — ended; worked example above |

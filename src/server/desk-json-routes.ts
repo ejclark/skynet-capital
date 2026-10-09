@@ -178,6 +178,19 @@ function botRoster(
   return { subscriptions: state[found.id] ?? [], ...(envNamed ? { envNamed } : {}) };
 }
 
+/** The playbooks the desk's ideas leave out because the account already subscribes to them, on or
+ *  paused (#4950). The owner's copy only: which playbooks a bot runs is the owner's alone (#885),
+ *  and a non-owner's copy missing exactly those ideas would name them. An unwired or unreadable
+ *  store filters nothing — the ideas read as they did before, never as a claim. */
+function subscribedForIdeas(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+  owner: boolean,
+): ReadonlySet<string> {
+  const subs = owner ? (config.subscriptions?.loadIfReadable()?.[found.id] ?? []) : [];
+  return new Set(subs.map((s) => s.playbookId));
+}
+
 /** The bot's book (the hub's broker read) and its Store subscriptions, enabled or paused — what the
  *  roll call's unmanaged-lot line judges from (#4777). Undefined, so no claim is made, when either
  *  is unreadable: a failed broker read carries no positions, and an unwired or unreadable
@@ -367,7 +380,13 @@ export async function serveDeskJson(
   res.end(
     JSON.stringify({
       generatedAt: state.generatedAt,
-      desk: deskView(found, ledger, playbookStoreCatalog(), config.now),
+      desk: deskView(
+        found,
+        ledger,
+        playbookStoreCatalog(),
+        config.now,
+        subscribedForIdeas(found, config, owner),
+      ),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
         : {}),
