@@ -52,7 +52,12 @@ function closeWords(preview: TicketPreview | OptionPreview): string {
 type CloseState =
   | { readonly step: "editing" }
   | { readonly step: "reviewing" }
-  | { readonly step: "reviewed"; readonly preview: TicketPreview | OptionPreview }
+  | {
+      readonly step: "reviewed";
+      readonly preview: TicketPreview | OptionPreview;
+      /** The count that was reviewed — Confirm sends this, not whatever the row reads now. */
+      readonly count: number;
+    }
   | { readonly step: "submitting" }
   | { readonly step: "done"; readonly result: TicketResult }
   | { readonly step: "error"; readonly message: string };
@@ -93,40 +98,43 @@ export function ClosePanel({
     void queryClient.invalidateQueries({ queryKey: ["accounts-networth"] });
   };
 
-  // One draft for both steps, so Confirm sends exactly what was reviewed. An option close always
-  // names its count: left off, the server reads "close everything held", which is wrong for one
-  // buy of a larger position.
-  const optionDraft: OptionDraft = {
+  // One draft for both steps, so Confirm sends exactly what was reviewed: the count is fixed at
+  // Review and carried in the reviewed state, because the desk can refetch in between (window
+  // focus) and a shrunken holding would otherwise re-clamp it into an order nobody read. An
+  // option close always names its count: left off, the server reads "close everything held",
+  // which is wrong for one buy of a larger position.
+  const optionDraft = (contracts: number): OptionDraft => ({
     kind: "close",
     participantId: deskId,
     occSymbol: position.symbol,
-    contracts: closeQty,
-  };
-  const ticketDraft: TicketDraft = {
+    contracts,
+  });
+  const ticketDraft = (quantity: number): TicketDraft => ({
     participantId: deskId,
     symbol: position.symbol,
-    quantity: closeQty,
+    quantity,
     action: "sell",
-  };
+  });
 
   const review = async () => {
+    const count = closeQty;
     setState({ step: "reviewing" });
     try {
       const { preview } = position.isOption
-        ? await reviewOption(optionDraft)
-        : await reviewTicket(ticketDraft);
-      setState({ step: "reviewed", preview });
+        ? await reviewOption(optionDraft(count))
+        : await reviewTicket(ticketDraft(count));
+      setState({ step: "reviewed", preview, count });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
   };
 
-  const confirm = async () => {
+  const confirm = async (count: number) => {
     setState({ step: "submitting" });
     try {
       const result = position.isOption
-        ? await submitOption(optionDraft)
-        : await submitTicket(ticketDraft);
+        ? await submitOption(optionDraft(count))
+        : await submitTicket(ticketDraft(count));
       setState({ step: "done", result });
       if (result.ok) {
         refresh();
@@ -197,7 +205,7 @@ export function ClosePanel({
               <button
                 type="button"
                 className="btn btn-primary mc-btn"
-                onClick={() => void confirm()}
+                onClick={() => void confirm(state.count)}
               >
                 Confirm
               </button>

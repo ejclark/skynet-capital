@@ -153,6 +153,25 @@ describe("ClosePanel — a sold option", () => {
     expect(optionCalls[1]?.draft).toEqual(optionCalls[0]?.draft);
   });
 
+  it("confirms the contracts it reviewed, even when the holding refreshes underneath", async () => {
+    shortOption = false;
+    const client = new QueryClient();
+    const panel = (p: DeskPosition) => (
+      <QueryClientProvider client={client}>
+        <ClosePanel deskId="sauron" position={p} onDone={rstest.fn()} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(panel(position({ ...soldPut, quantity: "3", value: "$1,650" })));
+    fireEvent.click(screen.getByRole("button", { name: "Close all" }));
+    await screen.findByRole("button", { name: "Confirm" });
+
+    rerender(panel(position({ ...soldPut, quantity: "2", value: "$1,100" })));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(optionCalls.map((c) => c.step)).toEqual(["review", "submit"]));
+    expect(optionCalls[1]?.draft).toEqual(optionCalls[0]?.draft);
+  });
+
   it("names a held option's close as a sell to close", async () => {
     shortOption = false;
     renderPanel(position({ ...soldPut, quantity: "2", value: "$1,100" }));
@@ -195,6 +214,27 @@ describe("ClosePanel — shares", () => {
       },
     ]);
     expect(screen.getByText(/Sell 1,200 shares\b/)).toBeInTheDocument();
+  });
+
+  it("confirms the count it reviewed, even when the holding refreshes underneath", async () => {
+    // The desk refetches between Review and Confirm (window focus) and the holding has shrunk.
+    // Confirm still sends the 1,200 the member read; the server's own re-review answers for the
+    // difference, rather than the panel quietly sending a different order.
+    const client = new QueryClient();
+    const panel = (p: DeskPosition) => (
+      <QueryClientProvider client={client}>
+        <ClosePanel deskId="sauron" position={p} onDone={rstest.fn()} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(panel(big));
+    fireEvent.click(screen.getByRole("button", { name: "Close all" }));
+    await screen.findByRole("button", { name: "Confirm" });
+
+    rerender(panel(position({ quantity: "1,000", value: "$232,100" })));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(ticketCalls.map((c) => c.step)).toEqual(["review", "submit"]));
+    expect(ticketCalls[1]?.draft).toEqual(ticketCalls[0]?.draft);
   });
 
   it("closes part of the position when the count is trimmed", async () => {
