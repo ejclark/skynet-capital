@@ -23,11 +23,6 @@ import { type AccountsSection, sectionsFor } from "../../src/shell/profile-secti
  * name, and a phone's switch that fits at 390 with "More ▾" instead of a cut-off tab.
  */
 
-rstest.mock("../../src/shell/cockpit-clock", () => ({
-  CockpitClock: () => null,
-  usePhoneWidth: () => false,
-}));
-
 const ACCOUNTS: readonly OwnedAccount[] = [
   { id: "human-eric", name: "Eric", kind: "human", hostConfigured: true, profile: null },
   { id: "bot-sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null },

@@ -149,17 +149,24 @@ function Bracketed({ children }: { readonly children: ReactNode }): ReactElement
  * cards names the two columns once. Each figure keeps its sign, so hue never carries the direction
  * alone, and the link's name says each one in words (#5049). Each card is a 44px+ target that
  * opens the position on Trade, where closing it lives on a phone.
+ *
+ * Under the link, inside the same card, each position carries its guidance line (#5070,
+ * `position-guidance-slot.tsx`): a sibling of the link, never inside it, so its own controls stay
+ * buttons and the link keeps exactly the name above.
  */
 export function PositionCards({
   positions,
   deskId,
   decayBySymbol,
   deltaBySymbol,
+  guide,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
   readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
   readonly deltaBySymbol?: ReadonlyMap<string, number>;
+  /** Each position's guidance line, drawn under its link in the same card. */
+  readonly guide?: (position: DeskPosition) => ReactNode;
 }): ReactElement {
   return (
     <ul className="pos-cards">
@@ -177,7 +184,7 @@ export function PositionCards({
           : {};
         const writtenOption = p.isOption && held(p.quantity).short;
         return (
-          <li key={p.symbol}>
+          <li key={p.symbol} className={guide ? "pos-card-guided" : undefined}>
             <Link
               to="/trade"
               search={tradeSearch(deskId, p.symbol)}
@@ -220,6 +227,7 @@ export function PositionCards({
               )}{" "}
               {greeks.theta || greeks.delta ? <GreeksLine {...greeks} /> : null}
             </Link>
+            {guide?.(p)}
           </li>
         );
       })}

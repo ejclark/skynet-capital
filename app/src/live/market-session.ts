@@ -79,6 +79,19 @@ function nextOpenAfter(date: string): string {
   return d ? `${dayOf(d)} 9:30` : "";
 }
 
+/** The first trading day strictly after today in New York (`YYYY-MM-DD`): the session a row's
+ *  "Not now" waits out (#5070), so a mark set aside on a Thursday afternoon is back after
+ *  Friday's close, never an hour later at Thursday's. */
+export function nextSessionAfterToday(now: Date = new Date()): string {
+  return tradingDayAfter(easternParts(now).date);
+}
+
+/** Whether `date`'s close (4:00, or 1:00 on an early close) has passed at `now`. */
+export function closeHasPassed(date: string, now: Date = new Date()): boolean {
+  const e = easternParts(now);
+  return e.date > date || (e.date === date && e.minutes >= closeFor(date));
+}
+
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 export function marketSession(now: Date = new Date()): MarketSessionView {

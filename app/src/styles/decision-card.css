@@ -1,0 +1,57 @@
+/* The decision card's parts that outlived the "Needs a decision" pager (#3689 slice 7; the pager
+ * retired with #5070, its job moved onto the positions' fact badges): the Map lens's stacked
+ * decisions (`shell/positions-lens.tsx`) and the ceremonies' buttons still wear them. The kind is
+ * written in words, so colour never carries it alone. */
+
+.decisions-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.decision-sym {
+  font-size: 15px;
+  font-weight: 700;
+}
+.decision-kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.decision--at-risk .decision-kind {
+  color: var(--neg);
+}
+.decision-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.decision-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+.decision-btn:hover {
+  filter: brightness(1.08);
+  color: var(--text);
+}
+.decision-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.decision-btn--primary:hover {
+  color: var(--accent-contrast);
+}

@@ -11,12 +11,17 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { fetchOptionPositions } from "../live/options";
+import { MARK_TOKEN, MARK_WORD } from "../live/position-mark";
+import { rowCallOf } from "../live/row-call";
 import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
+import { GuidanceSlot } from "./position-guidance-slot";
+import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
+import { lookRank, shownKind, useRowMarks } from "./use-row-marks";
 import { ViewTabs } from "./view-tabs";
 
 /**
@@ -144,7 +149,6 @@ export function PositionsBlotter({
   readonly children?: ReactNode;
 }): ReactElement {
   const filter = parseDeskQuery(query);
-  const shown = positions.filter((p) => matchesFilter(p, filter));
   const hasOptions = positions.some((p) => p.isOption);
   // Same cache as the Money strip and the Trade page's option card: one read of the option book.
   const statement = useQuery({
@@ -155,6 +159,42 @@ export function PositionsBlotter({
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
   const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
+  // Every row's fact badge and this viewer's Not now on it (#5070): the marks filter (`is:review`
+  // …) and sort (`sort:look`) the list, and the pager they replace is gone.
+  const marks = useRowMarks(deskId, positions, statement.data);
+  const kindOf = (p: DeskPosition) => shownKind(marks.rows.get(p.symbol));
+  const kept = positions.filter((p) => matchesFilter(p, filter, kindOf(p)));
+  // A stable sort: inside each mark the server's order (largest first) holds.
+  const shown = filter.sortLook
+    ? kept
+        .map((p, i) => ({ p, i, r: lookRank(marks.rows.get(p.symbol)) }))
+        .sort((a, b) => a.r - b.r || a.i - b.i)
+        .map(({ p }) => p)
+    : kept;
+  // What a mark filter hides, by name, so a narrowed list never reads as the whole book.
+  const hiddenByMark = filter.mark
+    ? positions.filter((p) => matchesFilter(p, { ...filter, mark: undefined }) && !kept.includes(p))
+    : [];
+  const counts = { review: 0, consider: 0, onplan: 0 };
+  for (const p of positions) {
+    const kind = kindOf(p);
+    if (kind) counts[kind] += 1;
+  }
+  const guide = (p: DeskPosition) => {
+    const row = marks.rows.get(p.symbol);
+    const call = rowCallOf(positions, p);
+    return row ? (
+      <GuidanceSlot
+        position={p}
+        row={row}
+        deskId={deskId}
+        canTrade={canTrade}
+        {...(call ? { call } : {})}
+        onAside={() => marks.setAside(p.symbol)}
+        onUndo={() => marks.undo(p.symbol)}
+      />
+    ) : null;
+  };
   const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
   // An Events row's `#pos-<symbol>` link (#4348): land on the row or card once it has rendered.
   useLandOnPosition(`${view}:${shown.map((p) => p.symbol).join(",")}`);
@@ -173,14 +213,15 @@ export function PositionsBlotter({
   };
   return (
     <>
-      {lens && onLensChange ? (
-        <div className="positions-head">
-          <h2 className="positions-title">
-            Positions <span className="num">{positions.length}</span>
-          </h2>
-          <LensSwitch lens={view} onChange={pickLens} />
-        </div>
-      ) : null}
+      <PositionsHead
+        deskId={deskId}
+        count={positions.length}
+        query={query}
+        filter={filter}
+        counts={counts}
+        onChange={refine}
+        lens={lens && onLensChange ? <LensSwitch lens={view} onChange={pickLens} /> : undefined}
+      />
       <ViewTabs deskId={deskId} query={query} onPick={refine} />
       <PositionsFilterBar query={query} onChange={refine} ref={bar} />
       <div className="positions-result" ref={result}>
@@ -196,6 +237,7 @@ export function PositionsBlotter({
               totalCount={positions.length}
               decayBySymbol={decay}
               canTrade={canTrade}
+              guide={guide}
             />
             {shown.length > 0 ? (
               <PositionCards
@@ -203,10 +245,33 @@ export function PositionsBlotter({
                 deskId={deskId}
                 decayBySymbol={decay}
                 deltaBySymbol={delta}
+                guide={guide}
               />
             ) : null}
           </div>
         )}
+        {hiddenByMark.length > 0 ? (
+          <p className="pos-hidden-line">
+            <span>
+              {hiddenByMark.length} hidden by Filter:{" "}
+              {hiddenByMark
+                .map((p) => {
+                  const kind = kindOf(p);
+                  return `${p.display} (${kind ? MARK_WORD[kind] : "set aside"})`;
+                })
+                .join(", ")}
+            </span>{" "}
+            <button
+              type="button"
+              className="pos-hidden-clear"
+              onClick={() =>
+                refine(filter.mark ? toggleQualifier(query, MARK_TOKEN[filter.mark]) : query)
+              }
+            >
+              Clear
+            </button>
+          </p>
+        ) : null}
         {children}
       </div>
     </>

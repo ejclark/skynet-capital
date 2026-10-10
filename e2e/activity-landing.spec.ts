@@ -5,19 +5,20 @@ import { OWNED, ownTheDayTrader } from "./own-account";
  * Landing on a row below the sticky head (#5022) — scroll position against a sticky header is
  * layout, so it needs a real browser. Two doors on the Profile page's Overview jump to a row:
  *   - a FORM square (the net-worth card's closed trades) opens Activity at `#act-<orderId>`;
- *   - a decision card's "Show in table" is a plain `#pos-<symbol>` anchor to the positions book.
+ *   - an Events row's `#pos-<symbol>` link lands on the position in the book (the decision pager's
+ *     "Show in table" door made the same URL until the pager retired, #5070).
  * Either one must leave its row fully on screen BELOW the cockpit head (topbar + sticky head),
  * marked `data-landed` for a moment — the outline and inset bar that say "this one".
  *
- * At 390 neither door is drawn (≤700px the card's footer and the secondary action step aside,
- * #3689 slice 8), but the links they make are: a Thesis marker carries the same `#act-` URL and an
- * Events row the same `#pos-` one. So the phone opens those URLs and the desktop taps the doors —
- * one landing, both widths.
+ * At 390 the FORM strip is not drawn (≤700px the card's footer steps aside, #3689 slice 8), but
+ * the link it makes is: a Thesis marker carries the same `#act-` URL. So the phone opens that URL
+ * and the desktop taps the square; both widths open the `#pos-` URL an Events row makes — one
+ * landing, both widths.
  *
  * The offline ledger holds two buys and no closes, so the spec answers the Day Trader's activity
  * with thirty orders, half of them closes: the FORM strip's oldest square then points well down
- * the table, so the page has to scroll to reach it. A holding decision is added to its desk so the
- * pager carries "Show in table".
+ * the table, so the page has to scroll to reach it. A holding decision rides on its desk, as a
+ * flagged book's would.
  */
 
 const HOUR = 3_600_000;
@@ -52,7 +53,7 @@ function ledger(): unknown {
   return { available: true, activity };
 }
 
-/** A held position the pager flags, with its "Show in table" door — first, so it is the card shown. */
+/** A held position the decision engine flags, as a flagged book's desk carries it. */
 const HOLDING = {
   id: "lock-in-AAPL",
   kind: "lock-in",
@@ -126,37 +127,21 @@ test.describe("landing at 1280px, through the Overview's doors (#5022)", () => {
     await expectLanded(page.locator(`tr[id="${DEEPEST_CLOSE}"]`));
   });
 
-  test("“Show in table” lands its position below the sticky head, marked", async ({ page }) => {
+  // The decision pager's "Show in table" door retired with the pager (#5070): its job is the fact
+  // badge on every row. The `#pos-<symbol>` URL it made is still an Events row's link.
+  test("an Events row's #pos- link lands its position below the sticky head, marked", async ({
+    page,
+  }) => {
     await stage(page);
-    await page.goto(OVERVIEW);
-    const door = page.getByRole("link", { name: "Show in table" });
-    await expect(door).toBeVisible();
     // The offline book is two rows at the very end of the page, where no jump can top-align a row;
     // a member's real book has room below it. Give the page that room.
-    await page.addStyleTag({ content: "body { padding-bottom: 1500px; }" });
-    // A plain anchor: the browser makes its own top-aligned jump before the landing runs, and
-    // `popstate` fires right after that jump, ahead of the router and the landing. Read it there.
-    await page.evaluate((selector) => {
-      window.addEventListener(
-        "popstate",
-        () => {
-          const el = [...document.querySelectorAll(selector)].find(
-            (c) => c.getClientRects().length > 0,
-          );
-          const head = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
-          document.body.dataset.firstJump = el
-            ? String(Math.round(el.getBoundingClientRect().top - head))
-            : "none";
-        },
-        { capture: true, once: true },
-      );
-    }, POSITION);
-    await door.click();
+    await page.addInitScript(() => {
+      document.addEventListener("DOMContentLoaded", () => {
+        document.body.style.paddingBottom = "1500px";
+      });
+    });
+    await page.goto(`${OVERVIEW}#pos-AAPL`);
     await expectLanded(page.locator(POSITION).filter({ visible: true }));
-    // Read, not defaulted: a jump that was never observed must not pass as one that landed at 0.
-    const firstJump = await page.locator("body").getAttribute("data-first-jump");
-    expect(firstJump, "the browser's own jump was observed").toMatch(/^-?\d+$/);
-    expect(Number(firstJump), "it stops below the head").toBeGreaterThanOrEqual(0);
   });
 });
 

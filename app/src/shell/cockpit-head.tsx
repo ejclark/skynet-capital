@@ -9,7 +9,6 @@ import {
 import type { OwnedAccount } from "../live/settings";
 import { AccountMenu } from "./account-menu";
 import { ALL_ACCOUNTS } from "./account-switcher";
-import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
 import { HeadVitals } from "./head-vitals";
 import { PlaybooksHeadLine } from "./heartbeat";
@@ -42,8 +41,9 @@ import type { PageSection } from "./sections";
  *   - a member with NO LINKED ACCOUNT reads "No account linked yet — connect one in Onboarding"
  *     (#3807 slice 2e: the words are the control, opening the connect guide under the head).
  *
- * The calendar head (#3807 slice 2·1) is unchanged: at ≥861 the head's last row, at ≤860 the row
- * directly under it, one instance placed by the phone's own media query (`cockpit-clock.tsx`).
+ * NO CALENDAR, on any section (#5074; #5037 round 2 — Eric, round 1: "controls that do nothing is
+ * an oxy moron"): the range heads the Events section, the one section whose content it changes
+ * (`events-section.tsx`), so the three rows keep one height everywhere.
  * @category accounts
  */
 
@@ -109,78 +109,69 @@ export function CockpitHead({
     enabled: linked,
   });
   const { stats } = resolveNetWorth(networth.data, accountId);
-  const phone = usePhoneWidth();
-  // On Events the grid's own head is the one range control (`events-section.tsx`).
-  const clock = section === "events" ? null : <CockpitClock />;
   const viewer = isViewerSection(section) ? VIEWER[section as "milestones" | "feedback"] : null;
   const picked = accounts.find((a) => a.id === accountId);
 
   return (
-    <>
-      <div className="cockpit-head" ref={publishClearance}>
-        <div className="head-account">
-          {!linked ? (
-            <p className="head-note">
-              No account linked yet — <ConnectLink />.
-            </p>
-          ) : viewer ? (
-            <p className="head-note">
-              <b>{viewer.who}</b> · the same on every account
-            </p>
-          ) : (
-            <>
-              <AccountMenu
-                accounts={accounts}
-                selectedId={accountId}
-                onSelect={onSelectAccount}
-                defaultId={defaultId}
-                onSetDefault={onSetDefault}
-                onClearDefault={onClearDefault}
-              />
-              {picked ? (
-                <span className={`chip chip-${picked.kind}`}>
-                  {picked.kind === "bot" ? "BOT" : "HUMAN"}
-                </span>
-              ) : null}
-              <span className="env-pill">SIM</span>
-              {picked?.kind === "bot" ? (
-                <PlaybooksHeadLine
-                  deskId={picked.id}
-                  renderLink={(label) => (
-                    <button
-                      type="button"
-                      className="hb-line-link"
-                      aria-current={section === "playbooks" ? "true" : undefined}
-                      onClick={() => onSelectSection("playbooks")}
-                    >
-                      {label}
-                    </button>
-                  )}
-                />
-              ) : null}
-            </>
-          )}
-        </div>
+    <div className="cockpit-head" ref={publishClearance}>
+      <div className="head-account">
         {!linked ? (
-          <p className="head-vitals head-vitals--note">
-            Net worth shows once an account is linked.
+          <p className="head-note">
+            No account linked yet — <ConnectLink />.
           </p>
         ) : viewer ? (
-          <p className="head-vitals head-vitals--note">{viewer.line}</p>
+          <p className="head-note">
+            <b>{viewer.who}</b> · the same on every account
+          </p>
         ) : (
-          <HeadVitals stats={stats} loading={networth.isPending} error={networth.isError} />
+          <>
+            <AccountMenu
+              accounts={accounts}
+              selectedId={accountId}
+              onSelect={onSelectAccount}
+              defaultId={defaultId}
+              onSetDefault={onSetDefault}
+              onClearDefault={onClearDefault}
+            />
+            {picked ? (
+              <span className={`chip chip-${picked.kind}`}>
+                {picked.kind === "bot" ? "BOT" : "HUMAN"}
+              </span>
+            ) : null}
+            <span className="env-pill">SIM</span>
+            {picked?.kind === "bot" ? (
+              <PlaybooksHeadLine
+                deskId={picked.id}
+                renderLink={(label) => (
+                  <button
+                    type="button"
+                    className="hb-line-link"
+                    aria-current={section === "playbooks" ? "true" : undefined}
+                    onClick={() => onSelectSection("playbooks")}
+                  >
+                    {label}
+                  </button>
+                )}
+              />
+            ) : null}
+          </>
         )}
-        <SectionSwitch
-          sections={sections}
-          current={section}
-          onSelect={onSelectSection}
-          variant="horizontal"
-          fold={4}
-          divideBefore="milestones"
-        />
-        {phone ? null : clock}
       </div>
-      {phone ? clock : null}
-    </>
+      {!linked ? (
+        <p className="head-vitals head-vitals--note">Net worth shows once an account is linked.</p>
+      ) : viewer ? (
+        <p className="head-vitals head-vitals--note">{viewer.line}</p>
+      ) : (
+        <HeadVitals stats={stats} loading={networth.isPending} error={networth.isError} />
+      )}
+      <SectionSwitch
+        sections={sections}
+        current={section}
+        onSelect={onSelectSection}
+        variant="horizontal"
+        fold={4}
+        divideBefore="milestones"
+      />
+    </div>
   );
 }

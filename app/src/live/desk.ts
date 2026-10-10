@@ -5,6 +5,8 @@
  * value arrives server-formatted; the one raw numeric (`totalPlRaw`) exists for FILTERING only.
  */
 
+import type { MarkKind } from "./position-mark";
+
 export type Tone = "pos" | "neg" | "flat";
 
 /** One still-open tax lot inside a position — same column shape as `DeskPosition` (#3186 slice
@@ -213,6 +215,10 @@ export async function fetchDesk(id: string): Promise<DeskSnapshot> {
  * slice 6b; shares never match, since they don't expire), and `event:before-expiry` keeps options
  * whose stock prints before they expire. Chips and the query text are ONE model; both sides write
  * this string.
+ *
+ * #5070 adds the row marks and their sort: `is:review` / `is:consider` / `is:onplan` keep the rows
+ * whose shown mark matches (`position-mark.ts`; a mark set aside by Not now matches none), and
+ * `sort:look` puts the rows worth a look first. Neither is ever a search word.
  */
 export interface DeskFilter {
   readonly terms: readonly string[];
@@ -224,6 +230,10 @@ export interface DeskFilter {
   readonly maxDays?: number;
   /** Keep only options with their stock's own event before expiry. */
   readonly eventBeforeExpiry?: boolean;
+  /** Keep only the rows showing this mark. */
+  readonly mark?: MarkKind;
+  /** "Worth a look first": Review, then Consider, then the rest. A sort, never a filter. */
+  readonly sortLook?: boolean;
 }
 
 /** The fixed-word qualifiers, each the part of the filter it sets. A later one of the same kind
@@ -236,6 +246,10 @@ const QUALIFIERS: ReadonlyMap<string, Partial<DeskFilter>> = new Map<string, Par
   ["day:>0", { daySign: 1 }],
   ["day:<0", { daySign: -1 }],
   ["event:before-expiry", { eventBeforeExpiry: true }],
+  ["is:review", { mark: "review" }],
+  ["is:consider", { mark: "consider" }],
+  ["is:onplan", { mark: "onplan" }],
+  ["sort:look", { sortLook: true }],
 ]);
 
 export function parseDeskQuery(query: string): DeskFilter {
@@ -251,7 +265,13 @@ export function parseDeskQuery(query: string): DeskFilter {
   return { ...set, terms };
 }
 
-export function matchesFilter(position: DeskPosition, filter: DeskFilter): boolean {
+/** `mark` is the mark the row shows now — undefined while Not now has it set aside. */
+export function matchesFilter(
+  position: DeskPosition,
+  filter: DeskFilter,
+  mark?: MarkKind,
+): boolean {
+  if (filter.mark !== undefined && mark !== filter.mark) return false;
   if (filter.option !== undefined && position.isOption !== filter.option) return false;
   if (filter.plSign === 1 && position.totalPlRaw <= 0) return false;
   if (filter.plSign === -1 && position.totalPlRaw >= 0) return false;
@@ -277,6 +297,8 @@ const EXCLUSIVE_GROUPS: readonly (readonly string[])[] = [
   ["pl:>0", "pl:<0"],
   // Today's change stacks with the lifetime pair: "down today but still above cost" is a real book.
   ["day:>0", "day:<0"],
+  // A row shows one mark at a time; the marks stack with the kinds and the sort.
+  ["is:review", "is:consider", "is:onplan"],
 ];
 
 /** Toggle one qualifier in the query string — the chip side of the bidirectional model. */

@@ -548,7 +548,7 @@
           {
             "id": "clients",
             "label": "API clients",
-            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, horizon-params, held-events, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, manage-handoff, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
+            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, horizon-params, book-events, book-lanes, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, manage-handoff, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
             "responsibility": "Typed fetch wrappers over /api/* with same-origin cookies; postJson for every write; desk-events.ts opens the second SSE stream /api/trade/events."
           },
           {
@@ -560,7 +560,7 @@
           {
             "id": "shell",
             "label": "Shell components",
-            "path": "app/src/shell/*.tsx (board-section, calendar-head, cockpit-clock, held-events-line, positions-*, accounts-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
+            "path": "app/src/shell/*.tsx (board-section, calendar-head, book-range-head, book-lanes, events-section, held-events-line, positions-*, accounts-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
             "responsibility": "Presentational React components for every section; gates render fog-of-war doors visible, named, disabled and counted."
           },
           {
@@ -572,8 +572,8 @@
           {
             "id": "prefs",
             "label": "Per-viewer preferences",
-            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, decision-pager.tsx, new-high-ceremony.tsx, level-up-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts",
-            "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies) — never shared state."
+            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, new-high-ceremony.tsx, level-up-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts, mark-aside.ts, look-sort.ts",
+            "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies, a row mark set aside by Not now, the \"Worth a look first\" sort) — never shared state."
           },
           {
             "id": "styles",
