@@ -6,8 +6,15 @@ describe("GlossaryTerm", () => {
   it("prints the plain label and describes it without opening anything", () => {
     render(<GlossaryTerm term="timeDecay" />);
     const term = screen.getByRole("button", { name: "Time decay" });
-    expect(term).toHaveAccessibleDescription(/lose each day if prices don't move.*theta/);
+    expect(term).toHaveAccessibleDescription(/each day if prices don't move.*theta/);
     expect(screen.getByRole("tooltip", { hidden: true })).not.toBeVisible();
+  });
+
+  it("says time decay works for the seller of an option, not only against the buyer (#5023)", () => {
+    render(<GlossaryTerm term="timeDecay" />);
+    expect(screen.getByRole("button", { name: "Time decay" })).toHaveAccessibleDescription(
+      /one you bought loses money and one you sold earns it/,
+    );
   });
 
   it("opens on focus, closes on Escape", () => {
