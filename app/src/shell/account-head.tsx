@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
 import { PageFrame } from "./frame";
 import { HeartbeatChip } from "./heartbeat";
+import { publishClearance } from "./landing";
 import { SauronCard } from "./sauron-card";
 
 /**
@@ -43,7 +44,7 @@ export function AccountHead({
 }): ReactElement {
   const isOwn = useOwnsAccount(id);
   return (
-    <div className="cockpit-head acct-head">
+    <div className="cockpit-head acct-head" ref={publishClearance}>
       <div className="acct-head-id">
         <h1>{name}</h1>
         <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>

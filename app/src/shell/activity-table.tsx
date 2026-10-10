@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type {
   ActivityReasoning,
   DeskActivityEvent,
@@ -9,6 +9,7 @@ import type {
 } from "../live/desk";
 import { lifecycleDayText } from "../live/lifecycle-day";
 import { cycleAnchor } from "./cycle-anchor";
+import { targetedAnchor, useLandOnHash } from "./landing";
 
 /**
  * The activity ledger as a table (#738 — the Cockpit's Activity section). Replaces the old
@@ -48,6 +49,7 @@ export function ActivityTable({
   readonly deskId?: string;
 }): ReactElement {
   const withWhy = events.some((event) => event.reasoning);
+  useLandOnHash(findActivityRow, rowKey(events));
   return (
     <div className="blotter-card">
       <div className="blotter-scroll">
@@ -204,12 +206,20 @@ function WhyDetail({
 
 /** The row the URL points at, if any (#4046 item 1): a Thesis marker or a FORM square links
  *  `?section=activity#act-<orderId>`, but the ledger loads after the router has already tried the
- *  hash, so the browser's own jump finds nothing. The row scrolls itself in once it exists. */
+ *  hash, so the browser's own jump finds nothing. The table lands on the row once it exists — the
+ *  same landing a position gets (`landing.ts`, #5022): centred below the sticky head, marked. */
 export function targetedActivityRow(): string | undefined {
-  const raw = typeof window === "undefined" ? "" : window.location.hash;
-  const hash = raw.startsWith("#") ? decodeURIComponent(raw.slice(1)) : "";
-  return hash.startsWith("act-") ? hash : undefined;
+  return typeof window === "undefined" ? undefined : targetedAnchor("act-", window.location.hash);
 }
+
+const findActivityRow = (hash: string): HTMLElement | undefined => {
+  const anchor = targetedAnchor("act-", hash);
+  return (anchor && document.getElementById(anchor)) || undefined;
+};
+
+/** Every anchor the table draws, a spread's legs included: it changes when an older page lands. */
+const rowKey = (events: readonly DeskActivityEvent[]): string =>
+  events.flatMap((e) => [e.orderId, ...(e.legs ?? []).map((leg) => leg.orderId)]).join(",");
 
 /** What a lifecycle row says where an order's side would be. Nothing was bought or sold, and on a
  *  phone a $0 "SELL" under the put's real sale read as a second sale (#4650). The word carries it;
@@ -256,16 +266,10 @@ function ActivityRow({
   readonly deskId?: string;
 }): ReactElement {
   const [open, setOpen] = useState(false);
-  const anchor = `act-${event.orderId}`;
-  const row = useRef<HTMLTableRowElement>(null);
-  useEffect(() => {
-    // Optional-call, as `decisions-section.tsx` does: happy-dom has no `scrollIntoView`.
-    if (targetedActivityRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
-  }, [anchor]);
   const stamp = rowStamp(event);
   return (
     <>
-      <tr id={anchor} ref={row}>
+      <tr id={`act-${event.orderId}`}>
         {withWhy ? (
           <td className="why-col">
             {event.reasoning ? (
@@ -355,13 +359,8 @@ function LegRow({
   readonly leg: DeskActivityLeg;
   readonly span: number;
 }): ReactElement {
-  const anchor = `act-${leg.orderId}`;
-  const row = useRef<HTMLTableRowElement>(null);
-  useEffect(() => {
-    if (targetedActivityRow() === anchor) row.current?.scrollIntoView?.({ block: "center" });
-  }, [anchor]);
   return (
-    <tr className="row-leg" id={anchor} ref={row}>
+    <tr className="row-leg" id={`act-${leg.orderId}`}>
       <td colSpan={span}>
         <div className="leg-line">
           <span className="visually-hidden">Leg: </span>
