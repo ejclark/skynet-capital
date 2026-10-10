@@ -113,8 +113,8 @@
           "sees": "a per-position sheet; nothing says what taking profit here does to the whole book",
           "ears": "WHEN a lever call says take profit, the app shall celebrate the rung beside the explanation of why it was right.",
           "expect": [{ "text": "Lock in profit", "within": "main" }],
-          "known_gap": "profit-take exists only as a decision-card kind (app/src/shell/decision-pager.tsx:26 'Lock in profit'); no celebration is paired with its explanation on the guidance sheet",
-          "where": "app/src/shell/decision-pager.tsx:26",
+          "known_gap": "profit-take exists only as a row's fact badge (app/src/live/position-mark.ts 'Consider', #5070) and the Map lens's 'Lock in profit' card; no celebration is paired with its explanation on the guidance sheet",
+          "where": "app/src/live/position-mark.ts",
           "severity": "low",
           "fix": "M",
           "judge": "does this reader feel the win and know why it was earned?"

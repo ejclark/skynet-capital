@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskPosition } from "../live/desk";
 import { BlotterRow } from "./blotter-row";
 import { GlossaryTerm } from "./glossary-term";
@@ -25,6 +25,7 @@ export function PositionsTable({
   totalCount,
   decayBySymbol,
   canTrade = true,
+  guide,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
@@ -34,6 +35,8 @@ export function PositionsTable({
   readonly totalCount: number;
   /** Does the viewer own this account? Off it, no row renders a write (`BlotterRow`). */
   readonly canTrade?: boolean;
+  /** Each position's guidance line (#5070), drawn as a full-width row under it. */
+  readonly guide?: (position: DeskPosition) => ReactNode;
 }): ReactElement {
   if (positions.length === 0) {
     return (
@@ -100,6 +103,7 @@ export function PositionsTable({
                 deskId={deskId}
                 decay={decayBySymbol?.get(position.symbol)?.signed}
                 canTrade={canTrade}
+                guide={guide?.(position)}
               />
             ))}
           </tbody>

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useId, useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionEvent, PositionLot, Tone } from "../live/desk";
@@ -170,6 +170,7 @@ export function BlotterRow({
   deskId,
   decay,
   canTrade = true,
+  guide,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
@@ -180,6 +181,8 @@ export function BlotterRow({
    *  and Roll do not render — the page says why in visible text beside the blotter. Guidance is a
    *  read and stays. */
   readonly canTrade?: boolean;
+  /** The position's guidance line (#5070), a full-width row right under this one. */
+  readonly guide?: ReactNode;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -275,6 +278,11 @@ export function BlotterRow({
           ) : null}
         </td>
       </tr>
+      {guide ? (
+        <tr className="row-guide">
+          <td colSpan={12}>{guide}</td>
+        </tr>
+      ) : null}
       {lotsOpen && position.lots
         ? position.lots.map((lot) => (
             <tr className="row-lot" key={lot.lotId}>

@@ -9,6 +9,7 @@ import {
   fetchDeskActivity,
 } from "../live/desk";
 import { parseOn } from "../live/horizon-params";
+import { initialPositionsQuery } from "../live/look-sort";
 import { fetchNetWorth } from "../live/networth";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
@@ -112,7 +113,9 @@ function AccountsPage(): ReactElement {
 
   // URL-stateful positions filter — the same immediate-locally/debounced-replace discipline
   // `research.tsx` uses, ported from the retired `/u/:id` positions view.
-  const [query, setQuery] = useState(q ?? "");
+  // With no filter in the URL the list opens sorted worth-a-look-first (#5070), unless this viewer
+  // turned the sort off.
+  const [query, setQuery] = useState(() => initialPositionsQuery(q));
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const onFilterChange = (next: string) => {
@@ -187,7 +190,7 @@ function AccountsPage(): ReactElement {
         const crossing = next === "events" || section === "events";
         if (crossing) {
           clearTimeout(urlTimer.current);
-          setQuery("");
+          setQuery(initialPositionsQuery());
         }
         void navigate({
           search: (prev: ProfileSearch) => ({
