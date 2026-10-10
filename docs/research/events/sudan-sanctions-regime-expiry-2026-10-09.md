@@ -272,3 +272,49 @@ Forward tests: `FT-sudan-sanctions-regime-expiry-2026-10-09-1`, `-2` — open, i
 
 **Last assessed:** 2026-10-10
 <!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"docs.un.org/S/RES/2830(2026)","status":"NOT_FETCHED","at":"2026-10-10"},{"url":"sudantribune.com/article/319788","status":"403","at":"2026-10-10"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-10, D+1).** `symbols: []` by design, so no `earnings-cycle` / `intraday-edges` run applies;
+the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and
+nothing here reads it. The *outcome* is scored from the Council's own meeting coverage; the *tape* from Yahoo
+daily bars pulled today via `scripts/research/market-data.mjs`. Date label stays **estimate** (`NEWS:`): the
+confirmed-prefix taxonomy has no UN slot, so this close-out does not flip it.
+
+| Measure | Stance said | What happened | Result |
+|---|---|---|---|
+| Lapse vs renew/rollover | Renewal or further technical rollover, not a lapse | Council **unanimously** adopted a **two-month technical rollover** on **2026-10-08**, one day before the 10-09 lapse; sanctions measures now run to **2026-12-11** | **held** |
+| Scope (Darfur vs all of Sudan) | Embargo stays Darfur-scoped | Press coverage: scope "remained unchanged — limited to actors operating in Darfur"; the Council called it "a short-term technical rollover" to allow talks on extending beyond December | **held** (to date) |
+| Veto / lapse kill switch | Neither | No veto, no lapse | **not fired** |
+| VIX ≥ 20 on a Sudan headline | — | VIX 14.84 on 10-09 (15.41 on 10-08), VIX3M 17.77; contango intact | **not fired** |
+
+**Read from a single press release.** Resolution number (**2830**), the 8 Oct date, the 11 Dec measures date and
+the Panel of Experts date (reported as 11 Jan 2027) all come from one fetch of `press.un.org/en/2026/sc16470.doc.htm`
+(summarised by the fetch tool, not quoted from the operative text). A second search summary independently says
+the Council voted unanimously on a two-month renewal after the U.S. withdrew its expansion proposal; that
+detail is **not** in the press release as read, so treat it as search-relayed. The resolution text itself
+(`docs.un.org` / `main.un.org/securitycouncil/en/content/sres28302026`) was again not obtainable. Sudan Tribune
+and SCR monthly-forecast pages were reached by search only (the Tribune returned HTTP 403 to a direct fetch).
+
+**The stance, scored.** *Stand aside; expect renewal or rollover, not a lapse* — held on every leg, and cost
+nothing (no position exists). Two things moved the picture without changing the call. The rollover was
+**longer than the first** (two months against one), which reads as friction easing, not tightening; and the
+fight is **not settled** — the same press release describes members "crossing swords" over whether the measures
+should be abolished or expanded, so the 12-11 decision re-opens the scope question.
+
+**Forward tests — held open on purpose, not scored.** Both rows carry `Score by 2026-10-16`, past this event's
+close-out window (`closeOutWithinDays: 6` → 2026-10-15), so `event-scan --due` lists them under
+`forwardTestsBeyondWindow` and they re-open as `forward-test-due` on the score-by date. The evidence above
+points to **FT-1 pass** (rollover adopted before the lapse) and **FT-2 pass** (no scope expansion adopted), but
+scoring before the registered date is the falsification the doc forbids and nothing here is time-critical, so
+the Outcome cells are left `—` for the owning lane to fill from a fresh read on 2026-10-16. Their kill
+conditions (a lapse, a veto, or an adopted expansion on or before 10-16) were not met as of 2026-10-10.
+
+**Beyond the horizon, named not filed.** The next measures expiry, **2026-12-11**, is 62 days out; for a
+low-impact event `assessment-cadence.json` makes nothing past 30 days due, so no proposal file is written
+(`--on-date=2026-12-11` already shows seven other entries, none of them this deadline). A later sweep inside
+the horizon (from about 2026-11-11) should file it. No kill-list entry: the hypothesis is about a diplomatic
+deadline with no symbol.
+
+**Last assessed:** 2026-10-10
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0} -->
