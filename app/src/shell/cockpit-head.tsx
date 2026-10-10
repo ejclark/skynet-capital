@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import {
   type AccountNetWorthView,
@@ -13,7 +12,7 @@ import { ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
 import { HeadVitals } from "./head-vitals";
-import { useHeartbeatStatus } from "./heartbeat";
+import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
 import { SectionSwitch } from "./section-switch";
@@ -28,8 +27,8 @@ import type { PageSection } from "./sections";
  *   1. THE ACCOUNT ROW — the account's name, which opens the menu of everything that sets it up
  *      (`account-menu.tsx`: switch, the default star, + Add an account, its settings, its league
  *      page — moved off the head on Eric's "secondary/auxiliary… should be relocated"), its kind and
- *      SIM, and on a bot "● Running · 7 playbooks ›": a plain link into its Heartbeat, never a
- *      popover (round 2: the status's detail belongs in the main window).
+ *      SIM, and on a bot its head line at the row's right edge — "● Running · 7 playbooks ›"
+ *      (`PlaybooksHeadLine`, #5073: a plain link into the Playbooks section, never a popover).
  *   2. THE VITALS LINE — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
  *      that cut across every section, said once (Eric's Level 2 note: "the most relevant dimensions
  *      that overlap/intersect across various views… minimal content").
@@ -79,46 +78,6 @@ const VIEWER: Record<"milestones" | "feedback", { readonly who: string; readonly
     line: "What you've sent Moneypenny — no account's numbers here.",
   },
 };
-
-/** A bot's status as a plain link into its Heartbeat section — the state in a glyph and a word, the
- *  fact behind it where there is room, and how many playbooks it runs. Nothing until the read
- *  lands with something true to say. */
-function BotStatus({
-  deskId,
-  onOpen,
-}: {
-  readonly deskId: string;
-  readonly onOpen: () => void;
-}): ReactElement | null {
-  const status = useHeartbeatStatus(deskId);
-  if (!status) return null;
-  const count = status.playbooks;
-  return (
-    <Link
-      to="/accounts"
-      search={(prev) => ({ ...prev, section: "heartbeat" as const })}
-      className="head-bot"
-      data-state={status.state}
-      onClick={(e) => {
-        e.preventDefault();
-        onOpen();
-      }}
-    >
-      <span className="head-bot-glyph" aria-hidden="true">
-        {status.glyph}
-      </span>
-      <b>{status.word}</b>
-      {status.detail ? <span className="head-bot-detail"> · {status.detail}</span> : null}
-      {count !== undefined ? (
-        <span className="head-bot-count">
-          {" "}
-          · {count} {count === 1 ? "playbook" : "playbooks"}
-        </span>
-      ) : null}
-      <span aria-hidden="true"> ›</span>
-    </Link>
-  );
-}
 
 export function CockpitHead({
   accounts,
@@ -185,7 +144,19 @@ export function CockpitHead({
               ) : null}
               <span className="env-pill">SIM</span>
               {picked?.kind === "bot" ? (
-                <BotStatus deskId={picked.id} onOpen={() => onSelectSection("heartbeat")} />
+                <PlaybooksHeadLine
+                  deskId={picked.id}
+                  renderLink={(label) => (
+                    <button
+                      type="button"
+                      className="hb-line-link"
+                      aria-current={section === "playbooks" ? "true" : undefined}
+                      onClick={() => onSelectSection("playbooks")}
+                    >
+                      {label}
+                    </button>
+                  )}
+                />
               ) : null}
             </>
           )}

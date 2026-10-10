@@ -41,9 +41,6 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
     ['"outlook" as const', "Trade section door (held by #4943)"],
     ['"watchlist" as const', "Trade section door (held by #4943)"],
   ],
-  "app/src/shell/cockpit-head.tsx": [
-    ['section: "heartbeat" as const', "the bot's status line opens Heartbeat, a section switch"],
-  ],
   "app/src/shell/events-agenda.tsx": [
     ["section: undefined, events: undefined", "leaves Events for the row's #pos- anchor"],
   ],

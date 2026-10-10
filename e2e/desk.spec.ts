@@ -10,7 +10,7 @@ test.describe("the any-account page", () => {
     await page.goto("/app/u/day-trader");
     await expect(page.getByRole("heading", { level: 1, name: /The Day Trader/ })).toBeVisible();
     const sections = page.getByRole("navigation", { name: "Sections" });
-    for (const name of ["Overview", "Activity", "Pulse", "Heartbeat", "Thesis"]) {
+    for (const name of ["Overview", "Activity", "Pulse", "Playbooks", "Thesis"]) {
       await expect(sections.getByRole("link", { name })).toBeVisible();
     }
     await expect(sections.getByRole("link", { name: "Settings" })).toHaveCount(0);
@@ -24,9 +24,9 @@ test.describe("the any-account page", () => {
     await expect(page.getByText("click a symbol for its fill timeline")).toHaveCount(0);
   });
 
-  test("renders an account's heartbeat at the decisions route", async ({ page }) => {
+  test("renders a bot's playbooks at the decisions route", async ({ page }) => {
     await page.goto("/app/u/day-trader/decisions");
-    await expect(page.getByRole("heading", { name: "Heartbeat", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Playbooks", exact: true })).toBeVisible();
   });
 
   test("renders an account's activity", async ({ page }) => {

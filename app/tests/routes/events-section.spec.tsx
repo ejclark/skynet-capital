@@ -135,10 +135,8 @@ rstest.mock("../../src/live/research", () => ({
   fetchResearch: () => Promise.reject(new Error("the calendar never reads the whole shelf")),
   fetchResearchCalendar: () => Promise.resolve(RESEARCH),
 }));
-rstest.mock("../../src/shell/heartbeat", () => ({
-  HeartbeatSection: () => null,
-  useHeartbeatStatus: () => null,
-}));
+rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
+rstest.mock("../../src/shell/bot-playbooks", () => ({ BotPlaybooksSection: () => null }));
 rstest.mock("../../src/shell/accounts-overview-section", () => ({
   OverviewSection: ({
     desks,

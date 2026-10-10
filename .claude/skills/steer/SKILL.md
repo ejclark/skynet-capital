@@ -76,10 +76,25 @@ The stable page's URL is in #5056's state block; the first publish puts it there
    (publish + 90 min) in the prompt; past it, cancel the loop. A late Done is read back by the
    next page's step 1. "steered" from Eric cancels the loop and runs steps 7 and 8 at once.
 7. **Read back** — ArtifactData `list` the collections `tp/<id>/decisions`, `tp/<id>/queue` and
-   `tp/<id>/reel`, and `get` `tp`/`<id>`, all with `out_dir: <dir>/records`. Then
-   `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --out <dir>/readback`
-   prints the plan: `actions`, `commands`, `rollover`, `defaults`, `followUps`.
+   `tp/<id>/reel`, and `get` `tp`/`<id>`, all with `out_dir: <dir>/records`.
+   - **His comments count too** — Eric, 2026-10-10, after an automatic reply told him _"a comment
+     here won't show up in the read-back"_. ArtifactComments `read` on the stable page's URL
+     (follow `cursor` while it says more threads exist). Take every comment Eric wrote and sent to
+     Claude since this round's `openedAt` — never Claude's own replies — and write
+     `<dir>/comments.json` as `[{ "anchorKey": "<the anchor's element id>", "text": "<his words,
+     exactly>", "at": "<ISO time>" }]`. A decision's anchor is `#d-<key>`, or `#d-<key>-<option>`
+     on one of its options; pass the id as it is — the read-back maps it to the decision key.
+   - Then `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --comments
+     <dir>/comments.json --out <dir>/readback` prints the plan: `actions`, `commands`, `rollover`,
+     `defaults`, `followUps`, `unplacedComments`. Each comment is quoted word for word under
+     "Eric's comments on the page" in its decision's part of the issue comment; a decision he
+     commented on without tapping is quoted and rolled over, never given its default.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
+   - Comments: reply on each quoted thread with the issue it landed on, then resolve it, so the
+     next round never quotes it twice. `followUps` `read-comment` → read his comments beside his
+     taps, and bank anything that shapes a next round beside the round (the critique round's
+     `{ anchor, gist, applies_to, commitment }`, step 4 below). `unplacedComments` (on what
+     shipped, the queue, the header) → answer each on its thread and route it like any raw thought.
    - `followUps`: `next-round` → build the next design round (below); `read-note` / `more` /
      `hold` / `not` → read his words; a note that does settle it gets its label move by hand, with
      the quote. "Not now" never takes `needs-eric` off by itself: on an issue still carrying
@@ -97,8 +112,14 @@ The stable page's URL is in #5056's state block; the first publish puts it there
 - **No decision is asked without a picture.** One with none is named as being drawn, by title,
   counted apart in the summary line, and rolled over by the read-back with no default and no label
   move. `tests/scripts/steer-pictures.spec.ts`.
-- **Every read-back comment carries the lane FOOTER and quotes Eric word for word.** A plan flips
-  only through `ready — take slice 1 per the state block`, on an Approve of a `plan` issue.
+- **The bar counts only what the store holds** — the read-back reads nothing else. A view with no
+  store (the desktop app's own browser, not signed in to claude.ai; a saved file) says "Answers
+  save only on claude.ai — open this page there to see or change them" and locks the controls; a
+  store still connecting says "Loading your answers…"; one that can't be read says so. Never a
+  browser-only count. `tests/scripts/steer-client.spec.ts`.
+- **Every read-back comment carries the lane FOOTER and quotes Eric word for word** — his notes
+  and his comments sent to Claude on the page alike. A plan flips only through
+  `ready — take slice 1 per the state block`, on an Approve of a `plan` issue.
 - **A skipped approval that is reversible and in the envelope takes its default**, said as
   "default applied; no answer from Eric". Every other skip rolls over.
 - **The irreversible class is a link, never a button**: held/platter PR merges, the surge dial,
@@ -116,6 +137,7 @@ What round 1 of #5037 did, written down so the next round costs instructions, no
 3. **Reactions: Build this · More of this · Not this**, plus a note in his words (I like · I wish ·
    What if). One Build per question becomes a `feedback` + `ready` issue at read-back.
 4. **Comments pinned on a picture reach the live session** (ArtifactComments): answer each one,
+   quote it on the issue at read-back (step 7 of the drill),
    and record each as `{ anchor, gist, applies_to, commitment }` beside the round — round 1's are
    in the session scratchpad's `shapes/r1-feedback/` with `eric-verbatim.md` mapping them.
 5. **The next round is built from his words**: every More goes deeper (real states, edge cases,

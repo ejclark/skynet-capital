@@ -1078,8 +1078,73 @@ const sauronProbes = {
 // A bot that sat out the whole last session (#4949) — the closed-market stale the server returns
 // once the newest pass predates that session's open. Its own frames, then back to the live loop.
 let sauronSatOut = false;
+// Sauron's playbooks as #5037's round 2 drew them (#5073): seven on, BETA-SCOUT off. The roll call
+// is the server's own `playbookRollCall` output for these verdicts on 2026-10-09 — every reason and
+// date verbatim — so the frame shows the real copy, including HC-SAURON's contradiction (can't fire
+// on the roll call, trading on live signals in its verdict) that one card per playbook resolves.
+const sauronVerdict = (playbookId, mode, state, since, sinceIsLowerBound = false) => ({
+  playbookId,
+  mode,
+  state,
+  since,
+  sinceIsLowerBound,
+});
+const ON_ESTIMATE = (sym, date) =>
+  `On, but the next print date for ${sym} (${date}) is an estimate — only a confirmed date opens a position.`;
+const sauronRollCall = [
+  {
+    playbookId: "S1-NVDA",
+    status: "armed",
+    mode: "standard",
+    reason: ON_ESTIMATE("NVDA", "2026-11-18"),
+  },
+  {
+    playbookId: "G1-GOOG",
+    status: "armed",
+    mode: "standard",
+    reason: ON_ESTIMATE("GOOG", "2026-10-28"),
+  },
+  {
+    playbookId: "TACO-DJT",
+    status: "blocked",
+    reason: "No news feed is wired to it yet, so its trigger never arrives.",
+  },
+  {
+    playbookId: "HC-SAURON",
+    status: "blocked",
+    mode: "standard",
+    reason: "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
+  },
+  {
+    playbookId: "CRWV-WHEEL",
+    status: "armed",
+    mode: "aggressive",
+    reason: "On and waiting for its own window to open.",
+    nextEntry: "2026-11-18",
+  },
+  {
+    playbookId: "NVDA-CALL-SPREAD",
+    status: "armed",
+    mode: "aggressive",
+    reason: ON_ESTIMATE("NVDA", "2026-11-18"),
+  },
+  {
+    playbookId: "SAURON",
+    status: "armed",
+    mode: "aggressive",
+    reason:
+      "On, reading live price and sentiment every pass — there is no date window to wait for.",
+  },
+  {
+    playbookId: "BETA-SCOUT",
+    status: "off",
+    reason:
+      "Not running here: it runs only on the first bot the bots app runs, and only while the forced-pick setting is on in operations.",
+  },
+];
 const sauronHeartbeat = () => {
-  const lastAgo = sauronSatOut ? 3 * 86_400_000 : sessionOpen ? 22_000 : 16 * 3_600_000;
+  const lastAgo = sauronSatOut ? 3 * 86_400_000 : sessionOpen ? 20_000 : 16 * 3_600_000;
+  const today = new Date(Date.now() - lastAgo - 5 * 3_600_000).toISOString();
   return {
     available: true,
     heartbeat: {
@@ -1090,21 +1155,14 @@ const sauronHeartbeat = () => {
       cadenceMs: 15_000,
       staleAfterMs: 120_000,
       playbooks: [
-        {
-          playbookId: "HC-SAURON",
-          mode: "standard",
-          state: "tactical",
-          since: new Date(Date.now() - lastAgo - 2 * 3_600_000).toISOString(),
-          sinceIsLowerBound: false,
-        },
-        {
-          playbookId: "S1-NVDA",
-          mode: "standard",
-          state: "no-window",
-          since: "2026-09-22T13:30:00Z",
-          sinceIsLowerBound: true,
-        },
+        sauronVerdict("SAURON", "aggressive", "tactical", today),
+        sauronVerdict("CRWV-WHEEL", "aggressive", "no-window", today),
+        sauronVerdict("S1-NVDA", "standard", "no-window", "2026-09-22T13:30:00Z", true),
+        sauronVerdict("NVDA-CALL-SPREAD", "aggressive", "no-window", "2026-10-05T13:30:00Z"),
+        sauronVerdict("G1-GOOG", "standard", "no-window", "2026-09-29T13:30:00Z"),
+        sauronVerdict("HC-SAURON", "standard", "tactical", today),
       ],
+      rollCall: sauronRollCall,
     },
   };
 };
@@ -1247,7 +1305,7 @@ await shootCockpit("accounts-summary-phone");
 // this harness stubs no milestones.)
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
 await page.locator(".head-vitals .head-worth").waitFor();
-await page.locator(".head-bot").waitFor();
+await page.locator(".head-account .hb-line").waitFor();
 await page.waitForLoadState("networkidle");
 await shootCockpit("head-bot-phone");
 await page.getByRole("button", { name: /^Account: / }).click();
@@ -1392,7 +1450,7 @@ await shootCockpit("accounts-summary-desktop");
 // The head at 1280 (#5072): every section fits, your own after a hairline; the room adds the bot's
 // last check, today's percent and the cash amount — never a new concept.
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
-await page.locator(".head-bot").waitFor();
+await page.locator(".head-account .hb-line").waitFor();
 await shootCockpit("head-bot-desktop");
 
 // The cockpit clock at 1280 (#3807 slice 2·1): the head as the sticky block's last row, the
@@ -1483,51 +1541,85 @@ await page.waitForTimeout(400);
 await shootCockpit("accounts-new-high-desktop");
 atHigh = false;
 
-// The bot heartbeat (#3687 slice 3): the Heartbeat section at phone width, then the header chip
-// opened on the desktop Activity tab — the glance that rides every tab.
+// A bot's Playbooks (#5073 — Heartbeat merged in as its top strip): the bot's checks, the counted
+// line, then one card per playbook — phone first. Then one card opened in place, the check log
+// unfolded from the strip, the same log with the traded rounds included (#3961), COND-SCOUT's
+// shadow probes, the head line on another section, a bot that sat out a session, and the bench.
+// The stage fades in on every navigation (`motion.css`, stage-enter): a frame taken the moment its
+// element attaches pictures the page half-dimmed. And the cockpit head is sticky at 390 too, so a
+// scrolled frame puts its subject just under the head, never behind it.
+const settle = () => page.waitForTimeout(450);
+const underHead = (selector, gap = 8) =>
+  page.evaluate(
+    ([sel, pad]) => {
+      const el = document.querySelector(sel);
+      const sticky = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
+      if (el) window.scrollBy(0, el.getBoundingClientRect().top - sticky - pad);
+    },
+    [selector, gap],
+  );
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
-await page.locator(".hb-section").waitFor();
-await shootCockpit("accounts-heartbeat-phone");
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-cards").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-phone");
+// One card opened in place: the rest of its reason, its mode and since, the way to change it.
+await page.getByText("S1-NVDA", { exact: true }).click();
+await page.locator(".pbb-card details[open] .pbb-open").waitFor();
+await underHead(".pbb-card:has(details[open])", 150);
+await settle();
+await shootCockpit("accounts-playbooks-open-phone");
+// The footer: the playbook that is off, opened to why, beside the way to change it.
+await page.getByText("S1-NVDA", { exact: true }).click();
+await page.locator(".pbb-off summary").click();
+await underHead(".pbb-foot", 260);
+await settle();
+await shootCockpit("accounts-playbooks-off-phone");
 // COND-SCOUT's shadow probes (#3651 slice 7b), scrolled so the card's title and its "Simulated"
 // banner clear the sticky header — the banner is the claim this frame has to prove.
-await page.evaluate(() => {
-  const card = document.querySelector(".sp-card");
-  const sticky = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
-  if (card) window.scrollBy(0, card.getBoundingClientRect().top - sticky - 8);
-});
-await shootCockpit("accounts-heartbeat-probes-phone");
-// The no-trade log below the verdicts, scrolled into view (#3687 slice 4).
-await page.locator(".hb-log .cycles").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-log-phone");
-// The same log with the traded rounds included (#3961) — the pass behind a fill, opened: its
+await underHead(".sp-card");
+await shootCockpit("accounts-playbooks-probes-phone");
+// The check log, unfolded from the strip — what an old `?section=heartbeat` link lands on.
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
+await page.locator(".pbb-log .cycles").waitFor();
+await underHead(".pbb-strip");
+await settle();
+await shootCockpit("accounts-playbooks-log-phone");
+// The same log with the traded rounds included (#3961) — the check behind a fill, opened: its
 // placed and rejected orders, the idea the guards refused, and the ideas → past-the-guards count.
 tradedPassesIncluded = true;
-await page.getByRole("checkbox", { name: /Include the passes that placed a trade/ }).check();
+await page.getByRole("checkbox", { name: /Include the checks that placed a trade/ }).check();
 await page.locator(".cycle-placed").waitFor();
 await page.locator(".cycle-placed .cycle-row").click();
 await page.locator(".cycle-placed .cycle-body").waitFor();
-await page.locator(".cycle-placed").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-traded-round-phone");
+await underHead(".cycle-placed");
+await shootCockpit("accounts-playbooks-traded-round-phone");
 tradedPassesIncluded = false;
-// The head's status on a bot that made no pass all last session (#4949): "Not checking · no check
-// last session", never "idle" — a plain link into Heartbeat since #5072, no popover. Phone first
-// (the detail steps aside there), then desktop.
+// The head line on another section — "● Running · 7 playbooks ›", the way in from anywhere.
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.locator(".hb-line").waitFor();
+await settle();
+await shootCockpit("accounts-head-line-phone");
+// A bot that made no check all last session (#4949): "Not checking · no check last session",
+// never "idle" — the strip's heavier border and its plain-words definition.
 sauronSatOut = true;
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
-await page.locator(".head-bot").waitFor();
-await shootCockpit("accounts-heartbeat-head-stale-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await shootCockpit("accounts-heartbeat-head-stale-desktop");
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-strip[data-state='stale']").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-stale-phone");
 sauronSatOut = false;
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
-await page.locator(".head-bot").waitFor();
-await shootCockpit("accounts-heartbeat-head-desktop");
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
-await page.locator(".hb-log .cycles").waitFor();
-await shootCockpit("accounts-heartbeat-log-desktop");
+// The bench: the fact takes its own column and the mode rides beside the state word.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-cards").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-desktop");
+await page.getByRole("button", { name: /Every check/ }).click();
+await page.locator(".pbb-log .cycles").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-log-desktop");
 await page.locator(".sp-card").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-probes-desktop");
+await shootCockpit("accounts-playbooks-probes-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });

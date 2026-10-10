@@ -75,6 +75,8 @@ export const ROLL_CALL_WORDS: Record<
 export const UNMANAGED_WORDS = {
   glyph: "◇",
   word: "Nothing sells it",
+  /** What its closed card says (#5073); the reason is what it opens to. */
+  fact: "Held, and no playbook this bot runs will sell it",
   reason:
     "Held, but no playbook this bot runs trades it, and the bot's own rules only trade the ten " +
     "names every bot watches. It keeps a live price; nothing here will sell it. Subscribe this " +

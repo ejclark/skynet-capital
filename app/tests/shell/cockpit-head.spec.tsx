@@ -83,11 +83,8 @@ const HEARTBEAT = {
     cadenceMs: 15_000,
     staleAfterMs: 120_000,
     playbooks: [],
-    rollCall: [
-      ...Array.from({ length: 7 }, (_, i) => roll("armed", i)),
-      roll("off", 7),
-      roll("paused", 8),
-    ],
+    // seven on and one switched off: the head counts the seven it runs
+    rollCall: [...Array.from({ length: 7 }, (_, i) => roll("armed", i)), roll("off", 7)],
   },
 };
 
@@ -167,18 +164,19 @@ const vitals = async () => {
 };
 
 describe("the account row", () => {
-  it("names the account, its kind and SIM, and a bot's status as a plain link into Heartbeat", async () => {
+  it("names the account, its kind and SIM, and a bot's head line on the same row", async () => {
     const calls = mount();
     const name = await accountButton("Sauron");
     const row = name.closest(".head-account") as HTMLElement;
     expect(within(row).getByText("BOT")).toBeInTheDocument();
     expect(within(row).getByText("SIM")).toBeInTheDocument();
-    const status = await within(row).findByRole("link", { name: /Running.*7 playbooks/ });
-    expect(status.getAttribute("href")).toMatch(/section=heartbeat/);
-    // a link, not a popover: nothing opens over the page
-    expect(status).not.toHaveAttribute("aria-expanded");
-    fireEvent.click(status);
-    expect(calls.sections).toEqual(["heartbeat"]);
+    // #5073's line, seated on the account row: the state in words, then the way into Playbooks
+    const open = await within(row).findByRole("button", { name: "7 playbooks" });
+    expect(open.closest(".hb-line")).toHaveTextContent("● Running · 7 playbooks ›");
+    // a plain link, not a popover: nothing opens over the page
+    expect(open).not.toHaveAttribute("aria-expanded");
+    fireEvent.click(open);
+    expect(calls.sections).toEqual(["playbooks"]);
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -186,11 +184,11 @@ describe("the account row", () => {
     mount({ accountId: "human-eric" });
     expect(await accountButton("Eric")).toBeInTheDocument();
     expect(screen.getByText("HUMAN")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Running/ })).toBeNull();
+    expect(document.querySelector(".hb-line")).toBeNull();
     cleanup();
     mount({ accountId: ALL_ACCOUNTS });
     expect(await accountButton("All accounts")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Running/ })).toBeNull();
+    expect(document.querySelector(".hb-line")).toBeNull();
   });
 
   it("shows no setup controls on the head — no default star, no add, no settings", async () => {
@@ -304,7 +302,7 @@ describe("the vitals line", () => {
   });
 
   it("is the same three rows on every account section", async () => {
-    for (const section of ["overview", "activity", "events", "heartbeat", "thesis"] as const) {
+    for (const section of ["overview", "activity", "events", "playbooks", "thesis"] as const) {
       mount({ section });
       await vitals();
       const head = document.querySelector(".cockpit-head") as HTMLElement;
@@ -344,7 +342,7 @@ describe("the section switch", () => {
     viewport(390);
     mount();
     await accountButton("Sauron");
-    expect(shown()).toEqual(["Overview", "Activity", "Events", "Heartbeat", "More"]);
+    expect(shown()).toEqual(["Overview", "Activity", "Events", "Playbooks", "More"]);
     fireEvent.click(screen.getByRole("button", { name: "More sections" }));
     const more = within(group()).getAllByRole("button").slice(5);
     expect(more.map((b) => b.textContent)).toEqual(["Thesis", "Milestones", "Feedback"]);
@@ -369,7 +367,7 @@ describe("the section switch", () => {
       "Overview",
       "Activity",
       "Events",
-      "Heartbeat",
+      "Playbooks",
       "Thesis",
       "Milestones",
       "Feedback",

@@ -6,7 +6,8 @@
  * Each row has ONE height on every section and every account — 38 · 34 · 38 — so a tap on a
  * section or an account never moves the switch (Eric, round 1: "uniform structure… prevents
  * content shift to retain focus"). Rows never wrap; what a phone has no room for leaves by rule
- * (the bot's detail, today's percent, the cash amount), never by overflow.
+ * (today's percent, the cash amount), never by overflow; a bot's head line, last in its row,
+ * ellipsizes before it wraps.
  *
  * Hue never carries a meaning alone (a standing reader is red/green colourblind): the day move is
  * a ▲/▼ and a sign beside its tone, the cash bar's parts are solid and hatched with the word
@@ -205,30 +206,16 @@
   color: var(--muted);
 }
 
-/* a bot's status: a plain link at the row's right edge — the glyph and the word say the state */
-.head-bot {
-  margin-left: auto;
+/* a bot's head line (`PlaybooksHeadLine`, #5073) seated at the row's right edge, on one line: the
+   glyph and the word say the state, the link opens the Playbooks section */
+.head-account .hb-line {
+  margin: 0 0 0 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 32px;
   font-size: 12.5px;
-  color: var(--accent);
-  text-decoration: none;
-}
-.head-bot-glyph {
-  margin-right: 4px;
-}
-.head-bot b {
-  font-weight: 600;
-  color: var(--text);
-}
-.head-bot:hover .head-bot-count {
-  text-decoration: underline;
-}
-.head-bot-detail {
-  color: var(--muted);
+  line-height: 32px;
 }
 
 /* 2 · the vitals line: net worth · today · cash, on the number's baseline */
@@ -378,17 +365,12 @@
   background: var(--surface-2);
 }
 
-/* A phone curates: the bot's last check, today's percent and the cash amount step aside (one tap
- * away, in Heartbeat and the Overview), the bar shortens and the switch's buttons close up. A wider
- * head only adds that room back — never a new concept. */
+/* A phone curates: today's percent and the cash amount step aside (the Overview carries both),
+ * the bar shortens and the switch's buttons close up. A wider head only adds that room back —
+ * never a new concept. */
 @media (max-width: 700px) {
-  .head-bot-detail,
   .head-day-pct,
   .head-cash-amount {
-    display: none;
-  }
-  /* the count rides "Running"; a stopped or waiting bot's longer word keeps the row instead */
-  .head-bot:not([data-state="beating"]) .head-bot-count {
     display: none;
   }
   .head-worth {
