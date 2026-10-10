@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import type { DeskPosition } from "../../src/live/desk";
+import { LANDED_MS } from "../../src/shell/landing";
 import {
-  LANDED_MS,
   positionAnchor,
   targetedPosition,
   visiblePositionTarget,
