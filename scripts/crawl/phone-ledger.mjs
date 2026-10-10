@@ -73,7 +73,7 @@ export function writePhoneLedger(path, run) {
     "## Reading the columns",
     "",
     "- **page** — the path the step landed on (after any redirect), so one control on one page is one row however many journeys pass it.",
-    "- **what** — `page-sideways-scroll`: the document is wider than the window · `overflow`: the outermost element whose content spills past its box with `overflow-x: visible` · `tap-target` / `tap-target-aaa`: a control under 24×24 / 44×44 CSS px · `input-zoom`: a text field under 16px, which iPhone Safari zooms into on focus.",
+    "- **what** — `page-sideways-scroll`: the document is wider than the window · `overflow`: the outermost element whose content spills past its box with `overflow-x: visible` · `offscreen-left`: a box with words or a control that starts left of the screen, where no scroll reaches · `tap-target` / `tap-target-aaa`: a control under 24×24 / 44×44 CSS px · `input-zoom`: a text field under 16px, which iPhone Safari zooms into on focus.",
     "- **where** — the first fixed-string hit of the element's visible text in `app/src` or `src` (`scripts/crawl/locate.mjs`); `—` when the text is built at runtime or the element has none.",
     "- **severity** — high: the whole page drags sideways; medium: a control or field a thumb fights with; low: advisory (AAA). **fix** — S: a CSS rule or padding; M: a layout change.",
     "",

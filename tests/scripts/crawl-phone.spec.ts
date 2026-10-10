@@ -1,12 +1,14 @@
 import { describe, expect, it } from "@rstest/core";
-import type { Box, Field, Rect, Target } from "../../scripts/crawl/phone.mjs";
+import type { Box, Field, LeftBox, Rect, Target } from "../../scripts/crawl/phone.mjs";
 import {
   circleHitsRect,
   dedupe,
   isInlineTarget,
   isUaDefault,
   leaks,
+  leftFindings,
   outermostLeaks,
+  outermostLeftSpills,
   phoneArgs,
   phoneFindings,
   servedFinding,
@@ -180,6 +182,46 @@ describe("zoomFindings", () => {
     expect(found.map((f) => [f.kind, f.snippet, f.severity])).toEqual([
       ["input-zoom", "Symbol", "medium"],
       ["input-zoom", "Order type", "medium"],
+    ]);
+  });
+});
+
+const hung = (i: number, left: number, over: Partial<LeftBox> = {}): LeftBox => ({
+  i,
+  left,
+  right: left + 300,
+  name: ".status-popover",
+  text: "Market closed",
+  ancestors: [],
+  ...over,
+});
+
+describe("the left-edge check", () => {
+  it("reports a box hung off the left edge, by how far and by its words (#4046)", () => {
+    const found = leftFindings([hung(0, -113)]);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      kind: "offscreen-left",
+      snippet: "Market closed",
+      severity: "medium",
+    });
+    expect(found[0]?.what).toContain("starts 113px left of the screen");
+  });
+
+  it("skips a box wholly off the page, and one inside the 4px tolerance", () => {
+    expect(outermostLeftSpills([hung(0, -999, { right: -900 }), hung(1, -4)])).toEqual([]);
+  });
+
+  it("reports only the outermost box of a hung subtree", () => {
+    const rows = outermostLeftSpills([hung(0, -113), hung(1, -100, { ancestors: [0] })]);
+    expect(rows.map((b) => b.i)).toEqual([0]);
+  });
+
+  it("joins the page's other findings, and an older snapshot without it still reads", () => {
+    const snap = { innerWidth: 390, scrollWidth: 390, boxes: [], targets: [], inputs: [] };
+    expect(phoneFindings(snap)).toEqual([]);
+    expect(phoneFindings({ ...snap, lefts: [hung(0, -40)] }).map((f) => f.kind)).toEqual([
+      "offscreen-left",
     ]);
   });
 });
