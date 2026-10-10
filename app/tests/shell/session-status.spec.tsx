@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { SessionStatus } from "../../src/shell/session-status";
 import statusCss from "../../src/styles/session-status.css?raw";
@@ -130,6 +130,48 @@ describe("the top bar's status line", () => {
     opsFails = true;
     mount();
     expect(await screen.findByText("fleet status unknown")).toBeInTheDocument();
+  });
+
+  it("keeps saying an unreachable fleet while it asks again — a new page or the minute's re-read never reads as healthy", async () => {
+    // The shell remounts the line on every page (`key={pathname}`), and the panel re-reads the fleet
+    // every minute. With no answer ever landed, Query hands each fresh ask back as "pending" — which
+    // the line used to draw exactly like a healthy fleet, for the whole retry window (#1307).
+    opsFails = true;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const at = new Date(OPEN);
+    const bar = (page: string): ReactElement => (
+      <QueryClientProvider client={client}>
+        <header className="topbar">
+          <SessionStatus key={page} now={at} />
+        </header>
+      </QueryClientProvider>
+    );
+    // Query tells its observers on a later tick, so every look below lets that tick land first —
+    // otherwise an old frame would pass for the new one.
+    const settle = () =>
+      act(async () => {
+        await new Promise((done) => setTimeout(done, 20));
+      });
+    const { rerender } = render(bar("/leaderboard"));
+    expect(await screen.findByText("fleet status unknown")).toBeInTheDocument();
+    // Every later ask hangs, so whatever the line says next, it says while a read is in flight.
+    const never = new Promise<Response>((resolve) => void resolve); // never settles
+    globalThis.fetch = (() => never) as typeof fetch;
+    void client.refetchQueries({ queryKey: ["ops-status"] });
+    await settle();
+    expect(client.isFetching({ queryKey: ["ops-status"] })).toBe(1);
+    expect(line()).toHaveTextContent("fleet status unknown"); // the minute's re-read
+    rerender(bar("/accounts"));
+    await settle();
+    expect(line()).toHaveTextContent("fleet status unknown"); // a new page
+    // …and the moment a read lands, the line is the market's again.
+    await act(async () => {
+      await client.cancelQueries({ queryKey: ["ops-status"] });
+    });
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response(JSON.stringify(healthy), { status: 200 }))) as typeof fetch;
+    void client.refetchQueries({ queryKey: ["ops-status"] });
+    await waitFor(() => expect(line()).not.toHaveTextContent(/fleet/i));
   });
 
   it("opens the fleet's own rows one tap further, still in place", async () => {

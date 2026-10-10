@@ -159,3 +159,20 @@ describe("the page's shape", () => {
     expect(JSON.parse(data).decisions[0].title).toBe(first?.title);
   });
 });
+
+describe("decisions that roll to the next page are named, not just numbered", () => {
+  it("names each rolled decision by its title, so three questions on one issue read as three", () => {
+    const tp = fixture();
+    const rolled = {
+      ...tp,
+      deferred: [
+        { key: "5037-q3", issue: 5037, title: "What does the sticky head hold?", minutes: 4 },
+        { key: "5037-q7", issue: 5037, title: "How does cash read beside net worth?", minutes: 4 },
+      ],
+    };
+    const out = renderPage(rolled);
+    expect(out).toContain("What does the sticky head hold? (#5037)");
+    expect(out).toContain("How does cash read beside net worth? (#5037)");
+    expect(out).not.toContain("#5037, #5037");
+  });
+});

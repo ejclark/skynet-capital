@@ -101,6 +101,11 @@ export interface Fleet {
  * matches the server's own deploy-signal cache TTL (`ops-status-deploy-lag.ts`), so every member as
  * a viewer costs the GitHub Actions API nothing extra: the cache is shared, and Query pauses the
  * interval while the tab is hidden.
+ *
+ * "Failed" is the LAST SETTLED read, not `isError`: with no answer ever landed, Query hands every
+ * fresh ask back as `pending` — each minute's re-read, and every page, since the shell remounts the
+ * line per path — and the line would draw that exactly like a healthy fleet for the whole retry
+ * window. An unreachable fleet stays said until a read actually lands (#1307).
  */
 export function useFleet(): Fleet {
   const ops = useQuery({
@@ -109,7 +114,8 @@ export function useFleet(): Fleet {
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
-  return { ops, reading: fleetReading(ops.data, ops.isError) };
+  const failed = ops.isError || ops.errorUpdatedAt > ops.dataUpdatedAt;
+  return { ops, reading: fleetReading(ops.data, failed) };
 }
 
 /** The opened panel's fleet row: the summary in words, and the rows one more tap away, in place. */
