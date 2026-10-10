@@ -24,9 +24,9 @@
           "id": "s2",
           "only": "desktop",
           "goto": "/app/accounts",
-          "sees": "the Overview: net worth, then the positions blotter — EEM, Guidance on the row",
+          "sees": "the Overview: net worth, then the positions blotter — EEM, its guidance line under the row",
           "ears": "WHEN the member opens Overview, the app shall show the held positions with a way into each one's guidance, even when net worth cannot be read.",
-          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
+          "expect": [{ "text": "EEM" }, { "role": "button", "name": "Guidance for EEM" }],
           "judge": "can this reader tell which position to act on?"
         },
         {
@@ -42,10 +42,10 @@
           "id": "s3",
           "only": "desktop",
           "goto": "/app/u/human-eric",
-          "sees": "the desk's blotter: EEM, Guidance on the row; they click it",
+          "sees": "the desk's blotter: EEM, its guidance line under the row; they open its Guidance in place",
           "ears": "WHEN the member opens their desk, the app shall show each held position with a way into its guidance.",
-          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
-          "act": { "click": { "role": "link", "name": "Guidance" } },
+          "expect": [{ "text": "EEM" }, { "role": "button", "name": "Guidance for EEM" }],
+          "act": { "click": { "role": "button", "name": "Guidance for EEM" } },
           "judge": "can this reader tell which position to act on?"
         },
         {

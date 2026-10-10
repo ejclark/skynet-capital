@@ -46,7 +46,7 @@
   }
 }
 .cycle-body,
-.row-more td,
+.row-open td,
 .gate-body {
   animation: fold-open var(--dur-quick) var(--ease-spatial) both;
 }

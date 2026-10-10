@@ -69,7 +69,7 @@ function DeskPage(): ReactElement {
           <div className="overview-worth">
             <DeskTilesGrid tiles={d.tiles} />
           </div>
-          <div className="overview-decide acct-book">
+          <div className="overview-decide">
             {canTrade ? null : (
               <p className="acct-own-note">You can trade only your own accounts.</p>
             )}

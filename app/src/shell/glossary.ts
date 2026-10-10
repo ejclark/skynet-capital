@@ -127,6 +127,11 @@ export const GLOSSARY = {
     plain:
       "The deepest fall from a peak your account has recorded. It's the drop you'd have had to sit through, not a loss you booked.",
   },
+  projection: {
+    label: "Model projects",
+    plain:
+      "What the guidance model expects this position to total by its next date, and how sure it is. It's a projection, never a fact, and it reads — until the model has one for the position.",
+  },
   delta: {
     label: "Move per $1",
     plain:

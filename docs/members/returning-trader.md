@@ -67,8 +67,8 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    blotter is one card per position and EEM's card is the way in — it opens the position on
    Trade, where Guidance is a tab (`s2-phone`). Judge: can this reader tell which position to
    act on?
-3. `/app/u/human-eric` — the desk's blotter: EEM, Guidance on the row (desktop); the EEM card
-   (phone); they click it. **WHEN the member opens their desk, the app shall show each held
+3. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
+   opens in place (desktop); the EEM card (phone); they click it. **WHEN the member opens their desk, the app shall show each held
    position with a way into its guidance.** Judge: can this reader tell which position to act on?
 4. `/app/trade?desk=human-eric&symbol=EEM&section=guidance` — Trade, EEM prefilled, the Guidance
    pane (offline: "No live quote for EEM — nothing to advise on"; the lever calls need a live quote

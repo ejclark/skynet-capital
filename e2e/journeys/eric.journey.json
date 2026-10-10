@@ -81,10 +81,10 @@
           "id": "s1",
           "only": "desktop",
           "goto": "/app/u/human-eric",
-          "sees": "the desk's blotter: EEM, Guidance on the row; he clicks it",
+          "sees": "the desk's blotter: EEM, its guidance line under the row; he opens its Guidance in place",
           "ears": "WHEN the owner asks whether to take profit on a position, the app shall offer that position's guidance from the blotter.",
-          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
-          "act": { "click": { "role": "link", "name": "Guidance" } },
+          "expect": [{ "text": "EEM" }, { "role": "button", "name": "Guidance for EEM" }],
+          "act": { "click": { "role": "button", "name": "Guidance for EEM" } },
           "judge": "can this reader tell which position to act on?"
         },
         {

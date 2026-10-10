@@ -85,8 +85,10 @@ describe("PositionsBlotter", () => {
         />,
       ),
     );
-    // The table and the phone's cards (#3689 slice 8) both list what the filter kept.
-    expect(screen.getAllByText("MSFT put").length).toBeGreaterThan(0);
+    // The table and the phone's cards (#3689 slice 8) both list what the filter kept, each in
+    // Eric's row spec (#5061, #5071); the table row's opener names it by its display.
+    expect(screen.getByRole("button", { name: "Detail for MSFT put" })).toBeInTheDocument();
+    expect(screen.getAllByText("LONG PUT")).toHaveLength(2);
     expect(screen.queryByText("SPY")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Options" })).toHaveAttribute("aria-pressed", "true");
   });

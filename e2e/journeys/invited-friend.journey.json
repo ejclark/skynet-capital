@@ -17,7 +17,7 @@
             { "url": "/app/accounts" },
             { "role": "region", "name": "Net worth · Friend" },
             { "role": "region", "name": "Net worth · Eric", "absent": true },
-            { "role": "button", "name": "1 buy for EEM", "absent": true },
+            { "role": "button", "name": "Detail for EEM", "absent": true },
             { "role": "link", "name": "EEM", "absent": true },
             { "text": "Guest list", "absent": true },
             { "text": "Mission Control", "absent": true }
@@ -30,7 +30,7 @@
           "goto": "/app/accounts",
           "sees": "the positions blotter: XLE, the friend's one holding, on its row",
           "ears": "WHEN the invited friend reads their positions, the app shall show the positions of the friend's own accounts.",
-          "expect": [{ "role": "button", "name": "1 buy for XLE" }],
+          "expect": [{ "role": "button", "name": "Detail for XLE" }],
           "judge": "can this reader find what they hold?"
         },
         {

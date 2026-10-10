@@ -1,8 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import type { DeskPosition } from "../live/desk";
 import { BlotterRow } from "./blotter-row";
-import { GlossaryTerm } from "./glossary-term";
 import type { HoldingDecay } from "./holding-decay";
+import { colClass, POS_COLUMNS, PositionsHeaderRow } from "./position-columns";
 
 /**
  * The positions blotter (#738 phase 2c, extracted #2321) — shared between a single desk (`/u/:id`)
@@ -10,13 +10,16 @@ import type { HoldingDecay } from "./holding-decay";
  * row (`BlotterRow`) rather than two copies drifting apart. `canTrade` is the one difference the
  * two pages have (#3807 slice 2d): off an account the viewer owns, the rows offer no write.
  *
- * `table-layout: fixed` + the `<colgroup>` below (#3186 slice 3) — under the default `auto`
- * layout, EVERY column's width is recomputed from the max content across ALL currently-rendered
- * rows; opening a lot accordion adds rows whose symbol cell holds an opened-at date (~21 chars)
- * instead of a ticker (~5), so the whole table's columns visibly shifted on open/close
- * (live-review). Fixed layout locks each column's width from the colgroup once, so no row content
- * can ever move another column. `col-detail`/`fold-col` classes on the `<col>` elements mirror the
- * same classes on the `<th>`/`<td>` cells so a hidden column's width drops out too.
+ * Its columns are ranked (#5071, `position-columns.tsx`): which of them show is decided by the
+ * table's own width, a container query on `.blotter-scroll` (`positions-columns.css`), so the
+ * same table fits beside the tower, beside Moneypenny's rail, or alone, with no sideways scroll.
+ *
+ * `table-layout: fixed` + the `<colgroup>` (#3186 slice 3) — under the default `auto` layout,
+ * EVERY column's width is recomputed from the max content across ALL currently-rendered rows, so
+ * opening a row would visibly shift the columns. Fixed layout locks each column's width from the
+ * colgroup once (the widths live in `positions-columns.css`, beside the widths that pick them).
+ * Each `<col>` carries its column's class, like its `<th>`/`<td>`, so a hidden column's width
+ * drops out too.
  * @category trading
  */
 export function PositionsTable({
@@ -24,6 +27,7 @@ export function PositionsTable({
   deskId,
   totalCount,
   decayBySymbol,
+  deltaBySymbol,
   canTrade = true,
   guide,
 }: {
@@ -31,6 +35,8 @@ export function PositionsTable({
   readonly deskId: string;
   /** Time decay per OCC symbol, from the option book (#3689 slice 6); absent until it answers. */
   readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
+  /** Dollars per $1 in the stock per OCC symbol, from the same book (#5059). */
+  readonly deltaBySymbol?: ReadonlyMap<string, number>;
   /** Unfiltered count, for the empty-state copy (0 open vs. 0 matching a filter). */
   readonly totalCount: number;
   /** Does the viewer own this account? Off it, no row renders a write (`BlotterRow`). */
@@ -50,50 +56,14 @@ export function PositionsTable({
   return (
     <div className="blotter-card">
       <div className="blotter-scroll">
-        <table className="blotter blotter-fixed">
+        <table className="blotter blotter-fixed pos-table">
           <colgroup>
-            <col className="fold-col" style={{ width: 32 }} />
-            <col style={{ width: 220 }} />
-            <col style={{ width: 56 }} />
-            <col style={{ width: 100 }} />
-            <col style={{ width: 90 }} />
-            <col style={{ width: 124 }} />
-            <col style={{ width: 88 }} />
-            <col className="col-detail" style={{ width: 100 }} />
-            <col className="col-detail" style={{ width: 96 }} />
-            <col className="col-detail" style={{ width: 130 }} />
-            <col className="col-detail" style={{ width: 150 }} />
-            {/* The action column, sized for its widest row: an option buy the viewer owns —
-                "Close this buy" + "Roll", ~159px of buttons (macOS system font) in the 160px left
-                after the cell's 24px padding. A share row's "Guidance" + "Close all" is ~153px.
-                Under fixed layout this width is the column's ONLY size (a cell's `min-width` is
-                ignored), so anything narrower pushes a button out of its cell (#4945); the e2e
-                `positions-table.spec.ts` measures both rows at four widths. */}
-            <col style={{ width: 184 }} />
+            {POS_COLUMNS.map((key) => (
+              <col key={key} className={colClass(key)} />
+            ))}
           </colgroup>
           <thead>
-            <tr>
-              <th className="fold-col" aria-label="Row detail" />
-              <th>Position</th>
-              <th className="num">Qty</th>
-              <th className="num">Value</th>
-              <th className="num">Today</th>
-              <th className="num">Total P/L</th>
-              <th className="num">
-                <GlossaryTerm term="expiresIn" />
-              </th>
-              <th className="num col-detail">
-                <GlossaryTerm term="timeDecay">Decay / day</GlossaryTerm>
-              </th>
-              <th className="num col-detail">
-                <GlossaryTerm term="breakeven" />
-              </th>
-              <th className="num col-detail">
-                <GlossaryTerm term="bestWorst" />
-              </th>
-              <th className="col-detail">Next event</th>
-              <th className="act-col" aria-label={canTrade ? "Close position" : "Guidance"} />
-            </tr>
+            <PositionsHeaderRow />
           </thead>
           <tbody>
             {positions.map((position) => (
@@ -101,7 +71,8 @@ export function PositionsTable({
                 key={position.symbol}
                 position={position}
                 deskId={deskId}
-                decay={decayBySymbol?.get(position.symbol)?.signed}
+                decay={decayBySymbol?.get(position.symbol)}
+                delta={deltaBySymbol?.get(position.symbol)}
                 canTrade={canTrade}
                 guide={guide?.(position)}
               />

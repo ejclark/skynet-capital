@@ -12,8 +12,11 @@
 
 const SAURON = "/app/accounts?account=sauron";
 const PUT = "CRWV $80 PUT · 6 NOV 26";
-const PUT_ROW = "#pos-CRWV261106P00080000";
+// The put's row opened (#5071): its writes sit in the row under its guidance line.
+const PUT_OPENED = "#pos-CRWV261106P00080000 + .row-guide + .row-open";
 const PUT_CARD = "CRWV $80 SHORT PUT";
+/** A desk row's one disclosure (#5071): the buys, Close and the rest open behind it. */
+const opener = (display) => `Detail for ${display}`;
 const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
 const click = (r, name, extra = {}) => ({ click: role(r, name, extra) });
@@ -63,10 +66,11 @@ const TODAY = [
     label: "positions: put + both share rows",
     route: SAURON,
     expect: [
-      role("row", PUT, { only: "desktop" }),
-      role("button", "3 buys for NVDA", { only: "desktop" }),
-      role("button", "1 buy for CRWV", { only: "desktop" }),
-      // The phone card names the put by its row spec since #5061: "CRWV $80 SHORT PUT, 29 days left".
+      // Both layouts name the put by its row spec (#5061 on the phone, #5071 on the desk).
+      role("row", PUT_CARD, { only: "desktop" }),
+      role("button", opener("NVDA"), { exact: true, only: "desktop" }),
+      role("button", opener("CRWV"), { exact: true, only: "desktop" }),
+      // "CRWV $80 SHORT PUT, 29 days left".
       role("link", PUT_CARD, { only: "phone" }),
       // Each card's name says its figures in words (#5049): "… total +$1,056, return +3.63%".
       role("link", "total +$1,056", { only: "phone" }),
@@ -77,12 +81,17 @@ const TODAY = [
     id: "positions-actions",
     label: "positions: row actions",
     route: SAURON,
-    // At 390 a position is a card, and the card itself is the action: tapping it opens Trade.
-    act: [{ ...click("link", PUT_CARD), only: "phone" }],
+    // At 390 a position is a card, and the card itself is the action: tapping it opens Trade. On
+    // the desk the writes open with the row (#5071).
+    act: [
+      { ...click("link", PUT_CARD), only: "phone" },
+      { ...click("button", opener("NVDA"), { exact: true }), only: "desktop" },
+      { ...click("button", opener(PUT), { exact: true }), only: "desktop" },
+    ],
     expect: [
       role("button", "Close all", { only: "desktop" }),
-      // The put's own Close, not any Close on the page (a dialog's, a toast's): inside its row.
-      role("button", "Close", { exact: true, within: PUT_ROW, only: "desktop" }),
+      // The put's own Close, not any Close on the page (a dialog's, a toast's): in its opened row.
+      role("button", "Close", { exact: true, within: PUT_OPENED, only: "desktop" }),
       { url: "/app/trade", only: "phone" },
     ],
   },
@@ -214,8 +223,9 @@ const BAD_DAY = [
     label: "positions: the losing row",
     route: SAURON,
     expect: [
-      role("button", "1 buy for CRWV", { only: "desktop" }),
-      role("link", "CRWV -$594", { only: "phone" }),
+      role("button", opener("CRWV"), { exact: true, only: "desktop" }),
+      // The card's name says its total in words, with a real minus (#5049).
+      role("link", "total −$594", { only: "phone" }),
     ],
   },
 ].map((s) => ({ viewer: "eric", ...s }));
