@@ -3,8 +3,10 @@
 // (#5056 slice 1, criterion 7). It writes NOTHING to GitHub: it prints the plan as JSON, and the
 // live session runs it (`--out <dir>` also writes each body to a file and the exact commands).
 //
-//   node scripts/steer/readback.mjs --tp <dir>/tp.json --records <records> [--out <dir>]
+//   node scripts/steer/readback.mjs --tp <dir>/tp.json --records <records> [--comments <file>]
+//     [--out <dir>]
 //     <records>: a folder ArtifactData wrote with out_dir, or one JSON file of path → document
+//     <file>: Eric's comments sent to Claude on the page, [{ anchorKey, text, at }] (SKILL.md step 7)
 //
 // THE RULES, each one a red-team finding on #5056 before this was built:
 //   - EVERY comment ends with the lane FOOTER (scripts/moneypenny/labels.mjs). The session posts as
@@ -22,11 +24,15 @@
 //     so it rolls over untouched — no default, no label, no comment.
 //   - Each Build on a design option becomes a `feedback` issue (his tap is the go), marked so the
 //     reel can say "because you said …" when it merges.
+//   - A comment Eric sent to Claude on the page counts like a note: quoted word for word under
+//     "Eric's comments on the page" in its decision's part of the issue comment, and a decision he
+//     commented on without a tap is quoted and rolled over — never given its default, never moved.
+//     A comment on anything but a shown decision is handed back in `unplacedComments`.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { CLAUDE_READY_LINE } from "../moneypenny/plan-claim.mjs";
-import { buildIssue, noteBlock, revisitIssue } from "./filings.mjs";
+import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
 import { activeMinutes, isAnswered, roundRecords } from "./model.mjs";
 import { readRecords } from "./records.mjs";
 
@@ -35,10 +41,53 @@ export const DEFAULT_APPLIED = "default applied; no answer from Eric";
 /** Why a decision that had no picture yet rolls over: it was named on the page, never asked. */
 export const DRAWING = "no picture yet: named as being drawn, not asked; it comes next page";
 
+const head = (d) => `**${d.q ? `Q${d.q} · ` : ""}${d.title}**`;
+
+/**
+ * A comment's anchor → the shown decision it sits on, and the option when it sits on one. The
+ * anchor may be the key (`5037-q1`), the element id (`d-5037-q1`, `#d-5037-q1`) or an option
+ * inside it (`d-5037-q1-A`). The longest key wins, so `5037` never claims `5037-q1`'s comments.
+ */
+export function anchorDecision(anchor, decisions) {
+  const raw = String(anchor ?? "")
+    .trim()
+    .replace(/^#/, "");
+  const ids = [raw, raw.replace(/^d-/, "")];
+  let best = null;
+  for (const d of decisions) {
+    const id = ids.find((x) => x === d.key || x.startsWith(`${d.key}-`));
+    if (id === undefined || (best && best.d.key.length >= d.key.length)) continue;
+    const rest = id === d.key ? null : id.slice(d.key.length + 1);
+    best = { d, opt: (d.options ?? []).some((o) => o.key === rest) ? rest : null };
+  }
+  return best;
+}
+
+/** Eric's comments, grouped by the decision they sit on, oldest first; the rest come back apart. */
+function placeComments(decisions, comments) {
+  const byKey = new Map();
+  const unplaced = [];
+  const sorted = [...comments].sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")));
+  for (const c of sorted) {
+    if (!String(c?.text ?? "").trim()) continue;
+    const hit = anchorDecision(c.anchorKey, decisions);
+    if (!hit) unplaced.push(c);
+    else byKey.set(hit.d.key, [...(byKey.get(hit.d.key) ?? []), { ...c, opt: hit.opt }]);
+  }
+  return { byKey, unplaced };
+}
+
+/** The block a decision's part carries: each comment quoted word for word, its option named. */
+export function commentsBlock(list) {
+  if (!list?.length) return "";
+  const each = list.map((c) => [c.opt ? `On option ${c.opt}:` : "", quote(c.text)].filter(Boolean));
+  return ["Eric's comments on the page:", ...each.flat()].join("\n\n");
+}
+
 function designPart(d, r) {
   const name = (k) => d.options.find((o) => o.key === k)?.name ?? k;
   const by = (v) => Object.keys(r.react ?? {}).filter((k) => r.react[k] === v);
-  const lines = [`**${d.q ? `Q${d.q} · ` : ""}${d.title}**`];
+  const lines = [head(d)];
   if (r.pick) lines.push(`- Build: option ${r.pick}, "${name(r.pick)}"`);
   if (by("more").length)
     lines.push(
@@ -118,8 +167,14 @@ function skipped(d, acc) {
   } else acc.roll(d, d.skip);
 }
 
-function designAnswer(d, r, acc, id) {
-  acc.part(d.issue, designPart(d, r));
+/** A decision Eric commented on and never tapped: his words go on the issue, and it stays his. */
+function commentedOnly(d, said, acc) {
+  acc.part(d.issue, [head(d), said].join("\n\n"));
+  acc.roll(d, "commented on the page, no tap — still his decision");
+}
+
+function designAnswer(d, r, acc, id, said) {
+  acc.part(d.issue, [designPart(d, r), said].filter(Boolean).join("\n\n"));
   if (r.pick) acc.actions.push(buildIssue(d, r, id));
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
@@ -144,8 +199,8 @@ function settles(d, r) {
 
 /** A fork or an approval. Only a tap that settles it moves a label: a note alone, "More", "Hold"
  *  or "Not now" is quoted and kept open, and the session routes those by hand, never this file. */
-function plainAnswer(d, r, acc) {
-  acc.part(d.issue, plainPart(d, r));
+function plainAnswer(d, r, acc, commented) {
+  acc.part(d.issue, [plainPart(d, r), commented].filter(Boolean).join("\n\n"));
   if (d.irreversible) return acc.roll(d, "irreversible: only Eric acts on it, on GitHub");
   if (!settles(d, r)) {
     const said = r.verdict === "build" ? "settled by a note he left empty" : r.verdict;
@@ -201,15 +256,21 @@ function flipComment({ d, r }, id) {
   };
 }
 
-/** The pure read-back: what was shown (tp.json) + what Eric saved → the plan. */
-export function readback(tp, records) {
+/** The pure read-back: what was shown (tp.json) + what Eric saved + his comments → the plan. */
+export function readback(tp, records, comments = []) {
   const rr = roundRecords(records, tp.id);
   const acc = accumulator();
+  const placed = placeComments(tp.decisions, comments);
   for (const d of tp.decisions) {
     const r = rr.decisions[d.key];
-    if (!isAnswered(r)) skipped(d, acc);
-    else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id);
-    else plainAnswer(d, r, acc);
+    const said = commentsBlock(placed.byKey.get(d.key));
+    if (!isAnswered(r)) {
+      if (said) commentedOnly(d, said, acc);
+      else skipped(d, acc);
+    } else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id, said);
+    else plainAnswer(d, r, acc, said);
+    if (said)
+      acc.follow("read-comment", d, "His comments are quoted on the issue; read them first");
   }
   // Never asked, so never answered: no default, no label, no comment — even if a record exists.
   for (const d of tp.needsPictures ?? []) acc.roll(d, DRAWING);
@@ -243,7 +304,16 @@ export function readback(tp, records) {
     rollover: acc.rollover,
     defaults: acc.defaults,
     followUps: acc.followUps,
+    unplacedComments: placed.unplaced,
   };
+}
+
+/** `--comments <file>`: a JSON array of { anchorKey, text, at }; anything else is refused. */
+export function readComments(file) {
+  const list = JSON.parse(readFileSync(resolve(file), "utf8"));
+  if (!Array.isArray(list))
+    throw new Error("--comments: expected a JSON array of { anchorKey, text, at }");
+  return list.filter((c) => c && typeof c.text === "string");
 }
 
 /** Write each body to a file and print the exact command that posts it (REST, scripts/issues.mjs). */
@@ -303,10 +373,13 @@ function main() {
     return i === -1 ? undefined : process.argv[i + 1];
   };
   if (!(flag("tp") && flag("records"))) {
-    throw new Error("usage: readback.mjs --tp <tp.json> --records <dir|file.json> [--out <dir>]");
+    throw new Error(
+      "usage: readback.mjs --tp <tp.json> --records <dir|file.json> [--comments <file.json>] [--out <dir>]",
+    );
   }
   const tp = JSON.parse(readFileSync(resolve(flag("tp")), "utf8"));
-  const plan = readback(tp, readRecords(flag("records")));
+  const comments = flag("comments") ? readComments(flag("comments")) : [];
+  const plan = readback(tp, readRecords(flag("records")), comments);
   if (flag("out")) plan.commands = commandsFor(plan, resolve(flag("out")));
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
 }
