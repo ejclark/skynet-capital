@@ -572,8 +572,8 @@
           {
             "id": "prefs",
             "label": "Per-viewer preferences",
-            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, decision-pager.tsx, new-high-ceremony.tsx, level-up-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts",
-            "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies) — never shared state."
+            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, new-high-ceremony.tsx, level-up-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts, mark-aside.ts, look-sort.ts",
+            "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies, a row mark set aside by Not now, the \"Worth a look first\" sort) — never shared state."
           },
           {
             "id": "styles",

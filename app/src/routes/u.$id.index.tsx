@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDesk } from "../live/desk";
+import { initialPositionsQuery } from "../live/look-sort";
 import { useRefineSearch } from "../live/refine-search";
 import { AccountLeague, useOwnsAccount } from "../shell/account-head";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
@@ -42,7 +43,8 @@ function DeskPage(): ReactElement {
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
   // a beat behind (replace, no history spam, no jump to the top: #4944) — so a refresh or a shared
   // link keeps the filter.
-  const [query, setQuery] = useState(q ?? "");
+  // No filter in the URL: the list opens sorted worth-a-look-first unless turned off (#5070).
+  const [query, setQuery] = useState(() => initialPositionsQuery(q));
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {

@@ -18,7 +18,8 @@
 /* after wire.css's `.council-*` rules by specificity, not order: every rule here is scoped under
  * `.council-mine`, so the alphabetical seat is safe (#3963). */
 @import "./council-line.css";
-@import "./decision-pager.css";
+@import "./decision-card.css";
+@import "./position-guidance.css";
 @import "./decisions.css";
 @import "./desk.css";
 /* right after desk.css, not alphabetical: its rules were desk.css's own tail until #5022 shared them

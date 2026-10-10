@@ -1300,10 +1300,11 @@ await page.waitForTimeout(150);
 await shootCockpit("accounts-council-phone");
 await page.evaluate(() => window.scrollTo(0, 0));
 
-// Needs a decision (#3689 slice 7): the card with its details open, scrolled into view.
-await page.locator(".decisions").scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: /Why, and details/ }).click();
-await shootCockpit("accounts-decision-phone");
+// The guidance line on every row (#5070; the "Needs a decision" pager it replaced retired): the
+// first card's guidance opened in place, with Not now and its return condition.
+await page.locator(".pos-cards .pos-guide-call").first().scrollIntoViewIfNeeded();
+await page.locator(".pos-cards .pos-guide-call").first().click();
+await shootCockpit("accounts-guidance-phone");
 
 // Positions at phone width (#3689 slice 8): one card per position, not the wide table. The lot
 // breakdown lives in the wide table, so its frame moved to the desktop pass below.
@@ -1365,7 +1366,7 @@ await shootCockpit("events-empty-desktop");
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
-await page.locator(".decisions").waitFor();
+await page.locator(".blotter .row-guide").first().waitFor();
 await page.locator(".standing-line").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
@@ -1416,16 +1417,10 @@ await page.waitForTimeout(150);
 await shootCockpit("accounts-council-desktop");
 await page.evaluate(() => window.scrollTo(0, 0));
 
-// Needs a decision at 1600 (#3689 slice 7): the at-risk card, details open, range bar with "now".
-await page.locator(".decisions").scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: /Why, and details/ }).click();
+// The guidance line at 1600 (#5070): a full-width row under each position in the table.
+await page.locator(".blotter .row-guide").first().scrollIntoViewIfNeeded();
 await page.mouse.move(0, 0);
-await shootCockpit("accounts-decision-desktop");
-// The card's lesson opened in place (#3689 follow-up): "What is IV crush?" as a glossary popover.
-await page.evaluate(() => window.scrollBy(0, 320));
-await page.locator(".decision-learn button").hover();
-await shootCockpit("accounts-decision-learn-desktop");
-await page.mouse.move(0, 0);
+await shootCockpit("accounts-guidance-desktop");
 
 // Map lens (#3689 slice 9, handoff 3c): the treemap with the options strip and the stacked
 // decisions column; then the Runway (slice 10's lens, built alongside).
@@ -1439,7 +1434,7 @@ await page.goto(`${origin}/app/accounts?lens=runway`);
 await page.locator(".runway").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-runway-desktop");
 await page.goto(`${origin}/app/accounts`);
-await page.locator(".decisions").waitFor();
+await page.locator(".blotter .row-guide").first().waitFor();
 
 // The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
 // best / worst case, with the Breakeven glossary open.

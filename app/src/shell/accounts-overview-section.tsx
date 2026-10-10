@@ -4,13 +4,11 @@ import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { CouncilLineCard } from "./council-line-card";
-import { DecisionPager } from "./decision-pager";
 import { HeldEventsLine } from "./held-events-line";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
 import { NewHighCeremony } from "./new-high-ceremony";
-import { useLens } from "./positions-lens";
 import { SauronCard } from "./sauron-card";
 import { useTowerColumn } from "./use-tower-column";
 
@@ -28,9 +26,14 @@ import { useTowerColumn } from "./use-tower-column";
  * drops its condensed copy on this section and keeps it on the others.
  *
  * #3725 → #3727: the top is a grid. The left column is the money story (net worth with "where your
- * money is" as its bottom row, then what needs a decision); the right is Sauron's character card,
- * the tower standing over the league in one card, spanning both rows. The card comes after the
- * decisions in the DOM so a phone reads worth → decide → card.
+ * money is" as its bottom row); the right is Sauron's character card, the tower standing over the
+ * league in one card, spanning both rows. The card comes after the money in the DOM so a phone
+ * reads worth → card.
+ *
+ * #5070: the "Needs a decision" pager that sat under the net worth retired. Its job moved onto the
+ * positions themselves — a fact badge on every row ("◆ Review · below breakeven"), a "Worth a
+ * look first" sort, and Not now on the row (`positions-blotter.tsx`). "All accounts" keeps the
+ * roster, with each account's count of decisions.
  *
  * #3807 slice 2·1: under the net-worth card, one line — the events on what this book holds in the
  * market calendar's range (the burning-day joint, docs/IA.md §6; `held-events-line.tsx`). The
@@ -76,8 +79,6 @@ export function OverviewSection({
   // One account's desk carries the Money strip's allocation (#3689 slice 5).
   const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
   const landmark = allAccounts || singleDesk?.error ? undefined : desks?.[0]?.landmark;
-  // The Map lens stacks the decisions beside the map (handoff 3c), so the pager steps aside.
-  const [lens] = useLens();
   const towerColumn = useTowerColumn();
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
@@ -109,18 +110,16 @@ export function OverviewSection({
             </p>
           )}
         </div>
-        <div className="overview-decide">
-          {allAccounts ? (
+        {allAccounts ? (
+          <div className="overview-decide">
             <NetWorthRoster
               accounts={roster}
               decisionsById={
                 new Map((desks ?? []).map((d) => [d.desk.id, d.desk.decisions?.length ?? 0]))
               }
             />
-          ) : lens === "map" ? null : (
-            <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
-          )}
-        </div>
+          </div>
+        ) : null}
         {towerColumn ? null : <OverviewCard landmark={landmark} owned={owned} />}
       </div>
       {desksLoading ? (

@@ -157,3 +157,36 @@ describe("day:<0 / day:>0 — today's change, apart from pl: (lifetime against c
     expect(clearChips("msft day:<0 pl:<0")).toBe("msft");
   });
 });
+
+// The marks as a filter and the "Worth a look first" sort (#5070, round 2 of #5037): the sort
+// orders the list and the marks narrow it, and both are tokens in the one query model.
+describe("sort:look and is:review / is:consider / is:onplan", () => {
+  it("reads sort:look as the sort, never as a search word", () => {
+    const f = parseDeskQuery("sort:look");
+    expect(f.sortLook).toBe(true);
+    expect(f.terms).toEqual([]);
+    expect(matchesFilter(shares, f)).toBe(true);
+  });
+
+  it("keeps only the rows whose mark matches, and a row with no mark shown matches none", () => {
+    const f = parseDeskQuery("is:review");
+    expect(f.mark).toBe("review");
+    expect(matchesFilter(shares, f, "review")).toBe(true);
+    expect(matchesFilter(shares, f, "onplan")).toBe(false);
+    expect(matchesFilter(shares, f, undefined)).toBe(false);
+    expect(matchesFilter(shares, parseDeskQuery("is:onplan"), "onplan")).toBe(true);
+    expect(matchesFilter(shares, parseDeskQuery("is:consider"), "review")).toBe(false);
+  });
+
+  it("makes the three marks replace one another, and stack with the kinds and the sort", () => {
+    expect(toggleQualifier("is:review", "is:onplan")).toBe("is:onplan");
+    expect(toggleQualifier("is:option sort:look", "is:review")).toBe(
+      "is:option sort:look is:review",
+    );
+    expect(toggleQualifier("is:review sort:look", "sort:look")).toBe("is:review");
+  });
+
+  it("leaves the marks and the sort out of the All chip's clearing", () => {
+    expect(clearChips("is:option is:review sort:look")).toBe("is:review sort:look");
+  });
+});

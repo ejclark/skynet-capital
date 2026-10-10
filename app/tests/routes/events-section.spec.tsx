@@ -148,7 +148,9 @@ rstest.mock("../../src/shell/accounts-overview-section", () => ({
     query: string;
   }) => {
     const rows = (desks ?? []).flatMap((d) => d.desk.positions);
-    const shown = rows.filter((p) => query === "" || p.symbol.includes(query.toUpperCase()));
+    // The real grammar: the list opens on `sort:look` (#5070), a sort that keeps every row.
+    const filter = actualDesk.parseDeskQuery(query);
+    const shown = rows.filter((p) => actualDesk.matchesFilter(p, filter));
     return <p data-testid="blotter">Positions {shown.length}</p>;
   },
 }));

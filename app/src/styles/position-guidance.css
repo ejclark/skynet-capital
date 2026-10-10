@@ -1,0 +1,282 @@
+/* The guidance line and the marks (#5070; round 2 of #5037): `shell/position-guidance-slot.tsx`,
+ * `shell/positions-head.tsx`. Every mark is a glyph plus a word — ◆ Review, ▲ Consider, ○ On plan,
+ * ◇ Not now — so hue never carries it alone (a standing reader is red/green colourblind); the
+ * Review badge also takes an outline, a shape step, not a tone shift. */
+
+/* The phone card becomes one box holding the link and the line under it. */
+.pos-cards > li.pos-card-guided {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.pos-cards > li.pos-card-guided > .pos-card {
+  border: 0;
+  background: none;
+  padding-bottom: 8px;
+}
+
+/* The slot: under a hairline, one line, the same height whatever it says. */
+.pos-guide {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.pos-guide-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  min-width: 0;
+}
+/* A block of inline text, not a flex box: the " · " between word and fact keeps its spaces. A fact
+   too long for a narrow card ends in an ellipsis; the whole of it is still in the row's name. */
+.pos-guide-mark {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--text);
+}
+.pos-guide-mark--review {
+  padding: 2px 10px;
+  border: 1.5px solid var(--text);
+  border-radius: 999px;
+}
+.pos-guide-mark--onplan,
+.pos-guide-mark--aside {
+  color: var(--muted);
+}
+.pos-guide-mark--aside {
+  padding: 1px 9px;
+  border: 1px dashed var(--muted);
+  border-radius: 999px;
+}
+.pos-guide-undo,
+.pos-guide-call {
+  flex: none;
+  min-height: 32px;
+  border: 0;
+  padding: 0 2px;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-guide-undo {
+  color: var(--accent);
+}
+.pos-guide-call {
+  margin-left: auto;
+  color: var(--text);
+}
+.pos-guide-meter {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.pos-guide-conf {
+  font-weight: 500;
+  color: var(--muted);
+}
+.pos-guide-read {
+  margin: 0;
+  font-size: 12.5px;
+}
+.pos-guide-chev {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.pos-guide-call[aria-expanded="true"] .pos-guide-chev {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pos-guide-chev {
+    transition: none;
+  }
+}
+
+/* Opened in place under its own line. */
+.pos-guide-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 0 12px;
+}
+.pos-guide-aside {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0;
+}
+.pos-guide-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px dashed var(--muted);
+  border-radius: 9px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-guide-when {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pos-guide-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* On the desk table: a full-width row under its position, joined to it. */
+.blotter tr:has(+ .row-guide) > td {
+  border-bottom: 0;
+}
+.blotter .row-guide > td {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+/* The table scrolls sideways when it is wider than its card: the line holds to the visible width
+   (the scroller is a size container, desk.css), so Guidance never sits off past the last column. */
+.row-guide .pos-guide {
+  position: sticky;
+  left: 12px;
+  width: calc(100cqw - 24px);
+  margin: 0;
+}
+
+/* The head: "Positions 3", the sort chip and Filter. */
+.positions-head {
+  flex-wrap: wrap;
+}
+.positions-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.pos-head-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pos-sort-chip[aria-pressed="true"] {
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+}
+.pos-filter-toggle[aria-expanded="true"] {
+  border-color: var(--text);
+  color: var(--text);
+}
+.pos-sort-line {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pos-sort-line code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+.pos-sort-save {
+  border: 0;
+  padding: 4px 2px;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Filter, opened in place under the head: no sheet, no pop-up. */
+.pos-filter-panel {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title done"
+    "line line";
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.pos-filter-panel-title {
+  grid-area: title;
+  font-size: 14px;
+  font-weight: 700;
+}
+.pos-filter-done {
+  grid-area: done;
+  border: 0;
+  padding: 0 2px;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-filter-line {
+  grid-area: line;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pos-filter-label {
+  min-width: 52px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pos-mark-chip[aria-pressed="true"] {
+  border-width: 1.5px;
+  color: var(--text);
+  border-color: var(--text);
+}
+
+/* What a mark filter hides, named under the list. */
+.pos-hidden-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.pos-hidden-clear {
+  flex: none;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
