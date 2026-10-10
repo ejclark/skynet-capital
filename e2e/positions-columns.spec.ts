@@ -89,6 +89,8 @@ const measure = (page: Page) =>
         const widths = heads.map((th) => th.offsetWidth);
         return {
           width: b.clientWidth,
+          // Unrounded: the container query compares this, and a box can land a pixel from a step.
+          exact: b.getBoundingClientRect().width,
           over: b.scrollWidth - b.clientWidth,
           headed: Math.round(widths.reduce((sum, w) => sum + w, 0)),
           position: Math.round(widths[0] ?? 0),
@@ -133,6 +135,28 @@ async function openEveryRow(page: Page): Promise<Frame> {
 
 const SIX = ["pos", "greeks", "value", "pl", "model", "open"];
 
+/** The columns a box of this width stands (positions-columns.css): its own width, never the
+ *  window's, picks them. */
+const ranked = (width: number): string[] => [
+  "pos",
+  ...(width >= 640 ? ["greeks"] : []),
+  "value",
+  "pl",
+  ...(width >= 760 ? ["model"] : []),
+  ...(width >= 960 ? ["event"] : []),
+  ...(width >= 1100 ? ["best"] : []),
+  "open",
+];
+
+/** The one table on the page stands exactly the columns its width ranks. */
+function expectRanked(frame: Frame, when: string): void {
+  expect(frame.boxes, `one table ${when}`).toHaveLength(1);
+  const [box] = frame.boxes;
+  expect(frame.columns, `the columns a ${box?.exact}px table ranks ${when}`).toEqual(
+    ranked(box?.exact ?? 0),
+  );
+}
+
 // A test that has measured all it needs can end while a staged answer is still in flight (an
 // account's page asks for its settings late); its handler must not fail the test after the fact.
 test.afterEach(async ({ page }) => {
@@ -171,6 +195,7 @@ for (const width of [860, 1100]) {
         const closed = await measure(page);
         expect(closed.boxes.length).toBeGreaterThan(0);
         for (const key of SIX) expect(closed.columns).toContain(key);
+        expectRanked(closed, `at ${width}`);
         expectNoSidewaysScroll(closed, `at ${width}`);
         expectNoSidewaysScroll(await openEveryRow(page), `at ${width}, every row opened`);
       });
@@ -198,8 +223,11 @@ test.describe("the positions table at 1280px", () => {
   }
 
   // The rail takes the room the tower needed, so the tower steps aside (#3977). The Profile page's
-  // book keeps the stage's width (~774px: the six still fit); an account's page splits it with the
-  // character card, leaving its book ~374px — too narrow for any table, so it reads as cards.
+  // book keeps the stage's width: ~774px under overlay scrollbars (macOS), the six; ~759px under a
+  // classic 15px scrollbar (Linux CI), a pixel short of Model projects' step, which opens in the row
+  // instead. Either way the table stands what its own width ranks. An account's page splits the
+  // stage with the character card, leaving its book ~374px — too narrow for any table, so it reads
+  // as cards.
   const RAIL = [
     { route: "/app/accounts", reads: "a table" },
     { route: `/app/u/${OWNED.id}`, reads: "cards" },
@@ -222,7 +250,7 @@ test.describe("the positions table at 1280px", () => {
         expect(closed.cards.length).toBeGreaterThan(0);
         return;
       }
-      expect(closed.columns).toEqual(SIX);
+      expectRanked(closed, "with the rail open");
       expectNoSidewaysScroll(await openEveryRow(page), "with the rail open, every row opened");
     });
   }
