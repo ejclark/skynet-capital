@@ -561,6 +561,12 @@ details.ev summary {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+/* No store, or one that can't be read: the line replaces the count and is the page's one warning,
+   so it carries weight and full ink — never a hue alone. */
+.bar output[data-state="blocked"] {
+  color: var(--text);
+  font: 600 13px / 1.4 var(--sans);
+}
 .bar .ghost {
   font: 600 13px var(--sans);
   background: transparent;
