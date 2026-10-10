@@ -1,0 +1,304 @@
+/* A bot's Playbooks section (#5073 — #5037 round 2, R2): `shell/bot-playbooks.tsx` and
+ * `shell/playbook-cards.tsx`. The bot's checks as a strip on top, a counted line, then one card per
+ * playbook in a single bordered list, its footer naming the ones that are off.
+ *
+ * Phone first (390): a card is two lines — name and state, then one fact — and opens in place.
+ * From the bench width (≥861) the state's mode and "since" move up beside the word, and the fact
+ * takes its own column, the room a lane per playbook will fill in the next slice.
+ *
+ * Every state rides a glyph and a word; a card that can't fire also gets a dashed rule, the strip's
+ * alarm state a heavier border, an open card its revealed body and a turned chevron — never hue
+ * alone (docs/BRAND.md → Accessibility). Existing tokens only. */
+
+.pbb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* ── the strip: is it running, how often, and what each check asks ─────────────────────────── */
+.pbb-strip {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--elev-base);
+  padding: 14px var(--space-4) 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pbb-strip[data-state="stale"] {
+  border: 2px solid var(--text);
+}
+.pbb-strip[data-state="market-closed"] {
+  border-style: dashed;
+}
+.pbb-strip[data-state="no-record"] {
+  border-style: dotted;
+}
+.pbb-strip p {
+  margin: 0;
+}
+.pbb-strip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px var(--space-3);
+}
+.pbb-strip-state {
+  font-size: 15px;
+  line-height: 1.35;
+}
+.pbb-strip-state b {
+  font-weight: 600;
+}
+.pbb-strip-detail {
+  color: var(--muted);
+}
+.pbb-strip-ok {
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+.pbb-strip-halt {
+  font-size: var(--text-md);
+  border-left: 2px solid var(--text);
+  padding-left: var(--space-2);
+}
+.pbb-strip-why {
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--muted);
+}
+.pbb-strip-why b {
+  font-weight: 600;
+  color: var(--text);
+}
+.pbb-strip-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -2px;
+}
+.pbb-log-toggle {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font: 500 var(--text-md) / 1.3 var(--sans);
+  color: var(--accent);
+  cursor: pointer;
+}
+.pbb-log-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.pbb-chev {
+  display: inline-block;
+  transition: transform var(--dur-quick) var(--ease-spatial);
+}
+
+/* ── the counted line ─────────────────────────────────────────────────────────────────────────── */
+.pbb-count {
+  margin: 4px 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-4);
+  font-size: var(--text-base);
+  color: var(--text);
+}
+.pbb-count > span {
+  white-space: nowrap;
+}
+
+/* ── the cards: one bordered list, a rule between rows ───────────────────────────────────────── */
+.pbb-cards {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--elev-base);
+  overflow: hidden;
+}
+.pbb-cards > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pbb-card + .pbb-card {
+  border-top: 1px solid var(--border);
+}
+.pbb-card + .pbb-card[data-state="blocked"] {
+  border-top-style: dashed;
+}
+/* A held lot nothing on the bot will sell (#4777): a heavier rule sets it apart from the playbooks
+   above it, on top of its own glyph and word. */
+.pbb-card + .pbb-card[data-state="unmanaged"] {
+  border-top-width: 2px;
+}
+/* A card's summary and the footer's are the closed state; the browser's own marker is replaced by
+   the row's chevron. */
+.pbb-sum {
+  list-style: none;
+  cursor: pointer;
+}
+.pbb-sum::-webkit-details-marker {
+  display: none;
+}
+.pbb-sum:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.pbb-card:has(details[open]) {
+  background: var(--surface-2);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Name and state share the first line; the fact takes the second, full width but for the chevron's
+   own narrow column — the state word's width never squeezes the fact. */
+.pbb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 14px;
+  grid-template-areas:
+    "name word word"
+    "fact fact chev";
+  align-items: baseline;
+  gap: 5px var(--space-3);
+  padding: 13px var(--space-4);
+}
+div.pbb-row {
+  grid-template-areas:
+    "name word word"
+    "fact fact fact";
+}
+.pbb-name {
+  grid-area: name;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 600 13px / 1.3 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.pbb-word {
+  grid-area: word;
+  justify-self: end;
+  text-align: right;
+  font-size: var(--text-base);
+  line-height: 1.3;
+}
+.pbb-state b {
+  font-weight: 600;
+}
+.pbb-fact {
+  grid-area: fact;
+  min-width: 0;
+  font-size: var(--text-md);
+  line-height: 1.4;
+  color: var(--text);
+}
+.pbb-row > .pbb-chev {
+  grid-area: chev;
+  justify-self: end;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+/* The chevron turns down when the thing it opens is open — a shape change beside the word. */
+.pbb-log-toggle[aria-expanded="true"] .pbb-chev,
+details[open] > .pbb-sum .pbb-chev {
+  transform: rotate(90deg);
+}
+.pbb-meta {
+  color: var(--muted);
+}
+.pbb-wide {
+  display: none;
+}
+
+/* the opened card: mode and since, the whole reason, the way to change it */
+.pbb-open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) 14px;
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.pbb-open p {
+  margin: 0;
+}
+.pbb-why {
+  color: var(--text);
+  border-left: 2px solid var(--border);
+  padding-left: var(--space-2);
+}
+
+/* a bot the viewer does not own (#885): a line before the cards says why they carry no names */
+.pbb-private {
+  margin: 0;
+  padding: 12px var(--space-4);
+  font-size: var(--text-md);
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── the footer: the ones that are off, and the way to change any of them ───────────────────── */
+.pbb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px var(--space-3);
+  padding: 12px var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+.pbb-off {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.pbb-off ul {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+.pbb-off .num {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* the check log, unfolded under the strip */
+.pbb-log {
+  padding: 2px 2px 6px;
+}
+.pbb-log > .note {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+
+/* ── from the bench width: the fact takes its own column, the mode rides beside the word ──── */
+@media (min-width: 861px) {
+  .pbb-row,
+  div.pbb-row {
+    grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 14px;
+    grid-template-areas:
+      "name fact chev"
+      "word fact chev";
+    gap: 3px var(--space-5);
+    align-items: center;
+  }
+  .pbb-word {
+    justify-self: start;
+    text-align: left;
+  }
+  .pbb-wide {
+    display: inline;
+  }
+  .pbb-narrow {
+    display: none;
+  }
+}
