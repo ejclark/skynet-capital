@@ -12,6 +12,9 @@
  */
 export const WIDTHS = { phone: 700, tablet: 860, bench: 1280 } as const;
 
+/** At or below the phone width — where content curates (the Profile head's switch folds to More). */
+export const PHONE_QUERY = `(max-width: ${WIDTHS.phone}px)`;
+
 /** At or below the tablet width — where the shell wraps, phones included. */
 export const TABLET_QUERY = `(max-width: ${WIDTHS.tablet}px)`;
 

@@ -1,0 +1,348 @@
+/* The calendar of what you hold (#5074; #5037 round 2, the calendar's R2): the Events card's head
+   (`shell/book-range-head.tsx`) and the lanes picture it drives (`shell/book-lanes.tsx`). Phone
+   first: the head stacks — arrows and the range, then three 44px options across the full width;
+   from 861 the range and the options share one row and the card adds room, nothing else. Every
+   signal is a shape or a word first (▲ ◆ ◇ ○, a hatch, a ✓, a dashed zero), the hue second. */
+
+.range-head {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.range-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.range-arrow {
+  flex: 0 0 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.range-arrow:hover {
+  border-color: var(--accent);
+}
+.range-words {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+.range-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.range-line {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.range-pick {
+  min-width: 0;
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+}
+.range-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.range-option {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.range-option:hover {
+  color: var(--text);
+}
+.range-option[aria-pressed="true"] {
+  border: 1.5px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--text);
+  font-weight: 650;
+  cursor: default;
+}
+.range-check {
+  margin-right: -3px;
+  color: var(--accent);
+  font-size: 12px;
+}
+/* A count is a filled chip; a zero is hollow and dashed — the shape says "nothing here". */
+.range-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+.range-count[data-zero] {
+  background: transparent;
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+}
+.range-caption {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (min-width: 861px) {
+  .range-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+    column-gap: 28px;
+    align-items: center;
+    padding: 14px 18px;
+  }
+  .range-words {
+    text-align: left;
+    padding-left: 6px;
+  }
+  .range-title {
+    font-size: 22px;
+  }
+  .range-pick {
+    margin: 0;
+  }
+}
+
+/* ---- The lanes ---- */
+.lanes {
+  margin: 0;
+  min-width: 0;
+  padding: 10px 14px 4px;
+}
+.lanes-note {
+  margin: 4px 0 10px;
+}
+.lanes-folded {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lane {
+  margin-bottom: 8px;
+}
+.lane-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: 12px;
+}
+.lane-name {
+  font-weight: 650;
+}
+.lane:not([data-market]) .lane-name {
+  text-transform: uppercase;
+}
+.lane-detail {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.lane-edge {
+  margin-left: auto;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 600 12px var(--mono);
+  cursor: pointer;
+}
+.lane-edge:hover,
+.lane-edge:focus-visible {
+  border-color: var(--accent);
+}
+.lane-track {
+  position: relative;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.lane-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.lane-closed {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(45deg, var(--muted) 0 1.5px, transparent 1.5px 5px);
+  opacity: 0.7;
+}
+.lane-closed--early {
+  top: 50%;
+}
+.lane-picked {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.lane-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+.lane-mark {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.lane-mark:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.lane-words {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text);
+  pointer-events: none;
+}
+.lane-words--after {
+  left: calc(50% + 9px);
+}
+.lane-words--before {
+  right: calc(50% + 9px);
+}
+
+.lane-glyph {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: -1px;
+  fill: currentColor;
+  stroke: none;
+}
+.lane-glyph--estimated,
+.lane-glyph--market {
+  fill: var(--surface-2);
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.lane-glyph--market {
+  color: var(--muted);
+}
+.lane-glyph--closed {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+/* The axis: the ticks, then today in a word under its rule — or the way back when it is off. */
+.lane-axis {
+  margin-top: -2px;
+}
+.lane-ticks,
+.lane-when {
+  position: relative;
+  min-height: 18px;
+}
+.lane-when {
+  display: flex;
+}
+.lane-tick,
+.lane-now {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.lane-tick.start,
+.lane-now.start {
+  transform: translateX(-6px);
+}
+.lane-tick.end,
+.lane-now.end {
+  transform: translateX(calc(-100% + 6px));
+}
+.lane-now {
+  padding-top: 1px;
+  border-top: 2px solid var(--accent);
+  font-weight: 650;
+  color: var(--text);
+}
+.lane-back {
+  appearance: none;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 11.5px var(--mono);
+  cursor: pointer;
+}
+.lane-back.end {
+  margin-left: auto;
+}
+.lane-back:hover,
+.lane-back:focus-visible {
+  text-decoration: underline;
+}
+.lanes-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.lanes-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lanes-key .lane-glyph:not(.lane-glyph--market, .lane-glyph--closed) {
+  color: var(--text);
+}

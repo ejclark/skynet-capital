@@ -5,11 +5,13 @@ import { SessionStatus } from "../../src/shell/session-status";
 import statusCss from "../../src/styles/session-status.css?raw";
 
 /**
- * The top bar's status line (#5037 round 2, question 9). Eric, 2026-10-10, on the old clock strip:
- * "this information is a really cool visual but is not actionable and taking prime real estate.
- * Knowing we are on the clock is useful for planning 'your day at work'… but is secondary." So the
- * strip folds to one line of words, and a tap opens the full clock, the next open and fleet health
- * IN PLACE — a disclosure in the bar, never a dialog over the page.
+ * The top bar's status line (#5037 round 2, question 9; revisited by #5075). Round 2 folded the
+ * old clock strip to one line of words, and a tap opened the full clock, the next open and fleet
+ * health IN PLACE. Eric's review of that, 2026-10-10: "I liked the 'market open' widget in the
+ * before better than the badge in the after… I also like the bigger version in the after, line
+ * tapped widget. I don't care for the badge - the information is only needed in one spot without
+ * redundancy." So folded, the line is the before's widget made compact — the state and the time
+ * left over the session's track — and opened, the market lives in the panel alone.
  */
 
 const OPEN = "2026-09-24T18:32:00Z"; // Thu 14:32 ET, 1h 28m to the close
@@ -77,23 +79,48 @@ function mount(at: string = OPEN): void {
 
 const line = () => screen.getByRole("button", { name: /market clock and fleet health/ });
 
+/** The folded widget's words, in reading order — the state, then the time left. */
+const widgetWords = (): string =>
+  [...line().querySelectorAll(".session-eyebrow, .session-left")]
+    .map((el) => el.textContent?.replace(/\s+/g, " ").trim())
+    .join(" | ");
+
 describe("the top bar's status line", () => {
-  it("is one folded line of words — no track and no clock until asked", () => {
+  it("folds to the before's widget: the state and the time left over the session's track", () => {
     mount();
-    expect(line()).toHaveTextContent("Open · 1h 28m left");
+    expect(widgetWords()).toBe("Market open | 1h 28m left today");
+    const track = line().querySelector(".session-track");
+    expect(track).not.toBeNull();
+    // the track is drawn to the session's own clock: 5h 2m of 6h 30m run at 14:32 ET
+    const clock = line().querySelector(".status-clock") as HTMLElement;
+    expect(clock.style.getPropertyValue("--elapsed")).toBe("77.44%");
+    expect(track?.querySelector(".session-knob")).not.toBeNull();
     expect(line()).toHaveAttribute("aria-expanded", "false");
+    // never the round-2 badge's sentence, and the full clock waits for the tap
+    expect(line()).not.toHaveTextContent("Open · 1h 28m left");
     expect(screen.queryByRole("timer")).toBeNull();
     expect(screen.queryByText("Next open")).toBeNull();
   });
 
-  it("words the closed and pre-market states plainly", () => {
+  it("words the closed and pre-market states the way the before's widget did", () => {
     mount(SATURDAY);
-    expect(line()).toHaveTextContent("Closed · opens Mon 9:30");
+    expect(widgetWords()).toBe("Market closed | opens Mon 9:30");
+    expect(line().querySelector(".session-knob")).toBeNull();
+    cleanup();
+    mount(PRE);
+    expect(widgetWords()).toBe("Opens in 42m | pre-market");
   });
 
-  it("counts down to the open before the bell", () => {
-    mount(PRE);
-    expect(line()).toHaveTextContent("Opens in 42m");
+  it("says the market in one spot: opened, the line folds its widget away and says Hide", () => {
+    mount();
+    fireEvent.click(line());
+    expect(line()).toHaveTextContent(/^Hide$/);
+    expect(line().querySelector(".session-track")).toBeNull();
+    expect(line()).toHaveAccessibleName("Hide the market clock and fleet health");
+    // one market clock on the page: the panel's
+    expect(document.querySelectorAll(".session-track")).toHaveLength(1);
+    fireEvent.click(line());
+    expect(widgetWords()).toBe("Market open | 1h 28m left today");
   });
 
   it("opens the full clock, the next open and fleet health in place — never a dialog", async () => {
@@ -276,12 +303,22 @@ describe("the status line beside a fleet alarm on a 390 phone", () => {
     expect(flag.borderRadius).not.toBe(ring.borderRadius);
   });
 
-  it("gives the market's sentence back where the bar has room", async () => {
+  it("folds the widget, track and all, to the market's one word beside an alarm", async () => {
+    ops = alarmed;
+    mount(OPEN);
+    await screen.findByText("1 fleet alert");
+    const clock = line().querySelector(".status-clock") as Element;
+    expect(getComputedStyle(clock).display).toBe("none");
+  });
+
+  it("gives the market its widget back where the bar has room", async () => {
     viewport(1280);
     ops = alarmed;
     mount(PRE);
     await screen.findByText("1 fleet alert");
-    expect(marketWords()).toBe("Opens in 42m");
+    const clock = line().querySelector(".status-clock") as Element;
+    expect(getComputedStyle(clock).display).not.toBe("none");
+    expect(marketWords()).toBe("Opens in | 42m | pre-market");
   });
 
   it("keeps the fleet's full words where the bar has room", async () => {
@@ -289,6 +326,6 @@ describe("the status line beside a fleet alarm on a 390 phone", () => {
     opsFails = true;
     mount(SATURDAY);
     await screen.findByText("fleet status unknown");
-    expect(shownWords()).toBe("Closed · opens Mon 9:30 | fleet status unknown");
+    expect(shownWords()).toBe("Market closed | opens Mon 9:30 | fleet status unknown");
   });
 });

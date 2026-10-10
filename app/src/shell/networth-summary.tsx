@@ -1,12 +1,12 @@
 import type { ReactElement } from "react";
 import type { AccountNetWorthView, NetWorthStatsView, NetWorthWindowView } from "../live/networth";
-import { GlossaryTerm } from "./glossary-term";
 import { RosterSparkline } from "./roster-sparkline";
 
 /**
- * The Accounts page's net-worth components (#2321) — the Cockpit's sticky at-a-glance
- * ({@link NetWorthCondensed}), the per-account roster ({@link NetWorthRoster}), and the legacy
- * composite ({@link NetWorthSummary}). Every figure arrives server-formatted; these components
+ * The Accounts page's net-worth components (#2321) — the per-account roster
+ * ({@link NetWorthRoster}) and the legacy composite ({@link NetWorthSummary}). The sticky
+ * at-a-glance that lived here became the Profile head's vitals line (`head-vitals.tsx`, #5072).
+ * Every figure arrives server-formatted; these components
  * only place it. The same shape serves one account (its row) and all accounts (the aggregate),
  * so the view never branches on how many accounts are selected beyond choosing which stats to show.
  * @category desk
@@ -133,48 +133,6 @@ export function NetWorthRoster({
           })}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-export function NetWorthCondensed({
-  stats,
-  caption,
-}: {
-  readonly stats: NetWorthStatsView;
-  readonly caption: string;
-}): ReactElement {
-  return (
-    <div className="networth-condensed">
-      <div className="networth-condensed-main">
-        <span className="desk-k">Net worth · {caption}</span>
-        <div className="networth-condensed-values">
-          <span className="networth-condensed-value num">{stats.value}</span>
-          <span className={`networth-condensed-day num tone-${stats.dayTone}`}>
-            {stats.dayChange}
-            <span className="desk-note">today</span>
-          </span>
-          {stats.bookedKnown ? (
-            <span className={`networth-condensed-booked num tone-${stats.bookedTone}`}>
-              {stats.bookedPl}
-              <span className="desk-note">
-                <GlossaryTerm term="lockedIn">locked in</GlossaryTerm>
-              </span>
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="networth-condensed-roi">
-        {stats.windows.map((w) => (
-          <span
-            key={w.label}
-            className={`networth-pill tone-${w.tone}${w.partial ? " networth-pill--partial" : ""}`}
-          >
-            <span className="networth-pill-label">{w.label}</span>
-            <span className="networth-pill-value num">{w.value}</span>
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

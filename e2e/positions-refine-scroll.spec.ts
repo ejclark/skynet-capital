@@ -179,11 +179,15 @@ async function fromTheFullList(page: Page, bar: Locator): Promise<number> {
     const headTop = () => head?.getBoundingClientRect().top ?? 0;
     // Mid-view first, so whatever pins itself to the top is pinned when it is measured.
     window.scrollBy({ top: headTop() - innerHeight / 2, behavior: "instant" });
+    // The pinned chrome is a STACK from the top: the bar, then whatever sticks flush under it (the
+    // Profile head sits at the bar's measured height since #5072 — 87px on a phone, so a fixed
+    // "top < 80" cut-off missed it and parked the positions head underneath it).
     const pinned = [...document.querySelectorAll("body *")]
       .filter((el) => ["fixed", "sticky"].includes(getComputedStyle(el).position))
       .map((el) => el.getBoundingClientRect())
-      .filter((r) => r.height > 0 && r.top < 80 && r.bottom < innerHeight / 2)
-      .reduce((low, r) => Math.max(low, r.bottom), 0);
+      .filter((r) => r.height > 0 && r.bottom < innerHeight / 2)
+      .sort((a, b) => a.top - b.top)
+      .reduce((low, r) => (r.top <= low + 1 ? Math.max(low, r.bottom) : low), 0);
     const target = Math.round(pinned) + 16;
     window.scrollBy({ top: headTop() - target, behavior: "instant" });
     return { want: target, got: headTop() };

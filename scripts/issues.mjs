@@ -22,6 +22,9 @@
 //   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
+//                                      [--blocked-by a,b]
+//     (--blocked-by on an existing issue: the second build on one surface waits for the first —
+//      every puller honours an open blocker. docs/DELEGATION.md → one build per surface.)
 //   node scripts/issues.mjs search "words" [--label x] [--state open|closed|all] [--limit 20] [--json]
 //     (every word must appear in title or body; --label filters; newest first)
 //   node scripts/issues.mjs show 123 [--json]
@@ -300,6 +303,10 @@ function update({ positional, flags }) {
   if (flags["comment-file"]) {
     ghWrite("POST", `issues/${n}/comments`, { body: withFooter(readBody(flags["comment-file"])) });
   }
+  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  for (const op of followUps({ child: issue, blockers })) ghWrite(op.method, op.path, op.payload);
+  for (const b of blockers)
+    console.log(`#${n} blocked by #${b.number} — it starts when that closes`);
   console.log(`${row(issue)}  ${issue.html_url}`);
 }
 

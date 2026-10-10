@@ -11,12 +11,12 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the cockpit: the account switcher, Overview · Activity",
+          "sees": "the cockpit: the account's name (its menu holds switching and + Add an account, #5072), Overview · Activity",
           "ears": "WHEN a member with one linked account opens Profile, the app shall open that account's cockpit on Overview.",
           "expect": [
             { "url": "/app/accounts" },
             { "role": "button", "name": "Overview" },
-            { "role": "link", "name": "Add an account" }
+            { "role": "button", "name": "Account:", "within": ".cockpit-head" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
         },
@@ -136,16 +136,10 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the Profile page's head: the switcher, then 'Open as the league sees it' — the same account's page at /u/human-eric (#3807 slice 2e)",
+          "sees": "the Profile page's head: the account's name; one tap on it opens its menu, whose '<name> as the league sees it' is the same account's page at /u/human-eric (#3807 slice 2e; under the name since #5072, its menu content specced in app/tests/shell/cockpit-head.spec.tsx)",
           "ears": "WHEN the member is on their Profile page with one account picked, the app shall link that account's page as the league sees it (/u/:id).",
-          "expect": [
-            {
-              "role": "link",
-              "name": "Open as the league sees it",
-              "within": ".cockpit-head",
-              "href": "/app/u/human-eric"
-            }
-          ],
+          "expect": [{ "role": "button", "name": "Account:", "within": ".cockpit-head" }],
+          "act": { "click": { "role": "button", "name": "Account:", "within": ".cockpit-head" } },
           "judge": "does the reader know there are two pages for one account?"
         },
         {

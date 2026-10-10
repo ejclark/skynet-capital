@@ -19,8 +19,8 @@ import {
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
  * renders through a real memory-history router so `Route.useSearch()` and the navigate calls are
- * the real ones; the data layer is mocked so the tree stays small (the calendar head and the book's
- * sections are stubbed — they have their own specs).
+ * the real ones; the data layer is mocked so the tree stays small (the book's sections are stubbed
+ * — they have their own specs).
  */
 
 let accounts: unknown[] = [];
@@ -109,10 +109,6 @@ rstest.mock("../../src/live/desk", () => ({
   fetchDesk: (id: string) => Promise.resolve({ desk: { id, positions: [] } }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
 }));
-rstest.mock("../../src/shell/cockpit-clock", () => ({
-  CockpitClock: () => null,
-  usePhoneWidth: () => false,
-}));
 rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
 rstest.mock("../../src/shell/bot-playbooks", () => ({ BotPlaybooksSection: () => null }));
 rstest.mock("../../src/shell/accounts-overview-section", () => ({
@@ -155,6 +151,10 @@ function mountAccounts(initialPath: string) {
 }
 
 const ERIC = { id: "human-eric", name: "Eric", kind: "human", suspended: false };
+/** The account's name in the head — the button that opens the menu under it (#5072). */
+const accountName = () => screen.queryByRole("button", { name: /^Account: / });
+/** The account row's words, when a viewer-level section or the zero-account door holds it. */
+const headNote = () => document.querySelector(".head-account")?.textContent;
 const pressed = () =>
   within(screen.getByRole("group", { name: "On this page" }))
     .getAllByRole("button")
@@ -172,8 +172,8 @@ describe("the zero-account door", () => {
     expect(await screen.findByText(/No account linked yet/)).toBeInTheDocument();
     expect(await screen.findByTestId("connect-guide")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Welcome to the league, Robin" })).toBeVisible();
-    // No switcher to pick from, no Overview to open, and no link back out to a redirect.
-    expect(screen.queryByRole("combobox", { name: "Account" })).toBeNull();
+    // No account to pick, no Overview to open, and no link back out to a redirect.
+    expect(accountName()).toBeNull();
     expect(pressed()).toEqual(["Milestones"]);
     expect(screen.queryByRole("button", { name: "Overview" })).toBeNull();
     expect(document.querySelector('a[href*="/onboarding"]')).toBeNull();
@@ -241,11 +241,11 @@ describe("the Profile page's default and its viewer-level sections", () => {
     accounts = [ERIC];
     mountAccounts("/accounts");
     expect(await screen.findByTestId("overview")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account: Eric" })).toBeInTheDocument();
     expect(pressed()).toEqual(["Overview"]);
   });
 
-  it("hides the switcher on Milestones with a line why, and round-trips to the Overview", async () => {
+  it("hides the account on Milestones with a line why, and round-trips to the Overview", async () => {
     accounts = [ERIC];
     onboardingComplete = true;
     const router = mountAccounts("/accounts");
@@ -254,11 +254,11 @@ describe("the Profile page's default and its viewer-level sections", () => {
     await waitFor(() =>
       expect(router.state.location.search).toMatchObject({ section: "milestones" }),
     );
-    expect(await screen.findByText("Your milestones — the same on every account.")).toBeVisible();
-    expect(screen.queryByRole("combobox", { name: "Account" })).toBeNull();
+    await waitFor(() => expect(headNote()).toBe("Your milestones · the same on every account"));
+    expect(accountName()).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Overview" }));
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("section"));
-    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account: Eric" })).toBeInTheDocument();
   });
 
   it("opens a chapter beneath the cards from its card, and closes it leaving the section", async () => {
@@ -277,41 +277,41 @@ describe("the Profile page's default and its viewer-level sections", () => {
     await userEvent.click(screen.getByRole("button", { name: "Feedback" }));
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("chapter"));
     expect(await screen.findByRole("button", { name: "✦ Talk to Moneypenny" })).toBeVisible();
-    expect(screen.getByText("Your filings — the same on every account.")).toBeVisible();
+    expect(headNote()).toBe("Your filings · the same on every account");
   });
 
-  it("links one picked account's page as the league sees it, never the aggregate's", async () => {
-    // #3807 slice 2e, dead end 6 — the mirror of /u/:id's "Open in your Accounts".
+  it("links one picked account's page as the league sees it, one tap under its name", async () => {
+    // #3807 slice 2e, dead end 6 — the mirror of /u/:id's "Open in your Accounts"; under the
+    // account's name since #5072 (setup and its league page are secondary to the head).
     accounts = [ERIC];
     mountAccounts("/accounts");
-    const own = await screen.findByRole("link", { name: "Open as the league sees it" });
+    await userEvent.click(await screen.findByRole("button", { name: "Account: Eric" }));
+    const own = screen.getByRole("link", { name: /Eric as the league sees it/ });
     expect(own.getAttribute("href")).toMatch(/\/u\/human-eric$/);
   });
 
   it("offers no league page on All accounts", async () => {
     accounts = [ERIC];
     mountAccounts("/accounts?account=all");
-    expect(await screen.findByRole("combobox", { name: "Account" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Open as the league sees it" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "Account: All accounts" }));
+    expect(screen.queryByRole("link", { name: /as the league sees it/ })).toBeNull();
   });
 
-  it("names Settings in words in the head's link row, in every head state (#3816 slice 7)", async () => {
-    // Eric, 2026-09-04: a labelled link beside its sibling, not only the topbar's icon-only gear.
-    const settingsHref = () => screen.getByRole("link", { name: "Settings" }).getAttribute("href");
-    mountAccounts("/accounts");
-    await screen.findByText(/No account linked yet/);
-    expect(settingsHref()).toBe("/settings");
-    cleanup();
-
+  it("names the account's settings in words, one tap under its name (#5072; #3816 slice 7 before)", async () => {
+    // Eric, 2026-09-04: a labelled link, not only an icon. Round 2 of #5037 moved it off the head
+    // into the menu under the account's name ("secondary/auxiliary… should be relocated"); the
+    // top bar's member menu keeps Settings for the doors with no account in the head.
     accounts = [ERIC];
     mountAccounts("/accounts");
-    await screen.findByRole("link", { name: "Open as the league sees it" });
-    expect(settingsHref()).toBe("/settings");
+    await userEvent.click(await screen.findByRole("button", { name: "Account: Eric" }));
+    expect(screen.getByRole("link", { name: /Eric's settings/ }).getAttribute("href")).toBe(
+      "/settings?section=account&account=human-eric",
+    );
     cleanup();
 
     mountAccounts("/accounts?section=milestones");
-    await screen.findByText("Your milestones — the same on every account.");
-    expect(settingsHref()).toBe("/settings");
+    await waitFor(() => expect(headNote()).toBe("Your milestones · the same on every account"));
+    expect(document.querySelector(".cockpit-head a[href*='settings']")).toBeNull();
   });
 
   it("says the ladder's gate in the server's words (#1672's fix, regressed, restored)", async () => {

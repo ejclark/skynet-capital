@@ -1,7 +1,7 @@
 /* The market calendar's head (#3807 slice 2·1): `shell/calendar-head.tsx`, one markup for R&D's
    band head (where `event-horizon.css` styles the parts — this sheet loads after it on purpose) and
-   the Profile page's cockpit head (`shell/cockpit-clock.tsx`), plus the events-on-what-you-hold
-   line under the net-worth card (`shell/held-events-line.tsx`). */
+   Trade's head (`shell/trade-clock.tsx`), plus Trade's line of what is dated on the symbol. The
+   Profile page's range heads its Events section instead (#5074, `book-calendar.css`). */
 
 /* The lens row's box: a reset fieldset holding the pill and the fog line, so a fogged chip's
    reason is in ITS OWN box (scripts/crawl/probes.mjs reads the enclosing fieldset — dead end 8).
@@ -16,17 +16,13 @@
   gap: 8px;
 }
 
-/* In the cockpit head (≥861): one row — label · arrows and range · the lens pill · the fog line. */
+/* One row — label · arrows and range · the lens pill · the fog line. */
 .cal-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 14px;
   min-width: 0;
-}
-.cockpit-head .cal-head {
-  padding: 8px 0 10px;
-  border-top: 1px solid var(--border);
 }
 .cal-head .rail-label {
   margin: 0;
@@ -63,21 +59,6 @@
   flex: 1 1 100%;
 }
 
-/* The phone row (≤860): directly under the sticky block, never inside it — the stuck chrome
-   stays the topbar's three rows plus the switcher and the section switch. */
-.cockpit > .cal-head {
-  margin: -6px 0 14px;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--border);
-}
-.cockpit > .cal-head .eh-head {
-  flex: 1 1 auto;
-  justify-content: space-between;
-}
-.cockpit > .cal-head .eh-lens-row {
-  flex: 1 1 100%;
-}
-
 /* R&D's band head (#3807 slice 2a): the same row leads the stage — a rule under it, the pinned
    day's Clear on the row, the month grid folded beneath (a disclosure until the popover/sheet
    lands; `event-horizon.tsx` says why). The grid keeps its compact calendar size inside the fold. */
@@ -109,7 +90,7 @@
   margin-top: 6px;
 }
 
-/* What is dated on what you hold — one line under the net-worth card; each tier a glyph + a word. */
+/* What is dated on the ticket's symbol — one line in Trade's head; each tier a glyph + a word. */
 .held-events {
   margin: 8px 0 0;
   font-size: 12px;
@@ -128,14 +109,6 @@
 }
 .held-event {
   color: var(--text);
-  text-decoration: none;
-}
-a.held-event:hover {
-  text-decoration: underline;
-}
-.held-event-sym {
-  font-family: var(--mono);
-  font-weight: 700;
 }
 
 /* Trade's head (#3807 slice 3b-2, `shell/trade-clock.tsx`): the same row leading the stage, its
@@ -159,10 +132,6 @@ a.held-event:hover {
    sheet and the page keeps a chip naming the range — one row where the head was ~150px. ---- */
 .cal-head--chip {
   gap: 8px;
-}
-.cockpit > .cal-head--chip {
-  margin: -6px 0 12px;
-  padding: 0 0 10px;
 }
 .cal-chip {
   display: inline-flex;

@@ -76,7 +76,10 @@ post-deploy.
 
 Baselines are committed PNGs, so they carry repo weight — one per surface, not one per component.
 Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a finding until
-something explains it.
+something explains it. Baselines are Linux-only, so off Linux re-baseline from CI's own run:
+`node scripts/rebaseline-from-ci.mjs <pr>` saves each failing shot's expected, actual and diff for
+reading, then `--run <id> --apply --commit` copies the actuals over the baselines. It refuses
+anything that is not a pixel mismatch on an existing baseline.
 
 ### Requirements in EARS (the upstream half of BDD)
 

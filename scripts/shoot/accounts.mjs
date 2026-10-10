@@ -1,11 +1,12 @@
 // Visual harness for /app/accounts (#2321) — the Cockpit: sticky net-worth header + horizontal
 // section switch + scrollable section detail. PHONE FIRST (docs/PICTURES.md → "Trading surfaces
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
-// expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the market calendar's
-// head in the cockpit head with the events on what the book holds; the run also prints the stuck
-// chrome at 390, the number the head's placement is judged by. The `events-*` frames (slice 2c)
-// are the Events section: a book with a held event, one with nothing dated on it, and (#5045) an
-// empty default week naming the next event on the book, then the range that one tap lands on.
+// expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the cockpit head —
+// no calendar in it since #5074 — with the next date on what the book holds under the net-worth
+// card; the run also prints the stuck chrome at 390. The `events-*` frames (slice 2c, #5074) are
+// the Events section, its range as its head over the lanes: a book with a held event, one with
+// nothing dated on it, and (#5045) an empty default week naming the next event on the book, then
+// the range that one tap lands on. `events-calendar.mjs` shoots the round-2 study's book.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
@@ -43,17 +44,17 @@ const win = (label, value, tone, note, partial = false, vs = undefined) => ({
 });
 
 const ericStats = {
-  value: "$1,047,832.14",
+  value: "$1,047,832",
   valueKnown: true,
-  dayChange: "+$2,418.67",
+  dayChange: "+$2,419 · +0.23%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$847,200.00",
+  cash: "$847,200",
   cashKnown: true,
-  bookedPl: "+$12,480.00",
+  bookedPl: "+$12,480",
   bookedTone: "pos",
   bookedKnown: true,
-  onPaper: "+$47,832.14",
+  onPaper: "+$47,832",
   onPaperTone: "pos",
   onPaperKnown: true,
   positionCount: 6,
@@ -69,18 +70,18 @@ const ericStats = {
 };
 
 const sauronStats = {
-  value: "$512,406.88",
+  value: "$512,407",
   valueKnown: true,
-  dayChange: "-$1,102.33",
+  dayChange: "-$1,102 · -0.21%",
   dayTone: "neg",
   dayKnown: true,
-  cash: "$201,400.00",
+  cash: "$201,400",
   cashKnown: true,
   positionCount: 3,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -92,18 +93,18 @@ const sauronStats = {
 };
 
 const totalStats = {
-  value: "$1,560,239.02",
+  value: "$1,560,239",
   valueKnown: true,
-  dayChange: "+$1,316.34",
+  dayChange: "+$1,316 · +0.08%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$1,048,600.00",
+  cash: "$1,048,600",
   cashKnown: true,
   positionCount: 9,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -143,7 +144,7 @@ const networthAtHigh = {
   accounts: [
     {
       ...networth.accounts[0],
-      value: "$1,051,200.00",
+      value: "$1,051,200",
       allTimeHigh: { value: "$1,051,200", at: "9/23", aboveNow: 0 },
       toNewHigh: undefined,
     },
@@ -1299,6 +1300,26 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
 
+// The head, Level 2 (#5072): Sauron's Overview at landing — the account row with the bot's status
+// as a plain link, one vitals line (net worth · today · cash), the switch with "More ▾" — then the
+// menu under the name, then More opened. (Milestones taking More's slot is `shoot:milestones`'s:
+// this harness stubs no milestones.)
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-vitals .head-worth").waitFor();
+await page.locator(".head-account .hb-line").waitFor();
+await page.waitForLoadState("networkidle");
+await shootCockpit("head-bot-phone");
+await page.getByRole("button", { name: /^Account: / }).click();
+await page.getByRole("navigation", { name: "Account menu" }).waitFor();
+await shootCockpit("head-menu-phone");
+await page.keyboard.press("Escape");
+await page.getByRole("button", { name: "More sections" }).click();
+await page.locator(".cockpit-nav-more-list").waitFor();
+await shootCockpit("head-more-phone");
+await page.goto(`${origin}/app/accounts`);
+await page.getByText("Net worth · Eric").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
+
 // The standing line (#3964): the member's own record inside the net-worth card — win rate, profit
 // factor, max drawdown, then the link to the rest of this account's Pulse. Its own frame at 390
 // because unlike the card's footer this row does NOT hide at phone width, and that is the claim
@@ -1308,14 +1329,13 @@ await page.waitForTimeout(150);
 await shootCockpit("accounts-standing-phone");
 await page.evaluate(() => window.scrollTo(0, 0));
 
-// The cockpit clock (#3807 slice 2·1): the market calendar's head under the section switch —
-// OUTSIDE the sticky block at 390 — and, under the net-worth card, the events on what this book
-// holds in the head's range: the week of Oct 26 carries AAPL's print (held) and the Fed decision
-// (market-wide). The stuck chrome is measured here because the panel's falsifier is a number: the
-// topbar plus the sticky head, once the page has scrolled, must not grow with the row (>253px).
+// The cockpit head with no calendar in it (#5074) and, under the net-worth card, the next date on
+// what this book holds — it reads no range, so the week in the URL changes nothing here. The stuck
+// chrome is measured because the head's height is judged by a number: the topbar plus the sticky
+// head, once the page has scrolled.
 await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".held-events").waitFor();
+await page.locator(".held-next").waitFor();
 await shootCockpit("accounts-head-phone");
 await page.evaluate(() => window.scrollTo(0, 900));
 await page.waitForTimeout(150);
@@ -1330,10 +1350,8 @@ const stuck = await page.evaluate(() =>
   ),
 );
 console.log(`stuck chrome at 390 (topbar + cockpit head, scrolled): ${stuck}px`);
-// The events line under the net-worth card, scrolled into the frame's lower third: on a phone the
-// calendar row is outside the sticky block, so this frame shows the line and the head frame above
-// shows the row — two frames, one surface at 390.
-await page.locator(".held-events").scrollIntoViewIfNeeded();
+// The next-date line under the net-worth card, scrolled into the frame's lower third.
+await page.locator(".held-next").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, 200));
 await page.waitForTimeout(150);
 await shootCockpit("accounts-held-phone");
@@ -1386,8 +1404,8 @@ await shootCockpit("accounts-all-summary-phone");
 // so the held line says so in words and the market-wide prints still show.
 await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
 await page.getByText("AAPL earnings print").waitFor();
-// #3977 slice 4: the grid's ▲ on the day AAPL's decision is due, with the agenda's first rows.
-await page.locator(".book-events .eh-legend").evaluate((el) => el.scrollIntoView({ block: "end" }));
+// The lanes' ▲ on the day AAPL's decision is due (#3977 slice 4, drawn as lanes by #5074).
+await page.locator(".lanes-key").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shootCockpit("events-marks-phone");
 // At 390 the agenda sits beneath the grid: the frame ends on its footer so the rows are the picture.
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
@@ -1428,11 +1446,17 @@ await page.locator(".blotter .row-guide").first().waitFor();
 await page.locator(".standing-line").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
-// The cockpit clock at 1280 (#3807 slice 2·1): the head as the sticky block's last row, the
-// events on what this book holds under the net-worth card.
+// The head at 1280 (#5072): every section fits, your own after a hairline; the room adds the bot's
+// last check, today's percent and the cash amount — never a new concept.
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-account .hb-line").waitFor();
+await shootCockpit("head-bot-desktop");
+
+// The cockpit head at 1280 with no calendar in it (#5074), the next date on what this book holds
+// under the net-worth card.
 await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".held-events").waitFor();
+await page.locator(".held-next").waitFor();
 await shootCockpit("accounts-head-desktop");
 
 // Lot breakdown (#3186 slice 1) in the wide table: the NVDA call's two buys, each with its own

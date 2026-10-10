@@ -46,9 +46,9 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter), **Activity** and **Events** (#3807 slice 2c — the book's calendar: the grid beside an
- * agenda of what falls on each day for the tickers held; its grid head is the page's one range
- * control there, a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
+ * blotter), **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * range is the section's own head and the page's only date control, over one lane per position and
+ * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
  * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
  * check log) and **Thesis** are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are
  * the VIEWER's (#3807 slice
@@ -141,10 +141,11 @@ function AccountsPage(): ReactElement {
   // The default account (shell/default-account.ts) is a viewer-chosen FALLBACK, never trusted
   // once it no longer names an owned account — a removed account can't strand the page.
   const storedDefaultId = defaultAccount.id;
-  const fallbackId =
+  const defaultId =
     storedDefaultId !== undefined && accounts.some((a) => a.id === storedDefaultId)
       ? storedDefaultId
-      : (accounts[0]?.id ?? "");
+      : undefined;
+  const fallbackId = defaultId ?? accounts[0]?.id ?? "";
   const selected =
     asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? (asked as string) : fallbackId;
   const deskIds = !linked ? [] : selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected];
@@ -168,12 +169,9 @@ function AccountsPage(): ReactElement {
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
-      isDefault={linked && storedDefaultId === selected}
-      onToggleDefault={() =>
-        storedDefaultId === selected
-          ? defaultAccount.clearDefault()
-          : defaultAccount.setDefault(selected)
-      }
+      defaultId={defaultId}
+      onSetDefault={defaultAccount.setDefault}
+      onClearDefault={defaultAccount.clearDefault}
       onSelectAccount={(id) =>
         void navigate({
           search: (prev) => ({ ...prev, account: id === fallbackId ? undefined : id }),
@@ -284,6 +282,7 @@ function CockpitBody({
         desksError={desks.isError}
         day={pinnedDay}
         onPickDay={onPickDay}
+        accounts={new Map(accounts.map((a) => [a.id, a.name]))}
       />
     );
   if (section === "overview") {
@@ -311,15 +310,17 @@ function CockpitBody({
 
 function AccountsBody({
   sections,
-  isDefault,
-  onToggleDefault,
+  defaultId,
+  onSetDefault,
+  onClearDefault,
   onSelectAccount,
   onSelectSection,
   ...body
 }: Parameters<typeof CockpitBody>[0] & {
   readonly sections: readonly PageSection<AccountsSection>[];
-  readonly isDefault: boolean;
-  readonly onToggleDefault: () => void;
+  readonly defaultId: string | undefined;
+  readonly onSetDefault: (id: string) => void;
+  readonly onClearDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
@@ -334,8 +335,9 @@ function AccountsBody({
           sections={sections}
           onSelectSection={onSelectSection}
           onSelectAccount={onSelectAccount}
-          isDefault={isDefault}
-          onToggleDefault={onToggleDefault}
+          defaultId={defaultId}
+          onSetDefault={onSetDefault}
+          onClearDefault={onClearDefault}
         />
         <CockpitBody {...body} />
       </div>

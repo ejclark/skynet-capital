@@ -8,7 +8,7 @@ import {
   MARK_WORD,
   type MarkKind,
 } from "../live/position-mark";
-import { useSavedViews } from "./saved-views";
+import { useSavedViews, VIEW_CAP_REASON, viewCapReached } from "./saved-views";
 
 /**
  * THE POSITIONS HEAD (#5070; round 2 of #5037): "Positions 3", then the two controls the row marks
@@ -52,6 +52,8 @@ export function PositionsHead({
   const addView = useSavedViews((s) => s.addView);
   const q = query.trim();
   const saved = views?.some((v) => v.q === q) ?? false;
+  // At the cap the store refuses a ninth view, so the door says so instead of doing nothing.
+  const full = viewCapReached(views ?? []);
   return (
     <>
       <div className="positions-head">
@@ -110,6 +112,8 @@ export function PositionsHead({
               <button
                 type="button"
                 className="pos-sort-save"
+                disabled={full}
+                title={full ? VIEW_CAP_REASON : undefined}
                 onClick={() => addView(deskId, q === LOOK_TOKEN ? "Worth a look first" : q, q)}
               >
                 Save as a view

@@ -29,7 +29,11 @@ export function useHeartbeat(deskId: string) {
 /** Renders nothing until there is something true to say. `renderLink` wraps the "7 playbooks ›"
  *  words in whatever opens the section on this page — the Profile page's section switch, or the
  *  any-account page's route. `showPlaybooks` false (a bot the viewer does not own, #885) still
- *  counts the verdicts: how many there are was never withheld, only which. */
+ *  counts the verdicts: how many there are was never withheld, only which.
+ *
+ *  The separator rides with the link (`.hb-line-go`), so a row too narrow for both — the Profile
+ *  head's account row at 390 while the market is closed (#5072) — drops "· 7 playbooks ›" whole
+ *  and keeps the state, "halted" included, never cutting it to "Waiting for the open · …". */
 export function PlaybooksHeadLine({
   deskId,
   showPlaybooks = true,
@@ -58,13 +62,15 @@ export function PlaybooksHeadLine({
         <span aria-hidden="true">{glyph}</span> <b>{word}</b>
         {heartbeat.halted ? " · halted" : ""}
       </span>
-      <span aria-hidden="true"> · </span>
-      {renderLink(
-        <>
-          {label}
-          <span aria-hidden="true"> ›</span>
-        </>,
-      )}
+      <span className="hb-line-go">
+        <span aria-hidden="true"> · </span>
+        {renderLink(
+          <>
+            {label}
+            <span aria-hidden="true"> ›</span>
+          </>,
+        )}
+      </span>
     </p>
   );
 }

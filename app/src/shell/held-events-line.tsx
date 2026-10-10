@@ -1,96 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { dayLensFog } from "../live/fog";
-import {
-  describeHeldEvent,
-  type HeldBook,
-  type HeldEvent,
-  heldEventsIn,
-} from "../live/held-events";
-import { useHorizonRange } from "../live/horizon-params";
-import { rangeLabel } from "../live/horizon-range";
-import { fetchPlays } from "../live/options";
+import { type BookDesk, bookEventsIn, dayLabel, nextOnBook } from "../live/book-events";
+import { dayBefore, glyphOf, inDays } from "../live/book-lanes";
+import { ALL_RANGE, marketToday } from "../live/horizon-range";
+import { GLYPH_WORD, LaneGlyphIcon } from "./book-lanes";
 
 /**
- * THE LINE UNDER THE NET-WORTH CARD (#3807 slice 2·1): what is dated, in the market calendar's
- * range, on what this book holds — `live/held-events.ts` is the join, this is its one plain line.
- * Two tiers, each a glyph AND a word (hue never alone): ◆ held — the stock's own event on a name
- * you hold, linking to that position's guidance on Trade; ○ market-wide — the Fed / CPI / jobs
- * print a held position carries. The empty states are honest and say the range: nothing dated
- * on what you hold this week is the common Monday, and the line says so rather than hiding —
- * range first, "Oct 5 – Oct 11: nothing on what you hold", as the Events section words it (#5045).
+ * THE NEXT DATE ON WHAT YOU HOLD — one line on the Overview (#3807 slice 2·1; reshaped by #5074,
+ * the calendar's V1 from #5037 round 2). It always names the next date on this book, from today,
+ * and never reads a range: the Overview has no calendar to drive it (the range lives on Events
+ * alone, "controls that do nothing is an oxy moron"), so the line is a fact with a link, not a
+ * control's output. "Events ›" opens the calendar on the range that holds that date.
  *
- * It reads the same range the head does (`useHorizonRange`, the root `?on=&span=` params, the
- * same fog), so a step on the head moves this line with it.
+ * The date comes from the desk payload the Overview already fetched — a decision due, a held
+ * name's next print, an option's expiry, a position's own next event (`bookEventsIn` with no
+ * corpus) — so it costs no request. Its glyph is the lanes picture's (▲ decide by · ◆ confirmed ·
+ * ◇ estimated) with the word for a screen reader; a book with nothing dated says so in words.
  */
-
-function EventItem({ event, link }: { readonly event: HeldEvent; readonly link: boolean }) {
-  const text = describeHeldEvent(event);
-  if (!link) return <span className="held-event">{text}</span>;
+export function HeldEventsLine({ desks }: { readonly desks: readonly BookDesk[] }): ReactElement {
+  const today = marketToday();
+  const book = bookEventsIn({ desks, events: [], calls: [], range: ALL_RANGE, lens: "all" });
+  const next = nextOnBook(book, dayBefore(today));
   return (
-    <Link
-      to="/trade"
-      search={{ desk: event.deskId, symbol: event.symbol, section: "guidance" }}
-      className="held-event"
-    >
-      <span className="held-event-sym">{event.symbol}</span> {text}
-    </Link>
-  );
-}
-
-function Tier({
-  glyph,
-  word,
-  events,
-  link,
-}: {
-  readonly glyph: string;
-  readonly word: string;
-  readonly events: readonly HeldEvent[];
-  readonly link: boolean;
-}): ReactElement {
-  return (
-    <>
-      <span className="held-tier">
-        <i className="held-glyph" aria-hidden="true">
-          {glyph}
-        </i>{" "}
-        {word}
-      </span>{" "}
-      {events.map((event, i) => (
-        <span key={`${event.symbol} ${event.at} ${event.label}`}>
-          {i > 0 ? " · " : ""}
-          <EventItem event={event} link={link} />
-        </span>
-      ))}
-    </>
-  );
-}
-
-export function HeldEventsLine({ desks }: { readonly desks: readonly HeldBook[] }): ReactElement {
-  // The day lens's fog reads the ladder the trade page already fetches (same key, shared cache).
-  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
-  const horizon = useHorizonRange({ fogged: dayLensFog(plays.data).fogged });
-  const { held, market, positions } = heldEventsIn(desks, horizon.range);
-  const when = horizon.lens === "all" ? "on any date" : rangeLabel(horizon.range, horizon.lens);
-  // An empty range leads with the range, in the Events section's own words (#5045, F-c5ebc986e1).
-  const label = horizon.lens === "all" ? "Any date" : rangeLabel(horizon.range, horizon.lens);
-  return (
-    <p className="held-events">
-      {positions === 0 ? (
-        `No open positions — nothing dated ${when}.`
-      ) : held.length === 0 ? (
-        `${label}: nothing on what you hold`
-      ) : (
-        <Tier glyph="◆" word="held" events={held} link />
-      )}
-      {market.length > 0 ? (
-        <>
-          {" · "}
-          <Tier glyph="○" word="market-wide:" events={market} link={false} />
-        </>
-      ) : null}
-    </p>
+    <div className="held-next">
+      <p className="held-next-label">Next date on what you hold</p>
+      <p className="held-next-line">
+        {book.positions === 0 ? (
+          <span>No open positions — nothing dated.</span>
+        ) : next ? (
+          <span>
+            <LaneGlyphIcon glyph={glyphOf(next)} />
+            <span className="visually-hidden">{GLYPH_WORD[glyphOf(next)]}:</span>{" "}
+            <span className="held-next-when num">{dayLabel(next.date)}</span> ·{" "}
+            {next.what ?? next.title} · {inDays(today, next.date)}
+          </span>
+        ) : (
+          <span>Nothing dated on what you hold yet.</span>
+        )}
+        <Link
+          to="/accounts"
+          search={(prev) => ({
+            ...prev,
+            section: "events" as const,
+            q: undefined,
+            events: undefined,
+            ...(next ? { on: next.date } : {}),
+          })}
+          className="held-next-link"
+        >
+          Events ›
+        </Link>
+      </p>
+    </div>
   );
 }

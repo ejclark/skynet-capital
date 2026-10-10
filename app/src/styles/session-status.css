@@ -1,16 +1,18 @@
-/* THE TOP BAR'S STATUS LINE AND ITS PANEL (#5037 round 2, question 9) — `shell/session-status.tsx`.
+/* THE TOP BAR'S STATUS LINE AND ITS PANEL (#5037 round 2, question 9; revisited by #5075) —
+ * `shell/session-status.tsx`.
  *
- * Eric, 2026-10-10: the clock strip was "a really cool visual but is not actionable and taking
- * prime real estate"; the bar's icons were "too many options… competing for attention". So the
- * always-on statuses fold into one pill of words beside Moneypenny and the member menu, and its
- * panel opens as the bar's own last row — in the flow, pushing the page down, never over it.
+ * Folded, the line is the clock strip that held the bar before round 2, made compact: the state
+ * and the time left stacked beside the session's track, in the strip's own box (Eric, 2026-10-10:
+ * "I liked the 'market open' widget in the before better than the badge in the after"). Opened,
+ * its panel is the bar's own last row — in the flow, pushing the page down, never over it — and
+ * the line says only "Hide", so the market is drawn in one spot at a time.
  *
- * Hue never carries a meaning alone (a standing reader is red/green colourblind): the line's WORDS
- * say open/opens/closed and any fleet trouble, and each mark has its own shape. The market's marks
- * are circles — filled while open, half-filled before the bell, an empty ring while closed — and the
- * fleet's are squares — filled for an alarm, hollow for a fleet nobody could read — so no two states
- * ever share a mark and differ only in colour (#5064's review). Tokens only. Motion only for a
- * viewer who has not asked the system to hold still: the chevron's turn and the panel's short
+ * Hue never carries a meaning alone (a standing reader is red/green colourblind): the widget's
+ * WORDS say open/opens/closed and any fleet trouble, and each mark has its own shape. The market's
+ * marks are circles — filled while open, half-filled before the bell, an empty ring while closed —
+ * and the fleet's are squares — filled for an alarm, hollow for a fleet nobody could read — so no
+ * two states ever share a mark and differ only in colour (#5064's review). Tokens only. Motion only
+ * for a viewer who has not asked the system to hold still: the chevron's turn and the panel's short
  * reveal sit behind `prefers-reduced-motion: no-preference` at the bottom of this file.
  */
 
@@ -18,11 +20,15 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
-  min-height: 32px;
-  padding: 0 10px 0 9px;
-  border-radius: 999px;
+  /* one height in every state and with or without an alarm, so the bar — and the sticky head
+     under it — never moves when the market opens or the fleet speaks */
+  box-sizing: border-box;
+  height: 34px;
+  padding: 3px 10px;
+  /* the before's strip box, not a pill */
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
   color: var(--text);
@@ -39,15 +45,63 @@
 .status-line[aria-expanded="true"] {
   border-color: var(--accent);
 }
+
+/* THE FOLDED WIDGET: the strip's label stack (eyebrow over the time left) beside its track, every
+   piece the opened clock draws (`market-session.tsx`), set small enough for the bar's first row */
+.status-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.status-clock-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1.15;
+}
+.status-line .session-eyebrow {
+  font-size: 9.5px;
+  line-height: 11px;
+  letter-spacing: 0.18em;
+  gap: 5px;
+}
+.status-line .session-left {
+  font-size: 10.5px;
+  line-height: 15px;
+  font-weight: 500;
+}
+.status-line .session-left b {
+  font-size: 13px;
+}
+.status-line .session-track {
+  flex: none;
+  width: clamp(52px, 17vw, 120px);
+  height: 6px;
+}
+.status-line .session-knob {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.status-line .session-power {
+  top: -2px;
+  bottom: -2px;
+}
+.status-line-hide {
+  font-size: 12.5px;
+}
+
+/* the market's own mark for its one word beside a fleet alarm on a phone, below — the widget's
+   eyebrow carries its dot everywhere else */
 .status-line-dot {
+  display: none;
   flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
-}
-.status-line-words {
-  font-variant-numeric: tabular-nums;
 }
 /* the phone bar's short words — the market's (`statusLineCue`) and the fleet's (`brief`) — shown
    only beside a fleet alarm at ≤700, below */
@@ -61,7 +115,7 @@
   background: linear-gradient(90deg, var(--accent) 50%, transparent 50%);
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
-/* closed: the pill drops the accent and the dot becomes an empty muted ring */
+/* closed: the box drops the accent and the dot becomes an empty muted ring */
 .status-line[data-state="closed"] {
   border-color: var(--border);
   background: var(--surface-2);
@@ -103,21 +157,45 @@
   transform: rotate(180deg);
 }
 
-/* A phone ranks the bar's first row: the eye, the line, Moneypenny, the member menu. The line's
- * honest words need the room the brand's name took ("Closed · opens Mon 9:30" is 199px; beside the
- * name there were 124), so the name steps aside and the eye stays as the brand. When the fleet
- * has something to say, it outranks the clock: the market's sentence steps aside for one word of
- * its own ("Open", "Opens 9:30", "Closed") beside its shape, and the sentence is back one tap down.
- * Measured at 390, the line has 242px; the widest pair, "Opens 9:30" beside "fleet status unknown",
- * needed 280, so the fleet says it shorter ("fleet unknown") and the line's gaps close a little —
- * the widest is 226 now, every pair on one row. */
+/* A phone ranks the bar's first row: the eye, the line, Moneypenny, the member menu. The widget
+ * needs the room the brand's name took, so the name steps aside and the eye stays as the brand;
+ * "today" leaves the time left (the opened clock says it), and the eyebrow's tracking closes a
+ * little. When the fleet has something to say, it outranks the clock: the widget, track and all,
+ * steps aside for the market's one word ("Open", "Opens 9:30", "Closed") beside its own shape, and
+ * the clock is back one tap down. Measured at 390, the line has 242px; the widest pair, "Opens
+ * 9:30" beside "fleet status unknown", needed 280, so the fleet says it shorter ("fleet unknown")
+ * and the line's gaps close a little — the widest is 226, every pair on one row. */
 /* The same ranking where Moneypenny's rail narrows the app column on a desktop: the name goes
  * first, so the views keep their room (#4046 item 4 measured them squeezed to nothing). */
 .shell:has(.mp-rail) .brand-name {
   display: none;
 }
+/* And the desk's narrowest one-row bar (#5075): the widget is ~80px wider than the badge it
+ * replaced, so from the tablet edge to 960 it sat over the last views — measured at 861 with the
+ * market closed, Activity and R&D under it; pre-market, R&D until 950. The name steps aside there,
+ * and up to 1100 while a fleet alarm widens the line. */
+@media (min-width: 861px) and (max-width: 960px) {
+  .brand-name {
+    display: none;
+  }
+}
+@media (min-width: 861px) and (max-width: 1100px) {
+  .topbar:has(.status-line[data-alarm]) .brand-name {
+    display: none;
+  }
+}
 @media (max-width: 700px) {
   .brand-name {
+    display: none;
+  }
+  .status-line {
+    gap: 7px;
+    padding: 3px 9px;
+  }
+  .status-line .session-eyebrow {
+    letter-spacing: 0.12em;
+  }
+  .status-line .session-today {
     display: none;
   }
   .status-line[data-alarm] {
@@ -128,9 +206,12 @@
     gap: 4px;
     padding-left: 5px;
   }
-  .status-line[data-alarm] .status-line-words,
+  .status-line[data-alarm] .status-clock,
   .status-line-fleet[data-brief] .status-line-alarm {
     display: none;
+  }
+  .status-line[data-alarm] .status-line-dot {
+    display: block;
   }
   .status-line[data-alarm] .status-line-cue,
   .status-line[data-alarm] .status-line-brief {
