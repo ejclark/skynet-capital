@@ -16,7 +16,8 @@ import { useSavedViews, VIEW_CAP_REASON, viewCapReached } from "./saved-views";
  *  - **⇅ Worth a look first** — a sort, never a grouping (Eric, aca3c01f: "order is more of a sort
  *    precedence"). A chip ⇄ the `sort:look` token; off, it counts the rows worth a look, on, it
  *    shows ✓ and the token it wrote, with "Save as a view" beside it. It opens on at load until the
- *    viewer turns it off (`look-sort.ts`);
+ *    viewer turns it off (`look-sort.ts`), and orders each mark's rows by the fact's urgency — an
+ *    option's expiry, then how far past its line (`use-row-marks.ts`'s `lookOrder`);
  *  - **Filter ▾** — opens under the head, no pop-up, with a Mark line: ◆ Review · 2, ▲ Consider · 0,
  *    ○ On plan · 1, each a toggle of its `is:` token. Its label carries the state ("Filter · 1").
  * The rest of round 2's Filter (the kinds, the search, the layouts and the saved views folded into

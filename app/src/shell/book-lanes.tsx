@@ -30,7 +30,7 @@ import type { DayRange, MarketClosure } from "../live/horizon-range";
  *             a tap moves the range onto it (the head's own `?on=` write, #5045's jump on every lane)
  *   today     the accent rule and the word under it; off the range, "‹ today Oct 8" goes back
  *
- * HONEST SHAPES. Each glyph is a shape, never a hue alone (▲ decide by · ◆ confirmed · ◇ estimated
+ * HONEST SHAPES. Each glyph is a shape, never a hue alone (⧗ decide by · ◆ confirmed · ◇ estimated
  * · ○ market-wide · hatched = market closed, an early close hatched to half height), and the key
  * names only what the frame draws. Words ride beside a mark only where they fit — the list under
  * the picture says every date in words, so a crowded quarter draws glyphs and nothing overlaps.
@@ -43,11 +43,13 @@ export const GLYPH_WORD: Record<LaneGlyph, string> = {
   market: "market-wide",
 };
 
-/** The glyph as a drawn shape in the text colour — crisp at 12px in any font. */
+/** The glyph as a drawn shape in the text colour — crisp at 12px in any font. Decide by is an
+ *  hourglass, a deadline's shape: it was a ▲, which the rows under the Overview's date line wear
+ *  for Consider (#5083 — one glyph, one meaning). */
 export function LaneGlyphIcon({ glyph }: { readonly glyph: LaneGlyph | "closed" }): ReactElement {
   return (
     <svg className={`lane-glyph lane-glyph--${glyph}`} viewBox="0 0 12 12" aria-hidden="true">
-      {glyph === "decide" ? <polygon points="6,1.5 11,10.5 1,10.5" /> : null}
+      {glyph === "decide" ? <polygon points="1.5,1 10.5,1 7,6 10.5,11 1.5,11 5,6" /> : null}
       {glyph === "confirmed" || glyph === "estimated" ? (
         <polygon points="6,1 11,6 6,11 1,6" />
       ) : null}

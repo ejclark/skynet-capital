@@ -2,8 +2,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { stakeFingerprint } from "../../../src/options/position-guidance";
-import type { DeskPosition, DeskSnapshot } from "../../src/live/desk";
+import type {
+  Decision,
+  DeskAllocation,
+  DeskPosition,
+  DeskSnapshot,
+  DeskTiles,
+} from "../../src/live/desk";
 import { heldStake, writeSnapshot } from "../../src/live/guidance";
+import type { NetWorthStatsView } from "../../src/live/networth";
 import * as actualOptions from "../../src/live/options" with { rstest: "importActual" };
 import type { OptionPositions } from "../../src/live/options";
 import { useSavedViews } from "../../src/shell/saved-views";
@@ -43,15 +50,29 @@ rstest.mock("../../src/live/options", () => ({
   ...actualOptions,
   fetchOptionPositions: () => Promise.resolve(BOOK),
 }));
+/** The Overview's `?lens=`: List unless a test sets it. */
+let lensSearch: Record<string, unknown> = {};
 rstest.mock("@tanstack/react-router", () => ({
   Link: ({ children, className }: { children: ReactNode; className?: string }) => (
     <a href="/app/trade" className={className}>
       {children}
     </a>
   ),
+  useSearch: () => lensSearch,
+  useNavigate: () => () => Promise.resolve(),
 }));
+// The Overview's money and league cards read their own endpoints; the positions half is real.
+rstest.mock("../../src/shell/networth-card", () => ({
+  NetWorthCard: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+}));
+rstest.mock("../../src/shell/money-strip", () => ({ MoneyStrip: () => null }));
+rstest.mock("../../src/shell/sauron-card", () => ({ SauronCard: () => null }));
+rstest.mock("../../src/shell/council-line-card", () => ({ CouncilLineCard: () => null }));
+rstest.mock("../../src/shell/new-high-ceremony", () => ({ NewHighCeremony: () => null }));
+rstest.mock("../../src/shell/use-tower-column", () => ({ useTowerColumn: () => false }));
 
 const { PositionsBlotter } = await import("../../src/shell/positions-blotter");
+const { OverviewSection } = await import("../../src/shell/accounts-overview-section");
 
 const pos = (over: Partial<DeskPosition>): DeskPosition => ({
   symbol: "SPY",
@@ -115,6 +136,56 @@ const PUT = pos({
   expiresInDays: 29,
 });
 const SAURON = [NVDA, CRWV, PUT];
+
+/** The decision engine's card on the put (`decisions-view.ts` soldCopy) — its lesson rode the
+ *  retired pager — and a playbook idea on NVDA, which only the Map lens used to show. */
+const PUT_DECISION: Decision = {
+  id: `at-risk-${PUT.symbol}`,
+  kind: "at-risk",
+  symbol: PUT.symbol,
+  display: "CRWV Nov 6 $80 Put",
+  plainName: "Sold put · profits if CRWV stays above $80",
+  pl: "−$295 · −116.0%",
+  plTone: "neg",
+  title: "Collected $255; buying back costs $550",
+  captionShort: "",
+  caption: "",
+  why: "",
+  clocks: [],
+  primary: { label: "Review on Trade ↗", href: "/app/trade?symbol=CRWV" },
+  stakeRaw: 550,
+  learn: { term: "breakeven", label: "What is a breakeven?" },
+  due: { at: "2026-11-06", reason: "expiry", label: "Expires Nov 6" },
+};
+const NVDA_IDEA: Decision = {
+  id: "idea-nvda-earnings",
+  kind: "idea",
+  symbol: "NVDA",
+  display: "NVDA",
+  plainName: "",
+  pl: "3 days before earnings",
+  plTone: "flat",
+  title: "A playbook fits NVDA, which you already hold",
+  captionShort: "",
+  caption: "",
+  why: "",
+  clocks: [],
+  primary: { label: "See the playbook ↗", href: "/app/playbooks/earnings-run-up" },
+  stakeRaw: 0,
+};
+const DECISIONS = [PUT_DECISION, NVDA_IDEA];
+
+const ALLOCATION: DeskAllocation = {
+  shares: "$34,716",
+  options: "$0",
+  optionsSold: "-$550",
+  cash: "$965,284",
+  sharesPct: 3.5,
+  optionsPct: 0,
+  cashPct: 96.5,
+  cashShare: "96.5%",
+  shareCount: 185,
+};
 
 function blotter(query: string, extra: Record<string, unknown> = {}) {
   const seen: string[] = [];
@@ -207,10 +278,81 @@ describe("the guidance line on every row", () => {
       screen.getByText(/Hold, medium confidence — from your guidance read at 2:00 PM ET/),
     ).toBeTruthy();
   });
+});
 
-  it("no longer renders the Needs a decision pager", () => {
-    blotter("");
-    expect(screen.queryByRole("region", { name: "Needs a decision" })).not.toBeInTheDocument();
+/** The Overview section for Sauron's one account: the money cards stubbed, the rest real. */
+function overview(lens?: "map") {
+  lensSearch = lens ? { lens } : {};
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const desk: DeskSnapshot = {
+    generatedAt: "2026-10-08T19:00:00.000Z",
+    desk: {
+      id: "sauron",
+      name: "Sauron",
+      kind: "bot",
+      tiles: {} as DeskTiles,
+      positions: SAURON,
+      considerations: [],
+      decisions: DECISIONS,
+      allocation: ALLOCATION,
+    },
+  };
+  return render(
+    <QueryClientProvider client={client}>
+      <OverviewSection
+        stats={{ cashKnown: true, cash: "$965,284", positionCount: 3 } as NetWorthStatsView}
+        caption="Sauron"
+        owned={[]}
+        allAccounts={false}
+        roster={[]}
+        loading={false}
+        error={false}
+        accountId="sauron"
+        desks={[desk]}
+        desksLoading={false}
+        desksError={false}
+        query=""
+        onFilterChange={() => undefined}
+      />
+    </QueryClientProvider>,
+  );
+}
+
+/** Eric retired these as verdicts (3a77c6db): the marks say a verb and a fact instead. */
+const RETIRED = /Needs a decision|At risk/;
+
+/** A polygon's corners: ▲ has three. */
+const corners = (svg: Element | null) =>
+  svg?.querySelector("polygon")?.getAttribute("points")?.trim().split(/\s+/).length;
+
+describe("the Overview after the pager (#5083)", () => {
+  it("says no retired word on List, and a row's guidance opens to the lesson the pager carried", async () => {
+    const { container } = overview();
+    await screen.findAllByText("$2.60 above strike");
+    expect(container).not.toHaveTextContent(RETIRED);
+    const cards = container.querySelector(".pos-cards") as HTMLElement;
+    fireEvent.click(within(cards).getByRole("button", { name: /^Guidance for CRWV \$80 PUT/ }));
+    const open = cards.querySelector(".pos-guide-open") as HTMLElement;
+    expect(within(open).getByRole("button", { name: "What is a breakeven?" })).toBeTruthy();
+  });
+
+  it("wears each Map card's row badge in place of the retired words", async () => {
+    const { container } = overview("map");
+    const column = await screen.findByRole("complementary", { name: "Worth a look" });
+    await within(column).findByText("$2.60 above strike");
+    expect(container).not.toHaveTextContent(RETIRED);
+    expect([...column.querySelectorAll(".map-decision-top > :first-child")].map(seenText)).toEqual([
+      "◆ Review · $2.60 above strike",
+      "Playbook idea",
+    ]);
+  });
+
+  it("draws the next date's decide by as its own shape, never the ▲ a row's Consider wears", async () => {
+    const { container } = overview();
+    await screen.findAllByText("$2.60 above strike");
+    const decide = container.querySelector(".held-next-line .lane-glyph--decide");
+    expect(decide).not.toBeNull();
+    expect(corners(decide)).not.toBe(3);
   });
 });
 
@@ -230,18 +372,40 @@ describe("Worth a look first — a sort, a chip ⇄ the sort:look token", () => 
     expect(seen).toEqual(["sort:look"]);
   });
 
-  it("puts Review first, then Consider, then On plan, keeping the server's order inside each", async () => {
+  it("puts Review first, then Consider, then On plan, and inside each the soonest expiry first", async () => {
     const { container } = blotter("sort:look");
     await screen.findAllByText("$2.60 above strike");
+    // R2 drew the at-risk put first: it has a clock, the shares don't.
     expect(order(container)).toEqual([
-      "CRWV · $82.60",
       "CRWV $80 SHORT PUT · 29d",
+      "CRWV · $82.60",
       "NVDA · $232.10",
     ]);
     expect(screen.getByRole("button", { name: /Worth a look first/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+  });
+
+  it("orders shares with no clock by how far past their line they sit, the deepest loss first", async () => {
+    const PLTR = pos({
+      symbol: "PLTR",
+      display: "PLTR",
+      price: "$140.00",
+      value: "$1,400",
+      totalPl: "-$350",
+      totalPlRaw: -350,
+      returnPct: "-20.00%",
+      totalTone: "neg",
+    });
+    const { container } = blotter("sort:look", { positions: [NVDA, CRWV, PUT, PLTR] });
+    await screen.findAllByText("$2.60 above strike");
+    expect(order(container)).toEqual([
+      "CRWV $80 SHORT PUT · 29d",
+      "PLTR · $140.00",
+      "CRWV · $82.60",
+      "NVDA · $232.10",
+    ]);
   });
 
   it("says the token it wrote, and Save as a view keeps it as a tab", () => {
@@ -302,10 +466,18 @@ describe("Filter — opens in place with a Mark line", () => {
   it("narrows to one mark, names what it hides, and Clear takes the mark off", async () => {
     const { container, seen } = blotter("is:review sort:look");
     await screen.findAllByText("$2.60 above strike");
-    expect(order(container)).toEqual(["CRWV · $82.60", "CRWV $80 SHORT PUT · 29d"]);
+    expect(order(container)).toEqual(["CRWV $80 SHORT PUT · 29d", "CRWV · $82.60"]);
     expect(seenText(screen.getByRole("button", { name: /^Filter/ }))).toBe("Filter · 1 ▾");
     expect(screen.getByText("1 hidden by Filter: NVDA (On plan)")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(seen).toEqual(["sort:look"]);
+  });
+
+  it("lets All go while a mark narrows the list, and tapping it takes the mark off, the sort kept", () => {
+    const { seen } = blotter("is:review sort:look");
+    const all = screen.getByRole("button", { name: "All" });
+    expect(all).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(all);
     expect(seen).toEqual(["sort:look"]);
   });
 });
@@ -326,6 +498,28 @@ describe("the row's guidance opens in place, and Not now steps its mark aside", 
       "Back after Friday's close, or sooner if CRWV trades below $80.00.",
     );
     expect(within(card).getByRole("link", { name: /Guidance for CRWV on Trade/ })).toBeTruthy();
+  });
+
+  it("opens with the decision engine's sentence on the position and its lesson, one tap away", async () => {
+    const { container } = blotter("", { decisions: DECISIONS });
+    await screen.findAllByText("$2.60 above strike");
+    openGuidance(container, /^Guidance for CRWV \$80 PUT/);
+    const card = container.querySelector(".pos-cards .pos-guide-open") as HTMLElement;
+    expect(seenText(card)).toContain("Collected $255; buying back costs $550");
+    fireEvent.click(within(card).getByRole("button", { name: "What is a breakeven?" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/stops losing money at expiry/);
+  });
+
+  it("hangs a playbook idea on the line of the name it fits, with the way to the playbook", async () => {
+    const { container } = blotter("", { decisions: DECISIONS });
+    await screen.findAllByText("$2.60 above strike");
+    openGuidance(container, /^Guidance for NVDA/);
+    const card = container.querySelector(".pos-cards .pos-guide-open") as HTMLElement;
+    expect(seenText(card)).toContain("A playbook fits NVDA, which you already hold");
+    expect(within(card).getByRole("link", { name: /See the playbook/ })).toHaveAttribute(
+      "href",
+      "/app/playbooks/earnings-run-up",
+    );
   });
 
   it("sets the mark aside with Undo beside it, and the sort lets the row fall back", async () => {

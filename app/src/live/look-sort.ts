@@ -1,7 +1,8 @@
 /**
- * "WORTH A LOOK FIRST" AT LOAD (#5070; round 2 of #5037, Eric picked R2 over V1, which drew the
- * sort off). The positions list opens sorted, rows worth a look first, unless this viewer turned
- * the sort off — then it stays off until they turn it back on. The sort is the `sort:look` token
+ * "WORTH A LOOK FIRST" AT LOAD (#5070; round 2 of #5037). The positions list opens sorted, rows
+ * worth a look first, as R2 drew it, unless this viewer turned the sort off — then it stays off
+ * until they turn it back on. The fork is not settled: Eric marked More on V1 too, which drew the
+ * sort off at load (#5083), so this default is R2's until he picks. The sort is the `sort:look` token
  * in the one query model, so the default is simply the query a page starts with when its URL
  * carries none. Per viewer, in this browser: a way of looking, never a record.
  */

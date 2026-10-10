@@ -186,7 +186,8 @@ describe("sort:look and is:review / is:consider / is:onplan", () => {
     expect(toggleQualifier("is:review sort:look", "sort:look")).toBe("is:review");
   });
 
-  it("leaves the marks and the sort out of the All chip's clearing", () => {
-    expect(clearChips("is:option is:review sort:look")).toBe("is:review sort:look");
+  it("clears the marks with the chips — All means every position — and leaves the sort", () => {
+    expect(clearChips("is:option is:review sort:look")).toBe("sort:look");
+    expect(clearChips("nvda is:onplan")).toBe("nvda");
   });
 });

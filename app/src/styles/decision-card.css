@@ -1,7 +1,7 @@
-/* The decision card's parts that outlived the "Needs a decision" pager (#3689 slice 7; the pager
- * retired with #5070, its job moved onto the positions' fact badges): the Map lens's stacked
- * decisions (`shell/positions-lens.tsx`) and the ceremonies' buttons still wear them. The kind is
- * written in words, so colour never carries it alone. */
+/* The decision card's parts that outlived the pager (#3689 slice 7; it retired with #5070, its job
+ * moved onto the positions' fact badges): the Map lens's stacked cards (`shell/positions-lens.tsx`,
+ * each wearing its row's badge since #5083, a playbook idea its kind in words) and the ceremonies'
+ * buttons still wear them, so colour never carries a card's kind alone. */
 
 .decisions-eyebrow {
   font-family: var(--mono);
@@ -10,25 +10,12 @@
   text-transform: uppercase;
   color: var(--accent);
 }
-.decision-sym {
-  font-size: 15px;
-  font-weight: 700;
-}
 .decision-kind {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent);
-}
-.decision--at-risk .decision-kind {
-  color: var(--neg);
-}
-.decision-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
 }
 .decision-btn {
   display: inline-flex;

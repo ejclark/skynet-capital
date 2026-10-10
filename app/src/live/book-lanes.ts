@@ -11,7 +11,8 @@ import { held } from "./quantity";
  * has something on — the shape carries the meaning, the key under the picture names it in words
  * (hue never alone, docs/BRAND.md → Accessibility):
  *
- *   ▲ decide   a decision due on that position (a "Needs a decision" card's day)
+ *   ⧗ decide   a decision due on that position (a decision card's due day; an hourglass, since
+ *              ▲ is Consider on the rows, #5083)
  *   ◆ confirmed  a dated event on what you hold — a print, an option's expiry, a named event
  *   ◇ estimated  the same, on a cadence estimate rather than a confirmed day
  *   ○ market   a headline macro print (the market-wide lane only)

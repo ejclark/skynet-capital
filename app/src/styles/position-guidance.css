@@ -288,3 +288,18 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* First in the opened guidance: what the decision engine says about this position — its sentence,
+   then its lesson or the playbook that fits the name (#5083; the retired pager's last card parts). */
+.pos-guide-said {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.pos-guide-sentence {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}

@@ -6,7 +6,7 @@ import { LaneGlyphIcon } from "./book-lanes";
 
 /**
  * THE AGENDA (#3807 slice 2c): one row per event on the book in the range — the date, the glyph
- * the lanes picture draws for it (#5074: ▲ ◆ ◇ ○, one shape language above and below) with the
+ * the lanes picture draws for it (#5074: ⧗ ◆ ◇ ○, one shape language above and below) with the
  * tier in a word (hue never alone, docs/BRAND.md → Accessibility), the title as visible text, the
  * ledger's call when one exists, and the held position it lands on. ONE link per row, and it goes
  * to a PLACE, never a filter: the position's own row on the Overview (`#pos-<symbol>`) — for a

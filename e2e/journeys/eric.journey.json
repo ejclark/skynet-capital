@@ -111,7 +111,7 @@
           "sees": "a per-position sheet; nothing says what taking profit here does to the whole book",
           "ears": "WHEN a lever call says take profit, the app shall celebrate the rung beside the explanation of why it was right.",
           "expect": [{ "text": "Lock in profit", "within": "main" }],
-          "known_gap": "profit-take exists only as a row's fact badge (app/src/live/position-mark.ts 'Consider', #5070) and the Map lens's 'Lock in profit' card; no celebration is paired with its explanation on the guidance sheet",
+          "known_gap": "profit-take exists only as a row's fact badge (app/src/live/position-mark.ts 'Consider', #5070), which the Map lens's cards wear too (#5083); no celebration is paired with its explanation on the guidance sheet",
           "where": "app/src/live/position-mark.ts",
           "severity": "low",
           "fix": "M",
