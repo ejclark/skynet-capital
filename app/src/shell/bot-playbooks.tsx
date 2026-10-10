@@ -1,11 +1,13 @@
 import { type ReactElement, useId, useState } from "react";
 import { botPlaybooks, playbooksCount } from "../live/bot-playbooks";
+import { weekVerdict } from "../live/check-week";
 import { agoText, type Heartbeat, heartbeatLine } from "../live/heartbeat";
 import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
 import { useHeartbeat } from "./heartbeat";
 import { CountedLine, PlaybookCards } from "./playbook-cards";
 import { ShadowProbes } from "./shadow-probes";
+import { WeekStrip } from "./week-lanes";
 
 /**
  * A BOT'S PLAYBOOKS (#5073 — #5037 round 2, Eric's pick R2: "I really like the visualization
@@ -72,6 +74,8 @@ export function BotPlaybooksSection({
         named={showPlaybooks}
         unmanaged={showPlaybooks ? (heartbeat.unmanaged ?? []) : []}
         none={heartbeat.playbooks === null && !heartbeat.rollCall}
+        playbooks={heartbeat.playbooks}
+        {...(heartbeat.week ? { week: heartbeat.week } : {})}
       />
       <ShadowProbes deskId={deskId} />
     </div>
@@ -88,10 +92,10 @@ function stripDetail(h: Heartbeat): string {
 }
 
 /** The bot's checks — is it running, how often, and the one sentence that joins it to the cards
- *  below: every check asks every playbook what to do. A week of checks drawn as a strip, with the
- *  trades marked and "none missed" counted, is slice 2 (it needs the week from the server); this
- *  slice says only what the payload can prove — "on time" means the newest check is inside the
- *  two-minute window, not that no check was ever late. */
+ *  below: every check asks every playbook what to do. The week of checks is drawn under it with
+ *  the trades marked, and "none missed" is counted from it (#5073 slice 2). A server that sent no
+ *  week leaves only what the newest check can prove — "on time" means it is inside the two-minute
+ *  window, not that no check this week was late. */
 function ChecksStrip({
   heartbeat,
   name,
@@ -109,6 +113,8 @@ function ChecksStrip({
 }): ReactElement {
   const { glyph, word } = heartbeatLine(heartbeat);
   const detail = stripDetail(heartbeat);
+  const { week } = heartbeat;
+  const verdict = week ? weekVerdict(week) : undefined;
   const cadence = Math.round(heartbeat.cadenceMs / 1000);
   const stale = Math.round(heartbeat.staleAfterMs / 60_000);
   return (
@@ -118,7 +124,11 @@ function ChecksStrip({
           <span aria-hidden="true">{glyph}</span> <b>{word}</b>
           {detail ? <span className="pbb-strip-detail"> · {detail}</span> : null}
         </p>
-        {heartbeat.state === "beating" ? (
+        {verdict ? (
+          <p className="pbb-strip-ok" data-ok={verdict.ok}>
+            <span aria-hidden="true">{verdict.glyph}</span> {verdict.word}
+          </p>
+        ) : heartbeat.state === "beating" ? (
           <p className="pbb-strip-ok">
             <span aria-hidden="true">✓</span> on time
           </p>
@@ -138,6 +148,20 @@ function ChecksStrip({
           </>
         ) : null}
       </p>
+      {week ? (
+        // From the bench width the strip takes the cards' own wide column, so a lane's trade mark
+        // sits straight under the strip's; the label holds the cards' name column.
+        <div className="pbb-strip-week">
+          <span className="pbb-strip-week-label" aria-hidden="true">
+            This week
+          </span>
+          <WeekStrip
+            week={week}
+            label={`${name}'s checks this week: ${verdict?.word ?? ""}. ${week.trades.length} ${week.trades.length === 1 ? "trade" : "trades"} placed.`}
+          />
+        </div>
+      ) : null}
+      {verdict?.detail ? <p className="pbb-strip-gap">{verdict.detail}</p> : null}
       {heartbeat.state === "stale" ? (
         <p className="pbb-strip-why">
           Not checking means no check for {stale} min while the market is open, or none in all of
@@ -145,6 +169,13 @@ function ChecksStrip({
         </p>
       ) : null}
       <div className="pbb-strip-foot">
+        {week && week.trades.length > 0 ? (
+          <p className="pbb-strip-key">
+            <span aria-hidden="true">▲</span> buy · <span aria-hidden="true">▼</span> sell placed
+          </p>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           className="pbb-log-toggle"

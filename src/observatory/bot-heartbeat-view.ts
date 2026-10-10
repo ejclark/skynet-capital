@@ -1,3 +1,4 @@
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { unmanagedTickers } from "../domain/bots-universe.js";
 import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
@@ -14,6 +15,7 @@ import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry
 import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-eligibility.js";
 import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
+import { type CheckWeekView, checkWeekView } from "./check-week-view.js";
 import { readPlaybookWindow } from "./playbook-window.js";
 
 /**
@@ -63,6 +65,10 @@ export interface HeartbeatView {
   /** Share tickers this bot holds that nothing on it will sell (#4777, `unmanagedHoldings`).
    *  Absent when there was nothing to judge from — never an empty list posing as "all managed". */
   readonly unmanaged?: readonly string[];
+  /** This week's checks, each playbook's answers and the trades placed, on one clock (#5073 slice
+   *  2). Absent when the store could not be read for the week — never an empty week posing as
+   *  "nothing missed". */
+  readonly week?: CheckWeekView;
 }
 
 /** What the dashboard knows of a bot's book and roster beyond its passes: the lots its broker read
@@ -308,13 +314,14 @@ function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbea
 
 /** `records` newest first, as `DecisionDb.listByPersona` returns them. `holdings` absent — the
  *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off; `roster`
- *  absent judges the roll call from the passes alone. */
+ *  absent judges the roll call from the passes alone; `weekRows` absent leaves `week` off. */
 export function botHeartbeatView(
   records: readonly DecisionRecord[],
   now: Date,
   marketOpen: boolean,
   holdings?: BotHoldings,
   roster?: RollCallRoster,
+  weekRows?: CheckWeekRows,
 ): HeartbeatView {
   const verdicts = latestVerdictPass(records)?.verdicts ?? null;
   const house = registeredPlaybooks();
@@ -327,6 +334,7 @@ export function botHeartbeatView(
     staleAfterMs: STALE_AFTER_MS,
     rollCall: playbookRollCall(verdicts, now, house, PLAYBOOK_WIRING_GAPS, UPCOMING_PRINTS, roster),
     ...(orphans ? { unmanaged: orphans } : {}),
+    ...(weekRows ? { week: checkWeekView(weekRows, now, STALE_AFTER_MS, verdicts ?? []) } : {}),
   };
   const newest = records[0];
   if (!newest) {

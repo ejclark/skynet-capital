@@ -280,3 +280,144 @@ describe("BotPlaybooksSection — honest empty states", () => {
     ).toBeInTheDocument();
   });
 });
+
+/** #5073 slice 2 — the week on one clock: Mon–Fri Oct 5–9 2026, now Fri 3:00 PM New York. Every
+ *  session is 13 half hours; Friday's last one has not begun. */
+const DAYS = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"];
+const NOW = Date.parse("2026-10-09T19:00:00Z");
+function grid<T>(begun: T, future: T): T[][] {
+  return DAYS.map((_, d) =>
+    Array.from({ length: 13 }, (_, b) => (d === 4 && b > 11 ? future : begun)),
+  );
+}
+const week: NonNullable<Heartbeat["week"]> = {
+  bucketMs: 1_800_000,
+  now: NOW,
+  sessions: DAYS.map((date) => ({
+    date,
+    openAt: Date.parse(`${date}T13:30:00Z`),
+    closeAt: Date.parse(`${date}T20:00:00Z`),
+  })),
+  checks: grid<number | null>(120, null),
+  gaps: [],
+  lanes: [
+    { playbookId: "SAURON", mode: "aggressive", slot: 0, states: grid("tactical", null) },
+    { playbookId: "HC-SAURON", mode: "standard", slot: 1, states: grid("tactical", null) },
+    { playbookId: "S1-NVDA", mode: "standard", slot: 2, states: grid("no-window", null) },
+  ],
+  trades: [
+    {
+      at: Date.parse("2026-10-05T15:20:00Z"),
+      symbol: "NVDA",
+      side: "buy",
+      playbookId: "SAURON",
+      mode: "aggressive",
+    },
+    {
+      at: Date.parse("2026-10-06T14:31:00Z"),
+      symbol: "CRWV",
+      side: "sell",
+      playbookId: "CRWV-WHEEL",
+      mode: "aggressive",
+    },
+  ],
+};
+const withWeek = (over: Partial<NonNullable<Heartbeat["week"]>> = {}): DeskHeartbeat => ({
+  available: true,
+  heartbeat: { ...sauron, week: { ...week, ...over } },
+});
+
+describe("BotPlaybooksSection — the week on one clock", () => {
+  it("draws the week of checks under the strip, and counts none missed instead of 'on time'", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    const strip = await screen.findByRole("region", { name: "Sauron's checks" });
+    expect(strip.textContent).toContain("✓ none missed");
+    expect(strip.textContent).not.toContain("on time");
+    const drawn = within(strip).getByRole("figure", { name: /Sauron's checks this week/ });
+    expect(drawn.getAttribute("aria-label")).toContain("none missed. 2 trades placed.");
+    expect(drawn.querySelectorAll(".wk-day")).toHaveLength(5);
+    expect(drawn.querySelectorAll('.wk-cell[data-c="checked"]')).toHaveLength(64);
+    expect(drawn.querySelectorAll('.wk-cell[data-c="future"]')).toHaveLength(1);
+    // Both trades sit on the bot's own strip, whichever playbook placed them.
+    expect([...drawn.querySelectorAll(".wk-mark")].map((m) => m.textContent)).toEqual([
+      "▲NVDA",
+      "▼CRWV",
+    ]);
+    expect(drawn.querySelectorAll(".wk-now")).toHaveLength(1);
+  });
+
+  it("names a span the market was open with no check, and never says none missed", async () => {
+    const from = Date.parse("2026-10-07T14:02:00Z");
+    next = withWeek({ gaps: [{ from, to: from + 34 * 60_000 }] });
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    const strip = await screen.findByRole("region", { name: "Sauron's checks" });
+    expect(strip.textContent).toContain("✕ 1 gap with no check");
+    expect(strip.textContent).toContain("for 34 min");
+    expect(strip.textContent).not.toContain("none missed");
+    expect(strip.querySelectorAll('.wk-cell[data-c="gap"]')).toHaveLength(2);
+  });
+
+  it("gives each card its lane on the same clock, said in words for a screen reader", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    await screen.findByText("SAURON");
+    const lane = within(cardOf("SAURON")).getByRole("img");
+    expect(lane.getAttribute("aria-label")).toBe(
+      "This week: trading on live signals in 64 of 64 half hours asked. 1 trade placed.",
+    );
+    expect(lane.querySelectorAll('.wk-cell[data-s="tactical"]')).toHaveLength(64);
+    expect(lane.querySelectorAll(".wk-mark")).toHaveLength(1);
+    expect(
+      within(cardOf("S1-NVDA")).getByRole("img").querySelectorAll('[data-s="no-window"]'),
+    ).toHaveLength(64);
+  });
+
+  it("hatches a can't-fire card's lane, whatever its checks recorded", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    await screen.findByText("HC-SAURON");
+    const lane = within(cardOf("HC-SAURON")).getByRole("img");
+    expect(lane.getAttribute("aria-label")).toBe("This week: can't fire.");
+    expect(lane.querySelectorAll('[data-s="blocked"]')).toHaveLength(64);
+    expect(lane.querySelectorAll('[data-s="tactical"]')).toHaveLength(0);
+    // TACO-DJT never ran, so it has no lane rows of its own — still hatched, still on the clock.
+    expect(
+      within(cardOf("TACO-DJT")).getByRole("img").querySelectorAll('[data-s="blocked"]'),
+    ).toHaveLength(64);
+  });
+
+  it("opens a card to the key to its shapes and its trades in words", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    await screen.findByText("SAURON");
+    const card = cardOf("SAURON");
+    fireEvent.click(within(card).getByText("SAURON"));
+    expect(within(card).getByText("Waiting for its window")).toBeInTheDocument();
+    expect(card.querySelector(".wk-trades")?.textContent).toMatch(/^▲ Buy NVDA placed /);
+  });
+
+  it("matches a nameless card to its lane by slot, and keeps trades to the strip", async () => {
+    const { rollCall: _withheld, ...rest } = sauron;
+    const anonymous = (sauron.playbooks ?? []).map(({ playbookId: _id, ...v }) => v);
+    next = {
+      available: true,
+      heartbeat: {
+        ...rest,
+        playbooks: anonymous,
+        week: {
+          ...week,
+          lanes: week.lanes.map(({ playbookId: _id, ...l }) => l),
+          trades: week.trades.map(({ playbookId: _p, mode: _m, ...t }) => t),
+        },
+      },
+    };
+    render(withClient(<BotPlaybooksSection deskId="sauron" showPlaybooks={false} />));
+    await screen.findByText("Aggressive mode");
+    const lanes = [...document.querySelectorAll(".pbb-card .wk-lane")];
+    expect(lanes).toHaveLength(3);
+    expect(lanes.map((l) => l.querySelectorAll('[data-s="tactical"]').length)).toEqual([64, 64, 0]);
+    expect(document.querySelectorAll(".pbb-card .wk-mark")).toHaveLength(0);
+    expect(document.querySelectorAll(".wk-strip .wk-mark")).toHaveLength(2);
+  });
+});

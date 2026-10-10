@@ -31,6 +31,44 @@ export interface Heartbeat {
   /** Share tickers held that nothing on this bot will sell (#4777). Absent for a non-owner, and
    *  when the server could not read the bot's book or subscriptions. */
   readonly unmanaged?: readonly string[];
+  /** This week on one clock (#5073 slice 2) — mirrors `CheckWeekView`
+   *  (`src/observatory/check-week-view.ts`). Absent when the server could not read the week. */
+  readonly week?: CheckWeek;
+}
+
+export interface CheckWeek {
+  readonly bucketMs: number;
+  readonly now: number;
+  /** This week's trading days, New York's calendar; epoch ms bounds. */
+  readonly sessions: readonly {
+    readonly date: string;
+    readonly openAt: number;
+    readonly closeAt: number;
+  }[];
+  /** Per session, per bucket: checks recorded; null for a bucket not yet begun. */
+  readonly checks: readonly (readonly (number | null)[])[];
+  /** Open-market spans longer than the stale window with no check recorded. */
+  readonly gaps: readonly { readonly from: number; readonly to: number }[];
+  readonly lanes: readonly WeekLane[];
+  readonly trades: readonly WeekTrade[];
+}
+
+export interface WeekLane {
+  /** Absent for a non-owner (#885), who matches a lane to its card by `slot`. */
+  readonly playbookId?: string;
+  readonly mode: string;
+  /** Its index in `Heartbeat.playbooks`, when it is one of the newest verdict pass's lines. */
+  readonly slot?: number;
+  readonly states: readonly (readonly (PlaybookVerdictState | null)[])[];
+}
+
+export interface WeekTrade {
+  readonly at: number;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
+  /** Absent for a non-owner: their trades ride the strip, never a lane. */
+  readonly playbookId?: string;
+  readonly mode?: string;
 }
 
 export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked";

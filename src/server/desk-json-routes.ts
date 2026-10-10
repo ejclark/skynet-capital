@@ -222,6 +222,7 @@ async function heartbeatPayload(
     regularSessionOpen(),
     botHoldings(found, roster),
     roster,
+    config.readCheckWeek?.(found.id),
   );
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
