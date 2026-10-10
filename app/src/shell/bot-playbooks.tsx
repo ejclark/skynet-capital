@@ -114,7 +114,10 @@ function ChecksStrip({
   const { glyph, word } = heartbeatLine(heartbeat);
   const detail = stripDetail(heartbeat);
   const { week } = heartbeat;
-  const verdict = week ? weekVerdict(week) : undefined;
+  // A bot that is not checking never reads "none missed": the week can be clean only because the
+  // quiet began before it (a dead Friday, read on Monday's open).
+  const weekRead = week ? weekVerdict(week) : undefined;
+  const verdict = weekRead?.ok && heartbeat.state === "stale" ? undefined : weekRead;
   const cadence = Math.round(heartbeat.cadenceMs / 1000);
   const stale = Math.round(heartbeat.staleAfterMs / 60_000);
   return (
@@ -128,7 +131,7 @@ function ChecksStrip({
           <p className="pbb-strip-ok" data-ok={verdict.ok}>
             <span aria-hidden="true">{verdict.glyph}</span> {verdict.word}
           </p>
-        ) : heartbeat.state === "beating" ? (
+        ) : heartbeat.state === "beating" && !weekRead ? (
           <p className="pbb-strip-ok">
             <span aria-hidden="true">✓</span> on time
           </p>
@@ -157,7 +160,7 @@ function ChecksStrip({
           </span>
           <WeekStrip
             week={week}
-            label={`${name}'s checks this week: ${verdict?.word ?? ""}. ${week.trades.length} ${week.trades.length === 1 ? "trade" : "trades"} placed.`}
+            label={`${name}'s checks this week${verdict ? `: ${verdict.word}` : ""}. ${week.trades.length} ${week.trades.length === 1 ? "trade" : "trades"} placed.`}
           />
         </div>
       ) : null}

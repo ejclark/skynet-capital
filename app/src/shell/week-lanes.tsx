@@ -62,12 +62,13 @@ function TradeMarks({
 }) {
   return (
     <>
-      {trades.map((trade) => {
+      {trades.map((trade, i) => {
         const at = placeIn(session, trade.at);
         if (at === undefined) return null;
         return (
           <span
-            key={`${trade.at}:${trade.symbol}:${trade.side}`}
+            // biome-ignore lint/suspicious/noArrayIndexKey: two playbooks can place the same order in one check, and a nameless trade carries nothing else to tell them apart; the list is the payload's own order.
+            key={`${i}:${trade.at}:${trade.symbol}:${trade.side}`}
             className="wk-mark"
             data-side={trade.side}
             data-edge={at > 0.7 ? "end" : undefined}
@@ -218,8 +219,9 @@ export function LaneTrades({ trades }: { readonly trades: readonly WeekTrade[] }
   if (trades.length === 0) return null;
   return (
     <ul className="wk-trades">
-      {trades.map((trade) => (
-        <li key={`${trade.at}:${trade.symbol}:${trade.side}`}>
+      {trades.map((trade, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: as on the marks — one check can place the same order twice.
+        <li key={`${i}:${trade.at}:${trade.symbol}:${trade.side}`}>
           <span aria-hidden="true">{trade.side === "buy" ? "▲" : "▼"}</span>{" "}
           {trade.side === "buy" ? "Buy" : "Sell"} <b>{trade.symbol}</b> placed{" "}
           <span className="pbb-meta">{weekTime(trade.at)}</span>

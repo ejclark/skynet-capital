@@ -358,6 +358,17 @@ describe("BotPlaybooksSection — the week on one clock", () => {
     expect(strip.querySelectorAll('.wk-cell[data-c="gap"]')).toHaveLength(2);
   });
 
+  it("never says none missed beside a bot that is not checking", async () => {
+    next = {
+      available: true,
+      heartbeat: { ...sauron, state: "stale", sinceLastPassMs: 420_000, week },
+    };
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    const strip = await screen.findByRole("region", { name: "Sauron's checks" });
+    expect(strip.textContent).toContain("Not checking");
+    expect(strip.textContent).not.toContain("none missed");
+  });
+
   it("gives each card its lane on the same clock, said in words for a screen reader", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));

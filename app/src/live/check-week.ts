@@ -33,11 +33,13 @@ export function laneFor(
   return slot >= 0 ? week.lanes.find((l) => l.slot === slot) : undefined;
 }
 
-/** The trades a card's own playbook placed — none for a card whose name is withheld, whose
- *  trades the server keeps to the strip. */
+/** The trades a card's own playbook placed, in the mode its lane draws — none for a card whose
+ *  name is withheld, whose trades the server keeps to the strip. */
 export function tradesFor(card: PlaybookCard, week: CheckWeek): WeekTrade[] {
   if (!card.playbookId) return [];
-  return week.trades.filter((t) => t.playbookId === card.playbookId);
+  return week.trades.filter(
+    (t) => t.playbookId === card.playbookId && (!(card.mode && t.mode) || t.mode === card.mode),
+  );
 }
 
 /** How far through its session an instant is, 0–1; undefined outside every session. */
@@ -84,13 +86,19 @@ function spanText(ms: number): string {
 }
 
 /** The strip's verdict on the week: "none missed", or how many spans had no check, the longest
- *  named. ✕ rather than ▲ — the strip keeps ▲/▼ for trades. */
-export function weekVerdict(week: CheckWeek): {
-  readonly ok: boolean;
-  readonly glyph: string;
-  readonly word: string;
-  readonly detail?: string;
-} {
+ *  named. ✕ rather than ▲ — the strip keeps ▲/▼ for trades. Undefined before this week's first
+ *  open: nothing has happened yet to have missed, and "none missed" on a Monday morning would sit
+ *  beside a bot that went quiet all last Friday. */
+export function weekVerdict(week: CheckWeek):
+  | {
+      readonly ok: boolean;
+      readonly glyph: string;
+      readonly word: string;
+      readonly detail?: string;
+    }
+  | undefined {
+  const begun = week.checks.some((day) => day.some((count) => count !== null));
+  if (!begun) return undefined;
   if (week.gaps.length === 0) return { ok: true, glyph: "✓", word: "none missed" };
   const longest = week.gaps.reduce((a, b) => (b.to - b.from > a.to - a.from ? b : a));
   const n = week.gaps.length;

@@ -93,10 +93,10 @@ describe("weekVerdict", () => {
         { from: OPEN + 3_600_000, to: OPEN + 3_600_000 + 75 * 60_000 },
       ],
     });
-    expect(v.ok).toBe(false);
-    expect(v.glyph).toBe("✕");
-    expect(v.word).toBe("2 gaps with no check");
-    expect(v.detail).toMatch(/^Longest: no check recorded .+ for 1h 15m$/);
+    expect(v?.ok).toBe(false);
+    expect(v?.glyph).toBe("✕");
+    expect(v?.word).toBe("2 gaps with no check");
+    expect(v?.detail).toMatch(/^Longest: no check recorded .+ for 1h 15m$/);
   });
 });
 
@@ -110,5 +110,40 @@ describe("laneSummary", () => {
       "This week: no check asked it. 1 trade placed.",
     );
     expect(laneSummary(lane, [], true)).toBe("This week: can't fire.");
+  });
+});
+
+describe("weekVerdict — before the week has begun", () => {
+  it("claims nothing before this week's first open", () => {
+    expect(weekVerdict({ ...week, checks: [Array.from({ length: 13 }, () => null)] })).toBe(
+      undefined,
+    );
+  });
+});
+
+describe("tradesFor — a playbook in two modes", () => {
+  it("keeps to the mode its card's lane draws", () => {
+    const both = {
+      ...week,
+      trades: [
+        {
+          at: OPEN,
+          symbol: "CRWV",
+          side: "sell" as const,
+          playbookId: "CRWV-WHEEL",
+          mode: "standard",
+        },
+        {
+          at: OPEN,
+          symbol: "CRWV",
+          side: "sell" as const,
+          playbookId: "CRWV-WHEEL",
+          mode: "aggressive",
+        },
+      ],
+    };
+    expect(
+      tradesFor(card({ playbookId: "CRWV-WHEEL", mode: "aggressive" }), both).map((t) => t.mode),
+    ).toEqual(["aggressive"]);
   });
 });
