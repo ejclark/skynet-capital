@@ -10,6 +10,10 @@ import { type FormClose, readForm, streakLabel } from "./form-data";
  * (`#act-<orderId>`); hover or focus shows what it was. The glyph says win or loss, so the square
  * never relies on green versus red alone.
  *
+ * A touch screen never hovers (#5046), so the strip also says in words that the squares open their
+ * trades, and each square is pressed through a 44×44 box around it (form-strip.css) — the drawn
+ * square alone is too small for a thumb.
+ *
  * Shares the `["desk-activity", id]` cache with the Trade page's recent-orders strip. Renders
  * nothing until there's at least one close: an empty strip reads like a losing record.
  */
@@ -69,10 +73,16 @@ export function FormStrip({ accountId }: { readonly accountId: string }): ReactE
         {run ? " · " : null}
         best {form.best} in your last {form.seen} closes
       </span>
-      <div className="form-squares">
-        {form.closes.map((c) => (
-          <Square key={c.orderId} close={c} accountId={accountId} />
-        ))}
+      <div className="form-track">
+        <div className="form-squares">
+          {form.closes.map((c) => (
+            <Square key={c.orderId} close={c} accountId={accountId} />
+          ))}
+        </div>
+        <span className="form-cue">
+          {form.closes.length === 1 ? "The square opens its trade" : "Each square opens its trade"}{" "}
+          <span aria-hidden="true">↗</span>
+        </span>
       </div>
     </div>
   );

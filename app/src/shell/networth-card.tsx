@@ -66,17 +66,20 @@ function CardFoot({
   return (
     <div className="nw-foot">
       {accountId ? <FormStrip accountId={accountId} /> : null}
-      {toHigh === undefined ? null : toNewHigh ? (
-        <span className="nw-to-high">
-          To a new high <b className="num">{toNewHigh}</b>
-        </span>
-      ) : (
-        <span className="nw-to-high nw-at-high">At a new high ✦</span>
-      )}
-      {/* the words beside it carry the gap; the meter is its picture */}
+      {/* one unit, so a wrapping footer never parts the words from their meter */}
       {toHigh === undefined ? null : (
-        <span className="nw-meter" aria-hidden="true">
-          <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
+        <span className="nw-high">
+          {toNewHigh ? (
+            <span className="nw-to-high">
+              To a new high <b className="num">{toNewHigh}</b>
+            </span>
+          ) : (
+            <span className="nw-to-high nw-at-high">At a new high ✦</span>
+          )}
+          {/* the words beside it carry the gap; the meter is its picture */}
+          <span className="nw-meter" aria-hidden="true">
+            <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
+          </span>
         </span>
       )}
     </div>
