@@ -113,10 +113,8 @@ rstest.mock("../../src/shell/cockpit-clock", () => ({
   CockpitClock: () => null,
   usePhoneWidth: () => false,
 }));
-rstest.mock("../../src/shell/heartbeat", () => ({
-  HeartbeatChip: () => null,
-  HeartbeatSection: () => null,
-}));
+rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
+rstest.mock("../../src/shell/bot-playbooks", () => ({ BotPlaybooksSection: () => null }));
 rstest.mock("../../src/shell/accounts-overview-section", () => ({
   OverviewSection: () => <p data-testid="overview">The book's overview</p>,
 }));

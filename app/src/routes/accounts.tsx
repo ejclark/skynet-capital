@@ -16,12 +16,12 @@ import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
+import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
 import { EventsSection } from "../shell/events-section";
 import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
-import { HeartbeatSection } from "../shell/heartbeat";
 import type { MilestoneChapter } from "../shell/milestone-card";
 import { MilestonesSection } from "../shell/milestones-section";
 import { parseLens } from "../shell/positions-lens";
@@ -48,8 +48,10 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
  * blotter), **Activity** and **Events** (#3807 slice 2c — the book's calendar: the grid beside an
  * agenda of what falls on each day for the tickers held; its grid head is the page's one range
- * control there, a picked day is `?events=`) apply to every account; **Heartbeat** and **Thesis**
- * are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are the VIEWER's (#3807 slice
+ * control there, a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
+ * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
+ * check log) and **Thesis** are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are
+ * the VIEWER's (#3807 slice
  * 2b, #888): what `/learn` (+ its chapters `/onboarding`, `/learn/trading`, `/playbooks`, now
  * `?chapter=`) and `/feedback` were, moved as they were — those routes are redirects now, and the
  * Profile link row is gone from this page because the switch is the map. PROGRESSIVE DISCLOSURE:
@@ -89,7 +91,7 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  // One account linked → each bot fill can link to its round on that account's Heartbeat (#3961).
+  // One account linked → each bot fill can link to its round in that account's checks (#3961).
   // Several merged → a row carries no account of its own, so the link is honestly left off.
   const only = deskIds.length === 1 ? deskIds[0] : undefined;
   return <ActivityTable events={activity.data.events} {...(only ? { deskId: only } : {})} />;
@@ -162,6 +164,7 @@ function AccountsPage(): ReactElement {
       section={section}
       sections={sections}
       chapter={chapter}
+      checksOpen={search.checks === "open"}
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
@@ -195,8 +198,10 @@ function AccountsPage(): ReactElement {
             // The page's own default rides no param — so the default is written out whenever
             // the member picks anything else, and omitted when they pick it back.
             section: next === opening ? undefined : next,
-            // A chapter belongs to Milestones; leaving it closes the chapter.
+            // A chapter belongs to Milestones; leaving it closes the chapter. The check log's
+            // unfold belongs to Playbooks the same way.
             chapter: next === "milestones" ? prev.chapter : undefined,
+            checks: next === "playbooks" ? prev.checks : undefined,
             ...(crossing ? { q: undefined, events: undefined } : {}),
           }),
           replace: true,
@@ -215,6 +220,7 @@ function CockpitBody({
   accountId,
   accounts,
   chapter,
+  checksOpen,
   query,
   onFilterChange,
   pinnedDay,
@@ -227,6 +233,8 @@ function CockpitBody({
   /** Every account the session owns — the league card highlights all of them (#3689). */
   readonly accounts: readonly OwnedAccount[];
   readonly chapter: MilestoneChapter | undefined;
+  /** `?checks=open` — Playbooks arrives with its check log unfolded (an old Heartbeat link). */
+  readonly checksOpen: boolean;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
   readonly pinnedDay: string | undefined;
@@ -237,7 +245,7 @@ function CockpitBody({
     queryKey: ["desks", deskIds.join(",")],
     queryFn: () => fetchDesks(deskIds),
     // Overview needs the desk snapshot both for the considerations rail and for the positions
-    // blotter it carries; Heartbeat, Thesis and the viewer's sections read their own endpoints.
+    // blotter it carries; Playbooks, Thesis and the viewer's sections read their own endpoints.
     enabled:
       deskIds.length > 0 &&
       (section === "overview" || section === "activity" || section === "events"),
@@ -257,7 +265,16 @@ function CockpitBody({
       />
     );
   if (section === "feedback") return <FeedbackSection />;
-  if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
+  if (section === "playbooks")
+    return (
+      <BotPlaybooksSection
+        // Keyed by the bot, so switching bots starts each one with its own log folded.
+        key={accountId}
+        deskId={accountId}
+        botName={accounts.find((a) => a.id === accountId)?.name}
+        checksOpen={checksOpen}
+      />
+    );
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "events")
     return (
@@ -329,7 +346,7 @@ function AccountsBody({
 export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
-    ...sectionFromSearch(search.section),
+    ...sectionFromSearch(search.section, search.checks),
     // The Milestones chapter open beneath the cards (#3807 slice 2b; once its own route, #1119).
     ...chapterFromSearch(search.chapter),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100

@@ -11,7 +11,7 @@ import type { OwnedAccount } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
-import { HeartbeatChip } from "./heartbeat";
+import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
 import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
@@ -20,7 +20,8 @@ import type { PageSection } from "./sections";
 
 /**
  * THE PROFILE PAGE'S STICKY HEAD (#2321, the Cockpit; moved out of `routes/accounts.tsx` by #3807
- * slice 2b): the account switcher, a bot's heartbeat chip, the condensed net worth off-Overview,
+ * slice 2b): the account switcher, a bot's head line ("● Running · 7 playbooks ›", #5073 — it opens
+ * the Playbooks section; the chip and its popover retired), the condensed net worth off-Overview,
  * the section switch and the calendar head (at ≥861 its last row, at ≤860 the row directly under
  * it — one instance, placed by the phone's own media query, `cockpit-clock.tsx`).
  *
@@ -168,7 +169,21 @@ export function CockpitHead({
             }
           />
         )}
-        {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
+        {sections.some((s) => s.id === "playbooks") ? (
+          <PlaybooksHeadLine
+            deskId={accountId}
+            renderLink={(label) => (
+              <button
+                type="button"
+                className="hb-line-link"
+                aria-current={section === "playbooks" ? "true" : undefined}
+                onClick={() => onSelectSection("playbooks")}
+              >
+                {label}
+              </button>
+            )}
+          />
+        ) : null}
         {!linked || section === "overview" ? null : stats ? (
           <NetWorthCondensed stats={stats} caption={caption} />
         ) : (

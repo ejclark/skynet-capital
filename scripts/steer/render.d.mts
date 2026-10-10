@@ -51,6 +51,8 @@ export interface TouchPointData {
 }
 
 export const TITLE: string;
+/** The page's intro line, telling Eric his comments sent to Claude are read back too. */
+export const COMMENTS_COUNT: string;
 export function renderPage(
   tp: TouchPointData,
   opts?: { img?: (pic: Picture | { local?: string | null }) => string | null },

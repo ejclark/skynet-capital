@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
 import { PageFrame } from "./frame";
-import { HeartbeatChip } from "./heartbeat";
+import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
 import { SauronCard } from "./sauron-card";
 
@@ -14,12 +14,14 @@ import { SauronCard } from "./sauron-card";
  * users belong outside of profile"; #3345/#3350: Accounts is self-scoped). 2a's link row became
  * this page's own head, cockpit-shaped like `/accounts`' (`cockpit.css`): the account's name, its
  * kind and the SIM pill on the first line, the section switch on the second — Overview · Activity
- * · Pulse, and for a bot Heartbeat · Thesis. Sticky at ≥861 exactly like the cockpit head; at
+ * · Pulse, and for a bot Playbooks · Thesis. Sticky at ≥861 exactly like the cockpit head; at
  * ≤860 it scrolls away with the page (`.acct-head`), so a phone keeps its height for the book.
  *
- * "Decisions" folds into "Heartbeat" (#3687): the item is named for what the Profile page calls a
- * bot's passes, and it opens `/u/:id/decisions`, which now reads as Heartbeat. The old rail's way
- * back to the Leaderboard stays gone — the topbar's Leaderboard tab is that.
+ * "Decisions" folded into "Heartbeat" (#3687), and Heartbeat into "Playbooks" (#5073): the item is
+ * named for what the Profile page calls the section, and it opens `/u/:id/decisions` — the address
+ * every saved link and every fill's "the whole pass" still uses. The bot's head line
+ * ("● Running · 7 playbooks ›") links there too. The old rail's way back to the Leaderboard stays
+ * gone — the topbar's Leaderboard tab is that.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
  * account, so it appears only on a page the session owns — ownership from the same
@@ -49,7 +51,17 @@ export function AccountHead({
         <h1>{name}</h1>
         <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
         <span className="env-pill">SIM</span>
-        {kind === "bot" ? <HeartbeatChip deskId={id} showPlaybooks={isOwn} /> : null}
+        {kind === "bot" ? (
+          <PlaybooksHeadLine
+            deskId={id}
+            showPlaybooks={isOwn}
+            renderLink={(label) => (
+              <Link to="/u/$id/decisions" params={{ id }} className="hb-line-link">
+                {label}
+              </Link>
+            )}
+          />
+        ) : null}
         {isOwn ? (
           <Link to="/accounts" search={{ account: id }} className="acct-head-own">
             Open in your Accounts
@@ -68,7 +80,7 @@ export function AccountHead({
         </Link>
         {kind === "bot" ? (
           <Link to="/u/$id/decisions" params={{ id }}>
-            Heartbeat
+            Playbooks
           </Link>
         ) : null}
         {kind === "bot" ? (
