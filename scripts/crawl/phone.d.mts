@@ -30,6 +30,16 @@ export interface Box {
   ancestors: number[];
 }
 
+/** A shown box starting left of x=0; `left`/`right` are its visible page-x extent, clipped. */
+export interface LeftBox {
+  i: number;
+  left: number;
+  right: number;
+  name: string;
+  text: string;
+  ancestors: number[];
+}
+
 /** A visible, enabled control as measured in the page; `ancestors` index other targets. */
 export interface Target {
   i: number;
@@ -57,6 +67,8 @@ export interface Snapshot {
   innerWidth: number;
   scrollWidth: number;
   boxes: Box[];
+  /** Absent in snapshots taken before the left-edge check (#4046). */
+  lefts?: LeftBox[];
   targets: Target[];
   inputs: Field[];
 }
@@ -71,6 +83,8 @@ export function leaks(
   tolerance?: number,
 ): boolean;
 export function outermostLeaks(boxes: Box[], tolerance?: number): Box[];
+export function outermostLeftSpills(lefts: LeftBox[], tolerance?: number): LeftBox[];
+export function leftFindings(lefts: LeftBox[]): PhoneFinding[];
 export function isInlineTarget(t: { display: string; hostText: string; ownText: string }): boolean;
 export function isUaDefault(t: { tag: string; type: string; appearance: string }): boolean;
 export function circleHitsRect(c: { x: number; y: number }, radius: number, r: Rect): boolean;

@@ -1,4 +1,4 @@
-// Phone checks — four things a 390px screen gets wrong that a desktop frame never shows, run by
+// Phone checks — five things a 390px screen gets wrong that a desktop frame never shows, run by
 // the persona crawl ONLY behind `--phone-audit` at the phone viewport (so run 0's ledger and maps
 // stay byte-comparable, #3807) and by `npm run phone -- <path>` for one page in a few seconds.
 // Mobile-first is the house discipline on every information surface (CLAUDE.md), and the crawl
@@ -8,6 +8,11 @@
 //  - overflow: an element whose content spills past its own box with `overflow-x: visible` — the
 //    predicate is COPIED from scripts/layout-resize-scan.mjs (`controlsFindings`), not imported,
 //    because that file is another lane's; only the outermost offender per subtree is reported.
+//  - offscreen-left: a shown box with words or a control in it that starts left of x=0 — no
+//    scroll reaches it, and the two checks above never see it, because scrollWidth only grows
+//    rightward (#4046: the status popover hung 113px off a 390px screen with 0 findings). A box
+//    wholly left of the page (a parked skip link, a closed drawer) is skipped, as is one an inner
+//    `overflow-x` box clips back on screen (a ticker); only the outermost offender is reported.
 //  - tap-target: a control under 24×24 CSS px (WCAG 2.2 SC 2.5.8, AA) with the SC's exceptions —
 //    inline (a link in a sentence), spacing (a 24px circle on its centre touches no other target
 //    and no other undersized target's circle), user-agent default (an unstyled checkbox), and
@@ -108,6 +113,26 @@ export function tapFindings(targets) {
   return out;
 }
 
+/**
+ * The boxes hung off the left edge with no hung ancestor. `left`/`right` are the box's visible
+ * extent in page coordinates, already clipped by any inner `overflow-x` ancestor in the browser.
+ */
+export function outermostLeftSpills(lefts, tolerance = TOLERANCE) {
+  const hung = new Set(lefts.filter((b) => b.left < -tolerance && b.right > 0).map((b) => b.i));
+  return lefts.filter((b) => hung.has(b.i) && !b.ancestors.some((a) => hung.has(a)));
+}
+
+/** A box hung off the left edge: what spills there is out of reach of every scroll. */
+export function leftFindings(lefts) {
+  return outermostLeftSpills(lefts).map((b) => ({
+    kind: "offscreen-left",
+    what: `${b.name} starts ${px(-b.left)}px left of the screen — no scroll reaches that part${b.text ? ` "${clip(b.text, 60)}"` : ""}`,
+    snippet: b.text,
+    severity: "medium",
+    fix: "S",
+  }));
+}
+
 const ZOOM_TYPES = new Set(["text", "search", "number", "email", "password", "tel", "url"]);
 /** A text field under 16px: iPhone Safari zooms the page when it is focused. */
 export function zoomFindings(inputs) {
@@ -165,6 +190,7 @@ export function phoneFindings(snap) {
       fix: "S",
     });
   }
+  out.push(...leftFindings(snap.lefts ?? []));
   out.push(...tapFindings(snap.targets), ...zoomFindings(snap.inputs));
   return dedupe(out);
 }
@@ -312,6 +338,47 @@ function snapshot(tolerance) {
     };
   });
 
+  // Boxes hung off the left edge. The visible left is clipped by every inner overflow-x box (a
+  // ticker translating its row left inside a clipped strip is fine); body and html are not walked,
+  // because their clip IS the screen edge this check is about. Words or a control only — a
+  // decorative glow bleeding past the edge loses nothing.
+  const visible = (el) => {
+    if (el.getClientRects().length === 0) return false;
+    const s = getComputedStyle(el);
+    if (s.visibility === "hidden" || s.opacity === "0") return false;
+    if (el.checkVisibility && !el.checkVisibility()) return false;
+    return !el.closest("[inert], [aria-hidden='true']");
+  };
+  const CONTROLS = "a, button, input, select, textarea, [role=button], [role=tab], [role=link]";
+  const extentOf = (el) => {
+    const r = el.getBoundingClientRect();
+    let left = r.left;
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement)
+      if (getComputedStyle(p).overflowX !== "visible")
+        left = Math.max(left, p.getBoundingClientRect().left);
+    return { left: left + window.scrollX, right: r.right + window.scrollX, width: r.width };
+  };
+  const hungEls = [];
+  const extents = new Map();
+  for (const el of document.querySelectorAll("body *")) {
+    if (el.getBoundingClientRect().left >= -tolerance) continue;
+    const ext = extentOf(el);
+    if (ext.width <= 1 || ext.left >= -tolerance || ext.right <= 0 || !visible(el)) continue;
+    const carries = firstLine(el) || el.matches(CONTROLS) || el.querySelector(CONTROLS);
+    if (!carries) continue;
+    hungEls.push(el);
+    extents.set(el, ext);
+  }
+  const hungTree = indexed(hungEls);
+  const lefts = hungEls.map((el, i) => ({
+    i,
+    left: extents.get(el).left,
+    right: extents.get(el).right,
+    name: nameOf(el),
+    text: (firstLine(el) || labelOf(el)).slice(0, 80),
+    ancestors: hungTree.ancestors(el),
+  }));
+
   const targetEls = [
     ...document.querySelectorAll(
       "a, button, input, select, textarea, [role=button], [role=tab], [role=link], summary",
@@ -346,10 +413,17 @@ function snapshot(tolerance) {
       label: labelOf(el).slice(0, 80),
     }));
 
-  return { innerWidth: window.innerWidth, scrollWidth: doc.scrollWidth, boxes, targets, inputs };
+  return {
+    innerWidth: window.innerWidth,
+    scrollWidth: doc.scrollWidth,
+    boxes,
+    lefts,
+    targets,
+    inputs,
+  };
 }
 
-/** The four phone checks on the page as it stands. Never throws past the page's own errors. */
+/** The five phone checks on the page as it stands. Never throws past the page's own errors. */
 export async function probePhone(page) {
   return phoneFindings(await page.evaluate(snapshot, TOLERANCE));
 }
