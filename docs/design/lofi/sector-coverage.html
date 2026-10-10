@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>R&amp;D — Sector Coverage — Lo-fi</title>
-<meta name="description" content="Five greybox shapes for the sector coverage section of R&D (#3811 slice 2). Real values from coverageBySector() as of 2026-10-03. No colour, no motion, no invented numbers.">
+<meta name="description" content="Five greybox shapes for the sector coverage section of R&D (#3811 slice 2), plus the hybrid drawn from Eric's 2026-10-07 reaction. Real values from coverageBySector() as of 2026-10-07. No colour, no motion, no invented numbers.">
 <style>
   :root {
     color-scheme: light dark;
@@ -119,26 +119,60 @@
   table.doc th, table.doc td { border: 1px solid var(--line2); padding: 5px 8px; text-align: left; vertical-align: top; }
   table.doc th { font: 11px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--ink3); font-weight: 400; }
   .foot { color: var(--ink2); font-size: 13px; max-width: 86ch; }
+
+  /* ---- H · the hybrid: E's ring on top, C's matrix as the body, B's rows at 390 ---- */
+  .hsum { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .hsum svg { flex: none; }
+  .hread { min-width: 0; flex: 1 1 140px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .hread p { margin: 0; }
+  .hread .big { font-size: 15px; }
+  .hkey { font: 10.5px/1.35 var(--mono); color: var(--ink3); margin: 0; }
+  .hlegend { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: center; font-size: 11px; color: var(--ink2); margin: 0; border-top: 1px solid var(--line); padding-top: 6px; }
+  .slots { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 4px; }
+  .slot { display: flex; align-items: center; gap: 4px; font: 11.5px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+  .slot .none, .tbl .none { color: var(--ink3); }
+  .shead { display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--cols) * 58px); gap: 8px; align-items: end; font-size: 10px; color: var(--ink3); line-height: 1.15; padding: 0 2px 4px; border-bottom: 1px solid var(--line); }
+  .shead .slots span { padding-right: 4px; }
+  .hrows { display: flex; flex-direction: column; }
+  .hrow { padding: 7px 2px; border-bottom: 1px solid var(--line2); display: flex; flex-direction: column; gap: 4px; }
+  .hrow.gaprow { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); }
+  .hrow .top { display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--cols) * 58px); gap: 8px; align-items: center; }
+  .hrow .top .slots, .shead .slots { grid-template-columns: repeat(var(--cols), 58px); gap: 0; }
+  .hrow .cname { font-size: 12.5px; font-weight: 700; }
+  .dword { font: 10.5px/1 var(--mono); color: var(--ink2); white-space: nowrap; }
+  .hline { font: 10.5px/1.3 var(--mono); color: var(--ink2); margin: 0; }
+  .tbl.plain th { font: 11px/1.25 var(--sans); text-transform: none; letter-spacing: 0; color: var(--ink2); vertical-align: bottom; }
+  .tbl.plain td { text-align: left; }
+  .tbl.plain td .names { color: var(--ink3); font-size: 10.5px; }
+  .compare { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .flabel { font: 11px/1 var(--mono); color: var(--ink3); margin: 0 0 4px; }
 </style>
 </head>
 <body>
 <main class="page">
-  <p class="eyebrow">Lo-fi shapes · docs/PATTERNS.md · #3811 slice 2 (sub-issue #4314)</p>
+  <p class="eyebrow">Lo-fi shapes · docs/PATTERNS.md · #3811 slice 2 (sub-issue #4314) · hybrid H added 2026-10-07</p>
   <h1>Where does our attention sit across the market — and what shape says it?</h1>
   <p class="lede">Eric, 2026-09-26: "the research tab shows all the stocks I'm paying attention too. This
     information should be part of a larger visual… this communicates what part of the market we have
     covered and gaps in our portfolio… this has parallels to the calendar showing events over a
-    timespan." Five greybox shapes for a <b>Coverage</b> section of R&amp;D, two viewports, phone first.</p>
+    timespan." Five greybox shapes for a <b>Coverage</b> section of R&amp;D, two viewports, phone first —
+    and a sixth, <b>H</b>, drawn from Eric's reaction to the five on 2026-10-07: no single pick, but
+    "A: a uniform view to compare sectors · B: the most intuitive · C: the visual I like, but the format
+    wasn't clear · E: a high-level read of how balanced or unbalanced our coverage and holdings are." H puts
+    E on top as the balance read, C underneath as the body with plain-word headers, and B's one-row-per-sector
+    as C's phone layout. The page opens on H; <b>Compare → beside C</b> draws it next to its nearest single
+    shape.</p>
 
   <p class="howto">Every count, symbol, fund ticker and date below is <b>real</b> — read out of
     <code>coverageBySector()</code> (<code>src/domain/sector-coverage.ts</code>, shipped in slice 1) and the live
-    event corpus on <b>2026-10-03</b>, <b>with slice 1 (#4496) applied</b> — it is the tree the Coverage
-    section will be built on, and it is the one that files KBH under Consumer Discretionary. Nothing is a
-    placeholder. The one thing that is not a number is the
+    event corpus on <b>2026-10-07</b> (first read on 2026-10-03 for slice 2, re-read for H so all six
+    shapes stand on one set of numbers; the sector counts did not move). Slice 1 (#4496) is on
+    <code>main</code>, which is what files KBH under Consumer Discretionary. Nothing is a placeholder. The one thing that is not a number is the
     sector-fund return: there is no bars source without a member's own linked account, so the no-account
     frames say so in words and the linked frames show a <b>width sample</b> (<span class="mono">▒</span> glyphs) to
     size the slot — never a figure. Vanilla HTML/CSS/JS, no build step, no network. The URL hash is the
-    state (<code>#grid/none/390</code> = shape / account / viewport), so a link lands on a frame.</p>
+    state (<code>#hybrid/none/390</code> = shape / account / viewport, with <code>/vs</code> appended for the
+    side-by-side), so a link lands on a frame.</p>
 
   <nav class="switchers" id="switchers">
     <div class="group">
@@ -148,6 +182,12 @@
       <button class="sw" data-role="shape" data-shape="matrix">C · Coverage matrix</button>
       <button class="sw" data-role="shape" data-shape="treemap">D · Sector treemap</button>
       <button class="sw" data-role="shape" data-shape="ring">E · GICS ring</button>
+      <button class="sw" data-role="shape" data-shape="hybrid">H · Ring over matrix</button>
+    </div>
+    <div class="group">
+      <span class="group-label">Compare</span>
+      <button class="sw" data-role="cmp" data-cmp="off">alone</button>
+      <button class="sw" data-role="cmp" data-cmp="vs">beside its nearest</button>
     </div>
     <div class="group">
       <span class="group-label">Account</span>
@@ -205,6 +245,19 @@
           desk and three on a phone, which is the mobile-first ranking question made concrete: if only one
           number survives the phone, the brief's table has to say which. Drawn at full length deliberately so
           the cost is visible rather than assumed away.</td></tr>
+      <tr><td><b>H answers that ranking: one number survives 390</b> (2026-10-07)</td>
+        <td>the gap to the S&amp;P, 1 month</td>
+        <td>H's phone rows carry only <span class="mono">±#.# pts vs S&amp;P</span>, the number the brief's prompt
+          copy is built on ("XLE +6 pts vs S&amp;P this month"). Desk width adds the return and the volatility.
+          A proposal for slice 3, drawn so it can be rejected by eye.</td></tr>
+      <tr><td><b>The ring's labels fit once they are fund tickers</b> (2026-10-07)</td>
+        <td>11 four-letter labels around a 200px ring at 390</td>
+        <td>E's first objection was the eleven sector names. XLK…XLRE fit where "Consumer Discretionary"
+          could not, and the same ticker starts every row below the ring, so the list is the ring's key.</td></tr>
+      <tr><td><b>H costs half the fold on a phone</b> (2026-10-07)</td>
+        <td>6 of 12 rows above the 900px fold at 390 (4 with a linked account), against all 12 for C</td>
+        <td>Switch Compare to <i>beside its nearest</i>. The ring and its readout cost about 250px; in exchange
+          the three gaps are named <i>above</i> the fold, which no other shape manages at 390.</td></tr>
     </tbody>
   </table>
 
@@ -242,6 +295,16 @@
           drawn on it at all.</td>
         <td>Is the "8 / 11" in the middle worth the space the donut costs? If yes, it is a summary tile
           at the top of another shape, not the shape.</td></tr>
+      <tr><td><b>H · Ring over matrix</b></td>
+        <td>It says the same thing twice: the ring and the matrix are two drawings of one table, and on a
+          phone the ring costs half the fold (6 of 12 rows visible, 4 when linked, against 12 for C). And the balance it shows
+          is breadth, not weight. Eleven equal arcs say how many sectors we touch, not how much of the market's
+          value. That is the treemap's missing-weights objection one layer down. The holdings ring is empty for
+          all eleven today, because the only holding sits outside it.</td>
+        <td>Eric names the three gaps from the ring's readout without scrolling, then finds one fact in the
+          matrix the ring could not tell him (Real Estate's 32 reports). If the matrix adds nothing, drop it to
+          the phone rows alone. If the ring adds nothing the readout didn't, drop the ring and keep the
+          readout.</td></tr>
     </tbody>
   </table>
 
@@ -259,6 +322,10 @@
       <tr><td><b>D</b></td><td>proposes <b>Weighted treemap</b> — expected <i>declined-here</i></td></tr>
       <tr><td><b>E</b></td><td>proposes <b>Sector ring</b> — a spectacle shape, candidate for a summary tile
         elsewhere</td></tr>
+      <tr><td><b>H</b></td><td>composes <b>Sector ring</b> (as the summary tile E's red pass banked),
+        <b>Coverage matrix</b> (the body) and <b>Coverage rows</b> (its phone layout); proposes <b>Slotted
+        rows</b>; uses <b>Absence is named, never dropped</b> (Unclassified named in the readout, since the ring
+        cannot carry it)</td></tr>
     </tbody>
   </table>
   <p class="foot">Ruled out as a precedent before any of these were drawn: <b>Narrative shelves</b>
@@ -274,7 +341,9 @@
     playbook symbols (5). None of them changes which shape wins.</p>
 </main>
 <script>
-/* Real values, 2026-10-03, from coverageBySector() over the live shelf + event corpus.
+/* Real values, 2026-10-07, from coverageBySector() over the live shelf + event corpus (first read
+   2026-10-03 for slice 2; re-read for the hybrid so all six shapes are judged on one set of numbers —
+   the sector counts did not move, three "next dated" items had passed and Energy gained a ledger).
    `researched` = symbols with a ledger. `macro` = macro ledgers attributed to the sector by
    SECTOR_MACRO_SERIES. `upcoming` = dated events ahead that eventInSector() places here.
    `next` = the first of them. `calendar` is empty for every sector today and is kept as a field,
@@ -283,12 +352,12 @@
    into Unclassified, so re-deriving these numbers on a tree without that PR gives 2 researched names
    in Consumer Discretionary, not 3. */
 const SECTORS = [
-  { name: 'Technology', fund: 'XLK', researched: ['AAPL','AVGO','CRWV','MRVL','MSFT','MU','NVDA'], calendar: [], macro: 0, upcoming: 8, next: ['MRVL Investor Day', '2026-10-06'] },
-  { name: 'Communication Services', fund: 'XLC', researched: ['GOOG','META'], calendar: [], macro: 0, upcoming: 2, next: ['GOOG print', '2026-10-28'] },
+  { name: 'Technology', fund: 'XLK', researched: ['AAPL','AVGO','CRWV','MRVL','MSFT','MU','NVDA'], calendar: [], macro: 0, upcoming: 10, next: ['MSFT proxy statement (est.)', '2026-10-22'] },
+  { name: 'Communication Services', fund: 'XLC', researched: ['GOOG','META'], calendar: [], macro: 0, upcoming: 3, next: ['New Mexico v. Meta ruling', '2026-10-20'] },
   { name: 'Healthcare', fund: 'XLV', researched: [], calendar: [], macro: 0, upcoming: 0, next: null },
   { name: 'Financials', fund: 'XLF', researched: [], calendar: [], macro: 0, upcoming: 0, next: null },
-  { name: 'Energy', fund: 'XLE', researched: [], calendar: [], macro: 20, upcoming: 12, next: ['OPEC+ JMMC (68th)', '2026-10-04'] },
-  { name: 'Consumer Discretionary', fund: 'XLY', researched: ['AMZN','KBH','LEN'], calendar: [], macro: 12, upcoming: 14, next: ['Prime Big Deal Days', '2026-10-06'] },
+  { name: 'Energy', fund: 'XLE', researched: [], calendar: [], macro: 21, upcoming: 10, next: ['OPEC Monthly Oil Market Report', '2026-10-13'] },
+  { name: 'Consumer Discretionary', fund: 'XLY', researched: ['AMZN','KBH','LEN'], calendar: [], macro: 12, upcoming: 13, next: ['NAHB Housing Market Index', '2026-10-19'] },
   { name: 'Consumer Staples', fund: 'XLP', researched: ['COST'], calendar: [], macro: 0, upcoming: 0, next: null },
   { name: 'Industrials', fund: 'XLI', researched: [], calendar: [], macro: 4, upcoming: 3, next: ['Construction Spending', '2026-11-02'] },
   { name: 'Utilities', fund: 'XLU', researched: [], calendar: [], macro: 5, upcoming: 4, next: ['PJM IRAS · FERC 205(d)', '2026-10-12'] },
@@ -298,7 +367,7 @@ const SECTORS = [
 /* The fixture book for human-eric holds exactly one position, EEM — an emerging-markets ETF, which
    the GICS directory files under no sector. It lands in Unclassified, counted and named. */
 const HELD_BY_SECTOR = { 'Unclassified': ['EEM'] };
-const AS_OF = '2026-10-03';
+const AS_OF = '2026-10-07';
 const BARS_SAMPLE = '+##.#% · 1M · #.# pts vs S&amp;P · vol ##%';
 
 const held = (name) => state.acct === 'linked' ? (HELD_BY_SECTOR[name] ?? []) : [];
@@ -476,37 +545,208 @@ function shapeRing(wide) {
       for a one-tile summary at the top of another shape, not a shape of its own.</span>`;
 }
 
-const TEMPLATES = { grid: shapeGrid, rows: shapeRows, matrix: shapeMatrix, treemap: shapeTreemap, ring: shapeRing };
+/* ---- H · Ring over matrix — Eric's 2026-10-07 reaction, drawn ----
+   E on top as the balance read, C as the body, B as C's phone layout. Three changes the parts did
+   not have on their own, each answering a red-pass objection above:
+   - The ring is labelled by FUND TICKER, not sector name. Four characters fit around a 390 ring
+     where "Consumer Discretionary" never could (E's first objection), and the same ticker starts
+     every row below, so the ring's key is the list itself.
+   - Rows and arcs share ONE order — depth, then count — so the ring reads clockwise from heavy to
+     faint and its balance is visible before any label is read. The three gaps are named in the
+     readout beside the ring, above the fold (B's objection: the gaps sorted to where nobody looks).
+   - Unclassified, which a ring of eleven cannot carry (E's second objection), is named in the
+     readout and keeps its row below. */
+const RANK = { researched: 0, held: 1, calendar: 2, events: 3, gap: 4 };
+const hybridOrder = () => SECTORS.slice().sort((a, b) =>
+  RANK[depthOf(a)] - RANK[depthOf(b)] || b.researched.length - a.researched.length || b.macro - a.macro || a.name.localeCompare(b.name));
+const linked = () => state.acct === 'linked';
+
+/* Outer ring = research depth per sector (thick solid = researched names, dashed = macro reports
+   only, thin faint = gap), with one tick outside the arc per researched name so 7 vs 1 shows.
+   Inner ring = the viewer's holdings in that sector, drawn only with a linked account. */
+function ringHybrid(size) {
+  const cx = size / 2, cy = size / 2, r = size / 2 - 30, ri = r - 17;
+  const rows = hybridOrder(), step = 360 / rows.length, pad = 2.4;
+  const at = (rad, deg) => {
+    const t = ((deg - 90) * Math.PI) / 180;
+    return [cx + rad * Math.cos(t), cy + rad * Math.sin(t)];
+  };
+  const xy = (p) => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`;
+  const arc = (rad, a0, a1) => `M ${xy(at(rad, a0))} A ${rad} ${rad} 0 0 1 ${xy(at(rad, a1))}`;
+  const parts = rows.map((s, i) => {
+    const d = depthOf(s), a0 = i * step + pad, a1 = (i + 1) * step - pad, mid = (a0 + a1) / 2;
+    const dash = d === 'gap' ? '1.5 4' : d === 'events' ? '7 4' : '';
+    const w = d === 'researched' ? 14 : d === 'events' ? 9 : 5;
+    const out = [`<path d="${arc(r, a0, a1)}" fill="none" stroke="currentColor" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} opacity="${d === 'gap' ? 0.4 : 1}"></path>`];
+    const k = s.researched.length;
+    for (let j = 0; j < k; j++) {
+      const a = k === 1 ? mid : a0 + 2 + ((a1 - a0 - 4) * j) / (k - 1);
+      out.push(`<line x1="${at(r + 9, a)[0].toFixed(2)}" y1="${at(r + 9, a)[1].toFixed(2)}" x2="${at(r + 14, a)[0].toFixed(2)}" y2="${at(r + 14, a)[1].toFixed(2)}" stroke="currentColor" stroke-width="1.5"></line>`);
+    }
+    const [lx, ly] = at(r + 23, mid);
+    out.push(`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace, monospace" font-size="9" fill="currentColor" ${d === 'gap' ? 'opacity="0.7"' : ''}>${s.fund}</text>`);
+    if (linked()) {
+      const h = held(s.name).length;
+      out.push(`<path d="${arc(ri, a0, a1)}" fill="none" stroke="currentColor" stroke-width="${h ? 6 : 1.5}" ${h ? '' : 'stroke-dasharray="1 3" opacity="0.45"'}></path>`);
+    }
+    return out.join('');
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${coveredCount()} of 11 GICS sectors covered">
+    ${parts}
+    <text x="${cx}" y="${cy - 2}" text-anchor="middle" font-family="ui-monospace, monospace" font-size="${(size / 7.5).toFixed(0)}" font-weight="700" fill="currentColor">${coveredCount()}/11</text>
+    <text x="${cx}" y="${(cy + size / 13).toFixed(0)}" text-anchor="middle" font-family="ui-monospace, monospace" font-size="9" fill="currentColor" opacity="0.7">covered</text>
+  </svg>`;
+}
+
+function hybridSummary(wide) {
+  const gaps = SECTORS.filter(s => depthOf(s) === 'gap').map(s => s.name);
+  const heldIn = SECTORS.filter(s => held(s.name).length).length;
+  const outside = HELD_BY_SECTOR[UNCL] ?? [];
+  const holdings = linked()
+    ? `<p><b>Holdings:</b> ${heldIn} of 11 sectors${outside.length ? ` · ${outside.length} outside all of them (${outside.join(', ')} — Unclassified)` : ''}</p>`
+    : '<p><b>Holdings:</b> link an account to see them on the inner ring</p>';
+  return `<div class="hsum">
+      ${ringHybrid(wide ? 260 : 200)}
+      <div class="hread">
+        <p class="big"><b>${coveredCount()} of 11</b> sectors covered</p>
+        <p>${byName()} by researched names · ${byMacroOnly()} by macro reports only</p>
+        <p><b>${gaps.length} gaps:</b> ${gaps.join(', ')}</p>
+        ${holdings}
+        <p class="hkey">ring = the list below, clockwise from the top · thick: names researched, a tick each · dashed: macro only · faint: gap${linked() ? ' · inner: you hold' : ''}</p>
+      </div>
+    </div>`;
+}
+
+const UNCL = 'Unclassified';
+function hybridCols() {
+  return [
+    { head: 'researched', wide: 'Researched names', n: s => s.researched.length, mark: '<span class="dot"></span>', names: s => s.researched },
+    { head: 'on calendar', wide: 'On the calendar, not yet researched', n: s => s.calendar.length, mark: '<span class="ring"></span>', names: s => s.calendar },
+    ...(linked() ? [{ head: 'you hold', wide: 'You hold', n: s => held(s.name).length, mark: '<span class="sq"></span>', names: s => held(s.name) }] : []),
+    { head: 'macro reports', wide: 'Macro reports about the sector', n: s => s.macro, mark: '<span class="dring"></span>', names: () => [] },
+  ];
+}
+function hybridLegend() {
+  return `<p class="hlegend"><span>Each column counts one kind of coverage:</span>
+    <span class="mk"><span class="dot"></span><span class="mkword">a ledger we wrote</span></span>
+    <span class="mk"><span class="ring"></span><span class="mkword">dated, no ledger yet</span></span>
+    ${linked() ? '<span class="mk"><span class="sq"></span><span class="mkword">in your positions</span></span>' : ''}
+    <span class="mk"><span class="dring"></span><span class="mkword">a macro report about it</span></span>
+    <span class="mk"><span class="none">—</span><span class="mkword">none</span></span>
+    <span class="mk"><span class="hatchmark"></span><span class="mkword">a gap</span></span></p>`;
+}
+
+function shapeHybrid(wide) {
+  const cols = hybridCols();
+  const rows = hybridOrder().concat([{ name: UNCL, fund: null, researched: [], calendar: [], macro: 0, upcoming: 0, next: null }]);
+  const slot = (c, s) => c.n(s) ? `<span class="slot">${c.mark}${c.n(s)}</span>` : '<span class="slot none">—</span>';
+  const note = linked()
+    ? 'Linked: the inner ring and the "you hold" column come from the viewer\'s own broker read; the fund line is a WIDTH SAMPLE sizing the slot, never a quote.'
+    : 'No linked account: no holdings column and no sector-fund number — absent, not shown as zero. Everything else needs no broker.';
+  if (!wide) {
+    /* Phone: B's one row per sector, with C's columns kept as fixed slots in the same place on every
+       row — so a column still scans straight down, which is what A's uniform grid was for. Of the
+       brief's four fund numbers only one survives 390: the gap to the S&P, the one the prompt copy
+       ("XLE +6 pts vs S&P") is built on. Desk width adds the rest. */
+    const row = (s) => {
+      const gap = s.fund && depthOf(s) === 'gap';
+      const lines = [];
+      const names = s.researched.length ? s.researched : held(s.name);
+      if (names.length) lines.push(names.join(' · '));
+      if (gap) lines.push('<b>gap</b> — no coverage');
+      else if (s.fund) lines.push(s.next ? `next: ${s.next[0]} · ${s.next[1]}` : 'next: nothing dated ahead');
+      else lines.push('not a GICS sector — counted here, never dropped');
+      if (s.fund && linked()) lines.push(`${s.fund} ±#.# pts vs S&amp;P · 1M <i>width sample</i>`);
+      return `<div class="hrow${gap ? ' gaprow' : ''}" style="--cols:${cols.length}">
+        <div class="top"><span class="cname">${s.name} <span class="cfund">${s.fund ?? ''}</span></span><span class="slots">${cols.map(c => slot(c, s)).join('')}</span></div>
+        ${lines.map(l => `<p class="hline">${l}</p>`).join('')}
+      </div>`;
+    };
+    return `${headLite()}
+      ${hybridSummary(false)}
+      ${hybridLegend()}
+      <div class="hrows">
+        <div class="shead" style="--cols:${cols.length}"><span>sector</span><span class="slots">${cols.map(c => `<span>${c.head}</span>`).join('')}</span></div>
+        ${rows.map(row).join('')}
+      </div>
+      <span class="meta">${note} At 390 each row keeps the matrix's columns as fixed slots beside the name, so "researched" is always the first slot and scans straight down.</span>`;
+  }
+  /* Desk: C proper — plain-word headers, the names written into the cell, then the room desk width
+     adds: the next dated item and the full fund line. */
+  const cell = (c, s) => {
+    const n = c.n(s);
+    if (!n) return '<span class="none">—</span>';
+    const nm = c.names(s);
+    return `<span class="mk">${c.mark}<span class="mkword">${n}</span></span>${nm.length ? ` <span class="names">${nm.join(' ')}</span>` : ''}`;
+  };
+  const row = (s) => `<tr class="${s.fund && depthOf(s) === 'gap' ? 'gaprow' : ''}">
+      <td><b>${s.name}</b> <span class="cfund">${s.fund ?? ''}</span>${s.fund && depthOf(s) === 'gap' ? '<br><span class="dword">gap — no coverage</span>' : ''}${s.fund ? '' : '<br><span class="dword">not a GICS sector</span>'}</td>
+      ${cols.map(c => `<td>${cell(c, s)}</td>`).join('')}
+      <td>${s.fund && s.next ? `${s.next[0]}<br><span class="names">${s.next[1]}</span>` : '<span class="none">—</span>'}</td>
+      <td>${s.fund ? (linked() ? BARS_SAMPLE : '<span class="none">no data</span>') : '<span class="none">—</span>'}</td>
+    </tr>`;
+  return `${headLite()}
+    ${hybridSummary(true)}
+    ${hybridLegend()}
+    <div class="tw"><table class="tbl plain">
+      <thead><tr><th>Sector</th>${cols.map(c => `<th>${c.wide}</th>`).join('')}<th>Next dated item</th><th>Sector fund, last month${linked() ? '' : ' (needs a linked account)'}</th></tr></thead>
+      <tbody>${rows.map(row).join('')}</tbody>
+    </table></div>
+    <span class="meta">${note} Desk width adds the names inside each cell, the next dated item and the full fund line — room, not new concepts.</span>`;
+}
+/* H carries its own readout beside the ring, so it takes the title and section switch only. */
+function headLite() {
+  return `<p class="ftitle">R&amp;D</p>
+    <div class="secsw"><span>Board</span><span class="on">Coverage</span><span>Playbooks</span></div>
+    <p class="sub">as of ${AS_OF} · tap a sector — an arc or a row — to add <span class="mono">sector:&lt;name&gt;</span> to the Board query</p>`;
+}
+
+const TEMPLATES = { grid: shapeGrid, rows: shapeRows, matrix: shapeMatrix, treemap: shapeTreemap, ring: shapeRing, hybrid: shapeHybrid };
 const NAMES = {
   grid: 'A · <b>Calendar twin grid</b> — sector tiles drawn in the month grid\'s own marks; a tap filters the Board the way a day does. The lead: it makes "parallels to the calendar" a mechanic, not a look-alike.',
   rows: 'B · <b>Coverage rows</b> — one row per sector, read straight down: name · fund · marks · one metric. Gaps say "no coverage" in words. Candidate as A\'s detail fold.',
   matrix: 'C · <b>Coverage matrix</b> — sectors × four counted mark columns; desk width adds the fund window and the next dated event.',
   treemap: 'D · <b>Sector treemap</b> — equal tiles, because index weights have no source here. Drawn to show why it is expected to be declined.',
   ring: 'E · <b>GICS ring</b> — 11 arcs, thickness = depth, "8/11" in the middle. A spectacle shape; the labels do not fit at 390.',
+  hybrid: 'H · <b>Ring over matrix</b> — Eric\'s 2026-10-07 reaction, drawn: E\'s ring on top as the balance read (now labelled by fund ticker, which fits), C\'s matrix as the body with plain-word headers and a one-line legend, and B\'s one-row-per-sector as the phone layout with C\'s columns kept as fixed slots. Its nearest single shape is C — Compare draws them side by side.',
 };
-const state = { shape: 'grid', acct: 'none', vp: 390 };
+/* The single shape each frame is judged against in Compare: H against C (its body); any other shape
+   against H, so every comparison is "this one, or the hybrid?". */
+const NEAREST = { hybrid: 'matrix' };
+const state = { shape: 'hybrid', acct: 'none', vp: 390, cmp: 'off' };
+function frame(shape, wide) {
+  const fh = wide ? 760 : 900;
+  const body = `<div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">${wide ? 'Leaderboard · Profile · Trade · Activity · <u>R&amp;D</u>' : '☰ <u>R&amp;D</u>'}</span></div>
+    <p class="fcap">/app/research?section=coverage · ${wide ? 'desk' : 'phone'} · account: ${state.acct === 'linked' ? 'linked' : 'none'}</p>
+    <div class="fbody">${TEMPLATES[shape](wide)}
+      <div class="qbar">filter — sector:energy · sym:NVDA · kind:opex · lens:month</div>
+      <p class="why">a tap on a sector writes <span class="mono">sector:&lt;name&gt;</span> into the same query the chips write — one model, two carriers</p>
+    </div>`;
+  return `<div class="frame" data-fold="${fh}" style="--fw:${state.vp}px;--fh:${fh}px">${body}</div>`;
+}
 function render() {
   document.querySelectorAll('.sw[data-role="shape"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === state.shape)));
   document.querySelectorAll('.sw[data-role="acct"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.acct === state.acct)));
   document.querySelectorAll('.sw[data-role="vp"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vp) === state.vp)));
+  document.querySelectorAll('.sw[data-role="cmp"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cmp === state.cmp)));
   document.getElementById('shape-name').innerHTML = NAMES[state.shape];
   const wide = state.vp === 1280;
-  const fh = wide ? 760 : 900;
-  const body = `<div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">${wide ? 'Leaderboard · Profile · Trade · Activity · <u>R&amp;D</u>' : '☰ <u>R&amp;D</u>'}</span></div>
-    <p class="fcap">/app/research?section=coverage · ${wide ? 'desk' : 'phone'} · account: ${state.acct === 'linked' ? 'linked' : 'none'}</p>
-    <div class="fbody">${TEMPLATES[state.shape](wide)}
-      <div class="qbar">filter — sector:energy · sym:NVDA · kind:opex · lens:month</div>
-      <p class="why">a tap on a sector writes <span class="mono">sector:&lt;name&gt;</span> into the same query the chips write — one model, two carriers</p>
-    </div>`;
-  document.getElementById('stage').innerHTML =
-    `<div class="frame" data-fold="${fh}" style="--fw:${state.vp}px;--fh:${fh}px">${body}</div>`;
-  const hash = `#${state.shape}/${state.acct}/${state.vp}`;
+  const letter = (k) => NAMES[k].slice(0, 1);
+  if (state.cmp === 'vs') {
+    const other = NEAREST[state.shape] ?? 'hybrid';
+    const pair = state.shape === 'hybrid' ? ['hybrid', other] : [state.shape, 'hybrid'];
+    document.getElementById('stage').innerHTML = `<div class="compare">${pair.map(k =>
+      `<div><p class="flabel">${letter(k)} · ${NAMES[k].match(/<b>([^<]*)<\/b>/)[1]}</p>${frame(k, wide)}</div>`).join('')}</div>`;
+  } else {
+    document.getElementById('stage').innerHTML = frame(state.shape, wide);
+  }
+  const hash = `#${state.shape}/${state.acct}/${state.vp}${state.cmp === 'vs' ? '/vs' : ''}`;
   if (location.hash !== hash) history.replaceState(null, '', hash);
 }
 function readHash() {
-  const m = /^#(grid|rows|matrix|treemap|ring)\/(none|linked)\/(390|1280)$/.exec(location.hash);
+  const m = /^#(grid|rows|matrix|treemap|ring|hybrid)\/(none|linked)\/(390|1280)(\/vs)?$/.exec(location.hash);
   if (!m) return false;
-  state.shape = m[1]; state.acct = m[2]; state.vp = Number(m[3]);
+  state.shape = m[1]; state.acct = m[2]; state.vp = Number(m[3]); state.cmp = m[4] ? 'vs' : 'off';
   return true;
 }
 document.getElementById('switchers').addEventListener('click', e => {
@@ -514,6 +754,7 @@ document.getElementById('switchers').addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.role === 'shape') state.shape = b.dataset.shape;
   else if (b.dataset.role === 'acct') state.acct = b.dataset.acct;
+  else if (b.dataset.role === 'cmp') state.cmp = b.dataset.cmp;
   else state.vp = Number(b.dataset.vp);
   render();
 });
