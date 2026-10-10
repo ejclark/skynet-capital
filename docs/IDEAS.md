@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Re-baseline in CI on a label, so a visual PR never needs the round trip.** CI already holds
+  every actual. A `rebaseline` label on a PR whose only red is screenshot mismatches would run
+  `scripts/rebaseline-from-ci.mjs`'s classifier on the run, copy the actuals and push one commit —
+  still refusing logic failures and new snapshots, and still asking a human to read the diffs
+  first (the label is that read). Lives in `.github/workflows/` (protected, `envelope.json`), so it
+  boards the platter as a proposal, never a lane edit.
+  _(src: Claude · while: retro on #5079/#5080 red first runs)_
+
 - **Let a drawing keep an approval an approval.** Since the steering page asks nothing without a
   picture, an approve or fork row reaches it only through a design manifest — which makes it a
   design question, so a plan's Approve → ready line and a skipped approval's default no longer
