@@ -1,0 +1,614 @@
+/* The decisions page (#5056). Layout: one reading column, phone first; each decision reads as a
+   before/after run (Today, then every option in the same row shape) and widens to picture + side
+   panel at 861px; one fixed bar carries the save state and Done. Tokens are docs/BRAND.md's: the
+   app's dark ground first, its light column under prefers-color-scheme and data-theme. Pressed
+   states never rely on colour: each carries a glyph, and most a border or strike as well. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0f14;
+  --surface: #131a22;
+  --surface-2: #0f151c;
+  --border: #223041;
+  --text: #e6edf3;
+  --muted: #8b9aab;
+  --accent: #35d0ba;
+  --accent-contrast: #04302b;
+  /* accent as TEXT: teal reads 3.2:1 on the light ground, so light mode inks it deeper */
+  --ink: #35d0ba;
+  --warm: #ffc24d;
+  --bar: rgba(15, 21, 28, 0.96);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f7f9fb;
+    --surface: #ffffff;
+    --surface-2: #f0f4f8;
+    --border: #dce3ea;
+    --text: #0b0f14;
+    --muted: #5a6b7b;
+    --accent: #0e9f8c;
+    --accent-contrast: #032420;
+    --ink: #0a5f54;
+    --warm: #8a5300;
+    --bar: rgba(247, 249, 251, 0.96);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f9fb;
+  --surface: #ffffff;
+  --surface-2: #f0f4f8;
+  --border: #dce3ea;
+  --text: #0b0f14;
+  --muted: #5a6b7b;
+  --accent: #0e9f8c;
+  --accent-contrast: #032420;
+  --ink: #0a5f54;
+  --warm: #8a5300;
+  --bar: rgba(247, 249, 251, 0.96);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Two classes deep, so a revealed note's own `display: flex` never beats `hidden`. */
+.page [hidden],
+.bar [hidden] {
+  display: none;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px / 1.55 var(--sans);
+  margin: 0;
+}
+.page {
+  box-sizing: border-box;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 24px 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.page * {
+  box-sizing: border-box;
+}
+section,
+header {
+  min-width: 0;
+}
+h1 {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 0;
+  text-wrap: balance;
+}
+h3 {
+  font-size: 17px;
+  line-height: 1.35;
+  margin: 0;
+  text-wrap: balance;
+}
+p {
+  margin: 0;
+}
+a {
+  color: var(--text);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+a:focus-visible,
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.eyebrow {
+  font: 600 11px / 1.3 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.muted,
+.lede {
+  color: var(--muted);
+}
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 70ch;
+}
+.halt {
+  border: 2px solid var(--warm);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+.halt::before {
+  content: "⏸ ";
+}
+.toc {
+  margin: 4px 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.toc .meta {
+  color: var(--muted);
+  font: 12px var(--mono);
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+}
+
+/* What shipped */
+.pairs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.kind {
+  font: 600 11px var(--mono);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ship {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.ship .row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.shiplist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.because {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  font-size: 14px;
+}
+.because::before {
+  content: "Because you said: ";
+  font-weight: 600;
+}
+.counts {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Decisions */
+.dec {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 24px;
+}
+.dhead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 72ch;
+}
+.ask {
+  color: var(--muted);
+}
+.recline b {
+  color: var(--ink);
+}
+.changes {
+  border-left: 3px solid var(--warm);
+  padding: 4px 0 4px 10px;
+}
+.skip {
+  font-size: 14px;
+  color: var(--muted);
+}
+.skip b {
+  color: var(--text);
+}
+.opts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.opt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+.opt.today {
+  background: var(--surface-2);
+  border-style: dashed;
+}
+.pics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.shot {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  max-width: 100%;
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.shot.phone {
+  flex: 0 1 240px;
+}
+.shot.desk {
+  flex: 1 1 100%;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.oname {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.delta b {
+  color: var(--muted);
+}
+.okey {
+  display: block;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.today .okey {
+  color: var(--warm);
+}
+.tag {
+  font: 600 11px var(--sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--accent);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.tag.plain {
+  border-color: var(--border);
+  color: var(--muted);
+}
+details.ev {
+  max-width: 80ch;
+  color: var(--muted);
+}
+details.ev summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+.gh {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+}
+.gh a {
+  font-weight: 600;
+}
+.gh a::after {
+  content: " ↗";
+}
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 80ch;
+  font-size: 13px;
+  color: var(--muted);
+}
+.note textarea,
+.note input {
+  font: 14px / 1.45 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+/* Reaction buttons — a pressed state is a glyph plus a border or strike, never a colour alone. */
+.btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rb {
+  font: 600 13px var(--sans);
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 12px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.rb:hover {
+  border-color: var(--muted);
+}
+.rb:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.rb[aria-pressed="true"] {
+  border-width: 3px;
+  padding: 5px 10px;
+}
+.rb[data-v="build"][aria-pressed="true"],
+.rb[data-v="approve"][aria-pressed="true"],
+.rb[data-v="done"][aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.rb[data-v="build"][aria-pressed="true"]::before,
+.rb[data-v="approve"][aria-pressed="true"]::before,
+.rb[data-v="done"][aria-pressed="true"]::before {
+  content: "✓ ";
+}
+.rb[data-v="more"][aria-pressed="true"],
+.rb[data-v="bump"][aria-pressed="true"],
+.rb[data-v="revisit"][aria-pressed="true"] {
+  border-style: double;
+  border-color: var(--accent);
+}
+.rb[data-v="more"][aria-pressed="true"]::before {
+  content: "+ ";
+}
+.rb[data-v="bump"][aria-pressed="true"]::before {
+  content: "↑ ";
+}
+.rb[data-v="revisit"][aria-pressed="true"]::before {
+  content: "↺ ";
+}
+.rb[data-v="not"][aria-pressed="true"],
+.rb[data-v="veto"][aria-pressed="true"] {
+  border-color: var(--warm);
+  text-decoration: line-through;
+}
+.rb[data-v="not"][aria-pressed="true"]::before,
+.rb[data-v="veto"][aria-pressed="true"]::before {
+  content: "× ";
+}
+.rb[data-v="hold"][aria-pressed="true"] {
+  border-style: dashed;
+  border-color: var(--warm);
+}
+.rb[data-v="hold"][aria-pressed="true"]::before {
+  content: "‖ ";
+}
+
+/* Queue */
+.queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.qi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+.qi .row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.num {
+  font: 600 13px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* The 14-day strip: day blocks solid, night blocks hatched, so the split never rests on hue. */
+.chart {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 4px;
+  align-items: end;
+  height: 120px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 2px;
+  height: 100%;
+  min-width: 0;
+}
+.col .n {
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text);
+}
+.seg {
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+}
+.seg.day {
+  background: var(--accent);
+}
+.seg.night {
+  background: repeating-linear-gradient(135deg, var(--accent) 0 2px, transparent 2px 5px);
+}
+.col .d {
+  font: 11px var(--mono);
+  text-align: center;
+  color: var(--muted);
+}
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+  align-items: center;
+}
+.key {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.fact {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+.fact b {
+  display: block;
+  font: 600 22px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bar */
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bar);
+  border-top: 1px solid var(--border);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 10;
+}
+.bar output {
+  flex: 1 1 0;
+  min-width: 0;
+  font: 12px / 1.4 var(--mono);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.bar .ghost {
+  font: 600 13px var(--sans);
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.bar .rb[data-v="done"] {
+  border-radius: 8px;
+  padding-inline: 18px;
+  font-size: 14px;
+}
+
+@media (min-width: 861px) {
+  .page {
+    padding-inline: 32px;
+  }
+  .pairs {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  .opt {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+  .pics {
+    flex-wrap: nowrap;
+  }
+  .shot.phone {
+    flex: 0 0 min(40%, 240px);
+  }
+  .shot.desk {
+    flex: 1 1 auto;
+  }
+  .shiplist .ship {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .shiplist .ship .row {
+    flex: 1 1 420px;
+  }
+  .shiplist .ship .reveal {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

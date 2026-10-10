@@ -26,11 +26,11 @@
 //     (every word must appear in title or body; --label filters; newest first)
 //   node scripts/issues.mjs show 123 [--json]
 //
-// Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
+// Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket), else `gh auth token` (ensureGhToken). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
 import { readFileSync } from "node:fs";
 import { lintIssue } from "./issue-lint.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
-import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
 
@@ -332,6 +332,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(2);
   }
   try {
+    ensureGhToken();
     run(args);
   } catch (err) {
     console.error(`issues: ${err.stderr || err.message}`);

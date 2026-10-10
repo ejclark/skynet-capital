@@ -57,6 +57,52 @@ describe("deskView", () => {
     expect(aapl?.totalPl.startsWith("+") || aapl?.totalPl.startsWith("-")).toBe(true);
   });
 
+  // #5059 (Eric's row spec, #5037): a sold option's return is measured against the premium it
+  // collected, as a broker's statement prints it. Over a negative cost basis it read "—", so the
+  // phone card's second line had a total and no return. The profile world's put: $255 in, $550
+  // to buy back.
+  it("measures a sold option's return against the premium collected", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "CRWV261106P00080000", quantity: -1, avgPrice: 255, marketValue: -550 },
+        ],
+      }),
+    );
+    expect(view.positions[0]).toMatchObject({
+      totalPl: "-$295",
+      totalTone: "neg",
+      returnPct: "-116%",
+    });
+  });
+
+  // Past ±100% the hundredths are noise, and on the phone card they push the size line onto a
+  // second row (#5059). Under it they stay: "+3.63%".
+  it("rounds a return past 100% to the whole percent", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AMD261120C00180000", quantity: 2, avgPrice: 200, marketValue: 1_024 },
+        ],
+      }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("+156%");
+  });
+
+  it("keeps a bought position's return against what it cost", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[0]?.returnPct).toBe(
+      `+${((42_930 / (200 * 189.2) - 1) * 100).toFixed(2)}%`,
+    );
+  });
+
+  it("reads a position with no cost basis as having no return, never a made-up one", () => {
+    const view = deskView(
+      snapshot({ positions: [{ symbol: "AAPL", quantity: 10, avgPrice: 0, marketValue: 2_300 }] }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("—");
+  });
+
   it("keeps an errored account honest — zeros stay absent, the error rides along", () => {
     const view = deskView(snapshot({ positions: [], error: "account unreachable" }));
     expect(view.error).toBe("account unreachable");
