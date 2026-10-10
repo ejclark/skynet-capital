@@ -1,0 +1,410 @@
+/* THE PROFILE HEAD'S THREE ROWS (#5072 — Level 2 of #5037 round 2): `shell/cockpit-head.tsx`
+ * (the account row), `head-vitals.tsx` (the vitals line), `account-menu.tsx` (the menu under the
+ * name) and the switch's "More ▾" (`section-switch.tsx`). The box and the switch's buttons are
+ * `cockpit.css`'s.
+ *
+ * Each row has ONE height on every section and every account — 38 · 34 · 38 — so a tap on a
+ * section or an account never moves the switch (Eric, round 1: "uniform structure… prevents
+ * content shift to retain focus"). Rows never wrap; what a phone has no room for leaves by rule
+ * (the bot's detail, today's percent, the cash amount), never by overflow.
+ *
+ * Hue never carries a meaning alone (a standing reader is red/green colourblind): the day move is
+ * a ▲/▼ and a sign beside its tone, the cash bar's parts are solid and hatched with the word
+ * "cash", the current account and section carry a bar or an underline, and the bot's state is a
+ * glyph and a word. Tokens only. */
+
+/* 1 · the account row */
+.head-account {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  min-width: 0;
+}
+.head-account .chip,
+.head-account .env-pill {
+  flex: none;
+}
+.head-note {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.head-note b {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+/* the account's name, which is the menu's button: an underline while it is open */
+/* the name outranks the bot's status for the row's room: it keeps its width up to half the row */
+.acct-menu-wrap {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 50%;
+}
+.acct-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 2px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.acct-menu-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acct-menu-chev {
+  flex: none;
+  display: grid;
+  color: var(--muted);
+}
+.acct-menu-btn[aria-expanded="true"] {
+  border-bottom-color: var(--accent);
+}
+.acct-menu-btn[aria-expanded="true"] .acct-menu-chev {
+  transform: rotate(180deg);
+}
+
+/* the menu: hangs from the name, as wide as a phone allows */
+.acct-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 24px));
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--elev-overlay);
+}
+.acct-menu-eyebrow {
+  margin: 6px 14px 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.acct-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* the account in view: a bar down its edge and a filled mark (an empty ring for the others) */
+.acct-menu-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border-left: 3px solid transparent;
+}
+.acct-menu-row[data-current] {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.acct-menu-pick {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px 0 11px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.acct-menu-mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.acct-menu-row[data-current] .acct-menu-mark {
+  background: var(--accent);
+  box-shadow: none;
+}
+.acct-menu-kind {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.acct-menu-default {
+  flex: none;
+  min-height: 36px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.acct-menu-default[aria-pressed="true"] {
+  color: var(--text);
+}
+.acct-menu-default:hover {
+  background: var(--surface-2);
+}
+.acct-menu-items {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.acct-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 14px;
+  color: var(--text);
+  font-size: 14px;
+  text-decoration: none;
+}
+.acct-menu-item:hover {
+  background: var(--surface-2);
+}
+.acct-menu-glyph {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  color: var(--muted);
+}
+.acct-menu-item-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.acct-menu-item-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* a bot's status: a plain link at the row's right edge — the glyph and the word say the state */
+.head-bot {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 32px;
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.head-bot-glyph {
+  margin-right: 4px;
+}
+.head-bot b {
+  font-weight: 600;
+  color: var(--text);
+}
+.head-bot:hover .head-bot-count {
+  text-decoration: underline;
+}
+.head-bot-detail {
+  color: var(--muted);
+}
+
+/* 2 · the vitals line: net worth · today · cash, on the number's baseline */
+.head-vitals {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  box-sizing: border-box;
+  height: 34px;
+  margin: 0;
+  padding: 4px 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+.head-worth {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.head-day {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.head-day-word {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.head-cash {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.head-cash b {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--text);
+}
+/* one whole in two parts: invested solid, cash hatched, an outline that holds 3:1 on the ground */
+.head-cash-bar {
+  display: inline-flex;
+  width: 140px;
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.head-cash-in {
+  flex: none;
+  width: var(--invested);
+  min-width: 6px;
+  background: var(--accent);
+  border-right: 1.5px solid var(--bg);
+}
+.head-cash-bar[data-all-cash] .head-cash-in {
+  display: none;
+}
+.head-cash-idle {
+  flex: 1;
+  background: repeating-linear-gradient(135deg, var(--muted) 0 1.5px, transparent 1.5px 4px);
+}
+.head-vitals--note {
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 3 · the switch: one height, and on a phone four sections and "More ▾" */
+.cockpit-head .cockpit-nav {
+  height: 38px;
+}
+.cockpit-nav[data-folds] {
+  overflow: visible;
+}
+.cockpit-nav-divide {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
+  background: var(--border);
+}
+.cockpit-nav-more {
+  position: relative;
+  display: flex;
+  margin-left: auto;
+}
+.cockpit-nav-more-btn[data-current] {
+  color: var(--accent);
+  text-shadow: 0 0 0.35px currentColor;
+  border-bottom-color: var(--accent);
+}
+.cockpit-nav-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cockpit-nav-chev {
+  display: grid;
+  color: var(--muted);
+}
+.cockpit-nav-more-btn[aria-expanded="true"] .cockpit-nav-chev {
+  transform: rotate(180deg);
+}
+.cockpit-nav-more-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--elev-overlay);
+}
+.cockpit-nav-more-item {
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.cockpit-nav-more-item:hover {
+  background: var(--surface-2);
+}
+.cockpit-nav-more-item[aria-pressed="true"] {
+  border-left-color: var(--accent);
+  background: var(--surface-2);
+}
+
+/* A phone curates: the bot's last check, today's percent and the cash amount step aside (one tap
+ * away, in Heartbeat and the Overview), the bar shortens and the switch's buttons close up. A wider
+ * head only adds that room back — never a new concept. */
+@media (max-width: 700px) {
+  .head-bot-detail,
+  .head-day-pct,
+  .head-cash-amount {
+    display: none;
+  }
+  /* the count rides "Running"; a stopped or waiting bot's longer word keeps the row instead */
+  .head-bot:not([data-state="beating"]) .head-bot-count {
+    display: none;
+  }
+  .head-worth {
+    font-size: 18px;
+  }
+  .head-cash-bar {
+    width: 44px;
+  }
+  .cockpit-head .cockpit-nav-btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .cockpit-head .cockpit-nav > .cockpit-nav-btn:first-of-type {
+    padding-left: 0;
+  }
+  .cockpit-head .cockpit-nav-more-btn {
+    padding-right: 0;
+  }
+}

@@ -18,10 +18,13 @@ import { ShadowProbes } from "./shadow-probes";
 import { useDismiss } from "./use-dismiss";
 
 /**
- * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a chip in the account
- * header that answers "is it alive?" on every tab, and a Heartbeat section with the detail. Both
- * read one query, refreshed at the replication poll's own 30s rhythm (a faster refetch can't see
- * newer passes than the bots process has sent).
+ * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a line in the account
+ * head that answers "is it alive?" on every tab, and a Heartbeat section with the detail. All read
+ * one query, refreshed at the replication poll's own 30s rhythm (a faster refetch can't see newer
+ * passes than the bots process has sent). The Profile head says it as a plain link into the
+ * section (`useHeartbeatStatus`, #5072 — round 2 of #5037: no popover, the detail belongs in the
+ * main window); `/u/:id`'s head still wears the chip with its popover until that head takes the
+ * same rows.
  */
 
 const REFRESH_MS = 30_000;
@@ -135,6 +138,29 @@ function StateText({ heartbeat }: { readonly heartbeat: Heartbeat }): ReactEleme
       {heartbeat.halted ? ` · halted: ${heartbeat.halted}` : ""}
     </>
   );
+}
+
+/** What the Profile page's head says about a bot (#5072): its state as a glyph and a word, the
+ *  one fact behind it, and how many playbooks it runs — or null until there is something true to
+ *  say. The count is the roll call's "On" lines where the owner can see them (#4450), else the
+ *  playbooks that concluded on the last pass. */
+export interface HeartbeatStatus {
+  readonly state: Heartbeat["state"];
+  readonly glyph: string;
+  readonly word: string;
+  readonly detail: string;
+  readonly playbooks: number | undefined;
+}
+
+export function useHeartbeatStatus(deskId: string): HeartbeatStatus | null {
+  const query = useHeartbeat(deskId);
+  if (!query.data?.available) return null;
+  const { heartbeat } = query.data;
+  const line = heartbeatLine(heartbeat);
+  const playbooks = heartbeat.rollCall
+    ? heartbeat.rollCall.filter((l) => l.status === "armed").length
+    : heartbeat.playbooks?.length;
+  return { state: heartbeat.state, ...line, playbooks };
 }
 
 /** Shape A — the header chip. Renders nothing until there is something true to say. */

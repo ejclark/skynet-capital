@@ -50,13 +50,15 @@ describe("heartbeatLine — a glyph and a word for every state, never hue alone"
     expect(line.detail).not.toMatch(/idle/);
   });
 
-  it("market-closed names the last check, and leaves the open time to the topbar clock", () => {
+  it("market-closed says what the bot does, names the last check, and leaves the market's state and open time to the top bar", () => {
     const line = heartbeatLine(hb({ state: "market-closed", sinceLastPassMs: 16 * 3_600_000 }));
     expect(line).toMatchObject({
       glyph: "◐",
-      word: "Market closed",
+      word: "Waiting for the open",
       detail: "last check 16h ago",
     });
+    // #5072: never a second market badge beside the top bar's — no "Market closed" here
+    expect(line.word).not.toMatch(/market closed/i);
     expect(line.detail).not.toMatch(/open/i);
   });
 

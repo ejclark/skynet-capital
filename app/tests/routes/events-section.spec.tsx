@@ -136,8 +136,8 @@ rstest.mock("../../src/live/research", () => ({
   fetchResearchCalendar: () => Promise.resolve(RESEARCH),
 }));
 rstest.mock("../../src/shell/heartbeat", () => ({
-  HeartbeatChip: () => null,
   HeartbeatSection: () => null,
+  useHeartbeatStatus: () => null,
 }));
 rstest.mock("../../src/shell/accounts-overview-section", () => ({
   OverviewSection: ({

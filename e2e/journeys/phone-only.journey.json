@@ -11,11 +11,11 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the cockpit at 390: the account switcher, the section switch as a row",
+          "sees": "the cockpit at 390: the account's name, the section switch as a row that fits — the sections with no room one tap under More ▾, never past the screen's edge (#5072)",
           "ears": "WHEN the cockpit renders at 390px, the app shall keep every section reachable without horizontal page scroll.",
           "expect": [
             { "role": "button", "name": "Overview" },
-            { "role": "link", "name": "Add an account" }
+            { "role": "button", "name": "Account:", "within": ".cockpit-head" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
         },

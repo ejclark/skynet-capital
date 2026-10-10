@@ -97,8 +97,9 @@ export const FROZEN_DIFF_RATIO = 0.002;
 
 /**
  * The topbar market clock, asserted on its own at a FIXED size on every whole-frame page (#4094).
- * Since #5037 round 2 the clock is the status line (`.status-line`, "Open · 6h left" at
- * FIXED_CLOCK); the full track opens in place on a tap and is not part of any baseline.
+ * Since #5037 round 2 the clock is the status line (`.status-line`: since #5075 the clock strip
+ * made compact, "MARKET OPEN · 6h left" over the session's track at FIXED_CLOCK); the full clock
+ * opens in place on a tap and is not part of any baseline.
  *
  * WHY (measured 2026-09-30). The whole-frame ratio above scales with page height (resized to content,
  * 1,843–6,215 px of budget across the suite), while a wrong market state is a fixed-size change in

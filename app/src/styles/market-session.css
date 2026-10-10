@@ -1,9 +1,10 @@
-/* The full market clock (#3689 slice 1, design handoff 3a) — `shell/market-session.tsx`.
+/* The market clock (#3689 slice 1, design handoff 3a) — `shell/market-session.tsx`.
  *
- * It held a 440px strip in the topbar on every route until round 2 of #5037 (question 9) folded it
- * behind the status line; it now draws inside the line's opened panel (`session-status.css`), so it
- * owns no border, ground or placement of its own. A phone stacks the label over the track; from
- * the tablet edge up the two sit side by side. Tokens only; every tint is a color-mix of one.
+ * Its pieces draw twice: compact in the top bar's folded status line (the strip that held the bar
+ * before round 2 of #5037, asked back by #5075 — the box and the sizes are `session-status.css`'s)
+ * and full in the line's opened panel, which owns no border, ground or placement of its own. In the
+ * panel a phone stacks the label over the track; from the tablet edge up the two sit side by side.
+ * Tokens only; every tint is a color-mix of one.
  *
  * Colour never carries the state alone: the eyebrow SAYS open/closed/opens-in, and power hour is
  * named in words beside its tick. The knob has no transition on purpose — a clock doesn't animate.
@@ -65,6 +66,7 @@
   gap: 3px;
 }
 .session-track {
+  display: block;
   position: relative;
   height: 8px;
   border-radius: 999px;
@@ -112,15 +114,22 @@
   color: var(--charged);
 }
 
+/* The state's mark is a shape, never a hue alone (#5064's review): a filled circle while the market
+   trades, half-filled before the bell, an empty ring once it is closed — in the folded widget and
+   the opened clock alike. */
+:is(.market-session, .status-line)[data-state="pre"] .session-dot {
+  background: linear-gradient(90deg, var(--accent) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
 /* closed: the track reads as spent, muted — the eyebrow drops the accent */
-.market-session[data-state="closed"] .session-eyebrow {
+:is(.market-session, .status-line)[data-state="closed"] .session-eyebrow {
   color: var(--muted);
 }
-.market-session[data-state="closed"] .session-dot {
-  background: var(--muted);
-  box-shadow: none;
+:is(.market-session, .status-line)[data-state="closed"] .session-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
 }
-.market-session[data-state="closed"] .session-fill {
+:is(.market-session, .status-line)[data-state="closed"] .session-fill {
   background: color-mix(in srgb, var(--muted) 35%, var(--surface-2));
 }
 

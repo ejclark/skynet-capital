@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import {
   type AccountNetWorthView,
   type AccountsNetWorthView,
@@ -8,38 +8,43 @@ import {
   type NetWorthStatsView,
 } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
-import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
+import { AccountMenu } from "./account-menu";
+import { ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
-import { HeartbeatChip } from "./heartbeat";
+import { HeadVitals } from "./head-vitals";
+import { useHeartbeatStatus } from "./heartbeat";
 import { publishClearance } from "./landing";
-import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
 import { SectionSwitch } from "./section-switch";
 import type { PageSection } from "./sections";
 
 /**
- * THE PROFILE PAGE'S STICKY HEAD (#2321, the Cockpit; moved out of `routes/accounts.tsx` by #3807
- * slice 2b): the account switcher, a bot's heartbeat chip, the condensed net worth off-Overview,
- * the section switch and the calendar head (at ≥861 its last row, at ≤860 the row directly under
- * it — one instance, placed by the phone's own media query, `cockpit-clock.tsx`).
+ * THE PROFILE PAGE'S STICKY HEAD (#2321, the Cockpit; Level 2 of #5037 round 2 — #5072). Three
+ * rows, the same three at the same heights on every section and every account, so nothing shifts
+ * as a member moves around (Eric, round 1: "uniform structure both elevates commonalities… and
+ * prevents content shift to retain focus"):
  *
- * TWO DOORS change its first row, never its height (#3807 slice 2b):
- *   - a VIEWER-LEVEL section open (Milestones, Feedback — #888) HIDES the switcher, never greys it
- *     (docs/IA.md §5.5): the row says in one line why the pick does not apply, at the switcher's
- *     own height (`.cockpit-head-note`), so the head does not jump as the member moves between
- *     sections at 390;
- *   - a member with NO LINKED ACCOUNT gets the same page: the row reads "No account linked yet" in
- *     place of the switcher and the vitals — the Milestones section below opens on the connect
- *     guide, so the old early return's link back to `/onboarding` (a loop once `/onboarding`
- *     redirects here) is gone. Its words are the control (#3807 slice 2e — the phase-2 crawl's
- *     one regression: "connect one in Onboarding below" named an action with nothing in reach):
- *     "connect one in Onboarding" opens the connect guide and scrolls it under the head, inline in
- *     the same line, so the row keeps its height at 390.
+ *   1. THE ACCOUNT ROW — the account's name, which opens the menu of everything that sets it up
+ *      (`account-menu.tsx`: switch, the default star, + Add an account, its settings, its league
+ *      page — moved off the head on Eric's "secondary/auxiliary… should be relocated"), its kind and
+ *      SIM, and on a bot "● Running · 7 playbooks ›": a plain link into its Heartbeat, never a
+ *      popover (round 2: the status's detail belongs in the main window).
+ *   2. THE VITALS LINE — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
+ *      that cut across every section, said once (Eric's Level 2 note: "the most relevant dimensions
+ *      that overlap/intersect across various views… minimal content").
+ *   3. THE SECTION SWITCH — every section where they fit; at ≤700 four and "More ▾" (`fold`), so
+ *      none is cut off at the screen's edge.
  *
- * ONE ACCOUNT PICKED, the switcher's row also links that account's page as the league sees it
- * (`/u/:id` — slice 2e, dead end 6: the mirror of that page's "Open in your Accounts"). Never on
- * All accounts: an aggregate has no page of its own.
+ * TWO DOORS change what the first two rows say, never their height:
+ *   - a VIEWER-LEVEL section open (Milestones, Feedback — #888) HIDES the account (docs/IA.md §5.5),
+ *     and the rows say whose page this is instead: "Your milestones · the same on every account",
+ *     and that no account's numbers are here;
+ *   - a member with NO LINKED ACCOUNT reads "No account linked yet — connect one in Onboarding"
+ *     (#3807 slice 2e: the words are the control, opening the connect guide under the head).
+ *
+ * The calendar head (#3807 slice 2·1) is unchanged: at ≥861 the head's last row, at ≤860 the row
+ * directly under it, one instance placed by the phone's own media query (`cockpit-clock.tsx`).
  * @category accounts
  */
 
@@ -63,51 +68,57 @@ export function resolveNetWorth(
   return { stats: row, caption: row?.name ?? "this account", roster: [], allAccounts: false };
 }
 
-/** The switcher's row, said in words — the same label and the same height as the control, and
- *  the same link row at its right edge. */
-function HeadNote({
-  children,
-  trailing,
-}: {
-  readonly children: ReactNode;
-  readonly trailing: ReactNode;
-}): ReactElement {
-  return (
-    <div className="set-switch cockpit-head-note">
-      <div className="field set-switch-field">
-        <span className="cockpit-head-label">Account</span>
-        <p className="cockpit-head-line">{children}</p>
-      </div>
-      <span className="set-switch-aside">{trailing}</span>
-    </div>
-  );
-}
-
-/** The head's link row: the picked account's page as the league sees it (when one account is
- *  picked), then Settings in words (#3816 slice 7 — Eric, 2026-09-04, asked for a labelled link
- *  beside its sibling; the topbar's icon-only gear stays as the global fast path). Present in every
- *  head state, so a member with no account or on a viewer section still reads where Settings is. */
-function HeadLinks({ accountId }: { readonly accountId?: string }): ReactElement {
-  return (
-    <>
-      {accountId ? (
-        <>
-          <Link to="/u/$id" params={{ id: accountId }}>
-            Open as the league sees it
-          </Link>
-          {" · "}
-        </>
-      ) : null}
-      <Link to="/settings">Settings</Link>
-    </>
-  );
-}
-
-/** Why the switcher is gone while a viewer-level section is open — one line, the job in words. */
-const VIEWER_LINE: Record<"milestones" | "feedback", string> = {
-  milestones: "Your milestones — the same on every account.",
-  feedback: "Your filings — the same on every account.",
+/** Whose page a viewer-level section is, said in the two rows the account would fill. */
+const VIEWER: Record<"milestones" | "feedback", { readonly who: string; readonly line: string }> = {
+  milestones: {
+    who: "Your milestones",
+    line: "Chapters of your own ladder — no account's numbers here.",
+  },
+  feedback: {
+    who: "Your filings",
+    line: "What you've sent Moneypenny — no account's numbers here.",
+  },
 };
+
+/** A bot's status as a plain link into its Heartbeat section — the state in a glyph and a word, the
+ *  fact behind it where there is room, and how many playbooks it runs. Nothing until the read
+ *  lands with something true to say. */
+function BotStatus({
+  deskId,
+  onOpen,
+}: {
+  readonly deskId: string;
+  readonly onOpen: () => void;
+}): ReactElement | null {
+  const status = useHeartbeatStatus(deskId);
+  if (!status) return null;
+  const count = status.playbooks;
+  return (
+    <Link
+      to="/accounts"
+      search={(prev) => ({ ...prev, section: "heartbeat" as const })}
+      className="head-bot"
+      data-state={status.state}
+      onClick={(e) => {
+        e.preventDefault();
+        onOpen();
+      }}
+    >
+      <span className="head-bot-glyph" aria-hidden="true">
+        {status.glyph}
+      </span>
+      <b>{status.word}</b>
+      {status.detail ? <span className="head-bot-detail"> · {status.detail}</span> : null}
+      {count !== undefined ? (
+        <span className="head-bot-count">
+          {" "}
+          · {count} {count === 1 ? "playbook" : "playbooks"}
+        </span>
+      ) : null}
+      <span aria-hidden="true"> ›</span>
+    </Link>
+  );
+}
 
 export function CockpitHead({
   accounts,
@@ -116,8 +127,9 @@ export function CockpitHead({
   sections,
   onSelectSection,
   onSelectAccount,
-  isDefault,
-  onToggleDefault,
+  defaultId,
+  onSetDefault,
+  onClearDefault,
 }: {
   readonly accounts: readonly OwnedAccount[];
   /** The selected account id or `ALL_ACCOUNTS`; empty when nothing is linked. */
@@ -126,8 +138,10 @@ export function CockpitHead({
   readonly sections: readonly PageSection<AccountsSection>[];
   readonly onSelectSection: (section: AccountsSection) => void;
   readonly onSelectAccount: (id: string) => void;
-  readonly isDefault: boolean;
-  readonly onToggleDefault: () => void;
+  /** The stored default the page opens on, when it still names an owned account. */
+  readonly defaultId: string | undefined;
+  readonly onSetDefault: (id: string) => void;
+  readonly onClearDefault: () => void;
 }): ReactElement {
   const linked = accounts.length > 0;
   const networth = useQuery({
@@ -135,52 +149,63 @@ export function CockpitHead({
     queryFn: fetchNetWorth,
     enabled: linked,
   });
-  const { stats, caption } = resolveNetWorth(networth.data, accountId);
+  const { stats } = resolveNetWorth(networth.data, accountId);
   const phone = usePhoneWidth();
   // On Events the grid's own head is the one range control (`events-section.tsx`).
   const clock = section === "events" ? null : <CockpitClock />;
+  const viewer = isViewerSection(section) ? VIEWER[section as "milestones" | "feedback"] : null;
+  const picked = accounts.find((a) => a.id === accountId);
 
   return (
     <>
       <div className="cockpit-head" ref={publishClearance}>
-        {!linked ? (
-          <HeadNote trailing={<HeadLinks />}>
-            <span>
+        <div className="head-account">
+          {!linked ? (
+            <p className="head-note">
               No account linked yet — <ConnectLink />.
-            </span>
-          </HeadNote>
-        ) : isViewerSection(section) ? (
-          <HeadNote trailing={<HeadLinks />}>
-            {VIEWER_LINE[section as "milestones" | "feedback"]}
-          </HeadNote>
-        ) : (
-          <AccountSwitcher
-            accounts={accounts}
-            selectedId={accountId}
-            onSelect={onSelectAccount}
-            allowAll
-            isDefault={isDefault}
-            onToggleDefault={onToggleDefault}
-            trailing={
-              <HeadLinks
-                {...(accountId === ALL_ACCOUNTS || accountId === "" ? {} : { accountId })}
+            </p>
+          ) : viewer ? (
+            <p className="head-note">
+              <b>{viewer.who}</b> · the same on every account
+            </p>
+          ) : (
+            <>
+              <AccountMenu
+                accounts={accounts}
+                selectedId={accountId}
+                onSelect={onSelectAccount}
+                defaultId={defaultId}
+                onSetDefault={onSetDefault}
+                onClearDefault={onClearDefault}
               />
-            }
-          />
-        )}
-        {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
-        {!linked || section === "overview" ? null : stats ? (
-          <NetWorthCondensed stats={stats} caption={caption} />
-        ) : (
-          <p className="note">
-            {networth.isError ? "Net worth is unreachable right now." : "Reading your net worth…"}
+              {picked ? (
+                <span className={`chip chip-${picked.kind}`}>
+                  {picked.kind === "bot" ? "BOT" : "HUMAN"}
+                </span>
+              ) : null}
+              <span className="env-pill">SIM</span>
+              {picked?.kind === "bot" ? (
+                <BotStatus deskId={picked.id} onOpen={() => onSelectSection("heartbeat")} />
+              ) : null}
+            </>
+          )}
+        </div>
+        {!linked ? (
+          <p className="head-vitals head-vitals--note">
+            Net worth shows once an account is linked.
           </p>
+        ) : viewer ? (
+          <p className="head-vitals head-vitals--note">{viewer.line}</p>
+        ) : (
+          <HeadVitals stats={stats} loading={networth.isPending} error={networth.isError} />
         )}
         <SectionSwitch
           sections={sections}
           current={section}
           onSelect={onSelectSection}
           variant="horizontal"
+          fold={4}
+          divideBefore="milestones"
         />
         {phone ? null : clock}
       </div>

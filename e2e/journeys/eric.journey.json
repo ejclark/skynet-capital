@@ -11,12 +11,12 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the cockpit opens on his account: the switcher, Overview · Activity",
+          "sees": "the cockpit opens on his account: the account's name (switching, + Add an account and its settings one tap under it, #5072), net worth · today · cash on one line, Overview · Activity",
           "ears": "WHEN the owner opens Profile, the app shall open his own account's cockpit on Overview.",
           "expect": [
             { "url": "/app/accounts" },
             { "role": "button", "name": "Overview" },
-            { "role": "link", "name": "Add an account" }
+            { "role": "button", "name": "Account:", "within": ".cockpit-head" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
         },
@@ -181,11 +181,11 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the cockpit at 390 — the switcher, the section switch as a row",
+          "sees": "the cockpit at 390 — the account's name, one vitals line, the section switch as a row that fits (More ▾ for the rest, #5072)",
           "ears": "WHEN the owner opens the cockpit on a phone, the app shall show the account and the section switch above the fold.",
           "expect": [
             { "role": "button", "name": "Overview" },
-            { "role": "link", "name": "Add an account" }
+            { "role": "button", "name": "Account:", "within": ".cockpit-head" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
         },

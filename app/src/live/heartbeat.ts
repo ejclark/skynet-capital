@@ -57,9 +57,9 @@ export function entryDateText(date: string): string {
 
 /** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). Each
  *  glyph is unique on the page (#4650): "Paused" takes the pause bars, not the Store row's ○,
- *  because ○ already means Off here and ◐ means Market closed on the state card above; "Starts next
- *  pass" is the play mark beside them — a dotted ◌ read as ○ at this size, and the quarter-filled
- *  circles fall back to a speck in common fonts. */
+ *  because ○ already means Off here and ◐ means waiting for the open on the state card above;
+ *  "Starts next pass" is the play mark beside them — a dotted ◌ read as ○ at this size, and the
+ *  quarter-filled circles fall back to a speck in common fonts. */
 export const ROLL_CALL_WORDS: Record<
   RollCallStatus,
   { readonly glyph: string; readonly word: string }
@@ -113,11 +113,14 @@ const GLYPH: Record<HeartbeatState, string> = {
 
 /** What each state measures, in plain words (#5044): whether the bot is checking the market, and
  *  when it last did. Nothing here compares the bot with the market or anyone else — "Beating" read
- *  as "beating the market", so the enum's own word stays internal. */
+ *  as "beating the market", so the enum's own word stays internal. A closed market is said as what
+ *  the BOT is doing, "Waiting for the open" (#5072): the market's own state is the top bar's, and
+ *  the Profile head beside it saying "Market closed" too was a second market badge (Eric,
+ *  2026-10-10: "the information is only needed in one spot without redundancy"). */
 const WORD: Record<HeartbeatState, string> = {
   beating: "Running",
   stale: "Not checking",
-  "market-closed": "Market closed",
+  "market-closed": "Waiting for the open",
   "no-record": "Hasn't run yet",
 };
 

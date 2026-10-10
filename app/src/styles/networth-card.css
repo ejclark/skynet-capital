@@ -36,19 +36,6 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.nw-value {
-  font-family: var(--mono);
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.nw-cents {
-  font-size: 24px;
-  color: var(--muted);
-}
-
 .nw-stats {
   display: flex;
   flex-wrap: wrap;
@@ -180,16 +167,14 @@
     border-right: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
-  .nw-value {
-    font-size: 32px;
-  }
   .nw-foot {
     justify-content: space-between;
   }
 }
 
-/* Phone (#3689 slice 8, handoff 3b): the value and one line (today · this month · vs the S&P).
-   The stats, windows table, chart and footer are the wider screens' room. */
+/* Phone (#3689 slice 8, handoff 3b): one line (this month · vs the S&P) — the value and today ride
+   the Profile head (#5072). The stats, windows table, chart and footer are the wider screens'
+   room. */
 .nw-phone-line {
   display: none;
   margin: 0;

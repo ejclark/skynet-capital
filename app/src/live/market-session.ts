@@ -135,30 +135,8 @@ export function sessionSentence(view: MarketSessionView): string {
 }
 
 /**
- * The top bar's one line (#5037 round 2, question 9) — the session in the words a glance takes.
- * Eric, 2026-10-10, on the strip it replaces: "a really cool visual but is not actionable and
- * taking prime real estate… useful for planning 'your day at work'… but is secondary." So the
- * line keeps the one fact a member plans by (open or not, and for how long) and the track moves
- * behind a tap. Power hour is named in the opened clock, not here: the line stays one register.
- * There is no after-hours word on purpose — the app trades the regular session only, so after
- * the bell is simply closed.
- */
-export function statusLineWords(view: MarketSessionView): string {
-  const left = formatMinutes(view.minutesLeft);
-  switch (view.state) {
-    case "open":
-    case "power":
-      return `Open · ${left} left`;
-    case "pre":
-      return `Opens in ${left}`;
-    case "closed":
-      return view.nextOpen ? `Closed · opens ${view.nextOpen}` : "Closed";
-  }
-}
-
-/**
  * The market's word when a fleet alarm has the phone bar (#5064's review). At ≤700px the alarm
- * outranks the clock and `statusLineWords` steps aside, but "not open yet" and "closed" must never
+ * outranks the clock and the folded widget steps aside, but "not open yet" and "closed" must never
  * be told apart by a ring's colour alone — a standing reader is red/green colourblind
  * (docs/BRAND.md → Accessibility). So each state keeps one short word of its own beside the alarm.
  * Before the bell it is the open's TIME, not a countdown: one fixed width, so the line never grows

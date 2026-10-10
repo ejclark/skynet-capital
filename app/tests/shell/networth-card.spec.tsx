@@ -36,18 +36,23 @@ const stats: NetWorthStatsView = {
 
 // The Overview's net-worth card (#3689 slice 3), shown here in its "All accounts" form (no chart).
 describe("NetWorthCard", () => {
-  it("answers 'am I winning' in plain words: today, locked in, on paper", () => {
+  it("answers 'am I winning' in plain words: locked in, on paper", () => {
     render(<NetWorthCard stats={stats} caption="Eric" />);
     expect(screen.getByRole("region", { name: "Net worth · Eric" })).toBeInTheDocument();
-    expect(screen.getByText("Today")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Locked in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "On paper" })).toBeInTheDocument();
     expect(screen.getByText("-$3,120")).toHaveClass("tone-neg");
   });
 
-  it("sets the cents smaller, beside the whole dollars", () => {
-    render(<NetWorthCard stats={stats} caption="Eric" />);
-    expect(screen.getByText(".14")).toHaveClass("nw-cents");
+  it("leaves the value and today to the head, which says them on every section (#5072)", () => {
+    const { container } = render(<NetWorthCard stats={stats} caption="Eric" />);
+    expect(container).not.toHaveTextContent("$1,047,832");
+    expect(container).not.toHaveTextContent("+$2,418");
+    expect(screen.queryByText("Today")).toBeNull();
+    // the phone's line keeps the month and the S&P
+    expect(container.querySelector(".nw-phone-line")).toHaveTextContent(
+      "+4.60% this month · +2.3 pts vs S&P",
+    );
   });
 
   it("scores each window against the S&P, and leaves a blank where there's no comparison", () => {

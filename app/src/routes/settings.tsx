@@ -339,10 +339,11 @@ function SettingsPage(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const guestList = useQuery({ queryKey: ["admin-invite"], queryFn: fetchGuestList });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["settings"] });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // The section lives in the URL (#1740), so a link can land on the card it is talking about.
+  // The section lives in the URL (#1740), so a link can land on the card it is talking about — and
+  // the account too (#5072): the Profile head's "<name>'s settings" opens on that account's card.
+  const { section: asked, account: askedAccount } = Route.useSearch();
+  const [selectedId, setSelectedId] = useState<string | null>(askedAccount ?? null);
   const navigate = Route.useNavigate();
-  const asked = Route.useSearch().section;
   const setSection = (next: SettingsSection) =>
     void navigate({ search: next === "preferences" ? {} : { section: next }, replace: true });
 
@@ -437,6 +438,12 @@ export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(typeof search.section === "string" && SETTINGS_SECTIONS.some((s) => s.id === search.section)
       ? { section: search.section as SettingsSection }
+      : {}),
+    // Which account's card opens first; an id the session does not own falls back to the first.
+    ...(typeof search.account === "string" &&
+    search.account.length > 0 &&
+    search.account.length <= 100
+      ? { account: search.account }
       : {}),
   }),
   component: SettingsPage,
