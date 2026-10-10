@@ -25,26 +25,21 @@ function SingleAccountPositions({
 }): ReactElement {
   const { desk: d } = desk;
   const [lens, setLens] = useLens();
-  return (
-    <>
-      {d.error ? (
-        <p className="note-stop">Account unreachable — positions can't be read right now.</p>
-      ) : (
-        <>
-          <PositionsBlotter
-            deskId={d.id}
-            positions={d.positions}
-            query={query}
-            onFilterChange={onFilterChange}
-            lens={lens}
-            onLensChange={setLens}
-            {...(d.allocation ? { allocation: d.allocation } : {})}
-            decisions={d.decisions ?? []}
-          />
-          <NewTradeCard deskId={d.id} />
-        </>
-      )}
-    </>
+  return d.error ? (
+    <p className="note-stop">Account unreachable — positions can't be read right now.</p>
+  ) : (
+    <PositionsBlotter
+      deskId={d.id}
+      positions={d.positions}
+      query={query}
+      onFilterChange={onFilterChange}
+      lens={lens}
+      onLensChange={setLens}
+      {...(d.allocation ? { allocation: d.allocation } : {})}
+      decisions={d.decisions ?? []}
+    >
+      <NewTradeCard deskId={d.id} />
+    </PositionsBlotter>
   );
 }
 

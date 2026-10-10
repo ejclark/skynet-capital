@@ -77,8 +77,9 @@ function DeskPage(): ReactElement {
               query={query}
               onFilterChange={setFilter}
               canTrade={canTrade}
-            />
-            {canTrade ? <NewTradeCard deskId={d.id} /> : null}
+            >
+              {canTrade ? <NewTradeCard deskId={d.id} /> : null}
+            </PositionsBlotter>
           </div>
           {towerColumn ? null : (
             <div className="overview-card">
