@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { type SavedView, useSavedViews, viewCapReached } from "./saved-views";
+import { type SavedView, useSavedViews, VIEW_CAP_REASON, viewCapReached } from "./saved-views";
 
 /**
  * VIEW TABS (#738 phase 3b) — the Projects view model on the blotter. Each tab is a saved filter
@@ -146,7 +146,7 @@ export function ViewTabs({
           type="button"
           className="view-tab view-add"
           disabled={viewCapReached(views)}
-          title={viewCapReached(views) ? "Eight views is plenty — delete one first" : undefined}
+          title={viewCapReached(views) ? VIEW_CAP_REASON : undefined}
           onClick={() => setNaming(true)}
         >
           + New view
