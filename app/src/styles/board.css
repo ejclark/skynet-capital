@@ -196,6 +196,11 @@
      nothing needs clipping to the card's rounded corners */
   overflow: visible;
 }
+/* The last metric's ranking, held on screen while the new one loads (#5057): dimmed, never gone,
+   so the page keeps its height and the scroll stays where the chip was tapped. */
+.ladder[aria-busy="true"] {
+  opacity: 0.5;
+}
 .rank-row {
   display: grid;
   grid-template-columns: 1fr 180px 110px auto;

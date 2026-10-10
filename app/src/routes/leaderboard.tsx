@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { CSSProperties, MouseEvent, ReactElement } from "react";
 import { useEffect, useRef } from "react";
@@ -194,15 +194,18 @@ function FieldLadder({
   b,
   armedName,
   onTap,
+  reranking,
 }: {
   readonly rows: readonly BoardRow[];
   readonly a?: string;
   readonly b?: string;
   readonly armedName?: string;
   readonly onTap: OnTap;
+  /** The rows are the last metric's, held while the new ranking loads: drawn dimmed, busy. */
+  readonly reranking: boolean;
 }): ReactElement {
   return (
-    <ul className="ladder">
+    <ul className="ladder" aria-busy={reranking || undefined}>
       {rows.map((row, index) => (
         <li
           key={row.key}
@@ -291,14 +294,12 @@ function Standings(): ReactElement {
     () => connectBoardChannel(queryClient, by, { ...(a ? { a } : {}), ...(b ? { b } : {}) }),
     [queryClient, by, a, b],
   );
-  // A compare pick keeps the board it was made on until the new snapshot lands: without it, the
-  // page swapped to "Reading the board…" for a beat, and the page that short put the scroll back
-  // at the top, whatever the tap asked for (#5057). A metric switch is a different ranking, so it
-  // never shows the old one.
-  const board = useQuery({
-    ...boardQueryOptions(by, pick),
-    placeholderData: (previous, query) => (query?.queryKey[1] === by ? previous : undefined),
-  });
+  // A compare pick or a metric chip keeps the board on screen until the new snapshot lands: without
+  // it, the page swapped to "Reading the board…" for a beat, and the page that short put the scroll
+  // back at the top, whatever the tap asked for (#5057; a chip at 390 went from 656 to 0). The rows
+  // held under a NEW metric are the old ranking, so the Field draws them dimmed and busy.
+  const board = useQuery({ ...boardQueryOptions(by, pick), placeholderData: keepPreviousData });
+  const reranking = board.isPlaceholderData && board.data?.metric !== by;
   const compareShown = Boolean(board.data?.compare);
   const heading = useRef<HTMLHeadingElement | null>(null);
   const place = useComparePlace(compareShown, heading);
@@ -360,6 +361,7 @@ function Standings(): ReactElement {
         b={b}
         armedName={rows.find((r) => r.key === a)?.name}
         onTap={place.tapped}
+        reranking={reranking}
       />
       <footer className="obs-foot num">
         as of {generatedAt} · ranked by {by} · {opsApplied} live op{opsApplied === 1 ? "" : "s"}{" "}

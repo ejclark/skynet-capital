@@ -20,6 +20,26 @@ test.describe("leaderboard", () => {
     await expect(page.locator(".match")).toBeVisible();
     await expect(page.getByText("The Day Trader")).toBeVisible();
   });
+
+  // #4944's filter-chip promise, broken here until #5057: the new metric's snapshot was a fresh
+  // query, the page swapped to "Reading the board…", and the shorter page threw the scroll to 0.
+  test("a metric chip keeps the place at 390", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/leaderboard");
+    await expect(page.locator(".rank-row").first()).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const reading = await page.evaluate(() => Math.round(window.scrollY));
+    expect(reading).toBeGreaterThan(0);
+    await page.getByRole("link", { name: "Return %" }).click();
+    await expect(page.getByText("Return %", { exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.locator(".ladder")).not.toHaveAttribute("aria-busy", "true");
+    expect(
+      Math.abs((await page.evaluate(() => Math.round(window.scrollY))) - reading),
+    ).toBeLessThanOrEqual(2);
+  });
 });
 
 // Compare keeps your place and brings the pair to you (#5057, Eric's pick on #5037 question 8).
