@@ -46,7 +46,7 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
   - **Detection lag:** each red was seen within minutes, but the class — a visual PR's first run
     failing on its own new pictures — was paid at least three times in one day before anyone named
     it. Eric named it; nothing counts first-run reds.
-- **ROOT CAUSE:** two mechanisms.
+- **ROOT CAUSE:** three mechanisms.
   1. Screenshot baselines are `*-chromium-linux.png` only and builders run on macOS, so `ship.sh`
      skips the local Playwright run (2026-10-02, PR #4519). A visual PR meets its new pictures
      first in CI, and the way back was six manual steps: download `playwright-report`, decode the
@@ -57,6 +57,11 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
      head change moved the same page screenshots, so whichever merged second failed on pictures it
      never drew: #5079 moved five page shots (four of them 51px shorter), #5080 moved the same
      five (four of them 1px taller) plus two more, and the code collided (#5079 against #5078).
+  3. (Found in review, after #5080 merged.) `captureWholeFrame` (`e2e/determinism.ts`) asserted
+     the frame and then the top bar's market clock, both hard, so a red frame hid its clock. #5080's
+     first red run (38069939238) showed six frames and one clock; the re-baseline of those seven
+     (91c38a4) went red on the six clocks it had hidden (run 38072789546), and a16511d paid the
+     second round trip. The script reads only what a run compared, so it could not have caught it.
 - **PREVENTION:**
   1. **Script (rank 1):** `scripts/rebaseline-from-ci.mjs <pr>` finds the PR's failed `integration
      tests` run, decodes the report, saves expected/actual/diff side by side and lists them — a
@@ -69,6 +74,12 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
      surface); a later build on a busy surface is linked `--blocked-by` the first
      (`scripts/issues.mjs update` now takes it), and every puller waits. Echoed in
      `.claude/skills/steer/SKILL.md`'s read-back and `docs/ENGINEERING.md`.
+  4. **Soft frame shot:** `captureWholeFrame` now asserts the frame with `expect.soft`, so every
+     run compares both pictures and one dry run lists both. The test still fails on either.
+     The review also tightened the script: a logic failure on ANY attempt refuses the test (not
+     only the last one), a snapshot CI reported missing is refused even if a file has appeared
+     locally since, and `--apply` refuses a run that did not test the PR's head (a dry run on one
+     still lists it, read only).
 - **SIDE QUESTS:** a CI job that re-baselines on a label would remove the round trip entirely (CI
   already holds the actuals), but it lives in `.github/workflows/` — protected by `envelope.json` —
   so it boards the platter as a proposal only (→ docs/IDEAS.md). No workflow file was touched here.

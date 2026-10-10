@@ -141,11 +141,17 @@ export async function resizeToContentHeight(page: Page, width = 1280): Promise<v
  * Call `freezePage(page)` before `page.goto`, and wait for the page's own content marker to be
  * visible, before calling this — it only owns the settle → resize → screenshot tail every route
  * spec shares, plus the fixed-size market clock assertion (MARKET_CLOCK above).
+ *
+ * The frame shot is SOFT so the clock shot always runs too (2026-10-10). Hard, a red frame ended
+ * the test before the clock was compared, so a change to the top bar showed one picture per page
+ * per CI run: #5080's first red run listed six frames and one clock, its re-baseline went red again
+ * on the six clocks it had hidden, and the PR paid a second round trip (a16511d). Soft, one run
+ * shows both, and `scripts/rebaseline-from-ci.mjs` lists them in one pass. The test still fails.
  */
 export async function captureWholeFrame(page: Page, name: string): Promise<void> {
   await page.waitForLoadState("networkidle");
   await resizeToContentHeight(page);
-  await expect(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
+  await expect.soft(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
   await expect(page.locator(MARKET_CLOCK)).toHaveScreenshot(
     name.replace(/\.png$/, "-market-clock.png"),
     {

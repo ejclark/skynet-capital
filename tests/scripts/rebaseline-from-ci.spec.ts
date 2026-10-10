@@ -13,6 +13,8 @@ import {
   reportZipFrom,
   type ScreenshotRow,
   screenshotVerdict,
+  staleForApply,
+  type Test,
   unzip,
 } from "../../scripts/rebaseline-from-ci.mjs";
 
@@ -227,6 +229,30 @@ describe("rebaseline-from-ci — which failures it will ever re-baseline", () =>
     expect(row("desk-page")).toBeUndefined();
   });
 
+  it("refuses a test whose first try failed a logic assertion, even if its retry failed on pixels only", () => {
+    const logicThenPixels: Test = {
+      title: "matches the known-good page screenshot",
+      path: ["desk/retry"],
+      projectName: "chromium",
+      outcome: "unexpected",
+      results: [
+        { status: "failed", errors: [{ message: LOGIC }], attachments: [] },
+        {
+          status: "failed",
+          errors: [{ message: LEARN }],
+          attachments: shots("desk-retry-page", 7),
+        },
+      ],
+    };
+    const run = classify({
+      report: { files: [{ fileId: "ee", fileName: "desk.spec.ts" }] },
+      files: [{ fileId: "ee", fileName: "desk.spec.ts", tests: [logicThenPixels] }],
+    });
+
+    expect(run.screenshots).toEqual([]);
+    expect(run.others[0]?.why).toMatch(/toBeVisible\(\) failed/);
+  });
+
   it("leaves a test that passed on its retry alone", () => {
     expect(row("learn-trading-page")).toBeUndefined();
     expect(others.map((o) => o.title)).not.toContain(
@@ -268,6 +294,16 @@ describe("rebaseline-from-ci — what --apply may write", () => {
         why: expect.stringMatching(/new snapshot is a human call/),
       }),
     ]);
+  });
+
+  it("refuses a snapshot CI found no baseline for, even once a file is at that path here", () => {
+    const home = screenshots.find((s) => s.snapshot === "home-page");
+
+    expect(home?.missing).toBe(true);
+    expect(screenshots.find((s) => s.snapshot === "learn-page")?.missing).toBe(false);
+    const { copies, refusals } = plan(home ? [home] : [], () => true);
+    expect(copies).toEqual([]);
+    expect(refusals[0]?.why).toMatch(/new snapshot is a human call/);
   });
 
   it("refuses a name that would land outside an e2e snapshots folder, even if a file is there", () => {
@@ -336,6 +372,20 @@ describe("rebaseline-from-ci — which run it reads", () => {
     const pick = pickRun([at(1, "d703ff6".padEnd(40, "0"), "completed", "failure", 5)], HEAD);
 
     expect("stop" in pick && pick.stop).toMatch(/no Pipeline run on the PR's head b2fe12c/);
+  });
+});
+
+describe("rebaseline-from-ci — which run --apply may copy from", () => {
+  const HEAD = "91c38a4".padEnd(40, "0");
+
+  it("copies from a run that tested the PR's head", () => {
+    expect(staleForApply({ id: 38072789546, head_sha: HEAD }, HEAD)).toBeNull();
+  });
+
+  it("refuses a run on an older commit — it can be read, never applied", () => {
+    const older = { id: 38069939238, head_sha: "d703ff6".padEnd(40, "0") };
+
+    expect(staleForApply(older, HEAD)).toMatch(/tested d703ff6, but the PR's head is 91c38a4/);
   });
 });
 

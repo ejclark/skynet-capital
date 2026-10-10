@@ -9,9 +9,10 @@
 //
 // The dry run never touches the repo: it saves each failing screenshot's expected, actual and diff
 // side by side under a temp dir and prints where. Exit 0 = listed, or applied. Exit 1 = refused and
-// nothing written: a failure that is not a screenshot mismatch, a snapshot with no baseline yet, or
-// --apply from a branch that is not the PR's. Exit 2 = could not do its job: no failed `integration
-// tests` run on the PR's head, the report artifact is gone, or GitHub was unreadable.
+// nothing written: a failure that is not a screenshot mismatch, a snapshot with no baseline yet,
+// --apply from a branch that is not the PR's, or --apply with a run that did not test the PR's
+// head (a stale run can be read, never applied). Exit 2 = could not do its job: no failed
+// `integration tests` run on the PR's head, the report artifact is gone, or GitHub was unreadable.
 //
 // WHAT HAPPENED (2026-10-10). #5079 and #5080 both went red on their first CI run, and Eric called
 // it "a red flag for avoidable process friction, possible process thrashing". Neither was a bug.
@@ -165,7 +166,10 @@ function classifyTest(spec, test) {
   const errors = (result.errors ?? []).map(messageOf);
   const attachments = result.attachments ?? [];
   const actuals = attachments.filter((a) => a.name.endsWith("-actual.png"));
-  const blocking = errors.find((m) => screenshotVerdict(m) === "other");
+  // Every attempt, not only the last: a logic failure the retry happened to pass is still one, and
+  // re-baselining the retry's picture would leave that test flaky, which CI counts as green.
+  const everyError = test.results.flatMap((r) => (r.errors ?? []).map(messageOf));
+  const blocking = everyError.find((m) => screenshotVerdict(m) === "other");
   if (blocking !== undefined) return { other: { spec, title, why: firstLine(blocking) } };
   if (errors.length === 0 || actuals.length === 0) {
     return { other: { spec, title, why: `${result.status}, no screenshot` } };
@@ -175,6 +179,12 @@ function classifyTest(spec, test) {
     const named = (suffix) =>
       attachments.find((a) => a.name === `${snapshot}-${suffix}.png`)?.path ?? null;
     const error = errors.find((m) => stripAnsi(m).includes(`Snapshot: ${snapshot}.png`));
+    // CI's own word that this snapshot had no baseline in the commit it tested — refused by plan()
+    // even if a file has since appeared at that path locally.
+    const file = posix.basename(baselinePath({ spec, snapshot, project: test.projectName }));
+    const missing = errors.some(
+      (m) => screenshotVerdict(m) === "missing" && stripAnsi(m).includes(`/${file}`),
+    );
     return {
       spec,
       title,
@@ -184,6 +194,7 @@ function classifyTest(spec, test) {
       actual: actual.path,
       diff: named("diff"),
       why: mismatchSummary(error ?? errors[0]),
+      missing,
     };
   });
   return { rows };
@@ -205,7 +216,7 @@ export function plan(screenshots, exists) {
     const baseline = baselinePath(row);
     if (!INSIDE_SNAPSHOTS.test(baseline) || baseline.includes("..")) {
       refusals.push({ ...row, baseline, why: "not a path inside an e2e snapshots folder" });
-    } else if (!exists(baseline)) {
+    } else if (row.missing || !exists(baseline)) {
       refusals.push({ ...row, baseline, why: "no baseline yet — a new snapshot is a human call" });
     } else {
       copies.push({ ...row, baseline });
@@ -227,6 +238,19 @@ export function pickRun(runs, headSha) {
   }
   if (newest.conclusion === "success") return { done: `run ${newest.id} on ${head} passed` };
   return { run: newest };
+}
+
+/**
+ * Why --apply must not copy this run's pictures, or null. A run on an older commit can be READ
+ * (the dry run warns), but its actuals were drawn by code the PR has moved past: copied over the
+ * head's baselines they can undo a newer re-baseline, or simply go red again on the next run.
+ */
+export function staleForApply(run, headSha) {
+  if (run.head_sha === headSha) return null;
+  return (
+    `run ${run.id} tested ${run.head_sha.slice(0, 7)}, but the PR's head is ${headSha.slice(0, 7)}` +
+    " — wait for the head's own run, then dry-run again without --run"
+  );
 }
 
 export function commitMessage(runId, baselines) {
@@ -390,6 +414,8 @@ const READ_FIRST = [
 ];
 
 function apply({ args, pr, run, copies, reportDir, root }) {
+  const stale = staleForApply(run, pr.head.sha);
+  if (stale) throw new Exit(1, `rebaseline: ${stale} — nothing written.`);
   if (!onPrBranch(pr)) {
     throw new Exit(
       1,
@@ -431,6 +457,8 @@ function main(argv) {
   if (others.length || refusals.length) throw new Exit(1, "rebaseline: refused — nothing written.");
   if (!copies.length) throw new Exit(0, "rebaseline: no screenshot to re-baseline.");
   if (args.apply) return apply({ args, pr, run, copies, reportDir, root });
+  const stale = staleForApply(run, pr.head.sha);
+  if (stale) return console.log(`\nRead only: ${stale}.`);
   for (const line of READ_FIRST) console.log(line);
   console.log(`  node scripts/rebaseline-from-ci.mjs ${args.pr} --run ${run.id} --apply --commit`);
 }
