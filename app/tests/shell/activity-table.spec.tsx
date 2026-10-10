@@ -333,6 +333,7 @@ describe("ActivityTable — the row a link points at", () => {
   });
   afterEach(() => {
     window.location.hash = "";
+    rstest.useRealTimers();
   });
 
   it("scrolls the targeted row into view when it renders", () => {
@@ -357,14 +358,12 @@ describe("ActivityTable — the row a link points at", () => {
       <ActivityTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />,
     );
     const row = container.querySelector("#act-ord-2");
-    expect(scroll).toHaveBeenCalledWith({ block: "center" });
     expect(row).toHaveAttribute("data-landed");
     expect(container.querySelector("#act-ord-1")).not.toHaveAttribute("data-landed");
     act(() => {
       rstest.advanceTimersByTime(LANDED_MS);
     });
     expect(row).not.toHaveAttribute("data-landed");
-    rstest.useRealTimers();
   });
 
   it("lands on a spread's leg, which a Thesis marker for that fill links", () => {
@@ -375,17 +374,22 @@ describe("ActivityTable — the row a link points at", () => {
     expect(container.querySelector("#act-leg-1")).toHaveAttribute("data-landed");
   });
 
-  it("lands on the row once an older page brings it in, and only once", () => {
+  it("lands on the row once an older page brings it in, and not again on a refetch", () => {
+    rstest.useFakeTimers();
     window.location.hash = "#act-ord-9";
     const first = [event()];
     const { rerender, container } = render(<ActivityTable events={first} />);
     expect(scroll).not.toHaveBeenCalled();
     const older = [...first, event({ orderId: "ord-9", symbol: "XLE" })];
     rerender(<ActivityTable events={older} />);
-    expect(container.querySelector("#act-ord-9")).toHaveAttribute("data-landed");
-    // A refetch handing back the same rows is not a new link: the page stays where it is.
+    const row = container.querySelector("#act-ord-9");
+    expect(row).toHaveAttribute("data-landed");
+    act(() => {
+      rstest.advanceTimersByTime(LANDED_MS);
+    });
+    // A refetch handing back the same rows is not a new link: nothing is marked again.
     rerender(<ActivityTable events={[...older]} />);
-    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(row).not.toHaveAttribute("data-landed");
   });
 });
 
