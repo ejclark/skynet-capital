@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
+import { decayClause, type HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
 
 /** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
@@ -21,9 +22,9 @@ function tradeSearch(deskId: string, symbol: string) {
 /**
  * HOLDING STEADY, AS CARDS (#3689 slice 8, handoff 3b): the phone's positions. At ≤700px the wide
  * table gives way to one card per position: name and total P/L on the first line, then the
- * plain line ("Expires in 37 days · loses ~$12/day") with the return. Each card is a 44px+ target
- * that opens the position on Trade, where closing it lives on a phone. The table keeps its inline
- * close on wider screens.
+ * plain line ("Expires in 37 days · loses ~$12/day to time", or "earns ~$11/day from time" on an
+ * option sold, #5023) with the return. Each card is a 44px+ target that opens the position on
+ * Trade, where closing it lives on a phone. The table keeps its inline close on wider screens.
  */
 export function PositionCards({
   positions,
@@ -32,15 +33,14 @@ export function PositionCards({
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
-  readonly decayBySymbol?: ReadonlyMap<string, string>;
+  readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
 }): ReactElement {
   return (
     <ul className="pos-cards">
       {positions.map((p) => {
-        const decay = decayBySymbol?.get(p.symbol);
         const sub = [
           p.expiresIn && p.expiresIn !== "no expiry" ? `Expires in ${p.expiresIn}` : p.plainName,
-          decay ? `loses ~${decay.replace("−", "")}` : undefined,
+          decayClause(decayBySymbol?.get(p.symbol)),
         ]
           .filter(Boolean)
           .join(" · ");
@@ -60,7 +60,12 @@ export function PositionCards({
               </span>
               <span className="pos-card-bottom">
                 <span className="pos-card-sub">{sub}</span>
-                <span className={`pos-card-ret num tone-${p.totalTone}`}>{p.returnPct}</span>
+                <span className={`pos-card-ret num tone-${p.totalTone}`}>
+                  {/* Apart on screen, but one link name: without this a reader hears "profits if
+                      CRWV rises −8.32%" (#5023). */}
+                  <span className="visually-hidden">, return </span>
+                  {p.returnPct}
+                </span>
               </span>
             </Link>
           </li>

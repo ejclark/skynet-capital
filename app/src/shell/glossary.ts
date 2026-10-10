@@ -33,7 +33,7 @@ export const GLOSSARY = {
   timeDecay: {
     label: "Time decay",
     plain:
-      "What your options lose each day if prices don't move. Every option is worth a little less as expiry nears.",
+      "What time does to your options each day if prices don't move. Every option is worth a little less as expiry nears, so one you bought loses money and one you sold earns it.",
     jargon: "theta (Θ)",
   },
   marketExposure: {

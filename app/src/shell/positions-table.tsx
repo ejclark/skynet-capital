@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { DeskPosition } from "../live/desk";
 import { BlotterRow } from "./blotter-row";
 import { GlossaryTerm } from "./glossary-term";
+import type { HoldingDecay } from "./holding-decay";
 
 /**
  * The positions blotter (#738 phase 2c, extracted #2321) — shared between a single desk (`/u/:id`)
@@ -27,8 +28,8 @@ export function PositionsTable({
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
-  /** "−$12/day" per OCC symbol, from the option book (#3689 slice 6); absent until it answers. */
-  readonly decayBySymbol?: ReadonlyMap<string, string>;
+  /** Time decay per OCC symbol, from the option book (#3689 slice 6); absent until it answers. */
+  readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
   /** Unfiltered count, for the empty-state copy (0 open vs. 0 matching a filter). */
   readonly totalCount: number;
   /** Does the viewer own this account? Off it, no row renders a write (`BlotterRow`). */
@@ -97,7 +98,7 @@ export function PositionsTable({
                 key={position.symbol}
                 position={position}
                 deskId={deskId}
-                decay={decayBySymbol?.get(position.symbol)}
+                decay={decayBySymbol?.get(position.symbol)?.signed}
                 canTrade={canTrade}
               />
             ))}
