@@ -111,15 +111,19 @@ const GLYPH: Record<HeartbeatState, string> = {
   "no-record": "○",
 };
 
+/** What each state measures, in plain words (#5044): whether the bot is checking the market, and
+ *  when it last did. Nothing here compares the bot with the market or anyone else — "Beating" read
+ *  as "beating the market", so the enum's own word stays internal. */
 const WORD: Record<HeartbeatState, string> = {
-  beating: "Beating",
-  stale: "Stale",
+  beating: "Running",
+  stale: "Not checking",
   "market-closed": "Market closed",
-  "no-record": "No passes yet",
+  "no-record": "Hasn't run yet",
 };
 
-/** One short line: the state, then the one fact that explains it. The market's own open/close
- *  time is the topbar clock's job, so a closed market doesn't repeat it here. */
+/** One short line: the state, then the one fact that explains it — empty when the word already
+ *  says it all. The market's own open/close time is the topbar clock's job, so a closed market
+ *  doesn't repeat it here. */
 export function heartbeatLine(h: Heartbeat): {
   readonly glyph: string;
   readonly word: string;
@@ -128,18 +132,18 @@ export function heartbeatLine(h: Heartbeat): {
   const ago = h.sinceLastPassMs === null ? null : agoText(h.sinceLastPassMs);
   const detail =
     h.state === "beating"
-      ? `last pass ${ago} ago`
+      ? `checked the market ${ago} ago`
       : h.state === "stale"
-        ? // Stale with the market closed means no pass in the whole last session (#4949) — "for
-          // 3 days" would blur a stopped bot with a weekend's ordinary quiet.
+        ? // Stale with the market closed means no check in the whole last session (#4949) —
+          // "3 days ago" would blur a stopped bot with a weekend's ordinary quiet.
           h.marketOpen
-          ? `no pass for ${ago}`
-          : "no pass last session"
+          ? `last check ${ago} ago`
+          : "no check last session"
         : h.state === "market-closed"
           ? ago
-            ? `idle, last pass ${ago} ago`
-            : "idle"
-          : "this bot hasn't run a pass yet";
+            ? `last check ${ago} ago`
+            : ""
+          : "";
   return { glyph: GLYPH[h.state], word: WORD[h.state], detail };
 }
 

@@ -185,8 +185,9 @@ const cards = [
     <div class="filter-bar">
       <div class="filter-query"><input type="text" value="pl:>0 NVDA" spellcheck="false"></div>
       <button type="button" class="filter-chip">Options only</button>
-      <button type="button" class="filter-chip" aria-pressed="true">In profit</button>
-      <button type="button" class="filter-chip">Under water</button>
+      <button type="button" class="filter-chip">Down today</button>
+      <button type="button" class="filter-chip" aria-pressed="true">Above cost</button>
+      <button type="button" class="filter-chip">Below cost</button>
     </div>
     <p class="ds-note">Chips ⇄ query text are ONE model; the URL keeps the query. A saved view is a named query; the unsaved dot appears the moment the live filter drifts (the Projects rule).</p>`,
   },

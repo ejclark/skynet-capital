@@ -86,19 +86,47 @@ describe("HeartbeatChip", () => {
   it("says the state in words and opens each playbook's verdict on tap", async () => {
     next = staleDesk;
     render(withClient(<HeartbeatChip deskId="sauron" />));
-    const chip = await screen.findByRole("button", { name: /Stale/ });
-    expect(chip.textContent).toContain("no pass for 7 min");
+    const chip = await screen.findByRole("button", { name: /Not checking/ });
+    expect(chip.textContent).toContain("Not checking · last check 7 min ago");
     expect(chip.getAttribute("data-state")).toBe("stale");
     fireEvent.click(chip);
     expect(screen.getByText("waiting for its window")).toBeInTheDocument();
     expect(screen.getByText(/^at least since/)).toBeInTheDocument();
   });
 
+  // #5044 — "Beating" read as "beating the market"; the chip says what it measures.
+  it("reads Running with when the bot last checked the market, never Beating", async () => {
+    next = {
+      available: true,
+      heartbeat: { ...staleHeartbeat, state: "beating", sinceLastPassMs: 20_000 },
+    };
+    render(withClient(<HeartbeatChip deskId="sauron" />));
+    const chip = await screen.findByRole("button", { name: /Running/ });
+    expect(chip.textContent).toContain("Running · checked the market 20s ago");
+    expect(chip.textContent).not.toMatch(/beat/i);
+  });
+
+  it("says a bot that never ran hasn't run yet, with no dangling separator", async () => {
+    next = {
+      available: true,
+      heartbeat: {
+        ...staleHeartbeat,
+        state: "no-record",
+        lastPassAt: null,
+        sinceLastPassMs: null,
+        playbooks: null,
+      },
+    };
+    render(withClient(<HeartbeatChip deskId="sauron" />));
+    const chip = await screen.findByRole("button", { name: /Hasn't run yet/ });
+    expect(chip.textContent?.trim()).toBe("○ Hasn't run yet");
+  });
+
   // #4949 — the table opened but only a second tap on the chip closed it.
   it("closes on Escape and hands focus back to the chip", async () => {
     next = staleDesk;
     render(withClient(<HeartbeatChip deskId="sauron" />));
-    const chip = await screen.findByRole("button", { name: /Stale/ });
+    const chip = await screen.findByRole("button", { name: /Not checking/ });
     fireEvent.click(chip);
     const table = screen.getByRole("table");
     expect(chip.getAttribute("aria-controls")).toBe(table.parentElement?.id);
@@ -118,7 +146,7 @@ describe("HeartbeatChip", () => {
         </>,
       ),
     );
-    const chip = await screen.findByRole("button", { name: /Stale/ });
+    const chip = await screen.findByRole("button", { name: /Not checking/ });
     fireEvent.click(chip);
     fireEvent.pointerDown(screen.getByText("waiting for its window"));
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -126,14 +154,14 @@ describe("HeartbeatChip", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("reads stale, not idle, when a closed market follows a session with no pass", async () => {
+  it("reads not checking, not idle, when a closed market follows a session with no check", async () => {
     next = {
       available: true,
       heartbeat: { ...staleHeartbeat, marketOpen: false, sinceLastPassMs: 3 * 86_400_000 },
     };
     render(withClient(<HeartbeatChip deskId="sauron" />));
-    const chip = await screen.findByRole("button", { name: /Stale/ });
-    expect(chip.textContent).toContain("Stale · no pass last session");
+    const chip = await screen.findByRole("button", { name: /Not checking/ });
+    expect(chip.textContent).toContain("Not checking · no check last session");
     expect(chip.textContent).not.toContain("idle");
   });
 });
@@ -142,8 +170,8 @@ describe("HeartbeatSection", () => {
   it("shows the state card and the verdict table", async () => {
     next = staleDesk;
     render(withClient(<HeartbeatSection deskId="sauron" />));
-    await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
-    expect(screen.getByText(/Stale means no pass for 2 min/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Not checking")).toBeInTheDocument());
+    expect(screen.getByText(/Not checking means no check for 2 min/)).toBeInTheDocument();
     // Twice: once as a roll-call line, once as the verdict table's own row.
     expect(screen.getAllByText("S1-NVDA")).toHaveLength(2);
   });
@@ -280,7 +308,7 @@ describe("RollCallList — an On line says what it is waiting for", () => {
     const { rollCall: _withheld, ...withoutRollCall } = staleHeartbeat;
     next = { available: true, heartbeat: withoutRollCall as typeof staleHeartbeat };
     render(withClient(<HeartbeatSection deskId="sauron" showPlaybooks={false} />));
-    await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Not checking")).toBeInTheDocument());
     expect(screen.queryByText("Which playbooks this bot runs")).not.toBeInTheDocument();
     expect(screen.queryByText(/^Next window: /)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Change this bot's playbooks/ })).toBeNull();
@@ -298,7 +326,7 @@ describe("RollCallList — an On line says what it is waiting for", () => {
   it("offers no link when the viewer may not see the playbooks, even if a roll call came", async () => {
     next = staleDesk;
     render(withClient(<HeartbeatSection deskId="sauron" showPlaybooks={false} />));
-    await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Not checking")).toBeInTheDocument());
     expect(screen.queryByRole("link", { name: /Change this bot's playbooks/ })).toBeNull();
   });
 });

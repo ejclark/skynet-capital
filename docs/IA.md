@@ -384,8 +384,9 @@ needs the controls, not just the way to them.
 - ◆ **The heartbeat vocabulary.** `HeartbeatState` is `beating | stale | market-closed | no-record`
   (`app/src/live/heartbeat.ts:7`); `no-window` is a *playbook verdict* state (`:8`) and `halted` is
   a detail string (`bot-heartbeat-view.ts:40`). A suspended bot's passes still write records with
-  `halted = "suspended by owner"`, so in market hours it reads "● Beating · halted: suspended by
-  owner" — the fault word with no until. MISSING 11 is specified against this enum.
+  `halted = "suspended by owner"`, so in market hours it reads "● Running · checked the market 20s
+  ago · halted: suspended by owner" — the fault word with no until. (The chip said "Beating" until
+  #5044 renamed the words; the enum value is unchanged.) MISSING 11 is specified against this enum.
 - ◆ **390 (a phase-3 note, not a grouping change):** the per-playbook row renders as a card ≤860
   (the verdict table is already four columns); the own-bot switch rides the chip's popover for
   owners (`heartbeat.tsx:80-96`) — beside the state it changes, no header growth (#3687's budget);

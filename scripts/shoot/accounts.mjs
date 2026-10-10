@@ -881,7 +881,7 @@ const board = {
 
 // The bot heartbeat (#3687 slice 3). The topbar market clock reads the real time, so the fixture
 // follows it: a live loop mid-session when the market is open, an idle one otherwise — a frame
-// saying "Beating" beside "Opens in 2h" would picture a state the server can never return.
+// saying "Running" beside "Opens in 2h" would picture a state the server can never return.
 const etNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
 const etMinutes = etNow.getHours() * 60 + etNow.getMinutes();
 const sessionOpen = etNow.getDay() % 6 !== 0 && etMinutes >= 570 && etMinutes < 960;
@@ -1484,8 +1484,9 @@ await page.locator(".cycle-placed .cycle-body").waitFor();
 await page.locator(".cycle-placed").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-heartbeat-traded-round-phone");
 tradedPassesIncluded = false;
-// The chip on a bot that made no pass all last session (#4949): "Stale · no pass last session",
-// never "idle", with its playbook table open — phone first, then desktop. Escape closes it.
+// The chip on a bot that made no pass all last session (#4949): "Not checking · no check last
+// session", never "idle", with its playbook table open — phone first, then desktop. Escape closes
+// it.
 sauronSatOut = true;
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.locator(".hb-chip").click();

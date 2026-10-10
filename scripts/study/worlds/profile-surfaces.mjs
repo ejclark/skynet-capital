@@ -103,21 +103,27 @@ const TODAY = [
     id: "positions-filters",
     label: "positions: filter chips",
     route: SAURON,
-    expect: ["Options", "Shares", "In profit", "Losing", "Expiring within 3 weeks"].map((n) =>
-      role("button", n, { exact: true }),
-    ),
+    expect: [
+      "Options",
+      "Shares",
+      "Up today",
+      "Down today",
+      "Above cost",
+      "Below cost",
+      "Expiring within 3 weeks",
+    ].map((n) => role("button", n, { exact: true })),
   },
   {
     id: "bot-chip",
     label: "bot status chip",
     route: SAURON,
-    expect: [role("button", "Beating · last pass")],
+    expect: [role("button", "Running · checked the market")],
   },
   {
     id: "bot-table",
     label: "bot chip: playbook table (opened)",
     route: SAURON,
-    act: [click("button", "Beating · last pass")],
+    act: [click("button", "Running · checked the market")],
     // Verdicts are the playbooks' own at the newest pass (book.mjs): a Thursday is outside the
     // wheel's sale window.
     expect: [
@@ -171,7 +177,7 @@ const FRIEND = [
     id: "friend-chip",
     label: "friend: chip verdicts, no playbook ids",
     route: "/app/u/sauron",
-    act: [click("button", "Beating · last pass")],
+    act: [click("button", "Running · checked the market")],
     expect: [
       role("row", "aggressive waiting for its window"),
       text("CRWV-WHEEL", { absent: true }),
@@ -200,7 +206,7 @@ const BAD_DAY = [
     id: "bad-chip",
     label: "bot chip: stopped",
     route: SAURON,
-    expect: [role("button", "Stale · no pass for")],
+    expect: [role("button", "Not checking · last check")],
   },
   {
     id: "bad-decision",

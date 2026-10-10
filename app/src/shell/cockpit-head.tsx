@@ -12,6 +12,7 @@ import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
 import { HeartbeatChip } from "./heartbeat";
+import { publishClearance } from "./landing";
 import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
 import { SectionSwitch } from "./section-switch";
@@ -141,7 +142,7 @@ export function CockpitHead({
 
   return (
     <>
-      <div className="cockpit-head">
+      <div className="cockpit-head" ref={publishClearance}>
         {!linked ? (
           <HeadNote trailing={<HeadLinks />}>
             <span>

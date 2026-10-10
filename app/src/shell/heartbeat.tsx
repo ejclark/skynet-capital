@@ -130,7 +130,8 @@ function StateText({ heartbeat }: { readonly heartbeat: Heartbeat }): ReactEleme
   const line = heartbeatLine(heartbeat);
   return (
     <>
-      <span aria-hidden="true">{line.glyph}</span> <b>{line.word}</b> · {line.detail}
+      <span aria-hidden="true">{line.glyph}</span> <b>{line.word}</b>
+      {line.detail ? ` · ${line.detail}` : ""}
       {heartbeat.halted ? ` · halted: ${heartbeat.halted}` : ""}
     </>
   );
@@ -207,8 +208,9 @@ export function HeartbeatSection({
           <StateText heartbeat={heartbeat} />
         </p>
         <p className="note">
-          Passes run at most every {cadence}s while the market is open. Stale means no pass for{" "}
-          {stale} min during market hours, or none in all of the last session while it is closed.
+          The bot checks the market at most every {cadence}s while it is open; each check is a pass
+          below. Not checking means no check for {stale} min during market hours, or none in all of
+          the last session while it is closed.
         </p>
       </section>
       {showPlaybooks && heartbeat.rollCall ? (
