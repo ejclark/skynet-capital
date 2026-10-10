@@ -383,7 +383,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   counts an expert's find as unprimed, and every item came out "unprimed". Either give experts no
   cards or count card-exposed finds apart.
 - 2026-10-09 · the fixed-build control failed on 5 of 7 items: two were real leftovers the fixes
-  missed, the rest a rubric that matched a different mechanism ("the page shrinks" vs "it jumps to
-  the top"). A full match needs the same mechanism.
+  missed (#5021, #5023), one was a false alarm from a Trade address the study typed by hand into
+  its route list (the app's own links open a held contract with `section=orders&manage=<OCC>`),
+  and two were a rubric that matched a different mechanism ("the page shrinks" vs "it jumps to the
+  top"). A full match needs the same mechanism, and census routes are copied from links the app
+  builds, never composed.
 - 2026-10-09 · three experts ran one after another (~2.7 minutes a batch, ~4½ of the round's ~7¾
   hours), and token use was never recorded. Run experts in parallel and log the CLI's usage per call.
