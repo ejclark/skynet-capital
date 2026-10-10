@@ -170,11 +170,19 @@ a.map-tile:hover {
 .map-decision.decision--at-risk {
   border-left-color: var(--neg);
 }
+/* The row's badge, then the figure — on one line when they fit, else the figure under it, never a
+   figure broken across two lines (#5083: the badge says more than the word it replaced). */
 .map-decision-top {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
   font-family: var(--mono);
   font-size: 12px;
+}
+.map-decision-top > .num {
+  margin-left: auto;
+  white-space: nowrap;
 }
 .map-decision-sym {
   font-weight: 700;

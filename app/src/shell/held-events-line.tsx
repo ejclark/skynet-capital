@@ -14,7 +14,7 @@ import { GLYPH_WORD, LaneGlyphIcon } from "./book-lanes";
  *
  * The date comes from the desk payload the Overview already fetched — a decision due, a held
  * name's next print, an option's expiry, a position's own next event (`bookEventsIn` with no
- * corpus) — so it costs no request. Its glyph is the lanes picture's (▲ decide by · ◆ confirmed ·
+ * corpus) — so it costs no request. Its glyph is the lanes picture's (⧗ decide by · ◆ confirmed ·
  * ◇ estimated) with the word for a screen reader; a book with nothing dated says so in words.
  */
 export function HeldEventsLine({ desks }: { readonly desks: readonly BookDesk[] }): ReactElement {

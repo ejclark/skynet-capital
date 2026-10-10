@@ -2,7 +2,7 @@
    (`shell/book-range-head.tsx`) and the lanes picture it drives (`shell/book-lanes.tsx`). Phone
    first: the head stacks — arrows and the range, then three 44px options across the full width;
    from 861 the range and the options share one row and the card adds room, nothing else. Every
-   signal is a shape or a word first (▲ ◆ ◇ ○, a hatch, a ✓, a dashed zero), the hue second. */
+   signal is a shape or a word first (⧗ ◆ ◇ ○, a hatch, a ✓, a dashed zero), the hue second. */
 
 .range-head {
   padding: 12px 12px 10px;

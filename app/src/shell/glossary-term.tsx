@@ -80,3 +80,22 @@ export function GlossaryTerm({
     </span>
   );
 }
+
+/**
+ * A decision's lesson ("What is IV crush?", #3715): the server names a glossary term, and the card
+ * opens it in place. The retired pager drew it last on each card; the row's guidance and the Map
+ * lens's cards carry it now (#5083). A term the glossary doesn't know is dropped, never drawn as a
+ * button that opens nothing.
+ */
+export function LessonTerm({
+  learn,
+}: {
+  readonly learn?: { readonly term: string; readonly label: string };
+}): ReactElement | null {
+  if (!(learn && learn.term in GLOSSARY)) return null;
+  return (
+    <p className="lesson-term">
+      <GlossaryTerm term={learn.term as GlossaryKey}>{learn.label}</GlossaryTerm>
+    </p>
+  );
+}

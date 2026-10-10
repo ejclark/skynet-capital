@@ -103,7 +103,7 @@ export interface BookEvent {
 }
 
 export interface BookEvents {
-  /** Decision cards due in range — their own tier, so the grid marks the day apart (▲). */
+  /** Decision cards due in range — their own tier, so the picture marks the day apart (⧗). */
   readonly decide: readonly BookEvent[];
   readonly held: readonly BookEvent[];
   readonly market: readonly BookEvent[];

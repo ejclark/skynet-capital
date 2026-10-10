@@ -1,5 +1,5 @@
 import type { DeskPosition } from "../../src/live/desk";
-import { MARK_GLYPH, MARK_WORD, markOf } from "../../src/live/position-mark";
+import { MARK_GLYPH, MARK_WORD, markOf, pastLine } from "../../src/live/position-mark";
 
 /**
  * THE FACT BADGE (#5070, round 2 of #5037): every position row carries one mark that says a verb
@@ -198,5 +198,23 @@ describe("the mark's shape and word", () => {
   it("pairs every kind with a glyph and a word, so colour is never the only signal", () => {
     expect(MARK_GLYPH).toEqual({ review: "◆", consider: "▲", onplan: "○" });
     expect(MARK_WORD).toEqual({ review: "Review", consider: "Consider", onplan: "On plan" });
+  });
+});
+
+describe("pastLine — how far past its line, the order inside one mark (#5083)", () => {
+  const past = (p: DeskPosition, spot?: number) => pastLine(p, markOf(p, spot), spot);
+
+  it("measures a sold put through its strike, negative while the stock is still clear", () => {
+    expect(past(CRWV_PUT, 78.4)).toBeCloseTo(2);
+    expect(past(CRWV_PUT, 82.6)).toBeCloseTo(-3.25);
+  });
+
+  it("measures everything else by its return's distance from cost", () => {
+    expect(past(CRWV)).toBeCloseTo(8.32);
+    expect(past(CRWV_PUT)).toBeCloseTo(116);
+  });
+
+  it("gives On plan no line", () => {
+    expect(past(NVDA)).toBe(0);
   });
 });

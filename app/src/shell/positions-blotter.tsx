@@ -11,7 +11,7 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { fetchOptionPositions } from "../live/options";
-import { MARK_TOKEN, MARK_WORD } from "../live/position-mark";
+import { MARK_KINDS, MARK_TOKEN, MARK_WORD } from "../live/position-mark";
 import { rowCallOf } from "../live/row-call";
 import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { useKeepPlace } from "./keep-place";
@@ -21,7 +21,7 @@ import { GuidanceSlot } from "./position-guidance-slot";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
-import { lookRank, shownKind, useRowMarks } from "./use-row-marks";
+import { decisionsByRow, lookOrder, shownKind, useRowMarks } from "./use-row-marks";
 import { ViewTabs } from "./view-tabs";
 
 /**
@@ -35,7 +35,8 @@ import { ViewTabs } from "./view-tabs";
  */
 
 /** The plain filter chips (#3689 slice 6b), each a qualifier in the one query model. "All" isn't
- *  here: it's the absence of every chip's qualifier, and clearing them is its action.
+ *  here: it's the absence of every chip's qualifier and every mark's (#5083: a mark narrows the
+ *  list too, so All let go of neither while one did), and clearing them is its action.
  *
  *  Each P/L chip says which of the two questions it answers (#5042): today's change, or lifetime
  *  against cost. It used to read "In profit" / "Losing" over lifetime P/L, and members tapped
@@ -53,9 +54,13 @@ export const POSITION_CHIPS = [
   ["event:before-expiry", "Earnings before expiry"],
 ] as const;
 
-const CHIP_QUALIFIERS: readonly string[] = POSITION_CHIPS.map(([q]) => q);
+/** Everything All clears: the chips and the Filter's marks. The sort stays — it narrows nothing. */
+const CHIP_QUALIFIERS: readonly string[] = [
+  ...POSITION_CHIPS.map(([q]) => q),
+  ...MARK_KINDS.map((kind) => MARK_TOKEN[kind]),
+];
 
-/** The query with every chip qualifier removed, keeping any typed search words. */
+/** The query with every chip and mark qualifier removed, keeping any typed search words. */
 export function clearChips(query: string): string {
   return query
     .split(/\s+/)
@@ -75,7 +80,7 @@ export function PositionsFilterBar({
 }): ReactElement {
   const inputId = useId();
   const tokens = query.toLowerCase().split(/\s+/);
-  const noChip = !POSITION_CHIPS.some(([q]) => tokens.includes(q));
+  const noChip = !CHIP_QUALIFIERS.some((q) => tokens.includes(q));
   return (
     <div className="filter-bar" ref={ref}>
       <div className="filter-query">
@@ -119,6 +124,9 @@ export function PositionsFilterBar({
   );
 }
 
+/** One empty list, so a page without decisions keeps the rows' lookup memoised. */
+const NO_DECISIONS: readonly Decision[] = [];
+
 /** Tabs + filter bar + the filtered table, for one account. */
 export function PositionsBlotter({
   deskId,
@@ -128,7 +136,7 @@ export function PositionsBlotter({
   lens,
   onLensChange,
   allocation,
-  decisions = [],
+  decisions = NO_DECISIONS,
   canTrade = true,
   children,
 }: {
@@ -164,11 +172,11 @@ export function PositionsBlotter({
   const marks = useRowMarks(deskId, positions, statement.data);
   const kindOf = (p: DeskPosition) => shownKind(marks.rows.get(p.symbol));
   const kept = positions.filter((p) => matchesFilter(p, filter, kindOf(p)));
-  // A stable sort: inside each mark the server's order (largest first) holds.
+  // Inside each mark the fact's urgency (#5083), then the server's order (largest first).
   const shown = filter.sortLook
     ? kept
-        .map((p, i) => ({ p, i, r: lookRank(marks.rows.get(p.symbol)) }))
-        .sort((a, b) => a.r - b.r || a.i - b.i)
+        .map((p, i) => ({ p, i, row: marks.rows.get(p.symbol) }))
+        .sort(lookOrder)
         .map(({ p }) => p)
     : kept;
   // What a mark filter hides, by name, so a narrowed list never reads as the whole book.
@@ -180,6 +188,8 @@ export function PositionsBlotter({
     const kind = kindOf(p);
     if (kind) counts[kind] += 1;
   }
+  // The decision engine's cards, each on the row it speaks about: its lesson opens there (#5083).
+  const said = useMemo(() => decisionsByRow(positions, decisions), [positions, decisions]);
   const guide = (p: DeskPosition) => {
     const row = marks.rows.get(p.symbol);
     const call = rowCallOf(positions, p);
@@ -190,6 +200,7 @@ export function PositionsBlotter({
         deskId={deskId}
         canTrade={canTrade}
         {...(call ? { call } : {})}
+        decisions={said.get(p.symbol) ?? []}
         onAside={() => marks.setAside(p.symbol)}
         onUndo={() => marks.undo(p.symbol)}
       />
@@ -226,7 +237,12 @@ export function PositionsBlotter({
       <PositionsFilterBar query={query} onChange={refine} ref={bar} />
       <div className="positions-result" ref={result}>
         {view === "map" && allocation ? (
-          <MapLens positions={shown} allocation={allocation} decisions={decisions} />
+          <MapLens
+            positions={shown}
+            allocation={allocation}
+            decisions={decisions}
+            marks={marks.rows}
+          />
         ) : view === "runway" ? (
           <RunwayLens positions={shown} />
         ) : (

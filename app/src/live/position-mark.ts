@@ -123,6 +123,24 @@ function soldMark(p: DeskPosition, ret: number | undefined, spot?: number): Posi
   return null;
 }
 
+/**
+ * How far past its line a marked position sits, in percent: the look sort's order inside one mark,
+ * after the clock (#5083; R2 drew the at-risk put first). A sold option judged on its strike is
+ * measured through the strike as a share of it (negative while the stock is still clear, so the
+ * nearer comes first); anything else by how far its return sits from cost — the deeper loss under
+ * Review, the bigger gain under Consider. On plan has no line, so it reads 0.
+ */
+export function pastLine(p: DeskPosition, mark: PositionMark, spot?: number): number {
+  if (mark.kind === "onplan") return 0;
+  const occ = parseOccSymbol(p.symbol);
+  if (occ && spot !== undefined && held(p.quantity).short) {
+    // The same test `soldMark` judges the strike by: past it, or within NEAR_STRIKE of it.
+    const through = occ.type === "put" ? occ.strike - spot : spot - occ.strike;
+    if (through >= -occ.strike * NEAR_STRIKE) return (through / occ.strike) * 100;
+  }
+  return Math.abs(percent(p.returnPct) ?? 0);
+}
+
 export function markOf(p: DeskPosition, spot?: number): PositionMark {
   const ret = percent(p.returnPct);
   const { short } = held(p.quantity);

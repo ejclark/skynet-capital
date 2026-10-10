@@ -79,6 +79,7 @@ function DeskPage(): ReactElement {
               query={query}
               onFilterChange={setFilter}
               canTrade={canTrade}
+              decisions={d.decisions ?? []}
             >
               {canTrade ? <NewTradeCard deskId={d.id} /> : null}
             </PositionsBlotter>

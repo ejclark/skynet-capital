@@ -2,7 +2,10 @@ import { useSearch } from "@tanstack/react-router";
 import type { CSSProperties, ReactElement } from "react";
 import type { Decision, DeskAllocation, DeskPosition } from "../live/desk";
 import { useRefineSearch } from "../live/refine-search";
+import { LessonTerm } from "./glossary-term";
+import { FactBadge } from "./position-guidance-slot";
 import { squarify } from "./treemap";
+import type { RowMark } from "./use-row-marks";
 
 /**
  * THE POSITIONS LENSES (#3689 slices 9–10, design handoff 3c): three ways to look at the same
@@ -11,7 +14,9 @@ import { squarify } from "./treemap";
  *  - List: the table (the landing).
  *  - Map: a treemap of where the capital sits. Tile size is money, tile colour is return (red or
  *    green by sign, with the sign in the text too). The options get their own strip, scaled up so
- *    they're readable, and the legend says by how much. The decisions stack in a column beside it.
+ *    they're readable, and the legend says by how much. The decision engine's cards stack in a
+ *    column beside it, "Worth a look", each wearing its row's fact badge (◆ Review · …, ▲ Consider
+ *    · …) where the retired verdicts "Needs a decision" / "At risk" stood (#5083), and its lesson.
  *  - Runway: a 90-day expiry timeline. Each option is a bar to its expiry, with its last three
  *    weeks hatched (when time decay speeds up).
  */
@@ -123,14 +128,48 @@ function PositionTile({
   );
 }
 
+/** One decision card on the Map: its row's badge (a playbook idea says so in words), the figure,
+ *  the name, the sentence, the lesson and the way on. */
+function MapDecision({
+  d,
+  row,
+}: {
+  readonly d: Decision;
+  readonly row: RowMark | undefined;
+}): ReactElement {
+  return (
+    <article className={`map-decision decision--${d.kind}`}>
+      <span className="map-decision-top">
+        {d.kind === "idea" ? (
+          <span className="decision-kind">Playbook idea</span>
+        ) : row ? (
+          <FactBadge row={row} />
+        ) : (
+          <span />
+        )}
+        <span className={`num tone-${d.plTone}`}>{d.pl}</span>
+      </span>
+      <span className="map-decision-sym">{d.display}</span>
+      <span className="map-decision-title">{d.title}</span>
+      <LessonTerm learn={d.learn} />
+      <a className="decision-btn decision-btn--primary" href={d.primary.href}>
+        {d.primary.label}
+      </a>
+    </article>
+  );
+}
+
 export function MapLens({
   positions,
   allocation,
   decisions,
+  marks,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly allocation: DeskAllocation;
   readonly decisions: readonly Decision[];
+  /** Every row's fact badge, so a card reads as its row does. */
+  readonly marks?: ReadonlyMap<string, RowMark>;
 }): ReactElement {
   // Every weight is a share of the whole account (shares + options + cash = 100), from the server's
   // own percentages: a position's weightPct is of what's invested, so it scales by invested's share.
@@ -198,26 +237,10 @@ export function MapLens({
         </div>
       </div>
       {decisions.length > 0 ? (
-        <aside className="map-decisions" aria-label="Needs a decision">
-          <span className="decisions-eyebrow">Needs a decision</span>
+        <aside className="map-decisions" aria-label="Worth a look">
+          <span className="decisions-eyebrow">Worth a look</span>
           {decisions.map((d) => (
-            <article key={d.id} className={`map-decision decision--${d.kind}`}>
-              <span className="map-decision-top">
-                <span className="decision-kind">
-                  {d.kind === "at-risk"
-                    ? "At risk"
-                    : d.kind === "lock-in"
-                      ? "Lock in profit"
-                      : "Idea"}
-                </span>
-                <span className={`num tone-${d.plTone}`}>{d.pl}</span>
-              </span>
-              <span className="map-decision-sym">{d.display}</span>
-              <span className="map-decision-title">{d.title}</span>
-              <a className="decision-btn decision-btn--primary" href={d.primary.href}>
-                {d.primary.label}
-              </a>
-            </article>
+            <MapDecision key={d.id} d={d} row={marks?.get(d.symbol)} />
           ))}
         </aside>
       ) : null}
