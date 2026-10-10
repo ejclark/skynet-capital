@@ -18,6 +18,12 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Let a drawing keep an approval an approval.** Since the steering page asks nothing without a
+  picture, an approve or fork row reaches it only through a design manifest — which makes it a
+  design question, so a plan's Approve → ready line and a skipped approval's default no longer
+  fire. Fix: a manifest attaches Today + options to the row and keeps its kind and default.
+  _(src: Claude · while: #5056, pictures on every decision)_
+
 - **Unisolated workflow agents share the primary checkout's mutable state.** Review and ship
   agents run without `isolation: worktree`, so their working directory is the primary. An `npm ci`,
   an `npm run build --prefix app` (rewrites the `app/dist` the shoot scripts read) or a branch

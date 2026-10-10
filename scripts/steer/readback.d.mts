@@ -27,5 +27,6 @@ export interface ReadbackPlan {
 }
 
 export const DEFAULT_APPLIED: string;
+export const DRAWING: string;
 export function readback(tp: TouchPointData, records: Record<string, unknown>): ReadbackPlan;
 export function commandsFor(plan: ReadbackPlan, dir: string): string[][];

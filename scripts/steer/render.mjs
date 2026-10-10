@@ -40,7 +40,7 @@ function optionsHtml(d, img) {
     const delta = o.delta ? `<p class="delta"><b>Changes:</b> ${e(o.delta)}</p>` : "";
     rows.push(
       `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
-        `${delta}${buttons(VERBS[d.kind === "design" ? "design" : "fork"], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`,
+        `${delta}${d.irreversible ? "" : buttons(VERBS[d.kind === "design" ? "design" : "fork"], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`,
     );
   }
   return rows.length ? `<div class="opts">${rows.join("")}</div>` : "";
@@ -90,6 +90,13 @@ function decisionHtml(d, i, total, img) {
   );
 }
 
+/** The page's summary line: the decisions asked now, and — counted apart — the ones being drawn. */
+function headline(n, minutes, drawn) {
+  const more = drawn ? ` <span class="muted">· ${drawn} more being drawn</span>` : "";
+  if (n) return `${plural(n, "decision")}, about ${minutes} minutes${more}`;
+  return drawn ? `Nothing to answer yet${more}` : "Nothing needs a decision this time";
+}
+
 function headerHtml(tp) {
   const n = tp.decisions.length;
   const page = tp.slot === "am" ? "Morning page" : "Evening page";
@@ -103,6 +110,10 @@ function headerHtml(tp) {
   const rolled = tp.deferred.length
     ? `<p class="muted">${plural(tp.deferred.length, "more decision")} roll to the next page: ${tp.deferred.map((x) => `${e(x.title)} (#${x.issue})`).join(" · ")}.</p>`
     : "";
+  const drawn = tp.needsPictures ?? [];
+  const drawing = drawn.length
+    ? `<p class="muted" id="drawing">${plural(drawn.length, "decision")} ${drawn.length === 1 ? "is" : "are"} being drawn and come${drawn.length === 1 ? "s" : ""} next page: ${drawn.map((x) => `${e(x.title)} (#${x.issue})`).join(" · ")}. Nothing is asked here without a picture.</p>`
+    : "";
   const unstated = tp.unstated.count
     ? `<p class="muted">${plural(tp.unstated.count, "issue")} carry the waiting-on-you label but state no decision (${tp.unstated.numbers.map((x) => `#${x}`).join(", ")}). They are not asked here: each gets a stated decision or loses the label.</p>`
     : "";
@@ -111,14 +122,20 @@ function headerHtml(tp) {
     (tp.queue.halt
       ? `<p class="halt">Work is halted. Nothing is queued until the dial moves.</p>`
       : "") +
-    `<h1>${n ? `${plural(n, "decision")}, about ${tp.budget.used} minutes` : "Nothing needs a decision this time"}</h1>` +
+    `<h1>${headline(n, tp.budget.used, drawn.length)}</h1>` +
     `<p class="lede">${plural(tp.reel.merged, "PR")} merged since ${e(when(tp.reel.since))} · ${plural(tp.queue.items.length, "item")} queued until ${e(tp.next.label)} · the dial reads ${e(tp.queue.position)}</p>` +
     (toc ? `<ol class="toc">${toc}</ol>` : "") +
     rolled +
+    drawing +
     unstated +
     `</header>`
   );
 }
+
+const emptyDecisions = (tp) =>
+  tp.needsPictures?.length
+    ? '<p class="muted">Every decision this time is still being drawn; they come next page. Press Done to say you looked.</p>'
+    : '<p class="muted">Nothing waits on you. Press Done to say you looked.</p>';
 
 /** The whole page. `img(picture)` returns the published path of a picture, or null for none. */
 export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
@@ -142,7 +159,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     `<div class="page">`,
     headerHtml(tp),
     reelHtml(tp.reel, img),
-    `<section class="block" id="decisions"><h2>Decisions</h2>${decisions || '<p class="muted">Nothing waits on you. Press Done to say you looked.</p>'}</section>`,
+    `<section class="block" id="decisions"><h2>Decisions</h2>${decisions || emptyDecisions(tp)}</section>`,
     queueHtml(tp.queue, tp.next),
     stripHtml(tp.strip),
     `</div>`,

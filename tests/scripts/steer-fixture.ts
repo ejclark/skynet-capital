@@ -1,5 +1,7 @@
 // One touch point built through the real model (decisionsFrom → fitBudget, designDecisions), so the
 // steer specs exercise the same shaping gather.mjs does — only the GitHub reads are replaced.
+// It skips gather's splitByPictures on purpose: the fork, approval and default paths stay covered
+// for a tp.json that carries them. steer-pictures.spec.ts runs the split, as gather does.
 import { designDecisions } from "../../scripts/steer/design.mjs";
 import { decisionsFrom, fitBudget } from "../../scripts/steer/model.mjs";
 import type { TouchPointData } from "../../scripts/steer/render.mjs";

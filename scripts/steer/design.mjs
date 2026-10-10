@@ -41,6 +41,45 @@ export function loadDesign(file, { issue, round } = {}) {
   return designDecisions(wrap.questions, { issue: n, round: wrap.round ?? round ?? null, at });
 }
 
+/** Every `--design` value in argv: repeatable (`--design a.json --design b.json`), a comma list
+ *  (`--design a.json,b.json`), or both. */
+export function designFiles(argv) {
+  const out = [];
+  argv.forEach((a, i) => {
+    if (a === "--design" && argv[i + 1] != null) out.push(...argv[i + 1].split(","));
+  });
+  return out.map((f) => f.trim()).filter(Boolean);
+}
+
+const namesIssue = (file) => {
+  const raw = JSON.parse(readFileSync(file, "utf8"));
+  return !Array.isArray(raw) && raw.issue != null;
+};
+
+/**
+ * Several rounds on one page, keyed by issue: `{ [issue]: decisions }` (#5056 — every decision
+ * gets pictures, so a page can carry one drawing per issue). Each manifest names its own `issue`;
+ * `issue` (--design-issue) stands in only when exactly one manifest leaves it out, so two bare
+ * manifests can never land on the same issue by accident. One issue, one manifest.
+ */
+export function loadDesigns(files, { issue, round } = {}) {
+  const bare = files.filter((f) => !namesIssue(f));
+  if (bare.length > 1) {
+    throw new Error(
+      `steer/design: ${bare.length} manifests name no issue (${bare.join(", ")}) — set \`issue\` in each; --design-issue covers one`,
+    );
+  }
+  const out = {};
+  for (const file of files) {
+    const questions = loadDesign(file, { issue, round });
+    const n = questions[0].issue;
+    if (out[n])
+      throw new Error(`steer/design: two manifests name #${n} — put its questions in one`);
+    out[n] = questions;
+  }
+  return out;
+}
+
 function checked(p) {
   if (!existsSync(p)) throw new Error(`steer/design: picture not found: ${p}`);
   return p;

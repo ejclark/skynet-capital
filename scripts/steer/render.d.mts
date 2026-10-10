@@ -1,6 +1,6 @@
 // Type surface for scripts/steer/render.mjs (see scripts/moneypenny/index.d.mts for why scripts/
 // ships hand-written declarations). The page is asserted on as a string.
-import type { Decision, Picture } from "./model.mjs";
+import type { Decision, NeedsPictures, Picture } from "./model.mjs";
 
 export interface TouchPointData {
   version?: number;
@@ -11,6 +11,8 @@ export interface TouchPointData {
   budget: { minutes: number; used: number; shown: number; deferred: number };
   decisions: Decision[];
   deferred: { key: string; issue: number; title: string; minutes: number }[];
+  /** Decisions with no picture yet: named as being drawn, never asked (absent on older pages). */
+  needsPictures?: NeedsPictures[];
   unstated: { count: number; numbers: number[] };
   reel: {
     since: string;

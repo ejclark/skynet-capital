@@ -6,6 +6,11 @@ export function loadDesign(
   file: string,
   opts?: { issue?: number; round?: number | string | null },
 ): Omit<Decision, "minutes" | "skip">[];
+export function designFiles(argv: string[]): string[];
+export function loadDesigns(
+  files: string[],
+  opts?: { issue?: number; round?: number | string | null },
+): Record<number, Omit<Decision, "minutes" | "skip">[]>;
 export function designDecisions(
   questions: Entry[],
   opts: { issue: number; round?: number | string | null; at?: (p: string) => string },

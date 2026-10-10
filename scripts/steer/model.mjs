@@ -126,8 +126,14 @@ export function decisionsFrom({
   for (const r of rows) {
     const base = shape(r, now);
     const round = design[r.row.number];
-    if (round?.length)
-      out.push(...round.map((q) => ({ ...base, ...q, cls: base.cls, why: base.why })));
+    // A held PR given pictures is still a held PR: a link to merge it, never a button (criterion 8).
+    const keep = (q) => ({
+      cls: base.cls,
+      why: base.why,
+      isPr: base.isPr,
+      irreversible: base.isPr || Boolean(q.irreversible),
+    });
+    if (round?.length) out.push(...round.map((q) => ({ ...base, ...q, ...keep(q) })));
     else out.push(base);
   }
   return out.map((d) => ({ ...d, minutes: estimateMinutes(d), skip: skipText(d) }));
@@ -162,6 +168,30 @@ function shape({ row, src, labels, cls, why, createdAt }, now) {
     today: null,
     options: [],
   };
+}
+
+/** Does the decision show Eric what he is answering — a picture of Today or of an option? */
+export const hasPictures = (d) =>
+  Boolean(d.today?.pictures?.length || (d.options ?? []).some((o) => o.pictures?.length));
+
+/**
+ * The page asks only what it can show (#5056 criterion 4 — Eric, 2026-10-10: "1 and 2 have no
+ * pictures. i'm uncertain what I am responding too"). A decision with no picture leaves the asked
+ * set for `needsPictures`: named on the page as being drawn, rolled over untouched by the
+ * read-back. The irreversible class stays, because the page never answers it: it is a link to
+ * GitHub, and the PR there opens with its own picture (the fridge rule).
+ */
+export function splitByPictures(decisions) {
+  const pictured = [];
+  const needsPictures = [];
+  for (const d of decisions) {
+    if (d.irreversible || hasPictures(d)) pictured.push(d);
+    else {
+      const { key, issue, title, kind, minutes } = d;
+      needsPictures.push({ key, issue, title, kind, minutes });
+    }
+  }
+  return { pictured, needsPictures };
 }
 
 /** What fits the page's minutes, in order; the rest is a count that rolls to the next page. */
