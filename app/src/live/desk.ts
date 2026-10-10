@@ -207,50 +207,56 @@ export async function fetchDesk(id: string): Promise<DeskSnapshot> {
 
 /**
  * The filter grammar — the blotter's subset of the Issues bar: bare terms match the display name,
- * `is:option`/`is:share` split by instrument, `pl:>0`/`pl:<0` split by the sign of total P/L, and
- * `dte:<N` / `dte:<=N` keeps what expires within N days (#3689 slice 6b; shares never match,
- * since they don't expire), and `event:before-expiry` keeps options whose stock prints before
- * they expire. Chips and the query text are ONE model; both sides write this string.
+ * `is:option`/`is:share` split by instrument, `pl:>0`/`pl:<0` split by the sign of total P/L
+ * (lifetime, against cost), `day:>0`/`day:<0` by the sign of today's change (#5042 — a flat or
+ * unpriced day matches neither), `dte:<N` / `dte:<=N` keeps what expires within N days (#3689
+ * slice 6b; shares never match, since they don't expire), and `event:before-expiry` keeps options
+ * whose stock prints before they expire. Chips and the query text are ONE model; both sides write
+ * this string.
  */
 export interface DeskFilter {
   readonly terms: readonly string[];
   readonly option?: boolean;
   readonly plSign?: 1 | -1;
+  /** The sign of today's change (`dayTone`), not lifetime P/L — "down today" is its own question. */
+  readonly daySign?: 1 | -1;
   /** Keep positions expiring in at most this many days. */
   readonly maxDays?: number;
   /** Keep only options with their stock's own event before expiry. */
   readonly eventBeforeExpiry?: boolean;
 }
 
+/** The fixed-word qualifiers, each the part of the filter it sets. A later one of the same kind
+ *  wins (`pl:>0 pl:<0` reads as `pl:<0`), as the chain of `if`s this replaced always did. */
+const QUALIFIERS: ReadonlyMap<string, Partial<DeskFilter>> = new Map<string, Partial<DeskFilter>>([
+  ["is:option", { option: true }],
+  ["is:share", { option: false }],
+  ["pl:>0", { plSign: 1 }],
+  ["pl:<0", { plSign: -1 }],
+  ["day:>0", { daySign: 1 }],
+  ["day:<0", { daySign: -1 }],
+  ["event:before-expiry", { eventBeforeExpiry: true }],
+]);
+
 export function parseDeskQuery(query: string): DeskFilter {
   const terms: string[] = [];
-  let option: boolean | undefined;
-  let plSign: 1 | -1 | undefined;
-  let maxDays: number | undefined;
-  let beforeExpiry = false;
+  let set: Partial<DeskFilter> = {};
   for (const token of query.toLowerCase().split(/\s+/).filter(Boolean)) {
     const dte = /^dte:<(=?)(\d{1,4})$/.exec(token);
-    if (dte) maxDays = Number(dte[2]) - (dte[1] ? 0 : 1);
-    else if (token === "event:before-expiry") beforeExpiry = true;
-    else if (token === "is:option") option = true;
-    else if (token === "is:share") option = false;
-    else if (token === "pl:>0") plSign = 1;
-    else if (token === "pl:<0") plSign = -1;
+    const qualifier = QUALIFIERS.get(token);
+    if (dte) set = { ...set, maxDays: Number(dte[2]) - (dte[1] ? 0 : 1) };
+    else if (qualifier) set = { ...set, ...qualifier };
     else terms.push(token);
   }
-  return {
-    terms,
-    ...(option === undefined ? {} : { option }),
-    ...(plSign ? { plSign } : {}),
-    ...(maxDays === undefined ? {} : { maxDays }),
-    ...(beforeExpiry ? { eventBeforeExpiry: true } : {}),
-  };
+  return { ...set, terms };
 }
 
 export function matchesFilter(position: DeskPosition, filter: DeskFilter): boolean {
   if (filter.option !== undefined && position.isOption !== filter.option) return false;
   if (filter.plSign === 1 && position.totalPlRaw <= 0) return false;
   if (filter.plSign === -1 && position.totalPlRaw >= 0) return false;
+  if (filter.daySign === 1 && position.dayTone !== "pos") return false;
+  if (filter.daySign === -1 && position.dayTone !== "neg") return false;
   if (
     filter.maxDays !== undefined &&
     (position.expiresInDays === undefined || position.expiresInDays > filter.maxDays)
@@ -269,6 +275,8 @@ const EXCLUSIVE_GROUPS: readonly (readonly string[])[] = [
   // options, and a share can never match either: the four replace one another rather than stack.
   ["is:option", "is:share", "dte:<21", "event:before-expiry"],
   ["pl:>0", "pl:<0"],
+  // Today's change stacks with the lifetime pair: "down today but still above cost" is a real book.
+  ["day:>0", "day:<0"],
 ];
 
 /** Toggle one qualifier in the query string — the chip side of the bidirectional model. */

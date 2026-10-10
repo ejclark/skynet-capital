@@ -105,3 +105,55 @@ describe("event:before-expiry", () => {
     expect(clearChips("msft event:before-expiry")).toBe("msft");
   });
 });
+
+// Today's change versus lifetime (#5042). Members tapped "Losing" for what is down TODAY; the chip
+// filtered on lifetime P/L and came back empty while MSFT was −$76 on the day (+$414 overall).
+describe("day:<0 / day:>0 — today's change, apart from pl: (lifetime against cost)", () => {
+  const msft = pos({
+    symbol: "MSFT",
+    display: "MSFT",
+    dayPl: "−$76",
+    dayTone: "neg",
+    totalPl: "+$414",
+    totalPlRaw: 414,
+    totalTone: "pos",
+  });
+  const crwv = pos({
+    symbol: "CRWV",
+    display: "CRWV",
+    dayPl: "+$31",
+    dayTone: "pos",
+    totalPl: "−$412",
+    totalPlRaw: -412,
+    totalTone: "neg",
+  });
+  const unpriced = pos({ symbol: "AAPL", display: "AAPL", dayTone: "flat", totalPlRaw: 0 });
+  const book = [msft, crwv, unpriced];
+  const keep = (q: string) => book.filter((p) => matchesFilter(p, parseDeskQuery(q)));
+
+  it("keeps what is down today even when it is above cost", () => {
+    expect(keep("day:<0")).toEqual([msft]);
+    expect(keep("pl:<0"), "the lifetime filter is a different question").toEqual([crwv]);
+  });
+
+  it("keeps what is up today, and a flat or unpriced day matches neither", () => {
+    expect(keep("day:>0")).toEqual([crwv]);
+    expect(keep("day:<0")).not.toContain(unpriced);
+    expect(keep("day:>0")).not.toContain(unpriced);
+  });
+
+  it("stacks with the lifetime pair: down today but above cost", () => {
+    expect(keep("day:<0 pl:>0")).toEqual([msft]);
+    expect(keep("day:<0 pl:<0")).toEqual([]);
+  });
+
+  it("makes day:>0 and day:<0 replace each other, and leaves pl: alone", () => {
+    expect(toggleQualifier("day:>0", "day:<0")).toBe("day:<0");
+    expect(toggleQualifier("pl:>0", "day:<0")).toBe("pl:>0 day:<0");
+    expect(toggleQualifier("day:<0 pl:>0", "pl:<0")).toBe("day:<0 pl:<0");
+  });
+
+  it("clears with All, keeping the search words", () => {
+    expect(clearChips("msft day:<0 pl:<0")).toBe("msft");
+  });
+});

@@ -30,12 +30,20 @@ import { ViewTabs } from "./view-tabs";
  */
 
 /** The plain filter chips (#3689 slice 6b), each a qualifier in the one query model. "All" isn't
- *  here: it's the absence of every chip's qualifier, and clearing them is its action. */
+ *  here: it's the absence of every chip's qualifier, and clearing them is its action.
+ *
+ *  Each P/L chip says which of the two questions it answers (#5042): today's change, or lifetime
+ *  against cost. It used to read "In profit" / "Losing" over lifetime P/L, and members tapped
+ *  "Losing" for what was down today — 6 of 6 study sessions got "No positions match" while MSFT
+ *  was −$76 on the day. The `pl:` tokens are unchanged, so a saved `pl:<0` view still resolves.
+ *  "Up today" rides along because it adds no line to the chip row at 390 (three either way). */
 export const POSITION_CHIPS = [
   ["is:option", "Options"],
   ["is:share", "Shares"],
-  ["pl:>0", "In profit"],
-  ["pl:<0", "Losing"],
+  ["day:>0", "Up today"],
+  ["day:<0", "Down today"],
+  ["pl:>0", "Above cost"],
+  ["pl:<0", "Below cost"],
   ["dte:<21", "Expiring within 3 weeks"],
   ["event:before-expiry", "Earnings before expiry"],
 ] as const;
