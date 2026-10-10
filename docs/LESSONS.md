@@ -35,6 +35,27 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A member study's census reported done after operating none of its controls
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's full round (#4943).
+  - **What the census is:** the step that operates every control on the area once and frames each
+    result, so the blind experts review the whole area, not a hand-picked sample.
+  - **What happened:** it operated 0 of 856 controls, and preflight still marked it done.
+  - **How it was caught:** by reading the experts' inputs after the round, which showed sign-in
+    doors instead of the profile. No gate fired.
+- **ROOT CAUSE:** a world change (#4998) made every fresh page load clear the member's session, and
+  the census opens each control on a fresh load. `openComposed` never passed the world's sign-in
+  step back to its caller. The census measured "did each step run", not "did it reach the screen it
+  was meant to".
+- **PREVENTION:** gate (#5008): sign-in is passed through, a census reaching under 80% of its
+  controls stops the round before any expert runs, and an expert batch with no frames refuses to
+  start.
+- **SIDE QUESTS:** the same "ran, so done" shape exists anywhere a step is checked for having run
+  rather than for its output (README Lessons, the oracle audit row: the answer grader was trusted
+  until two auditors read its fails).
+
+---
+
 ### Stub-only dry runs passed a study harness that failed its first real call three ways
 - **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
 - **SIGNAL:** The profile member study's first real thin slice (#4943).

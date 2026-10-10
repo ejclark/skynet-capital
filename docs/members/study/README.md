@@ -326,7 +326,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
-   and post its hash and the pin on the owning issue.
+   and post its hash and the pin on the owning issue. Every scored item gets its own id **at sealing**
+   (a pointer like "the open gaps in the README" cannot be graded), and `primes.json` is written in
+   the grader's shape, `{"<member>": ["<id>", …]}`. The controls' expectations name the mechanism
+   each fix removed, not only the item.
 2. `scripts/study/worlds/<area>-*.mjs`: compose payloads from the real builders at the pin, one pinned
    instant, full-URL stubs. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
@@ -361,3 +364,26 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   after one visit to a page with a live feed every later settle waited out its 5s cap twice
   (22s an action, `settled: false`). Every EventSource is now ignored, and a fresh load forgets
   the old page's requests.
+- 2026-10-09 · **full round: the census said done after operating 0 of 856 controls** — a world
+  change made fresh loads sign the member out, and the experts reviewed sign-in doors. A census
+  reaching under 80% of its controls, or an expert batch with no frames, now stops the round
+  (#5008; detail in `docs/LESSONS.md`).
+- 2026-10-09 · the answer grader failed 20 of 42 answers that were right (dates in words,
+  breakdowns, on-screen text in another format): task success read 43% when it was 66%. Audit the
+  oracle with two auditors before quoting task success (#5003, #5009).
+- 2026-10-09 · phone is where members struggle: 21 of 45 tasks right on a phone against 36 of 42
+  on desktop, and every give-up was on a phone. Phone sessions are where the next area's budget
+  earns the most.
+- 2026-10-09 · the expert merge timed out at 10 minutes on both controls, and resuming re-paid for
+  every answer. A resumed round now replays recorded answers, and the merge gets 30 minutes (#5010).
+  Resume with the same `--profile` path: the round compares the path, not its contents.
+- 2026-10-09 · the generated readout printed all 66 structural findings with every frame (794 lines,
+  48MB) and had to be cut to a top ten by hand. Next: `readout.mjs` ranks and caps at ten, the rest folded.
+- 2026-10-09 · the experts read the member cards, so their finds are primed — but the grader
+  counts an expert's find as unprimed, and every item came out "unprimed". Either give experts no
+  cards or count card-exposed finds apart.
+- 2026-10-09 · the fixed-build control failed on 5 of 7 items: two were real leftovers the fixes
+  missed, the rest a rubric that matched a different mechanism ("the page shrinks" vs "it jumps to
+  the top"). A full match needs the same mechanism.
+- 2026-10-09 · three experts ran one after another (~2.7 minutes a batch, ~4½ of the round's ~7¾
+  hours), and token use was never recorded. Run experts in parallel and log the CLI's usage per call.
