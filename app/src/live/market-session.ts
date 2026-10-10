@@ -156,6 +156,26 @@ export function statusLineWords(view: MarketSessionView): string {
   }
 }
 
+/**
+ * The market's word when a fleet alarm has the phone bar (#5064's review). At ≤700px the alarm
+ * outranks the clock and `statusLineWords` steps aside, but "not open yet" and "closed" must never
+ * be told apart by a ring's colour alone — a standing reader is red/green colourblind
+ * (docs/BRAND.md → Accessibility). So each state keeps one short word of its own beside the alarm.
+ * Before the bell it is the open's TIME, not a countdown: one fixed width, so the line never grows
+ * past the bar at 1 a.m. ("Opens 8h 30m"), and the countdown is one tap down with the rest.
+ */
+export function statusLineCue(view: MarketSessionView): string {
+  switch (view.state) {
+    case "open":
+    case "power":
+      return "Open";
+    case "pre":
+      return "Opens 9:30";
+    case "closed":
+      return "Closed";
+  }
+}
+
 const MONTHS = [
   "Jan",
   "Feb",

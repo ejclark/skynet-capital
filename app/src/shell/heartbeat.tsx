@@ -148,7 +148,7 @@ export function HeartbeatChip({
   const query = useHeartbeat(deskId);
   const [open, setOpen] = useState(false);
   const tableId = useId();
-  // Closes like the status pill beside it (#4949) — Escape or a click outside, not only a re-tap.
+  // Closes like the top bar's member menu (#4949) — Escape or a click outside, not only a re-tap.
   const { wrapRef, buttonRef } = useDismiss(
     open,
     useCallback(() => setOpen(false), []),

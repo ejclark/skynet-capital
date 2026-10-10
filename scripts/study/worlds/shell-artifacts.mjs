@@ -22,12 +22,12 @@ export const SHELL_ARTIFACTS = [
       " identity provider, off the machine, so the world shows a plain page with no buttons.",
   },
   {
-    route: "any link off the app (e.g. Status → “Open Actions” on github.com)",
+    route: "any link off the app (e.g. status line → Fleet details → “Open Actions” on github.com)",
     sees: "Nothing: the tap goes nowhere, or a blank tab.",
     why: "A study world aborts every request that would leave the machine; production opens it.",
   },
   {
-    route: "Status (header) → Live stream",
+    route: "status line (top bar) → Fleet details → Live stream",
     sees: "“This page is current — live · seq 0.”",
     why: "The world's board feed is live but never publishes, so its sequence stays 0.",
   },

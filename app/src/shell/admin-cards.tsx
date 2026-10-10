@@ -17,7 +17,8 @@ import {
  * linking stays deliberately owner-only (it grants order placement).
  *
  * The ops-status card was the third of these and is gone (#1296): fleet health is group-visible
- * now, so it belongs to the shell's status pill rather than to an owner-gated settings section.
+ * now, so it belongs to the top bar's status line (its panel, one tap down) rather than to an
+ * owner-gated settings section.
  */
 
 function useAnswer() {

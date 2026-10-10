@@ -112,8 +112,23 @@ await frame("panel-desktop", 1280, OPEN, tapLine);
 await frame("details-healthy-desktop", 1280, OPEN, tapDetails);
 
 ops = attention;
-await frame("line-alarm-phone", 390, OPEN, () => page.getByText("1 fleet alert").waitFor());
+const alarmed = () => page.getByText("1 fleet alert").waitFor();
+await frame("line-alarm-phone", 390, OPEN, alarmed);
+// At ≤700 the alarm folds the market's sentence to one word, so every state is shot with it: no
+// two may differ only by the mark's colour (#5064's review).
+await frame("line-alarm-pre-phone", 390, PRE, alarmed);
+await frame("line-alarm-closed-phone", 390, SATURDAY, alarmed);
 await frame("details-alarm-phone", 390, OPEN, tapDetails);
-await frame("line-alarm-desktop", 1280, OPEN, () => page.getByText("1 fleet alert").waitFor());
+await frame("line-alarm-desktop", 1280, OPEN, alarmed);
+
+// A fleet nobody could read: the read fails, and the line says so beside a hollow square — never
+// a second ring beside the closed market's — in the phone bar's fewer words.
+await page.route("**/api/ops-status", (route) => route.fulfill({ status: 502, body: "down" }));
+await frame("line-unknown-closed-phone", 390, SATURDAY, () =>
+  page.getByText("fleet unknown", { exact: true }).waitFor(),
+);
+await frame("line-unknown-pre-phone", 390, PRE, () =>
+  page.getByText("fleet unknown", { exact: true }).waitFor(),
+);
 
 await close();
