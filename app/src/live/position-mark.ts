@@ -1,5 +1,6 @@
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "./desk";
+import { held } from "./quantity";
 
 /**
  * THE FACT BADGE (#5070; round 2 of #5037, Eric's 3a77c6db): one mark per position that says a
@@ -124,7 +125,7 @@ function soldMark(p: DeskPosition, ret: number | undefined, spot?: number): Posi
 
 export function markOf(p: DeskPosition, spot?: number): PositionMark {
   const ret = percent(p.returnPct);
-  const short = Number(p.quantity.replace(/[^0-9.-]/g, "")) < 0;
+  const { short } = held(p.quantity);
   if (p.isOption && short) {
     const sold = soldMark(p, ret, spot);
     if (sold) return sold;

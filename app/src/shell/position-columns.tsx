@@ -1,11 +1,11 @@
 import type { ReactElement } from "react";
 import type { DeskPosition, PositionEvent } from "../live/desk";
+import { held } from "../live/quantity";
 import { GlossaryTerm } from "./glossary-term";
 import { greeksParts, type HoldingDecay } from "./holding-decay";
 import {
   dayChange,
   GreeksLine,
-  held,
   isWritten,
   PositionHead,
   PositionSize,
