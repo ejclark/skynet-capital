@@ -77,9 +77,11 @@ describe("page sections", () => {
       );
     });
 
-    it("keeps the calendar head's line and its falsifier (#3807 slice 2·1)", () => {
-      expect(frame).toContain("AN INSTRUMENT'S HEAD IS A ROW OF THE PAGE'S OWN IDENTITY");
-      expect(frame).toContain("second topbar");
+    it("keeps the calendar head's rule and records its falsifier firing (#3807 slice 2·1, #5074)", () => {
+      expect(frame).toContain("AN INSTRUMENT'S HEAD HEADS WHAT IT DRIVES");
+      expect(frame).toContain("never an inert one");
+      expect(frame).toContain("met its falsifier");
+      expect(frame).toContain("the Profile page's Events\n * card");
     });
 
     it("names the bench as a composition of sections that folds, never a fourth word (#3407)", () => {

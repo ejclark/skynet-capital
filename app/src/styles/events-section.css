@@ -1,87 +1,107 @@
-/* The Profile page's Events section (#3807 slice 2c): `shell/events-section.tsx` — the market
-   calendar's grid beside an agenda at ≥861, stacked at ≤860, in the reading track. Each tier is a
-   glyph AND a word; the glyphs sit on --text / --muted, pairs already in theme.css (≥ 3:1 in
-   both palettes), so no colour carries the tier alone. */
+/* The Profile page's Events section (#3807 slice 2c; the calendar of what you hold, #5074):
+   `shell/events-section.tsx` — one card, the range as its head (`book-calendar.css`), the lanes
+   picture and the list of dates stacked at ≤860 and side by side from 861. Each tier is a glyph
+   AND a word; the glyphs sit on --text / --muted, pairs already in theme.css (≥ 3:1 in both
+   palettes), so no colour carries the tier alone. */
 
-.book-events {
+.book-cal {
   max-width: var(--col-read);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.book-cal-body {
   display: grid;
-  gap: 16px 28px;
-  align-items: start;
+  min-width: 0;
 }
 @media (min-width: 861px) {
-  .book-events {
-    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  .book-cal-body {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
   }
-}
-/* The grid's head leads its own column here, not a stage row: no rule under it. */
-.book-events .rx-band {
-  margin: 0;
-  padding: 0;
-  border-bottom: 0;
-}
-.book-events .eh-fold .eh {
-  width: min(100%, 320px);
+  .book-cal-body > .lanes {
+    border-right: 1px solid var(--border);
+  }
 }
 
 .book-agenda {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
-.book-agenda .note {
-  margin: 0;
+@media (max-width: 860px) {
+  .book-agenda {
+    border-top: 1px solid var(--border);
+  }
 }
-.book-tiers {
+.book-agenda > .note {
   margin: 0;
-  font-size: 13px;
+  padding: 10px 14px;
+}
+.agenda-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
   color: var(--muted);
 }
-.book-tier {
-  color: var(--text);
-  font-weight: 600;
+.agenda-clear {
+  appearance: none;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
 }
-.book-glyph {
-  font-style: normal;
-  font-size: 10px;
-  vertical-align: 1px;
-}
-.book-tier-held .book-glyph {
-  color: var(--text);
-}
-.book-tier-market .book-glyph {
-  color: var(--muted);
+.agenda-clear:hover,
+.agenda-clear:focus-visible {
+  text-decoration: underline;
 }
 
 .agenda {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
 }
 .agenda-row {
   display: grid;
-  grid-template-columns: 7.5em minmax(0, 1fr);
-  gap: 2px 12px;
-  padding: 10px 0;
+  grid-template-columns: 6.6em 16px minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
-.agenda-row > :not(.agenda-when) {
-  grid-column: 2;
+.agenda-row > :not(.agenda-when, .agenda-glyph) {
+  grid-column: 3;
 }
 .agenda-when {
   grid-row: 1 / span 4;
   color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
   white-space: nowrap;
+  padding-top: 1px;
+}
+.agenda-glyph {
+  grid-row: 1 / span 4;
+  grid-column: 2;
+  padding-top: 2px;
 }
 .agenda-row .book-tier {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
 }
-.agenda-row[data-tier="held"] .book-tier {
+.agenda-row[data-tier="held"] .book-tier,
+.agenda-row[data-tier="decide"] .book-tier {
   color: var(--text);
 }
 .agenda-title {
@@ -106,17 +126,28 @@
   color: var(--muted);
   font-size: 12px;
 }
-/* THE NEXT EVENT ON AN EMPTY RANGE (#5045): a button, not a link — it moves the range (`?on=`)
-   rather than going somewhere — wearing the agenda link's face; the arrow rides with the hue. */
+
+/* THE NEXT DATE ON AN EMPTY RANGE (#5045): its row under its own small heading, then a button,
+   not a link — it moves the range (`?on=`) rather than going somewhere — in the link's face. */
+.agenda-next-head {
+  margin: 0;
+  padding: 10px 14px 6px;
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .book-next-jump {
   appearance: none;
+  align-self: flex-start;
+  min-height: 44px;
   margin: 0;
-  padding: 4px 0;
+  padding: 0 14px;
   border: 0;
   background: none;
   color: var(--accent);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 12.5px;
   text-align: left;
   cursor: pointer;
 }
@@ -124,12 +155,9 @@
 .book-next-jump:focus-visible {
   text-decoration: underline;
 }
-/* The date and the arrow wrap as one, so a long title never strands "· Fri, Oct 23 →" alone. */
-.book-next-when {
-  white-space: nowrap;
-}
 .agenda-foot {
   margin: 0;
+  padding: 10px 14px 14px;
   font-size: 12px;
   color: var(--muted);
 }
@@ -138,10 +166,9 @@
   white-space: nowrap;
 }
 
-/* A DECISION'S DUE DAY on the grid (#3977 slice 4, `event-horizon.tsx`'s `decideDays`) — a ▲ in
-   the cell's top-right corner, in the text colour (never a warm ramp: fire on the calendar waits
-   on a BRAND amendment, slice 7). The shape carries the meaning and the legend names it in words;
-   the pressed day flips it to the accent's ink. Only this section passes decide days. */
+/* A DECISION'S DUE DAY on R&D's month grid (#3977 slice 4, `event-horizon.tsx`'s `decideDays`) —
+   a ▲ in the cell's top-right corner, in the text colour. The shape carries the meaning and the
+   legend names it in words; the pressed day flips it to the accent's ink. */
 .eh-decide {
   position: absolute;
   top: 2px;
@@ -157,4 +184,44 @@
 }
 .eh-legend .eh-decide-key {
   position: static;
+}
+
+/* The next date on what you hold — the Overview's one line (`held-events-line.tsx`): a fact with a
+   link, never a range's output, so it carries no control. */
+.held-next {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.held-next-label {
+  margin: 0 0 4px;
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.held-next-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.held-next-when {
+  font-weight: 600;
+}
+.held-next-link {
+  margin-left: auto;
+  color: var(--accent);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.held-next-link:hover,
+.held-next-link:focus-visible {
+  text-decoration: underline;
 }

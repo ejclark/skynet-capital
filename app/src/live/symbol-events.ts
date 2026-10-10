@@ -6,7 +6,7 @@ import type { ResearchEvent } from "./research";
  * EVENTS ON THE TICKET'S SYMBOL (#3807 slice 3b-2): the market calendar's line on Trade, joined to
  * the ONE name the ticket is on rather than to a book. The same corpus the Profile page's Events
  * section reads (`/api/research/calendar` — every dated event, earnings prints included; `book-events.ts`),
- * in the same two tiers the net-worth card's line draws (`held-events.ts`):
+ * in two tiers, as the Events section words them:
  *
  *   on <SYM>     an event naming the symbol — its earnings print, a launch, a court date
  *   market-wide  the headline macro prints every position feels — the Fed decision, CPI, the jobs

@@ -68,14 +68,16 @@ import { useTowerColumn } from "./use-tower-column";
  *     one symbol. Held as a hypothesis — its falsifier is Eric reading the docked bench as a mess
  *     on the live route, at which point it folds at every width and the switch comes back.
  *
- * AN INSTRUMENT'S HEAD IS A ROW OF THE PAGE'S OWN IDENTITY (#3807 slice 2·1; the design panel and
- * the IA decision, docs/IA.md §8.1, 2026-09-26): an instrument's head (the calendar) is a row of
- * the page's own identity — the cockpit head on the Profile page; on R&D (#3807 slice 2a) the band
- * head that leads the stage, its month grid folded beneath it — rendered only where a date key
- * drives content; a dateless page shows no head, never an inert one. Its range is root URL state
+ * AN INSTRUMENT'S HEAD HEADS WHAT IT DRIVES (#3807 slice 2·1, the IA decision in docs/IA.md §8.1;
+ * amended by #5074, 2026-10-10): an instrument's head (the calendar) renders only where a date key
+ * drives content, as the head of that content — R&D's band head leading its board, its month grid
+ * folded beneath it (#3807 slice 2a); Trade's row leading its stage; the Profile page's Events
+ * card. A dateless page or section shows no head, never an inert one. Its range is root URL state
  * (`?on=&span=`, `live/horizon-params.ts`), so the key means one thing on every page it joins.
- * Held as a hypothesis — its falsifier is Eric reading the head as a second topbar on the live
- * route by 2026-10-10, at which point the row leaves the head for the stage's first row.
+ * The 2026-09-26 placement, a row of the Profile page's sticky identity, met its falsifier: Eric
+ * read it as chrome that drove nothing on most sections ("controls that do nothing is an oxy
+ * moron"; the range "warrants a larger piece of real estate", #5037 round 1), so it left the head
+ * for the one section whose content it changes, with room.
  *
  * THE TOWER'S COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock): from the bench width the
  * frame is TWO columns on every page but Settings — the stage, and the tower's own column from just

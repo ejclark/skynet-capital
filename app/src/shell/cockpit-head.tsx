@@ -9,7 +9,6 @@ import {
 } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
-import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { ConnectLink } from "./connect-link";
 import { HeartbeatChip } from "./heartbeat";
 import { publishClearance } from "./landing";
@@ -21,8 +20,10 @@ import type { PageSection } from "./sections";
 /**
  * THE PROFILE PAGE'S STICKY HEAD (#2321, the Cockpit; moved out of `routes/accounts.tsx` by #3807
  * slice 2b): the account switcher, a bot's heartbeat chip, the condensed net worth off-Overview,
- * the section switch and the calendar head (at ≥861 its last row, at ≤860 the row directly under
- * it — one instance, placed by the phone's own media query, `cockpit-clock.tsx`).
+ * and the section switch. NO CALENDAR, on any section (#5074; #5037 round 2 — Eric, round 1:
+ * "controls that do nothing is an oxy moron"): the range heads the Events section, the one
+ * section whose content it changes (`events-section.tsx`), and the head keeps one height
+ * everywhere.
  *
  * TWO DOORS change its first row, never its height (#3807 slice 2b):
  *   - a VIEWER-LEVEL section open (Milestones, Feedback — #888) HIDES the switcher, never greys it
@@ -136,55 +137,46 @@ export function CockpitHead({
     enabled: linked,
   });
   const { stats, caption } = resolveNetWorth(networth.data, accountId);
-  const phone = usePhoneWidth();
-  // On Events the grid's own head is the one range control (`events-section.tsx`).
-  const clock = section === "events" ? null : <CockpitClock />;
 
   return (
-    <>
-      <div className="cockpit-head" ref={publishClearance}>
-        {!linked ? (
-          <HeadNote trailing={<HeadLinks />}>
-            <span>
-              No account linked yet — <ConnectLink />.
-            </span>
-          </HeadNote>
-        ) : isViewerSection(section) ? (
-          <HeadNote trailing={<HeadLinks />}>
-            {VIEWER_LINE[section as "milestones" | "feedback"]}
-          </HeadNote>
-        ) : (
-          <AccountSwitcher
-            accounts={accounts}
-            selectedId={accountId}
-            onSelect={onSelectAccount}
-            allowAll
-            isDefault={isDefault}
-            onToggleDefault={onToggleDefault}
-            trailing={
-              <HeadLinks
-                {...(accountId === ALL_ACCOUNTS || accountId === "" ? {} : { accountId })}
-              />
-            }
-          />
-        )}
-        {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
-        {!linked || section === "overview" ? null : stats ? (
-          <NetWorthCondensed stats={stats} caption={caption} />
-        ) : (
-          <p className="note">
-            {networth.isError ? "Net worth is unreachable right now." : "Reading your net worth…"}
-          </p>
-        )}
-        <SectionSwitch
-          sections={sections}
-          current={section}
-          onSelect={onSelectSection}
-          variant="horizontal"
+    <div className="cockpit-head" ref={publishClearance}>
+      {!linked ? (
+        <HeadNote trailing={<HeadLinks />}>
+          <span>
+            No account linked yet — <ConnectLink />.
+          </span>
+        </HeadNote>
+      ) : isViewerSection(section) ? (
+        <HeadNote trailing={<HeadLinks />}>
+          {VIEWER_LINE[section as "milestones" | "feedback"]}
+        </HeadNote>
+      ) : (
+        <AccountSwitcher
+          accounts={accounts}
+          selectedId={accountId}
+          onSelect={onSelectAccount}
+          allowAll
+          isDefault={isDefault}
+          onToggleDefault={onToggleDefault}
+          trailing={
+            <HeadLinks {...(accountId === ALL_ACCOUNTS || accountId === "" ? {} : { accountId })} />
+          }
         />
-        {phone ? null : clock}
-      </div>
-      {phone ? clock : null}
-    </>
+      )}
+      {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
+      {!linked || section === "overview" ? null : stats ? (
+        <NetWorthCondensed stats={stats} caption={caption} />
+      ) : (
+        <p className="note">
+          {networth.isError ? "Net worth is unreachable right now." : "Reading your net worth…"}
+        </p>
+      )}
+      <SectionSwitch
+        sections={sections}
+        current={section}
+        onSelect={onSelectSection}
+        variant="horizontal"
+      />
+    </div>
   );
 }

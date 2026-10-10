@@ -13,13 +13,13 @@ import { LENSES, type Lens } from "../live/research";
  * count, the lens row and the day lens's fog line: the instrument's controls WITHOUT its grid.
  * Extracted from `event-horizon.tsx` (#738, #1704) so ONE markup renders in two places — R&D's
  * rail, where `EventHorizon` seats its month grid in the slot between the head row and the lens
- * row, and the Profile page's cockpit head (`cockpit-clock.tsx`), where there is no grid yet
- * (phase 3's popover or sheet). A fragment, on purpose: R&D's `.eh` column lays its parts out
- * with one flex gap, and a wrapper here would double it.
+ * row, and Trade's head (`trade-clock.tsx`), where there is no grid. The Profile page carried it in
+ * its cockpit head until #5074 gave the range the Events section's own head instead
+ * (`book-range-head.tsx`). A fragment, on purpose: R&D's `.eh` column lays its parts out with one
+ * flex gap, and a wrapper here would double it.
  *
  * "Market calendar", not "Event horizon": the visible label names what the thing does (CLAUDE.md
- * → no coined names in copy). The range label is text, not a control — tapping it is inert this
- * slice; the cockpit clock's header says what would change that.
+ * → no coined names in copy). The range label is text, not a control.
  *
  * THE LENS ROW (#1704 slice 2, Eric's brief): day · week · month · quarter. The lens picks the
  * RANGE around the anchor and the arrows step by that duration; the head names the range and

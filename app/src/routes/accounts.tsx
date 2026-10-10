@@ -45,9 +45,9 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter), **Activity** and **Events** (#3807 slice 2c — the book's calendar: the grid beside an
- * agenda of what falls on each day for the tickers held; its grid head is the page's one range
- * control there, a picked day is `?events=`) apply to every account; **Heartbeat** and **Thesis**
+ * blotter), **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * range is the section's own head and the page's only date control, over one lane per position and
+ * the list of dates; a picked day is `?events=`) apply to every account; **Heartbeat** and **Thesis**
  * are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are the VIEWER's (#3807 slice
  * 2b, #888): what `/learn` (+ its chapters `/onboarding`, `/learn/trading`, `/playbooks`, now
  * `?chapter=`) and `/feedback` were, moved as they were — those routes are redirects now, and the
@@ -264,6 +264,7 @@ function CockpitBody({
         desksError={desks.isError}
         day={pinnedDay}
         onPickDay={onPickDay}
+        accounts={new Map(accounts.map((a) => [a.id, a.name]))}
       />
     );
   if (section === "overview") {

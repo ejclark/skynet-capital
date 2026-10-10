@@ -19,8 +19,8 @@ import {
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
  * renders through a real memory-history router so `Route.useSearch()` and the navigate calls are
- * the real ones; the data layer is mocked so the tree stays small (the calendar head and the book's
- * sections are stubbed — they have their own specs).
+ * the real ones; the data layer is mocked so the tree stays small (the book's sections are stubbed
+ * — they have their own specs).
  */
 
 let accounts: unknown[] = [];
@@ -108,10 +108,6 @@ rstest.mock("../../src/live/networth", () => ({
 rstest.mock("../../src/live/desk", () => ({
   fetchDesk: (id: string) => Promise.resolve({ desk: { id, positions: [] } }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
-}));
-rstest.mock("../../src/shell/cockpit-clock", () => ({
-  CockpitClock: () => null,
-  usePhoneWidth: () => false,
 }));
 rstest.mock("../../src/shell/heartbeat", () => ({
   HeartbeatChip: () => null,
