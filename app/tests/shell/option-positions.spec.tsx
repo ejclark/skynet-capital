@@ -11,6 +11,7 @@ import { OptionPositionsCard } from "../../src/shell/option-positions";
  */
 
 const reviewed: OptionDraft[] = [];
+const submitted: OptionDraft[] = [];
 let nextPreview: Partial<OptionPreview> = {};
 let nextStatement: unknown = { available: false, reason: "unlinked", rows: [] };
 rstest.mock("../../src/live/options", () => ({
@@ -31,7 +32,10 @@ rstest.mock("../../src/live/options", () => ({
       },
     });
   },
-  submitOption: () => Promise.resolve({ ok: true, orderId: "o", status: "accepted", symbol: "x" }),
+  submitOption: (draft: OptionDraft) => {
+    submitted.push(draft);
+    return Promise.resolve({ ok: true, orderId: "o", status: "accepted", symbol: "x" });
+  },
 }));
 
 const held: DeskPosition = {
@@ -62,6 +66,7 @@ function withClient(node: ReactElement) {
 describe("OptionPositionsCard — close order type", () => {
   beforeEach(() => {
     reviewed.length = 0;
+    submitted.length = 0;
     nextPreview = {};
   });
 
@@ -98,6 +103,23 @@ describe("OptionPositionsCard — close order type", () => {
         }),
       ).toBeInTheDocument(),
     );
+  });
+
+  // The confirm names a count, so it sends that count (#5090's rule for the desk's close, here for
+  // Trade's): sent bare, the server closes whatever is held when Confirm lands — two contracts if
+  // a second was sold in between, while the button read "1 contract".
+  it("confirms the count it reviewed, not whatever is held when Confirm lands", async () => {
+    nextPreview = { side: "buy", positionIntent: "buy_to_close", contracts: 1 };
+    const sold = { ...held, quantity: "-1" };
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[sold]} />));
+    fireEvent.click(screen.getByRole("button", { name: "Close…" }));
+    await waitFor(() => expect(reviewed).toHaveLength(1));
+    expect(reviewed[0]).not.toHaveProperty("contracts");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /^Confirm — buy to close 1 contract/ }),
+    );
+    await waitFor(() => expect(submitted).toHaveLength(1));
+    expect(submitted[0]).toEqual({ ...reviewed[0], contracts: 1 });
   });
 
   it("reveals the premium field on Limit and reviews with the typed price", async () => {
