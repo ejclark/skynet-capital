@@ -6,10 +6,16 @@
 //                            out_dir, or one JSON file of path → document): the last Done starts
 //                            the reel, and the strip reads active minutes and decision waits
 //     [--since <ISO>]        start the reel here instead (wins over --prev)
-//     [--design <manifest>]  a design round enters as decisions of kind "design" (design.mjs)
+//     [--design <manifest>]  a design round enters as decisions of kind "design" (design.mjs);
+//                            repeat it, or give a comma list, for one manifest per issue — each
+//                            names its own `issue` (--design-issue fills in for one that doesn't)
 //     [--tp 2026-10-09-pm]   name the page (default: the Central clock — before noon is "am";
 //                            between midnight and 05:00 it refuses, and --tp is required)
 //     [--design-issue N] [--design-round N] [--budget <minutes>] [--now <ISO>]
+//
+// NOTHING IS ASKED WITHOUT A PICTURE (#5056 criterion 4). A decision that shows no picture — no
+// manifest drew it — goes to `needsPictures`, not `decisions`: the page names it as being drawn
+// and the read-back rolls it over. The summary line lists their keys; draw them and gather again.
 //
 // READS ONLY EXISTING MACHINERY, and builds no second copy of any of it (#5056's interrogation):
 //   - the decisions: `plan()` from scripts/moneypenny/assignments.mjs — the one Needs-you selector,
@@ -31,8 +37,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { plan, gather as readAssignments } from "../moneypenny/assignments.mjs";
 import { ensureGhToken, ghRest, ghRestAll } from "../moneypenny/gh.mjs";
-import { loadDesign } from "./design.mjs";
-import { BUDGET_MINUTES, decisionsFrom, fitBudget, parseSteerMarker } from "./model.mjs";
+import { designFiles, loadDesigns } from "./design.mjs";
+import {
+  BUDGET_MINUTES,
+  decisionsFrom,
+  fitBudget,
+  parseSteerMarker,
+  splitByPictures,
+} from "./model.mjs";
 import { readRecords } from "./records.mjs";
 import { historyFrom, isResearch, reelFrom, STRIP_DAYS, stripFrom } from "./reel.mjs";
 import {
@@ -110,7 +122,7 @@ function becauseMap(sinceIso) {
   return out;
 }
 
-function decisionsBlock({ deps, planned, designFile, now, slot }) {
+function decisionsBlock({ deps, planned, designFiles: files, now, slot }) {
   const blocks = {};
   for (const n of planned.needsYou.map((r) => r.number)) {
     if (deps.prs.some((p) => p.number === n)) continue;
@@ -118,19 +130,16 @@ function decisionsBlock({ deps, planned, designFile, now, slot }) {
       .filter((b) => b.state === "open")
       .map((b) => b.number);
   }
-  const design = {};
-  if (designFile) {
-    const round = loadDesign(designFile, {
-      issue: flag("design-issue") && Number(flag("design-issue")),
-      round: flag("design-round") ?? null,
-    });
-    const issue = round[0].issue;
+  const design = loadDesigns(files, {
+    issue: flag("design-issue") && Number(flag("design-issue")),
+    round: flag("design-round") ?? null,
+  });
+  for (const issue of Object.keys(design).map(Number)) {
     if (!planned.needsYou.some((r) => r.number === issue)) {
       throw new Error(
         `steer/gather: #${issue} is not on the Needs-you list — give it a \`Needs from you\` callout first (docs/ISSUES.md rule 7)`,
       );
     }
-    design[issue] = round;
   }
   const all = decisionsFrom({
     needsYou: planned.needsYou,
@@ -140,8 +149,10 @@ function decisionsBlock({ deps, planned, designFile, now, slot }) {
     design,
     now,
   });
+  // Nothing is asked without a picture: those wait, named, for a drawing (.claude/skills/steer).
+  const { pictured, needsPictures } = splitByPictures(all);
   const minutes = Number(flag("budget")) || BUDGET_MINUTES[slot];
-  return fitBudget(all, minutes);
+  return { ...fitBudget(pictured, minutes), needsPictures };
 }
 
 /**
@@ -195,10 +206,10 @@ function main() {
   const deps = readAssignments();
   const planned = plan(deps);
   const unstated = planned.queue.filter((q) => !q.decision).map((q) => q.number);
-  const { shown, deferred, used, minutes } = decisionsBlock({
+  const { shown, deferred, used, minutes, needsPictures } = decisionsBlock({
     deps,
     planned,
-    designFile: flag("design"),
+    designFiles: designFiles(process.argv),
     now,
     slot: tp.slot,
   });
@@ -218,6 +229,7 @@ function main() {
     budget: { minutes, used, shown: shown.length, deferred: deferred.length },
     decisions: shown,
     deferred,
+    needsPictures,
     unstated: { count: unstated.length, numbers: unstated },
     reel,
     queue: queueBlock(gate, next),
@@ -234,7 +246,9 @@ function main() {
   writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
   console.log(
     `tp.json → ${file} · ${out.id} · ${shown.length} decision(s), ~${used} min` +
-      `${deferred.length ? ` (${deferred.length} roll over)` : ""} · ${reel.merged} merged since ${since}` +
+      `${deferred.length ? ` (${deferred.length} roll over)` : ""}` +
+      `${needsPictures.length ? ` · ${needsPictures.length} need pictures: ${needsPictures.map((d) => d.key).join(", ")}` : ""}` +
+      ` · ${reel.merged} merged since ${since}` +
       ` · ${out.queue.items.length} queued · dial ${gate.position}`,
   );
 }

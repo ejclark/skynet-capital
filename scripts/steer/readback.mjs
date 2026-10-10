@@ -18,6 +18,8 @@
 //     skipped item — a fork, a design round, a held or platter PR — rolls over untouched: the
 //     standing "now, always now" answers WHEN, not WHAT (CLAUDE.md).
 //   - The irreversible class never moves here: a held PR's answer is a comment and a rollover.
+//   - A decision the page named as being drawn (`needsPictures`: no picture yet) was never asked,
+//     so it rolls over untouched — no default, no label, no comment.
 //   - Each Build on a design option becomes a `feedback` issue (his tap is the go), marked so the
 //     reel can say "because you said …" when it merges.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -30,6 +32,8 @@ import { readRecords } from "./records.mjs";
 
 const DECISION_LABEL = "needs-eric";
 export const DEFAULT_APPLIED = "default applied; no answer from Eric";
+/** Why a decision that had no picture yet rolls over: it was named on the page, never asked. */
+export const DRAWING = "no picture yet: named as being drawn, not asked; it comes next page";
 
 function designPart(d, r) {
   const name = (k) => d.options.find((o) => o.key === k)?.name ?? k;
@@ -204,9 +208,11 @@ export function readback(tp, records) {
   for (const d of tp.decisions) {
     const r = rr.decisions[d.key];
     if (!isAnswered(r)) skipped(d, acc);
-    else if (d.kind === "design") designAnswer(d, r, acc, tp.id);
+    else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id);
     else plainAnswer(d, r, acc);
   }
+  // Never asked, so never answered: no default, no label, no comment — even if a record exists.
+  for (const d of tp.needsPictures ?? []) acc.roll(d, DRAWING);
   queueAnswers(tp, rr, acc);
 
   const actions = [

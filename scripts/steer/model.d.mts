@@ -85,6 +85,19 @@ export function decisionsFrom(input: {
   design?: Record<number, Partial<Decision>[]>;
   now: string | number;
 }): Decision[];
+/** A decision held back for want of a picture: named on the page, never asked, rolled over. */
+export interface NeedsPictures {
+  key: string;
+  issue: number;
+  title: string;
+  kind: Kind;
+  minutes: number;
+}
+export function hasPictures(d: Partial<Decision>): boolean;
+export function splitByPictures(decisions: Decision[]): {
+  pictured: Decision[];
+  needsPictures: NeedsPictures[];
+};
 export function fitBudget(
   decisions: Decision[],
   minutes: number,
