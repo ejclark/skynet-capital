@@ -116,6 +116,23 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   reopen date, and "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx`),
   not a rung celebrated beside its explanation.
 
+- **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
+  member study (#4943) had been graded, so no member card could carry it; the study then found all
+  twelve of its items without seeing them (`docs/members/study/profile-2026-10/readout.md`).
+  The bugs in it were fixed at once (#4944–#4951); the placement questions come back as shapes.
+
+  > 1. the popover to see the playbook settings/configuration is useful but in a weird spot
+  > 2. the controls for the calendar are disconnected with the content it controls. These controls show up for MOST of the tabs, but not all. These controls don't even drive content on many of these views. Architecture/design smell.
+  >    1. cash ready to use - this information is directly association to the total networth - it lets you know how much of your capital is on the sidelines/idle
+  > 3. content shift between tabs - this is a smell that reflects poor design choices
+  >    1. activity list- the playbook triggering trade execution is important information to capture at the line item level on the list
+  >       1. the information is a wall of text, not friendly for human readability
+  > 4. Needs a decision - the concept and design of the section feels good, but the experience is disjointed because the information is detached from the position. I feel integrating the guidance to be inline with positions could enhance useability to be more intuitive.
+  >    1. The"needs a decision" feedback/guidance to sell after a price drop which feels 1-dimensional/amature/rookie-like. CRWV is a highly volitile stock that just had pullback - guidance to abandon position feels short sighted and prone to lose money. We should be paying more attention tt to the cycle ranges, bolingerband, moving averages, greeks, volume and sentiment to provide this type of guidance.
+  >    2. Horizontal scroll on this section is terrible ux
+  >    3. guidance - clicking on this button navigates to a new page and requires scrolling through a lot of content to find the guidance section - it's  completely disorienting; terrible ux. Guidance should be provided inline with the position.
+  > 5. Trade filters -clicking on these forces the page to scroll to the top, severing/breaking user flow - terrible ux
+
 ## 6. Journeys
 
 Each step: `goto` · what he sees · the EARS acceptance line · the judge line. Steps marked
