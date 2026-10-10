@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
-import { useId, useMemo } from "react";
+import type { ReactElement, ReactNode, Ref } from "react";
+import { useId, useMemo, useRef } from "react";
 import {
   type Decision,
   type DeskAllocation,
@@ -11,6 +11,7 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { fetchOptionPositions, type OptionPositions } from "../live/options";
+import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
@@ -51,15 +52,18 @@ export function clearChips(query: string): string {
 export function PositionsFilterBar({
   query,
   onChange,
+  ref,
 }: {
   readonly query: string;
   readonly onChange: (next: string) => void;
+  /** The blotter keeps this bar still across a refinement (#5021). */
+  readonly ref?: Ref<HTMLDivElement>;
 }): ReactElement {
   const inputId = useId();
   const tokens = query.toLowerCase().split(/\s+/);
   const noChip = !POSITION_CHIPS.some(([q]) => tokens.includes(q));
   return (
-    <div className="filter-bar">
+    <div className="filter-bar" ref={ref}>
       <div className="filter-query">
         <label className="visually-hidden" htmlFor={inputId}>
           Search or filter positions
@@ -131,6 +135,7 @@ export function PositionsBlotter({
   allocation,
   decisions = [],
   canTrade = true,
+  children,
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
@@ -144,6 +149,9 @@ export function PositionsBlotter({
   readonly decisions?: readonly Decision[];
   /** Does the viewer own this account (#3807 slice 2d)? Off it, the rows offer no write. */
   readonly canTrade?: boolean;
+  /** What sits under the list (the New trade card). It rides in the held region, so the space a
+   *  refinement holds (#5021) opens below it, where the page ends, not between it and the rows. */
+  readonly children?: ReactNode;
 }): ReactElement {
   const filter = parseDeskQuery(query);
   const shown = positions.filter((p) => matchesFilter(p, filter));
@@ -159,6 +167,19 @@ export function PositionsBlotter({
   const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
   // An Events row's `#pos-<symbol>` link (#4348): land on the row or card once it has rendered.
   useLandOnPosition(`${view}:${shown.map((p) => p.symbol).join(",")}`);
+  // A refinement that shortens the list keeps the filter bar under the finger (#5021): the list
+  // is the last thing on the Overview, so a shorter one would let the browser clamp the scroll.
+  const bar = useRef<HTMLDivElement>(null);
+  const result = useRef<HTMLDivElement>(null);
+  const keepPlace = useKeepPlace(bar, result, `${view}|${query}`);
+  const refine = (next: string) => {
+    if (next !== query) keepPlace();
+    onFilterChange(next);
+  };
+  const pickLens = (next: Lens) => {
+    if ((next === "map" && !allocation ? "list" : next) !== view) keepPlace();
+    onLensChange?.(next);
+  };
   return (
     <>
       {lens && onLensChange ? (
@@ -166,29 +187,32 @@ export function PositionsBlotter({
           <h2 className="positions-title">
             Positions <span className="num">{positions.length}</span>
           </h2>
-          <LensSwitch lens={view} onChange={onLensChange} />
+          <LensSwitch lens={view} onChange={pickLens} />
         </div>
       ) : null}
-      <ViewTabs deskId={deskId} query={query} onPick={onFilterChange} />
-      <PositionsFilterBar query={query} onChange={onFilterChange} />
-      {view === "map" && allocation ? (
-        <MapLens positions={shown} allocation={allocation} decisions={decisions} />
-      ) : view === "runway" ? (
-        <RunwayLens positions={shown} />
-      ) : (
-        <div className="pos-blotter">
-          <PositionsTable
-            positions={shown}
-            deskId={deskId}
-            totalCount={positions.length}
-            decayBySymbol={decay}
-            canTrade={canTrade}
-          />
-          {shown.length > 0 ? (
-            <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
-          ) : null}
-        </div>
-      )}
+      <ViewTabs deskId={deskId} query={query} onPick={refine} />
+      <PositionsFilterBar query={query} onChange={refine} ref={bar} />
+      <div className="positions-result" ref={result}>
+        {view === "map" && allocation ? (
+          <MapLens positions={shown} allocation={allocation} decisions={decisions} />
+        ) : view === "runway" ? (
+          <RunwayLens positions={shown} />
+        ) : (
+          <div className="pos-blotter">
+            <PositionsTable
+              positions={shown}
+              deskId={deskId}
+              totalCount={positions.length}
+              decayBySymbol={decay}
+              canTrade={canTrade}
+            />
+            {shown.length > 0 ? (
+              <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
+            ) : null}
+          </div>
+        )}
+        {children}
+      </div>
     </>
   );
 }
