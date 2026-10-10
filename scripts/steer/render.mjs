@@ -101,7 +101,7 @@ function headerHtml(tp) {
     )
     .join("");
   const rolled = tp.deferred.length
-    ? `<p class="muted">${plural(tp.deferred.length, "more decision")} roll to the next page: ${tp.deferred.map((x) => `#${x.issue}`).join(", ")}.</p>`
+    ? `<p class="muted">${plural(tp.deferred.length, "more decision")} roll to the next page: ${tp.deferred.map((x) => `${e(x.title)} (#${x.issue})`).join(" · ")}.</p>`
     : "";
   const unstated = tp.unstated.count
     ? `<p class="muted">${plural(tp.unstated.count, "issue")} carry the waiting-on-you label but state no decision (${tp.unstated.numbers.map((x) => `#${x}`).join(", ")}). They are not asked here: each gets a stated decision or loses the label.</p>`
