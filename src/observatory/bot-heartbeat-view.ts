@@ -185,7 +185,8 @@ const EXITS_ONLY_REASON =
   "nothing and its exit rules still sell what it holds. Subscribe this bot to it to let it open " +
   "positions.";
 /** No playbook answers to the id, so the bots refuse the subscription (`subscriptionRoster`) and a
- *  paused one runs no exits either (`pausedRoster`). Authored plays are not wired to run yet. */
+ *  paused one runs no exits either (`pausedRoster`). An authored play resolves only once its spec
+ *  reaches the bots (`resolveBotRoster`'s `authored`), and nothing persists one yet (#809). */
 const UNKNOWN_REASON =
   "Subscribed, but the bots find no playbook by this id, so nothing on this bot runs it.";
 

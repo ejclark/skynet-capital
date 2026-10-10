@@ -29,8 +29,9 @@ function authoredPlay(
  * unknown `SKYNET_PLAYBOOKS` token — a stale subscription should be loud, not silently dark.
  *
  * `authored` (#809 slice 2) is this account's own compiled authored plays, from
- * `authoredRoster(specs, accountId)`. Omitted — every caller today, since nothing persists a spec
- * yet — behaves byte-for-byte as before: only house plays resolve.
+ * `authoredRoster(specs, accountId)`; the bots forward it through `resolveBotRoster` (#4450 slice
+ * 3). Omitted — what every caller supplies today, since nothing persists a spec yet — only house
+ * plays resolve.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
