@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -12,6 +12,7 @@ import {
 import { quote } from "../../scripts/steer/filings.mjs";
 import { parseSteerMarker } from "../../scripts/steer/model.mjs";
 import {
+  anchorDecision,
   commandsFor,
   DEFAULT_APPLIED,
   type ReadbackAction,
@@ -199,6 +200,111 @@ describe("the commands a session runs", () => {
       const file = on4437?.[on4437.indexOf("--comment-file") + 1] ?? "";
       expect(readFileSync(file, "utf8")).toContain("> not this week");
       expect(cmds.filter((c) => c[2] === "create")).toHaveLength(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// #5056, Eric 2026-10-10: comments he sends to Claude on the page count. An automatic reply had
+// told him "a comment here won't show up in the read-back"; now each one is quoted word for word
+// beside his taps, on the issue the decision came from.
+describe("Eric's comments on the page", () => {
+  const said = [
+    {
+      anchorKey: "d-5037-q1-B",
+      text: "this one, but\n\nwith the row kept",
+      at: "2026-10-10T21:41:00Z",
+    },
+    { anchorKey: "#d-5037-q1", text: "progressive reveal everywhere", at: "2026-10-10T21:40:00Z" },
+    {
+      anchorKey: "4100",
+      text: "ready — take slice 1 per the state block",
+      at: "2026-10-10T21:42:00Z",
+    },
+    { anchorKey: "queue", text: "the queue feels long", at: "2026-10-10T21:43:00Z" },
+    { anchorKey: "d-2224", text: "   ", at: "2026-10-10T21:44:00Z" },
+  ];
+  const withComments = readback(tp, records, said);
+  const on = (n: number) =>
+    withComments.actions
+      .filter((a) => a.kind === "comment")
+      .filter((a) => a.issue === n)
+      .map((a) => a.body);
+
+  it("quotes each one word for word under its decision, oldest first, naming the option it sits on", () => {
+    const body = on(5037)[0] ?? "";
+    const block = [
+      "Eric's comments on the page:",
+      quote("progressive reveal everywhere"),
+      "On option B:",
+      quote("this one, but\n\nwith the row kept"),
+    ].join("\n\n");
+    expect(body).toContain(block);
+    // Inside question 1's part, after its taps and note — never under another question.
+    expect(body.indexOf(block)).toBeGreaterThan(body.indexOf("**Q1 · "));
+    expect(withComments.followUps).toContainEqual(
+      expect.objectContaining({ kind: "read-comment", key: "5037-q1" }),
+    );
+  });
+
+  it("keeps a decision he commented on without a tap open: quoted, no default, no label", () => {
+    expect(withComments.defaults.map((d) => d.issue)).not.toContain(4100);
+    expect(withComments.actions.some((a) => a.kind === "labels" && a.issue === 4100)).toBe(false);
+    expect(withComments.rollover.find((r) => r.key === "4100")?.why).toMatch(/commented/);
+    expect(on(4100)[0]).toContain("> ready — take slice 1 per the state block");
+  });
+
+  it("never lets a quoted comment read as his ready-flip: footed, led by the bold header", () => {
+    expect(on(4100)).toHaveLength(1);
+    for (const body of on(4100)) {
+      expect(body.endsWith(FOOTER)).toBe(true);
+      expect(isClaudeReadyLine(body)).toBe(false);
+      expect(body.split("\n")[0]).toMatch(/^\*\*Answered on the decisions page/);
+    }
+  });
+
+  it("hands back a comment that sits on no shown decision, and drops an empty one", () => {
+    expect(withComments.unplacedComments.map((c) => c.anchorKey)).toEqual(["queue"]);
+    expect(on(2224)[0]).not.toContain("Eric's comments on the page");
+  });
+
+  it("leaves the plan exactly as before when there are no comments", () => {
+    expect(plan.unplacedComments).toEqual([]);
+    expect(readback(tp, records, [])).toEqual(plan);
+  });
+
+  it("maps an anchor to the longest matching key, so 5037 never claims 5037-q1's comments", () => {
+    const ds = [
+      { key: "5037", options: [] },
+      { key: "5037-q1", options: [{ key: "A" }] },
+    ] as unknown as Parameters<typeof anchorDecision>[1];
+    expect(anchorDecision("d-5037-q1-A", ds)).toMatchObject({ d: { key: "5037-q1" }, opt: "A" });
+    expect(anchorDecision("d-5037", ds)).toMatchObject({ d: { key: "5037" }, opt: null });
+    expect(anchorDecision("d-503", ds)).toBeNull();
+  });
+
+  it("reads them from --comments on the command line, and refuses a file that is not a list", () => {
+    const dir = mkdtempSync(join(tmpdir(), "steer-comments-"));
+    const run = (comments: string) =>
+      execFileSync(
+        "node",
+        [
+          "scripts/steer/readback.mjs",
+          ...["--tp", join(dir, "tp.json"), "--records", join(dir, "records.json")],
+          ...["--comments", join(dir, comments)],
+        ],
+        { encoding: "utf8", stdio: "pipe" },
+      );
+    try {
+      writeFileSync(join(dir, "tp.json"), JSON.stringify(tp));
+      writeFileSync(join(dir, "records.json"), JSON.stringify(records));
+      writeFileSync(join(dir, "comments.json"), JSON.stringify(said));
+      writeFileSync(join(dir, "bad.json"), JSON.stringify({ text: "not a list" }));
+      const cli = JSON.parse(run("comments.json")) as { actions: ReadbackAction[] };
+      const c = cli.actions.filter((a) => a.kind === "comment").find((a) => a.issue === 5037);
+      expect(c?.body).toContain("> progressive reveal everywhere");
+      expect(() => run("bad.json")).toThrow();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
