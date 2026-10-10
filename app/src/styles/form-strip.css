@@ -1,13 +1,31 @@
 /* The Form strip (#3689 slice 3b) — `shell/form-strip.tsx`, in the net-worth card's footer. Squares
  * are 26×22, radius 5: ✓ on a green tint, ✕ on a red one. The glyph carries win or loss; the tint
- * repeats it. The popover shows on hover or focus with the same shadow as the glossary popovers. */
+ * repeats it. The popover shows on hover or focus with the same shadow as the glossary popovers.
+ *
+ * Touch (#5046): each square is pressed through an invisible 44×44 box centred on it, so the drawn
+ * square keeps its size while a thumb gets the target touch guidance asks for. The squares sit 44px
+ * apart, centre to centre, so neighbouring boxes meet and never overlap. The cue after them says in
+ * words that they open trades — the popover says so too, but only to a pointer that can hover. */
 
+/* 12px between wrapped rows, not 6: a square's press box reaches 11px above and below it, and
+   should not reach over the summary or the cue. In the footer the strip takes the room the gap to
+   a new high leaves, and never less than a row of squares: below that, the footer wraps the gap
+   onto its own line (networth-card.css) rather than squeezing squares under it. */
 .form-strip {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 12px;
-  margin-right: auto;
+  gap: 12px;
+  flex: 1 1 0;
+  min-width: min-content;
+}
+/* The squares and the cue that names them wrap as one: the cue stays beside the squares, or drops
+   just under them, never back under the summary. */
+.form-track {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   min-width: 0;
 }
 .form-eyebrow {
@@ -24,12 +42,15 @@
 .form-summary b {
   color: var(--text);
 }
+/* 26 drawn + 18 between = 44 from centre to centre: each square's box reaches 9px into the gap on
+   either side, so two neighbours' boxes meet in the middle of it. */
 .form-squares {
   display: flex;
-  gap: 4px;
+  gap: 18px;
 }
 .form-sq {
   position: relative;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
   width: 26px;
@@ -38,9 +59,27 @@
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
-  transition: outline-color 0.15s ease;
+  transition: outline-color var(--dur-quick) ease;
   outline: 1px solid transparent;
   outline-offset: 2px;
+}
+/* The press target: 44×44, centred on the square whatever its border, drawn as nothing. It reaches
+   11px above and below — into the footer's own padding, which is why the footer does not grow. */
+.form-sq::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+}
+.form-cue {
+  font-size: 12px;
+  color: var(--muted);
+}
+.form-cue span {
+  color: var(--accent);
 }
 .form-sq--win {
   background: color-mix(in srgb, var(--pos) 22%, var(--surface-2));

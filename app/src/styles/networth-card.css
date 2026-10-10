@@ -119,9 +119,12 @@
   height: 190px;
 }
 
+/* Wraps: where the Form strip's squares and the gap to a new high do not fit one line (a narrow
+   tablet), the gap and its meter drop below the strip together instead of crushing either. */
 .nw-foot {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
@@ -133,6 +136,13 @@
 /* a single account with no closes yet and no known high: no footer rule over nothing */
 .nw-foot:empty {
   display: none;
+}
+.nw-high {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .nw-to-high b {
   color: var(--charged);

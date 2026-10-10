@@ -179,3 +179,69 @@ test.describe("landing at 390px, through the links those doors make (#5022)", ()
     await expectLanded(card);
   });
 });
+
+/**
+ * The FORM squares as touch targets (#5046). A drawn square is 26×22 — too small for a thumb — so
+ * each one owns a 44×44 box centred on it, and no two boxes overlap: any point within 21px of a
+ * square's centre, across and down, belongs to that square. A press 18px off the centre, outside
+ * the drawn square but inside its box, opens that trade. And the strip says in words that the
+ * squares open trades: the popover that also says so needs a hover a touch screen never makes.
+ *
+ * The press is a mouse click, not `touchscreen.tap`: Chromium's touch adjustment snaps an emulated
+ * tap onto the nearest link, so a tap passes with no box at all and cannot tell the box from the
+ * browser's guess. A click lands exactly where it is sent — what a stylus, a trackpad, or a
+ * browser that does not adjust taps gets.
+ *
+ * Both ends of the widths that draw the strip: 1280, and 701 — one pixel above the phone layout
+ * that hides it (#3689 slice 8).
+ */
+const CUE = "Each square opens its trade";
+
+/** The points within 21px of each square's centre that hit-test to something other than it. */
+function strayPoints(): string[] {
+  const misses: string[] = [];
+  for (const sq of document.querySelectorAll<HTMLElement>(".form-sq")) {
+    const box = sq.getBoundingClientRect();
+    const [cx, cy] = [box.left + box.width / 2, box.top + box.height / 2];
+    for (const dx of [-21, 0, 21]) {
+      for (const dy of [-21, 0, 21]) {
+        const hit = document.elementFromPoint(cx + dx, cy + dy)?.closest(".form-sq");
+        if (hit !== sq) misses.push(`${sq.getAttribute("href")} at (${dx}, ${dy})`);
+      }
+    }
+  }
+  return misses;
+}
+
+for (const width of [1280, 701]) {
+  test.describe(`the FORM squares as touch targets at ${width}px (#5046)`, () => {
+    test.use({ viewport: { width, height: 900 } });
+
+    test("every square owns a 44×44 box centred on it, clear of its neighbours", async ({
+      page,
+    }) => {
+      await stage(page);
+      await page.goto(OVERVIEW);
+      await expect(page.locator(".form-sq")).toHaveCount(10);
+      await page.locator(".form-squares").scrollIntoViewIfNeeded();
+      expect(await page.evaluate(strayPoints)).toEqual([]);
+    });
+
+    test("a press 18px off a square's centre opens that trade's Activity row", async ({ page }) => {
+      await stage(page);
+      await page.goto(OVERVIEW);
+      const square = page.locator(".form-sq").first();
+      await square.scrollIntoViewIfNeeded();
+      const box = await square.boundingBox();
+      if (!box) throw new Error("the first FORM square has no box");
+      await page.mouse.click(box.x + box.width / 2 - 18, box.y + box.height / 2 + 18);
+      await expectLanded(page.locator(`tr[id="${DEEPEST_CLOSE}"]`));
+    });
+
+    test("the strip says its squares open trades, with no hover", async ({ page }) => {
+      await stage(page);
+      await page.goto(OVERVIEW);
+      await expect(page.locator(".form-strip").getByText(CUE)).toBeVisible();
+    });
+  });
+}
