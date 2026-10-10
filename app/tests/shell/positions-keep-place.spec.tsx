@@ -44,7 +44,7 @@ const position = (symbol: string, totalPlRaw: number): DeskPosition =>
     weightPct: 10,
   }) as DeskPosition;
 
-// Ten positions, three of them losing: "Losing" cuts the list from ten rows to three.
+// Ten positions, three of them below cost: "Below cost" cuts the list from ten rows to three.
 const BOOK = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((s, i) =>
   position(s, i < 3 ? -10 : 10),
 );
@@ -133,7 +133,7 @@ describe("a refinement that shrinks the positions list (#5021)", () => {
     page.scrollBy(ABOVE - 100);
     expect(page.barTop()).toBe(100);
 
-    fireEvent.click(screen.getByRole("button", { name: "Losing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Below cost" }));
 
     expect(document.querySelectorAll(".pos-card")).toHaveLength(3);
     expect(page.barTop(), "the bar stays under the finger").toBe(100);
@@ -142,7 +142,7 @@ describe("a refinement that shrinks the positions list (#5021)", () => {
   it("holds only the height the view needs, never a whole old list", () => {
     render(<Harness />);
     page.scrollBy(ABOVE - 100);
-    fireEvent.click(screen.getByRole("button", { name: "Losing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Below cost" }));
     // The view ends 700px below the bar's top: 100px of bar, the region, then 100px of page under
     // it. So the region needs 500px to keep the page that long — not the 1,000px ten rows took.
     expect(page.region()?.style.minHeight).toBe("500px");
@@ -155,7 +155,7 @@ describe("a refinement that shrinks the positions list (#5021)", () => {
     page = layOut(1600);
     render(<Harness />);
     page.scrollBy(ABOVE - 100);
-    fireEvent.click(screen.getByRole("button", { name: "Losing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Below cost" }));
     expect(page.region()?.style.minHeight).toBe("500px");
     expect(page.barTop()).toBe(100);
   });
@@ -166,7 +166,7 @@ describe("a refinement that shrinks the positions list (#5021)", () => {
     expect(page.scrollTo).not.toHaveBeenCalled();
 
     page.scrollBy(ABOVE - 100);
-    fireEvent.click(screen.getByRole("button", { name: "Losing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Below cost" }));
     fireEvent.click(screen.getByRole("button", { name: "All" }));
 
     expect(document.querySelectorAll(".pos-card")).toHaveLength(10);
@@ -177,7 +177,7 @@ describe("a refinement that shrinks the positions list (#5021)", () => {
   it("gives the held space back as the member scrolls up, without moving what they see", () => {
     render(<Harness />);
     page.scrollBy(ABOVE - 100);
-    fireEvent.click(screen.getByRole("button", { name: "Losing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Below cost" }));
     expect(page.region()?.style.minHeight).toBe("500px");
 
     act(() => page.scrollBy(-150));

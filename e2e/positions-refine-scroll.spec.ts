@@ -53,16 +53,20 @@ const SHARES = ["NVDA", "AAPL", "MSFT", "AMZN", "META", "GOOGL", "TSLA", "AMD"];
 const OPTIONS = ["SPY", "QQQ", "IWM", "XLE", "TLT", "GLD"];
 
 /** One position of the widened book, cut from a real share row so every field the table reads is
- *  the server's own shape. Odd rows lose, even rows win; half the options expire inside 3 weeks. */
+ *  the server's own shape. Odd rows are below cost, even rows above; every third row is down
+ *  today (#5042); half the options expire inside 3 weeks. */
 function widen(template: Position, i: number, option: boolean): Position {
   const base = option ? (OPTIONS[i] ?? "SPY") : (SHARES[i] ?? "NVDA");
   const symbol = option ? `${base}261120C00180000` : base;
   const win = i % 2 === 0;
+  const downToday = i % 3 === 0;
   return {
     ...template,
     symbol,
     display: option ? `${base} 180 call` : base,
     isOption: option,
+    dayPl: downToday ? "−$76" : "+$42",
+    dayTone: downToday ? "neg" : "pos",
     totalPl: win ? "+$420" : "−$310",
     totalPlRaw: win ? 420 : -310,
     totalTone: win ? "pos" : "neg",
@@ -230,8 +234,10 @@ const lens = (label: string): Step => ({
 const STEPS: readonly Step[] = [
   chip("Options"),
   chip("Shares"),
-  chip("In profit"),
-  chip("Losing"),
+  chip("Up today"),
+  chip("Down today"),
+  chip("Above cost"),
+  chip("Below cost"),
   chip("Expiring within 3 weeks"),
   chip("Earnings before expiry"),
   lens("Map"),
@@ -257,7 +263,7 @@ for (const { width, height } of [
     await page.setViewportSize({ width, height });
     await page.goto("/app/accounts");
     const bar = page.locator(".filter-bar").first();
-    await expect(bar.getByRole("button", { name: "Losing", exact: true })).toBeVisible();
+    await expect(bar.getByRole("button", { name: "Below cost", exact: true })).toBeVisible();
     // The book really is wide: fixture drift must not quietly shorten the page under the test.
     await expect(page.locator(".positions-title .num")).toHaveText("14");
 

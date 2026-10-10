@@ -103,9 +103,15 @@ const TODAY = [
     id: "positions-filters",
     label: "positions: filter chips",
     route: SAURON,
-    expect: ["Options", "Shares", "In profit", "Losing", "Expiring within 3 weeks"].map((n) =>
-      role("button", n, { exact: true }),
-    ),
+    expect: [
+      "Options",
+      "Shares",
+      "Up today",
+      "Down today",
+      "Above cost",
+      "Below cost",
+      "Expiring within 3 weeks",
+    ].map((n) => role("button", n, { exact: true })),
   },
   {
     id: "bot-chip",
