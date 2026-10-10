@@ -75,9 +75,22 @@
   font-weight: 600;
   color: var(--text);
 }
+.pbb-strip-week-label {
+  display: none;
+}
+.pbb-strip-gap {
+  font-size: var(--text-md);
+  border-left: 2px solid var(--text);
+  padding-left: var(--space-2);
+}
+.pbb-strip-key {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 .pbb-strip-foot {
   display: flex;
-  justify-content: flex-end;
+  align-items: baseline;
+  justify-content: space-between;
   margin-top: -2px;
 }
 .pbb-log-toggle {
@@ -159,7 +172,8 @@
   grid-template-columns: minmax(0, 1fr) auto 14px;
   grid-template-areas:
     "name word word"
-    "fact fact chev";
+    "fact fact chev"
+    "lane lane lane";
   align-items: baseline;
   gap: 5px var(--space-3);
   padding: 13px var(--space-4);
@@ -167,7 +181,14 @@
 div.pbb-row {
   grid-template-areas:
     "name word word"
-    "fact fact fact";
+    "fact fact fact"
+    "lane lane lane";
+}
+/* the card's week, full width under its fact — the strip's clock, edge to edge */
+.pbb-lane {
+  grid-area: lane;
+  min-width: 0;
+  margin-top: 1px;
 }
 .pbb-name {
   grid-area: name;
@@ -286,7 +307,7 @@ details[open] > .pbb-sum .pbb-chev {
   div.pbb-row {
     grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 14px;
     grid-template-areas:
-      "name fact chev"
+      "name lane chev"
       "word fact chev";
     gap: 3px var(--space-5);
     align-items: center;
@@ -297,6 +318,20 @@ details[open] > .pbb-sum .pbb-chev {
   }
   .pbb-wide {
     display: inline;
+  }
+  /* the strip's week in the cards' wide column: the same tracks and gap as a card's row, inside a
+     box of the same width and padding, so the two clocks line up to the pixel */
+  .pbb-strip-week {
+    display: grid;
+    grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 14px;
+    gap: 0 var(--space-5);
+    align-items: end;
+  }
+  .pbb-strip-week-label {
+    display: block;
+    padding-bottom: 22px;
+    font-size: var(--text-md);
+    color: var(--muted);
   }
   .pbb-narrow {
     display: none;

@@ -19,6 +19,7 @@ import {
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
@@ -28,6 +29,7 @@ import {
   SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
 } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
+import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
@@ -90,6 +92,8 @@ export interface InsightsBridgeHandle {
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
+  /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
+  readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
@@ -108,6 +112,10 @@ export interface CredentialsBridgeDeps {
 }
 
 const FUNNEL_TTL_MS = 30_000;
+/** A bot's week of checks (#5073 slice 2) is re-read at most this often per bot — every viewer of
+ *  the Playbooks section polls it every 30s. Short enough that the newest check it holds is never
+ *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
+const CHECK_WEEK_TTL_MS = 15_000;
 
 /** Start the internal insights listener; logs the port it bound once it's up. */
 export function startInsightsBridge(
@@ -212,6 +220,12 @@ export function startInsightsBridge(
           funnelFor: memoPerKey(FUNNEL_TTL_MS, (personaId: string) =>
             decisionDb.funnelFor(personaId),
           ),
+          readCheckWeek: memoPerKey(CHECK_WEEK_TTL_MS, (personaId: string) => {
+            const window = checkWeekWindow(new Date());
+            return window
+              ? decisionDb.checkWeek(personaId, window.from, window.to, WEEK_BUCKET_MS)
+              : undefined;
+          }),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.

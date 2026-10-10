@@ -1,0 +1,178 @@
+/* Lanes on one clock (#5073 slice 2): `shell/week-lanes.tsx`. The bot's week of checks as a strip,
+ * each playbook's answers as a lane under it, one column per session sized by its own length, the
+ * gap between columns the closed night.
+ *
+ * Every state is a SHAPE first (docs/BRAND.md → Accessibility — a standing reader is red/green
+ * colourblind): a tick, hatching, a solid band, a thin bar, an outline, dots. Marks that carry
+ * meaning use --text or --muted (≥ 3:1 on both surfaces); --border only draws "nothing yet". The
+ * one accent is the solid band, which is solid before it is teal. */
+
+.wk {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+.wk-row {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.wk-day {
+  position: relative;
+  display: block;
+  flex-basis: 0;
+  min-width: 0;
+}
+.wk-cells {
+  display: grid;
+  height: 100%;
+}
+.wk-cell {
+  display: block;
+  min-width: 0;
+}
+
+/* ── the strip: a tick per half hour checked ─────────────────────────────────────────────────── */
+.wk-strip {
+  margin-top: 6px;
+}
+.wk-strip .wk-row {
+  height: 34px;
+  /* room above the ticks for the trade marks */
+  padding-top: 14px;
+}
+.wk-strip .wk-cell {
+  border-bottom: 1px solid var(--border);
+}
+.wk-strip .wk-cell[data-c="checked"] {
+  background: linear-gradient(var(--muted), var(--muted)) center bottom / 2px 100% no-repeat;
+  border-bottom-color: var(--muted);
+}
+/* open with no check: hatched, a heavier rule under it — the strip's one alarm */
+.wk-strip .wk-cell[data-c="gap"] {
+  background: repeating-linear-gradient(-45deg, var(--text) 0 1px, transparent 1px 4px);
+  border-bottom: 2px solid var(--text);
+}
+.wk-strip .wk-cell[data-c="future"] {
+  border-bottom-style: dotted;
+}
+.wk-days {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.wk-days > span {
+  flex-basis: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ── marks on the clock: a trade, and now ───────────────────────────────────────────────────── */
+.wk-mark {
+  position: absolute;
+  /* in the row's top padding, above the ticks or the band — never on them */
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+.wk-mark-sym {
+  margin-left: 2px;
+  font: 600 9px / 1 var(--mono);
+  letter-spacing: 0.02em;
+}
+/* a ticker near a day's end reads leftward so it never runs into the next day */
+.wk-mark[data-edge="end"] .wk-mark-sym {
+  position: absolute;
+  right: 100%;
+  margin: 0 2px 0 0;
+}
+.wk-now {
+  position: absolute;
+  top: -4px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  border-radius: 1px;
+}
+
+/* ── a playbook's lane ────────────────────────────────────────────────────────────────────────── */
+.wk-lane .wk-row {
+  height: 24px;
+  /* the band sits low; a trade mark rides the top */
+  padding-top: 11px;
+}
+.wk-lane .wk-cell {
+  border-bottom: 1px solid var(--border);
+}
+.wk-lane .wk-cell[data-s="future"] {
+  border-bottom-style: dotted;
+}
+/* solid band: trading on live signals */
+.wk-cell[data-s="tactical"] {
+  background: var(--accent);
+  border-bottom-color: var(--accent);
+}
+/* a thin bar through the middle: wants to hold */
+.wk-cell[data-s="long"] {
+  background: linear-gradient(var(--text), var(--text)) center / 100% 3px no-repeat;
+  border-bottom-color: transparent;
+}
+/* an outline band: wants out */
+.wk-cell[data-s="flat"] {
+  border-top: 1px solid var(--text);
+  border-bottom: 1px solid var(--text);
+}
+/* a dot per half hour: waiting for its window */
+.wk-cell[data-s="no-window"] {
+  background:
+    radial-gradient(circle, var(--muted) 1.4px, transparent 1.6px) center / 100% 100% no-repeat;
+  border-bottom-color: transparent;
+}
+/* hatched with a dashed edge: can't fire */
+.wk-cell[data-s="blocked"] {
+  background: repeating-linear-gradient(45deg, var(--muted) 0 1px, transparent 1px 4px);
+  border-top: 1px dashed var(--muted);
+  border-bottom: 1px dashed var(--muted);
+}
+
+/* ── the key and the trades, in the opened card ──────────────────────────────────────────────── */
+.wk-key {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.wk-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.wk-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.wk-trades {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wk-trades b {
+  font: 600 12px / 1.3 var(--mono);
+}

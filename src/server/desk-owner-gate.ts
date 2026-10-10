@@ -1,4 +1,5 @@
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
+import type { CheckWeekView } from "../observatory/check-week-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
@@ -34,8 +35,17 @@ export function ownsDesk(
   return resolveOwnedIds(session, config).includes(id);
 }
 
-type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall" | "unmanaged"> & {
+type WeekLane = CheckWeekView["lanes"][number];
+type WeekTrade = CheckWeekView["trades"][number];
+
+type WithheldWeek = Omit<CheckWeekView, "lanes" | "trades"> & {
+  readonly lanes: readonly Omit<WeekLane, "playbookId">[];
+  readonly trades: readonly Omit<WeekTrade, "playbookId" | "mode">[];
+};
+
+type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall" | "unmanaged" | "week"> & {
   readonly playbooks: readonly Omit<PlaybookHeartbeat, "playbookId">[] | null;
+  readonly week?: WithheldWeek;
 };
 
 /** The heartbeat without each verdict line's id: the verdict, its mode and how long it has held
@@ -43,10 +53,26 @@ type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall" | "unmanag
 export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldHeartbeat {
   // The roll call is nothing but playbook names, so a non-owner gets none of it — nor the lots it
   // flags as unmanaged, which say which baskets this bot's playbooks do NOT cover (#4777).
-  const { rollCall: _rollCall, unmanaged: _unmanaged, ...rest } = heartbeat;
+  const { rollCall: _rollCall, unmanaged: _unmanaged, week, ...rest } = heartbeat;
   return {
     ...rest,
     playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
+    ...(week ? { week: withoutWeekPlaybookIds(week) } : {}),
+  };
+}
+
+/** The week's strip and lanes without a name (#5073 slice 2). A lane stays only when it is one of
+ *  the unnamed verdict lines (it keeps that line's slot); a lane for a playbook no longer running
+ *  would be a name-less row with nothing to sit under. A trade keeps when and which way, never
+ *  whose playbook placed it — on an unnamed lane, a CRWV mark names CRWV-WHEEL by inference
+ *  (#4971), so the trades ride the bot's own strip only. */
+function withoutWeekPlaybookIds(week: CheckWeekView): WithheldWeek {
+  return {
+    ...week,
+    lanes: week.lanes
+      .filter((lane) => lane.slot !== undefined)
+      .map(({ playbookId: _withheld, ...lane }) => lane),
+    trades: week.trades.map(({ playbookId: _p, mode: _m, ...trade }) => trade),
   };
 }
 

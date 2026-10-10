@@ -2,6 +2,7 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
@@ -129,6 +130,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     participantId: string,
     page?: { readonly before?: number; readonly limit?: number },
   ) => Promise<readonly DecisionRecord[]>;
+  /** One bot's week of checks, grouped answers and placed trades (#5073 slice 2,
+   *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
+   *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
+  readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
   /**
    * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
    * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach

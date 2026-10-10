@@ -7,7 +7,15 @@ import {
   type PlaybookCard,
   plainReason,
 } from "../live/bot-playbooks";
-import { type RollCallLine, sinceText, UNMANAGED_WORDS } from "../live/heartbeat";
+import { laneFor, laneSummary, tradesFor } from "../live/check-week";
+import {
+  type CheckWeek,
+  type PlaybookHeartbeat,
+  type RollCallLine,
+  sinceText,
+  UNMANAGED_WORDS,
+} from "../live/heartbeat";
+import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
 
 /**
  * THE PLAYBOOK CARDS (#5073) — one per playbook, under the bot's checks strip
@@ -18,8 +26,9 @@ import { type RollCallLine, sinceText, UNMANAGED_WORDS } from "../live/heartbeat
  * Heartbeat") — there is no per-playbook address there yet, so every link lands on this bot's
  * playbooks in the Store.
  *
- * Not yet here, each a later slice of #5073: a lane per playbook on the strip's week, trade marks
- * on it, the rule drawn as a picture, and what it holds.
+ * Each card carries its lane (#5073 slice 2): its answers across the week on the strip's own clock,
+ * with ▲/▼ where it traded, the key to the shapes and the trades in words once opened. Not yet
+ * here, each a later slice of #5073: the rule drawn as a picture, and what it holds.
  */
 
 function changeHref(deskId: string): string {
@@ -78,6 +87,7 @@ function Card({
   word,
   wide,
   fact,
+  lane,
   children,
 }: {
   readonly name: string;
@@ -87,6 +97,8 @@ function Card({
   /** Beside the state from the bench width up; on a phone it waits in the opened card. */
   readonly wide?: string;
   readonly fact?: string;
+  /** The card's week, under its name on a phone and in the wide column from the bench width. */
+  readonly lane?: ReactNode;
   readonly children?: ReactNode;
 }): ReactElement {
   const head = (
@@ -97,6 +109,7 @@ function Card({
         {wide ? <span className="pbb-meta pbb-wide"> · {wide}</span> : null}
       </span>
       {fact ? <span className="pbb-fact">{fact}</span> : null}
+      {lane ? <span className="pbb-lane">{lane}</span> : null}
     </>
   );
   return (
@@ -118,18 +131,46 @@ function Card({
   );
 }
 
+/** The card's lane and the trades its playbook placed this week; nothing without a week. */
+function weekOf(
+  card: PlaybookCard,
+  week: CheckWeek | undefined,
+  playbooks: readonly PlaybookHeartbeat[] | null,
+) {
+  if (!week) return undefined;
+  const trades = tradesFor(card, week);
+  const lane = laneFor(card, week, playbooks);
+  return {
+    trades,
+    lane: (
+      <WeekLaneRow
+        week={week}
+        lane={lane}
+        trades={trades}
+        state={card.state}
+        label={laneSummary(lane, trades, card.state === "blocked")}
+      />
+    ),
+  };
+}
+
 function PlaybookRow({
   card,
   named,
   deskId,
+  week,
+  playbooks,
 }: {
   readonly card: PlaybookCard;
   readonly named: boolean;
   readonly deskId: string;
+  readonly week?: CheckWeek;
+  readonly playbooks: readonly PlaybookHeartbeat[] | null;
 }): ReactElement {
   const { glyph, word } = CARD_WORDS[card.state];
   const meta = metaOf(card, named);
   const fact = cardFact(card);
+  const drawn = weekOf(card, week, playbooks);
   // A non-owner's card has no reason to read: its mode and since are the fact, and there is
   // nothing behind it to open.
   if (!named) {
@@ -140,6 +181,7 @@ function PlaybookRow({
         glyph={glyph}
         word={word}
         {...(meta ? { fact: meta } : {})}
+        {...(drawn ? { lane: drawn.lane } : {})}
       />
     );
   }
@@ -151,7 +193,10 @@ function PlaybookRow({
       word={word}
       {...(meta ? { wide: meta } : {})}
       {...(fact.short ? { fact: fact.short } : {})}
+      {...(drawn ? { lane: drawn.lane } : {})}
     >
+      {drawn ? <LaneKey /> : null}
+      {drawn ? <LaneTrades trades={drawn.trades} /> : null}
       {fact.more ? <p className="pbb-why">{fact.more}</p> : null}
       {meta ? <p className="pbb-meta pbb-narrow">{meta}</p> : null}
       <a className="hb-link" href={changeHref(deskId)}>
@@ -213,10 +258,16 @@ export function PlaybookCards({
   named,
   unmanaged,
   none,
+  week,
+  playbooks = null,
 }: {
   readonly deskId: string;
   readonly merged: BotPlaybooks;
   readonly named: boolean;
+  /** This week on the strip's clock — each card draws its lane from it. */
+  readonly week?: CheckWeek;
+  /** The heartbeat's verdict lines, which a nameless card's lane is matched through. */
+  readonly playbooks?: readonly PlaybookHeartbeat[] | null;
   /** Held tickers nothing on this bot will sell (#4777) — after the playbooks, by ticker. */
   readonly unmanaged: readonly string[];
   /** No verdict and no roll call came at all — nothing has been recorded to draw. */
@@ -236,7 +287,14 @@ export function PlaybookCards({
       ) : (
         <ul>
           {merged.cards.map((card) => (
-            <PlaybookRow key={card.key} card={card} named={named} deskId={deskId} />
+            <PlaybookRow
+              key={card.key}
+              card={card}
+              named={named}
+              deskId={deskId}
+              playbooks={playbooks}
+              {...(week ? { week } : {})}
+            />
           ))}
           {unmanaged.map((symbol) => (
             <Card

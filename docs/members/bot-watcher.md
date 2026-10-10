@@ -65,8 +65,9 @@ fails costs them more trust than a control that is greyed with a reason.
    gone. **WHEN the page promises an interaction, the app shall have a target for it.** _Fixed —
    dead end 5 (#3807 slice 2d)._ Judge: can this reader tell what to do next in ten seconds?
 4. `/app/u/sauron/decisions` — Playbooks: is the bot checking the market (the strip on top), one
-   card per playbook with its state, and every check folded behind the strip (Heartbeat merged in,
-   #5073). **WHEN a viewer reads a bot's checks, the app shall name the section Playbooks, as the
+   card per playbook with its state and its week drawn as a lane on the strip's clock (▲/▼ where
+   it traded, "none missed" counted from the week), and every check folded behind the strip
+   (Heartbeat merged in, #5073). **WHEN a viewer reads a bot's checks, the app shall name the section Playbooks, as the
    Profile page does, and gloss its own words where they appear.** Judge: does a first-time reader
    understand "past the guards"?
 5. `/app/u/sauron/thesis` — the thesis, its markers, a disabled Subscribe cluster, each reason in
