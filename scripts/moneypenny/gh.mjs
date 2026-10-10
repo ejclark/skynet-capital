@@ -10,6 +10,21 @@ export const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20, ...opts }).trim();
 
 /**
+ * A REST token for a CLI a live session runs by hand: GH_TOKEN, GITHUB_TOKEN, else the gh login —
+ * the same fallback scripts/ship.sh uses. Sets GH_TOKEN, so `ghRest` and any child process see it.
+ * CI always has a token, so this changes nothing there; a session without one used to get a 401
+ * from `curl --fail` on the first read (#5056: the read-back's commands run in Eric's session).
+ */
+export function ensureGhToken({ run = sh } = {}) {
+  if (process.env.GH_TOKEN || process.env.GITHUB_TOKEN) return;
+  try {
+    process.env.GH_TOKEN = run("gh", ["auth", "token"]);
+  } catch {
+    throw new Error("no GH_TOKEN, GITHUB_TOKEN or `gh auth token` — sign in with `gh auth login`");
+  }
+}
+
+/**
  * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
  * `HTTP 504: Gateway Timeout` from graphql killed a whole Moneypenny route run and dispatched a
  * repair session for it), a reset or a timeout — never a 4xx, which a retry only repeats.
