@@ -98,7 +98,7 @@
       "world": "profile-today",
       "viewer": "eric",
       "routes": [
-        "/app/trade?desk=sauron&symbol=CRWV&strike=80&exp=2026-11-06",
+        "/app/trade?desk=sauron&symbol=CRWV&section=orders&manage=CRWV261106P00080000",
         "/app/u/sauron/activity"
       ],
       "for": ["handoff", "labels"]

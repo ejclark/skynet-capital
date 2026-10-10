@@ -22,7 +22,7 @@ Not counted as new: 9 structural already on your key (re-found, not new) · 4 sm
 
 **Phone vs desktop — the clearest signal.** After an audit of the answer grader (below), members answered **36 of 42 tasks right on desktop (86%) but 21 of 45 on a phone (47%)**; all **8 give-ups were on a phone**, and the typical ease score was **5 of 7 on desktop, 3 on a phone**, with the page moving on its own by up to ~5,500px in a single phone session.
 
-**Controls.** The planted-defect build: **all 3 planted defects found** (pass). The fixed build: **5 of the 7 items its fixes removed were still reported** (fail) — partly real leftovers the fixes missed (a filtered list still shifts the page 39–209px; one more "open on Trade" route still lands on a buy form), partly a matching rubric too loose on mechanism. Details in the method half.
+**Controls.** The planted-defect build: **all 3 planted defects found** (pass). The fixed build: **5 of the 7 items its fixes removed were still reported** (fail) — two real leftovers the fixes missed (a filtered list still shifts the page 39–209px, #5021; a sold option's card reads "loses ~+$11/day", #5023), one false alarm from a Trade address the study typed by hand rather than one the app builds, and two matches by a rubric too loose on mechanism. Details in the method half.
 
 **It missed the bar on one count — the fixed-build control above** — so, per the plan, the design battle-test did not run.
 
@@ -302,7 +302,7 @@ This run's numbers are the baseline the next run is scored against. Each row say
 | Precision (blind findings that are real) | **88%** (279 of 317; 38 false, 13 test-world) | Test-world gaps: the world's clock in UTC, a playbook-store read and Trade's chain/watchlist reads never answered | World fixes (#5009 and a follow-up) | ≥ 90%, ≤ 5 test-world |
 | New structural problems | **66** (and 69 smaller) | So many that an uncapped readout became a 794-line wall | Rank and cap the top ten in the readout itself | top ten ranked by the tool |
 | Planted-defect control | **pass** — all 3 found | — | — | pass |
-| Fixed-build control | **fail** — 5 of 7 still reported | Two real leftovers the fixes missed (filtering still shifts the page 39–209px; one more "open on Trade" route lands on a buy form), and a matching rubric loose on mechanism ("moves" matched "jumps to the top") | Rubric: a full match needs the same mechanism; state expectations by mechanism; file the leftovers | pass |
+| Fixed-build control | **fail** — 5 of 7 still reported | Two real leftovers the fixes missed (filtering still shifts the page, #5021; a sold option reads "loses ~+$11/day", #5023); one false alarm from a hand-typed Trade address in the study's own route list; and a matching rubric loose on mechanism ("moves" matched "jumps to the top") | Census routes come from links the app builds; rubric: a full match needs the same mechanism; state expectations by mechanism; file the leftovers | pass |
 | Matcher agreement | **kappa 0.89** (38 disputes, tie-broken) | — | — | ≥ 0.85 |
 | Task success the grader reported | 43% (66% after audit) | 20 of 42 "failed" answers were right: dates in words, breakdowns, on-screen snippets in the wrong format | #5009 | audit changes < 5 verdicts |
 | Census coverage (did experts see every control) | 0% at first → **100%** | Fresh loads signed the member out after a world change; preflight still said done | Sign-in restored; a census under 80% now stops the round (#5008) | ≥ 95% |
