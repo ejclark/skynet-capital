@@ -95,6 +95,14 @@ interface DeskPositionView extends PlainPosition {
   readonly lots?: readonly PositionLot[];
 }
 
+/** A position's return: "+3.63%" to the hundredth, but whole percent once it is past ±100%
+ *  ("-116%" on a sold put that would cost $550 to close against $255 collected). Past 100 the
+ *  hundredths are noise, and on a phone card they push the size line onto a second row (#5059). */
+function returnLabel(value: number): string {
+  if (Math.abs(value) < 100) return pct(value);
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
+}
+
 /**
  * Reconstruct a position's lot breakdown from the round-trip matcher's `open` lots (Slice 1 of
  * #3186) — never independently re-derived, so a lot's qty/cost-basis/value/P&L are each a
@@ -143,7 +151,7 @@ function lotsFor(
       dayPl: formatSigned(day),
       dayTone: plClass(day),
       totalPl: formatSigned(total),
-      returnPct: basis > 0 ? pct((total / basis) * 100) : "—",
+      returnPct: basis > 0 ? returnLabel((total / basis) * 100) : "—",
       totalTone: plClass(total),
     };
   });
@@ -239,7 +247,10 @@ export function deskView(
         dayTone: plClass(day.amount),
         totalPl: formatSigned(pl),
         totalPlRaw: pl,
-        returnPct: basis > 0 ? pct((pl / basis) * 100) : "—",
+        // A written position's basis is the premium it collected, signed negative (#5059): its
+        // return is measured against that, as a broker's statement prints it ($550 to buy back a
+        // $255 put is -116%). No basis at all has no return.
+        returnPct: basis !== 0 ? returnLabel((pl / Math.abs(basis)) * 100) : "—",
         totalTone: plClass(pl),
         weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...(lots ? { lots } : {}),
