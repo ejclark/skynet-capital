@@ -30,6 +30,8 @@
 @import "./form-strip.css";
 @import "./gate.css";
 @import "./heartbeat.css";
+/* after heartbeat.css, not alphabetical: the Playbooks section reuses its `.hb-*` log and link. */
+@import "./bot-playbooks.css";
 @import "./shadow-probes.css";
 @import "./glossary.css";
 @import "./hero-chart.css";

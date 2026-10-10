@@ -10,7 +10,7 @@ import {
 import type { OwnedAccount } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
 import { ConnectLink } from "./connect-link";
-import { HeartbeatChip } from "./heartbeat";
+import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
 import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
@@ -19,7 +19,8 @@ import type { PageSection } from "./sections";
 
 /**
  * THE PROFILE PAGE'S STICKY HEAD (#2321, the Cockpit; moved out of `routes/accounts.tsx` by #3807
- * slice 2b): the account switcher, a bot's heartbeat chip, the condensed net worth off-Overview,
+ * slice 2b): the account switcher, a bot's head line ("● Running · 7 playbooks ›", #5073 — it opens
+ * the Playbooks section; the chip and its popover retired), the condensed net worth off-Overview,
  * and the section switch. NO CALENDAR, on any section (#5074; #5037 round 2 — Eric, round 1:
  * "controls that do nothing is an oxy moron"): the range heads the Events section, the one
  * section whose content it changes (`events-section.tsx`), and the head keeps one height
@@ -163,7 +164,21 @@ export function CockpitHead({
           }
         />
       )}
-      {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
+      {sections.some((s) => s.id === "playbooks") ? (
+        <PlaybooksHeadLine
+          deskId={accountId}
+          renderLink={(label) => (
+            <button
+              type="button"
+              className="hb-line-link"
+              aria-current={section === "playbooks" ? "true" : undefined}
+              onClick={() => onSelectSection("playbooks")}
+            >
+              {label}
+            </button>
+          )}
+        />
+      ) : null}
       {!linked || section === "overview" ? null : stats ? (
         <NetWorthCondensed stats={stats} caption={caption} />
       ) : (
