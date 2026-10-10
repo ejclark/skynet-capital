@@ -18,7 +18,8 @@ import { fetchPlays } from "../live/options";
  * Two tiers, each a glyph AND a word (hue never alone): ◆ held — the stock's own event on a name
  * you hold, linking to that position's guidance on Trade; ○ market-wide — the Fed / CPI / jobs
  * print a held position carries. The empty states are honest and say the range: nothing dated
- * on what you hold this week is the common Monday, and the line says so rather than hiding.
+ * on what you hold this week is the common Monday, and the line says so rather than hiding —
+ * range first, "Oct 5 – Oct 11: nothing on what you hold", as the Events section words it (#5045).
  *
  * It reads the same range the head does (`useHorizonRange`, the root `?on=&span=` params, the
  * same fog), so a step on the head moves this line with it.
@@ -73,12 +74,14 @@ export function HeldEventsLine({ desks }: { readonly desks: readonly HeldBook[] 
   const horizon = useHorizonRange({ fogged: dayLensFog(plays.data).fogged });
   const { held, market, positions } = heldEventsIn(desks, horizon.range);
   const when = horizon.lens === "all" ? "on any date" : rangeLabel(horizon.range, horizon.lens);
+  // An empty range leads with the range, in the Events section's own words (#5045, F-c5ebc986e1).
+  const label = horizon.lens === "all" ? "Any date" : rangeLabel(horizon.range, horizon.lens);
   return (
     <p className="held-events">
       {positions === 0 ? (
         `No open positions — nothing dated ${when}.`
       ) : held.length === 0 ? (
-        `Nothing dated on what you hold ${when}`
+        `${label}: nothing on what you hold`
       ) : (
         <Tier glyph="◆" word="held" events={held} link />
       )}
