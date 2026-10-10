@@ -10,7 +10,9 @@
 //   node scripts/comms-scan.mjs --table      # markdown table, for pasting into a digest
 //   node scripts/comms-scan.mjs --json       # machine shape
 //   ... --since=YYYY-MM-DD                   # window override (default: the last digest's date)
-//   ... --offline                            # skip every GitHub call, even with a token set
+//   ... --since=2026-10-10T16:00:00-05:00    # …or an exact instant: the decisions page (#5056)
+//                                            #    starts its reel at the previous page's Done
+//   ... --offline                           # skip every GitHub call, even with a token set
 //   ... --fixture=<path.json>                # read commits from a file instead of git (specs)
 //
 // DETECT-ONLY. Nothing here gates or ratchets — the numbers need reading for a few digests before
@@ -33,6 +35,9 @@ const REPO = process.env.SKYNET_COMMS_REPO ?? "ejclark/skynet-capital";
 /** Eric's GitHub login — his comments on a merged PR are the review signal this meter counts. */
 const OWNER_LOGIN = "ejclark";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** An ISO 8601 instant with an explicit zone — `Z` or an offset. A zoneless time is refused: git
+ *  would read it in the runner's local zone, which is a different window on every machine. */
+const INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/;
 /** Squash subjects end in the PR number GitHub appends. No number, not a merged PR. */
 const PR_IN_SUBJECT = /\(#(\d+)\)\s*$/;
 /** Field and record separators for one git-log record — the ASCII control codes invented for
@@ -122,13 +127,30 @@ function readFixture(path) {
   );
 }
 
+/**
+ * The `git log --since` value for a window start. A date keeps its old meaning — merged AFTER that
+ * day, the digest's "since the last digest" — and an instant means from that moment on, so a page
+ * answered at 16:42 starts the next reel at 16:42 rather than at the next midnight (#5056). Throws
+ * on anything else: a malformed window would widen silently, never fail. Pure.
+ */
+export function gitSince(since) {
+  const s = String(since ?? "");
+  if (DATE_RE.test(s)) return `${s}T23:59:59Z`;
+  if (INSTANT_RE.test(s) && !Number.isNaN(Date.parse(s))) {
+    return new Date(s).toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+  throw new Error(
+    "comms-scan: --since must be YYYY-MM-DD or an ISO instant with a zone (2026-10-10T16:00:00-05:00).",
+  );
+}
+
 function readLog(since) {
   const raw = execFileSync(
     "git",
     [
       "log",
       "origin/main",
-      `--since=${since}T23:59:59Z`,
+      `--since=${gitSince(since)}`,
       `--format=%H${FS}%an${FS}%cI${FS}%s${FS}%b${RS}`,
     ],
     { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
@@ -223,7 +245,7 @@ async function main() {
   const since = arg("since") ?? latestDigestDate();
   if (!fixture) {
     if (!since) throw new Error("comms-scan: no digest to measure from — pass --since=YYYY-MM-DD.");
-    if (!DATE_RE.test(since)) throw new Error("comms-scan: --since must be YYYY-MM-DD.");
+    gitSince(since); // throws on a malformed window, before any git or GitHub call
   }
   // What the report says it measured. A fixture run names the file, so a pasted table can never
   // be mistaken for a real week.

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { needsYouLines } from "../../../scripts/digest-scan.mjs";
 import { type PlanInput, plan } from "../../../scripts/moneypenny/assignments.mjs";
+import { decisionsFrom, fitBudget } from "../../../scripts/steer/model.mjs";
 
 // #4293 (#3818 criterion 12): the digest's Needs-you list SHALL equal the set the assignment lane
 // gives Eric. One selector (`plan()` in scripts/moneypenny/assignments.mjs), two readers — the dry
@@ -118,10 +119,64 @@ describe("digest Needs-you == the assignment lane's set (criterion 12)", () => {
   });
 });
 
+// #5056: the twice-a-day decisions page is the selector's third reader. It asks Eric exactly the
+// Needs-you set — everything it shows plus everything that rolls to the next page for time.
+describe("the decisions page asks the same set (third reader, #5056)", () => {
+  const pageSet = (input: PlanInput) => {
+    const planned = plan(input);
+    const all = decisionsFrom({
+      needsYou: planned.needsYou,
+      issues: input.issues,
+      prs: input.prs,
+      now: input.now ?? NOW,
+    });
+    const { shown, deferred } = fitBudget(all, 15);
+    return new Set([...shown, ...deferred].map((d) => d.issue));
+  };
+
+  it("equals the digest's Needs-you list, held and platter PRs included", () => {
+    expect([...pageSet(INPUT)].sort((a, b) => a - b)).toEqual(
+      [...digestSet(INPUT)].sort((a, b) => a - b),
+    );
+  });
+
+  it("asks nothing when nothing is assigned", () => {
+    expect(pageSet({ now: NOW }).size).toBe(0);
+  });
+
+  it("renders a held PR as a link-only approval, never a button that merges", () => {
+    const planned = plan(INPUT);
+    const held = decisionsFrom({
+      needsYou: planned.needsYou,
+      issues: INPUT.issues,
+      prs: INPUT.prs,
+      now: NOW,
+    });
+    for (const n of [20, 21, 22]) {
+      expect(held.find((d) => d.issue === n)).toMatchObject({
+        kind: "approve",
+        isPr: true,
+        irreversible: true,
+      });
+    }
+  });
+});
+
 describe("one source of truth", () => {
   it("digest-scan reads plan() from the assignment module and selects nothing itself", () => {
     const src = readFileSync("scripts/digest-scan.mjs", "utf8");
     expect(src).toMatch(/import\("\.\/moneypenny\/assignments\.mjs"\)/);
     expect(src).not.toMatch(/needs-eric|NEEDS_ERIC|hold-merge|HOLD_MERGE|decisionLine/);
+  });
+
+  it("the decisions page reads plan() too, and selects nothing itself", () => {
+    const gather = readFileSync("scripts/steer/gather.mjs", "utf8");
+    expect(gather).toMatch(/from "\.\.\/moneypenny\/assignments\.mjs"/);
+    expect(gather).toMatch(/\bplan\(deps\)/);
+    for (const f of ["scripts/steer/gather.mjs", "scripts/steer/model.mjs"]) {
+      expect(readFileSync(f, "utf8")).not.toMatch(
+        /needs-eric|NEEDS_ERIC|hold-merge|HOLD_MERGE|decisionLine/,
+      );
+    }
   });
 });
