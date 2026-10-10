@@ -530,8 +530,8 @@
           {
             "id": "root",
             "label": "Root shell route",
-            "path": "app/src/routes/__root.tsx, app/src/shell/frame.tsx, app/src/shell/session-status.tsx, app/src/shell/fleet-health.tsx, app/src/shell/market-session.tsx, app/src/shell/member-menu.tsx, app/src/shell/keyboard.tsx",
-            "responsibility": "Topbar view navigation, the status line (the market session in words; the full clock and fleet-ops health open in place on a tap), the member menu (settings, sign out), the Moneypenny rail toggle, keyboard chords, and the Outlet every page renders into. The page frame (shell/frame.tsx) is one full-width stage per route: a page's controls are a row at the top of its own stage, and Settings keeps its list as two columns inside its own stage (#3807 slice 2a). Its errorComponent (ShellError in shell/route-error.tsx) is the one failure that may replace the shell: the layout itself failing."
+            "path": "app/src/routes/__root.tsx, app/src/shell/frame.tsx, app/src/shell/session-status.tsx, app/src/shell/fleet-health.tsx, app/src/shell/market-session.tsx, app/src/shell/member-menu.tsx, app/src/shell/keyboard.tsx, app/src/shell/topbar-height.ts",
+            "responsibility": "Topbar view navigation, the status line (the market session as a compact clock, its state and time left over the track; the full clock and fleet-ops health open in place on a tap), the member menu (settings, sign out), the bar's measured height for a page's sticky head (--topbar-h), the Moneypenny rail toggle, keyboard chords, and the Outlet every page renders into. The page frame (shell/frame.tsx) is one full-width stage per route: a page's controls are a row at the top of its own stage, and Settings keeps its list as two columns inside its own stage (#3807 slice 2a). Its errorComponent (ShellError in shell/route-error.tsx) is the one failure that may replace the shell: the layout itself failing."
           },
           {
             "id": "routes",

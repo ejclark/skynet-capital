@@ -14,6 +14,8 @@
 @import "./board.css";
 @import "./chart-section.css";
 @import "./cockpit.css";
+/* right after cockpit.css: it sizes the head's rows and the switch's buttons cockpit.css draws */
+@import "./profile-head.css";
 @import "./compare.css";
 /* after wire.css's `.council-*` rules by specificity, not order: every rule here is scoped under
  * `.council-mine`, so the alphabetical seat is safe (#3963). */

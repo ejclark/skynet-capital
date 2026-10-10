@@ -141,10 +141,11 @@ function AccountsPage(): ReactElement {
   // The default account (shell/default-account.ts) is a viewer-chosen FALLBACK, never trusted
   // once it no longer names an owned account — a removed account can't strand the page.
   const storedDefaultId = defaultAccount.id;
-  const fallbackId =
+  const defaultId =
     storedDefaultId !== undefined && accounts.some((a) => a.id === storedDefaultId)
       ? storedDefaultId
-      : (accounts[0]?.id ?? "");
+      : undefined;
+  const fallbackId = defaultId ?? accounts[0]?.id ?? "";
   const selected =
     asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? (asked as string) : fallbackId;
   const deskIds = !linked ? [] : selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected];
@@ -168,12 +169,9 @@ function AccountsPage(): ReactElement {
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
-      isDefault={linked && storedDefaultId === selected}
-      onToggleDefault={() =>
-        storedDefaultId === selected
-          ? defaultAccount.clearDefault()
-          : defaultAccount.setDefault(selected)
-      }
+      defaultId={defaultId}
+      onSetDefault={defaultAccount.setDefault}
+      onClearDefault={defaultAccount.clearDefault}
       onSelectAccount={(id) =>
         void navigate({
           search: (prev) => ({ ...prev, account: id === fallbackId ? undefined : id }),
@@ -312,15 +310,17 @@ function CockpitBody({
 
 function AccountsBody({
   sections,
-  isDefault,
-  onToggleDefault,
+  defaultId,
+  onSetDefault,
+  onClearDefault,
   onSelectAccount,
   onSelectSection,
   ...body
 }: Parameters<typeof CockpitBody>[0] & {
   readonly sections: readonly PageSection<AccountsSection>[];
-  readonly isDefault: boolean;
-  readonly onToggleDefault: () => void;
+  readonly defaultId: string | undefined;
+  readonly onSetDefault: (id: string) => void;
+  readonly onClearDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
@@ -335,8 +335,9 @@ function AccountsBody({
           sections={sections}
           onSelectSection={onSelectSection}
           onSelectAccount={onSelectAccount}
-          isDefault={isDefault}
-          onToggleDefault={onToggleDefault}
+          defaultId={defaultId}
+          onSetDefault={onSetDefault}
+          onClearDefault={onClearDefault}
         />
         <CockpitBody {...body} />
       </div>

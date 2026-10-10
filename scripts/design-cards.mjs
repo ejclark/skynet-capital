@@ -114,13 +114,13 @@ const cards = [
     <header class="topbar" style="position:static">
       <span class="brand"><span class="brand-mark" aria-hidden="true">SC</span>Skynet Capital</span>
       <nav class="topnav"><a class="topnav-link" href="#">Leaderboard</a><a class="topnav-link" aria-current="page" href="#">Profile</a><a class="topnav-link" href="#">Trade</a><a class="topnav-link" href="#">Activity</a><a class="topnav-link" href="#">R&amp;D</a></nav>
-      <button type="button" class="status-line" data-state="open" data-fleet="ok" aria-expanded="false"><span class="status-line-dot"></span><span class="status-line-words">Open · 1h 28m left</span></button>
+      <button type="button" class="status-line" data-state="open" data-fleet="ok" aria-expanded="false"><span class="status-clock" style="--elapsed:77.44%;--power:84.62%"><span class="status-clock-words"><span class="session-eyebrow"><span class="session-dot"></span><span class="session-state">Market open</span></span><span class="session-left"><b>1h 28m</b> left<span class="session-today"> today</span></span></span><span class="session-track"><span class="session-fill"></span><span class="session-power"></span><span class="session-knob"></span></span></span></button>
       <div class="topbar-actions">
         <button type="button" class="mp-toggle" aria-pressed="false">✦</button>
         <div class="member-menu-wrap"><button type="button" class="member-menu-btn" aria-expanded="false">E</button></div>
       </div>
     </header>
-    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own sub-nav. Beside them, three marks only (#5037 round 2): the status line — the market in words, the full clock and fleet health one tap down, in place — Moneypenny, and the member menu (Settings, Sign out).</p>`,
+    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own sub-nav. Beside them, three marks only (#5037 round 2): the status line — the market clock made compact, its state and time left over the session's track; the full clock and fleet health one tap down, in place (#5075) — Moneypenny, and the member menu (Settings, Sign out).</p>`,
   },
   {
     file: "chrome/rail.html",

@@ -14,6 +14,7 @@ import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { ShellError } from "../shell/route-error";
 import { SessionStatus } from "../shell/session-status";
+import { publishTopbarHeight } from "../shell/topbar-height";
 import { Vantage } from "../shell/vantage";
 
 /**
@@ -120,7 +121,7 @@ function RootShell(): ReactElement {
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        <header className="topbar">
+        <header className="topbar" ref={publishTopbarHeight}>
           <span className="brand">
             <span className="brand-mark" aria-hidden="true">
               SC

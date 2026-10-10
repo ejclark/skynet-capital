@@ -44,17 +44,17 @@ const win = (label, value, tone, note, partial = false, vs = undefined) => ({
 });
 
 const ericStats = {
-  value: "$1,047,832.14",
+  value: "$1,047,832",
   valueKnown: true,
-  dayChange: "+$2,418.67",
+  dayChange: "+$2,419 · +0.23%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$847,200.00",
+  cash: "$847,200",
   cashKnown: true,
-  bookedPl: "+$12,480.00",
+  bookedPl: "+$12,480",
   bookedTone: "pos",
   bookedKnown: true,
-  onPaper: "+$47,832.14",
+  onPaper: "+$47,832",
   onPaperTone: "pos",
   onPaperKnown: true,
   positionCount: 6,
@@ -70,18 +70,18 @@ const ericStats = {
 };
 
 const sauronStats = {
-  value: "$512,406.88",
+  value: "$512,407",
   valueKnown: true,
-  dayChange: "-$1,102.33",
+  dayChange: "-$1,102 · -0.21%",
   dayTone: "neg",
   dayKnown: true,
-  cash: "$201,400.00",
+  cash: "$201,400",
   cashKnown: true,
   positionCount: 3,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -93,18 +93,18 @@ const sauronStats = {
 };
 
 const totalStats = {
-  value: "$1,560,239.02",
+  value: "$1,560,239",
   valueKnown: true,
-  dayChange: "+$1,316.34",
+  dayChange: "+$1,316 · +0.08%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$1,048,600.00",
+  cash: "$1,048,600",
   cashKnown: true,
   positionCount: 9,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -144,7 +144,7 @@ const networthAtHigh = {
   accounts: [
     {
       ...networth.accounts[0],
-      value: "$1,051,200.00",
+      value: "$1,051,200",
       allTimeHigh: { value: "$1,051,200", at: "9/23", aboveNow: 0 },
       toNewHigh: undefined,
     },
@@ -1300,6 +1300,26 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
 
+// The head, Level 2 (#5072): Sauron's Overview at landing — the account row with the bot's status
+// as a plain link, one vitals line (net worth · today · cash), the switch with "More ▾" — then the
+// menu under the name, then More opened. (Milestones taking More's slot is `shoot:milestones`'s:
+// this harness stubs no milestones.)
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-vitals .head-worth").waitFor();
+await page.locator(".head-account .hb-line").waitFor();
+await page.waitForLoadState("networkidle");
+await shootCockpit("head-bot-phone");
+await page.getByRole("button", { name: /^Account: / }).click();
+await page.getByRole("navigation", { name: "Account menu" }).waitFor();
+await shootCockpit("head-menu-phone");
+await page.keyboard.press("Escape");
+await page.getByRole("button", { name: "More sections" }).click();
+await page.locator(".cockpit-nav-more-list").waitFor();
+await shootCockpit("head-more-phone");
+await page.goto(`${origin}/app/accounts`);
+await page.getByText("Net worth · Eric").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
+
 // The standing line (#3964): the member's own record inside the net-worth card — win rate, profit
 // factor, max drawdown, then the link to the rest of this account's Pulse. Its own frame at 390
 // because unlike the card's footer this row does NOT hide at phone width, and that is the claim
@@ -1425,6 +1445,12 @@ await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await page.locator(".blotter .row-guide").first().waitFor();
 await page.locator(".standing-line").waitFor();
 await shootCockpit("accounts-summary-desktop");
+
+// The head at 1280 (#5072): every section fits, your own after a hairline; the room adds the bot's
+// last check, today's percent and the cash amount — never a new concept.
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-account .hb-line").waitFor();
+await shootCockpit("head-bot-desktop");
 
 // The cockpit head at 1280 with no calendar in it (#5074), the next date on what this book holds
 // under the net-worth card.

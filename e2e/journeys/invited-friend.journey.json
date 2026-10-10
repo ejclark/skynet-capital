@@ -180,11 +180,11 @@
         {
           "id": "s2",
           "goto": "/app/accounts?account=day-trader&section=thesis",
-          "sees": "Thesis on the friend's own bot: its standing call and the markers behind it",
+          "sees": "Thesis on the friend's own bot: its standing call and the markers behind it (on a phone Thesis takes the switch's More slot, #5072)",
           "ears": "WHEN the invited friend opens Thesis on the bot they own, the app shall show that bot's standing call.",
           "expect": [
             { "url": "/app/accounts?account=day-trader&section=thesis" },
-            { "role": "button", "name": "Thesis", "exact": true, "within": "main" }
+            { "role": "button", "name": "Thesis", "within": "main" }
           ],
           "judge": "can this reader tell what their bot believes right now?"
         }
