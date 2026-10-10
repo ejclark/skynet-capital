@@ -11,7 +11,7 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { fetchOptionPositions } from "../live/options";
-import { decayBySymbol } from "./holding-decay";
+import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
@@ -154,6 +154,7 @@ export function PositionsBlotter({
     staleTime: 30_000,
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
+  const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
   const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
   // An Events row's `#pos-<symbol>` link (#4348): land on the row or card once it has rendered.
   useLandOnPosition(`${view}:${shown.map((p) => p.symbol).join(",")}`);
@@ -197,7 +198,12 @@ export function PositionsBlotter({
               canTrade={canTrade}
             />
             {shown.length > 0 ? (
-              <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
+              <PositionCards
+                positions={shown}
+                deskId={deskId}
+                decayBySymbol={decay}
+                deltaBySymbol={delta}
+              />
             ) : null}
           </div>
         )}

@@ -1,20 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
-import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import type { ReactElement, ReactNode } from "react";
+import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition, Tone } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
-import { decayClause, type HoldingDecay } from "./holding-decay";
+import { type GreeksParts, greeksParts, type HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
-import { GLYPH, MINUS } from "./quote-change";
+import { MINUS } from "./quote-change";
 
 /** The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash. */
 const withMinus = (figure: string) => figure.replace(/^-/, MINUS);
 
-/** Today's change for the card's second figure (#5041): a glyph and signed dollars, or a dash when
- *  the day is flat or rounds to $0 — never a made-up "▲ +$0". */
-function dayChange(p: DeskPosition): { tone: Tone; glyph?: string; text: string } {
-  if (p.dayTone === "flat" || /^[+-]?\$0$/.test(p.dayPl)) return { tone: "flat", text: "—" };
-  return { tone: p.dayTone, glyph: GLYPH[p.dayTone], text: withMinus(p.dayPl) };
+/** Today's change for the bracket beside the value (#5041): signed dollars, or a dash when the
+ *  day is flat or rounds to $0 — never a made-up "+$0". */
+function dayChange(p: DeskPosition): { tone: Tone; text?: string } {
+  if (p.dayTone === "flat" || /^[+-]?\$0$/.test(p.dayPl)) return { tone: "flat" };
+  return { tone: p.dayTone, text: withMinus(p.dayPl) };
 }
 
 /** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
@@ -30,35 +30,152 @@ function tradeSearch(deskId: string, symbol: string) {
     : { desk: deskId, symbol };
 }
 
+/** The server's quantity ("-1", "1,200") as a whole count and a side. */
+function held(quantity: string): { readonly count: number; readonly short: boolean } {
+  const n = Number(quantity.replace(/[^0-9.-]/g, ""));
+  return { count: Math.abs(n), short: n < 0 };
+}
+
+const plural = (n: number, one: string) =>
+  `${n.toLocaleString("en-US")} ${one}${n === 1 ? "" : "s"}`;
+
+/** Line 1, left: "NVDA · $232.10" for shares, "CRWV $80 SHORT PUT · 29d" for an option. */
+function Head({ p }: { readonly p: DeskPosition }): ReactElement {
+  const occ = parseOccSymbol(p.symbol);
+  if (!occ) {
+    return (
+      <span className="pos-card-name">
+        <b>{p.symbol}</b>
+        <span aria-hidden="true"> · </span>
+        <span className="visually-hidden">, </span>
+        <span className="num">{p.price}</span>
+        <span className="visually-hidden"> a share</span>
+      </span>
+    );
+  }
+  const side = held(p.quantity).short ? "SHORT" : "LONG";
+  const days = p.expiresInDays;
+  return (
+    <span className="pos-card-name">
+      <b>{occ.underlying}</b> <span className="num">{occStrikeLabel(occ.strike)}</span>{" "}
+      <span className="pos-card-kind">
+        {side} {occ.type.toUpperCase()}
+      </span>
+      {days === undefined ? null : (
+        <>
+          <span className="pos-card-dte" aria-hidden="true">
+            {" · "}
+            {days === 0 ? "expires today" : `${days}d`}
+          </span>
+          <span className="visually-hidden">
+            , {days === 0 ? "expires today" : `${plural(days, "day")} left`}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/** Line 2, left: "130 shares (breakeven $223.98)", "1 contract (breakeven $77.45)". */
+function Size({ p }: { readonly p: DeskPosition }): ReactElement {
+  const { count, short } = held(p.quantity);
+  const size = p.isOption
+    ? plural(count, "contract")
+    : `${plural(count, "share")}${short ? " short" : ""}`;
+  return (
+    <span className="pos-card-sub">
+      <span className="visually-hidden">, </span>
+      {size}
+      {p.breakeven ? (
+        <>
+          <span aria-hidden="true"> (</span>
+          <span className="visually-hidden">, </span>
+          breakeven <span className="num">{p.breakeven}</span>
+          <span aria-hidden="true">)</span>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+/** Line 3, an option's only: "θ earns $11/day · Δ +$40 per $1", the figures in the text colour. */
+function GreeksLine({ theta, delta }: GreeksParts): ReactElement {
+  return (
+    <span className="pos-card-greeks">
+      <span className="visually-hidden">, </span>
+      {theta ? (
+        <>
+          θ {theta.verb} <span className="pos-card-greek-fig num">{theta.amount}</span>
+        </>
+      ) : null}
+      {theta && delta ? (
+        <>
+          <span aria-hidden="true"> · </span>
+          <span className="visually-hidden">, </span>
+        </>
+      ) : null}
+      {delta ? (
+        <>
+          Δ <span className="pos-card-greek-fig num">{delta}</span> per $1
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+/** A right-hand figure in brackets, the brackets for the eye only. */
+function Bracketed({ children }: { readonly children: ReactNode }): ReactElement {
+  return (
+    <>
+      <span aria-hidden="true">(</span>
+      {children}
+      <span aria-hidden="true">)</span>
+    </>
+  );
+}
+
 /**
- * HOLDING STEADY, AS CARDS (#3689 slice 8, handoff 3b): the phone's positions. At ≤700px the wide
- * table gives way to one card per position: name, total P/L and return on the first line
- * ("+$414 · +1.85% total"), then the plain line ("Expires in 37 days · loses ~$12/day to time", or
- * "earns ~$11/day from time" on an option sold, #5023) with today's change ("▼ −$76 today",
- * #5041 — the desktop table's Today column; on a phone the cards are the only positions view).
- * Each figure is named in a word and a direction glyph rides with the tone, so hue never carries
- * it alone. Each card is a 44px+ target that opens the position on Trade, where closing it lives
- * on a phone. The table keeps its inline close on wider screens.
+ * THE PHONE'S POSITIONS, AS ERIC'S ROW SPEC (#5059; round 2 of #5037, the positions surface,
+ * question 2 slice 1). At ≤700px the wide table gives way to one card per position, in two lines:
+ *  - line 1 is the position now: "NVDA · $232.10" (an option: "CRWV $80 SHORT PUT · 29d"), and on
+ *    the right its value with today's change in brackets, "$30,173 (+$195)";
+ *  - line 2 is since it was opened: "130 shares (breakeven $223.98)", and on the right the total
+ *    with its return in brackets, "+$1,056 (+3.63%)" — the boldest figure on the card, because
+ *    the total matters more than today's (Eric, #5037);
+ *  - an option adds a third line: "θ earns $11/day · Δ +$40 per $1" (`greeksParts`).
+ * A sold option's value is what it costs to close, a negative, and its return is against the
+ * premium collected (the server's `returnPct`). The right-hand figures sit on two edges shared by
+ * every card (one grid, subgridded through each card, in tabular digits), and a key above the
+ * cards names the two columns once. Each figure keeps its sign, so hue never carries the direction
+ * alone, and the link's name says each one in words (#5049). Each card is a 44px+ target that
+ * opens the position on Trade, where closing it lives on a phone.
  */
 export function PositionCards({
   positions,
   deskId,
   decayBySymbol,
+  deltaBySymbol,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
   readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
+  readonly deltaBySymbol?: ReadonlyMap<string, number>;
 }): ReactElement {
   return (
     <ul className="pos-cards">
+      {/* The column key: the links' names say each figure, so this is for the eye only. */}
+      <li className="pos-cards-key" aria-hidden="true">
+        <span className="pos-cards-key-value">value</span>{" "}
+        <span className="pos-cards-key-day">(today)</span>{" "}
+        <span className="pos-cards-key-total">total</span>{" "}
+        <span className="pos-cards-key-ret">(return)</span>
+      </li>
       {positions.map((p) => {
-        const sub = [
-          p.expiresIn && p.expiresIn !== "no expiry" ? `Expires in ${p.expiresIn}` : p.plainName,
-          decayClause(decayBySymbol?.get(p.symbol)),
-        ]
-          .filter(Boolean)
-          .join(" · ");
         const day = dayChange(p);
+        const greeks = p.isOption
+          ? greeksParts(decayBySymbol?.get(p.symbol), deltaBySymbol?.get(p.symbol))
+          : {};
+        const writtenOption = p.isOption && held(p.quantity).short;
         return (
           <li key={p.symbol}>
             <Link
@@ -69,46 +186,39 @@ export function PositionCards({
               // table row's, which is still in the DOM, only hidden.
               data-pos-anchor={positionAnchor(p.symbol)}
             >
-              <span className="pos-card-top">
-                <span className="pos-card-name">{p.display}</span>
-                {/* One link name, so a screen reader hears each figure named: "MSFT, total +$414,
-                    return +1.85%". The on-screen "total" trails the figures, where it lines up
-                    with "today" below. */}
-                <span className={`pos-card-fig num tone-${p.totalTone}`}>
-                  <span className="visually-hidden">, total </span>
-                  <span className="pos-card-pl">{withMinus(p.totalPl)}</span>
-                  {p.returnPct === "—" ? null : (
-                    <span className="pos-card-ret">
-                      <span aria-hidden="true"> · </span>
-                      <span className="visually-hidden">, return </span>
-                      {withMinus(p.returnPct)}
-                    </span>
-                  )}{" "}
-                  <span className="pos-card-label" aria-hidden="true">
-                    total
+              <Head p={p} />{" "}
+              <span className="pos-card-value num">
+                <span className="visually-hidden">, value </span>
+                {withMinus(p.value)}
+              </span>{" "}
+              <span className={`pos-card-day num tone-${day.tone}`}>
+                <span className="visually-hidden">, </span>
+                {day.text ? (
+                  <>
+                    <Bracketed>{day.text}</Bracketed>
+                    <span className="visually-hidden"> today</span>
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true">(—)</span>
+                    <span className="visually-hidden">no change today</span>
+                  </>
+                )}
+              </span>{" "}
+              <Size p={p} />{" "}
+              <span className={`pos-card-total num tone-${p.totalTone}`}>
+                <span className="visually-hidden">, total </span>
+                {withMinus(p.totalPl)}
+              </span>{" "}
+              {p.returnPct === "—" ? null : (
+                <span className={`pos-card-ret num tone-${p.totalTone}`}>
+                  <span className="visually-hidden">
+                    , return {writtenOption ? "on premium " : ""}
                   </span>
+                  <Bracketed>{withMinus(p.returnPct)}</Bracketed>
                 </span>
-              </span>
-              <span className="pos-card-bottom">
-                <span className="pos-card-sub">{sub}</span>
-                <span className={`pos-card-fig pos-card-day num tone-${day.tone}`}>
-                  {/* Apart on screen, but one link name: without the pause a reader hears
-                      "profits if MSFT rises −$76" (#5023's lesson). */}
-                  <span className="visually-hidden">, </span>
-                  {day.glyph ? (
-                    <>
-                      <span aria-hidden="true">{day.glyph} </span>
-                      {day.text}
-                    </>
-                  ) : (
-                    <>
-                      <span aria-hidden="true">{day.text}</span>
-                      <span className="visually-hidden">no change</span>
-                    </>
-                  )}{" "}
-                  <span className="pos-card-label">today</span>
-                </span>
-              </span>
+              )}{" "}
+              {greeks.theta || greeks.delta ? <GreeksLine {...greeks} /> : null}
             </Link>
           </li>
         );
