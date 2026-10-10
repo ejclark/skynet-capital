@@ -9,7 +9,7 @@ import {
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as actualDesk from "../../src/live/desk" with { rstest: "importActual" };
-import type { DeskPosition, PositionEvent } from "../../src/live/desk";
+import type { Decision, DeskPosition, PositionEvent } from "../../src/live/desk";
 import { horizonSearch } from "../../src/live/horizon-params";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import type { ResearchCalendarData } from "../../src/live/research";
@@ -91,6 +91,14 @@ const RESEARCH: ResearchCalendarData = {
 };
 
 let plays: unknown = { linked: true, wheels: false, plays: [] };
+/** A spec's own additions to one book: an option it holds, the decision due on it. */
+let extra: Record<
+  string,
+  {
+    readonly positions: readonly DeskPosition[];
+    readonly decisions: readonly Pick<Decision, "id" | "symbol" | "display" | "title" | "due">[];
+  }
+> = {};
 
 rstest.mock("../../src/live/settings", () => ({
   fetchSettings: () =>
@@ -105,7 +113,14 @@ rstest.mock("../../src/live/settings", () => ({
 }));
 rstest.mock("../../src/live/desk", () => ({
   ...actualDesk,
-  fetchDesk: (id: string) => Promise.resolve({ desk: { id, positions: DESKS[id] ?? [] } }),
+  fetchDesk: (id: string) =>
+    Promise.resolve({
+      desk: {
+        id,
+        positions: [...(DESKS[id] ?? []), ...(extra[id]?.positions ?? [])],
+        decisions: extra[id]?.decisions ?? [],
+      },
+    }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
 }));
 rstest.mock("../../src/live/networth", () => ({
@@ -167,6 +182,7 @@ const rowTexts = () =>
 
 beforeEach(() => {
   plays = { linked: true, wheels: false, plays: [] };
+  extra = {};
 });
 
 describe("/accounts?section=events — the book's calendar", () => {
@@ -283,6 +299,38 @@ describe("an empty range names the next event on what you hold (#5045)", () => {
     await screen.findByText("Nov 9 – Nov 15: nothing on what you hold.");
     expect(screen.getByText("Nothing later on what you hold is dated yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /→$/ })).not.toBeInTheDocument();
+  });
+
+  it("claims nothing when the range's one event is a decision due — that is on what you hold too", async () => {
+    // Sauron's NVDA call expires Fri Oct 9 and carries no event of its own that week: the week's
+    // one row is the decision (▲), so the note neither says the week is empty nor jumps past it.
+    extra = {
+      sauron: {
+        positions: [
+          {
+            symbol: "NVDA261009C00180000",
+            display: "NVDA Oct 9 $180 call",
+            isOption: true,
+            quantity: "2",
+          } as unknown as DeskPosition,
+        ],
+        decisions: [
+          {
+            id: "nvda-call-expiry",
+            symbol: "NVDA261009C00180000",
+            display: "NVDA Oct 9 $180 call",
+            title: "Expires this week: close it, roll it, or let it expire",
+            due: { at: "2026-10-09", reason: "expiry", label: "Expires Oct 9" },
+          },
+        ],
+      },
+    };
+    mountAccounts(`/accounts?section=events&account=sauron&${QUIET_WEEK}`);
+    await screen.findByText(/dated records on/);
+    await waitFor(() => expect(rowTexts()).toHaveLength(1));
+    expect(rowTexts()[0]).toContain("decide by");
+    expect(screen.queryByText(/nothing on what you hold/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Next on what you hold/)).not.toBeInTheDocument();
   });
 
   it("offers no jump on a picked day — the day narrows the agenda, the range stays put", async () => {
