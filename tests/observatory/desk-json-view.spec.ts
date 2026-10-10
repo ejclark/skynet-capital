@@ -248,6 +248,19 @@ describe("deskView lots", () => {
     expect(deskView(snapshot(), ledger).positions[0]?.lots).toBeUndefined();
   });
 
+  // #5091: a cut-off fill window can leave only buys on the ledger under a position that is now
+  // short. Their sizes match the short's in absolute terms, but they are not its buys — listed,
+  // each would offer "Close this buy", a sell that adds to the short.
+  it("omits lots when buys sum to a short position's size — the sign has to match too", () => {
+    const short = snapshot({
+      positions: [{ symbol: "TSLA", quantity: -100, avgPrice: 400, marketValue: -40_000 }],
+    });
+    const ledger = ledgerWith([
+      { symbol: "TSLA", quantity: 100, price: 380, at: "2026-09-10T14:00:00Z" },
+    ]);
+    expect(deskView(short, ledger).positions[0]?.lots).toBeUndefined();
+  });
+
   it("omits lots for a symbol the ledger never opened", () => {
     expect(deskView(snapshot(), ledgerWith([])).positions[0]?.lots).toBeUndefined();
   });

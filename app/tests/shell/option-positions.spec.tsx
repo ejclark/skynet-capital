@@ -66,6 +66,7 @@ describe("OptionPositionsCard — close order type", () => {
   });
 
   it("reviews a market close by default and says so on the confirm button", async () => {
+    nextPreview = { positionIntent: "sell_to_close" };
     render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
     fireEvent.click(screen.getByRole("button", { name: "Close…" }));
     await waitFor(() => expect(reviewed).toHaveLength(1));
@@ -73,13 +74,39 @@ describe("OptionPositionsCard — close order type", () => {
     expect(reviewed[0]).not.toHaveProperty("limitPrice");
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /Confirm — close 2 · market/ }),
+        screen.getByRole("button", { name: /^Confirm — sell to close 2 contracts · market/ }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  // #5091: the confirm says the side and the count in words, from the server's own preview — the
+  // desk's close panel does the same (#5089). A sold contract closes with a buy.
+  it("says buy to close and the count on a sold contract's confirm", async () => {
+    nextPreview = {
+      side: "buy",
+      positionIntent: "buy_to_close",
+      contracts: 1,
+      estNotional: 550,
+    };
+    const sold = { ...held, quantity: "-1" };
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[sold]} />));
+    fireEvent.click(screen.getByRole("button", { name: "Close…" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "Confirm — buy to close 1 contract · market · est $550.00",
+        }),
       ).toBeInTheDocument(),
     );
   });
 
   it("reveals the premium field on Limit and reviews with the typed price", async () => {
-    nextPreview = { orderType: "limit", limitPrice: 13.5, estNotional: 2_700 };
+    nextPreview = {
+      positionIntent: "sell_to_close",
+      orderType: "limit",
+      limitPrice: 13.5,
+      estNotional: 2_700,
+    };
     render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
     fireEvent.click(screen.getByRole("button", { name: "Limit" }));
     const price = screen.getByLabelText("Limit price per share");
@@ -91,7 +118,7 @@ describe("OptionPositionsCard — close order type", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("button", {
-          name: /Confirm — close 2 · limit \$13\.50 · est \$2,700\.00/,
+          name: /^Confirm — sell to close 2 contracts · limit \$13\.50 · est \$2,700\.00/,
         }),
       ).toBeInTheDocument(),
     );

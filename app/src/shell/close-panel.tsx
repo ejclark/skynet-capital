@@ -33,19 +33,23 @@ export function closeRefusal(position: DeskPosition): string | undefined {
   return `Close is off: you're short ${plural(count, "share")}, so closing means buying them back (a buy to cover), which this desk doesn't place yet. A sell would add to the short.`;
 }
 
+/** An option close's side and size in words, from the server's own preview — what it will send:
+ *  "Buy to close 1 contract". Trade's option close says the same on its Confirm (#5091). */
+export function optionCloseWords(preview: OptionPreview): string {
+  const side =
+    preview.positionIntent === "buy_to_close"
+      ? "Buy to close"
+      : preview.positionIntent === "sell_to_close"
+        ? "Sell to close"
+        : preview.side === "buy"
+          ? "Buy"
+          : "Sell";
+  return `${side} ${plural(preview.contracts, "contract")}`;
+}
+
 /** The confirm step's side and size in words, from the server's own preview — what it will send. */
 function closeWords(preview: TicketPreview | OptionPreview): string {
-  if ("positionIntent" in preview) {
-    const side =
-      preview.positionIntent === "buy_to_close"
-        ? "Buy to close"
-        : preview.positionIntent === "sell_to_close"
-          ? "Sell to close"
-          : preview.side === "buy"
-            ? "Buy"
-            : "Sell";
-    return `${side} ${plural(preview.contracts, "contract")}`;
-  }
+  if ("positionIntent" in preview) return optionCloseWords(preview);
   return `${preview.action === "buy" ? "Buy" : "Sell"} ${plural(preview.quantity, "share")}`;
 }
 

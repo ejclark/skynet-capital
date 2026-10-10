@@ -47,15 +47,20 @@ function lotAsPosition(position: DeskPosition, lot: PositionLot): DeskPosition {
 
 const unit = (position: DeskPosition) => (position.isOption ? "contracts" : "shares");
 
-/** The buys that make up the position: when, how many at what, worth now, P/L since. */
+/** The buys that make up the position: when, how many at what, worth now, P/L since. Each closes
+ *  as a sell of its own size, so the row's close refusal holds for every buy (#5091): under a short
+ *  stock, "Close this buy" would add to the short — off, described by the row's own reason. */
 function Buys({
   position,
   deskId,
   canTrade,
+  refusedWhyId,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
   readonly canTrade: boolean;
+  /** When the row's Close is off: the id of its visible reason, which every buy's Close cites. */
+  readonly refusedWhyId?: string;
 }): ReactElement | null {
   const [closing, setClosing] = useState<string | undefined>(undefined);
   const rollWhyId = useId();
@@ -78,14 +83,25 @@ function Buys({
             </span>
             {canTrade ? (
               <span className="pos-buy-acts">
-                <button
-                  type="button"
-                  className="btn mc-btn close-btn"
-                  aria-expanded={closing === lot.lotId}
-                  onClick={() => setClosing(closing === lot.lotId ? undefined : lot.lotId)}
-                >
-                  Close this buy
-                </button>
+                {refusedWhyId ? (
+                  <button
+                    type="button"
+                    className="btn mc-btn close-btn"
+                    disabled
+                    aria-describedby={refusedWhyId}
+                  >
+                    Close this buy
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn mc-btn close-btn"
+                    aria-expanded={closing === lot.lotId}
+                    onClick={() => setClosing(closing === lot.lotId ? undefined : lot.lotId)}
+                  >
+                    Close this buy
+                  </button>
+                )}
                 {rolls ? (
                   <button
                     type="button"
@@ -98,7 +114,7 @@ function Buys({
                 ) : null}
               </span>
             ) : null}
-            {canTrade && closing === lot.lotId ? (
+            {canTrade && !refusedWhyId && closing === lot.lotId ? (
               <div className="pos-buy-close">
                 <ClosePanel
                   deskId={deskId}
@@ -181,7 +197,12 @@ export function PositionRowOpen({
           </dd>
         </div>
       </dl>
-      <Buys position={position} deskId={deskId} canTrade={canTrade} />
+      <Buys
+        position={position}
+        deskId={deskId}
+        canTrade={canTrade}
+        {...(refusal ? { refusedWhyId: whyId } : {})}
+      />
       <div className="pos-open-acts">
         {/* Shares only: the guidance is about what to do with a stock you hold (#3729 step 4). The
             link carries the symbol and account, never the stake. */}
@@ -210,7 +231,7 @@ export function PositionRowOpen({
         ) : null}
       </div>
       {/* Short stock (#5086): the reason as text, the Roll pattern — a title has no hover on a
-          phone, and a sell here would add to the short. */}
+          phone, and a sell here would add to the short. Every buy's Close cites it too (#5091). */}
       {canTrade && refusal ? (
         <p id={whyId} className="lot-why">
           {refusal}
