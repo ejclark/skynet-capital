@@ -170,6 +170,20 @@
 .shell:has(.mp-rail) .brand-name {
   display: none;
 }
+/* And the desk's narrowest one-row bar (#5075): the widget is ~80px wider than the badge it
+ * replaced, so from the tablet edge to 960 it sat over the last views — measured at 861 with the
+ * market closed, Activity and R&D under it; pre-market, R&D until 950. The name steps aside there,
+ * and up to 1100 while a fleet alarm widens the line. */
+@media (min-width: 861px) and (max-width: 960px) {
+  .brand-name {
+    display: none;
+  }
+}
+@media (min-width: 861px) and (max-width: 1100px) {
+  .topbar:has(.status-line[data-alarm]) .brand-name {
+    display: none;
+  }
+}
 @media (max-width: 700px) {
   .brand-name {
     display: none;

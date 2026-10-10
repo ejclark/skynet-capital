@@ -6,8 +6,8 @@
  * Each row has ONE height on every section and every account — 38 · 34 · 38 — so a tap on a
  * section or an account never moves the switch (Eric, round 1: "uniform structure… prevents
  * content shift to retain focus"). Rows never wrap; what a phone has no room for leaves by rule
- * (today's percent, the cash amount), never by overflow; a bot's head line, last in its row,
- * ellipsizes before it wraps.
+ * (today's percent, the cash amount; at ≤370 the cash bar), never by overflow; a bot's head line,
+ * last in its row, lets its link go whole before its state is cut.
  *
  * Hue never carries a meaning alone (a standing reader is red/green colourblind): the day move is
  * a ▲/▼ and a sign beside its tone, the cash bar's parts are solid and hatched with the word
@@ -207,15 +207,30 @@
 }
 
 /* a bot's head line (`PlaybooksHeadLine`, #5073) seated at the row's right edge, on one line: the
-   glyph and the word say the state, the link opens the Playbooks section */
+   glyph and the word say the state, the link opens the Playbooks section. The state outranks the
+   link. Where the row has no room for both (390, the market closed: "◐ Waiting for the open" is
+   139px of a 194px slot), "· 7 playbooks ›" wraps whole onto a second line the row's height
+   clips: never "· …", and never "halted" cut short. The Playbooks tab two rows down is the same
+   door. `clip`, not `hidden`, so focusing the clipped link cannot scroll the state out of view. */
 .head-account .hb-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-content: flex-start;
+  column-gap: 0.3em;
+  height: 32px;
   margin: 0 0 0 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: clip;
   white-space: nowrap;
   font-size: 12.5px;
   line-height: 32px;
+}
+/* a state longer than the whole slot (a long account name beside it) ellipsizes last */
+.head-account .hb-line-state {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 2 · the vitals line: net worth · today · cash, on the number's baseline */
@@ -388,5 +403,19 @@
   }
   .cockpit-head .cockpit-nav-more-btn {
     padding-right: 0;
+  }
+}
+
+/* The narrowest common phones (360, most Android): a seven-figure book's line ran 6px past the
+ * gutter, and "Feedback ▾" in More's slot 4–7px — and a folded switch does not scroll inside
+ * itself (its More list must not clip), so either pushed the whole page sideways. The cash bar
+ * steps aside (the share stays, in words) and the switch's buttons close up a little more. */
+@media (max-width: 370px) {
+  .head-cash-bar {
+    display: none;
+  }
+  .cockpit-head .cockpit-nav > .cockpit-nav-btn {
+    padding-left: 6px;
+    padding-right: 6px;
   }
 }

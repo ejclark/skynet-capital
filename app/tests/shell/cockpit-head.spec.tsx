@@ -168,6 +168,10 @@ describe("the account row", () => {
     // #5073's line, seated on the account row: the state in words, then the way into Playbooks
     const open = await within(row).findByRole("button", { name: "7 playbooks" });
     expect(open.closest(".hb-line")).toHaveTextContent("● Running · 7 playbooks ›");
+    // the separator rides with the link, apart from the state: a row too narrow for both (390,
+    // market closed) drops "· 7 playbooks ›" whole and keeps the state, never "… · …"
+    expect(open.closest(".hb-line-go")).toHaveTextContent(/^· 7 playbooks ›$/);
+    expect(open.closest(".hb-line-state")).toBeNull();
     // a plain link, not a popover: nothing opens over the page
     expect(open).not.toHaveAttribute("aria-expanded");
     fireEvent.click(open);
