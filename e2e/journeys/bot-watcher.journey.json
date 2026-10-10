@@ -41,9 +41,9 @@
         {
           "id": "s4",
           "goto": "/app/u/sauron/decisions",
-          "sees": "Heartbeat: is the bot alive, what each playbook concluded on its last pass, the passes that placed no trade",
-          "ears": "WHEN a viewer reads a bot's passes, the app shall name them Heartbeat, as the Profile page does, and gloss its own words where they appear.",
-          "expect": [{ "role": "heading", "name": "Heartbeat", "exact": true }],
+          "sees": "Playbooks: is the bot checking the market (the strip on top), one card per playbook with its state, and every check folded behind the strip",
+          "ears": "WHEN a viewer reads a bot's checks, the app shall name the section Playbooks, as the Profile page does, and gloss its own words where they appear.",
+          "expect": [{ "role": "heading", "name": "Playbooks", "exact": true }],
           "judge": "does a first-time reader understand 'past the guards'?"
         },
         {
@@ -57,8 +57,8 @@
         {
           "id": "s6",
           "goto": "/app/u/sauron",
-          "sees": "the page's head: Overview · Activity · Pulse · Heartbeat · Thesis — the switch, not '← Leaderboard'",
-          "ears": "WHEN a viewer is on an account's page, the app shall offer that account's activity beside its heartbeat.",
+          "sees": "the page's head: Overview · Activity · Pulse · Playbooks · Thesis — the switch, not '← Leaderboard'",
+          "ears": "WHEN a viewer is on an account's page, the app shall offer that account's activity beside its playbooks.",
           "expect": [
             { "role": "link", "name": "Activity", "within": "nav.acct-switch" },
             { "role": "link", "name": "← Leaderboard", "absent": true }
