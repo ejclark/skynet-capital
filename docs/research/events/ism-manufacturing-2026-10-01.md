@@ -508,3 +508,122 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-02, D+1).** Macro-print mode carries no `earnings-cycle` / `intraday-edges` run
+— `symbols: []` by design, so the cache-bust rule (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`, run before this close-out) has no instrument target — so the
+report is scored from freshly re-sourced primary data and the tape from freshly re-fetched market
+reads, never from memory. Primary: ISM's own release, **"Manufacturing PMI® at 54.5%; September 2026
+ISM® Manufacturing PMI® Report"** (PRNewswire 302894520, dateline 2026-10-01 10:00 ET — ISM's
+authorized wire distribution; ismworld.org's own ROB calendar stays SSO-gated per the standing leg-1
+limit, unchanged at close-out), cross-checked against CNBC's same-day coverage and the Kalshi
+`KXISMPMI-26SEP` settlement record.
+
+**What printed — the headline missed consensus narrowly, and the Prices leg broke hard to the
+hawkish side this doc had been watching for.**
+
+| Index | Sep | Aug | Δ | Consensus |
+|---|---|---|---|---|
+| **Manufacturing PMI** | **54.5** | 54.6 | −0.1 | **54.9** Dow Jones (miss, −0.4); Continuum Economics' street preview **55.5** (miss, −1.0) |
+| New Orders | 55.3 | 53.7 | +1.6 | — |
+| Production | 56.7 | 58.3 | −1.6 | — |
+| Employment | 52.7 | 51.2 | +1.5 | — |
+| Supplier Deliveries | 59.0 | 59.3 | −0.3 | — |
+| Inventories | 48.6 | 50.6 | −2.0 | — |
+| Customers' Inventories | 41.6 | 42.8 | −1.2 | — |
+| **Prices** | **77.9** | 71.1 | **+6.8** | Continuum Economics **72.5** (miss, **+5.4**) |
+| Backlog of Orders | 56.4 | 51.8 | +4.6 | — |
+| New Export Orders | 50.9 | 53.2 | −2.3 | — |
+| Imports | 51.0 | 52.5 | −1.5 | — |
+
+Ninth consecutive month of manufacturing expansion, 23rd of overall-economy expansion; ISM maps 54.5
+to **+2.4% annualized real GDP** (unchanged from August's own mapping). Five of the six largest
+industries expanded (Computer & Electronic Products, Food/Beverage/Tobacco, Transportation Equipment,
+Machinery, Chemical Products). Panel tone **40% positive / 60% negative**, citing pricing volatility
+(46%), tariffs (34%), the Iran war (30%) and lead times (21%) — one respondent: *"Every month, we are
+faced with new headwinds created by this administration... causing prices to go up and uncertainty."*
+ISM's chair attributes the Prices jump to **"(1) increases in steel and aluminum prices that impact
+the entire value chain, (2) tariffs applied to many imported goods and (3) increases in petroleum-based
+products as a result of the Middle East conflict"** — the same three-driver framing this doc's fuel-
+channel thesis named, now with two siblings (tariffs, metals) it did not originally emphasize.
+
+**Scoring the stance — stand-aside was right, for the reason the doc gave, and the Prices call
+landed far stronger than its own "coin flip" framing from three days ago.**
+
+- **The headline missed both forecasts on the record**, Dow Jones' 54.9 and Continuum's 55.5, and
+  Kalshi's final pre-print modal bin (55.0–55.9 at ~36%, re-concentrated D-0) also missed — the print
+  settled in the **54.0–54.9** bin the D-0 row's own calc had assigned only ~19%. No lean the tape
+  built in its final three days actually held.
+- **`FT-ism-manufacturing-2026-10-01-1` PASSES, decisively — not a coin flip.** The registered bar was
+  Prices **≥ 73.0**; it printed **77.9**, a full **4.9 points** clear of the bar and **6.8 points**
+  above August, the largest single-month Prices move this doc's tracked series has carried. Continuum
+  Economics' own street forecast (72.5, the number that made this doc describe its own call as "close
+  to a coin flip" three days ago) missed by **5.4 points on the same side this doc called** — the fuel/
+  tariff/metals shock reached the national survey harder than either the street or this doc's own
+  registered framing expected. This is the clean reversal of the 09-01 sibling's close-out, where the
+  central leg (prices-paid) "resolved to no information" at 71.1 flat; here it is the loudest number in
+  the release.
+- **Leg 3 (national series does not extrapolate from a regional collapse) is reinforced again on the
+  headline.** 54.5 sits inside 2026's 52.4–55.6 range, an 8.6-point gap from Chicago's August 47.1 that
+  neither this nor the 09-01 close-out ever treated as a national forecast.
+- **No trade was made or implied; none was warranted.** `symbols: []` throughout, no house playbook
+  macro-keyed, and a scored pass licenses no entry — exactly as every stance note since D-33 has said.
+
+**Kill switches — final scoring.**
+
+1. ~~**Prices print below 73.0**~~ — **DID NOT FIRE.** Prices printed 77.9, 4.9 points clear of the
+   73.0 trigger on the hawkish side; `FT-ism-manufacturing-2026-10-01-1` scores **pass** above.
+2. ~~**Nov→Mar WTI backwardation flattens under ~$5, or WTI closes under $90, before 2026-09-30**~~ —
+   **expired un-fired, within its own stated window.** WTI's closest approach was **$90.60** on 09-30
+   (within a dollar); the print-day close bounced to **$93.00** (10-01, Yahoo daily bar, +$2.40 /
+   +2.6%) — the window named in the switch has now closed without it tripping, and the Prices print it
+   gated has already been scored on its own terms above.
+3. ~~**The Fed stops being inflation-anchored**~~ — **not fired, and now moot for this doc.** The
+   question this switch gated — how to weight this specific print — has resolved by the print
+   happening; ongoing Fed-path tracking continues on the FOMC/jobs/PCE ledgers, not here.
+4. ~~**A clean, unconfounded observation of this release's day-of reaction arrives**~~ — **still not
+   strictly fired, and this is the closest candidate yet.** The release shared its 10:00 ET slot with
+   Construction Spending, and its morning with the S&P Global manufacturing final (09:45 ET), BoJ
+   Tankan, Eurostat flash HICP and two Treasury items — so this is not the isolated session the switch
+   asks for. But it is the **first observation in this doc's history where same-day coverage names
+   this release's own Prices index, not macro mood or a different release, as a driver of the yield
+   move** (Yahoo Finance, 2026-10-01: "this inflation pressure in manufacturing was a key driver of the
+   early yield spike"). Recorded as a partial finding, not a reversal of leg 4's standing non-finding —
+   a shared slot still cannot isolate one release's effect.
+
+**Market reaction.** 10Y touched an **intraday high of 5.344%** (CNBC, 2026-10-01: highest level since
+2002) before retreating to close **5.243%, down ~5bp** on the session as yields pulled back from the
+morning spike. Equities were choppy and finished little changed: Dow **+0.04% to 50,926** after being
+down as much as 0.7% mid-morning (CNBC/Yahoo session wraps, press-sourced and rounded, not reconciled
+to the tick). VIX **16.33** close — against the **16.34** pre-print probe reading taken the same day,
+effectively flat, no regime move. WTI **$93.00** (Yahoo daily bar), +2.6% on the session, still **+11.5%**
+above the $83.40 pre-shock baseline this doc's fuel-channel thesis was built against in August.
+`KXISMPMI-26SEP` settled (Kalshi, settlement timestamp 2026-10-01T14:55:33Z): strikes ≥51–≥54 resolved
+**Yes**, ≥55 and above **No** — consistent with the 54.5 print and with the table above.
+
+**Adjacency.** `node scripts/event-scan.mjs --on-date=2026-10-01` returns the same 11 same-date entries
+this doc has tracked since D-16 (S&P Global manufacturing final, construction spending, BoJ Tankan,
+BoJ Summary of Opinions, Eurostat flash HICP, PMMS, Apple's EU DMA terms, UK electricity VAT, S&P
+Global's commodity/supply indicators, and two Treasury items) — no new dated adjacency found at
+close-out, nothing proposed.
+
+**Honest limits at close-out.** ismworld.org's release page remains SSO-gated, so these figures rest on
+ISM's authorized wire distribution rather than a fetched ismworld.org line — the standing leg-1 limit,
+unchanged through the event's entire life. Index closing levels (Dow, S&P, Nasdaq references in press
+coverage) are press-sourced and rounded, not re-derived from raw ticks. The day-of reaction-function
+kill switch (#4 above) is scored as a partial finding rather than a clean resolution because the 10:00
+ET slot is genuinely shared with Construction Spending and the morning with several other releases —
+this doc does not claim to have isolated ISM's own effect, only that this session's press attribution
+is the most ISM-specific of the four it has now logged. The backwardation half of kill switch #2 was
+never re-measured after D-7 (only the WTI-close half was tracked through close-out); recorded as an
+untracked half, not a silent drop.
+
+**Verdict.** The base case held on direction (continued low-to-mid-50s expansion, Prices elevated) but
+understated magnitude badly — Prices printed nearly 5 points clear of this doc's own registered bar
+and 5.4 points clear of the only published street forecast, which is itself informative about how
+hard the fuel/tariff/metals shock hit relative to what anyone was pricing. Stand-aside cost nothing and
+was the only defensible stance throughout: `symbols: []`, no house playbook macro-keyed, and the one
+forward test this doc registered scored a clean, decisive pass with no entry implied or taken. This
+doc goes quiet.
