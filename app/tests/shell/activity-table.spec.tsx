@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
 import { ActivityTable } from "../../src/shell/activity-table";
+import { LANDED_MS } from "../../src/shell/landing";
 
 /** The Decisions tab folded into its trades (#3687 slice 4): a bot row opens to the decision that
  *  placed it; a row with no decision (a human's, or one the trail never resolved) has no toggle.
@@ -345,6 +346,46 @@ describe("ActivityTable — the row a link points at", () => {
     window.location.hash = "#cycle-1";
     render(<ActivityTable events={[event()]} />);
     expect(scroll).not.toHaveBeenCalled();
+  });
+
+  // #5022: a FORM square tapped from the Overview landed on its row with nothing to say which row
+  // it was. It lands the way a position does: centred, and marked for a moment.
+  it("marks the row it lands on, only for a moment", () => {
+    rstest.useFakeTimers();
+    window.location.hash = "#act-ord-2";
+    const { container } = render(
+      <ActivityTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />,
+    );
+    const row = container.querySelector("#act-ord-2");
+    expect(scroll).toHaveBeenCalledWith({ block: "center" });
+    expect(row).toHaveAttribute("data-landed");
+    expect(container.querySelector("#act-ord-1")).not.toHaveAttribute("data-landed");
+    act(() => {
+      rstest.advanceTimersByTime(LANDED_MS);
+    });
+    expect(row).not.toHaveAttribute("data-landed");
+    rstest.useRealTimers();
+  });
+
+  it("lands on a spread's leg, which a Thesis marker for that fill links", () => {
+    const leg = { ...event({ orderId: "leg-1", display: "NVDA $185 CALL · 13 NOV 26" }) };
+    window.location.hash = "#act-leg-1";
+    const { container } = render(<ActivityTable events={[event({ legs: [leg] })]} />);
+    expect(scroll.mock.contexts[0]).toHaveAttribute("id", "act-leg-1");
+    expect(container.querySelector("#act-leg-1")).toHaveAttribute("data-landed");
+  });
+
+  it("lands on the row once an older page brings it in, and only once", () => {
+    window.location.hash = "#act-ord-9";
+    const first = [event()];
+    const { rerender, container } = render(<ActivityTable events={first} />);
+    expect(scroll).not.toHaveBeenCalled();
+    const older = [...first, event({ orderId: "ord-9", symbol: "XLE" })];
+    rerender(<ActivityTable events={older} />);
+    expect(container.querySelector("#act-ord-9")).toHaveAttribute("data-landed");
+    // A refetch handing back the same rows is not a new link: the page stays where it is.
+    rerender(<ActivityTable events={[...older]} />);
+    expect(scroll).toHaveBeenCalledTimes(1);
   });
 });
 

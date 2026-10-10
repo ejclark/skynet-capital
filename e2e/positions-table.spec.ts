@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { OWNED, ownTheDayTrader } from "./own-account";
 
 /**
  * The positions table's action column (#4945) — layout, so it needs a real browser. Two bugs once
@@ -16,27 +17,6 @@ import { expect, type Page, test } from "@playwright/test";
  *   - `/app/u/:id` folds the detail columns behind the chevron again at ≥1200 (`.acct-book`).
  */
 
-const OWNED = { id: "day-trader", name: "The Day Trader", kind: "bot" } as const;
-
-/** Enough of `NetWorthStatsView` for the Overview to render; the numbers are never asserted. */
-const STATS = {
-  value: "$1,006,400",
-  valueKnown: true,
-  dayChange: "+$0",
-  dayTone: "flat",
-  dayKnown: true,
-  cash: "$948,250",
-  cashKnown: true,
-  positionCount: 3,
-  bookedPl: "—",
-  bookedTone: "flat",
-  bookedKnown: false,
-  onPaper: "—",
-  onPaperTone: "flat",
-  onPaperKnown: false,
-  windows: [],
-};
-
 interface Lot {
   readonly lotId: string;
 }
@@ -46,20 +26,9 @@ interface Position {
   readonly lots?: readonly Lot[];
 }
 
-async function ownTheDayTrader(page: Page): Promise<void> {
-  await page.route("**/api/settings", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    body.accounts = [{ ...OWNED, hostConfigured: true, profile: null }];
-    await route.fulfill({ response, json: body });
-  });
-  await page.route("**/api/accounts/networth", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    body.accounts = [{ ...STATS, ...OWNED }];
-    body.total = STATS;
-    await route.fulfill({ response, json: body });
-  });
+/** The owner's view, plus one option in the desk: the offline fixtures hold shares only. */
+async function ownTheDayTraderWithAnOption(page: Page): Promise<void> {
+  await ownTheDayTrader(page);
   await page.route(`**/api/desk/${OWNED.id}`, async (route) => {
     const response = await route.fetch();
     const body = await response.json();
@@ -108,7 +77,7 @@ for (const route of ["/app/accounts", `/app/u/${OWNED.id}`]) {
   test.describe(`the positions table's actions on ${route}`, () => {
     for (const width of [1024, 1100, 1280, 1440]) {
       test(`stay inside their column and the table at ${width}px`, async ({ page }) => {
-        await ownTheDayTrader(page);
+        await ownTheDayTraderWithAnOption(page);
         await page.setViewportSize({ width, height: 900 });
         await page.goto(route);
         const buttons = await measureActions(page);
