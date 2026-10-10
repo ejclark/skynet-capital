@@ -19,45 +19,64 @@ const hb = (over: Partial<Heartbeat> = {}): Heartbeat => ({
 });
 
 describe("heartbeatLine — a glyph and a word for every state, never hue alone", () => {
-  it("beating names how recent the last pass was", () => {
+  // #5044: "Beating" read as "beating the market". The chip measures one thing — whether the bot
+  // is checking the market, and when it last did — so its words say exactly that.
+  it("running names how recent the last check of the market was", () => {
     expect(heartbeatLine(hb())).toEqual({
       glyph: "●",
-      word: "Beating",
-      detail: "last pass 22s ago",
+      word: "Running",
+      detail: "checked the market 22s ago",
     });
   });
 
-  it("stale names how long the silence has run", () => {
+  it("not checking names when the last check was", () => {
     expect(heartbeatLine(hb({ state: "stale", sinceLastPassMs: 7 * 60_000 }))).toMatchObject({
       glyph: "▲",
-      word: "Stale",
-      detail: "no pass for 7 min",
+      word: "Not checking",
+      detail: "last check 7 min ago",
     });
   });
 
   // #4949: the server calls a closed market stale once the bot sat out the whole last session.
-  it("stale with the market closed says the bot missed the last session, never idle", () => {
+  it("not checking with the market closed says the bot missed the last session, never idle", () => {
     const line = heartbeatLine(
       hb({ state: "stale", marketOpen: false, sinceLastPassMs: 3 * 86_400_000 }),
     );
-    expect(line).toMatchObject({ glyph: "▲", word: "Stale", detail: "no pass last session" });
+    expect(line).toMatchObject({
+      glyph: "▲",
+      word: "Not checking",
+      detail: "no check last session",
+    });
     expect(line.detail).not.toMatch(/idle/);
   });
 
-  it("market-closed says idle, and leaves the open time to the topbar clock", () => {
+  it("market-closed names the last check, and leaves the open time to the topbar clock", () => {
     const line = heartbeatLine(hb({ state: "market-closed", sinceLastPassMs: 16 * 3_600_000 }));
     expect(line).toMatchObject({
       glyph: "◐",
       word: "Market closed",
-      detail: "idle, last pass 16h ago",
+      detail: "last check 16h ago",
     });
     expect(line.detail).not.toMatch(/open/i);
   });
 
-  it("no-record says the bot hasn't run", () => {
+  it("no-record says the bot hasn't run, once", () => {
     expect(
       heartbeatLine(hb({ state: "no-record", lastPassAt: null, sinceLastPassMs: null })),
-    ).toMatchObject({ glyph: "○", word: "No passes yet" });
+    ).toEqual({ glyph: "○", word: "Hasn't run yet", detail: "" });
+  });
+
+  it("no state's words imply a comparison with the market or anyone else", () => {
+    const lines = [
+      hb(),
+      hb({ state: "stale", sinceLastPassMs: 7 * 60_000 }),
+      hb({ state: "stale", marketOpen: false, sinceLastPassMs: 3 * 86_400_000 }),
+      hb({ state: "market-closed", marketOpen: false, sinceLastPassMs: 16 * 3_600_000 }),
+      hb({ state: "no-record", lastPassAt: null, sinceLastPassMs: null }),
+    ].map(heartbeatLine);
+    for (const { word, detail } of lines) {
+      expect(`${word} ${detail}`).not.toMatch(/beat|outperform|ahead|behind|\bvs\b|than/i);
+    }
   });
 });
 
