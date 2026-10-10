@@ -1,0 +1,107 @@
+---
+name: steer
+description: >-
+  Run one steering touch point: gather what shipped, what needs Eric and what is queued, build one
+  page of pictures he answers in 15–30 minutes, publish it, then read his taps back into footed
+  issue comments and label moves. Use when a touch point is due or asked for — "steer", "the
+  morning page", "the evening page", "what needs me", "steered" (his answers are in) — and when a
+  design decision needs a critique round (Today, options as pictures, Build / More / Not). The
+  plan is #5056; the scripts are scripts/steer/.
+---
+
+# /steer — one page, twice a day
+
+Eric works about 8–4 Central. Each touch point is one page: **what shipped since the last page ·
+the decisions only he can make · what is queued until the next page · the last 14 days · Done.**
+His answers land as comments on their issues, so the page is disposable and the issue is the
+record. Plan and evidence: #5056. The format was earned on #5037, where round 1 of the profile
+critique drew 7 Builds, 24 More/Not marks, 6 notes and 16 pinned threads in one sitting.
+
+```mermaid
+flowchart LR
+  G["gather<br/>tp.json"] --> B["build<br/>steer.html"]
+  B --> P["publish<br/>one stable page"]
+  P --> W["check Done<br/>every 10 min, 90 min"]
+  W --> R["read back<br/>footed comments"]
+  R --> S["#5056 log<br/>one dated line"]
+```
+
+## The drill
+
+`<dir>` is this touch point's folder in the session scratchpad, e.g. `<scratchpad>/steer/2026-10-10-pm`.
+The stable page's URL is in #5056's state block; the first publish puts it there.
+
+1. **Read the last page's answers first** — the next reel starts at its Done. ArtifactData `list`
+   the collection `tp` on the stable page with `out_dir: <dir>/prev` (one file per round's meta).
+   No page yet: skip `--prev`.
+2. **Gather** — `npm run steer:gather -- --out <dir> --prev <dir>/prev` (about 2 minutes; it reads
+   the Needs-you selector, the rank, admission, the dial and the merge log — nothing else).
+   - An evening page opened after midnight: add `--tp 2026-10-09-pm`, or it files as the morning's.
+   - A design round: add `--design <manifest.json>` (shape below). Its issue must already be on the
+     Needs-you list — a `Needs from you` callout above the fold — or gather refuses it.
+   - Read the one-line summary: decisions and minutes, merges, queue, dial. A `halt` dial heads the page.
+3. **Build** — `npm run steer:build -- <dir>/tp.json` → `<dir>/steer.html` + `<dir>/files.json`.
+   Optional single look: open it at 390 (the page must not scroll sideways) and fix what is broken.
+4. **Publish** — the Artifact tool, `file_path: <dir>/steer.html`, `files` from `files.json`,
+   `capabilities: { db: {}, user: {} }`; first publish `icon: "compass"`, after that `url` = the
+   stable page. List its files first (`scope: "files"`) and map every `img/…` path this
+   `files.json` no longer names to `null`, so old rounds' pictures don't pile up. One functional
+   pass after the first publish: ArtifactData `list` of `tp` (empty until he opens it).
+   Never republish over round 1's critique page (5LDY3gN9gxLk8f3Z5UpSGT) unless Eric asks; its
+   `critique/q*` records stay readable either way, because this page writes only under `tp/`.
+5. **Watch for Done, briefly** — `/loop 10m` with a prompt that ArtifactData `get`s `tp/<id>`
+   (collection `tp`, doc `<id>`) and runs step 6 when `doneAt` is set. Put the stop time
+   (publish + 90 min) in the prompt; past it, cancel the loop. A late Done is read by the next
+   page's step 1, and "steered" from Eric runs step 6 at once.
+6. **Read back** — ArtifactData `list` the collections `tp/<id>/decisions`, `tp/<id>/queue` and
+   `tp/<id>/reel`, and `get` `tp`/`<id>`, all with `out_dir: <dir>/records`. Then
+   `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --out <dir>/readback`
+   prints the plan: `actions`, `commands`, `rollover`, `defaults`, `followUps`.
+   - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
+   - `followUps`: `next-round` → build the next design round (below); `read-note` / `more` /
+     `hold` → read his words; a note that does settle it gets its label move by hand, with the quote.
+   - Nothing in `rollover` is touched: a skipped fork, design round or held PR waits for the next page.
+7. **Update #5056's state block** — one dated Log line: the page id, answered / rolled over,
+   active minutes, and the stable page's URL if it is new.
+
+## What the page and the read-back guarantee (and the specs that hold them)
+
+- **One selector, one rank, one merge reader.** Decisions are `plan().needsYou`; order is
+  `classOf()` then oldest; the reel is `comms-scan --json`. `tests/scripts/moneypenny/needs-you.spec.ts`.
+- **Records are keyed by touch point**: `tp/<id>/{decisions,queue,reel}/<key>`, meta on `tp/<id>`.
+- **Every read-back comment carries the lane FOOTER and quotes Eric word for word.** A plan flips
+  only through `ready — take slice 1 per the state block`, on an Approve of a `plan` issue.
+- **A skipped approval that is reversible and in the envelope takes its default**, said as
+  "default applied; no answer from Eric". Every other skip rolls over.
+- **The irreversible class is a link, never a button**: held/platter PR merges, the surge dial,
+  envelope paths. Specs: `tests/scripts/steer-{records,readback,page}.spec.ts`.
+- **Pressed states carry a glyph and a border or strike**, both themes from `docs/BRAND.md`.
+
+## A design decision: the critique round (#5037)
+
+What round 1 of #5037 did, written down so the next round costs instructions, not invention:
+
+1. **Today first, as a real screenshot** of the live app at 390 (and 1280), marked so; a mockup
+   of today is labelled "mockup of today". The before is never imagined.
+2. **3–5 options as pictures, phone first**, each with one line on what it changes, and a
+   recommendation with its confidence and a dated "wrong if" folded beneath.
+3. **Reactions: Build this · More of this · Not this**, plus a note in his words (I like · I wish ·
+   What if). One Build per question becomes a `feedback` + `ready` issue at read-back.
+4. **Comments pinned on a picture reach the live session** (ArtifactComments): answer each one,
+   and record each as `{ anchor, gist, applies_to, commitment }` beside the round — round 1's are
+   in the session scratchpad's `shapes/r1-feedback/` with `eric-verbatim.md` mapping them.
+5. **The next round is built from his words**: every More goes deeper (real states, edge cases,
+   desktop), every Not is replaced by a new direction, every comment's commitment is honoured and
+   cited, and a note that applies to all questions (round 1: "progressive reveal") shapes all of them.
+
+The manifest `--design` reads is the critique builder's own: `{ issue, round, root?, questions:
+[{ q, title, ask, rec, conf, wrong, saw[], changes, topic, today: { phone, desk, source, caption },
+options: [{ key, name, phone, desk, delta }] }] }` (a bare array works with `--design-issue`).
+Picture paths resolve against `root`, the manifest's folder, then its parent.
+
+## What this will not do
+
+- Merge, set `surge`, touch an `envelope.json` path, or ask about a `needs-eric` label that states
+  no decision — those are counted on the page, and routed by the existing doors.
+- Run unattended. Slice 4 (#5056) moves assembly onto the digest's Routine; until then a live
+  session runs every step.

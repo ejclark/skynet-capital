@@ -1,0 +1,55 @@
+// Type surface for scripts/steer/render.mjs (see scripts/moneypenny/index.d.mts for why scripts/
+// ships hand-written declarations). The page is asserted on as a string.
+import type { Decision, Picture } from "./model.mjs";
+
+export interface TouchPointData {
+  version?: number;
+  id: string;
+  date: string;
+  slot: "am" | "pm";
+  next: { label: string; hours: number; [k: string]: unknown };
+  budget: { minutes: number; used: number; shown: number; deferred: number };
+  decisions: Decision[];
+  deferred: { key: string; issue: number; title: string; minutes: number }[];
+  unstated: { count: number; numbers: number[] };
+  reel: {
+    since: string;
+    merged: number;
+    research: number;
+    builds: number;
+    headlines: {
+      number: number;
+      subject: string;
+      kind?: string;
+      mergedAt?: string;
+      sha?: string;
+      shots: { path: string; url: string; sha?: string; local?: string | null }[];
+      because: string | null;
+    }[];
+    more: { total: number; byKind: Record<string, number> };
+  };
+  queue: {
+    position: string;
+    halt: boolean;
+    inFlightCap: number | null;
+    dialLink: string;
+    nextPick?: { number?: number; admit: boolean; reason: string } | null;
+    items: { number: number; title: string; cls: string | null; why: string }[];
+    [k: string]: unknown;
+  };
+  strip: {
+    days: { date: string; day: number; night: number; late: number }[];
+    perDay: number;
+    perNight: number;
+    needsYou: number;
+    unstated: number;
+    medianWaitDays: number | null;
+    pages: { id: string; minutes: number }[];
+  };
+}
+
+export const TITLE: string;
+export function renderPage(
+  tp: TouchPointData,
+  opts?: { img?: (pic: Picture | { local?: string | null }) => string | null },
+): string;
