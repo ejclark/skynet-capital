@@ -204,6 +204,25 @@ describe("BlotterRow", () => {
       expect(closeBuy[1]).toHaveAttribute("aria-expanded", "false");
     });
 
+    // #5091: each buy closes as a sell of its own size, so under a short position "Close this buy"
+    // would add to the short. Whatever the buys say, the row's refusal holds for every one of them,
+    // described by the same visible reason as the row's own Close.
+    it("keeps every Close this buy off on a short stock, with the row's reason", () => {
+      render(inTable(<BlotterRow position={{ ...lots, quantity: "-199" }} deskId="sauron" />));
+      fireEvent.click(opener());
+
+      const closeBuy = screen.getAllByRole("button", { name: "Close this buy" });
+      expect(closeBuy).toHaveLength(2);
+      for (const button of closeBuy) {
+        expect(button).toBeDisabled();
+        expect(button).toHaveAccessibleDescription(/short 199 shares/);
+        expect(button).not.toHaveAttribute("title");
+        fireEvent.click(button);
+      }
+      expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+    });
+
     it("renders no Roll on a stock's buys — rolling only exists for options", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       fireEvent.click(opener());

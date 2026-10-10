@@ -8,6 +8,7 @@ import type {
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskSnapshot } from "./desk";
 import type { OptionPositions } from "./options";
+import { parseQuantity } from "./quantity";
 
 /**
  * POSITION GUIDANCE, CLIENT SIDE (#3729 step 3). The route answers with the MARKET only — quotes,
@@ -109,6 +110,8 @@ export function writeSnapshot(symbol: string, stakeId: string, snapshot: Guidanc
   writeJson(SNAPSHOT_KEY(symbol), Object.fromEntries([...kept, [stakeId, snapshot]]));
 }
 
+/** A dollar figure ("$165.00") as a number. Sizes never come through here: they go through
+ *  `parseQuantity`, which keeps a typographic minus that this strip would drop (#5091). */
 const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
 
 /**
@@ -124,17 +127,17 @@ export function heldStake(
   const positions = desk?.desk.positions ?? [];
   const held = positions.find((p) => !p.isOption && p.symbol === symbol);
   if (!held) return undefined;
-  const shares = Math.floor(num(held.quantity));
+  const shares = Math.floor(parseQuantity(held.quantity));
   const costBasis = num(held.costPerShare);
   if (!(shares > 0)) return undefined;
   // Calls already sold on this stock (a short call is a negative quantity) — those lots are taken.
   const callsSold = positions
-    .filter((p) => p.isOption && num(p.quantity) < 0)
+    .filter((p) => p.isOption && parseQuantity(p.quantity) < 0)
     .filter((p) => {
       const parts = parseOccSymbol(p.symbol);
       return parts?.underlying === symbol && parts.type === "call";
     })
-    .reduce((n, p) => n - num(p.quantity), 0);
+    .reduce((n, p) => n - parseQuantity(p.quantity), 0);
   const openCalls = openCallsOf(desk, symbol, quotes);
   return {
     shares,
@@ -159,7 +162,7 @@ export function openCallsOf(
   const rows = new Map((quotes?.available ? quotes.rows : []).map((r) => [r.symbol, r]));
   return (desk?.desk.positions ?? []).flatMap((p) => {
     const parts = p.isOption ? parseOccSymbol(p.symbol) : undefined;
-    const contracts = -num(p.quantity);
+    const contracts = -parseQuantity(p.quantity);
     if (!(parts?.underlying === symbol && parts.type === "call" && contracts > 0)) return [];
     const premium = num(p.costPerShare) / 100;
     if (!(premium > 0)) return [];

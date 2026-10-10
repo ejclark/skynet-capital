@@ -13,6 +13,7 @@ import {
   submitOption,
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
+import { optionCloseWords } from "./close-panel";
 import { RollRow } from "./roll-row";
 
 /**
@@ -20,7 +21,8 @@ import { RollRow } from "./roll-row";
  * provided, in the shell: the desk's held option contracts, each with the same review-then-
  * confirm discipline as every order. Direction and size resolve SERVER-side from the live
  * holding (a long closes with a sell, a written contract with a buy), so one button is always
- * the right direction — this component only shows what the desk answered.
+ * the right direction — this component only shows what the desk answered, and its Confirm says
+ * that side and count in words ("buy to close 1 contract"), as the desk's close panel does (#5091).
  *
  * LIMIT CLOSE (#3407 P1 slice 3; closes were market-only): each row carries a Market / Limit
  * choice and, on Limit, the premium per share it will accept. Market stays the default the row
@@ -267,7 +269,7 @@ function CloseRow({
         {state.step === "reviewed" ? (
           state.preview.ok ? (
             <button type="button" className="btn btn-primary mc-btn" onClick={() => void confirm()}>
-              Confirm — close {state.preview.contracts}
+              Confirm — {optionCloseWords(state.preview).toLowerCase()}
               {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
                 ? ` · limit ${money(state.preview.limitPrice)}`
                 : " · market"}

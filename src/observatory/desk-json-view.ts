@@ -91,7 +91,7 @@ interface DeskPositionView extends PlainPosition {
    *  and `allocation.optionsSold` names what it owes (#4964). */
   readonly weightPct: number;
   /** Present only when the fill ledger's open lots for this symbol are all long and their
-   *  quantities sum exactly to the position's own — see `lotsFor`. */
+   *  quantities sum exactly to the position's own, sign included — see `lotsFor`. */
   readonly lots?: readonly PositionLot[];
 }
 
@@ -129,9 +129,11 @@ function lotsFor(
   if (lots.length === 0) return undefined;
   if (lots.some((lot) => lot.short)) return undefined;
 
-  const wantQty = Math.abs(position.quantity);
+  // Signed (#5091): every lot here is a buy, so only a long position can be their sum. A cut-off
+  // window can leave buys whose sizes match a SHORT position's in absolute terms; listed, each
+  // would offer "Close this buy" — a sell that adds to the short.
   const gotQty = lots.reduce((sum, lot) => sum + lot.quantity, 0);
-  if (Math.abs(gotQty - wantQty) > 1e-6) return undefined;
+  if (Math.abs(gotQty - position.quantity) > 1e-6) return undefined;
 
   const lastday = position.lastdayPrice ?? 0;
   return lots.map((lot, index): PositionLot => {
