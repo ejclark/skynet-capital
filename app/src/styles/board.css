@@ -198,7 +198,7 @@
 }
 .rank-row {
   display: grid;
-  grid-template-columns: 1fr 180px 110px 30px;
+  grid-template-columns: 1fr 180px 110px auto;
   align-items: center;
   gap: 14px;
   padding: var(--row-py) 16px;
@@ -249,6 +249,10 @@
   }
   .rank-bar {
     display: none;
+  }
+  /* The compare toggle takes the row's second line, at its end: the word needs the width. */
+  .rank-row .cmp-toggle {
+    grid-column: 1 / -1;
   }
 }
 @media (prefers-reduced-motion: reduce) {

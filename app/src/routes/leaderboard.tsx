@@ -1,18 +1,19 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { CSSProperties, ReactElement } from "react";
-import { useEffect } from "react";
+import type { CSSProperties, MouseEvent, ReactElement } from "react";
+import { useEffect, useRef } from "react";
 import {
   BOARD_METRICS,
   type BoardBlock,
-  type BoardCompare,
   type BoardMetric,
   type BoardRow,
   parseBoardMetric,
 } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
+import { useComparePlace } from "../shell/compare-place";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
+import { HeadToHead } from "../shell/head-to-head";
 
 /**
  * LEADERBOARD (#2321: split out of Profile — every player/bot ranked here belongs to no one
@@ -111,120 +112,51 @@ function VersusRead({ block }: { readonly block: BoardBlock | undefined }): Reac
   );
 }
 
-function CompareSection({
-  compare,
-  onClear,
-}: {
-  readonly compare: BoardCompare;
-  readonly onClear: () => void;
-}): ReactElement {
-  const lead = (delta: (typeof compare.deltas)[number]) =>
-    delta.lead === "tie" ? "—" : delta.lead === "a" ? "◀" : "▶";
-  return (
-    <section className="cmp" aria-label={`${compare.a.name} versus ${compare.b.name}`}>
-      <header className="cmp-head">
-        <h2>
-          {compare.a.name} <span className="cmp-vs">vs</span> {compare.b.name}
-        </h2>
-        <button type="button" className="cmp-clear" onClick={onClear}>
-          × clear
-        </button>
-      </header>
-      <div className="cmp-grid">
-        {([compare.a, compare.b] as const).map((side, i) => (
-          <article className={`cmp-col ${i === 0 ? "cmp-a" : "cmp-b"}`} key={side.key}>
-            <div className="cmp-who">
-              {side.name}
-              <span className={`chip chip-${side.kind}`}>
-                {side.kind === "bot" ? "BOT" : "HUMAN"}
-              </span>
-            </div>
-            <div className="cmp-equity num">{side.equity}</div>
-            <dl>
-              <div>
-                <dt>Cash</dt>
-                <dd className="num">{side.cash}</dd>
-              </div>
-              <div>
-                <dt>Invested</dt>
-                <dd className="num">{side.invested}</dd>
-              </div>
-              <div>
-                <dt>Unrealized</dt>
-                <dd className={`num tone-${side.unrealizedTone}`}>{side.unrealized}</dd>
-              </div>
-              <div>
-                <dt>Realized</dt>
-                <dd className={`num tone-${side.realizedTone}`}>{side.realized}</dd>
-              </div>
-              <div>
-                <dt>Return</dt>
-                <dd className={`num tone-${side.returnTone}`}>{side.returnPct}</dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-        <div className="cmp-mid">
-          {compare.deltas.map((delta) => (
-            <div className="cmp-delta" key={delta.label}>
-              <span className="cmp-dlabel">{delta.label}</span>
-              <span className="cmp-dval num">
-                {lead(delta)} {delta.amount}
-              </span>
-            </div>
-          ))}
-          <p className="cmp-legend">
-            ◀ {compare.a.name} · ▶ {compare.b.name}
-          </p>
-        </div>
-      </div>
-      <h3 className="cmp-holdhead">Holdings overlap</h3>
-      {compare.holdings.length === 0 ? (
-        <p className="note">Neither holds an open position yet.</p>
-      ) : (
-        <table className="cmp-holdings">
-          <tbody>
-            {compare.holdings.map((h) => (
-              <tr key={h.symbol} className={h.shared ? "cmp-shared" : ""}>
-                <td className="num cmp-aval">{h.aValue ?? "·"}</td>
-                <td className="cmp-sym">
-                  {h.symbol}
-                  {h.shared ? <span className="cmp-tag">SHARED</span> : null}
-                </td>
-                <td className="num cmp-bval">{h.bValue ?? "·"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-}
-
 /** The ramp: everyone is green, intensity carries the standing (never red on a friendly board). */
 const rampFor = (index: number, count: number): string =>
   count <= 1 ? "100%" : `${Math.round(100 - (index / (count - 1)) * 70)}%`;
 
+/** A Compare toggle's tap: which row, and whether it completes the pair (`compare-place.ts`). */
+type OnTap = (key: string, row: Element | null, completes: boolean) => void;
+
+/**
+ * A row's compare toggle (#5057). Every tap keeps the scroll (#4944's rule — the gate in
+ * tests/arch/same-page-scroll.spec.ts holds it); the view moves only to a completed pair, in
+ * `compare-place.ts`. Each toggle says what it does in a word: the ⇄ glyph alone read as "open
+ * this account" in 6 of #4943's sessions. Real links, so a pair stays a shareable `?a=&b=` URL.
+ */
 function ComparePill({
-  rowKey,
+  row,
   a,
   b,
+  armedName,
+  onTap,
 }: {
-  readonly rowKey: string;
+  readonly row: BoardRow;
   readonly a?: string;
   readonly b?: string;
+  readonly armedName?: string;
+  readonly onTap: OnTap;
 }): ReactElement {
+  // A modified click opens the link in another tab: this page doesn't change, so nothing to move.
+  const tap = (completes: boolean) => (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    onTap(row.key, e.currentTarget.closest("[data-row]"), completes);
+  };
   // Three shapes, straight from the server view's rule: part of the armed/showing pair → cancel;
   // something else armed and incomplete → complete the pair; otherwise → arm this row.
-  if (a && (rowKey === a || rowKey === b)) {
+  if (a && (row.key === a || row.key === b)) {
+    const word = b ? "Clear" : "Cancel";
     return (
       <Link
         from={Route.fullPath}
         search={(prev) => ({ by: prev.by })}
+        resetScroll={false}
+        onClick={tap(false)}
         className="cmp-toggle cmp-armed"
-        aria-label="Cancel compare"
+        aria-label={`${word} compare`}
       >
-        ×
+        <span aria-hidden="true">×</span> {word}
       </Link>
     );
   }
@@ -232,22 +164,26 @@ function ComparePill({
     return (
       <Link
         from={Route.fullPath}
-        search={(prev) => ({ ...prev, b: rowKey })}
+        search={(prev) => ({ ...prev, b: row.key })}
+        resetScroll={false}
+        onClick={tap(true)}
         className="cmp-toggle"
-        aria-label="Complete the pair with this row"
+        aria-label={`Compare ${row.name} with ${armedName ?? "the first pick"}`}
       >
-        ⇄
+        <span aria-hidden="true">⇄</span> Compare
       </Link>
     );
   }
   return (
     <Link
       from={Route.fullPath}
-      search={(prev) => ({ by: prev.by, a: rowKey })}
+      search={(prev) => ({ by: prev.by, a: row.key })}
+      resetScroll={false}
+      onClick={tap(false)}
       className="cmp-toggle"
-      aria-label="Compare this account"
+      aria-label={`Compare ${row.name}`}
     >
-      ⇄
+      <span aria-hidden="true">⇄</span> Compare
     </Link>
   );
 }
@@ -256,10 +192,14 @@ function FieldLadder({
   rows,
   a,
   b,
+  armedName,
+  onTap,
 }: {
   readonly rows: readonly BoardRow[];
   readonly a?: string;
   readonly b?: string;
+  readonly armedName?: string;
+  readonly onTap: OnTap;
 }): ReactElement {
   return (
     <ul className="ladder">
@@ -267,6 +207,8 @@ function FieldLadder({
         <li
           key={row.key}
           className="rank-row"
+          data-row={row.key}
+          data-cmp={a && (row.key === a || row.key === b) ? "picked" : undefined}
           style={{ "--g": rampFor(index, rows.length) } as CSSProperties}
         >
           <DeskHoverName id={row.key} name={row.name} kind={row.kind} />
@@ -274,10 +216,42 @@ function FieldLadder({
             <i style={{ width: `${row.bar}%` }} />
           </span>
           <span className="rank-val num">{row.value}</span>
-          <ComparePill rowKey={row.key} a={a} b={b} />
+          <ComparePill row={row} a={a} b={b} armedName={armedName} onTap={onTap} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The pick bar (#5057, "Pinned pick bar" in docs/PATTERNS.md): while one account is picked, one
+ * line stuck to the bottom of the screen names it and offers Cancel, so the second pick happens
+ * wherever the member is. It replaced a hint above the Field, which a phone had scrolled out of
+ * sight by the time the member was in the rows it pointed at. The live region is always mounted,
+ * so a screen reader hears the pick when the bar fills.
+ */
+function PickBar({ armed }: { readonly armed: BoardRow | undefined }): ReactElement {
+  return (
+    <div className="cmp-pickslot" role="status">
+      {armed ? (
+        <div className="cmp-pickbar">
+          <p>
+            <span>
+              Comparing <strong>{armed.name}</strong>
+            </span>
+            <span className="cmp-pickhow">Tap Compare on a second account</span>
+          </p>
+          <Link
+            from={Route.fullPath}
+            search={(prev) => ({ by: prev.by })}
+            resetScroll={false}
+            className="cmp-pickcancel"
+          >
+            Cancel
+          </Link>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -317,14 +291,23 @@ function Standings(): ReactElement {
     () => connectBoardChannel(queryClient, by, { ...(a ? { a } : {}), ...(b ? { b } : {}) }),
     [queryClient, by, a, b],
   );
-  const board = useQuery(boardQueryOptions(by, pick));
+  // A compare pick keeps the board it was made on until the new snapshot lands: without it, the
+  // page swapped to "Reading the board…" for a beat, and the page that short put the scroll back
+  // at the top, whatever the tap asked for (#5057). A metric switch is a different ranking, so it
+  // never shows the old one.
+  const board = useQuery({
+    ...boardQueryOptions(by, pick),
+    placeholderData: (previous, query) => (query?.queryKey[1] === by ? previous : undefined),
+  });
+  const compareShown = Boolean(board.data?.compare);
+  const heading = useRef<HTMLHeadingElement | null>(null);
+  const place = useComparePlace(compareShown, heading);
 
   // The compare figures ride the snapshot, so they go live the precise way: whenever a live op
   // moves either compared row, refetch — never on unrelated ticks. Refetch resets opsApplied,
   // so this cannot loop.
   const aValue = board.data?.rows.find((r) => r.key === a)?.value;
   const bValue = board.data?.rows.find((r) => r.key === b)?.value;
-  const compareShown = Boolean(board.data?.compare);
   const opsApplied = board.data?.opsApplied ?? 0;
   // biome-ignore lint/correctness/useExhaustiveDependencies: fires only when a compared row's VALUE moved — including opsApplied/refetch would refetch on every unrelated tick
   useEffect(() => {
@@ -357,29 +340,32 @@ function Standings(): ReactElement {
         <CohortFigure label="Bots" block={blocks["cohort:bot"]} />
       </div>
       <VersusRead block={blocks.versus} />
-      {armed ? (
-        <p className="cmp-hint">
-          Comparing <strong>{armed.name}</strong> — pick a second account on any row below.{" "}
-          <Link from={Route.fullPath} search={(prev) => ({ by: prev.by })} className="cmp-clear">
-            × cancel
-          </Link>
-        </p>
-      ) : null}
       {board.data.compare ? (
-        <CompareSection
+        <HeadToHead
           compare={board.data.compare}
-          onClear={() => void navigate({ search: { by } })}
+          headingRef={heading}
+          onClear={() => {
+            place.cleared();
+            void navigate({ search: { by }, resetScroll: false });
+          }}
         />
       ) : null}
       <div className="section-head">
         <span className="section-title">The Field</span>
         <RankChips active={by} />
       </div>
-      <FieldLadder rows={rows} a={a} b={b} />
+      <FieldLadder
+        rows={rows}
+        a={a}
+        b={b}
+        armedName={rows.find((r) => r.key === a)?.name}
+        onTap={place.tapped}
+      />
       <footer className="obs-foot num">
         as of {generatedAt} · ranked by {by} · {opsApplied} live op{opsApplied === 1 ? "" : "s"}{" "}
         applied without a refetch
       </footer>
+      <PickBar armed={armed} />
     </PageFrame>
   );
 }
