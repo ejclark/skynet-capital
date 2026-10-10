@@ -1460,8 +1460,8 @@ await page.locator(".held-next").waitFor();
 await shootCockpit("accounts-head-desktop");
 
 // Lot breakdown (#3186 slice 1) in the wide table: the NVDA call's two buys, each with its own
-// Close this buy / Roll actions.
-await page.getByRole("button", { name: /buys for NVDA Sep 18 180 Call/ }).click();
+// Close this buy / Roll actions — in the row's opened detail since the ranked columns (#5071).
+await page.getByRole("button", { name: "Detail for NVDA Sep 18 180 Call" }).click();
 await page.getByText("$1,484").waitFor();
 await shootCockpit("accounts-positions-lots-desktop");
 
@@ -1518,10 +1518,11 @@ await shootCockpit("accounts-runway-desktop");
 await page.goto(`${origin}/app/accounts`);
 await page.locator(".blotter .row-guide").first().waitFor();
 
-// The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
-// best / worst case, with the Breakeven glossary open.
+// The positions table at 1600 (#3689 slice 6; ranked columns #5071): the row spec's two-line
+// cells, θ · Δ, Model projects, next event and best / worst case, with the Model projects glossary
+// open (breakeven moved into the Position cell, so its header glossary is gone).
 await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: "Breakeven" }).hover();
+await page.getByRole("button", { name: "Model projects" }).hover();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-table-desktop");
 
