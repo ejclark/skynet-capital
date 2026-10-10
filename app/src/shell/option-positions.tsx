@@ -196,10 +196,13 @@ function CloseRow({
       setState({ step: "error", message: String(error) });
     }
   };
-  const confirm = async () => {
+  // The review goes bare (the server sizes it from the live holding), but Confirm names the count
+  // that review answered and its button read: bare again, the server would close whatever is held
+  // when Confirm lands. A holding that shrank in between is then refused, never resized (#5090).
+  const confirm = async (contracts: number) => {
     setState({ step: "submitting" });
     try {
-      const result = await submitOption(draft);
+      const result = await submitOption({ ...draft, contracts });
       setState({ step: "done", result });
       if (result.ok) onFilled();
     } catch (error) {
@@ -268,7 +271,11 @@ function CloseRow({
         {state.step === "reviewing" ? <span className="tkt-close-note">reviewing…</span> : null}
         {state.step === "reviewed" ? (
           state.preview.ok ? (
-            <button type="button" className="btn btn-primary mc-btn" onClick={() => void confirm()}>
+            <button
+              type="button"
+              className="btn btn-primary mc-btn"
+              onClick={() => void confirm(state.preview.contracts)}
+            >
               Confirm — {optionCloseWords(state.preview).toLowerCase()}
               {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
                 ? ` · limit ${money(state.preview.limitPrice)}`
