@@ -4,12 +4,17 @@
 // document per answer at `tp/<round>/{decisions,queue,reel}/<key>`, and the round's own document
 // `tp/<round>` holds its meta: when it was opened, when Done was pressed, and the tap log the
 // read-back turns into active minutes. Writes to one document are chained (one at a time, only on
-// a change); the meta is written on a pause, and at once on Done. With no store — a saved file, a
-// signed-out view — everything still works in this browser and "Copy as text" carries it out.
+// a change); the meta is written on a pause, and at once on Done.
+//
+// THE STORE IS THE ONLY COPY. The read-back reads the store and nothing else, so the page never
+// counts or presses an answer the store does not hold. A view with no store — the desktop app's
+// own browser, which is not signed in to claude.ai, or a saved file — says so in words and locks
+// the controls (Eric, 2026-10-10: "the version in the inline browser shows 0 of 7 answered. I
+// answered 5 of 7"); one whose store can't be read does the same. Until the store answers, the bar
+// says it is loading, never a count.
 (() => {
   const TP = JSON.parse(document.getElementById("tp-data").textContent);
   const ID = TP.id;
-  const LKEY = `steer-${ID}`;
   const out = document.getElementById("save-state");
   const doneBtn = document.getElementById("done");
   const copyBtn = document.getElementById("copy");
@@ -19,8 +24,13 @@
   const timers = {};
   let db = null;
   let readOnly = false;
+  /** The line shown in place of the count when the store can't be reached or read; locks the page. */
+  let blocked = null;
+  const NO_STORE = "Answers save only on claude.ai — open this page there to see or change them";
+  const UNREAD = "Couldn't read your saved answers — reload the page to try again";
+  const locked = () => readOnly || blocked !== null;
   // Until the store answers, a tap is held here and written once it does — a tap in the first
-  // second would otherwise live only in this browser, and the read-back would never see it.
+  // second would otherwise be lost, and the read-back would never see it.
   let connecting = true;
   const held = new Map();
 
@@ -43,7 +53,7 @@
     const r = state[row.dataset.sec][row.dataset.key] || blank();
     for (const b of row.querySelectorAll(".rb")) {
       b.setAttribute("aria-pressed", pressed(r, row.dataset.opt, b.dataset.v) ? "true" : "false");
-      b.disabled = readOnly;
+      b.disabled = locked();
     }
     const reveal = row.parentElement.querySelector(".reveal");
     if (reveal) reveal.hidden = !r.verdict;
@@ -53,26 +63,30 @@
     for (const t of document.querySelectorAll("[data-note]")) {
       const r = state[t.dataset.sec][t.dataset.key];
       if (document.activeElement !== t) t.value = r?.note || "";
-      t.disabled = readOnly;
+      t.disabled = locked();
     }
     doneBtn.setAttribute("aria-pressed", meta.doneAt ? "true" : "false");
     doneBtn.textContent = meta.doneAt ? "Done" : "I'm done";
-    doneBtn.disabled = readOnly;
+    // Done waits for the store too: pressed while connecting, the saved meta would overwrite it.
+    doneBtn.disabled = locked() || connecting;
     return TP.decisions.filter((d) => answered(state.decisions[d.key])).length;
   }
+  /** The bar's line. A count shows only once the store has answered — it is the store's count. */
   function status(msg) {
     const n = paint();
-    // The copy fallback shows only when the store can't keep the answers.
+    out.dataset.state = blocked ? "blocked" : connecting ? "loading" : "ready";
+    if (blocked) {
+      out.textContent = blocked;
+      return;
+    }
+    if (connecting) {
+      out.textContent = msg || "Loading your answers…";
+      return;
+    }
+    // The copy fallback shows only when a write to the store failed.
     if (/Copy as text/.test(msg || "")) copyBtn.hidden = false;
     const head = readOnly ? "View only" : msg;
     out.textContent = `${head ? `${head} · ` : ""}${n} of ${TP.decisions.length} answered`;
-  }
-  function saveLocal() {
-    try {
-      localStorage.setItem(LKEY, JSON.stringify({ state, meta }));
-    } catch {
-      /* private window or blocked storage: the store, or Copy as text, still carries it */
-    }
   }
   function write(path, body) {
     chains[path] = (chains[path] || Promise.resolve())
@@ -83,13 +97,12 @@
       );
   }
   function save(sec, key) {
-    saveLocal();
     if (connecting) {
       const r = state[sec][key];
       held.set(`${sec}/${key}`, { sec, key, rec: { ...r, react: { ...r.react } } });
-      return status("Saved here; sending when the page connects");
+      return status("Sending once your answers load");
     }
-    if (!db) return status("This browser only — Copy as text");
+    if (!db) return status("");
     const r = state[sec][key];
     const d = sec === "decisions" ? TP.decisions.find((x) => x.key === key) : null;
     write(`tp/${ID}/${sec}/${key}`, {
@@ -106,7 +119,6 @@
     });
   }
   function saveMeta(now) {
-    saveLocal();
     if (!db) return;
     clearTimeout(timers.meta);
     const go = () => write(`tp/${ID}`, { ...meta, taps: meta.taps.slice(-3000) });
@@ -141,7 +153,7 @@
   }
   document.addEventListener("click", (ev) => {
     const b = ev.target.closest?.(".rb");
-    if (!b || readOnly) return;
+    if (!b || locked()) return;
     if (b === doneBtn) return done();
     const row = b.closest(".react");
     toggle(rec(row.dataset.sec, row.dataset.key), row.dataset.opt, b.dataset.v);
@@ -151,7 +163,7 @@
   });
   document.addEventListener("input", (ev) => {
     const t = ev.target;
-    if (t.dataset?.note === undefined || readOnly) return;
+    if (t.dataset?.note === undefined || locked()) return;
     const { sec, key } = t.dataset;
     rec(sec, key).note = t.value;
     status("Typing");
@@ -196,13 +208,6 @@
     }
   });
 
-  try {
-    const l = JSON.parse(localStorage.getItem(LKEY) || "null");
-    if (l?.state) Object.assign(state, l.state);
-    if (l?.meta) Object.assign(meta, l.meta, { shown: TP.shown });
-  } catch {
-    /* nothing saved in this browser yet */
-  }
   status("");
 
   const use = (name) =>
@@ -213,6 +218,7 @@
     verdict: v.verdict || null,
     note: v.note || "",
   });
+  /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>
     db
       .collection(`tp/${ID}/${sec}`)
@@ -220,8 +226,9 @@
       .then(
         (snap) => {
           for (const doc of snap.docs) state[sec][doc.id] = fromDoc(doc.data());
+          return true;
         },
-        () => null,
+        () => false,
       );
 
   /** The store has answered (or never will): taps held while it was connecting go out now, over
@@ -235,25 +242,36 @@
     held.clear();
   }
 
+  /** No store here, or one that can't be read: say which, show no answers, lock the controls.
+   *  Taps held while connecting are dropped — nowhere would keep them. */
+  function offline(line) {
+    blocked = line;
+    db = null;
+    connecting = false;
+    held.clear();
+    for (const sec of Object.keys(state)) state[sec] = {};
+    meta.doneAt = null;
+    status("");
+  }
+
   async function boot() {
     const [d, user] = await Promise.all([use("db"), use("user")]);
+    if (!d) return offline(NO_STORE);
     db = d;
-    if (!db) {
-      connected();
-      return status("This browser only — Copy as text");
-    }
     if (user && (await user.can("data.write")) === false) readOnly = true;
     const saved = await db
       .doc(`tp/${ID}`)
       .get()
       .then(
-        (s) => (s.exists ? s.data() : null),
-        () => null,
+        (s) => ({ ok: true, data: s.exists ? s.data() : null }),
+        () => ({ ok: false, data: null }),
       );
-    await Promise.all(["decisions", "queue", "reel"].map(loadSection));
-    if (saved) {
-      const taps = [...new Set((saved.taps || []).concat(meta.taps))].sort((a, b) => a - b);
-      Object.assign(meta, saved, { shown: TP.shown, taps });
+    const loaded = await Promise.all(["decisions", "queue", "reel"].map(loadSection));
+    if (!saved.ok || loaded.includes(false)) return offline(UNREAD);
+    if (saved.data) {
+      const prev = saved.data;
+      const taps = [...new Set((prev.taps || []).concat(meta.taps))].sort((a, b) => a - b);
+      Object.assign(meta, prev, { shown: TP.shown, taps });
     }
     const early = held.size;
     connected();
@@ -261,11 +279,7 @@
       meta.openedAt = new Date().toISOString();
       saveMeta(true);
     } else if (early && !readOnly) saveMeta(false); // the held taps' log, which never reached it
-    saveLocal();
     status("Saves to this page as you go");
   }
-  boot().catch(() => {
-    connected();
-    status("This browser only — Copy as text");
-  });
+  boot().catch(() => offline(UNREAD));
 })();

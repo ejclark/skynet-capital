@@ -90,6 +90,11 @@ function decisionHtml(d, i, total, img) {
   );
 }
 
+/** The page's intro line: a comment sent to Claude is read back and quoted beside the taps
+ *  (.claude/skills/steer/SKILL.md step 7; readback.mjs --comments). */
+export const COMMENTS_COUNT =
+  "Comments you send to Claude count too — they're quoted on the issue with your answers.";
+
 /** The page's summary line: the decisions asked now, and — counted apart — the ones being drawn. */
 function headline(n, minutes, drawn) {
   const more = drawn ? ` <span class="muted">· ${drawn} more being drawn</span>` : "";
@@ -124,6 +129,7 @@ function headerHtml(tp) {
       : "") +
     `<h1>${headline(n, tp.budget.used, drawn.length)}</h1>` +
     `<p class="lede">${plural(tp.reel.merged, "PR")} merged since ${e(when(tp.reel.since))} · ${plural(tp.queue.items.length, "item")} queued until ${e(tp.next.label)} · the dial reads ${e(tp.queue.position)}</p>` +
+    (n ? `<p class="lede" id="intro">${COMMENTS_COUNT}</p>` : "") +
     (toc ? `<ol class="toc">${toc}</ol>` : "") +
     rolled +
     drawing +
@@ -163,7 +169,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     queueHtml(tp.queue, tp.next),
     stripHtml(tp.strip),
     `</div>`,
-    `<div class="bar" role="region" aria-label="Save and finish"><output id="save-state" aria-live="polite">Loading your saved answers…</output>` +
+    `<div class="bar" role="region" aria-label="Save and finish"><output id="save-state" aria-live="polite" data-state="loading">Loading your answers…</output>` +
       `<button type="button" class="ghost" id="copy" hidden>Copy as text</button>` +
       `<button type="button" class="rb" id="done" data-v="done" aria-pressed="false">I'm done</button></div>`,
     `<script type="application/json" id="tp-data">${json}</script>`,
