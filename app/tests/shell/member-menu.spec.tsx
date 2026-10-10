@@ -64,7 +64,7 @@ function mount(path = "/leaderboard") {
   return router;
 }
 
-const button = () => screen.getByRole("button", { name: "Account menu" });
+const button = () => screen.getByRole("button", { name: "Member menu" });
 
 describe("the member menu", () => {
   it("is one button; Settings and Sign out wait behind it", async () => {

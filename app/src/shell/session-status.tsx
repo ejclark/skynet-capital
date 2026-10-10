@@ -3,6 +3,7 @@ import {
   marketSession,
   nextOpenLabel,
   sessionSentence,
+  statusLineCue,
   statusLineWords,
 } from "../live/market-session";
 import { FleetHealth, useFleet } from "./fleet-health";
@@ -24,7 +25,8 @@ import { MarketSession, useNow } from "./market-session";
  *
  * The fleet dot left the bar with it. A healthy fleet adds nothing to the line; a degraded or
  * unreadable one is said there in words beside a shape (`fleetReading`), because a standing reader
- * is red/green colourblind and the line's own dot is the market's.
+ * is red/green colourblind and the line's own dot is the market's. When the alarm crowds a phone
+ * bar, the market keeps one word of its own (`statusLineCue`) so its state never rides on hue.
  *
  * The panel does not close on a click elsewhere, on purpose: it sits in the flow, so closing it on
  * pointerdown would pull the page up under the finger mid-tap. The line toggles it, Escape closes
@@ -41,6 +43,7 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
 
   const words = statusLineWords(view);
   const alarm = fleet.reading.line;
+  const brief = fleet.reading.brief;
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Escape" || !open) return;
     setOpen(false);
@@ -64,10 +67,12 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
       >
         <span className="status-line-dot" aria-hidden="true" />
         <span className="status-line-words">{words}</span>
+        {alarm ? <span className="status-line-cue">{statusLineCue(view)}</span> : null}
         {alarm ? (
-          <span className="status-line-fleet">
+          <span className="status-line-fleet" data-brief={brief ? "" : undefined}>
             <span className="status-line-flag" aria-hidden="true" />
-            {alarm}
+            <span className="status-line-alarm">{alarm}</span>
+            {brief ? <span className="status-line-brief">{brief}</span> : null}
           </span>
         ) : null}
         <span className="status-line-chev" aria-hidden="true">

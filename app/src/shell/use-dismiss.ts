@@ -3,9 +3,10 @@ import { type RefObject, useEffect, useRef } from "react";
 /**
  * Escape and a click outside both close a toggle-button popover; Escape hands focus back to the
  * button. A click outside lets focus go where the member clicked rather than pulling it back.
- * Shared by the topbar status pill and the bot heartbeat chip (#4949), so the two popovers in the
- * header never close differently. `close` should be stable (`useCallback`) — a new one per render
- * re-binds the listeners every render.
+ * Shared by the top bar's member menu and the bot heartbeat chip (#4949), so the app's floating
+ * popovers never close differently. (The bar's status line is not one: its panel sits in the flow
+ * and closes only on its own tap or Escape — `session-status.tsx` says why.) `close` should be
+ * stable (`useCallback`) — a new one per render re-binds the listeners every render.
  */
 export function useDismiss(
   open: boolean,

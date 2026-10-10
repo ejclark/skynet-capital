@@ -18,6 +18,10 @@ import { useDismiss } from "./use-dismiss";
  * unlike the status line's panel, it covers nothing in the flow and moves no content when it goes.
  * The initial comes from the session's own name on the `["onboarding"]` read the Profile page
  * already makes; with no name (an open dev server, a study world) it is a person glyph.
+ *
+ * Named "Member menu", not "Account": the word "Account" belongs to the account picker (the
+ * Profile page's combobox, and the bar's planned switcher — #5037 round 2, question 3), and two
+ * controls answering to one name leave a screen reader guessing which one it is on.
  */
 
 function GearIcon(): ReactElement {
@@ -94,14 +98,14 @@ export function MemberMenu(): ReactElement {
         className="member-menu-btn"
         aria-expanded={open}
         aria-controls={menuId}
-        aria-label="Account menu"
+        aria-label="Member menu"
         title="Settings and sign out"
         onClick={() => setOpen((was) => !was)}
       >
         {initial ? <span aria-hidden="true">{initial}</span> : <PersonIcon />}
       </button>
       {open ? (
-        <nav className="member-menu" id={menuId} aria-label="Account">
+        <nav className="member-menu" id={menuId} aria-label="Member menu">
           <Link
             to="/settings"
             className="member-menu-item"

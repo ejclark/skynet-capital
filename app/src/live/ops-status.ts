@@ -60,6 +60,12 @@ export interface FleetReading {
   readonly verdict: "ok" | "attention" | "unknown";
   /** Words for the line itself — present only when something is wrong or unreadable. */
   readonly line?: string;
+  /**
+   * Fewer words for the same fact, where `line` is too long for a phone bar that also carries the
+   * market's word (#5064's review measured "Opens 9:30" beside "fleet status unknown" at 390 pushing
+   * Moneypenny and the member menu onto a second row). Absent when `line` already fits.
+   */
+  readonly brief?: string;
   /** The opened panel's one-sentence summary, beside its Details control. */
   readonly summary: string;
 }
@@ -78,6 +84,7 @@ export function fleetReading(view: OpsStatusView | undefined, failed: boolean): 
     return {
       verdict: "unknown",
       line: "fleet status unknown",
+      brief: "fleet unknown",
       summary: "Fleet health · no reading right now",
     };
   }

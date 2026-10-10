@@ -3,6 +3,7 @@ import {
   marketSession,
   nextOpenLabel,
   sessionSentence,
+  statusLineCue,
   statusLineWords,
 } from "../../src/live/market-session";
 
@@ -123,5 +124,27 @@ describe("nextOpenLabel", () => {
   it("skips the weekend and the exchange's holidays", () => {
     expect(nextOpenLabel(new Date("2026-09-26T15:00:00Z"))).toBe("Mon Sep 28 · 9:30 ET");
     expect(nextOpenLabel(new Date("2026-11-25T21:00:00Z"))).toBe("Fri Nov 27 · 9:30 ET");
+  });
+});
+
+// The market's one word beside a fleet alarm on a phone (#5064's review): the sentence steps
+// aside, but no state may be left to a ring's colour — each keeps a word nothing else shares.
+describe("statusLineCue", () => {
+  const cue = (iso: string) => statusLineCue(marketSession(new Date(iso)));
+
+  it("says open, in the last hour too", () => {
+    expect(cue("2026-09-24T18:32:00Z")).toBe("Open"); // Thu 14:32 ET
+    expect(cue("2026-09-24T19:15:00Z")).toBe("Open"); // 15:15 ET, power hour
+  });
+
+  it("names the open's time before the bell — one width, however early it is", () => {
+    expect(cue("2026-09-24T12:48:00Z")).toBe("Opens 9:30"); // 8:48 ET
+    expect(cue("2026-09-24T05:00:00Z")).toBe("Opens 9:30"); // 1:00 ET, 8h 30m out
+  });
+
+  it("says closed after the bell, at weekends and on holidays", () => {
+    for (const iso of ["2026-09-24T21:00:00Z", "2026-09-26T15:00:00Z", "2026-11-26T15:00:00Z"]) {
+      expect(cue(iso)).toBe("Closed");
+    }
   });
 });

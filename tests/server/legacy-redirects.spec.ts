@@ -55,7 +55,8 @@ describe("serveLegacyRedirect", () => {
     // on Preferences: the guest list, and the unclaimed accounts on Account.
     expect(target("/invite")).toBe("/app/settings?section=guests");
     expect(target("/claim")).toBe("/app/settings?section=account");
-    // Ops status is the topbar pill now (#1296), on every route — so the bookmark lands on the app.
+    // Ops status lives behind the top bar's status line now (#1296, #5064), on every route — so
+    // the bookmark lands on the app.
     expect(target("/ops-status")).toBe("/app/");
     // The retired Mission Control bookmark — the fleet switchboard for every viewer now.
     expect(target("/controls")).toBe("/app/settings?section=account");

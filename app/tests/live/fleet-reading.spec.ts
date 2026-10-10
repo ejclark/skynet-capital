@@ -39,6 +39,8 @@ describe("fleetReading", () => {
     expect(r.verdict).toBe("unknown");
     expect(r.line).toBe("fleet status unknown");
     expect(r.summary).toBe("Fleet health · no reading right now");
+    // the phone bar's shorter words for the same fact, beside the market's own word
+    expect(r.brief).toBe("fleet unknown");
   });
 
   it("stays off the line while the first read is in flight, and where no panel is wired", () => {

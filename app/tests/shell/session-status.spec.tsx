@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { SessionStatus } from "../../src/shell/session-status";
+import statusCss from "../../src/styles/session-status.css?raw";
 
 /**
  * The top bar's status line (#5037 round 2, question 9). Eric, 2026-10-10, on the old clock strip:
@@ -160,5 +161,92 @@ describe("the top bar's status line", () => {
     // In the flow, so folding on a click elsewhere would pull the page up under the finger.
     fireEvent.pointerDown(document.body);
     expect(line()).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+/**
+ * The phone half, against the real stylesheet (#5064's review). At ≤700px a fleet alarm outranks
+ * the clock and the market's sentence steps aside — which once left "before the open" and "closed"
+ * told apart only by a ring's colour, and "closed + fleet unknown" as two identical grey rings. A
+ * standing reader is red/green colourblind (docs/BRAND.md → Accessibility), so every state keeps a
+ * cue that is not a hue: a word of its own, and a mark the fleet never shares.
+ */
+describe("the status line beside a fleet alarm on a 390 phone", () => {
+  type HappyWindow = { happyDOM: { setViewport(size: { width: number; height: number }): void } };
+  const viewport = (width: number) =>
+    (window as unknown as HappyWindow).happyDOM.setViewport({ width, height: 844 });
+  let sheet: HTMLStyleElement;
+  beforeEach(() => {
+    sheet = document.createElement("style");
+    sheet.textContent = statusCss;
+    document.head.append(sheet);
+    viewport(390);
+  });
+  afterEach(() => {
+    sheet.remove();
+    viewport(1024);
+  });
+
+  /** The line's words a reader can actually see — every text the stylesheet leaves displayed. */
+  const shownWords = (): string => {
+    const button = line();
+    const shown = (node: Element): boolean => {
+      for (let at: Element | null = node; at && at !== button; at = at.parentElement)
+        if (getComputedStyle(at).display === "none") return false;
+      return true;
+    };
+    return [...button.querySelectorAll("span")]
+      .filter((span) => span.children.length === 0 && span.textContent && shown(span))
+      .map((span) => span.textContent)
+      .join(" | ");
+  };
+  /** The market's cue alone — what is left once the fleet's own words are set aside. */
+  const marketWords = (): string =>
+    shownWords()
+      .split(" | ")
+      .filter((w) => !/fleet/.test(w))
+      .join(" | ");
+
+  it("keeps a word of the market's own in every state, and no two states share one", async () => {
+    ops = alarmed;
+    const cues: string[] = [];
+    for (const at of [OPEN, PRE, SATURDAY]) {
+      mount(at);
+      await screen.findByText("1 fleet alert");
+      // the alarm still outranks the clock: the full sentence is folded behind the tap
+      expect(shownWords()).not.toMatch(/left|opens Mon|in 42m/);
+      cues.push(marketWords());
+      cleanup();
+    }
+    expect(cues).toEqual(["Open", "Opens 9:30", "Closed"]);
+  });
+
+  it("draws an unreadable fleet as a square, never the closed market's ring beside it", async () => {
+    opsFails = true;
+    mount(SATURDAY);
+    await screen.findByText("fleet status unknown");
+    expect(marketWords()).toBe("Closed");
+    // and in fewer words, so the pair fits the bar beside Moneypenny and the member menu
+    expect(shownWords()).toBe("Closed | fleet unknown");
+    const ring = getComputedStyle(line().querySelector(".status-line-dot") as Element);
+    const flag = getComputedStyle(line().querySelector(".status-line-flag") as Element);
+    expect(ring.borderRadius).toBe("50%");
+    expect(flag.borderRadius).not.toBe(ring.borderRadius);
+  });
+
+  it("gives the market's sentence back where the bar has room", async () => {
+    viewport(1280);
+    ops = alarmed;
+    mount(PRE);
+    await screen.findByText("1 fleet alert");
+    expect(marketWords()).toBe("Opens in 42m");
+  });
+
+  it("keeps the fleet's full words where the bar has room", async () => {
+    viewport(1280);
+    opsFails = true;
+    mount(SATURDAY);
+    await screen.findByText("fleet status unknown");
+    expect(shownWords()).toBe("Closed · opens Mon 9:30 | fleet status unknown");
   });
 });

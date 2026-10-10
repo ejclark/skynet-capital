@@ -20,7 +20,7 @@ const off = (t) => text(t, { absent: true });
 // Round 2 of #5037 (question 9) folded the header's status pill into the status line and its gear
 // and sign-out icons into the member menu: each destination is the same, one tap deeper.
 const openStatus = click("button", "market clock and fleet health", { within: BAR });
-const openMenu = click("button", "Account menu", { exact: true, within: ACTIONS });
+const openMenu = click("button", "Member menu", { exact: true, within: ACTIONS });
 
 /** The copy a page prints when a service is not wired — a world hole, never a member's view. */
 const UNWIRED = [
