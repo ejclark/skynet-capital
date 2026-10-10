@@ -1,6 +1,7 @@
 import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { Decision, DeskPosition } from "./desk";
 import { type DayRange, inRange } from "./horizon-range";
+import { held } from "./quantity";
 import {
   callForLens,
   type HorizonRow,
@@ -119,14 +120,9 @@ export const underlyingOf = (symbol: string): string =>
 export function optionName(symbol: string, quantity: string): string | undefined {
   const occ = parseOccSymbol(symbol);
   if (!occ) return undefined;
-  const side = Number(quantity.replace(/[^0-9.-]/g, "")) < 0 ? "short" : "long";
+  const side = held(quantity).short ? "short" : "long";
   return `${occ.underlying} ${occStrikeLabel(occ.strike)} ${side} ${occ.type}`;
 }
-
-const quantityOf = (raw: string): number => {
-  const n = Number(raw.replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? Math.abs(n) : 0;
-};
 
 /** Every held name per account, in blotter order: shares, contracts, the soonest expiry. */
 export function touchedPositions(desks: readonly BookDesk[]): TouchedPosition[] {
@@ -143,7 +139,7 @@ export function touchedPositions(desks: readonly BookDesk[]): TouchedPosition[] 
         contracts: 0,
       };
       const expiry = position.isOption ? parseOccSymbol(position.symbol)?.expiration : undefined;
-      const qty = quantityOf(position.quantity);
+      const qty = held(position.quantity).count;
       byKey.set(key, {
         ...seen,
         shares: seen.shares + (position.isOption ? 0 : qty),

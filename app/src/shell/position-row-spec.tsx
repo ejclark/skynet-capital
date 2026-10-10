@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition, Tone } from "../live/desk";
+import { held } from "../live/quantity";
 import type { GreeksParts } from "./holding-decay";
 import { MINUS } from "./quote-change";
 
@@ -30,12 +31,6 @@ export const ROW_KEY = { value: "Value", today: "Today", pl: "P/L", ret: "Return
 export function dayChange(p: DeskPosition): { tone: Tone; text?: string } {
   if (p.dayTone === "flat" || /^[+-]?\$0$/.test(p.dayPl)) return { tone: "flat" };
   return { tone: p.dayTone, text: withMinus(p.dayPl) };
-}
-
-/** The server's quantity ("-1", "1,200") as a whole count and a side. */
-export function held(quantity: string): { readonly count: number; readonly short: boolean } {
-  const n = Number(quantity.replace(/[^0-9.-]/g, ""));
-  return { count: Math.abs(n), short: n < 0 };
 }
 
 export const plural = (n: number, one: string) =>

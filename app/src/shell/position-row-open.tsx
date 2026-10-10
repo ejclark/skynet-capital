@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionLot } from "../live/desk";
-import { ClosePanel } from "./close-panel";
+import { ClosePanel, closeRefusal } from "./close-panel";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
 import type { HoldingDecay } from "./holding-decay";
@@ -135,6 +135,8 @@ export function PositionRowOpen({
   readonly canTrade: boolean;
 }): ReactElement {
   const [closeOpen, setCloseOpen] = useState(false);
+  const whyId = useId();
+  const refusal = closeRefusal(position);
   const many = (position.lots?.length ?? 0) > 0;
   return (
     <div className="pos-open">
@@ -192,7 +194,11 @@ export function PositionRowOpen({
             Guidance
           </Link>
         )}
-        {canTrade ? (
+        {canTrade && refusal ? (
+          <button type="button" className="btn mc-btn close-btn" disabled aria-describedby={whyId}>
+            Close
+          </button>
+        ) : canTrade ? (
           <button
             type="button"
             className="btn mc-btn close-btn"
@@ -203,7 +209,14 @@ export function PositionRowOpen({
           </button>
         ) : null}
       </div>
-      {canTrade && closeOpen ? (
+      {/* Short stock (#5086): the reason as text, the Roll pattern — a title has no hover on a
+          phone, and a sell here would add to the short. */}
+      {canTrade && refusal ? (
+        <p id={whyId} className="lot-why">
+          {refusal}
+        </p>
+      ) : null}
+      {canTrade && closeOpen && !refusal ? (
         <ClosePanel deskId={deskId} position={position} onDone={() => setCloseOpen(false)} />
       ) : null}
     </div>

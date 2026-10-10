@@ -110,6 +110,20 @@ describe("BlotterRow", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
+  it("keeps a short stock's Close off with its reason as text, never a sell (#5086)", () => {
+    render(inTable(<BlotterRow position={position({ quantity: "-1,000" })} deskId="sauron" />));
+    fireEvent.click(opener());
+
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(close).toBeDisabled();
+    // Visible words, not a title a phone cannot hover — the Roll pattern (#3807 slice 2e).
+    expect(close).not.toHaveAttribute("title");
+    expect(close).toHaveAccessibleDescription(/short 1,000 shares/);
+    expect(within(opened()).getByText(/a sell would add to the short/i)).toBeVisible();
+    fireEvent.click(close);
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+  });
+
   describe("the buys, opened in the row (#3186 slice 1)", () => {
     const lots = position({
       lots: [

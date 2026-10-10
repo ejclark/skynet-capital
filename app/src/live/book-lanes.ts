@@ -1,6 +1,7 @@
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { type BookDesk, type BookEvent, type BookEvents, optionName } from "./book-events";
 import { addDays, type DayRange, daysOf, inRange, rangeFor } from "./horizon-range";
+import { held } from "./quantity";
 
 /**
  * THE CALENDAR OF WHAT YOU HOLD, AS LANES (#5074; #5037 round 2, the calendar's R2 — Eric picked
@@ -112,14 +113,13 @@ function slotOf(
   today: string,
   account: string | undefined,
 ): Slot {
-  const n = Number(position.quantity.replace(/[^0-9.-]/g, ""));
-  const count = Number.isFinite(n) ? Math.abs(n) : 0;
+  const { count, short } = held(position.quantity);
   const occ = parseOccSymbol(position.symbol);
   const left = occ ? daysBetween(today, occ.expiration) : 0;
   const life = left < 0 ? "expired" : left === 0 ? "expires today" : `${String(left)}d`;
   const size = occ
     ? [count === 1 ? null : plural(count, "contract"), life].filter(Boolean).join(" · ")
-    : `${plural(count, "share")}${n < 0 ? " short" : ""}`;
+    : `${plural(count, "share")}${short ? " short" : ""}`;
   return {
     key: `${deskId} ${position.symbol}`,
     deskId,
