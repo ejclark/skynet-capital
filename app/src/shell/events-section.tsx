@@ -2,7 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
-import { type BookDesk, type BookEvent, bookEventsIn } from "../live/book-events";
+import {
+  type BookDesk,
+  type BookEvent,
+  bookEventsIn,
+  dayLabel,
+  nextOnBook,
+} from "../live/book-events";
 import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, rangeLabel } from "../live/horizon-range";
@@ -29,7 +35,8 @@ import { AgendaRow, TIER, TierMark } from "./events-agenda";
  * position row: the day, then the row's link.
  *
  * HONEST WHEN THIN: no open positions, nothing dated on what you hold, and a research payload that
- * did not arrive each say so in words; the footer counts the dated events in range and how few of
+ * did not arrive each say so in words; an empty range names the next event on what you hold and
+ * moves onto it in one tap (#5045); the footer counts the dated events in range and how few of
  * the calendar's records name a ticker, with R&D one link away for the full board.
  */
 
@@ -52,27 +59,64 @@ const asGridEvent = (event: BookEvent): ResearchEvent => ({
 /** On one day: what to decide, then what you hold, then market-wide. */
 const TIER_ORDER: Record<BookEvent["tier"], number> = { decide: 0, held: 1, market: 2 };
 
-/** The held tier's honest state in words — never a blank where the rows would be. */
+/** "Oct 5 – Oct 11", "October 2026", "Oct 6, 2026" — the range as a label that leads a line. */
+function rangeName(range: DayRange, lens: Lens, day: string | undefined): string {
+  if (day) return rangeLabel({ start: day, end: day }, "day");
+  return lens === "all" ? "Any date" : rangeLabel(range, lens);
+}
+
+/**
+ * The held tier's honest state in words — never a blank where the rows would be. An empty range
+ * leads with the range, in plain words (F-c5ebc986e1), then names the next event on what you hold
+ * and moves the range onto it in one tap (#5045): three members met an empty week and read it as
+ * "nothing coming" while their prints sat later in the month. The tap is the head's own `?on=`
+ * write, so the lens — which R&D and Trade read too — stays theirs. Nothing dated at any time is
+ * said without a range.
+ */
 function HeldNote({
   loading,
   error,
   positions,
   held,
-  phrase,
+  label,
+  dated,
+  next,
+  onJump,
 }: {
   readonly loading: boolean;
   readonly error: boolean;
   readonly positions: number;
   readonly held: number;
-  readonly phrase: string;
+  readonly label: string;
+  /** Every event on what you hold, at any date; undefined until the calendar can vouch for a 0. */
+  readonly dated: number | undefined;
+  /** The next one after the range; null when nothing later is dated; undefined when not offered. */
+  readonly next: BookEvent | null | undefined;
+  readonly onJump: (date: string) => void;
 }): ReactElement | null {
   if (loading) return <p className="note">Reading what you hold…</p>;
   if (error)
     return <p className="note">Your positions are unreachable — only market-wide prints show.</p>;
   if (positions === 0)
     return <p className="note">No open positions on this account — market-wide prints only.</p>;
-  if (held === 0) return <p className="note">Nothing dated on what you hold {phrase}.</p>;
-  return null;
+  if (dated === 0) return <p className="note">Nothing dated on what you hold yet.</p>;
+  if (held > 0) return null;
+  return (
+    <>
+      <p className="note">{label}: nothing on what you hold.</p>
+      {next ? (
+        <p className="note book-next">
+          Next on what you hold:{" "}
+          <button type="button" className="book-next-jump" onClick={() => onJump(next.date)}>
+            {next.title}
+            <span className="book-next-when"> · {dayLabel(next.date)} →</span>
+          </button>
+        </p>
+      ) : next === null ? (
+        <p className="note">Nothing later on what you hold is dated yet.</p>
+      ) : null}
+    </>
+  );
 }
 
 export function EventsSection({
@@ -103,6 +147,12 @@ export function EventsSection({
   const everything = join(ALL_RANGE);
   const inView = join(day ? { start: day, end: day } : horizon.range);
   const phrase = when(horizon.range, horizon.lens, day);
+  // A "none" claim — nothing dated at all, nothing later — waits for the calendar to arrive; an
+  // event a position carries on its own (the backstop) can be named before it does.
+  const dated = everything.decide.length + everything.held.length;
+  const vouched = research.isSuccess;
+  const quiet = !day && inView.decide.length + inView.held.length === 0;
+  const next = quiet ? nextOnBook(everything, horizon.range.end) : undefined;
   const named = events.filter((e) => e.symbols.length > 0).length;
   const rows = [...inView.decide, ...inView.held, ...inView.market].sort((a, b) =>
     a.date < b.date ? -1 : a.date > b.date ? 1 : TIER_ORDER[a.tier] - TIER_ORDER[b.tier],
@@ -145,7 +195,10 @@ export function EventsSection({
           error={desksError}
           positions={inView.positions}
           held={inView.held.length}
-          phrase={phrase}
+          label={rangeName(horizon.range, horizon.lens, day)}
+          dated={dated > 0 || vouched ? dated : undefined}
+          next={next ?? (quiet && vouched ? null : undefined)}
+          onJump={horizon.setOn}
         />
         {research.isError ? (
           <p className="note">

@@ -182,7 +182,7 @@ describe("/accounts?section=events — the book's calendar", () => {
 
   it("says so when nothing held is dated (human-eric, EEM), and still lists the market-wide prints", async () => {
     mountAccounts(`/accounts?section=events&account=human-eric&${OCTOBER}`);
-    await screen.findByText("Nothing dated on what you hold in October 2026.");
+    await screen.findByText("Nothing dated on what you hold yet.");
     expect(rowTexts()).toHaveLength(3);
     expect(rowTexts().every((t) => t?.includes("market-wide"))).toBe(true);
     expect(screen.getByText(/dated records on/).textContent).toMatch(/4 of 8 dated records/);
@@ -244,6 +244,51 @@ describe("/accounts?section=events — the book's calendar", () => {
     mountAccounts(`/accounts?section=events&account=sauron&${OCTOBER}`);
     await screen.findByText(/Day lens: Held until rung/);
     expect(screen.getByRole("button", { name: /^Day/ })).toBeDisabled();
+  });
+});
+
+describe("an empty range names the next event on what you hold (#5045)", () => {
+  // No `span`: the default week, Mon Oct 5 – Sun Oct 11 — the week three members met empty.
+  const QUIET_WEEK = "on=2026-10-05";
+
+  it("names Sauron's META print three weeks out, and one tap moves the range onto it", async () => {
+    const router = mountAccounts(`/accounts?section=events&account=sauron&${QUIET_WEEK}`);
+    await screen.findByText("Oct 5 – Oct 11: nothing on what you hold.");
+    const jump = screen.getByRole("button", { name: "META earnings print · Wed, Oct 28 →" });
+    expect(jump.closest("p")).toHaveTextContent(/^Next on what you hold: META earnings print/);
+    await userEvent.click(jump);
+    // The same write the head's arrow makes: the anchor moves, the shared lens stays the default.
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ on: "2026-10-28" }));
+    expect(router.state.location.search).not.toHaveProperty("span");
+    const row = (await screen.findByText("META earnings print")).closest("li") as HTMLElement;
+    expect(row).toHaveTextContent("on what you hold");
+    expect(screen.queryByText(/^Next on what you hold/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/nothing on what you hold/)).not.toBeInTheDocument();
+  });
+
+  it("names the day-trader's iPhone Duo day, the nearer of AAPL's two", async () => {
+    mountAccounts(`/accounts?section=events&account=day-trader&${QUIET_WEEK}`);
+    await screen.findByRole("button", { name: "iPhone Duo goes on sale · Fri, Oct 23 →" });
+  });
+
+  it("says nothing is dated on what you hold, naming no range, when nothing ever is (human-eric)", async () => {
+    mountAccounts(`/accounts?section=events&account=human-eric&${QUIET_WEEK}`);
+    await screen.findByText("Nothing dated on what you hold yet.");
+    expect(screen.queryByText(/^Next on what you hold/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Oct 5 – Oct 11: nothing/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing later is dated when the book's only event is behind the range", async () => {
+    mountAccounts("/accounts?section=events&account=sauron&on=2026-11-09");
+    await screen.findByText("Nov 9 – Nov 15: nothing on what you hold.");
+    expect(screen.getByText("Nothing later on what you hold is dated yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /→$/ })).not.toBeInTheDocument();
+  });
+
+  it("offers no jump on a picked day — the day narrows the agenda, the range stays put", async () => {
+    mountAccounts(`/accounts?section=events&account=sauron&events=2026-10-06&${QUIET_WEEK}`);
+    await screen.findByText("Oct 6, 2026: nothing on what you hold.");
+    expect(screen.queryByText(/^Next on what you hold/)).not.toBeInTheDocument();
   });
 });
 

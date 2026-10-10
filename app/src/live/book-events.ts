@@ -299,6 +299,22 @@ export function bookEventsIn({
   };
 }
 
+/**
+ * THE NEXT DAY ON WHAT YOU HOLD (#5045): the earliest decision due or held-name event dated after
+ * `after` (a range's last day) — what an empty range names, so a quiet week never reads as
+ * "nothing coming" while a print sits three weeks out. Market-wide prints never count: every book
+ * has those. On one day a decision leads, since it is the one with a deadline.
+ */
+export function nextOnBook(
+  events: Pick<BookEvents, "decide" | "held">,
+  after: string,
+): BookEvent | undefined {
+  let next: BookEvent | undefined;
+  for (const event of [...events.decide, ...events.held])
+    if (event.date > after && (!next || event.date < next.date)) next = event;
+  return next;
+}
+
 const SHORT_DAY = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   month: "short",

@@ -4,7 +4,8 @@
 // expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the market calendar's
 // head in the cockpit head with the events on what the book holds; the run also prints the stuck
 // chrome at 390, the number the head's placement is judged by. The `events-*` frames (slice 2c)
-// are the Events section: a book with a held event, and one with nothing dated on it.
+// are the Events section: a book with a held event, one with nothing dated on it, and (#5045) an
+// empty default week naming the next event on the book, then the range that one tap lands on.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
@@ -1338,6 +1339,16 @@ await page.goto(
 await page.getByText("Nothing dated on what you hold").waitFor();
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shootCockpit("events-empty-phone");
+// #5045: the default week (no `span`) of Oct 5 holds nothing on Eric's book, so the section names
+// the next event on what he holds — AAPL's launch day, Oct 23 — and one tap moves the range there.
+await page.goto(`${origin}/app/accounts?section=events&on=2026-10-05`);
+await page.locator(".book-next-jump").waitFor();
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-next-phone");
+await page.locator(".book-next-jump").click();
+await page.locator(".agenda-row[data-tier='held']").first().waitFor();
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-next-landed-phone");
 
 // --- DESKTOP (1280px) ---
 await page.setViewportSize({ width: 1280, height: 900 });
