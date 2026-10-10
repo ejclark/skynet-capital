@@ -100,6 +100,11 @@
  * name there were 124), so the name steps aside and the eye stays as the brand. When the fleet
  * has something to say, it outranks the clock: the market's words step aside too, its dot keeps
  * the state by shape (filled open, ring shut), and the words are back one tap down. */
+/* The same ranking where Moneypenny's rail narrows the app column on a desktop: the name goes
+ * first, so the views keep their room (#4046 item 4 measured them squeezed to nothing). */
+.shell:has(.mp-rail) .brand-name {
+  display: none;
+}
 @media (max-width: 700px) {
   .brand-name {
     display: none;

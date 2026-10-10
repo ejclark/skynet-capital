@@ -121,8 +121,12 @@ a {
   color: var(--muted);
 }
 /* 51px = the bar's 52 less its hairline: the views set the first row's height, so the status
-   panel opening as a second row never squeezes it. The phone rule below gives them their own row. */
+   panel opening as a second row never squeezes it. A zero basis that grows: the views take the
+   room the other marks leave and scroll inside it, so a narrow app column (Moneypenny's rail
+   open) can never wrap the bar's first row. The phone rule below gives them their own row. */
 .topnav {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   gap: 2px;
   align-self: stretch;
