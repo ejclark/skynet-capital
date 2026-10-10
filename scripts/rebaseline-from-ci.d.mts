@@ -36,6 +36,8 @@ export interface ScreenshotRow {
   actual: string;
   diff: string | null;
   why: string;
+  /** CI reported no baseline for it in the commit it tested — plan() always refuses it. */
+  missing?: boolean;
 }
 export interface Other {
   spec: string;
@@ -79,6 +81,10 @@ export function pickRun(
   runs: Run[],
   headSha: string,
 ): { run: Run; stop?: undefined; done?: undefined } | { stop: string } | { done: string };
+export function staleForApply(
+  run: { id: number; head_sha: string },
+  headSha: string,
+): string | null;
 export function commitMessage(
   runId: number | string,
   baselines: string[],
