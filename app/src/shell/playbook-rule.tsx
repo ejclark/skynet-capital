@@ -181,10 +181,34 @@ function edgeSafe(
   return { x: at, y, textAnchor: anchor };
 }
 
+const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, "")}`;
+
+/** A put: kept above the strike, part-kept down to the breakeven, lost below it. A covered call:
+ *  kept below the strike, called away above it. In strip units. */
+function stripZones(
+  put: boolean,
+  strikeX: number,
+  beX: number | undefined,
+): { keep: Span; part?: Span; lose?: Span } {
+  if (!put) return { keep: [STRIP.left, strikeX], part: [strikeX, STRIP.right] };
+  if (beX === undefined) return { keep: [strikeX, STRIP.right] };
+  return { keep: [strikeX, STRIP.right], part: [beX, strikeX], lose: [STRIP.left, beX] };
+}
+
+/** What the strip draws, in a sentence for a screen reader. */
+function stripSentence(put: boolean, strike: number, be: number | undefined): string {
+  if (!put)
+    return `the covered call keeps its premium below ${money(strike)}; above it the shares are called away at ${money(strike)}`;
+  const loses = be !== undefined ? ` and loses below ${money(be)}` : "";
+  return `the sold put keeps its premium above ${money(strike)}${loses}`;
+}
+
 /**
- * The stock now against a sold contract's lines. A sold put keeps all its premium above the
- * strike and loses below the breakeven; a sold call the mirror. The zones are a solid band, a thin
- * line and hatching, each with its word; the price is ▼ with its figure.
+ * The stock now against a sold contract's lines. A sold put keeps all its premium above the strike
+ * and loses below its breakeven: a solid band, a thin line between, hatching. A wheel's sold call
+ * is COVERED — it sits on the 100 shares it was assigned — so above its strike nothing is lost:
+ * the shares are called away at the strike, and the strip says exactly that, with no breakeven
+ * (the naked call's line would be the wrong one). The price is ▼ with its figure.
  */
 export function PriceStrip({
   symbol,
@@ -199,21 +223,18 @@ export function PriceStrip({
   readonly breakeven?: number;
   readonly spot?: number;
 }): ReactElement {
-  const figures = [strike, breakeven, spot].filter((n): n is number => n !== undefined);
+  const put = side === "put";
+  const be = put ? breakeven : undefined;
+  const figures = [strike, be, spot].filter((n): n is number => n !== undefined);
   const lo = Math.min(...figures);
   const hi = Math.max(...figures);
   // Room past the outer figures for their labels to read beside their ticks.
   const pad = Math.max((hi - lo) * 0.45, strike * 0.06);
   const [from, to] = [lo - pad, hi + pad];
   const x = (n: number) => STRIP.left + ((n - from) / (to - from)) * (STRIP.right - STRIP.left);
-  const put = side === "put";
-  const be = breakeven ?? strike;
-  // The kept side, the part-kept side between the lines, and the losing side.
-  const keep: Span = put ? [x(strike), STRIP.right] : [STRIP.left, x(strike)];
-  const part: Span = put ? [x(be), x(strike)] : [x(strike), x(be)];
-  const lose: Span = put ? [STRIP.left, x(be)] : [x(be), STRIP.right];
+  const { keep, part, lose } = stripZones(put, x(strike), be === undefined ? undefined : x(be));
   const y = 40;
-  const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, "")}`;
+  const said = stripSentence(put, strike, be);
   // The strike's figure reads toward the kept side and the breakeven's toward the losing side, so
   // the two never overlap however close they sit.
   return (
@@ -221,7 +242,7 @@ export function PriceStrip({
       className="pbr-strip"
       viewBox="0 0 340 92"
       role="img"
-      aria-label={`${symbol}${spot !== undefined ? ` at ${money(spot)}` : ""}: the sold ${side} keeps its premium ${put ? "above" : "below"} ${money(strike)}${breakeven !== undefined ? ` and loses ${put ? "below" : "above"} ${money(breakeven)}` : ""}.`}
+      aria-label={`${symbol}${spot !== undefined ? ` at ${money(spot)}` : ""}: ${said}.`}
     >
       <defs>
         <pattern
@@ -236,15 +257,19 @@ export function PriceStrip({
       </defs>
       <line className="pbr-axis" x1={STRIP.left} x2={STRIP.right} y1={y} y2={y} />
       <rect className="pbr-keep" x={keep[0]} y={y - 4} width={keep[1] - keep[0]} height={8} />
-      <rect className="pbr-part" x={part[0]} y={y - 1.5} width={part[1] - part[0]} height={3} />
-      <rect
-        className="pbr-lose"
-        x={lose[0]}
-        y={y - 6}
-        width={lose[1] - lose[0]}
-        height={12}
-        fill="url(#pbr-hatch)"
-      />
+      {part ? (
+        <rect className="pbr-part" x={part[0]} y={y - 1.5} width={part[1] - part[0]} height={3} />
+      ) : null}
+      {lose ? (
+        <rect
+          className="pbr-lose"
+          x={lose[0]}
+          y={y - 6}
+          width={lose[1] - lose[0]}
+          height={12}
+          fill="url(#pbr-hatch)"
+        />
+      ) : null}
       <text
         className="pbr-zone"
         x={put ? STRIP.right : STRIP.left}
@@ -253,14 +278,16 @@ export function PriceStrip({
       >
         keeps all of it
       </text>
-      <text
-        className="pbr-zone"
-        x={put ? STRIP.left : STRIP.right}
-        y={y - 10}
-        textAnchor={put ? "start" : "end"}
-      >
-        loses
-      </text>
+      {put && !lose ? null : (
+        <text
+          className="pbr-zone"
+          x={put ? STRIP.left : STRIP.right}
+          y={y - 10}
+          textAnchor={put ? "start" : "end"}
+        >
+          {put ? "loses" : "called away"}
+        </text>
+      )}
       <line className="pbr-tick" x1={x(strike)} x2={x(strike)} y1={y - 8} y2={y + 10} />
       <text
         className="pbr-fig"
@@ -268,14 +295,14 @@ export function PriceStrip({
       >
         {money(strike)} strike
       </text>
-      {breakeven !== undefined ? (
+      {be !== undefined ? (
         <>
           <line className="pbr-tick pbr-tick-be" x1={x(be)} x2={x(be)} y1={y - 8} y2={y + 10} />
           <text
             className="pbr-fig pbr-fig-muted"
-            {...edgeSafe(x(be), `${money(breakeven)} breakeven`, put ? "end" : "start", y + 24)}
+            {...edgeSafe(x(be), `${money(be)} breakeven`, "end", y + 24)}
           >
-            {money(breakeven)} breakeven
+            {money(be)} breakeven
           </text>
         </>
       ) : null}

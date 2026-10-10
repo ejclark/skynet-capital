@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import type { Heartbeat } from "../../src/live/heartbeat";
 import { BotPlaybooksSection } from "../../src/shell/bot-playbooks";
+import { PriceStrip } from "../../src/shell/playbook-rule";
 
 /**
  * #5073 slice 3 — a playbook card opened in full (#5037 round 2's R2-open): the rule as a picture
@@ -311,5 +312,19 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
     const rule = await within(card).findByRole("region", { name: "The rule" });
     expect(rule.textContent).toContain("Sauron's own rules over the bots' ten names.");
     expect(within(card).queryByRole("region", { name: /^This bot's / })).toBeNull();
+  });
+});
+
+describe("the price strip under the wheel", () => {
+  it("says a covered call's shares are called away above the strike, never that it loses", () => {
+    render(<PriceStrip symbol="CRWV" side="call" strike={95} breakeven={97.4} spot={91.2} />);
+    const strip = screen.getByRole("img");
+    expect(strip.getAttribute("aria-label")).toBe(
+      "CRWV at $91.20: the covered call keeps its premium below $95; above it the shares are called away at $95.",
+    );
+    expect(strip.textContent).toContain("called away");
+    expect(strip.textContent).not.toContain("loses");
+    // The naked call's breakeven is the wrong line for a covered one.
+    expect(strip.textContent).not.toContain("breakeven");
   });
 });
