@@ -85,7 +85,6 @@
     "shoot:onboarding": "tsx scripts/shoot/onboarding.mjs",
     "shoot:moneypenny": "tsx scripts/shoot/moneypenny.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
-    "shoot:status-pill": "tsx scripts/shoot/status-pill.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
     "shoot:debit-spread": "tsx scripts/shoot/debit-spread.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",
@@ -125,7 +124,7 @@
     "test:e2e:update": "playwright test --update-snapshots",
     "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots",
     "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots",
-    "shoot:market-session": "tsx scripts/shoot/market-session.mjs",
+    "shoot:status-line": "tsx scripts/shoot/status-line.mjs",
     "shoot:route-error": "tsx scripts/shoot/route-error.mjs",
     "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs"
   },

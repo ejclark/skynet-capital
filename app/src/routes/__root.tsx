@@ -10,10 +10,10 @@ import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
 import { BrandEye } from "../shell/brand-eye";
 import { KeyboardChords } from "../shell/keyboard";
-import { MarketSession } from "../shell/market-session";
+import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { ShellError } from "../shell/route-error";
-import { StatusPill } from "../shell/status-pill";
+import { SessionStatus } from "../shell/session-status";
 import { Vantage } from "../shell/vantage";
 
 /**
@@ -22,19 +22,20 @@ import { Vantage } from "../shell/vantage";
  * sub-navigation through `PageFrame` (or none). Views the shell doesn't own yet are plain links
  * to the server-rendered pages.
  *
- * Preferences (theme, density) live on /settings, not here — they're per-viewer display state,
- * not a destination. Settings and Sign out are actions, not views, so they render as icon-only
- * buttons rather than competing with the view list for topnav space.
+ * Round 2 of #5037 (question 9) cut the bar's always-on controls to the views and three marks —
+ * Eric, 2026-10-10: "too many icons available all the time… Progressive reveal to elevate what's
+ * important and move the rest to the side until it's needed":
  *
- * There is no Feedback tab (handoff 2026-09-03): feedback goes through Moneypenny, the ✦ button
- * at the far right of the bar, which toggles her rail — a sibling of the whole app column, so it
- * pushes everything left rather than covering the stage (`shell.css`, `.shell` / `.shell-app`).
- *
- * Fleet ops health has no tab either (#1296): it hangs off the status pill in the bar's actions
- * (`status-pill.tsx`), which four signals earn without a fifth destination competing for the room.
- *
- * The market clock (#3689) sits between the views and the actions on every route: the time left
- * to trade is shell-level information, not an Accounts feature.
+ * - THE STATUS LINE (`session-status.tsx`): the market session in one line of words ("Open · 1h
+ *   28m left"), with fleet health folded in — said on the line only when degraded. A tap opens the
+ *   full clock (#3689), the next open and the fleet's rows (#1296) in place. The time left to trade
+ *   is shell-level information, not an Accounts feature, so it rides every route.
+ * - MONEYPENNY'S ✦: there is no Feedback tab (handoff 2026-09-03); the ✦ toggles her rail — a
+ *   sibling of the whole app column, so it pushes everything left rather than covering the stage
+ *   (`shell.css`, `.shell` / `.shell-app`).
+ * - THE MEMBER MENU (`member-menu.tsx`): Settings and Sign out are actions on your own session, not
+ *   views, so they sit behind one button wearing your initial instead of two icons of their own.
+ *   Preferences (theme, density) live on /settings — per-viewer display state, not a destination.
  *
  * The market calendar's range (#3807 slice 2·1) is ROOT search state — `?on=YYYY-MM-DD&span=<lens>`,
  * validated here and retained across client-side navigation (`retainSearchParams`), so the week
@@ -49,44 +50,6 @@ import { Vantage } from "../shell/vantage";
  * the topbar outlives it. `ShellError` is for this layout failing itself — the one case that may
  * replace the shell, since there is no shell left to keep (`shell/route-error.tsx`).
  */
-
-function GearIcon(): ReactElement {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.02-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.38.96a7.6 7.6 0 0 0-1.73-1l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.63.24-1.22.58-1.73 1l-2.38-.96a.5.5 0 0 0-.6.22L2.7 9.28a.5.5 0 0 0 .12.64L4.84 11.5c-.04.33-.06.66-.06 1s.02.67.06 1L2.82 15.08a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.38-.96c.51.42 1.1.76 1.73 1l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.63-.24 1.22-.58 1.73-1l2.38.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ExitIcon(): ReactElement {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10 8l-4 4 4 4M6 12h11"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 /** Every page of the Profile family lights the Profile tab. `/` is a thin redirect to
  *  `/leaderboard` now (#2321), so it no longer belongs to this family; `/learn`, its chapters,
@@ -142,6 +105,13 @@ function MoneypennyToggle(): ReactElement {
   );
 }
 
+/** The status line, folded again on every new page: keyed by the path, so a route change remounts
+ *  it closed (its panel sits in the flow, so it never closes on a click elsewhere). */
+function StatusLine(): ReactElement {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return <SessionStatus key={pathname} />;
+}
+
 function RootShell(): ReactElement {
   const app = useRef<HTMLDivElement>(null);
   return (
@@ -156,7 +126,7 @@ function RootShell(): ReactElement {
               SC
             </span>
             <BrandEye />
-            Skynet Capital
+            <span className="brand-name">Skynet Capital</span>
           </span>
           <nav className="topnav" aria-label="Views">
             <Link
@@ -189,22 +159,10 @@ function RootShell(): ReactElement {
               R&amp;D
             </Link>
           </nav>
-          <MarketSession />
+          <StatusLine />
           <div className="topbar-actions">
-            <StatusPill />
-            <Link
-              to="/settings"
-              className="icon-action"
-              activeProps={{ "aria-current": "page" }}
-              aria-label="Settings"
-              title="Settings"
-            >
-              <GearIcon />
-            </Link>
-            <a className="icon-action" href="/logout" aria-label="Sign out" title="Sign out">
-              <ExitIcon />
-            </a>
             <MoneypennyToggle />
+            <MemberMenu />
           </div>
         </header>
         <Outlet />

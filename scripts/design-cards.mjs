@@ -113,14 +113,14 @@ const cards = [
     body: `
     <header class="topbar" style="position:static">
       <span class="brand"><span class="brand-mark" aria-hidden="true">SC</span>Skynet Capital</span>
-      <nav class="topnav"><a class="topnav-link" aria-current="page" href="#">Standings</a><a class="topnav-link" href="#">The Wire</a><a class="topnav-link" href="#">Research</a><a class="topnav-link" href="#">Collections</a><a class="topnav-link" href="#">Milestones</a></nav>
+      <nav class="topnav"><a class="topnav-link" href="#">Leaderboard</a><a class="topnav-link" aria-current="page" href="#">Profile</a><a class="topnav-link" href="#">Trade</a><a class="topnav-link" href="#">Activity</a><a class="topnav-link" href="#">R&amp;D</a></nav>
+      <button type="button" class="status-line" data-state="open" data-fleet="ok" aria-expanded="false"><span class="status-line-dot"></span><span class="status-line-words">Open · 1h 28m left</span></button>
       <div class="topbar-actions">
-        <fieldset class="toggle-group"><button type="button" aria-pressed="true"><span class="toggle-text">Comfortable</span></button><button type="button"><span class="toggle-text">Compact</span></button></fieldset>
-        <span class="env-pill">SIM</span>
-        <span class="status status-live"><span class="status-dot"></span>live · seq 1338</span>
+        <button type="button" class="mp-toggle" aria-pressed="false">✦</button>
+        <div class="member-menu-wrap"><button type="button" class="member-menu-btn" aria-expanded="false">E</button></div>
       </div>
     </header>
-    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own left-rail sub-nav. Underline marks current; the dot alone survives on mobile.</p>`,
+    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own sub-nav. Beside them, three marks only (#5037 round 2): the status line — the market in words, the full clock and fleet health one tap down, in place — Moneypenny, and the member menu (Settings, Sign out).</p>`,
   },
   {
     file: "chrome/rail.html",

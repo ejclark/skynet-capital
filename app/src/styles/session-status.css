@@ -1,0 +1,226 @@
+/* THE TOP BAR'S STATUS LINE AND ITS PANEL (#5037 round 2, question 9) — `shell/session-status.tsx`.
+ *
+ * Eric, 2026-10-10: the clock strip was "a really cool visual but is not actionable and taking
+ * prime real estate"; the bar's icons were "too many options… competing for attention". So the
+ * always-on statuses fold into one pill of words beside Moneypenny and the member menu, and its
+ * panel opens as the bar's own last row — in the flow, pushing the page down, never over it.
+ *
+ * Hue never carries a meaning alone (a standing reader is red/green colourblind): the line's WORDS
+ * say open/opens/closed and any fleet trouble, and each mark has its own shape — a filled dot while
+ * the market is open, a ring while it is shut or not yet open, a square for a fleet alarm, a ring
+ * for a fleet nobody could read. Tokens only. Motion only for a viewer who has not asked the system
+ * to hold still: the chevron's turn and the panel's short reveal sit behind
+ * `prefers-reduced-motion: no-preference` at the bottom of this file.
+ */
+
+.status-line {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 10px 0 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.status-line ~ .topbar-actions {
+  margin-left: 0;
+}
+.status-line:hover,
+.status-line[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+.status-line-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.status-line-words {
+  font-variant-numeric: tabular-nums;
+}
+/* before the bell: a ring in the accent — the market is coming, not here */
+.status-line[data-state="pre"] .status-line-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* closed: the pill drops the accent and the dot becomes a muted ring */
+.status-line[data-state="closed"] {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+.status-line[data-state="closed"] .status-line-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+
+/* the fleet, only when it has something to say: a hairline, a shape, the words */
+.status-line-fleet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 7px;
+  border-left: 1px solid var(--border);
+}
+.status-line-flag {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--neg);
+}
+.status-line[data-fleet="attention"] {
+  border-color: color-mix(in oklab, var(--neg) 55%, var(--border));
+}
+.status-line[data-fleet="unknown"] .status-line-flag {
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.status-line-chev {
+  flex: none;
+  display: grid;
+  color: var(--muted);
+}
+.status-line[aria-expanded="true"] .status-line-chev {
+  transform: rotate(180deg);
+}
+
+/* A phone ranks the bar's first row: the eye, the line, Moneypenny, the member menu. The line's
+ * honest words need the room the brand's name took ("Closed · opens Mon 9:30" is 199px; beside the
+ * name there were 124), so the name steps aside and the eye stays as the brand. When the fleet
+ * has something to say, it outranks the clock: the market's words step aside too, its dot keeps
+ * the state by shape (filled open, ring shut), and the words are back one tap down. */
+@media (max-width: 700px) {
+  .brand-name {
+    display: none;
+  }
+  .status-line[data-alarm] .status-line-words {
+    display: none;
+  }
+}
+
+/* The panel: the bar's last row, under the views at every width. It bleeds to the bar's edges so its
+ * hairline reads as the bar growing, and it scrolls inside itself rather than outgrow the screen
+ * (the bar is sticky, so a panel taller than the viewport could never be read to its end). */
+.status-panel {
+  order: 9;
+  /* the bar's padding is 12px a side here (20px from the tablet edge up): the panel's basis takes
+     both back so its hairline runs edge to edge — a negative margin alone only shifts it */
+  flex-basis: calc(100% + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 -12px -6px;
+  padding: 12px 12px 14px;
+  border-top: 1px solid var(--border);
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+}
+.status-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.status-panel-row .num {
+  font-size: 12.5px;
+}
+.fleet-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fleet-mark {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pos);
+}
+.fleet-health[data-verdict="attention"] .fleet-mark {
+  border-radius: 2px;
+  background: var(--neg);
+}
+.fleet-health[data-verdict="unknown"] .fleet-mark {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.status-panel-more {
+  flex: none;
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fleet-health .ops-rows-wrap {
+  margin-top: 10px;
+}
+
+/* From the tablet edge up there is room for the three facts side by side — the same concepts as
+ * the phone, one row instead of a stack — and the fleet's rows, when asked for, take a row below. */
+@media (min-width: 861px) {
+  .status-panel {
+    flex-basis: calc(100% + 40px);
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 32px;
+    margin: 0 -20px;
+    padding: 12px 20px 14px;
+    max-height: calc(100dvh - 64px);
+  }
+  .status-panel .market-session {
+    flex: 1 1 380px;
+  }
+  .status-panel-row {
+    padding-top: 0;
+    border-top: none;
+  }
+  .status-panel > .status-panel-row {
+    gap: 10px;
+  }
+  .status-panel > .status-panel-row > span:first-child {
+    color: var(--muted);
+  }
+  .fleet-health {
+    display: contents;
+  }
+  .fleet-health .ops-rows-wrap {
+    flex-basis: 100%;
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-line-chev {
+    transition: transform 0.15s ease;
+  }
+  .status-panel {
+    animation: status-panel-in 0.14s ease-out;
+  }
+  @keyframes status-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+}

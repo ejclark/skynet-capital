@@ -59,13 +59,16 @@ a {
   flex-direction: column;
 }
 
+/* The bar wraps at every width: the status line's panel (`session-status.css`) is its last row
+   when open, under the views — in the flow, so the page moves down rather than being covered. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 5;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 0 12px;
   padding: 0 20px;
   min-height: 52px;
   border-bottom: 1px solid var(--border);
@@ -117,11 +120,14 @@ a {
   border: 1px solid var(--border);
   color: var(--muted);
 }
+/* 51px = the bar's 52 less its hairline: the views set the first row's height, so the status
+   panel opening as a second row never squeezes it. The phone rule below gives them their own row. */
 .topnav {
   display: flex;
   gap: 2px;
   align-self: stretch;
   align-items: stretch;
+  min-height: 51px;
   overflow-x: auto;
   scrollbar-width: none;
   margin-left: 8px;
@@ -153,23 +159,6 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-.icon-action {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  color: var(--muted);
-  text-decoration: none;
-}
-.icon-action:hover {
-  color: var(--text);
-  background: var(--surface-2);
-}
-.icon-action[aria-current="page"] {
-  color: var(--text);
-  background: var(--surface-2);
 }
 .visually-hidden {
   position: absolute;
@@ -239,16 +228,12 @@ a {
   .toggle-abbr {
     display: inline;
   }
-  /* the topbar wraps: brand + actions hold the first row, the view nav becomes a
-     full-width scrollable second row — six views no longer shove the actions off-screen */
+  /* brand · status line · actions hold the first row, the view nav becomes a full-width
+     scrollable second row — six views no longer shove the actions off-screen — and an open
+     status panel is the third */
   .topbar {
-    flex-wrap: wrap;
     padding: 6px 12px;
     row-gap: 2px;
-    /* a size container so the status popover can be exactly as wide as the bar's content
-       (`100cqw`, status.css) — 100vw counts a classic scrollbar's gutter and pushed it to 3px
-       from the edge. Safe here: the bar is already stretched full width by its column. */
-    container-type: inline-size;
   }
   .topnav {
     order: 3;
