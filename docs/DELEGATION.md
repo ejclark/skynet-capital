@@ -41,6 +41,20 @@ feeding thoughts; work moves underneath.
    replaceable, not a point of failure for the *record* — only for in-the-moment orchestration.
 6. **Escalation & circuit breakers.** A red PR never merges; a genuine design fork or ambiguity escalates
    to Eric rather than being guessed; a tripped rail halts and reports.
+7. **One build per surface at a time — WIP 1 per surface.** Builds that touch the same surface — the
+   same route or shell component, or the same page screenshots — run one after another, never in
+   parallel. Builds on independent surfaces may still run side by side. Two parallel builds on one
+   surface each change what the other's screenshots expect, so whichever merges second goes red on
+   pictures it never drew, and their code collides in the same files. Before dispatching, name each
+   build's surface (the route and shell files it edits, the `e2e/*-snapshots/` it will move); a second
+   build on a named surface waits — `node scripts/issues.mjs update <second> --blocked-by <first>`,
+   and every puller holds it until the first closes. Evidence, 2026-10-10: four builds ran at once on
+   the profile page (#5078, #5079, #5080, #5081 — all four edited `app/src/routes/accounts.tsx`, three
+   edited the profile head `cockpit-head.tsx`). Both #5079 and #5080 went red on their first CI run;
+   #5079 re-baselined five page shots by hand (902daaed), and #5080's run failed on those same five
+   plus two more — the same pictures, moved by two builds at once (`docs/LESSONS.md`, 2026-10-10).
+   A red first run on a visual PR is one command, not a re-plan: `node scripts/rebaseline-from-ci.mjs
+   <pr>`.
 
 ## Reliability — do we need Routines to keep agents working?
 

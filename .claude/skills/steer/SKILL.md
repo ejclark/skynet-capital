@@ -90,6 +90,11 @@ The stable page's URL is in #5056's state block; the first publish puts it there
      "Eric's comments on the page" in its decision's part of the issue comment; a decision he
      commented on without tapping is quoted and rolled over, never given its default.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
+   - **Builds on one surface go one at a time** (`docs/DELEGATION.md` rail 7): when two Builds this
+     read-back readies touch the same route or shell component, or the same page screenshots, link
+     each later one `--blocked-by` the first (`node scripts/issues.mjs update <n> --blocked-by
+     <first>`) so the lanes take them in turn. 2026-10-10: four parallel builds on the profile page
+     (#5078–#5081) collided in code and in screenshot baselines.
    - Comments: reply on each quoted thread with the issue it landed on, then resolve it, so the
      next round never quotes it twice. `followUps` `read-comment` → read his comments beside his
      taps, and bank anything that shapes a next round beside the round (the critique round's
