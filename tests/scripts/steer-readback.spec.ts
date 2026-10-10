@@ -99,6 +99,30 @@ describe("a skipped item", () => {
     expect(commentOn(4300)[0]?.body).toContain("> waiting on the deploy check");
   });
 
+  it("moves no label on “Not now” — on a ready plan, taking needs-eric off would start a build", () => {
+    const notNow = readback(tp, { [at("decisions/2224")]: { verdict: "not" } });
+    expect(notNow.actions.some((a) => a.kind === "labels" && a.issue === 2224)).toBe(false);
+    expect(notNow.rollover.map((r) => r.key)).toContain("2224");
+    expect(notNow.followUps).toContainEqual(expect.objectContaining({ kind: "not", issue: 2224 }));
+  });
+
+  it("settles a fork on “my note settles it” only when there is a note to settle it", () => {
+    const empty = readback(tp, { [at("decisions/2224")]: { verdict: "build", note: "  " } });
+    expect(empty.actions.some((a) => a.kind === "labels" && a.issue === 2224)).toBe(false);
+    expect(empty.rollover.map((r) => r.key)).toContain("2224");
+    const said = readback(tp, { [at("decisions/2224")]: { verdict: "build", note: "Shape 5" } });
+    expect(said.actions).toContainEqual(
+      expect.objectContaining({ kind: "labels", issue: 2224, remove: ["needs-eric"] }),
+    );
+  });
+
+  it("follows up a design question answered with a note alone", () => {
+    const noted = readback(tp, { [at("decisions/5037-q2")]: { note: "neither, try a sheet" } });
+    expect(noted.followUps).toContainEqual(
+      expect.objectContaining({ kind: "read-note", key: "5037-q2" }),
+    );
+  });
+
   it("moves no label on a note alone; the note is quoted and the item stays his", () => {
     expect(labelsOn(2224)).toBeUndefined();
     expect(plan.followUps).toContainEqual(

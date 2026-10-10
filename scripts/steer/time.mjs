@@ -54,9 +54,24 @@ export function addDays(date, days) {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-/** The touch point `now` falls in: before noon Central is the morning page, after is the evening. */
+/** Before this Central hour the clock cannot name the page: a late evening page and an early
+ *  morning one both land here, and guessing wrong files one under the other's records. */
+export const UNNAMED_BEFORE = 5;
+
+/**
+ * The touch point `now` falls in: before noon Central is the morning page, after is the evening.
+ * Between midnight and 05:00 it refuses instead of guessing: an evening page assembled after
+ * midnight would otherwise take the next morning's id, and that morning's page would then load
+ * and read back the evening's answers as its own. The caller names it with `--tp`.
+ */
 export function touchPoint(now) {
   const { date, hour } = central(now);
+  if (hour < UNNAMED_BEFORE) {
+    throw new Error(
+      `steer/time: it is ${String(hour).padStart(2, "0")}:xx Central, too early to tell which page this is — ` +
+        `pass --tp ${addDays(date, -1)}-pm for last evening's page, or --tp ${date}-am for this morning's`,
+    );
+  }
   const slot = hour < 12 ? "am" : "pm";
   return { id: `${date}-${slot}`, date, slot };
 }

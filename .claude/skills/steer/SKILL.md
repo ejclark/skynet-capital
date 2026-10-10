@@ -32,11 +32,19 @@ flowchart LR
 The stable page's URL is in #5056's state block; the first publish puts it there.
 
 1. **Read the last page's answers first** — the next reel starts at its Done. ArtifactData `list`
-   the collection `tp` on the stable page with `out_dir: <dir>/prev` (one file per round's meta).
-   No page yet: skip `--prev`.
-2. **Gather** — `npm run steer:gather -- --out <dir> --prev <dir>/prev` (about 2 minutes; it reads
-   the Needs-you selector, the rank, admission, the dial and the merge log — nothing else).
-   - An evening page opened after midnight: add `--tp 2026-10-09-pm`, or it files as the morning's.
+   the collection `tp` on the stable page with `out_dir: <dir>/prev` (one file per round's meta),
+   then `list` each listed round's `tp/<id>/decisions` from the last 14 days into the same
+   `out_dir` — the strip's "median days a decision waited" is read from those answers. No page
+   yet: skip `--prev`.
+   - **A late Done is read back before anything else.** If the latest round has `doneAt` set and
+     #5056's Log has no line for that page id (the 90-minute watch ended first), run step 6 for
+     that round now, with its own `tp.json` from its folder, then step 7.
+2. **Gather** — `git fetch origin main` first (the reel and the strip read `origin/main`; a stale
+   ref drops merges silently), then `npm run steer:gather -- --out <dir> --prev <dir>/prev`
+   (about 2 minutes; it reads the Needs-you selector, the rank, admission, the dial and the merge
+   log — nothing else).
+   - Between midnight and 05:00 Central gather refuses to name the page: pass `--tp` — last
+     evening's (`--tp 2026-10-09-pm`) or this morning's — so neither takes the other's records.
    - A design round: add `--design <manifest.json>` (shape below). Its issue must already be on the
      Needs-you list — a `Needs from you` callout above the fold — or gather refuses it.
    - Read the one-line summary: decisions and minutes, merges, queue, dial. A `halt` dial heads the page.
@@ -50,16 +58,19 @@ The stable page's URL is in #5056's state block; the first publish puts it there
    Never republish over round 1's critique page (5LDY3gN9gxLk8f3Z5UpSGT) unless Eric asks; its
    `critique/q*` records stay readable either way, because this page writes only under `tp/`.
 5. **Watch for Done, briefly** — `/loop 10m` with a prompt that ArtifactData `get`s `tp/<id>`
-   (collection `tp`, doc `<id>`) and runs step 6 when `doneAt` is set. Put the stop time
-   (publish + 90 min) in the prompt; past it, cancel the loop. A late Done is read by the next
-   page's step 1, and "steered" from Eric runs step 6 at once.
+   (collection `tp`, doc `<id>`) and, when `doneAt` is set, **cancels the loop, then** runs steps
+   6 and 7 — once: a tick after the read-back would post every comment again. Put the stop time
+   (publish + 90 min) in the prompt; past it, cancel the loop. A late Done is read back by the
+   next page's step 1. "steered" from Eric cancels the loop and runs steps 6 and 7 at once.
 6. **Read back** — ArtifactData `list` the collections `tp/<id>/decisions`, `tp/<id>/queue` and
    `tp/<id>/reel`, and `get` `tp`/`<id>`, all with `out_dir: <dir>/records`. Then
    `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --out <dir>/readback`
    prints the plan: `actions`, `commands`, `rollover`, `defaults`, `followUps`.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
    - `followUps`: `next-round` → build the next design round (below); `read-note` / `more` /
-     `hold` → read his words; a note that does settle it gets its label move by hand, with the quote.
+     `hold` / `not` → read his words; a note that does settle it gets its label move by hand, with
+     the quote. "Not now" never takes `needs-eric` off by itself: on an issue still carrying
+     `ready` that would start the build he just declined.
    - Nothing in `rollover` is touched: a skipped fork, design round or held PR waits for the next page.
 7. **Update #5056's state block** — one dated Log line: the page id, answered / rolled over,
    active minutes, and the stable page's URL if it is new.

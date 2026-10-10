@@ -58,9 +58,12 @@ function plainPart(d, r) {
   const head = `**${d.title}**`;
   const pick = r.pick ? `- Picked option ${r.pick}` : "";
   const took = r.verdict === "build" && d.recommendation;
+  const empty = r.verdict === "build" && !d.recommendation && !String(r.note ?? "").trim();
   const words = took
     ? `Took the recommendation: ${d.recommendation.label}`
-    : VERDICT_WORDS[r.verdict];
+    : empty
+      ? "Pressed “my note settles it” with no note — still open"
+      : VERDICT_WORDS[r.verdict];
   const verdict = r.verdict ? `- ${words ?? r.verdict}` : "";
   return [[head, pick, verdict].filter(Boolean).join("\n"), noteBlock(r.note)]
     .filter(Boolean)
@@ -116,18 +119,34 @@ function designAnswer(d, r, acc, id) {
   if (r.pick) acc.actions.push(buildIssue(d, r, id));
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
+  } else if (!r.pick) {
+    // A note and no tap: quoted above, and the next round still has to answer it.
+    acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
   }
 }
 
-/** A fork or an approval. Only an explicit tap moves a label: a note alone is quoted and kept
- *  open, and a note that does decide gets its label move from the session, never this file. */
+/**
+ * Does this tap settle the decision, so `needs-eric` may come off? Only a tap that says GO:
+ * a pick, Approve, "Take the recommendation", or "My note settles it" WITH a note to settle it.
+ * "Not now" is not one: taking `needs-eric` off an issue that still carries `ready` (a plan Eric
+ * already flipped, like #3977) unparks it, and the plan lane builds it on the `unlabeled` event
+ * (`labelEventReady`, plan-claim.mjs) — the opposite of what he tapped. It stays his, quoted.
+ */
+function settles(d, r) {
+  if (r.pick || r.verdict === "approve") return true;
+  if (r.verdict !== "build") return false;
+  return Boolean(d.recommendation) || Boolean(String(r.note ?? "").trim());
+}
+
+/** A fork or an approval. Only a tap that settles it moves a label: a note alone, "More", "Hold"
+ *  or "Not now" is quoted and kept open, and the session routes those by hand, never this file. */
 function plainAnswer(d, r, acc) {
   acc.part(d.issue, plainPart(d, r));
-  const decided = Boolean(r.pick) || ["build", "not", "approve"].includes(r.verdict);
   if (d.irreversible) return acc.roll(d, "irreversible: only Eric acts on it, on GitHub");
-  if (!decided) {
-    acc.roll(d, `answered "${r.verdict ?? "with a note only"}" — still his decision`);
-    const kind = r.verdict === "more" || r.verdict === "hold" ? r.verdict : "read-note";
+  if (!settles(d, r)) {
+    const said = r.verdict === "build" ? "settled by a note he left empty" : r.verdict;
+    acc.roll(d, `answered "${said ?? "with a note only"}" — still his decision`);
+    const kind = ["more", "hold", "not"].includes(r.verdict) ? r.verdict : "read-note";
     return acc.follow(kind, d, "Quoted on the issue; it stays his until a tap decides it");
   }
   acc.move(d.issue, { remove: [DECISION_LABEL] });

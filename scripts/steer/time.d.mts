@@ -11,6 +11,7 @@ export function central(t: string | number): {
 };
 export function centralToUtc(date: string, hour: number, minute?: number): string;
 export function addDays(date: string, days: number): string;
+export const UNNAMED_BEFORE: number;
 export function touchPoint(now: string | number): { id: string; date: string; slot: Slot };
 export function nextTouchPoint(
   tp: { date: string; slot: Slot },

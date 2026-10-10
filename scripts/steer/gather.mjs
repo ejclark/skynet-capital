@@ -7,7 +7,8 @@
 //                            the reel, and the strip reads active minutes and decision waits
 //     [--since <ISO>]        start the reel here instead (wins over --prev)
 //     [--design <manifest>]  a design round enters as decisions of kind "design" (design.mjs)
-//     [--tp 2026-10-09-pm]   name the page (default: the Central clock — before noon is "am")
+//     [--tp 2026-10-09-pm]   name the page (default: the Central clock — before noon is "am";
+//                            between midnight and 05:00 it refuses, and --tp is required)
 //     [--design-issue N] [--design-round N] [--budget <minutes>] [--now <ISO>]
 //
 // READS ONLY EXISTING MACHINERY, and builds no second copy of any of it (#5056's interrogation):
