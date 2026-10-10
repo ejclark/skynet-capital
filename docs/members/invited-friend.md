@@ -112,21 +112,21 @@ for, and seeing one would read as "I am in the wrong place".
    accounts."; no Close, no New trade. **WHEN the invited friend opens another member's bot, the
    app shall show its book read-only, with no control that would write to it.** Judge: can this
    reader tell they are looking, not trading?
-2. `/app/u/sauron/decisions` — Heartbeat; offline, "No decision trail is wired in this
-   deployment." **WHEN the invited friend reads another member's bot's heartbeat, the app shall not
-   name the playbooks it runs.** Passes offline on absent data (§5). Judge: can this reader tell
-   the bot is alive without learning its playbooks?
+2. `/app/u/sauron/decisions` — Playbooks (Heartbeat merged in as its top strip, #5073); offline,
+   "No decision trail is wired in this deployment." **WHEN the invited friend reads another
+   member's bot's playbooks, the app shall not name the playbooks it runs.** Passes offline on
+   absent data (§5). Judge: can this reader tell the bot is alive without learning its playbooks?
 
 ### j4 — my bot
 
 _(Added 2026-09-29, #3816 slice 9 — the friend is the only member in these files who owns a bot
 and is not the owner.)_
 
-1. `/app/accounts?account=day-trader&section=heartbeat` — Profile on The Day Trader: the section
-   switch gains Heartbeat · Thesis; Heartbeat says whether the loop is alive (offline: no
-   decision trail is wired). **WHEN the invited friend opens Profile on the bot they own, the app
-   shall offer its Heartbeat and show whether it is alive.** Judge: can this reader tell whether
-   their bot is running?
+1. `/app/accounts?account=day-trader&section=playbooks` — Profile on The Day Trader: the section
+   switch gains Playbooks · Thesis; Playbooks' top strip says whether the loop is alive (offline:
+   no decision trail is wired). **WHEN the invited friend opens Profile on the bot they own, the
+   app shall offer its Playbooks and show whether it is alive.** Judge: can this reader tell
+   whether their bot is running?
 2. `/app/accounts?account=day-trader&section=thesis` — Thesis on their own bot: its standing call
    and the markers behind it. **WHEN the invited friend opens Thesis on the bot they own, the app
    shall show that bot's standing call.** Judge: can this reader tell what their bot believes

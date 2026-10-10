@@ -15,9 +15,14 @@
     "mustBeSeenBy": "member (honest empty state with no account)"
   },
   {
-    "screen": "/accounts ?section=heartbeat",
+    "screen": "/accounts ?section=playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "bot owner (only while one bot account is selected)"
+  },
+  {
+    "screen": "/accounts ?section=heartbeat",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=thesis",
@@ -27,7 +32,7 @@
   {
     "screen": "/accounts ?section=decisions",
     "verdict": "redirect-only",
-    "target": "/accounts?section=heartbeat"
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=milestones (table of contents)",
@@ -65,7 +70,7 @@
     "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
   },
   {
-    "screen": "/u/$id/decisions (Heartbeat)",
+    "screen": "/u/$id/decisions (Playbooks)",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
   },
