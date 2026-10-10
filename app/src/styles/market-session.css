@@ -1,32 +1,26 @@
-/* The topbar market clock (#3689 slice 1, design handoff 3a) — `shell/market-session.tsx`.
+/* The full market clock (#3689 slice 1, design handoff 3a) — `shell/market-session.tsx`.
  *
- * Sits between the view nav and the actions. Wide screens get the full 440px widget; laptop widths
- * drop the track's labels and the min-width so the nav keeps its room; at the shell's 860px wrap
- * point it becomes its own full-width row under the nav (handoff 3b: the session widget is the
- * second thing a phone sees). Tokens only; every tint is a color-mix of one.
+ * It held a 440px strip in the topbar on every route until round 2 of #5037 (question 9) folded it
+ * behind the status line; it now draws inside the line's opened panel (`session-status.css`), so it
+ * owns no border, ground or placement of its own. A phone stacks the label over the track; from
+ * the tablet edge up the two sit side by side. Tokens only; every tint is a color-mix of one.
  *
  * Colour never carries the state alone: the eyebrow SAYS open/closed/opens-in, and power hour is
  * named in words beside its tick. The knob has no transition on purpose — a clock doesn't animate.
  */
 
 .market-session {
-  margin-left: auto;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 4px 12px;
-  min-width: 440px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-}
-.market-session + .topbar-actions {
-  margin-left: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .session-label {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
   white-space: nowrap;
   line-height: 1.25;
 }
@@ -66,7 +60,6 @@
 
 .session-track-wrap {
   flex: 1;
-  min-width: 170px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -120,10 +113,6 @@
 }
 
 /* closed: the track reads as spent, muted — the eyebrow drops the accent */
-.market-session[data-state="closed"] {
-  border-color: var(--border);
-  background: var(--surface-2);
-}
 .market-session[data-state="closed"] .session-eyebrow {
   color: var(--muted);
 }
@@ -135,28 +124,17 @@
   background: color-mix(in srgb, var(--muted) 35%, var(--surface-2));
 }
 
-@media (max-width: 1280px) {
+@media (min-width: 861px) {
   .market-session {
-    min-width: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+  .session-label {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .session-track-wrap {
-    min-width: 120px;
-  }
-  .session-ticks {
-    display: none;
-  }
-}
-
-@media (max-width: 860px) {
-  .market-session {
-    order: 4;
-    flex-basis: 100%;
-    margin: 4px 0 6px;
-  }
-  .market-session + .topbar-actions {
-    margin-left: auto;
-  }
-  .session-ticks {
-    display: flex;
+    min-width: 220px;
   }
 }

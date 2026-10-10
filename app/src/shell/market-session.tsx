@@ -2,9 +2,12 @@ import { type CSSProperties, type ReactElement, useEffect, useState } from "reac
 import { formatMinutes, marketSession, sessionSentence } from "../live/market-session";
 
 /**
- * The topbar market clock (#3689 slice 1, design handoff 3a): the time left to trade, always in
- * view on every route. Left, a label stack (state eyebrow + time left); middle, the session track
- * with a dashed power-hour tick and a "now" knob. `styles/market-session.css` holds the look.
+ * The full market clock (#3689 slice 1, design handoff 3a): a label stack (state eyebrow + time
+ * left) and the session track with a dashed power-hour tick and a "now" knob.
+ * `styles/market-session.css` holds the look. It sat in the topbar on every route until round 2 of
+ * #5037 (question 9) folded it behind the status line (`session-status.tsx`), which opens it in
+ * place: Eric, 2026-10-10, "a really cool visual but is not actionable and taking prime real
+ * estate".
  *
  * Deliberately NOT here: a "decisions today" counter (rejected in review as overly prescriptive).
  * The clock is local (`live/market-session.ts`), not a query: the session is a pure function of
@@ -14,7 +17,8 @@ import { formatMinutes, marketSession, sessionSentence } from "../live/market-se
 
 const TICK_MS = 30_000;
 
-function useNow(): Date {
+/** The wall clock, re-read every 30s — the status line and the opened clock share one tick rate. */
+export function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), TICK_MS);

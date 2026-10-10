@@ -11,11 +11,16 @@
 
 const FROM = "/app/accounts";
 const VIEWS = 'nav[aria-label="Views"]';
+const BAR = ".topbar";
 const ACTIONS = ".topbar-actions";
 const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
 const click = (r, name, extra = {}) => ({ click: role(r, name, extra) });
 const off = (t) => text(t, { absent: true });
+// Round 2 of #5037 (question 9) folded the header's status pill into the status line and its gear
+// and sign-out icons into the member menu: each destination is the same, one tap deeper.
+const openStatus = click("button", "market clock and fleet health", { within: BAR });
+const openMenu = click("button", "Account menu", { exact: true, within: ACTIONS });
 
 /** The copy a page prints when a service is not wired — a world hole, never a member's view. */
 const UNWIRED = [
@@ -67,8 +72,8 @@ const SURFACES = [
   },
   {
     id: "header-status",
-    label: "header: Status panel",
-    act: [click("button", "Status", { within: ACTIONS })],
+    label: "header: status line → fleet details",
+    act: [openStatus, click("button", "Fleet details", { within: BAR })],
     // The bridge's verdict, not only its label: the world's bots process is up (league-services).
     expect: [
       role("region", "Ops status"),
@@ -80,8 +85,8 @@ const SURFACES = [
   },
   {
     id: "header-settings",
-    label: "header: Settings",
-    act: [click("link", "Settings", { exact: true, within: ACTIONS })],
+    label: "header: member menu → Settings",
+    act: [openMenu, click("link", "Settings", { exact: true, within: ACTIONS })],
     expect: [{ url: "/app/settings" }, role("heading", "Settings", { exact: true })],
   },
   {
@@ -99,8 +104,8 @@ const SURFACES = [
   },
   {
     id: "header-sign-out",
-    label: "header: Sign out",
-    act: [click("link", "Sign out", { within: ACTIONS })],
+    label: "header: member menu → Sign out",
+    act: [openMenu, click("link", "Sign out", { within: ACTIONS })],
     expect: [{ url: "/login" }, role("heading", "You're signed out")],
   },
 ];

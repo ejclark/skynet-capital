@@ -7,7 +7,7 @@
 //   npm run phone -- /app/accounts --session    # signed in as the crawl member (human-eric)
 //   npm run phone -- /app/trade --strict        # exit 1 on any high or medium finding
 //   npm run phone -- /app/trade --all           # list the advisory (low) rows too, not just a count
-//   npm run phone -- /app/wire --click .status  # open something first (a popover), then measure
+//   npm run phone -- /app/leaderboard --click .status-line  # open something first, then measure
 //   npm run phone -- /app/wire --at 2026-09-26T15:00:00Z   # pin the clock (the market clock's state)
 //
 // Boots the offline dashboard exactly as the crawl does (server.mjs: frozen fixtures, no feedback

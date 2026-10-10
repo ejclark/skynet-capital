@@ -56,9 +56,10 @@ const SEEDED_RANDOM = `
 /**
  * Friday 2026-09-18, 10:00 America/New_York — a regular-session weekday (not in
  * `MARKET_CLOSURES`, src/domain/market-calendar.ts), 30 minutes after the open. Two surfaces read
- * this: the login skyline renders at full `marketLife()` liveliness, and the topbar market clock
- * (#3690) draws its open-session state. The instant was 2026-09-19 until #3690 exposed that it was
- * a Saturday — every baseline had quietly captured "MARKET CLOSED · opens Mon 9:30". A weekend or
+ * this: the login skyline renders at full `marketLife()` liveliness, and the topbar's status line
+ * (#3690; one line since #5037 round 2) reads "Open · 6h left". The instant was 2026-09-19 until
+ * #3690 exposed that it was a Saturday — every baseline had quietly captured "MARKET CLOSED · opens
+ * Mon 9:30". A weekend or
  * holiday bakes the closed state in; so would an overnight hour (and a dimmed city). If this ever
  * moves, keep it a weekday session hour and check the calendar — `isMarketClosed(date)` must be
  * false. Friday also keeps the research fixture's ledgers (e2e/fixtures/research) in the same week.
@@ -74,7 +75,8 @@ const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
  * a different topbar per run: ~940–1,130 pixels per shot, about a third of the shortest page's
  * FROZEN_DIFF_RATIO budget spent on noise. Refusing the stream holds every page at `connecting…`,
  * the state every baseline has always captured; the board snapshot the league card draws from is a
- * plain fetch and still lands.
+ * plain fetch and still lands. (Since #5037 round 2 the stream's words sit folded in the status
+ * line's panel rather than in the bar; the refusal stays, so nothing that reads the stream can vary.)
  */
 const isBoardChannel = (url: URL): boolean => url.pathname === "/events";
 
@@ -95,6 +97,8 @@ export const FROZEN_DIFF_RATIO = 0.002;
 
 /**
  * The topbar market clock, asserted on its own at a FIXED size on every whole-frame page (#4094).
+ * Since #5037 round 2 the clock is the status line (`.status-line`, "Open · 6h left" at
+ * FIXED_CLOCK); the full track opens in place on a tap and is not part of any baseline.
  *
  * WHY (measured 2026-09-30). The whole-frame ratio above scales with page height (resized to content,
  * 1,843–6,215 px of budget across the suite), while a wrong market state is a fixed-size change in
@@ -104,7 +108,7 @@ export const FROZEN_DIFF_RATIO = 0.002;
  * on top of the market-state signal. Inside this element the same CI images differ by 0 px, so the
  * clock gets its own shot and a small fixed budget, and the frame keeps its ratio for text noise.
  */
-const MARKET_CLOCK = ".market-session";
+const MARKET_CLOCK = ".status-line";
 const MARKET_CLOCK_DIFF_PIXELS = 50;
 
 /**
