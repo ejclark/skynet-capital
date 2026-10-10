@@ -12,7 +12,8 @@
 //
 // Equity is derived, never typed twice: a participant's equity is cash + Σ market value, and the
 // last history point ("@now") is overwritten with it, so the chart, the header and the blotter
-// can never disagree inside one world. History samples carry the snapshot's cash throughout — a
+// can never disagree inside one world. Yesterday's close is derived the same way (cash + Σ
+// quantity × lastday — `yesterdayEquity`), so the header's day change is its rows' (#5052). History samples carry the snapshot's cash throughout — a
 // simplification the study does not measure (no surface plots cash over time).
 
 import { UPCOMING_PRINTS } from "../../../src/domain/earnings-calendar.ts";
@@ -176,6 +177,22 @@ function snapshotOf(p, saleFill) {
   };
 }
 
+/**
+ * Yesterday's closing equity, derived from the marks the rows read (#5052): cash plus each position
+ * at yesterday's close, less what the input declares was booked today on positions already closed
+ * (`closedToday` — the one gap a header may show beyond its rows). Never typed: a hand-typed figure
+ * put Eric's header at −$71 beside rows adding to −$4 (day-change.mjs).
+ */
+export function yesterdayEquity(p, snapshot) {
+  if (p.lastEquity !== undefined) {
+    throw new Error(
+      `book: ${p.id} types lastEquity — it is derived from cash and each position's lastday; declare a closed-today amount (closedToday) for any gap`,
+    );
+  }
+  const atClose = snapshot.positions.reduce((s, x) => s + x.quantity * x.lastdayPrice, p.cash);
+  return Math.round((atClose - (p.closedToday ?? 0)) * 100) / 100;
+}
+
 /** Everything a world's server would hold, from one input file. */
 export function buildBook(name) {
   const input = resolveTokens(loadInput(name));
@@ -192,12 +209,24 @@ export function buildBook(name) {
     }));
   }
   if (bot) activity[input.bot.id] = bot.fills;
+  const lastEquity = Object.fromEntries(
+    input.participants.map((p, i) => [p.id, yesterdayEquity(p, participants[i])]),
+  );
+  const closedToday = Object.fromEntries(
+    input.participants.filter((p) => p.closedToday).map((p) => [p.id, p.closedToday]),
+  );
+  // Two history points are derived, never typed: "@now" is today's equity, and the last point
+  // before today's New York midnight is yesterday's close — so the chart's last step is the
+  // header's day change too.
+  const today = msOf("@0d 00:00");
   const history = {};
   for (const p of participants) {
-    history[p.id] = (input.history?.[p.id] ?? []).map((h, i, all) => ({
+    const points = input.history?.[p.id] ?? [];
+    const close = points.findLastIndex((h) => Date.parse(h.at) < today);
+    history[p.id] = points.map((h, i, all) => ({
       at: h.at,
       participantId: p.id,
-      equity: i === all.length - 1 ? p.equity : h.equity,
+      equity: i === all.length - 1 ? p.equity : i === close ? lastEquity[p.id] : h.equity,
       cash: p.cash,
       realizedPl: p.realizedPl ?? 0,
     }));
@@ -228,7 +257,6 @@ export function buildBook(name) {
       }
     }
   }
-  const lastEquity = Object.fromEntries(input.participants.map((p) => [p.id, p.lastEquity]));
   return {
     generatedAt: new Date(INSTANT).toISOString(),
     members: input.members,
@@ -238,6 +266,7 @@ export function buildBook(name) {
     subscriptions,
     history,
     lastEquity,
+    closedToday,
     market: { expirations: input.market?.expirations ?? [], symbols },
   };
 }

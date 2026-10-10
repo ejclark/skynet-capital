@@ -276,24 +276,29 @@ export function routeSlug(route) {
 
 const USAGE =
   "usage: census.mjs --run <compose dir> --world <name> --viewer <who> --out <fresh dir>" +
-  " [--viewport phone,desktop] [--cap 60] [--route <path> …  (replaces the world's routes)]";
+  " [--viewport phone,desktop] [--cap 60] [--route <path> …  (replaces the world's routes)]" +
+  " [--clock <zone>,<locale>  (the member's; default the owner's)]";
 
 /** Parse the census CLI. Viewports default to both frames; `--route` (repeatable) replaces the
  *  world's list with the paths given — any path of the app, a route outside the list included. */
 export function censusArgs(argv) {
   const out = { viewports: ["phone", "desktop"], cap: DEFAULT_CAP, routes: [] };
+  const set = {
+    "--run": (v) => (out.run = v),
+    "--world": (v) => (out.world = v),
+    "--viewer": (v) => (out.viewer = v),
+    "--out": (v) => (out.out = v),
+    "--route": (v) => out.routes.push(v),
+    "--viewport": (v) => (out.viewports = v.split(",").filter(Boolean)),
+    "--cap": (v) => (out.cap = Number(v)),
+    "--clock": (v) => (out.clock = v),
+  };
   for (let i = 0; i < argv.length; i += 2) {
     const [flag, value] = [argv[i], argv[i + 1]];
     if (value === undefined || value.startsWith("--"))
       throw new Error(`${flag} needs a value\n${USAGE}`);
-    if (flag === "--run") out.run = value;
-    else if (flag === "--world") out.world = value;
-    else if (flag === "--viewer") out.viewer = value;
-    else if (flag === "--out") out.out = value;
-    else if (flag === "--route") out.routes.push(value);
-    else if (flag === "--viewport") out.viewports = value.split(",").filter(Boolean);
-    else if (flag === "--cap") out.cap = Number(value);
-    else throw new Error(`unknown flag ${flag}\n${USAGE}`);
+    if (!Object.hasOwn(set, flag)) throw new Error(`unknown flag ${flag}\n${USAGE}`);
+    set[flag](value);
   }
   for (const k of ["run", "world", "viewer", "out"]) {
     if (!out[k]) throw new Error(`--${k} is required\n${USAGE}`);

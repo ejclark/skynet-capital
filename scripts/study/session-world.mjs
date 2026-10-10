@@ -20,6 +20,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_CLOCK } from "./clock.mjs";
 import { answerFrom } from "./payloads.mjs";
 
 const NAME = /^[a-z0-9-]+$/;
@@ -32,8 +33,8 @@ function viewersIn(dir) {
     .sort();
 }
 
-/** A composed world, read from its compose run directory. */
-function composedWorld(name, run, viewer) {
+/** A composed world, read from its compose run directory, on a member's clock. */
+function composedWorld(name, run, viewer, clock) {
   const root = resolve(run);
   const manifestPath = join(root, "manifest.json");
   if (!existsSync(manifestPath)) throw new Error(`${root} is not a compose run (no manifest.json)`);
@@ -46,16 +47,17 @@ function composedWorld(name, run, viewer) {
   if (!viewers.includes(who)) {
     throw new Error(`world ${name} has no viewer ${who} in this run (it has: ${viewers})`);
   }
-  return { name, run: root, viewer: who, viewers, pinnedInstant: manifest.instant };
+  return { name, run: root, viewer: who, viewers, pinnedInstant: manifest.instant, clock };
 }
 
 /**
- * Resolve `--world <name>` (+ `--run <compose dir>`, `--viewer <who>`) to what `open` takes.
- * A composed world asked for without a run is refused with the command that makes one.
+ * Resolve `--world <name>` (+ `--run <compose dir>`, `--viewer <who>`, `--clock`) to what `open`
+ * takes. A composed world asked for without a run is refused with the command that makes one.
+ * `clock` is the member's (./clock.mjs → parseClock; default the owner's).
  */
-export async function loadWorld(name, { run, viewer } = {}) {
+export async function loadWorld(name, { run, viewer, clock = DEFAULT_CLOCK } = {}) {
   if (!NAME.test(name)) throw new Error(`bad world name ${name}`);
-  if (run) return composedWorld(name, run, viewer);
+  if (run) return composedWorld(name, run, viewer, clock);
   const mod = await import(new URL(`./worlds/${name}.mjs`, import.meta.url).href);
   const w = mod.world ?? mod.default;
   const resolved = typeof w === "function" ? await w() : w;
@@ -79,6 +81,7 @@ export async function openComposed(world, frame, out) {
     at: world.pinnedInstant,
     frame,
     out,
+    clock: world.clock ?? DEFAULT_CLOCK,
   });
   // signIn rides along: a census fresh load clears cookies and must land the member signed in again.
   return {

@@ -57,6 +57,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
+import { roundClock } from "./clock.mjs";
 import { FILES, SESSIONS } from "./round-contract.mjs";
 import { adoptSource } from "./round-control.mjs";
 import {
@@ -145,6 +146,7 @@ function context(opts, seams = {}) {
   const out = resolve(opts.out);
   mkdirSync(out, { recursive: true });
   const callers = new Map();
+  const matrix = selectMatrix(p, opts);
   const ctx = {
     opts,
     p,
@@ -155,8 +157,14 @@ function context(opts, seams = {}) {
     roles: ROLES,
     sealed: resolve(opts.sealed),
     stub: opts.stub ? resolve(opts.stub) : null,
-    matrix: selectMatrix(p, opts),
+    matrix,
     censuses: censusPlan(p, opts),
+    // One clock for the round, from the members' own files (clock.mjs): the census, the facts
+    // sheet and every session read the page on it.
+    clock: roundClock(
+      matrix.map((r) => r.member),
+      join(HERE, "docs/members"),
+    ),
     dir: (step) => {
       const d = join(out, step);
       mkdirSync(d, { recursive: true });

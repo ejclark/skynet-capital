@@ -70,6 +70,15 @@ Every blind role first passes `roles/canary.md`.
   The one allowed exception is the action name `scroll` in `roles/actor.md`.
 - **Tasks name a goal and a reportable fact, never a route.** Where the member found it is measured, not graded.
 - **Success comes from the oracle,** never the member's claim: the fact reported, plus the place it lives seen on screen.
+  The oracle reads the answer the way a person wrote it: a date in any common form ("6 November
+  2026", "Nov 6", "11/6") is that calendar day; an amount beside its labelled parts ("$20,111
+  cash") or a rounded restatement ("about $25,200 — $25,212 to be exact") is still one answer;
+  only bare amounts in a list, or two joined by "or", are a guess (`oracle.mjs`, #5009).
+- **The page runs on the member's clock.** Each member file's §2 may declare a `Clock:` line
+  (zone · language); a member without one keeps the owner's (the file titled "— the owner").
+  `scripts/study/clock.mjs` reads it; the census, the facts sheet and every session take the same
+  `--clock`, and a round whose members keep different clocks is refused — an answer region is
+  text on screen, so they must all read one screen.
 - **Primes are tagged in advance.** A member card quote that hints at a key item is reported as primed recall, separately.
 - **Fixes after the pin don't spend the test.** The study runs against a pinned commit, and the fixed build is the negative control.
 
@@ -116,10 +125,13 @@ Three model-free tools make the blind roles' packets, so nobody chooses what an 
 
 ```sh
 npx tsx scripts/study/census.mjs --run <compose dir> --world <world> --viewer <who> --out <fresh dir> \
-  [--viewport phone,desktop] [--cap 60] [--route <path> …]
+  [--viewport phone,desktop] [--cap 60] [--route <path> …] [--clock <zone>,<locale>]
 node scripts/study/harvest.mjs --out <dir> [--facts <facts.json>] <census dir> [<census dir> …]
-npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--viewer <who> …] --out <facts.json>
+npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--viewer <who> …] \
+  [--clock <zone>,<locale>] --out <facts.json>
 ```
+
+`--clock` defaults to the owner's; a round passes its members' (see *Rules*).
 
 - **Census** (the experts' input). For each route the world's surfaces list names for that viewer,
   it walks the page screen by screen and lists every control from Chromium's accessibility tree
@@ -144,11 +156,19 @@ npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--vi
   payloads a viewer's page is served (never the inputs JSON), with the oracle's answer shape and an
   `answerRegion` — text the page prints where the fact is shown (an order's row from its
   date-and-time cell, so two like orders never share one). `weak` marks a region that is a bare
-  short number. Days are New York days, as the page shows them. The app's own formatters come from
-  the checkout that composed the run (manifest `checkout` + `commit`), refused if it has moved.
-  `harvest.mjs --facts` says which regions the walk actually saw — within one row or block, as the
-  oracle reads one element; a fact whose region shows only after a control is operated is found in
-  the census's revealed text, and one no screen shows cannot be graded.
+  short number. **Text as rendered:** a time the page formats itself is written on the member's
+  clock, as their screen shows it; a string the server formatted is copied as served. A fact the
+  page shows in more than one place carries a region for each — an order also as its league-feed
+  row (`/api/wire`, the server's own stamp), a position's next event also as a calendar strip
+  prints it ("CPI report Wed Oct 14") and as the Events agenda titles a held name's print ("MSFT
+  earnings print"), a playbook's verdict also as the bot page's roll call says it ("On, reading live
+  price and sentiment every pass…", whose lead clause answers it too). Days are the member's days.
+  The app's own formatters come from the checkout that composed the run (manifest `checkout` +
+  `commit`), refused if it has moved. `harvest.mjs --facts` says which regions the walk actually
+  saw — within one row or block, as the oracle reads one element, and within the fact's own world;
+  a fact whose region shows only after a control is operated is found in the census's revealed
+  text. **A fact no census screen shows is never handed to the task author** (`regions.json`
+  `seen` → `round-plan.mjs` → `gradableFacts`): its member could be right and still fail.
 
 The census, like a member session, runs against the pinned build: `pin.mjs prepare`, then run it in
 the pin's directory with `--run .study-run`.
@@ -332,6 +352,11 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    each fix removed, not only the item.
 2. `scripts/study/worlds/<area>-*.mjs`: compose payloads from the real builders at the pin, one pinned
    instant, full-URL stubs. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
+   Derive, never type, any figure the page shows two ways: yesterday's closing equity is cash plus
+   each position at its `lastday` (`worlds/book.mjs` → `yesterdayEquity`), and compose refuses a
+   world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
+   booked today on a position already closed is the one honest gap: declare it as the
+   participant's `closedToday` and say so in the input's comment.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.

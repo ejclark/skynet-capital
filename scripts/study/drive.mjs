@@ -4,7 +4,7 @@
 //   node scripts/study/drive.mjs --run <compose run dir> --world <name> --viewer <viewer>
 //        --viewport phone|desktop --task <task.json> --card <card.md>
 //        --actor scripted:<actions.json>|sealed --out <dir> [--dry-run] [--stub <dir>]
-//        [--roles <dir>]
+//        [--roles <dir>] [--clock <zone>,<locale>]
 //
 // THE LOOP: frame (the viewport JPEG) → the actor's turn → that action through the recorder →
 // append the turn and the trace record → repeat, until the member says `done` or `give_up`, or the
@@ -30,6 +30,9 @@
 // docs/members/study/roles (a pinned run's tree may predate them; scripts/study/round.mjs passes
 // its own).
 //
+// THE CLOCK: the page runs in the member's zone and language (`--clock`, ./clock.mjs — default the
+// owner's; a round passes the members' own), recorded on summary.json.
+//
 // Needs a built app (`npm run build --prefix app`) and a compose run; run from the repo root. It
 // re-runs itself under tsx (the world server imports the server's TypeScript).
 
@@ -40,6 +43,7 @@ import { pathToFileURL } from "node:url";
 import { VIEWPORTS } from "../crawl/steps.mjs";
 import { actorMessage, easeMessage } from "./actor-sealed.mjs";
 import { easeProblems, parseScript, toAction, turnProblems } from "./actor-turn.mjs";
+import { parseClock } from "./clock.mjs";
 import { textTarget } from "./measure-text.mjs";
 import { taskMetrics } from "./metrics.mjs";
 import { grade } from "./oracle.mjs";
@@ -53,7 +57,7 @@ const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 const USAGE =
   "usage: drive.mjs --run <dir> --world <name> --viewer <who> --viewport phone|desktop " +
   "--task <task.json> --card <card.md> --actor scripted:<actions.json>|sealed --out <dir> [--dry-run] " +
-  "[--stub <dir>] [--roles <dir>]";
+  "[--stub <dir>] [--roles <dir>] [--clock <zone>,<locale>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 function driveArgs(argv) {
@@ -73,6 +77,7 @@ function driveArgs(argv) {
     dryRun: argv.includes("--dry-run"),
     stub: get("--stub"),
     roles: get("--roles") ?? ROLES,
+    clock: parseClock(get("--clock")),
   };
   const missing = ["run", "world", "viewer", "task", "card", "actor", "out"].filter(
     (k) => !opts[k],
@@ -187,6 +192,7 @@ function summarise({ opts, task, world, session, cap, turns, ease, texts }) {
     viewer: world.viewer,
     viewport: opts.viewport,
     pinnedInstant: world.pinnedInstant,
+    clock: world.clock,
     run: world.run,
     task: task.id,
     actor: opts.actor,
@@ -225,7 +231,11 @@ async function main(argv) {
   if (existsSync(join(out, "trace.jsonl")) || existsSync(join(out, "turns.jsonl")))
     throw new Error(`${out} already holds a run — give each run its own --out`);
   mkdirSync(out, { recursive: true });
-  const world = await loadWorld(opts.world, { run: opts.run, viewer: opts.viewer });
+  const world = await loadWorld(opts.world, {
+    run: opts.run,
+    viewer: opts.viewer,
+    clock: opts.clock,
+  });
   const session = await open({
     world,
     viewport: opts.viewport,

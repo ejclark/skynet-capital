@@ -93,4 +93,5 @@ export function censusArgs(argv: string[]): {
   viewports: string[];
   cap: number;
   routes: string[];
+  clock?: string;
 };

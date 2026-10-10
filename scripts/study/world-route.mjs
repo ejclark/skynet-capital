@@ -20,8 +20,9 @@
 //    a silent `{}`: a stub artifact must surface as a world defect, not as a member's finding.
 //
 // The clock is pinned in the page too (`page.clock.setFixedTime`, as scripts/crawl/phone-one.mjs
-// does), and the timezone is New York's, so server-composed timestamps, the browser's "now" and
-// every rendered time read the same instant on any machine. The 3D landmark renders when its
+// does), and the page's zone and language are the member's (`clock`, ./clock.mjs — default the
+// owner's), so the browser's "now" reads the same instant on any machine and every time the page
+// formats itself reads as it would on that member's own screen (#5009). The 3D landmark renders when its
 // bundle is built (`npm run build:scene`), as in shell.mjs.
 
 import { existsSync, readFileSync } from "node:fs";
@@ -34,6 +35,7 @@ import { clearSessionCookie, sessionTokenFromCookies } from "../../src/server/au
 import { createBoardChannel, streamBoardPatches } from "../../src/server/board-patch-routes.ts";
 import { gateRequest } from "../../src/server/dashboard-auth-gate.ts";
 import { resolveChromium, shooter } from "../shoot/lib.mjs";
+import { DEFAULT_CLOCK } from "./clock.mjs";
 import { routeRequest, wantsEventStream } from "./routing.mjs";
 import { SIGNED_OUT_PAGE } from "./signed-out.mjs";
 
@@ -130,6 +132,7 @@ function startServer(dist, streams, session) {
  * @param {string} opts.at              the world's pinned instant (ISO), also the page's clock
  * @param {{viewport: {width: number, height: number}, hasTouch: boolean}} opts.frame  a VIEWPORTS entry
  * @param {string} [opts.out]           where `shoot(tag)` writes frames
+ * @param {{timeZone: string, locale: string}} [opts.clock]  the member's clock (./clock.mjs)
  * @returns {Promise<{page, origin, shoot,
  *                    session: {unstubbed: string[], writes: object[], offsite: string[]},
  *                    reframe: (frame) => Promise<void>, signIn: () => Promise<void>,
@@ -141,7 +144,7 @@ export async function openWorld({
   frame,
   out = ".",
   colorScheme = "dark",
-  timezoneId = "America/New_York",
+  clock = DEFAULT_CLOCK,
 }) {
   const dist = resolve("app/dist");
   if (!existsSync(join(dist, "index.html"))) {
@@ -161,7 +164,12 @@ export async function openWorld({
 
   async function reframe(next) {
     if (context) await context.close();
-    context = await browser.newContext({ ...next, colorScheme, timezoneId, locale: "en-US" });
+    context = await browser.newContext({
+      ...next,
+      colorScheme,
+      timezoneId: clock.timeZone,
+      locale: clock.locale,
+    });
     await context.addCookies([{ ...SESSION_COOKIE, url: origin }]);
     page = await context.newPage();
     await page.clock.setFixedTime(new Date(at));
