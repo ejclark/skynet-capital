@@ -3,6 +3,7 @@ import {
   bookEventsIn,
   describeTouch,
   isHeadlineMacro,
+  nextOnBook,
   touchedPositions,
 } from "../../src/live/book-events";
 import type { DecisionDue, NextPrint, PositionEvent } from "../../src/live/desk";
@@ -243,6 +244,41 @@ describe("bookEventsIn — the book's own days (#3977 slice 4)", () => {
     ]);
     expect(decide[0]?.touches.map((t) => t.rowSymbol)).toEqual(["NVDA261016C00180000"]);
     expect(join(desk, rangeFor("2026-11-02", "week"), []).decide).toEqual([]);
+  });
+});
+
+describe("nextOnBook — what an empty range names (#5045)", () => {
+  const all = (desk: BookDesk) => join(desk, ALL);
+
+  it("is the earliest event on what you hold after the range — never a market-wide print", () => {
+    expect(nextOnBook(all(sauron), "2026-10-11")?.id).toBe("meta-2026-10-28-print");
+    expect(nextOnBook(all(dayTrader), "2026-10-11")?.id).toBe("aapl-iphone-duo-launch-2026-10-23");
+    // EEM has no print: the jobs report, CPI and the Fed are market-wide, so nothing is named.
+    expect(nextOnBook(all(eric), "2026-10-11")).toBeUndefined();
+  });
+
+  it("starts the day after the range ends, and is undefined when nothing later is dated", () => {
+    expect(nextOnBook(all(sauron), "2026-10-27")?.date).toBe("2026-10-28");
+    expect(nextOnBook(all(sauron), "2026-10-28")?.id).toBe("nvda-2026-11-19-print");
+    expect(nextOnBook(all(sauron), "2026-11-19")).toBeUndefined();
+  });
+
+  it("leads with a decision due on the same day as a held event", () => {
+    const due: BookDesk = {
+      desk: {
+        ...sauron.desk,
+        decisions: [
+          {
+            id: "lock-meta",
+            symbol: "META",
+            display: "META",
+            title: "Up 42%: consider locking some of it in",
+            due: { at: "2026-10-28", reason: "event", label: "Earnings Oct 28" },
+          },
+        ],
+      },
+    };
+    expect(nextOnBook(all(due), "2026-10-11")?.tier).toBe("decide");
   });
 });
 
