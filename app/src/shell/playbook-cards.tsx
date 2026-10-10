@@ -15,6 +15,7 @@ import {
   sinceText,
   UNMANAGED_WORDS,
 } from "../live/heartbeat";
+import { PlaybookOpen, WhenOpened } from "./playbook-open";
 import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
 
 /**
@@ -27,8 +28,9 @@ import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
  * playbooks in the Store.
  *
  * Each card carries its lane (#5073 slice 2): its answers across the week on the strip's own clock,
- * with ▲/▼ where it traded, the key to the shapes and the trades in words once opened. Not yet
- * here, each a later slice of #5073: the rule drawn as a picture, and what it holds.
+ * with ▲/▼ where it traded, the key to the shapes and the trades in words once opened. Opened, a
+ * named card also draws its rule as a picture, what the bot holds in its ticker and whose say-so it
+ * runs on (#5073 slice 3, `playbook-open.tsx`), read only once the card is first opened.
  */
 
 function changeHref(deskId: string): string {
@@ -196,10 +198,24 @@ function PlaybookRow({
       {...(drawn ? { lane: drawn.lane } : {})}
     >
       {drawn ? <LaneKey /> : null}
-      {drawn ? <LaneTrades trades={drawn.trades} /> : null}
       {fact.more ? <p className="pbb-why">{fact.more}</p> : null}
       {meta ? <p className="pbb-meta pbb-narrow">{meta}</p> : null}
-      <a className="hb-link" href={changeHref(deskId)}>
+      {card.playbookId ? (
+        <WhenOpened>
+          <PlaybookOpen
+            deskId={deskId}
+            playbookId={card.playbookId}
+            {...(card.mode ? { mode: card.mode } : {})}
+          />
+        </WhenOpened>
+      ) : null}
+      {drawn && drawn.trades.length > 0 ? (
+        <section className="pbo-block" aria-label="Its trades this week">
+          <h4 className="pbo-h">Its trades this week ({drawn.trades.length})</h4>
+          <LaneTrades trades={drawn.trades} />
+        </section>
+      ) : null}
+      <a className="hb-link pbo-change" href={changeHref(deskId)}>
         Change or pause it in R&amp;D ›
       </a>
     </Card>

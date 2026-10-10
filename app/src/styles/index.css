@@ -38,6 +38,8 @@
 /* after heartbeat.css, not alphabetical: the Playbooks section reuses its `.hb-*` log and link. */
 @import "./bot-playbooks.css";
 @import "./week-lanes.css";
+/* after desk.css and bot-playbooks.css: an opened card shows the phone position card at any width. */
+@import "./playbook-open.css";
 @import "./shadow-probes.css";
 @import "./glossary.css";
 @import "./hero-chart.css";

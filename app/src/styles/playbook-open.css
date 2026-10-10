@@ -1,0 +1,172 @@
+/* A playbook card, opened in full (#5073 slice 3): `shell/playbook-open.tsx` and the rule's
+ * pictures in `shell/playbook-rule.tsx`. Every state is a shape and a word (docs/BRAND.md →
+ * Accessibility): the kept side a solid band, the part-kept a thin line, the losing side hatched,
+ * the step the book is on a ring plus "you are here". Marks that carry meaning use --text or
+ * --muted; the accent is the one solid band, which is solid before it is teal. */
+
+.pbo {
+  display: contents;
+}
+.pbo-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+.pbo-h {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pbo-quote {
+  font-style: italic;
+}
+.pbo-call {
+  color: var(--muted);
+}
+.pbo-change {
+  align-self: flex-start;
+  padding-top: var(--space-2);
+}
+
+/* What it holds: the Overview's phone card, at every width — this column is phone-wide. */
+.pbo-holds .pos-cards {
+  display: grid;
+}
+.pbo-holds .pos-cards-key {
+  padding: 0 15px;
+}
+
+/* ── the pictures ──────────────────────────────────────────────────────────────────────────── */
+.pbr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* a reading measure, not a panel cap: the pictures' labels are set at text size, so past about a
+     phone-and-a-half the drawing only grows its type (the fluid shell's `ch` exception) */
+  max-width: 62ch;
+}
+.pbr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.pbr-caption {
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+
+.pbr-edge {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+.pbr-self {
+  stroke-dasharray: 3 3;
+}
+.pbr-arrowhead {
+  fill: var(--muted);
+}
+.pbr-edge-label,
+.pbr-sub,
+.pbr-zone {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  fill: var(--muted);
+}
+.pbr-node {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.pbr-num {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--text);
+}
+.pbr-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--text);
+}
+/* the step the book is on: a filled node inside a heavy ring, and the words under it */
+.pbr-stop[data-here] .pbr-node {
+  fill: var(--accent);
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.pbr-stop[data-here] .pbr-num {
+  fill: var(--surface);
+}
+.pbr-halo {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2.5;
+}
+.pbr-stop[data-here] .pbr-sub {
+  fill: var(--text);
+  font-weight: 700;
+}
+
+/* the price strip and the window: one axis, zones as shapes */
+.pbr-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.pbr-keep {
+  fill: var(--accent);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.pbr-part {
+  fill: var(--muted);
+}
+.pbr-lose {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+.pbr-hatch-line {
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.pbr-tick {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.pbr-tick-be {
+  stroke-dasharray: 2 2;
+}
+.pbr-fig {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: var(--text);
+}
+.pbr-fig-muted {
+  fill: var(--muted);
+  font-weight: 500;
+}
+.pbr-print {
+  font-size: 15px;
+  fill: var(--text);
+}
+.pbr-now-line {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.pbr-now-fig {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text);
+}
