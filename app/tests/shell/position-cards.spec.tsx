@@ -293,9 +293,43 @@ describe("PositionCards — the right-hand figures (#5059)", () => {
     renderBook();
     const key = document.querySelector(".pos-cards-key");
     expect(key).toHaveAttribute("aria-hidden", "true");
-    expect(seen(key as HTMLElement)).toBe("value (today) total (return)");
     // The key is not a position: the list still holds one item per card.
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  // #5076, Eric on #5061: "the title headings mirrored the 2 column two row in the line item in a
+  // single word … gains in green, losses in red".
+  it("names each of the four figures in one word, in the figures' own 2 × 2", () => {
+    renderBook();
+    const word = (slot: string) =>
+      (document.querySelector(`.pos-cards-key-${slot}`) as HTMLElement).textContent;
+    // Each key word shares its grid slot's class stem with the figure it names on every card.
+    expect({
+      value: word("value"),
+      day: word("day"),
+      total: word("total"),
+      ret: word("ret"),
+    }).toEqual({ value: "Value", day: "Today", total: "P/L", ret: "Return" });
+    for (const slot of ["value", "day", "total", "ret"]) {
+      expect(word(slot)).not.toMatch(/\s|[()]/);
+      expect(document.querySelectorAll(`.pos-cards a .pos-card-${slot}`)).toHaveLength(3);
+    }
+  });
+
+  it("tones the gains and losses it names, each still signed", () => {
+    renderBook();
+    const nvda = card("NVDA");
+    for (const slot of ["day", "total", "ret"]) {
+      expect(nvda.querySelector(`.pos-card-${slot}`)).toHaveClass("tone-pos");
+      expect(nvda.querySelector(`.pos-card-${slot}`)?.textContent).toMatch(/\+/);
+    }
+    const put = card("CRWV \\$80");
+    for (const slot of ["day", "total", "ret"]) {
+      expect(put.querySelector(`.pos-card-${slot}`)).toHaveClass("tone-neg");
+      expect(put.querySelector(`.pos-card-${slot}`)?.textContent).toMatch(/−/);
+    }
+    // The value is what it's worth, not a gain or a loss: never toned.
+    expect(nvda.querySelector(".pos-card-value")?.className).not.toMatch(/tone-/);
   });
 });
 

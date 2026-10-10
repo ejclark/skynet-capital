@@ -236,6 +236,7 @@ export function PositionsBlotter({
               deskId={deskId}
               totalCount={positions.length}
               decayBySymbol={decay}
+              deltaBySymbol={delta}
               canTrade={canTrade}
               guide={guide}
             />

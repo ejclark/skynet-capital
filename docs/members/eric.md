@@ -178,8 +178,8 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j2 — take profit or hold
 
-1. `/app/u/human-eric` — the desk's blotter: EEM, Guidance on the row (desktop); the EEM card
-   (phone); he taps it. **WHEN the owner asks whether to take profit on a position, the app shall
+1. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
+   opens in place (desktop); the EEM card (phone); he taps it. **WHEN the owner asks whether to take profit on a position, the app shall
    offer that position's guidance from the blotter.** Judge: can this reader tell which position to
    act on? _(The cockpit's own blotter is the intended door.)_
 2. `/app/trade?desk=human-eric&symbol=EEM&section=guidance` — the Guidance pane for EEM. Offline:

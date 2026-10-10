@@ -148,9 +148,10 @@
 .blotter-scroll {
   overflow-x: auto;
   /* A size container so a phone-width "why" panel can be exactly as wide as the visible table
-     (`100cqw`, below) rather than the whole sideways-scrolling one. Safe: a block's width already
-     comes from its column, never from the table inside it. */
-  container-type: inline-size;
+     (`100cqw`, below) rather than the whole sideways-scrolling one, and so the positions table can
+     pick its columns by its own width (`positions-columns.css`, #5071). Safe: a block's width
+     already comes from its column, never from the table inside it. */
+  container: blotter / inline-size;
 }
 table.blotter {
   width: 100%;
@@ -159,8 +160,8 @@ table.blotter {
   min-width: 520px;
 }
 /* Positions only (positions-table.tsx) — see that file's header comment for why: locks every
-   column's width from its `<colgroup>` so opening/closing the lots accordion can never resize a
-   column out from under the rest of the row. */
+   column's width from its `<colgroup>` so opening a row can never resize a column out from under
+   the rest of the table. */
 .blotter-fixed {
   table-layout: fixed;
 }
@@ -194,83 +195,6 @@ table.blotter {
   font-size: 10.5px;
   color: var(--muted);
 }
-/* Lot-breakdown accordion (#3186 slice 1, restyled #3186 slice 2, slice 3) — the whole symbol
-   header is the trigger, not a separate labeled link (live-review: a small "N lots" text read as
-   unexpected custom behavior, and "lots" as unexplained jargon). Click anywhere on the symbol;
-   the chevron shows state, sharing the fold-col chevron's icon-rotates-on-expand language so both
-   disclosure controls on a row read as the same pattern. */
-.sym-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  border: none;
-  background: none;
-  padding: 0;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.sym-header:hover .sym {
-  color: var(--accent);
-}
-/* "3 buys" (#3689 slice 2) — the lots accordion's plain-language handle: you bought this at three
-   different times and prices. The row's chevron still opens it; the chip says what's inside. */
-.buys-chip {
-  flex-shrink: 0;
-  font-size: 11px;
-  line-height: 1.5;
-  padding: 0 7px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  color: var(--accent);
-  white-space: nowrap;
-}
-.sym-header svg {
-  color: var(--muted);
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
-.sym-header[aria-expanded="true"] svg {
-  transform: rotate(90deg);
-}
-.sym-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-/* A single accent bar on the row's leading edge, not a border on every `td` — that drew a
-   vertical divider between EVERY column (Eric's live-review note: "distracting"). */
-.row-lot td {
-  background: var(--surface-2);
-}
-.row-lot td:first-child {
-  border-left: 3px solid var(--accent);
-}
-.lot-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-/* `.btn`'s `width: 100%` (gate.css) and `.mc-btn`'s `width: auto` (admin.css) are equal
-   specificity, so which one wins is source order, not intent — and during the table's own
-   column-width pass a percentage width is resolved as auto/min-content, which for wrapping text
-   collapses to its longest UNBROKEN WORD, not the full label. Two buttons collapsed that way
-   overlapped each other's text outright (Eric's live-review screenshot: "Close lot" and "Roll"
-   rendering on top of one another). The extra specificity here, not `!important`, is what beats
-   `.btn`'s rule reliably regardless of stylesheet order. */
-.lot-actions .btn {
-  width: auto;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-/* Roll's reason, said once under the buys it applies to (#3807 slice 2e, dead end 8). */
-.row-lot-why td {
-  background: var(--surface-2);
-  border-left: 3px solid var(--accent);
-}
 .lot-why {
   margin: 0;
   font-size: 12.5px;
@@ -290,10 +214,6 @@ table.blotter {
 }
 .expand-btn[aria-expanded="true"] svg {
   transform: rotate(90deg);
-}
-.row-more td {
-  background: var(--surface-2);
-  font-size: 12px;
 }
 .more-grid {
   display: grid;
@@ -337,12 +257,12 @@ table.blotter {
   margin: 0 0 10px;
 }
 
-/* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict).
-   The positions table's `<col>` elements carry `col-detail` too (positions-table.tsx), so the
-   wide rule names its element types: a bare `.col-detail { display: table-cell }` also matched
-   `col.col-detail`, and a non-column child of a `<colgroup>` is treated as `display: none` — the
-   four detail widths dropped out of the colgroup, every later width slid one column left, and the
-   action column was left with no width at all (0px at 1280, #4945). */
+/* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict) —
+   the Activity table's. The positions table picks its columns by its own width instead
+   (`positions-columns.css`, #5071). The wide rule names its element types: a bare
+   `.col-detail { display: table-cell }` would also match a `col.col-detail`, and a non-column child
+   of a `<colgroup>` is treated as `display: none`, so every later width slides one column left
+   (0px for the last column at 1280, #4945). */
 .col-detail {
   display: none;
 }
@@ -354,33 +274,12 @@ table.blotter {
   td.col-detail {
     display: table-cell;
   }
-  .fold-col,
-  .row-more {
-    display: none;
-  }
 }
 
-/* close action column + inline close panel (#738 — close from the portfolio) */
-/* Its width is the last `<col>` in positions-table.tsx: under `table-layout: fixed` a cell's
-   `min-width` is ignored, so a width set here would only look like it made room (#4945). */
-.act-col {
-  white-space: nowrap;
-  text-align: right;
-}
-/* The same `.btn` `width: 100%` trap `.lot-actions .btn` (above) closes, on the parent row: there
-   the stretched "Guidance" link filled the whole cell and shoved "Close all" past the table's
-   right edge (#4945). */
-.act-col .btn {
-  width: auto;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
+/* the inline close panel (#738 — close from the portfolio), in a row's opened detail since #5071 */
 .close-btn {
   font-size: 11px;
   padding: 4px 10px;
-}
-.row-close > td {
-  background: var(--surface-2);
 }
 .close-panel {
   display: flex;
@@ -467,19 +366,9 @@ table.blotter {
   font-size: 18px;
 }
 
-/* The beginner columns (#3689 slice 6): Total P/L with its return beneath at 80%, best/worst split
-   into a gain and a loss (signs and words carry it as well as tint), and the plain sub-lines under
-   a position's name. */
-.pl-cell b {
-  display: block;
-  font-weight: 700;
-}
-.pl-cell-ret {
-  display: block;
-  font-size: 11px;
-  opacity: 0.8;
-}
-/* best above worst, one line each: the sign and the word ("unlimited") carry which is which */
+/* The beginner columns (#3689 slice 6): best/worst split into a gain and a loss (signs and words
+   carry it as well as tint). Best above worst, one line each: the sign and the word ("unlimited")
+   carry which is which. */
 .best-worst span {
   display: block;
   white-space: nowrap;
@@ -496,14 +385,6 @@ table.blotter {
 }
 .blotter .muted {
   color: var(--muted);
-}
-.sym-sub--plain,
-.sym-sub--num {
-  display: block;
-}
-.sym-sub--num {
-  font-family: var(--mono);
-  font-size: 10.5px;
 }
 
 /* Holding steady as cards (#3689 slice 8, handoff 3b), laid out as Eric's row spec (#5059): at
@@ -601,13 +482,17 @@ table.blotter {
   color: var(--text);
   font-weight: 600;
 }
-/* The column key, once above the cards: muted words on the same two edges. */
+/* The column key, once above the cards: one word a figure on the figures' own two edges, set as
+   headings the way the desk table's are (#5076) — Value · Today over P/L · Return. */
 .pos-cards-key {
   row-gap: 0;
   padding: 0 15px;
   font-family: var(--mono);
   font-size: 10px;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 .pos-cards-key > span {
@@ -634,8 +519,8 @@ table.blotter {
   }
 }
 
-/* The activity row's "why" (#3687 slice 4): the inline row accordion, but always visible — unlike
-   .fold-col/.row-more above, which hide at wide widths because theirs is overflow detail. */
+/* The activity row's "why" (#3687 slice 4): the inline row accordion, but always visible — it is
+   the row's reason, not overflow detail. */
 .why-col {
   width: 28px;
 }

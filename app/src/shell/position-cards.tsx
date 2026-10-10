@@ -1,21 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
-import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
-import type { DeskPosition, Tone } from "../live/desk";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import type { DeskPosition } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
-import { type GreeksParts, greeksParts, type HoldingDecay } from "./holding-decay";
+import { greeksParts, type HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
-import { MINUS } from "./quote-change";
-
-/** The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash. */
-const withMinus = (figure: string) => figure.replace(/^-/, MINUS);
-
-/** Today's change for the bracket beside the value (#5041): signed dollars, or a dash when the
- *  day is flat or rounds to $0 — never a made-up "+$0". */
-function dayChange(p: DeskPosition): { tone: Tone; text?: string } {
-  if (p.dayTone === "flat" || /^[+-]?\$0$/.test(p.dayPl)) return { tone: "flat" };
-  return { tone: p.dayTone, text: withMinus(p.dayPl) };
-}
+import {
+  Bracketed,
+  dayChange,
+  GreeksLine,
+  isWritten,
+  PositionHead,
+  PositionSize,
+  ROW_KEY,
+  withMinus,
+} from "./position-row-spec";
 
 /** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
  *  Close / Roll row marked — #4947; a strike/expiry preset would seed a new order instead), shares
@@ -30,110 +29,6 @@ function tradeSearch(deskId: string, symbol: string) {
     : { desk: deskId, symbol };
 }
 
-/** The server's quantity ("-1", "1,200") as a whole count and a side. */
-function held(quantity: string): { readonly count: number; readonly short: boolean } {
-  const n = Number(quantity.replace(/[^0-9.-]/g, ""));
-  return { count: Math.abs(n), short: n < 0 };
-}
-
-const plural = (n: number, one: string) =>
-  `${n.toLocaleString("en-US")} ${one}${n === 1 ? "" : "s"}`;
-
-/** Line 1, left: "NVDA · $232.10" for shares, "CRWV $80 SHORT PUT · 29d" for an option. */
-function Head({ p }: { readonly p: DeskPosition }): ReactElement {
-  const occ = parseOccSymbol(p.symbol);
-  if (!occ) {
-    return (
-      <span className="pos-card-name">
-        <b>{p.symbol}</b>
-        <span aria-hidden="true"> · </span>
-        <span className="visually-hidden">, </span>
-        <span className="num">{p.price}</span>
-        <span className="visually-hidden"> a share</span>
-      </span>
-    );
-  }
-  const side = held(p.quantity).short ? "SHORT" : "LONG";
-  const days = p.expiresInDays;
-  return (
-    <span className="pos-card-name">
-      <b>{occ.underlying}</b> <span className="num">{occStrikeLabel(occ.strike)}</span>{" "}
-      <span className="pos-card-kind">
-        {side} {occ.type.toUpperCase()}
-      </span>
-      {days === undefined ? null : (
-        <>
-          <span className="pos-card-dte" aria-hidden="true">
-            {" · "}
-            {days === 0 ? "expires today" : `${days}d`}
-          </span>
-          <span className="visually-hidden">
-            , {days === 0 ? "expires today" : `${plural(days, "day")} left`}
-          </span>
-        </>
-      )}
-    </span>
-  );
-}
-
-/** Line 2, left: "130 shares (breakeven $223.98)", "1 contract (breakeven $77.45)". */
-function Size({ p }: { readonly p: DeskPosition }): ReactElement {
-  const { count, short } = held(p.quantity);
-  const size = p.isOption
-    ? plural(count, "contract")
-    : `${plural(count, "share")}${short ? " short" : ""}`;
-  return (
-    <span className="pos-card-sub">
-      <span className="visually-hidden">, </span>
-      {size}
-      {p.breakeven ? (
-        <>
-          <span aria-hidden="true"> (</span>
-          <span className="visually-hidden">, </span>
-          breakeven <span className="num">{p.breakeven}</span>
-          <span aria-hidden="true">)</span>
-        </>
-      ) : null}
-    </span>
-  );
-}
-
-/** Line 3, an option's only: "θ earns $11/day · Δ +$40 per $1", the figures in the text colour. */
-function GreeksLine({ theta, delta }: GreeksParts): ReactElement {
-  return (
-    <span className="pos-card-greeks">
-      <span className="visually-hidden">, </span>
-      {theta ? (
-        <>
-          θ {theta.verb} <span className="pos-card-greek-fig num">{theta.amount}</span>
-        </>
-      ) : null}
-      {theta && delta ? (
-        <>
-          <span aria-hidden="true"> · </span>
-          <span className="visually-hidden">, </span>
-        </>
-      ) : null}
-      {delta ? (
-        <>
-          Δ <span className="pos-card-greek-fig num">{delta}</span> per $1
-        </>
-      ) : null}
-    </span>
-  );
-}
-
-/** A right-hand figure in brackets, the brackets for the eye only. */
-function Bracketed({ children }: { readonly children: ReactNode }): ReactElement {
-  return (
-    <>
-      <span aria-hidden="true">(</span>
-      {children}
-      <span aria-hidden="true">)</span>
-    </>
-  );
-}
-
 /**
  * THE PHONE'S POSITIONS, AS ERIC'S ROW SPEC (#5059; round 2 of #5037, the positions surface,
  * question 2 slice 1). At ≤700px the wide table gives way to one card per position, in two lines:
@@ -146,9 +41,11 @@ function Bracketed({ children }: { readonly children: ReactNode }): ReactElement
  * A sold option's value is what it costs to close, a negative, and its return is against the
  * premium collected (the server's `returnPct`). The right-hand figures sit on two edges shared by
  * every card (one grid, subgridded through each card, in tabular digits), and a key above the
- * cards names the two columns once. Each figure keeps its sign, so hue never carries the direction
- * alone, and the link's name says each one in words (#5049). Each card is a 44px+ target that
- * opens the position on Trade, where closing it lives on a phone.
+ * cards names them once, one word a figure in the figures' own 2 × 2 (#5076: Value · Today over
+ * P/L · Return, `ROW_KEY`). Each figure keeps its sign, so hue never carries the direction alone,
+ * and the link's name says each one in words (#5049). The pieces are `position-row-spec.tsx`'s,
+ * shared with the desk table. Each card is a 44px+ target that opens the position on Trade, where
+ * closing it lives on a phone.
  *
  * Under the link, inside the same card, each position carries its guidance line (#5070,
  * `position-guidance-slot.tsx`): a sibling of the link, never inside it, so its own controls stay
@@ -170,19 +67,19 @@ export function PositionCards({
 }): ReactElement {
   return (
     <ul className="pos-cards">
-      {/* The column key: the links' names say each figure, so this is for the eye only. */}
+      {/* The column key, one word a figure on the figures' own edges (#5076): the links' names
+          say each figure in words, so this is for the eye only. */}
       <li className="pos-cards-key" aria-hidden="true">
-        <span className="pos-cards-key-value">value</span>{" "}
-        <span className="pos-cards-key-day">(today)</span>{" "}
-        <span className="pos-cards-key-total">total</span>{" "}
-        <span className="pos-cards-key-ret">(return)</span>
+        <span className="pos-cards-key-value">{ROW_KEY.value}</span>{" "}
+        <span className="pos-cards-key-day">{ROW_KEY.today}</span>{" "}
+        <span className="pos-cards-key-total">{ROW_KEY.pl}</span>{" "}
+        <span className="pos-cards-key-ret">{ROW_KEY.ret}</span>
       </li>
       {positions.map((p) => {
         const day = dayChange(p);
         const greeks = p.isOption
           ? greeksParts(decayBySymbol?.get(p.symbol), deltaBySymbol?.get(p.symbol))
           : {};
-        const writtenOption = p.isOption && held(p.quantity).short;
         return (
           <li key={p.symbol} className={guide ? "pos-card-guided" : undefined}>
             <Link
@@ -193,7 +90,7 @@ export function PositionCards({
               // table row's, which is still in the DOM, only hidden.
               data-pos-anchor={positionAnchor(p.symbol)}
             >
-              <Head p={p} />{" "}
+              <PositionHead p={p} />{" "}
               <span className="pos-card-value num">
                 <span className="visually-hidden">, value </span>
                 {withMinus(p.value)}
@@ -212,7 +109,7 @@ export function PositionCards({
                   </>
                 )}
               </span>{" "}
-              <Size p={p} />{" "}
+              <PositionSize p={p} />{" "}
               <span className={`pos-card-total num tone-${p.totalTone}`}>
                 <span className="visually-hidden">, total </span>
                 {withMinus(p.totalPl)}
@@ -220,7 +117,7 @@ export function PositionCards({
               {p.returnPct === "—" ? null : (
                 <span className={`pos-card-ret num tone-${p.totalTone}`}>
                   <span className="visually-hidden">
-                    , return {writtenOption ? "on premium " : ""}
+                    , return {isWritten(p) ? "on premium " : ""}
                   </span>
                   <Bracketed>{withMinus(p.returnPct)}</Bracketed>
                 </span>

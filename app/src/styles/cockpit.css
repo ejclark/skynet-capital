@@ -226,33 +226,6 @@
   color: var(--muted);
 }
 
-/* The book in the Overview grid's left column (`u.$id.index.tsx`): at ≥1200 the character card
- * takes 384px on the right, so the blotter reads as it does below 1100 — detail columns folded
- * behind each row's chevron — and the Position column gives up 40px (the `<col>` widths are
- * inline, hence the !important). That is 854px against the ~806px column at 1280 since the action
- * column grew to hold its buttons (#4945), so the table scrolls ~48px there; which columns stand
- * beside the tower is a design call held by #4943, not settled here. */
-@media (min-width: 1200px) {
-  .acct-book col.col-detail,
-  .acct-book th.col-detail,
-  .acct-book td.col-detail {
-    display: none;
-  }
-  .acct-book col.fold-col {
-    display: table-column;
-  }
-  .acct-book th.fold-col,
-  .acct-book td.fold-col {
-    display: table-cell;
-  }
-  .acct-book tr.row-more {
-    display: table-row;
-  }
-  .acct-book .blotter-fixed col:nth-child(2) {
-    width: 180px !important;
-  }
-}
-
 /* A sentence whose words are the way in (#3807 slice 2e — the zero-account head's "connect one in
  * Onboarding", Trade's empty state): the accent AND an underline, the shape never the hue alone
  * (BRAND.md → Accessibility). */
