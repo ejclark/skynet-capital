@@ -54,6 +54,9 @@ export interface NetWorthStatsView {
   /** "33% idle" and its number, for the roster's deployed · idle bar (#3689 slice 10). */
   readonly idle?: string;
   readonly idlePct?: number;
+  /** "$34,166" — what is not cash (the positions at their mark, net of anything sold), so it and
+   *  `cash` add to `value`; "-$550" when what was sold outweighs what is held (#5100). */
+  readonly invested?: string;
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {

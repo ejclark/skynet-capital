@@ -23,6 +23,7 @@ export function profileStubs(accounts) {
     windows: [],
     idle: "100% idle",
     idlePct: 100,
+    invested: "$0.00",
   };
   return {
     "/api/settings": { accounts },

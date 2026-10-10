@@ -192,4 +192,28 @@ describe("idle share (#3689 slice 10)", () => {
     expect(view.accounts[1]).toMatchObject({ idle: "0% idle" });
     expect(view.total).toMatchObject({ idle: "17% idle" });
   });
+
+  // #5100: the head's bar prints both of its parts in dollars — invested is everything that is
+  // not cash (the positions at their mark, net of anything sold), so the two add to the total.
+  it("says what is invested beside the cash, for each account and the book", () => {
+    const view = accountsNetWorthView("t", [
+      account({ id: "a", equity: 996_966, cash: 962_800 }),
+      account({ id: "b", equity: 100_000, cash: 100_000 }),
+    ]);
+    expect(view.accounts[0]).toMatchObject({ invested: "$34,166", cash: "$962,800" });
+    expect(view.accounts[1]).toMatchObject({ invested: "$0", idlePct: 100 });
+    expect(view.total).toMatchObject({ invested: "$34,166" });
+  });
+
+  it("signs a book that is net short — only sold options — rather than calling it nothing", () => {
+    // $255 collected for a put that now costs $550 to buy back: the positions are worth −$550
+    const view = accountsNetWorthView("t", [account({ id: "a", equity: 99_705, cash: 100_255 })]);
+    expect(view.accounts[0]).toMatchObject({ invested: "-$550", idlePct: 100 });
+  });
+
+  it("leaves invested out when the value or the cash is unknown, as it does the share", () => {
+    const view = accountsNetWorthView("t", [account({ id: "a", cash: undefined })]);
+    expect(view.accounts[0]?.invested).toBeUndefined();
+    expect(view.accounts[0]?.idlePct).toBeUndefined();
+  });
 });
