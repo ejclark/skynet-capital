@@ -77,7 +77,7 @@ function HeldNote({
   loading,
   error,
   positions,
-  held,
+  onBook,
   label,
   dated,
   next,
@@ -86,7 +86,8 @@ function HeldNote({
   readonly loading: boolean;
   readonly error: boolean;
   readonly positions: number;
-  readonly held: number;
+  /** Decisions due plus held events in view — a decision due is on what you hold too. */
+  readonly onBook: number;
   readonly label: string;
   /** Every event on what you hold, at any date; undefined until the calendar can vouch for a 0. */
   readonly dated: number | undefined;
@@ -100,7 +101,7 @@ function HeldNote({
   if (positions === 0)
     return <p className="note">No open positions on this account — market-wide prints only.</p>;
   if (dated === 0) return <p className="note">Nothing dated on what you hold yet.</p>;
-  if (held > 0) return null;
+  if (onBook > 0) return null;
   return (
     <>
       <p className="note">{label}: nothing on what you hold.</p>
@@ -151,7 +152,8 @@ export function EventsSection({
   // event a position carries on its own (the backstop) can be named before it does.
   const dated = everything.decide.length + everything.held.length;
   const vouched = research.isSuccess;
-  const quiet = !day && inView.decide.length + inView.held.length === 0;
+  const onBook = inView.decide.length + inView.held.length;
+  const quiet = !day && onBook === 0;
   const next = quiet ? nextOnBook(everything, horizon.range.end) : undefined;
   const named = events.filter((e) => e.symbols.length > 0).length;
   const rows = [...inView.decide, ...inView.held, ...inView.market].sort((a, b) =>
@@ -194,7 +196,7 @@ export function EventsSection({
           loading={desksLoading}
           error={desksError}
           positions={inView.positions}
-          held={inView.held.length}
+          onBook={onBook}
           label={rangeName(horizon.range, horizon.lens, day)}
           dated={dated > 0 || vouched ? dated : undefined}
           next={next ?? (quiet && vouched ? null : undefined)}
