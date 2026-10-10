@@ -66,7 +66,7 @@ journey/step · what · where `file:line` · severity · fix size · judge) and 
 ## Phone checks — `--phone-audit` and `npm run phone`
 
 Mobile-first is the house discipline on every information surface (CLAUDE.md), so the phone frame
-gets four checks of its own (`phone.mjs`), **off by default** — a plain crawl's ledger and maps stay
+gets five checks of its own (`phone.mjs`), **off by default** — a plain crawl's ledger and maps stay
 byte-comparable with run 0:
 
 ```bash
@@ -82,6 +82,7 @@ npm run phone -- /app/wire --at 2026-09-26T15:00:00Z   # pin the clock: a time-d
 |---|---|---|
 | `page-sideways-scroll` | the document is wider than the window (+4px tolerance) | high |
 | `overflow` | the outermost element whose content spills past its box with `overflow-x: visible` (the predicate copied from `scripts/layout-resize-scan.mjs`), named by the element inside it that reaches furthest right | medium |
+| `offscreen-left` | the outermost shown box with words or a control that starts left of x=0 — no scroll reaches it, and `scrollWidth` (the two rows above) only grows rightward. Skips a box wholly off the page (a parked skip link) and one an inner `overflow-x` box clips back on screen | medium |
 | `tap-target` | a control under 24×24 CSS px — WCAG 2.2 SC 2.5.8 (AA) with its exceptions: a link inside a sentence, a 24px circle on its centre that touches no other control, an unstyled native checkbox/radio; hidden, disabled, ≤1px and off-canvas elements are skipped | medium |
 | `tap-target-aaa` | every AA-passing control under 44×44 — SC 2.5.5 (AAA), advisory | low |
 | `input-zoom` | a text field, textarea or select under 16px — iPhone Safari zooms the page on focus (`--text-base` is 13px) | medium |
