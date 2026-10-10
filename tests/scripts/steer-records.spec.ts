@@ -119,6 +119,14 @@ describe("touch points, in Central time", () => {
     expect(touchPoint("2026-11-02T14:30:00Z").id).toBe("2026-11-02-am"); // 08:30 CST
   });
 
+  it("refuses to guess after midnight, so a late evening page never takes the morning's records", () => {
+    // 00:30 CDT on 10-10: last evening's page or this morning's? Only --tp can say.
+    expect(() => touchPoint("2026-10-10T05:30:00Z")).toThrow(
+      /--tp 2026-10-09-pm .*--tp 2026-10-10-am/,
+    );
+    expect(touchPoint("2026-10-10T10:00:00Z").id).toBe("2026-10-10-am"); // 05:00 CDT
+  });
+
   it("finds the next page across the CDT → CST switch", () => {
     expect(centralToUtc("2026-10-10", 16)).toBe("2026-10-10T21:00:00Z");
     expect(centralToUtc("2026-11-02", 8)).toBe("2026-11-02T14:00:00Z");

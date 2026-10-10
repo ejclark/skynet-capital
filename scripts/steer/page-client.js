@@ -19,6 +19,10 @@
   const timers = {};
   let db = null;
   let readOnly = false;
+  // Until the store answers, a tap is held here and written once it does — a tap in the first
+  // second would otherwise live only in this browser, and the read-back would never see it.
+  let connecting = true;
+  const held = new Map();
 
   const blank = () => ({ pick: null, react: {}, verdict: null, note: "" });
   const rec = (sec, key) => {
@@ -80,9 +84,14 @@
   }
   function save(sec, key) {
     saveLocal();
+    if (connecting) {
+      const r = state[sec][key];
+      held.set(`${sec}/${key}`, { sec, key, rec: { ...r, react: { ...r.react } } });
+      return status("Saved here; sending when the page connects");
+    }
     if (!db) return status("This browser only — Copy as text");
     const r = state[sec][key];
-    const d = TP.decisions.find((x) => x.key === key);
+    const d = sec === "decisions" ? TP.decisions.find((x) => x.key === key) : null;
     write(`tp/${ID}/${sec}/${key}`, {
       round: ID,
       section: sec,
@@ -215,10 +224,24 @@
         () => null,
       );
 
+  /** The store has answered (or never will): taps held while it was connecting go out now, over
+   *  whatever the store held for the same answer — they are newer than anything it had. */
+  function connected() {
+    connecting = false;
+    for (const { sec, key, rec: r } of held.values()) {
+      state[sec][key] = r;
+      if (!readOnly) save(sec, key);
+    }
+    held.clear();
+  }
+
   async function boot() {
     const [d, user] = await Promise.all([use("db"), use("user")]);
     db = d;
-    if (!db) return status("This browser only — Copy as text");
+    if (!db) {
+      connected();
+      return status("This browser only — Copy as text");
+    }
     if (user && (await user.can("data.write")) === false) readOnly = true;
     const saved = await db
       .doc(`tp/${ID}`)
@@ -232,12 +255,17 @@
       const taps = [...new Set((saved.taps || []).concat(meta.taps))].sort((a, b) => a - b);
       Object.assign(meta, saved, { shown: TP.shown, taps });
     }
+    const early = held.size;
+    connected();
     if (!(meta.openedAt || readOnly)) {
       meta.openedAt = new Date().toISOString();
       saveMeta(true);
-    }
+    } else if (early && !readOnly) saveMeta(false); // the held taps' log, which never reached it
     saveLocal();
     status("Saves to this page as you go");
   }
-  boot().catch(() => status("This browser only — Copy as text"));
+  boot().catch(() => {
+    connected();
+    status("This browser only — Copy as text");
+  });
 })();
