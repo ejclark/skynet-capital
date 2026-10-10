@@ -21,6 +21,9 @@
 @import "./decision-pager.css";
 @import "./decisions.css";
 @import "./desk.css";
+/* right after desk.css, not alphabetical: its rules were desk.css's own tail until #5022 shared them
+ * with the Activity table, so they keep their place in the cascade. */
+@import "./landing.css";
 @import "./draft-builder.css";
 @import "./order-event-line.css";
 @import "./feedback.css";
