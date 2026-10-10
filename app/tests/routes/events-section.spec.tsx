@@ -225,6 +225,23 @@ describe("the range heads Events, and no other section carries a calendar (#5074
     expect(screen.getByText(/^Wed, Oct 28 · 1 on what you hold/)).toBeInTheDocument();
   });
 
+  it("lets a shared day lens go: Show all widens to its week in one write", async () => {
+    const router = mountAccounts("/accounts?section=events&account=sauron&on=2026-10-28&span=day");
+    await screen.findByText(/^Wed, Oct 28 · 1 on what you hold/);
+    await userEvent.click(screen.getByRole("button", { name: "Show all of Oct 26 – Nov 1 ×" }));
+    await waitFor(() => expect(router.state.location.search).not.toHaveProperty("span"));
+    expect(router.state.location.search).toMatchObject({ on: "2026-10-28" });
+    expect(await screen.findByText(/^Oct 26 – Nov 1 · 1 on what you hold/)).toBeInTheDocument();
+  });
+
+  it("lets a shared day lens go: the pressed Week still widens to the week", async () => {
+    const router = mountAccounts("/accounts?section=events&account=sauron&on=2026-10-28&span=day");
+    await screen.findByText(/^Wed, Oct 28 · 1 on what you hold/);
+    await userEvent.click(screen.getByRole("button", { name: /^Week/ }));
+    await waitFor(() => expect(router.state.location.search).not.toHaveProperty("span"));
+    expect(await screen.findByText(/^Oct 26 – Nov 1 · 1 on what you hold/)).toBeInTheDocument();
+  });
+
   it("shows no calendar on Overview or Activity — their content never moves with a range", async () => {
     mountAccounts(`/accounts?account=sauron&${OCTOBER}`);
     await screen.findByTestId("blotter");

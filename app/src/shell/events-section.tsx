@@ -6,7 +6,8 @@ import { type BookDesk, type BookEvent, bookEventsIn, nextOnBook } from "../live
 import { bookLanes, bookLens, countsAround } from "../live/book-lanes";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, inRange, rangeFor, stepAnchor } from "../live/horizon-range";
-import { fetchResearchCalendar } from "../live/research";
+import { useRefineSearch } from "../live/refine-search";
+import { DEFAULT_LENS, fetchResearchCalendar } from "../live/research";
 import { BookLanesPicture } from "./book-lanes";
 import { BookRangeHead, rangeWords } from "./book-range-head";
 import { AgendaRow } from "./events-agenda";
@@ -205,6 +206,18 @@ export function EventsSection({
     a.date < b.date ? -1 : a.date > b.date ? 1 : TIER_ORDER[a.tier] - TIER_ORDER[b.tier],
   );
   const note = HOLD_NOTE[state];
+  // A shared day lens (`span=day`, set on R&D or Trade) reads here as its week with that day
+  // picked, so letting the pick go has to drop the day lens with `?events=`, in one write. Without
+  // it, Show all, a second tap on the mark and the pressed Week would all do nothing.
+  const refine = useRefineSearch();
+  const clearPick = (): void =>
+    horizon.lens === "day"
+      ? refine((prev) => ({
+          ...prev,
+          events: undefined,
+          span: DEFAULT_LENS === "week" ? undefined : "week",
+        }))
+      : onPickDay(undefined);
 
   return (
     <section className="book-cal" aria-label="Events">
@@ -215,7 +228,7 @@ export function EventsSection({
         closures={closures}
         counts={countsAround(everything, horizon.anchor)}
         onStep={(direction) => horizon.setOn(stepAnchor(horizon.anchor, lens, direction))}
-        onLens={horizon.setLens}
+        onLens={(next) => (next === horizon.lens ? undefined : horizon.setLens(next))}
       />
       <div className="book-cal-body">
         <BookLanesPicture
@@ -227,7 +240,7 @@ export function EventsSection({
           today={horizon.today}
           label={`Dates on what you hold, ${title}`}
           {...(note ? { note: <p className="note lanes-note">{note}</p> } : {})}
-          onPick={(date) => onPickDay(date === picked ? undefined : date)}
+          onPick={(date) => (date === picked ? clearPick() : onPickDay(date))}
           onJump={horizon.setOn}
           onToday={() => horizon.setOn(undefined)}
         />
@@ -235,7 +248,7 @@ export function EventsSection({
           <p className="agenda-head">
             {headLine(picked ? dayName(picked) : title, state, onBook, inView.market.length)}
             {picked ? (
-              <button type="button" className="agenda-clear" onClick={() => onPickDay(undefined)}>
+              <button type="button" className="agenda-clear" onClick={clearPick}>
                 Show all of {title} ×
               </button>
             ) : null}

@@ -98,7 +98,8 @@ export function BookRangeHead({
                 className="range-option"
                 aria-pressed={pressed}
                 aria-label={`${NAME[option]} — ${String(count)} ${count === 1 ? "date" : "dates"} on what you hold`}
-                onClick={() => (pressed ? undefined : onLens(option))}
+                // Pressed still reports: a shared day lens draws as Week, and a tap on it widens.
+                onClick={() => onLens(option)}
               >
                 {pressed ? (
                   <span className="range-check" aria-hidden="true">
