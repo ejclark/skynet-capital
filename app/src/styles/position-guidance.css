@@ -205,6 +205,14 @@
   font-weight: 600;
   cursor: pointer;
 }
+/* At eight views the save is refused (`saved-views.ts`): drawn as a door that can't open, the
+   reason in its title, as "+ New view" does. Weight drops with the hue, so it never rides colour
+   alone. */
+.pos-sort-save:disabled {
+  color: var(--muted);
+  font-weight: 500;
+  cursor: not-allowed;
+}
 
 /* Filter, opened in place under the head: no sheet, no pop-up. */
 .pos-filter-panel {

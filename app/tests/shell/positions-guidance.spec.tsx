@@ -258,6 +258,24 @@ describe("Worth a look first — a sort, a chip ⇄ the sort:look token", () => 
     );
     expect(screen.queryByRole("button", { name: "Save as a view" })).not.toBeInTheDocument();
   });
+
+  it("says why Save as a view can't save once the account holds eight views, like + New view", () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({
+      id: `v${i}`,
+      name: `View ${i}`,
+      q: `v${i}`,
+    }));
+    useSavedViews.setState({ byDesk: { sauron: eight } });
+    blotter("sort:look");
+    const save = screen.getByRole("button", { name: "Save as a view" });
+    expect(save).toBeDisabled();
+    expect(save).toHaveAttribute("title", "Eight views is plenty — delete one first");
+    expect(
+      within(screen.getByRole("navigation", { name: "Saved views" })).getByRole("button", {
+        name: "+ New view",
+      }),
+    ).toBeDisabled();
+  });
 });
 
 describe("Filter — opens in place with a Mark line", () => {
