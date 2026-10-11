@@ -278,6 +278,43 @@ describe("the lanes picture — what the range drives", () => {
     expect(key).not.toContain("estimated date");
   });
 
+  it("draws your days as a bold outlined tile and leaves market-wide marks bare (#5098)", async () => {
+    // Oct 28 is the hard case: META prints the same day the Fed decides, one mark on each lane.
+    mountAccounts(`/accounts?section=events&account=sauron&${OCTOBER}`);
+    await screen.findByText("META earnings print");
+    const picture = screen.getByRole("figure", { name: "Dates on what you hold, October 2026" });
+    const tile = (name: string | RegExp) =>
+      within(picture).getByRole("button", { name }).classList.contains("lane-mark--tile");
+    expect(tile("Wed, Oct 28: META earnings print")).toBe(true);
+    expect(tile(/^Wed, Oct 28: FOMC rate decision/)).toBe(false);
+    expect(tile(/^Wed, Oct 14: CPI/)).toBe(false);
+    // The key draws what the frame draws: the held glyph on its tile, the market-wide ring bare.
+    const key = picture.querySelector(".lanes-key");
+    expect(key?.querySelector(".lane-tile .lane-glyph--confirmed")).toBeTruthy();
+    expect(key?.querySelector(".lane-glyph--market")?.closest(".lane-tile")).toBeNull();
+  });
+
+  it("puts a decision due on its tile too — a decision on a position is on what you hold", async () => {
+    extra = {
+      sauron: {
+        positions: [],
+        decisions: [
+          {
+            id: "meta-print",
+            symbol: "META",
+            display: "META",
+            title: "Hold or trim into the print",
+            due: { at: "2026-10-27", reason: "event", label: "Due Oct 27" },
+          },
+        ],
+      },
+    };
+    mountAccounts(`/accounts?section=events&account=sauron&${OCTOBER}`);
+    const due = await screen.findByRole("button", { name: /^Tue, Oct 27: / });
+    expect(due.classList.contains("lane-mark--tile")).toBe(true);
+    expect(due.querySelector(".lane-glyph--decide")).toBeTruthy();
+  });
+
   it("picks a day with a tap on its mark (?events=), and Show all clears it", async () => {
     const router = mountAccounts(`/accounts?section=events&account=sauron&${OCTOBER}`);
     await screen.findByText("META earnings print");

@@ -34,6 +34,13 @@ import type { DayRange, MarketClosure } from "../live/horizon-range";
  * · ○ market-wide · hatched = market closed, an early close hatched to half height), and the key
  * names only what the frame draws. Words ride beside a mark only where they fit — the list under
  * the picture says every date in words, so a crowded quarter draws glyphs and nothing overlaps.
+ *
+ * YOUR DAYS ON A TILE (#5098; #3977 option C, Eric's pick 2026-10-10): every mark on a holding's
+ * lane sits on a bold outlined square, and the market-wide lane's rings stay bare — shape and
+ * weight, no new colour ("reserve color to add to depth at a later time"). The test is whether a
+ * member spots their own days at a glance in a busy month; falsifier on #3977: one still missed by
+ * 2026-11-30. Moving between ranges blends — a mark both ranges hold slides to its new day, the
+ * rest fade in — on the motion tokens, which reduced motion zeroes (`theme.css`).
  */
 
 export const GLYPH_WORD: Record<LaneGlyph, string> = {
@@ -81,6 +88,26 @@ function useWidth(ref: RefObject<HTMLElement | null>): number {
 
 const pct = (n: number): string => `${String(Math.round(n * 10000) / 100)}%`;
 
+/** How far a mark's words sit from its centre: clear of the bare glyph, or of the tile's edge. */
+const WORDS_PAD = { bare: 9, tile: 16 } as const;
+
+/** A glyph as the frame draws it — on its tile when the day is on what you hold. */
+function MarkGlyph({
+  glyph,
+  tile,
+}: {
+  readonly glyph: LaneGlyph;
+  readonly tile: boolean;
+}): ReactElement {
+  return tile ? (
+    <span className="lane-tile">
+      <LaneGlyphIcon glyph={glyph} />
+    </span>
+  ) : (
+    <LaneGlyphIcon glyph={glyph} />
+  );
+}
+
 const SHORT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const short = (iso: string): string => SHORT.format(new Date(`${iso}T00:00:00Z`));
 
@@ -103,8 +130,9 @@ function Backdrop({ frame }: { readonly frame: Frame }): ReactElement {
   const at = (date: string): number => frame.days.indexOf(date);
   return (
     <>
+      {/* Keyed by the day, not its index, so a range change slides the same day's rule. */}
       {frame.rules.map((i) => (
-        <span key={`r${String(i)}`} className="lane-rule" style={{ left: pct(i / n) }} />
+        <span key={`r${frame.days[i]}`} className="lane-rule" style={{ left: pct(i / n) }} />
       ))}
       {frame.closures.map((c) => (
         <span
@@ -137,12 +165,14 @@ function LaneRow({
   readonly onPick: (date: string) => void;
   readonly onJump: (date: string) => void;
 }): ReactElement {
+  // A holding's lane: every day on it is on what you hold, so each mark sits on a tile.
+  const held = lane.key !== "market";
   const n = frame.days.length;
   const placed = lane.marks.map((m) => ({ index: frame.days.indexOf(m.date), words: m.words }));
-  const sides = placeWords(placed, n, frame.width);
+  const sides = placeWords(placed, n, frame.width, undefined, WORDS_PAD[held ? "tile" : "bare"]);
   const edge = lane.marks.length === 0 ? lane.nextAfter : undefined;
   return (
-    <div className="lane" data-market={lane.key === "market" || undefined}>
+    <div className="lane" data-market={!held || undefined}>
       <div className="lane-head">
         <span className="lane-name">{lane.name}</span>
         {lane.detail ? <span className="lane-detail">{lane.detail}</span> : null}
@@ -167,13 +197,13 @@ function LaneRow({
             <button
               key={mark.date}
               type="button"
-              className="lane-mark"
+              className={held ? "lane-mark lane-mark--tile" : "lane-mark"}
               style={{ left: pct(((placed[i]?.index ?? 0) + 0.5) / n) }}
               aria-pressed={frame.picked === mark.date}
               aria-label={said(mark)}
               onClick={() => onPick(mark.date)}
             >
-              <LaneGlyphIcon glyph={mark.glyph} />
+              <MarkGlyph glyph={mark.glyph} tile={held} />
               {side ? (
                 <span className={`lane-words lane-words--${side}`} aria-hidden="true">
                   {mark.words}
@@ -207,7 +237,7 @@ function Axis({
       <div className="lane-ticks">
         {ticks.map((t) => (
           <span
-            key={t.index}
+            key={frame.days[t.index]}
             className={`lane-tick num${edge(t.index)}`}
             style={{ left: pct((t.index + 0.5) / n) }}
           >
@@ -282,6 +312,8 @@ export function BookLanesPicture({
   const drawn = (["decide", "confirmed", "estimated", "market"] as const).filter((g) =>
     shown.includes(g),
   );
+  // A glyph is keyed on its tile only when a tile draws it — one pinned at an edge sits in a chip.
+  const tiled = new Set(lanes.holdings.flatMap((l) => l.marks.map((m) => m.glyph)));
   const row = (lane: Lane) => (
     <LaneRow key={lane.key} lane={lane} frame={frame} onPick={onPick} onJump={onJump} />
   );
@@ -301,7 +333,7 @@ export function BookLanesPicture({
       <p className="lanes-key">
         {drawn.map((g) => (
           <span key={g}>
-            <LaneGlyphIcon glyph={g} /> {GLYPH_WORD[g]}
+            <MarkGlyph glyph={g} tile={tiled.has(g)} /> {GLYPH_WORD[g]}
           </span>
         ))}
         {shut.length > 0 ? (
