@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { chipsFor } from "../live/moneypenny-script";
 
@@ -79,7 +79,10 @@ export function MoneypennyRail(): ReactElement | null {
   const [text, setText] = useState("");
   const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
+  const atEnd = useRef(true);
   const queryClient = useQueryClient();
+  const busy = typing || streaming;
+  const chipsShown = !busy && (flow === "idle" || draft !== undefined);
 
   // Follow the thread: every append scrolls the list to its end.
   // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
@@ -87,6 +90,20 @@ export function MoneypennyRail(): ReactElement | null {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, typing]);
+
+  // The chips come back when `streaming` ends — a render where neither trigger above changes —
+  // and shorten the list from below, hiding her last line (#5182). Re-pin before paint, but only
+  // if the member was already at the end: one who scrolled up to read stays where they were.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chipsShown IS the trigger
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (el && atEnd.current) el.scrollTop = el.scrollHeight;
+  }, [chipsShown]);
+  const onScroll = () => {
+    const el = list.current;
+    // a couple of px of slack: fractional layouts rarely land the end on an exact zero
+    if (el) atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 2;
+  };
 
   useEffect(() => {
     if (filedSeq === 0) return;
@@ -106,7 +123,6 @@ export function MoneypennyRail(): ReactElement | null {
 
   if (!open) return null;
 
-  const busy = typing || streaming;
   const submit = () => {
     const note = text.trim();
     if (!note || busy) return;
@@ -120,14 +136,13 @@ export function MoneypennyRail(): ReactElement | null {
       submit();
     }
   };
-  const chips =
-    !busy && (flow === "idle" || draft)
-      ? chipsFor({
-          draft: draft !== undefined,
-          connected: connected === true,
-          firstTradeDone: firstTradeDone === true,
-        })
-      : [];
+  const chips = chipsShown
+    ? chipsFor({
+        draft: draft !== undefined,
+        connected: connected === true,
+        firstTradeDone: firstTradeDone === true,
+      })
+    : [];
   // Best-effort: a clipboard failure (no permission, no secure context) costs nothing but the
   // "Copied" confirmation — the member's thread was never at risk of being lost by trying.
   const copyThread = () => {
@@ -180,7 +195,7 @@ export function MoneypennyRail(): ReactElement | null {
           ×
         </button>
       </div>
-      <div className="mp-list" ref={list} aria-live="polite">
+      <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
         {messages.map((m, i) => {
           const day = dayOf(m.at);
           const prev = i > 0 ? dayOf(messages[i - 1]?.at) : undefined;
