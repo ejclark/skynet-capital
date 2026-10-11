@@ -862,8 +862,8 @@ function TradePage(): ReactElement {
         ) : null}
         <h1>Trade</h1>
         <p>
-          Paper account · the gate reviews every order before anything is sent, and re-checks the
-          live account at submit.
+          Paper account · the gate reviews every order before anything is sent, and re-checks your
+          paper account's buying power and positions at submit.
         </p>
       </header>
       {plays.data ? (
