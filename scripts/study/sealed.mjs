@@ -92,6 +92,24 @@ export function userMessage(text, images = []) {
   return { type: "user", message: { role: "user", content } };
 }
 
+/** The last `result` event in a call's stream-json stdout, or null. */
+function resultEvent(stdout) {
+  return (
+    String(stdout ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith("{"))
+      .flatMap((l) => {
+        try {
+          return [JSON.parse(l)];
+        } catch {
+          return [];
+        }
+      })
+      .findLast((e) => e.type === "result") ?? null
+  );
+}
+
 /**
  * The structured answer from a call's stream-json stdout: the LAST `result` event's
  * `structured_output`. Throws with the reason when there is none — an error result, a result with
@@ -99,18 +117,7 @@ export function userMessage(text, images = []) {
  * the CLI's own stderr tail, when given, is the reason).
  */
 export function parseResult(stdout, stderr = "") {
-  const events = String(stdout ?? "")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("{"))
-    .flatMap((l) => {
-      try {
-        return [JSON.parse(l)];
-      } catch {
-        return [];
-      }
-    });
-  const result = events.findLast((e) => e.type === "result");
+  const result = resultEvent(stdout);
   if (!result) {
     const why = String(stderr ?? "")
       .trim()
@@ -130,6 +137,29 @@ export function parseResult(stdout, stderr = "") {
   return result.structured_output;
 }
 
+/**
+ * What a call cost, from the same final `result` event: tokens by kind, the CLI's own dollar
+ * figure (on a subscription sign-in that is its API-price estimate, not a bill), wall and API
+ * time, and the models that answered. Null when the output has no result event. Recorded on every
+ * call so a round's cost is read back, never estimated (#5099; the first round never kept it).
+ */
+export function resultUsage(stdout) {
+  const result = resultEvent(stdout);
+  if (!result) return null;
+  const u = result.usage ?? {};
+  const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return {
+    input_tokens: num(u.input_tokens),
+    output_tokens: num(u.output_tokens),
+    cache_creation_input_tokens: num(u.cache_creation_input_tokens),
+    cache_read_input_tokens: num(u.cache_read_input_tokens),
+    cost_usd: num(result.total_cost_usd),
+    duration_ms: num(result.duration_ms),
+    duration_api_ms: num(result.duration_api_ms),
+    models: Object.keys(result.modelUsage ?? {}),
+  };
+}
+
 /** Is the standalone CLI signed in? `{ok, why}` — never throws. */
 export function signedIn(run = spawnSync) {
   const out = run("claude", ["auth", "status"], { encoding: "utf8" });
@@ -147,8 +177,8 @@ export function signedIn(run = spawnSync) {
 }
 
 /**
- * One sealed call from an empty temp dir; resolves to its structured output, rejects with the
- * reason. ASYNC on purpose: a synchronous spawn would freeze the event loop for the whole call —
+ * One sealed call from an empty temp dir; resolves to `{answer, usage}` — its structured output and
+ * what it cost (`resultUsage`) — or rejects with the reason. ASYNC on purpose: a synchronous spawn would freeze the event loop for the whole call —
  * and with it a member's page route handlers, so in-page requests would queue and land as drift.
  */
 export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_000 }) {
@@ -189,7 +219,7 @@ export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_00
       });
       child.stdin.end(`${JSON.stringify(message)}\n`);
     });
-    return parseResult(stdout, err);
+    return { answer: parseResult(stdout, err), usage: resultUsage(stdout) };
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
@@ -219,16 +249,22 @@ export function redactImages(message) {
 }
 
 /**
- * A caller: `call({role, rolePath, schema, message, timeoutMs?})` → the structured answer. Real
+ * A caller: `call({role, rolePath, schema, message, timeoutMs?, n?})` → the structured answer. Real
  * (the sealed CLI) unless `stub` names a directory. Each call is recorded as
- * `<record>/<role>-<nnn>.json` when `record` is set, and a recorded answer to the identical message
- * is replayed instead of asked again (a resumed round pays only for what it has not got).
+ * `<record>/<role>-<nnn>.json` when `record` is set — with its `usage` when the CLI answered — and
+ * a recorded answer to the identical message is replayed instead of asked again (a resumed round
+ * pays only for what it has not got).
+ *
+ * `n` numbers the call explicitly. Calls made in parallel finish in any order, so a counter would
+ * hand a batch another batch's number on the next run, and the replay (and the stub, which answers
+ * by number) would miss. A step that runs a role's calls at once numbers every one of them;
+ * otherwise the caller counts per role.
  */
 export function makeCaller({ stub, record } = {}) {
   const counts = new Map();
-  return async function call({ role, rolePath, schema, message, timeoutMs }) {
-    const n = (counts.get(role) ?? 0) + 1;
-    counts.set(role, n);
+  return async function call({ role, rolePath, schema, message, timeoutMs, n: fixed }) {
+    const n = fixed ?? (counts.get(role) ?? 0) + 1;
+    if (fixed === undefined) counts.set(role, n);
     const entry = { role, n, rolePath, args: sealedArgs({ rolePath, schema: "<schema>" }) };
     entry.message = redactImages(message);
     const file = record ? join(record, `${role}-${String(n).padStart(3, "0")}.json`) : null;
@@ -248,10 +284,11 @@ export function makeCaller({ stub, record } = {}) {
     try {
       const answer = stub
         ? stubAnswer(stub, role, n, schema)
-        : { answer: await sealedCall({ rolePath, schema, message, timeoutMs }) };
+        : await sealedCall({ rolePath, schema, message, timeoutMs });
       save({
         stub: answer.from ?? null,
         repeated: answer.repeated ?? false,
+        usage: answer.usage ?? null,
         answer: answer.answer,
       });
       return answer.answer;

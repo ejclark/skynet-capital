@@ -24,7 +24,7 @@ import {
   wordsText,
 } from "./round-messages.mjs";
 import { expertCount, isControl, reviewSkip } from "./round-plan.mjs";
-import { readCards } from "./round-steps.mjs";
+import { pool, readCards } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -124,7 +124,13 @@ function expertBatches(ctx) {
   return { main: batchCensus(pick("experts")), handoff: batchCensus(pick("handoff")), dirOf };
 }
 
-/** Step 7: N independent experts, the census verbatim in batches, then one consolidation each. */
+/**
+ * Step 7: N independent experts AT ONCE (at most the round's concurrency), the census verbatim in
+ * batches, then one consolidation each. Run one after another, three experts took ~4½ of the first
+ * round's ~7¾ hours (#5099). Each expert still reads its own batches in order; every call carries
+ * the number it had when they ran in sequence (expert k's batches follow experts 1…k−1's), so a
+ * round recorded either way replays, and the stub answers it the same.
+ */
 export async function experts(ctx) {
   const step = "7-experts";
   const dir = ctx.dir(step);
@@ -132,80 +138,101 @@ export async function experts(ctx) {
   const { main, handoff, dirOf } = expertBatches(ctx);
   const n = expertCount(ctx.p, ctx.opts);
   const call = ctx.call(step);
-  const out = {};
-  for (let k = 1; k <= n; k++) {
-    const batches = k === 1 ? [...main, ...handoff] : main;
-    const batchFindings = [];
-    const impressions = [];
-    const index = {};
-    for (const [b, batch] of batches.entries()) {
-      const frames = batchFrames(batch.entries);
-      // An expert reviews pictures; a batch with none is a broken census, never a text-only review.
-      if (frames.length === 0) {
-        throw new Error(`expert batch ${b + 1} (${batch.source} ${batch.route}) has no frames`);
-      }
-      const images = [];
-      for (const f of frames) {
-        images.push({
-          label: `[${f.label}]`,
-          b64: await ctx.half(join(dirOf[batch.source], f.rel)),
-        });
-      }
-      const answer = await call({
-        role: "expert",
-        rolePath: join(ctx.roles, "expert.md"),
-        schema: readSchema("expert"),
-        message: userMessage(
-          expertBatchText({ cards, batch, frames, n: b + 1, of: batches.length }),
-          images,
-        ),
-        timeoutMs: 600_000,
-      });
-      impressions.push(...answer.first_impression);
-      for (const [i, finding] of answer.findings.entries()) {
-        const id = `B${b + 1}.${i + 1}`;
-        const cited = finding.frames
-          .map((label) => frames.find((f) => f.label === label))
-          .filter(Boolean)
-          .map((f) => ({
-            path: ctx.rel(join(dirOf[batch.source], f.rel)),
-            route: batch.route,
-            viewport: batch.viewport,
-          }));
-        index[id] = { frames: cited, source: batch.source };
-        batchFindings.push({ id, finding });
-      }
-      ctx.log(step, "batch", {
-        expert: k,
-        batch: b + 1,
-        of: batches.length,
-        source: batch.source,
-        route: batch.route,
-        viewport: batch.viewport,
-        controls: batch.entries.length,
-        frames: images.length,
-        findings: answer.findings.length,
+  const plan = Array.from({ length: n }, (_, i) => ({
+    k: i + 1,
+    batches: i === 0 ? [...main, ...handoff] : main,
+  }));
+  let first = 0;
+  for (const e of plan) {
+    e.first = first;
+    first += e.batches.length;
+  }
+  const settled = await pool(plan, ctx.opts.concurrency ?? ctx.p.concurrency, (e) =>
+    oneExpert(ctx, { ...e, step, dir, cards, dirOf, call }).then(
+      (summary) => ({ k: e.k, summary }),
+      (error) => ({ k: e.k, error }),
+    ),
+  );
+  // Every expert finishes (and records what it paid for) before one failure stops the step.
+  const failed = settled.find((s) => s.error);
+  if (failed) throw failed.error;
+  return Object.fromEntries(settled.map((s) => [`expert-${s.k}`, s.summary]));
+}
+
+/** One expert: its batches in order, then its consolidation; writes expert-<k>.json. */
+async function oneExpert(ctx, { k, batches, first, step, dir, cards, dirOf, call }) {
+  const batchFindings = [];
+  const impressions = [];
+  const index = {};
+  for (const [b, batch] of batches.entries()) {
+    const frames = batchFrames(batch.entries);
+    // An expert reviews pictures; a batch with none is a broken census, never a text-only review.
+    if (frames.length === 0) {
+      throw new Error(`expert batch ${b + 1} (${batch.source} ${batch.route}) has no frames`);
+    }
+    const images = [];
+    for (const f of frames) {
+      images.push({
+        label: `[${f.label}]`,
+        b64: await ctx.half(join(dirOf[batch.source], f.rel)),
       });
     }
-    const consolidated = await call({
-      role: "expert-consolidation",
+    const answer = await call({
+      role: "expert",
+      n: first + b + 1,
       rolePath: join(ctx.roles, "expert.md"),
-      schema: readSchema("expert-consolidation"),
-      message: userMessage(expertConsolidationText({ cards, batchFindings, impressions })),
-      // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
-      timeoutMs: 1_800_000,
+      schema: readSchema("expert"),
+      message: userMessage(
+        expertBatchText({ cards, batch, frames, n: b + 1, of: batches.length }),
+        images,
+      ),
+      timeoutMs: 600_000,
     });
-    writeJson(join(dir, `expert-${k}.json`), {
-      k,
-      batches: batches.length,
-      batchFindings,
-      index,
-      answer: consolidated,
+    impressions.push(...answer.first_impression);
+    for (const [i, finding] of answer.findings.entries()) {
+      const id = `B${b + 1}.${i + 1}`;
+      const cited = finding.frames
+        .map((label) => frames.find((f) => f.label === label))
+        .filter(Boolean)
+        .map((f) => ({
+          path: ctx.rel(join(dirOf[batch.source], f.rel)),
+          route: batch.route,
+          viewport: batch.viewport,
+        }));
+      index[id] = { frames: cited, source: batch.source };
+      batchFindings.push({ id, finding });
+    }
+    ctx.log(step, "batch", {
+      expert: k,
+      batch: b + 1,
+      of: batches.length,
+      source: batch.source,
+      route: batch.route,
+      viewport: batch.viewport,
+      controls: batch.entries.length,
+      frames: images.length,
+      findings: answer.findings.length,
     });
-    out[`expert-${k}`] = { batches: batches.length, findings: consolidated.findings.length };
-    ctx.log(step, "consolidated", { expert: k, ...out[`expert-${k}`] });
   }
-  return out;
+  const consolidated = await call({
+    role: "expert-consolidation",
+    n: k,
+    rolePath: join(ctx.roles, "expert.md"),
+    schema: readSchema("expert-consolidation"),
+    message: userMessage(expertConsolidationText({ cards, batchFindings, impressions })),
+    // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
+    timeoutMs: 1_800_000,
+  });
+  writeJson(join(dir, `expert-${k}.json`), {
+    k,
+    batches: batches.length,
+    batchFindings,
+    index,
+    answer: consolidated,
+  });
+  const summary = { batches: batches.length, findings: consolidated.findings.length };
+  ctx.log(step, "consolidated", { expert: k, ...summary });
+  return summary;
 }
 
 /** Step 8: the words pass over the harvested strings. */

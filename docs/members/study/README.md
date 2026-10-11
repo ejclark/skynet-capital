@@ -287,15 +287,23 @@ node scripts/study/round.mjs --pin <pin dir> --out <fresh dir> --sealed <answer-
 flowchart LR
   P["0 preflight<br/>pin · census · facts · harvest"] --> C["1 cards<br/>+ lint"] --> K["2 canary<br/>every blind role"]
   K --> F["3 framer"] --> T["4 tasks<br/>lint loop · freeze"] --> S["5 sessions<br/>N at once"]
-  S --> A["6 analysts"] --> E["7 experts ×3"] --> W["8 words"] --> M["9 member types"] --> X["10 findings.jsonl<br/>+ classes.json"]
+  S --> A["6 analysts"] --> E["7 experts ×3<br/>at once"] --> W["8 words"] --> M["9 member types"] --> X["10 findings.jsonl<br/>+ classes.json"]
 ```
 
 - **The area config** (`scripts/study/tasks/<area>.json`) holds everything area-specific: the
   cutoff, the members × worlds × viewports table (each member's viewer and start page), runs and
   tasks per pairing, the census cap and list, the framer's page list in plain words, the thin cut.
 - **Every blind call** goes through `scripts/study/sealed.mjs` with its role prompt and its schema
-  (`scripts/study/schemas/`). Each call's request (images as sha256 + size) and answer is kept in
-  `<out>/<step>/requests/`.
+  (`scripts/study/schemas/`). Each call's request (images as sha256 + size), answer and **usage**
+  (tokens by kind, the CLI's dollar figure, time, the model) is kept in `<out>/<step>/requests/`.
+- **What it cost** is read back from those records, never estimated (`usage.mjs`): each step's
+  `done.json` carries its `usage`, and `<out>/usage.json` sums the round by step — written even
+  when the round stops. A replayed call counts at the price first paid; a failed call is counted
+  apart, since the CLI never said what it spent. On a subscription sign-in the dollar figure is the
+  CLI's API-price estimate, not a bill.
+- **The experts run at once,** up to `--concurrency` (the area's, else the flag), each over its
+  own batches in order. Every call keeps the number it had when they ran one after another, so a
+  round recorded either way replays.
 - **The lint loop:** the task author hears back only the lint's `rewrite <file> item N (<kind>)`
   lines (plus `unknown-fact` when a task cites no fact on the sheet), at most three times; then
   the round stops. Tasks are frozen with their sha256 in `<out>/frozen.json`.
@@ -422,3 +430,6 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   member read the row through the page's translucent sticky header, which the recorder counts as
   covered. And deriving one figure can flip a world's story: Jordan's derived close made today a new
   all-time high and the page opened on a celebration, so a spec now refuses an unplanned high.
+- 2026-10-11 · the experts now run at once and every sealed call records its usage (#5099). The
+  ~4½ hours the experts took one after another should fall to about one expert's time; the next
+  round's `usage.json` says whether it did and what the round cost.
