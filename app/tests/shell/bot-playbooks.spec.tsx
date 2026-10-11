@@ -1,8 +1,26 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskHeartbeat, Heartbeat } from "../../src/live/heartbeat";
 import { BotPlaybooksSection } from "../../src/shell/bot-playbooks";
+
+// No router here: a card's way back to an order is a router Link — render the address it builds.
+rstest.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    search,
+    hash,
+  }: {
+    children: ReactNode;
+    to: string;
+    search?: Record<string, string>;
+    hash?: string;
+  }) => {
+    const query = new URLSearchParams(search ?? {}).toString();
+    return <a href={`${to}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`}>{children}</a>;
+  },
+}));
 
 let next: DeskHeartbeat = { available: false };
 const realFetch = globalThis.fetch;
@@ -430,5 +448,85 @@ describe("BotPlaybooksSection — the week on one clock", () => {
     expect(lanes.map((l) => l.querySelectorAll('[data-s="tactical"]').length)).toEqual([64, 64, 0]);
     expect(document.querySelectorAll(".pbb-card .wk-mark")).toHaveLength(0);
     expect(document.querySelectorAll(".wk-strip .wk-mark")).toHaveLength(2);
+  });
+});
+
+/** #5073 slice 4a (#5037 round 2, R2-act): an order's playbook link arrives on that playbook's
+ *  card — open, landed, the order's mark ringed on its lane, with one way back to the order. */
+describe("BotPlaybooksSection — arriving from an order", () => {
+  const bought = Date.parse("2026-10-05T15:20:00Z");
+  const landing = { card: "SAURON", mode: "aggressive", fill: bought, from: "ord-1" };
+
+  it("opens that card in place and lands on it, and on no other card", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
+    await screen.findByText("SAURON");
+    const card = cardOf("SAURON");
+    expect(card.querySelector("details")?.open).toBe(true);
+    expect(card.hasAttribute("data-landed")).toBe(true);
+    expect(cardOf("S1-NVDA").querySelector("details")?.open).toBe(false);
+    expect(cardOf("S1-NVDA").hasAttribute("data-landed")).toBe(false);
+  });
+
+  it("rings the order's mark on the card's lane, and says so in words", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
+    await screen.findByText("SAURON");
+    const card = cardOf("SAURON");
+    const lane = within(card).getByRole("img");
+    expect(lane.querySelectorAll(".wk-mark[data-ringed]")).toHaveLength(1);
+    expect(lane.getAttribute("aria-label")).toContain("The order you came from is ringed.");
+    expect(card.querySelector(".wk-trades li[data-ringed]")?.textContent).toMatch(
+      /Buy NVDA placed .* · the order you came from$/,
+    );
+    // The bot's own strip draws every trade; only the card's lane rings one.
+    expect(document.querySelectorAll(".wk-strip [data-ringed]")).toHaveLength(0);
+  });
+
+  it("carries one way back, to the order's row on this bot's Activity", async () => {
+    next = withWeek();
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
+    await screen.findByText("SAURON");
+    expect(
+      within(cardOf("SAURON")).getByRole("link", { name: "← Back to the order in Activity" }),
+    ).toHaveAttribute("href", "/accounts?account=sauron&section=activity#act-ord-1");
+  });
+
+  it("rings nothing for an order older than this week, and says why", async () => {
+    next = withWeek();
+    const older = { ...landing, fill: Date.parse("2026-09-28T15:20:00Z") };
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={older} />));
+    await screen.findByText("SAURON");
+    const card = cardOf("SAURON");
+    expect(card.querySelectorAll("[data-ringed]")).toHaveLength(0);
+    expect(card.textContent).toContain("placed before this week, so its lane has no mark to ring");
+  });
+
+  it("says so plainly when the playbook that placed the order has no card now", async () => {
+    next = withWeek();
+    const { rerender } = render(
+      withClient(
+        <BotPlaybooksSection deskId="sauron" landing={{ card: "BETA-SCOUT", from: "ord-9" }} />,
+      ),
+    );
+    expect(await screen.findByText(/It is off on this bot now/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "← Back to the order in Activity" })).toHaveAttribute(
+      "href",
+      "/accounts?account=sauron&section=activity#act-ord-9",
+    );
+    expect(document.querySelectorAll("[data-landed]")).toHaveLength(0);
+    rerender(withClient(<BotPlaybooksSection deskId="sauron" landing={{ card: "CRWV-WHEEL" }} />));
+    expect(await screen.findByText(/not one of this bot's playbooks now/)).toBeInTheDocument();
+  });
+
+  it("never lands a non-owner anywhere: the names are the owner's (#885)", async () => {
+    next = withWeek();
+    render(
+      withClient(<BotPlaybooksSection deskId="sauron" showPlaybooks={false} landing={landing} />),
+    );
+    await screen.findByText("Aggressive mode");
+    expect(document.querySelectorAll("[data-landed], [data-ringed]")).toHaveLength(0);
+    expect(screen.queryByText(/placed that order/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Back to the order/ })).not.toBeInTheDocument();
   });
 });

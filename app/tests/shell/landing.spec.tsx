@@ -1,4 +1,4 @@
-import { publishClearance, targetedAnchor } from "../../src/shell/landing";
+import { landingBlock, publishClearance, targetedAnchor } from "../../src/shell/landing";
 
 /**
  * The shared landing (#5022). The scroll and the mark are observed through the surfaces that use it
@@ -53,5 +53,14 @@ describe("publishClearance — how far the sticky stack reaches", () => {
     expect(clearance()).toBe("254px");
     undo?.();
     expect(clearance()).toBe("");
+  });
+});
+
+describe("landingBlock — where a target lands", () => {
+  it("centres a row, and lands a target taller than half the screen at its top", () => {
+    expect(landingBlock(48, 844)).toBe("center");
+    // An opened playbook card (#5073): centred, its own name would scroll off under the head.
+    expect(landingBlock(1400, 844)).toBe("start");
+    expect(landingBlock(422, 844)).toBe("center");
   });
 });

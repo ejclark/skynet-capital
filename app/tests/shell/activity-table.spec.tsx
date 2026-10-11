@@ -15,15 +15,27 @@ rstest.mock("@tanstack/react-router", () => ({
     children,
     to,
     params,
+    search,
     hash,
+    "aria-label": label,
   }: {
     children: ReactNode;
     to: string;
     params?: Record<string, string>;
+    search?: Record<string, string | number | undefined>;
     hash?: string;
+    "aria-label"?: string;
   }) => {
     const path = params?.id ? to.replace("$id", params.id) : to;
-    return <a href={`${path}${hash ? `#${hash}` : ""}`}>{children}</a>;
+    const set = Object.entries(search ?? {}).flatMap(([k, v]) =>
+      v === undefined ? [] : [[k, String(v)]],
+    );
+    const query = new URLSearchParams(set).toString();
+    return (
+      <a href={`${path}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`} aria-label={label}>
+        {children}
+      </a>
+    );
   },
 }));
 
@@ -133,7 +145,8 @@ describe("ActivityTable — the round behind a fill", () => {
     render(<ActivityTable events={[scouted]} deskId="sauron" />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.queryByText("The round")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    // Its playbook is still a way in to its card (#5073); the round has no address to link.
+    expect(screen.queryByRole("link", { name: "the whole pass" })).not.toBeInTheDocument();
   });
 });
 
@@ -433,5 +446,46 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
       .getElementById("act-opt-put-1")
       ?.querySelector("td.num")?.textContent;
     expect(saleStamp).toMatch(/\d{1,2}:\d{2}/);
+  });
+});
+
+/** #5073 slice 4a (#5037 round 2, R2-act): on one bot's ledger the playbook that placed an order is
+ *  a way in — it lands on that playbook's card on Playbooks, the order's mark ringed. */
+describe("ActivityTable — the playbook, as a way in to its card", () => {
+  const placed = event({
+    orderId: "ord-1",
+    reasoning: {
+      reason: "panic fade",
+      personaId: "sauron",
+      playbookId: "SAURON",
+      playbookMode: "aggressive",
+      cycleAt: "2026-10-05T15:20:00.000Z",
+    },
+  });
+
+  it("links the playbook to its card, naming the mode, the check and the order", () => {
+    render(<ActivityTable events={[placed]} deskId="sauron" />);
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    const link = screen.getByRole("link", {
+      name: "SAURON · aggressive — open its card on Playbooks",
+    });
+    expect(link.textContent).toBe("SAURON · aggressive ›");
+    expect(link).toHaveAttribute(
+      "href",
+      `/accounts?account=sauron&section=playbooks&card=SAURON&mode=aggressive&fill=${Date.parse("2026-10-05T15:20:00.000Z")}&from=ord-1`,
+    );
+  });
+
+  it("keeps the playbook as plain words on a ledger that merges several accounts", () => {
+    render(<ActivityTable events={[placed]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    expect(screen.getByText("SAURON · aggressive")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("never names the playbook, linked or not, on a page the viewer does not own (#885)", () => {
+    render(<ActivityTable events={[placed]} deskId="sauron" showPlaybook={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    expect(screen.queryByText(/SAURON/)).not.toBeInTheDocument();
   });
 });

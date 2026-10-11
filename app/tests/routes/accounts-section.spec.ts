@@ -33,6 +33,42 @@ describe("/accounts validateSearch — section", () => {
   });
 });
 
+/** An order's playbook link (#5073 slice 4a): `?card=` with its mode, the check that placed the
+ *  order and the order itself survive the URL; a malformed part drops, never the section. */
+describe("/accounts validateSearch — arriving on a playbook's card", () => {
+  const validateSearch = Route.options.validateSearch as (
+    search: Record<string, unknown>,
+  ) => Record<string, unknown>;
+
+  it("keeps the card, its mode, the check and the order", () => {
+    expect(
+      validateSearch({
+        section: "playbooks",
+        card: "SAURON",
+        mode: "aggressive",
+        fill: "1791206400000",
+        from: "ord-1",
+      }),
+    ).toEqual({
+      section: "playbooks",
+      card: "SAURON",
+      mode: "aggressive",
+      fill: 1791206400000,
+      from: "ord-1",
+    });
+  });
+
+  it("drops a landing with no card, and a check that is not a time", () => {
+    expect(validateSearch({ section: "playbooks", mode: "aggressive" })).toEqual({
+      section: "playbooks",
+    });
+    expect(validateSearch({ section: "playbooks", card: "SAURON", fill: "soon" })).toEqual({
+      section: "playbooks",
+      card: "SAURON",
+    });
+  });
+});
+
 /** Events on the book (#3807 slice 2c): the section is URL-reachable, and a picked day is its own
  *  `?events=` — a real calendar day or nothing, never the range's `?on=`. */
 describe("/accounts validateSearch — events", () => {
