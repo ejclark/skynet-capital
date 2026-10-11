@@ -57,7 +57,9 @@ export const LONG_DIAGRAM_LINES = 40;
 
 const CORPUS_ROOTS = ["docs", ".github", ".claude"];
 /** Vendored docs are not ours to gate; shots are images; handoffs are pasted from elsewhere. */
-const CORPUS_SKIP = new Set(["node_modules", "vendor", "shots", "handoffs", ".git"]);
+// `worktrees`: `.claude/worktrees/` holds gitignored agent checkouts — whole copies of the repo —
+// and walking them ran the corpus scan out of heap on a dev machine (2026-10-10).
+const CORPUS_SKIP = new Set(["node_modules", "vendor", "shots", "handoffs", ".git", "worktrees"]);
 
 /** Types upstream 12.x added; GitHub's 11.17.2 renders them as an error. */
 const NEEDS_12 = new Set(["usecase-beta", "usecase", "agentflow-beta", "agentflow"]);

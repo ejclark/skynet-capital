@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useRef } from "react";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { type BookDesk, type BookEvent, bookEventsIn, nextOnBook } from "../live/book-events";
 import { bookLanes, bookLens, countsAround } from "../live/book-lanes";
@@ -31,6 +31,11 @@ import { AgendaRow } from "./events-agenda";
  * range names (`span=day`) reads its week here with that day picked, and the unbounded all lens
  * reads its month. A PICKED DAY is this section's own `?events=` — a tap on a mark — and narrows
  * the list, never the range.
+ *
+ * A PICK DRAWS THE EYE TO ITS WORDS (Eric, 2026-10-10: "The animations elegantly draw attention to
+ * the event details and context"): a tap on a mark brings the list's head into view when it is off
+ * screen — below the picture on a phone, scrolled past on a desk — and the day's rows step in one
+ * after another. Reduced motion jumps instead of gliding and the rows simply appear.
  *
  * HONEST WHEN THIN: no open positions, nothing dated on what you hold, and a research payload that
  * did not arrive each say so in words; an empty range names the next date on what you hold and
@@ -210,6 +215,19 @@ export function EventsSection({
   // picked, so letting the pick go has to drop the day lens with `?events=`, in one write. Without
   // it, Show all, a second tap on the mark and the pressed Week would all do nothing.
   const refine = useRefineSearch();
+  const agenda = useRef<HTMLDivElement>(null);
+  const pickDay = (date: string): void => {
+    onPickDay(date);
+    const el = agenda.current;
+    if (!el || typeof window === "undefined") return;
+    const clear = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--landing-clear"),
+    );
+    const top = el.getBoundingClientRect().top;
+    if (top >= (clear || 0) && top <= window.innerHeight - 96) return;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    el.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+  };
   const clearPick = (): void =>
     horizon.lens === "day"
       ? refine((prev) => ({
@@ -240,11 +258,11 @@ export function EventsSection({
           today={horizon.today}
           label={`Dates on what you hold, ${title}`}
           {...(note ? { note: <p className="note lanes-note">{note}</p> } : {})}
-          onPick={(date) => (date === picked ? clearPick() : onPickDay(date))}
+          onPick={(date) => (date === picked ? clearPick() : pickDay(date))}
           onJump={horizon.setOn}
           onToday={() => horizon.setOn(undefined)}
         />
-        <div className="book-agenda">
+        <div className="book-agenda" ref={agenda}>
           <p className="agenda-head">
             {headLine(picked ? dayName(picked) : title, state, onBook, inView.market.length)}
             {picked ? (
@@ -259,9 +277,15 @@ export function EventsSection({
             </p>
           ) : null}
           {rows.length > 0 ? (
-            <ol className="agenda" aria-label={`Events ${phrase}`}>
-              {rows.map((event) => (
-                <AgendaRow key={`${event.tier} ${event.id}`} event={event} />
+            // Keyed by what it shows, so a new pick or range steps its rows in afresh.
+            <ol
+              key={`${picked ?? ""} ${range.start}`}
+              className="agenda"
+              data-picked={picked ? "" : undefined}
+              aria-label={`Events ${phrase}`}
+            >
+              {rows.map((event, i) => (
+                <AgendaRow key={`${event.tier} ${event.id}`} event={event} order={i} />
               ))}
             </ol>
           ) : null}

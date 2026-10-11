@@ -9,7 +9,9 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  overflow: hidden;
+  /* clip, not hidden: hidden makes the card a scroll box, and the lanes' sticky axis would stick
+     to it instead of the page */
+  overflow: clip;
 }
 .book-cal-body {
   display: grid;
@@ -77,6 +79,25 @@
   padding: 9px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
+}
+/* The rows step in, a beat apart (`--i`), when the list changes what it shows — a picked day or a
+   new range; a picked day's rows wear the accent edge the picked column wears in the picture. */
+.agenda-row {
+  transition:
+    opacity var(--dur-spatial) var(--ease-spatial) calc(var(--i, 0) * 45ms),
+    translate var(--dur-spatial) var(--ease-spatial) calc(var(--i, 0) * 45ms);
+}
+@starting-style {
+  .agenda-row {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.agenda[data-picked] > .agenda-row {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.book-agenda {
+  scroll-margin-top: calc(var(--landing-clear, 0px) + 8px);
 }
 .agenda-row > :not(.agenda-when, .agenda-glyph) {
   grid-column: 3;

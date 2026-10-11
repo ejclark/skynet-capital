@@ -356,6 +356,40 @@ export function spreadTiles(
   );
 }
 
+/** A stretch of the track, as fractions of its width. */
+export interface TrackSpan {
+  readonly left: number;
+  readonly width: number;
+}
+
+/**
+ * THE ZOOM BOX (Eric, 2026-10-10: "the chart is effectively a timeline which allows for a smooth
+ * animation to expand or contract the timeline"). When one range sits inside the other — Week in
+ * its Month, a Month in its Quarter — the picture draws a box from where the range you left was
+ * to where it is now: zooming out, the whole track shrinks onto the old week's slice of the month;
+ * zooming in, the new week's slice of the month grows to fill the track. An arrow step, where
+ * neither range holds the other, draws nothing; its marks already slide by date.
+ */
+export function zoomWindow(
+  prev: DayRange,
+  next: DayRange,
+): { readonly from: TrackSpan; readonly to: TrackSpan } | undefined {
+  const inside = (inner: DayRange, outer: DayRange): TrackSpan | undefined => {
+    if (inner.start < outer.start || inner.end > outer.end) return undefined;
+    const days = daysOf(outer);
+    if (daysOf(inner).length === days.length) return undefined;
+    return {
+      left: days.indexOf(inner.start) / days.length,
+      width: daysOf(inner).length / days.length,
+    };
+  };
+  const whole: TrackSpan = { left: 0, width: 1 };
+  const out = inside(prev, next);
+  if (out) return { from: whole, to: out };
+  const zoomIn = inside(next, prev);
+  return zoomIn ? { from: zoomIn, to: whole } : undefined;
+}
+
 /** "today", "tomorrow", "in 29 days" — how far off a date is, in words. */
 export function inDays(today: string, date: string): string {
   const n = daysBetween(today, date);
