@@ -3,7 +3,7 @@
 //   node scripts/study/round.mjs --pin <pin dir> --out <dir> --sealed <dir>
 //        [--profile scripts/study/tasks/<area>.json] [--thin] [--dry-run] [--stub <dir>]
 //        [--concurrency N] [--only-world <name>] [--cap N] [--runs N] [--experts N]
-//        [--frozen-from <main round> --control negative|positive --expect <key ids file>]
+//        [--frozen-from <main round> --control negative|positive --expect <expect file>]
 //
 // With --frozen-from it is a CONTROL round (round-control.mjs): the main round's frozen tasks,
 // re-verified and copied in, against this --pin — no framer, no task author, no words pass or
@@ -19,15 +19,15 @@
 //   0 preflight   the area config; the pin's record (its harness must be this checkout's), a composed run;
 //                 census + facts + harvest at the area's cap, if absent       (round-prepare.mjs)
 //   1 cards       member cards by script (packets.mjs), linted as cards (priming counted); the
-//                 page list linted as a role packet                            (round-prepare.mjs)
+//                 page list and the area's roles linted as role packets        (round-prepare.mjs)
 //   2 canary      every blind role once — any knowledge fails the round        (round-prepare.mjs)
 //   3 framer      cards + page list → job map                                  (round-steps.mjs)
 //   4 tasks       per member × world, linted; ONLY the lint's lines go back, ≤ 3 rewrites; frozen
 //   5 sessions    drive.mjs --actor sealed per member × world × viewport × task × run, N at once
 //   6 analysts    one per member: turns, summaries, key frames at half scale   (round-review.mjs)
 //   7 experts     ×N at once (≤ --concurrency), the census verbatim in batches of ≤ 20, then one
-//                 consolidation each
-//   8 words       the harvested strings
+//                 consolidation each; the area's roles, never the cards (#5099)
+//   8 words       the harvested strings and the area's roles
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
 // The out dir is a round directory exactly as grade.mjs and readout.mjs read it: its layout, the

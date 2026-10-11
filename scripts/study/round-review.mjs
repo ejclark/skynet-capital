@@ -24,7 +24,7 @@ import {
   wordsText,
 } from "./round-messages.mjs";
 import { expertCount, isControl, reviewSkip } from "./round-plan.mjs";
-import { pool, readCards } from "./round-steps.mjs";
+import { pool, readCards, readRoles } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -134,7 +134,8 @@ function expertBatches(ctx) {
 export async function experts(ctx) {
   const step = "7-experts";
   const dir = ctx.dir(step);
-  const cards = readCards(ctx, members(ctx));
+  // The area's roles, never the member cards: an expert's find is counted unprimed (#5099).
+  const roles = readRoles(ctx);
   const { main, handoff, dirOf } = expertBatches(ctx);
   const n = expertCount(ctx.p, ctx.opts);
   const call = ctx.call(step);
@@ -148,7 +149,7 @@ export async function experts(ctx) {
     first += e.batches.length;
   }
   const settled = await pool(plan, ctx.opts.concurrency ?? ctx.p.concurrency, (e) =>
-    oneExpert(ctx, { ...e, step, dir, cards, dirOf, call }).then(
+    oneExpert(ctx, { ...e, step, dir, roles, dirOf, call }).then(
       (summary) => ({ k: e.k, summary }),
       (error) => ({ k: e.k, error }),
     ),
@@ -160,7 +161,7 @@ export async function experts(ctx) {
 }
 
 /** One expert: its batches in order, then its consolidation; writes expert-<k>.json. */
-async function oneExpert(ctx, { k, batches, first, step, dir, cards, dirOf, call }) {
+async function oneExpert(ctx, { k, batches, first, step, dir, roles, dirOf, call }) {
   const batchFindings = [];
   const impressions = [];
   const index = {};
@@ -183,7 +184,7 @@ async function oneExpert(ctx, { k, batches, first, step, dir, cards, dirOf, call
       rolePath: join(ctx.roles, "expert.md"),
       schema: readSchema("expert"),
       message: userMessage(
-        expertBatchText({ cards, batch, frames, n: b + 1, of: batches.length }),
+        expertBatchText({ roles, batch, frames, n: b + 1, of: batches.length }),
         images,
       ),
       timeoutMs: 600_000,
@@ -219,7 +220,7 @@ async function oneExpert(ctx, { k, batches, first, step, dir, cards, dirOf, call
     n: k,
     rolePath: join(ctx.roles, "expert.md"),
     schema: readSchema("expert-consolidation"),
-    message: userMessage(expertConsolidationText({ cards, batchFindings, impressions })),
+    message: userMessage(expertConsolidationText({ roles, batchFindings, impressions })),
     // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
     timeoutMs: 1_800_000,
   });
@@ -245,7 +246,7 @@ export async function words(ctx) {
     role: "words",
     rolePath: join(ctx.roles, "words.md"),
     schema: readSchema("words"),
-    message: userMessage(wordsText({ cards: readCards(ctx, members(ctx)), strings })),
+    message: userMessage(wordsText({ roles: readRoles(ctx), strings })),
     timeoutMs: 600_000,
   });
   writeJson(join(dir, "words.json"), answer);

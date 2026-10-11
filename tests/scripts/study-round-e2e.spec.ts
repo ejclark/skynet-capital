@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "@rstest/core";
@@ -112,6 +112,19 @@ describe("a stub round, graded and read out — one contract from writer to read
       viewport: "phone",
       run: 1,
     });
+  });
+
+  // An expert's find counts as unprimed, so no expert call may carry a member card (#5099).
+  it("hands every expert call the area's roles and never a member card", () => {
+    const roles = readFileSync(join(round, "1-cards/roles.md"), "utf8");
+    expect(roles).toMatch(/^eric: /);
+    const dir = join(round, "7-experts/requests");
+    const calls = readdirSync(dir).map((f) => readFileSync(join(dir, f), "utf8"));
+    expect(calls.length).toBeGreaterThan(1);
+    for (const call of calls) {
+      expect(call).toContain(JSON.stringify(roles.trim()).slice(1, -1));
+      expect(call).not.toContain("Member card");
+    }
   });
 
   it("classes every finding in the graders' vocabulary, voice and expert kept as fields", () => {

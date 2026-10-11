@@ -40,10 +40,10 @@ their own column: whoever designs them has seen the answer key, so they never co
 | Task author | blind | `roles/task-author.md` | member cards · job map · world fact sheet |
 | Simulated member | blind | `roles/actor.md` | its card · the task · its own past turns · two frames |
 | Analyst | blind | `roles/analyst.md` | one member's traces and frames |
-| Expert ×3 | blind | `roles/expert.md` | the machine census of frames · member cards |
-| Words pass | blind | `roles/words.md` | harvested visible text · member cards |
+| Expert ×3 | blind | `roles/expert.md` | the machine census of frames · the area's roles |
+| Words pass | blind | `roles/words.md` | harvested visible text · the area's roles |
 | Member-type audit | blind | `roles/member-type-audit.md` | member cards |
-| Matcher ×2 + tie-break | aware | — | sealed key + findings with class labels stripped |
+| Matcher ×2 + tie-break | aware | `roles/matcher.md` | sealed key + findings with class labels stripped · a control's `--expect` |
 | Checker | aware | — | every non-key finding; the world's known artifacts (`<run>/<world>-artifacts.json`); may re-run the recorder |
 
 **Blind** means a sealed call: `claude -p --safe-mode --restricted --tools "" --strict-mcp-config
@@ -62,6 +62,11 @@ Every blind role first passes `roles/canary.md`.
 - **Packets are built by script.**
   - Member cards are §1–4 of `docs/members/<member>.md`, only quotes dated before the study, with code spans and paths stripped.
   - §5–7 (known problems, journeys) and the journey JSON never enter.
+  - **Only the members read the cards.** The experts and the words pass read the area's roles
+    instead: one line per member in the area config (`roles`), saying who they are here and on
+    what device, never their own words. So only a member's own finds can be primed, and an
+    expert's find counts as unprimed honestly. The roles are linted like the page list, and the
+    round refuses them if they repeat five words of any card.
 - **Lint fails closed** on:
   - any word from the sealed keyword list in a packet;
   - any interface label in a task;
@@ -175,11 +180,14 @@ the pin's directory with `--run .study-run`.
 
 ## Grading (Hartson, Andre & Williges 2001)
 
-- **Match:** same place *and* same mechanism; 0.5 for the same place with a vaguer mechanism.
+- **Match:** same place *and* same mechanism; 0.5 for the same place with the same mechanism said
+  vaguely. A different mechanism at the same place is no match, however close: "the page shrinks"
+  is not "it jumps to the top". The rubric, with a worked example, is `roles/matcher.md`.
 - **Thoroughness** per evaluator class and for the blind classes combined, with Wilson intervals.
 - **Validity:** verified-real ÷ reported.
 - **Structural yield:** verified findings about where things live, what a page is for and how pages connect, not on the key. A finding that re-finds a known gap or a readers-only item is reported apart and never counted; one whose matchers dispute a key item is held until a tie-break settles it.
-- **Controls:** the fixed build must not report fixed items; planted defects must be found.
+- **Controls:** the fixed build must not report fixed items; planted defects must be found. A
+  fixed build is held, not passed, while a matcher dispute names one of its fixed items.
 - **Easy-mode flag:** success ≥ 90% with ease ≥ 6 where the owner struggled fails calibration.
 
 ```sh
@@ -190,6 +198,12 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
 ```
 
+- **The matchers** are aware agents a workflow runs over `findings-unlabelled.jsonl`, in chunks:
+  matcher 1 and matcher 2 apart, then one tie-break over the findings they disagree on. Each reads
+  `roles/matcher.md`, the key and, for a control, its `--expect` file, and answers in
+  `schemas/matcher.json`'s shape, which becomes `matches-1.json`, `matches-2.json` and
+  `tiebreak.json`. Round one's matchers ran from a prompt kept only in one session, with the
+  rubric inside the sealed key. The rubric lives here now, so every round grades by the same one.
 - **The key is read only from `--sealed`.** `gold.md` (lines starting `A1`… the main list, `B1`…
   known gaps, `S1`… defects only the readers found) and `primes.json` (member → the ids their card
   hints at). `grade.json` carries ids, never the key's wording; the readout shows wording only with
@@ -292,7 +306,8 @@ flowchart LR
 
 - **The area config** (`scripts/study/tasks/<area>.json`) holds everything area-specific: the
   cutoff, the members × worlds × viewports table (each member's viewer and start page), runs and
-  tasks per pairing, the census cap and list, the framer's page list in plain words, the thin cut.
+  tasks per pairing, the census cap and list, the framer's page list in plain words, the roles the
+  experts and the words pass read (`roles`, one line per member), the thin cut.
 - **Every blind call** goes through `scripts/study/sealed.mjs` with its role prompt and its schema
   (`scripts/study/schemas/`). Each call's request (images as sha256 + size), answer and **usage**
   (tokens by kind, the CLI's dollar figure, time, the model) is kept in `<out>/<step>/requests/`.
@@ -334,7 +349,7 @@ defects (positive — they must be found).
 
 ```sh
 node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answer-key dir> \
-  --frozen-from <main round dir> --control negative|positive --expect <key ids file> \
+  --frozen-from <main round dir> --control negative|positive --expect <expect file> \
   [--runs N] [--experts N]
 ```
 
@@ -350,17 +365,22 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   task whose fact this build serves differently is logged as `fact-drift`, never refused.
 - **Cheaper:** 1 run a task and 1 expert unless `--runs` / `--experts` say otherwise; no words
   pass or member-type audit.
-- **`--expect`** is the key ids the control is about (a JSON array or one id a line) — ids only,
-  never wording, and no blind role reads them. They land in `control.json` and `round.json`; a
-  resume under another kind, source or list is refused.
+- **`--expect`** is the key ids the control is about, each with its **mechanism** beside it: what
+  the fix removed, or the defect that was planted. Write one a line (`A3 — tapping a filter jumps
+  the page to the top`) or a JSON array of `{id, mechanism}`. A negative control is refused unless
+  every id states one, so the mechanism is written before the round, never fitted to its findings.
+  The matchers judge an expected id against that mechanism. The round keeps the ids only, in
+  `control.json` and `round.json`, and no blind role reads the file. A resume under another kind,
+  source or list is refused.
 
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
    and post its hash and the pin on the owning issue. Every scored item gets its own id **at sealing**
    (a pointer like "the open gaps in the README" cannot be graded), and `primes.json` is written in
-   the grader's shape, `{"<member>": ["<id>", …]}`. The controls' expectations name the mechanism
-   each fix removed, not only the item.
+   the grader's shape, `{"<member>": ["<id>", …]}`. The controls' `--expect` files name the
+   mechanism each fix removed (or each planted defect) beside its id, not only the item.
+   Write the area config's `roles`: one plain line per member, never a quote from a card.
 2. `scripts/study/worlds/<area>-*.mjs`: compose payloads from the real builders at the pin, one pinned
    instant, full-URL stubs. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
    Derive, never type, any figure the page shows two ways: yesterday's closing equity is cash plus
@@ -437,3 +457,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   ~4½ hours the experts took one after another should fall to about one expert's time; the next
   round's `7-experts` start and done lines in `log.jsonl` say whether it did, and its `usage.json`
   what the round cost.
+- 2026-10-11 · the matching rubric and the experts' inputs are fixed (#5099). A full match now
+  needs the same mechanism: an adjacent one at the same place scores 0, where round one gave 0.5
+  and so counted it found. The rubric moved out of the sealed key and one session's prompt into
+  `roles/matcher.md`. A negative control states each fixed item's mechanism in `--expect` before
+  it runs, and a matcher dispute on a fixed item holds it rather than passing it. The experts and
+  the words pass now read one line per member instead of the cards, so the next round's primed
+  split is honest. Round one's grade still counts its card-reading experts as unprimed.

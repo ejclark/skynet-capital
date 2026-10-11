@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import { gradeArgs, loadRound } from "../../scripts/study/grade.mjs";
@@ -16,6 +17,7 @@ import {
   wilson,
 } from "../../scripts/study/grade-core.mjs";
 import { gradeRound } from "../../scripts/study/grade-round.mjs";
+import { schemaProblems } from "../../scripts/study/schema-check.mjs";
 
 // The grader turns a round's findings into the numbers the owner reads at the stop. Every id, item
 // and finding here is invented (tests/fixtures/study-grade/ is a made-up house, not the app); the
@@ -333,6 +335,34 @@ describe("controls and the cycle gate", () => {
     expect(warm).toMatchObject({ pass: true, sessions: { sessions: 2, succeeded: 1 } });
   });
 
+  // An unsettled dispute counts as no match — the strict reading for recall, but the KIND one for a
+  // fixed build, where "not reported" is the pass. One naming a fixed item holds the control.
+  it("holds a negative control while a matcher dispute names one of its fixed items", () => {
+    const split = (gold: string | null): Consensus => ({
+      gold: null,
+      score: 0,
+      disputed: true,
+      resolvedBy: "unresolved",
+      m1: { gold, score: gold ? 1 : 0 },
+      m2: { gold: null, score: 0 },
+      tiebreak: null,
+    });
+    const held = controlVerdict("negative", {
+      expect: ["Q9", "Q8"],
+      findings: [{ id: "d", level: "surface" }],
+      byId: new Map([["d", split("Q9")]]),
+    });
+    expect(held).toMatchObject({ pass: false, found: [], held: ["Q9"] });
+    expect(held.why).toBe("held: a matcher dispute names Q9 — settle it with a tie-break");
+    const elsewhere = controlVerdict("negative", {
+      expect: ["Q8"],
+      findings: [{ id: "d", level: "surface" }],
+      byId: new Map([["d", split("Q9")]]),
+    });
+    expect(elsewhere).toMatchObject({ pass: true });
+    expect(elsewhere).not.toHaveProperty("held");
+  });
+
   it("fails a negative control that still reports a fixed item, and one that never ran", () => {
     expect(controlVerdict("negative", { expect: ["P1"], findings, byId }).pass).toBe(false);
     expect(controlVerdict("negative", null)).toEqual({
@@ -496,5 +526,41 @@ describe("gradeRound — the made-up round, end to end from disk", () => {
 
   it("refuses to grade without the sealed folder named", () => {
     expect(() => gradeArgs(["--round", "x"])).toThrow(/missing --sealed/);
+  });
+});
+
+// The matchers are aware roles a workflow runs after the round (docs/members/study/roles/matcher.md).
+// Their answer shape is the file the grader reads, so a schema-valid answer must grade cleanly and
+// a score off the rubric's three steps must be refused by both.
+describe("the matcher's answer", () => {
+  const schema = JSON.parse(
+    readFileSync(join(import.meta.dirname, "../../scripts/study/schemas/matcher.json"), "utf8"),
+  );
+  const answer = {
+    matches: [
+      { finding: "a", gold: "Q1", score: 1, why: "the hall lamp; lit from below on both sides" },
+      {
+        finding: "b",
+        gold: null,
+        score: 0,
+        why: "the hall lamp, but it flickers — not lit from below",
+      },
+    ],
+  };
+
+  it("fits its schema and is what the grader reads as matches-1.json", () => {
+    expect(schemaProblems(schema, answer)).toEqual([]);
+    const { problems } = consensus({ ids: ["a", "b"], m1: answer.matches, m2: answer.matches });
+    expect(problems).toEqual([]);
+  });
+
+  it("allows only the rubric's three scores", () => {
+    const off = { matches: [{ finding: "a", gold: "Q1", score: 0.75, why: "half a mechanism" }] };
+    expect(schemaProblems(schema, off)).toEqual([
+      "$.matches[0].score: 0.75 is not one of [0,0.5,1]",
+    ]);
+    expect(consensus({ ids: ["a"], m1: off.matches, m2: off.matches }).problems).toContain(
+      "matches-1 scores a 0.75",
+    );
   });
 });

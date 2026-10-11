@@ -1,6 +1,8 @@
 // What each blind role of a round reads (#4943) — PURE text, built only from the packets a script
-// made (member cards, the area's page list, the job map, the facts sheet, traces, the census, the
-// harvest). Nothing here reaches for the repo, the answer key or a route the packet did not carry.
+// made (member cards, the area's roles and page list, the job map, the facts sheet, traces, the
+// census, the harvest). Nothing here reaches for the repo, the answer key or a route the packet
+// did not carry. The experts and the words pass read the roles, never a member card (#5099): a
+// card's own words can hint at an item, and the grader counts their finds as unprimed.
 // The images go beside the text through sealed.mjs → userMessage. Specced in
 // tests/scripts/study-round.spec.ts.
 
@@ -110,11 +112,11 @@ export function analystText({ card, sessions, dropped, coreDropped = 0 }) {
     .join("\n\n");
 }
 
-/** An expert's batch: the cards, the page and width, the census entries verbatim, the frames. */
-export function expertBatchText({ cards, batch, frames, n, of }) {
+/** An expert's batch: the area's roles, the page and width, the census entries verbatim, the frames. */
+export function expertBatchText({ roles, batch, frames, n, of }) {
   return [
-    "## Who uses this area (member cards)",
-    cardsBlock(cards),
+    "## Who uses this area",
+    roles.trim(),
     `## Batch ${n} of ${of}: page ${batch.route} at ${batch.viewport} width`,
     "Every control on this page was operated once by machine, in the order listed. The census entries, verbatim:",
     json(batch.entries),
@@ -127,10 +129,10 @@ export function expertBatchText({ cards, batch, frames, n, of }) {
 }
 
 /** An expert's consolidation: every batch finding it wrote, with ids, and nothing else new. */
-export function expertConsolidationText({ cards, batchFindings, impressions }) {
+export function expertConsolidationText({ roles, batchFindings, impressions }) {
   return [
-    "## Who uses this area (member cards)",
-    cardsBlock(cards),
+    "## Who uses this area",
+    roles.trim(),
     "## Your first impressions, page by page",
     json(impressions),
     "## Every finding you wrote, batch by batch",
@@ -140,11 +142,11 @@ export function expertConsolidationText({ cards, batchFindings, impressions }) {
   ].join("\n\n");
 }
 
-/** The words pass: the harvested strings, by page and kind, and the cards. */
-export function wordsText({ cards, strings }) {
+/** The words pass: the harvested strings, by page and kind, and the area's roles. */
+export function wordsText({ roles, strings }) {
   return [
-    "## Who reads these words (member cards)",
-    cardsBlock(cards),
+    "## Who reads these words",
+    roles.trim(),
     "## The visible text, by page and by where it sits",
     json(strings.routes),
     "## Your answer",

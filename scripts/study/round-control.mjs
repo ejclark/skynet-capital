@@ -1,7 +1,7 @@
 // A CONTROL ROUND (#4943) — the main round's frozen tasks, run again against another pinned build.
 //
 //   node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <dir> \
-//        --frozen-from <main round dir> --control negative|positive --expect <key ids file> \
+//        --frozen-from <main round dir> --control negative|positive --expect <expect file> \
 //        [--runs N] [--experts N]
 //
 // Negative = the fixed build: it must not report what the fixes removed. Positive = a build with
@@ -10,13 +10,18 @@
 //   3 framer, 4 tasks   NOT run — the main round's tasks.json, per-task files and frozen.json are
 //                       copied in, and refused unless tasks.json still hashes to its freeze
 //   1 cards             rebuilt as usual, and refused unless each hashes to the main round's card
-//   8 words, 9 audit    skipped — they read the cards and words, not the build's behaviour
+//   8 words, 9 audit    skipped — they judge the copy and the member cards, not the build's behaviour
 //   runs, experts       1 each by default (--runs, --experts override)
 // The census, facts sheet and harvest are the control pin's own (the build differs, so must they);
 // the member × world × viewport matrix, the thin cut and the world are the main round's. The
 // findings and classes keep the round contract, and <out>/control.json (round-contract.mjs →
 // controlRecord) says what this control is, for grade.mjs --negative / --positive.
-// The key ids in --expect are ids only (`A3`, `P1`) — never wording — and no blind role reads them.
+// --expect states each key id the control is about, with the MECHANISM beside it — what the fix
+// removed, or the defect planted (`A3 — a filter tap jumps the page to the top`). The mechanism is
+// for the matchers, who are aware: round one's fixed build "still reported" two items through a
+// different mechanism at the same place (#5099). A negative control is refused without one for
+// every id, so it is stated before the round, never after its findings. Only the ids reach
+// control.json and round.json, and no blind role reads the file.
 
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -86,13 +91,49 @@ export function factDrift(tasks, facts) {
   return out;
 }
 
-/** Key ids from --expect: a JSON array or one id a line; ids only, at least one. */
-export function expectIds(list) {
-  const ids = list.map((x) => String(x).trim()).filter(Boolean);
-  const bad = ids.filter((id) => !/^[A-Za-z]+\d+$/.test(id));
-  if (ids.length === 0) throw new Error("--expect names no key ids");
-  if (bad.length > 0) throw new Error(`--expect holds ids only (A3, P1), not: ${bad.join(", ")}`);
-  return [...new Set(ids)];
+const EXPECT_LINE = /^([A-Za-z]+\d+)(?:\s*[—–:-]\s*(.*))?$/;
+
+/** One --expect item as {id, mechanism}: `A3`, `A3 — mechanism` or {id, mechanism}; null if neither. */
+function expectEntry(x) {
+  if (x && typeof x === "object") {
+    const id = String(x.id ?? "").trim();
+    const mechanism = String(x.mechanism ?? "").trim();
+    return EXPECT_LINE.test(id) ? { id, mechanism: mechanism || null } : null;
+  }
+  const m = EXPECT_LINE.exec(String(x).trim());
+  return m ? { id: m[1], mechanism: m[2]?.trim() || null } : null;
+}
+
+/**
+ * --expect, read (a JSON array, or one item a line): [{id, mechanism}] — the first of an id
+ * named twice. Throws when it names no id, or an item does not start with one.
+ */
+export function expectEntries(list) {
+  const items = list.filter((x) => (typeof x === "object" ? x : String(x).trim()));
+  if (items.length === 0) throw new Error("--expect names no key ids");
+  const bad = items.filter((x) => !expectEntry(x)).map((x) => JSON.stringify(x));
+  if (bad.length > 0) {
+    throw new Error(
+      `each --expect item starts with a key id (A3, or A3 — the mechanism), not: ${bad.join(", ")}`,
+    );
+  }
+  const out = [];
+  for (const e of items.map(expectEntry)) if (!out.some((o) => o.id === e.id)) out.push(e);
+  return out;
+}
+
+/** The key ids from --expect — all a round records of it. */
+export const expectIds = (list) => expectEntries(list).map((e) => e.id);
+
+/** Why --expect cannot run this kind of control — [] when it can. */
+export function expectProblems(kind, entries) {
+  if (kind !== "negative") return [];
+  const bare = entries.filter((e) => !e.mechanism).map((e) => e.id);
+  return bare.length
+    ? [
+        `--expect names no mechanism for ${bare.join(", ")} — a negative control states what each fix removed`,
+      ]
+    : [];
 }
 
 /** A round's log events, in order; a torn line (a crash mid-append) is skipped, not fatal. */
@@ -142,12 +183,15 @@ export function adoptSource(ctx) {
     sealed: ctx.sealed,
   });
   if (problems.length > 0) throw new Error(`refusing the control — ${problems.join("; ")}`);
+  const expected = readList(resolve(ctx.opts.expect));
+  const unstated = expectProblems(ctx.opts.control, expectEntries(expected));
+  if (unstated.length > 0) throw new Error(`refusing the control — ${unstated.join("; ")}`);
   Object.assign(ctx.opts, {
     frozenFrom: dir,
     thin: Boolean(source.thin),
     onlyWorld: source.onlyWorld ?? undefined,
     sourceFrozen: frozen.sha256,
-    expectIds: expectIds(readList(resolve(ctx.opts.expect))),
+    expectIds: expectIds(expected),
   });
   ctx.matrix = selectMatrix(ctx.p, ctx.opts);
   ctx.censuses = censusPlan(ctx.p, ctx.opts);
