@@ -1,0 +1,210 @@
+/* The phone's Activity, one card an order under day headers (#5101; `activity-cards.tsx`). Line 1 is
+   what happened with the cash it moved on the right; line 2 is the bet with what it booked on the
+   right. Every card spans the same width, so the right-hand figures share one edge down the list,
+   in tabular digits, and the word sits before each number ("received +$255") so the digits align. */
+
+.act-cards {
+  display: grid;
+  gap: 16px;
+}
+.act-day-head {
+  margin: 0 0 6px 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.act-day-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.act-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  scroll-margin-top: calc(var(--landing-clear, 64px) + 12px);
+}
+/* Opened: an inset bar and the accent edge — a shape as well as a tone. */
+.act-card[data-open] {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.act-card[data-landed] {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: inset 5px 0 0 var(--text);
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+}
+
+/* The two lines are one 44px+ button: the whole card opens, not a chevron beside it. */
+.act-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 10px;
+  row-gap: 5px;
+  align-items: baseline;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.act-card-head:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.act-what {
+  grid-area: 1 / 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.act-side,
+.act-size {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+/* An expiry or assignment names itself on a dashed edge — no side's word, no side's hue (#4650). */
+.act-lifecycle {
+  padding: 0 6px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text);
+}
+.act-inst {
+  font-weight: 700;
+}
+
+.act-cash,
+.act-result {
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.act-cash {
+  grid-area: 1 / 2;
+}
+.act-result {
+  grid-area: 2 / 2;
+}
+.act-cash b,
+.act-result b {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.act-result b.tone-pos {
+  color: var(--pos);
+}
+.act-result b.tone-neg {
+  color: var(--neg);
+}
+
+.act-bet {
+  grid-area: 2 / 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: 13px;
+}
+.act-bet-words {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bet-glyph {
+  flex: none;
+  color: var(--accent);
+}
+.act-playbook {
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.act-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* A spread's legs, under its two lines and always on screen: side, contract, its own dollars. */
+.act-legs {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0 14px 10px;
+  list-style: none;
+  font-size: 12px;
+}
+.act-leg {
+  color: var(--muted);
+}
+.act-leg-contract {
+  color: var(--text);
+}
+.act-leg-missing {
+  border-top: 1px dashed var(--border);
+  padding-top: 4px;
+}
+
+/* Opened in place, under its own row: the receipt, then the decision. */
+.act-card-body {
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.act-receipt {
+  margin: 10px 0 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+/* The decision reads as sentences, not as the desk table's mono figures: one column, the words in
+   the house sans, each label a small caps word above its line. */
+.act-card-body .why-grid {
+  grid-template-columns: 1fr;
+  max-width: none;
+  gap: 8px;
+  padding: 0;
+}
+.act-card-body .why-grid dd {
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* A Thesis marker for one leg's fill lands on that leg's line inside its spread's card. */
+.act-leg {
+  scroll-margin-top: calc(var(--landing-clear, 64px) + 12px);
+}
+.act-leg[data-landed] {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: inset 5px 0 0 var(--text);
+}

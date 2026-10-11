@@ -1,7 +1,8 @@
 // Visual harness for an account's Activity paged and narrowed (#4650, plan #4642) — Eric watching the
 // option trades a bot makes through each playbook it runs. PHONE FIRST (docs/PICTURES.md): the 390px
 // frames prove the symbol box, the owner's playbook chips, "Load older orders" and the honest empty
-// line all fit a phone; one desktop frame shows the wider screen only adds room.
+// line all fit a phone, and (#5101) that each order is a day-headed card that opens in place; one
+// desktop frame shows the wider screen only adds room.
 //
 // Every `/api/desk/bot-sauron/activity` read — the first page, each older page, each filter — is
 // answered by the REAL route (`serveDeskJson`) over a real in-memory decision store and a fixture
@@ -190,10 +191,18 @@ for (const [tag, viewport] of [
   await toTop(page.locator(".page-header"));
   await shoot(`activity-filters-${tag}`);
 
-  // 2 — narrowed to one playbook: the chip pressed (✓), only the spread's row, its why open.
-  await page.getByRole("button", { name: "NVDA-CALL-SPREAD" }).click();
+  // 1b — the phone's cards (#5101): the put opened in place, under its own row — the time, the
+  // price a share, then the decision that placed it.
+  await page.locator("#act-opt-put-1 .act-card-head").click();
+  await settle();
+  await toTop(page.locator("#act-opt-put-1"));
+  await shoot(`activity-card-open-${tag}`);
+  await page.locator("#act-opt-put-1 .act-card-head").click();
+
+  // 2 — narrowed to one playbook: the chip pressed (✓), only the spread's card, its why open.
+  await page.getByRole("button", { name: "NVDA-CALL-SPREAD", exact: true }).click();
   await page.locator("#act-opt-put-1").waitFor({ state: "detached" });
-  await page.getByRole("button", { name: /Why NVDA \$185\/\$200 CALL SPREAD/ }).click();
+  await page.locator("#act-opt-spread-1 .act-card-head").click();
   await settle();
   await toTop(page.locator(".activity-filter-bar"));
   await shoot(`activity-playbook-${tag}`);

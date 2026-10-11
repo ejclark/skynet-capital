@@ -153,7 +153,10 @@ test.describe("landing at 390px, through the links those doors make (#5022)", ()
   }) => {
     await stage(page);
     await page.goto(`${OVERVIEW}&section=activity#${DEEPEST_CLOSE}`);
-    await expectLanded(page.locator(`tr[id="${DEEPEST_CLOSE}"]`));
+    // At 390 the ledger is one card an order (#5101), and the card carries the row's anchor.
+    const card = page.locator(`[id="${DEEPEST_CLOSE}"]`);
+    await expect(card).toHaveClass(/act-card/);
+    await expectLanded(card);
   });
 
   test("a position's link lands on its card below the sticky head, marked", async ({ page }) => {

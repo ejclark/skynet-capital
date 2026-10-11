@@ -8,6 +8,7 @@
  * position unless it deliberately needs to override a later one.
  */
 @import "./account-activity.css";
+@import "./activity-cards.css";
 @import "./admin.css";
 @import "./alpaca-guide.css";
 @import "./bench.css";
