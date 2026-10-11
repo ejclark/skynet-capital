@@ -37,10 +37,13 @@
   border-radius: 8px;
   font-size: 12.5px;
 }
+/* Short ids stay on one line; a long one (`russell-style-quarter-end-capping-effective-…`) breaks at
+ * its hyphens instead of overflowing a 390px card (#5149) — the full id stays readable, untruncated. */
 .rx-call-event {
   font-size: 11px;
   font-weight: 600;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rx-call-event:hover {
   color: var(--accent);
@@ -50,10 +53,16 @@
   min-width: 200px;
   line-height: 1.5;
 }
+/* The chips wrap onto a second line rather than push the card — and the page — sideways at 390px
+ * (#5149: horizon + confidence + "assessed … · stale (33d)" + "source blocked" ran to 478px). A
+ * single chip wider than the card truncates; its title carries the full text. */
 .rx-call-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 .rx-chip {
   font-size: 10px;
@@ -63,6 +72,14 @@
   padding: 1px 8px;
   color: var(--muted);
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The doc lists' `.rx-assessed` stamp (below) pins itself to the row's right edge; in a wrapped
+ * chip row that would strand the assessed chip on its own line, flush right, away from its siblings. */
+.rx-call-meta .rx-assessed {
+  margin-left: 0;
 }
 .rx-conf {
   color: var(--accent);
