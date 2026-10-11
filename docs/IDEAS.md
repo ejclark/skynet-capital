@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **R&D's month grid is the same dark block Eric reacted to on Events.** His note on #3977's
+  decisions page ("I don't like the overly dark calendar, especially when a large portion of it is
+  so empty") was answered on Profile → Events by #5134's lighter tracks; R&D's market board grid
+  was left as is on purpose (it is the market board, not your days). Show him the
+  live R&D page beside Events and let him place it: carry the lighter tracks over, or keep R&D dark.
+  _(src: Eric · while: closing #3977, #5134's follow-up)_
+
 - **Re-baseline in CI on a label, so a visual PR never needs the round trip.** CI already holds
   every actual. A `rebaseline` label on a PR whose only red is screenshot mismatches would run
   `scripts/rebaseline-from-ci.mjs`'s classifier on the run, copy the actuals and push one commit —
