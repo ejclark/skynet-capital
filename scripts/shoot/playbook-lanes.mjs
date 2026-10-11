@@ -8,6 +8,7 @@
 // spell, and the bench at 1280 where the strip and the lanes share one column.
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/playbook-lanes.mjs [outdir]
 
+import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { accountsFixture } from "./accounts-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -66,6 +67,23 @@ const trades = [
     mode: "aggressive",
   },
 ];
+// Opening a card reads the Store view for its rule (#5096): the server's own builder over the
+// lanes' subscriptions, as playbook-open.mjs serves it. Without it the open card threw (#5208).
+const SUBSCRIBED_AT = "2026-10-01T14:00:00.000Z";
+const store = playbookStoreView(
+  lanes.map((l) => ({
+    accountId: "bot-sauron",
+    playbookId: l.playbookId,
+    mode: l.mode,
+    enabled: true,
+    createdAt: SUBSCRIBED_AT,
+    updatedAt: SUBSCRIBED_AT,
+  })),
+  false,
+  [],
+  false,
+  new Date(NOW).toISOString(),
+);
 let quietWednesday = false;
 const heartbeat = () => {
   const quiet = (d, b) => quietWednesday && d === 2 && (b === 1 || b === 2);
@@ -96,7 +114,7 @@ const { page, origin, shoot, close } = await openShell({
   name: "playbook-lanes",
   viewport: { width: 390, height: 1100 },
   quality: 58,
-  stubs: { ...stubs, "/api/desk/bot-sauron/heartbeat": heartbeat },
+  stubs: { ...stubs, "/api/desk/bot-sauron/heartbeat": heartbeat, "/api/playbook-store": store },
 });
 await page.clock.setFixedTime(new Date(NOW));
 await page.emulateMedia({ reducedMotion: "reduce" });

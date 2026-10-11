@@ -66,6 +66,13 @@ async function composeWorld(world, runDir, server) {
       `compose: ${world.name}'s day change does not add up:\n  ${gaps.map(server.describeGap).join("\n  ")}`,
     );
   }
+  // A fill on a closed market is a state production can't show (#5208).
+  const offSession = server.offSessionFills(book);
+  if (offSession.length > 0) {
+    throw new Error(
+      `compose: ${world.name} fills outside a New York session:\n  ${offSession.map(server.describeFill).join("\n  ")}`,
+    );
+  }
   const config = server.serverConfig(book);
   // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
   const channel = server.createBoardChannel("study");
@@ -132,6 +139,7 @@ async function composeOne(runDir, name) {
   const server = {
     ...(await import("./book.mjs")),
     ...(await import("./day-change.mjs")),
+    ...(await import("./fill-sessions.mjs")),
     ...(await import("./server-config.mjs")),
     ...(await import("../server-reads.mjs")),
     ...(await import("../../../src/server/board-patch-routes.ts")),

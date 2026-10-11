@@ -14,6 +14,7 @@
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
 
 import { regularSessionOpen } from "../../../src/domain/market-session.ts";
+import { checkWeekWindow, WEEK_BUCKET_MS } from "../../../src/observatory/check-week-view.ts";
 import { INSTANT } from "./instant.mjs";
 import { leagueServices } from "./league-services.mjs";
 import { marketClient } from "./market.mjs";
@@ -86,6 +87,41 @@ function pageOf(records, page = {}) {
   return page.limit === undefined ? older : older.slice(0, page.limit);
 }
 
+/**
+ * One bot's week as the decision store's three reads answer it (`decision-db-week.ts`), over the
+ * book's records (#5208): every check in the week's window oldest first, verdicts counted per
+ * half-hour bucket, the placed trades. Production's bridge reads it whenever the store is open, so
+ * a world without it drew the Playbooks section with no lanes.
+ */
+function checkWeek(records) {
+  const window = checkWeekWindow(AT);
+  if (!window) return undefined;
+  const inWeek = records
+    .filter((r) => r.at >= window.from && r.at < window.to)
+    .sort((a, b) => a.at - b.at);
+  const verdicts = new Map();
+  for (const r of inWeek) {
+    const bucket = Math.floor(r.at / WEEK_BUCKET_MS);
+    for (const v of r.playbookVerdicts ?? []) {
+      const key = `${bucket}|${v.playbookId}|${v.mode}|${v.state}`;
+      const row = verdicts.get(key) ?? { bucket, ...v, n: 0 };
+      verdicts.set(key, { ...row, n: row.n + 1 });
+    }
+  }
+  const trades = inWeek.flatMap((r) =>
+    r.outcomes
+      .filter((o) => o.action === "placed")
+      .map(({ intent }) => ({
+        at: r.at,
+        symbol: intent.symbol,
+        side: intent.side === "sell" ? "sell" : "buy",
+        ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
+        ...(intent.playbookMode ? { mode: intent.playbookMode } : {}),
+      })),
+  );
+  return { checks: inWeek.map((r) => r.at), verdicts: [...verdicts.values()], trades };
+}
+
 /** The world's server config. `auth` is configured, so every ownership gate is live. */
 export function serverConfig(book) {
   const owners = new Map(book.members.map((m) => [m.email, m.owns]));
@@ -107,6 +143,7 @@ export function serverConfig(book) {
     rosterIds: () => new Set(book.participants.map((p) => p.id)),
     readTradeActivity: async (id) => book.activity[id] ?? [],
     readDecisions: async (id, page) => pageOf(book.decisions[id] ?? [], page),
+    readCheckWeek: (id) => checkWeek(book.decisions[id] ?? []),
     findByOrderId: (orderId) => byOrder.get(orderId),
     readHistory: async (id) => book.history[id] ?? [],
     // No account has set a per-playbook allocation yet (#4469): the store's empty state.
