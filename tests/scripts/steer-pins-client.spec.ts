@@ -270,6 +270,16 @@ describe("a choice saves in the decision's own record and counts as an answer", 
     expect(docs[REC]?.pins).toEqual({ "B:phone:1": "up", "B:phone:2": "down" });
   });
 
+  it("keeps another view's pins when this view's tap rewrites the whole record", async () => {
+    const docs: Docs = { [REC]: { pick: null, react: {}, note: "", pins: {} } };
+    const v = await open(docs);
+    await v.choose("B:phone:1", "Change");
+    (docs[REC] as { pins: Record<string, string> }).pins["B:phone:2"] = "up";
+    await v.click(v.doc.querySelector('.react[data-opt="A"] .rb[data-v="more"]'));
+    expect(docs[REC]).toMatchObject({ react: { A: "more" } });
+    expect(docs[REC]?.pins).toEqual({ "B:phone:1": "down", "B:phone:2": "up" });
+  });
+
   it("paints what the store holds when the page opens, a null as no reaction", async () => {
     const v = await open({ [REC]: { pins: { "B:phone:1": "down", "B:phone:2": null } } });
     expect(v.pin("B:phone:1").dataset.r).toBe("down");

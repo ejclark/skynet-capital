@@ -47,6 +47,8 @@
   let metaStored = false;
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
+  /** Pin ids this view has reacted to, by decision key: only these may overwrite stored pins. */
+  const touched = new Map();
   let readOnly = false;
   /** The line shown in place of the count when the store can't be reached or read; locks the page. */
   let blocked = null;
@@ -234,7 +236,22 @@
       return status("Sending once your answers load");
     }
     if (!db) return status("");
-    write(`tp/${ID}/${sec}/${key}`, body(sec, key));
+    if (sec !== "decisions") return write(`tp/${ID}/${sec}/${key}`, body(sec, key));
+    // A whole decision record replaces what is stored, so it first takes the stored pins and
+    // keeps every one this view didn't touch: another view's reactions survive this view's tap.
+    const path = `tp/${ID}/decisions/${key}`;
+    chain(path, (ref) =>
+      ref.get().then((snap) => {
+        const live = (snap.exists && snap.data()?.pins) || {};
+        const r = state.decisions[key];
+        const mine = touched.get(key) ?? new Set();
+        const pins = {};
+        for (const [id, v] of Object.entries(live)) if (v && !mine.has(id)) pins[id] = v;
+        for (const id of mine) if (r.pins?.[id]) pins[id] = r.pins[id];
+        r.pins = pins;
+        return landed(path, () => ref.set({ ...body("decisions", key), pins }))();
+      }),
+    );
   }
   /** One pin's reaction, merged into its decision's record (null clears it); a record the store
    *  doesn't hold yet is written whole. Held like any answer while the store is connecting. */
@@ -499,6 +516,7 @@
     react(key, id, v) {
       const r = rec("decisions", key);
       r.pins = { ...r.pins };
+      touched.set(key, (touched.get(key) ?? new Set()).add(id));
       if (r.pins[id] === v) delete r.pins[id];
       else r.pins[id] = v;
       tap();

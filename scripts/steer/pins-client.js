@@ -110,6 +110,7 @@ globalThis.steerPins = (api) => {
     const choice = t.closest?.(".pc");
     if (choice && openPin && pop.contains(choice)) {
       const pin = openPin;
+      if (api.locked()) return close(false);
       api.react(keyOf(pin), pin.dataset.pin, choice.dataset.r);
       return close(true);
     }
