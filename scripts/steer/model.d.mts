@@ -19,6 +19,8 @@ export interface Option {
 export interface Decision {
   key: string;
   kind: Kind;
+  /** A round-0 question (`kind: "problems"` in the manifest): a pick chooses a problem, never a build. */
+  problems?: boolean;
   issue: number;
   isPr: boolean;
   title: string;

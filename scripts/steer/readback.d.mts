@@ -23,6 +23,8 @@ export interface ReadbackPlan {
   rollover: { key: string; issue: number; kind: string; why: string }[];
   defaults: { key: string; issue: number; default: string }[];
   followUps: { kind: string; issue: number; key: string; why: string }[];
+  /** A problems question's answer: what the next round draws. Nothing is filed from it. */
+  nextRound: { issue: number; key: string; pick: string | null; instruction: string }[];
   /** Comments whose anchor is not a shown decision: the session answers them on the page. */
   unplacedComments: PageComment[];
   commands?: string[][];
@@ -51,4 +53,9 @@ export function anchorDecision(
 ): { d: TouchPointData["decisions"][number]; opt: string | null } | null;
 export function commentsBlock(list: (PageComment & { opt?: string | null })[] | undefined): string;
 export function readComments(file: string): PageComment[];
+/** The next round's instruction after a problems question is read back (round 0). */
+export function nextRoundInstruction(
+  d: TouchPointData["decisions"][number],
+  r: { pick?: string | null; react?: Record<string, string> },
+): string;
 export function commandsFor(plan: ReadbackPlan, dir: string): string[][];
