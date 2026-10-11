@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { ChainAnswer, ChainData, PlayInfo } from "../../src/live/options";
+import type { ChainPreset } from "../../src/shell/chain-section";
 import { OptionGate } from "../../src/shell/option-gate";
 
 /**
@@ -382,6 +383,92 @@ describe("OptionGate — chain cell picking", () => {
 });
 
 /**
+ * The cell names the side (#5166): a bid is a sale and an ask a purchase, so a price-cell pick
+ * lands on sell/buy to open for that contract at the tapped price, not on the ticket's current
+ * side at the mid. The ticket here is 202 (sell a covered call); the 180 call quotes 4.8 × 5.2 at
+ * a 5 mid, so the three prices are distinguishable.
+ */
+describe("OptionGate — a bid sells, an ask buys (#5166)", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  const playsWithLongCall: readonly PlayInfo[] = [
+    ...playsWithUnlockedTarget,
+    { ...chainPickPlay, code: "302", id: "302", name: "Buy a long call", side: "buy" },
+  ];
+
+  it("a bid on the rung it already names fills the limit at the bid, not the mid", async () => {
+    render(renderChainPickGate({ plays: playsWithLongCall, onPreset: () => undefined }));
+    fireEvent.click(await screen.findByRole("button", { name: "Pick the 180 call bid" }));
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(4.8));
+  });
+
+  it("an ask switches a sell ticket to buy to open, handing the ask up before the remount", async () => {
+    const presets: string[] = [];
+    const staged: unknown[] = [];
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={chainPickPlay}
+          initialSymbol="NVDA"
+          plays={playsWithLongCall}
+          onPreset={(code) => presets.push(code)}
+          onStage={(p) => staged.push(p)}
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Pick the 180 call ask" }));
+    expect(staged).toEqual([{ play: "302", strike: "180", limit: 5.2 }]);
+    expect(presets).toEqual(["302"]);
+  });
+
+  function renderWithPreset(preset: ChainPreset, onHandled: () => void = () => undefined) {
+    const client = new QueryClient();
+    return (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={chainPickPlay}
+          initialSymbol="NVDA"
+          initialStrike="180"
+          plays={playsWithLongCall}
+          onPreset={() => undefined}
+          preset={preset}
+          onPresetHandled={onHandled}
+        />
+      </QueryClientProvider>
+    );
+  }
+
+  it("applies a hand-off on the rung and strike it names, over the mid seed, once", async () => {
+    let handled = 0;
+    render(renderWithPreset({ play: "202", strike: "180", limit: 4.8, key: 1 }, () => handled++));
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(4.8));
+    expect(handled).toBe(1);
+  });
+
+  it("a hand-off for a '—' cell carries no price, so the mid seed stands", async () => {
+    render(renderWithPreset({ play: "202", strike: "180", key: 1 }));
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(5));
+  });
+
+  it("ignores a hand-off for another rung or strike", async () => {
+    let handled = 0;
+    render(renderWithPreset({ play: "302", strike: "180", limit: 5.2, key: 1 }, () => handled++));
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(5));
+    expect(handled).toBe(0);
+  });
+
+  it("shows a locked tap's note from the hand-off", async () => {
+    render(renderWithPreset({ play: "202", strike: "180", note: "Why it stayed.", key: 1 }));
+    expect(await screen.findByText("Why it stayed.")).toBeInTheDocument();
+  });
+});
+
+/**
  * The chain accordion (Eric, 2026-09-22 — "is it possible to have that table be expandable in the
  * same form after stock symbol is selected... an intuitive path... to collapse the table"): open
  * with nothing picked, collapsed to a one-line summary the instant a strike is picked, reopenable
@@ -459,7 +546,9 @@ describe("OptionGate — locked-pick note", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("Strike filled — the put side isn't unlocked yet."),
+        screen.getByText(
+          "Strike filled — “Sell a cash-secured put” isn't unlocked yet, so the side didn't change.",
+        ),
       ).toBeInTheDocument(),
     );
   });
@@ -471,7 +560,9 @@ describe("OptionGate — locked-pick note", () => {
     fireEvent.click(putCells[0] as HTMLElement);
     await waitFor(() =>
       expect(
-        screen.getByText("Strike filled — the put side isn't unlocked yet."),
+        screen.getByText(
+          "Strike filled — “Sell a cash-secured put” isn't unlocked yet, so the side didn't change.",
+        ),
       ).toBeInTheDocument(),
     );
 
@@ -479,7 +570,9 @@ describe("OptionGate — locked-pick note", () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByText("Strike filled — the put side isn't unlocked yet."),
+        screen.queryByText(
+          "Strike filled — “Sell a cash-secured put” isn't unlocked yet, so the side didn't change.",
+        ),
       ).not.toBeInTheDocument(),
     );
   });

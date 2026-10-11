@@ -12,8 +12,9 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
-import { navForPlay, type PlayCode, playForNav } from "../live/plays";
+import { type PlayCode, rungForChainTap } from "../live/plays";
 import { formatExpiration } from "../live/straddle";
+import { type ChainPreset, lockedTapNote } from "./chain-section";
 import { ChainStraddle } from "./chain-straddle";
 import { useFillFlare } from "./fill-flare";
 import { LockedPanel } from "./locked-panel";
@@ -21,6 +22,7 @@ import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
+import type { PickedCell } from "./straddle-view";
 import { SymbolField } from "./symbol-field";
 import { TimeInForceField } from "./tif-field";
 
@@ -68,8 +70,14 @@ import { TimeInForceField } from "./tif-field";
  * its own typed commits (see `StrikeField`'s `onCommit`), so typing doesn't fire a `navigate()` on
  * every keystroke. A LOCKED-target click is the one pick that still doesn't commit — the rung
  * didn't change, and the strike shown against it is provisional (the note says as much), so `?strike=`
- * stays whatever it already was. Known gap, out of scope for this pass: a rung switch doesn't
- * re-seed the limit price from the new rung's own chain — only the strike survives the remount.
+ * stays whatever it already was.
+ *
+ * THE CELL NAMES THE SIDE (#5166): a bid is a sale and an ask a purchase, so a price-cell pick
+ * targets `rungForChainTap` — sell to open at the bid, buy to open at the ask — rather than keeping
+ * the ticket's current side, and the limit is the tapped price, not the mid. Same rung → set here.
+ * A rung switch remounts this component and the URL carries no limit, so the price goes up to the
+ * route first (`onStage`) and comes back down as `preset` on the fresh mount — the same channel the
+ * standalone Chain section uses. A "—" cell carries no price, so the mid seed below still applies.
  *
  * HELD POSITIONS ON THE CHAIN (Eric, 2026-09-22): a "C"/"P" badge next to a strike marks a
  * contract the desk already holds at that strike, on the same underlying and expiration this
@@ -119,6 +127,9 @@ export function OptionGate({
   onPreset,
   chartSlot,
   header,
+  preset,
+  onPresetHandled,
+  onStage,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -169,6 +180,13 @@ export function OptionGate({
    *  and type toggle controls should be part of a singular trading form on the same card").
    *  Rendered first, above the play name, in both the working panel below and the locked branch. */
   readonly header?: ReactElement;
+  /** A chain tap's hand-off from the route (#5166, `ChainPreset`): applied once, when this ticket
+   *  is on the rung and strike it names, then reported back through `onPresetHandled`. */
+  readonly preset?: ChainPreset;
+  readonly onPresetHandled?: () => void;
+  /** Hands the route the price of a rung-switching cell pick before `onPreset` remounts this
+   *  component, so it survives the remount as `preset`. */
+  readonly onStage?: (preset: Omit<ChainPreset, "key">) => void;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
@@ -320,16 +338,21 @@ export function OptionGate({
    *  `onPreset`), but now also surfaces a `.tkt-note` explaining why the ticket stayed put, so the
    *  click is never silently dead. With no `plays`/`onPreset` wired up at all, this degrades to the
    *  same-rung behavior (fill and commit) for every click. */
-  const onChainCellPick = (clickedStrike: number, side: "call" | "put") => {
+  const onChainCellPick = (clickedStrike: number, side: "call" | "put", cell?: PickedCell) => {
     setLockedPickNote(undefined);
     const value = String(clickedStrike);
-    if (!(plays && onPreset)) {
+    // The tapped bid/ask beats the mid `pickStrike` seeds — that price is what the member chose.
+    const pickAtCell = () => {
       pickStrikeAndCommit(value);
+      if (cell?.value !== undefined) setLimitPrice(String(cell.value));
+    };
+    if (!(plays && onPreset)) {
+      pickAtCell();
       return;
     }
-    const target = playForNav({ ...navForPlay(play.code), optionType: side });
+    const target = rungForChainTap(play.code, side, cell?.price);
     if (target === play.code) {
-      pickStrikeAndCommit(value);
+      pickAtCell();
       return;
     }
     // Safety-critical, fail SAFE: a target this component can't find in `plays` is treated as
@@ -342,9 +365,14 @@ export function OptionGate({
       pickStrike(value);
       setStrikeFlash((n) => n + 1);
       setChainOpen(false);
-      setLockedPickNote(`Strike filled — the ${side} side isn't unlocked yet.`);
+      setLockedPickNote(lockedTapNote(plays.find((p) => p.code === target)?.name, true));
       return;
     }
+    onStage?.({
+      play: target,
+      strike: value,
+      ...(cell?.value !== undefined ? { limit: cell.value } : {}),
+    });
     onStrikeCommit?.(value);
     onPreset(target);
   };
@@ -361,6 +389,18 @@ export function OptionGate({
       setLimitPrice(String(seedPremium));
     }
   }, [seedPremium, strike]);
+
+  /** A chain tap's hand-off (#5166) — declared AFTER the mid seed on purpose: on a mount where the
+   *  chain is already cached both fire in one commit, and the tapped price must be the one that
+   *  lands. Applied only on the rung and strike it names (a route update can arrive a render apart
+   *  from the URL's); anything else waits, and the route drops it once the rung moves on. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the hand-off itself — one application per tap
+  useEffect(() => {
+    if (!preset || preset.play !== play.code || preset.strike !== (initialStrike ?? "")) return;
+    if (preset.limit !== undefined) setLimitPrice(String(preset.limit));
+    setLockedPickNote(preset.note);
+    onPresetHandled?.();
+  }, [preset?.key, initialStrike, play.code]);
 
   /** The currently-selected CONTRACT's real OCC symbol (task 3a) — sourced from the matched chain
    *  row, never hand-assembled: `buildOccSymbol` exists server-side/in `option-symbols.ts` for
