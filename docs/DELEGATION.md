@@ -39,7 +39,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
    token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
    `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
-   worktree agent's prompt.
+   worktree agent's prompt. **Temp files are yours alone:** write them inside your own worktree
+   (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
+   label — never a shared generic name like `body.md`. Every agent in a workflow shares one
+   scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
+   (#5240, #5245).
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
