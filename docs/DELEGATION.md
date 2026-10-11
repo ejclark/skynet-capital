@@ -14,7 +14,10 @@ and irreversible) applied to autonomy itself.
 The foreground thread (Eric + Claude) dispatches **subagents**, each in its **own isolated git
 worktree**, to build a scoped item to completion — build → verify → screenshot → open a PR — then report.
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
-feeding thoughts; work moves underneath.
+feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
+fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
+into separate lint, typecheck and per-suite calls (#5191).
 
 ## The rails (addressing single-point-of-failure & oversight)
 
