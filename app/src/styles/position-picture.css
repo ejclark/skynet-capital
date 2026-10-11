@@ -1,0 +1,226 @@
+/* A position's picture, first in its opened guidance (#5070 slice 2; round 2 of #5037, R2):
+ * `shell/position-picture.tsx`. Hue never carries a meaning alone (a standing reader is red/green
+ * colourblind): every zone is named in the key under the bar and drawn as its own shape (losing
+ * hatched, keeping part striped, keeping all solid), and the projection cell is dashed. */
+
+.pp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: stretch;
+  min-width: 0;
+  padding: 4px 0 2px;
+}
+.pp-strip {
+  margin: 0;
+  min-width: 0;
+}
+.pp-title {
+  margin: 0 0 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pp-sub {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* The price strip: "now" above the bar, strike and breakeven each on a row of its own under it,
+   so two close prices never print over each other. */
+.pp-price-art {
+  position: relative;
+  margin: 0 2px;
+}
+.pp-row {
+  position: relative;
+  height: 16px;
+}
+.pp-bar {
+  position: relative;
+  height: 22px;
+}
+.pp-zone {
+  position: absolute;
+  top: 7px;
+  height: 8px;
+}
+.pp-zone--keep,
+.pp-zone--gain {
+  background: color-mix(in srgb, var(--pos) 55%, var(--surface-2));
+}
+/* Keeps part: its own shape (upright stripes), not a lighter green — three zones, three shapes:
+   hatched, striped, solid. */
+.pp-zone--part {
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--pos) 60%, var(--surface-2)) 0 2px,
+    transparent 2px 5px
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pos) 45%, var(--surface-2));
+}
+.pp-zone--lose {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--neg) 55%, var(--surface-2)) 0 3px,
+    color-mix(in srgb, var(--neg) 18%, var(--surface-2)) 3px 6px
+  );
+}
+.pp-bar > .pp-zone:first-child {
+  border-radius: 999px 0 0 999px;
+}
+.pp-zone--last {
+  border-radius: 0 999px 999px 0;
+}
+.pp-tick {
+  position: absolute;
+  top: 3px;
+  width: 1.5px;
+  height: 16px;
+  background: var(--text);
+  transform: translateX(-50%);
+}
+.pp-tick--breakeven {
+  width: 0;
+  border-left: 1.5px dashed var(--text);
+  background: none;
+}
+.pp-now {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+.pp-label {
+  position: absolute;
+  top: 1px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.pp-label--start {
+  transform: none;
+}
+.pp-label--end {
+  transform: translateX(-100%);
+}
+.pp-label--now {
+  font-weight: 700;
+  color: var(--accent);
+}
+.pp-label--strike {
+  color: var(--text);
+}
+.pp-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.pp-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.pp-swatch {
+  position: static;
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* The waiting strip: the P/L if the price holds, today → expiry, $0 dashed. */
+.pp-wait-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pp-wait-ends b {
+  color: var(--text);
+}
+.pp-wait-art {
+  display: block;
+  width: 100%;
+  height: 44px;
+  overflow: visible;
+}
+.pp-wait-zero {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.pp-wait-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.pp-rates {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.pp-rates b {
+  color: var(--text);
+}
+.pp-note {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* The three figures, in Eric's order; the projection is dashed (PATTERNS → Projection drawn dashed). */
+.pp-figs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.pp-fig {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.pp-fig--model {
+  border-style: dashed;
+}
+.pp-fig dt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.pp-fig dd {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 0;
+}
+.pp-fig dd b {
+  font-size: 15px;
+}
+.pp-fig-note {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}

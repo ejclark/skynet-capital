@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type ReactElement, useId, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { Decision, DeskPosition } from "../live/desk";
 import { asideFor, asideWords } from "../live/mark-aside";
@@ -17,11 +17,11 @@ import type { RowMark } from "./use-row-marks";
  *    with Undo beside it;
  *  - right, the row's guidance, which opens in place under the line (round 2's "tap opens it in
  *    place"). Today it holds Not now with its return condition, said before anything is set
- *    aside, and the hand-off to the full guidance on Trade; the position's pictures join it next
- *    (#5070 slice 2). When this browser read the guidance for exactly this holding today, the spot
+ *    aside, and the hand-off to the full guidance on Trade. When this browser read the guidance for exactly this holding today, the spot
  *    says that call and its confidence ("Hold · ▰▰▱ medium", `row-call.ts`); otherwise it says
  *    "Guidance", never a made-up call.
- * Opened, it leads with what the decision engine says about this position, when it says anything:
+ * Opened, it leads with the position's picture (#5070 slice 2, `position-picture.tsx`): the price
+ * strip, the waiting-earns strip and the three figures. Then what the decision engine says about this position, when it says anything:
  * its sentence ("Collected $255; buying back costs $550") and the lesson the retired pager carried
  * ("What is a breakeven?", a glossary term opened in place), or a playbook that fits the name
  * (#5083). Not now and Undo are the owner's (ownership-gated controls); everyone sees the marks.
@@ -98,6 +98,7 @@ export function GuidanceSlot({
   canTrade,
   call,
   decisions = [],
+  picture,
   onAside,
   onUndo,
 }: {
@@ -108,6 +109,8 @@ export function GuidanceSlot({
   readonly call?: RowCall;
   /** The decision engine's cards on this row (`decisionsByRow`): a holding's, a playbook idea. */
   readonly decisions?: readonly Decision[];
+  /** The position's picture, first in the opened guidance (`PositionPicture`). */
+  readonly picture?: ReactNode;
   /** Does the viewer own this account? Off it, Not now and Undo are not drawn. */
   readonly canTrade: boolean;
   readonly onAside: () => void;
@@ -158,6 +161,7 @@ export function GuidanceSlot({
       </div>
       {open ? (
         <div id={openId} className="pos-guide-open">
+          {picture}
           {decisions.map((d) => (
             <DecisionSaid key={d.id} decision={d} />
           ))}

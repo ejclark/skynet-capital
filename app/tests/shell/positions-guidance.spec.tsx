@@ -41,6 +41,7 @@ const BOOK: OptionPositions = {
       daysToExpiry: 29,
       contracts: -1,
       spot: 82.6,
+      impliedVol: 0.75,
       positionGreeks: { delta: 39.8, theta: 11.46 },
     },
   ],
@@ -133,6 +134,7 @@ const PUT = pos({
   totalPlRaw: -295,
   returnPct: "-116%",
   totalTone: "neg",
+  costBasis: "-$255",
   expiresInDays: 29,
 });
 const SAURON = [NVDA, CRWV, PUT];
@@ -557,5 +559,66 @@ describe("the row's guidance opens in place, and Not now steps its mark aside", 
     const card = container.querySelector(".pos-cards .pos-guide-open") as HTMLElement;
     expect(within(card).queryByRole("button", { name: "Not now" })).not.toBeInTheDocument();
     expect(lines(container)).toContain("◆ Review · $2.60 above strike");
+  });
+});
+
+describe("the opened guidance leads with the position's picture (#5070 slice 2)", () => {
+  const openCard = async (name: RegExp) => {
+    const { container } = blotter("");
+    await screen.findAllByText("$2.60 above strike");
+    const cards = container.querySelector(".pos-cards") as HTMLElement;
+    fireEvent.click(within(cards).getByRole("button", { name }));
+    return cards.querySelector(".pos-guide-open") as HTMLElement;
+  };
+
+  it("draws the sold put's price strip first, its zones named in words and said whole", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const picture = within(open).getByRole("region", { name: /picture of CRWV \$80 PUT/ });
+    expect(open.firstElementChild).toBe(picture);
+    expect(
+      within(picture).getByRole("img", { name: /keeps all of the premium above the \$80 strike/ }),
+    ).toBeTruthy();
+    const art = picture.querySelector(".pp-price") as HTMLElement;
+    expect(seenText(art)).toContain("now $82.60");
+    expect(seenText(art)).toContain("strike $80");
+    expect(seenText(art)).toContain("breakeven $77.45");
+    expect([...picture.querySelectorAll(".pp-key li")].map(seenText)).toEqual([
+      "loses",
+      "keeps part",
+      "keeps all",
+    ]);
+  });
+
+  it("draws what waiting earns if CRWV holds, from today's P/L to the premium kept", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const wait = seenText(open.querySelector(".pp-wait") as HTMLElement);
+    expect(wait).toContain("Waiting earns · if CRWV holds $82.60");
+    expect(wait).toContain("−$295 today");
+    expect(wait).toContain("+$255 at expiry");
+    expect(wait).toMatch(/\+\$12\/day now → \$17\/day 14 days left → \$23\/day 7 days left/);
+    expect(wait).toContain("The P/L crosses $0 about Oct 29.");
+    expect(wait).toContain("Assumes today's 75% volatility holds; not a forecast.");
+  });
+
+  it("then the three figures: cash set aside, the P/L on the premium, and a dashed projection", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const figs = [...open.querySelectorAll(".pp-fig")].map((fig) =>
+      [...fig.querySelectorAll("dt, dd > :not(.visually-hidden)")].map(seenText).filter(Boolean),
+    );
+    expect(figs).toEqual([
+      ["Cash set aside", "$8,000", "buys 100 CRWV at $80 if assigned"],
+      ["P/L", "−$295", "−116% of $255"],
+      ["Model projects", "—", "a projection, once the model grades one"],
+    ]);
+    expect(open.querySelector(".pp-fig--model")).toBeTruthy();
+  });
+
+  it("gives shares their line and value, with no waiting strip", async () => {
+    const open = await openCard(/^Guidance for NVDA/);
+    expect(seenText(open.querySelector(".pp-price") as HTMLElement)).toContain("breakeven $223.98");
+    expect(open.querySelector(".pp-wait")).toBeNull();
+    const first = open.querySelector(".pp-fig") as HTMLElement;
+    expect(seenText(first.querySelector("dt") as HTMLElement)).toBe("Value");
+    expect(seenText(first.querySelector("dd b") as HTMLElement)).toBe("$30,173");
   });
 });
