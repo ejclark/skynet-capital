@@ -44,6 +44,7 @@ export function groupStrings(walks: Walk[]): {
   routes: Record<string, Record<StringKind, { text: string; viewports: string[] }[]>>;
 };
 export function regionCoverage(
-  facts: { id: string; viewer: string; answerRegion: string[] }[],
-  walks: (Walk & { viewer: string })[],
-): { judged: number; covered: number; missing: string[] };
+  facts: { id: string; viewer: string; world?: string; answerRegion: string[] }[],
+  walks: (Walk & { viewer: string; world?: string })[],
+): { judged: number; covered: number; missing: string[]; seen: string[] };
+export function factKey(fact: { id: string; viewer: string; world?: string }): string;

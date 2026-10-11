@@ -5,10 +5,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { clockArg } from "./clock.mjs";
 import { SESSIONS } from "./round-contract.mjs";
 import { adoptTasks } from "./round-control.mjs";
 import { framerText, taskAuthorText } from "./round-messages.mjs";
 import {
+  gradableFacts,
   isControl,
   lintFeedback,
   planSessions,
@@ -115,10 +117,26 @@ export async function tasks(ctx) {
   if (isControl(ctx.opts)) return adoptTasks(ctx);
   const dir = ctx.dir(step);
   const jobMap = readJson(join(ctx.out, "3-framer", "job-map.json"));
-  const { facts } = readJson(join(ctx.out, "0-preflight", "facts.json"));
+  const sheet = readJson(join(ctx.out, "0-preflight", "facts.json")).facts;
+  // Only facts a census screen showed: a region no screen prints can never be graded (#5009).
+  const regionsFile = join(ctx.out, "0-preflight", "harvest", "regions.json");
+  const { facts, withheld } = gradableFacts(
+    sheet,
+    existsSync(regionsFile) ? readJson(regionsFile) : null,
+  );
+  ctx.log(step, "facts", { gradable: facts.length, withheld: withheld.length });
+  const units = taskUnits(ctx.matrix);
+  const bare = units.filter(
+    (u) => !facts.some((f) => f.world === u.world && f.viewer === u.viewer),
+  );
+  if (bare.length > 0) {
+    throw new Error(
+      `no fact on ${bare.map((u) => `${u.world}/${u.viewer}`).join(", ")}'s sheet was seen on a census screen — see 0-preflight/harvest/regions.json`,
+    );
+  }
   const call = ctx.call(step);
   const all = [];
-  for (const unit of taskUnits(ctx.matrix)) {
+  for (const unit of units) {
     all.push(...(await authorUnit(ctx, unit, { jobMap, facts, call })));
   }
   mkdirSync(join(dir, "tasks"), { recursive: true });
@@ -218,7 +236,7 @@ export async function sessions(ctx) {
       join(ctx.out, "4-tasks", "tasks", `${s.task}.json`),
     );
     args.push("--card", join(ctx.out, "1-cards", `${s.member}.md`), "--actor", "sealed");
-    args.push("--out", out, "--roles", ctx.roles);
+    args.push("--out", out, "--roles", ctx.roles, "--clock", clockArg(ctx.clock));
     if (ctx.stub) args.push("--stub", ctx.stub);
     const status = await ctx.toolAsync("drive.mjs", args, `${out}.log`);
     const summary = existsSync(join(out, "summary.json"))

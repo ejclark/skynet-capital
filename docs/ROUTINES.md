@@ -48,6 +48,12 @@ deterministic in-repo data, so the calendar itself can emit the wake-ups (issue 
 Eric-gated credential). The digest's daily clock is the one surviving exception: its deliverable is
 the push notification, which only a claude.ai Routine can send, and it is Eric's own arming.
 
+**A freed build slot is a tick too** (#5056 slice 2). `in-progress` coming off an issue — a build
+ending with or without a merge — re-checks the build queue and re-dispatches `scan` when work is
+admissible (`scripts/moneypenny/wake.mjs`), so a red or held PR no longer idles the lanes until the
+next merge. Still time-based, and still waiting on a merge: a finished build's own 2h claim lease
+lapsing, and a failed build's retry (kept at the merge pace on purpose, so it cannot loop).
+
 ## Retired (2026-08-19 — the no-checkout generation)
 
 The review that retired these found that every fresh-session Routine had been firing into cloud

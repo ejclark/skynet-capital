@@ -159,6 +159,10 @@ export function resolveTasks(args: {
   unit: Unit;
   file: string;
 }): { tasks: Record<string, unknown>[]; problems: string[] };
+export function gradableFacts<F extends Fact>(
+  facts: F[],
+  regions: { seen?: string[]; missing?: string[] } | null | undefined,
+): { facts: F[]; withheld: string[] };
 export function mergeFacts(sheets: { world: string; facts: Fact[]; dataNames?: string[] }[]): {
   worlds: string[];
   facts: Fact[];

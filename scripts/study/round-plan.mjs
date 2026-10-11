@@ -394,6 +394,22 @@ export function resolveTasks({ drafts, facts, unit, file }) {
   return { tasks, problems };
 }
 
+/**
+ * The facts a task author may build on: only those whose answer region a census screen showed
+ * (harvest.mjs → regions.json `seen`, keyed by harvest-plan.mjs → factKey). A fact no screen shows
+ * cannot be graded — its member can be right and still fail — so it never becomes a task (#5009:
+ * 304 of the first full round's 435 facts had a region no screen printed). An older regions.json
+ * with no `seen` list withholds only the facts it names `missing`. → {facts, withheld}.
+ */
+export function gradableFacts(facts, regions) {
+  if (!regions) return { facts, withheld: [] };
+  const key = (f) => `${f.world ? `${f.world}/` : ""}${f.viewer}:${f.id}`;
+  const keep = Array.isArray(regions.seen)
+    ? (f) => regions.seen.includes(key(f))
+    : (f) => !(regions.missing ?? []).includes(key(f));
+  return { facts: facts.filter(keep), withheld: facts.filter((f) => !keep(f)).map(key) };
+}
+
 /** Several facts sheets as one (harvest takes one): facts concatenated, data names unioned. */
 export function mergeFacts(sheets) {
   return {

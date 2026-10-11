@@ -5,7 +5,6 @@
     "sauron": {
       "cash": 998512,
       "realizedPl": 1016,
-      "lastEquity": 1003240,
       "positions": [
         { "symbol": "CRWV", "quantity": 55, "avgPrice": 90.1, "mark": 79.3, "lastday": 80.4 }
       ]

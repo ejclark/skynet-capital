@@ -1,5 +1,5 @@
 {
-  "$comment": "World 'profile-today' (#4943 slice 2). Snapshot-shaped inputs: what a broker read, the activity ledger, the decision store and the subscriptions file would hold. Values are sanitized (same shape and magnitudes, not anyone's real numbers). Times are tokens relative to scripts/study/worlds/instant.mjs; dates of expiries and prints are calendar facts. The composer runs the real builders over these; nothing here is a rendered payload.",
+  "$comment": "World 'profile-today' (#4943 slice 2). Snapshot-shaped inputs: what a broker read, the activity ledger, the decision store and the subscriptions file would hold. Values are sanitized (same shape and magnitudes, not anyone's real numbers). Times are tokens relative to scripts/study/worlds/instant.mjs; dates of expiries and prints are calendar facts. The composer runs the real builders over these; nothing here is a rendered payload. Yesterday's closing equity is derived, never typed (book.mjs → yesterdayEquity), so each header's day change is the sum of its rows (#5052); P/L booked today on a position already closed would be declared as that participant's closedToday.",
   "corpus": {
     "$comment": "The commit whose docs/research and src/domain/market-events this world reads (compose.mjs): the last to touch them before INSTANT.",
     "commit": "dccf617c00a86a2852fbbaa79c30d5fa5482ac9d"
@@ -15,7 +15,6 @@
       "kind": "human",
       "cash": 61480,
       "realizedPl": 1240,
-      "lastEquity": 98550,
       "positions": [
         { "symbol": "MSFT", "quantity": 45, "avgPrice": 498.2, "mark": 507.4, "lastday": 509.1 },
         { "symbol": "AAPL", "quantity": 60, "avgPrice": 228.4, "mark": 236.1, "lastday": 234.9 }
@@ -28,7 +27,6 @@
       "personaId": "sauron",
       "cash": 962800,
       "realizedPl": 571,
-      "lastEquity": 995015,
       "positions": [
         { "symbol": "NVDA", "quantity": 130, "avgPrice": 223.98, "mark": 232.1, "lastday": 230.6 },
         { "symbol": "CRWV", "quantity": 55, "avgPrice": 90.1, "mark": 82.6, "lastday": 84.1 },
@@ -42,14 +40,14 @@
       ]
     },
     {
+      "$comment": "SPY closed yesterday at 730.00, so Jordan sits $9 under the high the account closed at yesterday, as this world was designed. A close at 727.90 would make today a new all-time high, and the page opens on its celebration (#5052).",
       "id": "jordan",
       "displayName": "Jordan",
       "kind": "human",
       "cash": 20111,
       "realizedPl": 0,
-      "lastEquity": 25221,
       "positions": [
-        { "symbol": "SPY", "quantity": 7, "avgPrice": 712.3, "mark": 728.7, "lastday": 727.9 }
+        { "symbol": "SPY", "quantity": 7, "avgPrice": 712.3, "mark": 728.7, "lastday": 730 }
       ]
     }
   ],
@@ -314,6 +312,7 @@
     "MSFT": { "cik": 789019, "eightKs": [{ "date": "2026-07-29", "items": "2.02,9.01" }] }
   },
   "history": {
+    "$comment": "Daily closes. Two points are derived by book.mjs and written 0 here: '@now' (today's equity) and '@-1d 16:00' (yesterday's close, the header's day-change base).",
     "sauron": [
       { "at": "@-30d 16:00", "equity": 1003352 },
       { "at": "@-29d 16:00", "equity": 1003412 },
@@ -336,7 +335,7 @@
       { "at": "@-6d 16:00", "equity": 998437 },
       { "at": "@-3d 16:00", "equity": 997780 },
       { "at": "@-2d 16:00", "equity": 995936 },
-      { "at": "@-1d 16:00", "equity": 995015 },
+      { "at": "@-1d 16:00", "equity": 0 },
       { "at": "@now", "equity": 0 }
     ],
     "eric": [
@@ -361,7 +360,7 @@
       { "at": "@-6d 16:00", "equity": 97835 },
       { "at": "@-3d 16:00", "equity": 98372 },
       { "at": "@-2d 16:00", "equity": 97928 },
-      { "at": "@-1d 16:00", "equity": 98550 },
+      { "at": "@-1d 16:00", "equity": 0 },
       { "at": "@now", "equity": 0 }
     ],
     "jordan": [
@@ -386,7 +385,7 @@
       { "at": "@-6d 16:00", "equity": 25094 },
       { "at": "@-3d 16:00", "equity": 25129 },
       { "at": "@-2d 16:00", "equity": 25130 },
-      { "at": "@-1d 16:00", "equity": 25221 },
+      { "at": "@-1d 16:00", "equity": 0 },
       { "at": "@now", "equity": 0 }
     ]
   }

@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, relative } from "node:path";
+import { clockArg } from "./clock.mjs";
 import { memberCard } from "./packets.mjs";
 import { isHarnessPath, overlayManifest } from "./pin-plan.mjs";
 import { checkCards } from "./round-control.mjs";
@@ -102,6 +103,7 @@ function takeCensuses(ctx, step, dir) {
     rmSync(cdir, { recursive: true, force: true });
     const args = ["--run", ctx.run, "--world", c.world, "--viewer", c.viewer, "--out", cdir];
     args.push("--cap", String(cap), "--viewport", c.viewports.join(","));
+    args.push("--clock", clockArg(ctx.clock));
     for (const r of c.routes) args.push("--route", r);
     const status = ctx.tool("census.mjs", args, `${cdir}.log`);
     if (status !== 0) throw new Error(`census ${c.key} exited ${status} — ${cdir}.log`);
@@ -131,6 +133,7 @@ function factsAndHarvest(ctx, step, dir) {
         ...ctx.censuses.filter((c) => c.world === world).map((c) => c.viewer),
       ]);
       const args = ["--run", ctx.run, "--world", world, "--out", file];
+      args.push("--clock", clockArg(ctx.clock));
       for (const v of viewers) args.push("--viewer", v);
       const status = ctx.tool("worlds/facts.mjs", args, `${file}.log`);
       if (status !== 0) throw new Error(`facts ${world} exited ${status} — ${file}.log`);
@@ -162,6 +165,7 @@ export function preflight(ctx) {
     if (!existsSync(join(ctx.sealed, f))) throw new Error(`--sealed ${ctx.sealed} holds no ${f}`);
   }
   checkPin(ctx, step, dir);
+  ctx.log(step, "clock", { clock: clockArg(ctx.clock) });
   takeCensuses(ctx, step, dir);
   factsAndHarvest(ctx, step, dir);
   return { censuses: ctx.censuses.map((c) => c.key) };

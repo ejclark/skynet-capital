@@ -8,6 +8,10 @@ export const MAX_RIVALS: number;
 
 export function numbersIn(text: string | null | undefined): number[];
 export function hedged(text: string | null | undefined): boolean;
+/** Every calendar day an answer writes; `year` null when it leaves the year out. */
+export function datesIn(
+  text: string | null | undefined,
+): { month: number; day: number; year: number | null; start: number; end: number }[];
 export function tokens(text: string | null | undefined): string[];
 export function withinTolerance(
   n: number,

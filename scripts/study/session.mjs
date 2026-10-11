@@ -50,6 +50,7 @@ import { pathToFileURL } from "node:url";
 import { VIEWPORTS } from "../crawl/steps.mjs";
 import { shooter } from "../shoot/lib.mjs";
 import { openShell } from "../shoot/shell.mjs";
+import { parseClock } from "./clock.mjs";
 import { instrument, marks, since, snapshot } from "./measure.mjs";
 import { pickerInitScript } from "./measure-picker.mjs";
 import { landingTop, onScreenControl, probeTap, tapRect } from "./measure-tap.mjs";
@@ -353,6 +354,7 @@ async function main(argv) {
   const world = await loadWorld(worldName, {
     run: arg(argv, "--run"),
     viewer: arg(argv, "--viewer"),
+    clock: parseClock(arg(argv, "--clock")),
   });
   const viewport = arg(argv, "--viewport") ?? "phone";
   const session = await open({
