@@ -4,7 +4,8 @@
 //   node scripts/steer/build.mjs <dir>/tp.json [--out <dir>]
 //     writes <dir>/steer.html, <dir>/files.json ({ published path: local file }) and img/…
 //   Publish: the Artifact tool, file_path steer.html, files from files.json, capabilities
-//   { db: {}, user: {} } — one stable artifact, republished per touch point (.claude/skills/steer).
+//   { db: {}, user: {}, comments: {} } — all three every time (comments lets Done tell Claude,
+//   #5135) — one stable artifact, republished per touch point (.claude/skills/steer).
 //
 // Ported from the profile critique round's builder (#5037 round 1, a Python script in the session
 // scratchpad) and made generic: any number of decisions, three kinds (design · fork · approve),

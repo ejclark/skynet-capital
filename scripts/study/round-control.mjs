@@ -13,7 +13,9 @@
 //   8 words, 9 audit    skipped — they judge the copy and the member cards, not the build's behaviour
 //   runs, experts       1 each by default (--runs, --experts override)
 // The census, facts sheet and harvest are the control pin's own (the build differs, so must they);
-// the member × world × viewport matrix, the thin cut and the world are the main round's. The
+// the member × world × viewport matrix, the thin cut and the world are the main round's. The area
+// config may have changed since the main round ran, but only outside what it asks of whom (QUESTION
+// below: a census route, the roles, the run counts), and the round logs which keys did. The
 // findings and classes keep the round contract, and <out>/control.json (round-contract.mjs →
 // controlRecord) says what this control is, for grade.mjs --negative / --positive.
 // --expect states each key id the control is about, with the MECHANISM beside it — what the fix
@@ -35,17 +37,66 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const readIf = (path) => (existsSync(path) ? readJson(path) : null);
 
 /**
+ * What a control asks, and of whom: the area config's keys that must be the main round's. The
+ * frozen tasks and the member cards are held by their own hashes; these are the rest of the
+ * question — the area, the members × worlds × viewports, the cards' cutoff, the tasks per member,
+ * the thin cut and the page list. Any other key may differ, and is reported, never refused: the
+ * census is the control build's own input (round one's held a Trade address the app never builds,
+ * #5027), the roles are what the experts read in place of the cards (#5099), the run and expert
+ * counts change how much is run, and `about` is prose. Without this, any edit to the config left
+ * a main round no control could run from.
+ */
+export const QUESTION = ["area", "matrix", "cutoff", "tasksPer", "thin", "pages"];
+
+/** The top-level keys two area configs differ on: the question's, and the rest. */
+export function configDrift(before, now) {
+  const keys = [...new Set([...Object.keys(before ?? {}), ...Object.keys(now ?? {})])].sort();
+  const changed = keys.filter(
+    (k) => JSON.stringify(before?.[k] ?? null) !== JSON.stringify(now?.[k] ?? null),
+  );
+  return {
+    question: changed.filter((k) => QUESTION.includes(k)),
+    other: changed.filter((k) => !QUESTION.includes(k)),
+  };
+}
+
+/** Why another area config file than the main round's cannot run its control — [] when it can. */
+function configProblems(sourceConfig, config) {
+  if (!(sourceConfig && config)) {
+    return [
+      "the area config is not the one the --frozen-from round ran (its sha256 differs, and the file that round ran is gone or changed, so the two cannot be compared)",
+    ];
+  }
+  const { question } = configDrift(sourceConfig, config);
+  return question.length > 0
+    ? [
+        `the area config asks other questions than the --frozen-from round's: its ${question.join(", ")} differ`,
+      ]
+    : [];
+}
+
+/**
  * Why a control round may not run from this main round — [] when it may. `source` is the main
  * round's round.json (null when absent), `frozen` its frozen.json, `ranFrozen` the freeze its
- * sessions were planned on (its log), and `profileSha`, `stub`, `sealed` this run's own.
+ * sessions were planned on (its log), and `profileSha`, `stub`, `sealed` this run's own. When the
+ * area config's sha256 differs, `sourceConfig` (the main round's config, read from the path it
+ * recorded and only if that file still hashes to its record) and `config` (this run's) are
+ * compared on the QUESTION keys; without the main round's own file, nothing can show they match.
  */
-export function sourceProblems({ source, frozen, ranFrozen = null, profileSha, stub, sealed }) {
+export function sourceProblems({
+  source,
+  frozen,
+  ranFrozen = null,
+  profileSha,
+  stub,
+  sealed,
+  sourceConfig = null,
+  config = null,
+}) {
   if (!source) return ["the --frozen-from dir holds no round.json — not a round"];
   const out = [];
   if (source.control) out.push("the --frozen-from round is itself a control round");
-  if (source.profileSha !== profileSha) {
-    out.push("the area config is not the one the --frozen-from round ran (its sha256 differs)");
-  }
+  if (source.profileSha !== profileSha) out.push(...configProblems(sourceConfig, config));
   // A stub-authored task set re-asked with sealed calls (or the reverse) is not the same question.
   if (Boolean(source.stub) !== Boolean(stub)) {
     out.push(
@@ -92,13 +143,15 @@ export function factDrift(tasks, facts) {
 }
 
 const EXPECT_LINE = /^([A-Za-z]+\d+)(?:\s*[—–:-]\s*(.*))?$/;
+const EXPECT_ID = /^[A-Za-z]+\d+$/;
 
 /** One --expect item as {id, mechanism}: `A3`, `A3 — mechanism` or {id, mechanism}; null if neither. */
 function expectEntry(x) {
   if (x && typeof x === "object") {
     const id = String(x.id ?? "").trim();
     const mechanism = String(x.mechanism ?? "").trim();
-    return EXPECT_LINE.test(id) ? { id, mechanism: mechanism || null } : null;
+    // The id alone: `{id: "A3 — jumps"}` would carry the mechanism into control.json as an id.
+    return EXPECT_ID.test(id) ? { id, mechanism: mechanism || null } : null;
   }
   const m = EXPECT_LINE.exec(String(x).trim());
   return m ? { id: m[1], mechanism: m[2]?.trim() || null } : null;
@@ -158,6 +211,16 @@ function loggedPin(round) {
   return pins.at(-1)?.pin ?? null;
 }
 
+/**
+ * The area config a round ran, read from the path its round.json recorded — null when the file is
+ * gone or no longer hashes to the recorded sha256, so a config edited since is never taken for it.
+ */
+function configAsRan(source) {
+  if (!(source?.profile && source.profileSha && existsSync(source.profile))) return null;
+  const raw = readFileSync(source.profile);
+  return sha256(raw) === source.profileSha ? JSON.parse(raw.toString("utf8")) : null;
+}
+
 /** The freeze a round's sessions were last planned on, from its log; null when they never ran. */
 function ranFrozen(round) {
   const plans = logEvents(round).filter((l) => l.step === SESSIONS && l.event === "plan");
@@ -174,6 +237,7 @@ export function adoptSource(ctx) {
   const source = readIf(join(dir, "round.json"));
   const frozen = readIf(join(dir, FILES.frozen));
   const profileSha = sha256(readFileSync(resolve(ctx.opts.profile)));
+  const sourceConfig = configAsRan(source);
   const problems = sourceProblems({
     source,
     frozen,
@@ -181,8 +245,17 @@ export function adoptSource(ctx) {
     profileSha,
     stub: ctx.stub,
     sealed: ctx.sealed,
+    sourceConfig,
+    config: ctx.p,
   });
   if (problems.length > 0) throw new Error(`refusing the control — ${problems.join("; ")}`);
+  if (source.profileSha !== profileSha) {
+    // Reported, never refused: what changed is the build's own inputs or how much is run.
+    ctx.log("round", "config-drift", {
+      keys: configDrift(sourceConfig, ctx.p).other,
+      note: "the area config differs from the main round's outside the questions",
+    });
+  }
   const expected = readList(resolve(ctx.opts.expect));
   const unstated = expectProblems(ctx.opts.control, expectEntries(expected));
   if (unstated.length > 0) throw new Error(`refusing the control — ${unstated.join("; ")}`);

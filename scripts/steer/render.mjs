@@ -169,9 +169,14 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     queueHtml(tp.queue, tp.next),
     stripHtml(tp.strip),
     `</div>`,
-    `<div class="bar" role="region" aria-label="Save and finish"><output id="save-state" aria-live="polite" data-state="loading">Loading your answers…</output>` +
+    // The bar's two lines: what the store holds, then what became of Done — sent to Claude or not,
+    // and the read-back once the session posts it (#5135). Reopen is its own control: Done is one way.
+    `<div class="bar" role="region" aria-label="Save and finish"><div class="lines">` +
+      `<output id="save-state" aria-live="polite" data-state="loading">Loading your answers…</output>` +
+      `<p id="told" aria-live="polite" hidden></p></div><div class="acts">` +
       `<button type="button" class="ghost" id="copy" hidden>Copy as text</button>` +
-      `<button type="button" class="rb" id="done" data-v="done" aria-pressed="false">I'm done</button></div>`,
+      `<button type="button" class="reopen" id="reopen" hidden>Reopen</button>` +
+      `<button type="button" class="rb" id="done" data-v="done" aria-pressed="false">I'm done</button></div></div>`,
     `<script type="application/json" id="tp-data">${json}</script>`,
     `<script>\n${CLIENT.replace(/<\/script/gi, "<\\/script")}</script>`,
     "",
