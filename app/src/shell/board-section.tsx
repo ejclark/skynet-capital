@@ -186,18 +186,21 @@ export function CallBoard({
                   </a>
                   <span className="rx-call-text">{row.call}</span>
                   <span className="rx-call-meta">
-                    <span className="rx-chip" title="horizon">
+                    <span className="rx-chip" title={`horizon: ${row.horizon}`}>
                       {row.horizon}
                     </span>
                     {row.confidence ? (
-                      <span className="rx-chip rx-conf" title="stated confidence">
+                      <span
+                        className="rx-chip rx-conf"
+                        title={`stated confidence: ${row.confidence}`}
+                      >
                         {row.confidence}
                       </span>
                     ) : null}
                     {age ? (
                       <span
                         className={`rx-chip rx-assessed num${age.stale ? " rx-stale" : ""}`}
-                        title="ledger's last assessment date"
+                        title={`ledger's last assessment date: ${call.lastAssessed}${age.stale ? ` · stale (${age.days}d)` : ""}`}
                       >
                         assessed {call.lastAssessed}
                         {age.stale ? ` · stale (${age.days}d)` : ""}
