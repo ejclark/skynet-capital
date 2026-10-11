@@ -13,6 +13,8 @@ flowchart TD
   A["a · Intake<br/>his notes for one screen,<br/>quoted on its issue"] --> B["b · Frame<br/>what the screen is for;<br/>the IA call written first"]
   B --> C["c · Review today<br/>real shots at 390 and 1280;<br/>his words outrank the review"]
   C --> D["d · Draw one section<br/>2–5 shapes, one thing varied,<br/>a critic pass before he sees them"]
+  C -.->|"no notes yet"| Z["Round 0<br/>3–5 problems pinned on today;<br/>he picks which to fix first"]
+  Z --> E
   D --> E["e · Round page<br/>its own link: pinned notes,<br/>one pick, Done"]
   E --> F{"f · Done, read back:<br/>did he pick Build?"}
   F -->|"no: next variable<br/>or next section"| D
@@ -33,6 +35,32 @@ _Caption — the loop, one screen per session; Eric touches only his notes, the 
 - **Read first:** the screen's issue (its first comment is the state block), `docs/IA.md` §5 for
   the screen's group, `docs/PATTERNS.md` for named shapes, and the steer skill
   (`.claude/skills/steer/SKILL.md`), which owns the page machinery this loop reuses.
+- **The kit does the predictable steps** (`scripts/redesign/`): `shoot.mjs` takes today's frames,
+  `pin.mjs` draws problems on a frame, `lint.mjs` checks a manifest, `commons.mjs` shares findings
+  with the other screens. Never hand-roll Playwright or an annotation page; if the kit lacks
+  something, add it to the commons as a `request` to the kit.
+
+## The commons — when several screens are redesigned at once
+
+Each session reads the commons before every round, and writes to it instead of messaging other
+sessions:
+
+```sh
+node scripts/redesign/commons.mjs read             # the protocol page, then the latest findings
+node scripts/redesign/commons.mjs add --screen <id> --kind component|pattern|wording|data|request|ia-move \
+  --what "<≤140 chars>" [--where … --principle … --to … --why …]
+node scripts/redesign/commons.mjs digest           # the curator's view: shared findings, IA moves
+```
+
+- **Not only your screen** (a shared component, a pattern on many screens, app-wide wording, a
+  world or data gap) → `add` it, and on your page say "app-wide — in the commons" instead of
+  drawing your own fix. A change to a component another session owns is a `request` naming it.
+- **IA moves** (Eric, 2026-10-11: sections may be combined, or moved "to areas better suited to
+  achieve goals and in proximity to associated information"). Every round 0 asks it of each
+  section. A move **within** your screen (merge two sections, reorder) may be drawn as a shape. A
+  move **across** screens is never drawn alone: `add --kind ia-move --to <screen/section> --why
+  <the goal and what it would sit beside>`, shown on your page as a pinned candidate. The curator
+  turns them into one app-wide IA round, and the IA call is written before anything is built.
 
 ## The loop
 
@@ -56,9 +84,11 @@ _Caption — the loop, one screen per session; Eric touches only his notes, the 
   shape. A call that moves a route or the nav is written down here, never decided inside a shape.
 
 **c · Review today, steered by his words.**
-- Shoot today with its real script: `npm run build --prefix app && npm run shoot:<screen> <dir>`
-  (`scripts/shoot/*.mjs`), 390 first, then 1280. A screen with no script gets one before round 1:
-  the before is never imagined.
+- Shoot today: `node scripts/redesign/shoot.mjs --screen <id> --out <dir>/shots` → `<id>-phone.jpg`
+  (390) and `<id>-desk.jpg` (1280), both at 2x and ≤200KB, from the built app in the study world
+  (ids: `scripts/redesign/screens.json`). `--state '<json>'` answers chosen `/api` reads to show a
+  state the world lacks; say so on the frame. A screen missing from the registry gets an entry
+  before round 1: the before is never imagined.
 - Expert pass in the shape of `docs/members/study/roles/expert.md` (Nielsen H1–H10 with severity
   0–4, wasted steps, the four IA systems, posture) and a words pass in the shape of
   `docs/members/study/roles/words.md` (purposeful · concise · conversational · clear; anything that
@@ -66,6 +96,15 @@ _Caption — the loop, one screen per session; Eric touches only his notes, the 
 - His notes rank first. Sort each finding: it backs one of his notes, adds something he didn't say
   (offered, not imposed), or conflicts with one (his words win; name the conflict once). Post the
   review below the fold on the issue.
+
+**Round 0 — when there are no notes yet.** A session started without his notes doesn't guess
+which section to draw. It pins the 3–5 problems that matter most for the screen's job on today's
+frame, one problem per option, and he picks which to fix first:
+`node scripts/redesign/pin.mjs --frame <dir>/shots/<id>-phone.jpg --pins pins.json --out <dir>/r0/<key>-phone.jpg`
+(each pin is a number and a few words on the spot; `quote` and `tag` are optional; the
+script refuses text under 12px, low contrast, anything off the frame or badges closer than 8px,
+and names the pin). Each problem names the principle it breaks. In round 0 a pick chooses the
+problem: never run the read-back's build `create` command for it — the pick opens round 1.
 
 **d · Draw one section, 2–5 shapes.**
 - Pick **one** section for this sitting: the one his notes press hardest. Say why in one line.
@@ -75,24 +114,28 @@ _Caption — the loop, one screen per session; Eric touches only his notes, the 
 - Today is the real screenshot from step c. Shapes are frames at 390 (and 1280 when the desktop
   adds room): an HTML frame shot with Playwright, or the app on a scratch branch shot with its
   `scripts/shoot` script. His words sit on the spot they changed, on the frame.
-- **Critic pass before he sees anything:** check every frame against *His standing rules* below,
-  and fix what fails rather than caveat it.
+- Annotate with `pin.mjs` (above), never a list beside the picture; add `"tag": "illustrative
+  values"` wherever nothing computes the number.
+- **Critic pass before he sees anything:** `node scripts/redesign/lint.mjs <dir>/manifest.json`
+  first — fields, pictures, jargon, invented names, and every quote of his checked against the
+  files the manifest cites (`sources`) — then a critic judges only taste against *His standing
+  rules* below. Fix what fails rather than caveat it.
 - Write the manifest the steer builder reads (the shape is in the steer skill → *A design decision:
   the critique round*). Set `topic` to the surface — the route and its shell file — because the
   build issue carries it into its lane. An example (your issue, words and paths will differ):
 
 ```json
-{ "issue": 5150, "round": 1, "questions": [{
+{ "issue": 5150, "round": 1, "sources": ["notes.md"], "questions": [{
   "q": 1, "topic": "/trade · app/src/routes/trade.tsx",
   "title": "What leads the trade form at phone width?", "ask": "This round varies only the order.",
   "rec": "B", "conf": "low", "wrong": "He pins 'put the chain back on top' by 2026-10-17.",
   "saw": ["His note: 'I can't find the order line'", "H6 · recognition over recall, severity 3"],
-  "today": { "phone": "shots/today-390.jpg", "desk": "shots/today-1280.jpg",
-             "source": "scripts/shoot/trade.mjs", "caption": "Today, real screenshot." },
-  "options": [{ "key": "A", "name": "The chain first", "phone": "shapes/a-390.png",
-                "delta": "Nothing moves; the control." },
-              { "key": "B", "name": "The order sentence first", "phone": "shapes/b-390.png",
-                "delta": "The order sentence moves above the chain." }] }] }
+  "today": { "phone": "shots/trade-ticket-phone.jpg", "desk": "shots/trade-ticket-desk.jpg",
+             "source": "scripts/redesign/shoot.mjs", "caption": "Today, real screenshot." },
+  "options": [{ "key": "A", "name": "The chain first", "phone": "shapes/a-phone.jpg",
+                "desk": "shapes/a-desk.jpg", "delta": "Nothing moves; the control." },
+              { "key": "B", "name": "The order sentence first", "phone": "shapes/b-phone.jpg",
+                "desk": "shapes/b-desk.jpg", "delta": "The order sentence moves above the chain." }] }] }
 ```
 
 **e · Publish the round page, and give him the link.**

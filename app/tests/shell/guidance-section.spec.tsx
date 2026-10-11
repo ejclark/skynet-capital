@@ -100,6 +100,11 @@ describe("guidance tab — the stake stays in this browser", () => {
     expect(requested).toEqual(["/api/trade/guidance?symbol=CRWV"]);
   });
 
+  it("says so in its heading — the true one here, unlike /saved-positions (#5179)", async () => {
+    mount();
+    expect(await screen.findByText("Your stake — stays in this browser")).toBeTruthy();
+  });
+
   it("drops anything in storage the engine shouldn't read", () => {
     expect(cleanStake({ shares: -5, costBasis: "70", cash: 1e3, goal: "yolo", extra: 1 })).toEqual({
       cash: 1000,

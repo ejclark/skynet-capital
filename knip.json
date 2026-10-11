@@ -16,9 +16,14 @@
     "scripts/study/grade.mjs",
     "scripts/study/readout.mjs",
     "scripts/study/worlds/*.mjs",
+    "scripts/redesign/shoot.mjs",
+    "scripts/redesign/frames.mjs",
+    "scripts/redesign/pin.mjs",
+    "scripts/redesign/lint.mjs",
+    "scripts/redesign/commons.mjs",
     "tests/**/*.spec.ts"
   ],
-  "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/**/*.mjs"],
+  "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/**/*.mjs", "scripts/redesign/*.mjs"],
   "ignore": ["scripts/duel-log.mjs", "src/server/trade-service.ts"],
   "ignoreDependencies": ["@commitlint/config-conventional", "husky", "playwright-core"]
 }
