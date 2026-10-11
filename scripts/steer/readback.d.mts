@@ -56,6 +56,8 @@ export function readComments(file: string): PageComment[];
 /** The next round's instruction after a problems question is read back (round 0). */
 export function nextRoundInstruction(
   d: TouchPointData["decisions"][number],
-  r: { pick?: string | null; react?: Record<string, string> },
+  r: { pick?: string | null; react?: Record<string, string>; pins?: Record<string, unknown> },
+  /** `pinClauses(d, r)` (pins.mjs), when the caller already has it; computed when left out. */
+  pins?: string,
 ): string;
 export function commandsFor(plan: ReadbackPlan, dir: string): string[][];

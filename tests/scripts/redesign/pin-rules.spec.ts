@@ -75,6 +75,15 @@ describe("readPins", () => {
     ]);
     expect(readPins({}).problems).toEqual(["pins: nothing to draw"]);
   });
+
+  it("names a list entry that isn't a pin at all, instead of throwing", () => {
+    expect(readPins({ pins: [null, 7] }).problems).toEqual([
+      'pin 1 (""): x and y are % of the frame, 0–100',
+      "pin 1: needs a label — a few words on what is wrong here",
+      'pin 2 (""): x and y are % of the frame, 0–100',
+      "pin 2: needs a label — a few words on what is wrong here",
+    ]);
+  });
 });
 
 describe("layoutProblems", () => {

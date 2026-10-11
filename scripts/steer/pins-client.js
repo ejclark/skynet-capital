@@ -25,6 +25,19 @@ globalThis.steerPins = (api) => {
     const v = api.saved(keyOf(pin))?.pins?.[pin.dataset.pin];
     return REACTIONS.includes(v) ? v : null;
   };
+  /** The pin ids this page shows, by decision key. A record may hold more: a round republished
+   *  with fewer or renumbered pins keeps the old ids in the store, and those never count. */
+  const SHOWN = new Map();
+  for (const pin of document.querySelectorAll(".pin")) {
+    const key = keyOf(pin);
+    SHOWN.set(key, [...(SHOWN.get(key) ?? []), pin.dataset.pin]);
+  }
+  /** A record's reactions on the pins this page shows for its decision, as [id, reaction] in page
+   *  order — what counts as an answer and what Copy as text carries. */
+  const said = (key, r) =>
+    (SHOWN.get(key) ?? [])
+      .map((id) => [id, r?.pins?.[id]])
+      .filter(([, v]) => REACTIONS.includes(v));
 
   /** The three choices for this pin, its saved one pressed. */
   function fill(pin) {
@@ -136,5 +149,5 @@ globalThis.steerPins = (api) => {
   window.addEventListener("resize", () => {
     if (openPin) place(openPin);
   });
-  return { paint };
+  return { paint, said };
 };
