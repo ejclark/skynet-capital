@@ -195,12 +195,16 @@ describe("the range heads Events, and no other section carries a calendar (#5074
     expect(head()).toHaveTextContent("October 2026");
     expect(screen.getByText(/^Oct 1 – Oct 31 · \d+ sessions/)).toBeInTheDocument();
     // Sauron's one date on what he holds is META's print, Oct 28: none in the week of Oct 12.
-    const options = within(screen.getByRole("group", { name: "Range" })).getAllByRole("button");
-    expect(options.map((b) => b.getAttribute("aria-label"))).toEqual([
+    // One control, in reading order: the arrows flank the options (Eric, 2026-10-10).
+    const control = within(screen.getByRole("group", { name: "Range" })).getAllByRole("button");
+    expect(control.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Previous month",
       "Week — 0 dates on what you hold",
       "Month — 1 date on what you hold",
       "Quarter — 1 date on what you hold",
+      "Next month",
     ]);
+    const options = control.slice(1, -1);
     expect(options[1]).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("count = dates on what you hold")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Day/ })).not.toBeInTheDocument();

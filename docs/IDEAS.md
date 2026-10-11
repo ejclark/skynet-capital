@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Put events where planning happens — a direction for the next IA pass, not one surface.** Eric,
+  2026-10-10, on Profile → Events: "Having awareness of events is valuable when I am planning my
+  day, week, month; integrate the two" — then, asked which two: "that is the direction we want to
+  move with our designs, but doesn't have to be this instance. There is still more architecture to
+  consolidate, simplify." Read it as a consolidation rule: a date on what you hold belongs beside
+  the decision it bears on (a position row, the Overview's day, the trade form), not only on its own
+  tab. Candidates to run it against when the next IA pass opens: the Overview's held-events line
+  (`held-events-line.tsx`), positions rows, the Events card's own timeline + list split.
+  _(src: Eric · while: refining the Events lanes, #5037 R2 follow-up)_
+
 - **R&D's month grid is the same dark block Eric reacted to on Events.** His note on #3977's
   decisions page ("I don't like the overly dark calendar, especially when a large portion of it is
   so empty") was answered on Profile → Events by #5134's lighter tracks; R&D's market board grid

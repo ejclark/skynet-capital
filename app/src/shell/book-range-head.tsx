@@ -16,6 +16,10 @@ import { type DayRange, type MarketClosure, rangeLabel, sessionsIn } from "../li
  * and the caption under the row says what is counted. The pressed option wears a ✓ as well as
  * the accent.
  *
+ * THE ARROWS FLANK THE OPTIONS (Eric, 2026-10-10: "The week | month | quarter should reside between
+ * the < | > carets"): ‹ Week · Month · Quarter › reads as one control — the options say how big a
+ * step is, the arrows take it — with the range in words above (phone) or beside it (desk).
+ *
  * Day is not an option here: a day is picked by tapping it in the picture (`?events=`). The range
  * is still the root `?on=&span=` R&D and Trade read (`live/horizon-params.ts`).
  */
@@ -61,58 +65,54 @@ export function BookRangeHead({
   readonly onLens: (lens: BookLens) => void;
 }): ReactElement {
   const words = rangeWords(range, lens, closures);
+  const arrow = (direction: 1 | -1): ReactElement => (
+    <button
+      type="button"
+      className="range-arrow"
+      aria-label={`${direction === 1 ? "Next" : "Previous"} ${lens}`}
+      onClick={() => onStep(direction)}
+    >
+      {direction === 1 ? "›" : "‹"}
+    </button>
+  );
   return (
     <div className="range-head">
-      <div className="range-top">
-        <button
-          type="button"
-          className="range-arrow"
-          aria-label={`Previous ${lens}`}
-          onClick={() => onStep(-1)}
-        >
-          ‹
-        </button>
-        <div className="range-words">
-          <h3 className="range-title">{words.title}</h3>
-          <p className="range-line">{words.line}</p>
-        </div>
-        <button
-          type="button"
-          className="range-arrow"
-          aria-label={`Next ${lens}`}
-          onClick={() => onStep(1)}
-        >
-          ›
-        </button>
+      <div className="range-words">
+        <h3 className="range-title">{words.title}</h3>
+        <p className="range-line">{words.line}</p>
       </div>
       <fieldset className="range-pick">
         <legend className="visually-hidden">Range</legend>
-        <div className="range-options">
-          {BOOK_LENSES.map((option) => {
-            const count = counts[option];
-            const pressed = option === lens;
-            return (
-              <button
-                key={option}
-                type="button"
-                className="range-option"
-                aria-pressed={pressed}
-                aria-label={`${NAME[option]} — ${String(count)} ${count === 1 ? "date" : "dates"} on what you hold`}
-                // Pressed still reports: a shared day lens draws as Week, and a tap on it widens.
-                onClick={() => onLens(option)}
-              >
-                {pressed ? (
-                  <span className="range-check" aria-hidden="true">
-                    ✓
+        <div className="range-nav">
+          {arrow(-1)}
+          <div className="range-options">
+            {BOOK_LENSES.map((option) => {
+              const count = counts[option];
+              const pressed = option === lens;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className="range-option"
+                  aria-pressed={pressed}
+                  aria-label={`${NAME[option]} — ${String(count)} ${count === 1 ? "date" : "dates"} on what you hold`}
+                  // Pressed still reports: a shared day lens draws as Week, and a tap on it widens.
+                  onClick={() => onLens(option)}
+                >
+                  {pressed ? (
+                    <span className="range-check" aria-hidden="true">
+                      ✓
+                    </span>
+                  ) : null}
+                  {NAME[option]}
+                  <span className="range-count num" data-zero={count === 0 || undefined}>
+                    {count}
                   </span>
-                ) : null}
-                {NAME[option]}
-                <span className="range-count num" data-zero={count === 0 || undefined}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+          {arrow(1)}
         </div>
         <p className="range-caption">count = dates on what you hold</p>
       </fieldset>

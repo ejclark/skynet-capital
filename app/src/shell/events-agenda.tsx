@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import { type BookEvent, dayLabel, describeTouch } from "../live/book-events";
 import { glyphOf } from "../live/book-lanes";
 import { LaneGlyphIcon } from "./book-lanes";
@@ -54,9 +54,20 @@ function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
   );
 }
 
-export function AgendaRow({ event }: { readonly event: BookEvent }): ReactElement {
+export function AgendaRow({
+  event,
+  order = 0,
+}: {
+  readonly event: BookEvent;
+  /** Its place in the list — each row steps in a beat after the one above. */
+  readonly order?: number;
+}): ReactElement {
   return (
-    <li className="agenda-row" data-tier={event.tier}>
+    <li
+      className="agenda-row"
+      data-tier={event.tier}
+      style={{ "--i": Math.min(order, 8) } as CSSProperties}
+    >
       <span className="agenda-when num">{dayLabel(event.date)}</span>
       <span className="agenda-glyph">
         <LaneGlyphIcon glyph={glyphOf(event)} />

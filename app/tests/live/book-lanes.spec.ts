@@ -8,6 +8,7 @@ import {
   inDays,
   placeWords,
   spreadTiles,
+  zoomWindow,
 } from "../../src/live/book-lanes";
 import type { NextPrint } from "../../src/live/desk";
 import { ALL_RANGE, rangeFor } from "../../src/live/horizon-range";
@@ -289,5 +290,34 @@ describe("inDays", () => {
       "tomorrow",
       "in 29 days",
     ]);
+  });
+});
+
+describe("zoomWindow — the range you left, drawn growing or shrinking into the one you picked", () => {
+  const week = { start: "2026-10-05", end: "2026-10-11" };
+  const month = { start: "2026-10-01", end: "2026-10-31" };
+  const quarter = { start: "2026-10-01", end: "2026-12-31" };
+
+  it("zooming out shrinks the whole track down to where the old week sits in the month", () => {
+    const z = zoomWindow(week, month);
+    expect(z?.from).toEqual({ left: 0, width: 1 });
+    expect(z?.to.left).toBeCloseTo(4 / 31);
+    expect(z?.to.width).toBeCloseTo(7 / 31);
+  });
+
+  it("zooming in grows the new week out from where it sat in the month", () => {
+    const z = zoomWindow(month, week);
+    expect(z?.from.left).toBeCloseTo(4 / 31);
+    expect(z?.from.width).toBeCloseTo(7 / 31);
+    expect(z?.to).toEqual({ left: 0, width: 1 });
+  });
+
+  it("a month inside its quarter is a third of the track", () => {
+    expect(zoomWindow(month, quarter)?.to.width).toBeCloseTo(31 / 92);
+  });
+
+  it("an arrow step (no range inside the other) draws nothing", () => {
+    expect(zoomWindow(week, { start: "2026-10-12", end: "2026-10-18" })).toBeUndefined();
+    expect(zoomWindow(week, week)).toBeUndefined();
   });
 });

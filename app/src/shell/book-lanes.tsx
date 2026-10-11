@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
   type RefObject,
@@ -16,6 +17,8 @@ import {
   type LaneMark,
   placeWords,
   spreadTiles,
+  type TrackSpan,
+  zoomWindow,
 } from "../live/book-lanes";
 import type { DayRange, MarketClosure } from "../live/horizon-range";
 
@@ -42,6 +45,14 @@ import type { DayRange, MarketClosure } from "../live/horizon-range";
  * member spots their own days at a glance in a busy month; falsifier on #3977: one still missed by
  * 2026-11-30. Moving between ranges blends — a mark both ranges hold slides to its new day, the
  * rest fade in — on the motion tokens, which reduced motion zeroes (`theme.css`).
+ *
+ * READ TOP DOWN, ONE LINE A LANE (Eric, 2026-10-10: the labels "should be labeled at the top. The
+ * labels in the bottom are not always in view"; "the rows feel overly tall"). The days head the
+ * picture and stick under the page's sticky head while the lanes scroll, so a mark is read against
+ * its day before the eye reaches it. From 600px a lane's name sits in a left column on the same
+ * line as its track (~36px a lane, was ~64); a phone keeps the name over the track, tighter, since
+ * a gutter would take a third of a 390 track. Changing Week · Month · Quarter draws THE ZOOM BOX
+ * (`zoomWindow`): the range you left shrinks onto, or grows out of, its place in the new one.
  */
 
 export const GLYPH_WORD: Record<LaneGlyph, string> = {
@@ -73,7 +84,7 @@ export function LaneGlyphIcon({ glyph }: { readonly glyph: LaneGlyph | "closed" 
 }
 
 /** The track's drawn width — label placement reads it; a phone's track is the first guess. */
-function useWidth(ref: RefObject<HTMLElement | null>): number {
+function useWidth(ref: RefObject<HTMLDivElement | null>): number {
   const [width, setWidth] = useState(330);
   useEffect(() => {
     const el = ref.current;
@@ -112,7 +123,11 @@ function MarkGlyph({
   );
 }
 
-const SHORT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const SHORT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
 const short = (iso: string): string => SHORT.format(new Date(`${iso}T00:00:00Z`));
 
 /** A mark's or an edge's accessible name: the day, then each event on it in the list's words. */
@@ -183,7 +198,10 @@ function LaneRow({
         frame.width,
       ).map((x) => x / step - 0.5)
     : days;
-  const placed = lane.marks.map((m, i) => ({ index: at[i] ?? 0, words: m.words }));
+  const placed = lane.marks.map((m, i) => ({
+    index: at[i] ?? 0,
+    words: m.words,
+  }));
   const sides = placeWords(placed, n, frame.width, undefined, WORDS_PAD[held ? "tile" : "bare"]);
   const edge = lane.marks.length === 0 ? lane.nextAfter : undefined;
   return (
@@ -191,19 +209,19 @@ function LaneRow({
       <div className="lane-head">
         <span className="lane-name">{lane.name}</span>
         {lane.detail ? <span className="lane-detail">{lane.detail}</span> : null}
-        {edge ? (
-          <button
-            type="button"
-            className="lane-edge"
-            aria-label={`Move the range to ${said(edge)}`}
-            onClick={() => onJump(edge.date)}
-          >
-            <LaneGlyphIcon glyph={edge.glyph} />
-            <span className="num">{short(edge.date)}</span>
-            <span aria-hidden="true">›</span>
-          </button>
-        ) : null}
       </div>
+      {edge ? (
+        <button
+          type="button"
+          className="lane-edge"
+          aria-label={`Move the range to ${said(edge)}`}
+          onClick={() => onJump(edge.date)}
+        >
+          <LaneGlyphIcon glyph={edge.glyph} />
+          <span className="num">{short(edge.date)}</span>
+          <span aria-hidden="true">›</span>
+        </button>
+      ) : null}
       <div className="lane-track">
         <Backdrop frame={frame} />
         {lane.marks.map((mark, i) => {
@@ -232,31 +250,46 @@ function LaneRow({
   );
 }
 
-/** Ticks under the tracks, then today in words — or the way back to it when it is off the range. */
+/** The days over the tracks, then today in words pointing down at its rule — or the way back to
+ *  it when it is off the range. Sticky, so the days stay in view while the lanes scroll; its ticks
+ *  span exactly the track column, so `trackRef` measures the track's drawn width. */
 function Axis({
   frame,
+  lens,
   ticks,
   range,
   onToday,
+  trackRef,
 }: {
   readonly frame: Frame;
+  readonly lens: BookLens;
   readonly ticks: ReturnType<typeof axisFor>["ticks"];
   readonly range: DayRange;
   readonly onToday: () => void;
+  readonly trackRef: RefObject<HTMLDivElement | null>;
 }): ReactElement {
   const n = frame.days.length;
   const edge = (i: number): string => (i < n * 0.08 ? " start" : i > n * 0.92 ? " end" : "");
   const today = frame.days.indexOf(frame.today);
   return (
     <div className="lane-axis" aria-hidden={today >= 0 || undefined}>
-      <div className="lane-ticks">
+      <div className="lane-ticks" ref={trackRef}>
         {ticks.map((t) => (
           <span
             key={frame.days[t.index]}
             className={`lane-tick num${edge(t.index)}`}
             style={{ left: pct((t.index + 0.5) / n) }}
           >
-            {t.label}
+            {/* A week's tick is a weekday over its date, as a wall calendar heads its columns:
+                "Mon 5" side by side ran into "Tue 6" on a desk's lanes column. */}
+            {lens === "week" ? (
+              <>
+                <span className="lane-tick-dow">{t.label.slice(0, 3)}</span>
+                {t.label.slice(4)}
+              </>
+            ) : (
+              t.label
+            )}
           </span>
         ))}
       </div>
@@ -308,8 +341,21 @@ export function BookLanesPicture({
   readonly onJump: (date: string) => void;
   readonly onToday: () => void;
 }): ReactElement {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const width = useWidth(ref);
+  // The zoom box: derived when the range changes, during render, so it draws in the same frame the
+  // marks start to slide. `n` restarts its animation on every change.
+  const [seen, setSeen] = useState(range);
+  const [zoom, setZoom] = useState<{
+    readonly n: number;
+    readonly from: TrackSpan;
+    readonly to: TrackSpan;
+  } | null>(null);
+  if (seen.start !== range.start || seen.end !== range.end) {
+    const box = zoomWindow(seen, range);
+    setSeen(range);
+    setZoom(box ? { n: (zoom?.n ?? 0) + 1, ...box } : null);
+  }
   const { days, ticks } = axisFor(range, lens);
   const shut = closures.filter((c) => c.date >= range.start && c.date <= range.end);
   const frame: Frame = {
@@ -333,18 +379,43 @@ export function BookLanesPicture({
     <LaneRow key={lane.key} lane={lane} frame={frame} onPick={onPick} onJump={onJump} />
   );
   return (
-    <figure className="lanes" aria-label={label} ref={ref}>
-      {note ?? lanes.holdings.map(row)}
-      {note || lanes.folded.length === 0 ? null : (
-        <p className="lanes-folded">
-          {lanes.folded.length > 4
-            ? `${lanes.folded.slice(0, 3).join(" · ")} · ${String(lanes.folded.length - 3)} more`
-            : lanes.folded.join(" · ")}{" "}
-          — nothing dated in this range or after
-        </p>
-      )}
-      {row(lanes.market)}
-      <Axis frame={frame} ticks={ticks} range={range} onToday={onToday} />
+    <figure className="lanes" aria-label={label}>
+      <Axis
+        frame={frame}
+        lens={lens}
+        ticks={ticks}
+        range={range}
+        onToday={onToday}
+        trackRef={ref}
+      />
+      <div className="lanes-stage">
+        {zoom ? (
+          <span className="lanes-zoom-frame" aria-hidden="true">
+            <span
+              key={zoom.n}
+              className="lanes-zoom"
+              style={
+                {
+                  "--x0": zoom.from.left,
+                  "--w0": zoom.from.width,
+                  "--x1": zoom.to.left,
+                  "--w1": zoom.to.width,
+                } as CSSProperties
+              }
+            />
+          </span>
+        ) : null}
+        {note ?? lanes.holdings.map(row)}
+        {note || lanes.folded.length === 0 ? null : (
+          <p className="lanes-folded">
+            {lanes.folded.length > 4
+              ? `${lanes.folded.slice(0, 3).join(" · ")} · ${String(lanes.folded.length - 3)} more`
+              : lanes.folded.join(" · ")}{" "}
+            — nothing dated in this range or after
+          </p>
+        )}
+        {row(lanes.market)}
+      </div>
       <p className="lanes-key">
         {drawn.map((g) => (
           <span key={g}>
