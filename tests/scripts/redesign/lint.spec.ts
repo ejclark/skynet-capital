@@ -254,4 +254,20 @@ describe("the lint command", () => {
     expect(passed.stdout).toMatch(/clean \(1 question\(s\), 2 options\)/);
     expect(passed.status).toBe(0);
   });
+
+  // #5143: his banked words live in the repo (docs/design/eric-feedback/), so a fresh checkout
+  // checks a quote of his with no file cited and no REDESIGN_VERBATIM set — /tmp is not a home.
+  it("finds a quote of his in the repo's banked words when nothing else is cited", () => {
+    const file = join(dir, "banked.json");
+    const saw = ["His note: “controls that do nothing is an oxy moron”"];
+    writeFileSync(file, JSON.stringify(manifest(question({ saw }))));
+    const { REDESIGN_VERBATIM: _unset, ...env } = process.env;
+    const out = spawnSync(process.execPath, ["scripts/redesign/lint.mjs", file], {
+      encoding: "utf8",
+      env,
+    });
+    expect(out.stderr).not.toContain("banked-words files exist");
+    expect(out.stdout).toMatch(/clean/);
+    expect(out.status).toBe(0);
+  });
 });
