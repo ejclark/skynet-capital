@@ -211,7 +211,13 @@ function CouncilSection(): ReactElement {
       </p>
       <CouncilCompose
         week={data}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["council"] })}
+        // An edited line re-marks its replies as answering an earlier version — refresh both.
+        onSaved={() =>
+          Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["council"] }),
+            queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
+          ])
+        }
       />
       {data.entries.length === 0 ? (
         <p className="note">Nobody's spoken yet this week — be the first.</p>
