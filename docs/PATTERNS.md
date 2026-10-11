@@ -28,6 +28,10 @@ status quo), which settled the *kind / section / sub-view* vocabulary below.
 The trigger is a surface decision, not a PR. A copy fix, a rename, a one-link move never gets a
 shape menu — that would be the 10,000-cuts failure CLAUDE.md → *Interrupt economics* names.
 
+**Redesigning one screen from Eric's notes** runs this rule in a loop, one section per sitting:
+[`process/REDESIGN.md`](process/REDESIGN.md) (#5143) — his notes, the IA call, an expert review,
+2–5 shapes that each change one thing, a round page he answers, then the next round or a build.
+
 **Lo-fi shapes — when the decision is the template, not the placement** (Eric, 2026-09-21: "lofi is
 preferred for structural changes to see the higher level templates w/out the high fidelity details
 becoming a distraction"; convention set by the trading-parity study, `docs/research/trading-parity-2026-09.md`,

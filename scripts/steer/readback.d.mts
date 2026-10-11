@@ -1,5 +1,5 @@
 // Type surface for scripts/steer/readback.mjs (see scripts/moneypenny/index.d.mts).
-import type { TouchPointData } from "./render.mjs";
+import type { DesignRoundData, TouchPointData } from "./render.mjs";
 
 export type ReadbackAction =
   | { kind: "comment"; issue: number; body: string; why: string }
@@ -39,8 +39,9 @@ export const DEFAULT_APPLIED: string;
 /** How the page's Done comment starts: the read-back's trigger, dropped from the quotes. */
 export const DONE_TRIGGER: string;
 export const DRAWING: string;
+export const ROUND_DRAWING: string;
 export function readback(
-  tp: TouchPointData,
+  tp: TouchPointData | DesignRoundData,
   records: Record<string, unknown>,
   comments?: PageComment[],
 ): ReadbackPlan;
