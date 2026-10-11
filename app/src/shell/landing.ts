@@ -3,7 +3,8 @@ import { useEffect, useRef } from "react";
 /**
  * LANDING ON A ROW (#4348, shared by #5022): a link that names one row by hash — an Events row's
  * `#pos-<symbol>`, a FORM square's or a Thesis marker's `#act-<orderId>` — or an order's playbook
- * link naming its card (#5073) scrolls that row to the middle of what the sticky head leaves visible
+ * link naming its card (#5073) — or Trade's `?manage=` naming a held contract's Close / Roll row
+ * (#5216) — scrolls that row to the middle of what the sticky head leaves visible
  * (a target too tall for the middle, to its top), keeps it there while the page above settles, and
  * marks it `data-landed` for a moment: a thick outline and an inset bar (shape, not hue — a standing
  * reader is red/green colorblind, CLAUDE.md). `landing.css` draws the mark.

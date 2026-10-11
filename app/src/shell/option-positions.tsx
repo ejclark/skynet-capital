@@ -14,6 +14,7 @@ import {
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
 import { optionCloseWords } from "./close-panel";
+import { land } from "./landing";
 import { RollRow } from "./roll-row";
 
 /**
@@ -162,11 +163,17 @@ function CloseRow({
   useEffect(() => {
     if (!focus) return;
     // Next frame: on the docked bench the pane's own scroll-to-pane effect (a parent effect, so
-    // it runs after this one) would otherwise win, leaving the member at the pane's top.
-    const frame = requestAnimationFrame(() =>
-      rowRef.current?.scrollIntoView?.({ block: "center" }),
-    );
-    return () => cancelAnimationFrame(frame);
+    // it runs after this one) would otherwise win, leaving the member at the pane's top. Then
+    // `land` keeps the row centred while the ticket and chart above it finish loading: the row can
+    // render before them, and a single scroll left it pushed off screen below them (#5216).
+    let undo: (() => void) | undefined;
+    const frame = requestAnimationFrame(() => {
+      if (rowRef.current) undo = land(rowRef.current);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      undo?.();
+    };
   }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
