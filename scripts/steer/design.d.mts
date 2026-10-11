@@ -24,5 +24,11 @@ export function designRound(
 ): DesignRoundData;
 export function designDecisions(
   questions: Entry[],
-  opts: { issue: number; round?: number | string | null; at?: (p: string) => string },
+  opts: {
+    issue: number;
+    round?: number | string | null;
+    at?: (p: string) => string;
+    /** Reads a pins file a manifest names (loadDesign passes it); null when it isn't there. */
+    pinsFrom?: (p: string) => unknown;
+  },
 ): Omit<Decision, "minutes" | "skip">[];

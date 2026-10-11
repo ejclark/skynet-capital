@@ -11,6 +11,7 @@
 // app's, which the quote check verifies instead.
 
 import { QUESTION_KINDS } from "../steer/design.mjs";
+import { holderPins } from "../steer/pins.mjs";
 
 const CEILING = 200 * 1024;
 const CONF = ["low", "medium", "high"];
@@ -146,6 +147,21 @@ function pictureProblems(where, holder, env) {
 }
 
 /**
+ * The pins an option (or Today) names — inline, or the file pin.mjs drew from (`env.pinsAt`) — held
+ * to the steer builder's own rules (scripts/steer/pins.mjs), and their labels to plain words.
+ */
+function pinsLint(where, holder, env) {
+  const { byFrame, problems } = holderPins(holder, where, env.pinsAt);
+  const out = [...problems];
+  for (const [frame, pins] of Object.entries(byFrame)) {
+    const field = frame === "phone" ? "pins" : "pinsDesk";
+    for (const p of pins)
+      out.push(...copyProblems(`${where} ${field} pin ${p.n}`, p.label, env.ui));
+  }
+  return out;
+}
+
+/**
  * What the question asks. Round 0 picks which problem to fix first, so its questions set
  * `kind: "problems"` — without it the page says "Build this" and the read-back files a build from
  * the pick (the redesign commons, 2026-10-11: eight sessions hit it).
@@ -176,7 +192,11 @@ function todayProblems(q, at, env) {
   const out = [];
   if (!text(q.today.source)) out.push(`${at} today: needs "source" (the script that shot it)`);
   if (!text(q.today.caption)) out.push(`${at} today: needs "caption"`);
-  return [...out, ...pictureProblems(`${at} today`, q.today, env)];
+  return [
+    ...out,
+    ...pictureProblems(`${at} today`, q.today, env),
+    ...pinsLint(`${at} today`, q.today, env),
+  ];
 }
 
 function optionProblems(q, at, env) {
@@ -196,6 +216,7 @@ function optionProblems(q, at, env) {
         `${where}: needs "delta" — ${q.kind === "problems" ? "the problem, in a few words" : "the one thing it changes"}`,
       );
     out.push(...pictureProblems(where, o, env));
+    out.push(...pinsLint(where, o, env));
     out.push(...copyProblems(`${where} name`, o.name ?? "", env.ui));
     out.push(...copyProblems(`${where} delta`, o.delta ?? "", env.ui));
   }

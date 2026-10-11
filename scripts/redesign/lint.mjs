@@ -5,8 +5,10 @@
 // Checks what a script can (lint-rules.mjs): the fields the steer page needs, a numeric question
 // number, what each question asks (`kind`: "design", the default, or "problems", which round 0
 // must set so a pick chooses the next round's problem and files no build), a phone and a desk
-// picture for today and every option that exist and are ≤200KB, plain language (no designer
-// jargon, no Title-Cased name the app's UI never says), and that every quoted “…” in `saw` is
+// picture for today and every option that exist and are ≤200KB, any `pins` / `pinsDesk` held to the
+// page's rules (a number once per frame, x/y in %, a label ≤60 characters, the frame it sits on),
+// plain language (no designer jargon, no Title-Cased name the app's UI never says), and that
+// every quoted “…” in `saw` is
 // really there — in a file the manifest cites or in Eric's banked words. A model critic then
 // judges taste only.
 //
@@ -63,9 +65,22 @@ function main() {
   }
   const here = dirname(path);
   const roots = [raw?.root, here, dirname(here)].filter(Boolean).map((r) => resolve(here, r));
-  const pictureSize = (p) => {
+  const locate = (p) => {
     const hit = isAbsolute(p) ? p : roots.map((r) => join(r, p)).find((c) => existsSync(c));
-    return hit && existsSync(hit) ? statSync(hit).size : null;
+    return hit && existsSync(hit) ? hit : null;
+  };
+  const pictureSize = (p) => {
+    const hit = locate(p);
+    return hit ? statSync(hit).size : null;
+  };
+  // A pins value may name the file pin.mjs drew the frame from: read it as the page will.
+  const pinsAt = (p) => {
+    const hit = locate(p);
+    try {
+      return hit ? JSON.parse(readFileSync(hit, "utf8")) : null;
+    } catch {
+      return null;
+    }
   };
   const missing = [];
   const cache = new Map();
@@ -97,7 +112,7 @@ function main() {
     console.error(
       "lint: none of Eric's banked-words files exist here (REDESIGN_VERBATIM) — only cited sources are checked",
     );
-  const problems = lintDesign(raw, { pictureSize, sourcesFor, ui });
+  const problems = lintDesign(raw, { pictureSize, sourcesFor, ui, pinsAt });
   for (const p of new Set(missing)) problems.push(`manifest: cites ${p}, which isn't there`);
   if (problems.length > 0) {
     for (const p of problems) console.log(p);

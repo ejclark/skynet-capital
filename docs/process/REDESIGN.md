@@ -29,6 +29,10 @@ _Caption — the loop, one screen per session; Eric touches only his notes, the 
 
 - **One screen, one session, one issue.** If his notes cover two screens, run one and file the
   other as its own redesign ask (`/issue`), never both in one sitting.
+- **Before each round, pull the process.** Run `/usr/bin/git fetch origin main`, then
+  `/usr/bin/git merge origin/main --no-edit` (plain commands, one per call; never stash or rebase),
+  then read `commons.md` → *Process changes* and apply every line dated after your last round.
+  This is how a fix to the loop reaches the sessions already running.
 - **Work in the session scratchpad:** `<scratchpad>/redesign/<screen>/r<N>/` holds the round's
   shots, shapes, manifest, `tp.json`, page and read-back. Only a `docs/PATTERNS.md` row needs a
   branch (step h).
@@ -47,7 +51,7 @@ sessions:
 
 ```sh
 node scripts/redesign/commons.mjs read             # the protocol page, then the latest findings
-node scripts/redesign/commons.mjs add --screen <id> --kind component|pattern|wording|data|request|ia-move \
+node scripts/redesign/commons.mjs add --screen <id> --kind component|pattern|wording|data|request|ia-move|process \
   --what "<≤140 chars>" [--where … --principle … --to … --why …]
 node scripts/redesign/commons.mjs digest           # the curator's view: shared findings, IA moves
 ```
@@ -61,6 +65,13 @@ node scripts/redesign/commons.mjs digest           # the curator's view: shared 
   move **across** screens is never drawn alone: `add --kind ia-move --to <screen/section> --why
   <the goal and what it would sit beside>`, shown on your page as a pinned candidate. The curator
   turns them into one app-wide IA round, and the IA call is written before anything is built.
+- **Eric's inline process channel** (Eric, 2026-10-11: improvements "inline that carry forward to
+  the current and other parallel sessions"). When he types `process: …` in your chat, or pins a
+  comment starting `process:` on your page: `commons.mjs add --kind process --what "<his words,
+  whole>"` (`--screen` optional), send ONE message to the curator session **Profile REDESIGN**
+  quoting his words, and tell him "banked for all sessions". Don't change the loop in your own
+  session: the curator ships it to main and adds a *Process changes* line, which every session
+  pulls before its next round. The digest lists process lines first.
 
 ## The loop
 
@@ -119,6 +130,12 @@ marks and notes on the issue and prints `nextRound`, the instruction round 1 is 
   `scripts/shoot` script. His words sit on the spot they changed, on the frame.
 - Annotate with `pin.mjs` (above), never a list beside the picture; add `"tag": "illustrative
   values"` wherever nothing computes the number.
+- **Name the same pins in the manifest**, so he can react to each one: `"pins": "<the pins file
+  you passed pin.mjs>"` on the option (or on `today`) for its phone frame, `"pinsDesk"` for the
+  desktop one. It is read as-is — one file, no second copy to keep in sync
+  (`pin.mjs --pins <file> --emit-manifest-pins` prints the list the page will place, for inline
+  use). The page puts a button on each badge: 👍 Keep · 👎 Change · ☯︎ Mixed (round 0: Yes, a
+  problem · Not a problem · Partly).
 - **Critic pass before he sees anything:** `node scripts/redesign/lint.mjs <dir>/manifest.json`
   first — fields, pictures, jargon, invented names, and every quote of his checked against the
   files the manifest cites (`sources`) — then a critic judges only taste against *His standing
@@ -138,7 +155,8 @@ marks and notes on the issue and prints `nextRound`, the instruction round 1 is 
   "options": [{ "key": "A", "name": "The chain first", "phone": "shapes/a-phone.jpg",
                 "desk": "shapes/a-desk.jpg", "delta": "Nothing moves; the control." },
               { "key": "B", "name": "The order sentence first", "phone": "shapes/b-phone.jpg",
-                "desk": "shapes/b-desk.jpg", "delta": "The order sentence moves above the chain." }] }] }
+                "desk": "shapes/b-desk.jpg", "pins": "pins/b-phone.json",
+                "delta": "The order sentence moves above the chain." }] }] }
 ```
 
 **e · Publish the round page, and give him the link.**
@@ -167,6 +185,11 @@ npm run steer:build -- <dir>/tp.json
 - **No Build pick:** draw the next round from his words — More goes deeper, Not is replaced, every
   pinned note is honoured on the spot it named. Next variable in the same section, or the next
   section once this one is settled. Back to d.
+- **His pin reactions** come back as a *Per pin* list on the issue, each pin's label word for
+  word, and as `nextRound` instructions: 👍 keep as drawn · 👎 replace with a new direction ·
+  ☯︎ draw a closer look (variants of just that element). Round 0: yes, a problem · not a problem ·
+  partly — still nothing filed. A pin he left alone is "no signal", never a default. On a Build
+  pick, the build issue carries that option's pins.
 - **A Build pick:** the read-back files it as a `feedback` + `ready` issue. **One build lane per
   surface** (`docs/DELEGATION.md` rail 7): before running its `create` command, look for an open
   build on the same route, shell file or page screenshots; if there is one, add `--blocked-by

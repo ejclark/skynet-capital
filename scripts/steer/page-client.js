@@ -20,6 +20,11 @@
 // `readBackBy` and `readBackSummary` on `tp/<round>`; the page watches that one document and shows
 // the line. So the page's own meta writes MERGE (`update`), never replace: a `set` would erase what
 // the session wrote. Done is one way; Reopen is its own control.
+//
+// PIN REACTIONS (#5143, pins-client.js) save in the decision's own record as `pins`, and MERGE one
+// key at a time (`update({ pins: { <id>: v } })`, a cleared one as null): the same page open on a
+// phone and a laptop reacts to different pins without one erasing the other. The first write of a
+// record that isn't in the store yet is the whole record (`set`), as every other answer is.
 (() => {
   const TP = JSON.parse(document.getElementById("tp-data").textContent);
   const ID = TP.id;
@@ -40,6 +45,8 @@
   let comments = Promise.resolve(null);
   /** Has the round's document been seen or written? Until then a meta write reads first. */
   let metaStored = false;
+  /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
+  const stored = new Set();
   let readOnly = false;
   /** The line shown in place of the count when the store can't be reached or read; locks the page. */
   let blocked = null;
@@ -99,14 +106,20 @@
   /** The read-back already shown (its time and summary), so a re-delivered snapshot repeats nothing. */
   let heardKey = null;
 
-  const blank = () => ({ pick: null, react: {}, verdict: null, note: "" });
+  const blank = () => ({ pick: null, react: {}, verdict: null, note: "", pins: {} });
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
     return state[sec][key];
   };
+  const reacted = (r) => Object.values(r?.pins || {}).some(Boolean);
   const answered = (r) =>
     Boolean(
-      r && (r.pick || r.verdict || Object.keys(r.react || {}).length || (r.note || "").trim()),
+      r &&
+        (r.pick ||
+          r.verdict ||
+          Object.keys(r.react || {}).length ||
+          (r.note || "").trim() ||
+          reacted(r)),
     );
   const count = () => TP.decisions.filter((d) => answered(state.decisions[d.key])).length;
 
@@ -131,6 +144,7 @@
       if (document.activeElement !== t) t.value = r?.note || "";
       t.disabled = locked();
     }
+    pinsUi?.paint();
     const isDone = Boolean(meta.doneAt);
     doneBtn.setAttribute("aria-pressed", isDone ? "true" : "false");
     doneBtn.textContent = isDone ? "Done" : "I'm done";
@@ -182,17 +196,23 @@
     chains[path] = next;
     return next;
   }
-  const write = (path, body) => chain(path, (ref) => ref.set(body));
-  function save(sec, key) {
-    if (connecting) {
-      const r = state[sec][key];
-      held.set(`${sec}/${key}`, { sec, key, rec: { ...r, react: { ...r.react } } });
-      return status("Sending once your answers load");
-    }
-    if (!db) return status("");
+  /** A write that lands; the path is then one the store holds. */
+  const landed = (path, run) => () =>
+    run().then(
+      () => {
+        stored.add(path);
+      },
+      (err) => {
+        stored.delete(path);
+        throw err;
+      },
+    );
+  const write = (path, body) => chain(path, (ref) => landed(path, () => ref.set(body))());
+  /** The whole record of one answer, as the page holds it. */
+  function body(sec, key) {
     const r = state[sec][key];
     const d = sec === "decisions" ? TP.decisions.find((x) => x.key === key) : null;
-    write(`tp/${ID}/${sec}/${key}`, {
+    return {
       round: ID,
       section: sec,
       key,
@@ -202,7 +222,35 @@
       react: r.react,
       verdict: r.verdict,
       note: r.note || "",
+      ...(sec === "decisions" ? { pins: r.pins || {} } : {}),
       at: new Date().toISOString(),
+    };
+  }
+  function save(sec, key) {
+    if (connecting) {
+      const r = state[sec][key];
+      const copy = { ...r, react: { ...r.react }, pins: { ...r.pins } };
+      held.set(`${sec}/${key}`, { sec, key, rec: copy });
+      return status("Sending once your answers load");
+    }
+    if (!db) return status("");
+    write(`tp/${ID}/${sec}/${key}`, body(sec, key));
+  }
+  /** One pin's reaction, merged into its decision's record (null clears it); a record the store
+   *  doesn't hold yet is written whole. Held like any answer while the store is connecting. */
+  function savePin(key, id) {
+    if (connecting || !db) return save("decisions", key);
+    const path = `tp/${ID}/decisions/${key}`;
+    const v = state.decisions[key]?.pins?.[id] || null;
+    chain(path, (ref) => {
+      const there = stored.has(path) ? Promise.resolve(true) : ref.get().then((s) => s.exists);
+      return there.then((yes) =>
+        landed(path, () =>
+          yes
+            ? ref.update({ pins: { [id]: v }, at: new Date().toISOString() })
+            : ref.set(body("decisions", key)),
+        )(),
+      );
     });
   }
   /** The page's own fields on `tp/<round>` — the only ones it ever writes there. */
@@ -411,6 +459,7 @@
       Boolean,
     );
     for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
+    for (const [id, v] of Object.entries(r.pins || {}).sort()) if (v) bits.push(`pin ${id} ${v}`);
     const note = (r.note || "").trim().replace(/\s+/g, " ");
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
@@ -441,6 +490,23 @@
     }
   });
 
+  // The pins' own script (pins-client.js), handed the page's state; null on a page with no pins.
+  const pinsUi = globalThis.steerPins?.({
+    pins: TP.pins,
+    saved: (key) => state.decisions[key],
+    problems: (key) => Boolean(TP.decisions.find((d) => d.key === key)?.problems),
+    locked,
+    react(key, id, v) {
+      const r = rec("decisions", key);
+      r.pins = { ...r.pins };
+      if (r.pins[id] === v) delete r.pins[id];
+      else r.pins[id] = v;
+      tap();
+      status("Saving");
+      savePin(key, id);
+    },
+  });
+
   status("");
 
   const use = (name) =>
@@ -450,6 +516,8 @@
     react: v.react || {},
     verdict: v.verdict || null,
     note: v.note || "",
+    // A cleared reaction is stored as null (savePin); the page holds only the live ones.
+    pins: Object.fromEntries(Object.entries(v.pins || {}).filter(([, x]) => x)),
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>
@@ -458,7 +526,10 @@
       .get()
       .then(
         (snap) => {
-          for (const doc of snap.docs) state[sec][doc.id] = fromDoc(doc.data());
+          for (const doc of snap.docs) {
+            state[sec][doc.id] = fromDoc(doc.data());
+            stored.add(`tp/${ID}/${sec}/${doc.id}`);
+          }
           return true;
         },
         () => false,

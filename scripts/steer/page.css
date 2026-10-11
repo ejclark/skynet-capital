@@ -288,6 +288,109 @@ input:focus-visible {
 .shot.desk {
   flex: 1 1 100%;
 }
+
+/* Pin reactions (#5143, pins.mjs + pins-client.js). The picture is the positioning box: each pin
+   button sits on its baked badge by %, so it tracks the scaled image. The button is a 32px tap
+   target; what shows is smaller, so it hides as little of the frame as it can. Untouched, a ring
+   around the badge; reacted, a filled disc with the glyph, a heavier border and its number in a
+   corner — a shape and a weight, never a colour alone. */
+.shot.pinned {
+  position: relative;
+  overflow: visible;
+}
+.shot.pinned .frame {
+  display: block;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.pin {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.pin:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.pin .pg {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+  display: grid;
+  place-items: center;
+  font: 14px / 1 var(--sans);
+}
+.pin:hover .pg {
+  border-width: 3px;
+}
+.pin[data-r] .pg {
+  width: 26px;
+  height: 26px;
+  background: var(--surface);
+  border: 3px solid var(--text);
+}
+.pin .pn {
+  display: none;
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font: 700 11px / 18px var(--sans);
+  text-align: center;
+}
+.pin[data-r] .pn {
+  display: block;
+}
+.pinpop {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  /* its own width, not what is left of the picture beside it; wraps only at a narrow screen */
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.pc {
+  font: 600 14px var(--sans);
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pc[aria-pressed="true"] {
+  border: 3px solid var(--text);
+  padding: 4px 10px;
+}
+.pc[aria-pressed="true"]::after {
+  content: " ✓";
+}
 .side {
   display: flex;
   flex-direction: column;

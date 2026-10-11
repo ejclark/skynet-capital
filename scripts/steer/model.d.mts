@@ -8,6 +8,8 @@ export interface Picture {
   alt: string;
   size: "phone" | "desk";
   local?: string | null;
+  /** The pins its frame was drawn with (pins.mjs, #5143): a button sits on each badge. */
+  pins?: { n: number; x: number; y: number; label: string }[];
 }
 export interface Option {
   key: string;
@@ -55,6 +57,8 @@ export interface Saved {
   react?: Record<string, string>;
   verdict?: string | null;
   note?: string;
+  /** Pin reactions by `<option>:<phone|desk>:<n>`; a cleared one is null (#5143). */
+  pins?: Record<string, string | null>;
   at?: string;
   [k: string]: unknown;
 }

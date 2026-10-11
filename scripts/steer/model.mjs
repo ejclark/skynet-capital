@@ -237,12 +237,17 @@ export function parseSteerMarker(body = "") {
   return { round: m[1], key: m[2], note: /^> (.+)$/m.exec(body)?.[1]?.trim() ?? null };
 }
 
-/** Did Eric leave anything on this record — a pick, a verdict, a reaction or a note? */
+/** A pin reaction the page offers (pins.mjs); a cleared one is stored as null. */
+const PIN_VALUES = ["up", "down", "mixed"];
+
+/** Did Eric leave anything on this record — a pick, a verdict, a reaction, a note, or a reaction
+ *  on one of its pins (#5143)? */
 export const isAnswered = (rec) =>
   Boolean(
     rec &&
       (rec.pick ||
         rec.verdict ||
         Object.keys(rec.react ?? {}).length ||
-        String(rec.note ?? "").trim()),
+        String(rec.note ?? "").trim() ||
+        Object.values(rec.pins ?? {}).some((v) => PIN_VALUES.includes(v))),
   );

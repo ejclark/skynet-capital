@@ -2,7 +2,8 @@
 //
 // The shape is the one the profile critique builder already wrote (#5037 round 1: the session
 // scratchpad's img/manifest.json): one entry per question, `{ q, today: { phone, desk, source,
-// caption }, options: [{ key, name, phone, desk, delta }] }`. The question's words ride on the same
+// caption }, options: [{ key, name, phone, desk, delta }] }`. An option, or Today, may carry
+// `pins` / `pinsDesk`: the pins its frame was drawn with (pins.mjs). The question's words ride on the same
 // entry (round 1 kept them in a Python file beside it): `title`, `ask`, `rec` (the recommended
 // option's key), `conf`, `wrong`, `saw[]`, `changes`, `topic`. Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
@@ -13,6 +14,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
+import { holderPins } from "./pins.mjs";
 
 /** A design round's questions from a manifest file, as page decisions (minutes added later). */
 export function loadDesign(file, { issue, round } = {}) {
@@ -30,15 +32,28 @@ export function loadDesign(file, { issue, round } = {}) {
   const roots = [wrap.root, dirname(file), dirname(dirname(file))]
     .filter(Boolean)
     .map((r) => resolve(dirname(file), r));
+  const find = (p) =>
+    isAbsolute(p) ? (existsSync(p) ? p : null) : roots.map((r) => join(r, p)).find(existsSync);
   const at = (p) => {
     if (!p) return null;
     if (isAbsolute(p)) return checked(p);
-    const hit = roots.map((r) => join(r, p)).find((c) => existsSync(c));
+    const hit = find(p);
     if (!hit)
       throw new Error(`steer/design: picture not found: ${p} (looked under ${roots.join(", ")})`);
     return hit;
   };
-  return designDecisions(wrap.questions, { issue: n, round: wrap.round ?? round ?? null, at });
+  // A pins value may name the file pin.mjs drew from, so the frame and the page read one copy.
+  // Null when it isn't there: pins.mjs names the file in its refusal.
+  const pinsFrom = (p) => {
+    const hit = find(p);
+    return hit ? JSON.parse(readFileSync(hit, "utf8")) : null;
+  };
+  return designDecisions(wrap.questions, {
+    issue: n,
+    round: wrap.round ?? round ?? null,
+    at,
+    pinsFrom,
+  });
 }
 
 /** Every `--design` value in argv: repeatable (`--design a.json --design b.json`), a comma list
@@ -85,11 +100,34 @@ function checked(p) {
   return p;
 }
 
-const pics = (o, alt, at) =>
-  [
-    o?.phone && { src: at(o.phone), alt: `${alt} at phone width`, size: "phone" },
-    o?.desk && { src: at(o.desk), alt: `${alt} at desktop width`, size: "desk" },
-  ].filter(Boolean);
+const WIDTH = { phone: "phone width", desk: "desktop width" };
+
+/** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it. */
+const pics = (o, alt, at, pins = {}) =>
+  ["phone", "desk"]
+    .filter((size) => o?.[size])
+    .map((size) => ({
+      src: at(o[size]),
+      alt: `${alt} at ${WIDTH[size]}`,
+      size,
+      ...(pins[size]?.length ? { pins: pins[size] } : {}),
+    }));
+
+/** Every holder's pins by frame, or a throw naming each pin the page couldn't place (pins.mjs). */
+function pinsOf(q, n, pinsFrom) {
+  const problems = [];
+  const read = (holder, where) => {
+    const got = holderPins(holder, where, pinsFrom);
+    problems.push(...got.problems);
+    return got.byFrame;
+  };
+  const today = read(q.today, `q${n} today`);
+  const options = (q.options ?? []).map((o) => read(o, `q${n} option ${o.key}`));
+  if (Object.keys(today).length && (q.options ?? []).some((o) => safeKey(o.key) === "today"))
+    problems.push(`q${n}: an option keyed "today" can't share pin ids with Today's frame`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return { today, options };
+}
 
 /**
  * What a question asks. `design` (the default) shows shapes, and a pick is a build; `problems`
@@ -108,19 +146,21 @@ function questionKind(q, n) {
   return kind;
 }
 
-/** Pure once `at` is: manifest entries → decisions. `at` maps a manifest path to a usable one.
+/** Pure once `at` and `pinsFrom` are: manifest entries → decisions. `at` maps a manifest path to
+ *  a usable one; `pinsFrom` reads a pins file a manifest names (loadDesign passes both).
  *  A problems question stays a design decision (pictures, minutes, the store) and carries
  *  `problems: true`, which changes only its words and its read-back. */
-export function designDecisions(questions, { issue, round = null, at = (p) => p }) {
+export function designDecisions(questions, { issue, round = null, at = (p) => p, pinsFrom }) {
   return questions.map((q, i) => {
     const n = Number(q.q ?? i + 1);
     const problems = questionKind(q, n) === "problems";
-    const options = (q.options ?? []).map((o) => ({
+    const pins = pinsOf(q, n, pinsFrom);
+    const options = (q.options ?? []).map((o, j) => ({
       key: safeKey(o.key),
       name: o.name ?? `Option ${o.key}`,
       delta: o.delta ?? "",
       recommended: q.rec != null && String(o.key) === String(q.rec),
-      pictures: pics(o, `Option ${o.key}`, at),
+      pictures: pics(o, `Option ${o.key}`, at, pins.options[j]),
     }));
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
@@ -149,7 +189,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p 
         : null,
       today: q.today
         ? {
-            pictures: pics(q.today, "Today", at),
+            pictures: pics(q.today, "Today", at, pins.today),
             caption: q.today.caption ?? "",
             real: !source.startsWith("mockup"),
           }
