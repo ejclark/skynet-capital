@@ -101,6 +101,15 @@ export function peekNext(
     continuation?: () => unknown;
   },
 ): AdmissionIssue | null;
+/** #5056 slice 2: a freed build slot — peek the sweep, dispatch the scan when it names work. */
+export function wakeAfter(
+  freed: number,
+  deps?: {
+    peekDeps?: Parameters<typeof peekNext>[0];
+    claimed?: (slug: string) => boolean;
+    dispatch?: () => void;
+  },
+): string;
 /** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
 export function claimPlan(
   ctx: ClaimCtx,

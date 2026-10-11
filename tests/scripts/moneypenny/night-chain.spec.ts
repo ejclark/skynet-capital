@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { peekNext, route } from "../../../scripts/moneypenny/index.mjs";
+import { peekNext, route, wakeAfter } from "../../../scripts/moneypenny/index.mjs";
 import {
   type RestIssue,
   type RestPr,
@@ -209,6 +209,32 @@ describe("a freed build slot wakes the queue — merge or no merge", () => {
     expect(dispatches).toBe(1);
     expect(result.pick).toBe(4616);
     expect(wake({ queue: [queue[0] as Issue], leased: [4469] }).dispatches).toBe(0);
+  });
+
+  it("the router's wake reads the lease under the lane's own slug, and looks past a held pick", () => {
+    const queue = [ready(4469, ["plan"], "2026-09-01T00:00:00Z"), ready(4616, ["feedback"])];
+    const asked: string[] = [];
+    let dispatches = 0;
+    const line = wakeAfter(4469, {
+      peekDeps: {
+        readMode: () => mode("normal"),
+        readReady: () => queue,
+        readInFlight: () => [],
+        readPrIssues: () => new Map(),
+        readPlans: () => [],
+        continuation: noContinuation,
+      },
+      claimed: (slug: string) => {
+        asked.push(slug);
+        return slug === "plan-4469";
+      },
+      dispatch: () => {
+        dispatches += 1;
+      },
+    });
+    expect(asked).toEqual(["plan-4469"]);
+    expect(dispatches).toBe(1);
+    expect(line).toMatch(/#4616/);
   });
 
   it("the dispatch is the push pass's own call: the events workflow, as a scan", () => {

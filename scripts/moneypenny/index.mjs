@@ -1420,18 +1420,19 @@ const ONE_CALL_INTENTS = {
  * #5056 slice 2 — a freed build slot: peek the retry sweep (the same reads and pick as the push
  * pass), and dispatch the scan when it names work. `peek(n)` leaves #n out of the ready list, for
  * `wakeNext`'s look past a pick its own lease still holds; `isHeld` is the lease peek either lane
- * would take (`isClaimed`, read-only).
+ * would take (`isClaimed`, read-only). Every read is injectable, for night-chain.spec.ts.
  */
-function wakeAfter(freed) {
+export function wakeAfter(
+  freed,
+  { peekDeps = {}, claimed = (slug) => isClaimed(slug).claimed, dispatch } = {},
+) {
+  const readReady = peekDeps.readReady ?? (() => readOpenIssues(LABELS.ready.name));
   return wakeNext({
     freed,
     peek: (skip) =>
-      peekNext(
-        skip
-          ? { readReady: () => readOpenIssues(LABELS.ready.name).filter((x) => x.number !== skip) }
-          : {},
-      ),
-    isHeld: (n) => isClaimed(`plan-${n}`).claimed || isClaimed(`feedback-${n}`).claimed,
+      peekNext({ ...peekDeps, readReady: () => readReady().filter((x) => x.number !== skip) }),
+    isHeld: (n) => claimed(`plan-${n}`) || claimed(`feedback-${n}`),
+    ...(dispatch ? { dispatch } : {}),
   }).line;
 }
 
