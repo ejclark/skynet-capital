@@ -150,7 +150,7 @@
         },
         {
           "id": "s2",
-          "goto": "/app/u/sauron/decisions",
+          "goto": "/app/u/sauron/playbooks",
           "sees": "Playbooks (Heartbeat merged in as its top strip, #5073); offline: 'No decision trail is wired in this deployment.' — so no playbook card renders for anyone here, and these absences read no data, not withheld names",
           "ears": "WHEN the invited friend reads another member's bot's playbooks, the app shall not name the playbooks it runs.",
           "expect": [

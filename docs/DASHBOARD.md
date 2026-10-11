@@ -74,14 +74,15 @@ nested route per section:
 | Overview | `/u/:id` | who is this, at a glance — tiles, the character card, the blotter | every account |
 | Activity | `/u/:id/activity` | what did it actually do? — every order, with its reasons | every account |
 | Pulse | `/u/:id/pulse` | how is it doing over time? — equity curve, streaks, weekly P/L | every account |
-| Heartbeat | `/u/:id/decisions` | is the bot alive, and what did its last passes conclude? | bots |
+| Playbooks | `/u/:id/playbooks` | is the bot checking the market, and what is each of its playbooks doing? | bots |
 | Thesis | `/u/:id/thesis` | what is its standing call, and is it working? | bots |
 | Settings | `/settings` | (the viewer's own account settings) | only your own account |
 
-`/u/:id/decisions` keeps its address for saved links; Decisions folded into Heartbeat (#3687), so it
-reads what the Profile page's Heartbeat reads. `/u/:id/playbooks` redirects to R&D → Playbooks.
-Old `?tab=` links redirect to their section (`src/server/legacy-redirects.ts`). The route's name is
-a later IA call; the word "desk" is retired from member-facing copy (#3345).
+Decisions folded into Heartbeat (#3687) and Heartbeat into Playbooks (#5073), so the section reads
+what the Profile page's Playbooks reads, at an address named for it; a saved `/u/:id/decisions` link
+redirects there with the check log open. The Playbook Store itself lives on R&D → Playbooks.
+Old `?tab=` links redirect to their section (`src/server/legacy-redirects.ts`); the word "desk" is
+retired from member-facing copy (#3345).
 
 ### Acting on a position (your own accounts only)
 

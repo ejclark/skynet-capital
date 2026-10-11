@@ -6,7 +6,7 @@ import { AccountLeague, AccountPage } from "../shell/account-head";
 import { PageFrame } from "../shell/frame";
 
 /** The any-account page's layout (#3807 slice 2d) — exists so `/u/:id`'s sections (Overview,
- *  Activity, Pulse, Heartbeat at `/decisions`, Thesis, and the `/playbooks` redirect) are real
+ *  Activity, Pulse, Playbooks, Thesis, and the `/decisions` redirect) are real
  *  siblings under one param scope. It owns the frame and the page's own head
  *  (`account-head.tsx`); each child renders only its body, its own loading and error notes inside
  *  it (#4951: each child used to bring the head itself, so while a section's read was pending it

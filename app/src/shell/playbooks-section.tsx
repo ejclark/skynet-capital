@@ -13,8 +13,9 @@ import { StrategyCard } from "./playbook-strategy-cards";
 
 /**
  * R&D → PLAYBOOKS (#3623) — the one home for house playbooks. The Playbook Store (#885) used to
- * live on each account's desk (`/u/$id/playbooks`); Eric retired that placement on 2026-09-23 ("the
- * legacy route should not have the playbook store view"), so the catalog is studied and switched on
+ * live on each account's desk (`/u/$id/playbooks`, now the bot's own Playbooks section, #5073);
+ * Eric retired that placement on 2026-09-23 ("the legacy route should not have the playbook store
+ * view"), so the catalog is studied and switched on
  * in one place and the account becomes a parameter of the action, chosen under "Subscribe as" —
  * a row in the section's own head since the rail left the frame (#3807 slice 2a).
  *

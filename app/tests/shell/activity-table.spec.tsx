@@ -115,7 +115,7 @@ describe("ActivityTable — the round behind a fill", () => {
     expect(screen.getByText(/3 ideas → 2 past the guards/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "the whole pass" })).toHaveAttribute(
       "href",
-      `/u/sauron/decisions#cycle-${Date.parse("2026-09-22T18:59:00.000Z")}`,
+      `/u/sauron/playbooks#cycle-${Date.parse("2026-09-22T18:59:00.000Z")}`,
     );
   });
 

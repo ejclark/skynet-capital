@@ -128,7 +128,7 @@ function RoundLine({
         {counted}
         {counted && anchor && deskId ? " · " : null}
         {anchor && deskId ? (
-          <Link className="door-link" to="/u/$id/decisions" params={{ id: deskId }} hash={anchor}>
+          <Link className="door-link" to="/u/$id/playbooks" params={{ id: deskId }} hash={anchor}>
             the whole pass
           </Link>
         ) : null}

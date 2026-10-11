@@ -24,25 +24,29 @@ test.describe("the any-account page", () => {
     await expect(page.getByText("click a symbol for its fill timeline")).toHaveCount(0);
   });
 
-  test("renders a bot's playbooks at the decisions route", async ({ page }) => {
-    await page.goto("/app/u/day-trader/decisions");
+  test("renders a bot's playbooks at its own address", async ({ page }) => {
+    await page.goto("/app/u/day-trader/playbooks");
+    await expect(page.getByRole("heading", { name: "Playbooks", exact: true })).toBeVisible();
+    const sections = page.getByRole("navigation", { name: "Sections" });
+    await expect(sections.getByRole("link", { name: "Playbooks" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  // #5073's IA call: the section's address follows its name. A saved Decisions/Heartbeat link was
+  // asking for the bot's checks, so it lands on Playbooks with the check log open, its round kept.
+  test("redirects a saved decisions link to Playbooks with the check log open", async ({
+    page,
+  }) => {
+    await page.goto("/app/u/day-trader/decisions#cycle-1");
+    await expect(page).toHaveURL(/\/app\/u\/day-trader\/playbooks\?checks=open#cycle-1$/);
     await expect(page.getByRole("heading", { name: "Playbooks", exact: true })).toBeVisible();
   });
 
   test("renders an account's activity", async ({ page }) => {
     await page.goto("/app/u/sauron/activity");
     await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
-  });
-
-  // The Playbook Store left the account page in #3625 (Eric, 2026-09-23: "the legacy route should
-  // not have the playbook store view") — the route now only redirects to R&D → Playbooks with the
-  // same account pre-selected in the "Subscribe as" rail.
-  test("redirects an account's playbooks link to R&D → Playbooks", async ({ page }) => {
-    await page.goto("/app/u/day-trader/playbooks");
-    await expect(page).toHaveURL(/\/app\/research\?/);
-    await expect(page).toHaveURL(/[?&]section=playbooks\b/);
-    await expect(page).toHaveURL(/[?&]account=day-trader\b/);
-    await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
   });
 
   test("renders an account's pulse", async ({ page }) => {

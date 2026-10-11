@@ -7,8 +7,9 @@
 //
 // Two frame groups:
 //   · `store`  — the catalog, the metric blocks, the subscriber count and the delegation fog
-//                (#1707: the same card before and after rung 102 is earned). Entered through the
-//                retired desk URL `/app/u/<id>/playbooks`, so the shots also prove the redirect.
+//                (#1707: the same card before and after rung 102 is earned). Entered through
+//                R&D's own address; `/app/u/<id>/playbooks` is the bot's Playbooks section now
+//                (#5073), no longer a redirect to the Store.
 //   · `tune`   — #4642 slice 7 (#4649, #4610): a bot account (Sauron) with one subscription on and
 //                aimed at two symbols and one paused, leading their cards; the Edit form; a human
 //                account behind the bots-only door; the bot's roll call linking here.
@@ -159,10 +160,8 @@ async function frame({
       ...extraStubs,
     },
   });
-  const to = path ?? `/app/u/${account.id}/playbooks`;
+  const to = path ?? `/app/research?section=playbooks&account=${encodeURIComponent(account.id)}`;
   await page.goto(`${origin}${to}`);
-  if (to.endsWith("/playbooks"))
-    await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=/);
   await page.getByText(expect).first().waitFor();
   if (act) await act(page);
   if (scrollTo) await page.getByText(scrollTo).first().evaluate(underHeader);

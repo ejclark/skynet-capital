@@ -18,9 +18,9 @@ import { SauronCard } from "./sauron-card";
  * ≤860 it scrolls away with the page (`.acct-head`), so a phone keeps its height for the book.
  *
  * "Decisions" folded into "Heartbeat" (#3687), and Heartbeat into "Playbooks" (#5073): the item is
- * named for what the Profile page calls the section, and it opens `/u/:id/decisions` — the address
- * every saved link and every fill's "the whole pass" still uses. The bot's head line
- * ("● Running · 7 playbooks ›") links there too. The old rail's way back to the Leaderboard stays
+ * named for what the Profile page calls the section, and so is its address, `/u/:id/playbooks`
+ * (#5073's IA call; a saved `/u/:id/decisions` link redirects there with the check log open). The
+ * bot's head line ("● Running · 7 playbooks ›") and every fill's "the whole pass" link there too. The old rail's way back to the Leaderboard stays
  * gone — the topbar's Leaderboard tab is that.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
@@ -56,7 +56,7 @@ export function AccountHead({
             deskId={id}
             showPlaybooks={isOwn}
             renderLink={(label) => (
-              <Link to="/u/$id/decisions" params={{ id }} className="hb-line-link">
+              <Link to="/u/$id/playbooks" params={{ id }} className="hb-line-link">
                 {label}
               </Link>
             )}
@@ -79,7 +79,7 @@ export function AccountHead({
           Pulse
         </Link>
         {kind === "bot" ? (
-          <Link to="/u/$id/decisions" params={{ id }}>
+          <Link to="/u/$id/playbooks" params={{ id }}>
             Playbooks
           </Link>
         ) : null}
