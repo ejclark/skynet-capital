@@ -99,10 +99,12 @@ The stable page's URL is in #5056's state block; the first publish puts it there
      <dir>/comments.json --out <dir>/readback` prints the plan: `actions`, `commands`, `rollover`,
      `defaults`, `followUps`, `nextRound` (a problems question's next-round instruction, and any
      round's per-pin one), `unplacedComments`. **Per-pin reactions** (#5143): a decision whose
-     pictures carry pins gets a *Per pin* list — `Option B · pin 2 (range strip) — 👍 keep`, the
-     label word for word, an untouched pin "no signal", never a default — and, with no Build pick,
-     a `nextRound` entry: 👍 keep as drawn · 👎 replace with a new direction · ☯︎ draw a closer
-     look; round 0 reads yes / not / partly a problem and still files nothing. Each comment is quoted word for word under
+     pictures carry pins gets a *Per pin* list — `Option B · pin 2 (range strip) — 👎 change —
+     “<his note>”`, the label and his pin note word for word, an untouched pin "no signal", never a
+     default — and, with no Build pick, a `nextRound` entry: 👍 keep as drawn · 👎 replace with a
+     new direction · ☯︎ draw a closer look, and each pin note applied on that spot; round 0 reads
+     yes / not / partly a problem and still files nothing. A reaction or note on a pin the page no
+     longer shows is ignored. Each comment is quoted word for word under
      "Eric's comments on the page" in its decision's part of the issue comment; a decision he
      commented on without tapping is quoted and rolled over, never given its default.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
@@ -160,7 +162,9 @@ The stable page's URL is in #5056's state block; the first publish puts it there
 - **Pressed states carry a glyph and a border or strike**, both themes from `docs/BRAND.md`.
 - **A pin reaction is glyph and word, merged one key at a time** (☯︎ is U+262F U+FE0E, a text
   glyph): two views never erase each other's pins, a clear is written as null, an untouched pin
-  reads back as "no signal". `tests/scripts/steer-pins{,-client}.spec.ts`.
+  reads back as "no signal". A pin note (`pinNotes`, ≤280 characters) takes the same path, and a
+  tap held while the store connects merges into the stored record (#5243).
+  `tests/scripts/steer-pins{,-client}.spec.ts`, `tests/scripts/steer-pin-notes.spec.ts`.
 
 ## A design decision: the critique round (#5037)
 

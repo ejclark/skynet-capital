@@ -358,11 +358,28 @@ input:focus-visible {
 .pin[data-r] .pn {
   display: block;
 }
+/* A pin with a note: ✎ in a solid disc on the badge's top corner — a glyph and a shape. */
+.pin .pk {
+  display: none;
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  font: 700 11px / 18px var(--sans);
+  text-align: center;
+}
+.pin[data-noted] .pk {
+  display: block;
+}
 .pinpop {
   position: absolute;
   z-index: 5;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 4px;
   /* its own width, not what is left of the picture beside it; wraps only at a narrow screen */
   width: max-content;
@@ -372,6 +389,47 @@ input:focus-visible {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.pcs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* The note: a small text control under the choices until he opens it, then a field as wide as
+   the choices above it. 16px text, so a phone doesn't zoom on focus. */
+.pna {
+  align-self: flex-start;
+  font: 600 13px var(--sans);
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 8px 6px;
+  min-height: 40px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+.pnb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+}
+.pnt {
+  box-sizing: border-box;
+  width: 100%;
+  font: 16px / 1.4 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.pcount {
+  font: 12px var(--mono);
+  color: var(--muted);
 }
 .pc {
   font: 600 14px var(--sans);
