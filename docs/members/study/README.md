@@ -471,3 +471,14 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 - 2026-10-11 · round one could not be re-controlled: a control was refused on any edit to the
   area config, and round one's had two since it ran (#5027's census route, #5099's roles). A
   control now compares the file the main round ran on what it asks of whom, and logs the rest.
+- 2026-10-11 · **the fixed-build re-run (#5099) still failed, on 2 of 7 items where round one's
+  control failed on 5.** It ran on f129445e: the first fixed build plus the fixes for its two
+  leftovers (#5036, #5039), since the first one still carried them. One of the two is real: on
+  desktop, Review on Trade lands 284px down, on a new stock ticket, while a fresh load of the same
+  address lands 1107px down, on the held contract. The other is the recorder's wording: "tapping
+  'All accounts' scrolled the page 563px" was an account switch, which #4965 resets on purpose, but
+  the line names only the tapped text, so both matchers read it as a filter. A recorder line has to
+  say what the tap changed (account, section or filter) before a matcher can judge its mechanism.
+  Also: one expert batch ran past the 10-minute limit twice, then answered in 168s on a third,
+  identical call; and run by hand, each matcher skipped about one finding in sixty, so ask again
+  for the ones left out.
