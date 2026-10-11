@@ -16,6 +16,7 @@
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
 //   node scripts/moneypenny/index.mjs --check-callout          # needs-eric just landed: is the ask actually written?
+//   node scripts/moneypenny/index.mjs --end-build plan-1234    # a build's job ended: take in-progress off (#5056)
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -95,6 +96,7 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
+import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
 // Named re-exports, not `export … from` — this router keeps substantial logic of its own (the
@@ -135,11 +137,13 @@ export const slugify = (s) =>
  *
  * (Issue-label events reach the workflow but carry no router lane here — the feedback claim is a
  * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone. One
- * issue event does: a repair capsule closing drafts its LESSONS entry, #4212.)
+ * issue event does: a repair capsule closing drafts its LESSONS entry, #4212. And since #5056 slice 2
+ * a second: `in-progress` coming off an issue wakes the build queue — wake.mjs.)
  */
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
-  if (ctx.eventName === "issues") return routeLessonDraft(ctx);
+  // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
+  if (ctx.eventName === "issues") return [...routeLessonDraft(ctx), ...routeWake(ctx)];
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -1389,21 +1393,57 @@ function executeSweepIntent(i) {
 }
 
 /**
+ * The intents that are one call and a receipt line, as a table rather than as more branches in
+ * `executeOne` — which sat at cognitive complexity 22 against a ceiling of 20 when #5056 slice 2
+ * needed one more kind (`wake-next`). Moving the four one-liners here takes it back under.
+ */
+const ONE_CALL_INTENTS = {
+  noop: (i) => {
+    console.log(`· nothing to do (${i.reason})`);
+    return `noop — ${i.reason}`;
+  },
+  error: (i) => {
+    console.error(`::error::${i.reason}`);
+    process.exitCode = 1;
+    return `❌ refused — ${i.reason}`;
+  },
+  comment: (i) => {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    console.log(`· commented on #${i.issueNumber}`);
+    return `commented on #${i.issueNumber}`;
+  },
+  "draft-lesson": (i) => draftLesson(i),
+  "wake-next": (i) => wakeAfter(i.issueNumber),
+};
+
+/**
+ * #5056 slice 2 — a freed build slot: peek the retry sweep (the same reads and pick as the push
+ * pass), and dispatch the scan when it names work. `peek(n)` leaves #n out of the ready list, for
+ * `wakeNext`'s look past a pick its own lease still holds; `isHeld` is the lease peek either lane
+ * would take (`isClaimed`, read-only). Every read is injectable, for night-chain.spec.ts.
+ */
+export function wakeAfter(
+  freed,
+  { peekDeps = {}, claimed = (slug) => isClaimed(slug).claimed, dispatch } = {},
+) {
+  const readReady = peekDeps.readReady ?? (() => readOpenIssues(LABELS.ready.name));
+  return wakeNext({
+    freed,
+    peek: (skip) =>
+      peekNext({ ...peekDeps, readReady: () => readReady().filter((x) => x.number !== skip) }),
+    isHeld: (n) => claimed(`plan-${n}`) || claimed(`feedback-${n}`),
+    ...(dispatch ? { dispatch } : {}),
+  }).line;
+}
+
+/**
  * @param i the intent to carry out.
  * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
  *   so an issue whose memory could not be written is not dispatched either, exactly as before.
  */
 function executeOne(i, stallRepairs = []) {
-  if (i.kind === "noop") {
-    console.log(`· nothing to do (${i.reason})`);
-    return `noop — ${i.reason}`;
-  }
-  if (i.kind === "error") {
-    console.error(`::error::${i.reason}`);
-    process.exitCode = 1;
-    return `❌ refused — ${i.reason}`;
-  }
+  if (Object.hasOwn(ONE_CALL_INTENTS, i.kind)) return ONE_CALL_INTENTS[i.kind](i);
   if (i.kind === "open-issue") {
     ensureLabel(i.label);
     const url = sh("gh", [
@@ -1419,12 +1459,6 @@ function executeOne(i, stallRepairs = []) {
     console.log(`▶ queued ${url}`);
     return `opened issue \`${i.title}\` → ${url}`;
   }
-  if (i.kind === "comment") {
-    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-    console.log(`· commented on #${i.issueNumber}`);
-    return `commented on #${i.issueNumber}`;
-  }
-  if (i.kind === "draft-lesson") return draftLesson(i);
   if (i.kind === "release-claim") {
     const freed = releaseBuild(i.slug);
     console.log(
@@ -1535,6 +1569,14 @@ function runCliFlag(argv, ctx) {
         ? `::notice::released the lease for ${slug}`
         : `::notice::no lease held for ${slug} — nothing to release`,
     );
+    return true;
+  }
+
+  // `--end-build <slug>` (#5056 slice 2): a build's job ended — take `in-progress` off its issue,
+  // leave the lease. The removal's own `unlabeled` event wakes the queue (`routeWake`).
+  const endIdx = argv.indexOf("--end-build");
+  if (endIdx >= 0 && argv[endIdx + 1]) {
+    endBuild(slugify(argv[endIdx + 1]));
     return true;
   }
 

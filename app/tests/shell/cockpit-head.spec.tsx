@@ -46,6 +46,7 @@ const stats = (over: Partial<NetWorthStatsView>): NetWorthStatsView => ({
   windows: [],
   idle: "97% idle",
   idlePct: 96.573,
+  invested: "$34,166",
   ...over,
 });
 
@@ -323,6 +324,168 @@ describe("the vitals line", () => {
     expect(document.querySelector(".head-vitals")).toHaveTextContent("no account's numbers here");
     expect(screen.queryByRole("button", { name: /^Account:/ })).toBeNull();
     expect(screen.queryByText("$996,966")).toBeNull();
+  });
+});
+
+describe("the cash bar on a phone (#5100 — #5037 round 2, R2)", () => {
+  // Eric: "I like the mobile design Option R2 with the graph on the second row. I do not like the
+  // desktop version as much as the mobile." So a phone grows the bar to the head's full width on
+  // its own row, with each part's amount printed under it; a wider head keeps its compact line.
+  type HappyWindow = { happyDOM: { setViewport(size: { width: number; height: number }): void } };
+  const viewport = (width: number) =>
+    (window as unknown as HappyWindow).happyDOM.setViewport({ width, height: 844 });
+  afterEach(() => viewport(1024));
+  const split = async () => (await vitals()).querySelector(".head-split") as HTMLElement;
+  const words = async () => (await split()).querySelector(".head-split-words") as HTMLElement;
+
+  it("draws the number's line, then one bar in two parts, then the words, in that order", async () => {
+    viewport(390);
+    mount();
+    const box = await vitals();
+    const line = box.querySelector(".head-vitals-line") as HTMLElement;
+    const bar = (await split()).querySelector(".head-cash-bar") as HTMLElement;
+    const said = await words();
+    expect(line).toHaveTextContent("Net worth $996,966 ▲ +$1,951 today");
+    expect(bar.style.getPropertyValue("--invested")).toBe("3.4%");
+    expect(bar.querySelector(".head-cash-in")).not.toBeNull();
+    expect(bar.querySelector(".head-cash-idle")).not.toBeNull();
+    expect(bar).toHaveAttribute("aria-hidden", "true");
+    expect(line.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bar.compareDocumentPosition(said) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("prints each part's amount under it, tied to its part by the part's own pattern", async () => {
+    viewport(390);
+    mount();
+    const said = await words();
+    const invested = said.querySelector(".head-split-in") as HTMLElement;
+    const cash = said.querySelector(".head-split-idle") as HTMLElement;
+    expect(invested).toHaveTextContent(/^\$34,166 invested$/);
+    expect(cash).toHaveTextContent(/^\$962,800 ready to use · 96\.6%$/);
+    // solid beside invested, hatched beside cash: the words find their part by pattern, not hue
+    expect(invested.querySelector(".head-swatch--in")).toHaveAttribute("aria-hidden", "true");
+    expect(cash.querySelector(".head-swatch--idle")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("moves the share off the number's line: it is said once, under the bar", async () => {
+    viewport(390);
+    mount();
+    const box = await vitals();
+    expect(box.querySelector(".head-vitals-line")).not.toHaveTextContent("cash");
+    expect(box).not.toHaveTextContent("96.6% cash");
+    expect(box.querySelectorAll(".head-cash-bar")).toHaveLength(1);
+  });
+
+  it("says a book with nothing but cash has $0 invested, and draws no invested part", async () => {
+    viewport(390);
+    const allCash = stats({ cash: "$996,966", idlePct: 100, invested: "$0" });
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...allCash }],
+          }),
+        ),
+      )) as typeof fetch;
+    mount();
+    // the worth and the cash are the same figure here, so the line and the words both print it
+    expect(await screen.findAllByText("$996,966")).toHaveLength(2);
+    const bar = document.querySelector(".head-split .head-cash-bar");
+    expect(bar).toHaveAttribute("data-all-cash");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-split-in")).toHaveTextContent(/^\$0 invested$/);
+    // nothing in the bar is solid, so the invested words carry no solid swatch
+    expect(said.querySelector(".head-swatch--in")).toBeNull();
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(
+      /^\$996,966 ready to use · 100\.0%$/,
+    );
+  });
+
+  it("names a net-short book's positions for what they are, never a negative 'invested'", async () => {
+    viewport(390);
+    // only a sold put: $255 collected, $550 to buy back — the positions are worth −$550
+    const short = stats({ value: "$99,705", cash: "$100,255", idlePct: 100, invested: "-$550" });
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...short }],
+          }),
+        ),
+      )) as typeof fetch;
+    mount();
+    await screen.findByText("$99,705");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-split-in")).toHaveTextContent(/^-\$550 in positions$/);
+    expect(said).not.toHaveTextContent("invested");
+  });
+
+  // The split bar's rule is the smaller part's, whichever it is (PATTERNS → Labelled split bar):
+  // a nearly-all-invested book keeps its cash drawn — the stylesheet holds the hatch at 12px — so
+  // the hatched swatch beside "ready to use" points at something; a book with no cash draws none.
+  const serve = (book: NetWorthStatsView) => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...book }],
+          }),
+        ),
+      )) as typeof fetch;
+  };
+
+  it("keeps a nearly-all-invested book's cash in the bar, its hatched swatch beside the words", async () => {
+    viewport(390);
+    serve(stats({ value: "$1,000,000", cash: "$3,000", idlePct: 0.3, invested: "$997,000" }));
+    mount();
+    await screen.findByText("$1,000,000");
+    const bar = document.querySelector(".head-split .head-cash-bar") as HTMLElement;
+    expect(bar).not.toHaveAttribute("data-no-cash");
+    expect(bar).not.toHaveAttribute("data-all-cash");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-swatch--idle")).not.toBeNull();
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(
+      /^\$3,000 ready to use · 0\.3%$/,
+    );
+  });
+
+  it("draws no cash part for a book with none — a negative balance says 'cash', unhatched", async () => {
+    viewport(390);
+    serve(stats({ value: "$50,000", cash: "-$25,000", idlePct: 0, invested: "$75,000" }));
+    mount();
+    await screen.findByText("$50,000");
+    const bar = document.querySelector(".head-split .head-cash-bar") as HTMLElement;
+    expect(bar).toHaveAttribute("data-no-cash");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-swatch--idle")).toBeNull();
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(/^-\$25,000 cash · 0\.0%$/);
+  });
+
+  it("keeps the rows when the share is unknown: the cash in words where the bar's words go", async () => {
+    viewport(390);
+    const noShare = stats({ idlePct: undefined, idle: undefined, invested: undefined });
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...noShare }],
+          }),
+        ),
+      )) as typeof fetch;
+    mount();
+    expect((await split()).querySelector(".head-cash-bar")).toBeNull();
+    expect(await words()).toHaveTextContent(/^\$962,800 cash$/);
+  });
+
+  it("keeps today's compact line on a wider head: a short bar and the share beside the number", async () => {
+    mount();
+    const box = await vitals();
+    expect(box.querySelector(".head-split")).toBeNull();
+    expect(box).toHaveTextContent("$962,800 · 96.6% cash");
   });
 });
 

@@ -119,19 +119,29 @@ export interface NetWorthStatsView {
    *  plus the number for the bar. Absent when value or cash isn't known. */
   readonly idle?: string;
   readonly idlePct?: number;
+  /** "$34,166" — everything that is not cash: the positions at their mark, net of anything sold,
+   *  so it and `cash` add to `value` (#5100, the head's bar prints both parts). Negative ("-$550")
+   *  when what was sold outweighs what is held. Absent exactly when `idlePct` is. */
+  readonly invested?: string;
 }
 
-/** "33% idle" — cash over total value, clamped to 0..100 for the bar. */
+/** "33% idle" — cash over total value, clamped to 0..100 for the bar — and the invested rest. */
 function idleView(
   equity: number | undefined,
   cash: number | undefined,
 ): {
   idle?: string;
   idlePct?: number;
+  invested?: string;
 } {
   if (typeof equity !== "number" || typeof cash !== "number" || equity <= 0) return {};
   const pct = Math.min(100, Math.max(0, (cash / equity) * 100));
-  return { idle: `${pct.toFixed(0)}% idle`, idlePct: pct };
+  // The difference of the two dollars the head PRINTS (`formatCurrency` rounds with Math.round),
+  // not the rounded difference of the raw ones: $996,966.40 less $962,800.60 prints as $996,966
+  // and $962,801, so invested is $34,165 — rounding $34,165.80 said $34,166, and the parts added
+  // to a dollar more than the whole above them. Equity is positive here, so this is never "-0".
+  const invested = Math.round(equity) - Math.round(cash);
+  return { idle: `${pct.toFixed(0)}% idle`, idlePct: pct, invested: formatCurrency(invested) };
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {

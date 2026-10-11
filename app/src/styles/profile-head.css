@@ -3,16 +3,17 @@
  * name) and the switch's "More ▾" (`section-switch.tsx`). The box and the switch's buttons are
  * `cockpit.css`'s.
  *
- * Each row has ONE height on every section and every account — 38 · 34 · 38 — so a tap on a
+ * Each row has ONE height on every section and every account — 38 · 34 · 38, and 38 · 66 · 38 on
+ * a phone, whose vitals give the cash bar and its amounts rows of their own (#5100) — so a tap on a
  * section or an account never moves the switch (Eric, round 1: "uniform structure… prevents
  * content shift to retain focus"). Rows never wrap; what a phone has no room for leaves by rule
- * (today's percent, the cash amount; at ≤370 the cash bar), never by overflow; a bot's head line,
- * last in its row, lets its link go whole before its state is cut.
+ * (today's percent), never by overflow; a bot's head line, last in its row, lets its link go whole
+ * before its state is cut.
  *
  * Hue never carries a meaning alone (a standing reader is red/green colourblind): the day move is
- * a ▲/▼ and a sign beside its tone, the cash bar's parts are solid and hatched with the word
- * "cash", the current account and section carry a bar or an underline, and the bot's state is a
- * glyph and a word. Tokens only. */
+ * a ▲/▼ and a sign beside its tone, the cash bar's parts are solid and hatched with their words
+ * (and on a phone each part's words carry its pattern as a swatch), the current account and
+ * section carry a bar or an underline, and the bot's state is a glyph and a word. Tokens only. */
 
 /* 1 · the account row */
 .head-account {
@@ -300,6 +301,99 @@
   flex: 1;
   background: repeating-linear-gradient(135deg, var(--muted) 0 1.5px, transparent 1.5px 4px);
 }
+.head-cash-bar[data-no-cash] .head-cash-idle {
+  display: none;
+}
+
+/* 2b · a phone's vitals (#5100 — round 2's question 7, R2): the number's line, then the bar across
+ * the head's width on a row of its own, then each part's amount under its end. Fixed rows, so a
+ * book with no share to draw keeps the words where they always sit. */
+.head-vitals[data-split] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 0 2px;
+}
+.head-vitals-line {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  box-sizing: border-box;
+  height: 27px;
+  margin: 0;
+  min-width: 0;
+}
+.head-split {
+  display: grid;
+  grid-template-rows: 10px 16px;
+  row-gap: 6px;
+  min-width: 0;
+  margin-top: 5px;
+}
+.head-split .head-cash-bar {
+  grid-row: 1;
+  width: auto;
+  box-sizing: border-box;
+}
+/* the smaller part gets size before colour (BRAND), whichever it is: 12px, so a 96% cash book
+ * still shows what works and a 99.7% invested one still shows its cash (it drew 1px) — the
+ * invested part gives way for it, so the hatched swatch beside "ready to use" points at a hatch */
+.head-split .head-cash-in {
+  flex-shrink: 1;
+  min-width: 12px;
+}
+.head-split .head-cash-idle {
+  min-width: 12px;
+}
+.head-split-words {
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--muted);
+}
+.head-split-in,
+.head-split-idle {
+  display: block;
+  white-space: nowrap;
+}
+/* the cash side is the one the bar is about: it never gives way. A book too wide for both (seven
+ * figures on each side at 360) ellipsizes the invested words — never a glyph cut in half. */
+.head-split-in {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.head-split-idle {
+  flex: none;
+  margin-left: auto;
+}
+.head-split-words b {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--text);
+}
+/* each part's words carry the part's own pattern — solid, hatched — so they pair by shape */
+.head-swatch {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 2px;
+}
+.head-swatch--in {
+  background: var(--accent);
+}
+.head-swatch--idle {
+  border: 1px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--muted) 0 1.5px, transparent 1.5px 4px);
+}
 .head-vitals--note {
   align-items: center;
   font-size: 13px;
@@ -380,19 +474,22 @@
   background: var(--surface-2);
 }
 
-/* A phone curates: today's percent and the cash amount step aside (the Overview carries both),
- * the bar shortens and the switch's buttons close up. A wider head only adds that room back —
- * never a new concept. */
+/* A phone curates: today's percent steps aside (the Overview carries it), the cash takes the
+ * vitals' second and third rows — the bar, then its amounts (2b) — and the switch's buttons close
+ * up. The vitals are one height on every section, a note's included, so the switch never moves.
+ * A wider head only adds room back — never a new concept. */
 @media (max-width: 700px) {
-  .head-day-pct,
-  .head-cash-amount {
+  .head-vitals {
+    height: 66px;
+  }
+  .head-vitals--note {
+    white-space: normal;
+  }
+  .head-day-pct {
     display: none;
   }
   .head-worth {
     font-size: 18px;
-  }
-  .head-cash-bar {
-    width: 44px;
   }
   .cockpit-head .cockpit-nav-btn {
     padding-left: 8px;
@@ -406,13 +503,15 @@
   }
 }
 
-/* The narrowest common phones (360, most Android): a seven-figure book's line ran 6px past the
- * gutter, and "Feedback ▾" in More's slot 4–7px — and a folded switch does not scroll inside
- * itself (its More list must not clip), so either pushed the whole page sideways. The cash bar
- * steps aside (the share stays, in words) and the switch's buttons close up a little more. */
+/* The narrowest common phones (360, most Android): "Feedback ▾" in More's slot ran 4–7px past the
+ * gutter — and a folded switch does not scroll inside itself (its More list must not clip), so it
+ * pushed the whole page sideways. The switch's buttons close up a little more, and the bar's words
+ * step down half a size so a two-account book's "$234,798 invested" still prints whole beside its
+ * cash. (The number's line once ran past too, with the cash beside it; since #5100 the cash has
+ * rows of its own.) */
 @media (max-width: 370px) {
-  .head-cash-bar {
-    display: none;
+  .head-split-words {
+    font-size: 11px;
   }
   .cockpit-head .cockpit-nav > .cockpit-nav-btn {
     padding-left: 6px;

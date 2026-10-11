@@ -4,12 +4,17 @@ export type PrIntent = "apply" | "release";
 
 export function intentOf(event: string): PrIntent | null;
 
+/** A claim lane's own build PR (`feedback/<n>`, `plan/<n>`): its claim owns `in-progress`. */
+export function isClaimLaneBuild(headRef: string | null | undefined): boolean;
+
 export interface PrIssueFacts {
   number: number;
   isOpenIssue?: boolean;
   hasLabel?: boolean;
   namedByOtherOpenPr?: boolean;
   leased?: boolean;
+  /** The PR is a claim lane's own build — never marked on open (#5056 slice 2). */
+  laneBuild?: boolean;
 }
 
 export interface PrInProgressRow {

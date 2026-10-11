@@ -124,6 +124,7 @@ const networth = {
       kind: "human",
       ...ericStats,
       idle: "81% idle",
+      invested: "$200,632",
       idlePct: 80.9,
     },
     {
@@ -132,10 +133,11 @@ const networth = {
       kind: "bot",
       ...sauronStats,
       idle: "39% idle",
+      invested: "$311,007",
       idlePct: 39.3,
     },
   ],
-  total: { ...totalStats, idle: "67% idle", idlePct: 67.2 },
+  total: { ...totalStats, idle: "67% idle", idlePct: 67.2, invested: "$511,639" },
 };
 
 // The same book at a new all-time high (#3689 slice 10): the ceremony's frame swaps this in.
