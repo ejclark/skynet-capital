@@ -596,8 +596,9 @@ is expected and fine; the docs are the memory.
 
 - Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
   checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
-  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first
-  means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04; an isolated
+  worktree refuses that chain — its git rules are [`docs/DELEGATION.md`](docs/DELEGATION.md)
+  rail 2) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps

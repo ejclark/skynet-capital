@@ -35,7 +35,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
    work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
    is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
-   `bash scripts/…` call passes both (#5192). Put that line in every worktree agent's prompt.
+   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
+   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
+   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
+   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
+   worktree agent's prompt.
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
