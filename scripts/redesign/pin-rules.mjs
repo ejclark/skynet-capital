@@ -91,10 +91,10 @@ export function readPins(raw) {
     return { pins: [], problems: ["pins: not a JSON object"] };
   const list = raw.pins ?? [];
   const problems = Array.isArray(list) ? [] : ["pins: `pins` is a list"];
-  // A list entry that isn't an object (`null`, a number) is a pin with nothing set: refused by
+  // A list entry that isn't an object (`null`, a number, a list) is a pin with nothing set: refused by
   // name below, never a TypeError.
   const pins = (Array.isArray(list) ? list : []).map((raw, i) => {
-    const p = raw && typeof raw === "object" ? raw : {};
+    const p = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
     return { ...p, n: p.n ?? i + 1, side: p.side ?? "right", label: String(p.label ?? "") };
   });
   const seen = new Set();
