@@ -198,7 +198,7 @@ export function imageSize(buf) {
   }
   if (buf[0] !== 0xff || buf[1] !== 0xd8) throw new Error("pin: the frame is not a JPEG or PNG");
   let at = 2;
-  while (at < buf.length) {
+  while (at + 9 <= buf.length) {
     const marker = buf[at + 1];
     const length = buf.readUInt16BE(at + 2);
     // SOF0–SOF15 carry the size, except DHT (C4), JPG (C8) and DAC (CC).

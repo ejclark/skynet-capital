@@ -91,6 +91,10 @@ function main() {
       ].map((s) => read(s, true)),
       ...VERBATIM.map((s) => read(s, false)),
     ].join("\n");
+  if (!VERBATIM.some((f) => existsSync(f)))
+    console.error(
+      "lint: none of Eric's banked-words files exist here (REDESIGN_VERBATIM) — only cited sources are checked",
+    );
   const problems = lintDesign(raw, { pictureSize, sourcesFor, ui });
   for (const p of new Set(missing)) problems.push(`manifest: cites ${p}, which isn't there`);
   if (problems.length > 0) {

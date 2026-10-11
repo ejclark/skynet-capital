@@ -66,11 +66,13 @@ const norm = (s) =>
 /** True when every piece of the quote (cut at `…` or `...`) is in `source`, in order. */
 export function quoteFound(quote, source) {
   const hay = norm(source);
-  let from = 0;
-  for (const piece of quote
+  const pieces = quote
     .split(/…|\.\.\./)
     .map(norm)
-    .filter(Boolean)) {
+    .filter(Boolean);
+  if (pieces.length === 0) return false;
+  let from = 0;
+  for (const piece of pieces) {
     const at = hay.indexOf(piece, from);
     if (at < 0) return false;
     from = at + piece.length;

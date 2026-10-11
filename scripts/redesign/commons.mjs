@@ -62,8 +62,7 @@ export function parseFlags(argv, known) {
   for (let i = 0; i < argv.length; i += 2) {
     const flag = argv[i].replace(/^--/, "");
     if (!known.includes(flag)) throw new Error(`commons: unknown option ${argv[i]}`);
-    if (argv[i + 1] === undefined || argv[i + 1].startsWith("--"))
-      throw new Error(`commons: --${flag} needs a value`);
+    if (argv[i + 1] === undefined) throw new Error(`commons: --${flag} needs a value`);
     out[flag] = argv[i + 1];
   }
   return out;
