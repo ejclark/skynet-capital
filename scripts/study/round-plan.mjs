@@ -40,7 +40,7 @@ const USAGE =
   "usage: round.mjs --pin <pin dir> --out <dir> --sealed <dir> [--profile <area.json>] " +
   "[--thin] [--dry-run] [--stub <dir>] [--concurrency N] [--only-world <name>] [--cap N] " +
   "[--runs N] [--experts N] " +
-  "[--frozen-from <main round dir> --control negative|positive --expect <key ids file>]";
+  "[--frozen-from <main round dir> --control negative|positive --expect <expect file>]";
 
 /** The two control rounds a study grades its main round against (grade.mjs --negative/--positive). */
 export const CONTROL_KINDS = ["negative", "positive"];
@@ -185,6 +185,11 @@ export function profileProblems(p) {
   if (!(Array.isArray(p?.pages) && p.pages.every(isText) && p.pages.length > 0)) {
     out.push("pages must list plain descriptions");
   }
+  // What the experts and the words pass read in place of the member cards (#5099).
+  const unroled = [...new Set((p?.matrix ?? []).map((r) => r.member))].filter(
+    (m) => isText(m) && !isText(p?.roles?.[m]),
+  );
+  if (unroled.length > 0) out.push(`roles must describe every member: ${unroled.join(", ")}`);
   for (const [i, c] of (p?.census ?? []).entries()) {
     if (!(isText(c.world) && isText(c.viewer))) out.push(`census[${i}] needs world and viewer`);
     if (!(Array.isArray(c.for) && c.for.length > 0)) out.push(`census[${i}].for is required`);

@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import { join, relative } from "node:path";
 import { clockArg } from "./clock.mjs";
-import { memberCard } from "./packets.mjs";
+import { cardEchoes, memberCard, rolesPacket } from "./packets.mjs";
 import { isHarnessPath, overlayManifest } from "./pin-plan.mjs";
 import { checkCards } from "./round-control.mjs";
 import {
@@ -29,6 +29,7 @@ import {
   primingCounts,
   profileProblems,
 } from "./round-plan.mjs";
+import { ROLES } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -171,17 +172,23 @@ export function preflight(ctx) {
   return { censuses: ctx.censuses.map((c) => c.key) };
 }
 
-/** Step 1: the member cards, by script, linted as cards; the page list linted as a role packet. */
+/**
+ * Step 1: the member cards, by script, linted as cards; the area's roles and the page list, each
+ * linted as a role packet. The roles are what the experts and the words pass read instead of the
+ * cards (#5099), so they are refused when they repeat five words of any card.
+ */
 export function cards(ctx) {
   const step = "1-cards";
   const dir = ctx.dir(step);
   const members = [...new Set(ctx.matrix.map((r) => r.member))];
   const hashes = {};
+  const texts = {};
   for (const m of members) {
     const md = readFileSync(join(ctx.here, "docs/members", `${m}.md`), "utf8");
     const card = memberCard(md, { cutoff: ctx.p.cutoff, name: m });
     writeFileSync(join(dir, `${m}.md`), card.text);
     hashes[m] = card.sha256;
+    texts[m] = card.text;
   }
   writeFileSync(join(dir, "hashes.json"), `${JSON.stringify(hashes, null, 2)}\n`);
   // A control round asks the main round's questions of the main round's members, verbatim.
@@ -199,7 +206,18 @@ export function cards(ctx) {
     throw new Error(`page list lint refused: ${lintFeedback(pages.stdout).join(" · ")}`);
   }
   ctx.log(step, "pages-clean", { pages: ctx.p.pages.length });
-  return { members, priming };
+  const roles = rolesPacket(ctx.p.roles, members);
+  writeFileSync(join(dir, ROLES), roles.text);
+  const echoes = cardEchoes(roles.text, texts);
+  if (echoes.length > 0) {
+    throw new Error(`the area's roles repeat words from the member card of ${echoes.join(", ")}`);
+  }
+  const rolesLint = ctx.lint("role", [join(dir, ROLES)]);
+  if (rolesLint.status !== 0) {
+    throw new Error(`roles lint refused: ${lintFeedback(rolesLint.stdout).join(" · ")}`);
+  }
+  ctx.log(step, "roles-clean", { roles: members.length, sha256: roles.sha256 });
+  return { members, priming, roles: roles.sha256 };
 }
 
 /** Step 2: every blind role, asked what it knows, before it is shown anything. */

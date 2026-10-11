@@ -313,6 +313,11 @@ describe("the lanes picture — what the range drives", () => {
     const due = await screen.findByRole("button", { name: /^Tue, Oct 27: / });
     expect(due.classList.contains("lane-mark--tile")).toBe(true);
     expect(due.querySelector(".lane-glyph--decide")).toBeTruthy();
+    // The print is the next day on the same lane: a day is 11px on a 330px month, a tile 22px, so
+    // the two spread a tile apart instead of the print's tile covering the decision's glyph.
+    const print = screen.getByRole("button", { name: "Wed, Oct 28: META earnings print" });
+    const px = (el: HTMLElement): number => (Number.parseFloat(el.style.left) / 100) * 330;
+    expect(px(print) - px(due)).toBeGreaterThanOrEqual(22);
   });
 
   it("picks a day with a tap on its mark (?events=), and Show all clears it", async () => {

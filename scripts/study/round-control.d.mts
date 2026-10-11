@@ -18,4 +18,11 @@ export function factDrift(
   tasks: { id: string; fact: string; world: string; answer: unknown }[],
   facts: { id: string; world?: string; answer: unknown }[],
 ): { task: string; fact: string; drift: "missing" | "answer" }[];
+export interface ExpectEntry {
+  id: string;
+  /** What the fix removed (negative) or the defect planted (positive); null when not stated. */
+  mechanism: string | null;
+}
+export function expectEntries(list: unknown[]): ExpectEntry[];
 export function expectIds(list: unknown[]): string[];
+export function expectProblems(kind: "negative" | "positive", entries: ExpectEntry[]): string[];

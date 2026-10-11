@@ -14,6 +14,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { shingles } from "./lint.mjs";
 
 const KEEP = new Set(["1", "3", "4"]);
 const REPO_REF =
@@ -83,6 +84,28 @@ export function memberCard(markdown, { cutoff, name }) {
     .join("\n\n");
   const text = `# Member card: ${name}\n\n${body}\n`;
   return { text, sha256: createHash("sha256").update(text).digest("hex") };
+}
+
+/**
+ * The area's roles as the experts and the words pass read them (#5099): one paragraph per member,
+ * `<member>: <who they are here>`, in the order given — a paragraph each, so the lint names the
+ * one to rewrite. Written in the area config, never taken from a card: a card's own words are
+ * what can hint at an item, and only a reader who never saw one finds unprimed.
+ */
+export function rolesPacket(roles, members) {
+  const missing = members.filter((m) => !(typeof roles?.[m] === "string" && roles[m].trim()));
+  if (missing.length > 0)
+    throw new Error(`the area config gives no role for ${missing.join(", ")}`);
+  const text = `${members.map((m) => `${m}: ${roles[m].trim()}`).join("\n\n")}\n`;
+  return { text, sha256: createHash("sha256").update(text).digest("hex") };
+}
+
+/** The members whose card shares a five-word run with the roles: a role that echoes a card carries its hints. */
+export function cardEchoes(rolesText, cards) {
+  const runs = shingles(rolesText);
+  return Object.entries(cards)
+    .filter(([, card]) => [...shingles(card)].some((s) => runs.has(s)))
+    .map(([m]) => m);
 }
 
 function main(argv) {

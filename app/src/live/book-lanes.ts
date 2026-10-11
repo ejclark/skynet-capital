@@ -314,6 +314,48 @@ export function placeWords(
   });
 }
 
+/**
+ * Where each tile sits across the track, in px — the centres of one lane's marks, in date order.
+ * A tile is wider than a day on a month or a quarter (22px against ~11px or ~4px at 390), so two
+ * dates a day or two apart on one lane would stack and the later tile would cover the earlier
+ * glyph: a decide-by the day before the print it is about went half under it on a month and
+ * wholly under it on a quarter (#5098's review). Marks whose tiles would touch spread to `size`
+ * apart around their days' middle, never past the track's inset or their own outermost day; a
+ * mark with room stays on its day. The list under the picture still says each date in words.
+ */
+export function spreadTiles(
+  centres: readonly number[],
+  size: number,
+  width: number,
+): readonly number[] {
+  interface Run {
+    readonly count: number;
+    readonly sum: number;
+    readonly lo: number;
+    readonly hi: number;
+  }
+  const startOf = (run: Run): number => {
+    const span = (run.count - 1) * size;
+    const lower = Math.min(size / 2, run.lo);
+    const upper = Math.max(width - size / 2, run.hi) - span;
+    return Math.max(Math.min(run.sum / run.count - span / 2, upper), lower);
+  };
+  const runs: Run[] = [];
+  for (const centre of centres) {
+    let run: Run = { count: 1, sum: centre, lo: centre, hi: centre };
+    let prev = runs.at(-1);
+    while (prev && startOf(prev) + prev.count * size > startOf(run)) {
+      runs.pop();
+      run = { count: prev.count + run.count, sum: prev.sum + run.sum, lo: prev.lo, hi: run.hi };
+      prev = runs.at(-1);
+    }
+    runs.push(run);
+  }
+  return runs.flatMap((run) =>
+    Array.from({ length: run.count }, (_, k) => startOf(run) + k * size),
+  );
+}
+
 /** "today", "tomorrow", "in 29 days" — how far off a date is, in words. */
 export function inDays(today: string, date: string): string {
   const n = daysBetween(today, date);

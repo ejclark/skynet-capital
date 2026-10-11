@@ -1,6 +1,6 @@
 {
   "area": "profile",
-  "about": "The area config for one study round over the signed-in profile (#4943). Read by scripts/study/round.mjs; everything area-specific about a round lives here or in scripts/study/worlds/, never in the round's code.",
+  "about": "The area config for one study round over the signed-in profile (#4943). Read by scripts/study/round.mjs; everything area-specific about a round lives here or in scripts/study/worlds/, never in the round's code. `roles` is who each member is here, in plain words: the experts and the words pass read it instead of the member cards (#5099), so it never quotes a card.",
   "cutoff": "2026-10-08",
   "tasksPer": 3,
   "runs": 3,
@@ -81,6 +81,14 @@
       "start": "/app/accounts"
     }
   ],
+  "roles": {
+    "eric": "The owner of the league and of its automated accounts. A paper trader who looks after his whole book every day, on a phone when he is away and at a desk at home.",
+    "returning-trader": "Has one paper account and a few past trades, and comes back after some weeks to act on one holding they already know. Knows the trading words. Mostly at a desk.",
+    "bot-watcher": "Trades little themselves; follows how the automated accounts are doing, the way a fan follows a team's results. On a phone.",
+    "phone-only": "Only ever uses the app on a phone, one-handed, in short visits.",
+    "invited-friend": "A friend the owner invited: a member rather than the owner, with one account of their own. Comes to see their own money and how everyone in the league is doing. At a desk.",
+    "first-timer": "Invited yesterday and signed in for the first time today. Has no account linked and owns nothing in the app yet. On a laptop."
+  },
   "pages": [
     "your accounts' overview: what everything is worth, the cash you have, how your record looks, and where your money sits",
     "the positions your accounts hold, with ways to narrow the list",
