@@ -53,6 +53,19 @@ function ledger(): unknown {
   return { available: true, activity };
 }
 
+/** The same thirty orders as a bot's: each carries the decision that placed it, so each row opens
+ *  its why — and under it the door to its full detail (#5101). */
+function reasonedLedger(): unknown {
+  const { activity } = ledger() as { activity: readonly Record<string, unknown>[] };
+  return {
+    available: true,
+    activity: activity.map((order) => ({
+      ...order,
+      reasoning: { reason: `Placed ${String(order.orderId)} on the signal.`, personaId: "sauron" },
+    })),
+  };
+}
+
 /** A held position the decision engine flags, as a flagged book's desk carries it. */
 const HOLDING = {
   id: "lock-in-AAPL",
@@ -208,6 +221,36 @@ test.describe("an order's full detail at 1280px (#5101)", () => {
     await panel.getByRole("button", { name: /Close/ }).click();
     await expect(panel).toHaveCount(0);
     await expect(row).toBeInViewport();
+  });
+
+  // Not modal, so the list beside the panel stays live: a second order's Full detail takes the
+  // panel's place, and one Close still returns to the list — never to the first order's panel.
+  test("a second order's Full detail takes the panel's place; one Close returns to the list", async ({
+    page,
+  }) => {
+    await stage(page);
+    await page.route(
+      (url) => url.pathname === `/api/desk/${OWNED.id}/activity`,
+      (route) => route.fulfill({ json: reasonedLedger() }),
+    );
+    await page.goto(`${OVERVIEW}&section=activity`);
+    const panel = page.getByRole("complementary").filter({ hasText: "Full detail" });
+    const fullDetail = async (id: string) => {
+      await page.locator(`tr[id="act-${id}"] .expand-btn`).click();
+      await page
+        .locator(`tr[id="act-${id}"] + tr.row-why`)
+        .getByRole("button", { name: /Full detail/ })
+        .click();
+    };
+    await fullDetail("l1");
+    await expect(page).toHaveURL(/[?&]order=l1(&|#|$)/);
+    await fullDetail("l3");
+    await expect(page).toHaveURL(/[?&]order=l3(&|#|$)/);
+    await expect(panel).toHaveCount(1);
+    await panel.getByRole("button", { name: /Close/ }).click();
+    await expect(panel).toHaveCount(0);
+    await expect(page).not.toHaveURL(/[?&]order=/);
+    await expect(page).toHaveURL(/#act-l3$/);
   });
 });
 
