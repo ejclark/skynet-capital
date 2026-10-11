@@ -157,7 +157,51 @@ export async function experts(ctx) {
   // Every expert finishes (and records what it paid for) before one failure stops the step.
   const failed = settled.find((s) => s.error);
   if (failed) throw failed.error;
-  return Object.fromEntries(settled.map((s) => [`expert-${s.k}`, s.summary]));
+  const coverage = expertCoverage(settled);
+  // Not one batch answered is no expert review at all — a broken step, never a thin one.
+  if (coverage.answered === 0) {
+    throw new Error(`every one of the ${coverage.of} expert batches timed out twice`);
+  }
+  if (coverage.missing.length > 0) {
+    ctx.log(step, "coverage", {
+      ...coverage,
+      note: `${coverage.missing.length} of ${coverage.of} batches missing`,
+    });
+  }
+  return {
+    ...Object.fromEntries(settled.map((s) => [`expert-${s.k}`, s.summary])),
+    coverage,
+  };
+}
+
+/**
+ * The step's coverage: batches answered of batches asked, and every missing one by name. A missing
+ * batch's controls were never reviewed, so it counts against coverage — never dropped unsaid.
+ * @param {{k: number, summary: {batches: number, missing: object[]}}[]} settled
+ */
+export function expertCoverage(settled) {
+  const missing = settled.flatMap((s) => s.summary.missing.map((m) => ({ expert: s.k, ...m })));
+  const of = settled.reduce((sum, s) => sum + s.summary.batches, 0);
+  return { answered: of - missing.length, of, missing };
+}
+
+/**
+ * One expert batch's sealed call, asked once more if it timed out: the identical call (its number
+ * and message unchanged), because #5099's control re-run saw two 600s timeouts each answered in
+ * ~168s when asked again (#5155). A second timeout comes back as `{missing}` rather than stopping
+ * the round. Any other failure (a schema the CLI refuses, a sign-out) still throws: asking again
+ * would not change it.
+ */
+export async function askBatch(call, request, onRetry = () => undefined) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return { answer: await call(request) };
+    } catch (e) {
+      if (!e?.timedOut) throw e;
+      if (attempt === 2) return { missing: e.message };
+      onRetry(e);
+    }
+  }
 }
 
 /** One expert: its batches in order, then its consolidation; writes expert-<k>.json. */
@@ -165,6 +209,7 @@ async function oneExpert(ctx, { k, batches, first, step, dir, roles, dirOf, call
   const batchFindings = [];
   const impressions = [];
   const index = {};
+  const missing = [];
   for (const [b, batch] of batches.entries()) {
     const frames = batchFrames(batch.entries);
     // An expert reviews pictures; a batch with none is a broken census, never a text-only review.
@@ -178,17 +223,34 @@ async function oneExpert(ctx, { k, batches, first, step, dir, roles, dirOf, call
         b64: await ctx.half(join(dirOf[batch.source], f.rel)),
       });
     }
-    const answer = await call({
-      role: "expert",
-      n: first + b + 1,
-      rolePath: join(ctx.roles, "expert.md"),
-      schema: readSchema("expert"),
-      message: userMessage(
-        expertBatchText({ roles, batch, frames, n: b + 1, of: batches.length }),
-        images,
-      ),
-      timeoutMs: 600_000,
-    });
+    const where = {
+      batch: b + 1,
+      source: batch.source,
+      route: batch.route,
+      viewport: batch.viewport,
+      controls: batch.entries.length,
+    };
+    const asked = await askBatch(
+      call,
+      {
+        role: "expert",
+        n: first + b + 1,
+        rolePath: join(ctx.roles, "expert.md"),
+        schema: readSchema("expert"),
+        message: userMessage(
+          expertBatchText({ roles, batch, frames, n: b + 1, of: batches.length }),
+          images,
+        ),
+        timeoutMs: 600_000,
+      },
+      (e) => ctx.log(step, "retry", { expert: k, ...where, note: e.message }),
+    );
+    if (asked.missing) {
+      missing.push({ ...where, reason: asked.missing });
+      ctx.log(step, "missing", { expert: k, ...where, note: asked.missing });
+      continue;
+    }
+    const { answer } = asked;
     impressions.push(...answer.first_impression);
     for (const [i, finding] of answer.findings.entries()) {
       const id = `B${b + 1}.${i + 1}`;
@@ -205,33 +267,35 @@ async function oneExpert(ctx, { k, batches, first, step, dir, roles, dirOf, call
     }
     ctx.log(step, "batch", {
       expert: k,
-      batch: b + 1,
+      ...where,
       of: batches.length,
-      source: batch.source,
-      route: batch.route,
-      viewport: batch.viewport,
-      controls: batch.entries.length,
       frames: images.length,
       findings: answer.findings.length,
     });
   }
-  const consolidated = await call({
-    role: "expert-consolidation",
-    n: k,
-    rolePath: join(ctx.roles, "expert.md"),
-    schema: readSchema("expert-consolidation"),
-    message: userMessage(expertConsolidationText({ roles, batchFindings, impressions })),
-    // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
-    timeoutMs: 1_800_000,
-  });
+  // With no batch answered there is nothing to merge: the expert stands with no findings, and every
+  // batch it was given stays named as missing (experts() stops the step if no expert has any).
+  const consolidated =
+    missing.length === batches.length
+      ? { findings: [] }
+      : await call({
+          role: "expert-consolidation",
+          n: k,
+          rolePath: join(ctx.roles, "expert.md"),
+          schema: readSchema("expert-consolidation"),
+          message: userMessage(expertConsolidationText({ roles, batchFindings, impressions })),
+          // Merging ~35 batches (~570 findings) timed out at 10 minutes in both first controls.
+          timeoutMs: 1_800_000,
+        });
   writeJson(join(dir, `expert-${k}.json`), {
     k,
     batches: batches.length,
+    missing,
     batchFindings,
     index,
     answer: consolidated,
   });
-  const summary = { batches: batches.length, findings: consolidated.findings.length };
+  const summary = { batches: batches.length, missing, findings: consolidated.findings.length };
   ctx.log(step, "consolidated", { expert: k, ...summary });
   return summary;
 }
