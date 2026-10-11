@@ -22,6 +22,12 @@ import { Toggle } from "./toggle";
  * version (`APP_VERSION`, semantic-release-bumped) — a filing marked `shipped` right now is, by
  * definition, confirmed live in it. `BRAND.md`'s "celebration pairs with explanation": the version
  * line IS the explanation, so the fanfare stays a caption, not a takeover.
+ *
+ * Each row carries a small three-step track (filed · being built · shipped) pinned to the right
+ * end of its filed line, so every filing's track lines up in one column, with plain words below
+ * it (#5253, option B of #5159's round 2). The words carry the meaning; the track is the glance.
+ * At desktop width the track and its words share one right-hand column beside a capped title
+ * column, so they stay grouped without a wide empty gap (Eric's note on the round).
  */
 
 const RECENT_FILTERS = [
@@ -30,14 +36,55 @@ const RECENT_FILTERS = [
 ] as const;
 type RecentFilter = (typeof RECENT_FILTERS)[number][0];
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "open",
-  "needs-info": "needs your info",
-  "needs-eric": "with Eric",
-  "next-slice": "next slice",
-  shipped: "shipped",
-  "not-built": "closed, not built",
+type Status = NonNullable<RecentFiling["status"]>;
+
+/** One step of the track: filled (done), striped (paused), half-filled (part shipped), or
+ *  outlined and empty (not yet). Each mark rides with its row's words — never alone (BRAND →
+ *  Accessibility; #5093's lesson that one shape must keep one meaning). */
+type Step = "done" | "paused" | "part" | "todo";
+
+const STEP_NAMES = ["Filed", "Being built", "Shipped"] as const;
+
+const STEP_WORDS: Record<Step, string> = {
+  done: "done",
+  paused: "paused",
+  part: "partly",
+  todo: "not yet",
 };
+
+/** What each status shows: its words, and its track — `null` where a track would mislead. A
+ *  filing closed as not built never reached the build, so it says so in words alone. */
+const STATUS_VIEW: Record<
+  Status,
+  { readonly words: string; readonly track: readonly Step[] | null }
+> = {
+  open: { words: "In the build queue", track: ["done", "todo", "todo"] },
+  "needs-info": {
+    words: "Waiting on your answer",
+    track: ["done", "paused", "todo"],
+  },
+  "needs-eric": {
+    words: "Waiting on Eric's decision",
+    track: ["done", "paused", "todo"],
+  },
+  "next-slice": {
+    words: "First part shipped",
+    track: ["done", "done", "part"],
+  },
+  shipped: { words: "Shipped", track: ["done", "done", "done"] },
+  "not-built": { words: "Closed, not built", track: null },
+};
+
+function StatusTrack({ steps }: { readonly steps: readonly Step[] }): ReactElement {
+  const label = steps.map((step, i) => `${STEP_NAMES[i]}: ${STEP_WORDS[step]}`).join(" · ");
+  return (
+    <span className="fb-track" role="img" aria-label={label}>
+      {steps.map((step, i) => (
+        <span key={STEP_NAMES[i]} className={`fb-step fb-step-${step}`} />
+      ))}
+    </span>
+  );
+}
 
 function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -47,15 +94,24 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
   const send = async () => {
     setBusy(true);
     try {
-      const reply = await followupRequest({ issueNumber: filing.issueNumber, details });
+      const reply = await followupRequest({
+        issueNumber: filing.issueNumber,
+        details,
+      });
       setNote(
         reply.ok
-          ? { ok: true, text: "Sent — it lands on your issue and re-triggers the build." }
+          ? {
+              ok: true,
+              text: "Sent — it lands on your issue and re-triggers the build.",
+            }
           : { ok: false, text: reply.error ?? "Couldn't send that." },
       );
       if (reply.ok) setDetails("");
     } catch (err) {
-      setNote({ ok: false, text: err instanceof Error ? err.message : String(err) });
+      setNote({
+        ok: false,
+        text: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -120,17 +176,20 @@ export function RecentFeedback({
         <ul className="fb-list">
           {visible.map((filing) => {
             const shipped = filing.status === "shipped";
+            const view = filing.status ? STATUS_VIEW[filing.status] : undefined;
             return (
               <li key={filing.issueNumber} className={shipped ? "fb-row fb-row-shipped" : "fb-row"}>
-                <a href={filing.url} target="_blank" rel="noopener noreferrer">
+                <a className="fb-title" href={filing.url} target="_blank" rel="noopener noreferrer">
                   #{filing.issueNumber} · {filing.title}
                 </a>
-                <span className="fb-meta num">
+                <span className="fb-meta fb-filed num">
                   {filing.kind} · filed {filing.filedAt.slice(0, 10)}
                 </span>
-                {filing.status ? (
+                {view?.track ? <StatusTrack steps={view.track} /> : null}
+                {view ? (
                   <span className={`fb-status fb-${filing.status}`}>
-                    {shipped ? "🚀 shipped" : (STATUS_LABELS[filing.status] ?? filing.status)}
+                    {shipped ? <span aria-hidden="true">🚀 </span> : null}
+                    {view.words}
                   </span>
                 ) : null}
                 {shipped && appVersion ? (
