@@ -15,6 +15,7 @@ import {
   type LaneGlyph,
   type LaneMark,
   placeWords,
+  spreadTiles,
 } from "../live/book-lanes";
 import type { DayRange, MarketClosure } from "../live/horizon-range";
 
@@ -90,6 +91,9 @@ const pct = (n: number): string => `${String(Math.round(n * 10000) / 100)}%`;
 
 /** How far a mark's words sit from its centre: clear of the bare glyph, or of the tile's edge. */
 const WORDS_PAD = { bare: 9, tile: 16 } as const;
+
+/** Centre to centre for tiles side by side: `.lane-tile`'s 22px and a 2px gap, so each reads alone. */
+const TILE_STEP = 24;
 
 /** A glyph as the frame draws it — on its tile when the day is on what you hold. */
 function MarkGlyph({
@@ -168,7 +172,18 @@ function LaneRow({
   // A holding's lane: every day on it is on what you hold, so each mark sits on a tile.
   const held = lane.key !== "market";
   const n = frame.days.length;
-  const placed = lane.marks.map((m) => ({ index: frame.days.indexOf(m.date), words: m.words }));
+  const step = frame.width / n;
+  const days = lane.marks.map((m) => frame.days.indexOf(m.date));
+  // A tile is wider than a day on a month or a quarter: tiles that would cover each other spread
+  // apart (`spreadTiles`); the market lane's bare rings keep their days.
+  const at = held
+    ? spreadTiles(
+        days.map((d) => (d + 0.5) * step),
+        TILE_STEP,
+        frame.width,
+      ).map((x) => x / step - 0.5)
+    : days;
+  const placed = lane.marks.map((m, i) => ({ index: at[i] ?? 0, words: m.words }));
   const sides = placeWords(placed, n, frame.width, undefined, WORDS_PAD[held ? "tile" : "bare"]);
   const edge = lane.marks.length === 0 ? lane.nextAfter : undefined;
   return (
