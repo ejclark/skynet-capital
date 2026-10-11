@@ -193,6 +193,12 @@ Eric-sourced.
 - **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
   chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
   for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
+- **Nobody is told their Council line got a reply.** Replies (#5097) render only under the line on
+  Activity → The Council; the member's own line card on the Overview (`council-line-card.tsx`)
+  says nothing when someone answers. A "2 replies to your line ›" link there closes the loop an
+  argument needs. Eric's pick note also said "the trading section": the Trade page for a symbol
+  could show the week's lines tagged with that symbol's play, replies included. _(src: Claude ·
+  while: #5097)_
 - **NYSE Day Trader's Alpaca keys are rejected** — prod logs `NYSE Day Trader: unauthorized` on
   every boot since #4159, so that bot gets no fill updates until its keys are rotated (a credential
   step, Eric's). The 2026-09-30 outage was this rejection looping. _(src: Claude · while: #4159)_

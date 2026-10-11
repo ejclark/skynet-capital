@@ -13,10 +13,12 @@ import {
   toggleActivityQualifier,
 } from "../live/activity-feed";
 import { fetchCouncil } from "../live/council";
+import { fetchCouncilReplies } from "../live/council-replies";
 import { fetchFilingComments } from "../live/filing-comments";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
 import { CouncilCompose } from "../shell/council-compose";
+import { CouncilLines } from "../shell/council-lines";
 import { FilingOnramp } from "../shell/filing-onramp";
 import { PageFrame } from "../shell/frame";
 import { PnlStrip } from "../shell/pnl-strip";
@@ -183,10 +185,15 @@ function WireFilterBar({
  *  (`docs/THE-GAME.md:117`: "the argument is the product"). This is the league's shared view:
  *  everyone's lines. The composer itself is `shell/council-compose.tsx` since #3963, because the
  *  member's own line also renders beside their standing on the Profile Overview and it is ONE
- *  record — same endpoint, same `["council"]` query key, no copy to drift. */
+ *  record — same endpoint, same `["council"]` query key, no copy to drift.
+ *
+ *  Replies under each line (#5097) are their own read, `["council-replies"]`: a failed or unwired
+ *  one leaves the lines without their fold, never the section without its lines. A reply write
+ *  refreshes both reads, because a refused reply usually means the line itself moved. */
 function CouncilSection(): ReactElement {
   const queryClient = useQueryClient();
   const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
+  const replies = useQuery({ queryKey: ["council-replies"], queryFn: fetchCouncilReplies });
 
   if (council.isPending) return <p className="note">Tuning in…</p>;
   if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
@@ -204,21 +211,28 @@ function CouncilSection(): ReactElement {
       </p>
       <CouncilCompose
         week={data}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["council"] })}
+        // An edited line re-marks its replies as answering an earlier version — refresh both.
+        onSaved={() =>
+          Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["council"] }),
+            queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
+          ])
+        }
       />
       {data.entries.length === 0 ? (
         <p className="note">Nobody's spoken yet this week — be the first.</p>
       ) : (
-        <ul className="wire-fdbk council-entries">
-          {data.entries.map((entry) => (
-            <li key={entry.id}>
-              <span>{entry.text}</span>
-              {entry.playbookId ? (
-                <span className="council-play-tag">{entry.playbookId}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <CouncilLines
+          week={data.week}
+          entries={data.entries}
+          {...(replies.data ? { threads: replies.data } : {})}
+          onReplySaved={() =>
+            Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
+              queryClient.invalidateQueries({ queryKey: ["council"] }),
+            ])
+          }
+        />
       )}
     </section>
   );
