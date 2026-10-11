@@ -3,9 +3,7 @@ import type { ReactElement } from "react";
 import type { Journey } from "../live/learn";
 import { fetchPlays } from "../live/options";
 import { fetchSettings } from "../live/settings";
-import { CourseCard, ladderProgress } from "./course-cards";
-import { MilestonePanel } from "./milestone-panel";
-import { MilestoneStrip } from "./milestone-strip";
+import { LadderList } from "./ladder-list";
 
 /**
  * MILESTONE M·02 — TRADING PROGRESSION (#1119), a chapter of the Profile page's Milestones section
@@ -15,18 +13,17 @@ import { MilestoneStrip } from "./milestone-strip";
  * linked" note, so the chapter does not repeat them (one sentence per fact on the page — the
  * repetition dead end 2 counted on Trade).
  *
- * THE MILESTONE STRIP LIVES HERE TOO (#3407, Workbench slice 5 — Eric, 2026-09-22, "B — keep"): the
- * same component Trade renders above the Bench, `current` = the server's `nextUp` — "you are here"
- * on a page with no ticket. Fed by `/api/trade/plays` (the earned/locked truth) and the session's
- * first account for the preset links; fail-soft — no plays, no strip, the cards below still tell
- * the story.
+ * THE LADDER IS DRAWN ONCE (#5242, Eric's pick on #5176 round 2): the strip Trade renders (#3407)
+ * and the level cards below it drew the same eight rungs twice, counted twice. One list replaces
+ * both here — `LadderList`, rungs under their levels — and Trade keeps its strip. Fed by
+ * `/api/trade/plays` (the earned/locked truth) and the session's first account for the preset
+ * links; fail-soft — no plays, the list still tells the story, just without Trade links.
  * @category learning
  */
 export function LadderChapter({ journey }: { readonly journey: Journey }): ReactElement {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const deskId = settings.data?.accounts[0]?.id ?? "";
-  const ladder = ladderProgress(journey);
   return (
     <>
       <header className="page-header">
@@ -38,21 +35,7 @@ export function LadderChapter({ journey }: { readonly journey: Journey }): React
           it, so you always know what you're working toward.
         </p>
       </header>
-      {plays.data ? (
-        <MilestoneStrip
-          deskId={deskId}
-          current={plays.data.nextUp ?? ""}
-          plays={plays.data.plays}
-          wheels={plays.data.wheels}
-          gate={plays.data.gate}
-          nextUp={plays.data.nextUp}
-        />
-      ) : null}
-      <MilestonePanel title="Trading progression" done={ladder.done} total={ladder.total}>
-        {journey.courses.map((course) => (
-          <CourseCard key={course.level} course={course} />
-        ))}
-      </MilestonePanel>
+      <LadderList journey={journey} plays={plays.data} deskId={deskId} />
       <p className="note">
         Iron condors stay off the ladder: a condor is two spreads run together, a Playbook Store
         strategy, never a rung. Trades with undefined risk stay off it entirely.
