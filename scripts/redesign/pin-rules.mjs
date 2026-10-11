@@ -107,6 +107,14 @@ export function readPins(raw) {
   return { pins, quote: raw.quote, tag: raw.tag, problems };
 }
 
+/**
+ * The pins a round manifest names on an option (`pins` / `pinsDesk`, #5143), from `readPins`'s
+ * list: the badge number, the spot and the label the page puts a reaction button on, defaults
+ * filled exactly as this kit draws them — so the frame and the page can't disagree.
+ */
+export const manifestPins = (pins) =>
+  pins.map(({ n, x, y, label, side }) => ({ n, x, y, label, side }));
+
 const EDGES = [
   ["left", (r) => -r.x],
   ["top", (r) => -r.y],

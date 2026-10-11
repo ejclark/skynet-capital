@@ -6,18 +6,25 @@
 // thing by what it does; no invented labels (CLAUDE.md → "No coined names").
 import { readFileSync } from "node:fs";
 import { buttons, DAY, e, ext, note, plural, VERBS, when } from "./html.mjs";
+import { hasPins, PIN_CLIENT, pinIntro, pinnedShot } from "./pins.mjs";
 import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
 
 /** The artifact's name: stable across every republish, so the gallery card never changes. */
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
-const CLIENT = readFileSync(new URL("./page-client.js", import.meta.url), "utf8");
+// The pin reactions' script defines `steerPins`, which the page script calls (pins-client.js).
+const CLIENT = ["./pins-client.js", "./page-client.js"]
+  .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
+  .join("\n");
 
-function shots(pictures, img, issue) {
+/** The pictures of one holder. `at` names the holder (its decision key and option, or "today"),
+ *  so a picture with pins gets a button on each badge (pins.mjs). */
+function shots(pictures, img, issue, at) {
   const h = pictures
     .map((p) => {
       const src = img(p);
       if (!src) return "";
+      if (p.pins?.length) return pinnedShot(p, src, at);
       return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
     })
     .join("");
@@ -29,7 +36,7 @@ function optionsHtml(d, img) {
   if (d.today) {
     const src = `<span class="tag plain">${d.today.real ? "real screenshot" : "mockup of today"}</span>`;
     rows.push(
-      `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue)}</div>` +
+      `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, { key: d.key, option: "today" })}</div>` +
         `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p></div></article>`,
     );
   }
@@ -38,7 +45,9 @@ function optionsHtml(d, img) {
   for (const o of d.options) {
     const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
     const pics =
-      d.kind === "design" ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue)}</div>` : "";
+      d.kind === "design"
+        ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, { key: d.key, option: o.key })}</div>`
+        : "";
     const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
     rows.push(
       `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
@@ -164,6 +173,8 @@ function roundHeaderHtml(tp) {
   const round = tp.round != null ? `Design round ${e(tp.round)}` : "Design round";
   // One page asks one kind (design.mjs `designRound` refuses a mix), so its first decision says.
   const intro = ROUND_INTRO[tp.decisions[0]?.problems ? "problems" : "design"];
+  const pinned = tp.decisions.find(hasPins);
+  const pins = pinned ? ` ${pinIntro(pinned)}` : "";
   const date = tp.generatedAt ? ` · ${e(DAY.format(new Date(tp.generatedAt)))}` : "";
   const drawn = tp.needsPictures ?? [];
   const drawing = drawn.length
@@ -176,7 +187,7 @@ function roundHeaderHtml(tp) {
   return (
     `<header class="top"><p class="eyebrow">${round} · ${issues}${date}</p>` +
     `<h1>${n ? `${plural(n, "decision")}, about ${tp.budget.used} minutes` : "Nothing to answer yet"}</h1>` +
-    (n ? `<p class="lede" id="intro">${intro} ${COMMENTS_COUNT}</p>` : "") +
+    (n ? `<p class="lede" id="intro">${intro}${pins} ${COMMENTS_COUNT}</p>` : "") +
     toc +
     drawing +
     `</header>`
@@ -205,6 +216,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
       issue: d.issue,
       title: d.title,
     })),
+    ...(tp.decisions.some(hasPins) ? { pins: PIN_CLIENT } : {}),
   };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const decisions = tp.decisions

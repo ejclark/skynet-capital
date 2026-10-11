@@ -97,8 +97,12 @@ The stable page's URL is in #5056's state block; the first publish puts it there
      on one of its options; pass the id as it is — the read-back maps it to the decision key.
    - Then `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --comments
      <dir>/comments.json --out <dir>/readback` prints the plan: `actions`, `commands`, `rollover`,
-     `defaults`, `followUps`, `nextRound` (a problems question's next-round instruction),
-     `unplacedComments`. Each comment is quoted word for word under
+     `defaults`, `followUps`, `nextRound` (a problems question's next-round instruction, and any
+     round's per-pin one), `unplacedComments`. **Per-pin reactions** (#5143): a decision whose
+     pictures carry pins gets a *Per pin* list — `Option B · pin 2 (range strip) — 👍 keep`, the
+     label word for word, an untouched pin "no signal", never a default — and, with no Build pick,
+     a `nextRound` entry: 👍 keep as drawn · 👎 replace with a new direction · ☯︎ draw a closer
+     look; round 0 reads yes / not / partly a problem and still files nothing. Each comment is quoted word for word under
      "Eric's comments on the page" in its decision's part of the issue comment; a decision he
      commented on without tapping is quoted and rolled over, never given its default.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
@@ -154,6 +158,9 @@ The stable page's URL is in #5056's state block; the first publish puts it there
 - **The irreversible class is a link, never a button**: held/platter PR merges, the surge dial,
   envelope paths. Specs: `tests/scripts/steer-{records,readback,page}.spec.ts`.
 - **Pressed states carry a glyph and a border or strike**, both themes from `docs/BRAND.md`.
+- **A pin reaction is glyph and word, merged one key at a time** (☯︎ is U+262F U+FE0E, a text
+  glyph): two views never erase each other's pins, a clear is written as null, an untouched pin
+  reads back as "no signal". `tests/scripts/steer-pins{,-client}.spec.ts`.
 
 ## A design decision: the critique round (#5037)
 
@@ -175,7 +182,9 @@ What round 1 of #5037 did, written down so the next round costs instructions, no
 
 The manifest `--design` reads is the critique builder's own: `{ issue, round, root?, questions:
 [{ q, kind?, title, ask, rec, conf, wrong, saw[], changes, topic, today: { phone, desk, source,
-caption }, options: [{ key, name, phone, desk, delta }] }] }` (a bare array works with
+caption, pins?, pinsDesk? }, options: [{ key, name, phone, desk, delta, pins?, pinsDesk? }] }] }`
+(`pins`: the pins file pin.mjs drew that frame from, or its list — a 👍 / 👎 / ☯︎ button lands on
+each badge, saved as `pins` in the decision's record, merged one key at a time) (a bare array works with
 `--design-issue`). Picture paths resolve against `root`, the manifest's folder, then its parent.
 `kind` is `"design"` (the default) or `"problems"` — a redesign's round 0, where each option is a
 problem and the buttons read Fix this first · Look closer · Not a problem: the read-back files

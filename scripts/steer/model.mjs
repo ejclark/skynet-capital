@@ -15,6 +15,7 @@
 //
 // Pure: no network, no clock, no filesystem.
 import { classOf } from "../rank.mjs";
+import { PIN_REACTIONS } from "./pins.mjs";
 
 export const SECTIONS = ["decisions", "queue", "reel"];
 /** Minutes of attention each page is sized to (Eric, 2026-10-10: 15 in the morning, 15–30 at 4pm). */
@@ -237,12 +238,14 @@ export function parseSteerMarker(body = "") {
   return { round: m[1], key: m[2], note: /^> (.+)$/m.exec(body)?.[1]?.trim() ?? null };
 }
 
-/** Did Eric leave anything on this record — a pick, a verdict, a reaction or a note? */
+/** Did Eric leave anything on this record — a pick, a verdict, a reaction, a note, or a reaction
+ *  on one of its pins (#5143)? */
 export const isAnswered = (rec) =>
   Boolean(
     rec &&
       (rec.pick ||
         rec.verdict ||
         Object.keys(rec.react ?? {}).length ||
-        String(rec.note ?? "").trim()),
+        String(rec.note ?? "").trim() ||
+        Object.values(rec.pins ?? {}).some((v) => PIN_REACTIONS.includes(v))),
   );

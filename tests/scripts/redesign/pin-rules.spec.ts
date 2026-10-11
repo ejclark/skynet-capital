@@ -1,13 +1,19 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import {
   contrast,
   type Drawn,
   imageSize,
   layoutProblems,
+  manifestPins,
   PALETTE,
   paletteProblems,
   readPins,
 } from "../../../scripts/redesign/pin-rules.mjs";
+import { pinProblems } from "../../../scripts/steer/pins.mjs";
 
 // #5143: pin.mjs refuses a frame that breaks Eric's standing rules — text he can read on a phone,
 // contrast a red/green colourblind reader can see, nothing cut off, badges that don't touch — and
@@ -119,5 +125,46 @@ describe("imageSize", () => {
     png.writeUInt32BE(3120, 20);
     expect(imageSize(png)).toEqual({ width: 2560, height: 3120 });
     expect(() => imageSize(Buffer.from("GIF89a"))).toThrow(/not a JPEG or PNG/);
+  });
+});
+
+// Eric, 2026-10-11: a reaction on each pin. The manifest's `pins` is the JSON pin.mjs drew, so
+// there is no second copy to keep in sync; `--emit-manifest-pins` prints it, defaults filled.
+describe("manifestPins", () => {
+  it("keeps what the page needs from the pins pin.mjs drew, defaults filled", () => {
+    const { pins } = readPins({
+      pins: [
+        { x: 50, y: 12, label: "range strip", box: [4, 10, 92, 6] },
+        { x: 30, y: 40, label: "order line", side: "left" },
+      ],
+      tag: "illustrative values",
+    });
+    const out = manifestPins(pins);
+    expect(out).toEqual([
+      { n: 1, x: 50, y: 12, label: "range strip", side: "right" },
+      { n: 2, x: 30, y: 40, label: "order line", side: "left" },
+    ]);
+    expect(pinProblems(out, "q1 option B pins")).toEqual([]);
+  });
+
+  it("is what `pin.mjs --emit-manifest-pins` prints, and it refuses a pins file it can't draw", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pin-emit-"));
+    const file = join(dir, "pins.json");
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        ["scripts/redesign/pin.mjs", "--pins", file, "--emit-manifest-pins"],
+        { encoding: "utf8" },
+      );
+    writeFileSync(file, JSON.stringify({ pins: [{ x: 50, y: 12, label: "range strip" }] }));
+    const ok = run();
+    expect(ok.status).toBe(0);
+    expect(JSON.parse(ok.stdout)).toEqual([
+      { n: 1, x: 50, y: 12, label: "range strip", side: "right" },
+    ]);
+    writeFileSync(file, JSON.stringify({ pins: [{ x: 150, y: 12, label: "range strip" }] }));
+    const bad = run();
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toContain('pin 1 ("range strip"): x and y are % of the frame');
   });
 });

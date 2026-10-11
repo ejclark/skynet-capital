@@ -33,12 +33,18 @@
 //     A comment on anything but a shown decision is handed back in `unplacedComments`.
 //   - The page's own Done press is a comment too (#5135: it is how Done wakes the session), sent as
 //     Eric. It starts this read-back; it is not his words, so it is dropped, never quoted.
+//   - Pin reactions (#5143, pins.mjs): every decision with pins gets a "Per pin" list, each pin's
+//     label word for word, the ones he left alone as "no signal" — never a default. On a round with
+//     no Build pick they become the next round's instructions (`nextRound`): 👍 keep as drawn,
+//     👎 replace with a new direction, ☯︎ draw a closer look; on round 0, yes / not / partly a
+//     problem, and still nothing is filed. A Build pick's issue carries its own option's pins.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { CLAUDE_READY_LINE } from "../moneypenny/plan-claim.mjs";
 import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
 import { activeMinutes, isAnswered, roundRecords } from "./model.mjs";
+import { perPinBlock, pinClauses } from "./pins.mjs";
 import { readRecords } from "./records.mjs";
 
 const DECISION_LABEL = "needs-eric";
@@ -112,7 +118,7 @@ function designPart(d, r) {
         .join(", ")}`,
     );
   if (by("not").length) lines.push(`- Not: ${by("not").join(", ")}`);
-  return [lines.join("\n"), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [lines.join("\n"), perPinBlock(d, r), noteBlock(r.note)].filter(Boolean).join("\n\n");
 }
 
 const VERDICT_WORDS = {
@@ -190,11 +196,18 @@ function commentedOnly(d, said, acc) {
   acc.roll(d, "commented on the page, no tap — still his decision");
 }
 
+/** "Round 2", or "The next round" when the round has no number. */
+function nextRoundName(d) {
+  const n = Number(d.round);
+  return d.round != null && d.round !== "" && Number.isInteger(n)
+    ? `Round ${n + 1}`
+    : "The next round";
+}
+
 /** The next round, after a problems question is read: a pick is drawn, never filed. */
 export function nextRoundInstruction(d, r) {
-  const n = Number(d.round);
-  const round =
-    d.round != null && d.round !== "" && Number.isInteger(n) ? `Round ${n + 1}` : "The next round";
+  const round = nextRoundName(d);
+  const pins = pinClauses(d, r);
   const closer = marked(r, "more").filter((k) => k !== r.pick);
   const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
@@ -207,6 +220,7 @@ export function nextRoundInstruction(d, r) {
     drop.length
       ? `Drop ${named(d, drop)}: he says ${drop.length === 1 ? "it is" : "they are"} not a problem.`
       : "",
+    pins ? `Per pin: ${pins}` : "",
     r.pick ? "Nothing is filed from this pick." : "Nothing is filed.",
   ]
     .filter(Boolean)
@@ -221,7 +235,7 @@ function problemsPart(d, r) {
     );
   if (marked(r, "more").length) lines.push(`- Look closer: ${named(d, marked(r, "more"))}`);
   if (marked(r, "not").length) lines.push(`- Not a problem: ${named(d, marked(r, "not"))}`);
-  return [lines.join("\n"), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [lines.join("\n"), perPinBlock(d, r), noteBlock(r.note)].filter(Boolean).join("\n\n");
 }
 
 /** A problems question: quoted on its issue, nothing filed, the next round's instruction printed. */
@@ -231,16 +245,23 @@ function problemsAnswer(d, r, acc, said) {
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
   // A note and no tap: quoted above, and the next round still has to answer it.
-  if (!(r.pick || Object.keys(r.react ?? {}).length))
+  if (!(r.pick || Object.keys(r.react ?? {}).length || pinClauses(d, r)))
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
 function designAnswer(d, r, acc, id, said) {
   acc.part(d.issue, [designPart(d, r), said].filter(Boolean).join("\n\n"));
   if (r.pick) acc.actions.push(buildIssue(d, r, id));
+  // No Build: his pin reactions are the next round's instructions, pin by pin.
+  const pins = r.pick ? "" : pinClauses(d, r);
+  if (pins) {
+    const instruction = `${nextRoundName(d)} on #${d.issue}, per pin: ${pins}`;
+    acc.nextRound.push({ issue: d.issue, key: d.key, pick: null, instruction });
+    acc.follow("next-round", d, instruction);
+  }
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
-  } else if (!r.pick) {
+  } else if (!(r.pick || pins)) {
     // A note and no tap: quoted above, and the next round still has to answer it.
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
   }

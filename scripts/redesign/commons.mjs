@@ -12,6 +12,14 @@
 // screen wants moved elsewhere (Eric, 2026-10-11: sections may be combined or transplanted "to
 // areas better suited to achieve goals and in proximity to associated information"), as from → to.
 //
+// PROCESS LINES (Eric, 2026-10-11, with nineteen sessions running: "is there an organic way I can
+// add these types of improvements to the process inline that carry forward to the current and
+// other parallel sessions?"). When he types `process: …` in any session, or pins it on a round
+// page, that session adds his words whole as kind "process" (`--screen` optional), messages the
+// curator once, and goes on. The digest lists process lines first, newest first: the curator
+// ships each as a change on main plus a line in commons.md's "Process changes", and every
+// session pulls it before its next round (docs/process/REDESIGN.md).
+//
 // WHERE: REDESIGN_COMMONS names the folder (or the findings .jsonl itself); by default it is the
 // project's shared temp folder, /tmp/claude-<uid>/<checkout slug>/redesign-commons — the same
 // folder from every worktree of this checkout.
@@ -21,7 +29,9 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const KINDS = ["component", "pattern", "wording", "data", "request", "ia-move"];
+export const KINDS = ["component", "pattern", "wording", "data", "request", "ia-move", "process"];
+/** His words are kept whole on a process line: the 140-character cap is for findings. */
+const PROCESS_MAX = 2000;
 const FIELDS = ["screen", "kind", "what", "where", "principle", "to", "why"];
 const NEEDS_TO = {
   "ia-move": "an ia-move needs --to (the screen/section it should move to)",
@@ -71,18 +81,23 @@ export function parseFlags(argv, known) {
 /** A finding ready to append, or every reason it is not. `ids`: the screens a session can be. */
 export function makeFinding(flags, ids, now = new Date()) {
   const problems = [];
-  if (!ids.includes(flags.screen)) problems.push(`--screen is one of: ${ids.join(", ")}`);
+  const process = flags.kind === "process";
+  if (!((process && flags.screen === undefined) || ids.includes(flags.screen)))
+    problems.push(`--screen is one of: ${ids.join(", ")}`);
   if (!KINDS.includes(flags.kind)) problems.push(`--kind is one of: ${KINDS.join(", ")}`);
   const what = (flags.what ?? "").trim();
+  const cap = process ? PROCESS_MAX : 140;
   if (!what) problems.push("--what says the finding in one line");
-  else if (what.length > 140) problems.push(`--what is ${what.length} characters — keep it to 140`);
+  else if (what.length > cap)
+    problems.push(`--what is ${what.length} characters — keep it to ${cap}`);
   if (NEEDS_TO[flags.kind] && !flags.to?.trim()) problems.push(NEEDS_TO[flags.kind]);
   if (flags.kind === "ia-move" && !flags.why?.trim())
     problems.push(
       "an ia-move needs --why (the goal it serves and the information it would sit beside)",
     );
   for (const f of FIELDS)
-    if ((flags[f] ?? "").length > 300) problems.push(`--${f} is over 300 characters`);
+    if (!(process && f === "what") && (flags[f] ?? "").length > 300)
+      problems.push(`--${f} is over 300 characters`);
   if (problems.length > 0) return { problems };
   const finding = { at: now.toISOString().replace(/\.\d{3}Z$/, "Z") };
   for (const f of FIELDS) if (flags[f]?.trim()) finding[f] = flags[f].trim();
@@ -110,7 +125,8 @@ export function formatFinding(f) {
   const where = f.where ? ` (${f.where})` : "";
   const to = f.to ? ` → ${f.to}` : "";
   const why = f.why ? `: ${f.why}` : f.principle ? ` [${f.principle}]` : "";
-  return `- ${when}${f.screen ?? "?"} · ${f.kind}: ${f.what}${where}${to}${why}`;
+  const screen = screenOf(f);
+  return `- ${when}${screen ? `${screen} · ` : ""}${f.kind}: ${f.what}${where}${to}${why}`;
 }
 
 const tokens = (f) =>
@@ -141,18 +157,30 @@ export function clusters(findings) {
   return out;
 }
 
-const screensOf = (items) => [...new Set(items.map((f) => f.screen ?? "?"))];
+/** The screen a finding names; a process line may name none (it is Eric's, from any session). */
+const screenOf = (f) => f.screen ?? (f.kind === "process" ? null : "?");
+const screensOf = (items) => [...new Set(items.map(screenOf).filter(Boolean))];
+
+/** Process lines first, newest first: what the curator ships to every session. */
+function processLines(findings) {
+  const lines = findings
+    .filter((f) => f.kind === "process")
+    .sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
+  if (lines.length === 0) return [];
+  return [`## Process changes — ${lines.length}, newest first`, ...lines.map(formatFinding), ""];
+}
 
 /** The curator's first pass, as markdown. */
 export function digest(findings) {
   const all = screensOf(findings);
   const lines = [`# Commons digest — ${findings.length} findings from ${all.length} screens`, ""];
+  lines.push(...processLines(findings));
   lines.push("| Kind | Findings | Screens |", "|---|---|---|");
   for (const kind of [...KINDS, "unreadable"]) {
     const of = findings.filter((f) => f.kind === kind);
     if (of.length > 0) lines.push(`| ${kind} | ${of.length} | ${screensOf(of).length} |`);
   }
-  const shared = clusters(findings.filter((f) => f.kind !== "ia-move"))
+  const shared = clusters(findings.filter((f) => !["ia-move", "process"].includes(f.kind)))
     .filter((c) => c.items.length > 1)
     .sort(
       (a, b) =>
@@ -166,7 +194,7 @@ export function digest(findings) {
     for (const f of c.items)
       lines.push(`  - ${f.screen}: ${f.what}${f.where ? ` (${f.where})` : ""}`);
   }
-  for (const kind of KINDS.filter((k) => k !== "ia-move")) {
+  for (const kind of KINDS.filter((k) => !["ia-move", "process"].includes(k))) {
     const of = findings.filter((f) => f.kind === kind);
     if (of.length === 0) continue;
     lines.push("", `## ${kind} — ${of.length} from ${screensOf(of).length} screen(s)`);

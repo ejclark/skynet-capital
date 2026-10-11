@@ -143,6 +143,60 @@ describe("round 0 asks which problem to fix first", () => {
   });
 });
 
+// Eric, 2026-10-11: a reaction on each pin. The manifest names the pins pin.mjs drew — the same
+// JSON, inline or by its file — so the lint holds them to the steer builder's rules before he
+// sees the page, and holds their labels to the same plain words as the rest of the copy.
+describe("pins on a picture", () => {
+  const pins = [
+    { n: 1, x: 50, y: 12, label: "range strip", side: "right" },
+    { n: 2, x: 30, y: 40, label: "order line" },
+  ];
+  const withPins = (over: Record<string, unknown>) => {
+    const [a, b] = question().options;
+    return question({ options: [a, { ...b, ...over }] });
+  };
+  const pinsEnv: LintEnv = {
+    ...env,
+    pinsAt: (p) => (p === "pins/b.json" ? { pins } : null),
+  };
+
+  it("passes pins inline, by the file pin.mjs read, and on today", () => {
+    expect(lintDesign(manifest(withPins({ pins })), env)).toEqual([]);
+    expect(lintDesign(manifest(withPins({ pins: "pins/b.json" })), pinsEnv)).toEqual([]);
+    const today = { ...question().today, pins: [pins[0]] };
+    expect(lintDesign(manifest(question({ today })), env)).toEqual([]);
+  });
+
+  it("names a repeated number, a spot off the frame, a long label and a missing file", () => {
+    const bad = [
+      { n: 1, x: 50, y: 12, label: "range strip" },
+      { n: 1, x: 130, y: 40, label: "a".repeat(61) },
+    ];
+    expect(lintDesign(manifest(withPins({ pins: bad })), env)).toEqual([
+      'q1 option B pins pin 1 ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"): number 1 is used twice',
+      'q1 option B pins pin 1 ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"): x and y are % of the frame, 0–100',
+      "q1 option B pins pin 1: label is 61 characters — keep it to 60",
+    ]);
+    expect(lintDesign(manifest(withPins({ pins: "pins/gone.json" })), pinsEnv)).toEqual([
+      "q1 option B: pins file pins/gone.json isn't there or isn't JSON",
+    ]);
+  });
+
+  it("names pins on a frame the option has no picture for", () => {
+    expect(lintDesign(manifest(withPins({ desk: undefined, pinsDesk: pins })), env)).toEqual([
+      "q1 option B: no desk picture",
+      "q1 option B: pinsDesk names pins on a desk picture it doesn't have",
+    ]);
+  });
+
+  it("holds a pin's label to plain words", () => {
+    const chip = [{ n: 1, x: 5, y: 5, label: "the filter chip clips" }];
+    expect(lintDesign(manifest(withPins({ pins: chip })), env)).toEqual([
+      "q1 option B pins pin 1: “chip” is jargon — say “button”, “filter” or “tag”",
+    ]);
+  });
+});
+
 describe("plain language", () => {
   it("bans designer jargon outside quotes, and leaves his own words alone", () => {
     expect(
