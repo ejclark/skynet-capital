@@ -212,13 +212,14 @@ export function tldrOf(md: string): string | null {
 /**
  * The `adjacentIds` the ledger's `probe-ref` line records (docs/process/EVENT-RESEARCH.md,
  * deterministic screening) — the corridor graph every pulse already writes and nothing rendered
- * until #1704. Malformed JSON reads as no edges, never as a throw.
+ * until #1704. The LAST probe-ref, as `sourceBlockedOf` reads it: a pulse appends, so the first is
+ * the original corridor (#5183). Malformed JSON reads as no edges, never as a throw.
  */
 export function adjacentIdsOf(md: string): string[] {
-  const match = md.match(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/);
-  if (!match?.[1]) return [];
+  const raw = [...md.matchAll(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/g)].at(-1)?.[1];
+  if (!raw) return [];
   try {
-    const parsed = JSON.parse(match[1]) as { adjacentIds?: unknown };
+    const parsed = JSON.parse(raw) as { adjacentIds?: unknown };
     return Array.isArray(parsed.adjacentIds)
       ? parsed.adjacentIds.filter((id): id is string => typeof id === "string")
       : [];

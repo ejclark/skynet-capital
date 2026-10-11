@@ -1,4 +1,28 @@
-import { isPlayCode, navForPlay, PLAY_CODES, playForNav } from "../../src/live/plays";
+import {
+  isPlayCode,
+  navForPlay,
+  PLAY_CODES,
+  playForNav,
+  rungForChainTap,
+} from "../../src/live/plays";
+
+// A chain tap (#5166): the price cell says the side, whatever rung the ticket was on.
+describe("rungForChainTap", () => {
+  it("sells to open on a bid and buys to open on an ask, from every single-leg rung", () => {
+    for (const from of ["101", "102", "201", "202", "301", "302"]) {
+      expect(rungForChainTap(from, "call", "bid")).toBe("202");
+      expect(rungForChainTap(from, "put", "bid")).toBe("201");
+      expect(rungForChainTap(from, "call", "ask")).toBe("302");
+      expect(rungForChainTap(from, "put", "ask")).toBe("301");
+    }
+  });
+  it("keeps the side on a bare strike tap; a stock rung lands on the long side", () => {
+    expect(rungForChainTap("201", "call")).toBe("202");
+    expect(rungForChainTap("301", "call")).toBe("302");
+    expect(rungForChainTap("101", "put")).toBe("301");
+    expect(rungForChainTap("102", "call")).toBe("302");
+  });
+});
 
 // The ticket's nav ↔ play seam (#1461 slice 2): one table, read both ways, round-trips.
 describe("navForPlay / playForNav", () => {
