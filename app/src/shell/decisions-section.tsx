@@ -11,7 +11,7 @@ import { cycleAnchor } from "./cycle-anchor";
 
 /**
  * ACCOUNTS' DECISIONS SECTION — ported from the `/u/:id/decisions` route ("the bot's mind"),
- * which is still live while its content folds into `/accounts` (#3345/#3350/#3687): the
+ * since folded into the Playbooks section's check log (#3345/#3350/#3687; #5073): the
  * autonomous-trading audit trail, run-row style. Bot-only (Eric: "tied to autonomous
  * trading... folded somewhere within those types of accounts, which is currently only bot
  * accounts") — `AccountsBody` only shows this section in the switch when the selected account's
@@ -64,8 +64,8 @@ function ResultWords({
   ) : null;
 }
 
-/** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
- *  rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
+/** Exported so the Playbooks section's check log (`bot-playbooks.tsx`, on `/accounts` and
+ *  `/u/:id/playbooks`) reuses this same rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
  *  (#885: "we do not show what playbooks others are using") — the server already withholds it
  *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. What
  *  the broker said about an order that never traded rides the same gate: a broker's message can
