@@ -37,6 +37,7 @@ import { ProfileTower } from "../shell/profile-tower";
 import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
+import { useOrderDetail } from "../shell/use-order-detail";
 
 /**
  * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
@@ -85,6 +86,8 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
     },
     enabled: deskIds.length > 0,
   });
+  // An order's full detail (#5101): `?order=` — a panel beside the list, or a page on a phone.
+  const { detail, setDetail } = useOrderDetail();
   if (deskIds.length === 0)
     return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
@@ -96,7 +99,14 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
   // One account linked → each bot fill can link to its round in that account's checks (#3961).
   // Several merged → a row carries no account of its own, so the link is honestly left off.
   const only = deskIds.length === 1 ? deskIds[0] : undefined;
-  return <ActivityLedger events={activity.data.events} {...(only ? { deskId: only } : {})} />;
+  return (
+    <ActivityLedger
+      events={activity.data.events}
+      {...(only ? { deskId: only } : {})}
+      detail={detail}
+      onDetail={setDetail}
+    />
+  );
 }
 
 const asId = (raw: unknown): string | undefined =>
@@ -216,6 +226,8 @@ function AccountsPage(): ReactElement {
             mode: undefined,
             fill: undefined,
             from: undefined,
+            // An order's full detail belongs to Activity; leaving it closes the detail.
+            order: next === "activity" ? prev.order : undefined,
             ...(crossing ? { q: undefined, events: undefined } : {}),
           }),
           replace: true,
@@ -380,6 +392,8 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
+    // Activity's open full detail (#5101, `use-order-detail.ts`).
+    ...(asId(search.order) ? { order: asId(search.order) } : {}),
   }),
   component: AccountsPage,
 });

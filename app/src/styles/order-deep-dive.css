@@ -1,0 +1,448 @@
+/* An order's full detail, the opt-in deep dive (#5101; `order-deep-dive.tsx`, `order-pictures.tsx`).
+   Desktop: a non-modal panel beside the list — sticky under the head, scrolling on its own, the list
+   still live to its left. A phone or tablet: a page in the list's place with one way back. Zones are
+   told apart by pattern (hatch · dots · solid) and named in words; hue never carries one alone. */
+
+/* The door, under an opened card or an opened why: the house's "these words are the way in" —
+   accent AND underline, never the hue alone (docs/BRAND.md). */
+.act-full {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.act-full:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The row whose detail is open beside the table: an inset bar and a tint — a shape with the tone. */
+tr[data-detail] > td {
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+}
+tr[data-detail] > td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.act-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 16px;
+  align-items: start;
+}
+.act-split-list {
+  min-width: 0;
+}
+
+.act-deep {
+  color: var(--text);
+  font-size: 13px;
+}
+.act-deep-panel {
+  position: sticky;
+  top: calc(var(--landing-clear, 64px) + 8px);
+  max-height: calc(100vh - var(--landing-clear, 64px) - 24px);
+  overflow-y: auto;
+  padding: 12px 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--elev-raised);
+}
+/* From the bench width (1280) the frame keeps a 384px column beside the stage (the tower's,
+   tower-column.css): the panel docks over it, under the topbar, and the list keeps its full width. */
+[data-docked] > .act-deep-panel {
+  position: fixed;
+  z-index: 5;
+  top: calc(var(--topbar-h, 52px) + var(--stage-gap, 22px));
+  right: max(var(--gutter), calc((100vw - var(--shell-max)) / 2 + var(--gutter)));
+  bottom: 16px;
+  width: 384px;
+  max-height: none;
+}
+.act-deep-page {
+  padding: 0 2px 28px;
+  scroll-margin-top: calc(var(--landing-clear, 64px) + 4px);
+}
+
+.act-deep-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.act-deep-page .act-deep-bar {
+  margin: 0 -2px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.act-deep-back {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.act-deep-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.act-deep-close {
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.act-deep-back:focus-visible,
+.act-deep-close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The row's own two lines, repeated at the top so the deep dive never loses which order it is. */
+.dd-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.dd-head .act-what {
+  grid-area: 1 / 1;
+}
+.dd-head .act-cash {
+  grid-area: 1 / 2;
+}
+.dd-stamp {
+  grid-area: 2 / 1;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.dd-head .act-result {
+  grid-area: 2 / 2;
+}
+.dd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+/* The title takes focus so a screen reader starts here; it is not a control, so it draws no ring. */
+.dd-title:focus {
+  outline: none;
+}
+
+/* The price line: labels ride on their marks — now above, wrong-if and breakeven below. */
+.pl {
+  margin: 8px 0 4px;
+}
+.pl-row {
+  position: relative;
+  height: 18px;
+  font-size: 11.5px;
+}
+.pl-label {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.pl-label b {
+  color: var(--text);
+  font-weight: 700;
+}
+.pl-mid {
+  transform: translateX(-50%);
+}
+.pl-to {
+  transform: translateX(-100%);
+}
+.pl-bar {
+  position: relative;
+  height: 12px;
+  margin: 6px 0;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.pl-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.pl-keeps,
+.pl-sw-keeps {
+  background: var(--pos);
+}
+.pl-ahead,
+.pl-sw-ahead {
+  background: radial-gradient(circle, var(--pos) 1.3px, transparent 1.7px) 0 0 / 5px 5px;
+}
+.pl-loses,
+.pl-sw-loses {
+  background: repeating-linear-gradient(135deg, var(--neg) 0 3px, transparent 3px 6px);
+}
+/* A loss with no floor fades off its edge rather than stopping at the axis. */
+.pl-fade-from {
+  mask-image: linear-gradient(to right, transparent, #000 45%);
+}
+.pl-fade-to {
+  mask-image: linear-gradient(to left, transparent, #000 45%);
+}
+.pl-tick {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  transform: translateX(-50%);
+  background: var(--text);
+}
+.pl-be {
+  top: 0;
+  bottom: -7px;
+  width: 2px;
+  background: var(--muted);
+}
+.pl-now {
+  position: absolute;
+  top: 50%;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translate(-50%, -50%);
+}
+.pl-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  transform: translate(-50%, -50%);
+}
+.pl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pl-legend b {
+  color: var(--text);
+}
+.pl-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pl-sw {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 10px;
+  border-radius: 2px;
+}
+/* Cash held aside: its own hatch, in the text colour, framed — not a zone of the payoff. */
+.pl-sw-aside {
+  box-sizing: border-box;
+  border: 1px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--text) 0 2px, transparent 2px 5px);
+}
+
+/* Days left: fill day → expiry, a ring at today. */
+.dl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.dl b {
+  color: var(--text);
+}
+.dl-end {
+  white-space: nowrap;
+}
+.dl-track {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  height: 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.dl-gone {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.dl-today {
+  position: absolute;
+  top: 50%;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translate(-50%, -50%);
+}
+
+.dd-cash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.dd-cash b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dd-cash-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dd-label {
+  margin: 16px 0 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The play: branches off one stem — a swatch and the condition, then what happens. */
+.dd-branches {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border);
+  list-style: none;
+}
+.dd-branch {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(104px, auto) minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.dd-branch::before {
+  content: "";
+  position: absolute;
+  top: 0.65em;
+  left: -12px;
+  width: 8px;
+  border-top: 2px solid var(--border);
+}
+.dd-when {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-family: var(--mono);
+}
+.dd-wrong {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dd-why {
+  margin: 0;
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.5;
+}
+.dd-playbook {
+  padding-left: 12px;
+  border-left: 3px solid var(--border);
+}
+.dd-playbook p {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+.dd-sub {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dd-weighed p {
+  margin: 0;
+}
+.dd-show {
+  min-height: 32px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.dd-weighed-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+.dd-weighed-list dt {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dd-weighed-list dd {
+  margin: 0;
+  line-height: 1.45;
+}

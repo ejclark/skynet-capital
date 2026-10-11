@@ -202,3 +202,58 @@ describe("narrowing by playbook", () => {
     expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
   });
 });
+
+/** #5101 (R2-deep): an order's full detail lives in the URL — `?order=<id>#act-<id>` — so it is
+ *  linkable, and its one way back returns to the same row. */
+describe("an order's full detail", () => {
+  /** happy-dom has no `matchMedia` — the desktop default. A phone installs one that matches. */
+  function phone(): () => void {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    return () => Reflect.deleteProperty(window, "matchMedia");
+  }
+
+  it("opens from a link as a panel beside the live list on a desktop, and Close drops it", async () => {
+    answer = () => firstPage();
+    const router = mount("/u/sauron/activity?order=ord-3");
+    const panel = await screen.findByRole("complementary");
+    expect(within(panel).getByRole("heading", { level: 3 })).toHaveTextContent(
+      "NVDA rises from $181.40",
+    );
+    expect(document.getElementById("act-ord-0")).not.toBeNull();
+    expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole("button", { name: /Close/ }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("on a phone, opens as a page from the card and steps back to the same row, opened", async () => {
+    const restore = phone();
+    try {
+      answer = () => firstPage();
+      const router = mount("/u/sauron/activity");
+      const card = () => document.getElementById("act-ord-3") as HTMLElement;
+      await waitFor(() => expect(card()).not.toBeNull());
+      await userEvent.click(within(card()).getAllByRole("button")[0] as HTMLElement);
+      await userEvent.click(within(card()).getByRole("button", { name: /Full detail/ }));
+      await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      // A page in the list's place: the list, its heading and its filter step aside.
+      expect(screen.queryByLabelText("Filter by symbol")).toBeNull();
+      expect(document.getElementById("act-ord-0")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "‹ Activity" }));
+      await waitFor(() => expect(router.state.location.search).toEqual({}));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      await waitFor(() => expect(card()).toHaveAttribute("data-open"));
+    } finally {
+      restore();
+    }
+  });
+});
