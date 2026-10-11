@@ -367,7 +367,7 @@ export function OptionPositionsCard({
       <h2 className="panel-title">Option positions</h2>
       <p className="panel-sub">
         Held contracts on this account — Close reviews first, and works out the direction from the
-        live holding.
+        contracts you hold now.
       </p>
       <div className="tkt-close-rows">
         {held.map((position) => (

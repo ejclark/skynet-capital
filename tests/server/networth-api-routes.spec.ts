@@ -146,6 +146,43 @@ type TotalView = { value: string; windows: { label: string; value: string; parti
 const totalOf = (body: Record<string, unknown>): TotalView => body.total as TotalView;
 
 describe("serveNetWorthJson", () => {
+  it("reads where the record begins from the full history, so a longer window says 'since' (#5211)", async () => {
+    const { res, out } = fakeRes();
+    const sept8 = Date.UTC(2026, 8, 8, 20) / 1000;
+    await serveNetWorthJson(
+      res,
+      configWith({
+        hub: {
+          getState: () => ({
+            generatedAt: "2026-10-11T15:00:00.000Z",
+            participants: [eric],
+            collisions: [],
+          }),
+        } as never,
+        resolveOwnerIds: () => ["human-eric"],
+        tradingClientFor: () =>
+          fakeClient({
+            lastEquity: "100000",
+            // a zero close before the first deposit is not the start of the record
+            full: [
+              [sept8 - 86_400, 0],
+              [sept8, 100_000],
+              [sept8 + 86_400, 101_000],
+            ],
+            windows: {
+              "7D": { pct: 0.01, base: 100_000, end: 101_000 },
+              "1M": { pct: 0.02, base: 100_000, end: 102_000 },
+              "3M": { pct: 0.0225, base: 100_000, end: 102_250 },
+              "1Y": { pct: 0.0225, base: 100_000, end: 102_250 },
+            },
+          }),
+      }),
+      session,
+    );
+    const row = must((answered(out).accounts as TotalView[])[0], "accounts[0]");
+    expect(row.windows.map((w) => w.label)).toEqual(["7D", "1M", "Since 9/8"]);
+  });
+
   it("answers 200 with the session's owned accounts only", async () => {
     const { res, out } = fakeRes();
     await serveNetWorthJson(res, configWith({ resolveOwnerIds: () => ["human-eric"] }), session);
