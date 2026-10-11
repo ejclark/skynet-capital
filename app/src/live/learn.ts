@@ -14,6 +14,8 @@ export interface JourneyMilestone {
   readonly title: string;
   readonly detail: string;
   readonly points: number;
+  /** The rung's ladder code ("101"…) — pairs the milestone with its play on `/api/trade/plays`. */
+  readonly code?: string;
   readonly ticket?: string;
   readonly earned?: { readonly on: string; readonly orderId: string };
 }
