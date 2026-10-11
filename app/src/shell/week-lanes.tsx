@@ -14,7 +14,8 @@ import type { CheckWeek, WeekLane, WeekTrade } from "../live/heartbeat";
  * checks and a hatched cell one with a span of no check; on a lane solid is trading on live
  * signals, a thin bar wants to hold, an outline wants out, dots wait for a window, hatching with a
  * dashed edge can't fire. ▲ is a buy placed, ▼ a sell, a tall bar is now. The drawings are hidden
- * from a screen reader, which hears each one's sentence instead.
+ * from a screen reader, which hears each one's sentence instead. A card arrived at from an order
+ * (#5073 slice 4a) rings that order's mark — a circle drawn round it, a shape, never a tint.
  */
 
 type Session = CheckWeek["sessions"][number];
@@ -50,15 +51,18 @@ function NowBar({ week, session }: { readonly week: CheckWeek; readonly session:
   return <span className="wk-now" style={{ left: `${at * 100}%` }} />;
 }
 
-/** ▲/▼ at each trade's instant. `labelled` writes the ticker beside a mark when there is room. */
+/** ▲/▼ at each trade's instant. `labelled` writes the ticker beside a mark when there is room;
+ *  `ringAt` rings the marks the check at that instant placed. */
 function TradeMarks({
   trades,
   session,
   labelled = false,
+  ringAt,
 }: {
   readonly trades: readonly WeekTrade[];
   readonly session: Session;
   readonly labelled?: boolean;
+  readonly ringAt?: number;
 }) {
   return (
     <>
@@ -72,6 +76,7 @@ function TradeMarks({
             className="wk-mark"
             data-side={trade.side}
             data-edge={at > 0.7 ? "end" : undefined}
+            data-ringed={trade.at === ringAt ? "" : undefined}
             style={{ left: `${at * 100}%` }}
             title={tradeText(trade)}
           >
@@ -153,12 +158,15 @@ export function WeekLaneRow({
   trades,
   state,
   label,
+  ringAt,
 }: {
   readonly week: CheckWeek;
   readonly lane: WeekLane | undefined;
   readonly trades: readonly WeekTrade[];
   readonly state: CardState;
   readonly label: string;
+  /** The check whose trades this lane rings — the order the reader arrived from. */
+  readonly ringAt?: number;
 }): ReactElement {
   const blocked = state === "blocked";
   return (
@@ -171,7 +179,7 @@ export function WeekLaneRow({
             session={session}
             over={
               <>
-                <TradeMarks trades={trades} session={session} />
+                <TradeMarks trades={trades} session={session} {...(ringAt ? { ringAt } : {})} />
                 <NowBar week={week} session={session} />
               </>
             }
@@ -214,17 +222,32 @@ export function LaneKey(): ReactElement {
   );
 }
 
-/** "Sell CRWV placed · Tue 10:31 AM" for each of a card's trades — the marks, said in words. */
-export function LaneTrades({ trades }: { readonly trades: readonly WeekTrade[] }) {
+/** "Sell CRWV placed · Tue 10:31 AM" for each of a card's trades — the marks, said in words; the
+ *  ringed one says it is the order the reader came from. */
+export function LaneTrades({
+  trades,
+  ringAt,
+}: {
+  readonly trades: readonly WeekTrade[];
+  readonly ringAt?: number;
+}) {
   if (trades.length === 0) return null;
   return (
     <ul className="wk-trades">
       {trades.map((trade, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: as on the marks — one check can place the same order twice.
-        <li key={`${i}:${trade.at}:${trade.symbol}:${trade.side}`}>
-          <span aria-hidden="true">{trade.side === "buy" ? "▲" : "▼"}</span>{" "}
+        <li
+          // biome-ignore lint/suspicious/noArrayIndexKey: as on the marks — one check can place the same order twice.
+          key={`${i}:${trade.at}:${trade.symbol}:${trade.side}`}
+          data-ringed={trade.at === ringAt ? "" : undefined}
+        >
+          <span className="wk-trade-mark" aria-hidden="true">
+            {trade.side === "buy" ? "▲" : "▼"}
+          </span>{" "}
           {trade.side === "buy" ? "Buy" : "Sell"} <b>{trade.symbol}</b> placed{" "}
           <span className="pbb-meta">{weekTime(trade.at)}</span>
+          {trade.at === ringAt ? (
+            <span className="wk-trade-this"> · the order you came from</span>
+          ) : null}
         </li>
       ))}
     </ul>

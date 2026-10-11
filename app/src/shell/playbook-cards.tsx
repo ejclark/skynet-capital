@@ -1,4 +1,5 @@
-import type { ReactElement, ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { type ReactElement, type ReactNode, useEffect, useRef } from "react";
 import {
   type BotPlaybooks,
   CARD_WORDS,
@@ -15,6 +16,8 @@ import {
   sinceText,
   UNMANAGED_WORDS,
 } from "../live/heartbeat";
+import { landingCard, type PlaybookLanding } from "../live/playbook-landing";
+import { land } from "./landing";
 import { PlaybookOpen, WhenOpened } from "./playbook-open";
 import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
 
@@ -31,6 +34,11 @@ import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
  * with ▲/▼ where it traded, the key to the shapes and the trades in words once opened. Opened, a
  * named card also draws its rule as a picture, what the bot holds in its ticker and whose say-so it
  * runs on (#5073 slice 3, `playbook-open.tsx`), read only once the card is first opened.
+ *
+ * An order's playbook link arrives on its card (#5073 slice 4a — round 2's R2-act): that card opens
+ * in place and lands like any linked row (`landing.ts`), the order's mark is ringed on its lane, and
+ * the opened card carries one way back to the order's row on Activity. An order older than this
+ * week has no mark to ring, and the card says so rather than ringing a neighbour.
  */
 
 function changeHref(deskId: string): string {
@@ -90,6 +98,7 @@ function Card({
   wide,
   fact,
   lane,
+  arrived = false,
   children,
 }: {
   readonly name: string;
@@ -101,8 +110,16 @@ function Card({
   readonly fact?: string;
   /** The card's week, under its name on a phone and in the wide column from the bench width. */
   readonly lane?: ReactNode;
+  /** The card an order's link named: it arrives open and lands. */
+  readonly arrived?: boolean;
   readonly children?: ReactNode;
 }): ReactElement {
+  const row = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = row.current;
+    if (!(arrived && el)) return;
+    return land(el);
+  }, [arrived]);
   const head = (
     <>
       <span className="pbb-name">{name}</span>
@@ -115,9 +132,11 @@ function Card({
     </>
   );
   return (
-    <li className="pbb-card" data-state={state}>
+    <li className="pbb-card" data-state={state} ref={row}>
       {children ? (
-        <details>
+        // Opened from the first render when arrived at, so `WhenOpened` reads its blocks at once;
+        // React leaves the attribute alone after that, and the reader's own toggles stand.
+        <details open={arrived || undefined}>
           <summary className="pbb-row pbb-sum">
             {head}
             <span className="pbb-chev" aria-hidden="true">
@@ -138,22 +157,66 @@ function weekOf(
   card: PlaybookCard,
   week: CheckWeek | undefined,
   playbooks: readonly PlaybookHeartbeat[] | null,
+  ringAt: number | undefined,
 ) {
   if (!week) return undefined;
   const trades = tradesFor(card, week);
   const lane = laneFor(card, week, playbooks);
+  // Ring only a mark this lane actually draws — never a neighbour's, never an empty spot.
+  const ringed = ringAt !== undefined && trades.some((t) => t.at === ringAt) ? ringAt : undefined;
   return {
     trades,
+    ringed,
     lane: (
       <WeekLaneRow
         week={week}
         lane={lane}
         trades={trades}
         state={card.state}
-        label={laneSummary(lane, trades, card.state === "blocked")}
+        label={`${laneSummary(lane, trades, card.state === "blocked")}${ringed ? " The order you came from is ringed." : ""}`}
+        {...(ringed ? { ringAt: ringed } : {})}
       />
     ),
   };
+}
+
+/** The account's Activity with the order's row named — the card's one way back to it. */
+function BackToOrder({ deskId, orderId }: { readonly deskId: string; readonly orderId: string }) {
+  return (
+    <Link
+      className="door-link pbb-back"
+      to="/accounts"
+      search={{ account: deskId, section: "activity" }}
+      hash={`act-${orderId}`}
+    >
+      ← Back to the order in Activity
+    </Link>
+  );
+}
+
+/** What an arrival says above the card's other blocks: the way back, and — when the order's check
+ *  is not on this week's lane — why nothing is ringed. */
+function Arrival({
+  deskId,
+  landing,
+  ringed,
+  hasWeek,
+}: {
+  readonly deskId: string;
+  readonly landing: PlaybookLanding;
+  readonly ringed: number | undefined;
+  readonly hasWeek: boolean;
+}): ReactElement {
+  return (
+    <div className="pbb-arrival">
+      {landing.from ? <BackToOrder deskId={deskId} orderId={landing.from} /> : null}
+      {landing.fill !== undefined && hasWeek && ringed === undefined ? (
+        <p className="pbb-meta">
+          That order was placed before this week, so its lane has no mark to ring.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function PlaybookRow({
@@ -162,17 +225,20 @@ function PlaybookRow({
   deskId,
   week,
   playbooks,
+  arrival,
 }: {
   readonly card: PlaybookCard;
   readonly named: boolean;
   readonly deskId: string;
   readonly week?: CheckWeek;
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
+  /** Set on the one card an order's link named. */
+  readonly arrival?: PlaybookLanding;
 }): ReactElement {
   const { glyph, word } = CARD_WORDS[card.state];
   const meta = metaOf(card, named);
   const fact = cardFact(card);
-  const drawn = weekOf(card, week, playbooks);
+  const drawn = weekOf(card, week, playbooks, arrival?.fill);
   // A non-owner's card has no reason to read: its mode and since are the fact, and there is
   // nothing behind it to open.
   if (!named) {
@@ -196,7 +262,16 @@ function PlaybookRow({
       {...(meta ? { wide: meta } : {})}
       {...(fact.short ? { fact: fact.short } : {})}
       {...(drawn ? { lane: drawn.lane } : {})}
+      arrived={arrival !== undefined}
     >
+      {arrival ? (
+        <Arrival
+          deskId={deskId}
+          landing={arrival}
+          ringed={drawn?.ringed}
+          hasWeek={drawn !== undefined}
+        />
+      ) : null}
       {drawn ? <LaneKey /> : null}
       {fact.more ? <p className="pbb-why">{fact.more}</p> : null}
       {meta ? <p className="pbb-meta pbb-narrow">{meta}</p> : null}
@@ -212,7 +287,7 @@ function PlaybookRow({
       {drawn && drawn.trades.length > 0 ? (
         <section className="pbo-block" aria-label="Its trades this week">
           <h4 className="pbo-h">Its trades this week ({drawn.trades.length})</h4>
-          <LaneTrades trades={drawn.trades} />
+          <LaneTrades trades={drawn.trades} {...(drawn.ringed ? { ringAt: drawn.ringed } : {})} />
         </section>
       ) : null}
       <a className="hb-link pbo-change" href={changeHref(deskId)}>
@@ -268,6 +343,31 @@ function OffFooter({
   );
 }
 
+/** An order's playbook with no card on this bot now: said plainly, beside the way back, rather
+ *  than landing the reader on a card that is not the one that placed it. */
+function NoCard({
+  deskId,
+  landing,
+  off,
+}: {
+  readonly deskId: string;
+  readonly landing: PlaybookLanding;
+  readonly off: readonly RollCallLine[];
+}): ReactElement {
+  const isOff = off.some((l) => l.playbookId === landing.card);
+  return (
+    <div className="pbb-arrival pbb-nocard">
+      <p>
+        <span className="num">{landing.card}</span> placed that order.{" "}
+        {isOff
+          ? "It is off on this bot now — it is named in the footer below."
+          : "It is not one of this bot's playbooks now, so it has no card here."}
+      </p>
+      {landing.from ? <BackToOrder deskId={deskId} orderId={landing.from} /> : null}
+    </div>
+  );
+}
+
 export function PlaybookCards({
   deskId,
   merged,
@@ -276,6 +376,7 @@ export function PlaybookCards({
   none,
   week,
   playbooks = null,
+  landing,
 }: {
   readonly deskId: string;
   readonly merged: BotPlaybooks;
@@ -288,11 +389,17 @@ export function PlaybookCards({
   readonly unmanaged: readonly string[];
   /** No verdict and no roll call came at all — nothing has been recorded to draw. */
   readonly none: boolean;
+  /** An order's playbook link — the owner's alone (#885), so never passed on a nameless page. */
+  readonly landing?: PlaybookLanding;
 }): ReactElement {
   if (none) return <p className="note">No playbook has answered a check yet.</p>;
   const empty = merged.cards.length === 0 && unmanaged.length === 0;
+  const target = landing && named ? landingCard(merged.cards, landing) : undefined;
   return (
     <div className="pbb-cards">
+      {landing && named && !target ? (
+        <NoCard deskId={deskId} landing={landing} off={merged.off} />
+      ) : null}
       {named ? null : (
         <p className="pbb-private">
           Which playbooks these are is the bot owner's to see — each reads here by its state.
@@ -310,6 +417,7 @@ export function PlaybookCards({
               deskId={deskId}
               playbooks={playbooks}
               {...(week ? { week } : {})}
+              {...(landing && card === target ? { arrival: landing } : {})}
             />
           ))}
           {unmanaged.map((symbol) => (

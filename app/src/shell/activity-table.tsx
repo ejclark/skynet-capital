@@ -8,6 +8,7 @@ import type {
   DeskMissingLeg,
 } from "../live/desk";
 import { lifecycleDayText } from "../live/lifecycle-day";
+import { landingFor } from "../live/playbook-landing";
 import { cycleAnchor } from "./cycle-anchor";
 import { targetedAnchor, useLandOnHash } from "./landing";
 
@@ -124,15 +125,50 @@ function RoundLine({
   );
 }
 
+/** THE PLAYBOOK, AS A WAY IN (#5073 slice 4a — #5037 round 2, R2-act). On one account's ledger the
+ *  playbook that placed the order links to its card on Playbooks: that card arrives open, this
+ *  order's mark ringed on its lane, with one way back to this row. A merged ledger (All accounts)
+ *  has no account to send the reader to, so the name stays plain words, like the round's link. */
+function PlaybookLine({
+  why,
+  playbookId,
+  deskId,
+  orderId,
+}: {
+  readonly why: ActivityReasoning;
+  readonly playbookId: string;
+  readonly deskId?: string;
+  readonly orderId?: string;
+}): ReactElement {
+  const words = `${playbookId}${why.playbookMode ? ` · ${why.playbookMode}` : ""}`;
+  if (!(deskId && orderId)) return <dd>{words}</dd>;
+  const { card, mode, fill, from } = landingFor({ ...why, playbookId }, orderId);
+  return (
+    <dd>
+      <Link
+        className="door-link"
+        to="/accounts"
+        search={{ account: deskId, section: "playbooks", card, mode, fill, from }}
+        aria-label={`${words} — open its card on Playbooks`}
+      >
+        {words} ›
+      </Link>
+    </dd>
+  );
+}
+
 export function WhyDetail({
   why,
   showPlaybook,
   deskId,
+  orderId,
   costShown = false,
 }: {
   readonly why: ActivityReasoning;
   readonly showPlaybook: boolean;
   readonly deskId?: string;
+  /** The order this why belongs to — its playbook link's way back lands on its row. */
+  readonly orderId?: string;
   /** The row itself already says what the order cost (a spread's net) — said once, not twice. */
   readonly costShown?: boolean;
 }): ReactElement {
@@ -149,10 +185,12 @@ export function WhyDetail({
       {showPlaybook && why.playbookId ? (
         <div>
           <dt>Playbook</dt>
-          <dd>
-            {why.playbookId}
-            {why.playbookMode ? ` · ${why.playbookMode}` : ""}
-          </dd>
+          <PlaybookLine
+            why={why}
+            playbookId={why.playbookId}
+            {...(deskId ? { deskId } : {})}
+            {...(orderId ? { orderId } : {})}
+          />
         </div>
       ) : null}
       {why.contract ? (
@@ -338,6 +376,7 @@ function ActivityRow({
               why={event.reasoning}
               showPlaybook={showPlaybook}
               costShown={event.net !== undefined}
+              orderId={event.orderId}
               {...(deskId ? { deskId } : {})}
             />
           </td>

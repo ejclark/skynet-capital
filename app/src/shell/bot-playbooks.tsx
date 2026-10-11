@@ -2,6 +2,7 @@ import { type ReactElement, useId, useState } from "react";
 import { botPlaybooks, playbooksCount } from "../live/bot-playbooks";
 import { weekVerdict } from "../live/check-week";
 import { agoText, type Heartbeat, heartbeatLine } from "../live/heartbeat";
+import type { PlaybookLanding } from "../live/playbook-landing";
 import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
 import { useHeartbeat } from "./heartbeat";
@@ -30,12 +31,15 @@ export function BotPlaybooksSection({
   botName,
   showPlaybooks = true,
   checksOpen = false,
+  landing,
 }: {
   readonly deskId: string;
   /** The bot's own name, for the strip's sentence; "This bot" when the page does not know it. */
   readonly botName?: string;
   readonly showPlaybooks?: boolean;
   readonly checksOpen?: boolean;
+  /** An order's playbook link (#5073 slice 4a): that card arrives open, the order's mark ringed. */
+  readonly landing?: PlaybookLanding;
 }): ReactElement {
   const query = useHeartbeat(deskId);
   // The round a fill's "why" pointed at, read once as this section mounts (`cycle-anchor.ts`).
@@ -76,6 +80,7 @@ export function BotPlaybooksSection({
         none={heartbeat.playbooks === null && !heartbeat.rollCall}
         playbooks={heartbeat.playbooks}
         {...(heartbeat.week ? { week: heartbeat.week } : {})}
+        {...(landing && showPlaybooks ? { landing } : {})}
       />
       <ShadowProbes deskId={deskId} />
     </div>

@@ -11,6 +11,7 @@ import {
 import { parseOn } from "../live/horizon-params";
 import { initialPositionsQuery } from "../live/look-sort";
 import { fetchNetWorth } from "../live/networth";
+import { landingFromSearch, landingOf, type PlaybookLanding } from "../live/playbook-landing";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
@@ -50,8 +51,9 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * range is the section's own head and the page's only date control, over one lane per position and
  * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
  * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
- * check log) and **Thesis** are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are
- * the VIEWER's (#3807 slice
+ * check log; `?card=` arrives on one playbook's card open, from an order's playbook link —
+ * `live/playbook-landing.ts`) and **Thesis** are bot-only (#3345/#3350/#3687). **Milestones** and
+ * **Feedback** are the VIEWER's (#3807 slice
  * 2b, #888): what `/learn` (+ its chapters `/onboarding`, `/learn/trading`, `/playbooks`, now
  * `?chapter=`) and `/feedback` were, moved as they were — those routes are redirects now, and the
  * Profile link row is gone from this page because the switch is the map. PROGRESSIVE DISCLOSURE:
@@ -166,6 +168,7 @@ function AccountsPage(): ReactElement {
       sections={sections}
       chapter={chapter}
       checksOpen={search.checks === "open"}
+      landing={landingOf(search)}
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
@@ -174,7 +177,15 @@ function AccountsPage(): ReactElement {
       onClearDefault={defaultAccount.clearDefault}
       onSelectAccount={(id) =>
         void navigate({
-          search: (prev) => ({ ...prev, account: id === fallbackId ? undefined : id }),
+          search: (prev) => ({
+            ...prev,
+            account: id === fallbackId ? undefined : id,
+            // An order's card belongs to the bot that placed it — never landed on another's.
+            card: undefined,
+            mode: undefined,
+            fill: undefined,
+            from: undefined,
+          }),
           replace: true,
         })
       }
@@ -200,6 +211,11 @@ function AccountsPage(): ReactElement {
             // unfold belongs to Playbooks the same way.
             chapter: next === "milestones" ? prev.chapter : undefined,
             checks: next === "playbooks" ? prev.checks : undefined,
+            // An order's way in to one card is spent once the member goes anywhere else.
+            card: undefined,
+            mode: undefined,
+            fill: undefined,
+            from: undefined,
             ...(crossing ? { q: undefined, events: undefined } : {}),
           }),
           replace: true,
@@ -219,6 +235,7 @@ function CockpitBody({
   accounts,
   chapter,
   checksOpen,
+  landing,
   query,
   onFilterChange,
   pinnedDay,
@@ -233,6 +250,8 @@ function CockpitBody({
   readonly chapter: MilestoneChapter | undefined;
   /** `?checks=open` — Playbooks arrives with its check log unfolded (an old Heartbeat link). */
   readonly checksOpen: boolean;
+  /** `?card=` — Playbooks arrives on that card, open, from an order's playbook link (#5073). */
+  readonly landing: PlaybookLanding | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
   readonly pinnedDay: string | undefined;
@@ -271,6 +290,7 @@ function CockpitBody({
         deskId={accountId}
         botName={accounts.find((a) => a.id === accountId)?.name}
         checksOpen={checksOpen}
+        {...(landing ? { landing } : {})}
       />
     );
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
@@ -349,6 +369,8 @@ export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
     ...sectionFromSearch(search.section, search.checks),
+    // One playbook's card, arrived at from an order (#5073 slice 4a) — read on Playbooks alone.
+    ...landingFromSearch(search),
     // The Milestones chapter open beneath the cards (#3807 slice 2b; once its own route, #1119).
     ...chapterFromSearch(search.chapter),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100

@@ -150,6 +150,7 @@ function ActivityCard({
               why={event.reasoning}
               showPlaybook={showPlaybook}
               costShown={event.net !== undefined}
+              orderId={event.orderId}
               {...(deskId ? { deskId } : {})}
             />
           ) : null}
