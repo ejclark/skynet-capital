@@ -90,7 +90,13 @@ export function submitThesis(
     return { ok: false, error: "Unknown play — pick one from the list." };
   }
   const at = deps.now?.() ?? new Date();
-  deps.submit(weekKey(at), opaqueMemberId, trimmed, at, playbookId);
+  const week = weekKey(at);
+  // Update with nothing changed is not an edit. The line's `at` is its version for replies under
+  // it (#5097): moving it would mark every reply "Answered an earlier version" and refuse a reply
+  // in flight, both over words that never changed.
+  const current = deps.load().weeks[week]?.[opaqueMemberId];
+  if (current?.text === trimmed && current.playbookId === playbookId) return { ok: true };
+  deps.submit(week, opaqueMemberId, trimmed, at, playbookId);
   return { ok: true };
 }
 
