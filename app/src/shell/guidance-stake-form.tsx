@@ -10,9 +10,18 @@ import { Toggle } from "./toggle";
  * flicker through half-typed numbers. Once anything is saved the form folds to one line — the
  * calls are what a returning member came for — with Edit one tap away.
  *
- * The values never leave this browser: the parent keeps them in local storage per symbol and runs
- * the engine here (see `live/guidance.ts`).
+ * Where the values live is the parent's, so the heading says what the parent does with them: the
+ * trade form keeps them in local storage per symbol (see `live/guidance.ts`), `/saved-positions`
+ * posts them to the member's account (#5179 — "stays in this browser" was untrue there).
  */
+
+/** Where the parent keeps the stake — the heading must say the true one. */
+export type StakeStorage = "browser" | "account";
+
+const STORAGE_WORDS: Readonly<Record<StakeStorage, string>> = {
+  browser: "stays in this browser",
+  account: "saved to your account; only you see it",
+};
 
 type NumericField =
   | "shares"
@@ -88,9 +97,11 @@ function NumberField({
 export function GuidanceStakeForm({
   stake,
   onChange,
+  storage = "browser",
 }: {
   readonly stake: GuidanceStake;
   readonly onChange: (next: GuidanceStake) => void;
+  readonly storage?: StakeStorage;
 }): ReactElement {
   const entered = Object.keys(stake).length > 0;
   // Open until a goal is picked: without one no option call is available, so the form is the
@@ -116,7 +127,7 @@ export function GuidanceStakeForm({
   }
   return (
     <form className="guidance-stake" onSubmit={(e) => e.preventDefault()}>
-      <p className="guidance-kicker">Your stake — stays in this browser</p>
+      <p className="guidance-kicker">Your stake — {STORAGE_WORDS[storage]}</p>
       <div className="guidance-stake-fields">
         {FIELDS.map(([field, label, hint]) => (
           <NumberField
