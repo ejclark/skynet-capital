@@ -10,8 +10,8 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/triage-comment-bloat.instructions.md`
-rather than transcribing these values by hand. `effort: high` because every flagged comment is a keep-or-delete judgment where the expensive direction is a real invariant deleted, and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below does its own
-`git checkout -B`, and without a fresh worktree per item, concurrent items share one working
+rather than transcribing these values by hand. `effort: high` because every flagged comment is a keep-or-delete judgment where the expensive direction is a real invariant deleted, and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below checks out
+its own branch (`wt-start.sh` refuses the primary checkout), and without a fresh worktree per item, concurrent items share one working
 directory and stomp on each other's checkout.
 
 What the front matter **cannot** carry, because `grind.js` cannot enforce it — fan items **per
@@ -30,8 +30,9 @@ either delete the narration or leave it, one comment at a time, without changing
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B docs/triage-comment-bloat-<slug> origin/main`, then
-   `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh docs/triage-comment-bloat-<slug>` — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
 2. Confirm the target file is still flagged: test its comment lines against the four regexes in
    `NARRATION_PATTERNS` (`scripts/comment-bloat-scan.mjs`), case-insensitively. They are
    JavaScript regexes, so use `grep -niP`, or `grep -niE` with each `\d` rewritten as `[0-9]`

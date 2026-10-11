@@ -15,7 +15,7 @@ rather than transcribing the front matter. `effort: high` because steps 2–4 ar
 on someone else's open work and step 6 is a behavior-preserving refactor — `docs/COMPUTE.md` puts
 anything that reads, writes or judges at `high`. `model: sonnet` is the tier `/governor` step 4
 already dispatched its athletes at: mechanical-with-verification, and every rep is verified by exit
-status before it pushes. `isolation: worktree` because step 5 does its own `git checkout -B`, and
+status before it pushes. `isolation: worktree` because step 5 checks out its own branch (`wt-start.sh` refuses the primary checkout), and
 without a fresh worktree per item concurrent reps share one working directory.
 
 **One item per coach, never per target** — this is the whole fence, and it is what makes the
@@ -112,9 +112,13 @@ it yourself; nothing substitutes them for you.
    Any entry with `blocking: true` → report `status: "blocked"` with
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).
-5. **Branch and set up.** `git checkout -B <prefix><slug> origin/main` (`<slug>` from the target's
-   basename, or the symbol's name for duplication), then `bash scripts/worktree-setup.sh`. A later tool exiting 127 means this step was
-   skipped or failed — read what it says rather than hand-rolling a `node_modules` workaround.
+5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug>` (`<slug>` from the target's
+   basename, or the symbol's name for duplication) — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md`
+   rail 2). A later tool exiting 127 means this step was skipped or failed — read what it says
+   rather than hand-rolling a `node_modules` workaround. The drill's own step 1 (branch and set
+   up) is this step — skip it in step 6.
 6. **Run the drill, following its own spec exactly.** Read `.claude/skills/<drill>/SKILL.md` and
    carry it out against the target, including its ratchet step. That file is the single copy of the
    loop — do not reconstruct it from this chore, and do not improvise past a guardrail it states.

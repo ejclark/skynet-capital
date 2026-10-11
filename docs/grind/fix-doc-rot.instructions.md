@@ -10,7 +10,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/fix-doc-rot.instructions.md`
-rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below does its own `git checkout -B`, and without a
+rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below checks out its own branch (`wt-start.sh` refuses the primary checkout), and without a
 fresh worktree per item concurrent items share one working directory and stomp on each other's
 checkout; `outcomeCheck` so a `done` is verified against origin rather than trusted.
 
@@ -31,8 +31,10 @@ reality — without guessing at intent beyond what the surrounding prose already
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B docs/fix-doc-rot-<slug> origin/main` (`<slug>` from
-   the doc's basename), then `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh docs/fix-doc-rot-<slug>` (`<slug>` from the doc's basename) — fetch,
+   branch off `origin/main`, `node_modules` and one status line, in one call. After it, one plain
+   command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
+   (`docs/DELEGATION.md` rail 2).
 2. `node scripts/doc-rot-scan.mjs` — confirm each reference listed in your item is still flagged
    for your doc. Fix only those; don't hunt for others.
 3. For each reference, open the doc at the flagged citation and decide which case applies:

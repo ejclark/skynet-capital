@@ -31,8 +31,9 @@ reader can tell which.
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B eyes/honest-<basename> origin/main`, then
-   `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh eyes/honest-<basename>` — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
 2. Read the whole script, then every `catch {` and every `if (!existsSync(...)) return` in it.
    For each site write down which case it is:
    - **(a) Optional input.** The check still means what it says without this input (a digest dir

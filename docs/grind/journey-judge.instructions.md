@@ -28,8 +28,9 @@ against the step's own judge line — and the grades are honest about the frame,
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B docs/journey-judge-<member> origin/main`, then
-   `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh docs/journey-judge-<member>` — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
 2. Read `docs/members/<member>.md` (the journeys, in prose) and `e2e/journeys/<member>.journey.json`
    (the same steps, with `judge` lines). Read the frames under
    `docs/shots/crawl-<date>/<member>/` — the date is the ledger's header — in journey order, phone
