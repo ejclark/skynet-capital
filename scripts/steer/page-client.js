@@ -24,7 +24,13 @@
 // PIN REACTIONS (#5143, pins-client.js) save in the decision's own record as `pins`, and MERGE one
 // key at a time (`update({ pins: { <id>: v } })`, a cleared one as null): the same page open on a
 // phone and a laptop reacts to different pins without one erasing the other. The first write of a
-// record that isn't in the store yet is the whole record (`set`), as every other answer is.
+// record that isn't in the store yet is the whole record (`set`), as every other answer is. A
+// note on a pin (`pinNotes`, the same keys) takes the same path, written on a pause like any note;
+// an emptied one is null.
+//
+// A TAP WHILE THE STORE CONNECTS (#5243) is held as the fields it changed, and once the store
+// answers those fields go onto the record it holds — never a blank copy plus the tap, which would
+// erase an earlier pick or note.
 (() => {
   const TP = JSON.parse(document.getElementById("tp-data").textContent);
   const ID = TP.id;
@@ -47,8 +53,13 @@
   let metaStored = false;
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
-  /** Pin ids this view has reacted to, by decision key: only these may overwrite stored pins. */
-  const touched = new Map();
+  /** A decision record's fields keyed by pin id, each merged one key at a time. */
+  const MAPS = ["pins", "pinNotes"];
+  /** Pin ids this view has reacted to or written on, by field and decision key: only these may
+   *  overwrite what the store holds there. */
+  const touched = { pins: new Map(), pinNotes: new Map() };
+  const touch = (field, key, id) =>
+    touched[field].set(key, (touched[field].get(key) ?? new Set()).add(id));
   let readOnly = false;
   /** The line shown in place of the count when the store can't be reached or read; locks the page. */
   let blocked = null;
@@ -56,7 +67,8 @@
   const UNREAD = "Couldn't read your saved answers — reload the page to try again";
   const locked = () => readOnly || blocked !== null;
   // Until the store answers, a tap is held here and written once it does — a tap in the first
-  // second would otherwise be lost, and the read-back would never see it.
+  // second would otherwise be lost, and the read-back would never see it. Held as the fields it
+  // changed (`sec/key` → field path → value), so it lands on the stored record (#5243).
   let connecting = true;
   const held = new Map();
 
@@ -108,13 +120,20 @@
   /** The read-back already shown (its time and summary), so a re-delivered snapshot repeats nothing. */
   let heardKey = null;
 
-  const blank = () => ({ pick: null, react: {}, verdict: null, note: "", pins: {} });
+  const blank = () => ({
+    pick: null,
+    react: {},
+    verdict: null,
+    note: "",
+    pins: {},
+    pinNotes: {},
+  });
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
     return state[sec][key];
   };
-  /** A reaction on a pin this page shows (pins-client.js `said`): a stored id the page no longer
-   *  shows, or a value it never offers, is not an answer. */
+  /** A reaction or a note on a pin this page shows (pins-client.js `said`): a stored id the page
+   *  no longer shows, or a value it never offers, is not an answer. */
   const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length);
   const answered = (r, key) =>
     Boolean(
@@ -126,8 +145,15 @@
           reacted(r, key)),
     );
   const count = () => TP.decisions.filter((d) => answered(state.decisions[d.key], d.key)).length;
-  /** A stored `pins` that isn't a plain object (a hand-edited record) reads as none. */
-  const pinsOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  /** A stored `pins` or `pinNotes` that isn't a plain object (a hand-edited record) reads as none. */
+  const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  /** A note as it is written: the text, or null for an empty one. */
+  const noteValue = (v) => (typeof v === "string" && v.trim() ? v : null);
+  /** One pin key's stored value: a reaction as it is, a note as noteValue; a cleared one is null. */
+  const keyValue = (field, v) => (field === "pinNotes" ? noteValue(v) : v || null);
+  /** The live entries of one keyed field, as a whole record writes them. */
+  const liveOf = (field, m) =>
+    Object.fromEntries(Object.entries(mapOf(m)).filter(([, v]) => keyValue(field, v)));
 
   /** Is this button's value the saved one? An option row reads its pick/react, else the verdict. */
   const pressed = (r, opt, v) => {
@@ -228,51 +254,84 @@
       react: r.react,
       verdict: r.verdict,
       note: r.note || "",
-      ...(sec === "decisions" ? { pins: r.pins || {} } : {}),
+      ...(sec === "decisions" ? Object.fromEntries(MAPS.map((f) => [f, liveOf(f, r[f])])) : {}),
       at: new Date().toISOString(),
     };
   }
-  function save(sec, key) {
-    if (connecting) {
-      const r = state[sec][key];
-      const copy = { ...r, react: { ...r.react }, pins: { ...r.pins } };
-      held.set(`${sec}/${key}`, { sec, key, rec: copy });
-      return status("Sending once your answers load");
+  /** One keyed field as the store has it, with this view's own keys laid over it. */
+  function mergeKeys(field, key, stored, mine) {
+    const merged = liveOf(field, stored);
+    for (const id of touched[field].get(key) ?? []) {
+      const v = keyValue(field, mine?.[id]);
+      if (v) merged[id] = v;
+      else delete merged[id];
     }
-    if (!db) return status("");
+    return merged;
+  }
+  /** Write one answer's whole record. */
+  function save(sec, key) {
     if (sec !== "decisions") return write(`tp/${ID}/${sec}/${key}`, body(sec, key));
-    // A whole decision record replaces what is stored, so it first takes the stored pins and
-    // keeps every one this view didn't touch: another view's reactions survive this view's tap.
+    // A whole decision record replaces what is stored, so it first takes the stored pins and pin
+    // notes and keeps every one this view didn't touch: another view's survive this view's tap.
     const path = `tp/${ID}/decisions/${key}`;
     chain(path, (ref) =>
       ref.get().then((snap) => {
-        const live = pinsOf(snap.exists && snap.data()?.pins);
+        const live = snap.exists ? snap.data() : null;
         const r = state.decisions[key];
-        const mine = touched.get(key) ?? new Set();
-        const pins = {};
-        for (const [id, v] of Object.entries(live)) if (v && !mine.has(id)) pins[id] = v;
-        for (const id of mine) if (r.pins?.[id]) pins[id] = r.pins[id];
-        r.pins = pins;
-        return landed(path, () => ref.set({ ...body("decisions", key), pins }))();
+        for (const f of MAPS) r[f] = mergeKeys(f, key, live?.[f], r[f]);
+        return landed(path, () => ref.set(body("decisions", key)))();
       }),
     );
   }
-  /** One pin's reaction, merged into its decision's record (null clears it); a record the store
-   *  doesn't hold yet is written whole. Held like any answer while the store is connecting. */
-  function savePin(key, id) {
-    if (connecting || !db) return save("decisions", key);
+  /** One pin's reaction or note, merged into its decision's record (null clears it); a record the
+   *  store doesn't hold yet is written whole. */
+  function saveKey(key, field, id) {
     const path = `tp/${ID}/decisions/${key}`;
-    const v = state.decisions[key]?.pins?.[id] || null;
+    const v = keyValue(field, state.decisions[key]?.[field]?.[id]);
     chain(path, (ref) => {
       const there = stored.has(path) ? Promise.resolve(true) : ref.get().then((s) => s.exists);
       return there.then((yes) =>
         landed(path, () =>
           yes
-            ? ref.update({ pins: { [id]: v }, at: new Date().toISOString() })
+            ? ref.update({ [field]: { [id]: v }, at: new Date().toISOString() })
             : ref.set(body("decisions", key)),
         )(),
       );
     });
+  }
+  /** A field path (`pick`, `react.A`, `pins.B:phone:1`) → [field, sub-key or undefined]. */
+  const split = (p) => {
+    const i = p.indexOf(".");
+    return i < 0 ? [p] : [p.slice(0, i), p.slice(i + 1)];
+  };
+  const read = (r, p) => {
+    const [f, k] = split(p);
+    return k === undefined ? r?.[f] : r?.[f]?.[k];
+  };
+  function put(r, p, v) {
+    const [f, k] = split(p);
+    if (k === undefined) r[f] = v;
+    else {
+      r[f] = { ...mapOf(r[f]) };
+      if (v == null) delete r[f][k];
+      else r[f][k] = v;
+    }
+  }
+  /** One answer changed at these field paths: written now — a pin's reaction or note as its one
+   *  key, anything else as the whole record — or held, as the values he left, while the store
+   *  connects. */
+  function commit(sec, key, paths) {
+    if (connecting) {
+      const k = `${sec}/${key}`;
+      const h = held.get(k) ?? { sec, key, at: new Map() };
+      for (const p of paths) h.at.set(p, read(state[sec][key], p));
+      held.set(k, h);
+      return status("Sending once your answers load");
+    }
+    if (!db) return status("");
+    const keyed = sec === "decisions" && paths.every((p) => MAPS.includes(split(p)[0]));
+    if (!keyed) return save(sec, key);
+    for (const p of paths) saveKey(key, ...split(p));
   }
   /** The page's own fields on `tp/<round>` — the only ones it ever writes there. */
   const metaBody = () => ({
@@ -313,12 +372,9 @@
     saveMeta(false);
   }
 
-  /** One press: an option row toggles its pick or its More/Not mark; any other row its verdict. */
-  function toggle(r, opt, v) {
-    if (!opt) {
-      r.verdict = r.verdict === v ? null : v;
-      return;
-    }
+  /** An option row's press: Build toggles the pick (and lifts a Not on it); More/Not toggles its
+   *  mark (and a Not drops the pick). */
+  function pressOption(r, opt, v) {
     if (v === "build") {
       r.pick = r.pick === opt ? null : opt;
       if (r.pick === opt && r.react[opt] === "not") delete r.react[opt];
@@ -327,6 +383,20 @@
     if (r.react[opt] === v) delete r.react[opt];
     else r.react[opt] = v;
     if (v === "not" && r.pick === opt) r.pick = null;
+  }
+  /** One press: an option row toggles its pick or its More/Not mark; any other row its verdict.
+   *  Returns the field paths it changed. */
+  function toggle(r, opt, v) {
+    if (!opt) {
+      r.verdict = r.verdict === v ? null : v;
+      return ["verdict"];
+    }
+    const was = { pick: r.pick, mark: r.react[opt] };
+    pressOption(r, opt, v);
+    const paths = [];
+    if (r.pick !== was.pick) paths.push("pick");
+    if (r.react[opt] !== was.mark) paths.push(`react.${opt}`);
+    return paths;
   }
   function runNote(k) {
     const go = pendingNotes.get(k);
@@ -451,26 +521,30 @@
     const b = ev.target.closest?.(".rb");
     if (!b || locked()) return;
     if (b === doneBtn) return done();
-    const row = b.closest(".react");
-    toggle(rec(row.dataset.sec, row.dataset.key), row.dataset.opt, b.dataset.v);
+    const { sec, key, opt } = b.closest(".react").dataset;
+    const paths = toggle(rec(sec, key), opt, b.dataset.v);
     tap();
     status("Saving");
-    save(row.dataset.sec, row.dataset.key);
+    commit(sec, key, paths);
   });
   reopenBtn.addEventListener("click", reopen);
-  document.addEventListener("input", (ev) => {
-    const t = ev.target;
-    if (t.dataset?.note === undefined || locked()) return;
-    const { sec, key } = t.dataset;
-    const k = `${sec}/${key}`;
-    rec(sec, key).note = t.value;
+  /** A note typed: saved on a pause (or by Done, or a pin's popover closing), never per key. */
+  function typed(sec, key, path) {
+    const k = `${sec}/${key}/${path}`;
     status("Typing");
     clearTimeout(timers[k]);
     pendingNotes.set(k, () => {
       tap();
-      save(sec, key);
+      commit(sec, key, [path]);
     });
     timers[k] = setTimeout(() => runNote(k), 900);
+  }
+  document.addEventListener("input", (ev) => {
+    const t = ev.target;
+    if (t.dataset?.note === undefined || locked()) return;
+    const { sec, key } = t.dataset;
+    rec(sec, key).note = t.value;
+    typed(sec, key, "note");
   });
 
   function decisionText(d) {
@@ -480,8 +554,10 @@
       Boolean,
     );
     for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
-    for (const [id, v] of pinsUi?.said(d.key, r) ?? []) bits.push(`pin ${id} ${v}`);
-    const note = (r.note || "").trim().replace(/\s+/g, " ");
+    const line = (s) => (s || "").trim().replace(/\s+/g, " ");
+    for (const [id, v, n] of pinsUi?.said(d.key, r) ?? [])
+      bits.push(["pin", id, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
+    const note = line(r.note);
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
   function text() {
@@ -520,13 +596,20 @@
     react(key, id, v) {
       const r = rec("decisions", key);
       r.pins = { ...r.pins };
-      touched.set(key, (touched.get(key) ?? new Set()).add(id));
+      touch("pins", key, id);
       if (r.pins[id] === v) delete r.pins[id];
       else r.pins[id] = v;
       tap();
       status("Saving");
-      savePin(key, id);
+      commit("decisions", key, [`pins.${id}`]);
     },
+    note(key, id, text) {
+      const r = rec("decisions", key);
+      r.pinNotes = { ...r.pinNotes, [id]: text };
+      touch("pinNotes", key, id);
+      typed("decisions", key, `pinNotes.${id}`);
+    },
+    flush: () => flushNotes(),
   });
 
   status("");
@@ -538,8 +621,9 @@
     react: v.react || {},
     verdict: v.verdict || null,
     note: v.note || "",
-    // A cleared reaction is stored as null (savePin); the page holds only the live ones.
-    pins: Object.fromEntries(Object.entries(pinsOf(v.pins)).filter(([, x]) => x)),
+    // A cleared reaction or note is stored as null (saveKey); the page holds only the live ones.
+    pins: liveOf("pins", v.pins),
+    pinNotes: liveOf("pinNotes", v.pinNotes),
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>
@@ -557,13 +641,20 @@
         () => false,
       );
 
-  /** The store has answered (or never will): taps held while it was connecting go out now, over
-   *  whatever the store held for the same answer — they are newer than anything it had. */
+  /** The store has answered: taps held while it was connecting go onto the record it holds — each
+   *  field he changed takes the value he left, newer than the store's; every other field stays as
+   *  stored (#5243). A view that can't write shows the store only. */
   function connected() {
     connecting = false;
-    for (const { sec, key, rec: r } of held.values()) {
-      state[sec][key] = r;
-      if (!readOnly) save(sec, key);
+    for (const { sec, key, at } of readOnly ? [] : held.values()) {
+      const r = rec(sec, key);
+      for (const [p, v] of at) put(r, p, v);
+      // A pick and a Not on one option can't both stand: the one he tapped while loading wins.
+      if (r.pick && r.react[r.pick] === "not") {
+        if (at.has("pick")) delete r.react[r.pick];
+        else r.pick = null;
+      }
+      if (at.size) commit(sec, key, [...at.keys()]);
     }
     held.clear();
   }

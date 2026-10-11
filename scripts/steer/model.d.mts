@@ -59,6 +59,8 @@ export interface Saved {
   note?: string;
   /** Pin reactions by `<option>:<phone|desk>:<n>`; a cleared one is null (#5143). */
   pins?: Record<string, string | null>;
+  /** His note on a pin, keyed like `pins`; an emptied one is null. */
+  pinNotes?: Record<string, string | null>;
   at?: string;
   [k: string]: unknown;
 }

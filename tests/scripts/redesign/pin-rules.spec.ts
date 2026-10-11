@@ -13,7 +13,7 @@ import {
   paletteProblems,
   readPins,
 } from "../../../scripts/redesign/pin-rules.mjs";
-import { pinProblems } from "../../../scripts/steer/pins.mjs";
+import { MAX_PIN_LABEL, pinProblems } from "../../../scripts/steer/pins.mjs";
 
 // #5143: pin.mjs refuses a frame that breaks Eric's standing rules — text he can read on a phone,
 // contrast a red/green colourblind reader can see, nothing cut off, badges that don't touch — and
@@ -154,6 +154,22 @@ describe("manifestPins", () => {
       { n: 2, x: 30, y: 40, label: "order line", side: "left" },
     ]);
     expect(pinProblems(out, "q1 option B pins")).toEqual([]);
+  });
+
+  // #5244: pin.mjs refused a label past 48 while the page and the lint allowed 60, so a label could
+  // pass one check and fail the other. Both read the one exported limit now.
+  it("holds a label to the same limit the page and the lint read", () => {
+    const at = (n: number) => ({ x: 10, y: 10, label: "x".repeat(n) });
+    expect(readPins({ pins: [at(MAX_PIN_LABEL)] }).problems).toEqual([]);
+    expect(pinProblems([{ n: 1, ...at(MAX_PIN_LABEL) }], "q1")).toEqual([]);
+    expect(readPins({ pins: [at(MAX_PIN_LABEL + 1)] }).problems).toEqual([
+      expect.stringMatching(
+        new RegExp(`: ${MAX_PIN_LABEL + 1} characters — .*≤${MAX_PIN_LABEL}\\)`),
+      ),
+    ]);
+    expect(pinProblems([{ n: 1, ...at(MAX_PIN_LABEL + 1) }], "q1")).toEqual([
+      `q1 pin 1: label is ${MAX_PIN_LABEL + 1} characters — keep it to ${MAX_PIN_LABEL}`,
+    ]);
   });
 
   it("is what `pin.mjs --emit-manifest-pins` prints, and it refuses a pins file it can't draw", () => {

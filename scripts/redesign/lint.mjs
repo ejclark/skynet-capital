@@ -6,7 +6,8 @@
 // number, what each question asks (`kind`: "design", the default, or "problems", which round 0
 // must set so a pick chooses the next round's problem and files no build), a phone and a desk
 // picture for today and every option that exist and are ≤200KB, any `pins` / `pinsDesk` held to the
-// page's rules (a number once per frame, x/y in %, a label ≤60 characters, the frame it sits on),
+// page's rules (a number once per frame, x/y in %, a label within MAX_PIN_LABEL — the one limit
+// pin.mjs draws to, steer/pins.mjs — the frame it sits on),
 // plain language (no designer jargon, no Title-Cased name the app's UI never says), and that
 // every quoted “…” in `saw` is
 // really there — in a file the manifest cites or in Eric's banked words. A model critic then

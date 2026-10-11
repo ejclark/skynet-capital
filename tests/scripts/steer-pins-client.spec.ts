@@ -1,8 +1,16 @@
-import { createRequire } from "node:module";
 import { describe, expect, it } from "@rstest/core";
-import { designDecisions, designRound } from "../../scripts/steer/design.mjs";
 import { MIXED } from "../../scripts/steer/pins.mjs";
-import { renderPage } from "../../scripts/steer/render.mjs";
+import {
+  type Docs,
+  open,
+  pageOf,
+  question,
+  REC,
+  ROUND,
+  roundOf,
+  settle,
+  type Win,
+} from "./steer-pins-harness";
 
 // #5143, Eric 2026-10-11: thumbs up / down and "mixed" on each pin of a round's pictures. The page
 // script opens three choices anchored to the pin, saves the reaction in the decision's own record
@@ -10,121 +18,6 @@ import { renderPage } from "../../scripts/steer/render.mjs";
 // every answer takes — merged in one key at a time, so two views never erase each other's pins —
 // counts it as an answer, and locks the pins wherever the store isn't. Mixed is ☯︎ (U+262F U+FE0E),
 // Eric's pick over ◐.
-
-type Win = Window & typeof globalThis & { claude?: unknown };
-const { JSDOM } = createRequire(import.meta.url)("jsdom") as {
-  JSDOM: new (
-    html: string,
-    opts: { runScripts: "dangerously"; beforeParse: (w: Win) => void },
-  ) => { window: Win };
-};
-
-const NOW = "2026-10-11T18:00:00Z";
-const pic = (k: string) => ({ phone: `${k}-phone.jpg`, desk: `${k}-desk.jpg` });
-const question = (over: Record<string, unknown> = {}) => ({
-  q: 1,
-  title: "What leads the trade form at phone width?",
-  rec: "B",
-  today: { ...pic("today"), source: "scripts/redesign/shoot.mjs", caption: "Today." },
-  options: [
-    { key: "A", name: "The chain first", delta: "Nothing moves.", ...pic("A") },
-    {
-      key: "B",
-      name: "The order sentence first",
-      delta: "The order sentence moves up.",
-      ...pic("B"),
-      pins: [
-        { n: 1, x: 50, y: 12, label: "range strip" },
-        { n: 2, x: 30, y: 40, label: "order line" },
-      ],
-    },
-  ],
-  ...over,
-});
-const roundOf = (q = question(), round = 1) =>
-  designRound({ 5150: designDecisions([q], { issue: 5150, round }) }, { now: NOW });
-const ROUND = roundOf();
-const REC = `tp/${ROUND.id}/decisions/5150-q1`;
-
-type Docs = Record<string, Record<string, unknown>>;
-/** `update` as db.d.ts defines it: nested objects merge recursively, anything else replaces. */
-function merge(into: Record<string, unknown>, body: Record<string, unknown>) {
-  const out: Record<string, unknown> = { ...into };
-  for (const [k, v] of Object.entries(body)) {
-    const was = out[k];
-    const both = [v, was].every((x) => x && typeof x === "object" && !Array.isArray(x));
-    out[k] = both ? merge(was as Record<string, unknown>, v as Record<string, unknown>) : v;
-  }
-  return out;
-}
-/** The store surface the page uses (db.d.ts): doc get / set / update / onSnapshot, collection get. */
-function memoryStore(docs: Docs, writes: string[] = []) {
-  const snap = (path: string) => ({ exists: path in docs, data: () => docs[path] });
-  return {
-    doc: (path: string) => ({
-      get: () => Promise.resolve(snap(path)),
-      set: (body: Record<string, unknown>) => {
-        writes.push(`set ${path}`);
-        docs[path] = JSON.parse(JSON.stringify(body));
-        return Promise.resolve();
-      },
-      update: (body: Record<string, unknown>) => {
-        writes.push(`update ${path}`);
-        if (!(path in docs)) return Promise.reject({ code: "invalid_argument" });
-        docs[path] = merge(docs[path] ?? {}, JSON.parse(JSON.stringify(body)));
-        return Promise.resolve();
-      },
-      onSnapshot: () => () => undefined,
-    }),
-    collection: (path: string) => ({
-      get: () =>
-        Promise.resolve({
-          docs: Object.entries(docs)
-            .filter(([p]) => p.startsWith(`${path}/`) && !p.slice(path.length + 1).includes("/"))
-            .map(([p, v]) => ({ id: p.slice(path.length + 1), data: () => v })),
-        }),
-    }),
-  };
-}
-const claudeWith = (docs: Docs, writes: string[] = []) => ({
-  use: (name: string) => Promise.resolve(name === "db" ? memoryStore(docs, writes) : null),
-});
-const settle = async () => {
-  for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 5));
-};
-
-async function open(
-  docs: Docs | null,
-  {
-    html = renderPage(ROUND, { img: (p) => ("src" in p ? p.src : null) }),
-    before = (_w: Win): void => undefined,
-    writes = [] as string[],
-  } = {},
-) {
-  const { window } = new JSDOM(html, {
-    runScripts: "dangerously",
-    beforeParse(w) {
-      if (docs) w.claude = claudeWith(docs, writes);
-      before(w);
-    },
-  });
-  await settle();
-  const doc = window.document;
-  const pin = (id: string) =>
-    doc.querySelector<HTMLButtonElement>(`.pin[data-pin="${id}"]`) as HTMLButtonElement;
-  const pop = () => doc.querySelector<HTMLElement>(".pinpop");
-  const choices = () => [...doc.querySelectorAll<HTMLButtonElement>(".pinpop .pc")];
-  const click = async (el: Element | null | undefined) => {
-    (el as HTMLElement).click();
-    await settle();
-  };
-  const choose = async (id: string, word: string) => {
-    await click(pin(id));
-    await click(choices().find((c) => c.textContent?.includes(word)));
-  };
-  const line = () => doc.getElementById("save-state")?.textContent ?? "";
-  return { window, doc, pin, pop, choices, click, choose, line };
-}
 
 describe("tapping a pin opens three choices anchored to it", () => {
   it("shows glyph and word for each, inside the pin's own picture, focus on the first", async () => {
@@ -172,10 +65,7 @@ describe("tapping a pin opens three choices anchored to it", () => {
 
   it("offers a problem's words on a round-0 page", async () => {
     const zero = roundOf(question({ kind: "problems" }), 0);
-    const v = await open(
-      {},
-      { html: renderPage(zero, { img: (p) => ("src" in p ? p.src : null) }) },
-    );
+    const v = await open({}, { html: pageOf(zero) });
     await v.click(v.pin("B:phone:1"));
     expect(v.choices().map((c) => c.textContent?.trim())).toEqual([
       "👍 Yes, a problem",

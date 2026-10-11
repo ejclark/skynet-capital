@@ -131,7 +131,10 @@ marks and notes on the issue and prints `nextRound`, the instruction round 1 is 
   desktop one. It is read as-is — one file, no second copy to keep in sync
   (`pin.mjs --pins <file> --emit-manifest-pins` prints the list the page will place, for inline
   use). The page puts a button on each badge: 👍 Keep · 👎 Change · ☯︎ Mixed (round 0: Yes, a
-  problem · Not a problem · Partly).
+  problem · Not a problem · Partly), with an optional note under them. A label is a few words:
+  ≤48 characters, the one limit `pin.mjs`, the page and `lint.mjs` share (`MAX_PIN_LABEL`).
+  Reactions and notes on pins a republished round no longer shows are ignored, by the page and
+  the read-back alike — renumber or drop a pin and its old answers stop counting (#5240).
 - **Critic pass before he sees anything:** `node scripts/redesign/lint.mjs <dir>/manifest.json`
   first — fields, pictures, jargon, invented names, and every quote of his checked against the
   files the manifest cites (`sources`) — then a critic judges only taste against *His standing
@@ -191,6 +194,10 @@ npm run steer:build -- <dir>/tp.json
   ☯︎ draw a closer look (variants of just that element). Round 0: yes, a problem · not a problem ·
   partly — still nothing filed. A pin he left alone is "no signal", never a default. On a Build
   pick, the build issue carries that option's pins.
+- **His pin notes** are quoted word for word on that pin's line, after its reaction or alone —
+  `Option B · pin 2 (range strip) — 👎 change — “<his note>”` — and the `nextRound` instruction
+  carries each one: apply his note on that spot. A note counts as an answer with or without a
+  reaction.
 - **A Build pick:** the read-back files it as a `feedback` + `ready` issue. **One build lane per
   surface** (`docs/DELEGATION.md` rail 7): before running its `create` command, look for an open
   build on the same route, shell file or page screenshots; if there is one, add `--blocked-by
@@ -279,6 +286,7 @@ Newest first. This is how a change to the loop reaches the sessions already runn
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
+- 2026-10-11 · **Pin notes: a note can sit beside any pin's 👍 / 👎 / ☯︎** (Eric: "i wish the thumbs up/down/mixed signal form/process also allowed for commentary to expand on context"). The read-back quotes it under that pin, and the next round applies it on that spot (#PRNUM). Nothing changes in your manifest.
 - 2026-10-11 · **This loop is the default for design work, and its changelog lives here** (Eric:
   "fwiw, i really like this style of iteration on designs and would prefer more of this as a
   permanent process that I can continue to refine"). Process changes land on main in this

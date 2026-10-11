@@ -8,6 +8,10 @@
 //
 // The palette is the app's own tokens (app/src/styles/theme.css): annotations wear the accent, as
 // the round-3 frames did, so the pin look matches what Eric has already judged.
+//
+// A label's limit is the round page's and the lint's own (steer/pins.mjs, #5244): one number, so
+// a label this draws is one the page accepts.
+import { MAX_PIN_LABEL as MAX_LABEL } from "../steer/pins.mjs";
 
 export const PALETTE = {
   dark: { bg: "#0b0f14", text: "#e6edf3", accent: "#35d0ba", onAccent: "#04302b" },
@@ -22,7 +26,6 @@ const PAIRS = [
 const SIDES = ["right", "left", "top", "bottom"];
 const MIN_FONT = 12;
 const MIN_GAP = 8;
-const MAX_LABEL = 48;
 
 const channel = (hex, i) => {
   const c = Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;

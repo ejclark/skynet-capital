@@ -12,6 +12,12 @@
 // merged in one key at a time; a cleared reaction is written as null. A pin he never touched is
 // "no signal" — listed as that, never given a default.
 //
+// A NOTE BESIDE THE REACTION (Eric, 2026-10-11: "i wish the thumbs up/down/mixed signal
+// form/process also allowed for commentary to expand on context"): `pinNotes`, keyed the same way,
+// up to MAX_PIN_NOTE characters, merged one key at a time; an emptied note is null. A note counts
+// with or without a reaction, is quoted word for word under its pin, and the next round applies it
+// on that spot. A reaction or a note on a pin the page no longer shows is ignored (#5240).
+//
 // GLYPH AND WORD TOGETHER: Eric is red/green colourblind, so every reaction is a shape and a word
 // (👍 Keep · 👎 Change · ☯︎ Mixed), never a colour. The mixed glyph is U+262F with U+FE0E, so it
 // draws as a text glyph, not a colour emoji (Eric, 2026-10-11, in place of ◐).
@@ -36,7 +42,11 @@ export const PIN_DO = {
   problems: { up: "yes, a problem", down: "not a problem", mixed: "partly" },
 };
 export const NO_SIGNAL = "no signal";
-export const MAX_PIN_LABEL = 60;
+/** The one label limit (#5244): pin.mjs draws to it (pin-rules.mjs), and the page and the lint
+ *  check it here — a label can't pass one and fail the other. A few words, beside a badge. */
+export const MAX_PIN_LABEL = 48;
+/** A pin's note: a sentence or two on that spot, not a second write-up. */
+export const MAX_PIN_NOTE = 280;
 /** The manifest fields a holder (an option, or Today) may carry, and the frame each sits on. */
 export const PIN_FIELDS = [
   ["pins", "phone"],
@@ -128,24 +138,40 @@ export function decisionPins(d) {
 
 export const hasPins = (d) => decisionPins(d).length > 0;
 
-/** Each pin with its saved reaction, or null for none. A value the page never offers is none. */
+const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+/** A pin's saved note, trimmed, or null: a cleared (null) or blank one is none. */
+const noteOf = (r, id) => {
+  const v = mapOf(r?.pinNotes)[id];
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+};
+
+/** Each pin with its saved reaction and note, each null for none. A value the page never offers
+ *  is none. */
 export function pinReactions(d, r) {
-  const saved = r?.pins ?? {};
+  const saved = mapOf(r?.pins);
   return decisionPins(d).map((p) => ({
     ...p,
     reaction: PIN_REACTIONS.includes(saved[p.id]) ? saved[p.id] : null,
+    note: noteOf(r, p.id),
   }));
 }
+/** Did he leave anything on this pin — a reaction, a note, or both? */
+export const pinSaid = (p) => Boolean(p.reaction || p.note);
 
 const where = (p) =>
   `${p.option === "today" ? "Today" : `Option ${p.option}`}${p.frame === "desk" ? ", desktop" : ""} · pin ${p.n}`;
 
-/** One read-back line: `Option B · pin 2 (range strip) — 👍 keep`, or `— no signal`. */
+/** His note in a list item, word for word: a later line is indented, so it stays in the item. */
+const inline = (note) => `“${note.split("\n").join("\n  ")}”`;
+
+/** One read-back line: `Option B · pin 2 (range strip) — 👍 keep — “<his note>”`, the note alone
+ *  when he only wrote, or `— no signal`. */
 export function pinLine(d, p) {
-  const said = p.reaction
-    ? `${PIN_GLYPH[p.reaction]} ${PIN_WORDS[kindOf(d)][p.reaction].toLowerCase()}`
-    : NO_SIGNAL;
-  return `- ${where(p)} (${p.label}) — ${said}`;
+  const said = [
+    p.reaction ? `${PIN_GLYPH[p.reaction]} ${PIN_WORDS[kindOf(d)][p.reaction].toLowerCase()}` : "",
+    p.note ? inline(p.note) : "",
+  ].filter(Boolean);
+  return `- ${where(p)} (${p.label}) — ${said.length ? said.join(" — ") : NO_SIGNAL}`;
 }
 
 /** The "Per pin" list a decision's issue comment carries ("" when it shows no pins). `option`
@@ -155,15 +181,25 @@ export function perPinBlock(d, r, { option } = {}) {
   return all.length ? ["Per pin:", ...all.map((p) => pinLine(d, p))].join("\n") : "";
 }
 
-/** The pins he reacted to, as next-round clauses, the rest named as no signal; "" for none. */
+/** What the next round does on one pin: its reaction's instruction, then his note on that spot. */
+function pinTodo(d, p) {
+  return [
+    p.reaction ? PIN_DO[kindOf(d)][p.reaction] : "",
+    p.note ? `apply his note on that spot: “${p.note}”` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+/** The pins he reacted to or wrote on, as next-round clauses, the rest named as no signal; ""
+ *  for none. */
 export function pinClauses(d, r) {
   const all = pinReactions(d, r);
-  const said = all.filter((p) => p.reaction);
+  const said = all.filter(pinSaid);
   if (!said.length) return "";
-  const todo = PIN_DO[kindOf(d)];
-  const none = all.filter((p) => !p.reaction);
+  const none = all.filter((p) => !pinSaid(p));
   return [
-    ...said.map((p) => `${where(p)} (${p.label}): ${todo[p.reaction]}.`),
+    ...said.map((p) => `${where(p)} (${p.label}): ${pinTodo(d, p)}.`),
     none.length
       ? `No signal, so no default: ${none.map((p) => `${where(p)} (${p.label})`).join(", ")}.`
       : "",
@@ -181,11 +217,13 @@ export const PIN_INTRO = {
 };
 export const pinIntro = (d) => PIN_INTRO[kindOf(d)];
 
-/** What the page script needs to draw the popover: the glyphs, and the words for each kind. */
-export const PIN_CLIENT = { glyph: PIN_GLYPH, words: PIN_WORDS };
+/** What the page script needs to draw the popover: the glyphs, the words for each kind, and how
+ *  long a note may be. */
+export const PIN_CLIENT = { glyph: PIN_GLYPH, words: PIN_WORDS, noteMax: MAX_PIN_NOTE };
 
 /** A picture with pins: the frame, then a button on each badge, placed by % so it tracks the
- *  scaled image. The popover is the page script's, one at a time, set after the pin tapped. */
+ *  scaled image; its ✎ shows once the pin has a note. The popover is the page script's, one at a
+ *  time, set after the pin tapped. */
 export function pinnedShot(pic, src, { key, option }) {
   const pins = [...pic.pins]
     .sort((a, b) => a.n - b.n)
@@ -194,7 +232,8 @@ export function pinnedShot(pic, src, { key, option }) {
         `<button type="button" class="pin" data-pin="${e(pinId(option, pic.size, p.n))}" ` +
         `data-name="${e(`Pin ${p.n}: ${p.label}`)}" style="left:${p.x}%;top:${p.y}%" ` +
         `aria-label="${e(`Pin ${p.n}: ${p.label}`)}" aria-haspopup="true" aria-expanded="false">` +
-        `<span class="pg" aria-hidden="true"></span><span class="pn" aria-hidden="true">${p.n}</span></button>`,
+        `<span class="pg" aria-hidden="true"></span><span class="pn" aria-hidden="true">${p.n}</span>` +
+        `<span class="pk" aria-hidden="true">✎</span></button>`,
     )
     .join("");
   const size = pic.size === "phone" ? "phone" : "desk";

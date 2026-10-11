@@ -28,9 +28,16 @@ export const PIN_WORDS: {
 export const PIN_DO: { design: Record<PinReaction, string>; problems: Record<PinReaction, string> };
 export const NO_SIGNAL: string;
 export const MAX_PIN_LABEL: number;
+export const MAX_PIN_NOTE: number;
 export const PIN_FIELDS: [string, "phone" | "desk"][];
 export const PIN_INTRO: { design: string; problems: string };
-export const PIN_CLIENT: { glyph: Record<PinReaction, string>; words: typeof PIN_WORDS };
+export const PIN_CLIENT: {
+  glyph: Record<PinReaction, string>;
+  words: typeof PIN_WORDS;
+  noteMax: number;
+};
+/** A pin as the read-back has it: its saved reaction and its note, each null for none. */
+export type SaidPin = ShownPin & { reaction: PinReaction | null; note: string | null };
 
 export function pinId(option: string, frame: string, n: number): string;
 export function pinProblems(list: unknown, where: string): string[];
@@ -45,14 +52,9 @@ export function holderPins(
 ): { byFrame: { phone?: Pin[]; desk?: Pin[] }; problems: string[] };
 export function decisionPins(d: Partial<Decision>): ShownPin[];
 export function hasPins(d: Partial<Decision>): boolean;
-export function pinReactions(
-  d: Partial<Decision>,
-  r: Saved | null | undefined,
-): (ShownPin & { reaction: PinReaction | null })[];
-export function pinLine(
-  d: Partial<Decision>,
-  p: ShownPin & { reaction: PinReaction | null },
-): string;
+export function pinReactions(d: Partial<Decision>, r: Saved | null | undefined): SaidPin[];
+export function pinSaid(p: SaidPin): boolean;
+export function pinLine(d: Partial<Decision>, p: SaidPin): string;
 export function perPinBlock(
   d: Partial<Decision>,
   r: Saved | null | undefined,

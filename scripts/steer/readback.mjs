@@ -38,6 +38,10 @@
 //     no Build pick they become the next round's instructions (`nextRound`): 👍 keep as drawn,
 //     👎 replace with a new direction, ☯︎ draw a closer look; on round 0, yes / not / partly a
 //     problem, and still nothing is filed. A Build pick's issue carries its own option's pins.
+//   - A note on a pin (`pinNotes`; Eric, 2026-10-11: "allowed for commentary to expand on
+//     context") is quoted word for word on that pin's line, after its reaction or alone, and the
+//     next round's instruction carries it: "apply his note on that spot". A note counts as an
+//     answer with or without a reaction; one on a pin the page no longer shows is ignored.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";

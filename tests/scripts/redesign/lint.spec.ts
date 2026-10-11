@@ -11,6 +11,7 @@ import {
   splitQuotes,
   titleRuns,
 } from "../../../scripts/redesign/lint-rules.mjs";
+import { MAX_PIN_LABEL } from "../../../scripts/steer/pins.mjs";
 
 // #5143: the mechanical half of the critic pass. A model critic then judges taste only — so this
 // must catch what a script can: missing or heavy pictures, designer jargon, a name the app never
@@ -170,12 +171,13 @@ describe("pins on a picture", () => {
   it("names a repeated number, a spot off the frame, a long label and a missing file", () => {
     const bad = [
       { n: 1, x: 50, y: 12, label: "range strip" },
-      { n: 1, x: 130, y: 40, label: "a".repeat(61) },
+      { n: 1, x: 130, y: 40, label: "a".repeat(MAX_PIN_LABEL + 1) },
     ];
+    const long = `q1 option B pins pin 1 ("${"a".repeat(MAX_PIN_LABEL + 1)}")`;
     expect(lintDesign(manifest(withPins({ pins: bad })), env)).toEqual([
-      'q1 option B pins pin 1 ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"): number 1 is used twice',
-      'q1 option B pins pin 1 ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"): x and y are % of the frame, 0–100',
-      "q1 option B pins pin 1: label is 61 characters — keep it to 60",
+      `${long}: number 1 is used twice`,
+      `${long}: x and y are % of the frame, 0–100`,
+      `q1 option B pins pin 1: label is ${MAX_PIN_LABEL + 1} characters — keep it to ${MAX_PIN_LABEL}`,
     ]);
     expect(lintDesign(manifest(withPins({ pins: "pins/gone.json" })), pinsEnv)).toEqual([
       "q1 option B: pins file pins/gone.json isn't there or isn't JSON",

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "@rstest/core";
 import { designDecisions, designRound, loadDesign } from "../../scripts/steer/design.mjs";
 import { isAnswered } from "../../scripts/steer/model.mjs";
-import { MIXED, PIN_INTRO } from "../../scripts/steer/pins.mjs";
+import { MAX_PIN_LABEL, MAX_PIN_NOTE, MIXED, PIN_INTRO } from "../../scripts/steer/pins.mjs";
 import { readback } from "../../scripts/steer/readback.mjs";
 import { renderPage } from "../../scripts/steer/render.mjs";
 
@@ -93,13 +93,19 @@ describe("a manifest option carries the pins its frame was drawn with", () => {
           name: "B",
           delta: "y",
           ...pic("b"),
-          pins: [pin(2, 50, 12, "range strip"), pin(2, 101, 4, "x".repeat(61))],
+          pins: [pin(2, 50, 12, "range strip"), pin(2, 101, 4, "x".repeat(MAX_PIN_LABEL + 1))],
         },
         { key: "A", name: "A", delta: "x", ...pic("a") },
       ],
     });
     expect(() => decisions(q)).toThrow(
-      /q1 option B pins pin 2 \("x+"\): number 2 is used twice\nq1 option B pins pin 2 \("x+"\): x and y are % of the frame, 0–100\nq1 option B pins pin 2: label is 61 characters — keep it to 60/,
+      new RegExp(
+        [
+          'q1 option B pins pin 2 \\("x+"\\): number 2 is used twice',
+          'q1 option B pins pin 2 \\("x+"\\): x and y are % of the frame, 0–100',
+          `q1 option B pins pin 2: label is ${MAX_PIN_LABEL + 1} characters — keep it to ${MAX_PIN_LABEL}`,
+        ].join("\n"),
+      ),
     );
   });
 
@@ -157,6 +163,7 @@ describe("each pin on the page is a button on its badge", () => {
         design: { up: "Keep", down: "Change", mixed: "Mixed" },
         problems: { up: "Yes, a problem", down: "Not a problem", mixed: "Partly" },
       },
+      noteMax: MAX_PIN_NOTE,
     });
     expect(MIXED).toBe("\u262F\uFE0E");
   });
