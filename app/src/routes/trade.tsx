@@ -441,6 +441,7 @@ function Pane({
         onPick={props.onChainPick}
         markedStrikes={props.markedStrikes}
         onSymbolCommit={ask}
+        openAtPrice={!docked}
       />
     );
   }
