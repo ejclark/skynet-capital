@@ -7,6 +7,7 @@ import {
 } from "./companion";
 import { marketIsOpen } from "./market-hours";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import { plainLine } from "./moneypenny-links";
 import {
   answerFailed,
   DRAFT_DROPPED,
@@ -48,9 +49,12 @@ export interface MpMessage {
  *  member wipes it with a fresh conversation (NN/g's baseline chatbot guideline: chat content
  *  should be savable, not only discardable). Her own lines and system lines already carry their
  *  speaker inline ("Moneypenny · ", "sauron·ops · "); only a member's own line needs one added, so
- *  a pasted transcript reads the same as the rail itself, never doubled. */
+ *  a pasted transcript reads the same as the rail itself, never doubled. Her links paste as the
+ *  words she linked (`[open Trade](/trade)` → "open Trade"), the way the rail shows them. */
 export function formatTranscript(messages: readonly MpMessage[]): string {
-  return messages.map((m) => (m.role === "user" ? `You: ${m.text}` : m.text)).join("\n\n");
+  return messages
+    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainLine(m.text)))
+    .join("\n\n");
 }
 
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));

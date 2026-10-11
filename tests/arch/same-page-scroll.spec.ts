@@ -56,6 +56,9 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/money-strip.tsx": [
     ['chapter: "playbooks" as const', "Overview's door into Milestones, a section switch"],
   ],
+  "app/src/shell/moneypenny-rail.tsx": [
+    ["{ href: path }", "a place Moneypenny names on another page (#5238); same-page keeps it"],
+  ],
   // No Leaderboard entries: its compare toggles keep the scroll and move the view to the result
   // themselves, never to the top (#5057, Eric's pick on #5037 question 8). "The view follows the
   // result" — docs/PATTERNS.md.
