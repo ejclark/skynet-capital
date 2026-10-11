@@ -14,6 +14,12 @@ import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
  * window (broker unreachable, account too new) is honestly excluded and the window marked `partial`
  * rather than silently shrinking the denominator — the same honesty the desk's "needs a closed trade"
  * seams use.
+ *
+ * A window reaching back past the account's first day is not a record of that window (#5211): with
+ * history starting 9/8, Alpaca answers 1M, 3M and 1Y with the same since-day-one return, and three
+ * matching figures read as a year's track record. So the first such window is relabeled "Since
+ * 9/8" (and loses its S&P comparison, which was measured over the full window), and the longer
+ * ones behind it are dropped — `clipToHistory` below.
  */
 
 export type Tone = "pos" | "neg" | "flat";
@@ -60,6 +66,9 @@ export interface AccountNetWorthInput {
   readonly unrealizedPl?: number;
   /** Highest daily-close equity in the account's whole history (#3689), with its date. */
   readonly allTimeHigh?: { readonly value: number; readonly at: string };
+  /** The first day the account held money (ISO) — where its record begins (#5211). Omitted when
+   *  the full-history read failed, and then no window is clipped. */
+  readonly historyStart?: string;
 }
 
 /** SPY's return per window (`benchmark-returns.ts`); a window it doesn't cover is absent. */
@@ -191,6 +200,55 @@ function windowView(
   };
 }
 
+/** The first day (`YYYY-MM-DD`, UTC) a window reaches back to from `now`. */
+function windowStartDay(key: NetWorthWindowKey, now: Date): string {
+  const d = new Date(now.getTime());
+  if (key === "7D") d.setUTCDate(d.getUTCDate() - 7);
+  else d.setUTCMonth(d.getUTCMonth() - (key === "1M" ? 1 : key === "3M" ? 3 : 12));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Hold each window to the record that exists (#5211). `starts` are the first days of the accounts
+ * behind these windows — one for an account, every live one for the book. The first window that
+ * reaches past EVERY start becomes "Since <earliest>" with no S&P comparison, and the windows
+ * after it are dropped; a window reaching past only SOME starts (a younger account in the book) is
+ * marked `partial`. Unknown starts or an unreadable clock leave the windows as they were.
+ */
+function clipToHistory(
+  windows: readonly NetWorthWindowView[],
+  generatedAt: string | undefined,
+  starts: readonly (string | undefined)[],
+): readonly NetWorthWindowView[] {
+  const now = new Date(generatedAt ?? "");
+  const days = starts.map((s) => (s ? s.slice(0, 10) : undefined));
+  if (Number.isNaN(now.getTime()) || days.length === 0 || days.some((d) => !d)) return windows;
+  const sorted = (days as string[]).slice().sort();
+  const earliest = sorted[0] as string;
+  const latest = sorted[sorted.length - 1] as string;
+  const out: NetWorthWindowView[] = [];
+  for (const [i, w] of windows.entries()) {
+    const key = NET_WORTH_WINDOWS[i]?.key;
+    const from = key ? windowStartDay(key, now) : undefined;
+    if (from === undefined || from >= latest) {
+      out.push(w);
+    } else if (from >= earliest) {
+      out.push({ ...w, partial: true });
+    } else {
+      const { vsBenchmark: _vs, vsBenchmarkTone: _tone, ...rest } = w;
+      const day = monthDay(`${earliest}T00:00:00Z`);
+      out.push({
+        ...rest,
+        label: `Since ${day}`,
+        note: `the whole record, from ${day}`,
+        ...(earliest !== latest ? { partial: true } : {}),
+      });
+      break;
+    }
+  }
+  return out;
+}
+
 /** "9/19" in UTC — the day a high was set. */
 function monthDay(iso: string): string {
   const d = new Date(iso);
@@ -244,6 +302,7 @@ export function netWorthStatsView(input: {
   readonly windows: Record<NetWorthWindowKey, NetWorthWindowInput>;
   readonly benchmark?: BenchmarkInput;
   readonly generatedAt?: string;
+  readonly historyStart?: string;
 }): NetWorthStatsView {
   const valueKnown = typeof input.equity === "number";
   const cashKnown = typeof input.cash === "number";
@@ -269,8 +328,12 @@ export function netWorthStatsView(input: {
     onPaper: onPaperKnown ? formatSigned(input.unrealizedPl as number) : "—",
     onPaperTone: onPaperKnown ? plClass(input.unrealizedPl as number) : "flat",
     onPaperKnown,
-    windows: NET_WORTH_WINDOWS.map((w) =>
-      windowView(input.windows[w.key], w.label, w.note, input.benchmark?.[w.key]),
+    windows: clipToHistory(
+      NET_WORTH_WINDOWS.map((w) =>
+        windowView(input.windows[w.key], w.label, w.note, input.benchmark?.[w.key]),
+      ),
+      input.generatedAt,
+      [input.historyStart],
     ),
     ...highView(input.equity, input.allTimeHigh, input.generatedAt ?? ""),
     ...idleView(input.equity, input.cash),
@@ -282,6 +345,7 @@ export function netWorthStatsView(input: {
 function aggregateStats(
   live: readonly AccountNetWorthInput[],
   benchmark: BenchmarkInput,
+  generatedAt: string,
 ): NetWorthStatsView {
   const totalEquity = live.reduce((sum, a) => sum + (a.equity ?? 0), 0);
   const totalCash = live.reduce((sum, a) => sum + (a.cash ?? 0), 0);
@@ -339,7 +403,11 @@ function aggregateStats(
     onPaper: onPaperKnown ? formatSigned(totalOnPaper) : "—",
     onPaperTone: onPaperKnown ? plClass(totalOnPaper) : "flat",
     onPaperKnown,
-    windows,
+    windows: clipToHistory(
+      windows,
+      generatedAt,
+      live.map((a) => a.historyStart),
+    ),
     ...idleView(totalEquity, totalCash),
   };
 }
@@ -373,6 +441,6 @@ export function accountsNetWorthView(
   return {
     generatedAt,
     accounts,
-    total: live.length === 0 ? null : aggregateStats(live, benchmark),
+    total: live.length === 0 ? null : aggregateStats(live, benchmark, generatedAt),
   };
 }
