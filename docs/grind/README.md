@@ -335,7 +335,8 @@ already printing is the free checkpoint, not a new one.
   whose checkout is behind dispatches agents against a stale chore. The first `fix-doc-rot` run
   did exactly that: the `docs/IDEAS.md` item read the pre-#1323 two-case file and `blocked` on
   reasoning the third case ("an idea, not a citation") had already codified. Sync first —
-  `git fetch origin main && git rebase origin/main` (or `checkout -B … origin/main`) — then launch.
+  `git fetch origin main`, then `git merge origin/main`, as two plain calls (the worktree guard
+  refuses a `&&` chain, `docs/DELEGATION.md` rail 2) — then launch.
 - **Inside a worktree, local `main` is stale — only `origin/main` is ever fetched.** One agent
   ran `git checkout main -- .`, staged ~100 files from a far-behind local `main`, and reverted
   before anything was committed or pushed; the outcome check would have caught a push, but the
