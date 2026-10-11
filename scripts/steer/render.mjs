@@ -33,14 +33,16 @@ function optionsHtml(d, img) {
         `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p></div></article>`,
     );
   }
+  const verbs = VERBS[d.problems ? "problems" : d.kind === "design" ? "design" : "fork"];
+  const said = d.problems ? "The problem:" : "Changes:";
   for (const o of d.options) {
     const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
     const pics =
       d.kind === "design" ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue)}</div>` : "";
-    const delta = o.delta ? `<p class="delta"><b>Changes:</b> ${e(o.delta)}</p>` : "";
+    const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
     rows.push(
       `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
-        `${delta}${d.irreversible ? "" : buttons(VERBS[d.kind === "design" ? "design" : "fork"], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`,
+        `${delta}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key })}</div></article>`,
     );
   }
   return rows.length ? `<div class="opts">${rows.join("")}</div>` : "";
@@ -57,6 +59,9 @@ function controls(d) {
     d.kind === "approve" ? VERBS.approve : d.recommendation ? VERBS.forkRec : VERBS.forkWhole;
   return buttons(set, { sec: "decisions", key: d.key });
 }
+
+/** What a decision asks, as the page names it: its kind, or "problems" for a round-0 question. */
+const asks = (d) => (d.problems ? "problems" : d.kind);
 
 function decisionHtml(d, i, total, img) {
   const rec = d.recommendation;
@@ -76,7 +81,7 @@ function decisionHtml(d, i, total, img) {
   const age = d.ageDays != null ? ` · waiting ${plural(d.ageDays, "day")}` : "";
   return (
     `<section class="dec" id="d-${e(d.key)}" data-kind="${d.kind}">` +
-    `<div class="dhead"><p class="eyebrow">Decision ${i + 1} of ${total} · ${d.kind} · about ${d.minutes} min · ` +
+    `<div class="dhead"><p class="eyebrow">Decision ${i + 1} of ${total} · ${asks(d)} · about ${d.minutes} min · ` +
     `<a href="${e(d.link)}" ${ext}>#${d.issue}</a>${d.cls ? ` · ${e(d.cls)}` : ""}${age}</p>` +
     `<h3>${e(d.title)}</h3>${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
@@ -109,7 +114,7 @@ function headerHtml(tp) {
   const toc = tp.decisions
     .map(
       (d) =>
-        `<li><a href="#d-${e(d.key)}">${e(d.title)}</a> <span class="meta">${d.kind} · ${d.minutes} min</span></li>`,
+        `<li><a href="#d-${e(d.key)}">${e(d.title)}</a> <span class="meta">${asks(d)} · ${d.minutes} min</span></li>`,
     )
     .join("");
   const rolled = tp.deferred.length
@@ -138,10 +143,17 @@ function headerHtml(tp) {
   );
 }
 
-/** How a round page asks (docs/process/REDESIGN.md): his pinned comments lead, the taps follow. */
-export const ROUND_INTRO =
-  "Pin a comment on the spot a shape should change; your comments lead and the buttons follow. " +
-  "Mark More of this on the one closest to right, or Build this when it is ready to build.";
+/** How a round page asks (docs/process/REDESIGN.md): his pinned comments lead, the taps follow.
+ *  Keyed like VERBS: a round of shapes, or round 0's problems, where a pick builds nothing. */
+export const ROUND_INTRO = {
+  design:
+    "Pin a comment on the spot a shape should change; your comments lead and the buttons follow. " +
+    "Mark More of this on the one closest to right, or Build this when it is ready to build.",
+  problems:
+    "Pin a comment on the spot a problem shows; your comments lead and the buttons follow. " +
+    "Mark Fix this first on one problem: a pick chooses what the next round draws, and nothing " +
+    "is built from it.",
+};
 
 /** A design round's own page (#5143): the round, its issue, the question count — nothing else. */
 function roundHeaderHtml(tp) {
@@ -150,6 +162,8 @@ function roundHeaderHtml(tp) {
     .map((x) => `<a href="https://github.com/${e(tp.repo)}/issues/${x}" ${ext}>#${x}</a>`)
     .join(" · ");
   const round = tp.round != null ? `Design round ${e(tp.round)}` : "Design round";
+  // One page asks one kind (design.mjs `designRound` refuses a mix), so its first decision says.
+  const intro = ROUND_INTRO[tp.decisions[0]?.problems ? "problems" : "design"];
   const date = tp.generatedAt ? ` · ${e(DAY.format(new Date(tp.generatedAt)))}` : "";
   const drawn = tp.needsPictures ?? [];
   const drawing = drawn.length
@@ -162,7 +176,7 @@ function roundHeaderHtml(tp) {
   return (
     `<header class="top"><p class="eyebrow">${round} · ${issues}${date}</p>` +
     `<h1>${n ? `${plural(n, "decision")}, about ${tp.budget.used} minutes` : "Nothing to answer yet"}</h1>` +
-    (n ? `<p class="lede" id="intro">${ROUND_INTRO} ${COMMENTS_COUNT}</p>` : "") +
+    (n ? `<p class="lede" id="intro">${intro} ${COMMENTS_COUNT}</p>` : "") +
     toc +
     drawing +
     `</header>`
@@ -187,6 +201,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     decisions: tp.decisions.map((d) => ({
       key: d.key,
       kind: d.kind,
+      ...(d.problems ? { problems: true } : {}),
       issue: d.issue,
       title: d.title,
     })),

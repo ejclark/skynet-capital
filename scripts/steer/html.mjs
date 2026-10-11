@@ -9,6 +9,14 @@ export const VERBS = {
     ["more", "More of this"],
     ["not", "Not this"],
   ],
+  // Round 0 (docs/process/REDESIGN.md): each option is a problem pinned on today, and the one pick
+  // chooses what the next round draws — nothing is built from it. The values stay the design set's,
+  // so a press keeps its glyph (page.css) and the page script its one-pick rule.
+  problems: [
+    ["build", "Fix this first"],
+    ["more", "Look closer"],
+    ["not", "Not a problem"],
+  ],
   fork: [
     ["build", "Pick this"],
     ["more", "More on this"],

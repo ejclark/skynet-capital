@@ -110,6 +110,39 @@ describe("lintDesign", () => {
   });
 });
 
+// The redesign commons, 2026-10-11: round 0 picks a problem, not a shape. Its questions carry
+// `kind: "problems"`, so the page asks "Fix this first" and the read-back files nothing.
+describe("round 0 asks which problem to fix first", () => {
+  const problems = (over: Record<string, unknown> = {}) => question({ kind: "problems", ...over });
+  const round0 = (q = problems()) => ({ issue: 5150, round: 0, questions: [q] });
+
+  it('passes a round-0 question that sets kind "problems", and a later round that asks one', () => {
+    expect(lintDesign(round0(), env)).toEqual([]);
+    expect(lintDesign(manifest(problems()), env)).toEqual([]);
+  });
+
+  it("names a round-0 question that would ask for a build, and a kind it doesn't know", () => {
+    expect(lintDesign(round0(question()), env)).toEqual([
+      'q1: round 0 picks a problem — set "kind": "problems" so a pick files no build',
+    ]);
+    expect(lintDesign(manifest(question({ kind: "problem" })), env)).toEqual([
+      'q1: "kind" is "design" (the default) or "problems", not "problem"',
+    ]);
+  });
+
+  it("asks a problem for its words, not for what it changes", () => {
+    const [a, b] = question().options;
+    const q = problems({ options: [{ ...a, delta: "" }, b] });
+    expect(lintDesign(round0(q), env)).toEqual([
+      'q1 option A: needs "delta" — the problem, in a few words',
+    ]);
+  });
+
+  it("lets copy name the page's own buttons", () => {
+    expect(copyProblems("q1 ask", "Mark Fix this first, or Look closer.", ui)).toEqual([]);
+  });
+});
+
 describe("plain language", () => {
   it("bans designer jargon outside quotes, and leaves his own words alone", () => {
     expect(

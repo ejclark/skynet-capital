@@ -73,8 +73,8 @@ export interface DesignRoundData {
 export const TITLE: string;
 /** The page's intro line, telling Eric his comments sent to Claude are read back too. */
 export const COMMENTS_COUNT: string;
-/** A round page's intro: his pinned comments lead, the buttons follow. */
-export const ROUND_INTRO: string;
+/** A round page's intro, by what it asks: his pinned comments lead, the buttons follow. */
+export const ROUND_INTRO: { design: string; problems: string };
 export function renderPage(
   tp: TouchPointData | DesignRoundData,
   opts?: { img?: (pic: Picture | { local?: string | null }) => string | null },
