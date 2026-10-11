@@ -309,6 +309,50 @@ describe("a choice saves in the decision's own record and counts as an answer", 
   });
 });
 
+// A round republished with fewer or renumbered pins keeps the same records, so a record can hold a
+// reaction on a pin the page no longer shows. The bar counts — and Copy as text carries — only the
+// pins this page shows, with a value it offers: anything else is ignored, never a crash.
+describe("only the pins this page shows count", () => {
+  const copied = async (docs: Docs) => {
+    const written: string[] = [];
+    const v = await open(docs, {
+      before: (w) =>
+        Object.defineProperty(w.navigator, "clipboard", {
+          value: { writeText: (t: string) => Promise.resolve(written.push(t)) },
+        }),
+    });
+    await v.click(v.doc.getElementById("copy"));
+    return { v, text: written[0] ?? "" };
+  };
+
+  it("doesn't count or copy a reaction on a pin the republished page no longer shows", async () => {
+    const { v, text } = await copied({
+      [REC]: { pins: { "B:phone:9": "up", "C:desk:1": "down" } },
+    });
+    expect(v.line()).toMatch(/0 of 1 answered$/);
+    expect(v.doc.querySelectorAll(".pin[data-r]")).toHaveLength(0);
+    expect(text).toContain("#5150 What leads the trade form at phone width?: —");
+    expect(text).not.toContain("B:phone:9");
+  });
+
+  it("doesn't count a value the page never offers, and the next tap still saves", async () => {
+    const docs: Docs = { [REC]: { pins: { "B:phone:1": "meh", "B:phone:2": 7 } } };
+    const v = await open(docs);
+    expect(v.line()).toMatch(/0 of 1 answered$/);
+    await v.choose("B:phone:2", "Keep");
+    expect(v.line()).toMatch(/1 of 1 answered$/);
+    expect(docs[REC]?.pins).toEqual({ "B:phone:1": "meh", "B:phone:2": "up" });
+  });
+
+  it("reads a stored pins that isn't an object as none, and never writes it back in pieces", async () => {
+    const docs: Docs = { [REC]: { pick: null, react: {}, note: "", pins: "up" } };
+    const v = await open(docs);
+    expect(v.line()).toMatch(/0 of 1 answered$/);
+    await v.click(v.doc.querySelector('.react[data-opt="A"] .rb[data-v="more"]'));
+    expect(docs[REC]).toMatchObject({ react: { A: "more" }, pins: {} });
+  });
+});
+
 describe("the pins lock wherever the store isn't", () => {
   it("disables every pin in a view with no store, and opens nothing", async () => {
     const v = await open(null);

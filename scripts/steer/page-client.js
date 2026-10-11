@@ -113,17 +113,21 @@
     state[sec][key] = state[sec][key] || blank();
     return state[sec][key];
   };
-  const reacted = (r) => Object.values(r?.pins || {}).some(Boolean);
-  const answered = (r) =>
+  /** A reaction on a pin this page shows (pins-client.js `said`): a stored id the page no longer
+   *  shows, or a value it never offers, is not an answer. */
+  const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length);
+  const answered = (r, key) =>
     Boolean(
       r &&
         (r.pick ||
           r.verdict ||
           Object.keys(r.react || {}).length ||
           (r.note || "").trim() ||
-          reacted(r)),
+          reacted(r, key)),
     );
-  const count = () => TP.decisions.filter((d) => answered(state.decisions[d.key])).length;
+  const count = () => TP.decisions.filter((d) => answered(state.decisions[d.key], d.key)).length;
+  /** A stored `pins` that isn't a plain object (a hand-edited record) reads as none. */
+  const pinsOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
 
   /** Is this button's value the saved one? An option row reads its pick/react, else the verdict. */
   const pressed = (r, opt, v) => {
@@ -242,7 +246,7 @@
     const path = `tp/${ID}/decisions/${key}`;
     chain(path, (ref) =>
       ref.get().then((snap) => {
-        const live = (snap.exists && snap.data()?.pins) || {};
+        const live = pinsOf(snap.exists && snap.data()?.pins);
         const r = state.decisions[key];
         const mine = touched.get(key) ?? new Set();
         const pins = {};
@@ -476,7 +480,7 @@
       Boolean,
     );
     for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
-    for (const [id, v] of Object.entries(r.pins || {}).sort()) if (v) bits.push(`pin ${id} ${v}`);
+    for (const [id, v] of pinsUi?.said(d.key, r) ?? []) bits.push(`pin ${id} ${v}`);
     const note = (r.note || "").trim().replace(/\s+/g, " ");
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
@@ -535,7 +539,7 @@
     verdict: v.verdict || null,
     note: v.note || "",
     // A cleared reaction is stored as null (savePin); the page holds only the live ones.
-    pins: Object.fromEntries(Object.entries(v.pins || {}).filter(([, x]) => x)),
+    pins: Object.fromEntries(Object.entries(pinsOf(v.pins)).filter(([, x]) => x)),
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>

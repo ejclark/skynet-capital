@@ -15,7 +15,7 @@
 //
 // Pure: no network, no clock, no filesystem.
 import { classOf } from "../rank.mjs";
-import { PIN_REACTIONS } from "./pins.mjs";
+import { PIN_REACTIONS, pinReactions } from "./pins.mjs";
 
 export const SECTIONS = ["decisions", "queue", "reel"];
 /** Minutes of attention each page is sized to (Eric, 2026-10-10: 15 in the morning, 15–30 at 4pm). */
@@ -239,13 +239,17 @@ export function parseSteerMarker(body = "") {
 }
 
 /** Did Eric leave anything on this record — a pick, a verdict, a reaction, a note, or a reaction
- *  on one of its pins (#5143)? */
-export const isAnswered = (rec) =>
+ *  on one of its pins (#5143)? Given the decision `d`, only a pin it shows counts: a round
+ *  republished with fewer or renumbered pins leaves the old ids in the store, and the page doesn't
+ *  count those either (pins-client.js `said`). */
+export const isAnswered = (rec, d) =>
   Boolean(
     rec &&
       (rec.pick ||
         rec.verdict ||
         Object.keys(rec.react ?? {}).length ||
         String(rec.note ?? "").trim() ||
-        Object.values(rec.pins ?? {}).some((v) => PIN_REACTIONS.includes(v))),
+        (d
+          ? pinReactions(d, rec).some((p) => p.reaction)
+          : Object.values(rec.pins ?? {}).some((v) => PIN_REACTIONS.includes(v)))),
   );
