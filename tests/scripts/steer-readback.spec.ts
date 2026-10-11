@@ -15,6 +15,7 @@ import {
   anchorDecision,
   commandsFor,
   DEFAULT_APPLIED,
+  DONE_TRIGGER,
   type ReadbackAction,
   readback,
 } from "../../scripts/steer/readback.mjs";
@@ -224,6 +225,12 @@ describe("Eric's comments on the page", () => {
     },
     { anchorKey: "queue", text: "the queue feels long", at: "2026-10-10T21:43:00Z" },
     { anchorKey: "d-2224", text: "   ", at: "2026-10-10T21:44:00Z" },
+    // The page's own Done press (#5135): sent to Claude to start this read-back, not his words.
+    {
+      anchorKey: "div.bar",
+      text: `${DONE_TRIGGER} ${ROUND}: 4 of 5 answered. Read it back.`,
+      at: "2026-10-10T21:45:00Z",
+    },
   ];
   const withComments = readback(tp, records, said);
   const on = (n: number) =>
@@ -267,6 +274,16 @@ describe("Eric's comments on the page", () => {
   it("hands back a comment that sits on no shown decision, and drops an empty one", () => {
     expect(withComments.unplacedComments.map((c) => c.anchorKey)).toEqual(["queue"]);
     expect(on(2224)[0]).not.toContain("Eric's comments on the page");
+  });
+
+  it("drops the Done press the page sent to start the read-back: it is a trigger, not his words", () => {
+    expect(DONE_TRIGGER).toBe("Done with steering round");
+    const all = withComments.actions.map((a) => ("body" in a ? a.body : "")).join("\n");
+    expect(all).not.toContain(DONE_TRIGGER);
+    const onADecision = readback(tp, records, [
+      { anchorKey: "d-2224", text: `${DONE_TRIGGER} ${ROUND}: 1 of 5 answered. Read it back.` },
+    ]);
+    expect(onADecision).toEqual(plan);
   });
 
   it("leaves the plan exactly as before when there are no comments", () => {
