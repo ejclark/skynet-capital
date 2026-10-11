@@ -94,6 +94,8 @@ export async function open(
     before = (_w: Win): void => undefined,
     writes = [] as string[],
     gate = Promise.resolve(),
+    /** The store itself arrives only when this settles (`use("db")` pending), as #5247 specs it. */
+    late = Promise.resolve(),
   } = {},
 ) {
   const { window } = new JSDOM(html, {
@@ -102,7 +104,9 @@ export async function open(
       if (docs)
         w.claude = {
           use: (name: string) =>
-            Promise.resolve(name === "db" ? memoryStore(docs, writes, gate) : null),
+            name === "db"
+              ? late.then(() => memoryStore(docs, writes, gate))
+              : Promise.resolve(null),
         };
       before(w);
     },

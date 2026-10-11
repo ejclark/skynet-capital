@@ -199,6 +199,61 @@ describe("a choice saves in the decision's own record and counts as an answer", 
   });
 });
 
+// #5243: a tap while the bar says "Loading your answers…" — likelier now a pin invites one in the
+// first second — was held as a blank record plus the tap, and written whole over the stored record
+// once the store answered, erasing the pick and note it held. Each held change now lands on top.
+describe("a tap held while the store connects merges into the stored record", () => {
+  async function openSlow(docs: Docs, writes: string[] = []) {
+    let arrive: () => void = () => undefined;
+    const late = new Promise<void>((r) => {
+      arrive = r;
+    });
+    const v = await open(docs, { writes, late });
+    const answer = async () => {
+      arrive();
+      await settle();
+    };
+    return { ...v, answer };
+  }
+  const STORED = { pick: "B", react: {}, note: "closer", pins: { "B:phone:1": "down" } };
+
+  it("keeps the stored pick, note and pins under a pin and a mark tapped before it answers", async () => {
+    const docs: Docs = { [REC]: structuredClone(STORED) };
+    const writes: string[] = [];
+    const v = await openSlow(docs, writes);
+    expect(v.line()).toBe("Loading your answers…");
+    await v.choose("B:phone:2", "Keep");
+    await v.click(v.doc.querySelector('.react[data-opt="A"] .rb[data-v="more"]'));
+    expect(v.line()).toBe("Sending once your answers load");
+    expect(writes).toEqual([]);
+    await v.answer();
+    expect(docs[REC]).toMatchObject({
+      pick: "B",
+      react: { A: "more" },
+      note: "closer",
+      pins: { "B:phone:1": "down", "B:phone:2": "up" },
+    });
+    expect(v.pin("B:phone:1").dataset.r).toBe("down");
+    expect(v.doc.querySelector<HTMLTextAreaElement>("[data-note]")?.value).toBe("closer");
+    expect(v.line()).toMatch(/1 of 1 answered$/);
+  });
+
+  it("lands a held press as the value it set, so pressing what the store already holds keeps it", async () => {
+    const docs: Docs = { [REC]: structuredClone(STORED) };
+    const v = await openSlow(docs);
+    await v.click(v.doc.querySelector('.react[data-opt="B"] .rb[data-v="build"]'));
+    await v.choose("B:phone:1", "Change");
+    await v.answer();
+    expect(docs[REC]).toMatchObject({
+      pick: "B",
+      note: "closer",
+      pins: { "B:phone:1": "down" },
+    });
+    const build = v.doc.querySelector('.react[data-opt="B"] .rb[data-v="build"]');
+    expect(build?.getAttribute("aria-pressed")).toBe("true");
+  });
+});
+
 // A round republished with fewer or renumbered pins keeps the same records, so a record can hold a
 // reaction on a pin the page no longer shows. The bar counts — and Copy as text carries — only the
 // pins this page shows, with a value it offers: anything else is ignored, never a crash.
