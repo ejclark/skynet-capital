@@ -23,6 +23,7 @@ import type { CommunityProgressionService } from "./community-progression-servic
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
+import type { CouncilRepliesDeps } from "./council-replies-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
@@ -315,4 +316,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * its cards with no comment fold.
    */
   readonly filingComments?: FilingCommentsDeps;
+  /**
+   * `GET/POST /api/council/replies` — replies under each weekly Council line (#5097, #2224 option
+   * A), kept in the app. Omit to disable — the Council then shows its lines with no reply fold.
+   */
+  readonly councilReplies?: CouncilRepliesDeps;
 }
