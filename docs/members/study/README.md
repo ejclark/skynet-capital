@@ -198,12 +198,17 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
 ```
 
-- **The matchers** are aware agents a workflow runs over `findings-unlabelled.jsonl`, in chunks:
-  matcher 1 and matcher 2 apart, then one tie-break over the findings they disagree on. Each reads
-  `roles/matcher.md`, the key and, for a control, its `--expect` file, and answers in
+- **The matchers** run from `node scripts/study/match.mjs --sealed <key dir> --round <dir>
+  [--expect <file>]` (#5218) over `findings-unlabelled.jsonl`, in chunks of 40: matcher 1 and
+  matcher 2 apart, then one tie-break over the findings they disagree on. Each is a sealed call on
+  `roles/matcher.md`, handed the key and, for a control, its `--expect` mechanisms, and answers in
   `schemas/matcher.json`'s shape, which becomes `matches-1.json`, `matches-2.json` and
-  `tiebreak.json`. Round one's matchers ran from a prompt kept only in one session, with the
-  rubric inside the sealed key. The rubric lives here now, so every round grades by the same one.
+  `tiebreak.json`. Whatever a matcher leaves out is offered to it once more in a call of its own;
+  anything still unlabelled is listed by id in `match/coverage.json` and the run exits 1, never
+  filled in. Calls are recorded under `<round>/match/requests/`, so a re-run replays them free.
+  Round one's matchers ran from a prompt and a script kept only in one session, with the rubric
+  inside the sealed key. The rubric and the runner live here now, so every round grades by the
+  same one.
 - **The key is read only from `--sealed`.** `gold.md` (lines starting `A1`… the main list, `B1`…
   known gaps, `S1`… defects only the readers found) and `primes.json` (member → the ids their card
   hints at). `grade.json` carries ids, never the key's wording; the readout shows wording only with
@@ -482,3 +487,8 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   Also: one expert batch ran past the 10-minute limit twice, then answered in 168s on a third,
   identical call; and run by hand, each matcher skipped about one finding in sixty, so ask again
   for the ones left out.
+- 2026-10-11 · both method fixes from that re-run are in (#5218). A recorder line now names what
+  the tap changed beside the tapped text: "tapping 'All accounts' (an account switch: account)
+  scrolled the page 563px". The matchers run from `match.mjs`, which asks each one again for the
+  findings it skipped and lists any still left out. Whether this was enough shows in the next
+  control's `match/coverage.json` (complete, or the ids left out) and in how its matchers read A12.
