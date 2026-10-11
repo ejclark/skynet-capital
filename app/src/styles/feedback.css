@@ -155,50 +155,114 @@
   display: flex;
   flex-direction: column;
 }
+/* A row is a grid so the track can sit at the right end of the filed line at phone width, and in
+ * a right-hand column beside the title at desktop width (#5253) — same elements, two layouts. */
 .fb-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title title"
+    "filed track"
+    "status status"
+    "version version"
+    "follow follow";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
+}
+.fb-title {
+  grid-area: title;
+}
+.fb-filed {
+  grid-area: filed;
+}
+.fb-followup {
+  grid-area: follow;
 }
 .fb-row:last-child {
   border-bottom: none;
 }
 /* A shipped filing's small celebration (#429) — a subtle accent wash, never a takeover;
-   "celebration pairs with explanation" (BRAND.md) is the version caption below the badge. */
+   "celebration pairs with explanation" (BRAND.md) is the version caption below the words. */
 .fb-row-shipped {
   background: color-mix(in oklab, var(--accent) 6%, transparent);
   border-radius: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
+  /* The wash bleeds out by its own padding so the row's content — and its track — stays in the
+     same column as every other row (#5253). */
+  margin-inline: -8px;
+  padding-inline: 8px;
 }
 .fb-shipped-version {
+  grid-area: version;
   color: var(--accent);
 }
 .fb-meta {
   font-size: 11px;
   color: var(--muted);
 }
+/* The track: three same-size steps (filed · being built · shipped). Filled = done, striped =
+ * paused, half-filled = part shipped, outlined and empty = not yet. Every step keeps a --text
+ * outline so an empty one is still a visible shape, not a tone shift (BRAND → Accessibility). */
+.fb-track {
+  grid-area: track;
+  justify-self: end;
+  display: inline-flex;
+  gap: 3px;
+}
+.fb-step {
+  width: 16px;
+  height: 7px;
+  border-radius: 2px;
+  border: 1px solid var(--text);
+  box-sizing: border-box;
+}
+.fb-step-done {
+  background: var(--text);
+}
+.fb-step-paused {
+  background: repeating-linear-gradient(135deg, var(--text) 0 2px, transparent 2px 4px);
+}
+.fb-step-part {
+  background: linear-gradient(90deg, var(--text) 50%, transparent 50%);
+}
+.fb-row-shipped .fb-step {
+  border-color: var(--accent);
+}
+.fb-row-shipped .fb-step-done {
+  background: var(--accent);
+}
 .fb-status {
-  align-self: flex-start;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--surface-2);
+  grid-area: status;
+  font-size: 12px;
   color: var(--muted);
 }
 .fb-shipped {
   color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 12%, var(--surface-2));
+  font-weight: 600;
 }
 .fb-needs-info {
   color: var(--neg);
-  background: color-mix(in oklab, var(--neg) 10%, var(--surface-2));
+  font-weight: 600;
+}
+/* Desktop only adds room: the track and its words share one column, right after a capped title
+ * column, so they stay grouped with no wide empty gap between them (Eric's note on #5159). The
+ * fixed title column is what lines every row's track up in one column. */
+@media (min-width: 861px) {
+  .fb-row {
+    grid-template-columns: minmax(0, 64ch) minmax(150px, auto);
+    justify-content: start;
+    column-gap: 32px;
+    grid-template-areas:
+      "title track"
+      "filed status"
+      "follow version";
+  }
+  .fb-track {
+    justify-self: start;
+  }
 }
 .fb-followup-toggle {
   align-self: flex-start;

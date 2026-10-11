@@ -23,13 +23,14 @@ const filing = (issueNumber, title, kind, filedAt, status) => ({
 });
 
 // A ledger with one filing in each state the badge row can show — the mix is the point: two still
-// moving, one waiting on the member, one with Eric, and two already shipped (hidden by default).
+// moving, one waiting on the member, one with Eric, one closed unbuilt (words, no track — #5253),
+// and two already shipped (hidden by default).
 const feedback = {
   enabled: true,
   coachEnabled: true,
   followupEnabled: true,
   appVersion: "1.129.0",
-  feedbackCount: 6,
+  feedbackCount: 7,
   celebrating: [],
   recent: [
     filing(
@@ -48,6 +49,7 @@ const feedback = {
     ),
     filing(1171, "Milestone card cut off on my phone", "bug", "2026-09-01", "needs-info"),
     filing(1150, "Let me name my own bot personas", "feature", "2026-08-31", "needs-eric"),
+    filing(1139, "Let bots trade crypto", "feature", "2026-08-30", "not-built"),
     filing(1122, "Hide filings I've already seen ship", "idea", "2026-08-29", "shipped"),
     filing(1098, "Show which release my fix went out in", "idea", "2026-08-28", "shipped"),
   ],
@@ -58,7 +60,11 @@ const { page, origin, shoot, close } = await openShell({
   // 1000px tall so the "all" frame fits BOTH shipped rows with their version stamps — at the
   // harness default of 900 the second one is clipped, which is the half of the story #1312 built.
   viewport: { width: 1280, height: 1000 },
-  stubs: { "/api/feedback": feedback, "/api/learn": {}, ...profileStubs([JOE]) },
+  stubs: {
+    "/api/feedback": feedback,
+    "/api/learn": {},
+    ...profileStubs([JOE]),
+  },
 });
 
 await page.goto(`${origin}/app/accounts?section=feedback`);
@@ -69,7 +75,8 @@ await page.getByRole("button", { name: "All" }).click();
 await page.getByText("confirmed live in v1.129.0").first().waitFor();
 await shoot("feedback-all");
 
-// The phone frame (#5150): the Active / All switch keeps its words at 390, not "A" / "A".
+// The phone frame (#5150): the Active / All switch keeps its words at 390, not "A" / "A"; each
+// row's track sits at the right end of its filed line (#5253).
 await page.setViewportSize({ width: 390, height: 844 });
 await page.getByRole("button", { name: "Active" }).waitFor();
 await shoot("feedback-phone");
