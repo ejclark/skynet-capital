@@ -81,6 +81,25 @@ describe("a pressed state never rests on colour alone", () => {
   it("and a heavier border on top of the glyph, so a pressed button changes shape too", () => {
     expect(css).toMatch(/\.rb\[aria-pressed="true"\]\s*\{[^}]*border-width:\s*3px/);
   });
+
+  // #5135: Done is one way, so a pressed Done can't be pressed again — it must still read as
+  // pressed (glyph, border, full ink), never as a greyed-out control.
+  it("keeps a pressed Done at full ink while it can't be pressed again", () => {
+    expect(css).toMatch(
+      /\.rb\[data-v="done"\]\[aria-pressed="true"\]:disabled\s*\{[^}]*opacity:\s*1/,
+    );
+  });
+});
+
+describe("the bar (#5135)", () => {
+  const bar = html.slice(html.indexOf('class="bar"'));
+  it("carries Reopen as its own small text control, hidden until Done, never a reaction", () => {
+    expect(bar).toMatch(/<button type="button" class="reopen" id="reopen" hidden>Reopen<\/button>/);
+    expect(bar.indexOf('id="reopen"')).toBeLessThan(bar.indexOf('id="done"'));
+  });
+  it("has a line for what became of Done, read aloud when it changes and empty until then", () => {
+    expect(bar).toMatch(/<p id="told" aria-live="polite" hidden><\/p>/);
+  });
 });
 
 describe("both themes, from BRAND tokens", () => {

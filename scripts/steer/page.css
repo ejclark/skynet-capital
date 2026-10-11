@@ -550,16 +550,50 @@ details.ev summary {
   border-top: 1px solid var(--border);
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 10px;
   align-items: center;
   z-index: 10;
 }
-.bar output {
-  flex: 1 1 0;
+/* The save line, and under it what became of Done. At 390 with Reopen showing, the lines take the
+   whole first row and the controls sit beneath them, together, so a read-back reads in two lines,
+   not five, and Reopen never strands apart from the Done it undoes. */
+.bar .lines {
+  flex: 1 1 220px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bar .acts {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bar output {
   font: 12px / 1.4 var(--mono);
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+/* Done's outcome and the read-back: full ink and weight, since it is the answer to a press. */
+.bar #told {
+  font: 600 13px / 1.4 var(--sans);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+/* Reopen is a small text control beside a pressed Done — underlined, never a second big button. */
+.bar .reopen {
+  font: 600 13px var(--sans);
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 9px 4px;
+  min-height: 40px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
 }
 /* No store, or one that can't be read: the line replaces the count and is the page's one warning,
    so it carries weight and full ink — never a hue alone. */
@@ -580,6 +614,11 @@ details.ev summary {
   border-radius: 8px;
   padding-inline: 18px;
   font-size: 14px;
+}
+/* Pressed Done can't be pressed again (Reopen undoes it), but it reads as pressed, not greyed out. */
+.bar .rb[data-v="done"][aria-pressed="true"]:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 @media (min-width: 861px) {

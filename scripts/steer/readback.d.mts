@@ -36,6 +36,8 @@ export interface PageComment {
 }
 
 export const DEFAULT_APPLIED: string;
+/** How the page's Done comment starts: the read-back's trigger, dropped from the quotes. */
+export const DONE_TRIGGER: string;
 export const DRAWING: string;
 export function readback(
   tp: TouchPointData,

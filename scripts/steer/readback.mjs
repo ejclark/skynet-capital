@@ -28,6 +28,8 @@
 //     "Eric's comments on the page" in its decision's part of the issue comment, and a decision he
 //     commented on without a tap is quoted and rolled over — never given its default, never moved.
 //     A comment on anything but a shown decision is handed back in `unplacedComments`.
+//   - The page's own Done press is a comment too (#5135: it is how Done wakes the session), sent as
+//     Eric. It starts this read-back; it is not his words, so it is dropped, never quoted.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";
@@ -38,6 +40,8 @@ import { readRecords } from "./records.mjs";
 
 const DECISION_LABEL = "needs-eric";
 export const DEFAULT_APPLIED = "default applied; no answer from Eric";
+/** How the page's Done comment starts (page-client.js `tell`): the read-back's trigger, not a quote. */
+export const DONE_TRIGGER = "Done with steering round";
 /** Why a decision that had no picture yet rolls over: it was named on the page, never asked. */
 export const DRAWING = "no picture yet: named as being drawn, not asked; it comes next page";
 
@@ -69,7 +73,8 @@ function placeComments(decisions, comments) {
   const unplaced = [];
   const sorted = [...comments].sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")));
   for (const c of sorted) {
-    if (!String(c?.text ?? "").trim()) continue;
+    const text = String(c?.text ?? "").trim();
+    if (!text || text.startsWith(DONE_TRIGGER)) continue;
     const hit = anchorDecision(c.anchorKey, decisions);
     if (!hit) unplaced.push(c);
     else byKey.set(hit.d.key, [...(byKey.get(hit.d.key) ?? []), { ...c, opt: hit.opt }]);
