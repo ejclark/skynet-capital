@@ -54,8 +54,8 @@ export function LadderChapter({ journey }: { readonly journey: Journey }): React
         ))}
       </MilestonePanel>
       <p className="note">
-        Iron condors and anything with undefined risk stay off the ladder — a condor is a Playbook
-        Store strategy (two spreads run together), never a rung.
+        Iron condors stay off the ladder: a condor is two spreads run together, a Playbook Store
+        strategy, never a rung. Trades with undefined risk stay off it entirely.
       </p>
     </>
   );
