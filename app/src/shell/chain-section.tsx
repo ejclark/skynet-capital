@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import type { NewLeg } from "../live/draft-order";
 import { fetchChain, type PlayInfo } from "../live/options";
-import { navForPlay, type PlayCode, playForNav } from "../live/plays";
+import { navForPlay, type PlayCode, rungForChainTap } from "../live/plays";
 import { ChainStraddle } from "./chain-straddle";
 import { ExpirationField } from "./option-fields";
 import { QuoteHeader } from "./quote-header";
@@ -15,7 +15,8 @@ import { SymbolPrompt } from "./symbol-prompt";
  * the second tool of the bench (`frame.tsx`: a BENCH is several sections that are one
  * instrument's tools and feed each other). It reads the symbol the ticket committed (`?symbol=`)
  * and the side the current play implies, and a tap on a bid or ask PRESETS the ticket through the
- * URL — strike, the option rung for that side, back to the Ticket section — under the same
+ * URL — strike, the rung the cell names (a bid sells to open, an ask buys, #5166), back to the
+ * Ticket section, with the tapped price carried beside the URL (`ChainPreset`) — under the same
  * fail-safe rule the ticket's own inline chain uses (`option-gate.tsx`'s `onChainCellPick`): a
  * locked target rung never widens from a chain click; the strike still travels, the rung stays.
  * #1481 "the chain is the entry instrument" holds; this gives the chain room the ticket can't.
@@ -38,24 +39,49 @@ export interface ChainPick {
   readonly cell?: PickedCell;
 }
 
-/** The rung a chain tap presets from the current play — the ticket's own resolution rule: keep
- *  the side, flip the option type to the tapped column; a stock play lands on the long side. A
- *  target this component can't find in `plays` reads as LOCKED (fail safe), and a locked target
- *  presets nothing — the strike still travels, the rung stays. */
+/** The rung a chain tap presets from the current play — `rungForChainTap`, the rule both chains
+ *  share: a bid sells to open, an ask buys to open (#5166), and a bare strike tap keeps the side.
+ *  A target this component can't find in `plays` reads as LOCKED (fail safe), and a locked target
+ *  presets nothing — the strike still travels, the rung stays. `target` names the refused rung so
+ *  the ticket can say which one it was. */
 export function chainPickTarget(
   currentPlay: string,
   side: "call" | "put",
   plays: readonly Pick<PlayInfo, "code" | "locked">[] | undefined,
-): { readonly play: PlayCode | undefined; readonly locked: boolean } {
-  const nav = navForPlay(currentPlay);
-  const target = playForNav({
-    instrument: "option",
-    side: nav.instrument === "option" ? nav.side : "buy",
-    optionType: side,
-  });
-  if (target === currentPlay) return { play: undefined, locked: false };
+  price?: "bid" | "ask",
+): { readonly play: PlayCode | undefined; readonly locked: boolean; readonly target: PlayCode } {
+  const target = rungForChainTap(currentPlay, side, price);
+  if (target === currentPlay) return { play: undefined, locked: false, target };
   const locked = plays?.find((p) => p.code === target)?.locked ?? true;
-  return locked ? { play: undefined, locked: true } : { play: target, locked: false };
+  return locked
+    ? { play: undefined, locked: true, target }
+    : { play: target, locked: false, target };
+}
+
+/** What a chain tap hands the single-leg ticket beyond the URL (#5166): the price the member
+ *  tapped, or why the side did not change. The ticket remounts on every rung switch and the URL
+ *  carries only strike, expiry and rung — a limit in a shareable link would be stale by tomorrow
+ *  (the same reason `trade.tsx` keeps Outlook marks in state) — so this rides route state, the way
+ *  a Spread leg does (`incomingLeg`). `key` makes a repeat of the same tap a new hand-off. */
+export interface ChainPreset {
+  /** The rung the ticket should be on when it applies this — anything else ignores it. */
+  readonly play: string;
+  /** The strike the tap named; a ticket on another strike ignores it. */
+  readonly strike: string;
+  /** The tapped bid or ask. Absent for a "—" cell, so the ticket's own mid seed applies. */
+  readonly limit?: number;
+  /** Set when the tapped side's rung is locked: the one line saying why the side stayed. */
+  readonly note?: string;
+  readonly key: number;
+}
+
+/** The line a locked chain tap leaves on the ticket — "visible, disabled, explained… never
+ *  silently dead" (`ticket-nav.tsx`). Names the refused rung when the catalog knows it. */
+export function lockedTapNote(name: string | undefined, strikeFilled: boolean): string {
+  const rung = name ? `“${name}” isn't unlocked yet` : "that side isn't unlocked yet";
+  return strikeFilled
+    ? `Strike filled — ${rung}, so the side didn't change.`
+    : `${rung.charAt(0).toUpperCase()}${rung.slice(1)}, so the ticket didn't change.`;
 }
 
 /** Whether a chain pick should become a LEG on the Spread builder instead of a rung preset
@@ -80,6 +106,11 @@ export function chainPickLeg(play: string, symbol: string, pick: ChainPick): New
     ...(pick.cell.value !== undefined ? { limitPrice: pick.cell.value } : {}),
   };
 }
+
+/** The single-leg instruction line — pinned beside the behaviour it describes in
+ *  `chain-section.spec.tsx`, so the words cannot drift from what a tap does again (#5166). */
+export const CHAIN_TAP_COPY =
+  "Tap a bid to sell that contract at the bid, or an ask to buy it at the ask — the ticket opens preset with it.";
 
 export function ChainSection({
   symbol,
@@ -189,7 +220,7 @@ export function ChainSection({
       <p className="note">
         {nav.instrument === "spread"
           ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread. Tap an outlined strike's price again to reprice that leg."
-          : "Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract."}
+          : CHAIN_TAP_COPY}
       </p>
     </section>
   );
