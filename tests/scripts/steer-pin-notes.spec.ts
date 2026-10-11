@@ -259,6 +259,31 @@ describe("a tap held while the store connects merges into the stored record (#52
     });
   });
 
+  it("saves a note typed while loading, when the store answers before the pause", async () => {
+    const docs: Docs = { [REC]: saved() };
+    const { v, release } = await slow(docs);
+    await note(v, "B:phone:1", "shorter");
+    await release();
+    expect(docs[REC]?.pinNotes).toEqual({ "B:phone:1": "too tall" });
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(docs[REC]).toMatchObject({ pick: "B", pinNotes: { "B:phone:1": "shorter" } });
+  });
+
+  it("writes a held reaction and note on one pin in a single merge", async () => {
+    const docs: Docs = { [REC]: saved() };
+    const writes: string[] = [];
+    const { v, release } = await slow(docs, writes);
+    await v.choose("B:phone:2", "Keep");
+    await note(v, "B:phone:2", "and here");
+    await pressEscape(v);
+    await release();
+    expect(writes.filter((w) => w.endsWith(REC))).toEqual([`update ${REC}`]);
+    expect(docs[REC]).toMatchObject({
+      pins: { "B:phone:2": "up" },
+      pinNotes: { "B:phone:2": "and here" },
+    });
+  });
+
   it("lets a Not tapped while loading clear the stored pick on that option", async () => {
     const docs: Docs = { [REC]: saved() };
     const { v, release } = await slow(docs);

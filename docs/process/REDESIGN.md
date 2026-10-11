@@ -286,7 +286,7 @@ Newest first. This is how a change to the loop reaches the sessions already runn
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
-- 2026-10-11 · **Pin notes: a note can sit beside any pin's 👍 / 👎 / ☯︎** (Eric: "i wish the thumbs up/down/mixed signal form/process also allowed for commentary to expand on context"). The read-back quotes it under that pin, and the next round applies it on that spot (#PRNUM). Nothing changes in your manifest.
+- 2026-10-11 · **Pin notes: a note can sit beside any pin's 👍 / 👎 / ☯︎** (Eric: "i wish the thumbs up/down/mixed signal form/process also allowed for commentary to expand on context"). The read-back quotes it under that pin, and the next round applies it on that spot (#5251). One manifest check: a pin label is now ≤48 characters on the page and in `lint.mjs` too (it was 60), the same limit `pin.mjs` always drew to — shorten any longer inline label.
 - 2026-10-11 · **This loop is the default for design work, and its changelog lives here** (Eric:
   "fwiw, i really like this style of iteration on designs and would prefer more of this as a
   permanent process that I can continue to refine"). Process changes land on main in this

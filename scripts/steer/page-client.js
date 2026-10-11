@@ -283,19 +283,20 @@
       }),
     );
   }
-  /** One pin's reaction or note, merged into its decision's record (null clears it); a record the
-   *  store doesn't hold yet is written whole. */
-  function saveKey(key, field, id) {
+  /** Pins' reactions or notes (`[field, id]` pairs), merged into their decision's record in one
+   *  write, each key alone (null clears it); a record the store doesn't hold yet is written whole. */
+  function saveKeys(key, pairs) {
     const path = `tp/${ID}/decisions/${key}`;
-    const v = keyValue(field, state.decisions[key]?.[field]?.[id]);
+    const merge = { at: new Date().toISOString() };
+    for (const [field, id] of pairs)
+      merge[field] = {
+        ...merge[field],
+        [id]: keyValue(field, state.decisions[key]?.[field]?.[id]),
+      };
     chain(path, (ref) => {
       const there = stored.has(path) ? Promise.resolve(true) : ref.get().then((s) => s.exists);
       return there.then((yes) =>
-        landed(path, () =>
-          yes
-            ? ref.update({ [field]: { [id]: v }, at: new Date().toISOString() })
-            : ref.set(body("decisions", key)),
-        )(),
+        landed(path, () => (yes ? ref.update(merge) : ref.set(body("decisions", key))))(),
       );
     });
   }
@@ -331,7 +332,7 @@
     if (!db) return status("");
     const keyed = sec === "decisions" && paths.every((p) => MAPS.includes(split(p)[0]));
     if (!keyed) return save(sec, key);
-    for (const p of paths) saveKey(key, ...split(p));
+    saveKeys(key, paths.map(split));
   }
   /** The page's own fields on `tp/<round>` — the only ones it ever writes there. */
   const metaBody = () => ({
@@ -528,12 +529,15 @@
     commit(sec, key, paths);
   });
   reopenBtn.addEventListener("click", reopen);
-  /** A note typed: saved on a pause (or by Done, or a pin's popover closing), never per key. */
-  function typed(sec, key, path) {
+  /** A note typed: saved on a pause (or by Done, or a pin's popover closing), never per key. The
+   *  text is laid back on the record when it saves — the store may have answered meanwhile and
+   *  replaced the record it was typed into (#5243). */
+  function typed(sec, key, path, text) {
     const k = `${sec}/${key}/${path}`;
     status("Typing");
     clearTimeout(timers[k]);
     pendingNotes.set(k, () => {
+      put(rec(sec, key), path, text);
       tap();
       commit(sec, key, [path]);
     });
@@ -544,7 +548,7 @@
     if (t.dataset?.note === undefined || locked()) return;
     const { sec, key } = t.dataset;
     rec(sec, key).note = t.value;
-    typed(sec, key, "note");
+    typed(sec, key, "note", t.value);
   });
 
   function decisionText(d) {
@@ -607,7 +611,7 @@
       const r = rec("decisions", key);
       r.pinNotes = { ...r.pinNotes, [id]: text };
       touch("pinNotes", key, id);
-      typed("decisions", key, `pinNotes.${id}`);
+      typed("decisions", key, `pinNotes.${id}`, text);
     },
     flush: () => flushNotes(),
   });
@@ -621,7 +625,7 @@
     react: v.react || {},
     verdict: v.verdict || null,
     note: v.note || "",
-    // A cleared reaction or note is stored as null (saveKey); the page holds only the live ones.
+    // A cleared reaction or note is stored as null (saveKeys); the page holds only the live ones.
     pins: liveOf("pins", v.pins),
     pinNotes: liveOf("pinNotes", v.pinNotes),
   });
@@ -646,6 +650,10 @@
    *  stored (#5243). A view that can't write shows the store only. */
   function connected() {
     connecting = false;
+    // View only: nothing held is written, so a record that exists only because of a held tap goes.
+    if (readOnly)
+      for (const { sec, key } of held.values())
+        if (!stored.has(`tp/${ID}/${sec}/${key}`)) delete state[sec][key];
     for (const { sec, key, at } of readOnly ? [] : held.values()) {
       const r = rec(sec, key);
       for (const [p, v] of at) put(r, p, v);
