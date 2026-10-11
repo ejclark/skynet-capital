@@ -196,7 +196,7 @@ export function nextRoundInstruction(d, r) {
   const round =
     d.round != null && d.round !== "" && Number.isInteger(n) ? `Round ${n + 1}` : "The next round";
   const closer = marked(r, "more").filter((k) => k !== r.pick);
-  const drop = marked(r, "not");
+  const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
     r.pick
       ? `${round} on #${d.issue}: draw 2–5 shapes that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
@@ -230,6 +230,9 @@ function problemsAnswer(d, r, acc, said) {
   const instruction = nextRoundInstruction(d, r);
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
+  // A note and no tap: quoted above, and the next round still has to answer it.
+  if (!(r.pick || Object.keys(r.react ?? {}).length))
+    acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
 function designAnswer(d, r, acc, id, said) {

@@ -195,6 +195,8 @@ describe("the read-back of a problems question files nothing", () => {
   });
 
   it("rolls a skipped problems question over untouched, as any round's question", () => {
+    const noted = readback(tp, { [`tp/${tp.id}/decisions/5160-q1`]: { note: "rank first" } });
+    expect(noted.followUps.map((f) => f.kind)).toEqual(["next-round", "read-note"]);
     const skipped = readback(tp, {});
     expect(skipped.actions).toEqual([]);
     expect(skipped.nextRound).toEqual([]);

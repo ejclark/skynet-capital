@@ -10,10 +10,12 @@
 // invented this session. Text inside quotation marks is skipped by both — it is his words or the
 // app's, which the quote check verifies instead.
 
+import { QUESTION_KINDS } from "../steer/design.mjs";
+
 const CEILING = 200 * 1024;
 const CONF = ["low", "medium", "high"];
-/** What a question asks (scripts/steer/design.mjs QUESTION_KINDS): shapes, or round 0's problems. */
-const KINDS = ["design", "problems"];
+/** What a question asks: shapes, or round 0's problems — the steer builder's own list. */
+const KINDS = QUESTION_KINDS;
 
 /** Banned in copy: the word, a pattern, and what to say instead. */
 const BANNED = [
