@@ -3,6 +3,7 @@
 // a stub API. Two frames, because the surface's whole behaviour is the difference between them:
 //   · active — the default view, shipped filings hidden (#1308)
 //   · all    — the toggle flipped, shipped filings revealed with 🚀 and the version stamp (#1312)
+// plus a phone frame at 390, where the toggle's words must survive (#5150).
 //
 // This is the harness's first use (#1327): #1308 and #1312 both waived their fridge picture with
 // "no authed /feedback shoot script exists for this repo", which is the cost the consolidation was
@@ -67,5 +68,10 @@ await shoot("feedback-active");
 await page.getByRole("button", { name: "All" }).click();
 await page.getByText("confirmed live in v1.129.0").first().waitFor();
 await shoot("feedback-all");
+
+// The phone frame (#5150): the Active / All switch keeps its words at 390, not "A" / "A".
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Active" }).waitFor();
+await shoot("feedback-phone");
 
 await close();
