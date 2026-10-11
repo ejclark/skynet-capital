@@ -80,8 +80,13 @@ const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 const titleOf = (md: string, fallback: string): string =>
   md.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? fallback;
 
+/**
+ * The LAST `**Last assessed:**` line, not the first — every pulse appends a fresh stamp rather than
+ * rewriting the header, so the first is the oldest check (#5183: all 18 cards read stale). Same
+ * read as scripts/event-scan.mjs's.
+ */
 const lastAssessedOf = (md: string): string | null =>
-  md.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null;
+  [...md.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null;
 
 /**
  * The markdown files a directory shelves, slug-sorted — the ONE place the shelf's skip rule and

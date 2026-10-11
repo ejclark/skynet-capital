@@ -117,6 +117,13 @@ describe("tldrOf / adjacentIdsOf — the digest's other two fields", () => {
     expect(adjacentIdsOf("# T\n<!-- probe-ref: {not json} -->\n")).toEqual([]);
     expect(adjacentIdsOf("# T\n")).toEqual([]);
   });
+
+  it("reads the latest pulse's corridor, not the first (#5183)", () => {
+    const md =
+      '# T\n\n**Last assessed:** 2026-09-08\n<!-- probe-ref: {"adjacentIds":["old-1"]} -->\n\n' +
+      '**Last assessed:** 2026-10-07\n<!-- probe-ref: {"adjacentIds":["new-1","new-2"]} -->\n';
+    expect(adjacentIdsOf(md)).toEqual(["new-1", "new-2"]);
+  });
 });
 
 describe("sourceBlockedOf — #1711's blocked-source mark", () => {

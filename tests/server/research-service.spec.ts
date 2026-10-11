@@ -71,6 +71,17 @@ describe("listResearch", () => {
     expect(weeks).toHaveLength(1);
     expect(weeks[0]?.title).toContain("2026-W37");
   });
+
+  it("reports a ledger's latest pulse stamp, not its first (#5183)", () => {
+    const root = mkdtempSync(join(tmpdir(), "research-"));
+    mkdirSync(join(root, "events"));
+    writeFileSync(
+      join(root, "events", "eia-steo-2026-10-06.md"),
+      "# EIA STEO — ledger\n\n**Last assessed:** 2026-09-08\n<!-- probe-ref: {} -->\n\n" +
+        "## Assessment ledger\n\n**Last assessed:** 2026-10-07\n<!-- probe-ref: {} -->\n",
+    );
+    expect(listResearch(root).ledgers[0]?.lastAssessed).toBe("2026-10-07");
+  });
 });
 
 describe("weekly studies on the shelf", () => {
