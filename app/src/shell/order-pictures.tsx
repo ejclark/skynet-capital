@@ -56,6 +56,17 @@ export function PriceLine({
     const right = to === undefined ? 100 : x(to);
     return { left: pct(left), width: pct(right - left) };
   };
+  // The fade says the loss keeps growing past the edge — true of shares and of a sold option, never
+  // of a bought one, whose loss stops at what it paid ("loses all $255").
+  const grows = play.kind === "shares" || play.written;
+  const fade = (zone: Play["zones"][number]): string =>
+    zone.kind !== "loses" || !grows
+      ? ""
+      : zone.from === undefined
+        ? " pl-fade-from"
+        : zone.to === undefined
+          ? " pl-fade-to"
+          : "";
   return (
     <figure className="pl">
       <div className="pl-row pl-above">
@@ -73,7 +84,7 @@ export function PriceLine({
         {play.zones.map((zone) => (
           <span
             key={zone.kind}
-            className={`pl-zone pl-${zone.kind}${zone.from === undefined && zone.kind === "loses" ? " pl-fade-from" : ""}${zone.to === undefined && zone.kind === "loses" ? " pl-fade-to" : ""}`}
+            className={`pl-zone pl-${zone.kind}${fade(zone)}`}
             style={zoneStyle(zone.from, zone.to)}
           />
         ))}

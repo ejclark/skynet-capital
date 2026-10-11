@@ -1,6 +1,7 @@
 /* Landing on a row (#4348, shared by #5022) — `shell/landing.ts`. A link that names one row by hash
- * (an Events row's `#pos-<symbol>`, a FORM square's or a Thesis marker's `#act-<orderId>`) scrolls
- * the row or card to the middle of what the sticky head leaves visible and marks it for a moment. A
+ * (an Events row's `#pos-<symbol>`, a FORM square's or a Thesis marker's `#act-<orderId>`), or an
+ * order's playbook link naming its card (`?card=`, #5073 slice 4a), scrolls the row or card to the
+ * middle of what the sticky head leaves visible and marks it for a moment. A
  * thick outline plus an inset bar — shape carries it, never hue alone. The mark fades; with reduced
  * motion it simply holds until it is removed. */
 
@@ -10,12 +11,14 @@
  * head on the page, the topbar's 64px. The same margin centres a landing in the visible area. */
 tr[id^="act-"],
 tr[id^="pos-"],
-.pos-card[data-pos-anchor] {
+.pos-card[data-pos-anchor],
+.pbb-card {
   scroll-margin-top: calc(var(--landing-clear, 64px) + 12px);
 }
 
 tr[data-landed] > td,
-.pos-card[data-landed] {
+.pos-card[data-landed],
+.pbb-card[data-landed] {
   background: color-mix(in oklab, var(--accent) 14%, var(--surface));
 }
 tr[data-landed] {
@@ -25,14 +28,16 @@ tr[data-landed] {
 tr[data-landed] > td:first-child {
   box-shadow: inset 5px 0 0 var(--text);
 }
-.pos-card[data-landed] {
+.pos-card[data-landed],
+.pbb-card[data-landed] {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
   box-shadow: inset 5px 0 0 var(--text);
 }
 @media (prefers-reduced-motion: no-preference) {
   tr[data-landed],
-  .pos-card[data-landed] {
+  .pos-card[data-landed],
+  .pbb-card[data-landed] {
     animation: pos-landed 2.4s ease-out both;
   }
 }

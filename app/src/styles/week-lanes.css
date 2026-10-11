@@ -176,3 +176,31 @@
 .wk-trades b {
   font: 600 12px / 1.3 var(--mono);
 }
+
+/* ── the order the reader came from (#5073 slice 4a) ──────────────────────────────────────────
+ * A circle drawn round its mark — a shape, so it reads without the hue; --text holds ≥ 3:1 on both
+ * surfaces. The mark rises above the lane's other marks so the ring is never clipped by one. */
+.wk-mark[data-ringed] {
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  margin-bottom: 1px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 9px;
+}
+.wk-trades li[data-ringed] .wk-trade-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  font-size: 9px;
+}
+.wk-trade-this {
+  font-weight: 600;
+}

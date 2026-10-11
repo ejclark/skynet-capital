@@ -2,8 +2,9 @@ import { useEffect, useRef } from "react";
 
 /**
  * LANDING ON A ROW (#4348, shared by #5022): a link that names one row by hash — an Events row's
- * `#pos-<symbol>`, a FORM square's or a Thesis marker's `#act-<orderId>` — scrolls that row to the
- * middle of what the sticky head leaves visible, keeps it there while the page above settles, and
+ * `#pos-<symbol>`, a FORM square's or a Thesis marker's `#act-<orderId>` — or an order's playbook
+ * link naming its card (#5073) scrolls that row to the middle of what the sticky head leaves visible
+ * (a target too tall for the middle, to its top), keeps it there while the page above settles, and
  * marks it `data-landed` for a moment: a thick outline and an inset bar (shape, not hue — a standing
  * reader is red/green colorblind, CLAUDE.md). `landing.css` draws the mark.
  *
@@ -33,11 +34,21 @@ export function targetedAnchor(prefix: string, hash: string): string | undefined
   return raw.startsWith(prefix) && raw.length > prefix.length ? raw : undefined;
 }
 
+/** Where a target lands: centred, unless it is taller than half the screen — an opened playbook
+ *  card (#5073) — when centring would scroll its own name off the top, so its top lands under the
+ *  sticky head instead (the target's `scroll-margin-top` keeps it clear, landing.css). */
+export function landingBlock(height: number, viewport: number): ScrollLogicalPosition {
+  return height > viewport / 2 ? "start" : "center";
+}
+
 /** Centre `el`, re-centre it on every layout change for `SETTLE_MS`, mark it for `LANDED_MS`.
  *  Returns the undo: the mark cleared and the watching stopped. */
 export function land(el: HTMLElement): () => void {
   // Optional-call: happy-dom has no `scrollIntoView`.
-  const centre = () => el.scrollIntoView?.({ block: "center" });
+  const centre = () =>
+    el.scrollIntoView?.({
+      block: landingBlock(el.getBoundingClientRect().height, window.innerHeight),
+    });
   centre();
   el.setAttribute("data-landed", "");
   // Cards above the target (the Overview's chart, decisions, league; the cockpit head's own

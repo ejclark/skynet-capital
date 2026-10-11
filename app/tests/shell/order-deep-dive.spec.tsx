@@ -145,6 +145,26 @@ describe("OrderDeepDive — what it shows", () => {
     quote = { quoteNote: "no quote" };
   });
 
+  // The fade says a loss keeps growing past the edge: a sold put's does, a bought option's stops at
+  // what it paid — its losing stretch ends square, as "loses all $255" says.
+  it("fades a losing stretch off the edge only where the loss keeps growing", () => {
+    const fades = () => document.querySelectorAll(".pl-fade-from, .pl-fade-to").length;
+    const { unmount } = render(
+      wrap(<OrderDeepDive event={wheel} variant="page" showPlaybook onClose={noop} />),
+    );
+    expect(fades()).toBe(1);
+    unmount();
+    for (const symbol of ["CRWV261106P00080000", "CRWV261106C00090000"]) {
+      const bought = { ...wheel, symbol, side: "buy" as const };
+      const view = render(
+        wrap(<OrderDeepDive event={bought} variant="page" showPlaybook onClose={noop} />),
+      );
+      expect(document.querySelector(".pl-legend")).toHaveTextContent("loses all $255");
+      expect(fades()).toBe(0);
+      view.unmount();
+    }
+  });
+
   it("draws a share buy's line from its fill, with no stop price on the order", () => {
     render(wrap(<OrderDeepDive event={shares} variant="page" showPlaybook onClose={noop} />));
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("NVDA rises from $226.10");
