@@ -45,6 +45,10 @@ export interface DeskPosition {
   readonly totalTone: Tone;
   readonly weightPct: number;
   readonly lots?: readonly PositionLot[];
+  /** The playbook that opened the whole position (#5073 slice 4b) — on the bot owner's copy only
+   *  (#885), and only when one playbook's orders account for all of it. */
+  readonly playbookId?: string;
+  readonly playbookMode?: string;
   /** Plain words (#3689 slice 6; `src/observatory/position-plain.ts`). Optional so an older payload
    *  or fixture without them still renders, showing "—". */
   readonly plainName?: string;

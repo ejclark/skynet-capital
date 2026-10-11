@@ -530,3 +530,48 @@ describe("BotPlaybooksSection — arriving from an order", () => {
     expect(screen.queryByRole("link", { name: /Back to the order/ })).not.toBeInTheDocument();
   });
 });
+
+/** #5073 slice 4b (#5037 round 2, R2-pos): a position's playbook tag arrives on the card that
+ *  opened it — open and landed, with one way back to the position's row on Overview. */
+describe("BotPlaybooksSection — arriving from a position", () => {
+  const put = "CRWV261106P00080000";
+
+  it("opens the card and carries one way back to the position, by the name its row shows", async () => {
+    next = withWeek();
+    render(
+      withClient(
+        <BotPlaybooksSection
+          deskId="sauron"
+          botName="Sauron"
+          landing={{ card: "SAURON", mode: "aggressive", pos: put }}
+        />,
+      ),
+    );
+    await screen.findByText("SAURON");
+    const card = cardOf("SAURON");
+    expect(card.querySelector("details")?.open).toBe(true);
+    expect(card.hasAttribute("data-landed")).toBe(true);
+    expect(
+      within(card).getByRole("link", { name: "← Back to CRWV $80 PUT · 6 NOV 26" }),
+    ).toHaveAttribute("href", `/accounts?account=sauron#pos-${put}`);
+    // A position is no one order: nothing is ringed, and no "placed before this week" note.
+    expect(card.querySelectorAll("[data-ringed]")).toHaveLength(0);
+    expect(card.textContent).not.toContain("placed before this week");
+  });
+
+  it("says the playbook opened that position when it has no card now", async () => {
+    next = withWeek();
+    render(
+      withClient(
+        <BotPlaybooksSection deskId="sauron" landing={{ card: "BETA-SCOUT", pos: "NVDA" }} />,
+      ),
+    );
+    expect(
+      await screen.findByText(/opened that position\. It is off on this bot now/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "← Back to NVDA" })).toHaveAttribute(
+      "href",
+      "/accounts?account=sauron#pos-NVDA",
+    );
+  });
+});

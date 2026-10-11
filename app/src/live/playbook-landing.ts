@@ -8,6 +8,10 @@
  * check that placed the order — the `at` of its round, epoch ms, which is the very instant the
  * lane's trade mark is drawn at (both are the decision's `at`, `wire-reasoning.ts` and
  * `decision-db-week.ts`) — and `?from=` the order, so the card's one way back lands on its row.
+ *
+ * A position's tag arrives the same way (#5073 slice 4b, R2-pos): `?pos=` is the position's symbol
+ * instead of `?from=`, so the way back lands on its row on Overview. No `?fill=`: a position can
+ * be several orders, and no one of them is the mark to ring.
  */
 
 import type { PlaybookCard } from "./bot-playbooks";
@@ -17,11 +21,14 @@ export interface PlaybookLanding {
   readonly mode?: string;
   readonly fill?: number;
   readonly from?: string;
+  /** The position the reader came from — its symbol, an OCC one for an option. */
+  readonly pos?: string;
 }
 
 const MAX_CARD = 80;
 const MAX_MODE = 32;
 const MAX_ORDER = 100;
+const MAX_SYMBOL = 40;
 
 const bounded = (raw: unknown, max: number): string | undefined =>
   typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
@@ -33,23 +40,26 @@ export function landingFromSearch(search: Record<string, unknown>): Partial<Play
   const mode = bounded(search.mode, MAX_MODE);
   const fill = Number(search.fill);
   const from = bounded(search.from, MAX_ORDER);
+  const pos = bounded(search.pos, MAX_SYMBOL);
   return {
     card,
     ...(mode ? { mode } : {}),
     ...(Number.isSafeInteger(fill) && fill > 0 ? { fill } : {}),
     ...(from ? { from } : {}),
+    ...(pos ? { pos } : {}),
   };
 }
 
 /** The landing out of a validated search, which carries the page's other params beside it. */
 export function landingOf(search: Partial<PlaybookLanding>): PlaybookLanding | undefined {
-  const { card, mode, fill, from } = search;
+  const { card, mode, fill, from, pos } = search;
   if (!card) return undefined;
   return {
     card,
     ...(mode ? { mode } : {}),
     ...(fill ? { fill } : {}),
     ...(from ? { from } : {}),
+    ...(pos ? { pos } : {}),
   };
 }
 
@@ -64,6 +74,21 @@ export function landingFor(
     ...(why.playbookMode ? { mode: why.playbookMode } : {}),
     ...(Number.isFinite(fill) ? { fill } : {}),
     from: orderId,
+  };
+}
+
+/** What a position's playbook tag writes: its card, in the mode that opened it, and the way back.
+ *  Nothing for a position no playbook is named on. */
+export function landingForPosition(position: {
+  readonly symbol: string;
+  readonly playbookId?: string;
+  readonly playbookMode?: string;
+}): PlaybookLanding | undefined {
+  if (!position.playbookId) return undefined;
+  return {
+    card: position.playbookId,
+    ...(position.playbookMode ? { mode: position.playbookMode } : {}),
+    pos: position.symbol,
   };
 }
 

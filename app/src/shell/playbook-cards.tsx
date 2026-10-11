@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, type ReactNode, useEffect, useRef } from "react";
+import { humanizeOptionSymbol } from "../../../src/trading/option-symbols";
 import {
   type BotPlaybooks,
   CARD_WORDS,
@@ -19,6 +20,7 @@ import {
 import { landingCard, type PlaybookLanding } from "../live/playbook-landing";
 import { land } from "./landing";
 import { PlaybookOpen, WhenOpened } from "./playbook-open";
+import { positionAnchor } from "./position-anchor";
 import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
 
 /**
@@ -38,7 +40,9 @@ import { LaneKey, LaneTrades, WeekLaneRow } from "./week-lanes";
  * An order's playbook link arrives on its card (#5073 slice 4a — round 2's R2-act): that card opens
  * in place and lands like any linked row (`landing.ts`), the order's mark is ringed on its lane, and
  * the opened card carries one way back to the order's row on Activity. An order older than this
- * week has no mark to ring, and the card says so rather than ringing a neighbour.
+ * week has no mark to ring, and the card says so rather than ringing a neighbour. A position's tag
+ * arrives the same way (#5073 slice 4b — R2-pos), its way back landing on the position's row on
+ * Overview; it rings nothing, since a position can be several orders.
  */
 
 function changeHref(deskId: string): string {
@@ -194,6 +198,33 @@ function BackToOrder({ deskId, orderId }: { readonly deskId: string; readonly or
   );
 }
 
+/** The account's Overview with the position's row named — a position tag's one way back. */
+function BackToPosition({ deskId, symbol }: { readonly deskId: string; readonly symbol: string }) {
+  return (
+    <Link
+      className="door-link pbb-back"
+      to="/accounts"
+      search={{ account: deskId }}
+      hash={positionAnchor(symbol)}
+    >
+      ← Back to {humanizeOptionSymbol(symbol)}
+    </Link>
+  );
+}
+
+/** The one way back an arrival carries: to the order, or to the position. */
+function BackTo({
+  deskId,
+  landing,
+}: {
+  readonly deskId: string;
+  readonly landing: PlaybookLanding;
+}) {
+  if (landing.from) return <BackToOrder deskId={deskId} orderId={landing.from} />;
+  if (landing.pos) return <BackToPosition deskId={deskId} symbol={landing.pos} />;
+  return null;
+}
+
 /** What an arrival says above the card's other blocks: the way back, and — when the order's check
  *  is not on this week's lane — why nothing is ringed. */
 function Arrival({
@@ -209,7 +240,7 @@ function Arrival({
 }): ReactElement {
   return (
     <div className="pbb-arrival">
-      {landing.from ? <BackToOrder deskId={deskId} orderId={landing.from} /> : null}
+      <BackTo deskId={deskId} landing={landing} />
       {landing.fill !== undefined && hasWeek && ringed === undefined ? (
         <p className="pbb-meta">
           That order was placed before this week, so its lane has no mark to ring.
@@ -343,7 +374,7 @@ function OffFooter({
   );
 }
 
-/** An order's playbook with no card on this bot now: said plainly, beside the way back, rather
+/** An order's (or a position's) playbook with no card on this bot now: said plainly, beside the way back, rather
  *  than landing the reader on a card that is not the one that placed it. */
 function NoCard({
   deskId,
@@ -355,15 +386,16 @@ function NoCard({
   readonly off: readonly RollCallLine[];
 }): ReactElement {
   const isOff = off.some((l) => l.playbookId === landing.card);
+  const did = landing.pos && !landing.from ? "opened that position" : "placed that order";
   return (
     <div className="pbb-arrival pbb-nocard">
       <p>
-        <span className="num">{landing.card}</span> placed that order.{" "}
+        <span className="num">{landing.card}</span> {did}.{" "}
         {isOff
           ? "It is off on this bot now — it is named in the footer below."
           : "It is not one of this bot's playbooks now, so it has no card here."}
       </p>
-      {landing.from ? <BackToOrder deskId={deskId} orderId={landing.from} /> : null}
+      <BackTo deskId={deskId} landing={landing} />
     </div>
   );
 }
