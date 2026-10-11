@@ -29,7 +29,9 @@ import { PHONE_QUERY } from "./widths";
  * by hue (a standing reader is red/green colourblind), and each part's words carry that part's own
  * pattern as a swatch. The invested part keeps a minimum width so a 96% cash book still shows a
  * sliver of what is working — and none at all when nothing is, when its words lose their swatch
- * too (nothing in the bar is solid). A book whose sold options outweigh what it holds is "-$550 in
+ * too (nothing in the bar is solid). On a phone the cash part keeps the same minimum, so a book
+ * that is nearly all invested still shows the hatch its swatch points at, and draws none when there
+ * is no cash (`data-no-cash`). A book whose sold options outweigh what it holds is "-$550 in
  * positions", never a negative "invested"; a negative cash balance is "cash", never "ready to use".
  * @category accounts
  */
@@ -53,6 +55,7 @@ function CashBar({ idlePct }: { readonly idlePct: number }): ReactElement {
       className="head-cash-bar"
       style={invested}
       data-all-cash={idlePct >= 100 || undefined}
+      data-no-cash={idlePct <= 0 || undefined}
       aria-hidden="true"
     >
       <span className="head-cash-in" />
