@@ -35,3 +35,23 @@ export function followUps(args: {
   blockers?: Array<{ id: number }>;
   closed?: boolean;
 }): Array<{ method: string; path: string; payload: Record<string, unknown> }>;
+export function searchQuery(args: {
+  repo: string;
+  words: string;
+  state?: string;
+  label?: string;
+}): string;
+export function searchRemote(args: {
+  words: string;
+  state: string;
+  label?: string;
+  limit: number;
+  repo?: string;
+  read?: (path: string) => unknown;
+}): IssueLike[];
+export function scanIssues<T extends IssueLike & { pull_request?: unknown }>(
+  state: string,
+  keep: (issue: T) => boolean,
+  limit: number,
+  opts: { read: (path: string) => T[]; perPage?: number; maxPages?: number },
+): { items: T[]; partial: boolean; scanned?: number };
