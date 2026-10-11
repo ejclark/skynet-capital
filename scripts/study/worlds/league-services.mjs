@@ -128,6 +128,14 @@ export function leagueServices(book) {
       retract: refuse("retracting a Council line"),
       now: () => AT,
     },
+    // Replies under the Council's lines are on too (#5097); with no line up, nobody has replied.
+    councilReplies: {
+      load: () => ({ weeks: {} }),
+      add: refuse("a Council reply"),
+      remove: refuse("removing a Council reply"),
+      loadCouncil: () => ({ weeks: {} }),
+      now: () => AT,
+    },
     filingComments: {
       load: () => ({ issues: {} }),
       add: refuse("a filing comment"),

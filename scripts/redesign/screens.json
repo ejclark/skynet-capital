@@ -1,0 +1,194 @@
+[
+  {
+    "id": "leaderboard",
+    "name": "Leaderboard",
+    "purpose": "How every account is doing: bots against humans first, then the whole field by equity, return or P/L.",
+    "route": "/app/leaderboard?by=equity",
+    "world": "profile-today",
+    "viewer": "eric",
+    "settle": 3500
+  },
+  {
+    "id": "profile-overview",
+    "name": "Profile: Overview",
+    "purpose": "Your account at a glance: what it's worth, where the money sits, the league, your council line and every position.",
+    "route": "/app/accounts?account=eric",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-activity",
+    "name": "Profile: Activity",
+    "purpose": "One account's orders and fills, newest first (here, your bot Sauron).",
+    "route": "/app/accounts?account=sauron&section=activity",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-events",
+    "name": "Profile: Events",
+    "purpose": "Dated events on what the account holds (earnings, an option's expiry, market-wide releases) by week, month or quarter.",
+    "route": "/app/accounts?account=sauron&section=events",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-playbooks",
+    "name": "Profile: Playbooks",
+    "purpose": "Whether your bot is running, and what each playbook it follows is doing right now.",
+    "route": "/app/accounts?account=sauron&section=playbooks",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-thesis",
+    "name": "Profile: Thesis",
+    "purpose": "The bot's standing market call in its own words, plus the safeguards on each of its playbooks.",
+    "route": "/app/accounts?account=sauron&section=thesis",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-milestones",
+    "name": "Profile: Milestones",
+    "purpose": "Your rank, points and chapters: what each chapter teaches and what completes it.",
+    "route": "/app/accounts?section=milestones",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "learn-trading",
+    "name": "Milestones: Trading chapter",
+    "purpose": "The trading ladder: each rung from buying stock up to options, and what opens the next one.",
+    "route": "/app/accounts?section=milestones&chapter=trading",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "profile-feedback",
+    "name": "Profile: Feedback",
+    "purpose": "Everything you've sent Moneypenny and where each filing stands.",
+    "route": "/app/accounts?section=feedback",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "onboarding",
+    "name": "First visit, no account linked yet",
+    "purpose": "What a new member sees before linking an account: the getting-started chapter and the connect guide.",
+    "route": "/app/accounts",
+    "world": "no-account",
+    "viewer": "casey"
+  },
+  {
+    "id": "trade-ticket",
+    "name": "Trade: Ticket",
+    "purpose": "The order form for one symbol: price, side, order type and the rung you're on.",
+    "route": "/app/trade?symbol=NVDA",
+    "world": "profile-today",
+    "viewer": "eric",
+    "settle": 3500
+  },
+  {
+    "id": "trade-guidance",
+    "name": "Trade: Guidance",
+    "purpose": "For one symbol and your stake: whether shares, covered calls or cash-secured puts make sense now, and what would change that.",
+    "route": "/app/trade?symbol=NVDA&section=guidance",
+    "world": "profile-today",
+    "viewer": "eric",
+    "settle": 3500
+  },
+  {
+    "id": "trade-chain",
+    "name": "Trade: Options chain",
+    "purpose": "Calls and puts by strike for one expiration; tap a bid to sell or an ask to buy and the order form opens with that contract.",
+    "route": "/app/trade?symbol=NVDA&section=chain",
+    "world": "profile-today",
+    "viewer": "eric",
+    "settle": 3500
+  },
+  {
+    "id": "activity",
+    "name": "Activity",
+    "purpose": "Every trade, filing and milestone across the league, newest first, with a filter.",
+    "route": "/app/activity",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "council",
+    "name": "Activity: The Council",
+    "purpose": "Each member's one line for the week, with replies under each line.",
+    "route": "/app/activity?section=council",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "research",
+    "name": "R&D: Board",
+    "purpose": "The house's calls on upcoming market events, filterable by name, sector, event or call.",
+    "route": "/app/research",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "research-playbooks",
+    "name": "R&D: Playbooks",
+    "purpose": "The playbook catalog: what each strategy does, its evidence and record, and subscribing a bot to it.",
+    "route": "/app/research?section=playbooks",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "member-page",
+    "name": "Someone else's account page",
+    "purpose": "What a member sees of an account they don't own (here Jordan viewing Sauron): its numbers, its positions and the league.",
+    "route": "/app/u/sauron",
+    "world": "profile-today",
+    "viewer": "jordan",
+    "waitFor": ".acct-head h1"
+  },
+  {
+    "id": "member-pulse",
+    "name": "Account page: Pulse",
+    "purpose": "How an account has done over time: equity curve, win rate, drawdown, streaks and realized P/L by week.",
+    "route": "/app/u/sauron/pulse",
+    "world": "profile-today",
+    "viewer": "jordan",
+    "waitFor": ".acct-head h1",
+    "settle": 4000,
+    "maxH": {
+      "phone": 1900
+    }
+  },
+  {
+    "id": "moneypenny",
+    "name": "Moneypenny panel",
+    "purpose": "The side panel on every page for questions, learning help and filing feedback with Moneypenny (here opened over the Leaderboard).",
+    "route": "/app/leaderboard?by=equity",
+    "world": "profile-today",
+    "viewer": "eric",
+    "settle": 2500,
+    "clicks": ["button.mp-toggle"],
+    "maxH": {
+      "phone": 844,
+      "desk": 900
+    }
+  },
+  {
+    "id": "settings",
+    "name": "Settings",
+    "purpose": "Display preferences (density, tower motion, theme), your accounts and your rules.",
+    "route": "/app/settings",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "saved-positions",
+    "name": "Saved positions",
+    "purpose": "Add a position you hold outside Skynet, or pull one in from an account, and get guidance on it.",
+    "route": "/app/saved-positions",
+    "world": "profile-today",
+    "viewer": "eric"
+  }
+]
