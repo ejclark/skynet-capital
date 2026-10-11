@@ -410,6 +410,14 @@
       runNote(k);
     }
   }
+  /** Notes typed but not yet saved, dropped unsaved: a view that went dark or turned out view-only
+   *  keeps none, so they never mark, count or write (#5251). Returns the [sec, key] each was on. */
+  function dropNotes() {
+    const on = [...pendingNotes.keys()].map((k) => k.split("/").slice(0, 2));
+    for (const k of pendingNotes.keys()) clearTimeout(timers[k]);
+    pendingNotes.clear();
+    return on;
+  }
 
   /** Done: save it, then tell the watching session — from this press, never again on a timer. */
   function done() {
@@ -650,9 +658,10 @@
    *  stored (#5243). A view that can't write shows the store only. */
   function connected() {
     connecting = false;
-    // View only: nothing held is written, so a record that exists only because of a held tap goes.
+    // View only: nothing held or typed is written, so a record that exists only because of a held
+    // tap or a note typed while loading goes.
     if (readOnly)
-      for (const { sec, key } of held.values())
+      for (const [sec, key] of [...[...held.values()].map((h) => [h.sec, h.key]), ...dropNotes()])
         if (!stored.has(`tp/${ID}/${sec}/${key}`)) delete state[sec][key];
     for (const { sec, key, at } of readOnly ? [] : held.values()) {
       const r = rec(sec, key);
@@ -668,12 +677,14 @@
   }
 
   /** No store here, or one that can't be read: say which, show no answers, lock the controls.
-   *  Taps held while connecting are dropped — nowhere would keep them. */
+   *  Taps held while connecting, and notes typed and not yet saved, are dropped — nowhere would
+   *  keep them. */
   function offline(line) {
     blocked = line;
     db = null;
     connecting = false;
     held.clear();
+    dropNotes();
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
     turn++; // a send still pending must not report on a page that has gone dark

@@ -16,7 +16,9 @@
 // form/process also allowed for commentary to expand on context"): `pinNotes`, keyed the same way,
 // up to MAX_PIN_NOTE characters, merged one key at a time; an emptied note is null. A note counts
 // with or without a reaction, is quoted word for word under its pin, and the next round applies it
-// on that spot. A reaction or a note on a pin the page no longer shows is ignored (#5240).
+// on that spot. A reaction or a note on a pin the page no longer shows is ignored (#5240). Word for
+// word means every visible character: controls and bidi marks are dropped, and a stored note past
+// the limit (a hand-edited record) is cut with "…".
 //
 // GLYPH AND WORD TOGETHER: Eric is red/green colourblind, so every reaction is a shape and a word
 // (👍 Keep · 👎 Change · ☯︎ Mixed), never a colour. The mixed glyph is U+262F with U+FE0E, so it
@@ -139,10 +141,31 @@ export function decisionPins(d) {
 export const hasPins = (d) => decisionPins(d).length > 0;
 
 const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
-/** A pin's saved note, trimmed, or null: a cleared (null) or blank one is none. */
+/** A character no note needs, and none a page writes on purpose: a control other than tab and
+ *  newline (a NUL can fail the whole comment's post), or a bidi mark, embedding, override or
+ *  isolate (it would reorder the read-back's own words around the quote). */
+const invisible = (c) => {
+  const n = c.codePointAt(0) ?? 0;
+  return (
+    (n < 0x20 && c !== "\t" && c !== "\n") ||
+    (n >= 0x7f && n <= 0x9f) ||
+    n === 0x200e ||
+    n === 0x200f ||
+    (n >= 0x202a && n <= 0x202e) ||
+    (n >= 0x2066 && n <= 0x2069)
+  );
+};
+/** A pin's saved note as the read-back quotes it: every visible character as he wrote it, the
+ *  invisible ones dropped, trimmed, and — a hand-edited record past what the page allows — cut at
+ *  MAX_PIN_NOTE with "…" so the cut shows. A cleared (null), blank or invisible-only one is none. */
 const noteOf = (r, id) => {
   const v = mapOf(r?.pinNotes)[id];
-  return typeof v === "string" && v.trim() ? v.trim() : null;
+  if (typeof v !== "string") return null;
+  const chars = [...v.replace(/\r\n?/g, "\n")].filter((c) => !invisible(c));
+  const text = chars.join("").trim();
+  if (!text) return null;
+  const all = [...text];
+  return all.length > MAX_PIN_NOTE ? `${all.slice(0, MAX_PIN_NOTE - 1).join("")}…` : text;
 };
 
 /** Each pin with its saved reaction and note, each null for none. A value the page never offers
