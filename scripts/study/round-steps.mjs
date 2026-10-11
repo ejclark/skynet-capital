@@ -3,7 +3,7 @@
 // and writes its own folder; round.mjs runs them in order. The decisions are round-plan.mjs's.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { clockArg } from "./clock.mjs";
 import { SESSIONS } from "./round-contract.mjs";
@@ -196,6 +196,19 @@ export async function pool(items, n, fn) {
   return results;
 }
 
+/**
+ * A session folder about to be driven again keeps what its earlier attempt paid for: its recorded
+ * calls move to <step>/superseded/, where usage.mjs (which prices every requests/ folder under the
+ * step) still counts them, and no reader looks for a session (#5099).
+ */
+function keepSpent(stepDir, sessionRel, out) {
+  const spent = join(out, "requests");
+  if (!existsSync(spent)) return;
+  const aside = join(stepDir, "superseded", `${sessionRel.split("/").join("--")}--${Date.now()}`);
+  mkdirSync(aside, { recursive: true });
+  renameSync(spent, join(aside, "requests"));
+}
+
 /** Step 5: every session through drive.mjs --actor sealed, each in its own directory. */
 export async function sessions(ctx) {
   const step = SESSIONS;
@@ -226,6 +239,7 @@ export async function sessions(ctx) {
     if (existsSync(join(out, "summary.json")) && ran === s.taskSha) {
       return { ...s, status: 0, kept: true };
     }
+    keepSpent(dir, s.dir, out);
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
     const args = ["--run", ctx.run, "--world", s.world, "--viewer", s.viewer];
