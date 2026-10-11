@@ -56,7 +56,9 @@
   const UNREAD = "Couldn't read your saved answers — reload the page to try again";
   const locked = () => readOnly || blocked !== null;
   // Until the store answers, a tap is held here and written once it does — a tap in the first
-  // second would otherwise be lost, and the read-back would never see it.
+  // second would otherwise be lost, and the read-back would never see it. What is held is each
+  // change as the value it set, by answer, never the record it was made on: that record was blank,
+  // and writing it would erase the pick or note the store held (#5243).
   let connecting = true;
   const held = new Map();
 
@@ -113,6 +115,16 @@
     state[sec][key] = state[sec][key] || blank();
     return state[sec][key];
   };
+  /** Change one answer on the page; while the store connects, also hold the change to replay onto
+   *  the record the store holds once it answers. `fn` sets a value, never toggles, so a replay onto
+   *  a record that already holds it changes nothing. */
+  function edit(sec, key, fn) {
+    fn(rec(sec, key));
+    if (!connecting) return;
+    const k = `${sec}/${key}`;
+    if (!held.has(k)) held.set(k, { sec, key, changes: [] });
+    held.get(k).changes.push(fn);
+  }
   /** A reaction on a pin this page shows (pins-client.js `said`): a stored id the page no longer
    *  shows, or a value it never offers, is not an answer. */
   const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length);
@@ -233,12 +245,8 @@
     };
   }
   function save(sec, key) {
-    if (connecting) {
-      const r = state[sec][key];
-      const copy = { ...r, react: { ...r.react }, pins: { ...r.pins } };
-      held.set(`${sec}/${key}`, { sec, key, rec: copy });
-      return status("Sending once your answers load");
-    }
+    // The change itself is already held (`edit`); `connected` saves it.
+    if (connecting) return status("Sending once your answers load");
     if (!db) return status("");
     if (sec !== "decisions") return write(`tp/${ID}/${sec}/${key}`, body(sec, key));
     // A whole decision record replaces what is stored, so it first takes the stored pins and
@@ -313,19 +321,29 @@
     saveMeta(false);
   }
 
-  /** One press: an option row toggles its pick or its More/Not mark; any other row its verdict. */
-  function toggle(r, opt, v) {
+  /** One press, as the value it set: an option row's pick or More/Not mark, any other row's verdict
+   *  — `on` presses it, off releases it only if it is the one held. A pick and a Not on the same
+   *  option never stand together. */
+  function press(r, opt, v, on) {
     if (!opt) {
-      r.verdict = r.verdict === v ? null : v;
+      if (on) r.verdict = v;
+      else if (r.verdict === v) r.verdict = null;
       return;
     }
     if (v === "build") {
-      r.pick = r.pick === opt ? null : opt;
-      if (r.pick === opt && r.react[opt] === "not") delete r.react[opt];
+      if (!on) {
+        if (r.pick === opt) r.pick = null;
+        return;
+      }
+      r.pick = opt;
+      if (r.react[opt] === "not") delete r.react[opt];
       return;
     }
-    if (r.react[opt] === v) delete r.react[opt];
-    else r.react[opt] = v;
+    if (!on) {
+      if (r.react[opt] === v) delete r.react[opt];
+      return;
+    }
+    r.react[opt] = v;
     if (v === "not" && r.pick === opt) r.pick = null;
   }
   function runNote(k) {
@@ -451,11 +469,13 @@
     const b = ev.target.closest?.(".rb");
     if (!b || locked()) return;
     if (b === doneBtn) return done();
-    const row = b.closest(".react");
-    toggle(rec(row.dataset.sec, row.dataset.key), row.dataset.opt, b.dataset.v);
+    const { sec, key, opt } = b.closest(".react").dataset;
+    const v = b.dataset.v;
+    const on = !pressed(rec(sec, key), opt, v);
+    edit(sec, key, (r) => press(r, opt, v, on));
     tap();
     status("Saving");
-    save(row.dataset.sec, row.dataset.key);
+    save(sec, key);
   });
   reopenBtn.addEventListener("click", reopen);
   document.addEventListener("input", (ev) => {
@@ -463,7 +483,10 @@
     if (t.dataset?.note === undefined || locked()) return;
     const { sec, key } = t.dataset;
     const k = `${sec}/${key}`;
-    rec(sec, key).note = t.value;
+    const note = t.value;
+    edit(sec, key, (r) => {
+      r.note = note;
+    });
     status("Typing");
     clearTimeout(timers[k]);
     pendingNotes.set(k, () => {
@@ -518,11 +541,13 @@
     problems: (key) => Boolean(TP.decisions.find((d) => d.key === key)?.problems),
     locked,
     react(key, id, v) {
-      const r = rec("decisions", key);
-      r.pins = { ...r.pins };
       touched.set(key, (touched.get(key) ?? new Set()).add(id));
-      if (r.pins[id] === v) delete r.pins[id];
-      else r.pins[id] = v;
+      const on = rec("decisions", key).pins?.[id] !== v;
+      edit("decisions", key, (r) => {
+        r.pins = { ...r.pins };
+        if (on) r.pins[id] = v;
+        else if (r.pins[id] === v) delete r.pins[id];
+      });
       tap();
       status("Saving");
       savePin(key, id);
@@ -557,12 +582,14 @@
         () => false,
       );
 
-  /** The store has answered (or never will): taps held while it was connecting go out now, over
-   *  whatever the store held for the same answer — they are newer than anything it had. */
+  /** The store has answered (or never will): changes held while it was connecting are replayed
+   *  onto the record it holds for the same answer and go out now — newer than what it had, on top
+   *  of it, so a held pin tap never erases the pick or note already saved (#5243). */
   function connected() {
     connecting = false;
-    for (const { sec, key, rec: r } of held.values()) {
-      state[sec][key] = r;
+    for (const { sec, key, changes } of held.values()) {
+      const r = rec(sec, key);
+      for (const fn of changes) fn(r);
       if (!readOnly) save(sec, key);
     }
     held.clear();
