@@ -10,6 +10,8 @@
 export type Tone = "pos" | "neg" | "flat";
 
 export interface NetWorthWindowView {
+  /** "7D" · "1M" · "3M" · "1Y" — or "Since 9/8" when the window reaches past the account's first
+   *  day, and the longer windows are then absent (#5211): a lookup by "1M" may find nothing. */
   readonly label: string;
   readonly note: string;
   readonly value: string;
