@@ -10,7 +10,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "@rstest/core";
 import { runRound } from "../../scripts/study/round.mjs";
-import { FILES } from "../../scripts/study/round-contract.mjs";
+import { FILES, SESSIONS } from "../../scripts/study/round-contract.mjs";
+import { findSessions } from "../../scripts/study/round-files.mjs";
 import { makeCaller, readSchema, resultUsage, userMessage } from "../../scripts/study/sealed.mjs";
 import { readRequests, sumUsage } from "../../scripts/study/usage.mjs";
 import { fakePin, SEAMS, STUB } from "../support/study-round-fakes.js";
@@ -196,4 +197,64 @@ describe("a stub round with three experts at once", () => {
     expect(usage.total.calls).toBeGreaterThan(done.usage.calls);
     expect(usage.total.stubbed).toBe(usage.total.calls);
   });
+});
+
+describe("a round that stops still says what it spent", () => {
+  const argv = (pin: string, round: string) => [
+    "--pin",
+    pin,
+    "--out",
+    round,
+    "--sealed",
+    join(STUB, "sealed"),
+    "--stub",
+    STUB,
+    "--thin",
+  ];
+
+  it("stops with status 1, not a crash, when the browser will not launch — usage.json written", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "study-round-nolaunch-"));
+    const pin = join(tmp, "pin");
+    const round = join(tmp, "round");
+    fakePin(pin, "stub");
+    // The real frame scaler, pointed at a program that is no browser: its launch fails.
+    const { half: _real, ...seams } = SEAMS;
+    const was = process.env.PW_CHROME;
+    process.env.PW_CHROME = "/usr/bin/false";
+    try {
+      expect(await runRound(argv(pin, round), seams)).toBe(1);
+    } finally {
+      if (was === undefined) delete process.env.PW_CHROME;
+      else process.env.PW_CHROME = was;
+    }
+    expect(existsSync(join(round, FILES.usage))).toBe(true);
+  }, 120_000);
+
+  it("keeps a session's first attempt priced when the session is driven again", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "study-round-redrive-"));
+    const pin = join(tmp, "pin");
+    const round = join(tmp, "round");
+    fakePin(pin, "stub");
+    const usage = resultUsage(stream(RESULT));
+    // First attempt: the member's session pays for one call, then dies, and the round stops.
+    const dies = {
+      ...SEAMS,
+      toolAsync: (script: string, args: string[], logFile: string) => {
+        if (script !== "drive.mjs") return SEAMS.toolAsync(script, args, logFile);
+        const out = args[args.indexOf("--out") + 1] ?? "";
+        mkdirSync(join(out, "requests"), { recursive: true });
+        writeFileSync(join(out, "requests", "actor-001.json"), JSON.stringify({ usage }));
+        return Promise.resolve(1);
+      },
+    };
+    expect(await runRound(argv(pin, round), dies)).toBe(1);
+    // Resumed: the session is driven again from an empty folder, and the round finishes.
+    expect(await runRound(argv(pin, round), SEAMS)).toBe(0);
+    const done = JSON.parse(readFileSync(join(round, SESSIONS, "done.json"), "utf8"));
+    expect(done.usage).toMatchObject({ priced: 1, cost_usd: 0.1834 });
+    const total = JSON.parse(readFileSync(join(round, FILES.usage), "utf8"));
+    expect(total.steps[SESSIONS]).toEqual(done.usage);
+    // The kept calls sit apart from the sessions every reader walks.
+    expect(findSessions(round).some((s) => s.rel.includes("superseded"))).toBe(false);
+  }, 120_000);
 });
