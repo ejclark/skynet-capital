@@ -40,13 +40,14 @@
       ]
     },
     {
+      "$comment": "SPY closed yesterday at 730.00, so Jordan sits $9 under the high the account closed at yesterday, as this world was designed. A close at 727.90 would make today a new all-time high, and the page opens on its celebration (#5052).",
       "id": "jordan",
       "displayName": "Jordan",
       "kind": "human",
       "cash": 20111,
       "realizedPl": 0,
       "positions": [
-        { "symbol": "SPY", "quantity": 7, "avgPrice": 712.3, "mark": 728.7, "lastday": 727.9 }
+        { "symbol": "SPY", "quantity": 7, "avgPrice": 712.3, "mark": 728.7, "lastday": 730 }
       ]
     }
   ],

@@ -22,8 +22,8 @@
 // The clock is pinned in the page too (`page.clock.setFixedTime`, as scripts/crawl/phone-one.mjs
 // does), and the page's zone and language are the member's (`clock`, ./clock.mjs — default the
 // owner's), so the browser's "now" reads the same instant on any machine and every time the page
-// formats itself reads as it would on that member's own screen (#5009). The 3D landmark renders when its
-// bundle is built (`npm run build:scene`), as in shell.mjs.
+// formats itself reads as it would on that member's own screen (#5009). The 3D landmark renders
+// when its bundle is built (`npm run build:scene`), as in shell.mjs.
 
 import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";

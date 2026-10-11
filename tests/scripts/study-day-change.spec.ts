@@ -62,6 +62,20 @@ describe("every study world", () => {
       expect(rows.length).toBeGreaterThan(0);
       expect(dayChangeGaps(buildBook(world)).map(describeGap)).toEqual([]);
     });
+    it(`${world}: no account opens on a new all-time high no world asked for`, () => {
+      // A new high puts a celebration over the page's first load; deriving yesterday's close
+      // first made one for Jordan by accident (#5052). A world that wants one says so here.
+      const b = buildBook(world);
+      const today = Date.parse("2026-10-08T00:00:00-04:00");
+      const highs = b.participants
+        .filter((p) =>
+          (b.history[p.id] ?? [])
+            .filter((h) => Date.parse(h.at) < today)
+            .every((h) => p.equity > h.equity),
+        )
+        .map((p) => p.id);
+      expect(highs).toEqual([]);
+    });
     it(`${world}: the chart's last close before today is the header's yesterday`, () => {
       const b = buildBook(world);
       const today = Date.parse("2026-10-08T00:00:00-04:00");

@@ -415,3 +415,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   builds, never composed.
 - 2026-10-09 · three experts ran one after another (~2.7 minutes a batch, ~4½ of the round's ~7¾
   hours), and token use was never recorded. Run experts in parallel and log the CLI's usage per call.
+- 2026-10-10 · the grader fix (#5009) was proved by replaying round one's 87 sessions on the same
+  pin — each member's own taps, no model: 14 of the 20 audited-right answers now pass, none of the
+  15 audited-wrong, and all 36 earlier passes that replay still pass. Two more could not replay (the
+  no-account page opens mid-scroll, so a first tap lands elsewhere). Three still fail because the
+  member read the row through the page's translucent sticky header, which the recorder counts as
+  covered. And deriving one figure can flip a world's story: Jordan's derived close made today a new
+  all-time high and the page opened on a celebration, so a spec now refuses an unplanned high.
