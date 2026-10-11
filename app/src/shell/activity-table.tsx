@@ -124,7 +124,7 @@ function RoundLine({
   );
 }
 
-function WhyDetail({
+export function WhyDetail({
   why,
   showPlaybook,
   deskId,
@@ -212,13 +212,13 @@ export function targetedActivityRow(): string | undefined {
   return typeof window === "undefined" ? undefined : targetedAnchor("act-", window.location.hash);
 }
 
-const findActivityRow = (hash: string): HTMLElement | undefined => {
+export const findActivityRow = (hash: string): HTMLElement | undefined => {
   const anchor = targetedAnchor("act-", hash);
   return (anchor && document.getElementById(anchor)) || undefined;
 };
 
 /** Every anchor the table draws, a spread's legs included: it changes when an older page lands. */
-const rowKey = (events: readonly DeskActivityEvent[]): string =>
+export const rowKey = (events: readonly DeskActivityEvent[]): string =>
   events.flatMap((e) => [e.orderId, ...(e.legs ?? []).map((leg) => leg.orderId)]).join(",");
 
 /** What a lifecycle row says where an order's side would be. Nothing was bought or sold, and on a

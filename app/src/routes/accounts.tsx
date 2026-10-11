@@ -15,7 +15,7 @@ import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
-import { ActivityTable } from "../shell/activity-table";
+import { ActivityLedger } from "../shell/activity-ledger";
 import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
@@ -94,7 +94,7 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
   // One account linked → each bot fill can link to its round in that account's checks (#3961).
   // Several merged → a row carries no account of its own, so the link is honestly left off.
   const only = deskIds.length === 1 ? deskIds[0] : undefined;
-  return <ActivityTable events={activity.data.events} {...(only ? { deskId: only } : {})} />;
+  return <ActivityLedger events={activity.data.events} {...(only ? { deskId: only } : {})} />;
 }
 
 const asId = (raw: unknown): string | undefined =>

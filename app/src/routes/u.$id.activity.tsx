@@ -6,12 +6,13 @@ import { fetchDeskActivity } from "../live/desk";
 import { useRefineSearch } from "../live/refine-search";
 import { useOwnsAccount } from "../shell/account-head";
 import { ActivityFilterBar } from "../shell/activity-filter-bar";
-import { ActivityTable } from "../shell/activity-table";
+import { ActivityLedger } from "../shell/activity-ledger";
 import { type ActivityPages, useActivityPages } from "../shell/use-activity-pages";
 
 /**
  * THE ANY-ACCOUNT PAGE'S ACTIVITY (#3807 slice 2d, dead end 5) — the account's order ledger, the
- * same `ActivityTable` the Profile page's Activity renders, fed by the same per-account read
+ * same ledger the Profile page's Activity renders (`ActivityLedger`: cards on a phone, the table
+ * above it), fed by the same per-account read
  * (`/api/desk/:id/activity`). Each row carries `id="act-<orderId>"`, so the Thesis markers and a
  * bot's "passes that did trade" land on a row that exists. Reads are public inside the invite
  * gate by design; nothing here writes. One exception: a bot's decision names its playbook only for
@@ -81,7 +82,7 @@ function Ledger({
         </p>
       ) : null}
       <div className={refreshing ? "ledger-refreshing" : undefined} aria-busy={refreshing}>
-        <ActivityTable events={pages.rows} showPlaybook={showPlaybook} deskId={deskId} />
+        <ActivityLedger events={pages.rows} showPlaybook={showPlaybook} deskId={deskId} />
       </div>
       {pages.loadOlder ? (
         <button
