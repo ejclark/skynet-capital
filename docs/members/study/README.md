@@ -359,8 +359,12 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   main round's. The main round must have run its sessions on that freeze, under the same stub
   or sealed mode and the same `--sealed` key.
 - **The main round's shape:** its members × worlds × viewports, its thin cut, its world — so
-  `--thin` and `--only-world` are refused beside `--frozen-from`, and the area config must be the
-  one it ran (same sha256). A control of a control is refused.
+  `--thin` and `--only-world` are refused beside `--frozen-from`. The area config must ask what
+  the main round asked: the same file, or one whose area, matrix, cutoff, tasks per member, thin
+  cut and page list match the file the main round ran, read from the path its `round.json`
+  recorded and only while that file still hashes to the record. Any other key may differ (a census
+  route, the roles, the run counts) and is logged as `config-drift`. A control of a control is
+  refused.
 - **The build's own inputs:** census, facts sheet and harvest come from the control pin. A frozen
   task whose fact this build serves differently is logged as `fact-drift`, never refused.
 - **Cheaper:** 1 run a task and 1 expert unless `--runs` / `--experts` say otherwise; no words
@@ -464,3 +468,6 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   it runs, and a matcher dispute on a fixed item holds it rather than passing it. The experts and
   the words pass now read one line per member instead of the cards, so the next round's primed
   split is honest. Round one's grade still counts its card-reading experts as unprimed.
+- 2026-10-11 · round one could not be re-controlled: a control was refused on any edit to the
+  area config, and round one's had two since it ran (#5027's census route, #5099's roles). A
+  control now compares the file the main round ran on what it asks of whom, and logs the rest.
