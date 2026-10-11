@@ -152,6 +152,8 @@ const { page, origin, shoot, close } = await openShell({
       },
     },
     "/api/desk/bot-sauron/probes": { available: false },
+    // The deep dive's "now" ring (#5101): CRWV a few dollars above the put's $85 strike.
+    "/api/trade/quote": { symbol: "CRWV", last: 88.4, change: 1.2, changePct: 1.38, tone: "pos" },
   },
 });
 // The real route, query string and all (the shell's pathname-only stubs cannot see `?symbol=`).
@@ -186,6 +188,11 @@ for (const [tag, viewport] of [
   // page as it opens (its account head is sticky there too, so it is not scrolled under it).
   if (tag === "desktop") {
     await shoot(`activity-filters-${tag}`);
+    // 1c — the put's full detail as a side panel (#5101): not modal, the table live beside it.
+    await page.goto(`${origin}/app/u/bot-sauron/activity?order=opt-put-1#act-opt-put-1`);
+    await page.locator(".act-deep-panel").waitFor();
+    await settle();
+    await shoot(`activity-deep-${tag}`);
     break;
   }
   await toTop(page.locator(".page-header"));
@@ -197,6 +204,16 @@ for (const [tag, viewport] of [
   await settle();
   await toTop(page.locator("#act-opt-put-1"));
   await shoot(`activity-card-open-${tag}`);
+
+  // 1c — "Full detail ›": the put's deep dive as a page, its one way back at the top.
+  await page.getByRole("button", { name: /Full detail/ }).click();
+  await page.locator(".act-deep-page").waitFor();
+  await settle();
+  await shoot(`activity-deep-${tag}`);
+  await page.locator(".act-deep-page").evaluate((el) => el.scrollIntoView({ block: "end" }));
+  await shoot(`activity-deep-end-${tag}`);
+  await page.getByRole("button", { name: "‹ Activity" }).click();
+  await page.locator("#act-opt-put-1[data-open]").waitFor();
   await page.locator("#act-opt-put-1 .act-card-head").click();
 
   // 2 — narrowed to one playbook: the chip pressed (✓), only the spread's card, its why open.

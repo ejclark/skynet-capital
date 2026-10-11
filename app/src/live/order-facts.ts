@@ -205,10 +205,10 @@ export function orderDayKey(event: Pick<DeskActivityEvent, "at" | "lifecycle">):
   return stamp.toLocaleDateString("en-CA", { timeZone: ET });
 }
 
-/** A day key as the cards' header: "TUE · OCT 6", the year added when it is not this one. */
-export function dayHeader(key: string, now: Date = new Date()): string {
+/** A day key's weekday and date — ["Tue", "Oct 6"], the year added when it is not this one. */
+function dayParts(key: string, now: Date): [string, string] | undefined {
   const [year, month, day] = key.split("-").map(Number) as [number, number, number];
-  if (!(year && month && day)) return key;
+  if (!(year && month && day)) return undefined;
   const date = new Date(Date.UTC(year, month - 1, day, 12));
   const weekday = date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
   const monthDay = date.toLocaleDateString("en-US", {
@@ -217,8 +217,18 @@ export function dayHeader(key: string, now: Date = new Date()): string {
     timeZone: "UTC",
   });
   const thisYear = new Date(now).toLocaleDateString("en-CA", { timeZone: ET }).slice(0, 4);
-  const yearPart = String(year) === thisYear ? "" : `, ${year}`;
-  return `${weekday} · ${monthDay}${yearPart}`.toUpperCase();
+  return [weekday, `${monthDay}${String(year) === thisYear ? "" : `, ${year}`}`];
+}
+
+/** A day key as the cards' header: "TUE · OCT 6", the year added when it is not this one. */
+export function dayHeader(key: string, now: Date = new Date()): string {
+  const parts = dayParts(key, now);
+  return parts ? parts.join(" · ").toUpperCase() : key;
+}
+
+/** A day key in a sentence: "Tue Oct 6". */
+export function dayWords(key: string, now: Date = new Date()): string {
+  return dayParts(key, now)?.join(" ") ?? key;
 }
 
 /** The time of day an order filled or was placed, in New York time and saying so — "10:31 AM ET".
