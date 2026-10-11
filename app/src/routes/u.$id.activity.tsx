@@ -8,6 +8,9 @@ import { useOwnsAccount } from "../shell/account-head";
 import { ActivityFilterBar } from "../shell/activity-filter-bar";
 import { ActivityLedger } from "../shell/activity-ledger";
 import { type ActivityPages, useActivityPages } from "../shell/use-activity-pages";
+import { useMediaQuery } from "../shell/use-media";
+import { useOrderDetail } from "../shell/use-order-detail";
+import { TABLET_QUERY } from "../shell/widths";
 
 /**
  * THE ANY-ACCOUNT PAGE'S ACTIVITY (#3807 slice 2d, dead end 5) — the account's order ledger, the
@@ -30,10 +33,13 @@ import { type ActivityPages, useActivityPages } from "../shell/use-activity-page
 
 const MAX_SYMBOL = 32;
 const MAX_PLAYBOOK = 80;
+const MAX_ORDER = 100;
 
 interface ActivitySearch {
   readonly symbol?: string;
   readonly playbook?: string;
+  /** The order whose full detail is open (#5101, `use-order-detail.ts`). */
+  readonly order?: string;
 }
 
 /** What is narrowed, in words — so an empty result names the filter that emptied it. */
@@ -50,6 +56,9 @@ function Ledger({
   showPlaybook,
   deskId,
   onClear,
+  detail,
+  onDetail,
+  paging,
 }: {
   readonly pages: ActivityPages;
   readonly search: ActivitySearch;
@@ -58,6 +67,10 @@ function Ledger({
   readonly showPlaybook: boolean;
   readonly deskId: string;
   readonly onClear: () => void;
+  readonly detail: string | undefined;
+  readonly onDetail: (orderId: string | undefined) => void;
+  /** An order's full detail is open as a page (#5101): the list's own controls step aside too. */
+  readonly paging: boolean;
 }): ReactElement {
   const narrowed = narrowedTo(search);
   if (pages.rows.length === 0) {
@@ -72,9 +85,11 @@ function Ledger({
       <p className="note">No recorded orders in the ledger's window.</p>
     );
   }
+  // The ledger keeps one place in the tree whether or not a page stands in for the list, so the
+  // row a page steps back to is the same component, still holding which row to reopen.
   return (
     <>
-      {pages.missing ? (
+      {pages.missing && !paging ? (
         <p className="note">
           {pages.missing === "older"
             ? `The order this link points to is older than the ${pages.rows.length} loaded here — load older orders to reach it.`
@@ -82,9 +97,15 @@ function Ledger({
         </p>
       ) : null}
       <div className={refreshing ? "ledger-refreshing" : undefined} aria-busy={refreshing}>
-        <ActivityLedger events={pages.rows} showPlaybook={showPlaybook} deskId={deskId} />
+        <ActivityLedger
+          events={pages.rows}
+          showPlaybook={showPlaybook}
+          deskId={deskId}
+          detail={detail}
+          onDetail={onDetail}
+        />
       </div>
-      {pages.loadOlder ? (
+      {pages.loadOlder && !paging ? (
         <button
           type="button"
           className="btn wire-load-more"
@@ -94,7 +115,9 @@ function Ledger({
           {pages.loading ? "Loading…" : "Load older orders"}
         </button>
       ) : null}
-      {pages.failed ? <p className="set-err">Couldn't load older orders — try again.</p> : null}
+      {pages.failed && !paging ? (
+        <p className="set-err">Couldn't load older orders — try again.</p>
+      ) : null}
     </>
   );
 }
@@ -134,13 +157,24 @@ function ActivityPage(): ReactElement {
     narrow({ symbol: undefined, playbook: undefined });
   };
 
+  // An order's full detail (#5101): at tablet width and below it is a page in the list's place, so
+  // the heading and the filter step aside with the list; wider, it is a panel beside them.
+  const { detail, setDetail } = useOrderDetail();
+  const stacked = useMediaQuery(TABLET_QUERY);
+  const paging =
+    stacked && detail !== undefined && pages.rows.some((r) => r.orderId === detail && !r.lifecycle);
+
   // The frame and head are the layout's (`u.$id.tsx`, #4951) — only the ledger reads here.
   return (
     <>
-      <header className="page-header">
-        <h2>Activity</h2>
-        <p>Every order this account placed, newest first — what it did, at what price, and why.</p>
-      </header>
+      {paging ? null : (
+        <header className="page-header">
+          <h2>Activity</h2>
+          <p>
+            Every order this account placed, newest first — what it did, at what price, and why.
+          </p>
+        </header>
+      )}
       {activity.isPending ? (
         <p className="note">Reading the ledger…</p>
       ) : activity.isError ? (
@@ -149,13 +183,15 @@ function ActivityPage(): ReactElement {
         <p className="note">No durable activity ledger is wired in this deployment.</p>
       ) : (
         <>
-          <ActivityFilterBar
-            symbol={symbolText}
-            onSymbol={typeSymbol}
-            playbooks={activity.data.playbooks}
-            playbook={playbook}
-            onPlaybook={(next) => narrow({ playbook: next })}
-          />
+          {paging ? null : (
+            <ActivityFilterBar
+              symbol={symbolText}
+              onSymbol={typeSymbol}
+              playbooks={activity.data.playbooks}
+              playbook={playbook}
+              onPlaybook={(next) => narrow({ playbook: next })}
+            />
+          )}
           <Ledger
             pages={pages}
             search={search}
@@ -163,6 +199,9 @@ function ActivityPage(): ReactElement {
             showPlaybook={isOwn}
             deskId={id}
             onClear={clear}
+            detail={detail}
+            onDetail={setDetail}
+            paging={paging}
           />
         </>
       )}
@@ -179,7 +218,12 @@ function readSearch(search: Record<string, unknown>): ActivitySearch {
       : undefined;
   const symbol = text(search.symbol, MAX_SYMBOL)?.toUpperCase();
   const playbook = text(search.playbook, MAX_PLAYBOOK);
-  return { ...(symbol ? { symbol } : {}), ...(playbook ? { playbook } : {}) };
+  const order = text(search.order, MAX_ORDER);
+  return {
+    ...(symbol ? { symbol } : {}),
+    ...(playbook ? { playbook } : {}),
+    ...(order ? { order } : {}),
+  };
 }
 
 export const Route = createFileRoute("/u/$id/activity")({

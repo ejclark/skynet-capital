@@ -166,6 +166,49 @@ test.describe("landing at 390px, through the links those doors make (#5022)", ()
     await expect(card).toHaveClass(/pos-card/);
     await expectLanded(card);
   });
+
+  // #5101: an order's full detail is a page on a phone, and its one way back is the same row.
+  test("a deep card's full detail is a page whose way back lands on that card, opened", async ({
+    page,
+  }) => {
+    await stage(page);
+    await page.goto(`${OVERVIEW}&section=activity#${DEEPEST_CLOSE}`);
+    const card = page.locator(`[id="${DEEPEST_CLOSE}"]`);
+    await expectLanded(card);
+    await card.locator(".act-card-head").click();
+    await card.getByRole("button", { name: /Full detail/ }).click();
+    await expect(page.locator(".act-deep-page")).toBeVisible();
+    await expect(page.locator(".act-card")).toHaveCount(0);
+    await page.getByRole("button", { name: "‹ Activity" }).click();
+    await expect(card).toHaveAttribute("data-open", "");
+    await expectLanded(card);
+  });
+});
+
+test.describe("an order's full detail at 1280px (#5101)", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test("docks beside the live table, off its columns, and Close leaves the row on screen", async ({
+    page,
+  }) => {
+    await stage(page);
+    await page.goto(
+      `${OVERVIEW}&section=activity&order=${DEEPEST_CLOSE.slice(4)}#${DEEPEST_CLOSE}`,
+    );
+    const panel = page.getByRole("complementary").filter({ hasText: "Full detail" });
+    await expect(panel).toBeVisible();
+    const row = page.locator(`tr[id="${DEEPEST_CLOSE}"]`);
+    await expect(row).toBeVisible();
+    // Not modal, and not over the list: the table's right edge stops short of the panel.
+    const [table, side] = await Promise.all([
+      page.locator("table.blotter").boundingBox(),
+      panel.boundingBox(),
+    ]);
+    expect((table?.x ?? 0) + (table?.width ?? 0)).toBeLessThanOrEqual(side?.x ?? 0);
+    await panel.getByRole("button", { name: /Close/ }).click();
+    await expect(panel).toHaveCount(0);
+    await expect(row).toBeInViewport();
+  });
 });
 
 /**

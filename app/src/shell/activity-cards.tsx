@@ -39,10 +39,16 @@ export function ActivityCards({
   events,
   showPlaybook = true,
   deskId,
+  onDetail,
+  reopen,
 }: {
   readonly events: readonly DeskActivityEvent[];
   readonly showPlaybook?: boolean;
   readonly deskId?: string;
+  /** Opens an order's full detail (#5101) — "Full detail ›" in the opened card. Absent, no door. */
+  readonly onDetail?: (orderId: string) => void;
+  /** The order whose full detail was just closed: its card comes back opened, the row it left. */
+  readonly reopen?: string;
 }): ReactElement {
   useLandOnHash(findActivityRow, rowKey(events));
   return (
@@ -58,7 +64,9 @@ export function ActivityCards({
                 <ActivityCard
                   event={event}
                   showPlaybook={showPlaybook}
+                  startOpen={reopen === event.orderId}
                   {...(deskId ? { deskId } : {})}
+                  {...(onDetail ? { onDetail } : {})}
                 />
               </li>
             ))}
@@ -81,13 +89,17 @@ const LIFECYCLE_WORD: Record<NonNullable<DeskActivityEvent["lifecycle"]>, string
 function ActivityCard({
   event,
   showPlaybook,
+  startOpen,
   deskId,
+  onDetail,
 }: {
   readonly event: DeskActivityEvent;
   readonly showPlaybook: boolean;
+  readonly startOpen: boolean;
   readonly deskId?: string;
+  readonly onDetail?: (orderId: string) => void;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const bodyId = useId();
   const bet = orderBet(event);
   const cash = cashMoved(event);
@@ -152,6 +164,11 @@ function ActivityCard({
               costShown={event.net !== undefined}
               {...(deskId ? { deskId } : {})}
             />
+          ) : null}
+          {onDetail && !event.lifecycle ? (
+            <button type="button" className="act-full" onClick={() => onDetail(event.orderId)}>
+              Full detail <span aria-hidden="true">›</span>
+            </button>
           ) : null}
         </div>
       ) : null}
