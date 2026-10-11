@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A redesign shoot leaves the 3D scene built, and local e2e then times out under it.**
+  `scripts/redesign/shoot.mjs` builds `public/three/scene.js` (ignored) when missing; after that,
+  `ship open`'s local `test:e2e` renders the tower beside the Profile Overview under software GL
+  and `positions-refine-scroll.spec.ts` (1280px) times out in `settled()` — 2/2 local repeats red,
+  green on clean `main` and green again once `public/three` was deleted (18.9s vs 1.2m). CI never
+  builds the scene, so it never sees it. Cheap fixes to weigh: shoot builds the scene into a temp
+  dir, or the e2e webServer serves without `public/three`.
+  _(src: Claude · while: shipping #5242, a feedback build that shot its 390 frame first)_
+
 - **Put events where planning happens — a direction for the next IA pass, not one surface.** Eric,
   2026-10-10, on Profile → Events: "Having awareness of events is valuable when I am planning my
   day, week, month; integrate the two" — then, asked which two: "that is the direction we want to
