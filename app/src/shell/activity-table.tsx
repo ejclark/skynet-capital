@@ -40,6 +40,9 @@ export function ActivityTable({
   events,
   showPlaybook = true,
   deskId,
+  onDetail,
+  detail,
+  reopen,
 }: {
   readonly events: readonly DeskActivityEvent[];
   readonly showPlaybook?: boolean;
@@ -47,6 +50,12 @@ export function ActivityTable({
    *  Heartbeat (#3961). Omitted where one table merges several accounts' rows, since a row carries
    *  no account of its own: the count still renders, the link honestly does not. */
   readonly deskId?: string;
+  /** Opens an order's full detail (#5101): "Full detail ›" under an opened why. Absent, no door. */
+  readonly onDetail?: (orderId: string) => void;
+  /** The order whose full detail is open beside the table: its row wears the selected mark. */
+  readonly detail?: string;
+  /** The order whose full detail was just closed: its why comes back opened. */
+  readonly reopen?: string;
 }): ReactElement {
   const withWhy = events.some((event) => event.reasoning);
   useLandOnHash(findActivityRow, rowKey(events));
@@ -78,7 +87,10 @@ export function ActivityTable({
                 event={event}
                 withWhy={withWhy}
                 showPlaybook={showPlaybook}
+                selected={detail === event.orderId}
+                startOpen={reopen === event.orderId || detail === event.orderId}
                 {...(deskId ? { deskId } : {})}
+                {...(onDetail ? { onDetail } : {})}
               />
             ))}
           </tbody>
@@ -258,18 +270,24 @@ function ActivityRow({
   event,
   withWhy,
   showPlaybook,
+  selected = false,
+  startOpen = false,
   deskId,
+  onDetail,
 }: {
   readonly event: DeskActivityEvent;
   readonly withWhy: boolean;
   readonly showPlaybook: boolean;
+  readonly selected?: boolean;
+  readonly startOpen?: boolean;
   readonly deskId?: string;
+  readonly onDetail?: (orderId: string) => void;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const stamp = rowStamp(event);
   return (
     <>
-      <tr id={`act-${event.orderId}`}>
+      <tr id={`act-${event.orderId}`} data-detail={selected ? "" : undefined}>
         {withWhy ? (
           <td className="why-col">
             {event.reasoning ? (
@@ -340,6 +358,11 @@ function ActivityRow({
               costShown={event.net !== undefined}
               {...(deskId ? { deskId } : {})}
             />
+            {onDetail && !event.lifecycle ? (
+              <button type="button" className="act-full" onClick={() => onDetail(event.orderId)}>
+                Full detail <span aria-hidden="true">›</span>
+              </button>
+            ) : null}
           </td>
         </tr>
       ) : null}

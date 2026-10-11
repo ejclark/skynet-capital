@@ -9,6 +9,8 @@
  */
 @import "./account-activity.css";
 @import "./activity-cards.css";
+/* right after activity-cards.css, not alphabetical: the deep dive reuses the cards' row classes. */
+@import "./order-deep-dive.css";
 @import "./admin.css";
 @import "./alpaca-guide.css";
 @import "./bench.css";
