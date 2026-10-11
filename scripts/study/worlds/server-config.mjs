@@ -109,7 +109,12 @@ export function serverConfig(book) {
     readDecisions: async (id, page) => pageOf(book.decisions[id] ?? [], page),
     findByOrderId: (orderId) => byOrder.get(orderId),
     readHistory: async (id) => book.history[id] ?? [],
-    subscriptions: { load: () => book.subscriptions, loadIfReadable: () => book.subscriptions },
+    // No account has set a per-playbook allocation yet (#4469): the store's empty state.
+    subscriptions: {
+      load: () => book.subscriptions,
+      loadIfReadable: () => book.subscriptions,
+      loadAllocations: () => ({}),
+    },
     tradingClientFor: (id) => tradingClient(book, id),
     optionsClientFor: () => marketClient(book.market),
     ...leagueServices(book),

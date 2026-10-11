@@ -67,6 +67,27 @@ const BAR_DAYS = [7, 31, 93, 180, 366, YTD_DAYS, 1825];
 /** Hand-off reads: the trade page the profile's actions open, and the stores beside it. */
 const TRADE = ["/api/trade/plays", "/api/council", "/api/companion", "/api/saved-positions"];
 
+/** Reads the redesign kit's screens make beyond the profile (scripts/redesign/screens.json):
+ *  the Council's reply threads, R&D's playbook records, and the playbook store's first fetch,
+ *  which the page sends before any playbook is chosen (an empty `id`, answered as production does). */
+const BEYOND = ["/api/council/replies", "/api/outpost/performance", "/api/playbook-store?id="];
+
+/** The options chain the trade page opens on: its symbol, each side, the default expiry (none
+ *  named) and the front one — the first Friday on or after the instant, the first expiration the
+ *  world's market input lists (inputs/profile-today.json). */
+const CHAIN_SYMBOLS = ["NVDA"];
+const INSTANT_DAY = new Date(`${INSTANT.slice(0, 10)}T00:00:00Z`);
+const FRONT_EXPIRY = new Date(
+  INSTANT_DAY.getTime() + ((5 - INSTANT_DAY.getUTCDay() + 7) % 7) * 86_400_000,
+)
+  .toISOString()
+  .slice(0, 10);
+const chainReads = (symbol) =>
+  ["call", "put"].flatMap((type) => [
+    `/api/trade/chain?symbol=${symbol}&type=${type}`,
+    `/api/trade/chain?symbol=${symbol}&type=${type}&exp=${FRONT_EXPIRY}`,
+  ]);
+
 /** The trade page's per-account reads (each route answers only the account's owner). */
 const perAccountTrade = (id) =>
   ["option-positions", "orders", "alerts", "alerts/delivery", "option-lifecycle"].map(
@@ -83,10 +104,13 @@ function perSymbolTrade(symbol) {
 }
 
 export function profileReads() {
-  const reads = [...SHELL, ...TRADE];
+  const reads = [...SHELL, ...TRADE, ...BEYOND];
   for (const symbol of SYMBOLS) reads.push(...perSymbolTrade(symbol));
+  for (const symbol of CHAIN_SYMBOLS) reads.push(...chainReads(symbol));
   for (const id of ACCOUNTS) {
     reads.push(...deskReads(id), ...perAccountTrade(id));
+    // R&D Playbooks with this account picked under "Subscribe as".
+    reads.push(`/api/playbook-store?id=${id}`);
     for (const r of CURVE_RANGES) reads.push(`/api/accounts/${id}/equity-curve?range=${r}`);
   }
   return reads;
