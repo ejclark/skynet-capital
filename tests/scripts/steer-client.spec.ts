@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "@rstest/core";
+import { designDecisions, designRound } from "../../scripts/steer/design.mjs";
 import { DONE_TRIGGER } from "../../scripts/steer/readback.mjs";
 import { COMMENTS_COUNT, renderPage } from "../../scripts/steer/render.mjs";
 import { fixture, ROUND } from "./steer-fixture";
@@ -126,13 +127,15 @@ const settle = async () => {
   for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 5));
 };
 
-/** Open the built page, with or without a `window.claude`, and record every line the bar shows. */
-async function open(claude?: unknown) {
+/** Open the built page (or `html`), with or without a `window.claude`, and record every line the
+ *  bar shows. `before` runs on the window before the page's script does. */
+async function open(claude?: unknown, html = page, before?: (w: Win) => void) {
   const shown: string[] = [];
-  const { window } = new JSDOM(page, {
+  const { window } = new JSDOM(html, {
     runScripts: "dangerously",
     beforeParse(w) {
       if (claude) w.claude = claude;
+      before?.(w);
       new w.MutationObserver((records) => {
         for (const r of records) {
           if ((r.target as Element).id !== "save-state") continue;
@@ -206,6 +209,51 @@ describe("a view with the store counts the store's answers", () => {
     ]);
     expect(v.controls.some((c) => !c.disabled)).toBe(true);
     expect(v.pressed).toBeGreaterThan(0);
+  });
+});
+
+// The redesign commons, 2026-10-11: a round-0 pick chooses a problem. Copy as text — the fallback
+// he pastes into chat when Done can't reach Claude — must not call it a build.
+describe("Copy as text names a round-0 pick as fix first", () => {
+  it("writes `fix first B` for a problems question's pick, never `build B`", async () => {
+    const pic = (p: string) => ({ phone: p, desk: p });
+    const [q] = designDecisions(
+      [
+        {
+          q: 1,
+          kind: "problems",
+          title: "Which problem should the next round fix first?",
+          today: { ...pic("today.jpg"), source: "shots/today.jpg", caption: "Today." },
+          options: [
+            { key: "A", name: "Rank has no reason", delta: "No why.", ...pic("a.jpg") },
+            { key: "B", name: "Bots look like members", delta: "Same rows.", ...pic("b.jpg") },
+          ],
+        },
+      ],
+      { issue: 5160, round: 0 },
+    );
+    const round = designRound({ 5160: q ? [q] : [] });
+    const docs: Docs = {
+      [`tp/${round.id}`]: { openedAt: "2026-10-11T06:00:00Z", taps: [] },
+      [`tp/${round.id}/decisions/5160-q1`]: { pick: "B", react: { A: "not" }, note: "" },
+    };
+    const written: string[] = [];
+    const v = await open(claudeWith(Promise.resolve(store(docs))), renderPage(round), (w) => {
+      Object.defineProperty(w.navigator, "clipboard", {
+        value: {
+          writeText: (t: string) => {
+            written.push(t);
+            return Promise.resolve();
+          },
+        },
+      });
+    });
+    v.doc.querySelector<HTMLButtonElement>("#copy")?.click();
+    await settle();
+    expect(written[0]).toContain(
+      "#5160 Which problem should the next round fix first?: fix first B, not A",
+    );
+    expect(written[0]).not.toContain("build B");
   });
 });
 

@@ -195,6 +195,7 @@ function AccountsPage(): ReactElement {
             mode: undefined,
             fill: undefined,
             from: undefined,
+            pos: undefined,
           }),
           replace: true,
         })
@@ -221,11 +222,12 @@ function AccountsPage(): ReactElement {
             // unfold belongs to Playbooks the same way.
             chapter: next === "milestones" ? prev.chapter : undefined,
             checks: next === "playbooks" ? prev.checks : undefined,
-            // An order's way in to one card is spent once the member goes anywhere else.
+            // An order's or a position's way in to one card is spent once the member goes anywhere else.
             card: undefined,
             mode: undefined,
             fill: undefined,
             from: undefined,
+            pos: undefined,
             // An order's full detail belongs to Activity; leaving it closes the detail.
             order: next === "activity" ? prev.order : undefined,
             ...(crossing ? { q: undefined, events: undefined } : {}),
@@ -381,7 +383,8 @@ export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
     ...sectionFromSearch(search.section, search.checks),
-    // One playbook's card, arrived at from an order (#5073 slice 4a) — read on Playbooks alone.
+    // One playbook's card, arrived at from an order or a position (#5073 slices 4a, 4b) — read
+    // on Playbooks alone.
     ...landingFromSearch(search),
     // The Milestones chapter open beneath the cards (#3807 slice 2b; once its own route, #1119).
     ...chapterFromSearch(search.chapter),

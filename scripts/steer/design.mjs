@@ -91,10 +91,30 @@ const pics = (o, alt, at) =>
     o?.desk && { src: at(o.desk), alt: `${alt} at desktop width`, size: "desk" },
   ].filter(Boolean);
 
-/** Pure once `at` is: manifest entries → decisions. `at` maps a manifest path to a usable one. */
+/**
+ * What a question asks. `design` (the default) shows shapes, and a pick is a build; `problems`
+ * (round 0, docs/process/REDESIGN.md) shows the problems pinned on today, and a pick only chooses
+ * what the next round draws — the page asks "Fix this first" and the read-back files nothing.
+ */
+export const QUESTION_KINDS = ["design", "problems"];
+
+function questionKind(q, n) {
+  const kind = q.kind ?? "design";
+  if (!QUESTION_KINDS.includes(kind)) {
+    throw new Error(
+      `steer/design: q${n}: "kind" is "design" (the default) or "problems", not ${JSON.stringify(q.kind)}`,
+    );
+  }
+  return kind;
+}
+
+/** Pure once `at` is: manifest entries → decisions. `at` maps a manifest path to a usable one.
+ *  A problems question stays a design decision (pictures, minutes, the store) and carries
+ *  `problems: true`, which changes only its words and its read-back. */
 export function designDecisions(questions, { issue, round = null, at = (p) => p }) {
   return questions.map((q, i) => {
     const n = Number(q.q ?? i + 1);
+    const problems = questionKind(q, n) === "problems";
     const options = (q.options ?? []).map((o) => ({
       key: safeKey(o.key),
       name: o.name ?? `Option ${o.key}`,
@@ -107,6 +127,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p 
     return {
       key: safeKey(`${issue}-q${n}`),
       kind: "design",
+      ...(problems ? { problems: true } : {}),
       issue,
       isPr: false,
       round,
@@ -189,6 +210,15 @@ export function designRound(design, { id, title, now, repo = "ejclark/skynet-cap
   if (rounds.length > 1) {
     throw new Error(
       `steer/design: one page holds one round — the manifests name rounds ${rounds.join(", ")}`,
+    );
+  }
+  // The page's intro and verbs follow what it asks: a round-0 page picks a problem, a later one a
+  // shape. Mixing them would put one intro over two meanings.
+  const asks = new Set(all.map((d) => Boolean(d.problems)));
+  if (asks.size > 1) {
+    throw new Error(
+      "steer/design: one page asks which problem to fix first, or shows shapes — not both; " +
+        'round 0 sets "kind": "problems" on every question',
     );
   }
   const round = all.find((d) => d.round != null)?.round ?? null;

@@ -3,10 +3,12 @@
 //   node scripts/redesign/lint.mjs <design.json>     # exit 1 with one line per problem
 //
 // Checks what a script can (lint-rules.mjs): the fields the steer page needs, a numeric question
-// number, a phone and a desk picture for today and every option that exist and are ≤200KB, plain
-// language (no designer jargon, no Title-Cased name the app's UI never says), and that every
-// quoted “…” in `saw` is really there — in a file the manifest cites or in Eric's banked words.
-// A model critic then judges taste only.
+// number, what each question asks (`kind`: "design", the default, or "problems", which round 0
+// must set so a pick chooses the next round's problem and files no build), a phone and a desk
+// picture for today and every option that exist and are ≤200KB, plain language (no designer
+// jargon, no Title-Cased name the app's UI never says), and that every quoted “…” in `saw` is
+// really there — in a file the manifest cites or in Eric's banked words. A model critic then
+// judges taste only.
 //
 // WHERE QUOTES ARE LOOKED FOR: `today.source` when it is a file, `sources` / `notes` on the
 // question or the manifest (paths relative to the manifest, else the repo root — put his pasted

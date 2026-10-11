@@ -24,6 +24,9 @@
 //     so it rolls over untouched — no default, no label, no comment.
 //   - Each Build on a design option becomes a `feedback` issue (his tap is the go), marked so the
 //     reel can say "because you said …" when it merges.
+//   - A problems question (round 0, `kind: "problems"`) files NOTHING: a pick chooses what the next
+//     round draws, never a build. Its pick, marks and notes are quoted on the issue, and the plan's
+//     `nextRound` says what to draw next (the redesign commons, 2026-10-11: eight sessions).
 //   - A comment Eric sent to Claude on the page counts like a note: quoted word for word under
 //     "Eric's comments on the page" in its decision's part of the issue comment, and a decision he
 //     commented on without a tap is quoted and rolled over — never given its default, never moved.
@@ -92,9 +95,14 @@ export function commentsBlock(list) {
   return ["Eric's comments on the page:", ...each.flat()].join("\n\n");
 }
 
+const optionName = (d, k) => d.options.find((o) => o.key === k)?.name ?? k;
+const marked = (r, v) => Object.keys(r.react ?? {}).filter((k) => r.react[k] === v);
+/** Options named for a line: `A ("Rank has no reason"), C ("…")`. */
+const named = (d, keys) => keys.map((k) => `${k} ("${optionName(d, k)}")`).join(", ");
+
 function designPart(d, r) {
-  const name = (k) => d.options.find((o) => o.key === k)?.name ?? k;
-  const by = (v) => Object.keys(r.react ?? {}).filter((k) => r.react[k] === v);
+  const name = (k) => optionName(d, k);
+  const by = (v) => marked(r, v);
   const lines = [head(d)];
   if (r.pick) lines.push(`- Build: option ${r.pick}, "${name(r.pick)}"`);
   if (by("more").length)
@@ -153,6 +161,7 @@ function accumulator() {
     defaults: [],
     followUps: [],
     flips: [],
+    nextRound: [],
   };
   acc.part = (issue, text) => acc.parts.set(issue, [...(acc.parts.get(issue) ?? []), text]);
   acc.move = (issue, { add = [], remove = [] }) => {
@@ -179,6 +188,51 @@ function skipped(d, acc) {
 function commentedOnly(d, said, acc) {
   acc.part(d.issue, [head(d), said].join("\n\n"));
   acc.roll(d, "commented on the page, no tap — still his decision");
+}
+
+/** The next round, after a problems question is read: a pick is drawn, never filed. */
+export function nextRoundInstruction(d, r) {
+  const n = Number(d.round);
+  const round =
+    d.round != null && d.round !== "" && Number.isInteger(n) ? `Round ${n + 1}` : "The next round";
+  const closer = marked(r, "more").filter((k) => k !== r.pick);
+  const drop = marked(r, "not").filter((k) => k !== r.pick);
+  return [
+    r.pick
+      ? `${round} on #${d.issue}: draw 2–5 shapes that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
+      : `No problem picked on #${d.issue}: the next round asks again.`,
+    closer.length
+      ? `Look closer at ${named(d, closer)}: show ${closer.length === 1 ? "it" : "them"} again, closer.`
+      : "",
+    drop.length
+      ? `Drop ${named(d, drop)}: he says ${drop.length === 1 ? "it is" : "they are"} not a problem.`
+      : "",
+    r.pick ? "Nothing is filed from this pick." : "Nothing is filed.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function problemsPart(d, r) {
+  const lines = [head(d)];
+  if (r.pick)
+    lines.push(
+      `- Fix first: problem ${r.pick}, "${optionName(d, r.pick)}" — the next round draws it; nothing is filed from a problem pick`,
+    );
+  if (marked(r, "more").length) lines.push(`- Look closer: ${named(d, marked(r, "more"))}`);
+  if (marked(r, "not").length) lines.push(`- Not a problem: ${named(d, marked(r, "not"))}`);
+  return [lines.join("\n"), noteBlock(r.note)].filter(Boolean).join("\n\n");
+}
+
+/** A problems question: quoted on its issue, nothing filed, the next round's instruction printed. */
+function problemsAnswer(d, r, acc, said) {
+  acc.part(d.issue, [problemsPart(d, r), said].filter(Boolean).join("\n\n"));
+  const instruction = nextRoundInstruction(d, r);
+  acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
+  acc.follow("next-round", d, instruction);
+  // A note and no tap: quoted above, and the next round still has to answer it.
+  if (!(r.pick || Object.keys(r.react ?? {}).length))
+    acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
 function designAnswer(d, r, acc, id, said) {
@@ -276,7 +330,8 @@ export function readback(tp, records, comments = []) {
     if (!isAnswered(r)) {
       if (said) commentedOnly(d, said, acc);
       else skipped(d, acc);
-    } else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id, said);
+    } else if (d.problems && !d.irreversible) problemsAnswer(d, r, acc, said);
+    else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id, said);
     else plainAnswer(d, r, acc, said);
     if (said)
       acc.follow("read-comment", d, "His comments are quoted on the issue; read them first");
@@ -314,6 +369,7 @@ export function readback(tp, records, comments = []) {
     rollover: acc.rollover,
     defaults: acc.defaults,
     followUps: acc.followUps,
+    nextRound: acc.nextRound,
     unplacedComments: placed.unplaced,
   };
 }

@@ -10,8 +10,12 @@
 // invented this session. Text inside quotation marks is skipped by both — it is his words or the
 // app's, which the quote check verifies instead.
 
+import { QUESTION_KINDS } from "../steer/design.mjs";
+
 const CEILING = 200 * 1024;
 const CONF = ["low", "medium", "high"];
+/** What a question asks: shapes, or round 0's problems — the steer builder's own list. */
+const KINDS = QUESTION_KINDS;
 
 /** Banned in copy: the word, a pattern, and what to say instead. */
 const BANNED = [
@@ -36,7 +40,7 @@ const ALLOW = new Set(
     "January February March April May June July August September October November December " +
     "Jan Feb Mar Apr Jun Jul Aug Sep Sept Oct Nov Dec Monday Tuesday Wednesday Thursday Friday " +
     "Saturday Sunday Mon Tue Wed Thu Fri Sat Sun Eric Eric's Moneypenny Skynet Claude Nielsen " +
-    "Playwright Today Build More Not Done Option Round Fidelity GitHub"
+    "Playwright Today Build More Not Done Option Round Fidelity GitHub Fix Look"
   ).split(" "),
 );
 
@@ -141,6 +145,19 @@ function pictureProblems(where, holder, env) {
   return out;
 }
 
+/**
+ * What the question asks. Round 0 picks which problem to fix first, so its questions set
+ * `kind: "problems"` — without it the page says "Build this" and the read-back files a build from
+ * the pick (the redesign commons, 2026-10-11: eight sessions hit it).
+ */
+function kindProblems(q, at, raw) {
+  if (q.kind !== undefined && !KINDS.includes(q.kind))
+    return [`${at}: "kind" is "design" (the default) or "problems", not ${JSON.stringify(q.kind)}`];
+  if (String(raw.round) === "0" && q.kind !== "problems")
+    return [`${at}: round 0 picks a problem — set "kind": "problems" so a pick files no build`];
+  return [];
+}
+
 /** The question's own fields: the words, the call and its falsifier. */
 function fieldProblems(q, at) {
   const out = [];
@@ -174,7 +191,10 @@ function optionProblems(q, at, env) {
   for (const o of options) {
     const where = `${at} option ${o.key}`;
     if (!text(o.name)) out.push(`${where}: needs "name"`);
-    if (!text(o.delta)) out.push(`${where}: needs "delta" — the one thing it changes`);
+    if (!text(o.delta))
+      out.push(
+        `${where}: needs "delta" — ${q.kind === "problems" ? "the problem, in a few words" : "the one thing it changes"}`,
+      );
     out.push(...pictureProblems(where, o, env));
     out.push(...copyProblems(`${where} name`, o.name ?? "", env.ui));
     out.push(...copyProblems(`${where} delta`, o.delta ?? "", env.ui));
@@ -208,6 +228,7 @@ function questionProblems(q, i, raw, env) {
     ...(numbered
       ? []
       : [`question ${i + 1}: "q" is a number (1, 2, …), not ${JSON.stringify(q.q)}`]),
+    ...kindProblems(q, at, raw),
     ...fieldProblems(q, at),
     ...todayProblems(q, at, env),
     ...optionProblems(q, at, env),

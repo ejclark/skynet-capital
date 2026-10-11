@@ -75,7 +75,7 @@ describe("a design round's own page holds only its decisions (#5143)", () => {
     for (const id of ['id="shipped"', 'id="queue"', 'id="progress"']) {
       expect(html).not.toContain(id);
     }
-    expect(html).toContain(ROUND_INTRO);
+    expect(html).toContain(ROUND_INTRO.design);
     expect(html).toContain("Design round 1");
     expect(html).not.toMatch(/Morning page|Evening page/);
   });

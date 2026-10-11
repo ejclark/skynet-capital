@@ -406,7 +406,10 @@
 
   function decisionText(d) {
     const r = state.decisions[d.key] || blank();
-    const bits = [r.pick && `build ${r.pick}`, r.verdict].filter(Boolean);
+    // A round-0 pick chooses a problem to fix first; it is never a build (docs/process/REDESIGN.md).
+    const bits = [r.pick && `${d.problems ? "fix first" : "build"} ${r.pick}`, r.verdict].filter(
+      Boolean,
+    );
     for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
     const note = (r.note || "").trim().replace(/\s+/g, " ");
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;

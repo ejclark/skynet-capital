@@ -97,7 +97,8 @@ The stable page's URL is in #5056's state block; the first publish puts it there
      on one of its options; pass the id as it is — the read-back maps it to the decision key.
    - Then `npm run steer:readback -- --tp <dir>/tp.json --records <dir>/records --comments
      <dir>/comments.json --out <dir>/readback` prints the plan: `actions`, `commands`, `rollover`,
-     `defaults`, `followUps`, `unplacedComments`. Each comment is quoted word for word under
+     `defaults`, `followUps`, `nextRound` (a problems question's next-round instruction),
+     `unplacedComments`. Each comment is quoted word for word under
      "Eric's comments on the page" in its decision's part of the issue comment; a decision he
      commented on without tapping is quoted and rolled over, never given its default.
    - Run each `commands` entry as written (REST through `scripts/issues.mjs`; bodies are files).
@@ -173,9 +174,12 @@ What round 1 of #5037 did, written down so the next round costs instructions, no
    cited, and a note that applies to all questions (round 1: "progressive reveal") shapes all of them.
 
 The manifest `--design` reads is the critique builder's own: `{ issue, round, root?, questions:
-[{ q, title, ask, rec, conf, wrong, saw[], changes, topic, today: { phone, desk, source, caption },
-options: [{ key, name, phone, desk, delta }] }] }` (a bare array works with `--design-issue`).
-Picture paths resolve against `root`, the manifest's folder, then its parent.
+[{ q, kind?, title, ask, rec, conf, wrong, saw[], changes, topic, today: { phone, desk, source,
+caption }, options: [{ key, name, phone, desk, delta }] }] }` (a bare array works with
+`--design-issue`). Picture paths resolve against `root`, the manifest's folder, then its parent.
+`kind` is `"design"` (the default) or `"problems"` — a redesign's round 0, where each option is a
+problem and the buttons read Fix this first · Look closer · Not a problem: the read-back files
+nothing from it and prints `nextRound` instead. One page holds one kind.
 
 ## What this will not do
 

@@ -12,6 +12,8 @@ export function loadDesigns(
   files: string[],
   opts?: { issue?: number; round?: number | string | null },
 ): Record<number, Omit<Decision, "minutes" | "skip">[]>;
+/** What a manifest question may ask: shapes (the default) or round 0's problems. */
+export const QUESTION_KINDS: ["design", "problems"];
 export const DESIGN_TITLE: string;
 export const DESIGN_SKIP: string;
 export function designRoundId(issues: number[], round: number | string | null): string;

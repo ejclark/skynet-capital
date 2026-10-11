@@ -70,37 +70,59 @@ const ORDER: readonly CardState[] = [
 
 /** A glyph, the card's word, and the counted line's words for `n` of them. ◷ is new with this
  *  card (#5037 round 2): "waiting for its window" had no mark of its own. "Wants to hold" takes a
- *  bar and "wants out" an arrow, so neither borrows ▲/▼, which the lanes keep for bought and sold. */
+ *  bar and "wants out" an arrow, so neither borrows ▲/▼, which the lanes keep for bought and sold.
+ *  `tag` is the one word a position's playbook tag carries beside the name (#5073 slice 4b,
+ *  round 2's `◷ CRWV-WHEEL · waiting ›`). */
 export const CARD_WORDS: Record<
   CardState,
-  { readonly glyph: string; readonly word: string; readonly counted: (n: number) => string }
+  {
+    readonly glyph: string;
+    readonly word: string;
+    readonly tag: string;
+    readonly counted: (n: number) => string;
+  }
 > = {
   tactical: {
     glyph: "●",
     word: "Trading on live signals",
+    tag: "trading",
     counted: () => "trading on live signals",
   },
   long: {
     glyph: "▬",
     word: "Wants to hold",
+    tag: "holding",
     counted: (n) => `${n === 1 ? "wants" : "want"} to hold`,
   },
-  flat: { glyph: "↓", word: "Wants out", counted: (n) => `${n === 1 ? "wants" : "want"} out` },
+  flat: {
+    glyph: "↓",
+    word: "Wants out",
+    tag: "wants out",
+    counted: (n) => `${n === 1 ? "wants" : "want"} out`,
+  },
   "no-window": {
     glyph: "◷",
     word: "Waiting for its window",
+    tag: "waiting",
     counted: () => "waiting for a window",
   },
   starting: {
     glyph: ROLL_CALL_WORDS.starting.glyph,
     word: ROLL_CALL_WORDS.starting.word,
+    tag: "starting",
     counted: (n) => `${n === 1 ? "starts" : "start"} next pass`,
   },
-  armed: { glyph: "◉", word: ROLL_CALL_WORDS.armed.word, counted: () => "on" },
-  paused: { glyph: ROLL_CALL_WORDS.paused.glyph, word: "Paused", counted: () => "paused" },
+  armed: { glyph: "◉", word: ROLL_CALL_WORDS.armed.word, tag: "on", counted: () => "on" },
+  paused: {
+    glyph: ROLL_CALL_WORDS.paused.glyph,
+    word: "Paused",
+    tag: "paused",
+    counted: () => "paused",
+  },
   blocked: {
     glyph: ROLL_CALL_WORDS.blocked.glyph,
     word: "Can't fire",
+    tag: "can't fire",
     counted: () => "can't fire",
   },
 };

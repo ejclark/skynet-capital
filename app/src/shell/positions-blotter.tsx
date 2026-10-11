@@ -19,6 +19,7 @@ import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
 import { GuidanceSlot } from "./position-guidance-slot";
 import { PositionPicture } from "./position-picture";
+import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
@@ -195,9 +196,12 @@ export function PositionsBlotter({
   }
   // The decision engine's cards, each on the row it speaks about: its lesson opens there (#5083).
   const said = useMemo(() => decisionsByRow(positions, decisions), [positions, decisions]);
+  // The playbook that opened each position, on a bot's own book (#5073 slice 4b).
+  const cardOf = usePlaybookCards(deskId, positions);
   const guide = (p: DeskPosition) => {
     const row = marks.rows.get(p.symbol);
     const call = rowCallOf(positions, p);
+    const card = cardOf(p);
     return row ? (
       <GuidanceSlot
         position={p}
@@ -214,6 +218,7 @@ export function PositionsBlotter({
             bookRead={statement.isSuccess}
           />
         }
+        playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
         onAside={() => marks.setAside(p.symbol)}
         onUndo={() => marks.undo(p.symbol)}
       />

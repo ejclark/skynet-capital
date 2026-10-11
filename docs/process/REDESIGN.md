@@ -103,8 +103,11 @@ frame, one problem per option, and he picks which to fix first:
 `node scripts/redesign/pin.mjs --frame <dir>/shots/<id>-phone.jpg --pins pins.json --out <dir>/r0/<key>-phone.jpg`
 (each pin is a number and a few words on the spot; `quote` and `tag` are optional; the
 script refuses text under 12px, low contrast, anything off the frame or badges closer than 8px,
-and names the pin). Each problem names the principle it breaks. In round 0 a pick chooses the
-problem: never run the read-back's build `create` command for it — the pick opens round 1.
+and names the pin). Each problem names the principle it breaks. Set `"kind": "problems"` on every
+round-0 question in the manifest (`lint.mjs` refuses round 0 without it): each problem then offers
+**Fix this first · Look closer · Not a problem**, its words read "The problem:", and the intro says
+a pick chooses what the next round draws. The read-back files nothing for it — it quotes his pick,
+marks and notes on the issue and prints `nextRound`, the instruction round 1 is drawn from.
 
 **d · Draw one section, 2–5 shapes.**
 - Pick **one** section for this sitting: the one his notes press hardest. Say why in one line.
@@ -196,7 +199,7 @@ line and go on. Never hold a build for a test that cannot run.
 | Phone first | The 390 frame comes first; desktop only adds room for what the phone put one tap away. |
 | No coined names | Say what a thing does ("the trade form's Guidance tab"), never a label invented this session. |
 | Domain honesty | Real tickers; the sold side of an option in words ("you sold the 180 call"); "illustrative values" wherever nothing computes the number. |
-| Comments lead, buttons follow | His pinned comments are the richest signal. The buttons are one pick: More of this on the one closest to right, Build this when it is ready to build. |
+| Comments lead, buttons follow | His pinned comments are the richest signal. The buttons are one pick: More of this on the one closest to right, Build this when it is ready to build (round 0: Fix this first, which builds nothing). |
 
 ## What this loop will not do
 
