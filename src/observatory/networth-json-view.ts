@@ -136,8 +136,11 @@ function idleView(
 } {
   if (typeof equity !== "number" || typeof cash !== "number" || equity <= 0) return {};
   const pct = Math.min(100, Math.max(0, (cash / equity) * 100));
-  // Rounded first, so a few cents either way reads "$0" rather than "-$0".
-  const invested = Math.round(equity - cash) || 0;
+  // The difference of the two dollars the head PRINTS (`formatCurrency` rounds with Math.round),
+  // not the rounded difference of the raw ones: $996,966.40 less $962,800.60 prints as $996,966
+  // and $962,801, so invested is $34,165 — rounding $34,165.80 said $34,166, and the parts added
+  // to a dollar more than the whole above them. Equity is positive here, so this is never "-0".
+  const invested = Math.round(equity) - Math.round(cash);
   return { idle: `${pct.toFixed(0)}% idle`, idlePct: pct, invested: formatCurrency(invested) };
 }
 

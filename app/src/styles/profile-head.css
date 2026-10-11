@@ -301,6 +301,9 @@
   flex: 1;
   background: repeating-linear-gradient(135deg, var(--muted) 0 1.5px, transparent 1.5px 4px);
 }
+.head-cash-bar[data-no-cash] .head-cash-idle {
+  display: none;
+}
 
 /* 2b · a phone's vitals (#5100 — round 2's question 7, R2): the number's line, then the bar across
  * the head's width on a row of its own, then each part's amount under its end. Fixed rows, so a
@@ -332,8 +335,14 @@
   width: auto;
   box-sizing: border-box;
 }
-/* the sliver gets size before colour (BRAND): 12px, so a 96% cash book still shows what works */
+/* the smaller part gets size before colour (BRAND), whichever it is: 12px, so a 96% cash book
+ * still shows what works and a 99.7% invested one still shows its cash (it drew 1px) — the
+ * invested part gives way for it, so the hatched swatch beside "ready to use" points at a hatch */
 .head-split .head-cash-in {
+  flex-shrink: 1;
+  min-width: 12px;
+}
+.head-split .head-cash-idle {
   min-width: 12px;
 }
 .head-split-words {

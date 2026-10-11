@@ -205,6 +205,27 @@ describe("idle share (#3689 slice 10)", () => {
     expect(view.total).toMatchObject({ invested: "$34,166" });
   });
 
+  it("adds to the worth it sits under, to the dollar, when the cents round apart", () => {
+    // $996,966.40 worth, $962,800.60 cash: the head prints $996,966 and $962,801, so the invested
+    // part it prints beside them must be $34,165 — rounding the $34,165.80 difference says $34,166
+    // and the two parts would add to a dollar more than the number above them.
+    const view = accountsNetWorthView("t", [
+      account({ id: "a", equity: 996_966.4, cash: 962_800.6 }),
+      account({ id: "b", equity: 100_000.4, cash: -2.5 }),
+    ]);
+    expect(view.accounts[0]).toMatchObject({
+      value: "$996,966",
+      cash: "$962,801",
+      invested: "$34,165",
+    });
+    // a negative half rounds up when printed ("-$2"), so the rest is $100,002, not $100,003
+    expect(view.accounts[1]).toMatchObject({
+      value: "$100,000",
+      cash: "-$2",
+      invested: "$100,002",
+    });
+  });
+
   it("signs a book that is net short — only sold options — rather than calling it nothing", () => {
     // $255 collected for a put that now costs $550 to buy back: the positions are worth −$550
     const view = accountsNetWorthView("t", [account({ id: "a", equity: 99_705, cash: 100_255 })]);

@@ -422,6 +422,48 @@ describe("the cash bar on a phone (#5100 — #5037 round 2, R2)", () => {
     expect(said).not.toHaveTextContent("invested");
   });
 
+  // The split bar's rule is the smaller part's, whichever it is (PATTERNS → Labelled split bar):
+  // a nearly-all-invested book keeps its cash drawn — the stylesheet holds the hatch at 12px — so
+  // the hatched swatch beside "ready to use" points at something; a book with no cash draws none.
+  const serve = (book: NetWorthStatsView) => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...book }],
+          }),
+        ),
+      )) as typeof fetch;
+  };
+
+  it("keeps a nearly-all-invested book's cash in the bar, its hatched swatch beside the words", async () => {
+    viewport(390);
+    serve(stats({ value: "$1,000,000", cash: "$3,000", idlePct: 0.3, invested: "$997,000" }));
+    mount();
+    await screen.findByText("$1,000,000");
+    const bar = document.querySelector(".head-split .head-cash-bar") as HTMLElement;
+    expect(bar).not.toHaveAttribute("data-no-cash");
+    expect(bar).not.toHaveAttribute("data-all-cash");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-swatch--idle")).not.toBeNull();
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(
+      /^\$3,000 ready to use · 0\.3%$/,
+    );
+  });
+
+  it("draws no cash part for a book with none — a negative balance says 'cash', unhatched", async () => {
+    viewport(390);
+    serve(stats({ value: "$50,000", cash: "-$25,000", idlePct: 0, invested: "$75,000" }));
+    mount();
+    await screen.findByText("$50,000");
+    const bar = document.querySelector(".head-split .head-cash-bar") as HTMLElement;
+    expect(bar).toHaveAttribute("data-no-cash");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-swatch--idle")).toBeNull();
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(/^-\$25,000 cash · 0\.0%$/);
+  });
+
   it("keeps the rows when the share is unknown: the cash in words where the bar's words go", async () => {
     viewport(390);
     const noShare = stats({ idlePct: undefined, idle: undefined, invested: undefined });
