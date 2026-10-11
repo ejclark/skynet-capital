@@ -1,0 +1,4 @@
+Workflow "review-changes" completed in 4m12s (3 agents).
+Phase Review: done {2 of 3}
+Result:
+{"confirmed":[{"file":"src/a.ts","title":"off-by-one","verdict":{"isReal":true}}],"dropped":2}

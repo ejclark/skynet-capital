@@ -295,6 +295,12 @@ A finished run returns a `ledger` field: a GFM table, one row per item (item · 
 summary), under a headline carrying the counts, the `itemSource`, and the run's output-token
 delta from `budget.spent()`. Print it verbatim; paste it into the issue or PR the run served.
 
+**Checking a run before it returns** — who is done, what came back, what an agent is stuck on — is
+`node scripts/wf-read.mjs --latest` (`--agent <id> --tail 10` for one agent's last tool calls,
+`--task <id>` for the result JSON in a task's `.output`). Never a hand-written journal parser: that
+was 71 calls in three days at a ~468K-token context, each one re-read for the rest of the session
+(#5194).
+
 Two facts fix that shape. The Background-tasks panel has no render lever — `meta.phases`,
 `phase()`, `agent()`'s `label`, `log()`'s one narrator line, and the returned value are the whole
 documented surface, so a diagram cannot live there. And a run's own directory sits under the
