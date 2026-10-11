@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
@@ -814,5 +822,123 @@ describe("ship — a visual PR is told the way back from a red first run", () =>
     expect(open.indexOf('visual_hint "$num" "$base"')).toBeGreaterThan(
       open.indexOf("opened PR #$num"),
     );
+  });
+});
+
+/**
+ * A BEHIND BRANCH IS CAUGHT UP, NOT REFUSED (#5195). The stale-base guard (docs/LESSONS.md,
+ * 2026-09-04) refused and printed `git merge origin/main --no-edit`; 21 agents in 3 days ran it by
+ * hand and re-ran ship open. Now ship runs that merge itself before verify, so verify still tests
+ * the merged tree. Real git against a fake origin that moved ahead; `npx` and `npm` are stubs, and
+ * the npm stub fails verify on purpose — "LOCAL VERIFY FAILED" proves the run carried on past the
+ * merge, and stops it before anything reaches the network.
+ */
+describe("ship open — a branch behind origin/main is merged up, never rebased", () => {
+  let dir: string;
+  let work: string;
+  const env = () =>
+    hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${join(dir, "bin")}:${process.env.PATH ?? ""}`,
+    });
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: work, encoding: "utf8", env: env(), stdio: "pipe" }).trim();
+  const commit = (file: string, text: string, subject: string) => {
+    writeFileSync(join(work, file), text);
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", subject]);
+  };
+  const ship = (extra: string[] = []) => {
+    const body = join(dir, "body.md");
+    writeFileSync(body, "## The picture\n\nPicture: waived — spec\n\n## Summary\n\n- spec\n");
+    try {
+      const out = execFileSync(
+        "bash",
+        [resolve("scripts/ship.sh"), "open", "test: spec", "--body-file", body, ...extra],
+        { cwd: work, env: env(), stdio: "pipe" },
+      );
+      return { code: 0, stdout: out.toString(), stderr: "" };
+    } catch (error) {
+      const e = error as { status?: number; stderr?: Buffer; stdout?: Buffer };
+      return {
+        code: e.status ?? -1,
+        stdout: e.stdout?.toString() ?? "",
+        stderr: e.stderr?.toString() ?? "",
+      };
+    }
+  };
+  /** A branch with its own work while origin/main moved two commits on; `clash` edits the same line. */
+  const behindBy2 = (clash: boolean) => {
+    commit("feature.txt", "feature\n", "feat: the branch's own work");
+    if (clash) commit("shared.txt", "feature\n", "feat: the branch edits shared");
+    git(["checkout", "-q", "main"]);
+    commit("main-a.txt", "a\n", "chore: main moves on");
+    commit("shared.txt", "main\n", "chore: main edits shared");
+    git(["push", "-q", "origin", "main"]);
+    git(["reset", "-q", "--hard", "HEAD~2"]);
+    git(["checkout", "-q", "feature"]);
+    return git(["rev-parse", "HEAD"]);
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "ship-behind-"));
+    work = join(dir, "work");
+    mkdirSync(join(dir, "bin"));
+    writeFileSync(join(dir, "bin", "npx"), "#!/bin/sh\nexit 0\n");
+    writeFileSync(join(dir, "bin", "npm"), "#!/bin/sh\necho stub-npm-fails\nexit 1\n");
+    chmodSync(join(dir, "bin", "npx"), 0o755);
+    chmodSync(join(dir, "bin", "npm"), 0o755);
+    execFileSync("git", ["init", "-q", "--bare", "-b", "main", join(dir, "origin.git")], {
+      env: env(),
+      stdio: "pipe",
+    });
+    mkdirSync(work);
+    git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
+    git(["config", "commit.gpgsign", "false"]);
+    git(["remote", "add", "origin", join(dir, "origin.git")]);
+    // ship runs its body linter as `node scripts/…` from the repo root; lend it this repo's, untracked.
+    symlinkSync(resolve("scripts"), join(work, "scripts"));
+    writeFileSync(join(work, ".git", "info", "exclude"), "scripts\n");
+    commit("shared.txt", "seed\n", "chore: seed");
+    git(["push", "-q", "origin", "main"]);
+    git(["checkout", "-q", "-b", "feature"]);
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("merges a clean catch-up, says so in one line, and carries on to local verify", () => {
+    const before = behindBy2(false);
+    const { code, stdout } = ship();
+    expect(stdout).toContain("ship: merged origin/main (2 commits)");
+    expect(stdout).toContain("LOCAL VERIFY FAILED"); // the stubbed verify ran: the merge did not stop it
+    expect(code).toBe(1);
+    expect(git(["rev-parse", "HEAD^1"])).toBe(before); // a merge on top, the branch's own commits kept
+    expect(git(["rev-parse", "HEAD^2"])).toBe(git(["rev-parse", "origin/main"]));
+    expect(git(["log", "-1", "--format=%s"])).toBe(
+      "Merge remote-tracking branch 'origin/main' into feature",
+    );
+  });
+
+  it("aborts a conflicting merge, names the paths, and refuses with the branch untouched", () => {
+    const before = behindBy2(true);
+    const { code, stdout, stderr } = ship();
+    expect(code).toBe(1);
+    expect(stderr).toContain("conflicting paths:");
+    expect(stderr).toContain("    shared.txt");
+    expect(stderr).toContain("2 commit(s) behind origin/main");
+    expect(stdout).not.toContain("local verify");
+    expect(git(["rev-parse", "HEAD"])).toBe(before);
+    expect(git(["status", "--porcelain"])).toBe("");
+  });
+
+  it("keeps today's refusal under --no-merge", () => {
+    const before = behindBy2(false);
+    const { code, stdout, stderr } = ship(["--no-merge"]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("2 commit(s) behind origin/main");
+    expect(stderr).toContain("git merge origin/main --no-edit");
+    expect(stdout).not.toContain("merged origin/main");
+    expect(git(["rev-parse", "HEAD"])).toBe(before);
   });
 });
