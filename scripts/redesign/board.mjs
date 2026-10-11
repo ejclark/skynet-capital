@@ -45,10 +45,14 @@ export function parseBoardArgs(argv) {
       throw new Error(`board: ${flag} needs a value`);
     if (flag === "--out") args.out = value;
     else
-      args.screens = value
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      args.screens = [
+        ...new Set(
+          value
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        ),
+      ];
   }
   if (!args.out) throw new Error(USAGE);
   if (args.screens?.length === 0) throw new Error("board: --screens names at least one screen id");
@@ -88,14 +92,15 @@ function main() {
     if (child.status !== 0) failed.push(id);
   });
 
-  const hasFrames = (id) => FRAMES.every(([kind]) => existsSync(join(img, `${id}-${kind}.jpg`)));
-  const screens = boardScreens(registry, ids, hasFrames);
+  // One read per frame: a frame counts as there only when its size can be read.
   const sizes = Object.fromEntries(
-    screens.map((s) => [
+    registry.map((s) => [
       s.id,
       Object.fromEntries(FRAMES.map(([kind]) => [kind, sizeOf(join(img, `${s.id}-${kind}.jpg`))])),
     ]),
   );
+  const hasFrames = (id) => FRAMES.every(([kind]) => sizes[id][kind]);
+  const screens = boardScreens(registry, ids, hasFrames);
   const day = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
     month: "short",
@@ -105,6 +110,8 @@ function main() {
     ref: git("rev-parse", "--abbrev-ref", "HEAD"),
     sha: git("rev-parse", "--short", "HEAD"),
     day,
+    // A partial refresh says which screens are new, so the footer never dates older pictures.
+    reshot: args.screens ? ids.map((id) => findScreen(registry, id).name) : null,
   };
   writeFileSync(join(out, "board.html"), boardHtml(screens, sizes, made));
   const files = boardFiles(screens, sizes, img);

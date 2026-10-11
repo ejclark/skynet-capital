@@ -15,6 +15,6 @@ export function worldClock(instant?: string): string;
 export function boardHtml(
   screens: Screen[],
   sizes: Sizes,
-  made: { ref: string; sha: string; day: string },
+  made: { ref: string; sha: string; day: string; reshot?: string[] | null },
 ): string;
 export function boardFiles(screens: Screen[], sizes: Sizes, imgDir: string): Record<string, string>;

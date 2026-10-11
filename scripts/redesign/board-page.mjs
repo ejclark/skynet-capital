@@ -80,7 +80,8 @@ function sectionHtml(screen, sizes, eager) {
 
 /**
  * The page. `sizes[id]` is `{ phone, desk }`, each `{ width, height }` or null when that frame is
- * missing; `made` is `{ ref, sha, day }`, what the pictures were built from and when.
+ * missing; `made` is `{ ref, sha, day, reshot }`: what the pictures were built from and when,
+ * and (a partial refresh) which screens this build re-shot.
  */
 export function boardHtml(screens, sizes, made) {
   const jump = screens.map((s) => `<li><a href="#${e(s.id)}">${e(s.name)}</a></li>`).join("");
@@ -96,7 +97,7 @@ ${CSS}</style>
   </div>
 ${sections}
   <footer class="foot">
-    <p>Pictures: the app as built from ${e(made.ref)} (${e(made.sha)}) on ${e(made.day)}, serving the frozen study world (${worldClock()}). Sample accounts, not live data; option prices come from a model at the world's volatility. The Feedback filings and the council lines come from the repo's screenshot fixtures.</p>
+    <p>Pictures: ${made.reshot ? `${e(made.reshot.join(", "))} as` : "the app as"} built from ${e(made.ref)} (${e(made.sha)}) on ${e(made.day)}${made.reshot ? "; every other screen from an earlier build of this board" : ""}, serving the frozen study world (${worldClock()}). Sample accounts, not live data; option prices come from a model at the world's volatility. The Feedback filings and the council lines come from the repo's screenshot fixtures.</p>
     <p>Dark theme. Phone frames are 390 wide and desktop frames 1280 wide; a long page is cut to keep each picture light.</p>
   </footer>
 </main>

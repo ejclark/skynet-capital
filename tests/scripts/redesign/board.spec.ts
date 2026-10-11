@@ -41,7 +41,9 @@ describe("the registry the board reads", () => {
 describe("parseBoardArgs", () => {
   it("needs an out dir, and shoots every screen unless --screens names some", () => {
     expect(parseBoardArgs(["--out", "b"])).toEqual({ out: "b", screens: null, rebuild: false });
-    expect(parseBoardArgs(["--out", "b", "--screens", "activity, council", "--rebuild"])).toEqual({
+    expect(
+      parseBoardArgs(["--out", "b", "--screens", "activity, council,activity", "--rebuild"]),
+    ).toEqual({
       out: "b",
       screens: ["activity", "council"],
       rebuild: true,
@@ -103,6 +105,10 @@ describe("boardHtml", () => {
     expect(worldClock()).toBe("Thu Oct 8, 3:00 pm ET");
     expect(html).toContain("built from main (b13e029) on Oct 11");
     expect(html).toContain("(Thu Oct 8, 3:00 pm ET)");
+    const partial = boardHtml(two, { settings: both }, { ...made, reshot: ["Settings"] });
+    expect(partial).toContain(
+      "Settings as built from main (b13e029) on Oct 11; every other screen from an earlier build",
+    );
   });
 
   it("sends the start line through comments, with its own words for every refusal", () => {
