@@ -2,8 +2,8 @@
 // book so the pages one tap from the profile render as a member would see them, never as a
 // deployment with the service switched off. The thin slice met three such holes: Activity stuck
 // on "Tuning in…" (no feed read), the Status pill saying "No ops panel is wired in this
-// deployment", and Settings › Account saying account management "isn't wired". Each was the
-// world, not the app — production wires all of them whenever sign-in (OAuth) is configured
+// deployment", and Settings › Account saying account management "isn't wired"; later Milestones
+// saying the journey "isn't linked" (#5208). Each was the world, not the app — production wires all of them whenever sign-in (OAuth) is configured
 // (`src/scripts/serve-dashboard.ts`, `dashboard-ops-status.ts`).
 //
 // RULES, the same as server-config.mjs: the real route handlers and builders run untouched; this
@@ -25,6 +25,7 @@ import {
   deployLag,
 } from "../../../src/server/ops-status-deploy-verdict.ts";
 import { buildOpsStatus } from "../../../src/server/ops-status-service.ts";
+import { createProgressionService } from "../../../src/server/progression-service.ts";
 import { isOccSymbol } from "../../../src/trading/option-symbols.ts";
 import { INSTANT } from "./instant.mjs";
 
@@ -88,6 +89,38 @@ function opsStatus(book) {
   };
 }
 
+/** A member's option fill needs its order-audit tag to earn, and no book carries the audit yet —
+ *  refused rather than read as earning nothing. */
+const optionFillWithoutAudit = (book, ids) => {
+  const option = ids.flatMap((id) => book.activity[id] ?? []).find((f) => isOccSymbol(f.symbol));
+  if (!option) return Promise.resolve([]);
+  return Promise.reject(
+    new Error(
+      `study world: ${option.symbol} is a member's option fill but the book carries no order ` +
+        "audit — add the audit to the book before a milestone can classify it",
+    ),
+  );
+};
+
+/**
+ * The journey (#5208): production builds it on every boot (`dashboard-companion.ts`), so
+ * `/api/learn` answers a linked member's own milestones from their fills. Without it the world
+ * said "isn't linked" beside an onboarding that said connected. Its messages and feedback reads
+ * are wired and empty — nobody here has said anything to Moneypenny or filed. No preference store:
+ * production seeds a member with fill history to wheels off with every earn already claimed, and
+ * an absent store reads exactly that (`progression-service-support.ts → seedRecord`) without a
+ * write on a read.
+ */
+function progression(book) {
+  return createProgressionService({
+    readFills: async (id) => book.activity[id] ?? [],
+    readTags: (id) => optionFillWithoutAudit(book, [id]),
+    readMessages: async () => [],
+    readFeedback: async () => [],
+    now: () => new Date(AT),
+  });
+}
+
 /** The seams to spread into a world's server config. */
 export function leagueServices(book) {
   const allActivity = () => Object.values(book.activity).flat();
@@ -103,18 +136,7 @@ export function leagueServices(book) {
     // leaving it off would print "isn't switched on in this deployment" (shell-artifacts.mjs).
     readAllTradeActivity: async () => allActivity(),
     readAllLadderProgress: async () => [],
-    readAllOrderAudit: () => {
-      const option = humans
-        .flatMap((id) => book.activity[id] ?? [])
-        .find((f) => isOccSymbol(f.symbol));
-      if (!option) return Promise.resolve([]);
-      return Promise.reject(
-        new Error(
-          `study world: ${option.symbol} is a member's option fill but the book carries no order ` +
-            "audit — add the audit to the book before the milestone kind can classify it",
-        ),
-      );
-    },
+    readAllOrderAudit: () => optionFillWithoutAudit(book, humans),
     readMergedPullRequests: async () => [],
     // Feedback is switched on (production has its token); this world's members have filed nothing.
     submitFeedback: refuse("submitting feedback"),
@@ -150,5 +172,6 @@ export function leagueServices(book) {
       removeAccount: refuse("removing an account"),
     },
     opsStatus: opsStatus(book),
+    progression: progression(book),
   };
 }

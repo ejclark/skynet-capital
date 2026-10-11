@@ -7,7 +7,12 @@ import { guardNetwork } from "../../scripts/study/no-network.mjs";
 import { serverRead } from "../../scripts/study/server-reads.mjs";
 import { buildBook } from "../../scripts/study/worlds/book.mjs";
 import { loadInput } from "../../scripts/study/worlds/inputs.mjs";
-import { INSTANT, msOf, resolveTokens } from "../../scripts/study/worlds/instant.mjs";
+import {
+  INSTANT,
+  msOf,
+  pinProcessClock,
+  resolveTokens,
+} from "../../scripts/study/worlds/instant.mjs";
 import { marketClient } from "../../scripts/study/worlds/market.mjs";
 import { serverConfig, sessionFor } from "../../scripts/study/worlds/server-config.mjs";
 import { createBoardChannel } from "../../src/server/board-patch-routes.js";
@@ -224,6 +229,46 @@ describe("serverRead", () => {
     expect(await serverRead("/api/no-such-read", config, createBoardChannel(), session)).toBe(
       undefined,
     );
+  });
+});
+
+// The reads a redesign frame makes are wired as production wires them (#5208): a linked member's
+// journey, and the bot's week under its heartbeat.
+describe("profile-today's reads, as production answers them", () => {
+  const book = buildBook("profile-today");
+  const config = serverConfig(book);
+  const read = async (url: string, email = "eric@study.world") =>
+    (await serverRead(url, config, createBoardChannel(), sessionFor(email)))?.body as Record<
+      string,
+      unknown
+    >;
+
+  it("answers each linked member's journey as linked", async () => {
+    expect(await read("/api/learn")).toMatchObject({ linked: true });
+    expect(await read("/api/learn", "jordan@study.world")).toMatchObject({ linked: true });
+  });
+
+  it("serves the bot's heartbeat with its week, a lane per answering playbook", async () => {
+    // The heartbeat route reads the wall clock for "now", as compose's pinned child does.
+    const unpin = pinProcessClock();
+    try {
+      const body = (await read("/api/desk/sauron/heartbeat")) as {
+        heartbeat: { week?: { lanes: unknown[]; trades: unknown[] } };
+      };
+      expect(body.heartbeat.week?.lanes.length).toBeGreaterThan(0);
+      expect(body.heartbeat.week?.trades.length).toBeGreaterThan(0);
+    } finally {
+      unpin();
+    }
+  });
+
+  it("refuses a journey over a member's option fill the book has no audit for", async () => {
+    const withPut = structuredClone(book);
+    withPut.activity.eric = [
+      { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
+    ];
+    const progression = serverConfig(withPut).progression as { view(id: string): Promise<unknown> };
+    await expect(progression.view("eric")).rejects.toThrow(/member's option fill/);
   });
 });
 
