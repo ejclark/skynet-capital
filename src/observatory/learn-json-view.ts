@@ -14,8 +14,9 @@ import type { AcademyProgress } from "../server/progression-service.js";
  * MILESTONES AS DATA — `/api/learn`, the JSON twin behind the shell's
  * journey. The honesty rule is inherited whole (Eric, 2026-08-25: progress a user can claim with
  * zero proof is worthless): a milestone is EARNED only by a real filled order, and the proof —
- * fill date + order id — rides every earned row. Level 100 opens from the start; each higher
- * course unlocks when the one below completes.
+ * fill date + order id — rides every earned row. A course's lock follows the desk's
+ * (`progression-service-support.ts`'s `openLevels`): wheels off locks nothing; wheels on, level 100
+ * opens from the start and each higher course when the one below completes or a rung opens.
  *
  * Since 8b the celebration and the comprehension gate render IN the shell, so this view carries
  * them whole — with one hard rule: the check ships its questions and options only. The answer
