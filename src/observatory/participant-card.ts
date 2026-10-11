@@ -2,6 +2,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
 import {
   type ActivityView,
+  costBasis,
   type ParticipantSnapshot,
   type PositionView,
   unrealizedPl,
@@ -30,10 +31,23 @@ export function participantInvested(snapshot: ParticipantSnapshot): number {
   return snapshot.positions.reduce((sum, p) => sum + p.marketValue, 0);
 }
 
-/** A participant's unrealized return, as a percent of invested — 0 when nothing's invested. */
+/** What the open positions cost to open — each position's basis taken unsigned, so a written
+ *  option (whose basis is the premium collected, signed negative) adds to the base instead of
+ *  cancelling a long against it. */
+export function participantCostBasis(snapshot: ParticipantSnapshot): number {
+  return snapshot.positions.reduce((sum, p) => sum + Math.abs(costBasis(p)), 0);
+}
+
+/**
+ * The open positions' return (#5212): unrealized P/L as a percent of what those positions cost —
+ * 0 when nothing is open. It is NOT the account's return: cash, closed trades and deposits are all
+ * outside it, so every place that shows it labels it "Open-position return". Measured on cost, the
+ * way the desk prints a position's return, not on today's market value (which read a position down
+ * 50% as down 100%).
+ */
 export function participantReturnPct(snapshot: ParticipantSnapshot): number {
-  const invested = participantInvested(snapshot);
-  return invested > 0 ? (participantUnrealized(snapshot) / invested) * 100 : 0;
+  const basis = participantCostBasis(snapshot);
+  return basis > 0 ? (participantUnrealized(snapshot) / basis) * 100 : 0;
 }
 
 function positionRow(position: PositionView): string {

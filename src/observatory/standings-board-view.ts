@@ -186,7 +186,7 @@ export function standingsCompareView(
       ...(a.realizedPl === undefined || b.realizedPl === undefined
         ? []
         : [compareDelta("Realized", a.realizedPl, b.realizedPl, formatSigned)]),
-      compareDelta("Return", participantReturnPct(a), participantReturnPct(b), pct),
+      compareDelta("Open-position return", participantReturnPct(a), participantReturnPct(b), pct),
     ],
     holdings: holdingsUnion(a, b).map(({ symbol, aValue: av, bValue: bv }) => ({
       symbol,

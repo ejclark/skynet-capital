@@ -53,9 +53,9 @@ describe("the match — cohort cards", () => {
   });
 
   it("shows the best performer's name and return within a cohort", () => {
-    // Bot A: mktValue 12,000 vs cost 100*100=10,000 -> +2,000 unrealized -> +16.67% of invested value.
+    // Bot A: mktValue 12,000 vs cost 100*100=10,000 -> +2,000 unrealized -> +20.00% of cost.
     expect(html).toContain("Bot A");
-    expect(html).toContain("+16.67%");
+    expect(html).toContain("+20.00%");
   });
 
   it("reports breadth (share of the cohort in profit)", () => {

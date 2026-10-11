@@ -1,5 +1,5 @@
 import {
-  participantInvested,
+  participantCostBasis,
   participantReturnPct,
   participantUnrealized,
 } from "./participant-card.js";
@@ -21,6 +21,7 @@ export interface CohortStats {
   readonly totalEquity: number;
   readonly avgEquity: number;
   readonly totalUnrealized: number;
+  /** The cohort's open positions' return on cost — not the accounts' return (#5212). */
   readonly returnPct: number;
   readonly breadthPct: number; // share of the cohort currently in profit
   readonly best?: { name: string; pct: number };
@@ -36,7 +37,7 @@ export function cohortStats(
   const count = c.length;
   const totalEquity = c.reduce((s, p) => s + p.equity, 0);
   const totalUnrealized = c.reduce((s, p) => s + participantUnrealized(p), 0);
-  const totalInvested = c.reduce((s, p) => s + participantInvested(p), 0);
+  const totalBasis = c.reduce((s, p) => s + participantCostBasis(p), 0);
   const returns = c.map(participantReturnPct);
   const inProfit = c.filter((p) => participantUnrealized(p) >= 0).length;
   let best: { name: string; pct: number } | undefined;
@@ -51,7 +52,7 @@ export function cohortStats(
     totalEquity,
     avgEquity: count ? totalEquity / count : 0,
     totalUnrealized,
-    returnPct: totalInvested > 0 ? (totalUnrealized / totalInvested) * 100 : 0,
+    returnPct: totalBasis > 0 ? (totalUnrealized / totalBasis) * 100 : 0,
     breadthPct: count ? (inProfit / count) * 100 : 0,
     best,
     spread: returns.length ? Math.max(...returns) - Math.min(...returns) : 0,

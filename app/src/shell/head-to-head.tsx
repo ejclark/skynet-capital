@@ -28,7 +28,7 @@ const LINES: ReadonlyArray<
   readonly [label: string, text: (s: CompareSide) => string, tone: (s: CompareSide) => FieldTone]
 > = [
   ["Equity", (s) => s.equity, () => "flat"],
-  ["Return", (s) => s.returnPct, (s) => s.returnTone],
+  ["Open-position return", (s) => s.returnPct, (s) => s.returnTone],
   ["Unrealized", (s) => s.unrealized, (s) => s.unrealizedTone],
   ["Realized", (s) => s.realized, (s) => s.realizedTone],
   ["Cash", (s) => s.cash, () => "flat"],

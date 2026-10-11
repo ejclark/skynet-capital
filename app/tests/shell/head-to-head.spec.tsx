@@ -42,7 +42,7 @@ const COMPARE: BoardCompare = {
     { label: "Equity", lead: "a", amount: "$475,540" },
     { label: "Unrealized", lead: "b", amount: "+$18,602" },
     { label: "Realized", lead: "tie", amount: "+$0" },
-    { label: "Return", lead: "a", amount: "+31.30%" },
+    { label: "Open-position return", lead: "a", amount: "+31.30%" },
   ],
   holdings: [
     { symbol: "NVDA", aValue: "$10,000", bValue: "$2,000", shared: true, heavier: "a" },
@@ -62,7 +62,7 @@ describe("the head-to-head lays the pair side by side (#5057)", () => {
   it("orders the line items by what a phone shows first: equity, return, P/L, then cash and invested", () => {
     expect(headToHeadLines(COMPARE).map((l) => l.label)).toEqual([
       "Equity",
-      "Return",
+      "Open-position return",
       "Unrealized",
       "Realized",
       "Cash",
@@ -76,7 +76,7 @@ describe("the head-to-head lays the pair side by side (#5057)", () => {
     expect(line("Invested")).toEqual({ a: "$458,110", mid: "Invested", b: "$62,570" });
     expect(line("Equity").a).toContain("$578,110");
     expect(line("Equity").b).toContain("$102,570");
-    expect(line("Return").b).toContain("+3.21%");
+    expect(line("Open-position return").b).toContain("+3.21%");
   });
 
   it("heads each column with the account's name and its kind as a word", () => {

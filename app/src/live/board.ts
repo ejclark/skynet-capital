@@ -18,7 +18,7 @@ export const BOARD_METRICS: ReadonlyArray<{ key: BoardMetric; label: string }> =
   { key: "equity", label: "Equity" },
   { key: "month", label: "1M return" },
   { key: "pl", label: "Unrealized P/L" },
-  { key: "return", label: "Return %" },
+  { key: "return", label: "Open-position return" },
   { key: "realized", label: "Realized P/L" },
 ];
 

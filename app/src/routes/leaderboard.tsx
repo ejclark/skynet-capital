@@ -52,7 +52,7 @@ function MatchRead({ block }: { readonly block: BoardBlock | undefined }): React
 const COHORT_METRICS = [
   ["avgEquity", "Avg equity"],
   ["unrealized", "Unrealized"],
-  ["return", "Return"],
+  ["return", "Open-position return"],
   ["breadth", "In profit"],
   ["spread", "Spread"],
 ] as const;

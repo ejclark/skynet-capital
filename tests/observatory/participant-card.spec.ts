@@ -1,6 +1,7 @@
 import {
   activityFeed,
   participantCard,
+  participantCostBasis,
   participantInvested,
   participantReturnPct,
   participantUnrealized,
@@ -57,11 +58,32 @@ describe("participant-card", () => {
       expect(participantReturnPct(snap({ positions: [] }))).toBe(0);
     });
 
-    it("computes return as a percent of invested", () => {
+    it("computes the open positions' return as a percent of what they cost, not of market value", () => {
       const snapshot = snap({
         positions: [pos("NVDA", { quantity: 10, avgPrice: 90, marketValue: 1_000 })],
       });
-      expect(participantReturnPct(snapshot)).toBeCloseTo(10, 5);
+      // +100 on a $900 cost is +11.11% — on the $1,000 market value it would read +10%.
+      expect(participantReturnPct(snapshot)).toBeCloseTo(11.111, 2);
+    });
+
+    it("reads a position down half its cost as -50%, never -100%", () => {
+      const snapshot = snap({
+        positions: [pos("NVDA", { quantity: 10, avgPrice: 100, marketValue: 500 })],
+      });
+      expect(participantReturnPct(snapshot)).toBeCloseTo(-50, 5);
+    });
+
+    it("measures a written option against the premium collected, without cancelling a long", () => {
+      const snapshot = snap({
+        positions: [
+          pos("NVDA", { quantity: 10, avgPrice: 100, marketValue: 1_100 }),
+          // Sold one put for $255; buying it back costs $550 → -$295.
+          pos("NVDA261106P00080000", { quantity: -1, avgPrice: 255, marketValue: -550 }),
+        ],
+      });
+      expect(participantCostBasis(snapshot)).toBe(1_255);
+      // (+100 − 295) / 1,255
+      expect(participantReturnPct(snapshot)).toBeCloseTo(-15.538, 2);
     });
 
     it("handles a loss (negative unrealized P/L)", () => {
@@ -69,7 +91,8 @@ describe("participant-card", () => {
         positions: [pos("NVDA", { quantity: 10, avgPrice: 120, marketValue: 1_000 })],
       });
       expect(participantUnrealized(snapshot)).toBe(-200);
-      expect(participantReturnPct(snapshot)).toBeCloseTo(-20, 5);
+      // -200 on a $1,200 cost.
+      expect(participantReturnPct(snapshot)).toBeCloseTo(-16.667, 2);
     });
   });
 
