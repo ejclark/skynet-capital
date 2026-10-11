@@ -2,6 +2,7 @@ import type { PlaybookCard } from "../../src/live/bot-playbooks";
 import {
   landingCard,
   landingFor,
+  landingForPosition,
   landingFromSearch,
   landingOf,
 } from "../../src/live/playbook-landing";
@@ -78,5 +79,30 @@ describe("landingCard — which card the link names", () => {
   it("never lands on a card whose name is withheld, or one that is not there", () => {
     expect(landingCard([card({ mode: "aggressive" })], { card: "SAURON" })).toBeUndefined();
     expect(landingCard(cards, { card: "TACO-DJT" })).toBeUndefined();
+  });
+});
+
+/** #5073 slice 4b (#5037 round 2, R2-pos): a position's tag names the card that opened it and the
+ *  position to come back to — no check to ring, since a position can be several orders. */
+describe("landingForPosition — what a position's playbook tag writes", () => {
+  it("names the playbook, the mode that opened it, and the position", () => {
+    const written = landingForPosition({
+      symbol: "CRWV261106P00080000",
+      playbookId: "CRWV-WHEEL",
+      playbookMode: "aggressive",
+    });
+    expect(written).toEqual({ card: "CRWV-WHEEL", mode: "aggressive", pos: "CRWV261106P00080000" });
+    expect(landingFromSearch({ ...written })).toEqual(written);
+    expect(landingOf({ ...written })).toEqual(written);
+  });
+
+  it("writes nothing for a position no playbook is named on", () => {
+    expect(landingForPosition({ symbol: "NVDA" })).toBeUndefined();
+  });
+
+  it("drops a position param too long to be a symbol, keeping the card", () => {
+    expect(landingFromSearch({ card: "CRWV-WHEEL", pos: "X".repeat(41) })).toEqual({
+      card: "CRWV-WHEEL",
+    });
   });
 });

@@ -3,6 +3,7 @@ import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import { activityNarrowing, type PlaybookOf } from "../observatory/activity-filter.js";
+import type { TradeActivityRecord } from "../observatory/activity-record.js";
 import {
   type BotHoldings,
   botHeartbeatView,
@@ -25,6 +26,7 @@ import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
+import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -37,6 +39,7 @@ import {
   withoutThesisOwnerFields,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
+import { tagsByOrder } from "./playbook-performance.js";
 
 /** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
  *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched.
@@ -84,6 +87,23 @@ function ownerPlaybookOf(
     if (!seen.has(orderId)) seen.set(orderId, findByOrderId(orderId)?.intent.playbookId);
     return seen.get(orderId);
   };
+}
+
+/** Which playbook opened each order behind a position the bot holds now (#5073 slice 4b) — the
+ *  owner's alone (#885), so anyone else's ledger stays untagged and its positions name nothing.
+ *  Only the held symbols' orders are looked up: a closed trade's opener is not this view's to say.
+ *  A spread's legs take their spread's playbook, since the question is who put the leg on. */
+function ownerPositionTags(
+  found: ParticipantSnapshot,
+  durable: readonly TradeActivityRecord[],
+  config: DashboardServerConfig,
+  owner: boolean,
+): PlaybookTagsByOrder | undefined {
+  const { findByOrderId, findSpreadLeg } = config;
+  if (found.kind !== "bot" || !owner || !findByOrderId) return undefined;
+  const held = new Set(found.positions.map((p) => p.symbol));
+  const orders = [...durable, ...(found.activity ?? [])].filter((row) => held.has(row.symbol));
+  return tagsByOrder(orders, findByOrderId, findSpreadLeg, true);
 }
 
 /** `/api/desk/:id/activity` — the account's orders, newest first, keyset-paged by `before`, and
@@ -374,7 +394,8 @@ export async function serveDeskJson(
   // absent with no ledger wired, same honest degrade every other branch here takes, and
   // `deskView` already renders lot-free positions when `ledger` is undefined.
   const durable = await config.readTradeActivity?.(id);
-  const ledger = durable ? deskLedger(found, durable) : undefined;
+  const tags = durable ? ownerPositionTags(found, durable, config, owner) : undefined;
+  const ledger = durable ? deskLedger(found, durable, tags) : undefined;
   // The considerations rail (#3186 slice 3) folds house playbooks matching a held symbol into the
   // desk payload — `playbookStoreCatalog()` is a cheap, synchronous, in-memory walk of the playbook
   // registry (same cost `/api/playbook-store` pays per request), so no caching is added here.
