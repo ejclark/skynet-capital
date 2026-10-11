@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type ReactElement, useId, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { Decision, DeskPosition } from "../live/desk";
 import { asideFor, asideWords } from "../live/mark-aside";
@@ -25,6 +25,8 @@ import type { RowMark } from "./use-row-marks";
  * its sentence ("Collected $255; buying back costs $550") and the lesson the retired pager carried
  * ("What is a breakeven?", a glossary term opened in place), or a playbook that fits the name
  * (#5083). Not now and Undo are the owner's (ownership-gated controls); everyone sees the marks.
+ * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
+ * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
 
 function Mark({ mark }: { readonly mark: PositionMark }): ReactElement {
@@ -98,6 +100,7 @@ export function GuidanceSlot({
   canTrade,
   call,
   decisions = [],
+  playbook,
   onAside,
   onUndo,
 }: {
@@ -110,6 +113,8 @@ export function GuidanceSlot({
   readonly decisions?: readonly Decision[];
   /** Does the viewer own this account? Off it, Not now and Undo are not drawn. */
   readonly canTrade: boolean;
+  /** The playbook that opened it, as its tag line — the bot owner's alone (#885). */
+  readonly playbook?: ReactNode;
   readonly onAside: () => void;
   readonly onUndo: () => void;
 }): ReactElement {
@@ -196,6 +201,7 @@ export function GuidanceSlot({
           </Link>
         </div>
       ) : null}
+      {playbook}
     </div>
   );
 }

@@ -14,7 +14,10 @@ and irreversible) applied to autonomy itself.
 The foreground thread (Eric + Claude) dispatches **subagents**, each in its **own isolated git
 worktree**, to build a scoped item to completion — build → verify → screenshot → open a PR — then report.
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
-feeding thoughts; work moves underneath.
+feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
+fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
+into separate lint, typecheck and per-suite calls (#5191).
 
 ## The rails (addressing single-point-of-failure & oversight)
 
@@ -32,7 +35,11 @@ feeding thoughts; work moves underneath.
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
    work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
    is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
-   `bash scripts/…` call passes both (#5192). Put that line in every worktree agent's prompt.
+   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
+   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
+   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
+   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
+   worktree agent's prompt.
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.

@@ -21,6 +21,7 @@ import {
   type ParticipantSnapshot,
   unrealizedPl,
 } from "./participant-snapshot.js";
+import { type OpenedBy, openedBy } from "./position-opened-by.js";
 import { type PlainPosition, plainPosition } from "./position-plain.js";
 import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
 import {
@@ -93,6 +94,10 @@ interface DeskPositionView extends PlainPosition {
   /** Present only when the fill ledger's open lots for this symbol are all long and their
    *  quantities sum exactly to the position's own, sign included — see `lotsFor`. */
   readonly lots?: readonly PositionLot[];
+  /** The playbook that opened the whole position (#5073 slice 4b, `position-opened-by.ts`). Only
+   *  on a ledger the route tagged, which it does for the bot's owner alone (#885). */
+  readonly playbookId?: OpenedBy["playbookId"];
+  readonly playbookMode?: OpenedBy["playbookMode"];
 }
 
 /** A position's return: "+3.63%" to the hundredth, but whole percent once it is past ±100%
@@ -218,6 +223,7 @@ export function deskView(
       const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
       const option = isOccSymbol(position.symbol);
       const lots = lotsFor(position.symbol, ledger?.open, position, mark);
+      const opener = openedBy(position.symbol, position.quantity, ledger?.open);
       const display = humanizeOptionSymbol(position.symbol);
       forConsiderations.push({
         symbol: position.symbol,
@@ -256,6 +262,7 @@ export function deskView(
         totalTone: plClass(pl),
         weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...(lots ? { lots } : {}),
+        ...opener,
       };
     });
   const considerations = considerationsFor(forConsiderations, playbooks, {

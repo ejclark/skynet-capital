@@ -18,11 +18,12 @@ import { fetchDeskHeartbeat, heartbeatLine } from "../live/heartbeat";
 
 const REFRESH_MS = 30_000;
 
-export function useHeartbeat(deskId: string) {
+export function useHeartbeat(deskId: string, enabled = true) {
   return useQuery({
     queryKey: ["desk-heartbeat", deskId],
     queryFn: () => fetchDeskHeartbeat(deskId),
     refetchInterval: REFRESH_MS,
+    enabled,
   });
 }
 
