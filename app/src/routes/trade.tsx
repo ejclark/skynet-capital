@@ -16,9 +16,11 @@ import { normalizeSymbol } from "../live/symbol";
 import { BenchDoors } from "../shell/bench-doors";
 import {
   type ChainPick,
+  type ChainPreset,
   ChainSection,
   chainPickLeg,
   chainPickTarget,
+  lockedTapNote,
 } from "../shell/chain-section";
 import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
@@ -174,6 +176,9 @@ function DeskTicket({
   incomingLeg,
   onIncomingLegHandled,
   onLegsChange,
+  preset,
+  onPresetHandled,
+  onStage,
   notYours,
 }: {
   readonly desk: string;
@@ -215,6 +220,11 @@ function DeskTicket({
   readonly incomingLeg?: { readonly leg: NewLeg; readonly key: number };
   readonly onIncomingLegHandled?: () => void;
   readonly onLegsChange?: (legs: readonly DraftLeg[]) => void;
+  /** A chain tap's hand-off (#5166, `ChainPreset`) — the option ticket applies it; any other
+   *  ticket on the rung it names only shows its note (a locked tap from a stock rung). */
+  readonly preset?: ChainPreset;
+  readonly onPresetHandled?: () => void;
+  readonly onStage?: (preset: Omit<ChainPreset, "key">) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
@@ -247,9 +257,13 @@ function DeskTicket({
       {rungChip}
     </>
   );
+  // The option ticket shows a hand-off's note inside its own form, where an edit clears it.
+  const presetNote =
+    preset?.note && preset.play === code && info?.kind !== "option" ? preset.note : undefined;
   const header = (
     <>
       {headerNoNav}
+      {presetNote ? <p className="tkt-note">{presetNote}</p> : null}
       {plays.data ? (
         <TicketNav
           plays={plays.data.plays}
@@ -293,6 +307,9 @@ function DeskTicket({
         plays={plays.data?.plays ?? []}
         onPreset={onPreset}
         chartSlot={chartSlot}
+        preset={preset}
+        onPresetHandled={onPresetHandled}
+        onStage={onStage}
       />
     );
   }
@@ -348,6 +365,10 @@ interface StageProps {
    *  `ChainSection`'s own doc comment. Undefined off the Spread rung. */
   readonly markedStrikes?: readonly number[];
   readonly onLegsChange: (legs: readonly DraftLeg[]) => void;
+  /** A chain tap's price or locked-side note for the single-leg ticket — `DeskTicket`'s own doc. */
+  readonly preset?: ChainPreset;
+  readonly onPresetHandled: () => void;
+  readonly onStage: (preset: Omit<ChainPreset, "key">) => void;
 }
 
 /** Whether the ticket at `props.play` is an option rung — the one case `chartSlot` applies to
@@ -436,6 +457,9 @@ function Pane({
       incomingLeg={props.incomingLeg}
       onIncomingLegHandled={props.onIncomingLegHandled}
       onLegsChange={props.onLegsChange}
+      preset={props.preset}
+      onPresetHandled={props.onPresetHandled}
+      onStage={props.onStage}
       onExpirationCommit={props.onExpirationCommit}
       accounts={props.accounts}
       onDeskChange={props.onDeskChange}
@@ -587,6 +611,7 @@ function TradePage(): ReactElement {
   const commitSymbol = (s: string) => {
     const next = normalizeSymbol(s);
     if (next === symbol) return;
+    setPreset(undefined); // a tap on the old underlying's chain says nothing about this one
     navigate({
       replace: true,
       resetScroll: false,
@@ -630,6 +655,16 @@ function TradePage(): ReactElement {
     undefined,
   );
   const legPickCounter = useRef(0);
+  // A chain tap's hand-off to the single-leg ticket (#5166, `ChainPreset`) — the tapped price, or
+  // why the side stayed. Dropped once the rung moves anywhere but the one it names, so a stale tap
+  // can't price a ticket the member reached some other way.
+  const [preset, setPreset] = useState<ChainPreset | undefined>(undefined);
+  const presetCounter = useRef(0);
+  const stagePreset = (next: Omit<ChainPreset, "key">) =>
+    setPreset({ ...next, key: ++presetCounter.current });
+  useEffect(() => {
+    setPreset((p) => (p && p.play !== (play ?? "101") ? undefined : p));
+  }, [play]);
   const [draftLegs, setDraftLegs] = useState<readonly DraftLeg[]>([]);
   // The strikes of a structure picked on the Outlook pane — outlined on the chain so the member can
   // see which rows the proposal sits on (`onOutlookUse`). The SYMBOL it was picked against is held
@@ -646,7 +681,9 @@ function TradePage(): ReactElement {
   }, [isSpread]);
   /** A tap on the chain section either adds a leg (building a Spread) or presets the ticket
    *  through the URL (every other rung, Workbench slice 2): the strike always travels, the rung
-   *  only when the target is unlocked (`chainPickTarget`, the ticket's own fail-safe rule), and
+   *  the tapped cell names only when it is unlocked (`chainPickTarget`, the ticket's own fail-safe
+   *  rule — a bid sells to open, an ask buys, #5166), the tapped price rides route state beside
+   *  the URL (`stagePreset`; a locked rung stages its note instead, and the mid seed stands), and
    *  the section switches back to the ticket so the member lands on the preset form, not on the
    *  chain they just left. A leg pick stays ON the chain pane instead (`chainPickLeg`) — the same
    *  "tap several, then go review" flow `DraftLegForm`'s own inline chain already gives a Spread
@@ -659,7 +696,24 @@ function TradePage(): ReactElement {
       return;
     }
     if (isSpread) return;
-    const target = chainPickTarget(play ?? "101", pick.side, plays.data?.plays);
+    const current = play ?? "101";
+    const target = chainPickTarget(current, pick.side, plays.data?.plays, pick.cell?.price);
+    stagePreset(
+      target.locked
+        ? {
+            play: current,
+            strike: pick.strike,
+            note: lockedTapNote(
+              plays.data?.plays.find((p) => p.code === target.target)?.name,
+              navForPlay(current).instrument === "option",
+            ),
+          }
+        : {
+            play: target.play ?? current,
+            strike: pick.strike,
+            ...(pick.cell?.value !== undefined ? { limit: pick.cell.value } : {}),
+          },
+    );
     void navigate({
       resetScroll: false,
       search: (prev) => {
@@ -776,6 +830,9 @@ function TradePage(): ReactElement {
     onIncomingLegHandled: () => setIncomingLeg(undefined),
     markedStrikes,
     onLegsChange: setDraftLegs,
+    preset,
+    onPresetHandled: () => setPreset(undefined),
+    onStage: stagePreset,
   };
   // THE CONTROLS ROW (#3807 slice 2a — the rail left the frame): folded, the section switch is the
   // row at the top of the stage. Docked, every pane is already on the page and the switch would be a
