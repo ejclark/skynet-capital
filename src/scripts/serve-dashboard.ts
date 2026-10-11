@@ -195,6 +195,7 @@ async function main(): Promise<void> {
     allowlist,
     botControls,
     council,
+    councilReplies,
     filingComments,
     subscriptions,
     savedPositions,
@@ -374,6 +375,18 @@ async function main(): Promise<void> {
       retract: (week, memberId) => {
         council.retract(week, memberId);
       },
+    },
+    // Replies under each weekly Council line (#5097): the app's own store, reading the Council's
+    // lines so a reply only hangs on one that is up — no GitHub, no companion in reach.
+    councilReplies: {
+      load: () => councilReplies.load(),
+      add: (week, lineId, reply) => {
+        councilReplies.add(week, lineId, reply);
+      },
+      remove: (week, lineId, replyId, authorId) => {
+        councilReplies.remove(week, lineId, replyId, authorId);
+      },
+      loadCouncil: () => council.load(),
     },
     // Comments on another member's filing (issue #2224 shape 3): the app's own store plus the
     // app's own feedback log — deliberately no GitHub client in reach.
