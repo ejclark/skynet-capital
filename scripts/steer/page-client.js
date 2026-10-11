@@ -116,7 +116,8 @@
     // Pressed, it stays pressed: one way, so a second press after "nothing happened" can't reopen.
     doneBtn.disabled = locked() || connecting || isDone;
     reopenBtn.hidden = !isDone || locked();
-    told.textContent = toldLine;
+    // Only on a change: rewriting the same words would have the live region read them again.
+    if (told.textContent !== toldLine) told.textContent = toldLine;
     told.hidden = !toldLine;
     return count();
   }
@@ -251,11 +252,14 @@
   /** Done: save it, then tell the watching session — from this press, never again on a timer. */
   function done() {
     if (meta.doneAt || locked() || connecting) return;
+    const focused = document.activeElement === doneBtn;
     flushNotes();
     tap();
     meta.doneAt = new Date().toISOString();
     const saved = saveMeta(true);
     status("Saving");
+    // Pressed Done can't hold focus (it is disabled now); hand it to the Reopen beside it.
+    if (focused) reopenBtn.focus();
     sendDone(count(), saved).catch(() => tell(refused()));
   }
   async function sendDone(n, saved) {
@@ -283,12 +287,15 @@
   }
   function reopen() {
     if (!meta.doneAt || locked()) return;
+    const focused = document.activeElement === reopenBtn;
     turn++;
     tap();
     meta.doneAt = null;
     saveMeta(true);
     tell(REOPENED);
     status("Saving");
+    // Reopen just hid itself; focus goes to the Done it hands back.
+    if (focused) doneBtn.focus();
   }
 
   /** A clock time in the viewer's own zone; another day's carries its weekday. */
@@ -446,6 +453,7 @@
     held.clear();
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
+    turn++; // a send still pending must not report on a page that has gone dark
     toldLine = "";
     status("");
   }

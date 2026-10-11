@@ -284,6 +284,15 @@ describe("Done tells the Claude session watching the page (#5135)", () => {
     expect(c.sent).toHaveLength(2);
   });
 
+  it("hands keyboard focus from a pressed Done to Reopen, and back", async () => {
+    const v = await openWith(answered());
+    v.el("done").focus();
+    await v.press("done");
+    expect(v.doc.activeElement?.id).toBe("reopen");
+    await v.press("reopen");
+    expect(v.doc.activeElement?.id).toBe("done");
+  });
+
   for (const can of ["no_session", "off", "writers_only"]) {
     it(`says the answers are saved and no session is listening when sending reads "${can}"`, async () => {
       const docs = answered();
