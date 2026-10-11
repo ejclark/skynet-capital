@@ -1,9 +1,12 @@
 // The Profile page's head for a shoot that lands on one of its sections (#3807 slice 2b): since
 // /learn, /onboarding, /playbooks and /feedback became sections of /app/accounts, every harness
 // that photographs them needs the two reads the head makes — the owned accounts and the net worth
-// the head condenses off the Overview. One fresh paper account, honest round numbers.
+// the head condenses off the Overview. One fresh paper account, honest round numbers. Each
+// account's desk too: the page reads it on every section, and an unstubbed `{}` desk crashed the
+// route ("Cannot read properties of undefined (reading 'error')", found shooting #5150).
 
-/** `/api/settings` + `/api/accounts/networth` stubs for a member who owns `accounts`. */
+/** `/api/settings` + `/api/accounts/networth` + `/api/desk/<id>` stubs for a member who owns
+ *  `accounts` — an empty desk each (no positions, nothing considered). */
 export function profileStubs(accounts) {
   const stats = {
     value: "$1,000,000.00",
@@ -32,6 +35,15 @@ export function profileStubs(accounts) {
       accounts: accounts.map((a) => ({ ...a, ...stats })),
       total: stats,
     },
+    ...Object.fromEntries(
+      accounts.map((a) => [
+        `/api/desk/${a.id}`,
+        {
+          generatedAt: "2026-09-26T00:00:00Z",
+          desk: { id: a.id, name: a.name, kind: a.kind, considerations: [], positions: [] },
+        },
+      ]),
+    ),
   };
 }
 
