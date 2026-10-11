@@ -1,6 +1,7 @@
 // Visual harness for the owner's Mission Control switchboard — from the REAL built shell
 // (app/dist) over a stub API. One frame: the fleet rows plus the new "Moneypenny's model" dial
-// (#1672 slice 4), Sonnet selected as the delivered default.
+// (#1672 slice 4), Sonnet selected as the delivered default — then the same rows at 390, where the
+// Suspend button once drew over the bot's name (#5172).
 // Usage: npm run build --prefix app && npm run shoot:mission-control [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -49,5 +50,9 @@ await page.goto(`${origin}/app/settings?section=account`);
 await page.getByRole("heading", { name: "Moneypenny's model" }).waitFor();
 await page.locator("#mission-control").scrollIntoViewIfNeeded();
 await shoot("mission-control-companion-dial");
+
+await page.setViewportSize({ width: 390, height: 844 });
+await page.locator("#mission-control").scrollIntoViewIfNeeded();
+await shoot("mission-control-390");
 
 await close();
