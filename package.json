@@ -118,6 +118,7 @@
     "phone": "tsx scripts/crawl/phone-one.mjs",
     "study:compose": "tsx scripts/study/worlds/compose.mjs",
     "study:parity": "tsx scripts/study/parity.mjs",
+    "study:match": "node scripts/study/match.mjs",
     "study:pin": "node scripts/study/pin.mjs",
     "study:census": "tsx scripts/study/census.mjs",
     "study:harvest": "node scripts/study/harvest.mjs",

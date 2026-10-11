@@ -7,14 +7,19 @@ the two of you disagree, a third (the tie-break) decides.
 
 ## What you are given
 
-- **The key** — `gold.md` in the sealed folder you are named. Items `A1…` are the main list, `B1…`
+Everything arrives in the message (`scripts/study/match.mjs` hands it over; you read no files):
+
+- **The key** — the sealed folder's `gold.md`. Items `A1…` are the main list, `B1…`
   known gaps, `S1…` defects only the readers found. For a planted-defect control, the planted list
   (`P1…`) instead.
 - **A control round's expectations** — its `--expect` file. Beside each id it names, the mechanism
   the fix removed (a fixed build) or the defect that was planted (a planted build).
 - **The findings** — `findings-unlabelled.jsonl`, or a chunk of it: one per line, with id, what,
   level, severity and surface (route + viewport). Nothing says who found a finding, on purpose.
-  Judge only what each one says.
+  Judge only what each one says. A recorder line names what the tap changed beside the tapped
+  text — `(an account switch: account)`, `(a section switch: section)`, `(a filter change: lens)`
+  — so judge its mechanism by that: an account or section switch that resets the scroll is not a
+  filter that jumps.
 
 ## The rubric: place and mechanism
 
@@ -55,6 +60,11 @@ item, or none. A planted defect is found only through the mechanism that was pla
 For every finding you were given, in order and with none skipped, return `{finding, gold, score,
 why}`. `gold` is the item's id, or null exactly when `score` is 0. `why` is one short line naming
 the place, plus both mechanisms when they differ. The shape is `scripts/study/schemas/matcher.json`.
+
+## When you are asked again
+
+A message headed **Asked again** carries only the findings your earlier answer left out. Answer
+each of them by the same rubric, as if it had been in the first batch.
 
 ## When you are the tie-break
 
