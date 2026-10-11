@@ -126,4 +126,5 @@ export function steerMarker(id: string, key: string | number): string;
 export function parseSteerMarker(
   body?: string | null,
 ): { round: string; key: string; note: string | null } | null;
-export function isAnswered(rec: Saved | null | undefined): boolean;
+/** Given the decision, only a reaction on a pin it shows counts (#5143). */
+export function isAnswered(rec: Saved | null | undefined, d?: Partial<Decision>): boolean;

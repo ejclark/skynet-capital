@@ -204,10 +204,10 @@ function nextRoundName(d) {
     : "The next round";
 }
 
-/** The next round, after a problems question is read: a pick is drawn, never filed. */
-export function nextRoundInstruction(d, r) {
+/** The next round, after a problems question is read: a pick is drawn, never filed. `pins` is
+ *  `pinClauses(d, r)`, passed in when the caller already has it. */
+export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
   const round = nextRoundName(d);
-  const pins = pinClauses(d, r);
   const closer = marked(r, "more").filter((k) => k !== r.pick);
   const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
@@ -241,11 +241,12 @@ function problemsPart(d, r) {
 /** A problems question: quoted on its issue, nothing filed, the next round's instruction printed. */
 function problemsAnswer(d, r, acc, said) {
   acc.part(d.issue, [problemsPart(d, r), said].filter(Boolean).join("\n\n"));
-  const instruction = nextRoundInstruction(d, r);
+  const pins = pinClauses(d, r);
+  const instruction = nextRoundInstruction(d, r, pins);
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
   // A note and no tap: quoted above, and the next round still has to answer it.
-  if (!(r.pick || Object.keys(r.react ?? {}).length || pinClauses(d, r)))
+  if (!(r.pick || Object.keys(r.react ?? {}).length || pins))
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
@@ -348,7 +349,8 @@ export function readback(tp, records, comments = []) {
   for (const d of tp.decisions) {
     const r = rr.decisions[d.key];
     const said = commentsBlock(placed.byKey.get(d.key));
-    if (!isAnswered(r)) {
+    // Only a pin this decision shows counts: a republished round's old pin ids are not answers.
+    if (!isAnswered(r, d)) {
       if (said) commentedOnly(d, said, acc);
       else skipped(d, acc);
     } else if (d.problems && !d.irreversible) problemsAnswer(d, r, acc, said);

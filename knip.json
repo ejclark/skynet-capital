@@ -21,6 +21,7 @@
     "scripts/redesign/pin.mjs",
     "scripts/redesign/lint.mjs",
     "scripts/redesign/commons.mjs",
+    "scripts/redesign/board.mjs",
     "tests/**/*.spec.ts"
   ],
   "project": ["src/**/*.ts", "scripts/*.mjs", "scripts/study/**/*.mjs", "scripts/redesign/*.mjs"],

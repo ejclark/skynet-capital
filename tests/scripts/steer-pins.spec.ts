@@ -247,11 +247,24 @@ describe("the read-back lists every pin, word for word", () => {
   it("ignores a saved value for a pin the page never showed, or a value it never offers", () => {
     const odd = readback(tp, {
       ...meta,
-      [REC]: { pins: { "C:phone:9": "up", "B:phone:2": "meh" } },
+      [REC]: { note: "closer", pins: { "C:phone:9": "up", "B:phone:2": "meh" } },
     });
     expect(bodyOf(odd)).toContain("- Option B · pin 2 (range strip) — no signal");
     expect(bodyOf(odd)).not.toContain("C:phone:9");
     expect(odd.nextRound).toEqual([]);
+  });
+
+  // A round republished with fewer or renumbered pins keeps its records: a reaction on a pin the
+  // page no longer shows is no answer, so the page's "0 of 1 answered" and the read-back agree.
+  it("rolls a decision over when its only reaction is on a pin the page no longer shows", () => {
+    const stale = { pins: { "B:phone:9": "up" } };
+    expect(isAnswered(stale)).toBe(true);
+    expect(isAnswered(stale, tp.decisions[0])).toBe(false);
+    expect(isAnswered({ pins: { "B:phone:2": "up" } }, tp.decisions[0])).toBe(true);
+    const gone = readback(tp, { ...meta, [REC]: stale });
+    expect(gone.rollover.map((x) => x.key)).toEqual(["5150-q1"]);
+    expect(gone.actions).toEqual([]);
+    expect(gone.followUps).toEqual([]);
   });
 
   it("carries the picked option's pin reactions into the build it files", () => {

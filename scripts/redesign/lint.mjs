@@ -24,11 +24,9 @@ import { fileURLToPath } from "node:url";
 import { lintDesign } from "./lint-rules.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
-const BANKED =
-  "/private/tmp/claude-501/-Users-eric-Developer-skynet-capital/18fcfe8b-decc-4208-bbed-1117271a1b72/scratchpad/shapes";
+const BANKED = join(ROOT, "docs/design/eric-feedback");
 const VERBATIM = (
-  process.env.REDESIGN_VERBATIM ??
-  `${BANKED}/r1-feedback/eric-verbatim.md:${BANKED}/r2-feedback/eric-verbatim-r2.md`
+  process.env.REDESIGN_VERBATIM ?? `${BANKED}/r1-2026-10-09.md:${BANKED}/r2-2026-10-10.md`
 )
   .split(":")
   .filter(Boolean);
