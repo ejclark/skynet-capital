@@ -77,7 +77,7 @@ function decisionHtml(d, i, total, img) {
   return (
     `<section class="dec" id="d-${e(d.key)}" data-kind="${d.kind}">` +
     `<div class="dhead"><p class="eyebrow">Decision ${i + 1} of ${total} · ${d.kind} · about ${d.minutes} min · ` +
-    `<a href="${e(d.link)}" ${ext}>#${d.issue}</a> · ${e(d.cls ?? "")}${age}</p>` +
+    `<a href="${e(d.link)}" ${ext}>#${d.issue}</a>${d.cls ? ` · ${e(d.cls)}` : ""}${age}</p>` +
     `<h3>${e(d.title)}</h3>${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
     `${optionsHtml(d, img)}${controls(d)}${ev}` +
@@ -138,13 +138,49 @@ function headerHtml(tp) {
   );
 }
 
-const emptyDecisions = (tp) =>
-  tp.needsPictures?.length
-    ? '<p class="muted">Every decision this time is still being drawn; they come next page. Press Done to say you looked.</p>'
-    : '<p class="muted">Nothing waits on you. Press Done to say you looked.</p>';
+/** How a round page asks (docs/process/REDESIGN.md): his pinned comments lead, the taps follow. */
+export const ROUND_INTRO =
+  "Pin a comment on the spot a shape should change; your comments lead and the buttons follow. " +
+  "Mark More of this on the one closest to right, or Build this when it is ready to build.";
 
-/** The whole page. `img(picture)` returns the published path of a picture, or null for none. */
+/** A design round's own page (#5143): the round, its issue, the question count — nothing else. */
+function roundHeaderHtml(tp) {
+  const n = tp.decisions.length;
+  const issues = tp.issues
+    .map((x) => `<a href="https://github.com/${e(tp.repo)}/issues/${x}" ${ext}>#${x}</a>`)
+    .join(" · ");
+  const round = tp.round != null ? `Design round ${e(tp.round)}` : "Design round";
+  const date = tp.generatedAt ? ` · ${e(DAY.format(new Date(tp.generatedAt)))}` : "";
+  const drawn = tp.needsPictures ?? [];
+  const drawing = drawn.length
+    ? `<p class="muted" id="drawing">${plural(drawn.length, "decision")} ${drawn.length === 1 ? "is" : "are"} still being drawn: ${drawn.map((x) => e(x.title)).join(" · ")}. Nothing is asked here without a picture.</p>`
+    : "";
+  const toc =
+    n > 1
+      ? `<ol class="toc">${tp.decisions.map((d) => `<li><a href="#d-${e(d.key)}">${e(d.title)}</a></li>`).join("")}</ol>`
+      : "";
+  return (
+    `<header class="top"><p class="eyebrow">${round} · ${issues}${date}</p>` +
+    `<h1>${n ? `${plural(n, "decision")}, about ${tp.budget.used} minutes` : "Nothing to answer yet"}</h1>` +
+    (n ? `<p class="lede" id="intro">${ROUND_INTRO} ${COMMENTS_COUNT}</p>` : "") +
+    toc +
+    drawing +
+    `</header>`
+  );
+}
+
+const emptyDecisions = (tp) =>
+  tp.designOnly
+    ? '<p class="muted">Every decision in this round is still being drawn. Press Done to say you looked.</p>'
+    : tp.needsPictures?.length
+      ? '<p class="muted">Every decision this time is still being drawn; they come next page. Press Done to say you looked.</p>'
+      : '<p class="muted">Nothing waits on you. Press Done to say you looked.</p>';
+
+/** The whole page. `img(picture)` returns the published path of a picture, or null for none.
+ *  A design round's own page (`designOnly`, design.mjs `designRound`) carries its header, its
+ *  questions and the bar — no reel, no queue, no strip. */
 export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
+  const round = Boolean(tp.designOnly);
   const data = {
     id: tp.id,
     shown: tp.decisions.map((d) => d.key),
@@ -160,14 +196,14 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     .map((d, i) => decisionHtml(d, i, tp.decisions.length, img))
     .join("");
   return [
-    `<title>${TITLE}</title>`,
+    `<title>${e(round ? tp.title : TITLE)}</title>`,
     `<style>\n${CSS}</style>`,
     `<div class="page">`,
-    headerHtml(tp),
-    reelHtml(tp.reel, img),
+    round ? roundHeaderHtml(tp) : headerHtml(tp),
+    round ? "" : reelHtml(tp.reel, img),
     `<section class="block" id="decisions"><h2>Decisions</h2>${decisions || emptyDecisions(tp)}</section>`,
-    queueHtml(tp.queue, tp.next),
-    stripHtml(tp.strip),
+    round ? "" : queueHtml(tp.queue, tp.next),
+    round ? "" : stripHtml(tp.strip),
     `</div>`,
     // The bar's two lines: what the store holds, then what became of Done — sent to Claude or not,
     // and the read-back once the session posts it (#5135). Reopen is its own control: Done is one way.

@@ -13,6 +13,13 @@
 //                            between midnight and 05:00 it refuses, and --tp is required)
 //     [--design-issue N] [--design-round N] [--budget <minutes>] [--now <ISO>]
 //
+//   node scripts/steer/gather.mjs --design-only --design <manifest> --out <dir>   # a round page
+//     [--tp <id>]            the round's store id (default design-<issue>-r<round>)
+//     [--title "<name>"]     the artifact's name (default "Redesign round")
+//   A page that holds ONLY the design decisions its manifests draw — no reel, no queue, no strip,
+//   no GitHub reads (#5143; docs/process/REDESIGN.md). Build, publish and read it back exactly
+//   like a steering page: same store paths, same Done → "Done with steering round <id>".
+//
 // NOTHING IS ASKED WITHOUT A PICTURE (#5056 criterion 4). A decision that shows no picture — no
 // manifest drew it — goes to `needsPictures`, not `decisions`: the page names it as being drawn
 // and the read-back rolls it over. The summary line lists their keys; draw them and gather again.
@@ -37,7 +44,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { plan, gather as readAssignments } from "../moneypenny/assignments.mjs";
 import { ensureGhToken, ghRest, ghRestAll } from "../moneypenny/gh.mjs";
-import { designFiles, loadDesigns } from "./design.mjs";
+import { designFiles, designRound, loadDesigns } from "./design.mjs";
 import {
   BUDGET_MINUTES,
   decisionsFrom,
@@ -192,7 +199,37 @@ function queueBlock(gate, next) {
   };
 }
 
+/** Where tp.json goes, written; returns its path. */
+function writeTp(out) {
+  const dir = resolve(flag("out") ?? join(tmpdir(), "steer"));
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, "tp.json");
+  writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
+  return file;
+}
+
+/** `--design-only`: one design round's page from its manifests alone — nothing read from GitHub. */
+function designOnly() {
+  const design = loadDesigns(designFiles(process.argv), {
+    issue: flag("design-issue") && Number(flag("design-issue")),
+    round: flag("design-round") ?? null,
+  });
+  const out = designRound(design, {
+    id: flag("tp"),
+    title: flag("title"),
+    now: flag("now") ?? new Date().toISOString(),
+    repo: REPO,
+  });
+  const file = writeTp(out);
+  const drawn = out.needsPictures;
+  console.log(
+    `tp.json → ${file} · design round ${out.id} · ${out.decisions.length} question(s), ~${out.budget.used} min` +
+      `${drawn.length ? ` · ${drawn.length} need pictures: ${drawn.map((d) => d.key).join(", ")}` : ""}`,
+  );
+}
+
 function main() {
+  if (process.argv.includes("--design-only")) return designOnly();
   ensureGhToken();
   const now = flag("now") ?? new Date().toISOString();
   const tp = flag("tp") ? parseTouchPoint(flag("tp")) : touchPoint(now);
@@ -240,10 +277,7 @@ function main() {
       history,
     }),
   };
-  const dir = resolve(flag("out") ?? join(tmpdir(), "steer"));
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, "tp.json");
-  writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
+  const file = writeTp(out);
   console.log(
     `tp.json → ${file} · ${out.id} · ${shown.length} decision(s), ~${used} min` +
       `${deferred.length ? ` (${deferred.length} roll over)` : ""}` +

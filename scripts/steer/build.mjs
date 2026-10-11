@@ -44,7 +44,8 @@ function collectImages(tp, out) {
       p.local = put(`img/${d.key}/${i}-${basename(p.src)}`, (dest) => copyFileSync(p.src, dest));
     });
   }
-  for (const h of tp.reel.headlines) {
+  // A design round's own page (gather --design-only) has no reel.
+  for (const h of tp.reel?.headlines ?? []) {
     for (const s of h.shots.slice(0, 2)) {
       try {
         const bytes = execFileSync("git", ["show", `${s.sha}:${s.path}`], { maxBuffer: 32 << 20 });

@@ -12,7 +12,7 @@
 // an error — a round that silently lost its Today shot is the failure this page exists to avoid.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { safeKey } from "./model.mjs";
+import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 
 /** A design round's questions from a manifest file, as page decisions (minutes added later). */
 export function loadDesign(file, { issue, round } = {}) {
@@ -136,4 +136,72 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p 
       options,
     };
   });
+}
+
+// ── a design round on its own page (#5143) ─────────────────────────────────────────────────────
+//
+// A redesign session (docs/process/REDESIGN.md) asks one screen's questions on a page of its own:
+// the shapes it drew, Eric's pinned comments and one pick, then Done. The steering page's other
+// sections — what shipped, the queue, the 14-day strip — belong to the twice-a-day page and would
+// bury the one question, so this page carries none of them. Gather builds it with `--design-only`.
+//
+// No Needs-you door here: that door governs what the shared steering page asks, and this page asks
+// only what its own session drew for the screen Eric started. Everything after gather is the same
+// machinery: build.mjs renders it, the page saves to `tp/<id>/…`, Done sends "Done with steering
+// round <id>" to the watching session, and readback.mjs turns the answers into issue comments.
+
+/** The page's name when the session gives none: a name, not a summary (two words). */
+export const DESIGN_TITLE = "Redesign round";
+/** What skipping a question does on a round page: nothing is built, and the next round asks again. */
+export const DESIGN_SKIP =
+  "If you skip: nothing is built from it, and the next round asks it again.";
+
+/** `design-<issue>[-<issue>…][-r<round>]`: the round's store id when the session names none. */
+export function designRoundId(issues, round) {
+  const r = round == null || round === "" ? "" : `-r${safeKey(round)}`;
+  return `design-${issues.join("-")}${r}`;
+}
+
+/**
+ * The tp.json of a page that holds only design decisions: `design` is `loadDesigns()`'s
+ * `{ [issue]: decisions }`. Pure. `id` (from `--tp`) may be any id the store accepts; a bad one
+ * throws here, before anything is written. Nothing is asked without a picture: a question with
+ * none is named as being drawn, the same rule the steering page keeps.
+ */
+export function designRound(design, { id, title, now, repo = "ejclark/skynet-capital" } = {}) {
+  const issues = Object.keys(design)
+    .map(Number)
+    .sort((a, b) => a - b);
+  if (!issues.length) {
+    throw new Error("steer/design: a design-only page needs at least one --design manifest");
+  }
+  const all = issues.flatMap((n) =>
+    design[n].map((q) => ({
+      ...q,
+      link: `https://github.com/${repo}/issues/${n}`,
+      cls: null,
+      minutes: estimateMinutes(q),
+      skip: DESIGN_SKIP,
+    })),
+  );
+  const { pictured, needsPictures } = splitByPictures(all);
+  const round = all.find((d) => d.round != null)?.round ?? null;
+  const roundId = id || designRoundId(issues, round);
+  roundPath(roundId); // the store's own grammar: refuse an id it would not file
+  const used = pictured.reduce((sum, d) => sum + d.minutes, 0);
+  return {
+    version: 1,
+    designOnly: true,
+    id: roundId,
+    title: title || DESIGN_TITLE,
+    round,
+    issues,
+    generatedAt: now ?? null,
+    repo,
+    budget: { minutes: used, used, shown: pictured.length, deferred: 0 },
+    decisions: pictured,
+    deferred: [],
+    needsPictures,
+    unstated: { count: 0, numbers: [] },
+  };
 }

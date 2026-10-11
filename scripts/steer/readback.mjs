@@ -228,15 +228,16 @@ const QUEUE_MOVES = {
   },
 };
 
+/** The queue and the reel: a design round's own page (gather --design-only) has neither. */
 function queueAnswers(tp, rr, acc) {
-  for (const it of tp.queue.items ?? []) {
+  for (const it of tp.queue?.items ?? []) {
     const m = QUEUE_MOVES[rr.queue[String(it.number)]?.verdict];
     if (!m) continue;
     const said = noteBlock(rr.queue[String(it.number)].note);
     acc.part(it.number, said ? `${m.text}\n\n${said}` : m.text);
     acc.move(it.number, m.move);
   }
-  for (const h of tp.reel.headlines ?? []) {
+  for (const h of tp.reel?.headlines ?? []) {
     const r = rr.reel[String(h.number)];
     if (r?.verdict === "revisit") acc.actions.push(revisitIssue(h, r, tp.id));
   }
