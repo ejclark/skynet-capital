@@ -99,6 +99,22 @@ describe("saved positions — adding one", () => {
     expect(screen.getByDisplayValue("My Fidelity calls")).toBeTruthy();
   });
 
+  it("says the stake is saved to the account, never 'stays in this browser' (#5179)", async () => {
+    mount();
+    expect(
+      await screen.findByText("Your stake — saved to your account; only you see it"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/stays in this browser/)).toBeNull();
+  });
+
+  it("suggests a name for a shares position — the form takes no option fields (#5179)", async () => {
+    mount();
+    expect(await screen.findByLabelText("Name it (optional)")).toHaveAttribute(
+      "placeholder",
+      "My Fidelity shares",
+    );
+  });
+
   it("refuses to save a malformed ticker without a round trip", async () => {
     mount();
     await screen.findByText("Nothing saved yet — add a position above.");
@@ -160,6 +176,18 @@ describe("saved positions — pulling an existing paper position in (#3968 slice
     mount();
     await screen.findByText("Nothing saved yet — add a position above.");
     expect(screen.queryByLabelText("Account")).toBeNull();
+  });
+
+  it("asks for an account before claiming there are no positions (#5179)", async () => {
+    accounts = [
+      { id: "acct-1", name: "acct-1", kind: "human", hostConfigured: false, profile: null },
+    ];
+    mount();
+    const select = await screen.findByLabelText("Position");
+    expect(within(select).getByRole("option")).toHaveTextContent("Pick an account first");
+    expect(screen.queryByText("No stock positions there")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: "acct-1" } });
+    expect(await screen.findByRole("option", { name: "No stock positions there" })).toBeTruthy();
   });
 
   it("imports a held stock position as an ordinary saved position", async () => {
