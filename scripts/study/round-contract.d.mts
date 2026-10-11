@@ -18,7 +18,8 @@ export const FILES: Record<
   | "struck"
   | "control"
   | "grade"
-  | "frozen",
+  | "frozen"
+  | "usage",
   string
 >;
 export const SESSIONS: string;

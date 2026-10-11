@@ -60,6 +60,7 @@ export const FILES = {
   control: "control.json",
   grade: "grade.json",
   frozen: "frozen.json",
+  usage: "usage.json",
 };
 
 /** The sessions step's folder — also the round step that writes it. */

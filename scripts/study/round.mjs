@@ -25,12 +25,15 @@
 //   4 tasks       per member × world, linted; ONLY the lint's lines go back, ≤ 3 rewrites; frozen
 //   5 sessions    drive.mjs --actor sealed per member × world × viewport × task × run, N at once
 //   6 analysts    one per member: turns, summaries, key frames at half scale   (round-review.mjs)
-//   7 experts     ×N, the census verbatim in batches of ≤ 20, then one consolidation each
+//   7 experts     ×N at once (≤ --concurrency), the census verbatim in batches of ≤ 20, then one
+//                 consolidation each
 //   8 words       the harvested strings
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
 // The out dir is a round directory exactly as grade.mjs and readout.mjs read it: its layout, the
 // finding record and the classes are round-contract.mjs's, owned there for writer and readers both.
+// Every step's done.json carries what its sealed calls cost (`usage`, read back from their records
+// by usage.mjs), and <out>/usage.json sums the round, stopped or finished.
 // A step whose <out>/<step>/done.json exists is skipped, so a round resumes where it stopped —
 // but only under the mode the out dir was made with (<out>/round.json: the profile and its hash,
 // the pin, the sealed dir, thin, the stub, --only-world, --cap); any other mode is refused. A real
@@ -73,6 +76,7 @@ import { canary, cards, preflight } from "./round-prepare.mjs";
 import { analysts, audit, collect, experts, words } from "./round-review.mjs";
 import { framer, sessions, tasks } from "./round-steps.mjs";
 import { halfFrame, makeCaller, ROLES, signedIn } from "./sealed.mjs";
+import { roundUsage, stepUsage } from "./usage.mjs";
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -187,15 +191,19 @@ function context(opts, seams = {}) {
     toolAsync:
       seams.toolAsync ?? ((script, args, logFile) => toolAsync(ctx, script, args, logFile)),
     lint: (kind, files) => lint(ctx, kind, files),
-    /** A frame at half scale, base64 — one browser for the round, opened on first use. */
+    /**
+     * A frame at half scale, base64 — one browser for the round, opened on first use. `browser`
+     * holds the launch's promise, not the browser: the experts ask at once, and each awaiting its
+     * own launch would open one browser apiece and close only the last.
+     */
     half:
       seams.half ??
       (async (path) => {
         if (!ctx.browser) {
           const exe = resolveChromium();
-          ctx.browser = await chromium.launch(exe ? { executablePath: exe } : {});
+          ctx.browser = chromium.launch(exe ? { executablePath: exe } : {});
         }
-        return halfFrame(ctx.browser, readFileSync(path));
+        return halfFrame(await ctx.browser, readFileSync(path));
       }),
   };
   return ctx;
@@ -254,6 +262,9 @@ export async function runRound(argv, seams = {}) {
       }
       ctx.log(step, "start");
       const result = (await RUN[step](ctx)) ?? {};
+      // What the step's sealed calls cost, read back from their own records (usage.mjs).
+      const usage = stepUsage(ctx.out, step);
+      if (usage.calls > 0) result.usage = usage;
       const stamp = { at: new Date().toISOString(), ...result };
       writeFileSync(join(ctx.dir(step), "done.json"), `${JSON.stringify(stamp, null, 1)}\n`);
       ctx.log(step, "done", result);
@@ -262,7 +273,12 @@ export async function runRound(argv, seams = {}) {
     ctx.log("round", "stopped", { note: e instanceof Error ? e.message : String(e) });
     return 1;
   } finally {
-    await ctx.browser?.close();
+    await (await ctx.browser)?.close();
+    // Written stopped or finished: a round that dies late has still spent what it spent.
+    writeFileSync(
+      join(ctx.out, FILES.usage),
+      `${JSON.stringify(roundUsage(ctx.out, STEPS), null, 1)}\n`,
+    );
   }
   ctx.log("round", "complete", { findings: FILES.findings, classes: FILES.classes });
   return 0;

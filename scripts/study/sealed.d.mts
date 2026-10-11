@@ -22,6 +22,17 @@ export function parseResult(
   stdout: string | null | undefined,
   stderr?: string,
 ): Record<string, unknown>;
+export interface CallUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+  cost_usd: number;
+  duration_ms: number;
+  duration_api_ms: number;
+  models: string[];
+}
+export function resultUsage(stdout: string | null | undefined): CallUsage | null;
 export function signedIn(
   run?: (
     cmd: string,
@@ -34,7 +45,7 @@ export function sealedCall(args: {
   schema: string;
   message: UserMessage;
   timeoutMs?: number;
-}): Promise<Record<string, unknown>>;
+}): Promise<{ answer: Record<string, unknown>; usage: CallUsage | null }>;
 export function stubPick(present: number[], n: number): { n: number; repeated: boolean } | null;
 export function redactImages(message: UserMessage): {
   type: "user";
@@ -46,6 +57,7 @@ export type Call = (args: {
   schema: string;
   message: UserMessage;
   timeoutMs?: number;
+  n?: number;
 }) => Promise<Record<string, unknown>>;
 export function makeCaller(opts?: { stub?: string; record?: string }): Call;
 export function halfFrame(browser: unknown, jpeg: Uint8Array): Promise<string>;
