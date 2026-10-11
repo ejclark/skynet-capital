@@ -90,6 +90,35 @@ describe("submitThesis", () => {
     expect(viewFn(d, "abc123").entries).toHaveLength(1);
     expect(viewFn(d, "abc123").mine?.text).toBe("revised take");
   });
+
+  // Replies under a line (#5097) treat the line's `at` as its version: a reply sent against an
+  // older `at` is refused, and a reply stored under one is marked "Answered an earlier version".
+  // Pressing Update with nothing changed is not an edit, so it must not move that version.
+  it("keeps the line's version when Update changes nothing", () => {
+    let clock = new Date("2026-09-07T12:00:00.000Z");
+    const d = deps({ now: () => clock });
+    submitFn("NVDA runs", "abc123", d, "S1-NVDA");
+    const first = viewFn(d, "abc123").mine?.at;
+    clock = new Date("2026-09-07T12:05:00.000Z");
+    expect(submitFn("  NVDA runs  ", "abc123", d, "S1-NVDA")).toEqual({ ok: true });
+    expect(viewFn(d, "abc123").mine?.at).toBe(first);
+  });
+
+  it("moves the version when the words or the tagged play change", () => {
+    let clock = new Date("2026-09-07T12:00:00.000Z");
+    const d = deps({ now: () => clock });
+    submitFn("NVDA runs", "abc123", d, "S1-NVDA");
+    clock = new Date("2026-09-07T12:05:00.000Z");
+    submitFn("NVDA runs", "abc123", d);
+    expect(viewFn(d, "abc123").mine).toMatchObject({ at: clock.toISOString() });
+    expect(viewFn(d, "abc123").mine?.playbookId).toBeUndefined();
+    clock = new Date("2026-09-07T12:10:00.000Z");
+    submitFn("NVDA runs hard", "abc123", d);
+    expect(viewFn(d, "abc123").mine).toMatchObject({
+      text: "NVDA runs hard",
+      at: clock.toISOString(),
+    });
+  });
 });
 
 describe("councilWeekView", () => {
