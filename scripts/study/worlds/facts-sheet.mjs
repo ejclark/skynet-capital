@@ -14,6 +14,15 @@
 //
 // Formatting the app does itself (a verdict's words, a short date) comes in through `fmt`, so the
 // CLI can hand in the app's own functions where the pin's app exports them (facts.mjs).
+//
+// TEXT AS RENDERED, ON THE MEMBER'S CLOCK (#5009): a time the PAGE formats (the ledger's stamp) is
+// written in the world's clock (../clock.mjs — the member's zone and language), because that is
+// what the member's screen shows; a string the SERVER formatted (the league feed's "Oct 1, 19:30",
+// a roll-call reason) is copied as served. A fact the page shows in more than one place carries a
+// region for each place it can be read in: the first full round failed nine right answers whose
+// member read the fact in a place the sheet did not list (2026-10-09).
+
+import { DEFAULT_CLOCK } from "../clock.mjs";
 
 const MINUS = /^[-−–]/;
 
@@ -39,24 +48,24 @@ export function occParts(symbol) {
 }
 
 /** A calendar date ("2026-11-06") or an instant, as the app's short month-day: "Nov 6". Dates
- *  are calendar days (UTC); instants read on the world's New York clock, as the page does. */
-export function shortDate(iso) {
+ *  are calendar days (UTC); instants read on the world's clock, as the page does. */
+export function shortDate(iso, clock = DEFAULT_CLOCK) {
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
   return new Date(dateOnly ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    timeZone: dateOnly ? "UTC" : "America/New_York",
+    timeZone: dateOnly ? "UTC" : clock.timeZone,
   });
 }
 
-/** An instant's calendar day on the world's New York clock — the day the page shows: "2026-10-05". */
-export function nyDate(iso) {
+/** An instant's calendar day in a zone: "2026-10-05". */
+function dayIn(iso, timeZone) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      timeZone: "America/New_York",
+      timeZone,
     })
       .formatToParts(new Date(iso))
       .map((p) => [p.type, p.value]),
@@ -64,16 +73,31 @@ export function nyDate(iso) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-/** An order's date and time as the activity ledger stamps it (activity-table.tsx → rowStamp, in
- *  the study browser's en-US locale on the New York clock): "Oct 5, 11:20 AM". */
-export function rowStamp(iso) {
-  return new Date(iso).toLocaleString("en-US", {
+/** An instant's calendar day on New York's clock — the market's day, which the server's calendar
+ *  counts in: "2026-10-05". */
+export const nyDate = (iso) => dayIn(iso, "America/New_York");
+
+/** An instant's calendar day on the world's clock — the day the member's page shows. */
+export const clockDate = (iso, clock = DEFAULT_CLOCK) => dayIn(iso, clock.timeZone);
+
+/** An order's date and time as the activity ledger stamps it (activity-table.tsx → rowStamp: the
+ *  browser's own language and zone, which is the world's clock): "Oct 5, 10:20 AM" in Chicago. */
+export function rowStamp(iso, clock = DEFAULT_CLOCK) {
+  return new Date(iso).toLocaleString(clock.locale, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "America/New_York",
+    timeZone: clock.timeZone,
   });
+}
+
+/** "2026-10-27" → "Tue Oct 27": a calendar strip's day as the strip prints it after an event's
+ *  name ("CPI report Wed Oct 14", "MSFT Earnings Tue Oct 27" — book-events.ts → dayLabel). */
+export function stripDay(iso) {
+  const at = new Date(`${iso}T12:00:00Z`);
+  const part = (o) => at.toLocaleDateString("en-US", { ...o, timeZone: "UTC" });
+  return `${part({ weekday: "short" })} ${part({ month: "short", day: "numeric" })}`;
 }
 
 /** The app's verdict words (app/src/live/heartbeat.ts → VERDICT_WORDS), mirrored for a pin whose
@@ -95,7 +119,11 @@ const num = (display, tol = { abs: 1 }) => {
   const value = parseAmount(display);
   return value === null ? null : { kind: "number", value, ...tol };
 };
-const txt = (value) => ({ kind: "text", value });
+/** A text answer; `alternatives` are the page's other words for the same fact. */
+const txt = (value, alternatives = []) => {
+  const alt = [...new Set(alternatives.filter((a) => a && a !== value))];
+  return alt.length > 0 ? { kind: "text", value, alternatives: alt } : { kind: "text", value };
+};
 
 /** Assemble one fact; null when the payload had no usable value. */
 function fact(base, id, label, answer, display, answerRegion) {
@@ -207,33 +235,74 @@ function optionFacts(base, p) {
   ];
 }
 
-/** The next dated event a position carries (`nextEvent`: "CPI report Oct 14"). */
-function eventFacts(base, positions) {
-  const seen = new Set();
-  return positions.flatMap((p) => {
+/**
+ * The next dated event a position carries (`nextEvent`: "CPI report Oct 14"), in each place the
+ * page dates it:
+ *  - the positions table's own label ("Earnings Oct 27");
+ *  - a calendar strip, the event's name then its weekday and day ("CPI report Wed Oct 14",
+ *    "MSFT Earnings Tue Oct 27" — so the name-and-day part is the region);
+ *  - the Events agenda's row, by the title the research calendar gives that day's print of the
+ *    held name ("MSFT earnings print") — the row that prints the day beside it.
+ * A market-wide event's agenda row is titled by the calendar in other words ("CPI release (Sep
+ * 2026 data)") and is not joined by guesswork; the strip and the table still date it.
+ */
+function eventFacts(base, positions, calendar) {
+  const byLabel = new Map();
+  for (const p of positions) {
     const e = p.nextEvent;
-    if (!(e?.label && e.at) || seen.has(e.label)) return [];
-    seen.add(e.label);
+    if (!(e?.label && e.at)) continue;
+    const entry = byLabel.get(e.label) ?? { e, roots: new Set() };
+    if (e.scope === "stock") entry.roots.add(occParts(p.symbol)?.root ?? p.symbol);
+    byLabel.set(e.label, entry);
+  }
+  return [...byLabel.values()].map(({ e, roots }) => {
     const slug = e.label
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
-    return [
-      fact(base, `event.${slug}.date`, `when "${e.label}" falls`, txt(e.at), shortDate(e.at), [
-        e.label,
-      ]),
-    ];
+    const name = e.label.replace(/\s+[A-Z][a-z]{2}\s+\d{1,2}$/, "");
+    const agenda = (calendar ?? [])
+      .filter(
+        (c) =>
+          c.date === e.at && c.kind === "earnings" && (c.symbols ?? []).some((s) => roots.has(s)),
+      )
+      .map((c) => c.title);
+    return fact(base, `event.${slug}.date`, `when "${e.label}" falls`, txt(e.at), shortDate(e.at), [
+      e.label,
+      ...(name !== e.label ? [`${name} ${stripDay(e.at)}`] : []),
+      ...agenda,
+    ]);
   });
 }
 
-/** Subscribed playbooks the viewer may see (a non-owner's copy carries no ids): mode and verdict,
- *  as the chip's table prints a row — id, mode, verdict words. */
+/** An armed playbook's roll-call reason, cut to its lead clause — the plain words it says what it
+ *  is doing in: "On, reading live price and sentiment every pass — there is no …" → "reading live
+ *  price and sentiment every pass". */
+export function leadClause(reason) {
+  return String(reason ?? "")
+    .replace(/^On\b[,\s]*(?:and|but|with)?\s*/i, "")
+    .split(/\s+[—–]\s+|[.;:](?:\s|$)/)[0]
+    .trim();
+}
+
+/**
+ * Subscribed playbooks the viewer may see (a non-owner's copy carries no ids): mode and verdict,
+ * as the chip's table prints a row — id, mode, verdict words. The bot page's roll call says an
+ * armed playbook's state again in its own words (`rollCall[].reason`, the server's string), so
+ * those words answer it too and that line is a second place it is read — unless another playbook
+ * carries the very same line, which would not tell them apart. A playbook the roll call holds
+ * back (`blocked`, `off`) gets nothing from it: its line says why it cannot fire, a different fact.
+ */
 function playbookFacts(base, heartbeat, words) {
+  const roll = heartbeat?.rollCall ?? [];
+  const lines = roll.map((r) => r.reason);
   return (heartbeat?.playbooks ?? [])
     .filter((p) => p.playbookId)
     .flatMap((p) => {
       const said = words[p.state] ?? p.state;
       const row = `${p.playbookId} ${p.mode} ${said}`;
+      const called = roll.find((r) => r.playbookId === p.playbookId && r.status === "armed");
+      const own = called && lines.filter((l) => l === called.reason).length === 1;
       return [
         fact(base, `playbook.${p.playbookId}.mode`, `${p.playbookId}'s mode`, txt(p.mode), p.mode, [
           row,
@@ -242,20 +311,44 @@ function playbookFacts(base, heartbeat, words) {
           base,
           `playbook.${p.playbookId}.verdict`,
           `what ${p.playbookId} says now`,
-          txt(said),
+          txt(said, called ? [leadClause(called.reason)] : []),
           said,
-          [row],
+          [row, ...(own ? [called.reason] : [])],
         ),
       ];
     });
+}
+
+/** The league feed's row for one fill (activity.tsx → wire-trade-row.tsx: side · name · quantity ·
+ *  price · net · who · BOT/HUMAN · reconstructed · when), from the server's own strings — its
+ *  "when" is the server's (in UTC, whatever the member's clock — #5104). Null when the feed did not
+ *  serve it. */
+function feedRow(trades, deskId, r) {
+  const t = (trades ?? []).find(
+    (x) =>
+      x.whoId === deskId && x.at === r.at && (x.display === r.display || x.symbol === r.symbol),
+  );
+  if (!t) return null;
+  return [
+    t.side.toUpperCase(),
+    t.display ?? t.symbol,
+    t.quantity,
+    t.price,
+    ...(t.net ? [`net ${t.net}`] : []),
+    t.who,
+    t.kind === "bot" ? "BOT" : "HUMAN",
+    ...(t.reconstructed ? ["reconstructed"] : []),
+    t.when,
+  ].join(" ");
 }
 
 /** The newest activity rows (date · symbol · BUY/SELL · Qty · price — the phone hides the price
  *  column, so a quantity's region stops at the Qty cell), with the playbook that
  *  placed the order when the viewer's copy carries it — the gate strips it for a non-owner.
  *  Every region of a row starts at its date-and-time cell, so two orders of one symbol and side
- *  (or one day) never share a region: the oracle can tell which row was on screen. */
-function activityFacts(base, rows, max) {
+ *  (or one day) never share a region: the oracle can tell which row was on screen. The same fill's
+ *  row on the league feed (`/api/wire`) is a second place each of them is read, whole, stamp last. */
+function activityFacts(base, rows, max, { clock, trades }) {
   return rows.slice(0, max).flatMap((r) => {
     const id = `activity.${r.orderId}`;
     const side = String(r.side ?? "").toUpperCase();
@@ -265,9 +358,10 @@ function activityFacts(base, rows, max) {
     const qty =
       r.filled > 0 && r.filled !== r.quantity ? `${r.filled}/${r.quantity}` : `${r.quantity}`;
     // A lifecycle row stamps its day in its own words; the row is pinned by the symbol alone then.
-    const stamp = r.lifecycle ? "" : `${rowStamp(r.at)} `;
+    const stamp = r.lifecycle ? "" : `${rowStamp(r.at, clock)} `;
     const symbol = `${stamp}${r.display}${r.net ? ` net ${r.net}` : ""}`;
-    const day = shortDate(r.at);
+    const day = shortDate(r.at, clock);
+    const feed = r.lifecycle ? [] : [feedRow(trades, base.account, r)];
     return [
       fact(
         base,
@@ -275,7 +369,7 @@ function activityFacts(base, rows, max) {
         `whether the ${r.display} order of ${day} bought or sold`,
         txt(r.side),
         side,
-        [`${symbol} ${side}`],
+        [`${symbol} ${side}`, ...feed],
       ),
       fact(
         base,
@@ -283,7 +377,7 @@ function activityFacts(base, rows, max) {
         `how many ${r.display} the ${day} order ${r.side === "buy" ? "bought" : "sold"}`,
         { kind: "number", value: r.filled || r.quantity, abs: 0 },
         qty,
-        [`${symbol} ${side} ${qty}`],
+        [`${symbol} ${side} ${qty}`, ...feed],
       ),
       fact(
         base,
@@ -291,15 +385,15 @@ function activityFacts(base, rows, max) {
         `the price of the ${r.display} order of ${day}`,
         num(r.price, { abs: 0.01 }),
         r.price,
-        [`${symbol} ${side} ${qty} ${r.price}`],
+        [`${symbol} ${side} ${qty} ${r.price}`, ...feed],
       ),
       fact(
         base,
         `${id}.date`,
         `when the ${r.display} ${r.side} order filled`,
-        txt(nyDate(r.at)),
+        txt(clockDate(r.at, clock)),
         day,
-        [`${symbol} ${side}`],
+        [`${symbol} ${side}`, ...feed],
       ),
       pb
         ? fact(
@@ -331,8 +425,10 @@ function calendarFacts(viewer, events, instant, days) {
 /**
  * Every fact one viewer's payloads hold.
  * @param {{viewer: string, instant: string, payloads: Record<string, unknown>,
- *          verdictWords?: Record<string, string>, activityRows?: number, calendarDays?: number}} opts
- *   `payloads` maps a canonical request (payloads.mjs → canonicalUrl) to its body.
+ *          verdictWords?: Record<string, string>, activityRows?: number, calendarDays?: number,
+ *          clock?: {timeZone: string, locale: string}}} opts
+ *   `payloads` maps a canonical request (payloads.mjs → canonicalUrl) to its body; `clock` is the
+ *   world's (../clock.mjs), the one the member's page renders its own times in.
  */
 export function factSheet({
   viewer,
@@ -341,7 +437,10 @@ export function factSheet({
   verdictWords = VERDICT_WORDS_MIRROR,
   activityRows = 5,
   calendarDays = 7,
+  clock = DEFAULT_CLOCK,
 }) {
+  const calendar = payloads["/api/research/calendar"]?.events;
+  const trades = payloads["/api/wire"]?.wire?.trades;
   const networth = payloads["/api/accounts/networth"];
   const own = new Set((networth?.accounts ?? []).map((a) => a.id));
   const out = [];
@@ -362,13 +461,12 @@ export function factSheet({
     const positions = desk.positions ?? [];
     for (const p of positions)
       out.push(...(p.isOption ? optionFacts(base, p) : shareFacts(base, p)));
-    out.push(...eventFacts(base, positions));
+    out.push(...eventFacts(base, positions, calendar));
     out.push(...playbookFacts(base, payloads[`${key}/heartbeat`]?.heartbeat, verdictWords));
-    out.push(...activityFacts(base, payloads[`${key}/activity`]?.activity ?? [], activityRows));
+    const rows = payloads[`${key}/activity`]?.activity ?? [];
+    out.push(...activityFacts(base, rows, activityRows, { clock, trades }));
   }
-  out.push(
-    ...calendarFacts(viewer, payloads["/api/research/calendar"]?.events, instant, calendarDays),
-  );
+  out.push(...calendarFacts(viewer, calendar, instant, calendarDays));
   return out.filter(Boolean);
 }
 

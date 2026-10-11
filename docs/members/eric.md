@@ -41,6 +41,9 @@ down and draw more pictures... I want some god damn pictures to hang on the frid
 - Fixture participant **`human-eric`** — `fixtures/offline/participants.json`: display name
   "Eric", kind human, timezone **America/Chicago**, account `sim-eric` / **SIM-HUMAN-ERIC**, cash
   $61,200.00 of $102,300.00 portfolio value, status ACTIVE, **one position: EEM** (shares).
+- Clock: **America/Chicago** · en-US — the fixture's own timezone, in US English. A study world
+  renders the times its page formats on this clock, and so does every member whose file names no
+  clock of their own (`scripts/study/clock.mjs`, #5009).
 - The crawl signs in as `crawl@example.test`, linked to `human-eric` by
   `scripts/crawl/fixtures/owner-links.json` (the same owner-link shape the volume uses).
 - Rungs: whatever the offline fixture's fills earn — the ladder is read from the server, never

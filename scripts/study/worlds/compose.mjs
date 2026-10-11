@@ -59,6 +59,13 @@ import { INSTANT, pinProcessClock } from "./instant.mjs";
 /** Compose one world into `<runDir>/<world>/`; returns its manifest rows and any missing reads. */
 async function composeWorld(world, runDir, server) {
   const book = server.buildBook(world.input);
+  // A header whose day change is not its rows' would be read as the app's bug (#5052).
+  const gaps = server.dayChangeGaps(book);
+  if (gaps.length > 0) {
+    throw new Error(
+      `compose: ${world.name}'s day change does not add up:\n  ${gaps.map(server.describeGap).join("\n  ")}`,
+    );
+  }
   const config = server.serverConfig(book);
   // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
   const channel = server.createBoardChannel("study");
@@ -124,6 +131,7 @@ async function composeOne(runDir, name) {
   if (!world) throw new Error(`compose: no world named ${name}`);
   const server = {
     ...(await import("./book.mjs")),
+    ...(await import("./day-change.mjs")),
     ...(await import("./server-config.mjs")),
     ...(await import("../server-reads.mjs")),
     ...(await import("../../../src/server/board-patch-routes.ts")),

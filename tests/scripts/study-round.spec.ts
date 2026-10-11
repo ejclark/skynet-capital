@@ -29,6 +29,7 @@ import {
   canaryQuestion,
   canaryVerdict,
   censusPlan,
+  gradableFacts,
   keepClean,
   lintFeedback,
   mergeFacts,
@@ -283,6 +284,25 @@ describe("what the task author hears back", () => {
     ]);
     expect(m.facts.map((f) => f.world)).toEqual(["a", "b"]);
     expect(m.dataNames).toEqual(["X", "Y"]);
+  });
+
+  it("hands the task author only facts a census screen showed, by world and viewer", () => {
+    const fact = (world: string, id: string) => ({
+      world,
+      viewer: "v",
+      id,
+      answer: {},
+      answerRegion: ["r"],
+    });
+    const facts = [fact("a", "seen"), fact("a", "unseen"), fact("b", "seen")];
+    const regions = { seen: ["a/v:seen"], missing: ["a/v:unseen", "b/v:seen"] };
+    expect(gradableFacts(facts, regions)).toEqual({
+      facts: [facts[0]],
+      withheld: ["a/v:unseen", "b/v:seen"],
+    });
+    // An older regions.json names only what it missed; no regions at all withholds nothing.
+    expect(gradableFacts(facts, { missing: ["a/v:unseen"] }).withheld).toEqual(["a/v:unseen"]);
+    expect(gradableFacts(facts, null).facts).toHaveLength(3);
   });
 });
 
