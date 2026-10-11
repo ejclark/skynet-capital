@@ -169,8 +169,14 @@ function WaitingStripView({
   );
 }
 
-function Figures({ position }: { readonly position: DeskPosition }): ReactElement {
-  const stake = stakeFigure(position);
+function Figures({
+  position,
+  positions,
+}: {
+  readonly position: DeskPosition;
+  readonly positions: readonly DeskPosition[];
+}): ReactElement {
+  const stake = stakeFigure(position, positions);
   const premium = isWritten(position) ? position.costBasis.replace(/^-/, "") : undefined;
   return (
     <dl className="pp-figs">
@@ -211,10 +217,16 @@ function Figures({ position }: { readonly position: DeskPosition }): ReactElemen
  */
 export function PositionPicture({
   position,
+  positions,
   book,
+  bookRead,
 }: {
   readonly position: DeskPosition;
+  /** The account's positions: a sold leg's first figure looks for its spread partner. */
+  readonly positions: readonly DeskPosition[];
   readonly book?: OptionPositionRow;
+  /** Whether the option book has answered: until it has, a missing row says nothing. */
+  readonly bookRead: boolean;
 }): ReactElement {
   const spot = position.isOption ? book?.spot : signedDollars(position.price);
   const price = priceStrip(position, spot);
@@ -224,13 +236,15 @@ export function PositionPicture({
     <section className="pp" aria-label={`The picture of ${position.display}`}>
       {price ? <PriceStripView strip={price} /> : null}
       {wait ? <WaitingStripView strip={wait} underlying={underlying} /> : null}
-      {position.isOption && (book?.spot === undefined || book.impliedVol === undefined) ? (
+      {position.isOption &&
+      bookRead &&
+      (book?.spot === undefined || book.impliedVol === undefined) ? (
         <p className="pp-note">
           The waiting picture needs a live price and volatility for this contract; the feed has not
           quoted them.
         </p>
       ) : null}
-      <Figures position={position} />
+      <Figures position={position} positions={positions} />
     </section>
   );
 }

@@ -213,7 +213,7 @@ describe("the waiting-earns strip", () => {
 
 describe("the first figure: what the position ties up", () => {
   it("says a sold put's cash set aside, strike × 100", () => {
-    expect(stakeFigure(PUT)).toEqual({
+    expect(stakeFigure(PUT, [PUT])).toEqual({
       label: "Cash set aside",
       figure: "$8,000",
       note: "buys 100 CRWV at $80 if assigned",
@@ -221,8 +221,26 @@ describe("the first figure: what the position ties up", () => {
   });
 
   it("says shares are worth their value, and a bought option what it cost", () => {
-    expect(stakeFigure(NVDA).label).toBe("Value");
+    expect(stakeFigure(NVDA, [NVDA]).label).toBe("Value");
     const bought = pos({ symbol: "NVDA261218C00240000", isOption: true, costBasis: "$1,230" });
-    expect(stakeFigure(bought)).toMatchObject({ label: "Paid", figure: "$1,230" });
+    expect(stakeFigure(bought, [bought])).toMatchObject({ label: "Paid", figure: "$1,230" });
+  });
+
+  it("says a sold call is covered only when the account holds the shares", () => {
+    const call = pos({ symbol: "NVDA261218C00250000", isOption: true, quantity: "-1" });
+    expect(stakeFigure(call, [call, NVDA])).toMatchObject({
+      label: "Shares that cover it",
+      figure: "100 NVDA",
+    });
+    expect(stakeFigure(call, [call])).toMatchObject({ label: "Set aside", figure: "—" });
+  });
+
+  it("claims no cash or shares for a sold leg of a spread, and names its partner", () => {
+    const longPut = pos({ symbol: "CRWV261106P00075000", isOption: true, quantity: "1" });
+    expect(stakeFigure(PUT, [PUT, longPut])).toEqual({
+      label: "Set aside",
+      figure: "—",
+      note: "part of a spread with your bought $75 put",
+    });
   });
 });

@@ -280,32 +280,68 @@ export interface StakeFigure {
   readonly note: string;
 }
 
+/** A bought option of the same kind on the same stock: the sold leg is half of a spread. */
+function spreadPartner(
+  book: readonly DeskPosition[],
+  occ: NonNullable<ReturnType<typeof parseOccSymbol>>,
+): DeskPosition | undefined {
+  return book.find((p) => {
+    const o = parseOccSymbol(p.symbol);
+    return o?.underlying === occ.underlying && o.type === occ.type && parseQuantity(p.quantity) > 0;
+  });
+}
+
+/** Shares of `symbol` the book holds long. */
+function sharesHeld(book: readonly DeskPosition[], symbol: string): number {
+  const row = book.find((p) => !p.isOption && p.symbol === symbol);
+  const n = row ? parseQuantity(row.quantity) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 /**
  * What the position ties up (3a77c6db: "capital at play"): a sold put sets aside the cash to buy
  * the shares at its strike (strike × 100 × contracts — the ticket's own "Cash set aside", which
  * the order refuses to place without); a sold call is covered by shares held; a bought option is
- * what it cost; shares are what they are worth now.
+ * what it cost; shares are what they are worth now. A sold leg with a bought option of its kind
+ * on the same stock is half of a spread, whose reserve is the spread's, not this leg's — so it
+ * names its partner and claims no figure of its own. `book` is the account's positions.
  */
-export function stakeFigure(position: DeskPosition): StakeFigure {
+export function stakeFigure(position: DeskPosition, book: readonly DeskPosition[]): StakeFigure {
   const occ = parseOccSymbol(position.symbol);
   const { count, short: sold } = held(position.quantity);
   if (!occ) {
     return { label: "Value", figure: position.value, note: "what the shares are worth now" };
   }
+  if (!sold) {
+    return { label: "Paid", figure: position.costBasis, note: "the most it can lose" };
+  }
   const shares = count * 100;
-  if (sold && occ.type === "put") {
+  const covered = occ.type === "call" && sharesHeld(book, occ.underlying) >= shares;
+  const partner = covered ? undefined : spreadPartner(book, occ);
+  if (partner) {
+    const strike = parseOccSymbol(partner.symbol)?.strike;
+    return {
+      label: "Set aside",
+      figure: "—",
+      note: `part of a spread with your bought ${strike === undefined ? "" : `${strikeText(strike)} `}${occ.type}`,
+    };
+  }
+  if (occ.type === "put") {
     return {
       label: "Cash set aside",
       figure: `$${(occ.strike * shares).toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
       note: `buys ${shares.toLocaleString("en-US")} ${occ.underlying} at ${strikeText(occ.strike)} if assigned`,
     };
   }
-  if (sold) {
-    return {
-      label: "Shares that cover it",
-      figure: `${shares.toLocaleString("en-US")} ${occ.underlying}`,
-      note: `sold at ${strikeText(occ.strike)} if assigned`,
-    };
-  }
-  return { label: "Paid", figure: position.costBasis, note: "the most it can lose" };
+  return covered
+    ? {
+        label: "Shares that cover it",
+        figure: `${shares.toLocaleString("en-US")} ${occ.underlying}`,
+        note: `sold at ${strikeText(occ.strike)} if assigned`,
+      }
+    : {
+        label: "Set aside",
+        figure: "—",
+        note: `no ${occ.underlying} shares on this account cover it`,
+      };
 }

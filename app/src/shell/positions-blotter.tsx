@@ -206,7 +206,14 @@ export function PositionsBlotter({
         canTrade={canTrade}
         {...(call ? { call } : {})}
         decisions={said.get(p.symbol) ?? []}
-        picture={<PositionPicture position={p} book={bookRows.get(p.symbol)} />}
+        picture={
+          <PositionPicture
+            position={p}
+            positions={positions}
+            book={bookRows.get(p.symbol)}
+            bookRead={statement.isSuccess}
+          />
+        }
         onAside={() => marks.setAside(p.symbol)}
         onUndo={() => marks.undo(p.symbol)}
       />
