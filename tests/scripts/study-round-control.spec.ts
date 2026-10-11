@@ -7,6 +7,7 @@ import { runRound } from "../../scripts/study/round.mjs";
 import { controlProblems, FILES, SESSIONS } from "../../scripts/study/round-contract.mjs";
 import {
   cardMismatches,
+  configDrift,
   expectEntries,
   expectIds,
   expectProblems,
@@ -123,6 +124,36 @@ describe("what a control may run from", () => {
     expect(sourceProblems({ source, frozen: null, profileSha: "def" })).toHaveLength(2);
   });
 
+  // Round one's area config has changed twice since it ran: a census route the app never builds
+  // (#5027) and the roles the experts now read (#5099). Neither changes what a control asks of
+  // whom, so neither may leave round one with no fixed-build control to re-run (#5099).
+  it("compares a changed area config on what it asks of whom, and refuses only that", () => {
+    const ran = {
+      area: "house",
+      matrix: [{ member: "m", world: "w", viewports: ["phone"] }],
+      cutoff: "2026-10-08",
+      tasksPer: 3,
+      pages: ["the hall"],
+      census: [{ world: "w", routes: ["/typed-by-hand"] }],
+    };
+    const now = {
+      ...ran,
+      about: "edited",
+      census: [{ world: "w", routes: ["/built"] }],
+      roles: {},
+    };
+    expect(configDrift(ran, now)).toEqual({ question: [], other: ["about", "census", "roles"] });
+    const edited = { ...ok, profileSha: "def" };
+    expect(sourceProblems(edited)).toEqual([
+      "the area config is not the one the --frozen-from round ran (its sha256 differs, and the file that round ran is gone or changed, so the two cannot be compared)",
+    ]);
+    expect(sourceProblems({ ...edited, sourceConfig: ran, config: now })).toEqual([]);
+    const asked = { ...now, tasksPer: 2, matrix: [] };
+    expect(sourceProblems({ ...edited, sourceConfig: ran, config: asked })).toEqual([
+      "the area config asks other questions than the --frozen-from round's: its matrix, tasksPer differ",
+    ]);
+  });
+
   it("refuses a main round whose sessions never ran, or ran on another freeze than frozen.json", () => {
     expect(sourceProblems({ ...ok, ranFrozen: null })).toEqual([
       "the --frozen-from round never ran its sessions on its frozen tasks",
@@ -168,6 +199,10 @@ describe("what a control may run from", () => {
     expect(() => expectIds([])).toThrow(/no key ids/);
     expect(() => expectIds(["the lamp is lit from below"])).toThrow(/starts with a key id/);
     expect(() => expectIds(["A1 the lamp is lit from below"])).toThrow(/starts with a key id/);
+    // As JSON the mechanism has its own field, so an id carrying one is refused, not recorded.
+    expect(() => expectIds([{ id: "A1 — the lamp is lit from below" }])).toThrow(
+      /starts with a key id/,
+    );
   });
 
   // Round one's fixed build "still reported" two items through a different mechanism at the same
@@ -354,6 +389,39 @@ describe("a positive control on the stub, from a thin main round, graded beside 
     expect(await runRound([...args, ...ctlArgs], SEAMS)).toBe(1);
     expect(lastStop(out)).toMatch(/names no mechanism for A1/);
     expect(existsSync(join(out, "0-preflight"))).toBe(false);
+  });
+
+  // The main round ran the repo's area config, whose file still hashes to its record. A control
+  // under an edited copy gets past the source check (the bare --expect then stops it, before
+  // anything runs) only when the edit leaves what is asked of whom alone.
+  const edited = async (name: string, change: Record<string, unknown>) => {
+    const config = JSON.parse(read(join(ROOT, "scripts/study/tasks/profile.json")));
+    const profile = join(tmp, `${name}.json`);
+    writeFileSync(profile, JSON.stringify({ ...config, ...change }, null, 2));
+    const bare = join(tmp, "expect-bare.txt");
+    writeFileSync(bare, "A1\n");
+    const out = join(tmp, `control-${name}`);
+    const args = ["--pin", planted, "--out", out, "--sealed", sealed, "--stub", STUB];
+    const ctlArgs = ["--frozen-from", main, "--control", "negative", "--expect", bare];
+    expect(await runRound([...args, "--profile", profile, ...ctlArgs], SEAMS)).toBe(1);
+    return out;
+  };
+
+  it("runs from a main round whose area config changed only outside its questions, and logs it", async () => {
+    const out = await edited("profile-new-census", {
+      about: "edited after the main round",
+      census: [{ world: "profile-today", viewer: "eric", for: ["experts", "labels"] }],
+    });
+    expect(lastStop(out)).toMatch(/names no mechanism for A1/);
+    expect(events(out, "round").find((e) => e.event === "config-drift")).toMatchObject({
+      keys: ["about", "census"],
+    });
+  });
+
+  it("refuses a main round whose area config now asks other questions", async () => {
+    const out = await edited("profile-fewer-tasks", { tasksPer: 2 });
+    expect(lastStop(out)).toMatch(/asks other questions .*: its tasksPer differ/);
+    expect(events(out, "round").some((e) => e.event === "config-drift")).toBe(false);
   });
 
   it("refuses a control of a control", async () => {

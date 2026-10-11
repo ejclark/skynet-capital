@@ -9,7 +9,16 @@ export function sourceProblems(args: {
   /** This run's own stub dir and sealed dir. */
   stub?: string | null;
   sealed?: string;
+  /** The main round's area config as it ran (null when its file is gone or changed), and this run's. */
+  sourceConfig?: Record<string, unknown> | null;
+  config?: Record<string, unknown> | null;
 }): string[];
+/** The area config keys a control must share with its main round — what it asks, of whom. */
+export const QUESTION: string[];
+export function configDrift(
+  before: Record<string, unknown> | null | undefined,
+  now: Record<string, unknown> | null | undefined,
+): { question: string[]; other: string[] };
 export function cardMismatches(
   source: Record<string, string> | null | undefined,
   now: Record<string, string> | null | undefined,
