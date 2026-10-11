@@ -28,9 +28,10 @@ import type { PageSection } from "./sections";
  *      page — moved off the head on Eric's "secondary/auxiliary… should be relocated"), its kind and
  *      SIM, and on a bot its head line at the row's right edge — "● Running · 7 playbooks ›"
  *      (`PlaybooksHeadLine`, #5073: a plain link into the Playbooks section, never a popover).
- *   2. THE VITALS LINE — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
+ *   2. THE VITALS — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
  *      that cut across every section, said once (Eric's Level 2 note: "the most relevant dimensions
- *      that overlap/intersect across various views… minimal content").
+ *      that overlap/intersect across various views… minimal content"). On a phone the cash is a
+ *      bar across the head with each part's amount under it (#5100); wider, one compact line.
  *   3. THE SECTION SWITCH — every section where they fit; at ≤700 four and "More ▾" (`fold`), so
  *      none is cut off at the screen's edge.
  *
