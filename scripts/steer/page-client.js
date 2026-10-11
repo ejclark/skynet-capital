@@ -53,23 +53,45 @@
 
   // What became of Done, in words. Never a colour, never a spinner alone.
   const TELLING = "Done — telling Claude…";
-  const SENT = "Done — sent to Claude. The read-back shows here when it's posted.";
+  /** Is the round's doc still watched? A dead watch can't show the read-back, so the line says reload. */
+  let live = true;
+  const WAIT = "The read-back shows here when it's posted.";
+  const RELOAD = "Reload the page to see the read-back once it's posted.";
+  const waiting = () => (live ? WAIT : RELOAD);
+  const sent = () => `Done — sent to Claude. ${waiting()}`;
   const NOT_LISTENING =
     "Done — saved. No Claude session is listening right now; the next page reads it back.";
   const NO_REACH = "Done — saved. This view can't reach Claude; the next page reads it back.";
-  const NOT_SAVED =
-    "Done didn't save, and Claude wasn't told — use Copy as text and paste it in chat.";
+  const NOT_REACHED =
+    "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
   const REOPENED = "Reopened — press Done again when you're finished.";
-  const notTold = (why) =>
-    `Done — saved, but Claude wasn't told: ${why}. Say “done” in chat to start the read-back.`;
+  // A rejected send is not proof nothing was posted (comments.d.ts), so only a code that says the
+  // send was refused before writing earns "wasn't told"; any other rejection of the send hedges.
+  const UNTOLD = "wasn't told";
+  const MAYBE = "may not have been told";
+  const UNPOSTED = [
+    "claude_unavailable",
+    "consent_required",
+    "forbidden",
+    "invalid",
+    "transform_error",
+    "rate_limited",
+  ];
+  const LIFECYCLE = ["not_granted", "capability_disabled", "capability_removed"];
+  const notSaved = (told) =>
+    `Done didn't save, and Claude ${told} — use Copy as text and paste it in chat.`;
+  const notTold = (why, told) =>
+    `Done — saved, but Claude ${told}: ${why}. Say “done” in chat to start the read-back.`;
+  /** `canSendToClaude` said no (comments.d.ts): only `no_session` means no session is listening;
+   *  `writers_only`, `off` or a value it doesn't know means this view can't send. */
+  const unable = (can) => (can === "no_session" ? NOT_LISTENING : NO_REACH);
   /** A refused send, by its code (comments.d.ts). None is retried: a new press is the retry. */
-  function refused(code) {
-    if (code === "claude_unavailable") return NOT_LISTENING;
-    if (["not_granted", "capability_disabled", "capability_removed"].includes(code))
-      return NO_REACH;
-    if (code === "consent_required") return notTold("the page wasn't allowed to comment");
-    if (code === "forbidden") return notTold("commenting from this page is off here");
-    return notTold("sending it failed");
+  function refused(code, told) {
+    if (code === "claude_unavailable") return NOT_REACHED;
+    if (LIFECYCLE.includes(code)) return NO_REACH;
+    if (code === "consent_required") return notTold("the page wasn't allowed to comment", told);
+    if (code === "forbidden") return notTold("commenting from this page is off here", told);
+    return notTold("sending it failed", told);
   }
   /** Bumped by every Done, Reopen and new read-back: a send still pending never covers a later line. */
   let turn = 0;
@@ -260,7 +282,7 @@
     status("Saving");
     // Pressed Done can't hold focus (it is disabled now); hand it to the Reopen beside it.
     if (focused) reopenBtn.focus();
-    sendDone(count(), saved).catch(() => tell(refused()));
+    sendDone(count(), saved).catch(() => tell(refused(undefined, MAYBE)));
   }
   async function sendDone(n, saved) {
     const mine = ++turn;
@@ -269,21 +291,26 @@
     };
     say(TELLING);
     let line;
+    let told = UNTOLD;
     try {
       const c = await comments;
+      const can = c ? await c.canSendToClaude() : null;
       if (!c) line = NO_REACH;
-      else if ((await c.canSendToClaude()) !== "available") line = NOT_LISTENING;
+      else if (can !== "available") line = unable(can);
       else {
         // Anchored on the bar Done sits in, at the press; the text names the round for the session.
         const anchor = await c.anchorFor(bar);
         const text = `Done with steering round ${ID}: ${n} of ${TP.decisions.length} answered. Read it back.`;
-        await c.sendToClaude({ anchor, text });
-        return say(SENT);
+        await c.sendToClaude({ anchor, text }).catch((err) => {
+          if (![...UNPOSTED, ...LIFECYCLE].includes(err?.code)) told = MAYBE;
+          throw err;
+        });
+        return say(sent());
       }
     } catch (err) {
-      line = refused(err?.code);
+      line = refused(err?.code, told);
     }
-    say((await saved) === false ? NOT_SAVED : line);
+    say((await saved) === false ? notSaved(told) : line);
   }
   function reopen() {
     if (!meta.doneAt || locked()) return;
@@ -324,8 +351,7 @@
     heardKey = rb ? rb.key : null;
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
     if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) toldLine = rb.line;
-    else if (!Number.isNaN(doneMs))
-      toldLine = `Done at ${clock(doneMs)}. The read-back shows here when it's posted.`;
+    else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
   }
   /** A new read-back on the round's document (the session wrote it): show it, without a reload. */
   function heard(d) {
@@ -335,18 +361,20 @@
     turn++;
     tell(rb.line);
   }
+  /** The watch is gone: the bar stops promising a live read-back, and says a reload shows it. */
+  function deaf() {
+    live = false;
+    if (toldLine.endsWith(WAIT)) tell(toldLine.slice(0, -WAIT.length) + RELOAD);
+  }
   /** Watch the round's own document, once, for the session's read-back. */
   function watch() {
     try {
-      db.doc(`tp/${ID}`).onSnapshot(
-        (snap) => {
-          if (snap.exists) heard(snap.data());
-        },
-        // Terminal: the bar keeps what it has, and the next load reads the read-back. No resubscribe.
-        () => undefined,
-      );
+      // A terminal error (db.d.ts) is never resubscribed; the next load reads the read-back.
+      db.doc(`tp/${ID}`).onSnapshot((snap) => {
+        if (snap.exists) heard(snap.data());
+      }, deaf);
     } catch {
-      // A runtime without onSnapshot: the read-back shows on the next load.
+      deaf(); // a runtime without onSnapshot
     }
   }
 
