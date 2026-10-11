@@ -17,8 +17,8 @@
 // other parallel sessions?"). When he types `process: …` in any session, or pins it on a round
 // page, that session adds his words whole as kind "process" (`--screen` optional), messages the
 // curator once, and goes on. The digest lists process lines first, newest first: the curator
-// ships each as a change on main plus a line in commons.md's "Process changes", and every
-// session pulls it before its next round (docs/process/REDESIGN.md).
+// ships each as a change on main plus a dated line in docs/process/REDESIGN.md → "Process
+// changes", and every session pulls main and reads it before its next round.
 //
 // WHERE: REDESIGN_COMMONS names the folder (or the findings .jsonl itself); by default it is the
 // project's shared temp folder, /tmp/claude-<uid>/<checkout slug>/redesign-commons — the same
