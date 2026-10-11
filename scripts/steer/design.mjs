@@ -185,6 +185,12 @@ export function designRound(design, { id, title, now, repo = "ejclark/skynet-cap
     })),
   );
   const { pictured, needsPictures } = splitByPictures(all);
+  const rounds = [...new Set(all.filter((d) => d.round != null).map((d) => String(d.round)))];
+  if (rounds.length > 1) {
+    throw new Error(
+      `steer/design: one page holds one round — the manifests name rounds ${rounds.join(", ")}`,
+    );
+  }
   const round = all.find((d) => d.round != null)?.round ?? null;
   const roundId = id || designRoundId(issues, round);
   roundPath(roundId); // the store's own grammar: refuse an id it would not file

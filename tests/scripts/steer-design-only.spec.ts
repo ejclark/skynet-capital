@@ -9,7 +9,7 @@ import {
   designRound,
   loadDesigns,
 } from "../../scripts/steer/design.mjs";
-import { DONE_TRIGGER, readback } from "../../scripts/steer/readback.mjs";
+import { DONE_TRIGGER, ROUND_DRAWING, readback } from "../../scripts/steer/readback.mjs";
 import { ROUND_INTRO, renderPage } from "../../scripts/steer/render.mjs";
 
 // #5143 slice 1: a redesign session (docs/process/REDESIGN.md) asks one screen's question on a
@@ -115,6 +115,12 @@ describe("a design round's own page holds only its decisions (#5143)", () => {
     const page = renderPage(undrawn);
     expect(page).toContain('id="drawing"');
     expect(page).toContain("Where does cash sit?");
+    expect(readback(undrawn, {}).rollover[0]?.why).toBe(ROUND_DRAWING);
+  });
+
+  it("holds one round per page: manifests naming two rounds are refused", () => {
+    const later = manifest("later", { issue: 5152, round: 2, questions: [question] }, PICS);
+    expect(() => designRound(loadDesigns([trade, later]))).toThrow(/one page holds one round/);
   });
 });
 
@@ -139,7 +145,7 @@ describe("the CLIs a session runs build the round page with no GitHub reads", ()
       "--title",
       "Trade redesign",
     ]);
-    expect(said).toMatch(/design round design-5150-r1 · 1 question\(s\)/);
+    expect(said).toMatch(/design round design-5150-r1 · 1 decision\(s\)/);
     const written = JSON.parse(readFileSync(join(out, "tp.json"), "utf8"));
     expect(written.designOnly).toBe(true);
     expect(written.title).toBe("Trade redesign");

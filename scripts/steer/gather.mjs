@@ -223,7 +223,7 @@ function designOnly() {
   const file = writeTp(out);
   const drawn = out.needsPictures;
   console.log(
-    `tp.json → ${file} · design round ${out.id} · ${out.decisions.length} question(s), ~${out.budget.used} min` +
+    `tp.json → ${file} · design round ${out.id} · ${out.decisions.length} decision(s), ~${out.budget.used} min` +
       `${drawn.length ? ` · ${drawn.length} need pictures: ${drawn.map((d) => d.key).join(", ")}` : ""}`,
   );
 }

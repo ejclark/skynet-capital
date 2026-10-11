@@ -44,6 +44,9 @@ export const DEFAULT_APPLIED = "default applied; no answer from Eric";
 export const DONE_TRIGGER = "Done with steering round";
 /** Why a decision that had no picture yet rolls over: it was named on the page, never asked. */
 export const DRAWING = "no picture yet: named as being drawn, not asked; it comes next page";
+/** The same, on a design round's own page: there is no next page, the next round draws it. */
+export const ROUND_DRAWING =
+  "no picture yet: named as being drawn, not asked; the next round draws it";
 
 const head = (d) => `**${d.q ? `Q${d.q} · ` : ""}${d.title}**`;
 
@@ -279,7 +282,8 @@ export function readback(tp, records, comments = []) {
       acc.follow("read-comment", d, "His comments are quoted on the issue; read them first");
   }
   // Never asked, so never answered: no default, no label, no comment — even if a record exists.
-  for (const d of tp.needsPictures ?? []) acc.roll(d, DRAWING);
+  const drawing = tp.designOnly ? ROUND_DRAWING : DRAWING;
+  for (const d of tp.needsPictures ?? []) acc.roll(d, drawing);
   queueAnswers(tp, rr, acc);
 
   const actions = [
