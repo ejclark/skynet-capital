@@ -273,12 +273,17 @@ export async function runRound(argv, seams = {}) {
     ctx.log("round", "stopped", { note: e instanceof Error ? e.message : String(e) });
     return 1;
   } finally {
-    await (await ctx.browser)?.close();
-    // Written stopped or finished: a round that dies late has still spent what it spent.
-    writeFileSync(
-      join(ctx.out, FILES.usage),
-      `${JSON.stringify(roundUsage(ctx.out, STEPS), null, 1)}\n`,
-    );
+    try {
+      // Written stopped or finished: a round that dies late has still spent what it spent.
+      writeFileSync(
+        join(ctx.out, FILES.usage),
+        `${JSON.stringify(roundUsage(ctx.out, STEPS), null, 1)}\n`,
+      );
+    } finally {
+      // A launch that failed already stopped the round above; awaiting its rejection again here
+      // would throw out of `finally`, turn the logged stop into a crash and skip usage.json.
+      await (await ctx.browser?.catch(() => null))?.close();
+    }
   }
   ctx.log("round", "complete", { findings: FILES.findings, classes: FILES.classes });
   return 0;

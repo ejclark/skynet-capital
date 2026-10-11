@@ -8,6 +8,8 @@
 //   round.json  log.jsonl  frozen.json  <step>/done.json …   the round's own bookkeeping
 //   5-sessions/<member>/<world>/<viewport>/<task>/run-<n>/   one member session each (drive.mjs):
 //                      summary.json · turns.jsonl · trace.jsonl · frames/NNN.jpg
+//   5-sessions/superseded/<session>--<ms>/requests/   the calls of an attempt driven again
+//   usage.json         what the round's sealed calls cost, by step (usage.mjs)
 //   findings.jsonl     every finding, one per line — the record below
 //   classes.json       {<finding id>: <class>} — kept apart, because the matchers get the findings
 //   findings-unlabelled.jsonl   what a matcher gets: id · what · level · severity · surface, by id

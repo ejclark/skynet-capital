@@ -298,10 +298,13 @@ flowchart LR
   (tokens by kind, the CLI's dollar figure, time, the model) is kept in `<out>/<step>/requests/`.
 - **What it cost** is read back from those records, never estimated (`usage.mjs`): each step's
   `done.json` carries its `usage`, and `<out>/usage.json` sums the round by step — written even
-  when the round stops. A replayed call counts at the price first paid; a failed call is counted
-  apart, since the CLI never said what it spent. On a subscription sign-in the dollar figure is the
-  CLI's API-price estimate, not a bill.
-- **The experts run at once,** up to `--concurrency` (the area's, else the flag), each over its
+  when the round stops. A replayed call counts at the price first paid; a session driven again
+  keeps its earlier attempt's calls under `5-sessions/superseded/`, so they still count; a failed
+  call is counted apart, since the CLI never said what it spent. On a subscription sign-in the
+  dollar figure is the CLI's API-price estimate, not a bill. `duration_ms` is the calls' own time
+  added up — calls made at once overlap, so it is not how long a step took; the step's `start` and
+  `done` lines in `<out>/log.jsonl` are.
+- **The experts run at once,** up to `--concurrency` (the flag, else the area's), each over its
   own batches in order. Every call keeps the number it had when they ran one after another, so a
   round recorded either way replays.
 - **The lint loop:** the task author hears back only the lint's `rewrite <file> item N (<kind>)`
@@ -432,4 +435,5 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   all-time high and the page opened on a celebration, so a spec now refuses an unplanned high.
 - 2026-10-11 · the experts now run at once and every sealed call records its usage (#5099). The
   ~4½ hours the experts took one after another should fall to about one expert's time; the next
-  round's `usage.json` says whether it did and what the round cost.
+  round's `7-experts` start and done lines in `log.jsonl` say whether it did, and its `usage.json`
+  what the round cost.

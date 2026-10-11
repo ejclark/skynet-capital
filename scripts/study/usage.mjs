@@ -6,6 +6,8 @@
 // A replayed call carries the usage of the run that paid for it, so a resumed round's total is
 // what the whole out dir cost, once. A stubbed call costs nothing and says so; a call that failed
 // may have spent tokens the CLI never reported, so it is counted apart rather than guessed at.
+// `duration_ms` is the calls' own time added up: calls made at once overlap, so it is call time,
+// never a step's wall time (that is the step's start and done lines in log.jsonl).
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
