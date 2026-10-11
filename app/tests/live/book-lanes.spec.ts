@@ -7,6 +7,7 @@ import {
   glyphOf,
   inDays,
   placeWords,
+  spreadTiles,
 } from "../../src/live/book-lanes";
 import type { NextPrint } from "../../src/live/desk";
 import { ALL_RANGE, rangeFor } from "../../src/live/horizon-range";
@@ -252,6 +253,32 @@ describe("placeWords — words only where they fit", () => {
         330,
       ),
     ).toEqual([null, "after"]);
+  });
+});
+
+describe("spreadTiles — a tile never covers the one beside it", () => {
+  // A 24px step (the 22px tile and a gap) on a 330px track.
+  const spread = (centres: number[]) => spreadTiles(centres, 24, 330);
+
+  it("leaves a tile on its day when it has room, even at the track's ends", () => {
+    expect(spread([5.5, 93.5, 120, 324.5])).toEqual([5.5, 93.5, 120, 324.5]);
+  });
+
+  it("spreads a decision and the print the next day a tile apart, around their middle", () => {
+    // A month: 11px a day, so Nov 9 and Nov 10 sit 11px apart.
+    expect(spread([93.5, 104.5])).toEqual([87, 111]);
+    // A quarter: a run of three days ~4px apart spreads around the middle one.
+    expect(spread([100, 104, 108])).toEqual([80, 104, 128]);
+  });
+
+  it("folds a run that spreads into its neighbour into one run", () => {
+    // The first two spread to 93 and 117, which now crowds 135: all three share one middle.
+    expect(spread([100, 110, 135])).toEqual([91, 115, 139]);
+  });
+
+  it("keeps a run inside the track, its outermost tile on its own day", () => {
+    expect(spread([2, 6])).toEqual([2, 26]);
+    expect(spread([322, 326])).toEqual([302, 326]);
   });
 });
 
