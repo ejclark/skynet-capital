@@ -97,6 +97,8 @@ export function peekNext(
   deps?: AdmissionDeps & {
     readReady?: () => AdmissionIssue[];
     readPrIssues?: () => Map<number, number>;
+    /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
+    continuation?: () => unknown;
   },
 ): AdmissionIssue | null;
 /** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
