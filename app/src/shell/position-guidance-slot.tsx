@@ -18,13 +18,13 @@ import type { RowMark } from "./use-row-marks";
  *  - right, the row's guidance, which opens in place under the line (round 2's "tap opens it in
  *    place"). Today it holds Not now with its return condition, said before anything is set
  *    aside, and the hand-off to the full guidance on Trade. When this browser read the guidance
- *    for exactly this holding today, the spot says that call and its confidence ("Hold · ▰▰▱ medium", `row-call.ts`); otherwise it says
- *    "Guidance", never a made-up call.
+ *    for exactly this holding today, the spot says that call and its confidence ("Hold · ▰▰▱
+ *    medium", `row-call.ts`); otherwise it says "Guidance", never a made-up call.
  * Opened, it leads with the position's picture (#5070 slice 2, `position-picture.tsx`): the price
  * strip, the waiting-earns strip and the three figures. Then what the decision engine says about
- * this position, when it says anything: its sentence ("Collected $255; buying back costs $550") and the lesson the retired pager carried
- * ("What is a breakeven?", a glossary term opened in place), or a playbook that fits the name
- * (#5083). Not now and Undo are the owner's (ownership-gated controls); everyone sees the marks.
+ * this position, when it says anything: its sentence ("Collected $255; buying back costs $550")
+ * and the lesson the retired pager carried ("What is a breakeven?", a glossary term opened in
+ * place), or a playbook that fits the name (#5083). Not now and Undo are the owner's (ownership-gated controls); everyone sees the marks.
  * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
  * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
