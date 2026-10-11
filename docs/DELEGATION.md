@@ -28,7 +28,11 @@ feeding thoughts; work moves underneath.
    install, `main`'s build, a lockfile — **stops and reports it as an incident, never repairs around
    it silently**: the one that did on 2026-10-09 left everyone else broken for most of an hour
    (`docs/LESSONS.md`). A worktree's `node_modules` is a clone of the primary's, never a link
-   (`scripts/worktree-setup.sh`).
+   (`scripts/worktree-setup.sh`). **An isolated agent's first call is `bash scripts/wt-start.sh
+   <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
+   work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
+   is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
+   `bash scripts/…` call passes both (#5192). Put that line in every worktree agent's prompt.
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
