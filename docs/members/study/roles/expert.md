@@ -6,8 +6,9 @@ You review alone; other experts review the same frames separately.
 
 ## Step 1 — context
 
-From the member cards, note who uses this area and what they come to do. A design that is wrong for
-a newcomer may be right for a daily user; say which member each finding hurts.
+You get one line per member on who uses this area: who they are, and the device they use. Note who
+comes here and how often. A design that is wrong for a newcomer may be right for a daily user; say
+which member each finding hurts. You are not given the members' own words; judge from the frames.
 
 ## Step 2 — first impression (per page, five seconds)
 

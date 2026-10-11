@@ -7,7 +7,9 @@ import { runRound } from "../../scripts/study/round.mjs";
 import { controlProblems, FILES, SESSIONS } from "../../scripts/study/round-contract.mjs";
 import {
   cardMismatches,
+  expectEntries,
   expectIds,
+  expectProblems,
   factDrift,
   sourceProblems,
 } from "../../scripts/study/round-control.mjs";
@@ -161,10 +163,37 @@ describe("what a control may run from", () => {
     ]);
   });
 
-  it("takes key ids only from --expect — never wording", () => {
+  it("takes key ids only from --expect into the round — never wording", () => {
     expect(expectIds(["A1", " P2 ", "A1"])).toEqual(["A1", "P2"]);
     expect(() => expectIds([])).toThrow(/no key ids/);
-    expect(() => expectIds(["the lamp is lit from below"])).toThrow(/ids only/);
+    expect(() => expectIds(["the lamp is lit from below"])).toThrow(/starts with a key id/);
+    expect(() => expectIds(["A1 the lamp is lit from below"])).toThrow(/starts with a key id/);
+  });
+
+  // Round one's fixed build "still reported" two items through a different mechanism at the same
+  // place (#5099). Each expectation now states the mechanism, for the matchers; the round keeps
+  // the ids alone.
+  it("reads the mechanism beside each id, as a line or as JSON, and keeps it out of the ids", () => {
+    const lines = ["A1 — a filter tap jumps the page to the top", "P2: the label is cut off", "A3"];
+    expect(expectEntries(lines)).toEqual([
+      { id: "A1", mechanism: "a filter tap jumps the page to the top" },
+      { id: "P2", mechanism: "the label is cut off" },
+      { id: "A3", mechanism: null },
+    ]);
+    expect(expectIds(lines)).toEqual(["A1", "P2", "A3"]);
+    expect(expectEntries([{ id: "A1", mechanism: "jumps to the top" }, "A2"])).toEqual([
+      { id: "A1", mechanism: "jumps to the top" },
+      { id: "A2", mechanism: null },
+    ]);
+  });
+
+  it("refuses a negative control whose expectation names no mechanism", () => {
+    const entries = expectEntries(["A1 — jumps to the top", "A2", "A3"]);
+    expect(expectProblems("negative", entries)).toEqual([
+      "--expect names no mechanism for A2, A3 — a negative control states what each fix removed",
+    ]);
+    expect(expectProblems("negative", expectEntries(["A1 — jumps to the top"]))).toEqual([]);
+    expect(expectProblems("positive", entries)).toEqual([]);
   });
 
   const rec = {
@@ -235,7 +264,10 @@ describe("a positive control on the stub, from a thin main round, graded beside 
   beforeAll(async () => {
     fakePin(join(tmp, "pin-today"), "today-stub");
     fakePin(planted, "planted-stub");
-    writeFileSync(ids, "# planted defects, by key id\nA1\n");
+    writeFileSync(
+      ids,
+      "# planted defects, by key id and mechanism\nA1 — the lamp is lit from below\n",
+    );
     status.main = await runRound(
       [...["--pin", join(tmp, "pin-today"), "--out", main, "--sealed", sealed]].concat([
         "--stub",
@@ -311,6 +343,17 @@ describe("a positive control on the stub, from a thin main round, graded beside 
   it("refuses a resume under the other kind", async () => {
     expect(await run(planted, ctl, main, "negative")).toBe(1);
     expect(lastStop(ctl)).toMatch(/another mode \(control\)/);
+  });
+
+  it("refuses a negative control whose expectation states no mechanism, before anything runs", async () => {
+    const bare = join(tmp, "expect-bare.txt");
+    writeFileSync(bare, "A1\n");
+    const out = join(tmp, "control-bare");
+    const args = ["--pin", planted, "--out", out, "--sealed", sealed, "--stub", STUB];
+    const ctlArgs = ["--frozen-from", main, "--control", "negative", "--expect", bare];
+    expect(await runRound([...args, ...ctlArgs], SEAMS)).toBe(1);
+    expect(lastStop(out)).toMatch(/names no mechanism for A1/);
+    expect(existsSync(join(out, "0-preflight"))).toBe(false);
   });
 
   it("refuses a control of a control", async () => {

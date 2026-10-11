@@ -73,6 +73,8 @@ export interface ControlResult {
   why: string;
   expect?: string[];
   found?: string[];
+  /** Negative only: fixed items an unsettled matcher dispute names — the control waits on a tie-break. */
+  held?: string[];
   /** The control's own sessions, and how many succeeded — when they were recorded. */
   sessions?: { sessions: number; succeeded: number };
 }

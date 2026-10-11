@@ -30,6 +30,8 @@ export interface AreaConfig {
   experts: number;
   matrix: MatrixRow[];
   pages: string[];
+  /** Who each member is in this area, in plain words — what the experts and the words pass read. */
+  roles: Record<string, string>;
   census?: CensusRow[];
   thin: { member: string; world: string; viewport: string; task: number; expertRoute: string };
 }

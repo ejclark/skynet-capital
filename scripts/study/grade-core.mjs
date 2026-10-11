@@ -3,10 +3,13 @@
 //
 // WHAT IS COUNTED, AND WHY THIS WAY
 //   match       — two matchers label every finding with one key item (or none) and a score:
-//                 1 same place + same mechanism · 0.5 same place, vaguer mechanism · 0 no match.
+//                 1 same place + same mechanism · 0.5 same place, the same mechanism said vaguely ·
+//                 0 otherwise — a different mechanism at the same place included (the rubric:
+//                 docs/members/study/roles/matcher.md, #5099).
 //                 Where they agree the lower score stands; where they disagree the finding is
 //                 DISPUTED — a tie-break label settles it if given, else it counts as no match
-//                 (and the readout marks the row for the owner's eye). Never the kinder reading.
+//                 (and the readout marks the row for the owner's eye). Never the kinder reading —
+//                 so a negative control whose fixed item a dispute names is held, not passed.
 //   found       — a key item counts found by a class when any of that class's findings matches it
 //                 at ≥ 0.5; a best score of 0.5 is reported separately as partial credit.
 //   thoroughness— found ÷ the main-list items that could render (struck items leave the
@@ -334,18 +337,40 @@ export function controlVerdict(kind, control) {
     ? { sessions: sessions.length, succeeded: sessions.filter((s) => s.success).length }
     : null;
   const unreached = kind === "negative" && ran !== null && ran.succeeded === 0;
-  const pass = kind === "negative" ? hit.length === 0 && !unreached : hit.length === expect.length;
+  // An unsettled dispute counts as no match, which is the kind reading for a fixed build: its pass
+  // is "not reported". So one naming a fixed item holds the control until a tie-break settles it.
+  const held =
+    kind === "negative"
+      ? expect.filter(
+          (id) => !hit.includes(id) && findings.some((f) => heldOn(byId.get(f.id)).includes(id)),
+        )
+      : [];
+  const pass =
+    kind === "negative"
+      ? hit.length === 0 && held.length === 0 && !unreached
+      : hit.length === expect.length;
   const why =
     kind === "negative"
       ? hit.length > 0
         ? `still reported: ${hit.join(", ")}`
-        : unreached
-          ? `no session succeeded (0 of ${ran.sessions}) — the fixed build was never shown reached`
-          : "none of the fixed items was reported"
+        : held.length > 0
+          ? `held: a matcher dispute names ${held.join(", ")} — settle it with a tie-break`
+          : unreached
+            ? `no session succeeded (0 of ${ran.sessions}) — the fixed build was never shown reached`
+            : "none of the fixed items was reported"
       : pass
         ? "every planted defect was found"
         : `missed: ${expect.filter((id) => !hit.includes(id)).join(", ")}`;
-  return { kind, ran: true, pass, expect, found: hit, why, ...(ran ? { sessions: ran } : {}) };
+  return {
+    kind,
+    ran: true,
+    pass,
+    expect,
+    found: hit,
+    ...(held.length ? { held } : {}),
+    why,
+    ...(ran ? { sessions: ran } : {}),
+  };
 }
 
 /** The cycle gate (recall ≥ 0.6 at validity ≥ 0.5, ≥ 3 structural, both controls) and the kill rule. */

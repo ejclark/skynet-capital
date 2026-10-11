@@ -36,6 +36,20 @@ export function readCards(ctx, members) {
   );
 }
 
+/** The area's roles packet, beside the cards in step 1's folder. */
+export const ROLES = "roles.md";
+
+/** The roles step 1 wrote: what the experts and the words pass read instead of the cards (#5099). */
+export function readRoles(ctx) {
+  const path = join(ctx.out, "1-cards", ROLES);
+  if (!existsSync(path)) {
+    throw new Error(
+      "1-cards/roles.md is missing — this round's cards step ran before the experts read roles (#5099); start a fresh round",
+    );
+  }
+  return readFileSync(path, "utf8");
+}
+
 /** Step 3: the framer reads every card and the page list → the job map. */
 export async function framer(ctx) {
   const step = "3-framer";

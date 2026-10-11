@@ -1,0 +1,37 @@
+{
+  "title": "Matcher — which key item, if any, each finding re-finds",
+  "description": "docs/members/study/roles/matcher.md (an aware role: matcher 1, matcher 2 and the tie-break all answer in this shape). The answers become matches-1.json, matches-2.json and tiebreak.json, which grade.mjs reads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["matches"],
+  "properties": {
+    "matches": {
+      "type": "array",
+      "description": "One entry for every finding you were given, none skipped.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding", "gold", "score", "why"],
+        "properties": {
+          "finding": {
+            "type": "string",
+            "description": "The finding's id, exactly as given (F-…)."
+          },
+          "gold": {
+            "type": ["string", "null"],
+            "description": "The key item's id (A1, B2, S3, P1…), or null when score is 0."
+          },
+          "score": {
+            "type": "number",
+            "enum": [0, 0.5, 1],
+            "description": "1: same place and same mechanism. 0.5: same place, the same mechanism said vaguely, never a different one. 0: anything else."
+          },
+          "why": {
+            "type": "string",
+            "description": "One short line: the place, and the mechanism on each side when they differ."
+          }
+        }
+      }
+    }
+  }
+}
