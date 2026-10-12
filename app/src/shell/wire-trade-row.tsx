@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { orderTime } from "../live/order-facts";
 import type { VitalGauge, WireTrade } from "../live/wire";
 
 /**
@@ -106,7 +107,10 @@ export function TradeRow({ trade }: { readonly trade: WireTrade }): ReactElement
           reconstructed
         </span>
       ) : null}
-      <span className="wire-when num">{trade.when}</span>
+      {/* The time only — the day's divider states the date (#5257) — on the account cards' own
+       *  clock, so one fill reads "10:31 AM ET" on both screens (#5104). A server older than `at`
+       *  leaves its own `when`. */}
+      <span className="wire-when num">{orderTime({ at: trade.at }) ?? trade.when}</span>
       {open ? <TradeReasoning trade={trade} /> : null}
     </li>
   );

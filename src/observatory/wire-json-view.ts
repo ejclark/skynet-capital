@@ -202,7 +202,9 @@ export function wireJsonView(
         ...(item.status
           ? { status: FEEDBACK_STATUS_LABEL[item.status], statusKey: item.status }
           : {}),
-        meta: `#${item.issueNumber} · ${new Date(item.filedAt).toLocaleDateString()}`,
+        // The number only — the feed's day divider states the date (#5257), in New York time where
+        // this server's own `toLocaleDateString()` would have written its zone's day.
+        meta: `#${item.issueNumber}`,
         at: item.filedAt,
       })),
     developmentEnabled: development !== undefined,
@@ -217,7 +219,7 @@ export function wireJsonView(
         title: item.title,
         url: item.url,
         ...(item.author ? { author: item.author } : {}),
-        meta: `#${item.pullRequest} · ${new Date(item.mergedAt).toLocaleDateString()}`,
+        meta: `#${item.pullRequest}`,
         at: item.mergedAt,
       })),
     milestonesEnabled: milestones !== undefined,
@@ -231,7 +233,7 @@ export function wireJsonView(
         whoId: item.participantId,
         title: item.title,
         ...(item.points !== undefined ? { points: item.points } : {}),
-        meta: `${item.points !== undefined ? `+${item.points} pts · ` : ""}${new Date(item.at).toLocaleDateString()}`,
+        meta: item.points !== undefined ? `+${item.points} pts` : "",
         at: item.at,
       })),
   };

@@ -16,7 +16,7 @@ const merge = (over: Partial<WireDevelopmentItem> = {}): WireDevelopmentItem => 
   title: "Development events for merged PRs",
   url: "https://github.com/ejclark/skynet-capital/pull/4272",
   author: "claude",
-  meta: "#4272 · 10/2/2026",
+  meta: "#4272",
   at: "2026-10-02T12:00:00.000Z",
   ...over,
 });

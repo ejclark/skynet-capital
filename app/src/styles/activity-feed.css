@@ -16,6 +16,29 @@
   flex-direction: column;
   gap: 6px;
 }
+/* One block a day (#5257): a thin line across the feed with the day centred in it, the same space
+   above and below so each day reads as its own block. The line is decoration (`--border`); the
+   words carry the day, on the cards' own header type (`.act-day-head`) and the AA-checked `--muted`. */
+.wire-day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.wire-day-head::before,
+.wire-day-head::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+.wire-day-head > span {
+  white-space: nowrap;
+}
 /* `.wire-merge` (#784 slice 4) and `.wire-earn` (slice 5) share every rule rather than copying them:
    each later kind is a row on the same list, so it is the same card at the same rhythm, differing
    only in what it says. */
