@@ -34,7 +34,7 @@ const earn = (over: Partial<WireMilestoneItem> = {}): WireMilestoneItem => ({
   whoId: "eric",
   title: "Buy your first stock",
   points: 25,
-  meta: "+25 pts · 10/2/2026",
+  meta: "+25 pts",
   at: "2026-10-02T09:00:00.000Z",
   ...over,
 });
@@ -63,6 +63,11 @@ describe("MilestoneRow", () => {
 
   it("shows the meta the server formatted, points and all", () => {
     render(inList(earn()));
-    expect(screen.getByText("+25 pts · 10/2/2026")).toBeInTheDocument();
+    expect(screen.getByText("+25 pts")).toBeInTheDocument();
+  });
+
+  it("leaves no empty meta behind for an earn the course score does not count", () => {
+    const { container } = render(inList(earn({ points: undefined, meta: "" })));
+    expect(container.querySelector(".wire-fdbk-meta")).toBeNull();
   });
 });

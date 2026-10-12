@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { orderTime } from "../../src/live/order-facts";
 import type { WireTrade } from "../../src/live/wire";
 import { TradeRow } from "../../src/shell/wire-trade-row";
 
@@ -142,5 +143,19 @@ describe("TradeRow", () => {
   it("never lets a human trade's row claim reasoning that isn't there", () => {
     renderRow({ kind: "human", who: "Eric", whoId: "eric" });
     expect(screen.getByRole("button")).toBeDisabled();
+  });
+  // #5257 / #5104: the day's divider carries the date, so the row keeps only its time — and on the
+  // account cards' clock, so one fill shows one time on both screens.
+  it("shows the fill's time as the account card's clock writes it, never the date", () => {
+    const at = "2026-10-06T14:31:00.000Z";
+    const { container } = renderRow({ at, when: "Oct 6, 2:31p" });
+    const when = container.querySelector(".wire-when");
+    expect(when?.textContent).toBe(orderTime({ at }));
+    expect(when?.textContent).toBe("10:31 AM ET");
+  });
+
+  it("falls back to the server's own words when the row carries no instant", () => {
+    const { container } = renderRow({ at: undefined as unknown as string, when: "2:30p" });
+    expect(container.querySelector(".wire-when")?.textContent).toBe("2:30p");
   });
 });

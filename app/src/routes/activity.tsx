@@ -17,6 +17,7 @@ import { fetchCouncilReplies } from "../live/council-replies";
 import { fetchFilingComments } from "../live/filing-comments";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
+import { ActivityDays } from "../shell/activity-days";
 import { CouncilCompose } from "../shell/council-compose";
 import { CouncilLines } from "../shell/council-lines";
 import { FilingOnramp } from "../shell/filing-onramp";
@@ -56,7 +57,8 @@ import { TradeRow } from "../shell/wire-trade-row";
  * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
  * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
  * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
- * the same rows more room, never new concepts.
+ * the same rows more room, never new concepts. Each day opens with a centred divider and the rows
+ * keep only their time (#5257, `shell/activity-days.tsx`).
  */
 
 /** The chip groups, in the order the controls row reads them. Kind leads, because it decides which
@@ -286,8 +288,9 @@ function FeedSection({
             : "Nothing here matches this filter."}
         </p>
       ) : (
-        <ul className="wire-feed">
-          {shown.map((item) => {
+        <ActivityDays
+          items={shown}
+          renderItem={(item) => {
             if (item.kind === "trade") return <TradeRow key={item.key} trade={item.trade} />;
             if (item.kind === "development") {
               return <DevelopmentRow key={item.key} merge={item.merge} />;
@@ -303,8 +306,8 @@ function FeedSection({
                 }
               />
             );
-          })}
-        </ul>
+          }}
+        />
       )}
       {onLoadMore ? (
         <button

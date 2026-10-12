@@ -43,7 +43,7 @@ const filing = (over: Partial<WireFeedbackItem> = {}): WireFeedbackItem => ({
   kindLabel: "Idea",
   title: "One feed, not three widgets",
   url: "https://github.com/ejclark/skynet-capital/issues/4271",
-  meta: "#4271 · 10/1/2026",
+  meta: "#4271",
   at: "2026-10-01T12:00:00.000Z",
   ...over,
 });
@@ -55,7 +55,7 @@ const merge = (over: Partial<WireDevelopmentItem> = {}): WireDevelopmentItem => 
   title: "development events for merged PRs",
   url: "https://github.com/ejclark/skynet-capital/pull/4272",
   author: "claude",
-  meta: "#4272 · 10/2/2026",
+  meta: "#4272",
   at: "2026-10-02T12:00:00.000Z",
   ...over,
 });
@@ -319,7 +319,7 @@ describe("the milestone kind", () => {
     whoId: "eric",
     title: "Buy your first stock",
     points: 25,
-    meta: "+25 pts · 10/2/2026",
+    meta: "+25 pts",
     at: "2026-10-02T09:00:00.000Z",
     ...over,
   });
