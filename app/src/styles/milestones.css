@@ -271,3 +271,45 @@
   padding: 0;
   cursor: pointer;
 }
+
+/* Steps first (#5256): with no account the onboarding chapter leads the section, so it drops the
+   rule that separates it from the table of contents, and the table of contents folds beneath it —
+   one tap away, its chevron turning when open (a shape, never colour alone). */
+.ms-chapter-lead {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: none;
+}
+.ms-toc-fold {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.ms-toc-fold > summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 14px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+.ms-toc-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.ms-toc-fold > summary::after {
+  content: "›";
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform var(--dur-quick) var(--ease-spatial);
+}
+.ms-toc-fold[open] > summary::after {
+  transform: rotate(90deg);
+}
+.ms-toc-fold-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+.ms-toc-fold-count {
+  font-size: 12px;
+  color: var(--muted);
+}
