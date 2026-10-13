@@ -30,15 +30,21 @@ globalThis.steerEar = (api) => {
     return Number.isNaN(ms) ? null : { ms, lost: v.lost === true };
   }
   return {
-    /** The round's document as the snapshot delivered it. */
+    /** The round's document as the snapshot delivered it. Returns what the line now says:
+     *  "listening", "lost" or "unknown". */
     hear(d) {
       clearTimeout(timer);
       const s = read(d?.listening);
       const left = s ? s.ms + STALE_MS - Date.now() : 0;
-      if (!s || left <= 0) return show("unknown", "");
-      show(s.lost ? "lost" : "listening", s.lost ? LOST : listening(s.ms));
+      if (!s || left <= 0) {
+        show("unknown", "");
+        return "unknown";
+      }
+      const state = s.lost ? "lost" : "listening";
+      show(state, s.lost ? LOST : listening(s.ms));
       // The stamp turns stale while the page is open: it goes quiet then, with no new snapshot.
       timer = setTimeout(() => show("unknown", ""), left);
+      return state;
     },
     /** The watch is gone, or the view went dark: the line can no longer tell. */
     off() {

@@ -103,6 +103,15 @@ describe("Done says when Claude got it", () => {
     expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
   });
 
+  it("says at once that the session isn't listening when a lost stamp lands on a waiting Done", async () => {
+    const v = await openWith(answered({ listening: { at: ago(HOUR), by: "session" } }));
+    await v.press("done");
+    expect(v.told()).toBe(SENT);
+    await stamp(v, { listening: { lost: true, at: ago(0) } });
+    expect(v.told()).toBe(UNHEARD);
+    expect(ear(v)).toBe(LOST);
+  });
+
   it("ignores an ack older than this Done", async () => {
     const v = await openWith(answered({ ackAt: "2026-10-10T22:00:00Z" }));
     await v.press("done");

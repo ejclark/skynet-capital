@@ -481,10 +481,12 @@
   /** One timer from the press of a sent Done: no read-back by then, and the bar says the session
    *  isn't listening. Never a resend — only Eric can wake the session. A dead watch can't tell. */
   function listen(doneAt, pressedAt) {
-    clearTimeout(timers.quiet);
+    stopWaiting();
     if (!live) return;
+    awaiting = doneAt;
     timers.quiet = setTimeout(
       () => {
+        awaiting = null;
         if (meta.doneAt !== doneAt || !live || blocked) return;
         turn++;
         tell(UNHEARD);
@@ -492,10 +494,17 @@
       Math.max(0, pressedAt + QUIET_MS - Date.now()),
     );
   }
+  /** The `doneAt` of a sent Done still waiting on a word from the session, or null. */
+  let awaiting = null;
+  /** The wait is over (an ack, a read-back, a lost stamp, a Reopen): the fallback stands down. */
+  function stopWaiting() {
+    awaiting = null;
+    clearTimeout(timers.quiet);
+  }
   function reopen() {
     if (!meta.doneAt || locked()) return;
     const focused = document.activeElement === reopenBtn;
-    clearTimeout(timers.quiet);
+    stopWaiting();
     turn++;
     tap();
     meta.doneAt = null;
@@ -543,28 +552,35 @@
   /** The round's document changed: a new read-back shows, else a new ack of this Done, without a
    *  reload; the listening line reads its stamp either way. */
   function heard(d) {
-    earUi?.hear(d);
+    const ear = earUi?.hear(d);
     const rb = readBackOf(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
     if (rb && rb.key !== heardKey) {
       heardKey = rb.key;
-      if (Number.isNaN(doneMs) || rb.ms >= doneMs) clearTimeout(timers.quiet);
+      if (Number.isNaN(doneMs) || rb.ms >= doneMs) stopWaiting();
       turn++;
       return tell(rb.line);
     }
     // An ack only answers the Done it follows, and never covers that Done's read-back.
     const ack = ackOf(d);
-    if (!(ack >= doneMs) || ack === ackedMs || (rb && rb.ms >= doneMs)) return;
-    ackedMs = ack;
-    clearTimeout(timers.quiet);
-    turn++;
-    tell(ACK);
+    if (ack >= doneMs && ack !== ackedMs && !(rb && rb.ms >= doneMs)) {
+      ackedMs = ack;
+      stopWaiting();
+      turn++;
+      return tell(ACK);
+    }
+    // The session said it lost the page while a sent Done waits: say so now, not in five minutes.
+    if (ear === "lost" && awaiting !== null && awaiting === meta.doneAt) {
+      stopWaiting();
+      turn++;
+      tell(UNHEARD);
+    }
   }
   /** The watch is gone: the bar stops promising a live read-back, and says a reload shows it. */
   function deaf() {
     live = false;
     earUi?.off();
-    clearTimeout(timers.quiet);
+    stopWaiting();
     if (toldLine.endsWith(WAIT)) tell(toldLine.slice(0, -WAIT.length) + RELOAD);
   }
   /** Watch the round's own document, once, for the session's read-back. */
@@ -743,7 +759,7 @@
     dropNotes();
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
-    clearTimeout(timers.quiet);
+    stopWaiting();
     earUi?.off();
     turn++; // a send still pending must not report on a page that has gone dark
     toldLine = "";

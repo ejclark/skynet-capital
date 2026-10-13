@@ -66,7 +66,7 @@ export function store(docs: Docs, { fail = false } = {}) {
       update: (body: Record<string, unknown>) => {
         if (full) return rejectFull();
         if (!(path in docs)) return Promise.reject({ code: "invalid_argument", message: "absent" });
-        docs[path] = merged(docs[path] ?? {}, body);
+        docs[path] = merged(docs[path] as Record<string, unknown>, body);
         notify(path);
         return Promise.resolve();
       },
