@@ -36,7 +36,7 @@ items don't wait on each other's slowest step:
 }
 ```
 
-(`fix-type-error.instructions.md` above is illustrative — not a checked-in file. See "Real,
+(the `fix-type-error` chore above is illustrative — not a checked-in file. See "Real,
 checked-in chores" below for ones that actually exist.)
 
 Once a step reports `blocked` or `skipped` for an item, later steps pass it through unchanged

@@ -41,7 +41,7 @@ into separate lint, typecheck and per-suite calls (#5191).
    `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
    worktree agent's prompt. **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
-   label — never a shared generic name like `body.md`. Every agent in a workflow shares one
+   label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245).
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A

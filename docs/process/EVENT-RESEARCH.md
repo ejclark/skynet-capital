@@ -147,8 +147,8 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried — its own fragment
 [`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
-`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event — with
-exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
+`docs/research/forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the
+event — with exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
 as `forward-test-due` (#2884, the mode below). The assessment is closed for good; the *register*
 is not.
 
@@ -168,7 +168,8 @@ window entirely — so the scanner dispatches immediately and names the test in 
 exactly as before. An unreadable row, a missing fragment, or an already-scored row all behave
 exactly as they did: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
 outcome record permanently while a wrong dispatch only costs a session. Legacy `FT-N` rows in
-`forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace to match on.
+`docs/research/forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace
+to match on.
 
 **Registering a forward test** (initial research, or a stance change mid-run) appends one row to
 `docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
