@@ -130,8 +130,8 @@ marks and notes on the issue and prints `nextRound`, the instruction round 1 is 
   you passed pin.mjs>"` on the option (or on `today`) for its phone frame, `"pinsDesk"` for the
   desktop one. It is read as-is — one file, no second copy to keep in sync
   (`pin.mjs --pins <file> --emit-manifest-pins` prints the list the page will place, for inline
-  use). The page puts a button on each badge: 👍 Keep · 👎 Change · ☯︎ Mixed (round 0: Yes, a
-  problem · Not a problem · Partly), with an optional note under them. A label is a few words:
+  use). The page puts a button on each badge: 👍 Keep · 👎 Change · ☯︎ Mixed (round 0: Fix it ·
+  Leave as is · Partly, so 👍 always means act on it), with an optional note under them. A label is a few words:
   ≤48 characters, the one limit `pin.mjs`, the page and `lint.mjs` share (`MAX_PIN_LABEL`).
   Reactions and notes on pins a republished round no longer shows are ignored, by the page and
   the read-back alike — renumber or drop a pin and its old answers stop counting (#5240).
@@ -192,8 +192,8 @@ npm run steer:build -- <dir>/tp.json
   section once this one is settled. Back to d.
 - **His pin reactions** come back as a *Per pin* list on the issue, each pin's label word for
   word, and as `nextRound` instructions: 👍 keep as drawn · 👎 replace with a new direction ·
-  ☯︎ draw a closer look (variants of just that element). Round 0: yes, a problem · not a problem ·
-  partly — still nothing filed. A pin he left alone is "no signal", never a default. On a Build
+  ☯︎ draw a closer look (variants of just that element). Round 0: fix it → draw it next round · leave
+  as is → drop it · partly → a closer look — still nothing filed. A pin he left alone is "no signal", never a default. On a Build
   pick, the build issue carries that option's pins.
 - **His pin notes** are quoted word for word on that pin's line, after its reaction or alone —
   `Option B · pin 2 (range strip) — 👎 change — “<his note>”` — and the `nextRound` instruction
@@ -287,6 +287,7 @@ Newest first. This is how a change to the loop reaches the sessions already runn
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
+- 2026-10-13 · **Round-0 pins now read 👍 Fix it · 👎 Leave as is · ☯︎ Partly** (Eric: "\"not a problem\" with a thumbs down is confusing, as is \"thumbs up - it's a problem\"..."). A thumbs-up now always means "act on this pin". The read-back's *Per pin* lines use the same words, and the next round reads them as: fix it → draw it next round, leave as is → drop it, partly → a closer look. The stored values (up/down/mixed) did not change. Round-0 pin reactions saved before this change were tapped under the old wording (👍 Yes, a problem · 👎 Not a problem), so for those rounds read his pin notes over the glyphs, and where a note and a glyph disagree, the note wins. Design rounds keep 👍 Keep · 👎 Change · ☯︎ Mixed.
 - 2026-10-13 · **A lost watch: re-watch, then ask him to say "watch my page"** (Eric: "I've had to click 'done'.. nothing happens then I click reopen/done again when revisiting artifacts hours later after the session has disconnected so that it triggers back in the main session. calling that out incase there's a cheap fix to the process to smooth out that friction"). A session's page watch drops after hours idle, and its own re-watch does not bring back the comment wake that lets Done reach it — only his message asking for the watch does. So when you get a watch-lost notice for your round page, re-watch it and tell Eric in one line to say "watch my page" in this session so Done reaches it again, ending with the page link. The page now says so too: five minutes after a sent Done with no read-back, its bar reads "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”)." Woken by his "done" in chat, read the round back exactly as for a Done comment (step f).
 - 2026-10-11 · **Pin notes: a note can sit beside any pin's 👍 / 👎 / ☯︎** (Eric: "i wish the thumbs up/down/mixed signal form/process also allowed for commentary to expand on context"). The read-back quotes it under that pin, and the next round applies it on that spot (#5251). One manifest check: a pin label is now ≤48 characters on the page and in `lint.mjs` too (it was 60), the same limit `pin.mjs` always drew to — shorten any longer inline label.
 - 2026-10-11 · **This loop is the default for design work, and its changelog lives here** (Eric:

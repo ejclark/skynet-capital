@@ -171,7 +171,7 @@ describe("the read-back on a stored note no page would write", () => {
     });
     expect(plan.actions.map((a) => a.kind)).toEqual(["comment"]);
     expect(commentOf(plan)).toContain(
-      "- Option B · pin 1 (range strip) — 👎 not a problem — “only here”",
+      "- Option B · pin 1 (range strip) — 👎 leave as is — “only here”",
     );
     expect(plan.nextRound[0]?.instruction).toContain("apply his note on that spot: “only here”");
     expect(plan.nextRound[0]?.instruction).toMatch(/Nothing is filed from this pick\.$/);

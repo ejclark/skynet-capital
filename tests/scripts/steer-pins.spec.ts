@@ -161,7 +161,7 @@ describe("each pin on the page is a button on its badge", () => {
       glyph: { up: "👍", down: "👎", mixed: "\u262F\uFE0E" },
       words: {
         design: { up: "Keep", down: "Change", mixed: "Mixed" },
-        problems: { up: "Yes, a problem", down: "Not a problem", mixed: "Partly" },
+        problems: { up: "Fix it", down: "Leave as is", mixed: "Partly" },
       },
       noteMax: MAX_PIN_NOTE,
     });
@@ -182,10 +182,11 @@ describe("each pin on the page is a button on its badge", () => {
     expect(css).toMatch(/height: 32px/);
   });
 
-  it("says on a round-0 page that a pin asks whether it is a problem", () => {
+  it("says on a round-0 page that a pin asks whether to fix that spot", () => {
     const problems = designRound({ 5150: decisions(question({ kind: "problems" }), 0) });
     const page = renderPage(problems, { img: (p) => ("src" in p ? p.src : null) });
     expect(page).toContain(PIN_INTRO.problems);
+    expect(PIN_INTRO.problems).toContain("👍 Fix it, 👎 Leave as is or");
     expect(PIN_INTRO.problems).toContain(`${MIXED} Partly`);
   });
 
@@ -284,7 +285,7 @@ describe("the read-back lists every pin, word for word", () => {
   });
 });
 
-describe("a round-0 page's pins read back as whether each is a problem", () => {
+describe("a round-0 page's pins read back as fix it · leave as is · partly", () => {
   const problems = designRound({ 5150: decisions(question({ kind: "problems" }), 0) });
   const pins = { "B:phone:2": "up", "B:phone:1": "down", "today:phone:1": "mixed" };
   const plan = readback(problems, {
@@ -292,19 +293,19 @@ describe("a round-0 page's pins read back as whether each is a problem", () => {
     [`tp/${problems.id}/decisions/5150-q1`]: { pins },
   });
 
-  it("says yes, a problem · not a problem · partly, and still files nothing", () => {
+  it("says fix it · leave as is · partly from the same stored up/down/mixed, and files nothing", () => {
     expect(bodyOf(plan)).toContain(`- Today · pin 1 (strikes start here) — ${MIXED} partly`);
-    expect(bodyOf(plan)).toContain("- Option B · pin 1 (order line) — 👎 not a problem");
-    expect(bodyOf(plan)).toContain("- Option B · pin 2 (range strip) — 👍 yes, a problem");
+    expect(bodyOf(plan)).toContain("- Option B · pin 1 (order line) — 👎 leave as is");
+    expect(bodyOf(plan)).toContain("- Option B · pin 2 (range strip) — 👍 fix it");
     expect(plan.actions.map((a) => a.kind)).toEqual(["comment"]);
   });
 
   it("folds them into the next round's instruction", () => {
     expect(plan.nextRound[0]?.instruction).toBe(
       "No problem picked on #5150: the next round asks again. Per pin: " +
-        "Today · pin 1 (strikes start here): partly. " +
-        "Option B · pin 1 (order line): not a problem. " +
-        "Option B · pin 2 (range strip): yes, a problem. " +
+        "Today · pin 1 (strikes start here): partly — draw a closer look. " +
+        "Option B · pin 1 (order line): leave as is — drop it. " +
+        "Option B · pin 2 (range strip): fix it — draw it next round. " +
         "No signal, so no default: Option B, desktop · pin 1 (range strip, wide). " +
         "Nothing is filed.",
     );
