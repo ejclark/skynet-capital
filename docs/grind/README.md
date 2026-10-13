@@ -173,6 +173,12 @@ prose ("the target below") rather than trying to template inside the instruction
   wave as one cycle PR stays the caller's job — a rep opens nothing.
 - [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
   flagged by `scripts/doc-rot-scan.mjs`.
+- [`instruction-drift.instructions.md`](instruction-drift.instructions.md) — read one instruction
+  file changed since the last run (or one skill's files) for what that scan cannot see: two files
+  ruling differently, a stale fact, a rule written as history. Three roles of one file chain per
+  item: check proposes the minimal rewrite, a refuter tries to kill each finding, apply lands what
+  survives. `scripts/instruction-drift-scan.mjs` prints the items and, with `--due`, whether a run
+  is owed; `--release` makes it a full run at a model release.
 - [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
   file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
 - [`split-into-sub-issues.instructions.md`](split-into-sub-issues.instructions.md) — split one
