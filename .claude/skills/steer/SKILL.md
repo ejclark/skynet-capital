@@ -111,7 +111,8 @@ The stable page's URL is in #5056's state block; the first publish puts it there
      “<his note>”`, the label and his pin note word for word, an untouched pin "no signal", never a
      default — and, with no Build pick, a `nextRound` entry: 👍 keep as drawn · 👎 replace with a
      new direction · ☯︎ draw a closer look, and each pin note applied on that spot; round 0 reads
-     yes / not / partly a problem and still files nothing. A reaction or note on a pin the page no
+     👍 fix it (draw it next round) · 👎 leave as is (drop it) · ☯︎ partly (a closer look) and
+     still files nothing. A reaction or note on a pin the page no
      longer shows is ignored. Each comment is quoted word for word under
      "Eric's comments on the page" in its decision's part of the issue comment; a decision he
      commented on without tapping is quoted and rolled over, never given its default.

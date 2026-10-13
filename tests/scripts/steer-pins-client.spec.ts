@@ -63,13 +63,13 @@ describe("tapping a pin opens three choices anchored to it", () => {
     expect(v.pin("B:phone:2").nextElementSibling).toBe(v.pop());
   });
 
-  it("offers a problem's words on a round-0 page", async () => {
+  it("offers fix it · leave as is · partly on a round-0 page, so 👍 always means act on it", async () => {
     const zero = roundOf(question({ kind: "problems" }), 0);
     const v = await open({}, { html: pageOf(zero) });
     await v.click(v.pin("B:phone:1"));
     expect(v.choices().map((c) => c.textContent?.trim())).toEqual([
-      "👍 Yes, a problem",
-      "👎 Not a problem",
+      "👍 Fix it",
+      "👎 Leave as is",
       `${MIXED} Partly`,
     ]);
   });

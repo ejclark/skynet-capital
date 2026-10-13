@@ -29,10 +29,12 @@ export const MIXED = "☯︎";
 /** The three reactions, in the order the popover offers them. */
 export const PIN_REACTIONS = ["up", "down", "mixed"];
 export const PIN_GLYPH = { up: "👍", down: "👎", mixed: MIXED };
-/** The popover's words. A round-0 pin is a problem, so its words say whether it is one. */
+/** The popover's words. On every kind a thumbs-up means "act on this pin", so a round-0 pin's 👍
+ *  says fix it (Eric, 2026-10-13: a thumbs-down on "not a problem" read backwards). The stored
+ *  values (up/down/mixed) never change, so records already saved keep their meaning. */
 export const PIN_WORDS = {
   design: { up: "Keep", down: "Change", mixed: "Mixed" },
-  problems: { up: "Yes, a problem", down: "Not a problem", mixed: "Partly" },
+  problems: { up: "Fix it", down: "Leave as is", mixed: "Partly" },
 };
 /** What the next round does with each reaction. */
 export const PIN_DO = {
@@ -41,7 +43,11 @@ export const PIN_DO = {
     down: "replace with a new direction",
     mixed: "draw a closer look (variants of just that element)",
   },
-  problems: { up: "yes, a problem", down: "not a problem", mixed: "partly" },
+  problems: {
+    up: "fix it — draw it next round",
+    down: "leave as is — drop it",
+    mixed: "partly — draw a closer look",
+  },
 };
 export const NO_SIGNAL = "no signal";
 /** The one label limit (#5244): pin.mjs draws to it (pin-rules.mjs), and the page and the lint
@@ -236,7 +242,7 @@ export function pinClauses(d, r) {
 /** The round page's line on pins, when it shows any. */
 export const PIN_INTRO = {
   design: `Tap a numbered pin to mark that spot ${PIN_GLYPH.up} Keep, ${PIN_GLYPH.down} Change or ${MIXED} Mixed.`,
-  problems: `Tap a numbered pin to say ${PIN_GLYPH.up} Yes, a problem, ${PIN_GLYPH.down} Not a problem or ${MIXED} Partly.`,
+  problems: `Tap a numbered pin to say ${PIN_GLYPH.up} Fix it, ${PIN_GLYPH.down} Leave as is or ${MIXED} Partly.`,
 };
 export const pinIntro = (d) => PIN_INTRO[kindOf(d)];
 
