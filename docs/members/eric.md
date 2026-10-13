@@ -116,7 +116,7 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   per position. The calendar's head sits in the cockpit (j1 s3). Even so, the split of his
   money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
   (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date, and "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx`),
+  reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
   not a rung celebrated beside its explanation.
 
 - **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
