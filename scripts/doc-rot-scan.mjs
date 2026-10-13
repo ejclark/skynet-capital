@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 // Doc-rot fitness scan — the eye that checks whether the instruction files still describe reality.
 //
 // Instruction files are the intent layer every fresh session and every lane loads; when they drift
@@ -26,8 +29,9 @@
 // Contracts: docs/plans/doc-rot-gate.md, issue #5318.
 //
 // Scope: every TRACKED instruction file — CLAUDE.md, README.md, .claude/**/*.md, .github prompts
-// and templates, docs/**/*.md — minus LEDGERS, the one definition of "a record of its moment" (the
-// fix-doc-rot chore defers to it rather than keeping a second list). That is wherever a session or lane reads
+// and templates, docs/**/*.md — minus the records of their moment. Both lists live in ONE module,
+// scripts/instructions/scope.mjs, shared with the instruction-drift chore (the fix-doc-rot chore
+// defers to it rather than keeping a second list). That is wherever a session or lane reads
 // instructions; the rot concentrates in .claude/**, the lane prompts and the docs subdirectories, not
 // only at the top level. `git ls-files` rather than a directory walk, so nested worktrees
 // (.claude/worktrees/) and local scratch never count; outside a git checkout the scan cannot know
@@ -56,9 +60,7 @@
 // pre-approves, so an unattended grind item can run it without a permission prompt.
 //
 // ①②④⑤ and ③ are all reported (advisory) in CI via tests/arch/doc-rot.spec.ts.
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { instructionFiles } from "./instructions/scope.mjs";
 
 const ROOT = process.cwd();
 const BUDGET_FILE = join(ROOT, "doc-rot-budget.json");
@@ -100,35 +102,11 @@ function trackedFiles() {
   }
 }
 
-/** What a session or a lane reads as instructions, wherever in the tree it lives. */
-const INSTRUCTION_FILE =
-  /^(CLAUDE\.md|README\.md|\.claude\/.+\.md|\.github\/prompts\/[^/]+\.md|\.github\/[^/]+\.md|\.github\/ISSUE_TEMPLATE\/[^/]+|docs\/.+\.md)$/;
-
-/**
- * Records of their moment — each describes the day it was written, so a path that moved since is
- * history, not rot. Every entry is a path prefix. This is the ONE definition: the fix-doc-rot chore
- * sends no agent to a record, because a record is never on the surface.
- */
-const LEDGERS = [
-  "docs/research/",
-  "docs/digests/",
-  "docs/JOURNEYS/",
-  "docs/vendor/",
-  "docs/plans/",
-  "docs/adr/0", // the numbered decision records; docs/adr/README.md is live
-  "docs/LESSONS.md",
-  "docs/IDEAS.md",
-  "docs/GAMEBOARD-PLAN.md", // a dated tournament verdict
-  "docs/ENGINEERING-AUDIT-2026-07.md", // a dated audit
-  "docs/STRUCTURE-graph.md", // generated from one commit; check ③ owns its freshness
-];
-/** A template is what a lane copies next (`TEMPLATE.md`, `0000-template.md`), so it is read as an
- *  instruction file even inside a ledger directory. */
-const TEMPLATE_FILE = /(^|\/)[^/]*template[^/]*\.md$/i;
-const isLedger = (f) => !TEMPLATE_FILE.test(f) && LEDGERS.some((l) => f.startsWith(l));
-
+/** The scan surface is the one instruction-file scope (`scripts/instructions/scope.mjs`), shared with
+ *  the instruction-drift chore so the two eyes can never disagree about which files are instructions
+ *  and which are records of their moment. */
 function scanSurface(tracked) {
-  return tracked.filter((f) => INSTRUCTION_FILE.test(f) && !isLedger(f));
+  return instructionFiles(tracked);
 }
 
 // ---- check ①: dead file references ---------------------------------------------------------------
