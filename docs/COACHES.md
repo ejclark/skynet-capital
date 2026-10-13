@@ -19,7 +19,7 @@ seats with distinct jobs:
   from scoring.
 - **Offensive coordinator.** Scales up systems where a **constraint** binds (Theory of Constraints:
   *elevate*). Owns capability plays: the single-runner pipeline (GHA-minutes constraint), the local
-  verify gate (review-trust constraint), Babylon MCP (domain-knowledge constraint), the local dev loop
+  verify gate (review-trust constraint), context7 three.js docs (domain-knowledge constraint), the local dev loop
   (iteration-speed constraint). Offense moves the ceiling; each play is triggered by a *measured*
   constraint, never speculation — same discipline as run-scale infra.
 
