@@ -434,6 +434,17 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
 
+**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
+Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
+cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
+working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
+charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
+Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
+round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
+The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
+it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
+2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
+
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
 with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for
