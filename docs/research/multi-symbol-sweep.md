@@ -71,6 +71,14 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"TLT has decayed to ~0.73–0.80× of its trailing-20 volume on a Columbus Day closure, so long Treasuries
+  are no longer the thin leg" (FT-sifma-bond-market-closure-2026-10-12-2)** — added 2026-10-13 from the
+  [sifma-bond-market-closure-2026-10-12 close-out](events/sifma-bond-market-closure-2026-10-12.md).
+  Registered on a 2014–2025 era split (n=12) that put TLT's median at 0.730×; the 2026-10-12 session printed
+  **0.311×** (15.35M vs a 49.30M median), against a 0.60× line. SPY ran 0.420× the same day, so part of the
+  thinning was market-wide, but the claim itself failed. Do not carry a TLT Columbus/closure depth guard
+  above ~0.5× without conditioning on the equity control; the companion LQD guard (FT-1, 0.206×) passed.
+
 - **"The full wholesale report revises the advance inventories m/m by 0.1pp or less" as a flat one-month
   bet (FT-wholesale-trade-2026-10-08-3)** — added 2026-10-09 from the
   [wholesale-trade-2026-10-08 close-out](events/wholesale-trade-2026-10-08.md). Registered on a 6-of-8
