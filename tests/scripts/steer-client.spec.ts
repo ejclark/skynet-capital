@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { describe, expect, it } from "@rstest/core";
+import { afterEach, describe, expect, it, rstest } from "@rstest/core";
 import { designDecisions, designRound } from "../../scripts/steer/design.mjs";
 import { DONE_TRIGGER } from "../../scripts/steer/readback.mjs";
 import { COMMENTS_COUNT, renderPage } from "../../scripts/steer/render.mjs";
@@ -555,5 +555,71 @@ describe("the page's meta writes keep what the session wrote (#5135)", () => {
     await openWith(docs);
     expect(docs[META]).toMatchObject({ id: ROUND, doneAt: null });
     expect(typeof docs[META]?.openedAt).toBe("string");
+  });
+});
+
+// Eric, 2026-10-13: "I've had to click 'done'.. nothing happens then I click reopen/done again".
+// A session's page watch drops after hours idle, while the send still reads "available", so Done
+// goes into silence. Five minutes after a sent Done with no read-back, the bar says how to wake
+// the session. One timer from the press; never a resend.
+const UNHEARD =
+  "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
+const MIN = 60 * 1000;
+describe("a sent Done no session answers says so after five minutes", () => {
+  afterEach(() => {
+    rstest.useRealTimers();
+  });
+  /** Open on real timers (the store connects), then fake them for the press and the wait. */
+  async function pressed(docs: Docs = answered(), c = commentsWith()) {
+    const v = await openWith(docs, c.api);
+    rstest.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const wait = (ms: number) => rstest.advanceTimersByTimeAsync(ms);
+    v.el("done").click();
+    await wait(100);
+    return { ...v, c, wait };
+  }
+
+  it("says the session isn't listening once five minutes pass with no read-back, and never resends", async () => {
+    const v = await pressed();
+    expect(v.told()).toBe(SENT);
+    await v.wait(5 * MIN - 1000);
+    expect(v.told()).toBe(SENT);
+    await v.wait(1000);
+    expect(v.told()).toBe(UNHEARD);
+    await v.wait(60 * MIN);
+    expect(v.c.sent).toHaveLength(1);
+  });
+
+  it("shows the read-back instead when it lands inside the five minutes", async () => {
+    const v = await pressed();
+    await v.wait(2 * MIN);
+    await v.db.doc(META).update({ ...READ_BACK, readBackAt: new Date().toISOString() });
+    await v.wait(10 * MIN);
+    expect(v.told()).toMatch(/^Read back .+ · 2 picks posted on their issues, 1 build queued$/);
+  });
+
+  it("still says so when the only read-back on the doc is older than the Done", async () => {
+    const v = await pressed();
+    await v.db.doc(META).update(READ_BACK); // 2026-10-10, before this press
+    await v.wait(5 * MIN);
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("drops the timer on Reopen", async () => {
+    const v = await pressed();
+    v.el("reopen").click();
+    await v.wait(10 * MIN);
+    expect(v.told()).toBe("Reopened — press Done again when you're finished.");
+  });
+
+  it("arms nothing when the send never went out, or the watch can't see a read-back", async () => {
+    const quiet = await pressed(answered(), commentsWith({ can: "no_session" }));
+    await quiet.wait(10 * MIN);
+    expect(quiet.told()).toBe(NOT_LISTENING);
+    rstest.useRealTimers();
+    const v = await pressed();
+    v.db.kill(META);
+    await v.wait(10 * MIN);
+    expect(v.told()).toBe(`Done — sent to Claude. ${RELOAD}`);
   });
 });

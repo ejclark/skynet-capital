@@ -85,6 +85,14 @@ The stable page's URL is in #5056's state block; the first publish puts it there
    `readBackAt` after its `doneAt` was read back — reply with that summary, don't run 7 again
    (a hedged send, "Claude may not have been told", can bring both his chat "done" and the
    comment). Reopen then Done sets a newer `doneAt`, which is read back afresh.
+   **A watch lost after hours idle** (Eric, 2026-10-13: _"I've had to click 'done'.. nothing
+   happens then I click reopen/done again"_): the send can still read "available" while no
+   session hears it, so five minutes after a sent Done with no read-back the page says the session
+   isn't listening and to say "done" (or "watch my page") in it. On a watch-lost notice for your
+   round page, re-watch it, then tell Eric in one line to say "watch my page" here so Done reaches
+   this session again, ending with the page link — a session's own re-watch does not re-arm the
+   comment wake; only his message does. Woken by "done" in chat, read the round back exactly as
+   for the Done comment.
 7. **Read back** — ArtifactData `list` the collections `tp/<id>/decisions`, `tp/<id>/queue` and
    `tp/<id>/reel`, and `get` `tp`/`<id>`, all with `out_dir: <dir>/records`.
    - **His comments count too** — Eric, 2026-10-10, after an automatic reply told him _"a comment

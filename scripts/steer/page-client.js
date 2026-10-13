@@ -86,6 +86,12 @@
   const NOT_REACHED =
     "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
   const REOPENED = "Reopened — press Done again when you're finished.";
+  // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
+  // happens"): a session's page watch drops after hours idle, yet the send still reads
+  // "available". Five minutes after the press with no read-back, the bar says how to wake it.
+  const QUIET_MS = 5 * 60 * 1000;
+  const UNHEARD =
+    "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
   // A rejected send is not proof nothing was posted (comments.d.ts), so only a code that says the
   // send was refused before writing earns "wasn't told"; any other rejection of the send hedges.
   const UNTOLD = "wasn't told";
@@ -426,13 +432,14 @@
     flushNotes();
     tap();
     meta.doneAt = new Date().toISOString();
+    const pressedAt = Date.now();
     const saved = saveMeta(true);
     status("Saving");
     // Pressed Done can't hold focus (it is disabled now); hand it to the Reopen beside it.
     if (focused) reopenBtn.focus();
-    sendDone(count(), saved).catch(() => tell(refused(undefined, MAYBE)));
+    sendDone(count(), saved, pressedAt).catch(() => tell(refused(undefined, MAYBE)));
   }
-  async function sendDone(n, saved) {
+  async function sendDone(n, saved, pressedAt) {
     const mine = ++turn;
     const say = (line) => {
       if (mine === turn) tell(line);
@@ -453,6 +460,7 @@
           if (![...UNPOSTED, ...LIFECYCLE].includes(err?.code)) told = MAYBE;
           throw err;
         });
+        if (mine === turn) listen(meta.doneAt, pressedAt);
         return say(sent());
       }
     } catch (err) {
@@ -460,9 +468,24 @@
     }
     say((await saved) === false ? notSaved(told) : line);
   }
+  /** One timer from the press of a sent Done: no read-back by then, and the bar says the session
+   *  isn't listening. Never a resend — only Eric can wake the session. A dead watch can't tell. */
+  function listen(doneAt, pressedAt) {
+    clearTimeout(timers.quiet);
+    if (!live) return;
+    timers.quiet = setTimeout(
+      () => {
+        if (meta.doneAt !== doneAt || !live || blocked) return;
+        turn++;
+        tell(UNHEARD);
+      },
+      Math.max(0, pressedAt + QUIET_MS - Date.now()),
+    );
+  }
   function reopen() {
     if (!meta.doneAt || locked()) return;
     const focused = document.activeElement === reopenBtn;
+    clearTimeout(timers.quiet);
     turn++;
     tap();
     meta.doneAt = null;
@@ -506,12 +529,15 @@
     const rb = readBackOf(d);
     if (!rb || rb.key === heardKey) return;
     heardKey = rb.key;
+    const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
+    if (Number.isNaN(doneMs) || rb.ms >= doneMs) clearTimeout(timers.quiet);
     turn++;
     tell(rb.line);
   }
   /** The watch is gone: the bar stops promising a live read-back, and says a reload shows it. */
   function deaf() {
     live = false;
+    clearTimeout(timers.quiet);
     if (toldLine.endsWith(WAIT)) tell(toldLine.slice(0, -WAIT.length) + RELOAD);
   }
   /** Watch the round's own document, once, for the session's read-back. */
@@ -687,6 +713,7 @@
     dropNotes();
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
+    clearTimeout(timers.quiet);
     turn++; // a send still pending must not report on a page that has gone dark
     toldLine = "";
     status("");
