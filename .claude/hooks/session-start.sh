@@ -87,6 +87,18 @@ else
   echo "session-start: git fetch origin main failed — branch off origin/main only after a manual fetch"
 fi
 
+# Cloud clones are shallow (~50 commits), but the study corpus pins older commits that
+# `npm test` reads with `git show` (scripts/study/worlds/inputs/*.json). Fetch just those —
+# without them verify fails on a missing object, not on the change being shipped.
+if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+  pinned=$(grep -ho '"commit": *"[0-9a-f]\{40\}"' scripts/study/worlds/inputs/*.json 2>/dev/null \
+    | grep -o '[0-9a-f]\{40\}' | sort -u)
+  for sha in $pinned; do
+    git cat-file -e "$sha^{commit}" 2>/dev/null || git fetch --quiet --depth=1 origin "$sha" 2>/dev/null \
+      || echo "session-start: could not fetch pinned study commit $sha — study-compose tests will fail"
+  done
+fi
+
 echo "session-start: installing root deps…"
 npm install --no-audit --no-fund --include=dev --loglevel=error
 
