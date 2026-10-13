@@ -21,6 +21,12 @@
 // the line. So the page's own meta writes MERGE (`update`), never replace: a `set` would erase what
 // the session wrote. Done is one way; Reopen is its own control.
 //
+// IS ANYONE LISTENING (Eric, 2026-10-13: "is there a way to get a more responsive 'reconnected to
+// session' feedback?"). The session also stamps that document: `listening` after each publish or
+// re-watch and on a watch-lost notice (ear-client.js draws that line), and `ackAt` when a Done
+// reaches it, before the read-back — the bar then says Claude got it, and the five-minute
+// fallback stands down. The page reads these and never writes them; its merge leaves them be.
+//
 // PIN REACTIONS (#5143, pins-client.js) save in the decision's own record as `pins`, and MERGE one
 // key at a time (`update({ pins: { <id>: v } })`, a cleared one as null): the same page open on a
 // phone and a laptop reacts to different pins without one erasing the other. The first write of a
@@ -86,6 +92,8 @@
   const NOT_REACHED =
     "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
   const REOPENED = "Reopened — press Done again when you're finished.";
+  /** The session stamped `ackAt` after this Done: it heard, and the read-back is on its way. */
+  const ACK = "Claude got your Done, reading back…";
   // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
   // happens"): a session's page watch drops after hours idle, yet the send still reads
   // "available". Five minutes after the press with no read-back, the bar says how to wake it.
@@ -125,6 +133,8 @@
   let toldLine = "";
   /** The read-back already shown (its time and summary), so a re-delivered snapshot repeats nothing. */
   let heardKey = null;
+  /** The ack already shown, by its time, for the same reason. */
+  let ackedMs = Number.NaN;
 
   const blank = () => ({
     pick: null,
@@ -521,22 +531,39 @@
     const rb = readBackOf(d);
     heardKey = rb ? rb.key : null;
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
+    const ack = ackOf(d);
     if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) toldLine = rb.line;
-    else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
+    else if (ack >= doneMs) {
+      ackedMs = ack;
+      toldLine = ACK;
+    } else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
   }
-  /** A new read-back on the round's document (the session wrote it): show it, without a reload. */
+  /** The session's `ackAt` as a time, or NaN. NaN compares false, so a missing one never counts. */
+  const ackOf = (d) => (typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN);
+  /** The round's document changed: a new read-back shows, else a new ack of this Done, without a
+   *  reload; the listening line reads its stamp either way. */
   function heard(d) {
+    earUi?.hear(d);
     const rb = readBackOf(d);
-    if (!rb || rb.key === heardKey) return;
-    heardKey = rb.key;
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
-    if (Number.isNaN(doneMs) || rb.ms >= doneMs) clearTimeout(timers.quiet);
+    if (rb && rb.key !== heardKey) {
+      heardKey = rb.key;
+      if (Number.isNaN(doneMs) || rb.ms >= doneMs) clearTimeout(timers.quiet);
+      turn++;
+      return tell(rb.line);
+    }
+    // An ack only answers the Done it follows, and never covers that Done's read-back.
+    const ack = ackOf(d);
+    if (!(ack >= doneMs) || ack === ackedMs || (rb && rb.ms >= doneMs)) return;
+    ackedMs = ack;
+    clearTimeout(timers.quiet);
     turn++;
-    tell(rb.line);
+    tell(ACK);
   }
   /** The watch is gone: the bar stops promising a live read-back, and says a reload shows it. */
   function deaf() {
     live = false;
+    earUi?.off();
     clearTimeout(timers.quiet);
     if (toldLine.endsWith(WAIT)) tell(toldLine.slice(0, -WAIT.length) + RELOAD);
   }
@@ -650,6 +677,9 @@
     flush: () => flushNotes(),
   });
 
+  // The listening line's own script (ear-client.js), fed each snapshot of the round's document.
+  const earUi = globalThis.steerEar?.({ el: document.getElementById("ear"), clock });
+
   status("");
 
   const use = (name) =>
@@ -714,6 +744,7 @@
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
     clearTimeout(timers.quiet);
+    earUi?.off();
     turn++; // a send still pending must not report on a page that has gone dark
     toldLine = "";
     status("");

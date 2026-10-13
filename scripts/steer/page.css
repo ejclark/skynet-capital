@@ -743,6 +743,17 @@ details.ev summary {
   color: var(--text);
   overflow-wrap: anywhere;
 }
+/* Whether Claude is listening: a quiet mono line with its glyph (● listening). Not listening is a
+   warning he acts on (⊘), so it takes full ink and weight — the glyph and words carry it, not hue. */
+.bar #ear {
+  font: 12px / 1.4 var(--mono);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.bar #ear[data-state="lost"] {
+  font: 600 13px / 1.4 var(--sans);
+  color: var(--text);
+}
 /* Reopen is a small text control beside a pressed Done — underlined, never a second big button. */
 .bar .reopen {
   font: 600 13px var(--sans);

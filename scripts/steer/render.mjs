@@ -12,8 +12,9 @@ import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
 /** The artifact's name: stable across every republish, so the gallery card never changes. */
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
-// The pin reactions' script defines `steerPins`, which the page script calls (pins-client.js).
-const CLIENT = ["./pins-client.js", "./page-client.js"]
+// The pin reactions' script defines `steerPins`, and the listening line's `steerEar`; the page
+// script calls both (pins-client.js, ear-client.js).
+const CLIENT = ["./pins-client.js", "./ear-client.js", "./page-client.js"]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
   .join("\n");
 
@@ -234,9 +235,11 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     `</div>`,
     // The bar's two lines: what the store holds, then what became of Done — sent to Claude or not,
     // and the read-back once the session posts it (#5135). Reopen is its own control: Done is one way.
+    // Under them, whether a Claude session is listening, from its own stamp (ear-client.js).
     `<div class="bar" role="region" aria-label="Save and finish"><div class="lines">` +
       `<output id="save-state" aria-live="polite" data-state="loading">Loading your answers…</output>` +
-      `<p id="told" aria-live="polite" hidden></p></div><div class="acts">` +
+      `<p id="told" aria-live="polite" hidden></p>` +
+      `<p id="ear" aria-live="polite" data-state="unknown" hidden></p></div><div class="acts">` +
       `<button type="button" class="ghost" id="copy" hidden>Copy as text</button>` +
       `<button type="button" class="reopen" id="reopen" hidden>Reopen</button>` +
       `<button type="button" class="rb" id="done" data-v="done" aria-pressed="false">I'm done</button></div></div>`,
