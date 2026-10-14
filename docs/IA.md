@@ -1118,3 +1118,32 @@ that proves it (written in slice 1a; §5–§8 supersede where they disagree).
 10. **The hero chart's range is not URL state.** "The calendar's range" cannot key the equity chart
     today: its range lives in component state (`hero-chart.tsx:101`) and speaks a different
     vocabulary (7D·1M·3M·1Y·YTD·ALL, `equity-curve.ts:8`) from the lens (day·week·month·quarter·all).
+
+## 10. Upstream problems found in redesigns — what one screen can't fix alone
+
+Eric, 2026-10-14: *"The plan assumes the changes are nested within the target area. This creates a
+blind spot when IA has upstream inefficiencies, which is often… These may be bigger overhauls that
+are deferred, but we should be capturing context to identify what problems remained needing solved
+to take on the bigger jobs/overhauls."*
+
+A redesign session (`docs/process/REDESIGN.md`, step c's upstream pass) tags each problem **here**
+(the screen can fix it alone) or **upstream** (its root sits in a group, a joint, a missing entity,
+the shell or a shared component — §5–§8). An upstream problem is never patched in a screen as if it
+were local: it gets a row here, or a line added to the row it shares a root with. A screen may still
+draw the best in-area workaround when its goal needs one, and says so on the frame.
+
+**When a row becomes an overhaul:** cited by 3 or more screens, or blocking a screen's agreed goal.
+Then the curator files one plan issue (`/issue`, `enhancement` + `plan`) that opens with the row as
+its evidence, and the row points at it. Until then it waits here, with its context intact.
+
+| # | Root, and where it sits | Screens that hit it (where it surfaced) | Why one screen can't fix it | Workaround in place | Status |
+|---|---|---|---|---|---|
+| U1 | **One history, three homes** — the league feed, Profile Activity and `/u/<id>/activity` each list orders with their own controls and rows (§5.1, §5.7) | activity, profile-activity, profile-overview (#5143 digest 2026-10-11: "one history, one set of controls"; two "Activity" labels 50px apart) | Merging lists moves a route and the nav; no single screen owns the order list | none | **ready for an overhaul plan** (3 screens) |
+| U2 | **Derived numbers on a log** — P/L, booked totals and Pulse's headline numbers sit on feeds instead of the book's ledger (§5.1) | profile-activity (Eric #5160: "a transaction log separately which cares about the transaction, not the enriched/derived data"), member-pulse, activity (booked strip) | Moving the numbers needs the Overview's ledger to exist first; each feed alone can only delete them | none | **ready for an overhaul plan** (3 screens) |
+| U3 | **A section switch that can't hold its sections at 390** — tabs cut off with no cue, a head taking half the first screen (§5.8, the shell) | trade-ticket, trade-chain, member-pulse, saved-positions (a third viewer section), activity (clipped chips) | The switch and head are one shared shell component; a screen fixing its own copy forks it | none | **ready for an overhaul plan** (5 screens) |
+| U4 | **A filing's answer lives away from the conversation that made it** (§5.6) | profile-feedback, moneypenny | Joins Profile → Feedback with the Moneypenny panel; neither screen owns both | none | waiting (2 screens) |
+| U5 | **One play's status, safety stages and stop switch spread over three places** — Thesis, Playbooks, `/settings` (§5.2) | profile-thesis, profile-playbooks | Re-homing controls crosses three routes; §5.2's moves are proposed, not built | none | waiting (2 screens) |
+| U6 | **Desktop adds no room** — the 3D landmark or league rail sits beside content that keeps an 800px column (§5.8) | research, profile-feedback | The rail is the shell's frame, on every route | none | waiting (2 screens) |
+
+Seeded from the commons digest posted on #5143 (2026-10-11, 16 IA moves from 10 screens); later
+rows are added by redesign sessions as they find them.

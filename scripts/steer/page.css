@@ -283,7 +283,10 @@ input:focus-visible {
   height: auto;
 }
 .shot.phone {
-  flex: 0 1 240px;
+  /* its real width: a 390 frame shown at 390, so 14px app text reads at 14px (it was capped at
+     240px — 62% — and the desktop frame at about 330px of 1280, 26%; Eric, 2026-10-14: "the size
+     of the screenshots, text instructions is extremely small") */
+  flex: 0 1 390px;
 }
 .shot.desk {
   flex: 1 1 100%;
@@ -800,17 +803,31 @@ details.ev summary {
   .pairs {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
+  /* Wide: the phone frame at its real width with the option's words beside it, and the desktop
+     frame on its own row across the whole card, so neither shrinks to share a row. The pictures'
+     box dissolves into the card's grid to place them. */
   .opt {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 390px) minmax(0, 1fr);
+    column-gap: 20px;
   }
-  .pics {
-    flex-wrap: nowrap;
+  .opt > .pics {
+    display: contents;
   }
-  .shot.phone {
-    flex: 0 0 min(40%, 240px);
+  .opt > .pics > .shot.phone,
+  .opt > .pics > .muted {
+    grid-column: 1;
+    grid-row: 1;
   }
-  .shot.desk {
-    flex: 1 1 auto;
+  .opt > .side {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .opt > .pics > .shot.desk {
+    grid-column: 1 / -1;
+  }
+  /* no phone frame: the words lead, the desktop frame spans below them */
+  .opt:not(:has(.shot.phone)) > .side {
+    grid-column: 1 / -1;
   }
   .shiplist .ship {
     flex-direction: row;
