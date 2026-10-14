@@ -85,6 +85,9 @@
 @import "./book-calendar.css";
 @import "./route-error.css";
 @import "./session-status.css";
+/* right before settings.css, not alphabetical: its `.set-ok` / `.set-err` rules were settings.css's
+ * own until InlineResult took them, so they keep their place in the cascade. */
+@import "./inline-result.css";
 @import "./settings.css";
 @import "./shell.css";
 @import "./spread-legs.css";

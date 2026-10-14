@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { followupRequest, type RecentFiling } from "../live/feedback";
+import { InlineResult } from "../ui";
 import { Toggle } from "./toggle";
 
 /**
@@ -137,7 +138,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
           >
             {busy ? "Sending…" : "Send follow-up"}
           </button>
-          {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
+          {note ? <InlineResult tone={note.ok ? "ok" : "err"}>{note.text}</InlineResult> : null}
         </div>
       ) : null}
     </div>
