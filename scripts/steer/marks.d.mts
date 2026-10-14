@@ -15,6 +15,8 @@ export interface SaidMark {
   note: string | null;
   /** Placed before he pressed "Show what Claude found". */
   before: boolean;
+  /** The named part of the screen it landed on (frame-sections.mjs), or null. */
+  section?: string | null;
 }
 
 export const PENCIL: string;

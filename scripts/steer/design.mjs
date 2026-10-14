@@ -107,8 +107,10 @@ function checked(p) {
 
 const WIDTH = { phone: "phone width", desk: "desktop width" };
 
-/** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it. */
-const pics = (o, alt, at, pins = {}) =>
+/** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it
+ *  and, when the manifest names them, its sections (frame-sections.mjs: where each named part of
+ *  the screen sits, so the read-back can name the part a mark landed on). */
+const pics = (o, alt, at, pins = {}, sections = {}) =>
   ["phone", "desk"]
     .filter((size) => o?.[size])
     .map((size) => ({
@@ -116,7 +118,30 @@ const pics = (o, alt, at, pins = {}) =>
       alt: `${alt} at ${WIDTH[size]}`,
       size,
       ...(pins[size]?.length ? { pins: pins[size] } : {}),
+      ...(sections[size]?.length ? { sections: sections[size] } : {}),
     }));
+
+/** A holder's sections by frame: `sections` (phone) and `sectionsDesk`, each the list itself or
+ *  the path of the `.sections.json` the shoot script wrote beside the frame. A file that isn't
+ *  there gives none — sections only sharpen the read-back, so they never refuse a round. */
+function sectionsOf(holder, readJson) {
+  const out = {};
+  for (const [field, size] of [
+    ["sections", "phone"],
+    ["sectionsDesk", "desk"],
+  ]) {
+    let v = holder?.[field];
+    if (typeof v === "string") {
+      try {
+        v = readJson ? readJson(v) : null;
+      } catch {
+        v = null;
+      }
+    }
+    if (Array.isArray(v)) out[size] = v;
+  }
+  return out;
+}
 
 /** Every holder's pins by frame, or a throw naming each pin the page couldn't place (pins.mjs). */
 function pinsOf(q, n, pinsFrom) {
@@ -152,13 +177,13 @@ function questionKind(q, n) {
 }
 
 /** One manifest option as the page holds it, its pictures carrying the pins drawn on them. */
-function optionOf(o, q, at, pins) {
+function optionOf(o, q, at, pins, readJson) {
   return {
     key: safeKey(o.key),
     name: o.name ?? `Option ${o.key}`,
     delta: o.delta ?? "",
     recommended: q.rec != null && String(o.key) === String(q.rec),
-    pictures: pics(o, `Option ${o.key}`, at, pins),
+    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson)),
     // One frame for every problem: the option names its pin on Today's frame instead of carrying
     // pictures of its own (render.mjs draws it as a compact row).
     ...(Number.isInteger(o.pin) ? { pin: o.pin } : {}),
@@ -169,11 +194,13 @@ function optionOf(o, q, at, pins) {
 /** Today as the page holds it: its pictures with their pins, and — for a round that opens on clean
  *  frames (marks.mjs) — `clean`, the same frames before pin.mjs drew on them, so his first look
  *  carries none of Claude's badges. */
-function todayOf(today, source, at, pins) {
+function todayOf(today, source, at, pins, readJson) {
   if (!today) return null;
+  // The clean frames are the same screen before pin.mjs drew on it, so they share its sections.
+  const sections = sectionsOf(today, readJson);
   return {
-    pictures: pics(today, "Today", at, pins),
-    ...(today.clean ? { clean: pics(today.clean, "Today, before any pin", at) } : {}),
+    pictures: pics(today, "Today", at, pins, sections),
+    ...(today.clean ? { clean: pics(today.clean, "Today, before any pin", at, {}, sections) } : {}),
     caption: today.caption ?? "",
     real: !source.startsWith("mockup"),
   };
@@ -198,7 +225,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p,
     const n = Number(q.q ?? i + 1);
     const problems = questionKind(q, n) === "problems";
     const pins = pinsOf(q, n, pinsFrom);
-    const options = (q.options ?? []).map((o, j) => optionOf(o, q, at, pins.options[j]));
+    const options = (q.options ?? []).map((o, j) => optionOf(o, q, at, pins.options[j], pinsFrom));
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
     return {
@@ -225,7 +252,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p,
             saw: q.saw ?? [],
           }
         : null,
-      today: todayOf(q.today, source, at, pins.today),
+      today: todayOf(q.today, source, at, pins.today, pinsFrom),
       options,
     };
   });

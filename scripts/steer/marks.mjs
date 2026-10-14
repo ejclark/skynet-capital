@@ -24,6 +24,7 @@
 //
 // Everything here is pure: the words, the page's lines, and the read-back's. The page script is
 // marks-client.js.
+import { sectionAt } from "./frame-sections.mjs";
 import { e } from "./html.mjs";
 import { cleanText, PIN_REACTIONS } from "./pins.mjs";
 
@@ -67,6 +68,17 @@ function shownFrames(d) {
  * for none), oldest first. Only a mark he said something on counts — the page removes the rest,
  * and one left behind by a closed tab is no answer.
  */
+/** The named part of the screen a mark landed on (frame-sections.mjs), or null when the frame it
+ *  sits on carries no sections or none holds the spot. */
+function sectionOf(d, option, frame, x, y) {
+  const pictures =
+    option === "today"
+      ? [...(d?.today?.clean ?? []), ...(d?.today?.pictures ?? [])]
+      : ((d?.options ?? []).find((o) => o.key === option)?.pictures ?? []);
+  const withSections = pictures.find((p) => p.size === frame && p.sections?.length);
+  return withSections ? sectionAt(withSections.sections, x, y) : null;
+}
+
 export function decisionMarks(d, r) {
   const frames = shownFrames(d);
   const reactions = mapOf(r?.pins);
@@ -88,6 +100,7 @@ export function decisionMarks(d, r) {
       reaction,
       note,
       before: m.beforeReveal === true,
+      section: sectionOf(d, hit[1], hit[2], m.x, m.y),
     });
   }
   return out.sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id));
@@ -96,7 +109,10 @@ export const marksSaid = (d, r) => decisionMarks(d, r).length > 0;
 
 const frameName = (m) =>
   `${m.option === "today" ? "Today" : `Option ${m.option}`}, ${m.frame === "desk" ? "desktop" : "phone"}`;
-const spot = (m) => `${Math.round(m.x)}% across, ${Math.round(m.y)}% down`;
+const where = (m) => `${Math.round(m.x)}% across, ${Math.round(m.y)}% down`;
+/** Where a mark sits: the part of the screen it landed on when the frame names its parts, with the
+ *  position beside it; the position alone when it doesn't. */
+const spot = (m) => (m.section ? `on “${m.section}” (${where(m)})` : where(m));
 /** His note in a list item, word for word: a later line is indented, so it stays in the item. */
 const inline = (note) => `“${note.split("\n").join("\n  ")}”`;
 const BEFORE = "(before Claude's problems were shown)";
@@ -122,7 +138,7 @@ export function markClauses(d, r) {
   if (!all.length) return "";
   const each = all.map((m) =>
     [
-      `${frameName(m)} at ${spot(m)}`,
+      `${frameName(m)} ${m.section ? spot(m) : `at ${spot(m)}`}`,
       m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "",
       m.note ? `“${m.note}”` : "",
     ]
