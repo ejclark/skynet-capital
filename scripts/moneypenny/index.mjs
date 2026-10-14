@@ -61,6 +61,7 @@ import {
   readInFlight,
   readOpenIssues,
   readOpenPlans,
+  recheckPullable,
   waitingPlans,
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
@@ -322,6 +323,12 @@ export function claimFeedback(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  // #5266 — the payload predates any link added after `ready`; ask the pull rule on a fresh read.
+  const stale = recheckPullable(issue, admission.readIssue);
+  if (stale) {
+    console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
+    return { claimed: false, reason: stale };
+  }
   // #3960 — the work spigot, the in-flight cap and the surface fence, BEFORE any lease is taken.
   const gate = gateAdmission(issue, admission);
   if (!gate.admit) return { claimed: false, reason: gate.reason };
