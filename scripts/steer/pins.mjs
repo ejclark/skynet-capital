@@ -161,18 +161,21 @@ const invisible = (c) => {
     (n >= 0x2066 && n <= 0x2069)
   );
 };
-/** A pin's saved note as the read-back quotes it: every visible character as he wrote it, the
+/** Text he wrote, as the read-back quotes it: every visible character as he wrote it, the
  *  invisible ones dropped, trimmed, and — a hand-edited record past what the page allows — cut at
- *  MAX_PIN_NOTE with "…" so the cut shows. A cleared (null), blank or invisible-only one is none. */
-const noteOf = (r, id) => {
-  const v = mapOf(r?.pinNotes)[id];
+ *  `max` with "…" so the cut shows. A non-string, blank or invisible-only one is none (null).
+ *  A mark's note and a note about the page (marks.mjs, page-notes.mjs) are quoted through this
+ *  too, so every note on a round page is cleaned one way. */
+export function cleanText(v, max = MAX_PIN_NOTE) {
   if (typeof v !== "string") return null;
   const chars = [...v.replace(/\r\n?/g, "\n")].filter((c) => !invisible(c));
   const text = chars.join("").trim();
   if (!text) return null;
   const all = [...text];
-  return all.length > MAX_PIN_NOTE ? `${all.slice(0, MAX_PIN_NOTE - 1).join("")}…` : text;
-};
+  return all.length > max ? `${all.slice(0, max - 1).join("")}…` : text;
+}
+/** A pin's (or a mark's) saved note as the read-back quotes it; a cleared (null) one is none. */
+export const noteOf = (r, id) => cleanText(mapOf(r?.pinNotes)[id]);
 
 /** Each pin with its saved reaction and note, each null for none. A value the page never offers
  *  is none. */
@@ -252,8 +255,9 @@ export const PIN_CLIENT = { glyph: PIN_GLYPH, words: PIN_WORDS, noteMax: MAX_PIN
 
 /** A picture with pins: the frame, then a button on each badge, placed by % so it tracks the
  *  scaled image; its ✎ shows once the pin has a note. The popover is the page script's, one at a
- *  time, set after the pin tapped. */
-export function pinnedShot(pic, src, { key, option }) {
+ *  time, set after the pin tapped. On a design round's own page (`markable`) the frame is a box,
+ *  never a link — a tap on it leaves a mark there (marks.mjs) instead of opening the picture. */
+export function pinnedShot(pic, src, { key, option, markable = false }) {
   const pins = [...pic.pins]
     .sort((a, b) => a.n - b.n)
     .map(
@@ -266,9 +270,14 @@ export function pinnedShot(pic, src, { key, option }) {
     )
     .join("");
   const size = pic.size === "phone" ? "phone" : "desk";
+  const img = `<img src="${e(src)}" alt="${e(pic.alt)}" loading="lazy">`;
+  if (markable)
+    return (
+      `<div class="shot ${size} pinned markable" data-key="${e(key)}" data-option="${e(option)}" ` +
+      `data-frame="${size}"><div class="frame">${img}</div>${pins}</div>`
+    );
   return (
     `<div class="shot ${size} pinned" data-key="${e(key)}">` +
-    `<a class="frame" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(pic.alt)}" loading="lazy"></a>` +
-    `${pins}</div>`
+    `<a class="frame" href="${e(src)}" ${ext}>${img}</a>${pins}</div>`
   );
 }

@@ -5,7 +5,11 @@
 // caption }, options: [{ key, name, phone, desk, delta }] }`. An option, or Today, may carry
 // `pins` / `pinsDesk`: the pins its frame was drawn with (pins.mjs). The question's words ride on the same
 // entry (round 1 kept them in a Python file beside it): `title`, `ask`, `rec` (the recommended
-// option's key), `conf`, `wrong`, `saw[]`, `changes`, `topic`. Two wrappers are accepted:
+// option's key), `conf`, `wrong`, `saw[]`, `changes`, `topic`. Three more ride through to the page
+// (Eric, 2026-10-14): `opening` on a problems question (his marks on clean frames before Claude's
+// problems, marks.mjs), `pin` on a problems option (its pin number on Today's frame, in place of
+// pictures of its own), and `scope` with each option's `serves` (scope.mjs). Two wrappers are
+// accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
 // Image paths resolve against `root`, else the manifest's folder, else its parent (round 1's
@@ -15,6 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 import { holderPins } from "./pins.mjs";
+import { scopeOf, servesOf } from "./scope.mjs";
 
 /** A design round's questions from a manifest file, as page decisions (minutes added later). */
 export function loadDesign(file, { issue, round } = {}) {
@@ -146,6 +151,44 @@ function questionKind(q, n) {
   return kind;
 }
 
+/** One manifest option as the page holds it, its pictures carrying the pins drawn on them. */
+function optionOf(o, q, at, pins) {
+  return {
+    key: safeKey(o.key),
+    name: o.name ?? `Option ${o.key}`,
+    delta: o.delta ?? "",
+    recommended: q.rec != null && String(o.key) === String(q.rec),
+    pictures: pics(o, `Option ${o.key}`, at, pins),
+    // One frame for every problem: the option names its pin on Today's frame instead of carrying
+    // pictures of its own (render.mjs draws it as a compact row).
+    ...(Number.isInteger(o.pin) ? { pin: o.pin } : {}),
+    ...(servesOf(o.serves) ? { serves: servesOf(o.serves) } : {}),
+  };
+}
+
+/** Today as the page holds it: its pictures with their pins, and — for a round that opens on clean
+ *  frames (marks.mjs) — `clean`, the same frames before pin.mjs drew on them, so his first look
+ *  carries none of Claude's badges. */
+function todayOf(today, source, at, pins) {
+  if (!today) return null;
+  return {
+    pictures: pics(today, "Today", at, pins),
+    ...(today.clean ? { clean: pics(today.clean, "Today, before any pin", at) } : {}),
+    caption: today.caption ?? "",
+    real: !source.startsWith("mockup"),
+  };
+}
+
+/** How a question opens and what it is sized by: `opening` (his marks on clean frames first,
+ *  Claude's problems folded away until he asks — marks.mjs) and `scope` (scope.mjs). */
+function stages(q, problems) {
+  const scope = scopeOf(q.scope);
+  return {
+    ...(problems && q.opening === true ? { opening: true } : {}),
+    ...(scope ? { scope } : {}),
+  };
+}
+
 /** Pure once `at` and `pinsFrom` are: manifest entries → decisions. `at` maps a manifest path to
  *  a usable one; `pinsFrom` reads a pins file a manifest names (loadDesign passes both).
  *  A problems question stays a design decision (pictures, minutes, the store) and carries
@@ -155,19 +198,14 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p,
     const n = Number(q.q ?? i + 1);
     const problems = questionKind(q, n) === "problems";
     const pins = pinsOf(q, n, pinsFrom);
-    const options = (q.options ?? []).map((o, j) => ({
-      key: safeKey(o.key),
-      name: o.name ?? `Option ${o.key}`,
-      delta: o.delta ?? "",
-      recommended: q.rec != null && String(o.key) === String(q.rec),
-      pictures: pics(o, `Option ${o.key}`, at, pins.options[j]),
-    }));
+    const options = (q.options ?? []).map((o, j) => optionOf(o, q, at, pins.options[j]));
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
     return {
       key: safeKey(`${issue}-q${n}`),
       kind: "design",
       ...(problems ? { problems: true } : {}),
+      ...stages(q, problems),
       issue,
       isPr: false,
       round,
@@ -187,13 +225,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p,
             saw: q.saw ?? [],
           }
         : null,
-      today: q.today
-        ? {
-            pictures: pics(q.today, "Today", at, pins.today),
-            caption: q.today.caption ?? "",
-            real: !source.startsWith("mockup"),
-          }
-        : null,
+      today: todayOf(q.today, source, at, pins.today),
       options,
     };
   });

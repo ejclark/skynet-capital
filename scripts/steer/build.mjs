@@ -39,7 +39,12 @@ function collectImages(tp, out) {
     return published;
   };
   for (const d of tp.decisions) {
-    const pics = [...(d.today?.pictures ?? []), ...d.options.flatMap((o) => o.pictures ?? [])];
+    // Today's clean frames too: an opening round shows them before its pinned ones (marks.mjs).
+    const pics = [
+      ...(d.today?.pictures ?? []),
+      ...(d.today?.clean ?? []),
+      ...d.options.flatMap((o) => o.pictures ?? []),
+    ];
     pics.forEach((p, i) => {
       p.local = put(`img/${d.key}/${i}-${basename(p.src)}`, (dest) => copyFileSync(p.src, dest));
     });

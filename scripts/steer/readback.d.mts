@@ -27,6 +27,12 @@ export interface ReadbackPlan {
   nextRound: { issue: number; key: string; pick: string | null; instruction: string }[];
   /** Comments whose anchor is not a shown decision: the session answers them on the page. */
   unplacedComments: PageComment[];
+  /** Each opening question (marks.mjs): when he pressed "Show what Claude found", or null. */
+  reveals: { issue: number; key: string; revealAt: string | null }[];
+  /** "Notes about the page:" with each note quoted under where he left it; "" for none. */
+  pageNotes: string;
+  /** One per note about the page: `commons.mjs add --kind process --what … --where …`. */
+  processLines: { what: string; where: string }[];
   commands?: string[][];
 }
 

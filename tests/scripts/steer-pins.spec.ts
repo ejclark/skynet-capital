@@ -168,8 +168,13 @@ describe("each pin on the page is a button on its badge", () => {
     expect(MIXED).toBe("\u262F\uFE0E");
   });
 
-  it("keeps a picture without pins exactly as it was", () => {
-    expect(html).toContain('<a class="shot phone" href="a-phone.jpg"');
+  // Eric, 2026-10-14: on a round's own page every frame takes his marks (marks.mjs), so a picture
+  // without pins is a box a tap marks — no longer a link that navigates away mid-answer.
+  it("makes a picture without pins a markable box on a round's own page, never a link", () => {
+    expect(html).toContain(
+      '<div class="shot phone markable" data-key="5150-q1" data-option="A" data-frame="phone"><div class="frame"><img src="a-phone.jpg"',
+    );
+    expect(html).not.toContain('<a class="shot');
   });
 
   it("tells him in the intro that a pin can be tapped", () => {
@@ -190,13 +195,15 @@ describe("each pin on the page is a button on its badge", () => {
     expect(PIN_INTRO.problems).toContain(`${MIXED} Partly`);
   });
 
-  it("leaves a page with no pins without the pins' words", () => {
+  // A round page with no pins still carries the popover's words: his marks open it (marks.mjs).
+  it("leaves a page with no pins without the pins' line, keeping the popover for marks", () => {
     const plain = question({ today: { ...question().today, pins: undefined } });
     const page = renderPage(
       designRound({ 5150: decisions({ ...plain, options: plain.options.slice(0, 1) }) }),
       { img: (p) => ("src" in p ? p.src : null) },
     );
-    expect(data(page).pins).toBeUndefined();
+    expect(data(page).pins?.noteMax).toBe(MAX_PIN_NOTE);
+    expect(data(page).marks?.words.mixed).toBe("Would change");
     expect(page).not.toContain(PIN_INTRO.design);
   });
 });

@@ -283,3 +283,122 @@ describe("the lint command", () => {
     expect(out.status).toBe(0);
   });
 });
+
+// Eric, 2026-10-14: "I'm redundantly navigating the same screenshots" — every problem pinned on
+// ONE Today frame, each option naming its pin instead of carrying pictures of its own.
+describe("one frame for every problem", () => {
+  const todayPins = [
+    { n: 1, x: 20, y: 20, label: "the order line" },
+    { n: 2, x: 60, y: 70, label: "the total" },
+  ];
+  const oneFrame = (over: Record<string, unknown> = {}, pin = 2) =>
+    question({
+      kind: "problems",
+      today: { ...question().today, pins: todayPins },
+      options: [
+        { key: "A", name: "The order line is buried", delta: "It sits below the chain.", pin: 1 },
+        { key: "B", name: "The total hides", delta: "A scroll away at phone width.", pin },
+      ],
+      ...over,
+    });
+
+  it("passes problems that name a pin on Today's phone frame and carry no picture", () => {
+    expect(lintDesign(manifest(oneFrame()), env)).toEqual([]);
+  });
+
+  it("names a pin number Today's frame doesn't have", () => {
+    expect(lintDesign(manifest(oneFrame({}, 7)), env)).toEqual([
+      `q1 option B: "pin" 7 isn't a pin on Today's phone frame`,
+    ]);
+  });
+
+  it("reads Today's desk pins when Today has no phone frame", () => {
+    const desk = { ...question().today, phone: undefined, pinsDesk: todayPins };
+    expect(lintDesign(manifest(oneFrame({ today: desk })), env)).toEqual([]);
+  });
+
+  it("keeps a pin for problems only, and still refuses an option with neither", () => {
+    const [a, b] = question().options;
+    const shape = question({ options: [{ ...a, phone: undefined, desk: undefined, pin: 1 }, b] });
+    expect(lintDesign(manifest(shape), env)).toEqual([
+      `q1 option A: "pin" is for a problems question — a shape needs its own picture`,
+    ]);
+    const bare = oneFrame({
+      options: [
+        { key: "A", name: "The order line is buried", delta: "It sits below the chain.", pin: 1 },
+        { key: "B", name: "The total hides", delta: "A scroll away." },
+      ],
+    });
+    expect(lintDesign(manifest(bare), env)).toEqual([
+      "q1 option B: no picture — a phone frame, plus a desk frame only where the layout changes",
+    ]);
+  });
+
+  it("asks an opening round for Today's frames before the pins were drawn", () => {
+    const clean = { ...question().today, pins: todayPins, clean: { phone: "t-390.jpg" } };
+    expect(lintDesign(manifest(oneFrame({ opening: true, today: clean })), env)).toEqual([]);
+    expect(lintDesign(manifest(oneFrame({ opening: true })), env)).toEqual([
+      `q1 today: "opening" needs "clean" — Today's frames before pin.mjs drew on them`,
+    ]);
+    const gone = { ...clean, clean: { phone: "gone.jpg" } };
+    expect(lintDesign(manifest(oneFrame({ opening: true, today: gone })), env)).toEqual([
+      "q1 today clean: phone picture gone.jpg doesn't exist",
+    ]);
+  });
+
+  it("takes an opening stage on a problems question only", () => {
+    const today = { ...question().today, pins: todayPins, clean: { phone: "t-390.jpg" } };
+    expect(lintDesign(manifest(oneFrame({ opening: true, today })), env)).toEqual([]);
+    expect(lintDesign(manifest(question({ opening: true })), env)).toEqual([
+      'q1: "opening": true is for a problems question — it hides the problems until asked',
+    ]);
+  });
+});
+
+// Eric, 2026-10-14: design rounds sized by the agreed scope, "only as many as needed, no more no
+// less" — a goal, outcomes, and each shape naming the outcomes it serves.
+describe("a round's scope", () => {
+  const scope = (met = [false, true]) => ({
+    goal: "The order line reads first at phone width.",
+    outcomes: [
+      { id: "O1", text: "The order line is above the fold.", met: met[0] },
+      { id: "O2", text: "The chain stays one tap away.", met: met[1] },
+    ],
+  });
+  const serving = (a: unknown, b: unknown) => {
+    const [first, second] = question().options;
+    return [
+      { ...first, serves: a },
+      { ...second, serves: b },
+    ];
+  };
+  const scoped = (over: Record<string, unknown> = {}) =>
+    question({ scope: scope(), options: serving(["O1"], ["O2"]), ...over });
+
+  it("passes a scope whose shapes each serve a listed outcome", () => {
+    expect(lintDesign(manifest(scoped()), env)).toEqual([]);
+  });
+
+  it("refuses a design round whose every outcome is met", () => {
+    expect(lintDesign(manifest(scoped({ scope: scope([true, true]) })), env)).toEqual([
+      "q1: every outcome is met — file the build instead of drawing a round",
+    ]);
+  });
+
+  it("refuses a shape that serves nothing, or an outcome the scope doesn't list", () => {
+    expect(lintDesign(manifest(scoped({ options: serving(undefined, ["O3"]) })), env)).toEqual([
+      'q1 option A: needs "serves" — the outcome ids this shape works toward',
+      "q1 option B: serves O3, which isn't one of the scope's outcomes",
+    ]);
+  });
+
+  it("lets a problems question carry a scope without serves", () => {
+    const q = question({ kind: "problems", scope: scope([true, true]) });
+    expect(lintDesign(manifest(q), env)).toEqual([]);
+  });
+
+  it("checks nothing about scope on a question that carries none", () => {
+    const q = question({ options: serving(["O9"], undefined) });
+    expect(lintDesign(manifest(q), env)).toEqual([]);
+  });
+});

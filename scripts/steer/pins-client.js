@@ -17,6 +17,13 @@
 // and saves it on a pause, on close and on Done. A choice tapped while the field is open saves and
 // leaves the popover open, so the text stays in front of him; with no field open it closes, as
 // before. A pin with a note wears ✎ on its badge, and reopening it shows the note.
+//
+// MARKS RIDE THIS POPOVER (Eric, 2026-10-14: his own spots, before Claude's — marks.mjs). A mark is
+// a `.pin` button with `data-mark` that marks-client.js places where he tapped; it opens, saves and
+// paints exactly as a pin does, with the marks' words and glyphs. Two hooks reach marks-client: a
+// tap on a frame's picture with no popover open asks `api.spot(ev)` for a new mark to open, and a
+// closed mark goes to `api.closed(pin)`, which takes it off the frame when nothing was said on it.
+// Marks never join `said` — marks-client.js counts its own.
 globalThis.steerPins = (api) => {
   const PINS = api.pins; // { glyph, words: { design, problems }, noteMax } from pins.mjs
   if (!PINS) return null;
@@ -33,8 +40,14 @@ globalThis.steerPins = (api) => {
   let left = null;
   let openPin = null;
 
-  const keyOf = (pin) => pin.closest(".pinned")?.dataset.key;
-  const words = (pin) => PINS.words[api.problems(keyOf(pin)) ? "problems" : "design"];
+  /** A mark (marks-client.js) is a pin button he placed himself: it takes the marks' words and
+   *  glyphs (👍 Like · 👎 Don't like · ✏︎ Would change) and everything else from here. */
+  const MARKS = api.marks;
+  const isMark = (pin) => pin.dataset.mark !== undefined;
+  const keyOf = (pin) => pin.closest(".shot")?.dataset.key;
+  const words = (pin) =>
+    isMark(pin) ? MARKS.words : PINS.words[api.problems(keyOf(pin)) ? "problems" : "design"];
+  const glyphs = (pin) => (isMark(pin) ? MARKS.glyph : PINS.glyph);
   const reactionOf = (r, id) => (REACTIONS.includes(r?.pins?.[id]) ? r.pins[id] : null);
   const noteOf = (r, id) => {
     const v = r?.pinNotes?.[id];
@@ -45,7 +58,7 @@ globalThis.steerPins = (api) => {
   /** The pin ids this page shows, by decision key. A record may hold more: a round republished
    *  with fewer or renumbered pins keeps the old ids in the store, and those never count. */
   const SHOWN = new Map();
-  for (const pin of document.querySelectorAll(".pin")) {
+  for (const pin of document.querySelectorAll(".pin:not([data-mark])")) {
     const key = keyOf(pin);
     SHOWN.set(key, [...(SHOWN.get(key) ?? []), pin.dataset.pin]);
   }
@@ -100,7 +113,7 @@ globalThis.steerPins = (api) => {
         b.setAttribute("aria-pressed", now === v ? "true" : "false");
         const glyph = document.createElement("span");
         glyph.setAttribute("aria-hidden", "true");
-        glyph.textContent = PINS.glyph[v];
+        glyph.textContent = glyphs(pin)[v];
         b.append(glyph, ` ${w[v]}`);
         return b;
       }),
@@ -122,7 +135,11 @@ globalThis.steerPins = (api) => {
     pop.setAttribute("aria-label", pin.dataset.name);
     fillChoices(pin);
     field.value = api.saved(keyOf(pin))?.pinNotes?.[pin.dataset.pin] ?? "";
-    field.setAttribute("aria-label", `Note on ${pin.dataset.name.replace(/^Pin/, "pin")}`);
+    field.setAttribute(
+      "aria-label",
+      `Note on ${pin.dataset.name.replace(/^(Pin|Your)/, (w) => w.toLowerCase())}`,
+    );
+    field.placeholder = isMark(pin) ? "What about this spot?" : "What should change on this spot?";
     field.disabled = api.locked();
     showNote(Boolean(savedNote(pin)));
     count();
@@ -130,7 +147,7 @@ globalThis.steerPins = (api) => {
 
   /** Below the pin, or above it when the bar would cover it; never past the 8px gutter. */
   function place(pin) {
-    const frame = pin.closest(".pinned").getBoundingClientRect();
+    const frame = pin.closest(".shot").getBoundingClientRect();
     const r = pin.getBoundingClientRect();
     const vw = document.documentElement.clientWidth || window.innerWidth;
     const bar = document.querySelector(".bar")?.getBoundingClientRect();
@@ -157,7 +174,8 @@ globalThis.steerPins = (api) => {
     (pop.querySelector('[aria-pressed="true"]') || pop.querySelector(".pc")).focus();
   }
 
-  /** Close it; a note typed and not yet saved goes out now. */
+  /** Close it; a note typed and not yet saved goes out now. A mark left with nothing said is
+   *  then taken off the frame (marks-client.js `closed`), and focus has no button to return to. */
   function close(focusPin) {
     if (!openPin) return;
     const pin = openPin;
@@ -165,7 +183,8 @@ globalThis.steerPins = (api) => {
     pop.hidden = true;
     pin.setAttribute("aria-expanded", "false");
     api.flush();
-    if (focusPin) pin.focus();
+    if (isMark(pin)) api.closed?.(pin);
+    if (focusPin && pin.isConnected) pin.focus();
   }
 
   /** Each pin as the record has it: the chosen glyph on its badge, ✎ when it has a note, and its
@@ -179,7 +198,7 @@ globalThis.steerPins = (api) => {
       const noted = Boolean(savedNote(pin));
       if (noted) pin.dataset.noted = "";
       else delete pin.dataset.noted;
-      pin.querySelector(".pg").textContent = v ? PINS.glyph[v] : "";
+      pin.querySelector(".pg").textContent = v ? glyphs(pin)[v] : "";
       const bits = [v ? words(pin)[v] : "", noted ? "with a note" : ""].filter(Boolean);
       const name = pin.dataset.name;
       pin.setAttribute("aria-label", bits.length ? `${name} — ${bits.join(", ")}` : name);
@@ -214,8 +233,18 @@ globalThis.steerPins = (api) => {
       if (api.locked()) return;
       return openPin === pin ? close(true) : open(pin);
     }
-    if (openPin && !pop.contains(t)) close(false);
+    away(ev);
   });
+  /** A tap away from any pin: with a popover open it only closes it; with none open, a tap on a
+   *  frame's picture may leave a new mark there (marks-client.js `spot`), which opens like a pin. */
+  function away(ev) {
+    if (openPin) {
+      if (!pop.contains(ev.target)) close(false);
+      return;
+    }
+    const made = api.spot?.(ev);
+    if (made) open(made);
+  }
   document.addEventListener("input", (ev) => {
     if (ev.target !== field || !openPin || api.locked()) return;
     count();

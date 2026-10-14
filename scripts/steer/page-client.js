@@ -34,6 +34,13 @@
 // note on a pin (`pinNotes`, the same keys) takes the same path, written on a pause like any note;
 // an emptied one is null.
 //
+// MARKS AND THE REVEAL (marks.mjs, marks-client.js) take the same path: a mark's spot is one key of
+// `marks`, written with his first reaction or note on it (its reaction and note are `pins` and
+// `pinNotes` keys), and an emptied one is null. `revealAt` — the first press of "Show what Claude
+// found" — is merged alone, never by rewriting the record, and a whole-record write keeps the
+// stored one. A NOTE ABOUT THE PAGE (page-notes-client.js) is one key of `pageNotes` on the round's
+// own document, merged with `update` like the page's other meta.
+//
 // A TAP WHILE THE STORE CONNECTS (#5243) is held as the fields it changed, and once the store
 // answers those fields go onto the record it holds — never a blank copy plus the tap, which would
 // erase an earlier pick or note.
@@ -59,11 +66,13 @@
   let metaStored = false;
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
-  /** A decision record's fields keyed by pin id, each merged one key at a time. */
-  const MAPS = ["pins", "pinNotes"];
+  /** A decision record's fields keyed by pin (or mark) id, each merged one key at a time. */
+  const MAPS = ["pins", "pinNotes", "marks"];
+  /** A decision record's own fields merged alone, never with the whole record: `revealAt`. */
+  const MERGED = ["revealAt"];
   /** Pin ids this view has reacted to or written on, by field and decision key: only these may
    *  overwrite what the store holds there. */
-  const touched = { pins: new Map(), pinNotes: new Map() };
+  const touched = { pins: new Map(), pinNotes: new Map(), marks: new Map() };
   const touch = (field, key, id) =>
     touched[field].set(key, (touched[field].get(key) ?? new Set()).add(id));
   let readOnly = false;
@@ -143,6 +152,8 @@
     note: "",
     pins: {},
     pinNotes: {},
+    marks: {},
+    revealAt: null,
   });
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
@@ -150,7 +161,7 @@
   };
   /** A reaction or a note on a pin this page shows (pins-client.js `said`): a stored id the page
    *  no longer shows, or a value it never offers, is not an answer. */
-  const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length);
+  const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length || marksUi?.said(key, r).length);
   const answered = (r, key) =>
     Boolean(
       r &&
@@ -165,8 +176,13 @@
   const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
   /** A note as it is written: the text, or null for an empty one. */
   const noteValue = (v) => (typeof v === "string" && v.trim() ? v : null);
-  /** One pin key's stored value: a reaction as it is, a note as noteValue; a cleared one is null. */
-  const keyValue = (field, v) => (field === "pinNotes" ? noteValue(v) : v || null);
+  /** One pin key's stored value: a reaction as it is, a note as noteValue, a mark as its spot
+   *  (marks-client.js); a cleared one is null. */
+  const keyValue = (field, v) => {
+    if (field === "pinNotes") return noteValue(v);
+    if (field === "marks") return v && typeof v === "object" ? v : null;
+    return v || null;
+  };
   /** The live entries of one keyed field, as a whole record writes them. */
   const liveOf = (field, m) =>
     Object.fromEntries(Object.entries(mapOf(m)).filter(([, v]) => keyValue(field, v)));
@@ -192,7 +208,9 @@
       if (document.activeElement !== t) t.value = r?.note || "";
       t.disabled = locked();
     }
+    marksUi?.paint();
     pinsUi?.paint();
+    notesUi?.paint(locked() || connecting);
     const isDone = Boolean(meta.doneAt);
     doneBtn.setAttribute("aria-pressed", isDone ? "true" : "false");
     doneBtn.textContent = isDone ? "Done" : "I'm done";
@@ -271,6 +289,7 @@
       verdict: r.verdict,
       note: r.note || "",
       ...(sec === "decisions" ? Object.fromEntries(MAPS.map((f) => [f, liveOf(f, r[f])])) : {}),
+      ...(sec === "decisions" ? { revealAt: r.revealAt || null } : {}),
       at: new Date().toISOString(),
     };
   }
@@ -295,20 +314,24 @@
         const live = snap.exists ? snap.data() : null;
         const r = state.decisions[key];
         for (const f of MAPS) r[f] = mergeKeys(f, key, live?.[f], r[f]);
+        r.revealAt = r.revealAt || live?.revealAt || null; // a reveal is never taken back
         return landed(path, () => ref.set(body("decisions", key)))();
       }),
     );
   }
-  /** Pins' reactions or notes (`[field, id]` pairs), merged into their decision's record in one
-   *  write, each key alone (null clears it); a record the store doesn't hold yet is written whole. */
+  /** Pins' reactions or notes, marks (`[field, id]` pairs) or a merged field alone (`[field]`),
+   *  merged into their decision's record in one write, each key alone (null clears it); a record
+   *  the store doesn't hold yet is written whole. */
   function saveKeys(key, pairs) {
     const path = `tp/${ID}/decisions/${key}`;
     const merge = { at: new Date().toISOString() };
     for (const [field, id] of pairs)
-      merge[field] = {
-        ...merge[field],
-        [id]: keyValue(field, state.decisions[key]?.[field]?.[id]),
-      };
+      if (id === undefined) merge[field] = state.decisions[key]?.[field] ?? null;
+      else
+        merge[field] = {
+          ...merge[field],
+          [id]: keyValue(field, state.decisions[key]?.[field]?.[id]),
+        };
     chain(path, (ref) => {
       const there = stored.has(path) ? Promise.resolve(true) : ref.get().then((s) => s.exists);
       return there.then((yes) =>
@@ -346,7 +369,8 @@
       return status("Sending once your answers load");
     }
     if (!db) return status("");
-    const keyed = sec === "decisions" && paths.every((p) => MAPS.includes(split(p)[0]));
+    const keyed =
+      sec === "decisions" && paths.every((p) => MAPS.includes(split(p)[0]) || MERGED.includes(p));
     if (!keyed) return save(sec, key);
     saveKeys(key, paths.map(split));
   }
@@ -358,10 +382,10 @@
     taps: meta.taps.slice(-3000),
     shown: meta.shown,
   });
-  /** Merge the page's fields into the round's document, so the session's read-back fields stay.
-   *  `update` needs the document, so a first write reads to choose; a failed update reads again. */
-  function putMeta(ref) {
-    const body = metaBody();
+  /** Merge the page's fields (or `body`, a note about the page) into the round's document, so the
+   *  session's read-back fields stay. `update` needs the document, so a first write reads to
+   *  choose; a failed update reads again. */
+  function putMeta(ref, body = metaBody()) {
     const exists = metaStored ? Promise.resolve(true) : ref.get().then((s) => s.exists);
     return exists
       .then((yes) => (yes ? ref.update(body) : ref.set(body)))
@@ -387,6 +411,15 @@
   function tap() {
     meta.taps.push(Date.now());
     saveMeta(false);
+  }
+  /** A note about the page (page-notes-client.js): one key of `pageNotes` merged into the round's
+   *  document — an `update`, never a `set` over it, so the session's fields and other notes stay.
+   *  Resolves whether it landed. */
+  function savePageNote(id, entry) {
+    if (!db || locked()) return Promise.resolve(false);
+    tap();
+    status("Saving");
+    return chain(`tp/${ID}`, (ref) => putMeta(ref, { pageNotes: { [id]: entry } }));
   }
 
   /** An option row's press: Build toggles the pick (and lifts a Not on it); More/Not toggles its
@@ -553,6 +586,7 @@
    *  reload; the listening line reads its stamp either way. */
   function heard(d) {
     const ear = earUi?.hear(d);
+    notesUi?.hear(d);
     const rb = readBackOf(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
     if (rb && rb.key !== heardKey) {
@@ -609,15 +643,22 @@
   /** A note typed: saved on a pause (or by Done, or a pin's popover closing), never per key. The
    *  text is laid back on the record when it saves — the store may have answered meanwhile and
    *  replaced the record it was typed into (#5243). */
-  function typed(sec, key, path, text) {
+  function typed(sec, key, path, text, also = []) {
     const k = `${sec}/${key}/${path}`;
     status("Typing");
     clearTimeout(timers[k]);
-    pendingNotes.set(k, () => {
+    // A mark's spot claimed by an earlier keystroke still rides this note's first write.
+    // Its value is laid back with the note's, should the store replace the record meanwhile.
+    const was = pendingNotes.get(k)?.also ?? [];
+    const extra = [...was, ...also.map((p) => [p, read(rec(sec, key), p)])];
+    const go = () => {
+      for (const [p, v] of extra) put(rec(sec, key), p, v);
       put(rec(sec, key), path, text);
       tap();
-      commit(sec, key, [path]);
-    });
+      commit(sec, key, [...extra.map(([p]) => p), path]);
+    };
+    go.also = extra;
+    pendingNotes.set(k, go);
     timers[k] = setTimeout(() => runNote(k), 900);
   }
   document.addEventListener("input", (ev) => {
@@ -638,6 +679,11 @@
     const line = (s) => (s || "").trim().replace(/\s+/g, " ");
     for (const [id, v, n] of pinsUi?.said(d.key, r) ?? [])
       bits.push(["pin", id, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
+    for (const [id, v, n] of marksUi?.said(d.key, r) ?? []) {
+      const m = r.marks[id];
+      const at = `${Math.round(m.x)}% across ${Math.round(m.y)}% down`;
+      bits.push(["mark", id, at, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
+    }
     const note = line(r.note);
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
@@ -668,29 +714,64 @@
     }
   });
 
+  /** Keyed field paths (`pins.<id>`, `marks.<id>`) of one decision this view changed: only these
+   *  may overwrite what the store holds there. */
+  const mine = (key, paths) => {
+    for (const [f, id] of paths.map(split)) if (id !== undefined && touched[f]) touch(f, key, id);
+  };
+  /** One decision changed at these field paths, here or by a script beside this one: tapped,
+   *  then written. */
+  function changed(key, paths) {
+    mine(key, paths);
+    tap();
+    status("Saving");
+    commit("decisions", key, paths);
+  }
+
+  // His marks and the reveal (marks-client.js); null on any page but a design round's own.
+  const marksUi = globalThis.steerMarks?.({
+    marks: TP.marks,
+    saved: (key) => state.decisions[key],
+    rec: (key) => rec("decisions", key),
+    changed,
+    opening: (key) => Boolean(TP.decisions.find((d) => d.key === key)?.opening),
+    locked,
+  });
+
   // The pins' own script (pins-client.js), handed the page's state; null on a page with no pins.
+  // It opens marks too: a tap on a frame asks marks-client for one, and a closed one goes back. A
+  // held mark's first word claims it, so its spot rides that word's write.
   const pinsUi = globalThis.steerPins?.({
     pins: TP.pins,
+    marks: TP.marks,
     saved: (key) => state.decisions[key],
     problems: (key) => Boolean(TP.decisions.find((d) => d.key === key)?.problems),
     locked,
+    spot: (ev) => marksUi?.spot(ev) ?? null,
+    closed: (pin) => marksUi?.closed(pin),
     react(key, id, v) {
       const r = rec("decisions", key);
+      const also = marksUi?.claim(key, id) ?? [];
       r.pins = { ...r.pins };
-      touch("pins", key, id);
       if (r.pins[id] === v) delete r.pins[id];
       else r.pins[id] = v;
-      tap();
-      status("Saving");
-      commit("decisions", key, [`pins.${id}`]);
+      changed(key, [...also, `pins.${id}`]);
     },
     note(key, id, text) {
       const r = rec("decisions", key);
+      const also = marksUi?.claim(key, id) ?? [];
       r.pinNotes = { ...r.pinNotes, [id]: text };
-      touch("pinNotes", key, id);
-      typed("decisions", key, `pinNotes.${id}`, text);
+      mine(key, [...also, `pinNotes.${id}`]);
+      typed("decisions", key, `pinNotes.${id}`, text, also);
     },
     flush: () => flushNotes(),
+  });
+
+  // Notes about the page itself (page-notes-client.js); null on any page but a round's own.
+  const notesUi = globalThis.steerPageNotes?.({
+    cfg: TP.pageNotes,
+    locked: () => locked() || connecting,
+    save: savePageNote,
   });
 
   // The listening line's own script (ear-client.js), fed each snapshot of the round's document.
@@ -708,6 +789,9 @@
     // A cleared reaction or note is stored as null (saveKeys); the page holds only the live ones.
     pins: liveOf("pins", v.pins),
     pinNotes: liveOf("pinNotes", v.pinNotes),
+    // Records saved before marks and the reveal existed read as none of either.
+    marks: liveOf("marks", v.marks),
+    revealAt: typeof v.revealAt === "string" ? v.revealAt : null,
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>
@@ -788,6 +872,7 @@
       meta.taps = [...new Set((prev.taps || []).concat(meta.taps))].sort((a, b) => a - b);
       meta.openedAt = prev.openedAt || null;
       meta.doneAt = prev.doneAt || null;
+      notesUi?.hear(prev);
       opened(prev);
     }
     const early = held.size;
