@@ -41,6 +41,7 @@ first; parts whose shape is still being redesigned wait for a round to confirm t
 | H3 | Fewer iterations thanks to paved paths | **don't, as worded** | medium | The #5160 retro ties all 6 avoidable rounds to vocabulary, the screen's job and reading order. Only 11 of 95 commons findings are rooted in a component. | By 2026-11-14, ≥25% of round-causing turns across ≥5 retro'd sessions are component-rooted |
 | H4a | Consistency goes up | **validated for atoms** | high | 47 of the 52 visible, unjustified inconsistencies sit in copied atoms. Several break hard rules: LIVE drawn as HUMAN's green chip (`decisions-section.tsx:202`), errors shown by hue alone. | By 2026-11-30, a re-audit of covered families shows less than a 50% drop in their items |
 | H4b | Fewer designs needed overall | **don't** | medium | About 88% of what drives rounds is wording (23), IA (16) and judgement, not parts. | By 2026-12-15, the next 5 sessions after the atoms land average ≥30% fewer rounds to a filed build |
+| H5 | Fewer of Eric's decisions and notes spent on consistency: a design system makes recurring choices one-time picks, and building from shared parts removes frame-to-build drift | **validated, narrowed: test it** | medium | The study measured tokens and rounds, not his attention, which is the constraint. 16 commons findings are tagged consistency, his own round notes ask for "aligned with other rows", and the loop carries a "show the build before filing" step because builds drift from drawn frames. One page of picks ([Component consistency](https://claude.ai/artifact/17AropDw7Wv1p4UXzFyseL)) settles 7 recurring choices at once. | By 2026-11-30, his notes and pins on the next 5 redesign sessions tagged consistency/rework are not fewer than on the 19-session baseline |
 | SEQ | Library first, redesigns as its test | **validated, split by volatility** | medium | Process-first applies to the gates, the catalog and the rule-derived atoms. Metz's caution against the wrong abstraction applies to layout-bearing parts the 19 sessions are still drawing (8 are at round 0). | By 2026-11-14, ≥3 redesign PRs change a first-tier atom's API, or ≥5 builds file and none restructures a panel, row or shell shape |
 | — | A full library wave now (Button, Card, Eyebrow, Chip base, status words across 60+ files) | **don't** | high | These parts carry open taste forks (radius, compact size, label spec, status hues). Parallel cross-app waves already clobbered each other's screenshots (LESSONS 2026-10-10). | By 2026-10-31, the forks have been picked in the #5143 consistency round, so these become ready slices |
 | — | Every part ships with a catalog entry and a reuse guard | **validated** | medium | ENGINEERING.md claimed a shared library for weeks while `app/src` imported nothing from it. GitClear and Storybook both put the gain in **routing** agents to parts, not in parts existing. | By 2026-11-14, build PRs still add hand-rolled copies of a catalogued family |
@@ -48,6 +49,27 @@ first; parts whose shape is still being redesigned wait for a round to confirm t
 **Your gut, re-read.** It was right that this is worth doing as an ongoing investment, but for
 quality, honesty and fix-once reasons. The token and round savings it expected are not in the
 evidence. They get a dated test (below) rather than a build-out.
+
+## Results so far (tier 1, 2026-10-14)
+
+Eric's pushback after the first read (2026-10-14): a design system "expedites decision making
+and organically dry implementation… less time for me to get distracted or bogged down in
+rework" and faster building "with lego pieces". That claim is about his attention, which the
+first pass did not measure; it is row H5 above, and the one page of seven picks that turns
+recurring choices into one-time decisions is the tier-3 gate.
+
+| Shipped | What it did | Moved |
+|---|---|---|
+| #5368 | Orders pane frame restored (bug #5364) | severity-3 visible defects 4 → 3 |
+| #5369 | Duplication, clone and dead-code scans see `app/src`; new CSS-literal ratchet | the census numbers are CI-measured from here on |
+| #5370 | Alerts dividers (an undefined token) — the new scan's first catch | dangling tokens 3 → 1 |
+| #5373 | Dead net-worth composite removed — the app dead-code scan's first catch | dead code 92 → 91 · spacing literals 1,572 → 1,561 |
+| #5374 | `app/src/ui` home + catalog; KindChip (13 sites) and EnvPill (6) | hand-rolled kind chips 15 → 0 · LIVE off HUMAN's green |
+
+**Stop rule check:** the last three PRs closed about 6 ledger items between them (all in #5374), so returns have not
+diminished yet. What remains in tier 1 is blocked rather than exhausted: the font-size sweep
+waits on two open PRs that touch the same files (#5221, #5222), and every larger part waits on the
+picks page.
 
 <details>
 <summary><strong>The evidence, in numbers</strong></summary>
