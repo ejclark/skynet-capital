@@ -21,6 +21,7 @@ import { PreferencesCard } from "../shell/preferences-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
 import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
+import { KindChip } from "../ui";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -283,9 +284,7 @@ function AccountCard({
     <section className="set-card">
       <h2 className="set-card-h">
         {account.name}
-        <span className={`chip chip-${account.kind}`}>
-          {account.kind === "bot" ? "BOT" : "HUMAN"}
-        </span>
+        <KindChip kind={account.kind} />
       </h2>
       <AccountOwnershipLine accountId={account.id} onChanged={onChanged} />
       {account.hostConfigured ? (

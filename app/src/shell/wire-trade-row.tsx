@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { orderTime } from "../live/order-facts";
 import type { VitalGauge, WireTrade } from "../live/wire";
+import { KindChip } from "../ui";
 
 /**
  * ONE ACTIVITY ROW, EXPANDABLE (PR 6, issue #2287) — the plan's "why" (the persona's own stated
@@ -44,6 +45,7 @@ function TradeReasoning({ trade }: { readonly trade: WireTrade }): ReactElement 
     <div className="wire-trade-body">
       {reasoning ? (
         <div className="wire-trade-why">
+          {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
           {reasoning.strategy ? <span className="chip chip-bot">{reasoning.strategy}</span> : null}
           <p className="cycle-reason">"{reasoning.reason}"</p>
           {reasoning.expectation ? (
@@ -101,7 +103,7 @@ export function TradeRow({ trade }: { readonly trade: WireTrade }): ReactElement
       <Link to="/u/$id" params={{ id: trade.whoId }} className="wire-who">
         {trade.who}
       </Link>
-      <span className={`chip chip-${trade.kind}`}>{trade.kind === "bot" ? "BOT" : "HUMAN"}</span>
+      <KindChip kind={trade.kind} />
       {trade.reconstructed ? (
         <span className="wire-recon" title="Recovered after the fact, not watched live">
           reconstructed

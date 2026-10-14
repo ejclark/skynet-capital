@@ -43,6 +43,7 @@
     "config:audit": "node scripts/config-audit.mjs",
     "repair-watchlist:scan": "node scripts/repair-watchlist-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
+    "ui:catalog": "node scripts/ui-catalog.mjs",
     "comment-bloat:scan": "node scripts/comment-bloat-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
     "css-literal:scan": "node scripts/css-literal-scan.mjs",
