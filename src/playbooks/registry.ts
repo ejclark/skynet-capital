@@ -197,12 +197,13 @@ export const NVDA_CALL_SPREAD: Playbook = callSpread({
 
 /**
  * CRWV-WHEEL (#4642 slice 5) — the wheel on CRWV, RUN AGAINST OUR OWN STUDY, ON PURPOSE.
- * `docs/research/crwv-premium-fit.md` found CRWV's option premium underpays its moves (implied
+ * `docs/research/crwv-premium-fit.md` found the market under-estimates how far CRWV moves (implied
  * 69.9% vs a median 88.7% realized; Δ0.20 puts priced 19.4% to assign against 33.3% delivered) and
  * called "stand aside". The play exists because its owner holds the opposite conviction, so it
  * carries the study's numbers and a dated falsifier on every order rather than pretending to an
  * edge. Its pair row is a ◆ conviction checked on 2027-01-29, and that row, not this file, is where
- * the order copy's framing, citation and retire date come from (#4469 slice 2c).
+ * the order copy's citation and retire date come from (#4469 slice 2c); every put's Why states the
+ * data, then the owner's bet as what the market has wrong (#5326).
  */
 export const CRWV_WHEEL: Playbook = wheel({
   symbol: "CRWV",
@@ -212,7 +213,14 @@ export const CRWV_WHEEL: Playbook = wheel({
   findings:
     "AGAINST this play: implied 69.9% vs a median 88.7% realized (6th percentile); Δ0.20 puts " +
     "priced 19.4% to assign vs 33.3% delivered.",
-  studySays: "our study found CRWV's option premium underpays its moves",
+  dataShows:
+    "Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the " +
+    "past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned " +
+    "would have been assigned 33% of the time in CRWV's own price history.",
+  bet:
+    "So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its " +
+    "owner runs this against the study, betting the market has CRWV about right: that its swings " +
+    "calm to the pace options price.",
 });
 
 /** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,

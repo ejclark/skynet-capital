@@ -41,8 +41,8 @@ import type { Playbook } from "./playbook.js";
  * `wheel`.
  *
  * IT TRADES ON A VERDICT, AND SAYS WHICH ONE ON EVERY ORDER. The pair row (`pair-table.ts`) is
- * the one source of the evidence the orders state: its status picks the framing (the owner's
- * conviction, or the house's research), its study is the citation, and its dated test — a
+ * the one source of the evidence the orders state: its status says whether the play runs against
+ * its study (a ◆ conviction, whose Why adds the owner's bet) or with it, its study is the citation, and its dated test — a
  * conviction's check date, a ✓ verdict's shelf date — is the date in the retire rule each order
  * carries. A pair with neither verdict has no business selling puts, so the template refuses to
  * build one (criterion 1; code, not copy, enforces what a ticker needs — the plan's call 4).
@@ -72,9 +72,13 @@ export interface WheelSetting {
   readonly thesis: string;
   /** What the study measured, said on the descriptor between its citation and the retire rule. */
   readonly findings: string;
-  /** What the study found, said on every put after its framing ("our study found CRWV's option
-   *  premium underpays its moves"). */
-  readonly studySays: string;
+  /** What the study's data shows, in plain words a member can check: whole sentences, numbers with
+   *  their units, no "IV" or "realized vol". Every put's Why opens with it (#5326). */
+  readonly dataShows: string;
+  /** A ◆ conviction pair only: where its owner disagrees with the study, as whole sentences naming
+   *  which number the market has wrong and which way, said "against the study" plainly. A pair the
+   *  house's research backs has no bet to state — its Why is the data alone. */
+  readonly bet?: string;
 }
 
 /** The strategy tag a wheel order carries on its decision record — `crwv-wheel-put`. One definition,
@@ -85,7 +89,7 @@ export const wheelStrategyTag = (symbol: string, type: "put" | "call"): string =
 /** What the helpers below read: the ticker, and the words its pair row settles. */
 interface Wheel {
   readonly symbol: string;
-  /** "Run on its owner's conviction — <studySays>." */
+  /** What the data shows, then — on a conviction — the owner's bet against it. */
   readonly basis: string;
   /** The falsifier, stated on every order so the record can grade the play by it. */
   readonly retireRule: string;
@@ -95,17 +99,17 @@ interface Wheel {
 const retireTest = (date: string): string =>
   `net P/L is below 0 on ${date} or more than 1 in 3 sold puts finish in the money`;
 
-/** How the pair's verdict frames the sale, and the date its retire rule is checked on — or a
+/** Whether the pair runs against its study, and the date its retire rule is checked on — or a
  *  refusal naming what the row lacks. */
-function verdictOf(evidence: PairEvidence): { framing: string; date: string } | string {
+function verdictOf(evidence: PairEvidence): { against: boolean; date: string } | string {
   if (evidence.status === "conviction") {
     return evidence.checkOn
-      ? { framing: "Run on its owner's conviction", date: evidence.checkOn }
+      ? { against: true, date: evidence.checkOn }
       : "a conviction with no check date";
   }
   if (evidence.status === "researched") {
     return evidence.shelfOn
-      ? { framing: "Run on the house's research", date: evidence.shelfOn }
+      ? { against: false, date: evidence.shelfOn }
       : "a verdict with no shelf date";
   }
   return `no verdict (${evidence.status})`;
@@ -313,9 +317,13 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     const lacks = typeof verdict === "string" ? verdict : "no study to cite";
     throw new Error(`wheel × ${symbol} cannot sell puts on ${lacks}`);
   }
+  // A play run against its study says what it bets instead — never "trust me" (#5326).
+  if (verdict.against && !setting.bet) {
+    throw new Error(`wheel × ${symbol} runs against its study but its setting states no bet`);
+  }
   const spec: Wheel = {
     symbol,
-    basis: `${verdict.framing} — ${setting.studySays}.`,
+    basis: verdict.against ? `${setting.dataShows} ${setting.bet}` : setting.dataShows,
     retireRule: `the play retires if its ${retireTest(verdict.date)}`,
   };
   return {
