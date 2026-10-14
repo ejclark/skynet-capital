@@ -135,7 +135,7 @@ const activity = {
       origin: "app",
       reasoning: {
         reason:
-          "Run on its owner's conviction — CRWV's premium pays to wait for a lower entry. Sold the $80 put, 28 days out.",
+          "Sold the $80 put, 28 days out. Its owner runs this against our study, betting the market has CRWV's swings about right.",
         personaId: "sauron",
         playbookId: "CRWV-WHEEL",
         playbookMode: "aggressive",
