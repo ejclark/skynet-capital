@@ -115,6 +115,13 @@
   box-shadow: var(--elev-base);
 }
 
+/* the filter toggles in the row are `FilterChip`s (filter-chip.css): bordered pills with a ✓, so the
+   row's 2px item gap is too tight between two outlines — each chip takes one more step. */
+.stage-controls .filter-chip {
+  flex: none;
+  margin-left: var(--space-1);
+}
+
 /* the SECTION role (#1740) — a radio (exactly one current), where the filter toggles beside it are
    checkboxes (any number on). The two look identical under `.railctl` alone, and in a row the group
    labels that told them apart are hidden, so the current section gets an accent bar: a shape

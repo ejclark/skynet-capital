@@ -1,0 +1,44 @@
+/* FilterChip (app/src/ui/filter-chip.tsx): one item of a set, on or off. Before #5365 the app drew
+ * the pressed state four ways: a hue-and-shadow `.railctl` on the league Activity filters, an accent
+ * border on the positions blotter, and a ✓ on the account Activity playbooks, the chart studies and
+ * the playbook symbol picker. The league filters and the blotter had no shape at all, and the
+ * blotter's accent label on --surface-2 measured 2.99:1 in the light palette, under AA text.
+ *
+ * Pressed now reads three ways, none of them hue alone (docs/BRAND.md → Accessibility): the ✓ in a
+ * fixed slot (the account Activity playbook chips' slot, #4650), a 1px inset ring that doubles the
+ * accent border with no layout shift (BRAND: "an accent tint plus a bar or ring" — the bar is the
+ * section switch's alone, PATTERNS.md → Radio vs checkbox), and the label stepping from --muted to
+ * --text. A surface's class (`className`) lays the chip out; it never redraws the mark.
+ *
+ * Cascade: right after desk.css, whose `.filter-chips` / `.filter-chip` rules these were. */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Inline, not flex: a label's own spaces ("◆ Watch · 3") must survive between its spans. */
+.filter-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-chip:hover {
+  color: var(--text);
+}
+.filter-chip[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.filter-chip-check {
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+}

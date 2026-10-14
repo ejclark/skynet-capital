@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { useId } from "react";
+import { FilterChip } from "../ui";
 
 /**
  * NARROWING AN ACCOUNT'S ACTIVITY (#4650, plan #4642) — a symbol box and, for the bot's owner, one
@@ -8,9 +9,8 @@ import { useId } from "react";
  * · `filter-query`, its label read by screen readers only) and the positions blotter's chip row with
  * "All" first. The page owns the URL; this only reports what was typed or pressed.
  *
- * A pressed chip says so with a ✓ in a fixed slot as well as its accent border — a shape, never the
- * hue alone (a standing reader is red/green colourblind; docs/BRAND.md → Accessibility). The slot
- * is always there, so pressing a chip never shifts the row.
+ * The chips are `FilterChip`, whose ✓ slot began here: a pressed chip says so by a shape, never the
+ * hue alone (a standing reader is red/green colourblind; docs/BRAND.md → Accessibility).
  */
 export function ActivityFilterBar({
   symbol,
@@ -56,39 +56,20 @@ export function ActivityFilterBar({
           <span id={labelId} className="filter-chips-label">
             Playbook
           </span>
-          <Chip pressed={playbook === undefined} onPress={() => onPlaybook(undefined)}>
+          <FilterChip pressed={playbook === undefined} onPress={() => onPlaybook(undefined)}>
             All
-          </Chip>
+          </FilterChip>
           {chips.map((id) => (
-            <Chip
+            <FilterChip
               key={id}
               pressed={playbook === id}
               onPress={() => onPlaybook(playbook === id ? undefined : id)}
             >
               {id}
-            </Chip>
+            </FilterChip>
           ))}
         </fieldset>
       ) : null}
     </div>
-  );
-}
-
-function Chip({
-  pressed,
-  onPress,
-  children,
-}: {
-  readonly pressed: boolean;
-  readonly onPress: () => void;
-  readonly children: ReactNode;
-}): ReactElement {
-  return (
-    <button type="button" className="filter-chip" aria-pressed={pressed} onClick={onPress}>
-      <span className="filter-chip-check" aria-hidden="true">
-        {pressed ? "✓" : ""}
-      </span>
-      {children}
-    </button>
   );
 }

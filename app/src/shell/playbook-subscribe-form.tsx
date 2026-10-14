@@ -10,7 +10,7 @@ import {
   type SubscriptionWriteResult,
   subscribeRequest,
 } from "../live/playbook-store";
-import { InlineResult } from "../ui";
+import { FilterChip, InlineResult } from "../ui";
 import { ConvictionFields, convictionOf } from "./playbook-conviction";
 
 /**
@@ -73,15 +73,14 @@ function SymbolAim({
       <legend>Symbols — new entries only</legend>
       <div className="pb-symbols-chips">
         {basket.map((symbol) => (
-          <button
+          <FilterChip
             key={symbol}
-            type="button"
-            className="railctl num"
-            aria-pressed={picked.includes(symbol)}
-            onClick={() => onToggle(symbol)}
+            className="num"
+            pressed={picked.includes(symbol)}
+            onPress={() => onToggle(symbol)}
           >
             {symbol}
-          </button>
+          </FilterChip>
         ))}
       </div>
       <p className="pb-symbols-hint">

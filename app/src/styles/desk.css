@@ -116,27 +116,6 @@
   color: var(--muted);
   pointer-events: none;
 }
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.filter-chip {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.filter-chip[aria-pressed="true"] {
-  background: var(--surface-2);
-  color: var(--accent);
-  border-color: var(--accent);
-}
 
 .blotter-card {
   background: var(--surface);

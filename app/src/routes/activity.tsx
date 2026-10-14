@@ -29,7 +29,7 @@ import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
 import { TradeRow } from "../shell/wire-trade-row";
-import { InlineResult } from "../ui";
+import { FilterChip, InlineResult } from "../ui";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
@@ -120,15 +120,13 @@ function WireControls({
     <>
       <p className="rail-label">{label}</p>
       {chips.map(([qualifier, text]) => (
-        <button
+        <FilterChip
           key={qualifier}
-          type="button"
-          className="railctl"
-          aria-pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
-          onClick={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
+          pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
+          onPress={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
         >
           {text}
-        </button>
+        </FilterChip>
       ))}
     </>
   );
