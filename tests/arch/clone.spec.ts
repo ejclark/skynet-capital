@@ -31,7 +31,10 @@ const FAKE_JSCPD = (writesReport: boolean) =>
   ].join("\n");
 
 /** Run the real scanner in a seeded fixture with a fake jscpd; return {status, out}. */
-function scanFixture(writesReport: boolean, budget?: number): { status: number; out: string } {
+function scanFixture(
+  writesReport: boolean,
+  budget?: Record<string, number>,
+): { status: number; out: string } {
   const root = mkdtempSync(join(tmpdir(), "clone-scan-fixture-"));
   try {
     writeFileSync(
@@ -43,7 +46,7 @@ function scanFixture(writesReport: boolean, budget?: number): { status: number; 
     writeFileSync(bin, FAKE_JSCPD(writesReport));
     chmodSync(bin, 0o755);
     if (budget !== undefined)
-      writeFileSync(join(root, "clone-budget.json"), JSON.stringify({ clones: budget }));
+      writeFileSync(join(root, "clone-budget.json"), JSON.stringify(budget));
     try {
       const out = execFileSync("node", [SCRIPT], { cwd: root, encoding: "utf8", stdio: "pipe" });
       return { status: 0, out };
@@ -60,9 +63,18 @@ function scanFixture(writesReport: boolean, budget?: number): { status: number; 
 // state, never a quiet pass.
 describe("clone-scan — missing inputs are named, never a quiet pass", () => {
   it("passes when jscpd reports and the budget holds (the fixture's control case)", () => {
-    const { status, out } = scanFixture(true, 0);
+    const { status, out } = scanFixture(true, { clones: 0, appClones: 0 });
     expect(status).toBe(0);
-    expect(out).toContain("✓ clones within budget (0 ≤ 0)");
+    expect(out).toContain("✓ src clones within budget (0 ≤ 0)");
+    expect(out).toContain("✓ app/src clones within budget (0 ≤ 0)");
+  });
+
+  it("exits 2 with UNKNOWN when the app/src key is missing (a root-only budget)", () => {
+    const { status, out } = scanFixture(true, { clones: 0 });
+    expect(status).toBe(2);
+    expect(out).toContain(
+      "appClones missing from clone-budget.json — app/src clone verdict UNKNOWN",
+    );
   });
 
   it("exits 2 with UNKNOWN when clone-budget.json is missing (was: infinite budget)", () => {
@@ -72,9 +84,9 @@ describe("clone-scan — missing inputs are named, never a quiet pass", () => {
   });
 
   it("exits 2 naming jscpd's own error when it wrote no report", () => {
-    const { status, out } = scanFixture(false, 0);
+    const { status, out } = scanFixture(false, { clones: 0, appClones: 0 });
     expect(status).toBe(2);
-    expect(out).toContain("jscpd wrote no report — clone count UNKNOWN");
+    expect(out).toContain("jscpd wrote no report (src) — clone count UNKNOWN");
     expect(out).toContain("cannot parse .jscpd.json");
   });
 });

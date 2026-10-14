@@ -4,7 +4,7 @@
 
 **Responsibility:** Detect-and-correct loops per quality dimension: each eye is a scan script plus a ratchet-down budget JSON plus a tests/arch spec (advisory for debt, blocking for contracts); drills are skills, athletes are agents dispatched by /governor
 
-**Code roots:** `scripts/*-scan.mjs` · `tests/arch/` · `tests/support/advisory-scan.ts` · `*-budget.json` · `arch-grandfather.json` · `biome.json` · `.husky/` · `commitlint.config.js` · `knip.json` · `.jscpd.json` · `.dependency-cruiser.cjs` · `.claude/skills/governor/SKILL.md`
+**Code roots:** `scripts/*-scan.mjs` · `tests/arch/` · `tests/support/advisory-scan.ts` · `*-budget.json` · `arch-grandfather.json` · `biome.json` · `.husky/` · `commitlint.config.js` · `knip.json` · `.jscpd.json` · `.jscpd.app.json` · `.dependency-cruiser.cjs` · `.claude/skills/governor/SKILL.md`
 
 **Entrypoints:** `npm run verify` · `npm test` · `npm run arch:scan / dupe:scan / dead:scan / spec:gap / incident:scan ...` · `.husky/pre-push`
 
@@ -37,7 +37,7 @@ C4Component
     Component(biome, "Lint and format", "biome.json, .husky/pre-commit", "Cognitive complexity is a warning; pre-commit auto-formats staged files")
     Component(commitlint, "Commit lint", "commitlint.config.js, .husky/commit-msg, scripts/commit-msg-reflow.mjs", "Conventional commits; CI lints the PR title only")
     Component(size, "Size coach", "scripts/arch-scan.mjs, scripts/code-lines.mjs, arch-grandfather.json", "300 code lines in src, 500 in tests, junk-drawer names; exceptions list, not a numbered budget; drill decompose, athlete decomposer")
-    Component(dupe, "Duplication and clone coach", "scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json", "dupe-budget.json and clone-budget.json; drill dedupe, athlete ui-librarian")
+    Component(dupe, "Duplication and clone coach", "scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json, .jscpd.app.json", "dupe-budget.json and clone-budget.json; drill dedupe, athlete ui-librarian")
     Component(dead, "Dead-code coach", "scripts/dead-scan.mjs, knip.json", "dead-budget.json; drill bury, athlete mortician")
     Component(depgraph, "Dep-graph coach", "scripts/dep-graph-scan.mjs, .dependency-cruiser.cjs", "no-circular and hexagonal layering rules; dep-graph-budget.json; no athlete")
     Component(specgap, "Spec-gap coach", "scripts/spec-gap-scan.mjs", "spec-gap-budget.json; drill backfill, athlete test-backfiller")
@@ -83,8 +83,8 @@ _Caption — components of Fitness gates and coaches, from the paths on each ele
 | **Lint and format** | `biome.json, .husky/pre-commit` | biome check . ; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files |
 | **Commit lint** | `commitlint.config.js, .husky/commit-msg, scripts/commit-msg-reflow.mjs` | Conventional Commits on every local commit; pipeline lints the PR title (the squash subject) via npx commitlint |
 | **Size coach** | `scripts/arch-scan.mjs, scripts/code-lines.mjs, arch-grandfather.json, tests/arch/god-file.spec.ts` | 300 code lines (src, app/src, scripts) / 500 (tests) and junk-drawer names; advisory; drill /decompose, athlete decomposer |
-| **Duplication and clone coach** | `scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json, dupe-budget.json, clone-budget.json` | Same symbol in N files (dupe) and jscpd token clones; advisory; drill /dedupe, athlete ui-librarian |
-| **Dead-code coach** | `scripts/dead-scan.mjs, knip.json, dead-budget.json` | knip-found unused files/exports/types; advisory; drill /bury, athlete mortician |
+| **Duplication and clone coach** | `scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json, .jscpd.app.json, dupe-budget.json, clone-budget.json` | Same symbol in N files (dupe) and jscpd token clones, root src and app/src on separate budgets; advisory; drill /dedupe, athlete ui-librarian |
+| **Dead-code coach** | `scripts/dead-scan.mjs, knip.json, dead-budget.json` | knip-found unused files/exports/types, root and the app workspace on separate budgets; advisory; drill /bury, athlete mortician |
 | **Dep-graph coach** | `scripts/dep-graph-scan.mjs, .dependency-cruiser.cjs, dep-graph-budget.json` | no-circular, no-orphans, domain-stays-pure, ports-depend-on-domain-only; advisory; no athlete yet |
 | **Spec-gap coach** | `scripts/spec-gap-scan.mjs, spec-gap-budget.json` | src files no spec imports; advisory; drill /backfill, athlete test-backfiller |
 | **Learning coach** | `scripts/incident-scan.mjs, incident-budget.json, tests/arch/lessons.spec.ts, docs/LESSONS.md` | Failed main runs with no LESSONS entry naming the sha; offline ledger integrity spec; drill /retro; also runs inside ship.sh open as a preflight |
