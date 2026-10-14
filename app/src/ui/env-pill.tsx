@@ -12,7 +12,7 @@ export const PAPER_WORD = "SIM";
  */
 export type EnvMode = "sim" | "live" | "observe";
 
-const WORD: Record<EnvMode, string> = { sim: PAPER_WORD, live: "LIVE", observe: "OBSERVE" };
+const MODE_WORD: Record<EnvMode, string> = { sim: PAPER_WORD, live: "LIVE", observe: "OBSERVE" };
 
 /**
  * Labels the trading mode (SIM, LIVE) in one neutral pill, so a mode never borrows a kind chip's colour.
@@ -25,5 +25,5 @@ const WORD: Record<EnvMode, string> = { sim: PAPER_WORD, live: "LIVE", observe: 
  *   that names the paper account in prose ("SIM account — simulated fill") stays text.
  */
 export function EnvPill({ mode = "sim" }: { readonly mode?: EnvMode }): ReactElement {
-  return <span className="env-pill">{WORD[mode]}</span>;
+  return <span className="env-pill">{MODE_WORD[mode]}</span>;
 }

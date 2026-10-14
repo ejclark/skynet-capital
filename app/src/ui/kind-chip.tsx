@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 export type AccountKind = "human" | "bot";
 
 /** The chip's word for each kind, one casing everywhere (the ~10-site majority, #5365). */
-const WORD: Record<AccountKind, { readonly one: string; readonly many: string }> = {
+const KIND_WORD: Record<AccountKind, { readonly one: string; readonly many: string }> = {
   human: { one: "HUMAN", many: "HUMANS" },
   bot: { one: "BOT", many: "BOTS" },
 };
@@ -36,7 +36,7 @@ export function KindChip({
   readonly className?: string;
 }): ReactElement {
   const tone = you ? "chip-you" : `chip-${kind}`;
-  const word = you ? "YOU" : WORD[kind][plural ? "many" : "one"];
+  const word = you ? "YOU" : KIND_WORD[kind][plural ? "many" : "one"];
   return (
     <span className={className ? `chip ${tone} ${className}` : `chip ${tone}`}>
       {word}
