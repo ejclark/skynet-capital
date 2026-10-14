@@ -11,7 +11,9 @@ import { answered, claudeWith, commentsWith, META, open, openWith } from "./stee
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-const LISTENING = /^● Claude is listening · since \d{1,2}:\d{2}/;
+// A stamp from before midnight carries its weekday (`clock`, page-client.js), so a run between
+// 00:00 and 06:00 sees "since Tue 11:57 PM" — the optional weekday keeps that from reading as red.
+const LISTENING = /^● Claude is listening · since (?:[A-Z][a-z]{2} )?\d{1,2}:\d{2}/;
 const LOST = "⊘ Claude isn't listening — say “watch my page” in its session";
 const ACK = "Claude got your Done, reading back…";
 const SENT = "Done — sent to Claude. The read-back shows here when it's posted.";
