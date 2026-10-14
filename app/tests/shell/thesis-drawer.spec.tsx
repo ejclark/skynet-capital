@@ -408,6 +408,7 @@ describe("ThesisDrawer", () => {
       sellMomentumAtMost: 0,
       windows: { momentum: 20, sentiment: 10 },
       researchBuild: false,
+      researchTrades: [] as number[],
     };
     const mark = (n: number, symbol: string, side: "buy" | "sell", over = {}) => ({
       n,
@@ -552,6 +553,24 @@ describe("ThesisDrawer", () => {
       await waitFor(() => expect(screen.getByText(/faster research build/)).toBeInTheDocument());
       expect(screen.queryByText("Waits")).not.toBeInTheDocument();
       expect(screen.getByText(/What protects this play/)).toBeInTheDocument();
+    });
+
+    it("leaves an older research-build trade off the line and out of the walk-through", async () => {
+      nextThesis = withPlay({
+        markers: [
+          mark(6, "NVDA", "buy", { sentiment: -0.82, momentum: 0.003 }),
+          mark(9, "AMD", "buy", { sentiment: 0.2, momentum: 0.01 }),
+          mark(10, "NVDA", "sell", { sentiment: 0.75, momentum: -0.001 }),
+        ],
+        play: { ...play, researchTrades: [9] },
+      });
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(screen.getByText(/Trade 9 came from the bot's/)).toBeInTheDocument(),
+      );
+      expect(screen.queryByLabelText(/Trade 9/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Bought: 6 NVDA$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Trade 6, NVDA:/)).toBeInTheDocument();
     });
 
     it("draws no play block when the payload carries none", async () => {

@@ -38,6 +38,7 @@ describe("thesisPlayView", () => {
       sellMomentumAtMost: 0,
       windows,
       researchBuild: false,
+      researchTrades: [],
     });
   });
 
@@ -81,5 +82,9 @@ describe("thesisPlayView", () => {
       windows,
     );
     expect(standard?.researchBuild).toBe(false);
+    // Back on the standard build, the older research trade is still listed, so it is never drawn
+    // on the standard line or walked through as a standard buy.
+    expect(standard?.researchTrades).toEqual([1]);
+    expect(research?.researchTrades).toEqual([2]);
   });
 });

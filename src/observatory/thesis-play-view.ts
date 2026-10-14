@@ -17,9 +17,9 @@ import type { ThesisMarker } from "./thesis-json-view.js";
  *
  * THE RESEARCH BUILD. Sauron's account can run a hardcore research build instead
  * (`sauron-hardcore.ts`: looser thresholds, a momentum scalp, half exits), switched in the bots
- * process where the dashboard cannot see it. Its trades carry `hc-` strategy tags, so when this
- * play's newest trade carries one, `researchBuild` says so and the tab states it in words rather
- * than drawing the standard line over trades the standard rules did not make.
+ * process where the dashboard cannot see it. Its trades carry `hc-` strategy tags: each one is
+ * listed in `researchTrades`, so the tab never draws or walks it as a standard trade, and when the
+ * play's newest trade is one, `researchBuild` says the standard line is not the rule running now.
  */
 
 export interface ThesisPlay {
@@ -39,6 +39,9 @@ export interface ThesisPlay {
   readonly windows?: SignalWindows;
   /** This play's newest recorded trade came from the research build, whose rules differ. */
   readonly researchBuild: boolean;
+  /** Every one of this play's trades (`ThesisMarker.n`) the research build placed — never drawn on
+   *  the standard line or walked through as a standard buy, whichever build placed the newest. */
+  readonly researchTrades: readonly number[];
 }
 
 interface DrawnRule {
@@ -61,14 +64,12 @@ const DRAWN_RULES: Readonly<Record<string, DrawnRule>> = {
   },
 };
 
-function newestStrategy(markers: readonly ThesisMarker[], playbookId: string): string | undefined {
-  for (let i = markers.length - 1; i >= 0; i--) {
-    const marker = markers[i];
-    if (marker?.playbookId === playbookId && marker.reasoning?.strategy) {
-      return marker.reasoning.strategy;
-    }
-  }
-  return undefined;
+/** This play's trades, oldest first, each with whether the research build placed it — known only
+ *  for a trade whose decision carries its strategy tag. */
+function playTrades(markers: readonly ThesisMarker[], playbookId: string, researchTag: string) {
+  return markers
+    .filter((m) => m.playbookId === playbookId)
+    .map((m) => ({ n: m.n, research: m.reasoning?.strategy?.startsWith(researchTag) }));
 }
 
 /**
@@ -91,11 +92,14 @@ export function thesisPlayView(
     .find((p) => p?.rulesOf === personaId);
   if (!playbook) return undefined;
   const { researchTag, ...lines } = rule;
+  const trades = playTrades(markers, playbook.id, researchTag);
+  const newestTagged = trades.filter((t) => t.research !== undefined).at(-1);
   return {
     playbookId: playbook.id,
     name: playbook.displayName ?? playbook.id,
     ...lines,
     ...(windows ? { windows } : {}),
-    researchBuild: newestStrategy(markers, playbook.id)?.startsWith(researchTag) ?? false,
+    researchBuild: newestTagged?.research ?? false,
+    researchTrades: trades.filter((t) => t.research).map((t) => t.n),
   };
 }

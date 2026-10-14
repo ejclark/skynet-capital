@@ -105,6 +105,7 @@ const thesis = {
       sellMomentumAtMost: 0,
       windows: { momentum: 20, sentiment: 10 },
       researchBuild: false,
+      researchTrades: [],
     },
   },
   // The safeguard ladder (#3194 slice 6a). Two plays so the frame shows the real spread of

@@ -251,7 +251,11 @@ export function ThesisPlayBlock({
   /** When the pass the safeguards were read from ran (`ladderAsOf`). */
   readonly asOf: string | undefined;
 }): ReactElement {
-  const marks = markers.filter((m) => m.playbookId === play.playbookId);
+  // The research build's trades were not made by this rule, so they are named, never drawn.
+  const research = new Set(play.researchTrades);
+  const ours = markers.filter((m) => m.playbookId === play.playbookId);
+  const marks = ours.filter((m) => !research.has(m.n));
+  const skipped = ours.filter((m) => research.has(m.n)).map((m) => m.n);
   return (
     <section className="thesis-play">
       <h3 className="thesis-play-name">{play.name}</h3>
@@ -263,6 +267,13 @@ export function ThesisPlayBlock({
       ) : (
         <>
           <RuleLine play={play} marks={marks} />
+          {skipped.length > 0 ? (
+            <p className="note">
+              {skipped.length === 1 ? "Trade" : "Trades"} {skipped.join(", ")} came from the bot's
+              faster research build, whose thresholds and exits differ, so{" "}
+              {skipped.length === 1 ? "it isn't" : "they aren't"} on this line.
+            </p>
+          ) : null}
           <p className="thesis-play-walk">{walkThrough(play, marks)}</p>
         </>
       )}

@@ -580,6 +580,8 @@ export interface ThesisPlay {
   readonly sellMomentumAtMost: number;
   readonly windows?: { readonly momentum: number; readonly sentiment: number };
   readonly researchBuild: boolean;
+  /** This play's trades the research build placed — never drawn on the standard line. */
+  readonly researchTrades: readonly number[];
 }
 
 export interface ThesisHealth {
