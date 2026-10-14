@@ -103,6 +103,11 @@ export function readIssue(
   exec?: (cmd: string, args: string[]) => string,
 ): Required<Pick<AdmissionIssue, "number" | "title" | "state" | "body" | "labels">> &
   AdmissionIssue;
+/** #5266: the pull rule again over a fresh read — a blocker linked after the payload; fails closed. */
+export function recheckPullable(
+  issue: AdmissionIssue,
+  read?: (n: number) => AdmissionIssue,
+): string | null;
 export interface AdmissionCliIO {
   readMode?: AdmissionDeps["readMode"];
   readInFlight?: () => AdmissionIssue[];

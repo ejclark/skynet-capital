@@ -326,7 +326,8 @@ lanes pick up the next slice without reading the thread. Pilot: #3955, five slic
   a one-line ask, the metadata table (Status · Parent `#N, slice k of n` · Size · As of), an EARS
   `Done when` line, and nothing else — the brief is the parent's (#4059 is the reference shape).
 - A child inherits the parent's `ready`; say so in its Status cell. A slice that waits on another
-  gets a native **blocked-by** link, not prose.
+  gets a native **blocked-by** link, not prose. `issues.mjs create --blocked-by` adds `ready` only
+  after the link lands, so no claim lane sees the slice unblocked for that one second (#5266).
 - **Only the last child closes the parent.** A slice PR writes `Closes #<child>` and `Part of
   #<parent>` — never the parent's number next to a closing keyword anywhere in the body, follow-ups
   included (#4179's "closes #3955" in a follow-up line closed the parent with a slice still open).

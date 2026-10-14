@@ -8,12 +8,14 @@ import {
   queueNote,
   readInFlight,
   readOpenPlans,
+  recheckPullable,
   startedPlanInputs,
   surfaceOf,
   waitingPlans,
 } from "../../../scripts/moneypenny/admission.mjs";
 import {
   type ClaimCtx,
+  claimFeedback,
   claimNext,
   peekNext,
   SWEEP_HELD_SKIPS,
@@ -358,6 +360,57 @@ describe("gateAdmission — the impure call, reads injected", () => {
     });
     expect(gateAdmission(me, deps)).toEqual({ admit: false, reason: "work-mode is halt" });
     expect(lines.some((l) => l.startsWith("::warning::could not post"))).toBe(true);
+  });
+});
+
+// #5266 — a `ready` label event carries the issue as it stood when the label landed. #5262 and
+// #5317 were filed `ready` and linked to their blocker a second later, so the payload said 0
+// blockers and the lane claimed both. The claim now asks the pull rule again on a fresh read.
+describe("recheckPullable — the fresh re-read before a claim (#5266)", () => {
+  const payloadRow = {
+    number: 5262,
+    state: "open",
+    labels: [{ name: "feedback" }, { name: "ready" }],
+    issue_dependencies_summary: { blocked_by: 0 },
+  };
+  const blockedRow = { ...payloadRow, issue_dependencies_summary: { blocked_by: 1 } };
+
+  it("refuses with the blocker reason when the fresh row has an open blocker", () => {
+    expect(recheckPullable(payloadRow, () => blockedRow)).toBe(
+      "#5262 is blocked by 1 open issue — it starts when they close",
+    );
+  });
+
+  it("passes when the fresh row agrees with the payload", () => {
+    expect(recheckPullable(payloadRow, () => payloadRow)).toBeNull();
+  });
+
+  it("fails closed when the issue cannot be re-read", () => {
+    const reason = recheckPullable(payloadRow, () => {
+      throw new Error("HTTP 502");
+    });
+    expect(reason).toBe("queued: #5262 could not be re-read — HTTP 502");
+  });
+
+  it("makes claimFeedback refuse a blocked issue whatever the event payload said", () => {
+    const reads: string[] = [];
+    const result = claimFeedback(
+      { payload: { action: "labeled", label: { name: "ready" }, issue: payloadRow } },
+      0,
+      "abc",
+      {
+        readIssue: () => blockedRow,
+        readMode: () => {
+          reads.push("mode");
+          return { ...mode("normal"), until: null, reason: "x" };
+        },
+      },
+    );
+    expect(result).toEqual({
+      claimed: false,
+      reason: "#5262 is blocked by 1 open issue — it starts when they close",
+    });
+    expect(reads).toEqual([]); // refused before the admission gate or the lease
   });
 });
 

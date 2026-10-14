@@ -10,7 +10,8 @@ import { issueNumberFromSlug } from "../../../scripts/moneypenny/labels.mjs";
 // module against a fake `gh` on PATH that records every call and answers only what the lease
 // needs: no lease yet (404), a tag object on stamp, success on everything else. No network.
 // Since #3960 the claims ask the admission gate first, so the fake also answers the work-mode dial
-// (`work-mode:$WORK_MODE` on #4153, normal by default), an empty in-flight list, and no comments.
+// (`work-mode:$WORK_MODE` on #4153, normal by default), an empty in-flight list, and no comments —
+// and, since #5266's fresh re-read, any one-issue read as a `ready` row with no blockers.
 
 let dir: string;
 let log: string;
@@ -29,6 +30,7 @@ beforeEach(() => {
       `  *git/tags*) echo '{"sha":"stamp"}' ;;`,
       `  *"issue view 4153 "*) echo "{\\"labels\\":[{\\"name\\":\\"work-mode:\${WORK_MODE:-normal}\\"}],\\"comments\\":[]}" ;;`,
       "  *labels=in-progress*) echo '[]' ;;",
+      `  *"api repos/{owner}/{repo}/issues/"[0-9]*) echo '{"number":1,"labels":[{"name":"ready"}]}' ;;`,
       `  *"--json comments"*) echo '{"comments":[]}' ;;`,
       "  *) echo '{}' ;;",
       "esac",

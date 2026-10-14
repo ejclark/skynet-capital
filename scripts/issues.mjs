@@ -189,11 +189,25 @@ export function scanIssues(state, keep, limit, { read, perPage = 100, maxPages =
 }
 
 /**
- * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
- * then close a slice that already shipped. Ids, not numbers — both endpoints take the issue's
- * database id. Pure so the order is specced: closing before linking would leave the bar short.
+ * Which of a filing's labels go on the POST and which wait for its links (#5266). `ready` is the
+ * claim lanes' trigger, and its label event carries the issue as it stood that instant — filed
+ * with `ready` and linked a second later, #5262 and #5317 were both claimed while blocked. So a
+ * filing with a parent or a blocker POSTs without `ready` and `followUps` adds it once linked.
  */
-export function followUps({ child, parentNumber, blockers = [], closed = false }) {
+export function splitLabels(labels = [], { parentNumber = 0, blockers = [] } = {}) {
+  const links = Boolean(parentNumber) || blockers.length > 0;
+  if (!(links && labels.includes("ready"))) return { initial: labels, afterLinks: [] };
+  return { initial: labels.filter((l) => l !== "ready"), afterLinks: ["ready"] };
+}
+
+/**
+ * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
+ * add the labels that waited for those links (`splitLabels`), then close a slice that already
+ * shipped. Ids, not numbers — both endpoints take the issue's database id. Pure so the order is
+ * specced: closing before linking would leave the bar short, labelling `ready` before linking
+ * would let a claim lane start a blocked build.
+ */
+export function followUps({ child, parentNumber, blockers = [], afterLinks = [], closed = false }) {
   const ops = [];
   if (parentNumber) {
     ops.push({
@@ -207,6 +221,14 @@ export function followUps({ child, parentNumber, blockers = [], closed = false }
       method: "POST",
       path: `issues/${child.number}/dependencies/blocked_by`,
       payload: { issue_id: b.id },
+    });
+  }
+  if (afterLinks.length) {
+    // POST adds to the label set; a PATCH `labels` would replace it.
+    ops.push({
+      method: "POST",
+      path: `issues/${child.number}/labels`,
+      payload: { labels: afterLinks },
     });
   }
   if (closed) {
@@ -294,17 +316,22 @@ function create({ flags }) {
     }
   }
   if (flags["dry-run"]) return console.log(`dry-run ok: would file "${title}" [${labels}]`);
-  const issue = ghWrite("POST", "issues", { title, body, labels });
+  // Blockers are read before the POST so a bad number refuses before anything is filed.
   const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  const parentNumber = Number(flags.parent) || 0;
+  const { initial, afterLinks } = splitLabels(labels, { parentNumber, blockers });
+  const issue = ghWrite("POST", "issues", { title, body, labels: initial });
   const ops = followUps({
     child: issue,
-    parentNumber: Number(flags.parent) || 0,
+    parentNumber,
     blockers,
+    afterLinks,
     closed: Boolean(flags.closed),
   });
-  let last = issue;
-  for (const op of ops) last = ghWrite(op.method, op.path, op.payload) ?? last;
-  console.log(`${row(flags.closed ? last : issue)}  ${issue.html_url}`);
+  for (const op of ops) ghWrite(op.method, op.path, op.payload);
+  // The POST's row predates the deferred label and the close, so print a fresh read when either ran.
+  const shown = afterLinks.length || flags.closed ? ghRest(`issues/${issue.number}`) : issue;
+  console.log(`${row(shown)}  ${issue.html_url}`);
 }
 
 function link({ positional }) {
