@@ -86,6 +86,11 @@ influence playbooks to consider, strategies to try, decisions to execute."*
   data points to make an informed decision; the fork erodes into a clear/linear path."*
 - **Wants freshness stated** (2026-09-25, on guidance): *"a sanity/pulse check against live
   information sources to ensure we're not acting on cached/stale information."*
+- **Attention: easily distracted** (2026-10-14): *"I feel I have A.D.H.D. and am easily distracted
+  thus will tend to prefer simple and elegant design that is free of distraction making it easier
+  to remain focused and on task."* A page that shows only the task's part keeps him on it; one that
+  shows everything invites feedback on what isn't in play (*"it's easy to spend time giving feedback
+  on things out of scope for the task at hand"*).
 - **Reads first:** the picture, the standing, what needs him. **Skips:** a wall of text, a menu of
   coined names (2026-09-25: *"another cute word you keep using that i've told you to stop because
   it's confusing"*), a mechanism he would have to arbitrate.

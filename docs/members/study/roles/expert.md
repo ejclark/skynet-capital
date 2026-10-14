@@ -27,7 +27,9 @@ Two checks run on every page, whatever else it shows (Eric, 2026-10-14, on round
 interactable elements to provide context to changes and/or to leave feedback cover content I need to
 evaluate"; and "between mobile and desktop… doubles the work to leave feedback"): **does any control,
 label or bar cover content the person came to read?** (H8, severity 3 when it hides a number or a
-label) and **does the same answer have to be given twice?** (H7, severity 2).
+label), **does the same answer have to be given twice?** (H7, severity 2), and **is anything on
+screen not part of this task?** (H8, severity 2 — a distraction costs an easily-distracted member
+the task; Eric, 2026-10-14: "simple and elegant design that is free of distraction").
 
 ## Step 4 — wasted steps (excise audit)
 
