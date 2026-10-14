@@ -164,7 +164,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "marked": "18.0.14",
+    "marked": "18.1.0",
     "three": "0.186.1"
   }
 }
