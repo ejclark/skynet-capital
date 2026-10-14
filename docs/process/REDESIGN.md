@@ -8,34 +8,44 @@ This is the loop a **redesign session** runs: one session per screen, started fr
 that screen, ending in a build filed in that screen's lane. You need no chat history to run it:
 this page, the screen's issue and the commands below are the whole contract. Plan: #5143.
 
-It runs in **two phases** (Eric, 2026-10-14: define the target area with the goal, assess it, and
-"iterate: identify problems/friction impeding achieving our goal… when we are done defining
-problems, goals and/or outcomes, proceed"): **define the problem** until he agrees the list, then
-**propose** shapes against that list. Problems whose root sits outside the screen are tagged
-*upstream* and banked where a later overhaul can find them, never patched as if they were local.
+It runs in **four stages** (Eric, 2026-10-14: "the feedback i provide feeds the next process to
+outline the proposals - problems to fix, outcomes to deliver… After that we need to walk the
+problem"):
+
+1. **Align** — his marks first, on clean frames, then the problems Claude found. His unprompted
+   read comes before any of ours, so ours can't anchor it.
+2. **Scope** — what alignment produces: the goal, the outcomes he'll check by eye and the ranked
+   problems, agreed once with "that's the list". The contract the rest is measured against.
+3. **Work the problem** — design rounds inside that scope, "only as many as needed, no more no
+   less": shapes per round sized by uncertainty, rounds only for outcomes still open.
+4. **Learn forward** — a retro before the session archives. Its findings feed the next session's
+   alignment, his reader profile, the personas and this page.
+
+Problems whose root sits outside the screen are tagged *upstream* and banked where a later overhaul
+can find them, never patched as if they were local.
 
 ```mermaid
 flowchart TD
-  subgraph P1["Phase 1 · Define the problem"]
-    A["a · Intake<br/>his notes, quoted on its issue"] --> B["b · Frame + goal<br/>what the screen is for, what<br/>'better' means; the IA call"]
-    B --> C["c · Assess today<br/>real shots; his words first;<br/>each problem tagged here · upstream"]
-    C --> R["Problem rounds<br/>goal + problems pinned;<br/>Fix first · Look closer · Not a problem"]
+  subgraph S1["1 · Align"]
+    A["a · Intake + b · goal + IA call<br/>c · assess today, upstream pass"] --> R["Round 0 · his pass on clean frames,<br/>then: Show what Claude found"]
     R -->|"keep defining"| R
   end
-  C -->|"upstream"| U["docs/IA.md §10<br/>the upstream ledger"]
-  R -->|"he says: that's the list"| L["Agreed goal +<br/>ranked problem list"]
-  subgraph P2["Phase 2 · Propose"]
-    D["d · Draw one section<br/>2–5 shapes, each naming<br/>the problem it solves"] --> E["e · Round page<br/>pinned notes, one pick, Done"]
-    E --> F{"f · Done, read back:<br/>did he pick Build?"}
-    F -->|"no: next variable,<br/>or the next problem"| D
+  C2["docs/IA.md §10<br/>the upstream ledger"]
+  A -->|"upstream"| C2
+  R -->|"he says: that's the list"| L["2 · Scope<br/>goal · outcomes · ranked problems"]
+  subgraph S3["3 · Work the problem"]
+    D["d · Draw for an open outcome<br/>1 shape to confirm · 2–3 for a fork · ≤5 to explore"] --> E["e · Round page<br/>outcome checklist, pins, one pick, Done"]
+    E --> F{"f · Done, read back:<br/>every outcome met?"}
+    F -->|"no"| D
   end
   L --> D
-  F -->|"yes"| G["File the build in the<br/>screen's lane, one at a time"]
-  F -.->|"only with a test world<br/>and #5099's control passed"| T["g · Simulated members"]
+  F -->|"yes: Build"| G["File the build in the<br/>screen's lane, one at a time"]
   G --> H["h · Bank each pattern,<br/>surprise and upstream row"]
+  H --> I["4 · Learn forward<br/>i · retro: trace + his inline notes"]
+  I -.->|"opening questions"| R
 ```
 
-_Caption — the loop, one screen per session; Eric touches only his notes, the round pages and Done._
+_Caption — the loop, one screen per session; Eric touches only his notes, the round pages and Done. The dotted line is the loop teaching itself._
 
 ## Before you start
 
@@ -86,10 +96,12 @@ node scripts/redesign/commons.mjs digest           # the curator's view: shared 
 
 ## The loop
 
-### Phase 1 · Define the problem — before any shape
+### 1 · Align — his read first, then the problems Claude found
 
 Nothing is drawn until he has agreed what is wrong and what better looks like. Shapes drawn before
-that answer a question nobody settled, and each round re-litigates it.
+that answer a question nobody settled, and each round re-litigates it. And his read comes before
+ours: a usability study opens with what the person notices unprompted, then probes (Eric,
+2026-10-14: "doesn't this create bias through the process out of the gate?").
 
 **a · Intake his notes, word for word.**
 - From the board (https://claude.ai/artifact/1Rrba8RtHyqLKq5FDuCccq): ArtifactComments `read` on
@@ -133,43 +145,75 @@ that answer a question nobody settled, and each round re-litigates it.
   names its root (a group, a joint, a missing entity, the shell, a shared component) and why the
   screen can't fix it; without both it is *here*, so the tag can't become a way to defer work.
   Upstream problems go on the ledger (§10) and on the problem rounds, marked as such, so he sees
-  what this screen can and can't solve. When the goal needs it, Phase 2 may still draw the best
+  what this screen can and can't solve. When the goal needs it, stage 3 may still draw the best
   in-area workaround, labelled on the frame "works around U<n>".
 
-**Problem rounds — every screen, until he says it's the list.** The session doesn't guess which
-section to draw. Round 0 pins the 3–5 problems that matter most for the goal on today's frame, one
-problem per option, with the goal in the question's `ask`, and he picks which to fix first:
-`node scripts/redesign/pin.mjs --frame <dir>/shots/<id>-phone.jpg --pins pins.json --out <dir>/r0/<key>-phone.jpg`
-(each pin is a number and a few words on the spot; `quote` and `tag` are optional; the
-script refuses text under 12px, low contrast, anything off the frame or badges closer than 8px,
-and names the pin). Each problem names the principle it breaks. Set `"kind": "problems"` on every
-round-0 question in the manifest (`lint.mjs` refuses round 0 without it): each problem then offers
-**Fix this first · Look closer · Not a problem**, its words read "The problem:", and the intro says
-a pick chooses what the next round draws. The read-back files nothing for it — it quotes his pick,
-marks and notes on the issue and prints `nextRound`, the instruction the next round is drawn from.
+**Round 0 — one page, two stages, one frame.** The session doesn't guess which section to draw,
+and doesn't lead with its own list.
+- **Stage 1 · his pass.** The question opens on today's frames, clean, with nothing of ours drawn
+  on them (`"opening": true` on the round-0 question). He taps any spot and marks it **like · don't
+  like · would change**, with a note if he wants one. The page keeps where each mark sits and
+  whether it came before he saw our list. Ask the **opening questions** (below) in the question's
+  `ask`, with the goal from step b as a draft for him to correct.
+- **Stage 2 · what Claude found.** Behind a "Show what Claude found" button: the 3–5 problems that
+  matter most for the goal, **all pinned on one Today frame** — never one copy of the screenshot per
+  problem (Eric, 2026-10-14: "I'm redundantly navigating the same screenshots"). Each pin is
+  answered on the pin (👍 Fix it · 👎 Leave as is · ☯︎ Partly, with a note); each problem's row
+  points at its pin (`"pin": <n>`, no pictures of its own) and carries only **Fix this first**.
+  Draw the pins with
+  `node scripts/redesign/pin.mjs --frame <dir>/shots/<id>-phone.jpg --pins pins.json --out <dir>/r0/today-pinned-phone.jpg`
+  (each pin a number and a few words on the spot; the script refuses text under 12px, low
+  contrast, anything off the frame or badges closer than 8px, and names the pin). Each problem names
+  the principle it breaks. Set `"kind": "problems"` on the round-0 question (`lint.mjs` refuses
+  round 0 without it).
+- **Reading it back.** The read-back files nothing for round 0: it quotes his marks (and which came
+  before the reveal), his pin answers and notes, and his pick on the issue, and prints `nextRound`,
+  the instruction the next round is drawn from. **His marks rank first**: a mark that names
+  something our list missed becomes a problem; a mark that contradicts one of ours wins.
 - **Loop until it's the list.** Look closer → draw that problem closer (its parts, its cause); Not
   a problem → drop it; his notes add the problems he sees. Each round's intro carries the current
   list, ranked, and says: "when this is the list, say *that's the list* — in a pinned comment or in
-  this session." That phrase ends Phase 1; until he says it, the next round is another problem
+  this session." That phrase ends stage 1 and sets the scope; until he says it, the next round is another problem
   round, never a shape.
 - **Upstream problems on the page:** start the option's name with "Upstream:" and say the root and
   the ledger row in its `delta` ("Upstream: the section switch is one shell part every screen
   shares — U3"). He ranks them like any other; a pick tells you whether the goal needs a workaround.
-- **Fast path:** when his notes already name the problems, round 0 is the list drafted from his
-  words, each quoted on its pin; one round where he says "that's the list" or corrects it.
-- **At the end of Phase 1,** write the agreed goal and the ranked list into the state block —
-  numbered P1, P2…, each tagged here or upstream — and post it on the issue quoting his words. That
-  list is what Phase 2 is measured against.
+- **Fast path:** when his notes already name the problems (a board-started session), they arrive
+  as marks he has already made: stage 1 shows them in place for him to add to, and stage 2 is the
+  list drafted from his words. Often one round, ending in "that's the list".
 
-### Phase 2 · Propose — shapes against the agreed list
+### 2 · Scope — the agreed proposal
 
-**d · Draw one section, 2–5 shapes.**
-- Pick **one** section for this sitting: the one holding the highest-ranked unsolved problem on the
-  agreed list. Say which problem, in one line.
-- Draw 2–5 named shapes (`docs/PATTERNS.md` → *the 3–5 shapes rule*; each names its pattern row,
-  and a new pattern gets a row in step h). **Every shape changes one thing, on the same data.** The
-  round names that one variable; the next round names the next one. **Every shape names the
-  problem(s) it solves** in its `delta` ("solves P2"); a shape that solves none isn't drawn.
+When he says "that's the list", write **the scope** into the state block and post it on the issue,
+quoting his words. It is what the rest of the session is measured against:
+- **the goal**, as he corrected it;
+- **the outcomes**, O1, O2…, each a thing he can check by eye on a frame ("the order line is on the
+  first screen at 390"), each open until a shape meets it;
+- **the problems**, P1, P2…, ranked, each tagged here or upstream, each naming the outcome it
+  blocks.
+
+A note in a later round that reveals a new problem or outcome is added to the scope (ranked where he
+put it) and said in the read-back; it never reopens stage 1.
+
+### 3 · Work the problem — design rounds sized by the scope
+
+"Once we decide on a proposal, we know the scope of the problem and outcome and just have to work
+the problem… only as many as needed, no more no less" (Eric, 2026-10-14).
+
+**d · Draw for an open outcome — as many shapes as the uncertainty needs.**
+- **A round exists only for an outcome still open.** Pick **one** section for this sitting: the one
+  holding the highest-ranked open problem. Say which outcome and problem, in one line. When every
+  outcome is met, there is no round to draw: file the build.
+- **Shapes per round follow the uncertainty**, and the round's `ask` says why it has that many:
+  **1 shape beside today** when one direction is clearly right (his notes converge; he is
+  confirming, not choosing) · **2–3** for a real fork · **up to 5** to explore an open taste call
+  (`docs/PATTERNS.md` → *the 3–5 shapes rule* is for that case). Each shape names its pattern row; a
+  new pattern gets a row in step h. **Every shape changes one thing, on the same data.** The round
+  names that one variable; the next round names the next one.
+- **Every shape names the outcomes it serves** — `"serves": ["O2"]` on the option, and in its
+  `delta` the problem it solves ("solves P2"). A shape that serves none isn't drawn. The question
+  carries the scope (`"scope": { "goal", "outcomes": [{ "id", "text", "met" }] }`) so the page shows
+  the outcome checklist above the shapes, ticked as rounds meet them.
 - **Phone and desktop answer once.** When the desktop frame is the phone layout with more room and
   nothing moved, leave `desk` out of the option and say "desktop: same layout, wider" in its
   `delta`; pin each element once, on the phone frame. Draw a desktop frame only where the layout
@@ -228,6 +272,11 @@ npm run steer:build -- <dir>/tp.json
   watches the page; if it doesn't, watch it with ArtifactComments. Then stamp `tp/<id>` with
   `listening` so the page's bar says you're listening (steer skill step 5); on a watch-lost
   notice, stamp `listening.lost` and ask him to say "watch my page" (step 6).
+- **Every round page carries "✎ Note about this page"** in its bar. He taps it, then the spot that
+  bugged him (the intro, a button, a pin, the reveal), and writes a line. Marks on a frame are
+  design feedback; notes on the page are process feedback, given at the moment of friction (Eric,
+  2026-10-14: "if i have an issue, I have the ability to organically provide feedback inline"). The
+  read-back hands each one back as a process line; step f routes it.
 - Give him the link in one line, put it in the state block, and stop. No polling.
 - **Every summary ends with the round page's link.** Any chat summary or status reply about a
   round, now or later, ends with that page as a named link, e.g.
@@ -248,7 +297,7 @@ npm run steer:build -- <dir>/tp.json
   pinned note is honoured on the spot it named. Next variable in the same section, or the section
   holding the next unsolved problem once this one is settled. Back to d. A note that reveals a new
   problem goes on the agreed list (ranked where he put it, tagged here or upstream) — say so in the
-  read-back rather than reopening Phase 1.
+  read-back rather than reopening stage 1.
 - **His pin reactions** come back as a *Per pin* list on the issue, each pin's label word for
   word, and as `nextRound` instructions: 👍 keep as drawn · 👎 replace with a new direction ·
   ☯︎ draw a closer look (variants of just that element). Round 0: fix it → draw it next round · leave
@@ -277,9 +326,38 @@ line and go on. Never hold a build for a test that cannot run.
 - Each surprise in the process: a slip goes to `docs/LESSONS.md` through `/retro`; anything smaller
   goes on the screen's issue. Change this page in the same PR when the loop itself was wrong.
 - Each upstream problem the session found has its line in `docs/IA.md` §10 (same docs PR).
-- The session is done when every problem on the agreed list is solved (a build filed), deferred or
-  dropped by him; the rows are banked; and the state block says so. An upstream problem is done for
-  this screen once its ledger row names the screen.
+- The screen is done when every outcome in the scope is met (a build filed) or deferred or
+  dropped by him, and every problem is solved, deferred or dropped; the rows are banked; and the
+  state block says so. An upstream problem is done for this screen once its ledger row names the
+  screen. The session is done once step i has run too.
+
+### 4 · Learn forward — the retro before archiving
+
+"A retro activity before archiving the session could also provide a self healing mechanic… Odds are
+likely that better context could have been provided, superior questions asked/answered upfront to
+reduce the required iterations" (Eric, 2026-10-14). It always runs, and asks him nothing: his side
+of it is the page notes, pin notes and marks he already left along the way.
+
+**i · Run the retro, then route what it found.** On a finished screen, and on a stalled one (5 or
+more rounds with no build):
+- **Trace.** List each round: what it drew, his pick, and the note that changed direction. For each
+  turn, ask: *could an opening question have surfaced this before round 1?* If yes, that question
+  goes into the bank (below). Ask too whether a rule of the loop cost rounds (for example, one change
+  per round where two independent changes could have shared a page) and say so with the rounds it
+  cost.
+- **Route every note he left** into the layer it teaches, in one docs PR:
+
+  | The note says something about… | It lands in |
+  |---|---|
+  | how the loop runs | a dated line in *Process changes* (through the curator), and the opening questions bank |
+  | how he reads, decides and wants to be asked | a dated corrections row in `docs/READERS.md` |
+  | what he wants from the app as a member | `docs/members/eric.md`, quoted and dated |
+  | a friction any member would hit | the other personas (`docs/members/*.md`) and the study roles' checks (`docs/members/study/roles/expert.md`) |
+  | the screen itself | the screen's issue and its scope |
+
+- **Write the ledger row** (below): rounds to the scope, rounds to a build, notes that arrived after
+  round 0 and what changed because of them.
+- Post the retro on the screen's issue (headed "Retro"), then archive per CLAUDE.md.
 
 ## His standing rules — the critic pass checks every frame against these
 
@@ -296,6 +374,9 @@ line and go on. Never hold a build for a test that cannot run.
 | Answer once | A desktop frame that only widens the phone layout is left out ("desktop: same layout, wider"); each element is pinned once. |
 | No coined names | Say what a thing does ("the trade form's Guidance tab"), never a label invented this session. |
 | Domain honesty | Real tickers; the sold side of an option in words ("you sold the 180 call"); "illustrative values" wherever nothing computes the number. |
+| His read before ours | Round 0 opens on clean frames for his marks; our problems stay behind "Show what Claude found". |
+| One frame per round 0 | Every problem is a pin on one Today frame; no copy of the screenshot per problem. |
+| As many as needed | 1 shape to confirm, 2–3 for a fork, up to 5 to explore; the `ask` says which, and every shape serves an open outcome. |
 | Comments lead, buttons follow | His pinned comments are the richest signal. The buttons are one pick: More of this on the one closest to right, Build this when it is ready to build (round 0: Fix this first, which builds nothing). |
 
 ## What this loop will not do
@@ -314,10 +395,11 @@ way: a commit on main plus a dated line in [*Process changes*](#process-changes)
 session reads after pulling main before its next round.
 
 **His inline channel** (Eric, 2026-10-11: improvements "inline that carry forward to the current
-and other parallel sessions"). When he types `process: …` in your chat, or pins a comment starting
-`process:` on your page:
+and other parallel sessions"). Three doors, one path: a note left with "✎ Note about this page"
+(the read-back lists it under *Notes about the page*, with the spot it was left on), `process: …`
+typed in your chat, or a comment starting `process:` pinned on your page. For each:
 - run `node scripts/redesign/commons.mjs add --kind process --what "<his words, whole>"`
-  (`--screen` optional);
+  (`--screen` optional; `--where "<the spot>"` for a page note);
 - send ONE message to the curator, quoting his words: the session the commons page names as
   curator (today **Profile REDESIGN**);
 - tell him "banked for all sessions", and go on. Don't change the loop in your own session.
@@ -347,12 +429,42 @@ https://claude.ai/artifact/1Rrba8RtHyqLKq5FDuCccq, `files` from `files.json`,
 `capabilities: { comments: {} }`. Each Start press arrives as a comment, "Start redesign: <id>
 (<route>)": open one redesign session for that screen with his notes pinned on it.
 
+## Opening questions — the bank round 0 asks from
+
+Questions a retro found would have saved rounds had they been asked before round 1. Round 0's `ask`
+carries the ones that fit the screen; his answers become marks, goal and outcomes. Each line names
+the retro (or the digest) that earned it. Newest first.
+
+- What do you open this screen to decide, and what do you do right after? (the job, and what it
+  hands to the next screen) — #5143 digest, 2026-10-11: 16 IA moves from 10 screens re-homed
+  sections by the job they serve.
+- Which numbers here do you trust, and which do you check somewhere else first? — #5143 digest,
+  2026-10-11: a return, return windows, booked P&L and a drawdown read as misleading on four
+  screens (leaderboard, profile-overview, activity, member-pulse).
+- What on this screen do you never look at? — #5143 digest, 2026-10-11: the council form,
+  Safeguards, the coverage footer and the locked Subscribe box were each proposed to move off the
+  screen they sat on.
+- Is anything here the same as on another screen, under another name? — #5143 digest,
+  2026-10-11: one history in three places, two "Activity" labels.
+- At phone width, what must be on the first screen? — the mobile-first rule (CLAUDE.md), asked
+  rather than assumed.
+
+## Learn-forward ledger — is the loop getting faster?
+
+One row per finished (or stalled) screen, written by its retro (step i). The bet: rounds to a build
+fall as the bank, his reader profile and the personas grow. It's wrong if, by 2026-11-14, the next
+five screens average as many rounds to a build as the sessions before this ledger did.
+
+| Screen (issue) | Finished | Rounds to the scope | Rounds to a build | Notes after round 0 | What the retro changed |
+|---|---|---|---|---|---|
+
 ## Process changes
 
 Newest first. This is how a change to the loop reaches the sessions already running it: pull main
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
+- 2026-10-14 · **Four stages — align, scope, work the problem, learn forward — and his read before ours** (Eric: "doesn't this create bias through the process out of the gate?"; "I'm redundantly navigating the same screenshots"; "only as many as needed, no more no less"; "if i have an issue, I have the ability to organically provide feedback inline"). From your next round: **round 0** opens on clean frames for his marks (`"opening": true`), with your problems behind "Show what Claude found", all pinned on **one** Today frame (options carry `"pin": <n>`, no pictures). Write the **scope** (goal, outcomes O1…, problems P1…) when he says "that's the list". Design rounds carry `scope` and each option `serves` an open outcome; draw **1 shape to confirm, 2–3 for a fork, up to 5 to explore**, and say which in the `ask`. Route his **page notes** (the read-back's *Notes about the page*) like `process:` notes. Before archiving, run **step i, the retro**, and write your row in the *Learn-forward ledger*. **Already past round 0?** Don't redo it: put the scope in your state block from his words so far and carry `scope` from your next round. **The kit for marks, the reveal, one-frame problems, page notes and the scope checklist** lands in its own PR; until its line appears here, draw round 0 as before (one picture per problem), and put the scope's outcomes in the `ask`.
 - 2026-10-14 · **Two phases: define the problem, then propose — and look past the screen's edges** (Eric: "define the target area with the objective and/or goal… iterate: identify problems/friction impeding achieving our goal… when we are done defining problems, goals and/or outcomes, proceed"; and "the plan assumes the changes are nested within the target area. This creates a blind spot when IA has upstream inefficiencies, which is often"). Step b now writes **the goal** (one to three outcomes he can check by eye); step c adds **the upstream pass** — each problem tagged *here* or *upstream*, upstream ones named by root and banked in the new ledger, `docs/IA.md` §10 (seeded with six roots from the 2026-10-11 digest; U1–U3 are already cited by 3+ screens). Problem rounds now run on **every** screen and loop until he says "that's the list"; only then does d draw, and every shape names the problem it solves. **If your session is already past round 0:** don't restart. Before your next round, write the goal and the ranked list (P1, P2…, each tagged) from his words so far into the state block, and make the next round page's first question that list as a problem round, its intro asking "is this the list?"; his "that's the list" — or his corrections — and you're back in Phase 2. Add any upstream problem you've already met to §10 in your next docs PR.
 - 2026-10-14 · **Answer once: leave out a desktop frame that only widens the phone layout** (Eric: "between mobile and desktop there was a significant amount in overlap on feedback mechanisms.. often times template/structures didn't fundamentally change thus doubles the work to leave feedback"). From your next round: no `desk` on an option whose desktop frame moves nothing — say "desktop: same layout, wider" in its `delta` — and pin each element once, on the phone frame. And the round page now shows frames at their real size (Eric: "the size of the screenshots, text instructions is extremely small"): a phone frame at 390px, not 240, and the desktop frame on its own row across the card — about 73% of real size at 1024px wide, up from 26%. Republish your page on your next round to pick it up; nothing in the manifest changes.
 - 2026-10-13 · **Stamp the round page so its bar shows whether you're listening** (Eric: "is there a way to get a more responsive 'reconnected to session' feedback?"). The page now reads three fields you write on `tp/<round id>` with ArtifactData `update` (steer skill, steps 5–6). After each publish, and after the re-watch his "watch my page" asks for: `{ listening: { at: <now>, by: "session", lost: false } }` — the bar reads "● Claude is listening · since <time>" (`lost: false` matters: `update` merges, so it clears an earlier lost stamp). On a watch-lost notice: `{ listening: { lost: true, at: <now> } }` first — the bar says at once "⊘ Claude isn't listening — say “watch my page” in its session" — then tell Eric in one line to say "watch my page", ending with the page link. On a Done trigger, comment or chat: `{ ackAt: <now> }` before the read-back — the bar says "Claude got your Done, reading back…". If `tp/<round id>` doesn't exist yet, `set` `{ id, listening }` instead; never `set` over one that does. A stamp over 6 hours old shows nothing, and the five-minute no-reply line still covers that case.

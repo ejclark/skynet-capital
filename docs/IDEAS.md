@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Align → scope as a general type, beyond redesign.** The redesign loop's front half (his
+  unprompted marks first, then ours revealed; the agreed goal · outcomes · problems as the scope;
+  the work sized by that scope; a retro routing his notes to process, reader profile and personas)
+  fits research briefs and plan issues too. Build it as an anatomy like
+  `docs/process/LEARNING-LOOP.md` when a second domain asks for it, not from one example.
+  _(src: Eric · while: redesign loop v3, 2026-10-14: "we should have enough ideas on our iterative
+  structure that we can recognize opportunities to build additional process / structure")_
 - **A redesign shoot leaves the 3D scene built, and local e2e then times out under it.**
   `scripts/redesign/shoot.mjs` builds `public/three/scene.js` (ignored) when missing; after that,
   `ship open`'s local `test:e2e` renders the tower beside the Profile Overview under software GL

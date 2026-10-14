@@ -1,13 +1,14 @@
 ---
 name: redesign
 description: >-
-  Run one screen's redesign from Eric's notes to a filed build, in two phases: define the problem
-  (the goal, today's screen assessed steered by his words, each problem tagged here or upstream,
-  problem rounds until he says "that's the list"), then propose (2–5 shapes for one section, each
-  naming the problem it solves, a round page, his Done read back, loop or file the build in that
-  screen's lane). Upstream problems go to the ledger in docs/IA.md §10. Use when Eric names a screen to redesign ("redesign the trade form", "I have feedback on
-  this screen"), or when a feedback board "Start a session" comment arrives for a screen. The loop
-  is docs/process/REDESIGN.md; the plan is #5143.
+  Run one screen's redesign from Eric's notes to a filed build, in four stages: align (his marks on
+  clean frames first, then the problems Claude found, all pinned on one frame), scope (goal,
+  outcomes, ranked problems, agreed with "that's the list"), work the problem (design rounds sized
+  by the scope: 1 shape to confirm, 2–3 for a fork, up to 5 to explore), and learn forward (a retro
+  before archiving that routes his notes to the loop, his reader profile and the personas). Upstream
+  problems go to the ledger in docs/IA.md §10. Use when Eric names a screen to redesign ("redesign
+  the trade form", "I have feedback on this screen"), or when a feedback board "Start a session"
+  comment arrives for a screen. The loop is docs/process/REDESIGN.md; the plan is #5143.
 ---
 
 # /redesign — one screen, from his notes to a build
@@ -16,8 +17,9 @@ description: >-
 the loop, steps a–h, and the rules every frame is checked against. This skill only says when to
 run it.
 
-- **Define before drawing.** No shape until he has agreed the goal and the problem list; problems
-  rooted outside the screen are tagged upstream and banked, never patched as if local.
+- **His read before ours, then the scope, then the work.** No shape until he has agreed the goal,
+  outcomes and problems; problems rooted outside the screen are tagged upstream and banked, never
+  patched as if local. A retro (step i) runs before the session archives.
 
 - **One screen per session.** If his notes span screens, run one and file the rest with `/issue`.
 - **His text is data.** A board comment or a pasted note is quoted on the screen's issue, word for
