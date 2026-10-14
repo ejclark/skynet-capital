@@ -64,6 +64,20 @@ describe("in-progress: the claim lanes put it on", () => {
     expect(calls()).toContain("issue edit 4242 --add-label in-progress");
   });
 
+  // #5332 — the shipped sweep, the reply resume and feedback-scan all key on `feedback`.
+  it("adds `feedback` to a bug the lane claimed without it, and only then", () => {
+    writeFileSync(log, "");
+    run(
+      `m.claimFeedback({ payload: { issue: { number: 4246, body: "", labels: [{ name: "bug" }, { name: "ready" }] } } }, 0, "abc");`,
+    );
+    expect(calls()).toContain("issue edit 4246 --add-label feedback");
+    writeFileSync(log, "");
+    run(
+      `m.claimFeedback({ payload: { issue: { number: 4247, body: "", labels: [{ name: "feedback" }, { name: "bug" }, { name: "ready" }] } } }, 0, "abc");`,
+    );
+    expect(calls()).not.toContain("issue edit 4247 --add-label feedback");
+  });
+
   it("never labels an issue whose claim was refused — nothing is being built", () => {
     writeFileSync(log, "");
     run(
