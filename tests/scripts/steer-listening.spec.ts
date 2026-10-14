@@ -11,7 +11,9 @@ import { answered, claudeWith, commentsWith, META, open, openWith } from "./stee
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-const LISTENING = /^● Claude is listening · since \d{1,2}:\d{2}/;
+// A stamp from before local midnight carries its weekday ("since Tue 11:55 PM"), so a run just
+// after midnight must accept one — the suite failed every build in the first hours of a UTC day.
+const LISTENING = /^● Claude is listening · since (?:[A-Z][a-z]{2} )?\d{1,2}:\d{2}/;
 const LOST = "⊘ Claude isn't listening — say “watch my page” in its session";
 const ACK = "Claude got your Done, reading back…";
 const SENT = "Done — sent to Claude. The read-back shows here when it's posted.";

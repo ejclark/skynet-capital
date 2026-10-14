@@ -6,6 +6,7 @@ import {
   instrumentWords,
   orderBet,
   orderDayKey,
+  orderStamp,
   orderTime,
   sideWord,
   signedDollars,
@@ -195,5 +196,12 @@ describe("the day header", () => {
   it("gives the time of day in New York time, saying so — and none for a report", () => {
     expect(orderTime(order({ at: "2026-10-06T14:31:00Z" }))).toBe("10:31 AM ET");
     expect(orderTime({ at: "2026-11-06T23:59:59.999Z", lifecycle: "OPEXP" })).toBeUndefined();
+  });
+
+  it("stamps an order with its New York day and time — one string for every width (#5164)", () => {
+    expect(orderStamp(order({ at: "2026-10-06T14:31:00Z" }), NOW)).toBe("Tue Oct 6 · 10:31 AM ET");
+    // Late evening in New York is already tomorrow in UTC: the day is New York's, like the time.
+    expect(orderStamp(order({ at: "2026-10-07T01:15:00Z" }), NOW)).toBe("Tue Oct 6 · 9:15 PM ET");
+    expect(orderStamp({ at: "2026-11-06T23:59:59.999Z", lifecycle: "OPEXP" }, NOW)).toBeUndefined();
   });
 });

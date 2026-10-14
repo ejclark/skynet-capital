@@ -245,6 +245,17 @@ export function orderTime(event: Pick<DeskActivityEvent, "at" | "lifecycle">): s
   return `${time} ET`;
 }
 
+/** An order's day and time as one string — "Tue Oct 6 · 10:31 AM ET", the deep dive's own words —
+ *  so the desktop table and the phone card never print one fill at two times (#5164: the table
+ *  once read the browser's zone and named none). Undefined for a report, which has a day alone. */
+export function orderStamp(
+  event: Pick<DeskActivityEvent, "at" | "lifecycle">,
+  now: Date = new Date(),
+): string | undefined {
+  const time = orderTime(event);
+  return time ? `${dayWords(orderDayKey(event), now)} · ${time}` : undefined;
+}
+
 /** Rows grouped under their market day, in the order the days first appear (the ledger is newest
  *  first), each day's rows in the order given — one header a day even when a report's UTC day
  *  lands it among another day's orders. */
