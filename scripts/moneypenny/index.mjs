@@ -83,6 +83,7 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
   ensureLabel,
   ensureVocabulary,
+  inFeedbackLane,
   issueNumberFromSlug,
   LABELS,
   labelNames,
@@ -295,7 +296,8 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  * Triggered on the `ready` label now, not `feedback` (#3818 consolidation, 2026-09-28) — see
  * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
  * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
- * being present rather than trusting the workflow's cheap `if:` alone.
+ * being present rather than trusting the workflow's cheap `if:` alone — or `bug` (#5332,
+ * `inFeedbackLane`), which takes `feedback` on a win (`adoptFeedbackLabel`).
  *
  * #3960: also runs on an `unlabeled` event that clears the last parking label from a still-`ready`
  * issue (`feedbackReadyIntent`), and asks the admission gate (admission.mjs) before the lease — a
@@ -334,8 +336,26 @@ export function claimFeedback(
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
   // #3960: the board's In Progress column reads this label; the release path takes it back off.
   setInProgress(issue.number, true);
+  adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * A `bug` the lane claimed without `feedback` takes it here (#5332). The shipped sweep, the reply
+ * resume (`laneOf`) and `feedback-scan` all key on `feedback`, so one label write keeps every
+ * downstream reader unchanged — instead of each learning `bug` and the sweep paying a second
+ * GraphQL list per push. Best-effort like `setInProgress`: the lease already made the claim safe.
+ */
+function adoptFeedbackLabel(issue) {
+  if (labelNames(issue.labels).includes(LABELS.feedback.name)) return;
+  try {
+    sh("gh", ["issue", "edit", String(issue.number), "--add-label", LABELS.feedback.name]);
+  } catch (err) {
+    console.log(
+      `::warning::could not add \`${LABELS.feedback.name}\` to bug #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+  }
 }
 
 /**
@@ -662,11 +682,7 @@ export function peekNext(deps = {}) {
     continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
@@ -693,11 +709,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   } = deps;
   const mode = readMode();
   const inFlight = inFlightOf();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  let pool = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  let pool = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
   // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
   const { openPlans, waiting } = waitingOrSkip(readPlans);
@@ -761,6 +773,9 @@ function waitingOrSkip(readPlans) {
     return { openPlans: undefined, waiting: undefined };
   }
 }
+
+/** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */
+const inALane = (i) => labelNames(i.labels).includes(LABELS.plan.name) || inFeedbackLane(i);
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
