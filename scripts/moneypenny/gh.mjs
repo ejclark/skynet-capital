@@ -34,9 +34,14 @@ export function ensureGhToken({ run = sh } = {}) {
  * reporting this issue.` — GitHub's server-side fault, one red among ~40 green runs of the same
  * job that evening — and got exactly one attempt because nothing here said "5xx". Matched on
  * GitHub's fixed wording, which no 4xx or validation error uses.
+ *
+ * #5354: `ghRest` is curl, and curl says a 5xx in its own words — `curl: (22) The requested URL
+ * returned error: 500`. projects.mjs learned that for its one read (#4182, `CURL_SERVER_ERROR`),
+ * but every other `withRetry(() => ghRest…)` still got one attempt, and a `route` tick died on a
+ * single 500 from the relay's closed-issue read (run 38496303201, 2026-10-14). Only 5xx, as there.
  */
 const TRANSIENT_GH_ERROR =
-  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
+  /HTTP 5\d\d|returned error: 5\d\d\b|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
 
 export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 
