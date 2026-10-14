@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render as mount, screen } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
 import { orderStamp, orderTime } from "../../src/live/order-facts";
 import { ActivityTable } from "../../src/shell/activity-table";
@@ -39,6 +40,20 @@ rstest.mock("@tanstack/react-router", () => ({
     );
   },
 }));
+
+rstest.mock("../../src/live/quote", () => ({
+  fetchQuote: () => Promise.resolve({ last: 86.1 }),
+}));
+
+/** An opened row asks for the stock's quote (the price line's "now"), so it needs a client. */
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return mount(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
 
 const event = (over: Partial<DeskActivityEvent> = {}): DeskActivityEvent => ({
   orderId: "ord-1",
@@ -151,8 +166,9 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 });
 
-/** #4642 criterion 8 — a bot's option fill opens to the order in words, the dollars that moved and
- *  what would prove it wrong, beside the playbook its owner already sees. */
+/** #4642 criterion 8 gave a bot's option fill its order in words, its cost and what proves it wrong
+ *  here; #5262 (#5160 round 16) moved all three to Full detail. The row opens to the phone card's
+ *  view instead: the price line on the left, Placed by and Why on the right. */
 describe("ActivityTable — a bot's option fill", () => {
   const sold = event({
     symbol: "CRWV261106P00085000",
@@ -172,16 +188,21 @@ describe("ActivityTable — a bot's option fill", () => {
     },
   });
 
-  it("names the order, its cost, the playbook and what proves it wrong", () => {
-    render(<ActivityTable events={[sold]} />);
+  it("opens to the price line beside Placed by and Why, leaving the rest to Full detail", async () => {
+    const { container } = render(<ActivityTable events={[sold]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
-    expect(screen.getByText("SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10")).toBeInTheDocument();
-    expect(
-      screen.getByText("$205.00 received — 1 contract × 100 shares × $2.05"),
-    ).toBeInTheDocument();
+    const opened = container.querySelector(".row-why .oo");
+    expect(opened).toHaveClass("oo-wide");
+    expect(await screen.findByText("$86.10")).toBeInTheDocument();
+    const pivots = [...container.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
+    expect(pivots).toEqual(["Breakeven $82.95", "Strike $85", "now $86.10"]);
+    expect(container.querySelector(".pv-side-below")).toHaveTextContent("ITM · below $85");
     expect(screen.getByText("CRWV-WHEEL · standard")).toBeInTheDocument();
-    expect(screen.getByText("Proves it wrong")).toBeInTheDocument();
-    expect(screen.getByText("CRWV settles below $85 on 2026-11-06")).toBeInTheDocument();
+    const labels = [...container.querySelectorAll(".oo-table dt")].map((dt) => dt.textContent);
+    expect(labels).toEqual(["Placed by", "Why"]);
+    expect(screen.queryByText(/limit \$2\.10/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$205\.00 received/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Proves it wrong")).not.toBeInTheDocument();
   });
 
   it("draws none of the three on a share fill", () => {
@@ -307,9 +328,9 @@ describe("ActivityTable — a bot's spread and its legs", () => {
       screen.getByRole("button", { name: "Why NVDA $185/$200 CALL SPREAD · 13 NOV 26 was bought" }),
     );
     expect(screen.getByText("NVDA-CALL-SPREAD · standard")).toBeInTheDocument();
-    expect(
-      screen.getByText("NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints"),
-    ).toBeInTheDocument();
+    // A spread draws no price line (one strike can't describe it); its proof is Full detail's.
+    expect(container.querySelector(".pv")).toBeNull();
+    expect(screen.queryByText(/D-20→D-5/)).not.toBeInTheDocument();
     expect(nets()).toHaveLength(1);
   });
 

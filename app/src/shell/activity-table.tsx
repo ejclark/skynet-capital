@@ -1,17 +1,10 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import type {
-  ActivityReasoning,
-  DeskActivityEvent,
-  DeskActivityLeg,
-  DeskMissingLeg,
-} from "../live/desk";
+import type { DeskActivityEvent, DeskActivityLeg, DeskMissingLeg } from "../live/desk";
 import { lifecycleDayText } from "../live/lifecycle-day";
 import { orderStamp } from "../live/order-facts";
-import { landingFor } from "../live/playbook-landing";
-import { cycleAnchor } from "./cycle-anchor";
 import { targetedAnchor, useLandOnHash } from "./landing";
+import { OpenedOrder } from "./opened-order";
 
 /**
  * The activity ledger as a table (#738 — the Cockpit's Activity section). Replaces the old
@@ -29,12 +22,11 @@ import { targetedAnchor, useLandOnHash } from "./landing";
  * A bot's rows carry the decision that placed them (#3687 slice 4 — the Decisions tab folded into
  * its trades): a leading chevron opens it directly beneath the row, the blotter's inline row
  * accordion (docs/PATTERNS.md). Unlike the blotter's own fold column it never hides at wide
- * widths — the "why" is not overflow detail. Its "Playbook" row is the owner's alone (#885: "we do
- * not show what playbooks others are using"): the server withholds the key from anyone else, and
- * `showPlaybook={false}` on a page the viewer does not own keeps the row from ever drawing. A bot's
- * option fill adds the order in words, its dollar cost and what would prove it wrong (#4642
- * criterion 8): the row's Price is per share, so the cost is where the ×100 is shown. A bot's
- * spread is ONE row — the spread in words, its net cash once — with each leg's own fill beneath
+ * widths — the "why" is not overflow detail. Opened, it is the phone card's own view (#5262,
+ * `opened-order.tsx`): the price line on the left, Placed by and Why on the right. Its playbook is
+ * the owner's alone (#885: "we do not show what playbooks others are using"): the server withholds
+ * the key from anyone else, and `showPlaybook={false}` on a page the viewer does not own keeps it
+ * from ever drawing. A bot's spread is ONE row — the spread in words, its net cash once — with each leg's own fill beneath
  * it (#4650), because the broker reports a spread's fills one per leg.
  * @category trading
  */
@@ -99,159 +91,6 @@ export function ActivityTable({
         </table>
       </div>
     </div>
-  );
-}
-
-/** THE REST OF THE ROUND (#3961) — a fill is one decision out of a pass that usually weighed
- *  several: siblings it rejected or skipped, ideas the risk guards refused outright. The count
- *  rides here because it is the one number that says how much was weighed; the round itself stays
- *  one link away on Heartbeat rather than being copied into this row (`docs/IA.md` §8.1 — one home
- *  per fact, a joint renders as a row or a link). Both halves are absent for a fill whose decision
- *  predates the round being addressable, never faked. The link wears `door-link` — the house's
- *  "these words are the way in" style, accent AND underline, never the hue alone (docs/BRAND.md). */
-function RoundLine({
-  why,
-  deskId,
-}: {
-  readonly why: ActivityReasoning;
-  readonly deskId?: string;
-}): ReactElement | null {
-  const anchor = why.cycleAt ? cycleAnchor(why.cycleAt) : undefined;
-  const counted =
-    why.rawCount !== undefined && why.guardedCount !== undefined
-      ? `${why.rawCount} idea${why.rawCount === 1 ? "" : "s"} → ${why.guardedCount} past the guards`
-      : undefined;
-  if (!(counted || (anchor && deskId))) return null;
-  return (
-    <div className="why-round">
-      <dt>The round</dt>
-      <dd>
-        {counted}
-        {counted && anchor && deskId ? " · " : null}
-        {anchor && deskId ? (
-          <Link className="door-link" to="/u/$id/playbooks" params={{ id: deskId }} hash={anchor}>
-            the whole pass
-          </Link>
-        ) : null}
-      </dd>
-    </div>
-  );
-}
-
-/** THE PLAYBOOK, AS A WAY IN (#5073 slice 4a — #5037 round 2, R2-act). On one account's ledger the
- *  playbook that placed the order links to its card on Playbooks: that card arrives open, this
- *  order's mark ringed on its lane, with one way back to this row. A merged ledger (All accounts)
- *  has no account to send the reader to, so the name stays plain words, like the round's link. */
-function PlaybookLine({
-  why,
-  playbookId,
-  deskId,
-  orderId,
-}: {
-  readonly why: ActivityReasoning;
-  readonly playbookId: string;
-  readonly deskId?: string;
-  readonly orderId?: string;
-}): ReactElement {
-  const words = `${playbookId}${why.playbookMode ? ` · ${why.playbookMode}` : ""}`;
-  if (!(deskId && orderId)) return <dd>{words}</dd>;
-  const { card, mode, fill, from } = landingFor({ ...why, playbookId }, orderId);
-  return (
-    <dd>
-      <Link
-        className="door-link"
-        to="/accounts"
-        search={{ account: deskId, section: "playbooks", card, mode, fill, from }}
-        aria-label={`${words} — open its card on Playbooks`}
-      >
-        {words} ›
-      </Link>
-    </dd>
-  );
-}
-
-export function WhyDetail({
-  why,
-  showPlaybook,
-  deskId,
-  orderId,
-  costShown = false,
-}: {
-  readonly why: ActivityReasoning;
-  readonly showPlaybook: boolean;
-  readonly deskId?: string;
-  /** The order this why belongs to — its playbook link's way back lands on its row. */
-  readonly orderId?: string;
-  /** The row itself already says what the order cost (a spread's net) — said once, not twice. */
-  readonly costShown?: boolean;
-}): ReactElement {
-  return (
-    <dl className="more-grid why-grid">
-      <div>
-        <dt>Why</dt>
-        <dd>“{why.reason}”</dd>
-      </div>
-      <div>
-        <dt>Decided by</dt>
-        <dd>{why.personaId}</dd>
-      </div>
-      {showPlaybook && why.playbookId ? (
-        <div>
-          <dt>Playbook</dt>
-          <PlaybookLine
-            why={why}
-            playbookId={why.playbookId}
-            {...(deskId ? { deskId } : {})}
-            {...(orderId ? { orderId } : {})}
-          />
-        </div>
-      ) : null}
-      {why.contract ? (
-        <div>
-          <dt>Order</dt>
-          <dd className="num">{why.contract}</dd>
-        </div>
-      ) : null}
-      {why.cost && !costShown ? (
-        <div>
-          <dt>Cost</dt>
-          <dd className="num">{why.cost}</dd>
-        </div>
-      ) : null}
-      {/* Only on an order that never traded (the server's `brokerWordsFor`), and the owner's alone
-          like the playbook (#4650): a broker's message can name the account's specifics. */}
-      {showPlaybook && why.brokerReason ? (
-        <div>
-          <dt>Broker said</dt>
-          <dd>{why.brokerReason}</dd>
-        </div>
-      ) : null}
-      {why.strategy ? (
-        <div>
-          <dt>Strategy</dt>
-          <dd>{why.strategy}</dd>
-        </div>
-      ) : null}
-      {why.expectation ? (
-        <div>
-          <dt>Expected</dt>
-          <dd>{why.expectation}</dd>
-        </div>
-      ) : null}
-      {why.invalidator ? (
-        <div>
-          <dt>Proves it wrong</dt>
-          <dd>{why.invalidator}</dd>
-        </div>
-      ) : null}
-      {why.guardDelta ? (
-        <div>
-          <dt>Risk guards</dt>
-          <dd>{why.guardDelta}</dd>
-        </div>
-      ) : null}
-      <RoundLine why={why} {...(deskId ? { deskId } : {})} />
-    </dl>
   );
 }
 
@@ -384,18 +223,13 @@ function ActivityRow({
       {open && event.reasoning ? (
         <tr className="row-why">
           <td colSpan={9}>
-            <WhyDetail
-              why={event.reasoning}
+            <OpenedOrder
+              event={event}
               showPlaybook={showPlaybook}
-              costShown={event.net !== undefined}
-              orderId={event.orderId}
-              {...(deskId ? { deskId } : {})}
+              wide
+              deskId={deskId}
+              onDetail={onDetail}
             />
-            {onDetail && !event.lifecycle ? (
-              <button type="button" className="act-full" onClick={() => onDetail(event.orderId)}>
-                Full detail <span aria-hidden="true">›</span>
-              </button>
-            ) : null}
           </td>
         </tr>
       ) : null}
