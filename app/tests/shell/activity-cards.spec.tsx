@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render as mount, screen, within } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
 import { ActivityCards } from "../../src/shell/activity-cards";
 import { ActivityLedger } from "../../src/shell/activity-ledger";
@@ -11,6 +12,20 @@ import { ActivityLedger } from "../../src/shell/activity-ledger";
 rstest.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
 }));
+let quote: unknown = { last: 82.6 };
+rstest.mock("../../src/live/quote", () => ({
+  fetchQuote: () => Promise.resolve(quote),
+}));
+
+/** An opened card asks for the stock's quote (the price line's "now"), so it needs a client. */
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return mount(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
 
 const event = (over: Partial<DeskActivityEvent> = {}): DeskActivityEvent => ({
   orderId: "ord-1",
@@ -123,7 +138,10 @@ describe("ActivityCards — one card an order, under its day", () => {
     fireEvent.click(head);
     expect(head).toHaveAttribute("aria-expanded", "true");
     const body = card("put-1").querySelector(".act-card-body");
-    expect(body).toHaveTextContent("10:31 AM ET · filled at $2.55 a share · filled");
+    // The status is said once: the price already says it filled (#5262).
+    expect(body?.querySelector(".act-receipt")?.textContent).toBe(
+      "10:31 AM ET · filled at $2.55 a share",
+    );
     expect(body).toHaveTextContent(/the market under-estimates how far CRWV moves/);
     expect(body).toHaveTextContent("CRWV-WHEEL · aggressive");
   });
@@ -144,6 +162,105 @@ describe("ActivityCards — one card an order, under its day", () => {
     expect(report.querySelector(".act-bet")).toHaveTextContent("expired worthless");
     expect(report.querySelector(".act-cash")).toBeEmptyDOMElement();
     expect(report.querySelector(".bet-glyph")).toBeNull();
+  });
+});
+
+/** #5262 (#5160 round 16, "divider"): an opened order leads with its price line — the pivots on
+ *  top, the bar named Loss · Premium under it, the outcome at expiry split by the strike's line —
+ *  then Placed by, then Why. The order in words, its cost and what proves it wrong stay in Full
+ *  detail. */
+describe("ActivityCards — an opened order leads with its price line", () => {
+  const sold = {
+    ...wheel,
+    reasoning: {
+      ...(wheel.reasoning as NonNullable<DeskActivityEvent["reasoning"]>),
+      contract: "SELL 1 CRWV $80 PUT · 6 NOV 26 · limit $2.55",
+      cost: "$255.00 received — 1 contract × 100 shares × $2.55",
+      strategy: "the wheel",
+      expectation: "Below it, the bot buys 100 shares at $80.",
+      invalidator: "the play retires if its net P/L is below 0 on 2027-01-29",
+      rawCount: 3,
+      guardedCount: 1,
+    },
+  };
+  const open = (): HTMLElement => {
+    fireEvent.click(within(card("put-1")).getByRole("button"));
+    const body = card("put-1").querySelector<HTMLElement>(".act-card-body");
+    if (!body) throw new Error("the card did not open");
+    return body;
+  };
+
+  it("puts Breakeven · Strike · now above the bar, each price under its name", async () => {
+    render(<ActivityCards events={[sold]} />);
+    const body = open();
+    await within(body).findByText("$82.60");
+    const pivots = [...body.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
+    expect(pivots).toEqual(["Breakeven $77.45", "Strike $80", "now $82.60"]);
+  });
+
+  it("names the hatch Loss and the solid Premium under the bar, and leaves OTM to the outcome", () => {
+    render(<ActivityCards events={[sold]} />);
+    const body = open();
+    const names = [...body.querySelectorAll(".pv-zname")].map((n) => n.textContent);
+    expect(names).toEqual(["Loss", "Premium"]);
+    expect(body.querySelector(".pv-loss")).not.toBeNull();
+    expect(body.querySelector(".pv-premium")).not.toBeNull();
+    expect(body.querySelector(".pv-otm")).not.toBeNull();
+  });
+
+  it("splits the outcome at expiry by the strike's line: ITM left, OTM right", () => {
+    render(<ActivityCards events={[sold]} />);
+    const body = open();
+    expect(body.querySelector(".pv-at")).toHaveTextContent("At Nov 6");
+    const divider = body.querySelector<HTMLElement>(".pv-divides");
+    expect(divider?.style.left).toBe("50.00%");
+    const [below, above] = [...body.querySelectorAll(".pv-side")];
+    expect(below).toHaveClass("pv-side-below");
+    expect([...(below?.children ?? [])].map((c) => c.textContent)).toEqual([
+      "ITM · below $80",
+      "assigned:",
+      "$8,000 buys",
+      "100 CRWV shares",
+    ]);
+    expect([...(above?.children ?? [])].map((c) => c.textContent)).toEqual([
+      "OTM · above $80",
+      "expires:",
+      "the $8,000",
+      "is freed",
+    ]);
+  });
+
+  it("follows the picture with Placed by, then Why — and nothing Full detail keeps", () => {
+    render(<ActivityCards events={[sold]} deskId="sauron" onDetail={() => undefined} />);
+    const body = open();
+    const labels = [...body.querySelectorAll(".oo-table dt")].map((dt) => dt.textContent);
+    expect(labels).toEqual(["Placed by", "Why"]);
+    const placed = body.querySelector(".oo-placed");
+    expect(placed).toHaveTextContent("sauron");
+    expect(placed).toHaveTextContent("CRWV-WHEEL · aggressive");
+    expect(placed).toHaveTextContent("3 ideas → 1 past the guards");
+    for (const gone of ["Order", "Cost", "Strategy", "Expected", "Proves it wrong"]) {
+      expect(within(body).queryByText(gone)).not.toBeInTheDocument();
+    }
+    expect(within(body).queryByText(/limit \$2\.55/)).not.toBeInTheDocument();
+    expect(within(body).queryByText(/retires if its net P\/L/)).not.toBeInTheDocument();
+    // The picture comes first, the table under it, the door last.
+    const order = [...(body.querySelector(".oo")?.children ?? [])].map((c) => c.className);
+    expect(order).toEqual(["pv", "more-grid why-grid oo-table", "act-full"]);
+  });
+
+  it("says when there is no quote for now, and still draws the line", async () => {
+    quote = { quoteNote: "no quote" };
+    try {
+      render(<ActivityCards events={[sold]} />);
+      const body = open();
+      expect(await within(body).findByText("now: no quote right now")).toBeInTheDocument();
+      const pivots = [...body.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
+      expect(pivots).toEqual(["Breakeven $77.45", "Strike $80"]);
+      expect(body.querySelector(".pv-now")).toBeNull();
+    } finally {
+      quote = { last: 82.6 };
+    }
   });
 });
 

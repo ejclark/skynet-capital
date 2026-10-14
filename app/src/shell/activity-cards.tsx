@@ -13,9 +13,10 @@ import {
   sizeWord,
   statusMark,
 } from "../live/order-facts";
-import { findActivityRow, rowKey, WhyDetail } from "./activity-table";
+import { findActivityRow, rowKey } from "./activity-table";
 import { BetGlyph } from "./bet-glyph";
 import { useLandOnHash } from "./landing";
+import { OpenedOrder } from "./opened-order";
 import { withMinus } from "./position-row-spec";
 
 /**
@@ -27,8 +28,9 @@ import { withMinus } from "./position-row-spec";
  *  - line 2 is the decision: the bet as a shape and a few words read off the contract ("Stays above
  *    $80"), the playbook it ran under for the owner alone (#885), a status only when it isn't
  *    "filled" (◷ working, ✕ canceled), and on the right what the order booked if it closed one.
- * Tapping the card opens it in place, under its own row: the time it filled, the price a share, and
- * — for a bot's order — the decision that placed it, the same words the desk table opens to.
+ * Tapping the card opens it in place, under its own row: the time it filled and the price a share,
+ * then the view the desk table's row opens to (#5262, `opened-order.tsx`) — the price line with the
+ * outcome at expiry, then who placed it and why.
  *
  * Every figure keeps its sign and its word, so neither the gain nor the cash direction rides on hue
  * (a standing reader is red/green colourblind). The card carries `id="act-<orderId>"`, the anchor a
@@ -157,20 +159,12 @@ function ActivityCard({
       {open ? (
         <div id={bodyId} className="act-card-body">
           <Receipt event={event} />
-          {event.reasoning ? (
-            <WhyDetail
-              why={event.reasoning}
-              showPlaybook={showPlaybook}
-              costShown={event.net !== undefined}
-              orderId={event.orderId}
-              {...(deskId ? { deskId } : {})}
-            />
-          ) : null}
-          {onDetail && !event.lifecycle ? (
-            <button type="button" className="act-full" onClick={() => onDetail(event.orderId)}>
-              Full detail <span aria-hidden="true">›</span>
-            </button>
-          ) : null}
+          <OpenedOrder
+            event={event}
+            showPlaybook={showPlaybook}
+            {...(deskId ? { deskId } : {})}
+            {...(onDetail ? { onDetail } : {})}
+          />
         </div>
       ) : null}
     </article>
@@ -186,7 +180,8 @@ function Receipt({ event }: { readonly event: DeskActivityEvent }): ReactElement
     event.filled > 0 && !event.lifecycle && event.price !== "—"
       ? `${event.symbol === "" ? "net" : "filled at"} ${event.price} a share`
       : undefined,
-    event.lifecycle ? undefined : event.status.replace(/_/g, " "),
+    // "filled" is what the price before it already says; any other status is news (#5262).
+    event.lifecycle || event.status === "filled" ? undefined : event.status.replace(/_/g, " "),
     event.backfilled ? "backfilled" : undefined,
     event.origin === "alpaca-direct"
       ? "placed directly in Alpaca, not through this app"
