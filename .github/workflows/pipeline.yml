@@ -84,7 +84,7 @@ jobs:
           fetch-depth: 0            # "Detect non-docs changes" below needs the PR's full commit range
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
@@ -231,7 +231,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc
 
@@ -363,7 +363,7 @@ jobs:
           fi
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
@@ -454,7 +454,7 @@ jobs:
           persist-credentials: true
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
