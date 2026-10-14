@@ -556,10 +556,30 @@ export interface ThesisMarker {
   readonly kind: "entry" | "exit";
   readonly at: string;
   readonly label: string;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
   readonly activityAnchor: string;
   /** Absent for a fill that predates the audit trail, or when no lookup is configured — never
    *  fabricated. */
   readonly reasoning?: ThesisMarkerReasoning;
+  /** The playbook that placed it — the owner's alone (#885). */
+  readonly playbookId?: string;
+  /** The news score and momentum its decision read (#5327); absent when not recorded. */
+  readonly sentiment?: number;
+  readonly momentum?: number;
+}
+
+/** The bot's own play, drawn (#5327) — mirrors `ThesisPlay` in
+ *  `src/observatory/thesis-play-view.ts`. The owner's alone. */
+export interface ThesisPlay {
+  readonly playbookId: string;
+  readonly name: string;
+  readonly buyAtOrBelow: number;
+  readonly buyMomentumAtLeast: number;
+  readonly sellAtOrAbove: number;
+  readonly sellMomentumAtMost: number;
+  readonly windows?: { readonly momentum: number; readonly sentiment: number };
+  readonly researchBuild: boolean;
 }
 
 export interface ThesisHealth {
@@ -580,6 +600,7 @@ export interface ThesisData {
   readonly health: ThesisHealth;
   readonly equity: readonly ThesisEquityPoint[];
   readonly markers: readonly ThesisMarker[];
+  readonly play?: ThesisPlay;
 }
 
 /** What one safeguard stage does to a play's position today (#3194 slice 6a). The word IS the

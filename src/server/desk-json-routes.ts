@@ -24,6 +24,7 @@ import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
+import { thesisPlayView } from "../observatory/thesis-play-view.js";
 import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
@@ -226,6 +227,53 @@ function botHoldings(
   };
 }
 
+/** `/thesis` — a bot's standing call, its markers, its safeguard ladder and (for its owner) its own
+ *  play drawn (#5327). A human desk has no persona/decision-cycle mind to show a thesis for — same
+ *  gate as `/decisions`, same honest absence rather than an empty-but-present payload. */
+async function thesisPayload(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+  owner: boolean,
+): Promise<unknown> {
+  if (found.kind !== "bot") return { available: false, kind: found.kind };
+  const id = found.id;
+  const [decisionRecords, activityRecords, samples] = await Promise.all([
+    config.readDecisions?.(id),
+    config.readTradeActivity?.(id),
+    config.readHistory?.(id) ?? [],
+  ]);
+  const decisions = decisionRecords
+    ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
+    : { cycles: [] };
+  // A spread's legs fold into one fill here as on Activity, so its marker carries the spread's
+  // order id — the one its decision is filed under and its Activity row is anchored on (#4650).
+  const activity = activityRecords
+    ? deskActivityView(activityRecords, undefined, {
+        limit: MAX_PAGE_SIZE,
+        spreadOf: botSpreadLookup(found.kind, config),
+      }).activity
+    : [];
+  // The safeguard ladder (#3194 slice 6a) — read off the plays the BOT's own newest
+  // verdict-carrying pass reported, never this process's env (see `safeguard-ladder-view.ts`).
+  // Null means "no pass on hand said which plays ran", which is never "no safeguards".
+  const pass = latestVerdictPass(decisionRecords ?? []);
+  const ladder = pass ? safeguardLadderView(pass.verdicts) : null;
+  const base = thesisView(found.personaId, decisions, activity, samples, config.findByOrderId);
+  // The bot's own play, drawn (#5327) — read off the same ladder, so it appears only when the
+  // bot's own pass said the play ran. The owner's alone: the strip below drops it.
+  const play = thesisPlayView(found.personaId, ladder, base.markers, config.signalWindows);
+  const view = play ? { ...base, play } : base;
+  return {
+    available: true,
+    kind: "bot",
+    thesis: owner ? view : withoutThesisOwnerFields(view),
+    ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
+    // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
+    // as current (the same reason `playbookLines` carries `since`).
+    ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
+  };
+}
+
 /** `/api/desk/:id/heartbeat` (#3687) — from the bot's OWN passes, not the pooled account view:
  *  beta-scout runs after every bot, so its records would make a dead loop look alive. */
 async function heartbeatPayload(
@@ -329,45 +377,7 @@ export async function serveDeskJson(
     return;
   }
   if (sub === "thesis") {
-    // A human desk has no persona/decision-cycle mind to show a thesis for — same gate as
-    // `/decisions`, same honest absence rather than an empty-but-present payload.
-    if (found.kind !== "bot") {
-      res.end(JSON.stringify({ available: false, kind: found.kind }));
-      return;
-    }
-    const [decisionRecords, activityRecords, samples] = await Promise.all([
-      config.readDecisions?.(id),
-      config.readTradeActivity?.(id),
-      config.readHistory?.(id) ?? [],
-    ]);
-    const decisions = decisionRecords
-      ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
-      : { cycles: [] };
-    // A spread's legs fold into one fill here as on Activity, so its marker carries the spread's
-    // order id — the one its decision is filed under and its Activity row is anchored on (#4650).
-    const activity = activityRecords
-      ? deskActivityView(activityRecords, undefined, {
-          limit: MAX_PAGE_SIZE,
-          spreadOf: botSpreadLookup(found.kind, config),
-        }).activity
-      : [];
-    // The safeguard ladder (#3194 slice 6a) — read off the plays the BOT's own newest
-    // verdict-carrying pass reported, never this process's env (see `safeguard-ladder-view.ts`).
-    // Null means "no pass on hand said which plays ran", which is never "no safeguards".
-    const pass = latestVerdictPass(decisionRecords ?? []);
-    const ladder = pass ? safeguardLadderView(pass.verdicts) : null;
-    const view = thesisView(found.personaId, decisions, activity, samples, config.findByOrderId);
-    res.end(
-      JSON.stringify({
-        available: true,
-        kind: "bot",
-        thesis: owner ? view : withoutThesisOwnerFields(view),
-        ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
-        // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
-        // as current (the same reason `playbookLines` carries `since`).
-        ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
-      }),
-    );
+    res.end(JSON.stringify(await thesisPayload(found, config, owner)));
     return;
   }
   if (sub === "pulse") {

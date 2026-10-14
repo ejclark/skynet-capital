@@ -197,6 +197,10 @@ export interface Playbook {
    * twice. On any other bot it is an ordinary `decide` playbook. Absent on every other playbook.
    */
   readonly rulesOf?: string;
+  /** Optional — the name a member reads in place of the id (`SAURON` → "Buy the rumor, sell the
+   *  news", Eric 2026-10-12). Read today only by the Thesis tab's drawn rule (#5327); the app-wide
+   *  sweep that moves every surface off ids is #5205. Absent → surfaces keep showing the id. */
+  readonly displayName?: string;
   /** Optional — what the roll call says when no recorded pass ran this playbook, for one whose
    *  being off is not "nobody switched it on" (the forced daily pick runs on one bot only, and only
    *  while armed in operations). Absent on every other playbook. */

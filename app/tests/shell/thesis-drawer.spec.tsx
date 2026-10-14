@@ -229,6 +229,8 @@ describe("ThesisDrawer", () => {
             kind: "entry",
             at: "2026-09-10T14:00:00Z",
             label: "Buy 20 NVDA",
+            symbol: "NVDA",
+            side: "buy",
             activityAnchor: "act-ord-1",
             reasoning: {
               reason: "panic fade",
@@ -265,6 +267,8 @@ describe("ThesisDrawer", () => {
             kind: "entry",
             at: "2026-09-10T14:00:00Z",
             label: "Buy 20 NVDA",
+            symbol: "NVDA",
+            side: "buy",
             activityAnchor: "act-ord-1",
           },
         ],
@@ -294,6 +298,8 @@ describe("ThesisDrawer", () => {
             kind: "entry",
             at: "2026-09-10T14:00:00Z",
             label: "Buy 20 NVDA",
+            symbol: "NVDA",
+            side: "buy",
             activityAnchor: "act-ord-1",
           },
         ],
@@ -386,6 +392,174 @@ describe("ThesisDrawer", () => {
       render(withClient(<ThesisDrawer id="bot-sauron" />));
       await waitFor(() => expect(screen.getByText("not yet measured")).toBeInTheDocument());
       expect(screen.queryByText(/^Safeguards/)).not.toBeInTheDocument();
+    });
+  });
+
+  // The bot's own play, drawn (#5327). Every number arrives in the payload; these cases pin that
+  // the drawer words and places what it was given, says the gaps in words, and shows the play's
+  // safeguards once, as sentences rather than controls.
+  describe("the drawn play", () => {
+    const play = {
+      playbookId: "SAURON",
+      name: "Buy the rumor, sell the news",
+      buyAtOrBelow: -0.7,
+      buyMomentumAtLeast: 0,
+      sellAtOrAbove: 0.7,
+      sellMomentumAtMost: 0,
+      windows: { momentum: 20, sentiment: 10 },
+      researchBuild: false,
+    };
+    const mark = (n: number, symbol: string, side: "buy" | "sell", over = {}) => ({
+      n,
+      kind: side === "buy" ? ("entry" as const) : ("exit" as const),
+      at: `2026-09-1${n}T14:00:00Z`,
+      label: `${side === "buy" ? "Buy" : "Sell"} 5 ${symbol}`,
+      symbol,
+      side,
+      activityAnchor: `act-${n}`,
+      playbookId: "SAURON",
+      ...over,
+    });
+    const sauronEntry = {
+      playbookId: "SAURON",
+      mode: "standard" as const,
+      stages: [
+        {
+          stage: 1 as const,
+          name: "Price and news disagreeing",
+          state: "off" as const,
+          does: "Nothing checks whether the price move and the news tone disagree on this play.",
+        },
+      ],
+    };
+    const otherEntry = {
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      stages: [
+        {
+          stage: 1 as const,
+          name: "Price and news disagreeing",
+          state: "watching" as const,
+          does: "Logs it.",
+        },
+      ],
+    };
+    const withPlay = (
+      over: Partial<NonNullable<DeskThesis["thesis"]>> = {},
+      ladder = [sauronEntry, otherEntry],
+    ): DeskThesis => ({
+      available: true,
+      kind: "bot",
+      ladderAsOf: "2026-09-30T19:36:00.000Z",
+      ladder,
+      thesis: {
+        thesis: "Impose order on the market's chaos.",
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [],
+        markers: [
+          mark(3, "META", "buy", { sentiment: -0.75, momentum: 0.001 }),
+          mark(6, "NVDA", "buy", { sentiment: -0.82, momentum: 0.003 }),
+          mark(7, "META", "sell", { sentiment: 0.74, momentum: -0.002 }),
+          mark(8, "AMD", "buy", { playbookId: "S1-NVDA", sentiment: -0.9 }),
+        ],
+        play,
+        ...over,
+      },
+    });
+
+    it("draws the rule on its own scale with this play's trades, then walks its latest buy", async () => {
+      nextThesis = withPlay();
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("heading", { name: "Buy the rumor, sell the news" }),
+        ).toBeInTheDocument(),
+      );
+      for (const tick of ["−1", "−0.70", "News sentiment", "+0.70", "+1", "Waits"]) {
+        expect(screen.getByText(tick)).toBeInTheDocument();
+      }
+      expect(screen.getByText(/Bought: 3 META · 6 NVDA/)).toBeInTheDocument();
+      expect(screen.getByText(/Sold: 7 META/)).toBeInTheDocument();
+      // Another play's trade stays off this play's line.
+      expect(screen.queryByLabelText(/Trade 8/)).not.toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Trade 6: bought NVDA at a news score of −0.82"),
+      ).toBeInTheDocument();
+      // Each end's value sits in its own unbreakable span, so read the end's whole text.
+      const ends = document.querySelector(".thesis-play-ends")?.textContent?.replace(/\s+/g, " ");
+      expect(ends).toContain("Buy once momentum ≥ 0%");
+      expect(ends).toContain("Sell all once momentum ≤ 0%");
+      expect(
+        screen.getByText(
+          "Trade 6, NVDA: its last 10 news stories averaged −0.82 (bad-news words outweighed good), at or below its −0.70 line; then the price moved +0.30% over its last 20 price ticks (it needs 0% or more) → it bought.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the play's safeguards once, as sentences, never as controls", async () => {
+      nextThesis = withPlay();
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText(/What protects this play/)).toBeInTheDocument());
+      expect(
+        screen.getAllByText(
+          "Nothing checks whether the price move and the news tone disagree on this play.",
+        ),
+      ).toHaveLength(1);
+      expect(screen.queryByText("SAURON · standard")).not.toBeInTheDocument();
+      expect(screen.getByText("S1-NVDA · standard")).toBeInTheDocument();
+      // The only buttons are the locked Subscribe box's — no safeguard row is a control.
+      expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
+        "Subscribe",
+        "Steering Rules",
+      ]);
+      expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    });
+
+    it("drops the Safeguards list when the drawn play was the bot's only one", async () => {
+      nextThesis = withPlay({}, [sauronEntry]);
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText(/What protects this play/)).toBeInTheDocument());
+      expect(screen.queryByText(/^Safeguards/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/No decision pass on hand/)).not.toBeInTheDocument();
+    });
+
+    it("says in words what was not recorded, and draws nothing at a guessed spot", async () => {
+      nextThesis = withPlay({
+        markers: [mark(2, "NVDA", "buy"), mark(4, "META", "sell", { sentiment: 0.8 })],
+      });
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(screen.getByText(/Trade 2: no news score was recorded/)).toBeInTheDocument(),
+      );
+      expect(screen.queryByLabelText(/Trade 2/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Trade 2, NVDA: its decision didn't record/)).toBeInTheDocument();
+    });
+
+    it("says so when the play has not bought anything yet", async () => {
+      nextThesis = withPlay({ markers: [] });
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(screen.getByText("No trades from this play yet.")).toBeInTheDocument(),
+      );
+      expect(screen.getByText(/hasn't bought anything yet/)).toBeInTheDocument();
+    });
+
+    it("refuses to draw the standard line over the research build's trades", async () => {
+      nextThesis = withPlay({ play: { ...play, researchBuild: true } });
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText(/faster research build/)).toBeInTheDocument());
+      expect(screen.queryByText("Waits")).not.toBeInTheDocument();
+      expect(screen.getByText(/What protects this play/)).toBeInTheDocument();
+    });
+
+    it("draws no play block when the payload carries none", async () => {
+      nextThesis = withPlay({ play: undefined });
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText("not yet measured")).toBeInTheDocument());
+      expect(screen.queryByText(/What protects this play/)).not.toBeInTheDocument();
+      expect(screen.getByText("SAURON · standard")).toBeInTheDocument();
     });
   });
 });
