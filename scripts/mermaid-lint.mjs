@@ -92,6 +92,11 @@ const HOUSE_NOUNS = /(?<!ship\.sh )(?<!ship )\b(platter|boarding|capsule|state b
 const HANDLE = /(?<![#\w])[0-9a-f]{7,40}(?![\w])/i;
 /** Rule 2 — a flowchart fork: `id{"label"}` (single braces; `{{ }}` is a hexagon, not a fork). */
 const FORK = /\b\w+\{(?!\{)"?([^"{}]*?)"?\}/g;
+/** A live flowchart edge — solid `-->` or thick `==>`, labelled or not; a dotted `-.->` is the
+ *  removed path and stays still, so it never counts. */
+const LIVE_EDGE = /(?:--+|==+)>/g;
+/** Live edges past which an unanimated flow earns a note — one edge is a fact, two are a flow. */
+export const ANIMATE_FLOW_EDGES = 2;
 /** A six-digit hex colour on a classDef or style line. */
 const HEX = /#[0-9a-f]{6}\b/gi;
 
@@ -288,7 +293,7 @@ function hexFindings(source, at, registry) {
 }
 
 /** The round-3 rules (docs/PICTURES.md → "Rules the design rounds found"): rule 11 gated, rules
- *  1, 2 and 7 advisory. Split from policyFindings so each function stays readable. */
+ *  1, 2 and 7 advisory, plus the animate-the-flow note. Split from policyFindings so each function stays readable. */
 function roundThreeFindings(source, head, at, registry) {
   const problems = [];
   const notes = [];
@@ -323,6 +328,22 @@ function roundThreeFindings(source, head, at, registry) {
           `${at}: fork "${label}" asks no question — a fork shape ends in ? and its exits carry the answers (docs/PICTURES.md rule 2)`,
         );
       }
+    }
+  }
+  // Animate the whole flow (Eric, 2026-10-04, #4549). The rule reached a picture 0 times in 6 PR
+  // diagrams while it lived only in the flowchart card (2026-10-13), so it is said where every body
+  // passes: here, at ship time. A note, never a gate — a still frame is a taste loss, not a defect.
+  if (/^(flowchart|graph)\b/.test(head) && !/@\{[^}]*\banimat/.test(source)) {
+    const live =
+      source
+        .split("\n")
+        .filter((l) => !/^\s*(classDef|style|linkStyle|%%)/.test(l))
+        .join("\n")
+        .match(LIVE_EDGE)?.length ?? 0;
+    if (live >= ANIMATE_FLOW_EDGES) {
+      notes.push(
+        `${at}: a flow of ${live} live edges and none moves — animate every live edge (\`a e1@--> b\` then \`e1@{ animate: true }\`); dotted removed paths stay still (docs/PICTURES.md → The delta grammar)`,
+      );
     }
   }
   const noun = HOUSE_NOUNS.exec(source);
