@@ -11,8 +11,8 @@ import { answered, claudeWith, commentsWith, META, open, openWith } from "./stee
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-// `clock` prefixes another day's stamp with its weekday, so a 20-minute-old stamp read just after
-// midnight is "since Tue 11:51 PM" — the bare-time pattern went red 00:00–06:00 every day (#5332).
+// `clock` (page-client.js) prefixes another day's stamp with its weekday, so a 20-minute-old stamp read
+// just after midnight is "since Tue 11:51 PM" — the bare-time pattern went red 00:00–06:00 every day (#5332).
 const LISTENING = /^● Claude is listening · since (?:[A-Z][a-z]{2} )?\d{1,2}:\d{2}/;
 const LOST = "⊘ Claude isn't listening — say “watch my page” in its session";
 const ACK = "Claude got your Done, reading back…";
