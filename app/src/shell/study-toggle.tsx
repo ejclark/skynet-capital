@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
+import { FilterChip } from "../ui";
 import { STUDY_GLOSS, STUDY_IDS, STUDY_LABELS, type StudyId } from "./chart-studies";
 
 /**
- * The study toggles (#2017 Phase 1 chart build-out, the studies slice) — four `.railctl` chips,
+ * The study toggles (#2017 Phase 1 chart build-out, the studies slice) — four `FilterChip`s,
  * SMA · EMA · Bollinger · RSI, any number on at once. The same checkbox idiom `activity.tsx`'s
  * `WireRail` uses for its feed filters (`aria-pressed`, click toggles membership in a set), NOT the
  * radio-shaped `Toggle` in `toggle.tsx` — a member overlays SMA and RSI together, so exactly-one is
@@ -27,15 +28,9 @@ export function StudyToggles({
       <fieldset className="chart-studies">
         <legend className="visually-hidden">Studies</legend>
         {STUDY_IDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className="railctl"
-            aria-pressed={active.has(id)}
-            onClick={() => onToggle(id)}
-          >
+          <FilterChip key={id} pressed={active.has(id)} onPress={() => onToggle(id)}>
             {STUDY_LABELS[id]}
-          </button>
+          </FilterChip>
         ))}
       </fieldset>
       {STUDY_IDS.filter((id) => active.has(id)).map((id) => (

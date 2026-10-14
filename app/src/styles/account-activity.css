@@ -1,6 +1,6 @@
 /* An account's Activity, narrowed and walked back (#4650; `activity-filter-bar.tsx`,
    `shell/account-activity.tsx` — on `/u/<id>/activity` and Profile → Activity, #5165). The box
-   and the chips are desk.css's `filter-bar` / `filter-chip`; only what this page adds lives here. */
+   and the chips are desk.css's `filter-bar` and FilterChip's `filter-chips` (filter-chip.css); only what this page adds lives here. */
 
 /* The playbook chips sit in a fieldset (a labelled group of buttons): reset the browser's frame so
    it lays out exactly like `.filter-chips`, its group name as a small caps word leading the row. */
@@ -18,17 +18,6 @@
   letter-spacing: 0.03em;
   color: var(--muted);
   margin-right: 2px;
-}
-
-/* Pressed carries a shape as well as the accent: a ✓ in a slot that is always there, so the label
-   never shifts and the state is never hue alone (a standing reader is red/green colourblind). */
-.activity-playbooks .filter-chip {
-  padding-left: 8px;
-}
-.filter-chip-check {
-  display: inline-block;
-  width: 1.1em;
-  text-align: center;
 }
 
 /* A new filter's rows are on their way: the last filter's stay, stepped back, until they land. */

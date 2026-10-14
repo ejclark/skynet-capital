@@ -35,6 +35,8 @@
 @import "./landing.css";
 /* after desk.css, not alphabetical: it narrows the blotter's cells for the positions table. */
 @import "./positions-columns.css";
+/* after desk.css, not alphabetical: FilterChip's rules were desk.css's `.filter-chip` until #5365. */
+@import "./filter-chip.css";
 @import "./draft-builder.css";
 @import "./order-event-line.css";
 @import "./feedback.css";

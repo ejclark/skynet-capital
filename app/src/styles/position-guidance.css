@@ -259,11 +259,6 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.pos-mark-chip[aria-pressed="true"] {
-  border-width: 1.5px;
-  color: var(--text);
-  border-color: var(--text);
-}
 
 /* What a mark filter hides, named under the list. */
 .pos-hidden-line {

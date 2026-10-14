@@ -168,7 +168,8 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
 - **A radio and a checkbox never look the same.** Two controls that share a style but not a
   behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
   (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
-  its **filter toggles** turn any number on (`.railctl`, no bar). On a phone the group labels are
+  its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` — a ✓ and a ring, no bar;
+  every multi-select chip in the app is one, #5365). On a phone the group labels are
   hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
   controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where

@@ -4,7 +4,7 @@
 > of the app's shared UI parts: read it before building one, reuse an entry when it fits, and
 > extract a new primitive only by the rule in `app/src/ui/README.md`.
 
-Coverage: every module in `app/src/ui` (3) and every `app/src/shell` module
+Coverage: every module in `app/src/ui` (4) and every `app/src/shell` module
 imported by 5+ production files (12). Fields: job from the JSDoc's first
 sentence, props read from the source (best-effort), first real call site, `@whenNot` tag.
 
@@ -17,7 +17,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `ResultTone`, `InlineResult`
 - props: `{ tone: ResultTone; children: ReactNode; as?: "p" | "span"; live?: boolean; className?: string }`
 - importers: 20
-- usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:324`
+- usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:322`
 - when not to use: the state is the whole section's — a page or panel that could not load, an empty list, a loading line — that is a section state, not one action's result; and a number with a sign (P/L, a change) is a tone on the number (`tone-neg`), not a sentence.
 
 ### KindChip
@@ -29,6 +29,15 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - importers: 13
 - usage: `<KindChip kind={label === "Humans" ? "human" : "bot"} plural />` — `app/src/routes/leaderboard.tsx:72`
 - when not to use: the label is not an account's kind — a strategy, playbook or persona name wants its own chip style (#5365), and SIM / LIVE is `EnvPill`. Plain menu text ("Bot · SIM") is not a chip either.
+
+### FilterChip
+
+- file: `app/src/ui/filter-chip.tsx`
+- job: Turns one item of a set on or off — a filter, a study, a symbol — drawn the same way on every screen.
+- props: `{ pressed: boolean; onPress: () => void; children: ReactNode; className?: string }`
+- importers: 8
+- usage: `<FilterChip` — `app/src/routes/activity.tsx:123`
+- when not to use: the control picks which view the page shows rather than narrowing a set — a section, a lens, a range, a segmented choice — that is `SectionSwitch` or `Toggle` (`shell/`); and a label nobody presses (an account's kind, a status) is a read-only chip such as `KindChip`. A filter group whose picks exclude each other (Buy vs Sell, one playbook or All) is still filter chips.
 
 ### EnvPill
 
@@ -150,7 +159,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - category: navigation
 - props: `{ label?: string; sections: PageSection<Id>[]; current: Id; onSelect: (section: Id) => void; variant?: "rail" | "horizontal"; fold?: number; divideBefore?: Id }`
 - importers: 5
-- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:146`
+- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:144`
 - when not to use:
 
 ### withMinus
