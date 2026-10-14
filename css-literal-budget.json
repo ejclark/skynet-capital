@@ -1,10 +1,10 @@
 {
-  "rawFontSize": 637,
+  "rawFontSize": 634,
   "fontSizeEqualsToken": 318,
-  "rawSpacing": 1572,
-  "spacingEqualsToken": 676,
-  "rawRadius": 260,
-  "rawLetterSpacing": 129,
+  "rawSpacing": 1561,
+  "spacingEqualsToken": 670,
+  "rawRadius": 259,
+  "rawLetterSpacing": 128,
   "danglingVar": 1,
   "mismatchedFallback": 2
 }

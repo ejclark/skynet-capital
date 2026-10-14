@@ -1,72 +1,8 @@
-/* The Accounts page's Summary section — a net-worth hero (total value + the day's move) with an
- * ROI strip across 7D/1M/3M/1Y, plus a per-account roster for "All accounts". Reuses the desk
- * tile atoms (.desk-k/.desk-v/.desk-note, .tone-*, .chip-*) so it reads as one system with the
- * blotter; the hero is the one place a number gets to be loud. Mobile-first: the ROI strip is
- * 4-up on desktop, 2-up on phone, and the roster scrolls horizontally rather than collapsing. */
-
-.networth {
-  margin-bottom: 16px;
-}
-
-.networth-hero {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--elev-base);
-  margin-bottom: 12px;
-}
-
-.networth-hero-main {
-  background: var(--surface);
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.networth-value {
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-}
-
-.networth-day {
-  font-size: 15px;
-  font-weight: 700;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.networth-day .desk-note {
-  font-weight: 400;
-}
-
-.networth-hero-note {
-  margin-top: 2px;
-}
-
-.networth-roi {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
-}
-
-.networth-tile {
-  background: var(--surface);
-  padding: var(--tile-py) 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.networth-tile--partial .desk-note {
-  font-style: italic;
-}
+/* The Accounts page's per-account roster for "All accounts" (`NetWorthRoster`). Reuses the desk
+ * atoms (.desk-note, .tone-*, .chip-*) so it reads as one system with the blotter. Mobile-first:
+ * the roster scrolls horizontally rather than collapsing. The net-worth hero and its ROI strip
+ * that used to live here were buried with `NetWorthSummary`; the head's vitals line carries the
+ * total now (`head-vitals.tsx`, #5072). */
 
 .networth-roster-scroll {
   overflow-x: auto;
@@ -105,15 +41,6 @@
 }
 .networth-roster th[scope="row"] {
   font-weight: 600;
-}
-
-@media (max-width: 700px) {
-  .networth-roi {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .networth-value {
-    font-size: 24px;
-  }
 }
 
 /* The All-accounts roster (#3689 slice 10, handoff 2b): the month as a sparkline, the month
