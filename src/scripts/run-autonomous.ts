@@ -48,6 +48,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
 import {
   acceptAndKeep,
@@ -212,8 +213,9 @@ async function runLive(): Promise<void> {
   };
   const playbookRoster = enabledPlaybooks(process.env);
   announceRoster(playbookRoster);
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
-  const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
+  const windows = signalWindows(process.env);
+  const tracker = new MomentumTracker(windows.momentum);
+  const sentiment = new SentimentTracker(windows.sentiment);
   const universeSet = new Set(UNIVERSE);
 
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and

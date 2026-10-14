@@ -28,6 +28,8 @@ const markers = [
     kind: "entry" as const,
     at: "2026-09-01T00:00:00Z",
     label: "Buy 10 NVDA",
+    symbol: "NVDA",
+    side: "buy" as const,
     activityAnchor: "act-1",
   },
   {
@@ -35,6 +37,8 @@ const markers = [
     kind: "exit" as const,
     at: "2026-09-02T00:00:00Z",
     label: "Sell 10 NVDA",
+    symbol: "NVDA",
+    side: "sell" as const,
     activityAnchor: "act-2",
   },
 ];
