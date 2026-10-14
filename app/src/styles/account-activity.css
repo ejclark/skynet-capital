@@ -1,6 +1,6 @@
 /* An account's Activity, narrowed and walked back (#4650; `activity-filter-bar.tsx`,
-   `routes/u.$id.activity.tsx`). The box and the chips are desk.css's `filter-bar` / `filter-chip`;
-   only what this page adds lives here. */
+   `shell/account-activity.tsx` — on `/u/<id>/activity` and Profile → Activity, #5165). The box
+   and the chips are desk.css's `filter-bar` / `filter-chip`; only what this page adds lives here. */
 
 /* The playbook chips sit in a fieldset (a labelled group of buttons): reset the browser's frame so
    it lays out exactly like `.filter-chips`, its group name as a small caps word leading the row. */

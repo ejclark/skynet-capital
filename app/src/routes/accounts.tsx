@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -14,6 +14,11 @@ import { fetchNetWorth } from "../live/networth";
 import { landingFromSearch, landingOf, type PlaybookLanding } from "../live/playbook-landing";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import {
+  AccountActivity,
+  type ActivityNarrowing,
+  narrowingFromSearch,
+} from "../shell/account-activity";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityLedger } from "../shell/activity-ledger";
@@ -75,37 +80,82 @@ function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
   return Promise.all(ids.map((id) => fetchDesk(id)));
 }
 
-function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): ReactElement {
+/** "All accounts" — every account's newest page merged, newest first. There is no single cursor
+ *  across several ledgers, so this view never walks back: it says plainly that it holds each
+ *  account's newest orders and opens one account's full list for the rest (#5165). */
+function MergedActivity({
+  accounts,
+}: {
+  readonly accounts: readonly OwnedAccount[];
+}): ReactElement {
+  const ids = accounts.map((a) => a.id);
   const activity = useQuery({
-    queryKey: ["accounts-activity", deskIds.join(",")],
+    queryKey: ["accounts-activity", ids.join(",")],
     queryFn: async () => {
-      const pages = await Promise.all(deskIds.map((id) => fetchDeskActivity(id)));
+      const pages = await Promise.all(ids.map((id) => fetchDeskActivity(id)));
       const merged: DeskActivityEvent[] = pages.flatMap((p) => p.activity);
       merged.sort((a, b) => (a.at < b.at ? 1 : -1));
-      return { available: pages.every((p) => p.available), events: merged };
+      const more = accounts.filter((_, i) => pages[i]?.nextCursor !== undefined);
+      // A page with a cursor was a full one, so its length is the server's page size — said as
+      // read, never a copy of the server's constant that could drift from it.
+      const page = Math.max(0, ...pages.map((p) => (p.nextCursor ? p.activity.length : 0)));
+      return { available: pages.every((p) => p.available), events: merged, more, page };
     },
-    enabled: deskIds.length > 0,
   });
   // An order's full detail (#5101): `?order=` — a panel beside the list, or a page on a phone.
   const { detail, setDetail } = useOrderDetail();
-  if (deskIds.length === 0)
-    return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
   if (activity.isError) return <p className="note">The ledger is unreachable.</p>;
   if (!activity.data.available)
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  // One account linked → each bot fill can link to its round in that account's checks (#3961).
-  // Several merged → a row carries no account of its own, so the link is honestly left off.
-  const only = deskIds.length === 1 ? deskIds[0] : undefined;
+  const { events, more, page } = activity.data;
+  // Several merged → a row carries no account of its own, so its round link is honestly left off.
   return (
-    <ActivityLedger
-      events={activity.data.events}
-      {...(only ? { deskId: only } : {})}
-      detail={detail}
-      onDetail={setDetail}
-    />
+    <>
+      <ActivityLedger events={events} detail={detail} onDetail={setDetail} />
+      {more.length === 0 ? (
+        <p className="note activity-end">That's the oldest order in every account's ledger.</p>
+      ) : (
+        <p className="note activity-end">
+          These are the newest {page} orders from each account. To load older ones, open one
+          account:{" "}
+          {more.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 ? " · " : null}
+              <Link to="/accounts" search={{ account: a.id, section: "activity" }}>
+                {a.name} ›
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
+    </>
+  );
+}
+
+function ActivitySection({
+  accounts,
+  deskIds,
+  narrowing,
+  onNarrow,
+}: {
+  readonly accounts: readonly OwnedAccount[];
+  readonly deskIds: readonly string[];
+  readonly narrowing: ActivityNarrowing;
+  readonly onNarrow: (next: ActivityNarrowing) => void;
+}): ReactElement {
+  const [only, ...rest] = deskIds;
+  if (only === undefined)
+    return <p className="note">No account linked yet — its orders will be listed here.</p>;
+  if (rest.length > 0)
+    return <MergedActivity accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
+  // One account: the same paged, narrowed list `/u/<id>/activity` shows. Every account here is the
+  // viewer's own, so a bot's playbook is theirs to see. Keyed by the account, so switching starts
+  // the symbol box and the walk back over.
+  return (
+    <AccountActivity key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
   );
 }
 
@@ -180,6 +230,8 @@ function AccountsPage(): ReactElement {
       checksOpen={search.checks === "open"}
       landing={landingOf(search)}
       accounts={accounts}
+      narrowing={{ symbol: search.symbol, playbook: search.playbook }}
+      onNarrow={(next) => refine((prev) => ({ ...prev, ...next }))}
       query={query}
       onFilterChange={onFilterChange}
       defaultId={defaultId}
@@ -190,8 +242,11 @@ function AccountsPage(): ReactElement {
           search: (prev) => ({
             ...prev,
             account: id === fallbackId ? undefined : id,
-            // An order's card belongs to the bot that placed it — never landed on another's.
+            // An order's card belongs to the bot that placed it — never landed on another's. The
+            // Activity filter's playbook is one bot's too, so the narrowing goes with it.
             card: undefined,
+            symbol: undefined,
+            playbook: undefined,
             mode: undefined,
             fill: undefined,
             from: undefined,
@@ -228,8 +283,11 @@ function AccountsPage(): ReactElement {
             fill: undefined,
             from: undefined,
             pos: undefined,
-            // An order's full detail belongs to Activity; leaving it closes the detail.
-            order: next === "activity" ? prev.order : undefined,
+            // An order's full detail and the list's narrowing belong to Activity; leaving it
+            // closes the detail and drops the filter.
+            ...(next === "activity"
+              ? {}
+              : { order: undefined, symbol: undefined, playbook: undefined }),
             ...(crossing ? { q: undefined, events: undefined } : {}),
           }),
           replace: true,
@@ -252,6 +310,8 @@ function CockpitBody({
   landing,
   query,
   onFilterChange,
+  narrowing,
+  onNarrow,
   pinnedDay,
   onPickDay,
   onJoined,
@@ -268,6 +328,9 @@ function CockpitBody({
   readonly landing: PlaybookLanding | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  /** Activity's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/activity`). */
+  readonly narrowing: ActivityNarrowing;
+  readonly onNarrow: (next: ActivityNarrowing) => void;
   readonly pinnedDay: string | undefined;
   readonly onPickDay: (day: string | undefined) => void;
   readonly onJoined: () => void;
@@ -339,7 +402,14 @@ function CockpitBody({
       />
     );
   }
-  return <ActivitySection deskIds={deskIds} />;
+  return (
+    <ActivitySection
+      accounts={accounts}
+      deskIds={deskIds}
+      narrowing={narrowing}
+      onNarrow={onNarrow}
+    />
+  );
 }
 
 function AccountsBody({
@@ -395,6 +465,8 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
+    // Activity's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
+    ...narrowingFromSearch(search),
     // Activity's open full detail (#5101, `use-order-detail.ts`).
     ...(asId(search.order) ? { order: asId(search.order) } : {}),
   }),
