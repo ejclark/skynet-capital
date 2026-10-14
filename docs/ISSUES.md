@@ -249,7 +249,9 @@ rather than a formality. A `plan` issue has a second, equivalent door: a ready-s
 an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
-so a lane quoting the word in prose can never flip itself.
+so a lane quoting the word in prose can never flip itself. When admission queues a comment-flip (cap,
+work-mode) or open blockers hold it back, `claimPlan` applies `ready` to *record* that go — not to
+grant one — so the retry sweep starts it later instead of dropping it (#5334).
 
 **Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
 carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and

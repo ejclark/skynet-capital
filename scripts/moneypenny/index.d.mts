@@ -115,7 +115,8 @@ export function claimPlan(
   ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
-  admission?: AdmissionDeps,
+  /** `edit` records a refused comment-flip as the `ready` label (#5334). */
+  admission?: AdmissionDeps & { edit?: (n: number, args: string[]) => boolean },
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
