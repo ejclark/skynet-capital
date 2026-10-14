@@ -12,10 +12,13 @@
 // CRWV-WHEEL puts — each placed by its own decision, so the first page is full and has a cursor.
 // No sign-in is configured, so the viewer is the owner and the chips are drawn.
 //
+// The last frame is Profile → Activity at the list's end on a phone (#5165).
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/activity-filters.mjs [outdir]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
 import { filledRecord, HIGH, LOW, PUT } from "./option-fill-fixture.mjs";
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const DAY = 86_400_000;
@@ -152,6 +155,10 @@ const { page, origin, shoot, close } = await openShell({
       },
     },
     "/api/desk/bot-sauron/probes": { available: false },
+    // The Profile head's one other read, for frame 5.
+    "/api/accounts/networth": profileStubs([
+      { id: "bot-sauron", name: "Sauron", kind: "bot", suspended: false },
+    ])["/api/accounts/networth"],
     // The deep dive's "now" ring (#5101): CRWV a few dollars above the put's $85 strike.
     "/api/trade/quote": { symbol: "CRWV", last: 88.4, change: 1.2, changePct: 1.38, tone: "pos" },
   },
@@ -242,6 +249,22 @@ for (const [tag, viewport] of [
   await toTop(page.locator(".page-header"));
   await shoot(`activity-no-match-${tag}`);
 }
+
+// 5 — Profile → Activity at the end of its list (#5165): the owner's own page walks back the same
+// way, and once the oldest order is loaded it says so. A build without the walk shoots the list
+// where it simply stopped — the before frame.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?section=activity`);
+await page.locator("#act-opt-spread-1").waitFor();
+await settle();
+const profileOlder = page.getByRole("button", { name: "Load older orders" });
+if (await profileOlder.isVisible()) {
+  await profileOlder.click();
+  await profileOlder.waitFor({ state: "detached" });
+  await settle();
+}
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await shoot("profile-activity-end-phone");
 
 store.close();
 await close();
