@@ -30,7 +30,7 @@ shape menu — that would be the 10,000-cuts failure CLAUDE.md → *Interrupt ec
 
 **Redesigning one screen from Eric's notes** runs this rule in a loop, one section per sitting:
 [`process/REDESIGN.md`](process/REDESIGN.md) (#5143) — his notes, the IA call, an expert review,
-2–5 shapes that each change one thing, a round page he answers, then the next round or a build.
+1–5 shapes (1 to confirm, 2–3 for a fork, up to 5 to explore) that each change one thing, a round page he answers, then the next round or a build.
 
 **Lo-fi shapes — when the decision is the template, not the placement** (Eric, 2026-09-21: "lofi is
 preferred for structural changes to see the higher level templates w/out the high fidelity details

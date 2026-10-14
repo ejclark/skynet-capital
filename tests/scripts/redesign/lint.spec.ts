@@ -87,14 +87,18 @@ describe("lintDesign", () => {
     ]);
   });
 
-  it("asks for the fields the round page needs, a dated falsifier and 2–5 options", () => {
+  it("asks for the fields the round page needs, a dated falsifier and 1–5 options", () => {
+    const one = question();
+    one.options = one.options.slice(0, 1);
+    one.rec = String(one.options[0]?.key);
+    expect(lintDesign(manifest(one), env)).toEqual([]);
     const q = question({ title: "", conf: "sure", wrong: "If he hates it.", rec: "Z" });
-    q.options = q.options.slice(0, 1);
+    q.options = [];
     expect(lintDesign(manifest(q), env)).toEqual([
       'q1: needs "title"',
       'q1: "conf" is low, medium or high',
       'q1: "wrong" needs its date (YYYY-MM-DD) — the day the tape would prove it',
-      "q1: 1 options — a round shows 2–5",
+      "q1: 0 options — a round shows 1–5",
       'q1: "rec" Z is not an option\'s key',
     ]);
     expect(lintDesign([question()], env)).toEqual([
