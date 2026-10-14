@@ -88,6 +88,8 @@
 @import "./settings.css";
 @import "./shell.css";
 @import "./spread-legs.css";
+/* after spread-legs.css: the Ledger's entry groups sit beside a spread's leg rows. */
+@import "./ledger-table.css";
 @import "./status.css";
 @import "./symbol-field.css";
 @import "./theme.css";

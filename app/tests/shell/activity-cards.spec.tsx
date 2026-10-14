@@ -6,8 +6,9 @@ import { ActivityCards } from "../../src/shell/activity-cards";
 import { ActivityLedger } from "../../src/shell/activity-ledger";
 
 /** #5101 (round 2 of #5037, activity slice 1): on a phone the ledger is one card an order under a
- *  day header, two lines each — what happened with the cash it moved, then the bet with what it
- *  booked — and a tap opens the card in place, under its own row. */
+ *  day header, and a tap opens the card in place, under its own row. #5317 (#5160 rounds 9–15):
+ *  a card is its legs — a single order is one leg with where it stands, a close lists the buy it
+ *  closed beneath it and ends on a total. */
 
 rstest.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
@@ -90,42 +91,75 @@ describe("ActivityCards — one card an order, under its day", () => {
     ]);
   });
 
-  it("says what happened and the cash it moved on line 1, the bet on line 2", () => {
+  it("says what happened and its signed cash, then the contract, then the playbook and open", () => {
     render(<ActivityCards events={[wheel]} />);
     const put = card("put-1");
-    expect(put.querySelector(".act-what")).toHaveTextContent("SOLD 1 CRWV $80 PUT · Nov 6");
-    expect(put.querySelector(".act-cash")).toHaveTextContent("received +$255");
-    expect(put.querySelector(".act-bet")).toHaveTextContent("Stays above $80");
-    expect(put.querySelector(".act-bet")).toHaveTextContent("CRWV-WHEEL");
-    expect(put.querySelector(".bet-glyph")).not.toBeNull();
+    expect(put.querySelector(".act-what")).toHaveTextContent("SOLD 1 contract CRWV");
+    expect(put.querySelector(".act-cash")).toHaveTextContent(/^\+\$255$/);
+    expect(put.querySelector(".act-sub")).toHaveTextContent("$80 PUT · Nov 6 at $2.55");
+    const foot = put.querySelector(".act-foot");
+    expect(foot).toHaveTextContent("CRWV-WHEEL");
+    expect(foot?.querySelector(".act-outcome")).toHaveTextContent("open");
+    // The bet lives in the opened order now (#5317), never in the list.
+    expect(put.querySelector(".bet-glyph")).toBeNull();
+    expect(put).not.toHaveTextContent("Stays above");
   });
 
-  it("puts what a closing fill booked on the right of line 2, signed and worded", () => {
-    render(<ActivityCards events={[close]} />);
+  it("lists a round trip as the sale, the buy it closed with its day, then the total", () => {
+    const { realizedPl: _none, ...bought } = event({
+      orderId: "buy-1",
+      symbol: "META",
+      display: "META",
+      quantity: 15,
+      filled: 15,
+      price: "$742.00",
+      at: "2026-09-22T14:00:00Z",
+    });
+    render(<ActivityCards events={[{ ...close, opened: [{ ...bought, matched: 15 }] }]} />);
     const meta = card("close-1");
-    expect(meta.querySelector(".act-bet")).toHaveTextContent("Closed");
-    expect(meta.querySelector(".act-result")).toHaveTextContent("booked +$285");
-    expect(meta.querySelector(".act-cash")).toHaveTextContent("received +$11,415");
+    const legs = [...meta.querySelectorAll(".act-leg-row")];
+    expect(legs.map((leg) => leg.querySelector(".act-what")?.textContent)).toEqual([
+      "SOLD 15 shares META",
+      "BOUGHT 15 shares META",
+    ]);
+    expect(legs.map((leg) => leg.querySelector(".act-cash")?.textContent)).toEqual([
+      "+$11,415",
+      "−$11,130",
+    ]);
+    expect(legs[1]).toHaveAttribute("data-opened");
+    expect(legs[1]?.querySelector(".act-sub")).toHaveTextContent("at $742.00 · Sep 22");
+    const total = meta.querySelector(".act-total");
+    expect(total?.querySelector(".act-total-name")).toHaveTextContent("META · 9 days");
+    expect(total?.querySelector(".tone-pos")).toHaveTextContent("+$285");
+    // No paid / received / booked words: the sign carries the direction.
+    expect(meta).not.toHaveTextContent(/paid|received|booked/);
+    // The buy's anchor stays on its own card, on its own day.
+    expect(meta.querySelector('[id="act-buy-1"]')).toBeNull();
   });
 
-  it("names a status only when the order is not filled", () => {
+  it("names a dead order's status on its second line, with no cash it never moved", () => {
     render(
       <ActivityCards
-        events={[wheel, event({ orderId: "dead", filled: 0, price: "—", status: "canceled" })]}
+        events={[event({ orderId: "dead", filled: 0, price: "—", status: "canceled" })]}
       />,
     );
-    expect(card("put-1").querySelector(".act-status")).toBeNull();
     const dead = card("dead");
-    expect(dead.querySelector(".act-what")).toHaveTextContent("BUY 40 NVDA");
-    expect(dead.querySelector(".act-status")).toHaveTextContent("✕ canceled");
+    expect(dead.querySelector(".act-what")).toHaveTextContent("BUY 40 shares NVDA");
+    expect(dead.querySelector(".act-outcome")).toHaveTextContent("✕ canceled");
     expect(dead.querySelector(".act-cash")).toBeEmptyDOMElement();
   });
 
+  it("says a buy later sold is closed on the sale's day, never open", () => {
+    render(<ActivityCards events={[event({ closedOn: "2026-10-09T15:00:00Z" })]} />);
+    expect(card("ord-1").querySelector(".act-outcome")).toHaveTextContent("closed Oct 9");
+  });
+
   // #885: "at this time, we do not show what playbooks others are using".
-  it("keeps the playbook off a card the viewer does not own, the bet intact", () => {
+  it("keeps the playbook off a card the viewer does not own, its standing intact", () => {
     render(<ActivityCards events={[wheel]} showPlaybook={false} />);
-    expect(card("put-1").querySelector(".act-bet")).toHaveTextContent("Stays above $80");
-    expect(screen.queryByText("CRWV-WHEEL")).not.toBeInTheDocument();
+    expect(screen.queryByText(/CRWV-WHEEL/)).not.toBeInTheDocument();
+    expect(card("put-1").querySelector(".act-foot")).toBeNull();
+    expect(card("put-1").querySelector(".act-outcome")).toHaveTextContent("open");
     fireEvent.click(within(card("put-1")).getByRole("button"));
     expect(screen.queryByText(/CRWV-WHEEL/)).not.toBeInTheDocument();
   });
@@ -146,7 +180,7 @@ describe("ActivityCards — one card an order, under its day", () => {
     expect(body).toHaveTextContent("CRWV-WHEEL · aggressive");
   });
 
-  it("names an expiry report where a side would be, with no cash and no bet", () => {
+  it("names an expiry report where a side would be, with no cash and no price", () => {
     const expired = {
       ...wheel,
       orderId: "lifecycle:a",
@@ -158,10 +192,10 @@ describe("ActivityCards — one card an order, under its day", () => {
     };
     render(<ActivityCards events={[expired]} />);
     const report = card("lifecycle:a");
-    expect(report.querySelector(".act-what")).toHaveTextContent("EXPIRED 1 CRWV $80 PUT");
-    expect(report.querySelector(".act-bet")).toHaveTextContent("expired worthless");
+    expect(report.querySelector(".act-what")).toHaveTextContent("EXPIRED 1 contract CRWV");
+    expect(report.querySelector(".act-sub")).toHaveTextContent(/^\$80 PUT · Nov 6$/);
     expect(report.querySelector(".act-cash")).toBeEmptyDOMElement();
-    expect(report.querySelector(".bet-glyph")).toBeNull();
+    expect(report.querySelector(".act-outcome")).toBeNull();
   });
 });
 

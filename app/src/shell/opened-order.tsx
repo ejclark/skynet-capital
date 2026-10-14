@@ -118,19 +118,23 @@ function OrderTable({
  *  playbook that placed the order links to its card on Playbooks: that card arrives open, this
  *  order's mark ringed on its lane, with one way back to this row. A merged ledger (All accounts)
  *  has no account to send the reader to, so the name stays plain words, like the round's link. */
-function PlaybookLine({
+export function PlaybookLine({
   why,
   playbookId,
   deskId,
   orderId,
+  bare = false,
 }: {
   readonly why: ActivityReasoning;
   readonly playbookId: string;
-  readonly deskId?: string;
+  readonly deskId?: string | undefined;
   readonly orderId: string;
+  /** The Ledger's list (#5317): the playbook's name alone — its mode waits in the opened order. */
+  readonly bare?: boolean;
 }): ReactElement {
   const words = `${playbookId}${why.playbookMode ? ` · ${why.playbookMode}` : ""}`;
-  if (!deskId) return <span>{words}</span>;
+  const shown = bare ? playbookId : words;
+  if (!deskId) return <span>{shown}</span>;
   const { card, mode, fill, from } = landingFor({ ...why, playbookId }, orderId);
   return (
     <Link
@@ -139,7 +143,7 @@ function PlaybookLine({
       search={{ account: deskId, section: "playbooks", card, mode, fill, from }}
       aria-label={`${words} — open its card on Playbooks`}
     >
-      {words} ›
+      {shown} ›
     </Link>
   );
 }

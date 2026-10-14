@@ -355,6 +355,16 @@ export interface DeskActivityEvent extends DeskActivityLine {
   /** A bot's spread only: a leg it placed whose line the ledger does not hold yet. Until none is
    *  missing, the spread row carries no result (nothing filled, no P/L). */
   readonly missingLegs?: readonly DeskMissingLeg[];
+  /** A closing fill (#5317): each order whose lot it closed, the newest first. */
+  readonly opened?: readonly DeskOpenedLeg[];
+  /** An opening fill with nothing of it still open (#5317): when its last lot closed. */
+  readonly closedOn?: string;
+}
+
+/** An order a closing fill closed (part of) — `matched` is how much of it this close took.
+ *  Mirrors the server's `DeskOpenedLeg`. */
+export interface DeskOpenedLeg extends DeskActivityLine {
+  readonly matched: number;
 }
 
 /** One leg of a spread, as the account filled it — a whole order line of its own, for the ticket of
