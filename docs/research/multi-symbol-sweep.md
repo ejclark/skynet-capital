@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A Bobl vintage's softening demand shows as a rising yield and an allotment inside the recent-regime
+  band" (FT-bobl-5y-auction-2026-10-13-1, -2)** — added 2026-10-14 from the
+  [bobl-5y-auction-2026-10-13 close-out](events/bobl-5y-auction-2026-10-13.md). Registered 2026-09-30
+  on DE000BU25075's four taps (yield 2.89% to 3.28%) and a 2026-only allotment band of EUR 3,676–3,907m
+  (n = 7). The 10-13 reopening allotted **EUR 3,352m** (bids 3,607, bid-to-offer 0.72x, retention
+  33.0%) and printed **3.22%**, 6bp *under* the prior tap. Demand broke the band downward while the
+  yield eased. What survives: the 12-01 taper is untested (FT-3, open). Do not re-propose a
+  demand-softening-means-rising-yield read off one vintage's auction-day yields, which mostly track
+  the market level on each date; the allotment band needs at least the 11-03 tap before re-use.
+
 - **"TLT has decayed to ~0.73–0.80× of its trailing-20 volume on a Columbus Day closure, so long Treasuries
   are no longer the thin leg" (FT-sifma-bond-market-closure-2026-10-12-2)** — added 2026-10-13 from the
   [sifma-bond-market-closure-2026-10-12 close-out](events/sifma-bond-market-closure-2026-10-12.md).
