@@ -42,12 +42,23 @@
 //     context") is quoted word for word on that pin's line, after its reaction or alone, and the
 //     next round's instruction carries it: "apply his note on that spot". A note counts as an
 //     answer with or without a reaction; one on a pin the page no longer shows is ignored.
+//   - His own marks (marks.mjs; Eric, 2026-10-14) get a "Your marks:" list — the frame, the spot in
+//     % across and down, his reaction and his note word for word, and "(before Claude's problems
+//     were shown)" on a mark placed before the reveal. They count as an answer, and the next round
+//     applies them ("his marks: …"). An opening question says whether Claude's problems were shown
+//     and when (`reveals` in the plan too).
+//   - Notes about the page itself (page-notes.mjs) are about the PROCESS, so they never go on the
+//     screen's issue: they come back as the `pageNotes` block and as `processLines`
+//     ({ what, where }), for `scripts/redesign/commons.mjs add --kind process`.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { CLAUDE_READY_LINE } from "../moneypenny/plan-claim.mjs";
 import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
+import { when } from "./html.mjs";
+import { isOpening, markClauses, marksBlock, revealLine } from "./marks.mjs";
 import { activeMinutes, isAnswered, roundRecords } from "./model.mjs";
+import { pageNotesBlock, processLines } from "./page-notes.mjs";
 import { perPinBlock, pinClauses } from "./pins.mjs";
 import { readRecords } from "./records.mjs";
 
@@ -122,7 +133,9 @@ function designPart(d, r) {
         .join(", ")}`,
     );
   if (by("not").length) lines.push(`- Not: ${by("not").join(", ")}`);
-  return [lines.join("\n"), perPinBlock(d, r), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [lines.join("\n"), perPinBlock(d, r), marksBlock(d, r), noteBlock(r.note)]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 const VERDICT_WORDS = {
@@ -212,6 +225,7 @@ function nextRoundName(d) {
  *  `pinClauses(d, r)`, passed in when the caller already has it. */
 export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
   const round = nextRoundName(d);
+  const marks = markClauses(d, r);
   const closer = marked(r, "more").filter((k) => k !== r.pick);
   const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
@@ -225,6 +239,7 @@ export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
       ? `Drop ${named(d, drop)}: he says ${drop.length === 1 ? "it is" : "they are"} not a problem.`
       : "",
     pins ? `Per pin: ${pins}` : "",
+    marks ? `Apply ${marks}` : "",
     r.pick ? "Nothing is filed from this pick." : "Nothing is filed.",
   ]
     .filter(Boolean)
@@ -233,13 +248,17 @@ export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
 
 function problemsPart(d, r) {
   const lines = [head(d)];
+  const reveal = revealLine(d, r, when);
+  if (reveal) lines.push(reveal);
   if (r.pick)
     lines.push(
       `- Fix first: problem ${r.pick}, "${optionName(d, r.pick)}" — the next round draws it; nothing is filed from a problem pick`,
     );
   if (marked(r, "more").length) lines.push(`- Look closer: ${named(d, marked(r, "more"))}`);
   if (marked(r, "not").length) lines.push(`- Not a problem: ${named(d, marked(r, "not"))}`);
-  return [lines.join("\n"), perPinBlock(d, r), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [lines.join("\n"), perPinBlock(d, r), marksBlock(d, r), noteBlock(r.note)]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /** A problems question: quoted on its issue, nothing filed, the next round's instruction printed. */
@@ -250,23 +269,29 @@ function problemsAnswer(d, r, acc, said) {
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
   // A note and no tap: quoted above, and the next round still has to answer it.
-  if (!(r.pick || Object.keys(r.react ?? {}).length || pins))
+  if (!(r.pick || Object.keys(r.react ?? {}).length || pins || markClauses(d, r)))
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
 function designAnswer(d, r, acc, id, said) {
   acc.part(d.issue, [designPart(d, r), said].filter(Boolean).join("\n\n"));
   if (r.pick) acc.actions.push(buildIssue(d, r, id));
-  // No Build: his pin reactions are the next round's instructions, pin by pin.
+  // No Build: his pin reactions and his own marks are the next round's instructions, spot by spot.
   const pins = r.pick ? "" : pinClauses(d, r);
-  if (pins) {
-    const instruction = `${nextRoundName(d)} on #${d.issue}, per pin: ${pins}`;
+  const marks = r.pick ? "" : markClauses(d, r);
+  if (pins || marks) {
+    const instruction = [
+      `${nextRoundName(d)} on #${d.issue}${pins ? `, per pin: ${pins}` : ":"}`,
+      marks ? `Apply ${marks}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     acc.nextRound.push({ issue: d.issue, key: d.key, pick: null, instruction });
     acc.follow("next-round", d, instruction);
   }
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
-  } else if (!(r.pick || pins)) {
+  } else if (!(r.pick || pins || marks)) {
     // A note and no tap: quoted above, and the next round still has to answer it.
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
   }
@@ -345,6 +370,9 @@ function flipComment({ d, r }, id) {
   };
 }
 
+/** An ISO time as stored, or null when it isn't one. */
+const validTime = (v) => (typeof v === "string" && !Number.isNaN(Date.parse(v)) ? v : null);
+
 /** The pure read-back: what was shown (tp.json) + what Eric saved + his comments → the plan. */
 export function readback(tp, records, comments = []) {
   const rr = roundRecords(records, tp.id);
@@ -398,6 +426,15 @@ export function readback(tp, records, comments = []) {
     followUps: acc.followUps,
     nextRound: acc.nextRound,
     unplacedComments: placed.unplaced,
+    // An opening question's reveal: whether he asked to see Claude's problems, and when.
+    reveals: tp.decisions.filter(isOpening).map((d) => ({
+      issue: d.issue,
+      key: d.key,
+      revealAt: validTime(rr.decisions[d.key]?.revealAt),
+    })),
+    // His notes about the page itself: never on the screen's issue — process lines for the commons.
+    pageNotes: pageNotesBlock(meta),
+    processLines: processLines(meta),
   };
 }
 

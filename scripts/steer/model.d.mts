@@ -17,12 +17,24 @@ export interface Option {
   delta: string;
   recommended: boolean;
   pictures?: Picture[];
+  /** A problems option drawn as a row: its pin number on Today's frame, in place of pictures. */
+  pin?: number;
+  /** The scope's outcome ids this shape works toward (scope.mjs). */
+  serves?: string[];
+}
+/** A round's goal and the outcomes it is drawn to meet (scope.mjs). */
+export interface Scope {
+  goal: string;
+  outcomes: { id: string; text: string; met: boolean }[];
 }
 export interface Decision {
   key: string;
   kind: Kind;
   /** A round-0 question (`kind: "problems"` in the manifest): a pick chooses a problem, never a build. */
   problems?: boolean;
+  /** A problems question that opens on clean frames, Claude's problems folded away (marks.mjs). */
+  opening?: boolean;
+  scope?: Scope;
   issue: number;
   isPr: boolean;
   title: string;
@@ -43,7 +55,8 @@ export interface Decision {
     wrongIf: string | null;
     saw?: string[];
   } | null;
-  today: { pictures: Picture[]; caption: string; real: boolean } | null;
+  /** `clean`: Today's frames before pin.mjs drew on them, for a round that opens on them (marks.mjs). */
+  today: { pictures: Picture[]; clean?: Picture[]; caption: string; real: boolean } | null;
   options: Option[];
   changes?: string | null;
   topic?: string | null;
@@ -61,6 +74,10 @@ export interface Saved {
   pins?: Record<string, string | null>;
   /** His note on a pin, keyed like `pins`; an emptied one is null. */
   pinNotes?: Record<string, string | null>;
+  /** His marks by `<option>:<phone|desk>:m<unique>` (marks.mjs); a removed one is null. */
+  marks?: Record<string, { x: number; y: number; at: string; beforeReveal: boolean } | null>;
+  /** When he pressed "Show what Claude found" on an opening question. */
+  revealAt?: string | null;
   at?: string;
   [k: string]: unknown;
 }

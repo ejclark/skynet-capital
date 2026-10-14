@@ -65,5 +65,10 @@ export function pinIntro(d: Partial<Decision>): string;
 export function pinnedShot(
   pic: Picture & { pins: Pin[] },
   src: string,
-  at: { key: string; option: string },
+  at: { key: string; option: string; markable?: boolean },
 ): string;
+/** Text he wrote, cleaned as the read-back quotes it (invisible characters dropped, cut at `max`
+ *  with "…"); null for none. */
+export function cleanText(v: unknown, max?: number): string | null;
+/** A pin's (or a mark's) saved note, cleaned; null for none. */
+export function noteOf(r: Saved | null | undefined, id: string): string | null;

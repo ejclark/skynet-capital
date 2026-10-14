@@ -6,55 +6,107 @@
 // thing by what it does; no invented labels (CLAUDE.md → "No coined names").
 import { readFileSync } from "node:fs";
 import { buttons, DAY, e, ext, note, plural, VERBS, when } from "./html.mjs";
+import {
+  cleanShots,
+  isOpening,
+  MARK_CLIENT,
+  MARK_INTRO,
+  markableShot,
+  OPENING_LINE,
+  REVEAL_SHOW,
+} from "./marks.mjs";
+import { PAGE_NOTE_CLIENT } from "./page-notes.mjs";
 import { hasPins, PIN_CLIENT, pinIntro, pinnedShot } from "./pins.mjs";
+import { scopeHtml, servesHtml } from "./scope.mjs";
 import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
 
 /** The artifact's name: stable across every republish, so the gallery card never changes. */
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
-// The pin reactions' script defines `steerPins`, and the listening line's `steerEar`; the page
-// script calls both (pins-client.js, ear-client.js).
-const CLIENT = ["./pins-client.js", "./ear-client.js", "./page-client.js"]
+// The pin reactions' script defines `steerPins`, the listening line's `steerEar`, the marks'
+// `steerMarks` and the page notes' `steerPageNotes`; the page script calls each (pins-client.js,
+// ear-client.js, marks-client.js, page-notes-client.js).
+const CLIENT = [
+  "./pins-client.js",
+  "./ear-client.js",
+  "./marks-client.js",
+  "./page-notes-client.js",
+  "./page-client.js",
+]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
   .join("\n");
 
 /** The pictures of one holder. `at` names the holder (its decision key and option, or "today"),
- *  so a picture with pins gets a button on each badge (pins.mjs). */
+ *  so a picture with pins gets a button on each badge (pins.mjs); on a design round's own page
+ *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. */
 function shots(pictures, img, issue, at) {
   const h = pictures
     .map((p) => {
       const src = img(p);
       if (!src) return "";
       if (p.pins?.length) return pinnedShot(p, src, at);
+      const size = p.size === "phone" ? "phone" : "desk";
+      if (at.markable) return markableShot(size, src, p.alt, at);
       return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
     })
     .join("");
   return h || `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
 }
 
-function optionsHtml(d, img) {
-  const rows = [];
-  if (d.today) {
-    const src = `<span class="tag plain">${d.today.real ? "real screenshot" : "mockup of today"}</span>`;
-    rows.push(
-      `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, { key: d.key, option: "today" })}</div>` +
-        `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p></div></article>`,
-    );
-  }
+/** A problem that names its pin on Today's frame (`pin`): a compact row, no pictures, labelled
+ *  with its pin number. Only "Fix this first": the pin itself carries yes / not / partly. */
+function pinRowHtml(d, o) {
+  const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
+  const delta = o.delta ? `<p class="delta"><b>The problem:</b> ${e(o.delta)}</p>` : "";
+  return (
+    `<article class="opt pinrow" id="d-${e(d.key)}-${e(o.key)}"><div class="side"><h4 class="oname">` +
+    `<span class="okey">Pin ${e(o.pin)}</span>${e(o.name)}${tag}</h4>${delta}${servesHtml(o.serves)}` +
+    `${buttons([VERBS.problems[0]], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+  );
+}
+
+/** Today's row: its pictures, whether they are real, and its caption. Problems that name their
+ *  pin on Today's frame (`pinRows`) sit in its side panel, so at desktop width each one reads
+ *  beside the frame its pin is on, and at phone width right under it. */
+function todayHtml(d, img, markable, pinRows = "") {
+  const src = `<span class="tag plain">${d.today.real ? "real screenshot" : "mockup of today"}</span>`;
+  const at = { key: d.key, option: "today", markable };
+  const rows = pinRows ? `<div class="pinrows">${pinRows}</div>` : "";
+  return (
+    `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, at)}</div>` +
+    `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p>${rows}</div></article>`
+  );
+}
+
+/** Is this option a problem drawn as a row on Today's frame, with no pictures of its own? */
+const isPinRow = (d, o) => Boolean(d.problems && o.pin != null && !o.pictures?.length);
+
+/** One option's row: its pictures (a design question's), its name and change, its buttons. */
+function optionHtml(d, o, img, markable) {
   const verbs = VERBS[d.problems ? "problems" : d.kind === "design" ? "design" : "fork"];
   const said = d.problems ? "The problem:" : "Changes:";
-  for (const o of d.options) {
-    const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
-    const pics =
-      d.kind === "design"
-        ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, { key: d.key, option: o.key })}</div>`
-        : "";
-    const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
-    rows.push(
-      `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
-        `${delta}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key })}</div></article>`,
-    );
-  }
+  const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
+  const at = { key: d.key, option: o.key, markable };
+  const pics =
+    d.kind === "design"
+      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at)}</div>`
+      : "";
+  const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
+  return (
+    `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
+    `${delta}${servesHtml(o.serves)}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+  );
+}
+
+function optionsHtml(d, img, markable) {
+  // A problem that names its pin sits beside Today's frame; with no Today it keeps its own row.
+  const beside = d.today ? d.options.filter((o) => isPinRow(d, o)) : [];
+  const rows = [
+    ...(d.today ? [todayHtml(d, img, markable, beside.map((o) => pinRowHtml(d, o)).join(""))] : []),
+    ...d.options
+      .filter((o) => !beside.includes(o))
+      .map((o) => (isPinRow(d, o) ? pinRowHtml(d, o) : optionHtml(d, o, img, markable))),
+  ];
   return rows.length ? `<div class="opts">${rows.join("")}</div>` : "";
 }
 
@@ -73,7 +125,22 @@ function controls(d) {
 /** What a decision asks, as the page names it: its kind, or "problems" for a round-0 question. */
 const asks = (d) => (d.problems ? "problems" : d.kind);
 
-function decisionHtml(d, i, total, img) {
+/** An opening question (marks.mjs): Today's frames clean, to mark first; Claude's problems — the
+ *  pinned frame and the rows — folded under "Show what Claude found" until he presses it. The
+ *  glyph turns with the region (▸ folded, ▾ open), so the state is a shape and words, not colour.
+ *  Claude's call (`call`: the recommendation and its evidence) folds away with them — a
+ *  "Recommended: …" above the clean frames would name a problem before he has looked. */
+function openingHtml(d, img, call) {
+  const k = e(d.key);
+  return (
+    `<div class="opening"><p class="stage">${OPENING_LINE}</p><div class="pics">${cleanShots(d, img)}</div></div>` +
+    `<button type="button" class="revealer" id="reveal-${k}" data-key="${k}" aria-expanded="false" ` +
+    `aria-controls="found-${k}"><span class="rg" aria-hidden="true">▸</span> <span class="rw">${REVEAL_SHOW}</span></button>` +
+    `<div class="found" id="found-${k}" hidden>${call}${optionsHtml(d, img, true)}</div>`
+  );
+}
+
+function decisionHtml(d, i, total, img, markable) {
   const rec = d.recommendation;
   const recLine = rec
     ? `<p class="recline">Recommended: <b>${e(rec.label)}</b>${rec.confidence ? ` <span class="muted">· ${e(rec.confidence)} confidence</span>` : ""}</p>`
@@ -89,13 +156,14 @@ function decisionHtml(d, i, total, img) {
         `<ul>${(rec.saw ?? []).map((s) => `<li>${e(s)}</li>`).join("")}</ul>${rec.wrongIf ? `<p><b>Wrong if:</b> ${e(rec.wrongIf)}</p>` : ""}</details>`
       : "";
   const age = d.ageDays != null ? ` · waiting ${plural(d.ageDays, "day")}` : "";
+  const opening = isOpening(d) && markable;
   return (
     `<section class="dec" id="d-${e(d.key)}" data-kind="${d.kind}">` +
     `<div class="dhead"><p class="eyebrow">Decision ${i + 1} of ${total} · ${asks(d)} · about ${d.minutes} min · ` +
     `<a href="${e(d.link)}" ${ext}>#${d.issue}</a>${d.cls ? ` · ${e(d.cls)}` : ""}${age}</p>` +
-    `<h3>${e(d.title)}</h3>${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${recLine}${changes}${dflt}` +
+    `<h3>${e(d.title)}</h3>${scopeHtml(d.scope)}${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${opening ? "" : recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
-    `${optionsHtml(d, img)}${controls(d)}${ev}` +
+    `${opening ? openingHtml(d, img, recLine + ev) : optionsHtml(d, img, markable)}${controls(d)}${opening ? "" : ev}` +
     note({
       sec: "decisions",
       key: d.key,
@@ -163,6 +231,11 @@ export const ROUND_INTRO = {
     "Pin a comment on the spot a problem shows; your comments lead and the buttons follow. " +
     "Mark Fix this first on one problem: a pick chooses what the next round draws, and nothing " +
     "is built from it.",
+  // A round that opens on clean frames (marks.mjs): his eye first, Claude's list after.
+  opening:
+    "Start with today's screen as it is, before Claude's problems. Then show what Claude found " +
+    "and mark Fix this first on one problem: a pick chooses what the next round draws, and " +
+    "nothing is built from it.",
 };
 
 /** A design round's own page (#5143): the round, its issue, the question count — nothing else. */
@@ -173,9 +246,11 @@ function roundHeaderHtml(tp) {
     .join(" · ");
   const round = tp.round != null ? `Design round ${e(tp.round)}` : "Design round";
   // One page asks one kind (design.mjs `designRound` refuses a mix), so its first decision says.
-  const intro = ROUND_INTRO[tp.decisions[0]?.problems ? "problems" : "design"];
+  const first = tp.decisions[0];
+  const intro = ROUND_INTRO[isOpening(first) ? "opening" : first?.problems ? "problems" : "design"];
   const pinned = tp.decisions.find(hasPins);
-  const pins = pinned ? ` ${pinIntro(pinned)}` : "";
+  // An opening round's intro already says how its pins come later; it adds only the marks' line.
+  const pins = `${pinned && !isOpening(first) ? ` ${pinIntro(pinned)}` : ""} ${MARK_INTRO}`;
   const date = tp.generatedAt ? ` · ${e(DAY.format(new Date(tp.generatedAt)))}` : "";
   const drawn = tp.needsPictures ?? [];
   const drawing = drawn.length
@@ -214,15 +289,24 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
       key: d.key,
       kind: d.kind,
       ...(d.problems ? { problems: true } : {}),
+      ...(round && isOpening(d) ? { opening: true } : {}),
       issue: d.issue,
       title: d.title,
     })),
-    ...(tp.decisions.some(hasPins) ? { pins: PIN_CLIENT } : {}),
+    // A design round's own page takes marks on every frame, and they ride the pins' popover, so
+    // it carries the pins' words even with no pin drawn; and its bar takes notes about the page.
+    ...(round || tp.decisions.some(hasPins) ? { pins: PIN_CLIENT } : {}),
+    ...(round ? { marks: MARK_CLIENT, pageNotes: PAGE_NOTE_CLIENT } : {}),
   };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const decisions = tp.decisions
-    .map((d, i) => decisionHtml(d, i, tp.decisions.length, img))
+    .map((d, i) => decisionHtml(d, i, tp.decisions.length, img, round))
     .join("");
+  // Notes about the page itself (page-notes.mjs): a toggle, then the count of notes already left.
+  const pageNote = round
+    ? `<button type="button" class="ghost" id="pnote" aria-pressed="false">${e(PAGE_NOTE_CLIENT.label)}</button>` +
+      `<span class="pncount" id="pnote-count" aria-live="polite" hidden></span>`
+    : "";
   return [
     `<title>${e(round ? tp.title : TITLE)}</title>`,
     `<style>\n${CSS}</style>`,
@@ -240,6 +324,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
       `<output id="save-state" aria-live="polite" data-state="loading">Loading your answers…</output>` +
       `<p id="told" aria-live="polite" hidden></p>` +
       `<p id="ear" aria-live="polite" data-state="unknown" hidden></p></div><div class="acts">` +
+      pageNote +
       `<button type="button" class="ghost" id="copy" hidden>Copy as text</button>` +
       `<button type="button" class="reopen" id="reopen" hidden>Reopen</button>` +
       `<button type="button" class="rb" id="done" data-v="done" aria-pressed="false">I'm done</button></div></div>`,

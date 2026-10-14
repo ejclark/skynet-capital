@@ -12,6 +12,7 @@
 
 import { QUESTION_KINDS } from "../steer/design.mjs";
 import { holderPins } from "../steer/pins.mjs";
+import { scopeProblems } from "../steer/scope.mjs";
 
 const CEILING = 200 * 1024;
 const CONF = ["low", "medium", "high"];
@@ -177,6 +178,11 @@ function kindProblems(q, at, raw) {
     return [`${at}: "kind" is "design" (the default) or "problems", not ${JSON.stringify(q.kind)}`];
   if (String(raw.round) === "0" && q.kind !== "problems")
     return [`${at}: round 0 picks a problem — set "kind": "problems" so a pick files no build`];
+  // The opening stage hides Claude's problems behind his own marks; a shape round has none to hide.
+  if (q.opening !== undefined && !(q.opening === true && q.kind === "problems"))
+    return [
+      `${at}: "opening": true is for a problems question — it hides the problems until asked`,
+    ];
   return [];
 }
 
@@ -202,7 +208,40 @@ function todayProblems(q, at, env) {
     ...out,
     ...pictureProblems(`${at} today`, q.today, env),
     ...pinsLint(`${at} today`, q.today, env),
+    ...cleanProblems(q, at, env),
   ];
+}
+
+/**
+ * An opening round shows Today before Claude's problems (marks.mjs). pin.mjs bakes the badges into
+ * the frame, so a pinned Today needs `clean` — the same frames before the badges — or his first,
+ * unbiased look would carry every one of them.
+ */
+function cleanProblems(q, at, env) {
+  const clean = q.today?.clean;
+  if (clean) return pictureProblems(`${at} today clean`, clean, env);
+  const pinned = q.today?.pins !== undefined || q.today?.pinsDesk !== undefined;
+  return q.opening === true && pinned
+    ? [`${at} today: "opening" needs "clean" — Today's frames before pin.mjs drew on them`]
+    : [];
+}
+
+/**
+ * An option that names its pin on Today's frame instead of carrying pictures (Eric, 2026-10-14:
+ * "I'm redundantly navigating the same screenshots"): a problems question only, and the pin must be
+ * on Today's phone frame — or its desk frame when Today has no phone one — so the row and the spot
+ * it points at can't drift apart.
+ */
+function pinOptionProblems(q, o, where, env) {
+  if (q.kind !== "problems")
+    return [`${where}: "pin" is for a problems question — a shape needs its own picture`];
+  if (!(Number.isInteger(o.pin) && o.pin >= 1))
+    return [`${where}: "pin" is the number of a pin on Today's frame (1, 2, …)`];
+  const frame = text(q.today?.phone) ? "phone" : "desk";
+  const pins = holderPins(q.today, `${where} today`, env.pinsAt).byFrame[frame] ?? [];
+  return pins.some((p) => p.n === o.pin)
+    ? []
+    : [`${where}: "pin" ${o.pin} isn't a pin on Today's ${frame} frame`];
 }
 
 function optionProblems(q, at, env) {
@@ -221,7 +260,9 @@ function optionProblems(q, at, env) {
       out.push(
         `${where}: needs "delta" — ${q.kind === "problems" ? "the problem, in a few words" : "the one thing it changes"}`,
       );
-    out.push(...pictureProblems(where, o, env));
+    // One frame for every problem: an option naming its pin on Today needs no picture of its own.
+    if (o.pin !== undefined) out.push(...pinOptionProblems(q, o, where, env));
+    else out.push(...pictureProblems(where, o, env));
     out.push(...pinsLint(where, o, env));
     out.push(...copyProblems(`${where} name`, o.name ?? "", env.ui));
     out.push(...copyProblems(`${where} delta`, o.delta ?? "", env.ui));
@@ -236,6 +277,9 @@ function wordingProblems(q, at, raw, env) {
     if (text(q[f])) out.push(...copyProblems(`${at} ${f}`, q[f], env.ui));
   if (text(q.today?.caption))
     out.push(...copyProblems(`${at} today caption`, q.today.caption, env.ui));
+  if (text(q.scope?.goal)) out.push(...copyProblems(`${at} scope goal`, q.scope.goal, env.ui));
+  for (const o of Array.isArray(q.scope?.outcomes) ? q.scope.outcomes : [])
+    if (text(o?.text)) out.push(...copyProblems(`${at} scope ${o.id}`, o.text, env.ui));
   const saw = Array.isArray(q.saw) ? q.saw : [];
   const sources = env.sourcesFor(q, raw);
   saw.forEach((line, n) => {
@@ -259,6 +303,7 @@ function questionProblems(q, i, raw, env) {
     ...fieldProblems(q, at),
     ...todayProblems(q, at, env),
     ...optionProblems(q, at, env),
+    ...scopeProblems(q, at),
     ...wordingProblems(q, at, raw, env),
   ];
 }
