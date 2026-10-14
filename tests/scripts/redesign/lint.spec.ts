@@ -82,7 +82,6 @@ describe("lintDesign", () => {
     });
     expect(lintDesign(manifest(q), env)).toEqual([
       'question 1: "q" is a number (1, 2, …), not "q1"',
-      "question 1 option A: no desk picture",
       "question 1 option B: phone picture nope.jpg doesn't exist",
       "question 1 option B: desk picture b-1280.jpg is 260KB — 200KB is the cap",
     ]);
@@ -186,8 +185,19 @@ describe("pins on a picture", () => {
 
   it("names pins on a frame the option has no picture for", () => {
     expect(lintDesign(manifest(withPins({ desk: undefined, pinsDesk: pins })), env)).toEqual([
-      "q1 option B: no desk picture",
       "q1 option B: pinsDesk names pins on a desk picture it doesn't have",
+    ]);
+  });
+
+  // Answer once (REDESIGN.md, Eric 2026-10-14): a desktop frame that only widens the phone layout
+  // is left out, so one opinion takes one answer; a desktop-only finding may show the desk alone.
+  it("takes a phone frame alone, or a desk frame alone, and refuses an option with neither", () => {
+    expect(lintDesign(manifest(withPins({ desk: undefined })), env)).toEqual([]);
+    expect(lintDesign(manifest(withPins({ phone: undefined, pins: undefined })), env)).toEqual([]);
+    expect(
+      lintDesign(manifest(withPins({ phone: undefined, desk: undefined, pins: undefined })), env),
+    ).toEqual([
+      "q1 option B: no picture — a phone frame, plus a desk frame only where the layout changes",
     ]);
   });
 

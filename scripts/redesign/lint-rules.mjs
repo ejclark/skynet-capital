@@ -1,7 +1,7 @@
 // LINT RULES FOR A ROUND'S MANIFEST (#5143) — the mechanical half of the critic pass, pure.
 //
 // WHY: a model critic pass on 2026-10-10 spent most of its tokens on faults a script can find — a
-// missing desk frame, a 400KB picture, "chip" and "hero" in Eric's copy, a quote of his that he
+// missing frame, a 400KB picture, "chip" and "hero" in Eric's copy, a quote of his that he
 // never wrote, a question numbered "q1". This module finds those, so a model critic judges taste
 // only. lint.mjs reads the files and hands everything in through `env`; nothing here touches disk.
 //
@@ -128,14 +128,20 @@ export function copyProblems(where, text, ui) {
 
 const text = (v) => typeof v === "string" && v.trim().length > 0;
 
+/**
+ * At least one frame, each one present and under the cap. A missing desk frame is the rule, not a
+ * gap (REDESIGN.md → *Answer once*, Eric 2026-10-14: a desktop frame that only widens the phone
+ * layout "doubles the work to leave feedback"); a desk frame alone is a desktop-only finding.
+ */
 function pictureProblems(where, holder, env) {
   const out = [];
+  if (!(text(holder?.phone) || text(holder?.desk)))
+    out.push(
+      `${where}: no picture — a phone frame, plus a desk frame only where the layout changes`,
+    );
   for (const size of ["phone", "desk"]) {
     const p = holder?.[size];
-    if (!text(p)) {
-      out.push(`${where}: no ${size} picture`);
-      continue;
-    }
+    if (!text(p)) continue;
     const bytes = env.pictureSize(p);
     if (bytes === null) out.push(`${where}: ${size} picture ${p} doesn't exist`);
     else if (bytes > CEILING)
