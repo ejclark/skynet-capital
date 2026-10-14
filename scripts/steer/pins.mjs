@@ -23,6 +23,7 @@
 // GLYPH AND WORD TOGETHER: Eric is red/green colourblind, so every reaction is a shape and a word
 // (👍 Keep · 👎 Change · ☯︎ Mixed), never a colour. The mixed glyph is U+262F with U+FE0E, so it
 // draws as a text glyph, not a colour emoji (Eric, 2026-10-11, in place of ◐).
+import { focusedFrame } from "./focus.mjs";
 import { e, ext } from "./html.mjs";
 
 export const MIXED = "☯︎";
@@ -256,7 +257,8 @@ export const PIN_CLIENT = { glyph: PIN_GLYPH, words: PIN_WORDS, noteMax: MAX_PIN
 /** A picture with pins: the frame, then a button on each badge, placed by % so it tracks the
  *  scaled image; its ✎ shows once the pin has a note. The popover is the page script's, one at a
  *  time, set after the pin tapped. On a design round's own page (`markable`) the frame is a box,
- *  never a link — a tap on it leaves a mark there (marks.mjs) instead of opening the picture. */
+ *  never a link — a tap on it leaves a mark there (marks.mjs) instead of opening the picture — and
+ *  a picture with a round's focus opens cropped to it, its pins riding the crop (focus.mjs). */
 export function pinnedShot(pic, src, { key, option, markable = false }) {
   const pins = [...pic.pins]
     .sort((a, b) => a.n - b.n)
@@ -271,11 +273,13 @@ export function pinnedShot(pic, src, { key, option, markable = false }) {
     .join("");
   const size = pic.size === "phone" ? "phone" : "desk";
   const img = `<img src="${e(src)}" alt="${e(pic.alt)}" loading="lazy">`;
-  if (markable)
+  if (markable) {
+    const f = focusedFrame(`<div class="frame">${img}</div>${pins}`, pic.focus, pic.ratio);
     return (
       `<div class="shot ${size} pinned markable" data-key="${e(key)}" data-option="${e(option)}" ` +
-      `data-frame="${size}"><div class="frame">${img}</div>${pins}</div>`
+      `data-frame="${size}"${f.attrs}>${f.inner}</div>`
     );
+  }
   return (
     `<div class="shot ${size} pinned" data-key="${e(key)}">` +
     `<a class="frame" href="${e(src)}" ${ext}>${img}</a>${pins}</div>`

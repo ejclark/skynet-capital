@@ -402,3 +402,69 @@ describe("a round's scope", () => {
     expect(lintDesign(manifest(q), env)).toEqual([]);
   });
 });
+
+// Eric, 2026-10-14: a round narrowed to "the sections under the microscope". A `focus` label must
+// name a section some frame in the question really has, or the page opens every frame whole and
+// the round quietly loses the part it was narrowed to; a box must sit inside the frame.
+describe("a question's focus", () => {
+  const sections = [
+    { label: "The order card", x: 0, y: 30, w: 100, h: 40 },
+    { label: "Order line", x: 10, y: 40, w: 80, h: 10 },
+  ];
+  const withSections = (today: Record<string, unknown> = {}) => ({
+    ...question().today,
+    sections,
+    ...today,
+  });
+
+  it("passes a label a frame names, case aside, inline or from a sections file", () => {
+    expect(
+      lintDesign(manifest(question({ focus: "order LINE", today: withSections() })), env),
+    ).toEqual([]);
+    const fromFile = question({
+      focus: "Order line",
+      today: withSections({ sections: undefined, sectionsDesk: "t-1280.sections.json" }),
+    });
+    const sectionsAt = (p: string) => (p === "t-1280.sections.json" ? sections : null);
+    expect(lintDesign(manifest(fromFile), { ...env, sectionsAt })).toEqual([]);
+  });
+
+  it("refuses a label no frame names, naming the frames it checked", () => {
+    const q = question({
+      focus: "Order total",
+      today: withSections(),
+      options: question().options.map((o, i) => (i === 0 ? { ...o, sections } : o)),
+    });
+    expect(lintDesign(manifest(q), env)).toEqual([
+      'q1: "focus" “Order total” isn\'t a section on any frame — checked today phone, option A phone',
+    ]);
+  });
+
+  it("refuses a label when no frame names its sections at all", () => {
+    expect(lintDesign(manifest(question({ focus: "Order line" })), env)).toEqual([
+      'q1: "focus" “Order line” names a section, but no frame names its sections — add "sections" (or use a box)',
+    ]);
+  });
+
+  it("passes a box per frame inside 0–100, and refuses one outside it", () => {
+    expect(lintDesign(manifest(question({ focus: { phone: [10, 20, 30, 40] } })), env)).toEqual([]);
+    expect(
+      lintDesign(
+        manifest(question({ focus: { phone: [10, 20, 130, 40], desk: [80, 0, 30, 10] } })),
+        env,
+      ),
+    ).toEqual([
+      "q1 focus phone: every number is % of the frame, 0–100",
+      "q1 focus desk: the box runs past the frame's edge",
+    ]);
+  });
+
+  it("refuses a focus that is neither a label nor a box per frame", () => {
+    expect(lintDesign(manifest(question({ focus: [1, 2, 3, 4] })), env)).toEqual([
+      'q1: "focus" is a section\'s label, or { "phone": [x, y, w, h], "desk": [...] }',
+    ]);
+    expect(lintDesign(manifest(question({ focus: { tablet: [0, 0, 1, 1] } })), env)).toEqual([
+      'q1 focus: "tablet" isn\'t a frame — "phone" or "desk"',
+    ]);
+  });
+});

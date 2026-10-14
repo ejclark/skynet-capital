@@ -111,7 +111,8 @@ function main() {
     console.error(
       "lint: none of Eric's banked-words files exist here (REDESIGN_VERBATIM) — only cited sources are checked",
     );
-  const problems = lintDesign(raw, { pictureSize, sourcesFor, ui, pinsAt });
+  // A sections file (a `focus` label is checked against it) is read the same way as a pins file.
+  const problems = lintDesign(raw, { pictureSize, sourcesFor, ui, pinsAt, sectionsAt: pinsAt });
   for (const p of new Set(missing)) problems.push(`manifest: cites ${p}, which isn't there`);
   if (problems.length > 0) {
     for (const p of problems) console.log(p);

@@ -11,6 +11,7 @@
 // app's, which the quote check verifies instead.
 
 import { QUESTION_KINDS } from "../steer/design.mjs";
+import { focusBoxProblems, matchSection } from "../steer/focus.mjs";
 import { holderPins } from "../steer/pins.mjs";
 import { scopeProblems } from "../steer/scope.mjs";
 
@@ -292,6 +293,52 @@ function wordingProblems(q, at, raw, env) {
   return out;
 }
 
+/**
+ * A question's `focus` (scripts/steer/focus.mjs): a section's label that some frame in the question
+ * really names — else the page would open every frame whole and the round would quietly lose the
+ * part it was narrowed to — or an explicit box per frame, inside 0–100.
+ */
+function focusProblems(q, at, env) {
+  const spec = q.focus;
+  if (spec === undefined) return [];
+  if (typeof spec === "string" && spec.trim()) return focusLabelProblems(q, at, spec.trim(), env);
+  if (!(spec && typeof spec === "object" && !Array.isArray(spec) && Object.keys(spec).length))
+    return [`${at}: "focus" is a section's label, or { "phone": [x, y, w, h], "desk": [...] }`];
+  return Object.entries(spec).flatMap(([frame, box]) =>
+    ["phone", "desk"].includes(frame)
+      ? focusBoxProblems(box, `${at} focus ${frame}`)
+      : [`${at} focus: "${frame}" isn't a frame — "phone" or "desk"`],
+  );
+}
+
+/** A focus label against every frame's sections — Today's, its clean frames' and each option's. */
+function focusLabelProblems(q, at, label, env) {
+  const read = env.sectionsAt ?? env.pinsAt;
+  const holders = [
+    ["today", q.today],
+    ["today clean", q.today?.clean],
+    ...(Array.isArray(q.options) ? q.options : []).map((o) => [`option ${o?.key}`, o]),
+  ];
+  const checked = [];
+  for (const [name, holder] of holders) {
+    for (const [field, frame] of [
+      ["sections", "phone"],
+      ["sectionsDesk", "desk"],
+    ]) {
+      let list = holder?.[field];
+      if (typeof list === "string") list = read ? read(list) : null;
+      if (!Array.isArray(list)) continue;
+      checked.push(`${name} ${frame}`);
+      if (matchSection(list, label)) return [];
+    }
+  }
+  return [
+    checked.length
+      ? `${at}: "focus" “${label}” isn't a section on any frame — checked ${checked.join(", ")}`
+      : `${at}: "focus" “${label}” names a section, but no frame names its sections — add "sections" (or use a box)`,
+  ];
+}
+
 function questionProblems(q, i, raw, env) {
   const numbered = Number.isInteger(q.q) && q.q >= 1;
   const at = numbered ? `q${q.q}` : `question ${i + 1}`;
@@ -304,6 +351,7 @@ function questionProblems(q, i, raw, env) {
     ...todayProblems(q, at, env),
     ...optionProblems(q, at, env),
     ...scopeProblems(q, at),
+    ...focusProblems(q, at, env),
     ...wordingProblems(q, at, raw, env),
   ];
 }
@@ -312,7 +360,8 @@ function questionProblems(q, i, raw, env) {
  * Every problem in a round's manifest, one line each.
  * @param raw the parsed manifest
  * @param env `{ pictureSize(path) → bytes | null, sourcesFor(question, raw) → text,
- *              ui: { text, lower } }` — the app's UI text, for the coined-name check
+ *              ui: { text, lower }, pinsAt?(path), sectionsAt?(path) }` — the app's UI text, for
+ *              the coined-name check; the readers parse a pins or sections file a manifest names
  */
 export function lintDesign(raw, env) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw))

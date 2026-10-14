@@ -33,6 +33,8 @@ export interface ReadbackPlan {
   pageNotes: string;
   /** One per note about the page: `commons.mjs add --kind process --what … --where …`. */
   processLines: { what: string; where: string }[];
+  /** Outcomes he added to a scope (outcomes.mjs), word for word, for the session to classify. */
+  outcomesAdded: { issue: number; key: string; text: string; at: string }[];
   commands?: string[][];
 }
 

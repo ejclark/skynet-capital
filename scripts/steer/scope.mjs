@@ -34,9 +34,11 @@ export const servesOf = (raw) =>
 /** One outcome's state, glyph and word together. */
 export const STATE = { open: "☐ open", met: "☑ met" };
 
-/** The top of a decision with a scope: its goal, then each outcome and its state. */
-export function scopeHtml(scope) {
-  if (!scope) return "";
+/** The top of a decision with a scope: its goal, then each outcome and its state, then `extra`
+ *  under the list — on a round's own page, the outcomes he adds (outcomes.mjs). With no scope,
+ *  only `extra`, in the same box ("" when there is neither). */
+export function scopeHtml(scope, extra = "") {
+  if (!scope) return extra ? `<div class="scope">${extra}</div>` : "";
   const goal = scope.goal ? `<p class="goal"><b>Goal:</b> ${e(scope.goal)}</p>` : "";
   const items = scope.outcomes
     .map(
@@ -46,7 +48,7 @@ export function scopeHtml(scope) {
     )
     .join("");
   const list = items ? `<ul class="outcomes" aria-label="Outcomes">${items}</ul>` : "";
-  return `<div class="scope">${goal}${list}</div>`;
+  return `<div class="scope">${goal}${list}${extra}</div>`;
 }
 
 /** An option row's line: "serves O1, O3" ("" when it names none). */

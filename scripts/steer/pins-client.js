@@ -165,7 +165,11 @@ globalThis.steerPins = (api) => {
     close(false);
     if (!pop) build();
     fill(pin);
-    pin.after(pop);
+    // On a focused frame (focus.mjs) the pin sits in a clipped plane: the popover goes on the
+    // picture's own box instead, where `place` measures from and nothing clips it.
+    const plane = pin.closest(".fplane");
+    if (plane) plane.closest(".shot").append(pop);
+    else pin.after(pop);
     pop.hidden = false;
     pin.setAttribute("aria-expanded", "true");
     pin.setAttribute("aria-controls", pop.id);

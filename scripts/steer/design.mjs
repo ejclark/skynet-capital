@@ -8,8 +8,10 @@
 // option's key), `conf`, `wrong`, `saw[]`, `changes`, `topic`. Three more ride through to the page
 // (Eric, 2026-10-14): `opening` on a problems question (his marks on clean frames before Claude's
 // problems, marks.mjs), `pin` on a problems option (its pin number on Today's frame, in place of
-// pictures of its own), and `scope` with each option's `serves` (scope.mjs). Two wrappers are
-// accepted:
+// pictures of its own), and `scope` with each option's `serves` (scope.mjs). And `focus` (Eric,
+// 2026-10-14: narrow a round to the section under the microscope): a section's label, or a box per
+// frame — resolved here on every picture into `focus: { x, y, w, h, label }` (focus.mjs), so the
+// page opens each frame cropped to it. Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
 // Image paths resolve against `root`, else the manifest's folder, else its parent (round 1's
@@ -17,6 +19,7 @@
 // an error — a round that silently lost its Today shot is the failure this page exists to avoid.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { focusBoxProblems, focusFor, imageRatio } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 import { holderPins } from "./pins.mjs";
 import { scopeOf, servesOf } from "./scope.mjs";
@@ -53,11 +56,21 @@ export function loadDesign(file, { issue, round } = {}) {
     const hit = find(p);
     return hit ? JSON.parse(readFileSync(hit, "utf8")) : null;
   };
+  // A picture's proportions, read from its header, so a focused crop is sized before it loads;
+  // null when it can't be read — the page script measures it then (focus-client.js).
+  const ratioOf = (p) => {
+    try {
+      return imageRatio(readFileSync(p));
+    } catch {
+      return null;
+    }
+  };
   return designDecisions(wrap.questions, {
     issue: n,
     round: wrap.round ?? round ?? null,
     at,
     pinsFrom,
+    ratioOf,
   });
 }
 
@@ -110,16 +123,51 @@ const WIDTH = { phone: "phone width", desk: "desktop width" };
 /** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it
  *  and, when the manifest names them, its sections (frame-sections.mjs: where each named part of
  *  the screen sits, so the read-back can name the part a mark landed on). */
-const pics = (o, alt, at, pins = {}, sections = {}) =>
+const pics = (o, alt, at, pins = {}, sections = {}, focus = NO_FOCUS) =>
   ["phone", "desk"]
     .filter((size) => o?.[size])
-    .map((size) => ({
-      src: at(o[size]),
-      alt: `${alt} at ${WIDTH[size]}`,
-      size,
-      ...(pins[size]?.length ? { pins: pins[size] } : {}),
-      ...(sections[size]?.length ? { sections: sections[size] } : {}),
-    }));
+    .map((size) =>
+      withFocus(
+        {
+          src: at(o[size]),
+          alt: `${alt} at ${WIDTH[size]}`,
+          size,
+          ...(pins[size]?.length ? { pins: pins[size] } : {}),
+          ...(sections[size]?.length ? { sections: sections[size] } : {}),
+        },
+        focus,
+      ),
+    );
+
+/** No `focus` on the question: pictures as they always were. */
+const NO_FOCUS = { spec: undefined, ratioOf: undefined };
+
+/** A picture with the round's focus resolved on it (focus.mjs) — `focus`, and `ratio` when its
+ *  file can be read — or as it was, when the question has none or this frame doesn't hold it. */
+function withFocus(pic, { spec, ratioOf }) {
+  const focus = spec === undefined ? null : focusFor(spec, pic);
+  if (!focus) return pic;
+  const ratio = ratioOf?.(pic.src);
+  return { ...pic, focus, ...(typeof ratio === "number" && ratio > 0 ? { ratio } : {}) };
+}
+
+/** A question's `focus`, checked: a section's label, or a box per frame. A malformed box throws,
+ *  as a malformed pin does — a crop drawn from it would hide the wrong part of the screen. */
+function focusSpec(q, n, ratioOf) {
+  const spec = q.focus;
+  if (spec === undefined) return NO_FOCUS;
+  if (typeof spec === "string" && spec.trim()) return { spec: spec.trim(), ratioOf };
+  const ok = spec && typeof spec === "object" && !Array.isArray(spec);
+  const problems = ok
+    ? Object.entries(spec).flatMap(([k, box]) =>
+        ["phone", "desk"].includes(k)
+          ? focusBoxProblems(box, `q${n} focus ${k}`)
+          : [`q${n} focus: "${k}" isn't a frame — "phone" or "desk"`],
+      )
+    : [`q${n}: "focus" is a section's label, or { "phone": [x, y, w, h], "desk": [...] }`];
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return { spec, ratioOf };
+}
 
 /** A holder's sections by frame: `sections` (phone) and `sectionsDesk`, each the list itself or
  *  the path of the `.sections.json` the shoot script wrote beside the frame. A file that isn't
@@ -177,13 +225,13 @@ function questionKind(q, n) {
 }
 
 /** One manifest option as the page holds it, its pictures carrying the pins drawn on them. */
-function optionOf(o, q, at, pins, readJson) {
+function optionOf(o, q, at, pins, readJson, focus) {
   return {
     key: safeKey(o.key),
     name: o.name ?? `Option ${o.key}`,
     delta: o.delta ?? "",
     recommended: q.rec != null && String(o.key) === String(q.rec),
-    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson)),
+    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson), focus),
     // One frame for every problem: the option names its pin on Today's frame instead of carrying
     // pictures of its own (render.mjs draws it as a compact row).
     ...(Number.isInteger(o.pin) ? { pin: o.pin } : {}),
@@ -194,13 +242,15 @@ function optionOf(o, q, at, pins, readJson) {
 /** Today as the page holds it: its pictures with their pins, and — for a round that opens on clean
  *  frames (marks.mjs) — `clean`, the same frames before pin.mjs drew on them, so his first look
  *  carries none of Claude's badges. */
-function todayOf(today, source, at, pins, readJson) {
+function todayOf(today, source, at, pins, readJson, focus) {
   if (!today) return null;
   // The clean frames are the same screen before pin.mjs drew on it, so they share its sections.
   const sections = sectionsOf(today, readJson);
   return {
-    pictures: pics(today, "Today", at, pins, sections),
-    ...(today.clean ? { clean: pics(today.clean, "Today, before any pin", at, {}, sections) } : {}),
+    pictures: pics(today, "Today", at, pins, sections, focus),
+    ...(today.clean
+      ? { clean: pics(today.clean, "Today, before any pin", at, {}, sections, focus) }
+      : {}),
     caption: today.caption ?? "",
     real: !source.startsWith("mockup"),
   };
@@ -216,16 +266,23 @@ function stages(q, problems) {
   };
 }
 
-/** Pure once `at` and `pinsFrom` are: manifest entries → decisions. `at` maps a manifest path to
- *  a usable one; `pinsFrom` reads a pins file a manifest names (loadDesign passes both).
- *  A problems question stays a design decision (pictures, minutes, the store) and carries
+/** Pure once `at`, `pinsFrom` and `ratioOf` are: manifest entries → decisions. `at` maps a
+ *  manifest path to a usable one; `pinsFrom` reads a pins (or sections) file a manifest names;
+ *  `ratioOf` reads a picture's height ÷ width, for a question with a focus (loadDesign passes all
+ *  three). A problems question stays a design decision (pictures, minutes, the store) and carries
  *  `problems: true`, which changes only its words and its read-back. */
-export function designDecisions(questions, { issue, round = null, at = (p) => p, pinsFrom }) {
+export function designDecisions(
+  questions,
+  { issue, round = null, at = (p) => p, pinsFrom, ratioOf },
+) {
   return questions.map((q, i) => {
     const n = Number(q.q ?? i + 1);
     const problems = questionKind(q, n) === "problems";
     const pins = pinsOf(q, n, pinsFrom);
-    const options = (q.options ?? []).map((o, j) => optionOf(o, q, at, pins.options[j], pinsFrom));
+    const focus = focusSpec(q, n, ratioOf);
+    const options = (q.options ?? []).map((o, j) =>
+      optionOf(o, q, at, pins.options[j], pinsFrom, focus),
+    );
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
     return {
@@ -252,7 +309,7 @@ export function designDecisions(questions, { issue, round = null, at = (p) => p,
             saw: q.saw ?? [],
           }
         : null,
-      today: todayOf(q.today, source, at, pins.today, pinsFrom),
+      today: todayOf(q.today, source, at, pins.today, pinsFrom, focus),
       options,
     };
   });
