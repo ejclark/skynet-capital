@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
+import { orderStamp, orderTime } from "../../src/live/order-facts";
 import { ActivityTable } from "../../src/shell/activity-table";
 import { LANDED_MS } from "../../src/shell/landing";
 
@@ -446,6 +447,19 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
       .getElementById("act-opt-put-1")
       ?.querySelector("td.num")?.textContent;
     expect(saleStamp).toMatch(/\d{1,2}:\d{2}/);
+  });
+});
+
+/** #5164: the table once printed "Oct 6, 09:31 AM" — the browser's zone, unnamed — for a fill the
+ *  phone card read "10:31 AM ET". One order, one time, at every width. */
+describe("ActivityTable — one fill, one time", () => {
+  it("prints an order's day and time in New York time, naming the zone, as the card does", () => {
+    const fill = event({ orderId: "crwv-put", at: "2026-10-06T14:31:00Z" });
+    render(<ActivityTable events={[fill]} />);
+    const stamp = document.getElementById("act-crwv-put")?.querySelector("td.num")?.textContent;
+    expect(stamp).toBe(orderStamp(fill));
+    expect(stamp).toContain(orderTime(fill) as string);
+    expect(stamp).toMatch(/^Tue Oct 6(, 2026)? · 10:31 AM ET$/);
   });
 });
 

@@ -599,6 +599,13 @@ export function checkCallout(ctx, deps = {}) {
  * no-op, never a second build. WHO may say ready is the workflow's job (`moneypenny-events.yml`'s `if:`,
  * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
  * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
+ *
+ * A REFUSED COMMENT-FLIP IS RECORDED AS THE LABEL (#5334). The retry sweep reads only `ready`
+ * issues, and a comment-flip carries no label — so a flip that admission queued (cap, work-mode)
+ * or that open blockers held back used to be dropped until someone re-posted it (#5281). Both
+ * refusals now apply `ready` before returning, as `unpark` does for a reply: the label records the
+ * go the comment already gave, the board shows it in Ready, and the sweep claims it once admitted
+ * (blockers honoured by `notPullableReason`). A parked or `in-progress` plan is never labelled.
  */
 export function claimPlan(
   ctx,
@@ -606,16 +613,21 @@ export function claimPlan(
   sha = process.env.GITHUB_SHA ?? "",
   admission = {},
 ) {
+  const edit = admission.edit ?? editLabels;
   const intent = planReadyIntent(ctx);
   if (!intent.ready) {
     console.log(`::notice::not building a plan issue — ${intent.reason}`);
+    if (intent.blocked) recordPlanFlip(ctx, intent.issue, edit);
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
   // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
   // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
   const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });
-  if (!gate.admit) return { claimed: false, reason: gate.reason };
+  if (!gate.admit) {
+    recordPlanFlip(ctx, issue, edit);
+    return { claimed: false, reason: gate.reason };
+  }
   const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
@@ -634,6 +646,20 @@ export function claimPlan(
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * `ready` on a plan whose comment-flip was refused (#5334, see `claimPlan`). Only for the comment
+ * door — a label event already carries the label — and only when the issue lacks it, so a re-posted
+ * flip writes nothing. Best-effort, `unpark`'s doctrine.
+ */
+function recordPlanFlip(ctx, issue, edit) {
+  if (!ctx.payload?.comment || labelNames(issue.labels).includes(LABELS.ready.name)) return;
+  if (edit(issue.number, ["--add-label", LABELS.ready.name])) {
+    console.log(
+      `::notice::plan #${issue.number} — refused flip recorded as \`ready\` for the sweep`,
+    );
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ import type {
   DeskMissingLeg,
 } from "../live/desk";
 import { lifecycleDayText } from "../live/lifecycle-day";
+import { orderStamp } from "../live/order-facts";
 import { landingFor } from "../live/playbook-landing";
 import { cycleAnchor } from "./cycle-anchor";
 import { targetedAnchor, useLandOnHash } from "./landing";
@@ -289,19 +290,12 @@ function SideChip({ event }: { readonly event: DeskActivityEvent }): ReactElemen
   );
 }
 
-/** An order's date and time; a lifecycle row's DAY alone, the lifecycle card's own rule — its stamp
- *  is a synthetic end-of-day instant, so a time would be one the event never had. */
+/** An order's day and time in New York time, naming the zone — the phone card's clock (#5164); a
+ *  lifecycle row's DAY alone, the lifecycle card's own rule — its stamp is a synthetic end-of-day
+ *  instant, so a time would be one the event never had. */
 function rowStamp(event: DeskActivityEvent, now = new Date()): string {
   if (event.lifecycle) return lifecycleDayText(event.at, now);
-  const when = new Date(event.at);
-  return Number.isNaN(when.getTime())
-    ? event.at
-    : when.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  return orderStamp(event, now) ?? event.at;
 }
 
 function ActivityRow({
