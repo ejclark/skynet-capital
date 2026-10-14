@@ -167,7 +167,7 @@ describe("the read-back of a problems question files nothing", () => {
         key: "5160-q1",
         pick: "B",
         instruction:
-          'Round 1 on #5160: draw 2–5 shapes that fix problem B, "Bots and members look alike". ' +
+          'Round 1 on #5160: draw 1–5 shapes (1 to confirm, 2–3 for a fork) that fix problem B, "Bots and members look alike". ' +
           'Look closer at A ("Rank has no reason"): show it again, closer. ' +
           'Drop C ("The total hides below the fold"): he says it is not a problem. ' +
           "Nothing is filed from this pick.",

@@ -57,7 +57,7 @@ The stable page's URL is in #5056's state block; the first publish puts it there
    words alone: _"1 and 2 have no pictures. i'm uncertain what I am responding too"_. Gather keeps
    any decision with no picture out of the asked set, in `tp.json`'s `needsPictures`. For each one,
    draw Today and its options as pictures (the critique-round drill below: a real screenshot of
-   Today, 2–5 options phone-first, a recommendation) into a design manifest for its issue, then
+   Today, 1–5 options phone-first, a recommendation) into a design manifest for its issue, then
    re-run step 2 with every manifest passed as `--design`. Publish only when `needsPictures` is
    empty — or, when a drawing can't be finished this touch point, publish anyway: the page names
    each one as "being drawn and comes next page" and the read-back rolls it over untouched. A held

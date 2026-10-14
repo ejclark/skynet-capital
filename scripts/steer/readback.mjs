@@ -243,7 +243,7 @@ export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
   const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
     r.pick
-      ? `${round} on #${d.issue}: draw 2–5 shapes that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
+      ? `${round} on #${d.issue}: draw 1–5 shapes (1 to confirm, 2–3 for a fork) that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
       : `No problem picked on #${d.issue}: the next round asks again.`,
     closer.length
       ? `Look closer at ${named(d, closer)}: show ${closer.length === 1 ? "it" : "them"} again, closer.`

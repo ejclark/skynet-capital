@@ -248,8 +248,9 @@ function pinOptionProblems(q, o, where, env) {
 function optionProblems(q, at, env) {
   const options = Array.isArray(q.options) ? q.options : [];
   const out = [];
-  if (options.length < 2 || options.length > 5)
-    out.push(`${at}: ${options.length} options — a round shows 2–5`);
+  // 1 to confirm, 2–3 for a fork, up to 5 to explore (REDESIGN.md → step d, *As many as needed*).
+  if (options.length < 1 || options.length > 5)
+    out.push(`${at}: ${options.length} options — a round shows 1–5`);
   const keys = options.map((o) => String(o.key));
   if (new Set(keys).size !== keys.length) out.push(`${at}: two options share a key`);
   if (text(q.rec) && !keys.includes(String(q.rec)))
