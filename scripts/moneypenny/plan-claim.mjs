@@ -163,7 +163,12 @@ export function planReadyIntent(ctx) {
     return { ready: false, reason: "comment does not read as a ready-flip" };
   }
   const notPullable = notPullableReason(asFlipped(issue));
-  if (notPullable) return { ready: false, reason: notPullable };
+  if (notPullable) {
+    // #5334: a flip refused ONLY for open blockers is still the owner's go — `blocked` tells
+    // `claimPlan` to record it as the label, so the sweep starts it when the blockers close.
+    const blocked = !notPullableReason({ ...asFlipped(issue), issue_dependencies_summary: null });
+    return { ready: false, reason: notPullable, ...(blocked ? { blocked, issue } : {}) };
+  }
   return { ready: true, reason: "ready-flip on a plan issue", issue };
 }
 
