@@ -33,7 +33,13 @@
 //     `ready` and is now buildable → ready. Without it, clearing `needs-eric` from a ready issue
 //     left it idle until someone thought to say "ready" again — the flip was already on record.
 // The comment path is unchanged.
-import { LABELS, labelNames, notPullableReason, PARKING_LABELS } from "./labels.mjs";
+import {
+  inFeedbackLane,
+  LABELS,
+  labelNames,
+  notPullableReason,
+  PARKING_LABELS,
+} from "./labels.mjs";
 
 // THE PULL RULE (#4393 criterion 10) is `notPullableReason` in labels.mjs — the one test every
 // puller asks. A ready-flip comment and a `labeled: ready` event ARE the flip, so those two paths
@@ -213,8 +219,8 @@ export function labelEventReady(payload, lane) {
 export function feedbackReadyIntent(ctx) {
   const issue = ctx.payload?.issue;
   if (!issue) return { ready: false, reason: "no issue in the payload" };
-  if (!labelNames(issue.labels).includes(LABELS.feedback.name)) {
-    return { ready: false, reason: "ready, but not a feedback issue — not this lane's" };
+  if (!inFeedbackLane(issue)) {
+    return { ready: false, reason: "ready, but not a feedback or bug issue — not this lane's" };
   }
   if (issue.state && issue.state !== "open") {
     return { ready: false, reason: `issue #${issue.number} is not open` };
