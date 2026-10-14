@@ -199,6 +199,19 @@ quoting his words. It is what the rest of the session is measured against:
 A note in a later round that reveals a new problem or outcome is added to the scope (ranked where he
 put it) and said in the read-back; it never reopens stage 1.
 
+**Outcomes he adds — and the ones today's design can't reach** (Eric, 2026-10-14: "the redesign
+process must offer 'integrate this outcome' capabilities too… the current design may not have that,
+and redesign/rearchitecture may be necessary to achieve said outcomes"). He can add an outcome at
+any round with "＋ Add an outcome" on the scope (or in chat); the read-back lists them under
+*Outcomes he added* and asks you to classify each:
+- **Today's design can reach it** → it joins the scope as the next O-number; rounds work it.
+- **It needs something the app doesn't have** — a missing entity, field or endpoint (`docs/IA.md`
+  §7), or a move across screens (§10) → it is a **re-architecture**. Say so on the issue, add the
+  row to §7 or §10, and file one plan issue for the capability (`/issue`, `enhancement` + `plan`);
+  the scope carries the outcome as "waits on #N". When the goal can't be met without it, the next
+  round draws the screen **as it would be with the capability** (`"tag": "illustrative values"`),
+  so the design leads the architecture instead of waiting for it.
+
 ### 3 · Work the problem — design rounds sized by the scope
 
 "Once we decide on a proposal, we know the scope of the problem and outcome and just have to work
@@ -218,6 +231,13 @@ the problem… only as many as needed, no more no less" (Eric, 2026-10-14).
   `delta` the problem it solves ("solves P2"). A shape that serves none isn't drawn. The question
   carries the scope (`"scope": { "goal", "outcomes": [{ "id", "text", "met" }] }`) so the page shows
   the outcome checklist above the shapes, ticked as rounds meet them.
+- **Name the round's focus** — `"focus": "<section label>"` (a label from the frame's
+  `.sections.json`) or `{ "phone": [x, y, w, h] }` in %. The page opens each frame on just that part,
+  at real size, with "Show the whole screen" one tap away (the focus then drawn as a dashed outline
+  with its label). Eric, 2026-10-14: "without that, it's easy to spend time giving feedback on things
+  out of scope for the task at hand" — and he is easily distracted, so the default shows only what is
+  in play. His marks outside the focus read back under *Outside this round's focus — added to the
+  scope for later*: add each to the scope; they never steer this round.
 - **Phone and desktop answer once.** When the desktop frame is the phone layout with more room and
   nothing moved, leave `desk` out of the option and say "desktop: same layout, wider" in its
   `delta`; pin each element once, on the phone frame. Draw a desktop frame only where the layout
@@ -391,6 +411,7 @@ more rounds with no build):
 | Domain honesty | Real tickers; the sold side of an option in words ("you sold the 180 call"); "illustrative values" wherever nothing computes the number. |
 | His read before ours | Round 0 opens on clean frames for his marks; our problems stay behind "Show what Claude found". |
 | One frame per round 0 | Every problem is a pin on one Today frame; no copy of the screenshot per problem. |
+| Only what's in play | The frame opens on the round's focus; the whole screen is one tap away; nothing on the page that isn't this round's question. |
 | As many as needed | 1 shape to confirm, 2–3 for a fork, up to 5 to explore; the `ask` says which, and every shape serves an open outcome. |
 | Comments lead, buttons follow | His pinned comments are the richest signal. The buttons are one pick: More of this on the one closest to right, Build this when it is ready to build (round 0: Fix this first, which builds nothing). |
 
@@ -486,6 +507,7 @@ Newest first. This is how a change to the loop reaches the sessions already runn
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
+- 2026-10-14 · **The focus view and outcomes he adds** (Eric: "I liked the outline of the sections under the microscope to narrow focus"; "simple and elegant design that is free of distraction"; "the redesign process must offer 'integrate this outcome' capabilities too"). From your next round: give each design question a `"focus"` (a section label from the frame's `.sections.json`, or a box) — the page opens on that part at real size, the whole screen one tap away, and the read-back splits his marks into in-focus and *outside — added to the scope for later*. The page's intro is now one line, its how-to folded. Every round page carries "＋ Add an outcome": classify each *Outcome he added* as reachable by today's design (it joins the scope) or a re-architecture (a row in `docs/IA.md` §7/§10, a plan issue, and a round drawn as the screen would be with it).
 - 2026-10-14 · **His marks read back by name.** `shoot.mjs` now writes `<id>-<phone|desk>.sections.json` beside each frame. Name it on the holder (`"sections"` for the phone frame, `"sectionsDesk"` for the desktop one; on Today it also covers `today.clean`), and the read-back says *on “Place order” (10% across, 62% down)* instead of a bare position. A frame without one reads back as before.
 - 2026-10-14 · **The page kit is live: marks, the reveal, one-frame problems, page notes, the scope checklist.** From your next round, round 0 is the two-stage page: `"opening": true`, `today.clean` (the unpinned frames), Today's `pins` holding every problem, and options with `"pin": <n>` instead of pictures. Design rounds carry `"scope"` and each option `"serves"`. The read-back now adds *Your marks* to the issue comment, says when (and after how many marks) your problems were shown, and returns `processLines` — run `commons.mjs add --kind process --what … --where …` for each, as for a `process:` note. Every frame on a round page is now a markable box, not a link.
 - 2026-10-14 · **The first retro (#5160, 17 rounds) — three changes** (its trace: about 6 rounds were avoidable). From your next round: the critic pass also checks every frame against `docs/READERS.md` and the screen's settled list, and any payoff or P&L picture against the strategy's real mechanics; the round that offers Build shows the frames the build will carry, so a last note lands before the issue is filed; and round 0 asks two more opening questions (his words for things; what he reads first in a row). `node scripts/redesign/retro.mjs <issue>` gathers a screen's rounds, picks and notes for step i.
