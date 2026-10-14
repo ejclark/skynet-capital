@@ -30,5 +30,7 @@ export function designDecisions(
     at?: (p: string) => string;
     /** Reads a pins file a manifest names (loadDesign passes it); null when it isn't there. */
     pinsFrom?: (p: string) => unknown;
+    /** A picture's height ÷ width, for a question with a `focus`; null when it can't be read. */
+    ratioOf?: (p: string) => number | null;
   },
 ): Omit<Decision, "minutes" | "skip">[];

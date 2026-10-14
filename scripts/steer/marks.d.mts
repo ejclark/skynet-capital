@@ -1,6 +1,6 @@
 // Type surface for scripts/steer/marks.mjs (see scripts/moneypenny/index.d.mts for why scripts/
 // ships hand-written declarations).
-import type { Decision, Saved } from "./model.mjs";
+import type { Decision, Picture, Saved } from "./model.mjs";
 import type { PinReaction } from "./pins.mjs";
 
 /** A mark as the read-back has it: its frame, its spot in %, what he said, and when. */
@@ -17,7 +17,15 @@ export interface SaidMark {
   before: boolean;
   /** The named part of the screen it landed on (frame-sections.mjs), or null. */
   section?: string | null;
+  /** Inside the round's focus (focus.mjs) — always true on a frame with none. */
+  inFocus: boolean;
 }
+
+export const IN_FOCUS: string;
+export const OUT_OF_FOCUS: string;
+export const ADD_TO_SCOPE: string;
+export function scopeClauses(d: Partial<Decision>, r: Saved | null | undefined): string;
+export function markInstruction(d: Partial<Decision>, r: Saved | null | undefined): string;
 
 export const PENCIL: string;
 export const MARK_GLYPH: Record<PinReaction, string>;
@@ -51,5 +59,5 @@ export function markableShot(
   size: "phone" | "desk",
   src: string,
   alt: string,
-  at: { key: string; option: string },
+  at: { key: string; option: string; focus?: Picture["focus"]; ratio?: number },
 ): string;

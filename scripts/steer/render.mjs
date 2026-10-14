@@ -5,31 +5,46 @@
 // queued until the next page · the 14-day strip · Done (in the fixed bar). Page text names each
 // thing by what it does; no invented labels (CLAUDE.md → "No coined names").
 import { readFileSync } from "node:fs";
+import { FOCUS_CLIENT } from "./focus.mjs";
 import { buttons, DAY, e, ext, note, plural, VERBS, when } from "./html.mjs";
 import {
   cleanShots,
   isOpening,
   MARK_CLIENT,
-  MARK_INTRO,
   markableShot,
   OPENING_LINE,
   REVEAL_SHOW,
 } from "./marks.mjs";
+import { OUTCOME_CLIENT, outcomesControl } from "./outcomes.mjs";
 import { PAGE_NOTE_CLIENT } from "./page-notes.mjs";
-import { hasPins, PIN_CLIENT, pinIntro, pinnedShot } from "./pins.mjs";
+import { hasPins, PIN_CLIENT, pinnedShot } from "./pins.mjs";
+import {
+  COMMENTS_COUNT,
+  HOW_SUMMARY,
+  ROUND_INTRO,
+  ROUND_LINE,
+  roundHeaderHtml,
+} from "./round-header.mjs";
 import { scopeHtml, servesHtml } from "./scope.mjs";
 import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
+
+// The round page's header and its words live in round-header.mjs; the page's words stay readable
+// from here, where the specs and the steer skill have always found them.
+export { COMMENTS_COUNT, HOW_SUMMARY, ROUND_INTRO, ROUND_LINE };
 
 /** The artifact's name: stable across every republish, so the gallery card never changes. */
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // The pin reactions' script defines `steerPins`, the listening line's `steerEar`, the marks'
-// `steerMarks` and the page notes' `steerPageNotes`; the page script calls each (pins-client.js,
-// ear-client.js, marks-client.js, page-notes-client.js).
+// `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes` and the page
+// notes' `steerPageNotes`; the page script calls each (pins-client.js, ear-client.js,
+// marks-client.js, focus-client.js, outcomes-client.js, page-notes-client.js).
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
   "./marks-client.js",
+  "./focus-client.js",
+  "./outcomes-client.js",
   "./page-notes-client.js",
   "./page-client.js",
 ]
@@ -46,7 +61,8 @@ function shots(pictures, img, issue, at) {
       if (!src) return "";
       if (p.pins?.length) return pinnedShot(p, src, at);
       const size = p.size === "phone" ? "phone" : "desk";
-      if (at.markable) return markableShot(size, src, p.alt, at);
+      if (at.markable)
+        return markableShot(size, src, p.alt, { ...at, focus: p.focus, ratio: p.ratio });
       return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
     })
     .join("");
@@ -140,6 +156,10 @@ function openingHtml(d, img, call) {
   );
 }
 
+/** A decision's scope, and on a round's own page the outcomes he adds under it (outcomes.mjs) —
+ *  there even with no scope, so he can say what the screen should reach. */
+const scopeBlock = (d, markable) => scopeHtml(d.scope, markable ? outcomesControl(d) : "");
+
 function decisionHtml(d, i, total, img, markable) {
   const rec = d.recommendation;
   const recLine = rec
@@ -161,7 +181,7 @@ function decisionHtml(d, i, total, img, markable) {
     `<section class="dec" id="d-${e(d.key)}" data-kind="${d.kind}">` +
     `<div class="dhead"><p class="eyebrow">Decision ${i + 1} of ${total} · ${asks(d)} · about ${d.minutes} min · ` +
     `<a href="${e(d.link)}" ${ext}>#${d.issue}</a>${d.cls ? ` · ${e(d.cls)}` : ""}${age}</p>` +
-    `<h3>${e(d.title)}</h3>${scopeHtml(d.scope)}${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${opening ? "" : recLine}${changes}${dflt}` +
+    `<h3>${e(d.title)}</h3>${scopeBlock(d, markable)}${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${opening ? "" : recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
     `${opening ? openingHtml(d, img, recLine + ev) : optionsHtml(d, img, markable)}${controls(d)}${opening ? "" : ev}` +
     note({
@@ -172,11 +192,6 @@ function decisionHtml(d, i, total, img, markable) {
     `</section>`
   );
 }
-
-/** The page's intro line: a comment sent to Claude is read back and quoted beside the taps
- *  (.claude/skills/steer/SKILL.md step 7; readback.mjs --comments). */
-export const COMMENTS_COUNT =
-  "Comments you send to Claude count too — they're quoted on the issue with your answers.";
 
 /** The page's summary line: the decisions asked now, and — counted apart — the ones being drawn. */
 function headline(n, minutes, drawn) {
@@ -221,55 +236,6 @@ function headerHtml(tp) {
   );
 }
 
-/** How a round page asks (docs/process/REDESIGN.md): his pinned comments lead, the taps follow.
- *  Keyed like VERBS: a round of shapes, or round 0's problems, where a pick builds nothing. */
-export const ROUND_INTRO = {
-  design:
-    "Pin a comment on the spot a shape should change; your comments lead and the buttons follow. " +
-    "Mark More of this on the one closest to right, or Build this when it is ready to build.",
-  problems:
-    "Pin a comment on the spot a problem shows; your comments lead and the buttons follow. " +
-    "Mark Fix this first on one problem: a pick chooses what the next round draws, and nothing " +
-    "is built from it.",
-  // A round that opens on clean frames (marks.mjs): his eye first, Claude's list after.
-  opening:
-    "Start with today's screen as it is, before Claude's problems. Then show what Claude found " +
-    "and mark Fix this first on one problem: a pick chooses what the next round draws, and " +
-    "nothing is built from it.",
-};
-
-/** A design round's own page (#5143): the round, its issue, the question count — nothing else. */
-function roundHeaderHtml(tp) {
-  const n = tp.decisions.length;
-  const issues = tp.issues
-    .map((x) => `<a href="https://github.com/${e(tp.repo)}/issues/${x}" ${ext}>#${x}</a>`)
-    .join(" · ");
-  const round = tp.round != null ? `Design round ${e(tp.round)}` : "Design round";
-  // One page asks one kind (design.mjs `designRound` refuses a mix), so its first decision says.
-  const first = tp.decisions[0];
-  const intro = ROUND_INTRO[isOpening(first) ? "opening" : first?.problems ? "problems" : "design"];
-  const pinned = tp.decisions.find(hasPins);
-  // An opening round's intro already says how its pins come later; it adds only the marks' line.
-  const pins = `${pinned && !isOpening(first) ? ` ${pinIntro(pinned)}` : ""} ${MARK_INTRO}`;
-  const date = tp.generatedAt ? ` · ${e(DAY.format(new Date(tp.generatedAt)))}` : "";
-  const drawn = tp.needsPictures ?? [];
-  const drawing = drawn.length
-    ? `<p class="muted" id="drawing">${plural(drawn.length, "decision")} ${drawn.length === 1 ? "is" : "are"} still being drawn: ${drawn.map((x) => e(x.title)).join(" · ")}. Nothing is asked here without a picture.</p>`
-    : "";
-  const toc =
-    n > 1
-      ? `<ol class="toc">${tp.decisions.map((d) => `<li><a href="#d-${e(d.key)}">${e(d.title)}</a></li>`).join("")}</ol>`
-      : "";
-  return (
-    `<header class="top"><p class="eyebrow">${round} · ${issues}${date}</p>` +
-    `<h1>${n ? `${plural(n, "decision")}, about ${tp.budget.used} minutes` : "Nothing to answer yet"}</h1>` +
-    (n ? `<p class="lede" id="intro">${intro}${pins} ${COMMENTS_COUNT}</p>` : "") +
-    toc +
-    drawing +
-    `</header>`
-  );
-}
-
 const emptyDecisions = (tp) =>
   tp.designOnly
     ? '<p class="muted">Every decision in this round is still being drawn. Press Done to say you looked.</p>'
@@ -296,7 +262,14 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
     // A design round's own page takes marks on every frame, and they ride the pins' popover, so
     // it carries the pins' words even with no pin drawn; and its bar takes notes about the page.
     ...(round || tp.decisions.some(hasPins) ? { pins: PIN_CLIENT } : {}),
-    ...(round ? { marks: MARK_CLIENT, pageNotes: PAGE_NOTE_CLIENT } : {}),
+    ...(round
+      ? {
+          marks: MARK_CLIENT,
+          pageNotes: PAGE_NOTE_CLIENT,
+          focus: FOCUS_CLIENT,
+          outcomes: OUTCOME_CLIENT,
+        }
+      : {}),
   };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const decisions = tp.decisions

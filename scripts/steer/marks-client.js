@@ -20,6 +20,11 @@
 // region opens on every later load while that stamp is there, and each mark records whether it was
 // placed before it (`beforeReveal`). A locked page (no store, or view only) takes no marks and
 // stamps nothing, but its reveal still opens, so the problems can be read.
+//
+// A ROUND'S FOCUS (focus.mjs, focus-client.js): a focused frame is cropped by CSS on the same
+// picture, so a tap still reads its spot against the frame's own box — the whole frame, moved
+// inside the crop — and saves a % of the whole screen. Its mark goes on that plane, and its record
+// adds `inFocus`: whether the spot is inside the focus box (`data-fbox`).
 globalThis.steerMarks = (api) => {
   const MARKS = api.marks; // { glyph, words, reveal } from marks.mjs; only on a round's own page
   if (!MARKS) return null;
@@ -43,6 +48,18 @@ globalThis.steerMarks = (api) => {
   const reactionOf = (r, id) => (MARKS.glyph[r?.pins?.[id]] ? r.pins[id] : null);
   const round1 = (v) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
   const nameOf = (x, y) => `Your mark, ${Math.round(x)}% across, ${Math.round(y)}% down`;
+  /** Where a frame's marks go: the plane of a focused frame (focus.mjs), which is the whole frame
+   *  moved inside its crop — so a mark's % lands where it does on the whole screen — else the frame. */
+  const host = (frame) => frame.querySelector(".fplane") ?? frame;
+  /** Is the spot inside the round's focus box (`data-fbox`, % of the frame)? Undefined on a frame
+   *  with no focus, so its record carries no `inFocus` at all. */
+  function inFocusOf(frame, x, y) {
+    const b = String(frame.dataset.fbox ?? "")
+      .split(",")
+      .map(Number);
+    if (!(b.length === 4 && b.every(Number.isFinite))) return undefined;
+    return x >= b[0] && x <= b[0] + b[2] && y >= b[1] && y <= b[1] + b[3];
+  }
   /** Has he pressed "Show what Claude found" on this decision (saved, or here)? */
   const revealed = (key) => shownHere.get(key) ?? Boolean(api.saved(key)?.revealAt);
 
@@ -98,9 +115,10 @@ globalThis.steerMarks = (api) => {
     const id = `${frame.dataset.option}:${frame.dataset.frame}:m${unique}`;
     const key = frame.dataset.key;
     const at = new Date().toISOString();
-    pending.set(id, { key, x, y, at, beforeReveal: api.opening(key) && !revealed(key) });
+    const beforeReveal = api.opening(key) && !revealed(key);
+    pending.set(id, { key, x, y, at, beforeReveal, inFocus: inFocusOf(frame, x, y) });
     const b = button(id, x, y);
-    frame.append(b);
+    host(frame).append(b);
     return b;
   }
 
@@ -111,7 +129,10 @@ globalThis.steerMarks = (api) => {
     if (!m) return [];
     pending.delete(id);
     const r = api.rec(key);
-    r.marks = { ...r.marks, [id]: { x: m.x, y: m.y, at: m.at, beforeReveal: m.beforeReveal } };
+    const spotOf = { x: m.x, y: m.y, at: m.at, beforeReveal: m.beforeReveal };
+    // A frame with a round's focus also says whether the spot was in it (focus.mjs).
+    if (typeof m.inFocus === "boolean") spotOf.inFocus = m.inFocus;
+    r.marks = { ...r.marks, [id]: spotOf };
     return [`marks.${id}`];
   }
 
@@ -154,7 +175,7 @@ globalThis.steerMarks = (api) => {
   /** A mark's button on one frame, once. */
   function place(frame, id, m) {
     const there = [...frame.querySelectorAll(".pin[data-mark]")].some((b) => b.dataset.pin === id);
-    if (!there) frame.append(button(id, m.x, m.y));
+    if (!there) host(frame).append(button(id, m.x, m.y));
   }
 
   /** Each reveal button and its region, open or folded; the glyph turns with it. */

@@ -10,6 +10,12 @@ export interface Picture {
   local?: string | null;
   /** The pins its frame was drawn with (pins.mjs, #5143): a button sits on each badge. */
   pins?: { n: number; x: number; y: number; label: string }[];
+  /** Where each named part of the screen sits on the frame (frame-sections.mjs). */
+  sections?: { label: string; x: number; y: number; w: number; h: number }[];
+  /** The round's focus on this frame (focus.mjs), every number in % of the frame. */
+  focus?: { x: number; y: number; w: number; h: number; label: string };
+  /** The frame's height ÷ width, read from its file, for a focused crop's shape. */
+  ratio?: number;
 }
 export interface Option {
   key: string;
@@ -75,7 +81,19 @@ export interface Saved {
   /** His note on a pin, keyed like `pins`; an emptied one is null. */
   pinNotes?: Record<string, string | null>;
   /** His marks by `<option>:<phone|desk>:m<unique>` (marks.mjs); a removed one is null. */
-  marks?: Record<string, { x: number; y: number; at: string; beforeReveal: boolean } | null>;
+  marks?: Record<
+    string,
+    {
+      x: number;
+      y: number;
+      at: string;
+      beforeReveal: boolean;
+      /** On a frame with a round's focus (focus.mjs): whether the spot was inside it. */
+      inFocus?: boolean;
+    } | null
+  >;
+  /** Outcomes he added to the scope (outcomes.mjs), by `o<unique>`; a removed one is null. */
+  outcomesAdded?: Record<string, { text: string; at: string } | null>;
   /** When he pressed "Show what Claude found" on an opening question. */
   revealAt?: string | null;
   at?: string;

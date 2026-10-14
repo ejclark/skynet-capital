@@ -15,15 +15,22 @@
 // own eye and which answered Claude's list.
 //
 // THE RECORD, merged one key at a time exactly as `pins` is (page-client.js header, PIN
-// REACTIONS): `marks: { "<option>:<phone|desk>:m<unique>": { x, y, at, beforeReveal } }`, x and y
-// in % of the frame. The mark's reaction is `pins[<id>]` and its note `pinNotes[<id>]` — the id
+// REACTIONS): `marks: { "<option>:<phone|desk>:m<unique>": { x, y, at, beforeReveal, inFocus? } }`,
+// x and y in % of the frame. The mark's reaction is `pins[<id>]` and its note `pinNotes[<id>]` — the id
 // grammar (an `m` before the unique part) keeps them apart from a pin's numbered ids, so a pin list
 // never shows a mark and a mark list never shows a pin. A mark closed with neither a reaction nor a
 // note is removed (`marks[<id>]: null`). A mark on a frame the page no longer shows is ignored, as a
 // pin's is (#5240).
 //
+// A ROUND'S FOCUS (focus.mjs; Eric, 2026-10-14: feedback "out of scope for the task at hand …
+// should be accounted for and be getting addressed in the bigger picture"): a mark on a frame with
+// a focus also records `inFocus`. The read-back splits his marks by it, and the next round applies
+// only the ones in focus and adds the rest to the scope, word for word — banked, never dropped. A
+// record from before `inFocus` is placed by its spot against the focus box, else read as in focus.
+//
 // Everything here is pure: the words, the page's lines, and the read-back's. The page script is
 // marks-client.js.
+import { focusedFrame, hasFocus, inFocus } from "./focus.mjs";
 import { sectionAt } from "./frame-sections.mjs";
 import { e } from "./html.mjs";
 import { cleanText, PIN_REACTIONS } from "./pins.mjs";
@@ -63,22 +70,37 @@ function shownFrames(d) {
   return new Set(holders.flatMap(([o, pics]) => pics.map((p) => `${o}:${p.size}`)));
 }
 
-/**
- * The marks a record holds on frames this decision shows, each with its reaction and note (null
- * for none), oldest first. Only a mark he said something on counts — the page removes the rest,
- * and one left behind by a closed tab is no answer.
- */
-/** The named part of the screen a mark landed on (frame-sections.mjs), or null when the frame it
- *  sits on carries no sections or none holds the spot. */
-function sectionOf(d, option, frame, x, y) {
+/** The pictures of one frame a mark's id names: Today's clean and pinned frames, or an option's. */
+function framePictures(d, option, frame) {
   const pictures =
     option === "today"
       ? [...(d?.today?.clean ?? []), ...(d?.today?.pictures ?? [])]
       : ((d?.options ?? []).find((o) => o.key === option)?.pictures ?? []);
-  const withSections = pictures.find((p) => p.size === frame && p.sections?.length);
+  return pictures.filter((p) => p.size === frame);
+}
+
+/** The named part of the screen a mark landed on (frame-sections.mjs), or null when the frame it
+ *  sits on carries no sections or none holds the spot. */
+function sectionOf(pictures, x, y) {
+  const withSections = pictures.find((p) => p.sections?.length);
   return withSections ? sectionAt(withSections.sections, x, y) : null;
 }
 
+/** Whether a mark sits in the round's focus (focus.mjs). On a frame with no focus it always does —
+ *  nothing narrowed what he was asked about, even if an older page recorded otherwise; on one with
+ *  a focus, as the page recorded it, else (a record from before `inFocus`) by its spot. */
+function focusOf(m, pictures) {
+  const focus = pictures.find((p) => p.focus)?.focus;
+  if (!focus) return true;
+  return typeof m.inFocus === "boolean" ? m.inFocus : inFocus(focus, m.x, m.y);
+}
+
+/**
+ * The marks a record holds on frames this decision shows, each with its reaction and note (null
+ * for none), where it sits and whether that is in the round's focus, oldest first. Only a mark he
+ * said something on counts — the page removes the rest, and one left behind by a closed tab is no
+ * answer.
+ */
 export function decisionMarks(d, r) {
   const frames = shownFrames(d);
   const reactions = mapOf(r?.pins);
@@ -90,6 +112,7 @@ export function decisionMarks(d, r) {
     const note = cleanText(mapOf(r?.pinNotes)[id]);
     if (!(reaction || note)) continue;
     const at = typeof m.at === "string" ? m.at : "";
+    const pictures = framePictures(d, hit[1], hit[2]);
     out.push({
       id,
       option: hit[1],
@@ -100,7 +123,8 @@ export function decisionMarks(d, r) {
       reaction,
       note,
       before: m.beforeReveal === true,
-      section: sectionOf(d, hit[1], hit[2], m.x, m.y),
+      section: sectionOf(pictures, m.x, m.y),
+      inFocus: focusOf(m, pictures),
     });
   }
   return out.sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id));
@@ -126,26 +150,62 @@ export function markLine(m) {
   return `- ${frameName(m)} · ${spot(m)} — ${said.join(" — ")}${m.before ? ` ${BEFORE}` : ""}`;
 }
 
-/** The "Your marks:" block a decision's issue comment carries ("" when he left none). */
+/** The read-back's headings for a decision with a focus (focus.mjs): the marks the round answers,
+ *  and the ones it banks — out of scope for this round, never dropped. */
+export const IN_FOCUS = "In this round's focus:";
+export const OUT_OF_FOCUS = "Outside this round's focus — added to the scope for later:";
+/** The next round's lead-in to the marks it banks rather than applies. */
+export const ADD_TO_SCOPE = "Outside this round's focus — add to the scope:";
+
+/** The "Your marks:" block a decision's issue comment carries ("" when he left none). A decision
+ *  with a focus splits it: the marks in it, then the ones outside it, each heading only when it
+ *  has a line. */
 export function marksBlock(d, r) {
   const all = decisionMarks(d, r);
-  return all.length ? ["Your marks:", ...all.map(markLine)].join("\n") : "";
+  if (!all.length) return "";
+  if (!hasFocus(d)) return ["Your marks:", ...all.map(markLine)].join("\n");
+  const group = (head, list) => (list.length ? [head, ...list.map(markLine)].join("\n") : "");
+  return [
+    group(
+      IN_FOCUS,
+      all.filter((m) => m.inFocus),
+    ),
+    group(
+      OUT_OF_FOCUS,
+      all.filter((m) => !m.inFocus),
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
-/** His marks as one next-round clause ("" for none): each spot, what he thinks, his note. */
+/** One mark as a next-round clause: the spot, what he thinks, his note. */
+const clause = (m) =>
+  [
+    `${frameName(m)} ${m.section ? spot(m) : `at ${spot(m)}`}`,
+    m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "",
+    m.note ? `“${m.note}”` : "",
+  ]
+    .filter(Boolean)
+    .join(": ");
+
+/** His marks in the round's focus as one next-round clause ("" for none) — every mark, on a
+ *  decision with no focus. */
 export function markClauses(d, r) {
-  const all = decisionMarks(d, r);
-  if (!all.length) return "";
-  const each = all.map((m) =>
-    [
-      `${frameName(m)} ${m.section ? spot(m) : `at ${spot(m)}`}`,
-      m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "",
-      m.note ? `“${m.note}”` : "",
-    ]
-      .filter(Boolean)
-      .join(": "),
-  );
-  return `his marks: ${each.join("; ")}.`;
+  const mine = decisionMarks(d, r).filter((m) => m.inFocus);
+  return mine.length ? `his marks: ${mine.map(clause).join("; ")}.` : "";
+}
+
+/** His marks outside the round's focus as one sentence ("" for none): banked, not applied. */
+export function scopeClauses(d, r) {
+  const out = decisionMarks(d, r).filter((m) => !m.inFocus);
+  return out.length ? `${ADD_TO_SCOPE} ${out.map(clause).join("; ")}.` : "";
+}
+
+/** What the next round does with his marks: apply the ones in focus, bank the rest ("" for none). */
+export function markInstruction(d, r) {
+  const apply = markClauses(d, r);
+  return [apply ? `Apply ${apply}` : "", scopeClauses(d, r)].filter(Boolean).join(" ");
 }
 
 /**
@@ -173,15 +233,26 @@ export function cleanShots(d, img) {
       const src = img(p);
       if (!src) return "";
       const size = p.size === "phone" ? "phone" : "desk";
-      return markableShot(size, src, p.alt, { key: d.key, option: "today" });
+      return markableShot(size, src, p.alt, {
+        key: d.key,
+        option: "today",
+        focus: p.focus,
+        ratio: p.ratio,
+      });
     })
     .join("");
 }
 
-/** A frame with no pins on a design round's own page: a box a tap marks, never a link. */
-export function markableShot(size, src, alt, { key, option }) {
+/** A frame with no pins on a design round's own page: a box a tap marks, never a link. With a
+ *  round's focus (`focus`, and the picture's `ratio`), it opens cropped to it (focus.mjs). */
+export function markableShot(size, src, alt, { key, option, focus, ratio }) {
+  const f = focusedFrame(
+    `<div class="frame"><img src="${e(src)}" alt="${e(alt)}" loading="lazy"></div>`,
+    focus,
+    ratio,
+  );
   return (
-    `<div class="shot ${size} markable" data-key="${e(key)}" data-option="${e(option)}" data-frame="${size}">` +
-    `<div class="frame"><img src="${e(src)}" alt="${e(alt)}" loading="lazy"></div></div>`
+    `<div class="shot ${size} markable" data-key="${e(key)}" data-option="${e(option)}" data-frame="${size}"${f.attrs}>` +
+    `${f.inner}</div>`
   );
 }

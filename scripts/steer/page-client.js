@@ -38,8 +38,9 @@
 // `marks`, written with his first reaction or note on it (its reaction and note are `pins` and
 // `pinNotes` keys), and an emptied one is null. `revealAt` — the first press of "Show what Claude
 // found" — is merged alone, never by rewriting the record, and a whole-record write keeps the
-// stored one. A NOTE ABOUT THE PAGE (page-notes-client.js) is one key of `pageNotes` on the round's
-// own document, merged with `update` like the page's other meta.
+// stored one. An OUTCOME HE ADDS (outcomes.mjs, outcomes-client.js) is one key of `outcomesAdded`,
+// merged the same way; a removed one is null. A NOTE ABOUT THE PAGE (page-notes-client.js) is one
+// key of `pageNotes` on the round's own document, merged with `update` like the page's other meta.
 //
 // A TAP WHILE THE STORE CONNECTS (#5243) is held as the fields it changed, and once the store
 // answers those fields go onto the record it holds — never a blank copy plus the tap, which would
@@ -67,12 +68,12 @@
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
   /** A decision record's fields keyed by pin (or mark) id, each merged one key at a time. */
-  const MAPS = ["pins", "pinNotes", "marks"];
+  const MAPS = ["pins", "pinNotes", "marks", "outcomesAdded"];
   /** A decision record's own fields merged alone, never with the whole record: `revealAt`. */
   const MERGED = ["revealAt"];
   /** Pin ids this view has reacted to or written on, by field and decision key: only these may
    *  overwrite what the store holds there. */
-  const touched = { pins: new Map(), pinNotes: new Map(), marks: new Map() };
+  const touched = Object.fromEntries(MAPS.map((f) => [f, new Map()]));
   const touch = (field, key, id) =>
     touched[field].set(key, (touched[field].get(key) ?? new Set()).add(id));
   let readOnly = false;
@@ -153,6 +154,7 @@
     pins: {},
     pinNotes: {},
     marks: {},
+    outcomesAdded: {},
     revealAt: null,
   });
   const rec = (sec, key) => {
@@ -161,7 +163,12 @@
   };
   /** A reaction or a note on a pin this page shows (pins-client.js `said`): a stored id the page
    *  no longer shows, or a value it never offers, is not an answer. */
-  const reacted = (r, key) => Boolean(pinsUi?.said(key, r).length || marksUi?.said(key, r).length);
+  const reacted = (r, key) =>
+    Boolean(
+      pinsUi?.said(key, r).length ||
+        marksUi?.said(key, r).length ||
+        outcomesUi?.said(key, r).length,
+    );
   const answered = (r, key) =>
     Boolean(
       r &&
@@ -181,6 +188,8 @@
   const keyValue = (field, v) => {
     if (field === "pinNotes") return noteValue(v);
     if (field === "marks") return v && typeof v === "object" ? v : null;
+    // An added outcome (outcomes-client.js) is its words and when; a blank one is none.
+    if (field === "outcomesAdded") return typeof v?.text === "string" && v.text.trim() ? v : null;
     return v || null;
   };
   /** The live entries of one keyed field, as a whole record writes them. */
@@ -210,6 +219,8 @@
     }
     marksUi?.paint();
     pinsUi?.paint();
+    focusUi?.paint(); // after the marks: a mark painted back outside a focused crop is hidden
+    outcomesUi?.paint();
     notesUi?.paint(locked() || connecting);
     const isDone = Boolean(meta.doneAt);
     doneBtn.setAttribute("aria-pressed", isDone ? "true" : "false");
@@ -684,6 +695,7 @@
       const at = `${Math.round(m.x)}% across ${Math.round(m.y)}% down`;
       bits.push(["mark", id, at, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
     }
+    for (const [, t] of outcomesUi?.said(d.key, r) ?? []) bits.push(`outcome “${line(t)}”`);
     const note = line(r.note);
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
@@ -727,6 +739,17 @@
     status("Saving");
     commit("decisions", key, paths);
   }
+
+  // A round's focus (focus-client.js): each focused picture's crop and its whole-screen button.
+  const focusUi = globalThis.steerFocus?.({ focus: TP.focus });
+  // The outcomes he adds under a scope (outcomes-client.js); null on any page but a round's own.
+  const outcomesUi = globalThis.steerOutcomes?.({
+    cfg: TP.outcomes,
+    saved: (key) => state.decisions[key],
+    rec: (key) => rec("decisions", key),
+    changed,
+    locked,
+  });
 
   // His marks and the reveal (marks-client.js); null on any page but a design round's own.
   const marksUi = globalThis.steerMarks?.({
@@ -791,6 +814,7 @@
     pinNotes: liveOf("pinNotes", v.pinNotes),
     // Records saved before marks and the reveal existed read as none of either.
     marks: liveOf("marks", v.marks),
+    outcomesAdded: liveOf("outcomesAdded", v.outcomesAdded),
     revealAt: typeof v.revealAt === "string" ? v.revealAt : null,
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */

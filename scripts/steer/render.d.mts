@@ -75,6 +75,10 @@ export const TITLE: string;
 export const COMMENTS_COUNT: string;
 /** A round page's intro, by what it asks: his pinned comments lead, the buttons follow. */
 export const ROUND_INTRO: { design: string; problems: string; opening: string };
+/** A round page's one line above its first picture (≤20 words): what to do. */
+export const ROUND_LINE: { design: string; problems: string; opening: string };
+/** The summary of the folded how-to under that line. */
+export const HOW_SUMMARY: string;
 export function renderPage(
   tp: TouchPointData | DesignRoundData,
   opts?: { img?: (pic: Picture | { local?: string | null }) => string | null },
