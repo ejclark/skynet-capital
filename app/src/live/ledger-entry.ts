@@ -132,16 +132,25 @@ function heldWords(fromKey: string, toKey: string): string {
 }
 
 /** Where a single order stands: a dead or working order's own mark, else `closed Oct 1` once
- *  nothing of it is open, else `open` — never on a stock sale with nothing to close (its buy is
- *  older than the ledger, so whether it closed a holding is not known) or a broker's report. */
+ *  nothing of it is open, else `open`. Never on a broker's report, and never where the matcher cannot
+ *  see the close — a stock sale with nothing to pair (its buy is older than the ledger), or an option
+ *  past its expiry (an exercise or a settlement ends it without a fill the matcher reads), whose
+ *  standing is left unsaid rather than guessed. */
 function standing(event: DeskActivityEvent, now: Date): string | undefined {
   if (event.lifecycle) return undefined;
   const mark = statusMark(event);
   if (mark) return mark;
   if (event.closedOn) return `closed ${dayDate(orderDayKey({ at: event.closedOn }), now)}`;
-  if (event.filled <= 0) return undefined;
+  if (event.filled <= 0 || pastExpiry(event, now)) return undefined;
   const stockSale = event.side === "sell" && event.symbol !== "" && !parseOccSymbol(event.symbol);
   return stockSale ? undefined : "open";
+}
+
+/** True once an option's (or a spread's first leg's) expiry day is behind New York's today. */
+function pastExpiry(event: DeskActivityEvent, now: Date): boolean {
+  const occ = parseOccSymbol(event.symbol) ?? parseOccSymbol(event.legs?.[0]?.symbol ?? "");
+  if (!occ) return false;
+  return occ.expiration < orderDayKey({ at: now.toISOString() });
 }
 
 function realized(event: DeskActivityEvent): LedgerEntry["outcome"] {

@@ -70,3 +70,48 @@ describe("ledgerEntry — the words an entry is drawn from", () => {
     ).toBe("closed Nov 2");
   });
 });
+
+describe("ledgerEntry — never claims open where the close is out of sight", () => {
+  const call = line({ symbol: "NVDA261009C00200000", quantity: 1, filled: 1, price: "$4.10" });
+
+  it("says a bought call is open while its expiry is ahead", () => {
+    expect(ledgerEntry(call, new Date("2026-10-09T15:00:00Z")).outcome?.text).toBe("open");
+  });
+
+  it("says nothing once its expiry is past — an exercise ends it without a fill the matcher reads", () => {
+    expect(ledgerEntry(call, new Date("2026-10-10T15:00:00Z")).outcome).toBeUndefined();
+  });
+
+  it("still says when it closed, past its expiry, once the matcher saw the close", () => {
+    const sold = { ...call, closedOn: "2026-10-08T15:00:00Z" };
+    expect(ledgerEntry(sold, new Date("2026-10-20T15:00:00Z")).outcome?.text).toBe("closed Oct 8");
+  });
+});
+
+describe("ledgerEntry — an expiry that ends a written contract", () => {
+  it("lists the report, then the sale it ended, then the premium kept as the total", () => {
+    const put = { symbol: "CRWV261106P00080000", display: "CRWV $80 PUT · 6 NOV 26" };
+    const write = { ...line({ ...put, side: "sell", quantity: 1, filled: 1, price: "$2.55" }) };
+    const expired = line({
+      ...put,
+      orderId: "lifecycle:a",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$0.00",
+      status: "expired worthless",
+      at: "2026-11-06T23:59:59.999Z",
+      lifecycle: "OPEXP",
+      realizedPl: "+$255",
+      realizedTone: "pos",
+      opened: [{ ...write, at: "2026-10-06T14:31:00Z", matched: 1 }],
+    });
+    const entry = ledgerEntry(expired, NOW);
+    expect(entry.legs.map((leg) => [leg.words.side, leg.cash])).toEqual([
+      ["EXPIRED", undefined],
+      ["SOLD", 255],
+    ]);
+    expect(entry.total).toEqual({ name: "CRWV $80 PUT", held: "31 days", range: "Oct 6 → Nov 6" });
+    expect(entry.outcome).toEqual({ text: "+$255", tone: "pos" });
+  });
+});

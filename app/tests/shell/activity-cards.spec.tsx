@@ -18,6 +18,16 @@ rstest.mock("../../src/live/quote", () => ({
   fetchQuote: () => Promise.resolve(quote),
 }));
 
+// The round-16 world's instant, Fri 2026-10-09 3:00 PM ET: the CRWV put is still before its Nov 6
+// expiry, so its card may say "open" (past it, `ledger-entry.ts` leaves the standing unsaid).
+beforeEach(() => {
+  rstest.useFakeTimers({ toFake: ["Date"] });
+  rstest.setSystemTime(new Date("2026-10-09T19:00:00Z"));
+});
+afterEach(() => {
+  rstest.useRealTimers();
+});
+
 /** An opened card asks for the stock's quote (the price line's "now"), so it needs a client. */
 function render(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
