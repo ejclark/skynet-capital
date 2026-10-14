@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDeskActivity } from "../live/desk";
+import { InlineResult } from "../ui";
 import { ActivityFilterBar } from "./activity-filter-bar";
 import { ActivityLedger } from "./activity-ledger";
 import { type ActivityPages, useActivityPages } from "./use-activity-pages";
@@ -121,7 +122,7 @@ function Ledger({
         </button>
       ) : null}
       {pages.failed && !paging ? (
-        <p className="set-err">Couldn't load older orders — try again.</p>
+        <InlineResult tone="err">Couldn't load older orders — try again.</InlineResult>
       ) : null}
       {!(pages.loadOlder || refreshing || paging) ? (
         <p className="note activity-end">

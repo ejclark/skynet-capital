@@ -7,7 +7,7 @@ import {
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
-import { EnvPill } from "../ui";
+import { EnvPill, InlineResult } from "../ui";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
@@ -344,7 +344,9 @@ export function DecisionsSection({
           {loadingMore ? "Loading…" : "Load older cycles"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older cycles — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older cycles — try again.</InlineResult>
+      ) : null}
     </>
   );
 }

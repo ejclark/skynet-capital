@@ -4,11 +4,21 @@
 > of the app's shared UI parts: read it before building one, reuse an entry when it fits, and
 > extract a new primitive only by the rule in `app/src/ui/README.md`.
 
-Coverage: every module in `app/src/ui` (2) and every `app/src/shell` module
+Coverage: every module in `app/src/ui` (3) and every `app/src/shell` module
 imported by 5+ production files (12). Fields: job from the JSDoc's first
 sentence, props read from the source (best-effort), first real call site, `@whenNot` tag.
 
 ## Primitives (`app/src/ui`)
+
+### InlineResult
+
+- file: `app/src/ui/inline-result.tsx`
+- job: Says in one sentence how an action came out — saved, refused, failed — with a ✓ or ✕ before it.
+- exports: `ResultTone`, `InlineResult`
+- props: `{ tone: ResultTone; children: ReactNode; as?: "p" | "span"; live?: boolean; className?: string }`
+- importers: 20
+- usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:324`
+- when not to use: the state is the whole section's — a page or panel that could not load, an empty list, a loading line — that is a section state, not one action's result; and a number with a sign (P/L, a change) is a tone on the number (`tone-neg`), not a sentence.
 
 ### KindChip
 
@@ -39,7 +49,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `useMediaQuery`, `usePhoneWidth`
 - signature: `(query: string)`
 - importers: 11
-- usage: `const stacked = useMediaQuery(TABLET_QUERY);` — `app/src/shell/account-activity.tsx:187`
+- usage: `const stacked = useMediaQuery(TABLET_QUERY);` — `app/src/shell/account-activity.tsx:188`
 - when not to use:
 
 ### GlossaryTerm
@@ -89,7 +99,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `FlareKind`, `TowerMessage`, `Mood`, `DEFAULT_MOOD`, `FILTER_CONTROLS`, `REGARD_TARGETS`, `prefersStill`, `glanceMessage`, `regardMessage`, `postTo`, `useTowerBus`, `setVantageFrame`, `toVantage`, `replayToVantage`, `useCardFrame`, `flareTower`, `useTowerGlance`, `useTowerRegard`, `useTowerRun`, `useTowerMood`
 - signature: `(kind: FlareKind)`
 - importers: 7
-- usage: `flareTower("milestone");` — `app/src/shell/community-banner.tsx:33`
+- usage: `flareTower("milestone");` — `app/src/shell/community-banner.tsx:34`
 - when not to use:
 
 ### PHONE_QUERY
@@ -140,7 +150,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - category: navigation
 - props: `{ label?: string; sections: PageSection<Id>[]; current: Id; onSelect: (section: Id) => void; variant?: "rail" | "horizontal"; fold?: number; divideBefore?: Id }`
 - importers: 5
-- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:145`
+- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:146`
 - when not to use:
 
 ### withMinus

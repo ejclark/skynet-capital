@@ -10,6 +10,7 @@ import {
   type SubscriptionWriteResult,
   subscribeRequest,
 } from "../live/playbook-store";
+import { InlineResult } from "../ui";
 import { ConvictionFields, convictionOf } from "./playbook-conviction";
 
 /**
@@ -322,7 +323,11 @@ export function SubscribeForm({
           <span aria-hidden="true">{verdict.glyph}</span> {verdict.text}
         </p>
       ) : null}
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }

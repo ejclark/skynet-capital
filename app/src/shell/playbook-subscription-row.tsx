@@ -7,6 +7,7 @@ import {
   setSubscriptionEnabledRequest,
   unsubscribeRequest,
 } from "../live/playbook-store";
+import { InlineResult } from "../ui";
 import { ConvictionPanel } from "./playbook-conviction";
 import { SubscribeForm } from "./playbook-subscribe-form";
 
@@ -173,7 +174,11 @@ export function SubscriptionRow({
           </button>
         </div>
       )}
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }

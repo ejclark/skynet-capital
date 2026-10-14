@@ -21,7 +21,7 @@ import { PreferencesCard } from "../shell/preferences-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
 import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
-import { KindChip } from "../ui";
+import { InlineResult, KindChip } from "../ui";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -38,9 +38,9 @@ function ResultLine({
 }): ReactElement | null {
   if (!result) return null;
   return result.ok ? (
-    <p className="set-ok">Saved — {result.displayName} is up to date.</p>
+    <InlineResult tone="ok">Saved — {result.displayName} is up to date.</InlineResult>
   ) : (
-    <p className="set-err">{result.error}</p>
+    <InlineResult tone="err">{result.error}</InlineResult>
   );
 }
 
@@ -204,9 +204,9 @@ function RotateSection({ account }: { readonly account: OwnedAccount }): ReactEl
             {busy ? "Verifying against Alpaca…" : "Verify & replace key"}
           </button>
           {result?.ok ? (
-            <p className="set-ok">
+            <InlineResult tone="ok">
               Key replaced — {result.displayName} streams on the new credential.
-            </p>
+            </InlineResult>
           ) : (
             <ResultLine result={result} />
           )}

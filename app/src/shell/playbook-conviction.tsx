@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { type ConvictionView, convictionRequest } from "../live/playbook-store";
+import { InlineResult } from "../ui";
 
 /**
  * AN OWNER'S CONVICTION (#4469 slice 3c part 3b, criteria 2, 11 and 12) — their own reason for
@@ -167,7 +168,11 @@ export function ConvictionPanel({
               Cancel
             </button>
           </div>
-          {error ? <span className="set-err">{error}</span> : null}
+          {error ? (
+            <InlineResult as="span" tone="err">
+              {error}
+            </InlineResult>
+          ) : null}
         </div>
       ) : (
         <div className="pb-subscription-actions">

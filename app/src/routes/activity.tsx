@@ -29,6 +29,7 @@ import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
 import { TradeRow } from "../shell/wire-trade-row";
+import { InlineResult } from "../ui";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
@@ -319,7 +320,9 @@ function FeedSection({
           {loadingMore ? "Loading…" : "Load older trades"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>
+      ) : null}
       {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
           unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
           is an invitation rather than a gap. Neither is the feed's own empty state, which is about

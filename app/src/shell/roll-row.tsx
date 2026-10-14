@@ -19,6 +19,7 @@ import { type ChainData, type ChainRow, fetchChain } from "../live/options";
 import { parseQuantity } from "../live/quantity";
 import { formatExpiration } from "../live/straddle";
 import { money, TIF_LABELS, type TicketTimeInForce, tifLabel } from "../live/ticket";
+import { InlineResult } from "../ui";
 
 /**
  * ROLL AS ONE TICKET (#3407 P3 slice 3; the study's row 11 — Fidelity's Roll ticket, 1:1): from
@@ -394,10 +395,14 @@ function RollAction({
             Review roll…
           </button>
           {state.step === "refused" ? (
-            <span className="tkt-close-note gate-refusal">✕ {state.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.refusals[0]}
+            </InlineResult>
           ) : null}
           {state.step === "error" ? (
-            <span className="tkt-close-note gate-refusal">{state.message}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.message}
+            </InlineResult>
           ) : null}
         </>
       );
@@ -425,9 +430,9 @@ function RollAction({
     }
     case "done":
       return (
-        <span className="tkt-close-note gate-ok">
+        <InlineResult as="span" tone="ok" className="tkt-close-note">
           order {state.response.orderId} {state.response.status} — one net limit, both legs
-        </span>
+        </InlineResult>
       );
   }
 }
