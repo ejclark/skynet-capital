@@ -7,6 +7,7 @@ import {
   type NetWorthStatsView,
 } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
+import { EnvPill, KindChip } from "../ui";
 import { AccountMenu } from "./account-menu";
 import { ALL_ACCOUNTS } from "./account-switcher";
 import { ConnectLink } from "./connect-link";
@@ -134,12 +135,8 @@ export function CockpitHead({
               onSetDefault={onSetDefault}
               onClearDefault={onClearDefault}
             />
-            {picked ? (
-              <span className={`chip chip-${picked.kind}`}>
-                {picked.kind === "bot" ? "BOT" : "HUMAN"}
-              </span>
-            ) : null}
-            <span className="env-pill">SIM</span>
+            {picked ? <KindChip kind={picked.kind} /> : null}
+            <EnvPill />
             {picked?.kind === "bot" ? (
               <PlaybooksHeadLine
                 deskId={picked.id}

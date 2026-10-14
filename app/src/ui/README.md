@@ -23,7 +23,9 @@ the barrel, `from "../ui"`.
 
 ## The contract
 
-1. Every primitive is re-exported from `index.ts`.
+1. Every primitive is re-exported from `index.ts`. That one file is exempt from Biome's
+   `noBarrelFile` (a scoped override in `biome.json`): its re-exports are leaf parts with no side
+   effects, and the barrel is how the catalog counts a primitive's fan-in.
 2. Every primitive ships with its entry in `CATALOG.md`. Give its JSDoc a one-sentence job as the
    first line, and a `@whenNot` tag naming the case where something else should be used. Then run
    `npm run ui:catalog` and commit the result.

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { AccountNetWorthView } from "../live/networth";
+import { KindChip } from "../ui";
 import { RosterSparkline } from "./roster-sparkline";
 
 /**
@@ -54,10 +55,7 @@ export function NetWorthRoster({
             return (
               <tr key={a.id}>
                 <th scope="row">
-                  {a.name}{" "}
-                  <span className={`chip chip-${a.kind}`}>
-                    {a.kind === "bot" ? "BOT" : "HUMAN"}
-                  </span>
+                  {a.name} <KindChip kind={a.kind} />
                   {a.error ? <span className="desk-note"> · {a.error}</span> : null}
                 </th>
                 <td>

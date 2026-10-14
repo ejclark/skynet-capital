@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
+import { EnvPill, KindChip } from "../ui";
 import { PageFrame } from "./frame";
 import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
@@ -49,8 +50,8 @@ export function AccountHead({
     <div className="cockpit-head acct-head" ref={publishClearance}>
       <div className="acct-head-id">
         <h1>{name}</h1>
-        <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
-        <span className="env-pill">SIM</span>
+        <KindChip kind={kind} />
+        <EnvPill />
         {kind === "bot" ? (
           <PlaybooksHeadLine
             deskId={id}

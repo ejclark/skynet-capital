@@ -4,13 +4,31 @@
 > of the app's shared UI parts: read it before building one, reuse an entry when it fits, and
 > extract a new primitive only by the rule in `app/src/ui/README.md`.
 
-Coverage: every module in `app/src/ui` (0) and every `app/src/shell` module
+Coverage: every module in `app/src/ui` (2) and every `app/src/shell` module
 imported by 5+ production files (12). Fields: job from the JSDoc's first
 sentence, props read from the source (best-effort), first real call site, `@whenNot` tag.
 
 ## Primitives (`app/src/ui`)
 
-_None yet — the first one lands with its own entry._
+### KindChip
+
+- file: `app/src/ui/kind-chip.tsx`
+- job: Says whether an account is a BOT or a HUMAN, in the same chip on every screen.
+- exports: `AccountKind`, `KindChip`
+- props: `{ kind: AccountKind; you?: boolean; plural?: boolean; detail?: ReactNode; className?: string }`
+- importers: 13
+- usage: `<KindChip kind={label === "Humans" ? "human" : "bot"} plural />` — `app/src/routes/leaderboard.tsx:72`
+- when not to use: the label is not an account's kind — a strategy, playbook or persona name wants its own chip style (#5365), and SIM / LIVE is `EnvPill`. Plain menu text ("Bot · SIM") is not a chip either.
+
+### EnvPill
+
+- file: `app/src/ui/env-pill.tsx`
+- job: Labels the trading mode (SIM, LIVE) in one neutral pill, so a mode never borrows a kind chip's colour.
+- exports: `PAPER_WORD`, `EnvMode`, `EnvPill`
+- props: `{ mode?: EnvMode }`
+- importers: 7
+- usage: `<EnvPill />` — `app/src/shell/account-head.tsx:54`
+- when not to use: the label says who an account is (BOT / HUMAN) — that is `KindChip`; and a sentence that names the paper account in prose ("SIM account — simulated fill") stays text.
 
 ## Shared shell modules (5+ importers)
 
@@ -102,7 +120,7 @@ _None yet — the first one lands with its own entry._
 - exports: `scrollToChapter`, `ConnectLink`
 - props: `{ children?: ReactNode }`
 - importers: 5
-- usage: `No account linked yet — <ConnectLink />.` — `app/src/shell/cockpit-head.tsx:121`
+- usage: `No account linked yet — <ConnectLink />.` — `app/src/shell/cockpit-head.tsx:122`
 - when not to use:
 
 ### readChartPalette

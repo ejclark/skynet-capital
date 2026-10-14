@@ -110,6 +110,16 @@
       }
     },
     {
+      "includes": ["**/app/src/ui/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/app/src/routes/**"],
       "linter": {
         "rules": {

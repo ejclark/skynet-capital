@@ -7,6 +7,7 @@ import {
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
+import { EnvPill } from "../ui";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
@@ -27,6 +28,9 @@ import { cycleAnchor } from "./cycle-anchor";
 export const GUARDS_GLOSS =
   "the risk checks every order must clear before it is placed: only a playbook the bot is subscribed to may open a position, a cap on any one position's share of the account, the cash to pay for it, never selling more than is held, and no new buys once the day's loss passes its limit";
 
+// Not an account kind: this chip, the strategy chips in OutcomeLine / RefusedLine and the
+// "via <persona>" tag borrow `.chip-bot` for a name. They want a chip style of their own — a taste
+// call left open on #5365 — so they are not `KindChip` (app/src/ui).
 /** The outcome's playbook, mode appended — never the mode standalone. */
 function PlaybookChip({
   outcome,
@@ -84,6 +88,7 @@ export function OutcomeLine({
         {outcome.contract ?? `${outcome.side.toUpperCase()} ${outcome.quantity} ${outcome.symbol}`}
       </span>
       {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       <ResultWords outcome={outcome} showBroker={showPlaybook} />
@@ -119,6 +124,7 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
         {intent.contract ?? `${intent.side.toUpperCase()} ${intent.quantity} ${intent.symbol}`}
       </span>
       {intent.guardReason ? <span className="cycle-guard">{intent.guardReason}</span> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
       <span className="cycle-reason">“{intent.reason}”</span>
       {intent.expectation ? (
@@ -191,6 +197,7 @@ export function CycleRow({
       >
         <span className="cycle-glyph" aria-hidden="true" />
         <span className="cycle-headline">{cycle.headline}</span>
+        {/* a persona name, not an account kind — its own chip style is open on #5365 */}
         {cycle.authorPersona ? (
           <span
             className="chip chip-bot"
@@ -199,9 +206,7 @@ export function CycleRow({
             via {cycle.authorPersona}
           </span>
         ) : null}
-        <span className={`chip chip-${cycle.mode === "live" ? "human" : "bot"}`}>
-          {cycle.mode.toUpperCase()}
-        </span>
+        <EnvPill mode={cycle.mode} />
         <span className="cycle-when num">{sinceStamp ? `${sinceStamp} – ${stamp}` : stamp}</span>
       </button>
       {open ? (
