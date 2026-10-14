@@ -26,6 +26,7 @@ corrects it; a row is never rewritten, only superseded by a later one.
 | Mild red/green colourblindness; dark mode | hue never carries meaning alone; ≥3:1 non-text contrast; shape/weight/word beside every colour | BRAND.md → Accessibility (2026-09-06) |
 | Reads *reactions*, not checklists, on a live surface | hand him the route/URL; feedback comes back as reactions | 2026-08-16 |
 | Digests over play-by-play as autonomy rises | tiered: needs-you · headlines · noise-absorbed | 2026-08-15 |
+| Runs his screen at a shrunk resolution so text reads larger; zooms only in a browser tab | a picture of a screen is shown at its real size or larger, never scaled down to fit a column; small labels baked into an image are the first thing he can't read | 2026-10-14 ("the size of the screenshots, text instructions is extremely small.. I'm having to resort to looking this up in the browser") |
 
 ### How he thinks (the mental models he decodes fastest)
 
@@ -58,6 +59,8 @@ corrects it; a row is never rewritten, only superseded by a later one.
 | 2026-09-04 | a wake reply re-narrating a PR body | (one line, plus an optional why) | the PR-watch reply rule |
 | 2026-09-06 | gates that fire on the wrong thing | "a smell now… removes a momentum breaker" | advisory unless it protects a constraint |
 | 2026-09-25 | invented names in copy and questions | "another cute word you keep using that i've told you to stop" | name what the thing does |
+| 2026-10-14 | leading with our own problem list | "From a usability study, doesn't this create bias through the process out of the gate?" | his unprompted read first, ours revealed after (REDESIGN.md round 0) |
+| 2026-10-14 | feedback saved for the end of a session | "ideally if i have an issue, I have the ability to organically provide feedback inline" | feedback controls at the point of friction, never an end questionnaire |
 | 2026-09-25 | primitive, dull PR charts | "the blandness requires more cognitive load… contrast, shapes, pictures, mental models, data structures" | the Mermaid grammar v2; this page |
 
 ### The full record (every dated correction with his words, from the lineage pass)
