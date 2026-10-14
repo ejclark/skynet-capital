@@ -15,7 +15,7 @@ import {
   expectancyView,
   funnelView,
 } from "../observatory/decision-json-view.js";
-import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
+import { deskLedger, realizedByOrder, roundTripLinks } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -125,13 +125,16 @@ async function activityPayload(
   if (!records) return { available: false, activity: [] };
   const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
   // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
-  // so a paginated activity page still carries P/L computed from the complete fill history.
-  const realizedMap = realizedByOrder(deskLedger(found, records));
+  // so a paginated activity page still carries P/L computed from the complete fill history. The
+  // same pass pairs each close with the orders it closed (#5317).
+  const ledger = deskLedger(found, records);
+  const realizedMap = realizedByOrder(ledger);
   const before = params.get("before");
   const view = deskActivityView(records, origins, {
     limit: resolvePageSize(params.get("per_page")),
     ...(before !== null ? { before } : {}),
     realizedByOrder: realizedMap,
+    roundTrips: roundTripLinks(ledger),
     spreadOf: botSpreadLookup(found.kind, config),
     ...activityNarrowing(params, ownerPlaybookOf(found.kind, config, owner)),
   });

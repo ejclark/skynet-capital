@@ -226,6 +226,11 @@ export function dayHeader(key: string, now: Date = new Date()): string {
   return parts ? parts.join(" · ").toUpperCase() : key;
 }
 
+/** A day key's date alone: "Oct 6", the year added when it is not this one. */
+export function dayDate(key: string, now: Date = new Date()): string {
+  return dayParts(key, now)?.[1] ?? key;
+}
+
 /** A day key in a sentence: "Tue Oct 6". */
 export function dayWords(key: string, now: Date = new Date()): string {
   return dayParts(key, now)?.join(" ") ?? key;
