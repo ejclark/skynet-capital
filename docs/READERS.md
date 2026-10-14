@@ -26,6 +26,7 @@ corrects it; a row is never rewritten, only superseded by a later one.
 | Mild red/green colourblindness; dark mode | hue never carries meaning alone; ≥3:1 non-text contrast; shape/weight/word beside every colour | BRAND.md → Accessibility (2026-09-06) |
 | Reads *reactions*, not checklists, on a live surface | hand him the route/URL; feedback comes back as reactions | 2026-08-16 |
 | Digests over play-by-play as autonomy rises | tiered: needs-you · headlines · noise-absorbed | 2026-08-15 |
+| Labels sit centred on their mark and use the mechanic's name (Strike, Breakeven, ITM, OTM), never a sentence | on a picture, one short name per mark, centred over it; the explanation lives elsewhere or nowhere | #5160 r4–r7 (2026-10-11/12: "keep to succinct labels; ITM, OTM, Strike, break even"; five notes asking a label be centred on its mark) |
 | Runs his screen at a shrunk resolution so text reads larger; zooms only in a browser tab | a picture of a screen is shown at its real size or larger, never scaled down to fit a column; small labels baked into an image are the first thing he can't read | 2026-10-14 ("the size of the screenshots, text instructions is extremely small.. I'm having to resort to looking this up in the browser") |
 
 ### How he thinks (the mental models he decodes fastest)
@@ -93,7 +94,9 @@ corrects it; a row is never rewritten, only superseded by a later one.
 Engagement is his stated alignment indicator (2026-09-25). What has drawn it: a picture that makes
 the causal argument (a before/after sequence, #3737); a mechanism rendered so he can judge by eye;
 a counter-intuitive stance held as a hypothesis with a falsifier; a side quest that improves the
-process; a named pattern he can ask for by name afterwards. - **PR #446 (2026-08-19, merged by Eric) — the flagship fridge PR** — Three screenshots (play picker, guided ticket, account) plus a `flowchart LR` of how an order moves with emoji-labelled  → He merged it; the same day he said "dumb this shit down and draw more pictures... I want some god damn pictures to hang on the fridge" — thi
+process; a named pattern he can ask for by name afterwards. On a wording or layout micro-choice,
+a recommendation backed by UX research (#5160, 2026-10-13: "curious what UX research would choose";
+"i'm open to change my mind if ux research has a recommendation"). - **PR #446 (2026-08-19, merged by Eric) — the flagship fridge PR** — Three screenshots (play picker, guided ticket, account) plus a `flowchart LR` of how an order moves with emoji-labelled  → He merged it; the same day he said "dumb this shit down and draw more pictures... I want some god damn pictures to hang on the fridge" — thi
 - **docs/PICTURES.md (PR #458, 2026-08-20)** — The change-type → picture decision table (screenshots / flowchart LR / sequenceDiagram / stateDiagram-v2 / erDiagram / c → No direct quote; asked for the hat-team research that produced it; 2026-08-30 "likes the existing before/after diagrams"
 - **docs/research/ai-hardware-constraints-aug-2026.md → The picture (2026-08-22, PR ** — The constraint clock — a `flowchart LR` with four phase subgraphs (EARLY / MID rent-collecting / LATE tells printed / DO → The doc had "regressed" into taxonomy — he wanted "expect pull back, bad time to buy" / "consider buying before this date"
 - **PR #515 → CLAUDE.md → "Research leads with the call", docs/process/EVENT-RESEARCH.md, /research renderer** — The call sheet as a GFM table: Name · The call · Confidence · (one-line why) · Proves me wrong — "That table is the chan → His correction produced it ("a research TLDR should give a direct directional read")

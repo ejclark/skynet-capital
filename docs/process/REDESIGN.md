@@ -236,7 +236,12 @@ the problem… only as many as needed, no more no less" (Eric, 2026-10-14).
 - **Critic pass before he sees anything:** `node scripts/redesign/lint.mjs <dir>/manifest.json`
   first — fields, pictures, jargon, invented names, and every quote of his checked against the
   files the manifest cites (`sources`) — then a critic judges only taste against *His standing
-  rules* below. Fix what fails rather than caveat it.
+  rules* below, **his reader profile** (`docs/READERS.md` → *How he reads*, *What he reacts against*)
+  and **the screen's settled list** in its state block. A shape he has already ruled out in kind (a
+  wall of text, a label written as a sentence, a label off-centre from its mark) never reaches him.
+  On any picture of a payoff or P&L, check it against the strategy's real mechanics (CLAUDE.md →
+  *Domain accuracy*). Fix what fails rather than caveat it (the #5160 retro: about three of its
+  seventeen rounds went on notes this pass could have caught).
 - Write the manifest the steer builder reads (the shape is in the steer skill → *A design decision:
   the critique round*). Set `topic` to the surface — the route and its shell file — because the
   build issue carries it into its lane. An example (your issue, words and paths will differ):
@@ -307,6 +312,10 @@ npm run steer:build -- <dir>/tp.json
   `Option B · pin 2 (range strip) — 👎 change — “<his note>”` — and the `nextRound` instruction
   carries each one: apply his note on that spot. A note counts as an answer with or without a
   reaction.
+- **Before a Build pick is filed, show the build.** The round that offers Build shows the frames
+  the build will carry, as they will look, so a last note lands before the issue exists, not after
+  (the #5160 retro: "the latest event (sold) should be listed first" arrived the round after #5317
+  was filed).
 - **A Build pick:** the read-back files it as a `feedback` + `ready` issue. **One build lane per
   surface** (`docs/DELEGATION.md` rail 7): before running its `create` command, look for an open
   build on the same route, shell file or page screenshots; if there is one, add `--blocked-by
@@ -340,7 +349,9 @@ of it is the page notes, pin notes and marks he already left along the way.
 
 **i · Run the retro, then route what it found.** On a finished screen, and on a stalled one (5 or
 more rounds with no build):
-- **Trace.** List each round: what it drew, his pick, and the note that changed direction. For each
+- **Trace.** `node scripts/redesign/retro.mjs <issue>` lists each round from its read-back: the
+  question, his picks and every note he left, plus the ledger's numbers. Find the note that changed
+  direction in each. For each
   turn, ask: *could an opening question have surfaced this before round 1?* If yes, that question
   goes into the bank (below). Ask too whether a rule of the loop cost rounds (for example, one change
   per round where two independent changes could have shared a page) and say so with the rounds it
@@ -435,6 +446,12 @@ Questions a retro found would have saved rounds had they been asked before round
 carries the ones that fit the screen; his answers become marks, goal and outcomes. Each line names
 the retro (or the digest) that earned it. Newest first.
 
+- Which words do you use for this, and which do you never want to see? — #5160 retro, 2026-10-14:
+  "I don't like 'wrong if'… in the money (ITM) is what matters" (r2) and "keep to succinct labels;
+  ITM, OTM, Strike, break even" (r4) turned four rounds.
+- In each row or card, what do you read first, second and third? — #5160 retro, 2026-10-14: "the
+  latest event (sold) should be listed first" (r14) and "Which strategy triggered the trade feels
+  like the first information to show, followed up by the why" (r16) arrived after a build was filed.
 - What do you open this screen to decide, and what do you do right after? (the job, and what it
   hands to the next screen) — #5143 digest, 2026-10-11: 16 IA moves from 10 screens re-homed
   sections by the job they serve.
@@ -457,6 +474,7 @@ five screens average as many rounds to a build as the sessions before this ledge
 
 | Screen (issue) | Finished | Rounds to the scope | Rounds to a build | Notes after round 0 | What the retro changed |
 |---|---|---|---|---|---|
+| Profile Activity (#5160) | still open at r16 (retro 2026-10-14, before this loop's v3) | 1 (round 0 picked a problem; no scope written) | 8 (#5262), then 13 (#5317) | 65 | the critic checks his reader profile and settled list; payoff pictures get a domain check; the build is shown before it's filed; two opening questions |
 
 ## Process changes
 
@@ -464,6 +482,7 @@ Newest first. This is how a change to the loop reaches the sessions already runn
 before each round, read every line dated after your last round, and apply each one to the round
 you're about to draw. The curator adds a line per change, in the same PR as the change.
 
+- 2026-10-14 · **The first retro (#5160, 17 rounds) — three changes** (its trace: about 6 rounds were avoidable). From your next round: the critic pass also checks every frame against `docs/READERS.md` and the screen's settled list, and any payoff or P&L picture against the strategy's real mechanics; the round that offers Build shows the frames the build will carry, so a last note lands before the issue is filed; and round 0 asks two more opening questions (his words for things; what he reads first in a row). `node scripts/redesign/retro.mjs <issue>` gathers a screen's rounds, picks and notes for step i.
 - 2026-10-14 · **Four stages — align, scope, work the problem, learn forward — and his read before ours** (Eric: "doesn't this create bias through the process out of the gate?"; "I'm redundantly navigating the same screenshots"; "only as many as needed, no more no less"; "if i have an issue, I have the ability to organically provide feedback inline"). From your next round: **round 0** opens on clean frames for his marks (`"opening": true`), with your problems behind "Show what Claude found", all pinned on **one** Today frame (options carry `"pin": <n>`, no pictures). Write the **scope** (goal, outcomes O1…, problems P1…) when he says "that's the list". Design rounds carry `scope` and each option `serves` an open outcome; draw **1 shape to confirm, 2–3 for a fork, up to 5 to explore**, and say which in the `ask`. Route his **page notes** (the read-back's *Notes about the page*) like `process:` notes. Before archiving, run **step i, the retro**, and write your row in the *Learn-forward ledger*. **Already past round 0?** Don't redo it: put the scope in your state block from his words so far and carry `scope` from your next round. **The kit for marks, the reveal, one-frame problems, page notes and the scope checklist** lands in its own PR; until its line appears here, draw round 0 as before (one picture per problem), and put the scope's outcomes in the `ask`.
 - 2026-10-14 · **Two phases: define the problem, then propose — and look past the screen's edges** (Eric: "define the target area with the objective and/or goal… iterate: identify problems/friction impeding achieving our goal… when we are done defining problems, goals and/or outcomes, proceed"; and "the plan assumes the changes are nested within the target area. This creates a blind spot when IA has upstream inefficiencies, which is often"). Step b now writes **the goal** (one to three outcomes he can check by eye); step c adds **the upstream pass** — each problem tagged *here* or *upstream*, upstream ones named by root and banked in the new ledger, `docs/IA.md` §10 (seeded with six roots from the 2026-10-11 digest; U1–U3 are already cited by 3+ screens). Problem rounds now run on **every** screen and loop until he says "that's the list"; only then does d draw, and every shape names the problem it solves. **If your session is already past round 0:** don't restart. Before your next round, write the goal and the ranked list (P1, P2…, each tagged) from his words so far into the state block, and make the next round page's first question that list as a problem round, its intro asking "is this the list?"; his "that's the list" — or his corrections — and you're back in Phase 2. Add any upstream problem you've already met to §10 in your next docs PR.
 - 2026-10-14 · **Answer once: leave out a desktop frame that only widens the phone layout** (Eric: "between mobile and desktop there was a significant amount in overlap on feedback mechanisms.. often times template/structures didn't fundamentally change thus doubles the work to leave feedback"). From your next round: no `desk` on an option whose desktop frame moves nothing — say "desktop: same layout, wider" in its `delta` — and pin each element once, on the phone frame. And the round page now shows frames at their real size (Eric: "the size of the screenshots, text instructions is extremely small"): a phone frame at 390px, not 240, and the desktop frame on its own row across the card — about 73% of real size at 1024px wide, up from 26%. Republish your page on your next round to pick it up; nothing in the manifest changes.
