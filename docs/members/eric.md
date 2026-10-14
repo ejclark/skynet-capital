@@ -89,6 +89,15 @@ influence playbooks to consider, strategies to try, decisions to execute."*
 - **Reads first:** the picture, the standing, what needs him. **Skips:** a wall of text, a menu of
   coined names (2026-09-25: *"another cute word you keep using that i've told you to stop because
   it's confusing"*), a mechanism he would have to arbitrate.
+- **Reads an option as its mechanics** (#5160, 2026-10-11/12): he sells cash-secured puts and reads
+  them as strike, breakeven, in or out of the money, with the premium as the profit — *"I don't like
+  "wrong if" - right/wrong don't matter. in the money (ITM) is what matters as that's when the
+  reserved cash is used to buy stocks"*; *"Max profit for Cash secured is the premium."*
+- **Reads a trade's history as one transaction, newest first, strategy before reasons** (#5160,
+  2026-10-12/14): *"I like having these transactions associated"*; *"I feel like the latest event
+  (sold) should be listed first"*; *"Which strategy triggered the trade feels like the first
+  information to show, followed up by the why"* — and the why must be substantiated: *"I don't like
+  that the why is "trust me bro"."*
 - _hypothesis — on a phone he reads only what is above the fold of the first screen and acts on at
   most one thing. Proves it wrong: a phone-session reaction after 2026-09-26 that cites something
   two screens down._

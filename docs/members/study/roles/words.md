@@ -13,7 +13,9 @@ Judge each piece against four standards:
    reads at a glance (about grade 7–10).
 
 Also flag: anything that could mislead a person about money (a number or claim that reads as
-something it is not), inconsistent names for the same thing, and dense text with no structure.
+something it is not), inconsistent names for the same thing, and dense text with no structure. A
+label on a picture uses the mechanic's own name where one exists (Strike, Breakeven, In the money),
+never a sentence (#5160 retro, 2026-10-14).
 
 Each finding: the text (quoted), where it sits, which standard it fails, why it matters to which
 member, and a rewrite. Severity: High (could mislead or block) · Moderate · Low.
