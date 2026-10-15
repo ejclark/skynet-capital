@@ -8,13 +8,20 @@
 // before — one test screen at a time until the redesign process settles (#5380), so this adds no
 // line to docs/process/REDESIGN.md's *Process changes*.
 //
-// THE MODES, one switch above each option's phone picture — "Compare: ⇄ Flip · ↔ Swipe · ◧ Divider",
+// THE MODES, one switch above each option's phone picture — "Compare: ⇄ Flip · ◫ Side by side ·
+// ◧ Divider",
 // a glyph and a word each (he is red/green colourblind), Flip pressed by default, nothing moving on
 // its own (docs/READERS.md: easily distracted):
 //   - FLIP: a "□ Today / ◆ Option A" toggle swaps the picture in the same spot. The option's pins
 //     and marks belong to its own frame, so they go with it while Today shows.
-//   - SWIPE: Today then the option in a sideways strip, the next one peeking at the edge, a dot per
-//     picture (● here, ○ not) — each picture keeps its shape-and-word label.
+//   - SIDE BY SIDE (#5430, GitHub image diff's "2-up"): Today and the option at half width each,
+//     both whole — scaled, never cropped — each under its shape-and-word label. A tap on either
+//     opens that picture full size in Flip, Side by side one tap back. It replaced a sideways strip
+//     that showed one picture at a time (Eric: it "entirely destroy the value potential of the
+//     view"); a viewer whose kept mode is that strip's `swipe` opens here. Half-width text is small
+//     at phone width — that is what the tap is for, so nothing else shrinks to make up for it. The
+//     tap lands on a button laid over each half, so in this mode it never places a mark: marks and
+//     pins still show on the option's half, and take a tap once it is open in Flip.
 //   - DIVIDER: Today left of a line, the option right of it, dragged by a handle under the picture
 //     ("◀ Drag ▶", thumb-sized). Offered only when both pictures share their pixel size, since a
 //     wipe across two layouts lines nothing up; otherwise the button reads "Divider: layouts
@@ -31,20 +38,26 @@
 import { arealFrame } from "./areas.mjs";
 import { e } from "./html.mjs";
 
-export const COMPARE_MODES = ["flip", "swipe", "divider"];
-/** The page's words. Each glyph rides beside its word, never alone; ↔ carries U+FE0E so it draws
- *  as text, not an emoji. */
+export const COMPARE_MODES = ["flip", "side", "divider"];
+/** The page's words. Each glyph rides beside its word, never alone. */
 export const COMPARE_WORDS = {
   lead: "Compare:",
-  modes: { flip: "Flip", swipe: "Swipe", divider: "Divider" },
-  glyphs: { flip: "⇄", swipe: "↔︎", divider: "◧" },
+  modes: { flip: "Flip", side: "Side by side", divider: "Divider" },
+  glyphs: { flip: "⇄", side: "◫", divider: "◧" },
   differ: "Divider: layouts differ",
   today: "□ Today",
   option: "◆",
   drag: "◀ Drag ▶",
+  hint: "Tap a picture to open it full size",
+  open: (name) => `Open ${name} full size`,
 };
-/** What the page script needs: the modes, and where a viewer's last one is kept. */
-export const COMPARE_CLIENT = { modes: COMPARE_MODES, store: "steer-compare-mode" };
+/** What the page script needs: the modes, where a viewer's last one is kept, and what a kept mode
+ *  that no longer exists opens as (`swipe`, the strip Side by side replaced, #5430). */
+export const COMPARE_CLIENT = {
+  modes: COMPARE_MODES,
+  store: "steer-compare-mode",
+  was: { swipe: "side" },
+};
 
 /** What is wrong with a question's `compare`; [] when it is fine or absent. */
 export function compareProblems(q, where) {
@@ -106,10 +119,9 @@ export function compareHtml({ d, o, pic, shot, img }) {
   const mine = `${W.option} ${name}`;
   const divider = sameSize(today, pic);
   const todayImg = `<img src="${e(src)}" alt="Today at phone width" loading="lazy">`;
-  const cell = (which, tag, inner) =>
-    `<figure class="cmp-cell" data-cell="${which}"><figcaption class="cmp-tag">${e(tag)}</figcaption>${inner}</figure>`;
-  const dot = (which, label, on) =>
-    `<button type="button" class="cmp-dot" data-go="${which}" aria-label="${e(`Show ${label}`)}" aria-current="${on}"></button>`;
+  const cell = (which, tag, label, inner) =>
+    `<figure class="cmp-cell" data-cell="${which}"><figcaption class="cmp-tag">${e(tag)}</figcaption>${inner}` +
+    `<button type="button" class="cmp-open" data-open="${which}" aria-label="${e(W.open(label))}" hidden></button></figure>`;
   return (
     `<div class="cmp" data-mode="flip" data-side="option"${divider ? "" : " data-nodivider"} style="--split:50">` +
     modesHtml(name, divider) +
@@ -117,10 +129,10 @@ export function compareHtml({ d, o, pic, shot, img }) {
     button('data-side="today"', e(W.today), false) +
     button('data-side="option"', e(mine), true) +
     `</div><div class="cmp-stage">` +
-    cell("today", W.today, todayCell(d, pic, todayImg)) +
-    cell("option", mine, shot) +
+    cell("today", W.today, "Today", todayCell(d, pic, todayImg)) +
+    cell("option", mine, name, shot) +
     `<div class="cmp-line" aria-hidden="true"></div></div>` +
-    `<div class="cmp-dots" hidden>${dot("today", "Today", true)}${dot("option", name, false)}</div>` +
+    `<p class="cmp-hint" hidden>${e(W.hint)}</p>` +
     `<label class="cmp-track" hidden><span class="cmp-end">${e(W.today)}</span>` +
     `<span class="cmp-knob" aria-hidden="true">${W.drag}</span><span class="cmp-end">${e(mine)}</span>` +
     `<input type="range" class="cmp-split" min="0" max="100" value="50" data-name="${e(name)}" ` +

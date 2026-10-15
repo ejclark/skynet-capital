@@ -133,7 +133,8 @@ function optionHtml(d, o, img, markable) {
   const said = d.problems ? "The problem:" : "Changes:";
   const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
   const at = { key: d.key, option: o.key, markable };
-  // A compared question (compare.mjs): the phone frame sits in Flip · Swipe · Divider with Today's.
+  // A compared question (compare.mjs): the phone frame sits in Flip · Side by side · Divider with
+  // Today's.
   const wrap = d.compare
     ? (p, h) => (p.size === "phone" ? compareHtml({ d, o, pic: p, shot: h, img }) : h)
     : undefined;

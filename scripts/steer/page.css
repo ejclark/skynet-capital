@@ -899,8 +899,9 @@ details.ev summary {
 
 /* Comparing an option with Today (compare.mjs + compare-client.js, #5411). One switch above the
    option's phone frame — a glyph and a word per mode, the pressed one a heavy border and a ✓, never
-   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SWIPE lays them in a
-   sideways strip, the next one peeking; DIVIDER stacks them and clips the option from the left to
+   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SIDE BY SIDE (#5430)
+   sets them in two columns, both whole, a clear button over each half that opens it in Flip (so a
+   tap there never places a mark); DIVIDER stacks them and clips the option from the left to
    --split (%), Today showing through, a line in the text colour ringed in the ground colour where
    they meet, dragged by a thumb-sized handle under the picture. */
 .cmp {
@@ -950,6 +951,7 @@ details.ev summary {
 }
 .cmp-cell {
   grid-area: 1 / 1;
+  position: relative;
   margin: 0;
   min-width: 0;
   background: var(--surface);
@@ -972,6 +974,9 @@ details.ev summary {
   height: auto;
 }
 .cmp .cmp-cell > .shot {
+  /* the cell is a column, so .shot.phone's 390px flex-basis would set its height: at half width
+     (Side by side) the picture is shorter than that and the frame ran on empty below it */
+  flex: none;
   width: 100%;
   box-sizing: border-box;
 }
@@ -986,36 +991,34 @@ details.ev summary {
 .cmp[data-mode="flip"][data-side="today"] .cmp-cell[data-cell="option"] {
   visibility: hidden;
 }
-.cmp[data-mode="swipe"] .cmp-stage {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
+.cmp[data-mode="side"] .cmp-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
 }
-.cmp[data-mode="swipe"] .cmp-cell {
-  flex: 0 0 86%;
-  scroll-snap-align: start;
+.cmp[data-mode="side"] .cmp-cell[data-cell="option"] {
+  grid-area: 1 / 2;
 }
-.cmp-dots {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-}
-.cmp-dot {
-  min-width: 36px;
-  min-height: 36px;
+.cmp-open {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   border: 0;
+  border-radius: 8px;
   background: transparent;
-  color: var(--text);
-  font-size: 16px;
-  cursor: pointer;
+  cursor: zoom-in;
 }
-.cmp-dot::before {
-  content: "○";
+.cmp-open:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
 }
-.cmp-dot[aria-current="true"]::before {
-  content: "●";
+.cmp-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 .cmp[data-mode="divider"] .cmp-cell[data-cell="option"] {
   clip-path: inset(0 0 0 calc(var(--split) * 1%));
