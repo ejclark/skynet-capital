@@ -1,6 +1,7 @@
 ---
 name: honest-degradation
 description: make one eye degrade honestly — a missing or unreadable input is a named state it prints, never a silent pass
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -10,8 +11,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/honest-degradation.instructions.md`.
-`effort: high` because every site is a judgment (is this input optional, required, or
-fixture-only?) and a wrong call either manufactures a red or preserves a silent pass.
+`model: opus` on `effort: high` (the judgment floor, `docs/COMPUTE.md`) because every site is a
+judgment (is this input optional, required, or fixture-only?) and a wrong call either manufactures
+a red or preserves a silent pass.
 `isolation: worktree` because the chore edits code and a spec and commits.
 
 Items are eye scripts (`"scripts/journey-scan.mjs"`), one per item, grouped so a script and its
