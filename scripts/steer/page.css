@@ -540,6 +540,44 @@ details.ev summary {
   width: 100%;
 }
 
+/* A note under an option (option-notes.mjs): one quiet line under its buttons until tapped. The
+   fold's state is the ▸/▾ shape, never a colour. */
+details.onote {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.onote summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+details.onote summary::-webkit-details-marker {
+  display: none;
+}
+details.onote summary::before {
+  content: "▸\00a0";
+}
+details.onote[open] summary::before {
+  content: "▾\00a0";
+}
+details.onote summary:hover {
+  color: var(--text);
+}
+.onote-t {
+  font: 14px / 1.45 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  max-width: 80ch;
+  box-sizing: border-box;
+}
+
 /* Reaction buttons — a pressed state is a glyph plus a border or strike, never a colour alone. */
 .btns {
   display: flex;
