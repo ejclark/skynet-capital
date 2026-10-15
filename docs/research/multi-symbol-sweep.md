@@ -71,6 +71,8 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A chair-less, contested standing committee still files its quarterly report" (FT-unsc-iran-panel-mandate-expiry-2026-09-26-2)** — added 2026-10-15 from the [unsc-iran-panel-mandate-expiry-2026-09-26 forward-test scoring](events/unsc-iran-panel-mandate-expiry-2026-09-26.md). Registered 2026-09-04 on a Secretariat cycle table listing 12 March and 9 June 2026 as 1737 Committee report dates. Security Council Report shows those were briefings: China and Russia objected to the draft 90-day report in March, June and September, so no report was presented. Do not read a mandate-cycle table's occurrence dates as delivery of a document; check that a report was adopted, not that a meeting was held.
+
 - **"A Social Security COLA projection that needs September to accelerate is running hot; fade it toward the
   last locked month's y/y" (FT-ssa-cola-2027-2026-10-14-1)** — added 2026-10-15 from the
   [ssa-cola-2027-2026-10-14 close-out](events/ssa-cola-2027-2026-10-14.md). Registered 2026-09-04 as
