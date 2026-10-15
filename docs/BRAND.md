@@ -86,9 +86,9 @@ means one number. Each is where the CSS already broke most often; JS reads them 
 
 The widening side of an edge is its complement (`min-width: 701px` · `861px`, `max-width:
 1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). One known
-exception: the topbar market clock compacts at ≤ 1280, one pixel off the bench edge — moving it
-to 1279 hides the view links at 1280 with Moneypenny's rail open, because the clock sizes by the
-window while the rail narrows the shell.
+exception in the shell: the topbar's brand name steps aside from 861 to 960 (to 1100 while a
+fleet alarm widens the status line) — widths measured where the market widget sat over the last
+view links, not edges (`app/src/styles/session-status.css`).
 
 ## Voice & tone
 
@@ -166,11 +166,12 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
 - **Small marks get size before colour.** A 4px dot is invisible at any contrast; 6px with a 1.5px
   ring reads. Legend and helper text sit at ≥ 11.5px.
 - **A radio and a checkbox never look the same.** Two controls that share a style but not a
-  behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
-  (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
-  its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` — a ✓ and a ring, no bar;
-  every multi-select chip in the app is one, #5365). On a phone the group labels are
-  hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
+  behaviour are a hue-only signal in disguise. The controls row's **section switch** picks exactly
+  one (`.railctl-section`, an accent bar under the current item in the row, on its left in
+  Settings' ≥ 861 column); its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` —
+  a ✓ and a ring, no bar; every multi-select chip in the app is one, #5365). The row hides the
+  group labels at every width, so the `<hr />` between them is a real vertical divider, not a
+  decoration (Settings' column shows the labels and turns the rule horizontal). The words those
   controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where
   low-contrast tones hide; light is where accent fills lose their text.
