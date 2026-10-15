@@ -99,7 +99,7 @@ one green rep per athlete invocation**, with the register as the shared prompt e
    `/vision` passage + translation table per piece. It never builds; the gate picks the athlete's
    target, not the athlete.
 2. **`render-alchemist`** — the research step, upstream of building: turns "make it look CGI-real" or
-   "closer to this reference" into a cited, buildable technique brief (Babylon.js APIs, GLSL patterns,
+   "closer to this reference" into a cited, buildable technique brief (three.js APIs, GLSL patterns,
    performance cost class, what's achievable now vs. what needs new infrastructure). Also the one
    athlete that handles reference media directly — pulls frames from provided video via `ffmpeg`,
    distinguishes a *fidelity-bar* ask (production polish — atmosphere, grain, light falloff, motion)
