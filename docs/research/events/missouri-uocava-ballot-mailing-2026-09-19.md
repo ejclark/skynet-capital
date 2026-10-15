@@ -418,3 +418,21 @@ this close-out adds no new information to that question, only confirms the ballo
 executed on schedule under the settled map. **This document goes quiet now** — `## Outcome` exists,
 so the scanner will not dispatch this event again; `FT-…-2` remains open in its own fragment for a
 human or a future sweep to check against its 2026-10-15 score-by.
+
+### Forward-test follow-up — `FT-…-2` scored 2026-10-15 (`forward-test-due`)
+
+**NEUTRAL (unresolved), as its own rule requires — not a pass.** Re-read 2026-10-15 by web search and
+page fetch (no instrument runs; `symbols: []`). Two facts the close-out above did not have:
+- **The Eighth Circuit did rule, 2026-09-21** (Spectrum News, Local10, Missouri Independent via
+  search results): the 2025 map must be used. The ruling was stayed one week, and the press reports
+  Missouri said it would apply for a UOCAVA hardship waiver **only if** that order took effect.
+  This corrects the close-out's "no date" note for the Eighth Circuit; it did not change the stance.
+- **SCOTUS 26A388, 2026-09-25** (*People Not Politicians v. Onder*, unsigned, no recorded dissent;
+  quote read via redistrictingonline.org 09-26): "as a matter of state law, the 2022 map, not the
+  2025 map, must be used in the 2026 congressional election"; "the election is not merely upcoming;
+  it has already started." The transmitted ballots stand, so the conditional waiver was never filed.
+
+**Limits.** The `supremecourt.gov` opinion PDF fetched but its text layer was not decodable here;
+the quotes are second-hand from the press. FVAP's waiver register still unreadable. Ohio 2022
+stays a single data point; the mechanism (return-window relief vs. transmission-date move) went
+untested. Nothing proposed (no adjacency sweep in this mode). Event stays closed.
