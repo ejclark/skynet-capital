@@ -1,8 +1,8 @@
 # Delegation & background agents — the safety rails
 
 > The GitHub-issue/PR-orchestration slice of this — what the event router routes, what the coordinator
-> hands off — now operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
-> The rails below are unchanged; she directs within them, never around them.
+> hands off — operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
+> The rails below hold; she directs within them, never around them.
 
 How Claude runs work in the background (subagents) while the foreground thread stays free for Eric's
 dialog — and the rails that make it safe to expand. This is the Second Way (overlapping feedback) and
@@ -50,8 +50,9 @@ into separate lint, typecheck and per-suite calls (#5191).
 4. **Overlapping nets — no single check is the SPOF.** Agent's own tests/lint + reviewer re-verify + CI
    + later passes. Drift is caught by *some* net. (Proven live: a background agent's lint caught a format
    drift the foreground check had missed; the foreground then corrected it — Detect · Correct · Maintain.)
-5. **Durable state = no record SPOF.** Everything is externalized: the backlog in [`IDEAS.md`](IDEAS.md),
-   branches + PRs on GitHub, the conventions in [`../CLAUDE.md`](../CLAUDE.md). If the session dies,
+5. **Durable state = no record SPOF.** Everything is externalized: the backlog in GitHub issues (the
+   Orchestration board), parked ideas in [`IDEAS.md`](IDEAS.md), branches + PRs on GitHub, the
+   conventions in [`../CLAUDE.md`](../CLAUDE.md). If the session dies,
    work-in-flight survives on branches/PRs and a fresh session resumes from the docs. The coordinator is
    replaceable, not a point of failure for the *record* — only for in-the-moment orchestration.
 6. **Escalation & circuit breakers.** A red PR never merges; a genuine design fork or ambiguity escalates
