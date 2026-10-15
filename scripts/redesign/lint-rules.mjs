@@ -14,6 +14,7 @@ import { AREA_MAX_WORDS, areaSpecProblems, areasFor, wordCount } from "../steer/
 import { compareProblems } from "../steer/compare.mjs";
 import { QUESTION_KINDS } from "../steer/design.mjs";
 import { focusBoxProblems, matchSection } from "../steer/focus.mjs";
+import { notesPerProblems } from "../steer/option-notes.mjs";
 import { holderPins } from "../steer/pins.mjs";
 import { scopeProblems } from "../steer/scope.mjs";
 import { widthsProblems } from "../steer/widths.mjs";
@@ -422,6 +423,7 @@ function questionProblems(q, i, raw, env) {
     ...areaProblems(q, at, env),
     ...compareProblems(q, at),
     ...widthsProblems(q, at),
+    ...notesPerProblems(q, at),
     ...wordingProblems(q, at, raw, env),
   ];
 }

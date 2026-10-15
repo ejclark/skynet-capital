@@ -17,6 +17,7 @@
 // Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the divider.
 // And `widths: true` (#5417): a holder's phone and desktop pictures share one slot with a
 // Phone · Desktop switch (widths.mjs), its `deskSame: true` labelling the desktop "same layout".
+// And `notesPer: "option"` (#5429): a note box folded under each option's buttons (option-notes.mjs).
 // Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
@@ -29,6 +30,7 @@ import { areaSpecProblems, areasFor } from "./areas.mjs";
 import { compareProblems } from "./compare.mjs";
 import { focusBoxProblems, focusFor, imageRatio, imageSize } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
+import { NOTES_PER, notesPerProblems } from "./option-notes.mjs";
 import { holderPins } from "./pins.mjs";
 import { scopeOf, servesOf } from "./scope.mjs";
 import { widthsProblems } from "./widths.mjs";
@@ -260,6 +262,20 @@ function widthsOf(q, n) {
   return q.widths === true;
 }
 
+/** A question's `notesPer`, checked (option-notes.mjs): true for a note box under each option. */
+function notesPerOf(q, n) {
+  const problems = notesPerProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.notesPer === NOTES_PER;
+}
+
+/** The page features a question opted into (#5380: one test screen at a time), as its fields. */
+const optIns = ({ compare, widths, notesPer }) => ({
+  ...(compare ? { compare: true } : {}),
+  ...(widths ? { widths: true } : {}),
+  ...(notesPer ? { notesPer: NOTES_PER } : {}),
+});
+
 /** A holder as the page holds it, with `deskSame` when the question switches widths and the
  *  manifest says the desktop layout only widens the phone one. */
 const sameLayout = (holder, raw, widths) =>
@@ -356,6 +372,7 @@ export function designDecisions(
     const areas = areasSpec(q, n);
     const compare = compareOf(q, n);
     const widths = widthsOf(q, n);
+    const notesPer = notesPerOf(q, n);
     const options = (q.options ?? []).map((o, j) => {
       const opt = sameLayout(
         optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas),
@@ -376,8 +393,7 @@ export function designDecisions(
       kind: "design",
       ...(problems ? { problems: true } : {}),
       ...stages(q, problems),
-      ...(compare ? { compare: true } : {}),
-      ...(widths ? { widths: true } : {}),
+      ...optIns({ compare, widths, notesPer }),
       issue,
       isPr: false,
       round,
