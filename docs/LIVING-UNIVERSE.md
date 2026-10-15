@@ -214,7 +214,8 @@ spread, participation) — they *are* the country-scale units.
 ## The three-era arc (Eric, 2026-09-27) — where the phased roadmap is headed
 
 Eric's first pass at the multi-year shape, offered as a hedge ("I have yet to invest much thought
-on the longer term"), not a spec. Banked here rather than built — nothing below is a slice yet.
+on the longer term"), not a spec. Banked here rather than built — nothing below is a slice yet,
+save the one playbook decision already in code.
 
 **Naming collision worth one line, not a block:** `THE-GAME.md`'s "Season" is the repeating
 **quarterly** renown-reset unit (`docs/THE-GAME.md` line ~120); Eric's "season 1/2/3" here name
@@ -223,18 +224,19 @@ words (IDEAS.md already uses "season one" this way), so this doc calls them **Er
 keep the two scales apart in writing — rename back if that reads worse out loud than on the page.
 
 - **Era 1 — humans vs. Sauron (and other Eric-account bots); the only autonomous bots in the
-  system.** This *is* the roadmap's phases 1–3 above, already in flight (Sauron autonomous is
+  system.** This *is* the roadmap's phases 1–3 below, already in flight (Sauron autonomous is
   IDEAS.md's stated season-one premise). New goals from this pass, not yet slices:
   - **Competition rules, undefined.** What "winning" a quarter means beyond the renown ledger
     THE-GAME.md already scores — open, not decided here.
   - **Regular touch points to keep people engaged.** Partly served today by the weekly Friday Recap
     (`THE-GAME.md`); whether that cadence is enough is untested — no active members yet (#3818).
   - **Joyful trading UX across stocks, options, and other tradeable commodities.** Today's order
-    path is equities-only market orders (IDEAS.md's Sauron roadmap, steps 2–4); "any other
-    commodities" is new scope, not on that roadmap yet.
+    path covers equities as market orders and options as limit orders, one leg or a same-expiry
+    vertical (`src/domain/types.ts` → `OrderIntent`, `OptionOrderIntent`; IDEAS.md's Sauron
+    roadmap, steps 2–4); "any other commodities" is new scope, not on that roadmap yet.
   - **Performance dashboards that answer or nudge, not just report.** No existing doc owns this —
     closest relative is the judgment axis (phase 3) and the observatory views (`## Scale across the
-    four views` below); a dashboard that *nudges toward the process that answers a question* is a
+    four views` above); a dashboard that *nudges toward the process that answers a question* is a
     sharper bar than either currently states.
   - **AI position/opportunity guidance toward maximizing profit**, and **hypothetical-scenario
     guidance** ("what if I did X"). Both new — nearest existing thread is CLAUDE.md's "position
@@ -244,13 +246,13 @@ keep the two scales apart in writing — rename back if that reads worse out lou
     subscriptions will be enabled for all accounts. The intent is to have season one be 'bots vs
     humans' and season 2 enables users to adopt autonomous trading strategies. This approach buys
     us time to refine the autonomous trading process in season 1 in preparation for season 2."*
-    Built 2026-10-05 (#4649): the Store refuses a human account's subscribe and edit with one
-    sentence (`src/domain/playbook-bots-only.ts`), and leaving stays open on every account
+    The Store refuses a human account's subscribe and edit with one sentence
+    (`src/domain/playbook-bots-only.ts`, #4649), and leaving stays open on every account
     (unsubscribe, pause, resume). Member copy says "a later season", never "Season 2", which a
     member would read as `THE-GAME.md`'s next quarter. Not a fog: nothing earnable opens it
     (`docs/FOG-OF-WAR.md` audit).
 - **Era 2 — bots vs. bots; members create and configure their own bots' strategies.** This is
-  phase 4 of the roadmap above (**contributable personas**) under a sharper frame: *promoting
+  phase 4 of the roadmap below (**contributable personas**) under a sharper frame: *promoting
   Sauron's own capabilities to other users*, not just accepting outside contributions. Same
   mechanism (plugin architecture, tier-gated trading authority via the contribution ladder below).
   - **Playbook subscriptions open to every account** (the same 2026-10-04 decision): members
