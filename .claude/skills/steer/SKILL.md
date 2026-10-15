@@ -224,5 +224,5 @@ nothing from it and prints `nextRound` instead. One page holds one kind.
 
 - Merge, set `surge`, touch an `envelope.json` path, or ask about a `needs-eric` label that states
   no decision — those are counted on the page, and routed by the existing doors.
-- Run unattended. Slice 4 (#5056) moves assembly onto the digest's Routine; until then a live
-  session runs every step.
+- Run unattended: a live session runs every step. Moving assembly onto the digest's Routine is
+  #5056 slice 4.
