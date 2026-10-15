@@ -41,7 +41,7 @@ How it works — everything meets at an in-memory `ObservatoryHub`:
 
 ```
 Alpaca market-data stream (price ticks) ─┐
-Engine fills (once trading is on) ────────┼─▶ ObservatoryHub.apply(event)
+Fills (every account's trade_updates) ────┼─▶ ObservatoryHub.apply(event)
                                           │      └─ reduceObservatory (pure)
                                           │            │ on change
    browsers ◀── SSE (/events) ◀───────────┴────────────┘  re-render + push
@@ -56,11 +56,10 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
   instant they execute (manual or bot), and the market-data stream pushes price ticks for
   held symbols. Both flow through the same hub → SSE path.
 
-## The player desk — three tabs on one account
+## The account page — one account, a section per route
 
-`/u` (bare) is the **Portfolio index** — the member's home, listing every account their signed-in
-email owns (`Participant.ownerEmail`) with a combined-equity hero above the per-account split. The
-drawer's "Portfolio" link (formerly "You") lands here; each row opens that account's desk.
+`/u` (bare) redirects to Settings → Account (`src/server/legacy-redirects.ts`), which lists every
+account the signed-in email owns (`Participant.ownerEmail`); each card opens that account's page.
 
 `/u/:id` is the page for **any** account, bot or human — reached from the Leaderboard and Activity,
 and never folded into the Profile page (Eric, #2321: "Profile verbiage is user-centric. Leaderboards
@@ -78,11 +77,10 @@ nested route per section:
 | Thesis | `/u/:id/thesis` | what is its standing call, and is it working? | bots |
 | Settings | `/settings` | (the viewer's own account settings) | only your own account |
 
-Decisions folded into Heartbeat (#3687) and Heartbeat into Playbooks (#5073), so the section reads
-what the Profile page's Playbooks reads, at an address named for it; a saved `/u/:id/decisions` link
-redirects there with the check log open. The Playbook Store itself lives on R&D → Playbooks.
-Old `?tab=` links redirect to their section (`src/server/legacy-redirects.ts`); the word "desk" is
-retired from member-facing copy (#3345).
+The Playbooks section reads what the Profile page's Playbooks reads, at an address named for it
+(#5073); a saved `/u/:id/decisions` link redirects there with the check log open. The Playbook Store
+itself lives on R&D → Playbooks. Old `?tab=` links redirect to their section
+(`src/server/legacy-redirects.ts`); member-facing copy never says "desk" (#3345).
 
 ### Acting on a position (your own accounts only)
 
@@ -103,14 +101,15 @@ moved between review and confirm is refused rather than sent.
 Member-initiated trading needs no switch — it's on the moment OAuth is configured (Eric's ruling,
 2026-08-21, #466: no separate kill switch). Without a signed-in identity there is no account to
 match an order to, so orders are refused; once a member's account carries an owner link
-(`Participant.ownerEmail`, stamped from their session at `/add`), they may trade it.
+(`Participant.ownerEmail`, stamped from their session by `POST /api/join`,
+`src/server/join-api-routes.ts`), they may trade it.
 
 Pictures: `npm run build --prefix app && npx tsx scripts/shoot/desk.mjs` (phone then desktop, as
 another member).
 
 ## Design
 
-The renderer (`observatory/standings-view.ts`) is a pure `DashboardData → HTML` function,
+The renderer (`src/observatory/standings-view.ts`) is a pure `DashboardData → HTML` function,
 so the exact layout is unit-tested and reproducible. Trading-terminal treatment: dark-first
 and theme-aware, monospace tabular figures, semantic green/red for P/L kept separate from
 the teal brand accent, BOT·persona vs HUMAN chips, live/error status dots.
