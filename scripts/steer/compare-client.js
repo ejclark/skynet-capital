@@ -68,12 +68,39 @@ globalThis.steerCompare = (api) => {
     }
   });
 
+  function split(b, v) {
+    const r = b.querySelector(".cmp-split");
+    b.style.setProperty("--split", String(v));
+    if (!r) return;
+    r.value = String(v);
+    r.setAttribute("aria-valuetext", `${v}% Today, ${100 - v}% ${r.dataset.name}`);
+  }
+
   document.addEventListener("input", (ev) => {
     const r = ev.target.closest?.(".cmp-split");
-    if (!r) return;
-    const v = Number(r.value);
-    r.closest(".cmp").style.setProperty("--split", String(v));
-    r.setAttribute("aria-valuetext", `${v}% Today, ${100 - v}% ${r.dataset.name}`);
+    if (r) split(r.closest(".cmp"), Number(r.value));
+  });
+
+  // The grip on the line: a drag moves the line to the pointer, wherever the picture has scrolled.
+  document.addEventListener("pointerdown", (ev) => {
+    const g = ev.target.closest?.(".cmp-grip");
+    if (!g) return;
+    ev.preventDefault();
+    const b = g.closest(".cmp");
+    const box = b.querySelector(".cmp-stage").getBoundingClientRect();
+    const move = (e) => {
+      const v = Math.round(((e.clientX - box.left) / box.width) * 100);
+      split(b, Math.min(100, Math.max(0, v)));
+    };
+    const stop = () => {
+      g.removeEventListener("pointermove", move);
+      g.removeEventListener("pointerup", stop);
+      g.removeEventListener("pointercancel", stop);
+    };
+    g.setPointerCapture?.(ev.pointerId);
+    g.addEventListener("pointermove", move);
+    g.addEventListener("pointerup", stop);
+    g.addEventListener("pointercancel", stop);
   });
 
   const first = kept() ?? "flip";

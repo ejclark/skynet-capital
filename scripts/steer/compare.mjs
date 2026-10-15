@@ -15,15 +15,20 @@
 //   - FLIP: a "□ Today / ◆ Option A" toggle swaps the picture in the same spot. The option's pins
 //     and marks belong to its own frame, so they go with it while Today shows.
 //   - SIDE BY SIDE (#5430, GitHub image diff's "2-up"): Today and the option at half width each,
-//     both whole — scaled, never cropped — each under its shape-and-word label. A tap on either
+//     both whole — scaled, never cropped — each under its shape-and-word label. At desktop width it
+//     takes the card's whole width, each picture up to its real phone width; with areas, the
+//     outlines and numbers stay and the callout words go (a half-width picture can't spare their
+//     gutter: it left each picture 0px wide, 2026-10-15). A tap on either
 //     opens that picture full size in Flip, Side by side one tap back. It replaced a sideways strip
 //     that showed one picture at a time (Eric: it "entirely destroy the value potential of the
 //     view"); a viewer whose kept mode is that strip's `swipe` opens here. Half-width text is small
 //     at phone width — that is what the tap is for, so nothing else shrinks to make up for it. The
 //     tap lands on a button laid over each half, so in this mode it never places a mark: marks and
 //     pins still show on the option's half, and take a tap once it is open in Flip.
-//   - DIVIDER: Today left of a line, the option right of it, dragged by a handle under the picture
-//     ("◀ Drag ▶", thumb-sized). Offered only when both pictures share their pixel size, since a
+//   - DIVIDER: Today left of a line, the option right of it, dragged by a round grip that rides on
+//     the line and stays in view as the picture scrolls (Eric, 2026-10-15: a handle under a tall
+//     picture was "often out of view of the actual change"); the "◀ Drag ▶" track under the
+//     picture stays for the keyboard. Offered only when both pictures share their pixel size, since a
 //     wipe across two layouts lines nothing up; otherwise the button reads "Divider: layouts
 //     differ", disabled, never hidden.
 // The mode is remembered per viewer (localStorage, compare-client.js) and set on every compared
@@ -48,6 +53,7 @@ export const COMPARE_WORDS = {
   today: "□ Today",
   option: "◆",
   drag: "◀ Drag ▶",
+  grip: "◀▶",
   hint: "Tap a picture to open it full size",
   open: (name) => `Open ${name} full size`,
 };
@@ -131,7 +137,7 @@ export function compareHtml({ d, o, pic, shot, img }) {
     `</div><div class="cmp-stage">` +
     cell("today", W.today, "Today", todayCell(d, pic, todayImg)) +
     cell("option", mine, name, shot) +
-    `<div class="cmp-line" aria-hidden="true"></div></div>` +
+    `<div class="cmp-line" aria-hidden="true"><span class="cmp-grip">${W.grip}</span></div></div>` +
     `<p class="cmp-hint" hidden>${e(W.hint)}</p>` +
     `<label class="cmp-track" hidden><span class="cmp-end">${e(W.today)}</span>` +
     `<span class="cmp-knob" aria-hidden="true">${W.drag}</span><span class="cmp-end">${e(mine)}</span>` +

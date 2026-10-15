@@ -248,6 +248,27 @@ describe("the page's compare script", () => {
     expect(block(v.doc, "B").dataset.mode).toBe("flip");
   });
 
+  it("moves the divider by its grip on the line, wherever the picture has scrolled", async () => {
+    // Eric, 2026-10-15: the handle under a tall picture was "often out of view of the actual
+    // change". The grip rides on the line (sticky in page.css) and a drag on it sets the split.
+    const v = await open(null, {
+      html: COMPARED,
+      before: storage({ [COMPARE_CLIENT.store]: "divider" }),
+    });
+    const a = block(v.doc, "A");
+    const grip = a.querySelector<HTMLElement>(".cmp-line .cmp-grip") as HTMLElement;
+    expect(grip).toBeTruthy();
+    const stage = a.querySelector<HTMLElement>(".cmp-stage") as HTMLElement;
+    stage.getBoundingClientRect = () => ({ left: 100, width: 400 }) as DOMRect;
+    const at = (type: string, x: number) =>
+      grip.dispatchEvent(new v.window.MouseEvent(type, { bubbles: true, clientX: x }));
+    at("pointerdown", 300);
+    at("pointermove", 180);
+    at("pointerup", 180);
+    expect(a.style.getPropertyValue("--split")).toBe("20");
+    expect((a.querySelector(".cmp-split") as HTMLInputElement).value).toBe("20");
+  });
+
   it("still switches when the browser refuses storage", async () => {
     const v = await open(null, { html: COMPARED, before: storage(null) });
     const b = block(v.doc, "A");
