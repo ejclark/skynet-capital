@@ -11,28 +11,30 @@ set -a && source .env && set +a
 npm run run:autonomous
 ```
 
-Defaults are deliberately conservative for shakeout: **Day Trader only**, **3% per-position
+Defaults are deliberately conservative for shakeout: **observe mode** (decides and logs, places
+nothing — set `SKYNET_AUTONOMOUS_MODE=live` to trade), **Day Trader only**, **3% per-position
 cap**, a **5-minute per-symbol order cooldown**, and trading **only while the market is open**.
 
 Knobs:
 
 | Env | Default | Meaning |
 |---|---|---|
+| `SKYNET_AUTONOMOUS_MODE` | `observe` | `observe` decides and logs without placing orders; `live` places paper orders (`src/scripts/autonomous-sinks.ts`) |
 | `SKYNET_AUTONOMOUS_BOTS` | `day-trader` | Comma-separated persona ids to enable |
 | `SKYNET_MAX_POSITION_PCT` | `0.03` | Max single position as a fraction of equity |
 | `SKYNET_MOMENTUM_WINDOW` | `20` | Ticks in the momentum window (`src/autonomous/signal-windows.ts`; the dashboard reads it too, for the Thesis tab's walked-through trade — set it on both apps) |
 | `SKYNET_SENTIMENT_WINDOW` | `10` | Articles kept in the rolling sentiment window (same file, same both-apps rule) |
 
 Two live signals feed the personas: **momentum** (from the price stream) and **news sentiment**
-(from Alpaca news, scored and polled). That means the news-driven personas now act too — enable
-them by name, e.g.:
+(from Alpaca news, scored and polled). The news-driven personas act on the second — enable them
+by name, e.g.:
 
 ```sh
 SKYNET_AUTONOMOUS_BOTS=day-trader,rumor-trader,news-fader npm run run:autonomous
 ```
 
 Run it alongside `npm run serve:dashboard` (same machine or the deployed server) and watch the
-orders land on the dashboard live.
+decisions — and, in `live` mode, the orders — land on the dashboard live.
 
 ## How it works
 
