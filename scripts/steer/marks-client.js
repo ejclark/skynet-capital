@@ -49,8 +49,9 @@ globalThis.steerMarks = (api) => {
   const round1 = (v) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
   const nameOf = (x, y) => `Your mark, ${Math.round(x)}% across, ${Math.round(y)}% down`;
   /** Where a frame's marks go: the plane of a focused frame (focus.mjs), which is the whole frame
-   *  moved inside its crop — so a mark's % lands where it does on the whole screen — else the frame. */
-  const host = (frame) => frame.querySelector(".fplane") ?? frame;
+   *  moved inside its crop — so a mark's % lands where it does on the whole screen — or of a frame
+   *  with areas (areas.mjs), the picture's own box between its margins; else the frame. */
+  const host = (frame) => frame.querySelector(".fplane, .aplane") ?? frame;
   /** Is the spot inside the round's focus box (`data-fbox`, % of the frame)? Undefined on a frame
    *  with no focus, so its record carries no `inFocus` at all. */
   function inFocusOf(frame, x, y) {

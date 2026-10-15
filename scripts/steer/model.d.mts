@@ -16,6 +16,8 @@ export interface Picture {
   focus?: { x: number; y: number; w: number; h: number; label: string };
   /** The frame's height ÷ width, read from its file, for a focused crop's shape. */
   ratio?: number;
+  /** The question's areas on this frame (areas.mjs), every number in % of the frame. */
+  areas?: import("./areas.mjs").Area[];
 }
 export interface Option {
   key: string;

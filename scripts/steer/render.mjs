@@ -62,7 +62,12 @@ function shots(pictures, img, issue, at) {
       if (p.pins?.length) return pinnedShot(p, src, at);
       const size = p.size === "phone" ? "phone" : "desk";
       if (at.markable)
-        return markableShot(size, src, p.alt, { ...at, focus: p.focus, ratio: p.ratio });
+        return markableShot(size, src, p.alt, {
+          ...at,
+          focus: p.focus,
+          ratio: p.ratio,
+          areas: p.areas,
+        });
       return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
     })
     .join("");

@@ -81,6 +81,14 @@ robust, alpha fragile — is the finding.
   locked month" neutral path for the final leg of a three-month average, and do not fade an advocacy-group
   estimate off two of three months.
 
+- **"A calendar-tagged `Bund 30 Y` second line on a multi-ISIN auction is genuinely 30-year paper"
+  (FT-bund-30y-auction-2026-10-14-5)** — added 2026-10-15 from the
+  [bund-30y-auction-2026-10-14 close-out](events/bund-30y-auction-2026-10-14.md). Registered
+  2026-09-30 on the Finanzagentur press release's `Bund 15/20/30 R` footnote. The 10-08 notice named
+  **DE000BU2T000, a 2047 (20-year) bond**, the same outcome as 09-16. Only EUR 747m of the EUR 2.5bn
+  was 30-year paper. Do not size or band a "two 30Y lines" auction off the website calendar's generic
+  `Bund 30 Y` label; read the tenor off the announcement notice.
+
 - **"A Bobl vintage's softening demand shows as a rising yield and an allotment inside the recent-regime
   band" (FT-bobl-5y-auction-2026-10-13-1, -2)** — added 2026-10-14 from the
   [bobl-5y-auction-2026-10-13 close-out](events/bobl-5y-auction-2026-10-13.md). Registered 2026-09-30

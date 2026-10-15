@@ -17,6 +17,8 @@ export interface SaidMark {
   before: boolean;
   /** The named part of the screen it landed on (frame-sections.mjs), or null. */
   section?: string | null;
+  /** The area it landed in (areas.mjs): its number, label and whether this round asks about it. */
+  area?: { n: number; label: string | null; active: boolean } | null;
   /** Inside the round's focus (focus.mjs) — always true on a frame with none. */
   inFocus: boolean;
 }
@@ -59,5 +61,11 @@ export function markableShot(
   size: "phone" | "desk",
   src: string,
   alt: string,
-  at: { key: string; option: string; focus?: Picture["focus"]; ratio?: number },
+  at: {
+    key: string;
+    option: string;
+    focus?: Picture["focus"];
+    ratio?: number;
+    areas?: Picture["areas"];
+  },
 ): string;
