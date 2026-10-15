@@ -501,6 +501,7 @@ five screens average as many rounds to a build as the sessions before this ledge
 |---|---|---|---|---|---|
 | Profile Activity (#5160) | still open at r16 (retro 2026-10-14, before this loop's v3) | 1 (round 0 picked a problem; no scope written) | 8 (#5262), then 13 (#5317) | 65 | the critic checks his reader profile and settled list; payoff pictures get a domain check; the build is shown before it's filed; two opening questions |
 | Round page (#5350, the loop's test screen) | design rounds done 2026-10-15 (r0–r4); builds #5392, #5418, #5417 | 1 (round 0 picked a problem; "proceed" set the scope) | 2 (#5391 at r2), then r3 (#5411) and r4 (#5417) | 6 | his reader profile gains *tools with modes over a single pick* and *shapes point, words explain*; two opening questions proposed on #5143 for when the test settles; `retro.mjs` reads a read-back's `Pick:` line |
+| R&D Playbooks (#5163, the loop's second test screen) | design rounds done 2026-10-15 (r0–r15); builds #5432, #5435, #5442, #5444, #5445, #5448 | 1 (round 0 picked problems; scope written from his notes) | 4 (#5432 at r4), then r5, r9, r12, r13, r15 | 20 | his reader profile gains *a word's second meaning*, *now before history* and *caveats in the caption*; three patterns land; U6 gains a third screen; opening questions and the confirm-round count proposed on #5143 |
 
 ## Process changes
 
