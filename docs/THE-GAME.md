@@ -172,7 +172,7 @@ can differ per surface.
 - **2.5D isometric (canvas/SVG) for the everyday surfaces** — the four views, the tiles, server-side
   rendering, phones, fast iteration. `GAMEBOARD-PLAN.md`'s verdict stands **for the everyday board**,
   and its reasoning (no asset pipeline on the critical path, hand-authored fidelity) still holds.
-- **Babylon for the hero moments** — and this already works: `src/three/` renders Barad-dûr and the
+- **three.js for the hero moments** — and this already works: `src/three/` renders Barad-dûr and the
   Eye, with `?power=` / `?health=` as the very leveling dials the observatory will feed from real
   standings. Use 3D as the **ceremony camera**: the founding, a landmark leveling up, the season
   finale flyover of your empire. High fidelity where it lands emotionally, once per week rather than

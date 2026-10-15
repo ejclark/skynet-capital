@@ -45,7 +45,7 @@ npm run run:autonomous:offline     # personas trade against in-memory brokers of
 
 ## Iterating on the `/tower` 3D scene — no server, no credentials, no deploy
 
-The Babylon scene (`src/three/`) is fully client-side, so it doesn't need `serve:dashboard` or any
+The three.js scene (`src/three/`) is fully client-side, so it doesn't need `serve:dashboard` or any
 env vars at all. For fast local iteration on shader/piece work — instead of a PR → verify → deploy
 cycle to see a change:
 
