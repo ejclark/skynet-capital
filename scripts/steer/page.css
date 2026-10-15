@@ -897,6 +897,177 @@ details.ev summary {
   border: 2px solid var(--text);
 }
 
+/* Comparing an option with Today (compare.mjs + compare-client.js, #5411). One switch above the
+   option's phone frame — a glyph and a word per mode, the pressed one a heavy border and a ✓, never
+   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SWIPE lays them in a
+   sideways strip, the next one peeking; DIVIDER stacks them and clips the option from the left to
+   --split (%), Today showing through, a line in the text colour ringed in the ground colour where
+   they meet, dragged by a thumb-sized handle under the picture. */
+.cmp {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cmp-modes,
+.cmp-flip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.cmp-lead {
+  font-size: 14px;
+  color: var(--muted);
+}
+.cmp-b {
+  font: 600 13px var(--sans);
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.cmp-b[aria-pressed="true"] {
+  border: 3px solid var(--text);
+  padding: 4px 10px;
+}
+.cmp-b[aria-pressed="true"]::after {
+  content: " ✓";
+}
+.cmp-b:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--muted);
+}
+.cmp-stage {
+  position: relative;
+  display: grid;
+}
+.cmp-cell {
+  grid-area: 1 / 1;
+  margin: 0;
+  min-width: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmp-tag {
+  font: 600 13px var(--sans);
+}
+.cmp-pic {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.cmp-pic img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.cmp .cmp-cell > .shot {
+  width: 100%;
+  box-sizing: border-box;
+}
+.cmp-line {
+  display: none;
+}
+/* Flip: the toggle above names the picture showing, so its own tag would say it twice. */
+.cmp[data-mode="flip"] .cmp-tag {
+  display: none;
+}
+.cmp[data-mode="flip"][data-side="option"] .cmp-cell[data-cell="today"],
+.cmp[data-mode="flip"][data-side="today"] .cmp-cell[data-cell="option"] {
+  visibility: hidden;
+}
+.cmp[data-mode="swipe"] .cmp-stage {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+}
+.cmp[data-mode="swipe"] .cmp-cell {
+  flex: 0 0 86%;
+  scroll-snap-align: start;
+}
+.cmp-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+.cmp-dot {
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.cmp-dot::before {
+  content: "○";
+}
+.cmp-dot[aria-current="true"]::before {
+  content: "●";
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] {
+  clip-path: inset(0 0 0 calc(var(--split) * 1%));
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] .cmp-tag {
+  text-align: right;
+}
+.cmp[data-mode="divider"] .cmp-line {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--split) * 1%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+  pointer-events: none;
+}
+.cmp-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  font: 600 13px var(--sans);
+}
+.cmp-knob {
+  position: absolute;
+  left: calc(var(--split) * 1%);
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cmp-split {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.cmp-track:has(.cmp-split:focus-visible) .cmp-knob {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
 /* A round's focus (focus.mjs + focus-client.js). The focused view (the default) crops the frame to
    the focus box plus a margin: the clip keeps the crop's proportions (--fa), and inside it the
    plane — the whole frame, its picture, pins and marks — is sized and moved by % of the crop
@@ -1295,6 +1466,7 @@ body.noting * {
     display: contents;
   }
   .opt > .pics > .shot.phone,
+  .opt > .pics > .cmp,
   .opt > .pics > .muted {
     grid-column: 1;
     grid-row: 1;

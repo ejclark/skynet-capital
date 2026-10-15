@@ -5,6 +5,7 @@
 // queued until the next page · the 14-day strip · Done (in the fixed bar). Page text names each
 // thing by what it does; no invented labels (CLAUDE.md → "No coined names").
 import { readFileSync } from "node:fs";
+import { COMPARE_CLIENT, compareHtml } from "./compare.mjs";
 import { FOCUS_CLIENT } from "./focus.mjs";
 import { buttons, DAY, e, ext, note, plural, VERBS, when } from "./html.mjs";
 import {
@@ -36,9 +37,10 @@ export { COMMENTS_COUNT, HOW_SUMMARY, ROUND_INTRO, ROUND_LINE };
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // The pin reactions' script defines `steerPins`, the listening line's `steerEar`, the marks'
-// `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes` and the page
-// notes' `steerPageNotes`; the page script calls each (pins-client.js, ear-client.js,
-// marks-client.js, focus-client.js, outcomes-client.js, page-notes-client.js).
+// `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes`, the page
+// notes' `steerPageNotes` and the compare modes `steerCompare`; the page script calls each
+// (pins-client.js, ear-client.js, marks-client.js, focus-client.js, outcomes-client.js,
+// page-notes-client.js, compare-client.js).
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
@@ -46,6 +48,7 @@ const CLIENT = [
   "./focus-client.js",
   "./outcomes-client.js",
   "./page-notes-client.js",
+  "./compare-client.js",
   "./page-client.js",
 ]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
@@ -53,25 +56,31 @@ const CLIENT = [
 
 /** The pictures of one holder. `at` names the holder (its decision key and option, or "today"),
  *  so a picture with pins gets a button on each badge (pins.mjs); on a design round's own page
- *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. */
-function shots(pictures, img, issue, at) {
+ *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. `wrap(picture,
+ *  html)` may set a frame inside more (a compared option's phone frame, compare.mjs). */
+function shots(pictures, img, issue, at, wrap = (_p, h) => h) {
   const h = pictures
     .map((p) => {
       const src = img(p);
       if (!src) return "";
-      if (p.pins?.length) return pinnedShot(p, src, at);
-      const size = p.size === "phone" ? "phone" : "desk";
-      if (at.markable)
-        return markableShot(size, src, p.alt, {
-          ...at,
-          focus: p.focus,
-          ratio: p.ratio,
-          areas: p.areas,
-        });
-      return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
+      return wrap(p, shot(p, src, at));
     })
     .join("");
   return h || `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
+}
+
+/** One picture's frame: pinned, markable, or a link to the file. */
+function shot(p, src, at) {
+  if (p.pins?.length) return pinnedShot(p, src, at);
+  const size = p.size === "phone" ? "phone" : "desk";
+  if (at.markable)
+    return markableShot(size, src, p.alt, {
+      ...at,
+      focus: p.focus,
+      ratio: p.ratio,
+      areas: p.areas,
+    });
+  return `<a class="shot ${size}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
 }
 
 /** A problem that names its pin on Today's frame (`pin`): a compact row, no pictures, labelled
@@ -108,9 +117,13 @@ function optionHtml(d, o, img, markable) {
   const said = d.problems ? "The problem:" : "Changes:";
   const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
   const at = { key: d.key, option: o.key, markable };
+  // A compared question (compare.mjs): the phone frame sits in Flip · Swipe · Divider with Today's.
+  const wrap = d.compare
+    ? (p, h) => (p.size === "phone" ? compareHtml({ d, o, pic: p, shot: h, img }) : h)
+    : undefined;
   const pics =
     d.kind === "design"
-      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at)}</div>`
+      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at, wrap)}</div>`
       : "";
   const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
   return (
@@ -275,6 +288,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
           outcomes: OUTCOME_CLIENT,
         }
       : {}),
+    ...(tp.decisions.some((d) => d.compare) ? { compare: COMPARE_CLIENT } : {}),
   };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const decisions = tp.decisions

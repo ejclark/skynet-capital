@@ -11,6 +11,7 @@
 // app's, which the quote check verifies instead.
 
 import { AREA_MAX_WORDS, areaSpecProblems, areasFor, wordCount } from "../steer/areas.mjs";
+import { compareProblems } from "../steer/compare.mjs";
 import { QUESTION_KINDS } from "../steer/design.mjs";
 import { focusBoxProblems, matchSection } from "../steer/focus.mjs";
 import { holderPins } from "../steer/pins.mjs";
@@ -418,6 +419,7 @@ function questionProblems(q, i, raw, env) {
     ...scopeProblems(q, at),
     ...focusProblems(q, at, env),
     ...areaProblems(q, at, env),
+    ...compareProblems(q, at),
     ...wordingProblems(q, at, raw, env),
   ];
 }
