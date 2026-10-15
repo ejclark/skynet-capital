@@ -13,7 +13,7 @@
 // (the loop, his reader profile, the personas, the screen) is the session's judgment.
 //
 // What it reads: the issue's comments over REST (scripts/moneypenny/gh.mjs, the core bucket).
-// What it prints: per round, its date, question, picks (Fix first · More of · Not · Build) and his
+// What it prints: per round, its date, question, picks (Fix first · Pick · More of · Not · Build) and his
 // notes word for word (pin notes and quoted notes), then the ledger row's numbers.
 
 import { pathToFileURL } from "node:url";
@@ -21,7 +21,7 @@ import { pathToFileURL } from "node:url";
 /** A read-back comment's first line, carrying the round id. */
 const READBACK = /Answered on the decisions page, design-(\d+)-r([\w-]+)\./;
 /** The pick lines a read-back writes under a question. */
-const PICK = /^- (Fix first|More of|Not|Build|Look closer|Not a problem):\s*(.*)$/;
+const PICK = /^- (Fix first|Pick|More of|Not|Build|Look closer|Not a problem):\s*(.*)$/;
 /** A per-pin line that carries his note: `- Option B · pin 2 (label) — 👍 keep — “note”`. */
 const PIN_NOTE = /^- (.+?) \((.*?)\)(?: — (.+?))? — “([\s\S]*)”?$/;
 
