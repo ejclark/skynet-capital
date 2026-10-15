@@ -11,7 +11,9 @@
 // pictures of its own), and `scope` with each option's `serves` (scope.mjs). And `focus` (Eric,
 // 2026-10-14: narrow a round to the section under the microscope): a section's label, or a box per
 // frame — resolved here on every picture into `focus: { x, y, w, h, label }` (focus.mjs), so the
-// page opens each frame cropped to it. Two wrappers are accepted:
+// page opens each frame cropped to it. And `areas` / `active` (#5391): the parts of the screen a
+// redesign tracks, resolved per picture into `areas` (areas.mjs) and drawn as numbered outlines.
+// Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
 // Image paths resolve against `root`, else the manifest's folder, else its parent (round 1's
@@ -19,6 +21,7 @@
 // an error — a round that silently lost its Today shot is the failure this page exists to avoid.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { areaSpecProblems, areasFor } from "./areas.mjs";
 import { focusBoxProblems, focusFor, imageRatio } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 import { holderPins } from "./pins.mjs";
@@ -123,21 +126,41 @@ const WIDTH = { phone: "phone width", desk: "desktop width" };
 /** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it
  *  and, when the manifest names them, its sections (frame-sections.mjs: where each named part of
  *  the screen sits, so the read-back can name the part a mark landed on). */
-const pics = (o, alt, at, pins = {}, sections = {}, focus = NO_FOCUS) =>
+const pics = (o, alt, at, pins = {}, sections = {}, focus = NO_FOCUS, areas = null) =>
   ["phone", "desk"]
     .filter((size) => o?.[size])
     .map((size) =>
-      withFocus(
-        {
-          src: at(o[size]),
-          alt: `${alt} at ${WIDTH[size]}`,
-          size,
-          ...(pins[size]?.length ? { pins: pins[size] } : {}),
-          ...(sections[size]?.length ? { sections: sections[size] } : {}),
-        },
-        focus,
+      withAreas(
+        withFocus(
+          {
+            src: at(o[size]),
+            alt: `${alt} at ${WIDTH[size]}`,
+            size,
+            ...(pins[size]?.length ? { pins: pins[size] } : {}),
+            ...(sections[size]?.length ? { sections: sections[size] } : {}),
+          },
+          focus,
+        ),
+        areas,
       ),
     );
+
+/** A picture with the question's areas resolved on it (areas.mjs), or as it was when it has none
+ *  or this frame holds none of them. */
+function withAreas(pic, spec) {
+  const areas = spec ? areasFor(spec, pic) : [];
+  return areas.length ? { ...pic, areas } : pic;
+}
+
+/** A question's `areas` / `active`, checked: null for none. A malformed one throws, as a malformed
+ *  focus box does — an outline drawn from it would point at the wrong part of the screen. */
+function areasSpec(q, n) {
+  const problems = areaSpecProblems(q, `q${n}`);
+  if (q.areas !== undefined && q.focus !== undefined)
+    problems.push(`q${n}: narrow a round by "focus" or by "areas", not both`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.areas === undefined ? null : { areas: q.areas, active: q.active ?? [] };
+}
 
 /** No `focus` on the question: pictures as they always were. */
 const NO_FOCUS = { spec: undefined, ratioOf: undefined };
@@ -225,13 +248,13 @@ function questionKind(q, n) {
 }
 
 /** One manifest option as the page holds it, its pictures carrying the pins drawn on them. */
-function optionOf(o, q, at, pins, readJson, focus) {
+function optionOf(o, q, at, pins, readJson, focus, areas) {
   return {
     key: safeKey(o.key),
     name: o.name ?? `Option ${o.key}`,
     delta: o.delta ?? "",
     recommended: q.rec != null && String(o.key) === String(q.rec),
-    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson), focus),
+    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson), focus, areas),
     // One frame for every problem: the option names its pin on Today's frame instead of carrying
     // pictures of its own (render.mjs draws it as a compact row).
     ...(Number.isInteger(o.pin) ? { pin: o.pin } : {}),
@@ -241,13 +264,13 @@ function optionOf(o, q, at, pins, readJson, focus) {
 
 /** Today as the page holds it: its pictures with their pins, and — for a round that opens on clean
  *  frames (marks.mjs) — `clean`, the same frames before pin.mjs drew on them, so his first look
- *  carries none of Claude's badges. */
-function todayOf(today, source, at, pins, readJson, focus) {
+ *  carries none of Claude's badges (nor the areas' outlines). */
+function todayOf(today, source, at, pins, readJson, focus, areas) {
   if (!today) return null;
   // The clean frames are the same screen before pin.mjs drew on it, so they share its sections.
   const sections = sectionsOf(today, readJson);
   return {
-    pictures: pics(today, "Today", at, pins, sections, focus),
+    pictures: pics(today, "Today", at, pins, sections, focus, areas),
     ...(today.clean
       ? { clean: pics(today.clean, "Today, before any pin", at, {}, sections, focus) }
       : {}),
@@ -280,8 +303,9 @@ export function designDecisions(
     const problems = questionKind(q, n) === "problems";
     const pins = pinsOf(q, n, pinsFrom);
     const focus = focusSpec(q, n, ratioOf);
+    const areas = areasSpec(q, n);
     const options = (q.options ?? []).map((o, j) =>
-      optionOf(o, q, at, pins.options[j], pinsFrom, focus),
+      optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas),
     );
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
@@ -309,7 +333,7 @@ export function designDecisions(
             saw: q.saw ?? [],
           }
         : null,
-      today: todayOf(q.today, source, at, pins.today, pinsFrom, focus),
+      today: todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas),
       options,
     };
   });

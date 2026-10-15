@@ -10,6 +10,7 @@
 // was, so nothing he relied on is gone.
 //
 // Pure: render.mjs calls roundHeaderHtml; the specs assert on the strings.
+import { AREAS_HOW, hasAreas } from "./areas.mjs";
 import { FOCUS_HOW, hasFocus } from "./focus.mjs";
 import { DAY, e, ext, plural } from "./html.mjs";
 import { isOpening, MARK_INTRO } from "./marks.mjs";
@@ -49,7 +50,7 @@ export const ROUND_INTRO = {
 };
 
 /** The folded how-to, in the order a first visit needs it: how the round asks, the pins, the
- *  marks, a focus when a picture has one, and that comments count. Every part is this module's or
+ *  marks, a focus or areas when a picture has them, and that comments count. Every part is this module's or
  *  a sibling's own constant — no manifest text — so it is written as is. */
 function howTo(tp, kind) {
   const first = tp.decisions[0];
@@ -60,6 +61,7 @@ function howTo(tp, kind) {
     pinned && !isOpening(first) ? pinIntro(pinned) : "",
     MARK_INTRO,
     tp.decisions.some(hasFocus) ? FOCUS_HOW : "",
+    tp.decisions.some(hasAreas) ? AREAS_HOW : "",
     COMMENTS_COUNT,
   ]
     .filter(Boolean)
