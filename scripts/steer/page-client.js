@@ -744,6 +744,8 @@
   const focusUi = globalThis.steerFocus?.({ focus: TP.focus });
   // Comparing an option with Today (compare-client.js): Flip · Swipe · Divider, kept per viewer.
   globalThis.steerCompare?.({ compare: TP.compare });
+  // One picture, two widths (widths-client.js): each slot's Phone · Desktop switch.
+  globalThis.steerWidths?.();
   // The outcomes he adds under a scope (outcomes-client.js); null on any page but a round's own.
   const outcomesUi = globalThis.steerOutcomes?.({
     cfg: TP.outcomes,

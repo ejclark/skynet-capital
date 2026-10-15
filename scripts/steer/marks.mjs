@@ -28,6 +28,13 @@
 // only the ones in focus and adds the rest to the scope, word for word — banked, never dropped. A
 // record from before `inFocus` is placed by its spot against the focus box, else read as in focus.
 //
+// ONE PICTURE, TWO WIDTHS (widths.mjs, #5417; Eric, 2026-10-14: marking phone and desktop apart
+// "doubles the work to leave feedback"): on a question with `widths`, a mark inside an area belongs
+// to the area, not the width — the page draws it on both, and the read-back names the area once,
+// with no width and no position (each width places the area differently). A mark outside every
+// area stays on the width it was placed on, and its line says "<width> only". Nothing new is
+// saved: which area a mark sits in is read from its spot, as it always was.
+//
 // Everything here is pure: the words, the page's lines, and the read-back's. The page script is
 // marks-client.js.
 import { areaAt, arealFrame } from "./areas.mjs";
@@ -94,6 +101,16 @@ function areaOf(pictures, x, y) {
   return a ? { n: a.n, label: a.label, active: a.active } : null;
 }
 
+/** On a question with `widths` whose holder shows both widths, how a mark is read: "both" when it
+ *  sits in an area the other width also draws (it belongs to the area), "only" when it doesn't (it
+ *  stays with its width); null on any other question or holder. */
+function widthOf(d, option, frame, area) {
+  if (!d?.widths) return null;
+  const other = framePictures(d, option, frame === "phone" ? "desk" : "phone");
+  if (!other.length) return null;
+  return area && other.some((p) => p.areas?.some((a) => a.n === area.n)) ? "both" : "only";
+}
+
 /** Whether a mark sits in the round's focus (focus.mjs). On a frame with no focus it always does —
  *  nothing narrowed what he was asked about, even if an older page recorded otherwise; on one with
  *  a focus, as the page recorded it, else (a record from before `inFocus`) by its spot. */
@@ -121,6 +138,7 @@ export function decisionMarks(d, r) {
     if (!(reaction || note)) continue;
     const at = typeof m.at === "string" ? m.at : "";
     const pictures = framePictures(d, hit[1], hit[2]);
+    const area = areaOf(pictures, m.x, m.y);
     out.push({
       id,
       option: hit[1],
@@ -132,16 +150,22 @@ export function decisionMarks(d, r) {
       note,
       before: m.beforeReveal === true,
       section: sectionOf(pictures, m.x, m.y),
-      area: areaOf(pictures, m.x, m.y),
+      area,
       inFocus: focusOf(m, pictures),
+      width: widthOf(d, hit[1], hit[2], area),
     });
   }
   return out.sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id));
 }
 export const marksSaid = (d, r) => decisionMarks(d, r).length > 0;
 
-const frameName = (m) =>
-  `${m.option === "today" ? "Today" : `Option ${m.option}`}, ${m.frame === "desk" ? "desktop" : "phone"}`;
+/** The frame a mark sits on: its holder alone for a mark on an area both widths draw, else the
+ *  holder and the width — "only" when the holder shows the other width too. */
+const frameName = (m) => {
+  const holder = m.option === "today" ? "Today" : `Option ${m.option}`;
+  if (m.width === "both") return holder;
+  return `${holder}, ${m.frame === "desk" ? "desktop" : "phone"}${m.width === "only" ? " only" : ""}`;
+};
 const where = (m) => `${Math.round(m.x)}% across, ${Math.round(m.y)}% down`;
 /** An area by number and label, and whether this round asks about it (areas.mjs). */
 const areaName = (a) =>
@@ -149,23 +173,44 @@ const areaName = (a) =>
 /** Where a mark sits: the area it landed in when the frame draws areas, else the part of the screen
  *  when the frame names its parts, with the position beside it; the position alone otherwise. */
 const spot = (m) =>
-  m.area
-    ? `${areaName(m.area)} (${where(m)})`
-    : m.section
-      ? `on “${m.section}” (${where(m)})`
-      : where(m);
+  m.width === "both"
+    ? areaName(m.area)
+    : m.area
+      ? `${areaName(m.area)} (${where(m)})`
+      : m.section
+        ? `on “${m.section}” (${where(m)})`
+        : where(m);
 /** His note in a list item, word for word: a later line is indented, so it stays in the item. */
 const inline = (note) => `“${note.split("\n").join("\n  ")}”`;
 const BEFORE = "(before Claude's problems were shown)";
 
-/** One read-back line: `- Today, phone · 42% across, 30% down — 👎 don't like — “…” (before …)`. */
-export function markLine(m) {
-  const said = [
+/** What one mark says, for a read-back line: `👎 don't like — “…” (before …)`. */
+const saidOf = (m) =>
+  [
     m.reaction ? `${MARK_GLYPH[m.reaction]} ${MARK_WORDS[m.reaction].toLowerCase()}` : "",
     m.note ? inline(m.note) : "",
-  ].filter(Boolean);
-  return `- ${frameName(m)} · ${spot(m)} — ${said.join(" — ")}${m.before ? ` ${BEFORE}` : ""}`;
+  ]
+    .filter(Boolean)
+    .join(" — ") + (m.before ? ` ${BEFORE}` : "");
+
+/** One read-back line: `- Today, phone · 42% across, 30% down — 👎 don't like — “…” (before …)`. */
+export const markLine = (m) => answerLine([m]);
+
+/** Marks as answers, in order: each on its own, except that marks on one area both widths draw
+ *  (`width: "both"`) are one answer — the area named once, whichever width each was placed on. */
+function answers(list) {
+  const out = new Map();
+  for (const m of list) {
+    const k = m.width === "both" ? `${m.option}:area${m.area.n}` : m.id;
+    out.set(k, [...(out.get(k) ?? []), m]);
+  }
+  return [...out.values()];
 }
+
+/** One answer's read-back line: where, then what each of its marks says. */
+const answerLine = ([m, ...more]) =>
+  `- ${frameName(m)} · ${spot(m)} — ${[m, ...more].map(saidOf).join("; ")}`;
+const answerLines = (list) => answers(list).map(answerLine);
 
 /** The read-back's headings for a decision with a focus (focus.mjs): the marks the round answers,
  *  and the ones it banks — out of scope for this round, never dropped. */
@@ -180,8 +225,8 @@ export const ADD_TO_SCOPE = "Outside this round's focus — add to the scope:";
 export function marksBlock(d, r) {
   const all = decisionMarks(d, r);
   if (!all.length) return "";
-  if (!hasFocus(d)) return ["Your marks:", ...all.map(markLine)].join("\n");
-  const group = (head, list) => (list.length ? [head, ...list.map(markLine)].join("\n") : "");
+  if (!hasFocus(d)) return ["Your marks:", ...answerLines(all)].join("\n");
+  const group = (head, list) => (list.length ? [head, ...answerLines(list)].join("\n") : "");
   return [
     group(
       IN_FOCUS,
@@ -196,12 +241,16 @@ export function marksBlock(d, r) {
     .join("\n\n");
 }
 
-/** One mark as a next-round clause: the spot, what he thinks, his note. */
-const clause = (m) =>
+/** What one mark says, for a next-round clause: what he thinks, his note. */
+const wordsOf = (m) =>
+  [m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "", m.note ? `“${m.note}”` : ""]
+    .filter(Boolean)
+    .join(": ");
+/** One answer as a next-round clause: the spot, then what each of its marks says. */
+const clause = ([m, ...more]) =>
   [
     `${frameName(m)} ${m.area || m.section ? spot(m) : `at ${spot(m)}`}`,
-    m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "",
-    m.note ? `“${m.note}”` : "",
+    ...[m, ...more].map(wordsOf),
   ]
     .filter(Boolean)
     .join(": ");
@@ -210,13 +259,13 @@ const clause = (m) =>
  *  decision with no focus. */
 export function markClauses(d, r) {
   const mine = decisionMarks(d, r).filter((m) => m.inFocus);
-  return mine.length ? `his marks: ${mine.map(clause).join("; ")}.` : "";
+  return mine.length ? `his marks: ${answers(mine).map(clause).join("; ")}.` : "";
 }
 
 /** His marks outside the round's focus as one sentence ("" for none): banked, not applied. */
 export function scopeClauses(d, r) {
   const out = decisionMarks(d, r).filter((m) => !m.inFocus);
-  return out.length ? `${ADD_TO_SCOPE} ${out.map(clause).join("; ")}.` : "";
+  return out.length ? `${ADD_TO_SCOPE} ${answers(out).map(clause).join("; ")}.` : "";
 }
 
 /** What the next round does with his marks: apply the ones in focus, bank the rest ("" for none). */

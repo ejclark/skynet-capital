@@ -25,6 +25,11 @@
 // picture, so a tap still reads its spot against the frame's own box — the whole frame, moved
 // inside the crop — and saves a % of the whole screen. Its mark goes on that plane, and its record
 // adds `inFocus`: whether the spot is inside the focus box (`data-fbox`).
+//
+// ONE PICTURE, TWO WIDTHS (widths.mjs): in a `.wsw` slot, a mark inside an area belongs to the
+// area, so it is also drawn on the other width's frame — the same place inside that width's outline
+// of the area (the smallest holding the spot, as areas.mjs `areaAt` picks it). It is one mark under
+// one id: either button opens it, and closing it empty removes both. Nothing new is saved.
 globalThis.steerMarks = (api) => {
   const MARKS = api.marks; // { glyph, words, reveal } from marks.mjs; only on a round's own page
   if (!MARKS) return null;
@@ -159,7 +164,51 @@ globalThis.steerMarks = (api) => {
     for (const key of FRAMES.keys()) for (const [id, m] of savedMarks(key)) want.set(id, m);
     for (const b of document.querySelectorAll(".pin[data-mark]"))
       if (!want.has(b.dataset.pin)) b.remove();
-    for (const [id, m] of want) for (const f of framesOf(id, m.key)) place(f, id, m);
+    for (const [id, m] of want) {
+      for (const f of framesOf(id, m.key)) place(f, id, m);
+      for (const [f, at] of mirrors(id, m)) place(f, id, { ...m, ...at });
+    }
+  }
+  /** A frame's areas (areas.mjs) as drawn, each box in % of the frame. */
+  const areasOn = (frame) =>
+    [...frame.querySelectorAll(".abox")].map((b) => ({
+      n: b.dataset.n,
+      x: Number.parseFloat(b.style.left),
+      y: Number.parseFloat(b.style.top),
+      w: Number.parseFloat(b.style.width),
+      h: Number.parseFloat(b.style.height),
+    }));
+  /** The smallest area holding the spot, edges included (areas.mjs `areaAt`), or null. */
+  function areaAt(areas, x, y) {
+    let best = null;
+    for (const a of areas) {
+      const inside = x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h;
+      if (inside && (!best || a.w * a.h < best.w * best.h)) best = a;
+    }
+    return best;
+  }
+  /** Where a mark in an area shows on the other width of its slot (widths.mjs): [frame, { x, y }]
+   *  for each frame there drawing the same area; none for a mark outside every area. */
+  function mirrors(id, m) {
+    const out = [];
+    const other = ID.exec(id)[2] === "phone" ? "desk" : "phone";
+    for (const f of framesOf(id, m.key)) {
+      const slot = f.closest(".wsw");
+      const a = slot && areaAt(areasOn(f), m.x, m.y);
+      if (!(a && a.w > 0 && a.h > 0)) continue;
+      for (const g of slot.querySelectorAll(`.markable[data-frame="${other}"]`)) {
+        const b = areasOn(g).find((x) => x.n === a.n);
+        if (b)
+          out.push([
+            g,
+            {
+              x: round1(b.x + ((m.x - a.x) / a.w) * b.w),
+              y: round1(b.y + ((m.y - a.y) / a.h) * b.h),
+            },
+          ]);
+      }
+    }
+    return out;
   }
   /** The live marks one decision's record holds, as [id, { key, x, y }]. */
   const savedMarks = (key) =>
