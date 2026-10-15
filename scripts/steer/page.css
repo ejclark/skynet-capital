@@ -1011,7 +1011,8 @@ details.onote summary:hover {
   width: 100%;
   height: auto;
 }
-.cmp .cmp-cell > .shot {
+.cmp .cmp-cell > .shot,
+.cmp .cmp-cell > .shot.phone.areas {
   /* the cell is a column, so .shot.phone's 390px flex-basis would set its height: at half width
      (Side by side) the picture is shorter than that and the frame ran on empty below it */
   flex: none;
@@ -1036,6 +1037,16 @@ details.onote summary:hover {
 }
 .cmp[data-mode="side"] .cmp-cell[data-cell="option"] {
   grid-area: 1 / 2;
+}
+/* Side by side with areas (#5163): it is the before | after shot, so both pictures get the room.
+   The callout words and their lines need a gutter or a band a half-width picture can't spare (at
+   desktop width the 172px gutter left each picture 0px, 2026-10-15), so they go; the outlines and
+   numbers stay, the same on both halves. */
+.cmp[data-mode="side"] .shot.areas :is(.agut, .aband, .arail, .aline) {
+  display: none;
+}
+.cmp[data-mode="side"] .shot.areas .arow {
+  padding: 0 0 0 28px;
 }
 .cmp-open {
   position: absolute;
@@ -1075,6 +1086,31 @@ details.onote summary:hover {
   background: var(--text);
   box-shadow: 0 0 0 2px var(--bg);
   pointer-events: none;
+}
+/* The divider's grip sits on the line itself and stays in view as the picture scrolls past it
+   (sticky inside the line's full-height box), so the handle is always beside the part he is
+   looking at; a drag on it moves the line (compare-client.js). The track under the picture stays
+   for the keyboard. Eric, 2026-10-15: the handle was "often out of view of the actual change". */
+.cmp-grip {
+  display: none;
+}
+.cmp[data-mode="divider"] .cmp-grip {
+  display: block;
+  position: sticky;
+  top: calc(50vh - 22px);
+  width: 44px;
+  height: 44px;
+  margin: 12px 0 12px -21px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font: 700 15px / 40px var(--sans);
+  text-align: center;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 7;
 }
 .cmp-track {
   position: relative;
@@ -1574,8 +1610,26 @@ body.noting * {
     grid-row: 2;
   }
   .opt:has(> .pics > .shot.phone.areas),
-  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas) {
+  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas),
+  .opt:has(> .pics > .cmp .shot.phone.areas) {
     grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
+  }
+  .opt > .pics > .cmp:has(.shot.phone.areas) {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* Side by side is the before | after shot: it takes the card's whole width under the option's
+     words, each picture up to its real phone width beside the other. */
+  .opt > .pics > .cmp[data-mode="side"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+  }
+  .opt:has(> .pics > .cmp[data-mode="side"]) > .side {
+    grid-column: 1 / -1;
+  }
+  .cmp[data-mode="side"] .cmp-stage {
+    grid-template-columns: repeat(2, minmax(0, calc(390px + 28px)));
+    column-gap: 24px;
   }
   /* no phone frame: the words lead, the desktop frame spans below them */
   .opt:not(:has(.shot.phone)) > .side {
