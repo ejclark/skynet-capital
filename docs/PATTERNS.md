@@ -338,3 +338,19 @@ anti-pattern and the two shapes that beat it.
 | **The guiding wind · a mode switched whole · the glint** | Direction lives in the world, not an overlay (edge labels only when they are the choice); a look is a mode with a declared scope; exactly one element carries the accent, at the decision. | `PICTURES.md` rules 9, 11, 12 (#3787) | Ghost of Yōtei's mechanics, read in the teardown on #3786 | placed — as rules; the app-side versions seeded in `IDEAS.md` |
 | **The second layer** | Detail that survives a phone: a spine that reads in ten seconds plus a second layer of claim-bearing detail — boxes of detail beside the spine (A), or a bold headline and one line of fact inside every node (C). | two candidates on #3778 (2026-09-26) | Eric, 2026-09-26 ("I expected more fine grained elaborate detail") | placed — Eric, 2026-09-26 ("both"): C on PR frames, A on pages, both at desk width; rule 18. Measured before shipping (his ask the same day): the door held rule 13's number (15.7 → 15.6 px) after a reflow from a 10.4 px first draft, and a blind read of both drawings by a zero-context reader named the same argument, the after faster |
 | **Diagram as contract** | A drawn boundary compiles into an import gate; a drawn lifecycle compiles into EARS lines and specs; drift is a red check. | a boundary gate script under `scripts/` and the `/ears` skill (both slice 8–9 of #3748) | Eric, 2026-09-25 ("infrastructure as code… non-deterministic into deterministic") | seeded — slices 8–9 |
+
+## The ledger — review tools (the redesign round page)
+
+Rows for how Eric judges a frame on a round page (`scripts/steer/`, `docs/process/REDESIGN.md`), named
+on the round-page redesign, #5350, the test screen for the redesign process (#5143). Each stays
+opt-in on that test screen until the process settles (#5380).
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **Pin label on the picture** (anti-pattern) | A numbered dot with its words drawn over the frame; the words hide what he's judging, and he guesses what the dot points at. | round pages until #5391 | #5350 round 0 (his pick: "notes cover what I judge") | named — the thing the rows below replace |
+| **Persistent area outlines** | Every area a redesign is about gets a dashed outline and a number that keeps across rounds while its problem is open; the asked-about ones go solid, with a few words in clear space beside the picture and a line to the outline. | #5391 (build) | Eric, #5350 rounds 1–2 ("outline the piece of scope in question then use an arrow/line…"; "preserving outlines… drives consistency across iterations") | placed — #5391 |
+| **Flip in place** (blink comparator) | One picture, a Today / option switch above it; the swap happens in the same spot, so a difference jumps out. | #5411, default mode | #5350 round 3 | placed — #5411 |
+| **Swipe strip** | Today and the options in a horizontal strip, the next one peeking at the edge, a dot per picture. | #5411 | #5350 round 3 | placed — #5411 |
+| **Divider wipe** | Today left of a draggable divider, the option right; only offered when both frames share dimensions. GitHub's image diff calls it Swipe. | #5411 | #5350 round 3; GitHub image diff | placed — #5411 |
+| **Onion skin** | The option over Today at an opacity you slide. GitHub's image diff has it. | — | GitHub image diff, named in #5350 round 3's read-back | seeded |
+| **Pixel-diff heatmap** | Changed pixels between two frames lit as a heatmap, regions outlined; mostly Claude's tool for a subtle change or a suspected layout shift. | #5412 (parked) | Eric, #5350 round 3 ("The pixel diff view is probably more useful for you than me") | seeded |
