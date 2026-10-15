@@ -300,6 +300,8 @@ describe("a template instance equals main's playbook field by field (criterion 7
       "keyedOn",
       "mixedSignals",
       "size",
+      // S1's measured stretches (#5432), set by its own setting: display-only, no decision reads it.
+      "stretches",
       "symbols",
       "thesis",
     ]);

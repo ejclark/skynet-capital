@@ -15,6 +15,20 @@ export interface PlaybookTraitView {
   readonly claim: string;
 }
 
+/** A study's measured moves before its past reports — mirrors `PrintStretches` in
+ *  `src/playbooks/playbook.ts`. Trading days before the report; `from` > `to`, 0 = report day. */
+export interface PrintStretchesView {
+  readonly source: string;
+  readonly era: string;
+  readonly reports: number;
+  readonly stretches: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly meanPct: number;
+    readonly rose: number;
+  }[];
+}
+
 export interface PlaybookStoreCardView {
   readonly id: string;
   readonly symbol: string;
@@ -26,6 +40,8 @@ export interface PlaybookStoreCardView {
   /** The probe's date window and per-mode target exposure — absent for a tactical playbook. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** The study's move in each stretch before a report (#5432) — sent only with `window`. */
+  readonly stretches?: PrintStretchesView;
   readonly traits: readonly PlaybookTraitView[];
   readonly description: string;
   readonly enter: string;

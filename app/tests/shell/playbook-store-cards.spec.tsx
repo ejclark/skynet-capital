@@ -427,3 +427,57 @@ describe("a card's labelled rows after the rules", () => {
     expect(rowNames()).toEqual(["Enter", "Exit — take profit", "Exit — cut losses", "Hold"]);
   });
 });
+
+/** #5432: a pre-earnings pair draws its rule as one line counted back from the earnings report, in
+ *  place of its Enter / Exit / Hold rows — on the study world's clock, against the real calendar. */
+describe("a pre-earnings pair drawn as one line", () => {
+  beforeEach(() => {
+    rstest.useFakeTimers({ toFake: ["Date"] });
+    rstest.setSystemTime(new Date("2026-10-08T19:00:00Z"));
+  });
+  afterEach(() => {
+    rstest.useRealTimers();
+  });
+  const s1: PlaybookStoreCardView = {
+    ...card(["NVDA"]),
+    window: "20 to 6 sessions before the print",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    stretches: {
+      source: "docs/research/nvda-earnings-cycle.md F2",
+      era: "2023–26",
+      reports: 14,
+      stretches: [
+        { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+        { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+        { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+      ],
+    },
+  };
+
+  it("shows the line, the rows and the bars, and no Enter / Exit / Hold paragraphs", () => {
+    mount(s1);
+    expect(screen.getByRole("img", { name: /^NVDA's window: holds from Oct 21/ })).toBeVisible();
+    expect(screen.getByText("① Buy · Oct 21 · 20 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("② Sell · Nov 11 · 5 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("Average move in each stretch")).toBeInTheDocument();
+    expect(document.querySelector(".pb-card-triggers")).toBeNull();
+    expect(screen.queryByText("enter rule")).toBeNull();
+    // The window is drawn, so it is not said again as a sentence; target exposure stays as it was.
+    expect(screen.queryByText("20 to 6 sessions before the print")).toBeNull();
+    expect(screen.getByText("Target exposure")).toBeInTheDocument();
+  });
+
+  it("keeps a pair's own labelled notes under the line", () => {
+    mount({ ...s1, notes: [{ label: "Pause", text: "pause rule" }] });
+    expect(
+      [...document.querySelectorAll(".pb-card-triggers dt")].map((dt) => dt.textContent),
+    ).toEqual(["Pause"]);
+  });
+
+  it("falls back to the rows when the ticker has no report on file to count back from", () => {
+    mount({ ...s1, id: "S1-NVDA", symbol: "ZZZZ", symbols: ["ZZZZ"] });
+    expect(screen.queryByRole("img", { name: /window/ })).toBeNull();
+    expect(screen.getByText("enter rule")).toBeInTheDocument();
+    expect(screen.getByText("20 to 6 sessions before the print")).toBeInTheDocument();
+  });
+});

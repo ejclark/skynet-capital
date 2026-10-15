@@ -26,6 +26,8 @@
 //   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the
 //                CRWV wheel states its reason and check day with "Set a new date", and the card says
 //                what is budgeted inside the allocation.
+//   · `window` — a pre-earnings play as one line (#5432): NVDA's buy, hold and sell counted back from
+//                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -143,6 +145,7 @@ async function frame({
   scrollTo,
   path,
   act,
+  clockAt,
   extraStubs = {},
   ...shell
 }) {
@@ -161,6 +164,8 @@ async function frame({
     },
   });
   const to = path ?? `/app/research?section=playbooks&account=${encodeURIComponent(account.id)}`;
+  // A dated picture (the window's dates are counted from today) is shot on a fixed day.
+  if (clockAt) await page.clock.setFixedTime(new Date(clockAt));
   await page.goto(`${origin}${to}`);
   await page.getByText(expect).first().waitFor();
   if (act) await act(page);
@@ -520,6 +525,46 @@ groups.conviction = [
     path: undefined,
     act: openConviction,
   }),
+];
+
+// #5432: the run-up's NVDA row drawn as one line, its dates counted on the real calendar from the
+// study world's Thursday — Nov 18 est., so buy Oct 21, sell Nov 11.
+const STUDY_DAY = "2026-10-08T19:00:00Z";
+const toNvdaLine = (page) =>
+  page
+    .locator(".pbr-window")
+    .first()
+    .evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 190);
+    });
+groups.window = [
+  {
+    tag: "phone-1-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+  },
+  {
+    tag: "phone-2-nvda-bars",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    scrollTo: "Average move in each stretch",
+  },
+  {
+    tag: "desktop-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+    quality: 55,
+  },
 ];
 
 const only = process.env.FRAMES;
