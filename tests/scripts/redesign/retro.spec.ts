@@ -62,6 +62,20 @@ describe("a read-back comment becomes one round of facts", () => {
     });
   });
 
+  it("reads a plain pick line beside the reactions", () => {
+    const r4 = readback(
+      4,
+      "2026-10-15T03:51:00Z",
+      ["**Q1 · How do you answer it once?**", '- Pick: A, "One picture"', "- More of: A, B"].join(
+        "\n",
+      ),
+    );
+    expect(parseReadback(r4)?.picks).toEqual([
+      { kind: "Pick", what: 'A, "One picture"' },
+      { kind: "More of", what: "A, B" },
+    ]);
+  });
+
   it("takes a quoted note as a note on the round, and skips a comment that isn't a read-back", () => {
     expect(parseReadback(r0)?.notes).toEqual([
       {

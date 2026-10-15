@@ -46,6 +46,11 @@ corrects it; a row is never rewritten, only superseded by a later one.
   not by its age (2026-09-06).
 - **Named shapes over described ones** — 3–5 options he can judge by eye, each pointing at its row in
   PATTERNS.md; a menu of unexplained names is not a question he can answer (2026-09-06, 2026-09-25).
+- **Tools with modes over a single pick** — when several shapes each show the thing from a useful
+  angle, he keeps them all as switchable modes with one default, rather than choosing one: "I like
+  having access to all 3 capabilities… a powerful way for me to iterate from different angles on
+  demand" (#5350 round 3, 2026-10-15; round 4 resolved the same way). "More of this" on several
+  shapes is read as that before it is read as indecision.
 
 ### What he reacts against (the recurring corrections)
 
