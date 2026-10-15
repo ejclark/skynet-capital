@@ -58,9 +58,9 @@ adds identity, consuming the map as one input. The operating model applies both.
 
 ## Worked example (real — Graphify run 2026-07-26)
 
-Graphify actually ran on this repo (701 nodes, 1835 edges, 19 communities — see
-[`STRUCTURE-graph.md`](STRUCTURE-graph.md)). The result **corrected my hypothesis and proved the core
-rule:**
+Graphify actually ran on this repo (701 nodes, 1835 edges, 19 communities on that run; the current
+snapshot is [`STRUCTURE-graph.md`](STRUCTURE-graph.md)). The result **corrected my hypothesis and
+proved the core rule:**
 
 - **Real god-nodes are the trading domain model:** `MarketContext` (38), `OrderIntent` (36), `Persona`
   (32), `Portfolio` (30) — the *engine*. I had guessed the UI files (`authenticator.ts`,
@@ -83,8 +83,6 @@ rule:**
 ## Open questions (for a Graphify-scoped session)
 
 - Confirm `graph.json`'s real schema and bind the roles above to concrete fields.
-- Does the mapper expose per-node centrality scores (to rank anchor candidates) and community
-  membership directly, or must BCP derive them?
 - Should BCP emit a machine-readable `brand.json` (tokens + anchor→node bindings + scope rules) so
   *Enforce* can be partly automated (lint deliverables against the brand per scope)?
 - Where should this spec live long-term — here, in Graphify, or a shared meta-repo?
