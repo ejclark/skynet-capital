@@ -11,8 +11,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the item list and the due check come from
 `scripts/instruction-drift-scan.mjs`. The chain is three roles of this one file, so write `steps`
-from the block below rather than from `grind-manifest.mjs --args`, which emits a single step; each
-role's tier still resolves from this front matter at dispatch unless the step overrides it.
+from the block below rather than from `grind-manifest.mjs --args`, which emits one `instructions`
+step plus the outcome check, never the three roles; each role's tier still resolves from this front
+matter at dispatch unless the step overrides it.
 
 ```bash
 git fetch origin main
