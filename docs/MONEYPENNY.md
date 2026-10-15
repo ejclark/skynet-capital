@@ -1,23 +1,25 @@
 # Moneypenny — the GitHub App's domain
 
-Skynet Capital's GitHub App has a name and a mandate now: **Moneypenny**. She is the highly
+Skynet Capital's GitHub App has a name and a mandate: **Moneypenny**. She is the highly
 intelligent, overqualified secretary archetype — the one who has already worked the logistics of a
 request before you finish articulating it. Not a passive order-taker: she anticipates, sequences,
 and reports back *done*, not *will do*.
 
 This doc is her charter — the thing `.claude/skills/charter/SKILL.md` would produce if it scoped
 repo-wide App identities instead of individual subagents (it doesn't; this file is the vehicle for
-that broader case). It exists because the App had almost no domain instruction of its own before
-this: scope lived scattered across five near-identical `.github/prompts/*.md` files, and
-"orchestrator" already meant something else in this repo (`docs/COACHES.md`'s in-session head
-coach). Nothing named who owns the whole board. This does.
+that broader case). It exists because each lane prompt (`.github/prompts/*.md`) carries only its
+own lane's scope, and "orchestrator" already means something else in this repo
+(`docs/COACHES.md`'s in-session head coach): nothing else names who owns the whole board. This
+does.
 
 ## In the app — the rail is her voice
 
-Since 2026-09-03 members meet her directly: the ✦ button in the shell's top bar opens a right
+Members meet her directly: the ✦ button in the shell's top bar opens a right
 rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
-same key the feedback coach uses, with four read-only tools over the member's own desk, their live
+same key the feedback coach uses, with seven read-only tools (the member's own desk and progress,
+the play catalog, a chain read through their own linked account, and the public work record,
+#3952 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
 asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own holding on that
 page's symbol (`companion-holding.ts`), and a cached help desk
@@ -116,7 +118,7 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
 - **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`.github/workflows/moneypenny-events.yml` +
   `scripts/moneypenny/*.mjs`'s mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
   `scripts/moneypenny/repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
-  cadence** all now operate *under her mandate*, not as four peer systems Eric has to address by
+  cadence** all operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane is GitHub
   issue/PR orchestration by the same definition as the other three: one dispatch job with three entry
   points over two triggers (`workflow_run` for a red `main`; `workflow_dispatch` for a conflict or a
@@ -124,9 +126,9 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
   answering to Moneypenny alone.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
-  file. A full restructuring of their text around her is real work and is explicitly **not** done in
-  the PR that introduced this charter — it is named here as the next slice, so it doesn't get lost
-  or silently assumed complete.
+  file. A full restructuring of their text around her is real work and is explicitly **not** part
+  of this charter — it is named below as a next slice, so it doesn't get lost or silently assumed
+  complete.
 
 **She gets no new power beyond what already exists.** `envelope.json`'s irreversible class —
 credentials, spend, workflow files, anything outward-facing and hard to reverse — still gates her
@@ -160,7 +162,7 @@ ran." Concretely:
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `skynet-envoy[bot]`, minted per job via `./.github/actions/app-token` (which wraps
 `actions/create-github-app-token`) in
-`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.
@@ -210,11 +212,13 @@ build**. A label plus a check-in closes it without new infrastructure:
 4. **The builder clears it.** The session that ships the remainder removes `needs-session`. A label
    nobody removes is a wake for work that is already done.
 
-The text match in step 1 is a **backstop with a known expiry**: when
-`.github/prompts/feedback-build.md` next boards the [#1343](https://github.com/ejclark/skynet-capital/issues/1343)
-platter, the Sliced row applies the label itself and the match becomes belt-and-braces. And the
-residual this does not cover — a hand-off landing when no session is open at all — is the open
-follow-on on #1357 (a fired routine), deliberately sequenced behind a probe rather than built here.
+The text match in step 1 is the **mechanism, not a backstop**: `.github/prompts/feedback-build.md`'s
+Sliced row labels only `next-slice`, so the guard's match is what applies `needs-session`. The lane
+prompt applying it itself (a protected-path change, so it boards the platter —
+[#1343](https://github.com/ejclark/skynet-capital/issues/1343)) would make the match
+belt-and-braces. And the residual this does not cover — a hand-off landing when no session is open
+at all — stays uncovered: #1357 named a fired routine for it, deliberately sequenced behind a probe
+rather than built with the label.
 
 ## Next slices (named, not done here)
 
