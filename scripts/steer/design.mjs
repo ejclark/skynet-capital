@@ -13,6 +13,8 @@
 // frame — resolved here on every picture into `focus: { x, y, w, h, label }` (focus.mjs), so the
 // page opens each frame cropped to it. And `areas` / `active` (#5391): the parts of the screen a
 // redesign tracks, resolved per picture into `areas` (areas.mjs) and drawn as numbered outlines.
+// And `compare: true` (#5411): each option's phone picture offers Flip · Swipe · Divider against
+// Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the divider.
 // Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
@@ -22,7 +24,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { areaSpecProblems, areasFor } from "./areas.mjs";
-import { focusBoxProblems, focusFor, imageRatio } from "./focus.mjs";
+import { compareProblems } from "./compare.mjs";
+import { focusBoxProblems, focusFor, imageRatio, imageSize } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 import { holderPins } from "./pins.mjs";
 import { scopeOf, servesOf } from "./scope.mjs";
@@ -68,12 +71,21 @@ export function loadDesign(file, { issue, round } = {}) {
       return null;
     }
   };
+  // A picture's pixel size, for a compared question's divider; null when it can't be read.
+  const sizeOf = (p) => {
+    try {
+      return imageSize(readFileSync(p));
+    } catch {
+      return null;
+    }
+  };
   return designDecisions(wrap.questions, {
     issue: n,
     round: wrap.round ?? round ?? null,
     at,
     pinsFrom,
     ratioOf,
+    sizeOf,
   });
 }
 
@@ -230,6 +242,28 @@ function pinsOf(q, n, pinsFrom) {
   return { today, options };
 }
 
+/** A question's `compare`, checked (compare.mjs): true to compare each option with Today. */
+function compareOf(q, n) {
+  const problems = compareProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.compare === true;
+}
+
+/** A holder's phone pictures, each with its pixel size when its file gives one (compare.mjs: the
+ *  divider is offered only on two pictures of one size). */
+function sized(holder, sizeOf) {
+  if (!(holder && sizeOf)) return holder;
+  const px = (p) => {
+    const size = p.size === "phone" ? sizeOf(p.src) : null;
+    return size ? { ...p, px: size } : p;
+  };
+  return {
+    ...holder,
+    pictures: (holder.pictures ?? []).map(px),
+    ...(holder.clean ? { clean: holder.clean.map(px) } : {}),
+  };
+}
+
 /**
  * What a question asks. `design` (the default) shows shapes, and a pick is a build; `problems`
  * (round 0, docs/process/REDESIGN.md) shows the problems pinned on today, and a pick only chooses
@@ -289,14 +323,14 @@ function stages(q, problems) {
   };
 }
 
-/** Pure once `at`, `pinsFrom` and `ratioOf` are: manifest entries → decisions. `at` maps a
- *  manifest path to a usable one; `pinsFrom` reads a pins (or sections) file a manifest names;
- *  `ratioOf` reads a picture's height ÷ width, for a question with a focus (loadDesign passes all
- *  three). A problems question stays a design decision (pictures, minutes, the store) and carries
+/** Pure once `at`, `pinsFrom`, `ratioOf` and `sizeOf` are: manifest entries → decisions. `at`
+ *  maps a manifest path to a usable one; `pinsFrom` reads a pins (or sections) file a manifest
+ *  names; `ratioOf` reads a picture's height ÷ width, for a question with a focus; `sizeOf` its
+ *  pixel size, for a compared one (loadDesign passes all four). A problems question stays a design decision (pictures, minutes, the store) and carries
  *  `problems: true`, which changes only its words and its read-back. */
 export function designDecisions(
   questions,
-  { issue, round = null, at = (p) => p, pinsFrom, ratioOf },
+  { issue, round = null, at = (p) => p, pinsFrom, ratioOf, sizeOf },
 ) {
   return questions.map((q, i) => {
     const n = Number(q.q ?? i + 1);
@@ -304,16 +338,20 @@ export function designDecisions(
     const pins = pinsOf(q, n, pinsFrom);
     const focus = focusSpec(q, n, ratioOf);
     const areas = areasSpec(q, n);
-    const options = (q.options ?? []).map((o, j) =>
-      optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas),
-    );
+    const compare = compareOf(q, n);
+    const options = (q.options ?? []).map((o, j) => {
+      const opt = optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas);
+      return compare ? sized(opt, sizeOf) : opt;
+    });
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
+    const today = todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas);
     return {
       key: safeKey(`${issue}-q${n}`),
       kind: "design",
       ...(problems ? { problems: true } : {}),
       ...stages(q, problems),
+      ...(compare ? { compare: true } : {}),
       issue,
       isPr: false,
       round,
@@ -333,7 +371,7 @@ export function designDecisions(
             saw: q.saw ?? [],
           }
         : null,
-      today: todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas),
+      today: compare ? sized(today, sizeOf) : today,
       options,
     };
   });

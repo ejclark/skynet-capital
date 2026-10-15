@@ -18,6 +18,8 @@ export interface Picture {
   ratio?: number;
   /** The question's areas on this frame (areas.mjs), every number in % of the frame. */
   areas?: import("./areas.mjs").Area[];
+  /** Its pixel size, read from its file, on a compared question's phone frames (compare.mjs). */
+  px?: { w: number; h: number };
 }
 export interface Option {
   key: string;
@@ -42,6 +44,8 @@ export interface Decision {
   problems?: boolean;
   /** A problems question that opens on clean frames, Claude's problems folded away (marks.mjs). */
   opening?: boolean;
+  /** Each option's phone picture offers Flip · Swipe · Divider against Today's (compare.mjs). */
+  compare?: boolean;
   scope?: Scope;
   issue: number;
   isPr: boolean;

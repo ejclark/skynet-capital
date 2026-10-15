@@ -742,6 +742,8 @@
 
   // A round's focus (focus-client.js): each focused picture's crop and its whole-screen button.
   const focusUi = globalThis.steerFocus?.({ focus: TP.focus });
+  // Comparing an option with Today (compare-client.js): Flip · Swipe · Divider, kept per viewer.
+  globalThis.steerCompare?.({ compare: TP.compare });
   // The outcomes he adds under a scope (outcomes-client.js); null on any page but a round's own.
   const outcomesUi = globalThis.steerOutcomes?.({
     cfg: TP.outcomes,
