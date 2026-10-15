@@ -29,8 +29,9 @@ _Caption —_
 <!-- The caption is required with any picture: one plain-language line naming what it shows and
 where it came from (a route, a shoot script, a diff). It's the line that survives email/mobile. -->
 
-<!-- CARVE-OUT PRs ONLY (workflow files / credentials / spend / outward-facing): add this next,
-top-level, never indented or inside <details> — blast radius comes BEFORE accomplishments:
+<!-- CARVE-OUT PRs ONLY (the irreversible class: `node scripts/envelope-scan.mjs --check <paths>`
+answers it from `envelope.json`, the one list): add this next, top-level, never indented or inside
+<details> — blast radius comes BEFORE accomplishments:
 > [!WARNING]
 > <what this touches and what could go wrong if it's wrong> -->
 
