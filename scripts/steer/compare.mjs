@@ -22,10 +22,13 @@
 // The mode is remembered per viewer (localStorage, compare-client.js) and set on every compared
 // option at once, so his last angle opens next time.
 //
-// NOT WITH `focus` OR `areas`: both reshape the option's frame (a crop, outlines in margins), so
-// Today would no longer sit in the same spot. design.mjs and the manifest lint refuse the pair.
+// NOT WITH `focus`: a crop reshapes the option's frame, so Today would no longer sit in the same
+// spot. design.mjs and the manifest lint refuse the pair. WITH `areas` it composes (#5163, the test
+// screen: its handover asked for both on one question): Today's picture is drawn in the same
+// numbered outlines and margins as the option's, so the two still line up in every mode.
 //
 // Pure: the words, the manifest check, and the HTML. The page script is compare-client.js.
+import { arealFrame } from "./areas.mjs";
 import { e } from "./html.mjs";
 
 export const COMPARE_MODES = ["flip", "swipe", "divider"];
@@ -49,8 +52,8 @@ export function compareProblems(q, where) {
   if (q.compare !== true) return [`${where}: "compare" is true or false`];
   const out = [];
   if (!q.today?.phone) out.push(`${where}: "compare" needs Today's phone picture to compare with`);
-  if (q.focus !== undefined || q.areas !== undefined)
-    out.push(`${where}: compare with today, or narrow the round by "focus" or "areas" — not both`);
+  if (q.focus !== undefined)
+    out.push(`${where}: compare with today, or narrow the round by "focus" — not both`);
   return out;
 }
 
@@ -78,6 +81,17 @@ function modesHtml(name, divider) {
   return `<div class="cmp-modes" role="group" aria-label="${e(`Compare ${name} with Today`)}"><span class="cmp-lead">${W.lead}</span>${b}</div>`;
 }
 
+/** Today's side of the comparison: the bare picture, or — when the option's frame carries areas —
+ *  the picture inside the same outlines and margins (Today's own areas, resolved on its frame by
+ *  design.mjs), so both sides keep one geometry and the divider still lines up. */
+function todayCell(d, pic, img) {
+  if (!pic.areas?.length) return `<div class="cmp-pic">${img}</div>`;
+  const areas = (d.today?.pictures ?? []).find((p) => p.size === "phone")?.areas ?? [];
+  if (!areas.length) return `<div class="cmp-pic">${img}</div>`;
+  const f = arealFrame(`<div class="frame">${img}</div>`, areas);
+  return `<div class="shot phone${f.cls}"${f.attrs}>${f.inner}</div>`;
+}
+
 /**
  * One option's phone picture, compared with Today's. `shot` is the option's frame as render.mjs
  * draws it (pins, marks and all); `img(picture)` returns a picture's published path. With no
@@ -91,6 +105,7 @@ export function compareHtml({ d, o, pic, shot, img }) {
   const name = `Option ${o.key}`;
   const mine = `${W.option} ${name}`;
   const divider = sameSize(today, pic);
+  const todayImg = `<img src="${e(src)}" alt="Today at phone width" loading="lazy">`;
   const cell = (which, tag, inner) =>
     `<figure class="cmp-cell" data-cell="${which}"><figcaption class="cmp-tag">${e(tag)}</figcaption>${inner}</figure>`;
   const dot = (which, label, on) =>
@@ -102,11 +117,7 @@ export function compareHtml({ d, o, pic, shot, img }) {
     button('data-side="today"', e(W.today), false) +
     button('data-side="option"', e(mine), true) +
     `</div><div class="cmp-stage">` +
-    cell(
-      "today",
-      W.today,
-      `<div class="cmp-pic"><img src="${e(src)}" alt="Today at phone width" loading="lazy"></div>`,
-    ) +
+    cell("today", W.today, todayCell(d, pic, todayImg)) +
     cell("option", mine, shot) +
     `<div class="cmp-line" aria-hidden="true"></div></div>` +
     `<div class="cmp-dots" hidden>${dot("today", "Today", true)}${dot("option", name, false)}</div>` +

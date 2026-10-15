@@ -127,6 +127,38 @@ describe("a question with compare: true", () => {
   });
 });
 
+describe("compare with areas (#5163, the test screen)", () => {
+  const AREAS = [
+    { n: 1, box: { phone: [5, 10, 90, 20] }, problem: "P1", words: "the timeline" },
+    { n: 2, box: { phone: [5, 50, 90, 20] }, problem: "P2" },
+  ];
+  const html = pageOf(question({ compare: true, areas: AREAS, active: [1] }));
+
+  it("is accepted, by the page and by the lint", () => {
+    expect(compareProblems(question({ compare: true, areas: AREAS, active: [1] }), "q1")).toEqual(
+      [],
+    );
+  });
+
+  it("draws Today in the same outlines as the option, so the two still line up", () => {
+    const b = block(parsed(html), "A");
+    const today = b.querySelector('.cmp-cell[data-cell="today"] .shot.areas') as HTMLElement;
+    const option = b.querySelector('.cmp-cell[data-cell="option"] .shot.areas') as HTMLElement;
+    expect(today).not.toBeNull();
+    expect(option).not.toBeNull();
+    const boxes = (el: Element) =>
+      [...el.querySelectorAll(".abox")].map((x) => [
+        x.getAttribute("data-n"),
+        x.getAttribute("style"),
+        x.hasAttribute("data-on"),
+      ]);
+    expect(boxes(today)).toEqual(boxes(option));
+    expect(today.getAttribute("style")).toBe(option.getAttribute("style"));
+    expect(today.querySelector("img")?.getAttribute("src")).toBe("today-phone.jpg");
+    expect(today.querySelectorAll(".pin")).toHaveLength(0);
+  });
+});
+
 describe("the manifest lint agrees with the page", () => {
   const env: LintEnv = {
     pictureSize: () => 1024,
@@ -136,9 +168,7 @@ describe("the manifest lint agrees with the page", () => {
   it("names compare beside focus", () => {
     const q = question({ compare: true, focus: { phone: [0, 0, 50, 50] } });
     const out = lintDesign({ issue: 5150, round: 3, questions: [q] }, env);
-    expect(out).toContain(
-      'q1: compare with today, or narrow the round by "focus" or "areas" — not both',
-    );
+    expect(out).toContain('q1: compare with today, or narrow the round by "focus" — not both');
   });
 });
 
