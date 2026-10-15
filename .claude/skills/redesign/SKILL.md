@@ -14,7 +14,7 @@ description: >-
 # /redesign — one screen, from his notes to a build
 
 **Read [`docs/process/REDESIGN.md`](../../../docs/process/REDESIGN.md) and follow it.** That page is
-the loop, steps a–h, and the rules every frame is checked against. This skill only says when to
+the loop, steps a–i, and the rules every frame is checked against. This skill only says when to
 run it.
 
 - **His read before ours, then the scope, then the work.** No shape until he has agreed the goal,
