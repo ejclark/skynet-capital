@@ -71,6 +71,16 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A Social Security COLA projection that needs September to accelerate is running hot; fade it toward the
+  last locked month's y/y" (FT-ssa-cola-2027-2026-10-14-1)** — added 2026-10-15 from the
+  [ssa-cola-2027-2026-10-14 close-out](events/ssa-cola-2027-2026-10-14.md). Registered 2026-09-04 as
+  "COLA lands at 3.5% or below", re-centred to 3.5% on 09-30 after August CPI-W printed 3.522%. SSA
+  announced **3.6%** on 10-14: September CPI-W ran **+3.9% y/y** against the ≈3.58% that 3.5% needed
+  (press-reported; bls.gov and ssa.gov 403 to this lane). What survives: the CPI-W-ratio identity and the
+  FT-2 date coupling (announced the same day as the September CPI). Do not re-propose a "hold the last
+  locked month" neutral path for the final leg of a three-month average, and do not fade an advocacy-group
+  estimate off two of three months.
+
 - **"A Bobl vintage's softening demand shows as a rising yield and an allotment inside the recent-regime
   band" (FT-bobl-5y-auction-2026-10-13-1, -2)** — added 2026-10-14 from the
   [bobl-5y-auction-2026-10-13 close-out](events/bobl-5y-auction-2026-10-13.md). Registered 2026-09-30
