@@ -21,6 +21,10 @@ export interface SaidMark {
   area?: { n: number; label: string | null; active: boolean } | null;
   /** Inside the round's focus (focus.mjs) — always true on a frame with none. */
   inFocus: boolean;
+  /** On a question with `widths` (widths.mjs) whose holder shows both widths: "both" for a mark on
+   *  an area the other width draws too (read back once, by its area), "only" for one that stays
+   *  with its width; null otherwise. */
+  width: "both" | "only" | null;
 }
 
 export const IN_FOCUS: string;

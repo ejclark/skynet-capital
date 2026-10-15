@@ -16,6 +16,7 @@ import { QUESTION_KINDS } from "../steer/design.mjs";
 import { focusBoxProblems, matchSection } from "../steer/focus.mjs";
 import { holderPins } from "../steer/pins.mjs";
 import { scopeProblems } from "../steer/scope.mjs";
+import { widthsProblems } from "../steer/widths.mjs";
 
 const CEILING = 200 * 1024;
 const CONF = ["low", "medium", "high"];
@@ -420,6 +421,7 @@ function questionProblems(q, i, raw, env) {
     ...focusProblems(q, at, env),
     ...areaProblems(q, at, env),
     ...compareProblems(q, at),
+    ...widthsProblems(q, at),
     ...wordingProblems(q, at, raw, env),
   ];
 }

@@ -1068,6 +1068,36 @@ details.ev summary {
   outline-offset: 3px;
 }
 
+/* One picture, two widths (widths.mjs + widths-client.js, #5417). A holder's phone and desktop
+   frames share one slot under a "▯ Phone · ▭ Desktop" switch in the compare switch's button style
+   (.cmp-b: the pressed one a heavy border and a ✓, never a colour alone); the slot shows the width
+   its data-width names and hides the other, so the phone frame keeps its real width and the
+   desktop one gets the card's. */
+.wsw {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wsw[data-width="desk"] {
+  flex-basis: 100%;
+}
+.wsw-b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.wsw[data-width="phone"] > .wsw-pic[data-w="desk"],
+.wsw[data-width="desk"] > .wsw-pic[data-w="phone"] {
+  display: none;
+}
+.wsw-pic {
+  min-width: 0;
+}
+
 /* A round's focus (focus.mjs + focus-client.js). The focused view (the default) crops the frame to
    the focus box plus a margin: the clip keeps the crop's proportions (--fa), and inside it the
    plane — the whole frame, its picture, pins and marks — is sized and moved by % of the crop
@@ -1467,6 +1497,7 @@ body.noting * {
   }
   .opt > .pics > .shot.phone,
   .opt > .pics > .cmp,
+  .opt > .pics > .wsw,
   .opt > .pics > .muted {
     grid-column: 1;
     grid-row: 1;
@@ -1496,7 +1527,13 @@ body.noting * {
   .shot.phone.areas {
     flex-basis: calc(390px + 28px + 172px);
   }
-  .opt:has(> .pics > .shot.phone.areas) {
+  /* A width slot showing the desktop frame takes the card's width, under the option's words. */
+  .opt > .pics > .wsw[data-width="desk"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .opt:has(> .pics > .shot.phone.areas),
+  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas) {
     grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
   }
   /* no phone frame: the words lead, the desktop frame spans below them */

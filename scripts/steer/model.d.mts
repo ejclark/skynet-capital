@@ -31,6 +31,8 @@ export interface Option {
   pin?: number;
   /** The scope's outcome ids this shape works toward (scope.mjs). */
   serves?: string[];
+  /** On a question with `widths`: its desktop layout only widens the phone one (widths.mjs). */
+  deskSame?: boolean;
 }
 /** A round's goal and the outcomes it is drawn to meet (scope.mjs). */
 export interface Scope {
@@ -46,6 +48,8 @@ export interface Decision {
   opening?: boolean;
   /** Each option's phone picture offers Flip · Swipe · Divider against Today's (compare.mjs). */
   compare?: boolean;
+  /** Each holder's phone and desktop pictures share one slot with a width switch (widths.mjs). */
+  widths?: boolean;
   scope?: Scope;
   issue: number;
   isPr: boolean;
@@ -68,7 +72,14 @@ export interface Decision {
     saw?: string[];
   } | null;
   /** `clean`: Today's frames before pin.mjs drew on them, for a round that opens on them (marks.mjs). */
-  today: { pictures: Picture[]; clean?: Picture[]; caption: string; real: boolean } | null;
+  today: {
+    pictures: Picture[];
+    clean?: Picture[];
+    caption: string;
+    real: boolean;
+    /** On a question with `widths`: its desktop layout only widens the phone one (widths.mjs). */
+    deskSame?: boolean;
+  } | null;
   options: Option[];
   changes?: string | null;
   topic?: string | null;

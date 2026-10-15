@@ -15,6 +15,8 @@
 // redesign tracks, resolved per picture into `areas` (areas.mjs) and drawn as numbered outlines.
 // And `compare: true` (#5411): each option's phone picture offers Flip · Swipe · Divider against
 // Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the divider.
+// And `widths: true` (#5417): a holder's phone and desktop pictures share one slot with a
+// Phone · Desktop switch (widths.mjs), its `deskSame: true` labelling the desktop "same layout".
 // Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
@@ -29,6 +31,7 @@ import { focusBoxProblems, focusFor, imageRatio, imageSize } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
 import { holderPins } from "./pins.mjs";
 import { scopeOf, servesOf } from "./scope.mjs";
+import { widthsProblems } from "./widths.mjs";
 
 /** A design round's questions from a manifest file, as page decisions (minutes added later). */
 export function loadDesign(file, { issue, round } = {}) {
@@ -249,6 +252,19 @@ function compareOf(q, n) {
   return q.compare === true;
 }
 
+/** A question's `widths`, checked with its holders' `deskSame` (widths.mjs): true to give each
+ *  holder's two widths one slot and a switch. */
+function widthsOf(q, n) {
+  const problems = widthsProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.widths === true;
+}
+
+/** A holder as the page holds it, with `deskSame` when the question switches widths and the
+ *  manifest says the desktop layout only widens the phone one. */
+const sameLayout = (holder, raw, widths) =>
+  holder && widths && raw?.deskSame === true ? { ...holder, deskSame: true } : holder;
+
 /** A holder's phone pictures, each with its pixel size when its file gives one (compare.mjs: the
  *  divider is offered only on two pictures of one size). */
 function sized(holder, sizeOf) {
@@ -339,19 +355,29 @@ export function designDecisions(
     const focus = focusSpec(q, n, ratioOf);
     const areas = areasSpec(q, n);
     const compare = compareOf(q, n);
+    const widths = widthsOf(q, n);
     const options = (q.options ?? []).map((o, j) => {
-      const opt = optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas);
+      const opt = sameLayout(
+        optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas),
+        o,
+        widths,
+      );
       return compare ? sized(opt, sizeOf) : opt;
     });
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
-    const today = todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas);
+    const today = sameLayout(
+      todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas),
+      q.today,
+      widths,
+    );
     return {
       key: safeKey(`${issue}-q${n}`),
       kind: "design",
       ...(problems ? { problems: true } : {}),
       ...stages(q, problems),
       ...(compare ? { compare: true } : {}),
+      ...(widths ? { widths: true } : {}),
       issue,
       isPr: false,
       round,

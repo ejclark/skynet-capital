@@ -28,6 +28,7 @@ import {
 } from "./round-header.mjs";
 import { scopeHtml, servesHtml } from "./scope.mjs";
 import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
+import { bothWidths, widthsHtml } from "./widths.mjs";
 
 // The round page's header and its words live in round-header.mjs; the page's words stay readable
 // from here, where the specs and the steer skill have always found them.
@@ -38,9 +39,9 @@ export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // The pin reactions' script defines `steerPins`, the listening line's `steerEar`, the marks'
 // `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes`, the page
-// notes' `steerPageNotes` and the compare modes `steerCompare`; the page script calls each
-// (pins-client.js, ear-client.js, marks-client.js, focus-client.js, outcomes-client.js,
-// page-notes-client.js, compare-client.js).
+// notes' `steerPageNotes`, the compare modes `steerCompare` and the width switch `steerWidths`;
+// the page script calls each (pins-client.js, ear-client.js, marks-client.js, focus-client.js,
+// outcomes-client.js, page-notes-client.js, compare-client.js, widths-client.js).
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
@@ -49,6 +50,7 @@ const CLIENT = [
   "./outcomes-client.js",
   "./page-notes-client.js",
   "./compare-client.js",
+  "./widths-client.js",
   "./page-client.js",
 ]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
@@ -57,17 +59,31 @@ const CLIENT = [
 /** The pictures of one holder. `at` names the holder (its decision key and option, or "today"),
  *  so a picture with pins gets a button on each badge (pins.mjs); on a design round's own page
  *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. `wrap(picture,
- *  html)` may set a frame inside more (a compared option's phone frame, compare.mjs). */
-function shots(pictures, img, issue, at, wrap = (_p, h) => h) {
-  const h = pictures
+ *  html)` may set a frame inside more (a compared option's phone frame, compare.mjs). `slot`
+ *  (`{ name, same }`, a question with `widths`) puts a holder's two widths in one slot with a
+ *  switch (widths.mjs). */
+function shots(pictures, img, issue, at, wrap = (_p, h) => h, slot = null) {
+  const drawn = pictures
     .map((p) => {
       const src = img(p);
-      if (!src) return "";
-      return wrap(p, shot(p, src, at));
+      return src ? { p, h: wrap(p, shot(p, src, at)) } : null;
     })
-    .join("");
-  return h || `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
+    .filter(Boolean);
+  if (!drawn.length)
+    return `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
+  if (slot && bothWidths(drawn.map((x) => x.p))) {
+    const of = (w) =>
+      drawn
+        .filter((x) => x.p.size === w)
+        .map((x) => x.h)
+        .join("");
+    return widthsHtml({ ...slot, phone: of("phone"), desk: of("desk") });
+  }
+  return drawn.map((x) => x.h).join("");
 }
+
+/** A holder's width slot on a question with `widths` (widths.mjs), else null. */
+const slotOf = (d, name, holder) => (d.widths ? { name, same: Boolean(holder?.deskSame) } : null);
 
 /** One picture's frame: pinned, markable, or a link to the file. */
 function shot(p, src, at) {
@@ -103,7 +119,7 @@ function todayHtml(d, img, markable, pinRows = "") {
   const at = { key: d.key, option: "today", markable };
   const rows = pinRows ? `<div class="pinrows">${pinRows}</div>` : "";
   return (
-    `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, at)}</div>` +
+    `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, at, undefined, slotOf(d, "Today", d.today))}</div>` +
     `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p>${rows}</div></article>`
   );
 }
@@ -123,7 +139,7 @@ function optionHtml(d, o, img, markable) {
     : undefined;
   const pics =
     d.kind === "design"
-      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at, wrap)}</div>`
+      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at, wrap, slotOf(d, `Option ${o.key}`, o))}</div>`
       : "";
   const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
   return (
