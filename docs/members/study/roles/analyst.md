@@ -15,7 +15,8 @@ where the expectation did not hold) · confusion points with the member's own wo
 Each finding is one problem the member hit, with:
 
 - `what` — the problem, in plain words, at a specific place in the app
-- `evidence` — the frame numbers and the member's quote
+- `frames` and `quote` — the frame labels and the member's own words (`quote` is empty for an
+  instrument-only finding)
 - `voice` — `member-voiced` (the member noticed or said it) or `instrument-only` (only the
   measurements show it)
 - `level` — `structural` (where something lives, what a page is for, how pages connect, what is
