@@ -1,6 +1,7 @@
 ---
 name: journey-judge
 description: grade one member's crawl frames on "can this reader tell what to do next in ten seconds?" and fill the ledger's judge cells
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -11,8 +12,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 **Calling convention:** generate the call with
 `node scripts/grind-manifest.mjs --args --items '["first-timer","eric"]' --item-source 'the members listed in docs/members/friction-ledger.md for run <date>' docs/grind/journey-judge.instructions.md`
 — one item per **member**, never per frame: a judge reads a journey as a sequence, and a frame
-graded alone loses the step before it. `effort: high` because this is a judgment call on a
-rendered page against a rubric (`docs/COMPUTE.md`: anything that judges runs at `high`); the crawl
+graded alone loses the step before it. `model: opus` and `effort: high` because this is a judgment
+call on a rendered page against a rubric (`docs/COMPUTE.md`: the judgment row's floor is
+`opus`/`high`, and grind's own default is `sonnet`); the crawl
 itself deliberately makes NO model call, so this chore is the only place the judge line is
 answered. `isolation: worktree` because step 1 checks out its own branch. Fan as wide as the member
 list — one member's rows never overlap another's (the ledger sorts rows by member, so each item's
