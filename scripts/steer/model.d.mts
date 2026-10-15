@@ -46,7 +46,8 @@ export interface Decision {
   problems?: boolean;
   /** A problems question that opens on clean frames, Claude's problems folded away (marks.mjs). */
   opening?: boolean;
-  /** Each option's phone picture offers Flip · Swipe · Divider against Today's (compare.mjs). */
+  /** Each option's phone picture offers Flip · Side by side · Divider against Today's
+   *  (compare.mjs). */
   compare?: boolean;
   /** Each holder's phone and desktop pictures share one slot with a width switch (widths.mjs). */
   widths?: boolean;

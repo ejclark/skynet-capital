@@ -13,8 +13,9 @@
 // frame — resolved here on every picture into `focus: { x, y, w, h, label }` (focus.mjs), so the
 // page opens each frame cropped to it. And `areas` / `active` (#5391): the parts of the screen a
 // redesign tracks, resolved per picture into `areas` (areas.mjs) and drawn as numbered outlines.
-// And `compare: true` (#5411): each option's phone picture offers Flip · Swipe · Divider against
-// Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the divider.
+// And `compare: true` (#5411): each option's phone picture offers Flip · Side by side · Divider
+// against Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the
+// divider.
 // And `widths: true` (#5417): a holder's phone and desktop pictures share one slot with a
 // Phone · Desktop switch (widths.mjs), its `deskSame: true` labelling the desktop "same layout".
 // And `notesPer: "option"` (#5429): a note box folded under each option's buttons (option-notes.mjs).
