@@ -10,6 +10,7 @@
 // invented this session. Text inside quotation marks is skipped by both — it is his words or the
 // app's, which the quote check verifies instead.
 
+import { AREA_MAX_WORDS, areaSpecProblems, areasFor, wordCount } from "../steer/areas.mjs";
 import { QUESTION_KINDS } from "../steer/design.mjs";
 import { focusBoxProblems, matchSection } from "../steer/focus.mjs";
 import { holderPins } from "../steer/pins.mjs";
@@ -312,15 +313,16 @@ function focusProblems(q, at, env) {
   );
 }
 
-/** A focus label against every frame's sections — Today's, its clean frames' and each option's. */
-function focusLabelProblems(q, at, label, env) {
+/** Every frame of a question that names its sections — Today's, its clean frames' and each
+ *  option's — as `{ name, frame, sections }`, each list read through the env when it is a path. */
+function frameSections(q, env) {
   const read = env.sectionsAt ?? env.pinsAt;
   const holders = [
     ["today", q.today],
     ["today clean", q.today?.clean],
     ...(Array.isArray(q.options) ? q.options : []).map((o) => [`option ${o?.key}`, o]),
   ];
-  const checked = [];
+  const out = [];
   for (const [name, holder] of holders) {
     for (const [field, frame] of [
       ["sections", "phone"],
@@ -328,16 +330,78 @@ function focusLabelProblems(q, at, label, env) {
     ]) {
       let list = holder?.[field];
       if (typeof list === "string") list = read ? read(list) : null;
-      if (!Array.isArray(list)) continue;
-      checked.push(`${name} ${frame}`);
-      if (matchSection(list, label)) return [];
+      if (Array.isArray(list)) out.push({ name, frame, holder, sections: list });
     }
   }
+  return out;
+}
+
+/** A section's label against every frame's sections: [] when one frame holds it. `field` names
+ *  what asked ("focus", or an area). */
+function sectionLabelProblems(q, at, label, env, field) {
+  const frames = frameSections(q, env);
+  if (frames.some((f) => matchSection(f.sections, label))) return [];
   return [
-    checked.length
-      ? `${at}: "focus" “${label}” isn't a section on any frame — checked ${checked.join(", ")}`
-      : `${at}: "focus" “${label}” names a section, but no frame names its sections — add "sections" (or use a box)`,
+    frames.length
+      ? `${at}: ${field} “${label}” isn't a section on any frame — checked ${frames.map((f) => `${f.name} ${f.frame}`).join(", ")}`
+      : `${at}: ${field} “${label}” names a section, but no frame names its sections — add "sections" (or use a box)`,
   ];
+}
+
+/** A focus label against every frame's sections — Today's, its clean frames' and each option's. */
+const focusLabelProblems = (q, at, label, env) =>
+  sectionLabelProblems(q, at, label, env, '"focus"');
+
+/**
+ * A question's `areas` / `active` (scripts/steer/areas.mjs, #5391): the data the page refuses
+ * (numbers, a label or a box, every active number an area), then what only the lint can see — a
+ * label no frame's sections hold, an area with no open problem, a callout past AREA_MAX_WORDS or
+ * in jargon, `focus` beside `areas`, and a frame where an active area's line can't reach its
+ * outline without crossing another area's box (the page would then draw no line).
+ */
+function areaProblems(q, at, env) {
+  const out = areaSpecProblems(q, at);
+  if (!Array.isArray(q.areas) || out.length) return out;
+  if (q.focus !== undefined) out.push(`${at}: narrow a round by "focus" or by "areas", not both`);
+  const active = new Set(Array.isArray(q.active) ? q.active : []);
+  for (const a of q.areas) out.push(...oneAreaProblems(q, a, `${at} area ${a.n}`, active, env));
+  return [...out, ...lineProblems(q, at, env)];
+}
+
+/** One area: its open problem, its label on a frame, and its callout's words. */
+function oneAreaProblems(q, a, where, active, env) {
+  const out = [];
+  if (!text(a.problem)) out.push(`${where}: needs "problem" — the open problem it belongs to`);
+  if (text(a.label) && a.box === undefined)
+    out.push(...sectionLabelProblems(q, where, a.label.trim(), env, "label"));
+  const words = text(a.words) ? a.words : text(a.label) ? a.label : "";
+  if (active.has(a.n) && !words)
+    out.push(`${where}: an active area needs "words" (or a label) beside the picture`);
+  if (wordCount(words) > AREA_MAX_WORDS)
+    out.push(`${where}: "words" is ${wordCount(words)} words — keep it to ${AREA_MAX_WORDS}`);
+  if (text(a.words)) out.push(...copyProblems(`${where} words`, a.words, env.ui));
+  return out;
+}
+
+/** Each frame where an active area's line has no clear height to the frame's right edge. */
+function lineProblems(q, at, env) {
+  const named = new Map(frameSections(q, env).map((f) => [`${f.name} ${f.frame}`, f.sections]));
+  const holders = [
+    ["today", q.today],
+    ...(Array.isArray(q.options) ? q.options : []).map((o) => [`option ${o?.key}`, o]),
+  ];
+  const out = [];
+  for (const [name, holder] of holders) {
+    for (const size of ["phone", "desk"]) {
+      if (!text(holder?.[size])) continue;
+      const pic = { size, sections: named.get(`${name} ${size}`) };
+      for (const a of areasFor(q, pic).filter((x) => x.active && x.ly == null))
+        out.push(
+          `${at} ${name} ${size}: area ${a.n}'s line can't reach its outline without crossing another area — move or resize a box`,
+        );
+    }
+  }
+  return out;
 }
 
 function questionProblems(q, i, raw, env) {
@@ -353,6 +417,7 @@ function questionProblems(q, i, raw, env) {
     ...optionProblems(q, at, env),
     ...scopeProblems(q, at),
     ...focusProblems(q, at, env),
+    ...areaProblems(q, at, env),
     ...wordingProblems(q, at, raw, env),
   ];
 }

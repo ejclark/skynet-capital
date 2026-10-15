@@ -17,6 +17,10 @@
   --ink: #35d0ba;
   --warm: #ffc24d;
   --bar: rgba(15, 21, 28, 0.96);
+  /* a round's areas (areas.mjs): the faint outline holds 3:1 on a dark frame and a light one; the
+     active one is the accent, ringed in the ground colour for the frame it doesn't suit */
+  --area: #2ba091;
+  --area-on: #35d0ba;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
@@ -34,6 +38,8 @@
     --ink: #0a5f54;
     --warm: #8a5300;
     --bar: rgba(247, 249, 251, 0.96);
+    --area: #397e75;
+    --area-on: #0a5f54;
   }
 }
 :root[data-theme="light"] {
@@ -49,6 +55,8 @@
   --ink: #0a5f54;
   --warm: #8a5300;
   --bar: rgba(247, 249, 251, 0.96);
+  --area: #397e75;
+  --area-on: #0a5f54;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -982,6 +990,131 @@ details.ev summary {
   left: 2px;
 }
 
+/* A round's areas (areas.mjs, #5391). The shot is three rows: a band of words above the picture,
+   the picture between its margins, a band below. The plane is the picture's own box, so every
+   outline, number, line, pin and mark is placed in % of the frame. Every area is a 1.5px dashed
+   outline with a hollow number in the left margin, level with its top; an active one is a 2.5px
+   solid outline with a filled number — dashed vs solid and hollow vs filled, never colour alone.
+   Phone width: an active area's words sit in a band, its line runs out to the right margin
+   (`--rail`, one lane per line, `--d` from the picture's edge), along it, and in to the outline's
+   right edge; a band's own stretch of line is clipped at the band's edge, where the plane's picks
+   it up. Desktop width (below): the words sit in a gutter beside the picture, level with the line. */
+.shot.areas {
+  position: relative;
+  overflow: visible;
+  border: 0;
+  background: none;
+}
+.shot.phone.areas {
+  flex: 0 1 calc(390px + 28px + var(--rail));
+}
+.arow {
+  padding: 0 var(--rail) 0 28px;
+}
+.aplane {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.abox {
+  position: absolute;
+  border: 1.5px dashed var(--area);
+  pointer-events: none;
+}
+.abox[data-on] {
+  border: 2.5px solid var(--area-on);
+  box-shadow: 0 0 0 1.5px var(--bg);
+}
+.anum {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--area);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 11px / 15px var(--sans);
+  text-align: center;
+  flex: none;
+}
+.anum[data-on] {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--area-on);
+  background: var(--area-on);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 18px;
+}
+.aplane > .anum {
+  position: absolute;
+  right: calc(100% + 5px);
+  pointer-events: none;
+}
+.aline,
+.arail {
+  position: absolute;
+  background: var(--area-on);
+  pointer-events: none;
+}
+.aline {
+  height: 2px;
+  margin-top: -1px;
+  right: calc(-1 * var(--d));
+}
+.arail {
+  width: 2px;
+  left: calc(100% + var(--d) - 1px);
+}
+.aband {
+  position: relative;
+  overflow: hidden;
+}
+.aband.above {
+  padding-bottom: 8px;
+}
+.aband.below {
+  padding-top: 8px;
+}
+.acall {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px calc(var(--rail) - var(--d)) 4px 0;
+  font: 600 15px / 1.3 var(--sans);
+}
+.ajoin {
+  flex: 1 1 12px;
+  min-width: 12px;
+  height: 2px;
+  background: var(--area-on);
+}
+.acall::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--rail) - var(--d) - 1px);
+  width: 2px;
+  height: 9999px;
+  background: var(--area-on);
+}
+.above > .acall::after {
+  top: 50%;
+}
+.below > .acall::after {
+  bottom: 50%;
+}
+.agut {
+  display: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  width: 156px;
+  margin: 0;
+  transform: translateY(-50%);
+  font: 600 15px / 1.3 var(--sans);
+}
+
 /* The round page's how-to, folded under its one line. */
 details.how {
   color: var(--muted);
@@ -1172,6 +1305,27 @@ body.noting * {
   }
   .opt > .pics > .shot.desk {
     grid-column: 1 / -1;
+  }
+  /* A round's areas: the words move from the bands to a gutter beside the picture, joined by a
+     straight line to the outline's right edge; the phone frame keeps its real width beside them. */
+  .shot.areas .aband,
+  .shot.areas .arail {
+    display: none;
+  }
+  .shot.areas .agut {
+    display: block;
+  }
+  .shot.areas .arow {
+    padding-right: 172px;
+  }
+  .shot.areas .aline {
+    right: -12px;
+  }
+  .shot.phone.areas {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  .opt:has(> .pics > .shot.phone.areas) {
+    grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
   }
   /* no phone frame: the words lead, the desktop frame spans below them */
   .opt:not(:has(.shot.phone)) > .side {

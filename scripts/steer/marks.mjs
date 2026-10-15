@@ -30,6 +30,7 @@
 //
 // Everything here is pure: the words, the page's lines, and the read-back's. The page script is
 // marks-client.js.
+import { areaAt, arealFrame } from "./areas.mjs";
 import { focusedFrame, hasFocus, inFocus } from "./focus.mjs";
 import { sectionAt } from "./frame-sections.mjs";
 import { e } from "./html.mjs";
@@ -86,6 +87,13 @@ function sectionOf(pictures, x, y) {
   return withSections ? sectionAt(withSections.sections, x, y) : null;
 }
 
+/** The area a mark landed in (areas.mjs) — its number, label and whether this round asks about it
+ *  — or null when the frame it sits on draws none or none holds the spot. */
+function areaOf(pictures, x, y) {
+  const a = areaAt(pictures.find((p) => p.areas?.length)?.areas, x, y);
+  return a ? { n: a.n, label: a.label, active: a.active } : null;
+}
+
 /** Whether a mark sits in the round's focus (focus.mjs). On a frame with no focus it always does —
  *  nothing narrowed what he was asked about, even if an older page recorded otherwise; on one with
  *  a focus, as the page recorded it, else (a record from before `inFocus`) by its spot. */
@@ -124,6 +132,7 @@ export function decisionMarks(d, r) {
       note,
       before: m.beforeReveal === true,
       section: sectionOf(pictures, m.x, m.y),
+      area: areaOf(pictures, m.x, m.y),
       inFocus: focusOf(m, pictures),
     });
   }
@@ -134,9 +143,17 @@ export const marksSaid = (d, r) => decisionMarks(d, r).length > 0;
 const frameName = (m) =>
   `${m.option === "today" ? "Today" : `Option ${m.option}`}, ${m.frame === "desk" ? "desktop" : "phone"}`;
 const where = (m) => `${Math.round(m.x)}% across, ${Math.round(m.y)}% down`;
-/** Where a mark sits: the part of the screen it landed on when the frame names its parts, with the
- *  position beside it; the position alone when it doesn't. */
-const spot = (m) => (m.section ? `on “${m.section}” (${where(m)})` : where(m));
+/** An area by number and label, and whether this round asks about it (areas.mjs). */
+const areaName = (a) =>
+  `on area ${a.n}${a.label ? `, “${a.label}”` : ""}, ${a.active ? "which this round asks about" : "outlined but not asked about this round"}`;
+/** Where a mark sits: the area it landed in when the frame draws areas, else the part of the screen
+ *  when the frame names its parts, with the position beside it; the position alone otherwise. */
+const spot = (m) =>
+  m.area
+    ? `${areaName(m.area)} (${where(m)})`
+    : m.section
+      ? `on “${m.section}” (${where(m)})`
+      : where(m);
 /** His note in a list item, word for word: a later line is indented, so it stays in the item. */
 const inline = (note) => `“${note.split("\n").join("\n  ")}”`;
 const BEFORE = "(before Claude's problems were shown)";
@@ -182,7 +199,7 @@ export function marksBlock(d, r) {
 /** One mark as a next-round clause: the spot, what he thinks, his note. */
 const clause = (m) =>
   [
-    `${frameName(m)} ${m.section ? spot(m) : `at ${spot(m)}`}`,
+    `${frameName(m)} ${m.area || m.section ? spot(m) : `at ${spot(m)}`}`,
     m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "",
     m.note ? `“${m.note}”` : "",
   ]
@@ -238,21 +255,20 @@ export function cleanShots(d, img) {
         option: "today",
         focus: p.focus,
         ratio: p.ratio,
+        areas: p.areas,
       });
     })
     .join("");
 }
 
 /** A frame with no pins on a design round's own page: a box a tap marks, never a link. With a
- *  round's focus (`focus`, and the picture's `ratio`), it opens cropped to it (focus.mjs). */
-export function markableShot(size, src, alt, { key, option, focus, ratio }) {
-  const f = focusedFrame(
-    `<div class="frame"><img src="${e(src)}" alt="${e(alt)}" loading="lazy"></div>`,
-    focus,
-    ratio,
-  );
+ *  round's focus (`focus`, and the picture's `ratio`), it opens cropped to it (focus.mjs); with
+ *  areas, it draws their outlines and callouts (areas.mjs). */
+export function markableShot(size, src, alt, { key, option, focus, ratio, areas }) {
+  const frame = `<div class="frame"><img src="${e(src)}" alt="${e(alt)}" loading="lazy"></div>`;
+  const f = areas?.length ? arealFrame(frame, areas) : focusedFrame(frame, focus, ratio);
   return (
-    `<div class="shot ${size} markable" data-key="${e(key)}" data-option="${e(option)}" data-frame="${size}"${f.attrs}>` +
+    `<div class="shot ${size} markable${f.cls ?? ""}" data-key="${e(key)}" data-option="${e(option)}" data-frame="${size}"${f.attrs}>` +
     `${f.inner}</div>`
   );
 }
