@@ -5,7 +5,7 @@ Moneypenny's rail (✦), their filings listed on the Profile page's **Feedback**
 (`/app/accounts?section=feedback`; `/feedback` redirects there, #3807 slice 2b) — no GitHub
 account or repo access required. A single server-side bot token files a
 labelled issue on `ejclark/skynet-capital`, so friends and family never need collaborator access to
-the private repo.
+the repo.
 
 **The feature is token-gated.** Until `SKYNET_FEEDBACK_GITHUB_TOKEN` is set the form still renders,
 but a submission returns a friendly "feedback isn't switched on yet" message instead of filing an
@@ -71,20 +71,19 @@ in code — only as a host secret, exactly like the Alpaca keys.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
    issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
-   label, the same retry path already documented in `scripts/moneypenny/index.mjs` (formerly
-   postmaster.mjs). Deliberately routed
-   through this structured, envelope-bound lane rather than the free-form `claude.yml`
+   label, the same retry path already documented in `scripts/moneypenny/index.mjs`. Deliberately
+   routed through this structured, envelope-bound lane rather than the free-form `claude.yml`
    comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
    against the member's own logged filings before anything posts.
 
 ## What the lane will build
 
 **The backlog gate (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
-created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue no longer
-builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
+created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue does not
+build immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 `triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
 — the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
-self-readies and keeps the old near-zero-friction path for the common case. Everything else,
+self-readies, which keeps the near-zero-friction path for the common case. Everything else,
 including anything already `needs-eric`/`needs-info`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
 until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
@@ -98,18 +97,17 @@ session applies it to its own filing. The triage rules for *that* build session 
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
-Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
-brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
-and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
-P/L, leaderboards, or bot cards — is ordinary buildable work.
-
-Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
+What is protected is [`envelope.json`](../envelope.json)'s list, not a paragraph here — run
+`node scripts/envelope-scan.mjs --list` for the live table with reasons. Everything else — including
+anything that merely *renders* trades, P/L, leaderboards, or bot cards, and the risk guards, order
+tickets, playbook definitions and broker clients the file opens on purpose (#928) — is ordinary
+buildable work.
 
 ### The four ways a build session ends
 
-Three of the four cost Eric nothing. That split is the point: `needs-eric` used to be the only
-non-PR exit, so "too big", "unclear what the member meant", and "genuinely his call" all landed in
-one queue — and the third got buried under the first two.
+Three of the four cost Eric nothing. That split is the point: with `needs-eric` as the only
+non-PR exit, "too big", "unclear what the member meant", and "genuinely his call" would all land in
+one queue — and the third would be buried under the first two.
 
 | Outcome | Marker | Waits on |
 | --- | --- | --- |
@@ -120,19 +118,19 @@ one queue — and the third got buried under the first two.
 
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
-`needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
-until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
-comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
-the plan lane's ready-flip uses) claims the lease, clears `needs-info`, and starts a build session
-with that comment as its input. Its first visible act is a comment saying what it understood and
-what happens next, so the thread still reads as a complete record.
+**The reply itself is the trigger** — an answer never sits on the thread waiting for someone to
+notice it and hand-clear the label. A comment from a repo member (`author_association` ∈
+`OWNER`/`MEMBER`/`COLLABORATOR`, the same gate the plan lane's ready-flip uses) claims the lease,
+clears `needs-info`, and starts a build session with that comment as its input. Its first visible
+act is a comment saying what it understood and what happens next, so the thread still reads as a
+complete record.
 
 The board follows along without anyone touching it: clearing `needs-info` and applying
 `in-progress` are the two label events the Orchestration board's Status sync already listens to, so
-the issue moves Blocked → In Progress as the build starts. A reply on an issue that is *also*
+the issue moves Blocked → Building now as the build starts. A reply on an issue that is *also*
 `needs-eric` does **not** resume — one reply answers one question, and the other still waits.
 
-**Slice 2 (#4301): any blocked lane.** The same door now serves `needs-eric` too, and a `plan`
+**Any blocked lane (#4301).** The same door serves `needs-eric` too, and a `plan`
 issue as well as a `feedback` one. The lane is read off the issue's own labels (`feedback` or
 `plan`) — nothing is recorded — and an issue with neither has no lane waiting, so a reply there
 stays a plain comment. A `feedback` reply builds in that run as above; a `plan` reply only takes the
@@ -176,7 +174,8 @@ The bot token can write issues, so the endpoint is protected in depth:
 - **Auth-gated** — behind the session gate, so only invite-only, signed-in members reach it.
 - **Per-email throttle** — max ~5 submissions per 10 minutes, returning a friendly slow-down
   message.
-- **1 MB body cap** — the same `readBody` guard used by `/add`.
+- **8 MB body cap** — `readBody`'s byte guard, sized so screenshots ride the same POST
+  (`SUBMIT_CAP_BYTES` in `src/server/feedback-api-routes.ts`; a follow-up gets 8 KB).
 
 ## Troubleshooting
 
