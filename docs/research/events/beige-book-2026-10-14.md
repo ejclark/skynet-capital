@@ -310,3 +310,90 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-13
 <!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"medium:0+","adjacentIds":["bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-5y-auction-2026-10-14","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-15, day after the release).** Macro-print mode (`symbols: []`) runs no
+`earnings-cycle` / `intraday-edges`; the instrument caches were still busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). The *report* is
+scored from the Board's own edition — `federalreserve.gov/monetarypolicy/beigebook202610-summary.htm`,
+HTTP 200, 88,889 bytes, fetched today, the cutoff-month slug the 09-15 row predicted — and the *tape*
+from Yahoo 5-minute bars fetched today. Both forward tests **pass**; no kill switch fired; stand-aside
+held. No trade was made or implied.
+
+**The cutoff prediction was exactly right again.** Stated verbatim: *"prepared at the Federal Reserve
+Bank of Philadelphia based on information collected on or before October 5, 2026"* — the ~10-05 the
+nine-day convention gave. So this report is blind to CPI 10-14, as written.
+
+| Count | Oct 14 edition | Sep 2 baseline | Read |
+|---|---|---|---|
+| **Activity** | 2 moderate · 3 modest · 4 slight = **9** growing; **3** no change | 10 of 12; 2 no change | softer |
+| **Labor** | 3 modest + 5 slight = **8** with gains; **4** no change | 7 gains / 5 no change | marginally better |
+| **Wages** | 5 moderate · 4 modest · 2 slight | not tallied | — |
+| **Prices** | **3 robust** · 8 moderate · 1 modest | 8 moderate · 2 modest · 1 slight · 1 robust | **robust 1 → 3** |
+| **Price pace** | picked up in **4** Districts; no slower-pace count given | same 8 · decreased 3 · increased 1 | net firming (was net cooling) |
+
+Verbatim on prices: *"Higher oil prices permeated all District reports. Firms reported elevated diesel
+prices and noted that fuel surcharges were passing on increased costs throughout the supply chain."*
+The three robust Districts are Cleveland (*"selling prices grew robustly"*), St. Louis (*"Prices have
+risen at a robust pace"*) and Dallas (*"price growth was strong"*). Activity leaned on manufacturing
+(Dallas led); five Districts said firms had cut staffing by attrition, delayed hiring or expected less
+job creation after investing in AI — a new line worth the AI-infra sleeve's attention, not a layoff
+signal and not scored here.
+
+**FT-1 — pass.** Three robust/strong Districts against a bar of two (09-02: one; 07-15: two). The
+first Beige Book whose books shut wholly inside the $100+ Brent regime (one sub-$100 close, 09-22)
+firmed its price tally, and the summary names oil and diesel as the common thread. Disclosed limits:
+n=1; the summary does not publish a "decreased" count, so the secondary read is met by absence; and a
+rotating preparer's framing moves between editions — this proves the channel *showed up once*, not that
+it is stable. The upside kill switch (**four or more** robust/strong) did not fire at three.
+
+**FT-2 — pass, and the true case.** SPY, Yahoo 5-minute bars, 2026-10-14 ET:
+
+| Hour | 9:30 (partial) | 10:00 | 11:00 | 12:00 | 13:00 | **14:00 (release)** | 15:00 |
+|---|---|---|---|---|---|---|---|
+| SPY open→close | −0.208% | **−0.101%** | −0.227% | −0.068% | −0.362% | **+0.024%** | +0.250% |
+
+The release hour's absolute move (0.024%) is below the CPI-digestion hour's (0.101%), and it is the
+**smallest of the seven regular hours** (09-02: 5th of 7). The morning was not degenerate, which was the
+test's own stated trap: 08:30 CPI gapped SPY **−0.401%** (778.04 → 774.92), the 10:00 hour ranged
+0.277%, and the session closed **−1.085%** (VIX 15.27 → 16.87). The first 5-minute bar at 14:00 was
++0.004%; the hour's largest bar (+0.103%) came at 14:10, ten minutes after the release, and the next
+bar gave back 0.006%. **The loudest hour of the day, 13:00 (−0.362%, VIX +5.4% in that hour), came
+*before* the release** — nothing on the page attributes it to this report, and none is claimed.
+
+**What did not carry over, stated rather than buried.** FT-2 is an equity test and it passed; the
+09-02 *rates* baseline did not repeat. TLT's release hour was **+0.18%** (4th of 7 hours; 09-02:
+−0.024%) and ^TNX **−1.8bp** (mid-pack of six hours, −3.6 to −0.8bp) on a day TLT closed +0.69%, so
+"the release hour is not a mover" is now **measured twice for equities and once-clean-once-not for
+rates**. A bid already running through the afternoon cannot be separated from the report with
+5-minute bars; leg 5 is *supported for SPY, undetermined for rates*.
+
+**The tape around it (NEWS:, secondary — BLS 403'd plain fetch; the CPI ledger owns the scoring).**
+Press wraps of 10-14 put September CPI at **+0.6% m/m / 3.7% y/y** and core **+0.3% / 2.6%** against
+~0.2% / 2.5% expected, the S&P 500 at **−1.11%**, the Nasdaq at **−1.88%**, and a chip-index drop of
+about 4.3% — a hot-CPI, AI-selloff session. The wraps readable here (Asia Business Daily; search
+summaries) do not name the Beige Book as a driver; two others (TheStreet 403, Detroit News 402) could
+not be fetched, so that is a partial read, not a clean absence.
+
+**Scoring the stance.** Stand aside was right on its stated mechanism: the report firmed prices as
+the energy call said, and the tape did not move on it. Kill switches against the 09-02 baseline: robust
+count **3** (neither <2 nor ≥4), employment gains **8** (not ≤3), release hour smaller than the CPI hour
+(the falsifier did not fire), date held. The 09-02 conclusion — *read the District reports, not the
+two national counts* — held: the national summary's own price sentence needed Cleveland, St. Louis and
+Dallas to be read as districts.
+
+**A finding for another event's owner (not edited here).** The sibling forward test
+`FT-beige-book-2027-05-26-2` predicts the preparing Bank from an "unbroken 18-edition" cycle and names
+**Atlanta** for 2026-10-14. The edition was prepared at **Philadelphia**. That is a miss on the
+prediction's first step, and its 2027-05-26 → Dallas projection rests on the same cycle — its owner
+should score it at its own date; this lane touches only its own fragment.
+
+**Verdict.** Informative, mostly inert: it verified its cutoff to the day, firmed the price count the
+way the energy thesis said, and did not move the equity tape in its release hour on a day the market
+fell 1.1% around it. Neither call earned a position and none was warranted. The price tally's 1 → 3
+robust and net-firming pace, and the new AI-staffing line, pass to the 11-25 edition's baseline. This
+doc goes quiet.
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"medium:0+","adjacentIds":["bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-5y-auction-2026-10-14","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
