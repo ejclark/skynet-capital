@@ -296,3 +296,54 @@ goes quiet.
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-16, D+1 — inside the `closeOutWithinDays: 6` window).** A sector print with no
+instrument attached (`symbols: []` by design), so `earnings-cycle`/`intraday-edges` have no target;
+the cache was busted first anyway. Inputs, all fetched direct today: EIA's weekly-history downloads
+(`WPULEUS3w.xls`, `WCESTUS1w.xls`, `WDISTUS1w.xls`, `WGTSTUS1w.xls`, all HTTP 200, parsed with `xlrd`),
+WPSR Tables 4 and 9 as CSV (`ir.eia.gov/wpsr/table{4,9}.csv`, HTTP 200, both headed week ending
+**10/9/26**), and Yahoo daily and 5-minute bars for `CL=F`, `BZ=F`, `^VIX`. The report for the week
+ending **2026-10-09** published; the schedule row (`Thursday 12:00 p.m.`) is the estimate-labelled
+date this ledger carried, and nothing in the data contradicts it.
+
+**Verdict: the utilization direction call passes by its letter but not its spirit, and the
+"print is not the price-setter" call is killed by its letter — with an intraday tell that it was
+right in substance.**
+
+### Forward tests scored
+
+| Test | Registered | Result | Verdict |
+|---|---|---|---|
+| `FT-eia-weekly-petroleum-status-2026-10-15-1` (turnaround keeps deepening) | Utilization **< 94.0%** for the week ending 10-09 | EIA Table 9: **93.5%** (prior 92.7, then 92.5; 2025 same week 85.7). Path 97.8 → 96.8 → 94.0 → 92.5 → 92.7 → **93.5** | **PASS** on the registered line, by 0.5pt. Flagged: the decline **troughed at 92.5 (wk ending 09-25) and has rebounded two weeks running**, so "continued decline" is not what happened; only the sub-94.0 level held. The 10-07 narrowed band (86.8-90.7) and even the original band top (93.0) were too low; kill 2 (< 86.7) did not fire |
+| `FT-eia-weekly-petroleum-status-2026-10-15-2` (print not the price-setter, observation #3) | Commercial-crude sign **does not match** WTI close-to-close sign | EIA Table 4: commercial crude ex-SPR **415.577 Mbbl, -8.557 w/w — a DRAW** (Cushing +1.862; Gulf Coast -9.239). `CL=F` closed **97.97** on 10-15 vs **95.09** on 10-14 (**+3.0%**). Draw + WTI up is a **matched** pair | **KILL** — the registered sign rule fires |
+
+**Reading the kill honestly.** The sign test is mechanical and it fired, so the row is a kill and not
+a void. The tape says the print was still not the cause: `CL=F` 5-minute bars on 10-15 read **93.61**
+at 08:30 ET (the CPI-day data cluster) and **96.29** by 11:55 — most of the day's rally was already
+in before the 12:00 release — then **96.30** at 12:00, **96.55** at 12:10 and **96.52** at 13:00, a
+move of about +0.3% across the print itself. The sign rule is a coarse instrument: it credits the
+print with whatever the full session did. What the three observations in this series (09-16 pass,
+09-30 pass, 10-15 kill) now support: the print is *rarely* the price-setter, not *never*, and a
+sign-match on a rally that began before 12:00 is a coincidence of sign, not a reaction. Not re-scored
+on intraday data — the registered cell stays a kill.
+
+### What else the data says (descriptive, not a forward test)
+
+- **Crude -8.6 mb draw is large** in a week utilization rose and refiner crude inputs ticked up to
+  16.6 mb/d, so the draw is not a refinery-throughput story (its cause is not in the tables read here). Distillate **102.611 mb
+  (-2.527 w/w, -12.3% y/y)** drew again — the 0/10-builds seasonal from the initial research held.
+- **SPR flat at about 283.0 mb** (total incl. SPR 1,506.999 less ex-SPR 1,224.016 = 282.983, same as the
+  prior week): the G7/IEA 100 mb release has not reached the weekly SPR line yet.
+- **The Saudi hook reversed.** Brent (`BZ=F`) read **105.92** on 10-15, not the ~96-97 the initial
+  research cited and not the ~100 of the 10-07 row — the "mostly-deflated premium" framing did not
+  hold into the print. `saudi-east-west-pipeline-repair-window-close-2026-10-15` carries that thread.
+- **Context:** VIX 16.46 (10-15 close; 10-14 16.87); WTI 97.97. The stance was stand-aside with no
+  energy exposure, so no P&L attaches to either result.
+
+Both registered forward tests are now scored. Per this lane's contract this ledger goes quiet — there
+is no `forward-test-due` door back in for this event.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

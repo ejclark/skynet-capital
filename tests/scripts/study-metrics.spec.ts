@@ -3,6 +3,7 @@ import type { Action, Container, Tap, TraceRecord, View } from "../../scripts/st
 import {
   actionFindings,
   actionRefusal,
+  changeKind,
   displacement,
   landingScreens,
   lateScroll,
@@ -178,6 +179,57 @@ describe("involuntary scroll", () => {
       { scroll: { before: 0, after: 0, intended: null, samples: [], drift: null } },
     );
     expect(lateScroll(reset)).toBe(0);
+  });
+});
+
+describe("changeKind — a recorder line says what the tap changed (#5218)", () => {
+  const tapTo = (from: Partial<View>, to: Partial<View>) =>
+    rec({ kind: "tap", x: 50, y: 216 }, { tap: tapOn("All accounts"), from, to });
+
+  it("names an account switch, even when it clears other params with it", () => {
+    const r = tapTo({ search: "?account=7&card=x", scrollY: 563 }, { search: "", scrollY: 0 });
+    expect(changeKind(r)).toEqual({ kind: "account", params: ["account", "card"] });
+    const line = actionFindings(r).find((f) => f.kind === "involuntary-scroll")?.what;
+    expect(line).toBe(
+      'tapping "All accounts" (an account switch: account, card) scrolled the page 563px on its own (563 → 0)',
+    );
+  });
+  it("tells a section switch from a filter change, and both from a move to another page", () => {
+    expect(changeKind(tapTo({ search: "?section=a" }, { search: "?section=b" }))?.kind).toBe(
+      "section",
+    );
+    expect(changeKind(tapTo({ search: "?chapter=a" }, { search: "" }))?.kind).toBe("section");
+    expect(changeKind(tapTo({ search: "" }, { search: "?lens=held" }))).toEqual({
+      kind: "filter",
+      params: ["lens"],
+    });
+    expect(changeKind(tapTo({}, { pathname: "/app/other" }))?.kind).toBe("navigation");
+  });
+  it("reads an older trace's section when it has no search, and says when only the page changed", () => {
+    expect(changeKind(tapTo({ section: "a" }, { section: "b" }))?.kind).toBe("section");
+    expect(changeKind(tapTo({}, {}))).toEqual({ kind: "in-page", params: [] });
+    expect(changeKind(tapTo({}, { textHash: "aaaa" }))).toBeNull();
+  });
+  it("adds the kind to the shift and displacement lines, never to a scroll action's", () => {
+    const shifted = rec(
+      { kind: "tap", x: 50, y: 216 },
+      {
+        tap: tapOn("Held"),
+        from: { search: "" },
+        to: { search: "?lens=held" },
+        shifts: [{ value: 0.2, hadRecentInput: false, t: 0 }],
+      },
+    );
+    expect(actionFindings(shifted).find((f) => f.kind === "layout-shift")?.what).toMatch(
+      /after tapping "Held" \(a filter change: lens\)$/,
+    );
+    const scrolled = rec(
+      { kind: "scroll", dir: "down", screens: 1 },
+      { to: { scrollY: 0 }, scroll: { before: 0, after: 0, intended: H, samples: [{ y: H }] } },
+    );
+    expect(actionFindings(scrolled).find((f) => f.kind === "involuntary-scroll")?.what).toBe(
+      `scroll scrolled the page ${H}px on its own (0 → 0)`,
+    );
   });
 });
 

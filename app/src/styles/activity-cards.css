@@ -1,19 +1,30 @@
-/* The phone's Activity, one card an order under day headers (#5101; `activity-cards.tsx`). Line 1 is
-   what happened with the cash it moved on the right; line 2 is the bet with what it booked on the
-   right. Every card spans the same width, so the right-hand figures share one edge down the list,
-   in tabular digits, and the word sits before each number ("received +$255") so the digits align. */
+/* The phone's Ledger, one card an entry under day headers (#5101; the receipt, #5317 —
+   `activity-cards.tsx`). A card is its legs: each leg is what happened with its signed cash on the
+   right, then its contract or price on a quieter line; an order the close closed is muted; a round
+   trip ends on a dashed rule and its total. Every card spans the same width, so the right-hand
+   figures share one edge down the list, in tabular digits. */
 
 .act-cards {
   display: grid;
   gap: 16px;
 }
 .act-day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0 0 6px 2px;
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--muted);
+}
+/* The day divider (#5317): the day at the left, a thin line running on from it — the entries sit
+   under it. The line is decoration; the words carry the day. */
+.act-day-head::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
 }
 .act-day-list {
   display: grid;
@@ -41,13 +52,10 @@
   background: color-mix(in oklab, var(--accent) 14%, var(--surface));
 }
 
-/* The two lines are one 44px+ button: the whole card opens, not a chevron beside it. */
+/* The legs and the total are one 44px+ button: the whole card opens, not a chevron beside it. */
 .act-card-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 10px;
-  row-gap: 5px;
-  align-items: baseline;
+  row-gap: 8px;
   box-sizing: border-box;
   width: 100%;
   min-height: 44px;
@@ -119,37 +127,90 @@
   color: var(--neg);
 }
 
-.act-bet {
-  grid-area: 2 / 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
+/* One leg, two lines: what happened · its cash, then its contract or price (and the outcome when
+   the card has no last line). */
+.act-leg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: baseline;
+}
+.act-sub {
+  grid-column: 1;
   min-width: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.act-leg-row > .act-cash {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+/* An order the close closed: the same two lines, quieter — the name loses its weight and the
+   words their full ink, so the close above reads first. */
+.act-leg-row[data-opened] .act-what,
+.act-leg-row[data-opened] .act-cash {
+  color: var(--muted);
+}
+.act-leg-row[data-opened] .act-inst {
+  font-weight: 400;
+}
+/* A round trip's total, under a dashed rule — a shape, never a tone. */
+.act-total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: baseline;
+  padding-top: 7px;
+  border-top: 1px dashed var(--border);
   font-size: 13px;
 }
-.act-bet-words {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.act-total-name {
+  font-weight: 700;
 }
+.act-outcome {
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.act-outcome b {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.act-outcome b.tone-pos {
+  color: var(--pos);
+}
+.act-outcome b.tone-neg {
+  color: var(--neg);
+}
+.act-leg-row > .act-outcome {
+  grid-column: 2;
+}
+/* The card's last line, outside its button so the playbook can be a link: the playbook, and a
+   single order's standing on the right. */
+.act-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  padding: 0 14px 11px;
+  font-size: 12px;
+}
+
+/* The bet's shape, in the deep dive's title (`order-deep-dive.tsx`) — the list no longer draws it. */
 .bet-glyph {
   flex: none;
   color: var(--accent);
-}
-.act-playbook {
-  padding: 0 6px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.act-status {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
 }
 
 /* A spread's legs, under its two lines and always on screen: side, contract, its own dollars. */

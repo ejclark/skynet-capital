@@ -13,6 +13,7 @@ import {
 import { fetchOptionPositions } from "../live/options";
 import { MARK_KINDS, MARK_TOKEN, MARK_WORD } from "../live/position-mark";
 import { rowCallOf } from "../live/row-call";
+import { FilterChip } from "../ui";
 import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
@@ -102,24 +103,17 @@ export function PositionsFilterBar({
         </span>
       </div>
       <div className="filter-chips">
-        <button
-          type="button"
-          className="filter-chip"
-          aria-pressed={noChip}
-          onClick={() => onChange(clearChips(query))}
-        >
+        <FilterChip pressed={noChip} onPress={() => onChange(clearChips(query))}>
           All
-        </button>
+        </FilterChip>
         {POSITION_CHIPS.map(([qualifier, label]) => (
-          <button
+          <FilterChip
             key={qualifier}
-            type="button"
-            className="filter-chip"
-            aria-pressed={tokens.includes(qualifier)}
-            onClick={() => onChange(toggleQualifier(query, qualifier))}
+            pressed={tokens.includes(qualifier)}
+            onPress={() => onChange(toggleQualifier(query, qualifier))}
           >
             {label}
-          </button>
+          </FilterChip>
         ))}
       </div>
     </div>

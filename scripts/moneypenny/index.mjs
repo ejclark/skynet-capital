@@ -61,6 +61,7 @@ import {
   readInFlight,
   readOpenIssues,
   readOpenPlans,
+  recheckPullable,
   waitingPlans,
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
@@ -83,6 +84,7 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
   ensureLabel,
   ensureVocabulary,
+  inFeedbackLane,
   issueNumberFromSlug,
   LABELS,
   labelNames,
@@ -295,7 +297,8 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  * Triggered on the `ready` label now, not `feedback` (#3818 consolidation, 2026-09-28) — see
  * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
  * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
- * being present rather than trusting the workflow's cheap `if:` alone.
+ * being present rather than trusting the workflow's cheap `if:` alone — or `bug` (#5332,
+ * `inFeedbackLane`), which takes `feedback` on a win (`adoptFeedbackLabel`).
  *
  * #3960: also runs on an `unlabeled` event that clears the last parking label from a still-`ready`
  * issue (`feedbackReadyIntent`), and asks the admission gate (admission.mjs) before the lease — a
@@ -320,6 +323,12 @@ export function claimFeedback(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  // #5266 — the payload predates any link added after `ready`; ask the pull rule on a fresh read.
+  const stale = recheckPullable(issue, admission.readIssue);
+  if (stale) {
+    console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
+    return { claimed: false, reason: stale };
+  }
   // #3960 — the work spigot, the in-flight cap and the surface fence, BEFORE any lease is taken.
   const gate = gateAdmission(issue, admission);
   if (!gate.admit) return { claimed: false, reason: gate.reason };
@@ -334,8 +343,26 @@ export function claimFeedback(
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
   // #3960: the board's In Progress column reads this label; the release path takes it back off.
   setInProgress(issue.number, true);
+  adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * A `bug` the lane claimed without `feedback` takes it here (#5332). The shipped sweep, the reply
+ * resume (`laneOf`) and `feedback-scan` all key on `feedback`, so one label write keeps every
+ * downstream reader unchanged — instead of each learning `bug` and the sweep paying a second
+ * GraphQL list per push. Best-effort like `setInProgress`: the lease already made the claim safe.
+ */
+function adoptFeedbackLabel(issue) {
+  if (labelNames(issue.labels).includes(LABELS.feedback.name)) return;
+  try {
+    sh("gh", ["issue", "edit", String(issue.number), "--add-label", LABELS.feedback.name]);
+  } catch (err) {
+    console.log(
+      `::warning::could not add \`${LABELS.feedback.name}\` to bug #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+  }
 }
 
 /**
@@ -572,6 +599,13 @@ export function checkCallout(ctx, deps = {}) {
  * no-op, never a second build. WHO may say ready is the workflow's job (`moneypenny-events.yml`'s `if:`,
  * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
  * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
+ *
+ * A REFUSED COMMENT-FLIP IS RECORDED AS THE LABEL (#5334). The retry sweep reads only `ready`
+ * issues, and a comment-flip carries no label — so a flip that admission queued (cap, work-mode)
+ * or that open blockers held back used to be dropped until someone re-posted it (#5281). Both
+ * refusals now apply `ready` before returning, as `unpark` does for a reply: the label records the
+ * go the comment already gave, the board shows it in Ready, and the sweep claims it once admitted
+ * (blockers honoured by `notPullableReason`). A parked or `in-progress` plan is never labelled.
  */
 export function claimPlan(
   ctx,
@@ -579,16 +613,21 @@ export function claimPlan(
   sha = process.env.GITHUB_SHA ?? "",
   admission = {},
 ) {
+  const edit = admission.edit ?? editLabels;
   const intent = planReadyIntent(ctx);
   if (!intent.ready) {
     console.log(`::notice::not building a plan issue — ${intent.reason}`);
+    if (intent.blocked) recordPlanFlip(ctx, intent.issue, edit);
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
   // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
   // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
   const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });
-  if (!gate.admit) return { claimed: false, reason: gate.reason };
+  if (!gate.admit) {
+    recordPlanFlip(ctx, issue, edit);
+    return { claimed: false, reason: gate.reason };
+  }
   const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
@@ -607,6 +646,20 @@ export function claimPlan(
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * `ready` on a plan whose comment-flip was refused (#5334, see `claimPlan`). Only for the comment
+ * door — a label event already carries the label — and only when the issue lacks it, so a re-posted
+ * flip writes nothing. Best-effort, `unpark`'s doctrine.
+ */
+function recordPlanFlip(ctx, issue, edit) {
+  if (!ctx.payload?.comment || labelNames(issue.labels).includes(LABELS.ready.name)) return;
+  if (edit(issue.number, ["--add-label", LABELS.ready.name])) {
+    console.log(
+      `::notice::plan #${issue.number} — refused flip recorded as \`ready\` for the sweep`,
+    );
+  }
 }
 
 /**
@@ -636,11 +689,7 @@ export function peekNext(deps = {}) {
     continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
@@ -667,11 +716,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   } = deps;
   const mode = readMode();
   const inFlight = inFlightOf();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  let pool = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  let pool = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
   // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
   const { openPlans, waiting } = waitingOrSkip(readPlans);
@@ -735,6 +780,9 @@ function waitingOrSkip(readPlans) {
     return { openPlans: undefined, waiting: undefined };
   }
 }
+
+/** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */
+const inALane = (i) => labelNames(i.labels).includes(LABELS.plan.name) || inFeedbackLane(i);
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;

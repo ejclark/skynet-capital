@@ -9,8 +9,8 @@
   max-width: var(--col-wide);
   min-width: 0;
 }
-/* The range selector — the same `.railctl` chip idiom as the chart studies, but single-select
-   (aria-pressed on exactly one at a time, not "any number on"). */
+/* The range selector — a chip row like the chart studies' `FilterChip`s, but single-select
+   (aria-pressed on exactly one at a time, not "any number on"), so it is not one of them. */
 .hero-chart-range {
   display: flex;
   flex-wrap: wrap;

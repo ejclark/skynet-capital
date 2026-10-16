@@ -13,7 +13,9 @@ import {
   submitOption,
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
+import { InlineResult } from "../ui";
 import { optionCloseWords } from "./close-panel";
+import { land } from "./landing";
 import { RollRow } from "./roll-row";
 
 /**
@@ -162,11 +164,17 @@ function CloseRow({
   useEffect(() => {
     if (!focus) return;
     // Next frame: on the docked bench the pane's own scroll-to-pane effect (a parent effect, so
-    // it runs after this one) would otherwise win, leaving the member at the pane's top.
-    const frame = requestAnimationFrame(() =>
-      rowRef.current?.scrollIntoView?.({ block: "center" }),
-    );
-    return () => cancelAnimationFrame(frame);
+    // it runs after this one) would otherwise win, leaving the member at the pane's top. Then
+    // `land` keeps the row centred while the ticket and chart above it finish loading: the row can
+    // render before them, and a single scroll left it pushed off screen below them (#5216).
+    let undo: (() => void) | undefined;
+    const frame = requestAnimationFrame(() => {
+      if (rowRef.current) undo = land(rowRef.current);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      undo?.();
+    };
   }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
@@ -288,21 +296,27 @@ function CloseRow({
                 : ""}
             </button>
           ) : (
-            <span className="tkt-close-note gate-refusal">✕ {state.preview.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.preview.refusals[0]}
+            </InlineResult>
           )
         ) : null}
         {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
         {state.step === "done" ? (
           state.result.ok ? (
-            <span className="tkt-close-note gate-ok">
+            <InlineResult as="span" tone="ok" className="tkt-close-note">
               order {state.result.orderId} {state.result.status}
-            </span>
+            </InlineResult>
           ) : (
-            <span className="tkt-close-note gate-refusal">✕ {state.result.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.result.refusals[0]}
+            </InlineResult>
           )
         ) : null}
         {state.step === "error" ? (
-          <span className="tkt-close-note gate-refusal">{state.message}</span>
+          <InlineResult as="span" tone="err" className="tkt-close-note">
+            {state.message}
+          </InlineResult>
         ) : null}
         <button
           type="button"
@@ -360,7 +374,7 @@ export function OptionPositionsCard({
       <h2 className="panel-title">Option positions</h2>
       <p className="panel-sub">
         Held contracts on this account — Close reviews first, and works out the direction from the
-        live holding.
+        contracts you hold now.
       </p>
       <div className="tkt-close-rows">
         {held.map((position) => (

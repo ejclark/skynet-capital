@@ -132,6 +132,13 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { conviction }))).toBe(false);
   });
 
+  it("counts a pointer at a record that steers the pair as stated (#5482 slice 2), and no other", () => {
+    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "ai-dip-2026-10" }))).toBe(
+      false,
+    );
+    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "no-such-view" }))).toBe(true);
+  });
+
   it("is quiet for a house ✓ pair, a paused subscription, and an id that is no pair", () => {
     expect(isConvictionNotStated(sub("S1-NVDA"))).toBe(false);
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { enabled: false }))).toBe(false);

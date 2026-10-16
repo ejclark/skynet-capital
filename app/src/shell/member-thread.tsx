@@ -1,5 +1,6 @@
 import type { FormEvent, ReactElement, ReactNode } from "react";
 import { useId, useState } from "react";
+import { InlineResult } from "../ui";
 
 /**
  * A THREAD OF MEMBER WORDS UNDER SOMETHING ANOTHER MEMBER POSTED — the shared parts of the two
@@ -106,7 +107,7 @@ export function ThreadRow({
           {armed ? "Tap again to delete" : "Delete"}
         </button>
       ) : null}
-      {note ? <p className="set-err">{note}</p> : null}
+      {note ? <InlineResult tone="err">{note}</InlineResult> : null}
     </li>
   );
 }
@@ -171,7 +172,7 @@ export function ThreadCompose({
       >
         {busy ? busyWord : submitWord}
       </button>
-      {note ? <p className="set-err">{note}</p> : null}
+      {note ? <InlineResult tone="err">{note}</InlineResult> : null}
     </form>
   );
 }

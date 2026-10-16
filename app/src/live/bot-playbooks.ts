@@ -1,7 +1,7 @@
 /**
  * ONE CARD PER PLAYBOOK (#5073, R2 slice 1 of #5037's playbooks round). The Heartbeat section drew
  * the same playbooks twice — the roll call (can it fire?) and the verdict table (what did it
- * conclude?) — so HC-SAURON could read "⊘ Can't fire" in one list and "trading on live signals" in
+ * conclude?) — so a playbook could read "⊘ Can't fire" in one list and "trading on live signals" in
  * the other. Both lists already arrive in one `/heartbeat` payload; this is the pure join that
  * turns them into one card each, with one state word, and the counted line that heads them.
  *

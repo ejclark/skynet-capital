@@ -2,6 +2,7 @@
 // tight dashed box, Eric's quote in a callout with a short leader, an "illustrative values" tag:
 //
 //   node scripts/redesign/pin.mjs --frame <jpg> --pins <json> --out <jpg> [--scheme dark|light] [--scale 2]
+//   node scripts/redesign/pin.mjs --pins <json> --emit-manifest-pins   # the manifest's `pins`, printed
 //
 // pins JSON (every x, y, w, h is % of the frame):
 //   { "pins": [{ "x": 50, "y": 12, "n": 1, "label": "Cash hides here", "side": "right",
@@ -18,16 +19,31 @@
 //
 // The frame is a shoot.mjs picture at 2x (--scale), so it is drawn at its CSS size and shot back
 // at the same pixels. The scheme follows the frame's own brightness unless --scheme says.
+//
+// ONE PINS FILE, TWO READERS (#5143): the round page puts a 👍 / 👎 / ☯︎ reaction button on each
+// badge, so the manifest names the same pins — `"pins": "<this pins file>"` on the option (or
+// `pinsDesk` for the desktop frame), read as-is, with no second copy to keep in sync.
+// `--emit-manifest-pins` checks the file and prints the list the page will place (n and side
+// filled as drawn), for a manifest that wants it inline.
 
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
-import { imageSize, layoutProblems, PALETTE, paletteProblems, readPins } from "./pin-rules.mjs";
+import {
+  imageSize,
+  layoutProblems,
+  manifestPins,
+  PALETTE,
+  paletteProblems,
+  readPins,
+} from "./pin-rules.mjs";
 
 const CEILING = 200 * 1024;
 const USAGE =
-  "usage: node scripts/redesign/pin.mjs --frame <jpg> --pins <json> --out <jpg> [--scheme dark|light] [--scale 2]";
+  "usage: node scripts/redesign/pin.mjs --frame <jpg> --pins <json> --out <jpg> [--scheme dark|light] [--scale 2]\n" +
+  "       node scripts/redesign/pin.mjs --pins <json> --emit-manifest-pins";
+const EMIT = "--emit-manifest-pins";
 
 const CSS = `
 html,body{margin:0;background:#000}#f{position:relative;overflow:hidden}#f>img{display:block;width:100%;height:100%}
@@ -44,8 +60,9 @@ html,body{margin:0;background:#000}#f{position:relative;overflow:hidden}#f>img{d
 svg{position:absolute;left:0;top:0;overflow:visible}svg path{fill:none;stroke:var(--accent);stroke-width:1.75}
 svg circle{fill:var(--accent)}`;
 
-function args(argv) {
-  const out = { scale: 2 };
+function args(all) {
+  const argv = all.filter((a) => a !== EMIT);
+  const out = { scale: 2, emit: argv.length !== all.length };
   for (let i = 0; i < argv.length; i += 2) {
     const key = {
       "--frame": "frame",
@@ -56,6 +73,10 @@ function args(argv) {
     }[argv[i]];
     if (!key || argv[i + 1] === undefined) throw new Error(USAGE);
     out[key] = key === "scale" ? Number(argv[i + 1]) : argv[i + 1];
+  }
+  if (out.emit) {
+    if (!out.pins) throw new Error(USAGE);
+    return out;
   }
   if (!(out.frame && out.pins && out.out)) throw new Error(USAGE);
   if (out.scheme && !PALETTE[out.scheme]) throw new Error("pin: --scheme is dark or light");
@@ -162,6 +183,10 @@ async function main() {
   const { pins, quote, tag, problems } = readPins(JSON.parse(readFileSync(opt.pins, "utf8")));
   problems.push(...paletteProblems());
   if (problems.length > 0) throw new Error(problems.join("\n"));
+  if (opt.emit) {
+    console.log(JSON.stringify(manifestPins(pins), null, 2));
+    return;
+  }
   const bytes = readFileSync(opt.frame);
   const px = imageSize(bytes);
   const W = Math.round(px.width / opt.scale);

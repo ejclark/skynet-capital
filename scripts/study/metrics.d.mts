@@ -141,6 +141,10 @@ export function landingScreens(
   innerHeight: number,
 ): number | null;
 export function noVisibleEffect(rec: TraceRecord): boolean;
+export type ChangeKind = "navigation" | "account" | "section" | "filter" | "in-page";
+export function changeKind(
+  rec: Pick<TraceRecord, "before" | "after">,
+): { kind: ChangeKind; params: string[] } | null;
 export function actionFindings(rec: TraceRecord): Finding[];
 export function lostness(v: { unique: number; total: number; optimal?: number }): number | null;
 export function matchesTarget(

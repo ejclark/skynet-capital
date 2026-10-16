@@ -324,6 +324,19 @@ const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocke
 export const pullable = (issue) => notPullableReason(issue) === null;
 
 /**
+ * WHICH ISSUES THE FEEDBACK LANE BUILDS (#5332): `feedback`, and a `bug` that is not a `plan`.
+ * CLAUDE.md files a mid-build bug `bug` + `fast-track` and says it is "pulled next", but both lane
+ * picks looked only for `plan` and `feedback`, so #5164/#5165/#5175/#5266 sat ready 2–3 days until
+ * someone hand-added `feedback`. A `bug` + `plan` stays the plan lane's — both claim steps run on
+ * one `ready` event, so letting each lane see it would start two builds.
+ */
+export function inFeedbackLane(issue) {
+  const names = labelNames(issue?.labels);
+  if (names.includes(LABELS.feedback.name)) return true;
+  return names.includes(LABELS.bug.name) && !names.includes(LABELS.plan.name);
+}
+
+/**
  * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →
  * null. The release paths (`--release <slug>`, the `release-claim` dispatch) only carry the slug,
  * and they are the ones that must take `in-progress` back off (#3960).

@@ -1,8 +1,9 @@
 // Visual harness for the Onboarding chapter of the Profile page's Milestones
 // (/app/accounts?section=milestones&chapter=onboarding, once /app/onboarding, #3807 slice 2b) — milestone M·01 from the REAL built shell (app/dist) over a
-// stub API, four frames: a brand-new member (the five-step guide as accordions, step 1 open), the
-// same member with step 5 opened (the connect form inside it), Moneypenny's rail open with her
-// intro (the whole shell pushed left), and a connected member (step 1 done, steps 2–3 waiting).
+// stub API, five frames: a brand-new member at 390 first (phone-first; steps lead, steps 2–3 held as
+// one line each, the milestones list folded below — #5256), the same at 1280, the member with step 5
+// opened (the connect form inside it), Moneypenny's rail open with her intro from step 2's held line
+// (the whole shell pushed left), and a connected member (step 1 done, steps 2–3 open in full).
 // JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
 // Usage: npm run build --prefix app && npm run shoot:onboarding [outdir]
@@ -87,8 +88,9 @@ const feedbackIndex = {
 };
 const playbooks = { linked: true, unlocked: 0, total: 4 };
 // The chapter now sits under the Milestones table of contents, which reads the whole journey.
+// `linked` follows the state below: no account until the connect lands.
 const journey = {
-  linked: true,
+  linked: false,
   rank: "Observer",
   points: 0,
   totalPoints: 295,
@@ -111,15 +113,21 @@ const { page, origin, shoot, close } = await openShell({
     // The head reads the owned accounts: none until the connect lands, then Uncle Joe's.
     "/api/settings": () => profileStubs(state === fresh ? [] : [JOE])["/api/settings"],
     "/api/accounts/networth": profileStubs([JOE])["/api/accounts/networth"],
+    // The connected frame's tower column reads Uncle Joe's desk; an unstubbed `{}` broke that frame.
+    "/api/desk/*": { desk: { id: "human-joe", name: "Uncle Joe", kind: "human", positions: [] } },
     "/api/join": joinIndex,
     "/api/feedback": feedbackIndex,
     "/api/playbooks": playbooks,
-    "/api/learn": journey,
+    "/api/learn": () => ({ ...journey, linked: state !== fresh }),
   },
 });
 
+// phone first (CLAUDE.md, mobile-first): the 390 frame is the one a member-surface PR opens with
+await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
+await shoot("onboarding-fresh-390");
+await page.setViewportSize({ width: 1280, height: 1100 });
 await shoot("onboarding-fresh");
 
 // step 5 opened — the connect form lives inside it; steps 1 and 5 stay open together
@@ -130,9 +138,9 @@ await page
   .scrollIntoViewIfNeeded();
 await shoot("onboarding-step5-form");
 
-// Moneypenny's rail — step 2's button opens it with her intro; the whole shell moves left
+// Moneypenny's rail — step 2's held line still opens it with her intro (ordered, never locked)
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
-await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
+await page.getByRole("button", { name: "Say hello now ›" }).click();
 await page.getByText(/isn't connected yet/).waitFor();
 await page.getByLabel("Message Moneypenny").fill("yes");
 await page.keyboard.press("Enter");

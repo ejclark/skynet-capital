@@ -86,9 +86,23 @@ influence playbooks to consider, strategies to try, decisions to execute."*
   data points to make an informed decision; the fork erodes into a clear/linear path."*
 - **Wants freshness stated** (2026-09-25, on guidance): *"a sanity/pulse check against live
   information sources to ensure we're not acting on cached/stale information."*
+- **Attention: easily distracted** (2026-10-14): *"I feel I have A.D.H.D. and am easily distracted
+  thus will tend to prefer simple and elegant design that is free of distraction making it easier
+  to remain focused and on task."* A page that shows only the task's part keeps him on it; one that
+  shows everything invites feedback on what isn't in play (*"it's easy to spend time giving feedback
+  on things out of scope for the task at hand"*).
 - **Reads first:** the picture, the standing, what needs him. **Skips:** a wall of text, a menu of
   coined names (2026-09-25: *"another cute word you keep using that i've told you to stop because
   it's confusing"*), a mechanism he would have to arbitrate.
+- **Reads an option as its mechanics** (#5160, 2026-10-11/12): he sells cash-secured puts and reads
+  them as strike, breakeven, in or out of the money, with the premium as the profit — *"I don't like
+  "wrong if" - right/wrong don't matter. in the money (ITM) is what matters as that's when the
+  reserved cash is used to buy stocks"*; *"Max profit for Cash secured is the premium."*
+- **Reads a trade's history as one transaction, newest first, strategy before reasons** (#5160,
+  2026-10-12/14): *"I like having these transactions associated"*; *"I feel like the latest event
+  (sold) should be listed first"*; *"Which strategy triggered the trade feels like the first
+  information to show, followed up by the why"* — and the why must be substantiated: *"I don't like
+  that the why is "trust me bro"."*
 - _hypothesis — on a phone he reads only what is above the fold of the first screen and acts on at
   most one thing. Proves it wrong: a phone-session reaction after 2026-09-26 that cites something
   two screens down._
@@ -116,7 +130,7 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   per position. The calendar's head sits in the cockpit (j1 s3). Even so, the split of his
   money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
   (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date, and "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx`),
+  reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
   not a rung celebrated beside its explanation.
 
 - **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind

@@ -222,8 +222,56 @@ describe("the zero-account door", () => {
     expect(LADDER_CARD_NO_ACCOUNT_NOTE).toContain(clause);
   });
 
+  it("leads with the steps and folds the milestones list one tap below them (#5256)", async () => {
+    mountAccounts("/accounts");
+    const welcome = await screen.findByRole("heading", { name: "Welcome to the league, Robin" });
+    const fold = document.querySelector("details.ms-toc-fold");
+    expect(fold).not.toBeNull();
+    expect(fold?.hasAttribute("open")).toBe(false);
+    expect(fold?.querySelector("summary")).toHaveTextContent("Your milestones");
+    // The steps come first in reading order; the chapter cards wait inside the fold.
+    expect(welcome.compareDocumentPosition(fold as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(fold?.querySelector('a[href*="chapter=trading"]')).not.toBeNull();
+    // Inside the fold the open card points up at the steps, never "below".
+    expect(fold?.querySelector(".mc-open-word")).toHaveTextContent("▴ Open above");
+    // The table of contents' own header and its "open the connect guide" note are gone: the guide
+    // is already the first thing on the page.
+    expect(screen.queryByText("Milestones · table of contents")).toBeNull();
+    expect(screen.queryByRole("link", { name: "open the connect guide" })).toBeNull();
+  });
+
+  it("holds steps 2 and 3 as one counted line each until step 1 is done (#5256)", async () => {
+    mountAccounts("/accounts");
+    expect(await screen.findByText("Step 1 of 3")).toBeInTheDocument();
+    const trade = screen.getByText("Step 3 of 3").closest("li");
+    expect(trade).toHaveTextContent("Make your first trade · Needs a connected account");
+    // The trade waits: no Open Trade, so step 1's is the only filled button on the page.
+    expect(screen.queryByRole("link", { name: "Open Trade ›" })).toBeNull();
+    expect(trade).not.toHaveTextContent("fixture detail");
+    // Moneypenny's step is ordered, never locked: her line keeps a way in.
+    const hello = screen.getByText("Step 2 of 3").closest("li");
+    expect(hello).toHaveTextContent("Say hello to Moneypenny · Next, after step 1");
+    expect(
+      within(hello as HTMLElement).getByRole("button", { name: "Say hello now ›" }),
+    ).toBeVisible();
+  });
+
+  it("opens steps 2 and 3 in full once the account is connected", async () => {
+    accounts = [ERIC];
+    mountAccounts("/accounts?section=milestones&chapter=onboarding");
+    expect(await screen.findByRole("link", { name: "Open Trade ›" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Meet Moneypenny ›" })).toBeInTheDocument();
+    expect(screen.queryByText(/Step \d of 3/)).toBeNull();
+    // A member with an account keeps the table of contents first, unfolded.
+    expect(screen.getByText("Milestones · table of contents")).toBeInTheDocument();
+    expect(document.querySelector("details.ms-toc-fold")).toBeNull();
+  });
+
   it("gives the Milestones note's 'isn't linked' its control: the connect guide", async () => {
-    mountAccounts("/accounts?section=milestones");
+    // Off the onboarding chapter the table of contents still leads, so its note still points there.
+    mountAccounts("/accounts?section=milestones&chapter=trading");
     expect(await screen.findByText(/this session isn't linked to an/)).toBeInTheDocument();
     const guide = screen.getByRole("link", { name: "open the connect guide" });
     expect(guide.getAttribute("href")).toMatch(/section=milestones/);

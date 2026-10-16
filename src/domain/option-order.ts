@@ -153,6 +153,22 @@ function debitSpreadProblems(
   return ok ? [] : ["a call debit spread buys the lower call and sells the higher, for a debit"];
 }
 
+function longCallProblems(
+  intent: OrderIntent,
+  option: OptionOrderIntent,
+  legs: readonly ParsedLeg[],
+): string[] {
+  const [leg] = legs;
+  const ok =
+    option.effect === "open" &&
+    legs.length === 1 &&
+    leg?.parts.type === "call" &&
+    leg.side === "buy" &&
+    intent.side === "buy" &&
+    option.limitPrice > 0;
+  return ok ? [] : ["a long call is one bought call, opened for a debit"];
+}
+
 function closeProblems(
   intent: OrderIntent,
   option: OptionOrderIntent,
@@ -185,6 +201,7 @@ function structureProblems(
   const singleLegType = SINGLE_LEG_OPENS.get(option.structure);
   if (singleLegType) return singleLegOpenProblems(intent, option, legs, singleLegType);
   if (option.structure === "call-debit-spread") return debitSpreadProblems(intent, option, legs);
+  if (option.structure === "long-call") return longCallProblems(intent, option, legs);
   return closeProblems(intent, option, legs);
 }
 

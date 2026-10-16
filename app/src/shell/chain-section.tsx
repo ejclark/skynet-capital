@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { NewLeg } from "../live/draft-order";
 import { fetchChain, type PlayInfo } from "../live/options";
 import { navForPlay, type PlayCode, rungForChainTap } from "../live/plays";
@@ -9,6 +9,7 @@ import { ExpirationField } from "./option-fields";
 import { QuoteHeader } from "./quote-header";
 import type { PickedCell } from "./straddle-view";
 import { SymbolPrompt } from "./symbol-prompt";
+import { useOpenAtPrice } from "./use-open-at-price";
 
 /**
  * THE CHAIN SECTION (#3407, Workbench slice 2) — the options chain as its own pane on `/trade`,
@@ -122,6 +123,7 @@ export function ChainSection({
   onPick,
   markedStrikes,
   onSymbolCommit,
+  openAtPrice = false,
 }: {
   /** The committed `?symbol=`; "" until the ticket has one. */
   readonly symbol: string;
@@ -143,6 +145,9 @@ export function ChainSection({
   readonly markedStrikes?: readonly number[];
   /** Set when the ticket is not on screen (folded): the empty pane asks for the symbol itself. */
   readonly onSymbolCommit?: (symbol: string) => void;
+  /** Folded (below the bench width), the page opens with the "Current price" row mid-screen
+   *  (#5234, `use-open-at-price.ts`); docked, the bench scrolls the pane instead. */
+  readonly openAtPrice?: boolean;
 }): ReactElement {
   const expId = useId();
   const [expiration, setExpiration] = useState(initialExpiration ?? "");
@@ -159,6 +164,8 @@ export function ChainSection({
     enabled: symbol !== "",
     placeholderData: keepPreviousData,
   });
+  const sectionRef = useRef<HTMLElement>(null);
+  useOpenAtPrice(sectionRef, openAtPrice, chain.isSuccess && !("chainNote" in chain.data));
   if (symbol === "") {
     return onSymbolCommit ? (
       <SymbolPrompt ask="Pick a symbol to browse its options chain." onCommit={onSymbolCommit} />
@@ -194,7 +201,7 @@ export function ChainSection({
     </div>
   );
   return (
-    <section className="chain-section" aria-label={`${symbol} options chain`}>
+    <section className="chain-section" aria-label={`${symbol} options chain`} ref={sectionRef}>
       <QuoteHeader
         symbol={symbol}
         provided={

@@ -15,6 +15,7 @@
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
@@ -428,6 +429,7 @@ async function main(): Promise<void> {
       : {}),
     readCondScout: insightsBridge.readCondScout,
     readHouseRoster: insightsBridge.readHouseRoster,
+    signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,

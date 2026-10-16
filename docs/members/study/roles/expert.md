@@ -23,6 +23,14 @@ H7 flexibility and efficiency · H8 aesthetic and minimalist design · H9 help u
 errors · H10 help and documentation.
 Severity: 0 not a problem · 1 cosmetic · 2 minor · 3 major · 4 prevents the task.
 
+Two checks run on every page, whatever else it shows (Eric, 2026-10-14, on round pages: "the
+interactable elements to provide context to changes and/or to leave feedback cover content I need to
+evaluate"; and "between mobile and desktop… doubles the work to leave feedback"): **does any control,
+label or bar cover content the person came to read?** (H8, severity 3 when it hides a number or a
+label), **does the same answer have to be given twice?** (H7, severity 2), and **is anything on
+screen not part of this task?** (H8, severity 2 — a distraction costs an easily-distracted member
+the task; Eric, 2026-10-14: "simple and elegant design that is free of distraction").
+
 ## Step 4 — wasted steps (excise audit)
 
 For each page's main task: how many interactions does it take, and how many of them move the person

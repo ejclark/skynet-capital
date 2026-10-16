@@ -105,7 +105,7 @@ describe("a strategy card", () => {
     expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled();
   });
 
-  it("draws each row's evidence as words: status, confidence, measured exit and its own study", () => {
+  it("draws a ready row's evidence as a call: status, the sentence, how sure and its own study", () => {
     mount(
       wheel([
         pair("CRWV-WHEEL", "CRWV", {
@@ -115,15 +115,20 @@ describe("a strategy card", () => {
           measuredExit: "D-5",
           checkOn: "2027-01-29",
           studyHref: "/app/research/crwv-premium-fit",
+          plainCall: "Sell cash-secured puts on CRWV, then covered calls on any shares assigned",
         }),
       ]),
     );
     expect(screen.getByText("◆ conviction")).toBeInTheDocument();
-    const facts = screen.getByText(/medium confidence/);
-    expect(facts).toHaveTextContent(
-      "medium confidence · measured at the D-5 exit · conviction checked 2027-01-29 · its study →",
-    );
-    expect(within(facts).getByRole("link", { name: "its study →" })).toHaveAttribute(
+    expect(
+      screen.getByText(
+        /^Sell cash-secured puts on CRWV, then covered calls on any shares assigned, on its owner's conviction, checked Jan 29/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/How sure/)).toHaveTextContent("How sure · medium");
+    // The old facts line (confidence · measured exit · dates) is gone; the study link stays.
+    expect(screen.queryByText(/medium confidence/)).toBeNull();
+    expect(screen.getByRole("link", { name: "its study →" })).toHaveAttribute(
       "href",
       "/app/research/crwv-premium-fit",
     );

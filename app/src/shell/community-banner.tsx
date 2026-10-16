@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { type CommunityCelebration, claimCommunityMilestones } from "../live/feedback";
+import { InlineResult } from "../ui";
 import { flareTower } from "./tower-bus";
 
 /**
@@ -48,7 +49,11 @@ export function CommunityUnlockBanner({
             <b>{c.title}</b> — filed ✓ (issue #{c.issueNumber}).
           </span>
         ))}
-        {error ? <span className="unlock-err">{error}</span> : null}
+        {error ? (
+          <InlineResult as="span" tone="err" live={false}>
+            {error}
+          </InlineResult>
+        ) : null}
       </div>
       <button
         type="button"

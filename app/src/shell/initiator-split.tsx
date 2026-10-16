@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { Initiator, InitiatorSplitView } from "../live/playbook-performance";
+import { EnvPill } from "../ui";
 import { signedMoney } from "./option-preview";
 
 /**
@@ -34,7 +35,7 @@ export function InitiatorSplit({
   return (
     <section className="pb-metrics pb-initiators" aria-label={heading}>
       <h3 className="pb-metrics-h">
-        {heading} <span className="env-pill">SIM</span>
+        {heading} <EnvPill />
       </h3>
       <dl className="pb-metrics-grid pb-initiators-grid">
         {split.rows.map((row) => (

@@ -120,6 +120,9 @@ export interface RoundTrip {
   readonly initiator?: Initiator;
   /** The closing order's broker id — from the CLOSING fill, used to join P/L to activity rows. */
   readonly orderId?: string;
+  /** The OPENING order's broker id (#5317) — so the ledger can pair a sale with the buy it closed.
+   *  Absent when the opening fill carried none. */
+  readonly entryOrderId?: string;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
   readonly entryIntentId?: number;
 }
@@ -139,6 +142,8 @@ export interface OpenLot {
   readonly initiator?: Initiator;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
   readonly entryIntentId?: number;
+  /** The opening order's broker id (#5317) — see `RoundTrip.entryOrderId`. */
+  readonly entryOrderId?: string;
 }
 
 export interface RoundTripLedger {
@@ -175,6 +180,8 @@ interface Lot {
   initiator?: Initiator;
   /** Carried from the opening fill (#2287 PR 7) — see `RoundTrip.entryIntentId`. */
   entryIntentId?: number;
+  /** The opening fill's order id (#5317) — see `RoundTrip.entryOrderId`. */
+  entryOrderId?: string;
 }
 
 function isUsable(fill: TradeFill): boolean {
@@ -209,6 +216,21 @@ function attributionOf(source: {
   };
 }
 
+/** A fill's leftover quantity, opening a lot that remembers its order (#5317). */
+function lotFrom(fill: TradeFill, quantity: number, price: number): Lot {
+  return {
+    quantity,
+    price,
+    at: fill.at,
+    ...attributionOf(fill),
+    ...(fill.orderId ? { entryOrderId: fill.orderId } : {}),
+  };
+}
+
+function entryOf(lot: Lot): { entryOrderId?: string } {
+  return lot.entryOrderId ? { entryOrderId: lot.entryOrderId } : {};
+}
+
 function tripFrom(
   lot: Lot,
   fill: TradeFill,
@@ -235,6 +257,7 @@ function tripFrom(
     ...(short ? { short: true } : {}),
     ...attributionOf(lot),
     ...(fill.orderId ? { orderId: fill.orderId } : {}),
+    ...entryOf(lot),
   };
 }
 
@@ -308,7 +331,7 @@ function matchSymbol(
     // Flat, so this fill sets the direction; otherwise it is adding to the leg already open.
     if (lots.length === 0) direction = fill.side === "buy" ? "long" : "short";
     if (fill.side === "sell") written += remaining;
-    lots.push({ quantity: remaining, price, at: fill.at, ...attributionOf(fill) });
+    lots.push(lotFrom(fill, remaining, price));
   }
 
   for (const lot of lots) {
@@ -319,6 +342,7 @@ function matchSymbol(
       at: lot.at,
       ...(direction === "short" ? { short: true } : {}),
       ...attributionOf(lot),
+      ...entryOf(lot),
     });
   }
   return { unmatchedSells, written };

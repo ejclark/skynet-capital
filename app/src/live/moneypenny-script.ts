@@ -8,6 +8,8 @@
  *
  * Design principle carried whole: look for organic openings to steer the conversation toward
  * completing onboarding. The name is always capitalized — "Moneypenny ·" opens her first line.
+ * A place she names is a link, written `[words](/path)` — only paths on `src/companion/places.ts`'s
+ * allow-list render as one (#5238).
  */
 
 import type { FeedbackKind } from "./feedback";
@@ -27,14 +29,14 @@ const WHO =
   "Moneypenny · hi, I'm Moneypenny — your assistant here. ask me questions any time, report a bug and it gets fixed, suggest an enhancement or a new feature and it gets built.";
 const ASK = "any immediate questions or support items? just ask.";
 const STEER_SETUP =
-  "i see your alpaca paper account isn't connected yet — that's the first step of onboarding. want a hand setting it up?";
+  "i see your alpaca paper account isn't connected yet — that's the first step of [onboarding](/onboarding). want a hand setting it up?";
 const STEER_TRADE_OPEN =
-  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — it confirms with alpaca before any fill.";
+  "your account is connected — the last step is your first trade. [open Trade](/trade) and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — it confirms with alpaca before any fill.";
 const STEER_TRADE_CLOSED =
-  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
+  "your account is connected — the last step is your first trade. [open Trade](/trade) and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
 
 export const SETUP_PATH = [
-  "Moneypenny · the short path: create a free account at alpaca.markets → switch it to Paper Trading → increase the paper balance to $1,000,000 → generate api keys → paste the key and secret on the onboarding page. the step-by-step cards live there, with links.",
+  "Moneypenny · the short path: create a free account at alpaca.markets → switch it to Paper Trading → increase the paper balance to $1,000,000 → generate api keys → paste the key and secret on the [onboarding page](/onboarding). the step-by-step cards live there, with links.",
   "stuck on a specific step? tell me which number and i'll walk you through it.",
 ];
 const SETUP_PATH_PLANT = [
@@ -42,7 +44,7 @@ const SETUP_PATH_PLANT = [
   "stuck on a specific step? tell me which number and i'll walk you through it. and if something on our side looks broken, say “file an issue” and i'll open one for the team to fix.",
 ];
 const SETUP_DECLINED =
-  "Moneypenny · no problem — the step-by-step cards are on the onboarding page whenever you're ready. anything else on your mind?";
+  "Moneypenny · no problem — the step-by-step cards are on the [onboarding page](/onboarding) whenever you're ready. anything else on your mind?";
 export const FB_OPEN =
   "Moneypenny · happy to file it. what's confusing, broken, or missing? a sentence or two is plenty.";
 export const FB_QUESTION =

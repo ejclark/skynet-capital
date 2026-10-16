@@ -17,6 +17,7 @@ import { fetchCouncilReplies } from "../live/council-replies";
 import { fetchFilingComments } from "../live/filing-comments";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
+import { ActivityDays } from "../shell/activity-days";
 import { CouncilCompose } from "../shell/council-compose";
 import { CouncilLines } from "../shell/council-lines";
 import { FilingOnramp } from "../shell/filing-onramp";
@@ -28,6 +29,7 @@ import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
 import { TradeRow } from "../shell/wire-trade-row";
+import { FilterChip, InlineResult } from "../ui";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
@@ -56,7 +58,8 @@ import { TradeRow } from "../shell/wire-trade-row";
  * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
  * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
  * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
- * the same rows more room, never new concepts.
+ * the same rows more room, never new concepts. Each day opens with a centred divider and the rows
+ * keep only their time (#5257, `shell/activity-days.tsx`).
  */
 
 /** The chip groups, in the order the controls row reads them. Kind leads, because it decides which
@@ -117,15 +120,13 @@ function WireControls({
     <>
       <p className="rail-label">{label}</p>
       {chips.map(([qualifier, text]) => (
-        <button
+        <FilterChip
           key={qualifier}
-          type="button"
-          className="railctl"
-          aria-pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
-          onClick={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
+          pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
+          onPress={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
         >
           {text}
-        </button>
+        </FilterChip>
       ))}
     </>
   );
@@ -286,8 +287,9 @@ function FeedSection({
             : "Nothing here matches this filter."}
         </p>
       ) : (
-        <ul className="wire-feed">
-          {shown.map((item) => {
+        <ActivityDays
+          items={shown}
+          renderItem={(item) => {
             if (item.kind === "trade") return <TradeRow key={item.key} trade={item.trade} />;
             if (item.kind === "development") {
               return <DevelopmentRow key={item.key} merge={item.merge} />;
@@ -303,8 +305,8 @@ function FeedSection({
                 }
               />
             );
-          })}
-        </ul>
+          }}
+        />
       )}
       {onLoadMore ? (
         <button
@@ -316,7 +318,9 @@ function FeedSection({
           {loadingMore ? "Loading…" : "Load older trades"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>
+      ) : null}
       {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
           unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
           is an invitation rather than a gap. Neither is the feed's own empty state, which is about

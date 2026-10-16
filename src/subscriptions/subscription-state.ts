@@ -39,6 +39,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "symbols",
   "compoundAllocation",
   "conviction",
+  "convictionId",
 ]);
 
 /** The fields a subscribe sets; a re-subscribe carries everything else forward from the record it
@@ -95,6 +96,15 @@ function parseConviction(raw: unknown): SubscriptionConviction | undefined {
   return { ...raw, reason, checkOn };
 }
 
+/** A conviction record's id (#5482 slice 2): kebab-case and bounded, or dropped — never the
+ *  subscription, which then reads its own conviction as before (`statedCheck`). */
+export const CONVICTION_ID_MAX = 64;
+export const CONVICTION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function parseConvictionId(raw: unknown): string | undefined {
+  const id = boundedString(raw, CONVICTION_ID_MAX);
+  return id !== undefined && CONVICTION_ID.test(id) ? id : undefined;
+}
+
 /** Parse one record, or null when this build cannot read it (`subscriptions-file.ts` keeps it). */
 export function parseSubscription(raw: unknown, accountId: string): PlaybookSubscription | null {
   if (!isRecord(raw)) return null;
@@ -108,6 +118,7 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     symbols,
     compoundAllocation,
     conviction,
+    convictionId,
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
@@ -123,6 +134,7 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
   if (typeof createdAt !== "string" || typeof updatedAt !== "string") return null;
   const parsedSymbols = parseSymbols(symbols);
   const parsedConviction = parseConviction(conviction);
+  const parsedConvictionId = parseConvictionId(convictionId);
   return {
     ...pick(raw, (key) => !KNOWN_FIELDS.has(key)),
     accountId,
@@ -135,6 +147,7 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
     ...(parsedConviction ? { conviction: parsedConviction } : {}),
+    ...(parsedConvictionId ? { convictionId: parsedConvictionId } : {}),
   };
 }
 

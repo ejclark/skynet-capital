@@ -84,7 +84,7 @@ describe("wireJsonView", () => {
     );
     expect(view.feedback[0]).toMatchObject({ status: "Shipped", statusKey: "shipped" });
     expect(view.feedback[1]?.status).toBeUndefined();
-    expect(view.feedback[0]?.meta.startsWith("#701")).toBe(true);
+    expect(view.feedback[0]?.meta).toBe("#701");
   });
 
   it("badges a filing whose kind the app doesn't recognize rather than dropping it", () => {
@@ -122,7 +122,7 @@ describe("wireJsonView", () => {
       kindLabel: "Merged",
       at: "2026-10-03T12:00:00Z",
     });
-    expect(view.development[0]?.meta.startsWith("#4273")).toBe(true);
+    expect(view.development[0]?.meta).toBe("#4273");
   });
 
   it("says 'Merged', not 'Shipped' — a filing row already wears that word as a status", () => {
@@ -175,8 +175,9 @@ describe("wireJsonView", () => {
       [earned(), earned({ milestoneId: "first-realized-profit", points: undefined })],
     );
     const byId = new Map(view.milestones.map((m) => [m.key, m]));
-    expect(byId.get("eric:first-buy")?.meta.startsWith("+25 pts")).toBe(true);
-    expect(byId.get("eric:first-realized-profit")?.meta).not.toMatch(/pts/);
+    // No date beside the points: the feed's day divider states it (#5257).
+    expect(byId.get("eric:first-buy")?.meta).toBe("+25 pts");
+    expect(byId.get("eric:first-realized-profit")?.meta).toBe("");
     expect(byId.get("eric:first-realized-profit")).not.toHaveProperty("points");
   });
 

@@ -1,0 +1,7 @@
+{"type":"launched","timestamp":"2026-10-11T08:00:00.000Z"}
+{"type":"started","key":"review:bugs","agentId":"a1","label":"review:bugs","phase":"Review","timestamp":"2026-10-11T08:00:01.000Z"}
+{"type":"started","key":"review:perf","agentId":"a2","timestamp":"2026-10-11T08:00:02.000Z"}
+{"type":"started","key":"review:docs","agentId":"a3","label":"review:docs","phase":"Review","timestamp":"2026-10-11T08:00:03.000Z"}
+{"type":"result","key":"review:bugs","agentId":"a1","result":{"findings":[{"file":"src/a.ts","title":"off-by-one in the window slice that drops the final bar of every session"}]}}
+{"type":"result","key":"review:docs","agentId":"a3","error":"agent exceeded its turn budget"}
+{"type":"result","key":"review:perf","agentId":"a2","res

@@ -238,3 +238,75 @@ describe("idle share (#3689 slice 10)", () => {
     expect(view.accounts[0]?.idlePct).toBeUndefined();
   });
 });
+
+describe("windows longer than the account's history (#5211)", () => {
+  // History began 9/8; on 10/11 the 1M window reaches back to 9/11 (inside the record) while 3M and
+  // 1Y reach past 9/8 — Alpaca answers both with the same since-day-one return.
+  const NOW = "2026-10-11T15:00:00.000Z";
+  const SAME = { returnFraction: 0.0225, base: 100_000, end: 102_250 };
+  const young = {
+    ...WINDOWS,
+    "1M": { returnFraction: 0.02, base: 100_250, end: 102_250 },
+    "3M": SAME,
+    "1Y": SAME,
+  };
+  const bench = { "7D": 0.005, "1M": 0.01, "3M": 0.04, "1Y": 0.15 };
+
+  it("says 'since' the first day for the first window past it and drops the longer ones", () => {
+    const view = accountsNetWorthView(
+      NOW,
+      [account({ id: "a", windows: young, historyStart: "2026-09-08T04:00:00.000Z" })],
+      bench,
+    );
+    const ws = must(view.accounts[0], "accounts[0]").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "Since 9/8"]);
+    const since = must(ws[2], "since window");
+    expect(since.value).toBe("+2.25%");
+    expect(since.note).toBe("the whole record, from 9/8");
+    // SPY's 3M return was measured over a quarter the account never had — no comparison
+    expect(since.vsBenchmark).toBeUndefined();
+    expect(must(ws[1], "1M").vsBenchmark).toBe("+1.0 pts vs S&P");
+  });
+
+  it("never shows the same figure under two window labels", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const values = must(view.accounts[0], "accounts[0]").windows.map((w) => w.value);
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("keeps every window when the history is longer than all of them", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", historyStart: "2024-01-02T05:00:00.000Z" }),
+    ]);
+    const ws = must(view.accounts[0], "accounts[0]").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "3M", "1Y"]);
+  });
+
+  it("leaves the windows alone when the history start is unknown", () => {
+    const view = accountsNetWorthView(NOW, [account({ id: "a", windows: young })]);
+    expect(must(view.accounts[0], "accounts[0]").windows).toHaveLength(4);
+  });
+
+  it("marks a book window partial when only some accounts are younger than it", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "old", historyStart: "2024-01-02T05:00:00.000Z" }),
+      account({ id: "new", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const ws = must(view.total, "total").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "3M", "1Y"]);
+    expect(ws.map((w) => w.partial === true)).toEqual([false, false, true, true]);
+  });
+
+  it("says 'since' the earliest start on the book when every account is younger than a window", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", windows: young, historyStart: "2026-08-20T04:00:00.000Z" }),
+      account({ id: "b", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const ws = must(view.total, "total").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "Since 8/20"]);
+    // b's record is shorter than the book's, so the figure covers it only in part
+    expect(ws[2]?.partial).toBe(true);
+  });
+});

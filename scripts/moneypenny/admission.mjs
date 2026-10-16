@@ -363,6 +363,25 @@ export function gateAdmission(issue, deps = {}) {
   return verdict;
 }
 
+/**
+ * THE FRESH RE-READ (#5266). A `ready` label event carries the issue as it stood the instant the
+ * label landed; a blocked-by link added a second later is not in it, so #5262 and #5317 were both
+ * claimed while blocked. A claim asks the one pull rule again over a fresh REST row before
+ * admission. An unreadable row refuses — fail closed, as the in-flight read does; the retry sweep
+ * reads fresh rows and tries again on a later tick.
+ *
+ * @returns {string | null} why the issue may not be pulled now, or null when it may
+ */
+export function recheckPullable(issue, read = readIssue) {
+  let fresh;
+  try {
+    fresh = read(issue.number);
+  } catch (err) {
+    return `queued: #${issue.number} could not be re-read — ${String(err?.message).slice(0, 200)}`;
+  }
+  return notPullableReason({ ...issue, ...fresh });
+}
+
 // ── the CLI (#4393 slice 3) — read-only; never comments, never labels ────────────────────────────
 
 /** One issue over REST (core bucket). A PR number throws: a PR is never pulled. */

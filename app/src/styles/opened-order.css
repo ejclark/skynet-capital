@@ -1,0 +1,225 @@
+/* An order, opened in place (#5262; `opened-order.tsx`, `pivot-line.tsx`): the picture, then Placed
+   by and Why. Under a phone's card the two stack; under a desk row the picture sits left of the
+   table. The picture reads top to bottom — the pivots over their lines, the bar, the zone names,
+   then the outcome at expiry split by the strike's own line. Each zone is a pattern AND a word: a
+   hatch for Loss, solid for the Premium (or Profit), a thin line for OTM — never the hue alone. */
+
+.oo {
+  --oo-bg: var(--surface);
+  display: grid;
+  gap: 14px;
+  margin-top: 6px;
+}
+.row-why .oo {
+  --oo-bg: var(--surface-2);
+}
+.oo-wide {
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  column-gap: 28px;
+  align-items: start;
+}
+.oo-wide .act-full {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+/* The table is one column at every width: Placed by, then Why, read down. */
+.oo .oo-table {
+  grid-template-columns: 1fr;
+  max-width: 72ch;
+  padding: 0;
+}
+.oo-placed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+/* The joins are drawn, not typed, so a wrap falls between parts; inline-block keeps a link's
+   underline off the dot. */
+.oo-placed > * + *::before {
+  content: "·";
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--muted);
+}
+/* The round is its own line under who and the playbook — never a wrap that starts on a dot. */
+.oo-placed > .oo-round {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.oo-placed > .oo-round::before {
+  content: none;
+}
+/* Sentences, at every width: the house sans the phone card already uses, not the desk's mono. */
+.oo .oo-table dd {
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* The picture. Lines are measured from the figure's top: under the pivots (34px), through the bar. */
+.pv {
+  position: relative;
+  margin: 0;
+  font-size: 12px;
+}
+.pv-pivots {
+  position: relative;
+  height: 34px;
+}
+.pv-pivot {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.pv-name {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.pv-pivot b {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.pv-line {
+  position: absolute;
+  z-index: 1;
+  top: 36px;
+  height: 22px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--muted);
+}
+/* The strike: the text colour, and it carries on to the figure's foot — the outcome's divider. */
+.pv-divides {
+  height: auto;
+  bottom: 0;
+  background: var(--text);
+}
+.pv-bar {
+  position: relative;
+  height: 12px;
+  margin-top: 6px;
+}
+.pv-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.pv-loss {
+  box-sizing: border-box;
+  border: 1px solid var(--neg);
+  background: repeating-linear-gradient(135deg, var(--neg) 0 3px, transparent 3px 6px);
+}
+.pv-premium,
+.pv-profit {
+  border-radius: 2px;
+  background: var(--pos);
+}
+/* OTM is flat — the premium is already kept — so it is a thin line, not a filled stretch. */
+.pv-otm {
+  top: 5px;
+  bottom: 5px;
+  background: var(--muted);
+}
+/* A loss with no floor fades off its edge rather than stopping at the axis. */
+.pv-fade-from {
+  mask-image: linear-gradient(to right, transparent, #000 45%);
+}
+.pv-fade-to {
+  mask-image: linear-gradient(to left, transparent, #000 45%);
+}
+.pv-now {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translate(-50%, -50%);
+}
+.pv-names {
+  position: relative;
+  height: 18px;
+  margin-top: 4px;
+}
+.pv-zname {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--oo-bg);
+  transform: translateX(-50%);
+}
+.pv-nonow {
+  margin: 2px 0 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* At expiry: the label sits on the strike's line, the two sides either side of it. */
+.pv-expiry {
+  margin-top: 8px;
+}
+.pv-at {
+  position: relative;
+  z-index: 2;
+  width: max-content;
+  margin: 0 auto 6px;
+  padding: 2px 8px;
+  background: var(--oo-bg);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pv-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.pv-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.pv-side-below {
+  align-items: flex-end;
+  padding-right: 12px;
+  text-align: right;
+}
+.pv-side-above {
+  align-items: flex-start;
+  padding-left: 12px;
+}
+.pv-when {
+  margin-bottom: 2px;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text);
+}
+.pv-words {
+  white-space: nowrap;
+  color: var(--text);
+}

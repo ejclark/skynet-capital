@@ -200,7 +200,9 @@ export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_00
       });
       const timer = setTimeout(() => {
         child.kill("SIGKILL");
-        fail(new Error(`sealed call: timed out after ${timeoutMs}ms`));
+        // Marked, so a caller can tell a slow call (worth asking again) from a broken one (#5155).
+        const e = new Error(`sealed call: timed out after ${timeoutMs}ms`);
+        fail(Object.assign(e, { timedOut: true }));
       }, timeoutMs);
       child.on("error", (e) => {
         clearTimeout(timer);

@@ -194,4 +194,31 @@ describe("parseSubscriptionsState", () => {
       expect(isCalendarDay(20270129)).toBe(false);
     });
   });
+
+  describe("convictionId (#5482 slice 2)", () => {
+    it("parses a pointer at a conviction record beside the subscription's own conviction", () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, conviction, convictionId: "ai-dip-2026-10" }],
+      });
+      expect(state?.["acct-1"]?.[0]?.convictionId).toBe("ai-dip-2026-10");
+      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
+    });
+
+    it("drops a malformed pointer, never the subscription", () => {
+      for (const bad of ["", "AI Dip", "a".repeat(65), 7, { id: "ai-dip-2026-10" }]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: bad }] });
+        expect(state?.["acct-1"]).toHaveLength(1);
+        expect(state?.["acct-1"]?.[0]).not.toHaveProperty("convictionId");
+      }
+    });
+
+    it("a re-subscribe carries the pointer forward", () => {
+      const [prior] =
+        parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: "ai-dip-2026-10" }] })?.[
+          "acct-1"
+        ] ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ convictionId: "ai-dip-2026-10" });
+    });
+  });
 });

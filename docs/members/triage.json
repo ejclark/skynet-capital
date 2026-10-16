@@ -70,7 +70,7 @@
     "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
   },
   {
-    "screen": "/u/$id/decisions (Playbooks)",
+    "screen": "/u/$id/playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
   },
@@ -85,9 +85,9 @@
     "mustBeSeenBy": "anyone signed in, bot accounts"
   },
   {
-    "screen": "/u/$id/playbooks",
+    "screen": "/u/$id/decisions",
     "verdict": "redirect-only",
-    "target": "/research?section=playbooks&account=$id"
+    "target": "/u/$id/playbooks?checks=open"
   },
   {
     "screen": "/leaderboard",
