@@ -29,6 +29,7 @@ printed by it. Paper only; educational.
 - **Buy signal:** no — nothing goes live from a 58-session sample; slice 2 records in observe-only.
 - Enter only 2 ranges below VWAP, after 10:00 ET, never on a print day ±1. A 1-range dip loses.
 - The stuck buys come in waves: CRWV and NBIS stuck on the same days. One bet, not fifty.
+- Today (10-16) is such a wave: the cycle-phase study reads a sector-wide pullback.
 - HC-SAURON's record is not reachable offline, so "adapt HC-SAURON" stays open (see §6).
 
 ## The calls in full
@@ -113,9 +114,13 @@ rule.
 - **Most buys never need the rule.** At 2/1, 68–79% sell the same day and 93–99% by day 5.
 - **The stuck ones arrive together.** The buys still held past day 5 were bought in four stretches
   of sector-wide selling: **Aug 17–18, Aug 27, Sep 8–11, Oct 6–8**. CRWV and NBIS got stuck on the
-  same three of them, as the cycle detector's cohort note predicts (CRWV moves with NBIS); the
-  cohort study itself is not on main yet. Fifty tranches across correlated names in a selloff are
-  one position.
+  same three of them, as the plan's cohort note expects (CRWV moves with NBIS). Fifty tranches
+  across correlated names in a selloff are one position.
+- **Today is one of those stretches.** The cycle-phase study
+  ([`cycle-phase-crwv-nvda-2026-10.md`](cycle-phase-crwv-nvda-2026-10.md)) reads 10-16 as a
+  sector-wide pullback: CRWV 41% and NBIS 38% under their 60-session highs, MU 18%, AMD 16%, with
+  CRWV's floor probably still lower. A dark run that starts now starts in the weather where these
+  buys get stuck, which is one more reason it records and does not trade.
 - **Most of them came back, slowly.** With no hand-off, buys held past day 5 that later hit target:
   **18 of 22** at 2/1 and **42 of 57** at 1/1, at a **median of 9 sessions** (range 6–15). The ones
   that did not: two CRWV buys from 09-09 still under water 26 sessions later (worst −39%), and one
