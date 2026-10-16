@@ -14,11 +14,12 @@ import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
+import { longCall } from "./long-call.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
 import { eventPlay, prePrintRunUp } from "./templates.js";
-import { wheel } from "./wheel.js";
+import { type WheelSetting, wheel } from "./wheel.js";
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
@@ -216,7 +217,9 @@ export const NVDA_CALL_SPREAD: Playbook = callSpread({
  * the order copy's citation and retire date come from (#4469 slice 2c); every put's Why states the
  * data, then the owner's bet as what the market has wrong (#5326).
  */
-export const CRWV_WHEEL: Playbook = wheel({
+/** CRWV's wheel words, before its 2026-10-16 conviction settings — the classic month-out, one-contract
+ *  wheel the specs keep measuring the template on. */
+export const CRWV_WHEEL_SETTING: WheelSetting = {
   symbol: "CRWV",
   thesis:
     "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
@@ -232,6 +235,40 @@ export const CRWV_WHEEL: Playbook = wheel({
     "So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its " +
     "owner runs this against the study, betting the market has CRWV about right: that its swings " +
     "calm to the pace options price.",
+};
+
+export const CRWV_WHEEL: Playbook = wheel({
+  ...CRWV_WHEEL_SETTING,
+  thesis:
+    "Sell cash-secured CRWV puts 14 to 45 days out near 0.15 delta, as many as the budget secures; " +
+    "if assigned, sell covered calls on the shares — run on its owner's conviction, against our own " +
+    "study of CRWV's premium.",
+  // Eric, 2026-10-16: "cash secured puts are a safer bet to be aggressive on.. the premiums drive
+  // cost basis down.. most likely worst case is to own stock and tie up capital until the next
+  // upswing". So: sold from 14 days out (the month-out rule left it dark before every print), aimed
+  // at 0.15 delta (about the $48–52 floor band, `docs/research/cycle-phase-crwv-nvda-2026-10.md`),
+  // and as many contracts as the budget secures, up to the mode's count.
+  minDte: 14,
+  putDelta: 0.15,
+  // Ten at most even when aggressive: assigned shares ride the print when no print-clean call exists,
+  // and the cycle study puts the low after the print, so part of the budget waits for 11-18.
+  putContracts: { conservative: 3, standard: 6, aggressive: 10 },
+});
+
+/**
+ * CRWV-LONG-CALL (#5482) — calls about four to six months out, held through CRWV's prints, on its
+ * owner's 2026-10-16 conviction that CRWV recovers well above today's price over 3 to 6 months. No
+ * study measures the play itself; the pair row is a ◆ conviction checked on 2027-01-29.
+ */
+export const CRWV_LONG_CALL: Playbook = longCall({
+  symbol: "CRWV",
+  thesis:
+    "Buy CRWV calls four to six months out near 0.60 delta and hold them through earnings; sell at " +
+    "double the cost or with 45 days left — run on its owner's conviction.",
+  bet:
+    "Its owner's view (2026-10-16): CRWV's selloff with the AI names is temporary, demand and its " +
+    "backlog hold, and it recovers well above today's price over the next 3 to 6 months. No study " +
+    "has tested this play; it is checked on 2027-01-29.",
 });
 
 /** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,
@@ -246,6 +283,7 @@ const ROSTER: readonly Playbook[] = [
   TACO_DJT,
   HC_SAURON,
   CRWV_WHEEL,
+  CRWV_LONG_CALL,
   NVDA_CALL_SPREAD,
   SAURON,
   BETA_SCOUT,

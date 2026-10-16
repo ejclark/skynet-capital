@@ -105,6 +105,7 @@
           "playbookId": "CRWV-WHEEL",
           "mode": "aggressive",
           "orderId": "sauron-crwv-put-1",
+          "filled": 1,
           "spot": 88.4,
           "listed": ["2026-10-30", "2026-11-06", "2026-11-20"],
           "book": {
@@ -115,9 +116,9 @@
             ]
           },
           "chain": [
-            { "strike": 75, "bid": 1.35, "ask": 1.5, "delta": -0.16, "openInterest": 3100 },
-            { "strike": 80, "bid": 2.5, "ask": 2.75, "delta": -0.25, "openInterest": 2400 },
-            { "strike": 85, "bid": 4.3, "ask": 4.6, "delta": -0.36, "openInterest": 1900 }
+            { "strike": 75, "bid": 1.35, "ask": 1.5, "delta": -0.09, "openInterest": 3100 },
+            { "strike": 80, "bid": 2.5, "ask": 2.75, "delta": -0.15, "openInterest": 2400 },
+            { "strike": 85, "bid": 4.3, "ask": 4.6, "delta": -0.26, "openInterest": 1900 }
           ]
         }
       },

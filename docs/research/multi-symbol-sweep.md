@@ -71,6 +71,56 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
+  |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
+  [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
+  voided test. On the 2026-10-05 print (Prices **74.0**) `^TNX` closed **+0.644%** vs the 0.627% bar — a kill by 0.017pp,
+  ~3.4bp of yield. Do not re-register "no ordering" for this release off a median-|move| threshold on one day: the margin is
+  inside the noise of how the median is estimated (0.627 → 0.638 as sessions were added). The surviving question is the
+  ordering across releases (Spearman +0.225 at n=10, insignificant), which needs the 11-04 print, not a threshold.
+
+- **"A proportional restatement of retail cancels in the total business inventories/sales ratio, so the restated June ratio stays
+  within 0.01 of its pre-restatement print" (FT-mtis-2026-10-15-2)** — added 2026-10-16 from the
+  [mtis-2026-10-15 close-out](events/mtis-2026-10-15.md). Registered 2026-09-06: June 2026 re-prints at 1.29–1.31
+  (was 1.30). It re-printed **1.33**: the AIES restatement moved retail inventories **+4.8%** and retail sales
+  **−3.4%** — opposite signs, ~8pp of asymmetry — so the weight coincidence (retail 30.4% of inventories, 31.5% of
+  sales) that makes a *proportional* move cancel was irrelevant. Do not carry any pre-2026-10-15 total-business
+  ratio level (1.28 trough, 1.30 June, percentile ranks) across the restated basis; re-derive levels from the
+  post-restatement series.
+
+- **"A ±5-point window around the prior month's value is a sharp test that the Empire State headline is
+  unforecastable" (FT-empire-state-mfg-2026-10-15-2)** — added 2026-10-16 from the
+  [empire-state-mfg-2026-10-15 close-out](events/empire-state-mfg-2026-10-15.md). Registered 2026-09-08:
+  the October headline prints outside 15.6–25.6 (±5 of August's 20.6), registered 64%. It printed **25.5**,
+  inside the window by 0.1, after a +17.9 September-to-October swing (92nd percentile of 303 monthly
+  moves). The window compares two months that straddle a swing, so it scores a coincidence of landing
+  spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
+  index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
+
+- **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
+
+- **"The 09-10 operation's 23-issue spread is a regime change in how the long end buys"
+  (FT-treasury-buyback-10y20y-2026-10-15-4)** — added 2026-10-16 from the
+  [treasury-buyback-10y20y-2026-10-15 close-out](events/treasury-buyback-10y20y-2026-10-15.md). The
+  10Y-20Y operation accepted **3 of 42** issues ($5.580B of $6.000B in one line) on 6.81x cover, the
+  kill clause (*5 or fewer*). Breadth follows a thin book (1.75x → 23 issues), not a regime; do not
+  re-register an issue-count call without conditioning on the offer book.
+
+- **"The eligible CUSIP count is point-predictable from the 20Y-exclusion rule"
+  (FT-treasury-buyback-10y20y-2026-10-15-1)** — added 2026-10-16 (scored KILL 2026-09-15, omitted from
+  this list then). The list printed 40, not 39, and has since printed 41 and 42: it is not monotone
+  (CUSIP churn in and out). The mechanism passes without a count (`FT-…-3`, three operations); do not
+  re-register a count.
+
+- **"The September PPI's core 12-month rise is a soft-base artifact, so read the core y/y into a soft base month as mechanical"
+  (FT-ppi-2026-10-15-1)** — added 2026-10-16 from the
+  [ppi-2026-10-15 close-out](events/ppi-2026-10-15.md). Registered 2026-09-15: core-ex-trade-services
+  12-month ≥ 4.8% on a m/m ≤ +0.4%. The 10-15 release printed **5.0% on +0.5% m/m** (final demand
+  +1.3% m/m, 6.3% y/y, the largest advance since March 2022; gasoline +20.3%). The base-month identity
+  was accurate to ~0.1pp but the rise was earned. What survives: the identity as arithmetic. Do not
+  re-propose a "mechanical lift" read of a core y/y in a month where energy or transport is already
+  running hot; check the m/m first.
+
 - **"A chair-less, contested standing committee still files its quarterly report" (FT-unsc-iran-panel-mandate-expiry-2026-09-26-2)** — added 2026-10-15 from the [unsc-iran-panel-mandate-expiry-2026-09-26 forward-test scoring](events/unsc-iran-panel-mandate-expiry-2026-09-26.md). Registered 2026-09-04 on a Secretariat cycle table listing 12 March and 9 June 2026 as 1737 Committee report dates. Security Council Report shows those were briefings: China and Russia objected to the draft 90-day report in March, June and September, so no report was presented. Do not read a mandate-cycle table's occurrence dates as delivery of a document; check that a report was adopted, not that a meeting was held.
 
 - **"A Social Security COLA projection that needs September to accelerate is running hot; fade it toward the

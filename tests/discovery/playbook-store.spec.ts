@@ -18,6 +18,7 @@ describe("playbookStoreCatalog", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
       "BETA-SCOUT",
+      "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
       "HC-SAURON",
