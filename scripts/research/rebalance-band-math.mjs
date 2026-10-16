@@ -74,6 +74,16 @@ export function basketIndex(memberCloses) {
 }
 
 /**
+ * The active share of a book: active over active plus holding. The one reading the band judges
+ * (drift is this minus the target). Shared by `simulate` below and by the live observer
+ * (`src/playbooks/play-target.ts`), so history and the bots measure drift the same way.
+ */
+export function activeShare(active, holding) {
+  const eq = active + holding;
+  return eq > 0 ? active / eq : 0;
+}
+
+/**
  * Run one book. `hold` is the holding target (0 = buy and hold), `band` the drift in active-share
  * points that trips a move back to target (Infinity = the static mix, never rebalanced).
  *
@@ -93,7 +103,7 @@ export function simulate(closes, growth, { hold, band, costBps = 0 }) {
     active *= closes[i] / closes[i - 1];
     cash *= growth[i];
     const eq = active + cash;
-    const drift = active / eq - target;
+    const drift = activeShare(active, cash) - target;
     if (Math.abs(drift) > maxDrift) maxDrift = Math.abs(drift);
     if (Math.abs(drift) > band) {
       const want = target * eq;

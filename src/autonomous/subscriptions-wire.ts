@@ -32,7 +32,10 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  *
  * Carried, never behavioral (#4469 slice 3c): any field a newer build put on a record (#4772), and
  * `allocations`, each account's capital per strategy (the app checks budgets against them). The
- * version names its fields, so neither moves it.
+ * version names its fields, so neither moves it. A subscription's `playTarget` (#5483 slice 3) is
+ * carried the same way, because it is observe-only: a bot logs where the play stands against it and
+ * trades exactly as it would without it. The slice that lets a target change what a bot does adds a
+ * new kind, as v2 and v3 did.
  *
  * `subscriptions.v2` (#4469 slice 3c part 2) is the one wire change that adds a behavioral field:
  * a subscription's `conviction` (its reason and check date), which a bot acts on (criteria 11 and
