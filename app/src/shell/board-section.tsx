@@ -30,6 +30,7 @@ import {
   toggleSymbolScope,
   unsearchedSymbols,
 } from "../live/research";
+import { FilterChip } from "../ui";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
 
@@ -186,18 +187,21 @@ export function CallBoard({
                   </a>
                   <span className="rx-call-text">{row.call}</span>
                   <span className="rx-call-meta">
-                    <span className="rx-chip" title="horizon">
+                    <span className="rx-chip" title={`horizon: ${row.horizon}`}>
                       {row.horizon}
                     </span>
                     {row.confidence ? (
-                      <span className="rx-chip rx-conf" title="stated confidence">
+                      <span
+                        className="rx-chip rx-conf"
+                        title={`stated confidence: ${row.confidence}`}
+                      >
                         {row.confidence}
                       </span>
                     ) : null}
                     {age ? (
                       <span
                         className={`rx-chip rx-assessed num${age.stale ? " rx-stale" : ""}`}
-                        title="ledger's last assessment date"
+                        title={`ledger's last assessment date: ${call.lastAssessed}${age.stale ? ` · stale (${age.days}d)` : ""}`}
                       >
                         assessed {call.lastAssessed}
                         {age.stale ? ` · stale (${age.days}d)` : ""}
@@ -356,11 +360,10 @@ export function ResearchFilters({
             const selected = scope.includes(entry.symbol);
             return (
               <span key={entry.symbol} className="rx-symbol-wrap">
-                <button
-                  type="button"
+                <FilterChip
                   className="rx-symbol"
-                  aria-pressed={selected}
-                  onClick={() => toggleSymbol(entry.symbol)}
+                  pressed={selected}
+                  onPress={() => toggleSymbol(entry.symbol)}
                 >
                   <span className="rx-symbol-name">{entry.symbol}</span>
                   {entry.next ? (
@@ -368,7 +371,7 @@ export function ResearchFilters({
                   ) : (
                     <span className="rx-symbol-next">no dated event</span>
                   )}
-                </button>
+                </FilterChip>
               </span>
             );
           })}

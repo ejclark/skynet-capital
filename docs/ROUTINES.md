@@ -48,6 +48,12 @@ deterministic in-repo data, so the calendar itself can emit the wake-ups (issue 
 Eric-gated credential). The digest's daily clock is the one surviving exception: its deliverable is
 the push notification, which only a claude.ai Routine can send, and it is Eric's own arming.
 
+**A freed build slot is a tick too** (#5056 slice 2). `in-progress` coming off an issue — a build
+ending with or without a merge — re-checks the build queue and re-dispatches `scan` when work is
+admissible (`scripts/moneypenny/wake.mjs`), so a red or held PR no longer idles the lanes until the
+next merge. Still time-based, and still waiting on a merge: a finished build's own 2h claim lease
+lapsing, and a failed build's retry (kept at the merge pace on purpose, so it cannot loop).
+
 ## Retired (2026-08-19 — the no-checkout generation)
 
 The review that retired these found that every fresh-session Routine had been firing into cloud
@@ -59,6 +65,6 @@ time, ~115 empty hourly fires). Their jobs moved into the repo, where the failur
 | Routine | Fate |
 |---|---|
 | Handoff build (hourly, `trig_01D95znC5tuGNCxDawHqyaaj`) | deleted — its job was already the postmaster's push trigger (docs/HANDOFFS.md, "one hop, no polling"); the daily schedule is now the net under it. The 2026-08-17 lesson (a poller masking a severed chain while producing nothing) stands as the epitaph. |
-| Event scan (daily 11:00, `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`) | deleted — replaced by the event router's `build-events` lane: same EVENT-RESEARCH protocol, now ticked by merges instead of a clock, prompt version-controlled in `moneypenny-events.yml` (formerly `postmaster.yml`). |
+| Event scan (daily 11:00, `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`) | deleted — replaced by the event router's `build-events` lane: same EVENT-RESEARCH protocol, now ticked by merges instead of a clock, prompt version-controlled in `moneypenny-events.yml` (formerly postmaster.yml). |
 | Config audit digest (daily 14:00, `trig_01GrqFFLqYSCbm9BZWKWaKjF`) | deleted — the audit now rides the secretary digest Routine (still claude.ai-side, preserving the duel-log rationale in docs/COACHES.md) instead of holding its own clock. |
 | Design handoff poke (poke-only, `trig_017zC6G25nbJNcCzFMFz957F`) | deleted — never fired once, was never registered here (a house-rule violation this review caught), and the handoff inbox (zip on a labeled issue → postmaster import) superseded it on 2026-08-16. |

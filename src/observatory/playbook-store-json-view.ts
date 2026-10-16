@@ -17,14 +17,17 @@ import {
 } from "../discovery/playbook-store-strategies.js";
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
-import type { PlaybookSubscription } from "../domain/types.js";
-import { findPair, type Pair } from "../playbooks/pair-table.js";
+import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
+import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
   handOffNote,
+  needsConviction,
   newSubscriptionRefusal,
   notTradingNote,
   subscribedPairs,
 } from "../subscriptions/subscribe-eligibility.js";
+import type { StrategyAllocation } from "../subscriptions/subscriptions-file.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 
@@ -39,6 +42,15 @@ interface SubscriptionView {
    *  #3527 slice 3) — absent means off, the flat-budget default every subscription had before
    *  this field existed. */
   readonly compoundAllocation?: boolean;
+  /** The owner's conviction on this pair: why, and the market day it is checked (#4469 3c). */
+  readonly conviction?: SubscriptionConviction;
+}
+
+/** The account's allocation for a strategy, and what its tickers' budgets add up to inside it. */
+interface StrategyAllocationView {
+  readonly capitalAllocated: number;
+  /** The budgets the owner set on this strategy's pairs, on or paused; compounding rides on top. */
+  readonly budgeted: number;
 }
 
 /** The old per-playbook card — kept one release beside `strategies` (#4469 slice 3a). */
@@ -53,6 +65,10 @@ interface PairRowView extends PairRowEntry {
   /** Why a NEW subscription to this pair would be refused — the API's own sentence (criterion 9).
    *  Only for a viewer who may manage the account and holds no subscription to it. */
   readonly subscribeRefusal?: string;
+  /** The study does not back this pair and its strategy runs on conviction (criterion 2): a new
+   *  subscription needs the owner's reason and check day. `subscribeRefusal` is judged as if they
+   *  were given, so the row is offered and the form asks for them. */
+  readonly needsConviction?: true;
   /** A share pair whose ticker an option pair on this bot takes: "the call spread trades NVDA on
    *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
   readonly handOff?: string;
@@ -63,6 +79,8 @@ interface PairRowView extends PairRowEntry {
 
 interface StrategyCardView extends Omit<StrategyCardEntry, "pairs"> {
   readonly pairs: readonly PairRowView[];
+  /** Set only for a viewer who manages the account, and only once its owner sets one. */
+  readonly allocation?: StrategyAllocationView;
 }
 
 export interface PlaybookStoreView {
@@ -108,6 +126,9 @@ function subscriptionView(sub: PlaybookSubscription): SubscriptionView {
     enabled: sub.enabled,
     ...(sub.symbols ? { symbols: sub.symbols } : {}),
     ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
+    ...(sub.conviction
+      ? { conviction: { reason: sub.conviction.reason, checkOn: sub.conviction.checkOn } }
+      : {}),
   };
 }
 
@@ -126,6 +147,7 @@ function strategyCardsView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
   asOfIso: string,
   envNamed: readonly string[] | undefined,
+  allocations: AccountAllocations | undefined,
 ): StrategyCardView[] {
   const byPairId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const onBot = subscribedPairs(subscriptions ?? [], findPair, envNamed);
@@ -137,14 +159,34 @@ function strategyCardsView(
       ? newSubscriptionRefusal({
           playbookId: row.id,
           subscriptions,
+          conviction: true,
           ...(envNamed ? { envNamed } : {}),
           asOfIso,
         })
       : undefined;
-    return refusal ? { ...row, subscribeRefusal: refusal } : row;
+    const pair = findPair(row.id);
+    const asks =
+      subscriptions && pair && needsConviction(pair) ? { needsConviction: true as const } : {};
+    return { ...row, ...asks, ...(refusal ? { subscribeRefusal: refusal } : {}) };
   };
-  return strategyCatalog(asOfIso).map((card) => ({ ...card, pairs: card.pairs.map(rowView) }));
+  return strategyCatalog(asOfIso).map((card) => {
+    const allocation = subscriptions ? allocations?.[card.strategy] : undefined;
+    return {
+      ...card,
+      pairs: card.pairs.map(rowView),
+      ...(allocation
+        ? {
+            allocation: {
+              capitalAllocated: allocation.capitalAllocated,
+              budgeted: budgetedOn(subscriptions ?? [], card.strategy).total,
+            },
+          }
+        : {}),
+    };
+  });
 }
+
+type AccountAllocations = Readonly<Partial<Record<StrategyId, StrategyAllocation>>>;
 
 export function playbookStoreView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
@@ -161,6 +203,9 @@ export function playbookStoreView(
   /** What the bots app's own setting runs on the viewed bot (`envNamedFor`): those playbooks hold
    *  their tickers though nothing is subscribed. Absent when the bots reported none. */
   envNamed?: readonly string[],
+  /** The viewed account's own allocations by strategy (#4469 slice 3c part 3) — only ever passed
+   *  with that account's own `subscriptions`, the same no-cross-account boundary. */
+  allocations?: AccountAllocations,
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -180,7 +225,7 @@ export function playbookStoreView(
     .reduce((sum, s) => sum + (s.capitalAllocated ?? 0), 0);
   return {
     cards,
-    strategies: strategyCardsView(subscriptions, asOfIso, envNamed),
+    strategies: strategyCardsView(subscriptions, asOfIso, envNamed, allocations),
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),

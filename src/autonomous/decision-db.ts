@@ -2,10 +2,12 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
+import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
@@ -17,6 +19,7 @@ import {
   type SettledIntent,
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
+import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -94,6 +97,10 @@ export interface DecisionDb {
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
    *  totals would be a worse lie than a slow query. */
   funnelFor(personaId: string): DecisionFunnel;
+  /** One persona's passes, grouped verdicts and placed trades in `[from, to)` (#5073 slice 2) —
+   *  the week strip and each playbook's lane. Bounded by the window, never a page: see
+   *  `decision-db-week.ts`. */
+  checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
   /** Total realized P/L across every closed retrospective attributed to one playbook, for one
    *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
@@ -138,6 +145,14 @@ export interface DecisionDb {
   /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
    *  what a restart hands back to the settle loop. */
   unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
+  /** What one dark playbook would have done (#5489): its dip signals and daily level readings,
+   *  oldest session first, from `fromSession` (`YYYY-MM-DD`) on. Written by `record()` from a
+   *  decision's `playbookObservations`, merged on re-say; this is how thirty observed days are
+   *  scored. Local to the store that recorded them — they do not ride the replication wire. */
+  playbookObservations(
+    playbookId: string,
+    opts?: { readonly fromSession?: string },
+  ): PlaybookObservation[];
   close(): void;
 }
 
@@ -269,7 +284,9 @@ export function openDecisionDb(path: string): DecisionDb {
   // Before any read below is prepared: they join it (`SETTLED_JOIN`).
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
+  const observations = openObservationTables(db);
   const results = openIntentResults(db);
+  const week = openCheckWeekReads(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -548,6 +565,9 @@ export function openDecisionDb(path: string): DecisionDb {
     for (const v of entry.playbookVerdicts ?? []) {
       insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
     }
+    // Also before the early return, and merged by key, so a re-say moves an outcome on.
+    if (entry.playbookObservations?.length)
+      observations.write(entry.at, entry.playbookObservations);
     if (hasIntents.get(decisionId)) return;
 
     insertIntents(decisionId, entry);
@@ -697,6 +717,8 @@ export function openDecisionDb(path: string): DecisionDb {
       }));
     },
 
+    checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
+
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
@@ -819,6 +841,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 
     close() {
       db.close();

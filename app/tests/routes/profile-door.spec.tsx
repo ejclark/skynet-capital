@@ -19,8 +19,8 @@ import {
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
  * renders through a real memory-history router so `Route.useSearch()` and the navigate calls are
- * the real ones; the data layer is mocked so the tree stays small (the calendar head and the book's
- * sections are stubbed — they have their own specs).
+ * the real ones; the data layer is mocked so the tree stays small (the book's sections are stubbed
+ * — they have their own specs).
  */
 
 let accounts: unknown[] = [];
@@ -109,14 +109,8 @@ rstest.mock("../../src/live/desk", () => ({
   fetchDesk: (id: string) => Promise.resolve({ desk: { id, positions: [] } }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
 }));
-rstest.mock("../../src/shell/cockpit-clock", () => ({
-  CockpitClock: () => null,
-  usePhoneWidth: () => false,
-}));
-rstest.mock("../../src/shell/heartbeat", () => ({
-  HeartbeatChip: () => null,
-  HeartbeatSection: () => null,
-}));
+rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
+rstest.mock("../../src/shell/bot-playbooks", () => ({ BotPlaybooksSection: () => null }));
 rstest.mock("../../src/shell/accounts-overview-section", () => ({
   OverviewSection: () => <p data-testid="overview">The book's overview</p>,
 }));
@@ -157,6 +151,10 @@ function mountAccounts(initialPath: string) {
 }
 
 const ERIC = { id: "human-eric", name: "Eric", kind: "human", suspended: false };
+/** The account's name in the head — the button that opens the menu under it (#5072). */
+const accountName = () => screen.queryByRole("button", { name: /^Account: / });
+/** The account row's words, when a viewer-level section or the zero-account door holds it. */
+const headNote = () => document.querySelector(".head-account")?.textContent;
 const pressed = () =>
   within(screen.getByRole("group", { name: "On this page" }))
     .getAllByRole("button")
@@ -174,8 +172,8 @@ describe("the zero-account door", () => {
     expect(await screen.findByText(/No account linked yet/)).toBeInTheDocument();
     expect(await screen.findByTestId("connect-guide")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Welcome to the league, Robin" })).toBeVisible();
-    // No switcher to pick from, no Overview to open, and no link back out to a redirect.
-    expect(screen.queryByRole("combobox", { name: "Account" })).toBeNull();
+    // No account to pick, no Overview to open, and no link back out to a redirect.
+    expect(accountName()).toBeNull();
     expect(pressed()).toEqual(["Milestones"]);
     expect(screen.queryByRole("button", { name: "Overview" })).toBeNull();
     expect(document.querySelector('a[href*="/onboarding"]')).toBeNull();
@@ -224,8 +222,56 @@ describe("the zero-account door", () => {
     expect(LADDER_CARD_NO_ACCOUNT_NOTE).toContain(clause);
   });
 
+  it("leads with the steps and folds the milestones list one tap below them (#5256)", async () => {
+    mountAccounts("/accounts");
+    const welcome = await screen.findByRole("heading", { name: "Welcome to the league, Robin" });
+    const fold = document.querySelector("details.ms-toc-fold");
+    expect(fold).not.toBeNull();
+    expect(fold?.hasAttribute("open")).toBe(false);
+    expect(fold?.querySelector("summary")).toHaveTextContent("Your milestones");
+    // The steps come first in reading order; the chapter cards wait inside the fold.
+    expect(welcome.compareDocumentPosition(fold as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(fold?.querySelector('a[href*="chapter=trading"]')).not.toBeNull();
+    // Inside the fold the open card points up at the steps, never "below".
+    expect(fold?.querySelector(".mc-open-word")).toHaveTextContent("▴ Open above");
+    // The table of contents' own header and its "open the connect guide" note are gone: the guide
+    // is already the first thing on the page.
+    expect(screen.queryByText("Milestones · table of contents")).toBeNull();
+    expect(screen.queryByRole("link", { name: "open the connect guide" })).toBeNull();
+  });
+
+  it("holds steps 2 and 3 as one counted line each until step 1 is done (#5256)", async () => {
+    mountAccounts("/accounts");
+    expect(await screen.findByText("Step 1 of 3")).toBeInTheDocument();
+    const trade = screen.getByText("Step 3 of 3").closest("li");
+    expect(trade).toHaveTextContent("Make your first trade · Needs a connected account");
+    // The trade waits: no Open Trade, so step 1's is the only filled button on the page.
+    expect(screen.queryByRole("link", { name: "Open Trade ›" })).toBeNull();
+    expect(trade).not.toHaveTextContent("fixture detail");
+    // Moneypenny's step is ordered, never locked: her line keeps a way in.
+    const hello = screen.getByText("Step 2 of 3").closest("li");
+    expect(hello).toHaveTextContent("Say hello to Moneypenny · Next, after step 1");
+    expect(
+      within(hello as HTMLElement).getByRole("button", { name: "Say hello now ›" }),
+    ).toBeVisible();
+  });
+
+  it("opens steps 2 and 3 in full once the account is connected", async () => {
+    accounts = [ERIC];
+    mountAccounts("/accounts?section=milestones&chapter=onboarding");
+    expect(await screen.findByRole("link", { name: "Open Trade ›" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Meet Moneypenny ›" })).toBeInTheDocument();
+    expect(screen.queryByText(/Step \d of 3/)).toBeNull();
+    // A member with an account keeps the table of contents first, unfolded.
+    expect(screen.getByText("Milestones · table of contents")).toBeInTheDocument();
+    expect(document.querySelector("details.ms-toc-fold")).toBeNull();
+  });
+
   it("gives the Milestones note's 'isn't linked' its control: the connect guide", async () => {
-    mountAccounts("/accounts?section=milestones");
+    // Off the onboarding chapter the table of contents still leads, so its note still points there.
+    mountAccounts("/accounts?section=milestones&chapter=trading");
     expect(await screen.findByText(/this session isn't linked to an/)).toBeInTheDocument();
     const guide = screen.getByRole("link", { name: "open the connect guide" });
     expect(guide.getAttribute("href")).toMatch(/section=milestones/);
@@ -243,11 +289,11 @@ describe("the Profile page's default and its viewer-level sections", () => {
     accounts = [ERIC];
     mountAccounts("/accounts");
     expect(await screen.findByTestId("overview")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account: Eric" })).toBeInTheDocument();
     expect(pressed()).toEqual(["Overview"]);
   });
 
-  it("hides the switcher on Milestones with a line why, and round-trips to the Overview", async () => {
+  it("hides the account on Milestones with a line why, and round-trips to the Overview", async () => {
     accounts = [ERIC];
     onboardingComplete = true;
     const router = mountAccounts("/accounts");
@@ -256,11 +302,11 @@ describe("the Profile page's default and its viewer-level sections", () => {
     await waitFor(() =>
       expect(router.state.location.search).toMatchObject({ section: "milestones" }),
     );
-    expect(await screen.findByText("Your milestones — the same on every account.")).toBeVisible();
-    expect(screen.queryByRole("combobox", { name: "Account" })).toBeNull();
+    await waitFor(() => expect(headNote()).toBe("Your milestones · the same on every account"));
+    expect(accountName()).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Overview" }));
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("section"));
-    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account: Eric" })).toBeInTheDocument();
   });
 
   it("opens a chapter beneath the cards from its card, and closes it leaving the section", async () => {
@@ -279,41 +325,41 @@ describe("the Profile page's default and its viewer-level sections", () => {
     await userEvent.click(screen.getByRole("button", { name: "Feedback" }));
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("chapter"));
     expect(await screen.findByRole("button", { name: "✦ Talk to Moneypenny" })).toBeVisible();
-    expect(screen.getByText("Your filings — the same on every account.")).toBeVisible();
+    expect(headNote()).toBe("Your filings · the same on every account");
   });
 
-  it("links one picked account's page as the league sees it, never the aggregate's", async () => {
-    // #3807 slice 2e, dead end 6 — the mirror of /u/:id's "Open in your Accounts".
+  it("links one picked account's page as the league sees it, one tap under its name", async () => {
+    // #3807 slice 2e, dead end 6 — the mirror of /u/:id's "Open in your Accounts"; under the
+    // account's name since #5072 (setup and its league page are secondary to the head).
     accounts = [ERIC];
     mountAccounts("/accounts");
-    const own = await screen.findByRole("link", { name: "Open as the league sees it" });
+    await userEvent.click(await screen.findByRole("button", { name: "Account: Eric" }));
+    const own = screen.getByRole("link", { name: /Eric as the league sees it/ });
     expect(own.getAttribute("href")).toMatch(/\/u\/human-eric$/);
   });
 
   it("offers no league page on All accounts", async () => {
     accounts = [ERIC];
     mountAccounts("/accounts?account=all");
-    expect(await screen.findByRole("combobox", { name: "Account" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Open as the league sees it" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "Account: All accounts" }));
+    expect(screen.queryByRole("link", { name: /as the league sees it/ })).toBeNull();
   });
 
-  it("names Settings in words in the head's link row, in every head state (#3816 slice 7)", async () => {
-    // Eric, 2026-09-04: a labelled link beside its sibling, not only the topbar's icon-only gear.
-    const settingsHref = () => screen.getByRole("link", { name: "Settings" }).getAttribute("href");
-    mountAccounts("/accounts");
-    await screen.findByText(/No account linked yet/);
-    expect(settingsHref()).toBe("/settings");
-    cleanup();
-
+  it("names the account's settings in words, one tap under its name (#5072; #3816 slice 7 before)", async () => {
+    // Eric, 2026-09-04: a labelled link, not only an icon. Round 2 of #5037 moved it off the head
+    // into the menu under the account's name ("secondary/auxiliary… should be relocated"); the
+    // top bar's member menu keeps Settings for the doors with no account in the head.
     accounts = [ERIC];
     mountAccounts("/accounts");
-    await screen.findByRole("link", { name: "Open as the league sees it" });
-    expect(settingsHref()).toBe("/settings");
+    await userEvent.click(await screen.findByRole("button", { name: "Account: Eric" }));
+    expect(screen.getByRole("link", { name: /Eric's settings/ }).getAttribute("href")).toBe(
+      "/settings?section=account&account=human-eric",
+    );
     cleanup();
 
     mountAccounts("/accounts?section=milestones");
-    await screen.findByText("Your milestones — the same on every account.");
-    expect(settingsHref()).toBe("/settings");
+    await waitFor(() => expect(headNote()).toBe("Your milestones · the same on every account"));
+    expect(document.querySelector(".cockpit-head a[href*='settings']")).toBeNull();
   });
 
   it("says the ladder's gate in the server's words (#1672's fix, regressed, restored)", async () => {

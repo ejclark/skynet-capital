@@ -124,8 +124,8 @@ const ericStats = {
 };
 const networth = {
   generatedAt: "2026-09-26T00:00:00Z",
-  accounts: [{ ...eric, ...ericStats, idle: "81% idle", idlePct: 80.9 }],
-  total: { ...ericStats, idle: "81% idle", idlePct: 80.9 },
+  accounts: [{ ...eric, ...ericStats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" }],
+  total: { ...ericStats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" },
 };
 const fresh = {
   linked: true,

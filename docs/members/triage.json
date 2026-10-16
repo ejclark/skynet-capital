@@ -5,6 +5,11 @@
     "mustBeSeenBy": "member with a linked account (hidden with zero accounts)"
   },
   {
+    "screen": "/accounts ?section=balance",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with one linked account selected (not All accounts; #5493 slice 3)"
+  },
+  {
     "screen": "/accounts ?section=activity",
     "verdict": "keep",
     "mustBeSeenBy": "member (honest empty state with no account)"
@@ -15,9 +20,14 @@
     "mustBeSeenBy": "member (honest empty state with no account)"
   },
   {
-    "screen": "/accounts ?section=heartbeat",
+    "screen": "/accounts ?section=playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "bot owner (only while one bot account is selected)"
+  },
+  {
+    "screen": "/accounts ?section=heartbeat",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=thesis",
@@ -27,7 +37,7 @@
   {
     "screen": "/accounts ?section=decisions",
     "verdict": "redirect-only",
-    "target": "/accounts?section=heartbeat"
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=milestones (table of contents)",
@@ -65,7 +75,7 @@
     "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
   },
   {
-    "screen": "/u/$id/decisions (Heartbeat)",
+    "screen": "/u/$id/playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
   },
@@ -80,9 +90,9 @@
     "mustBeSeenBy": "anyone signed in, bot accounts"
   },
   {
-    "screen": "/u/$id/playbooks",
+    "screen": "/u/$id/decisions",
     "verdict": "redirect-only",
-    "target": "/research?section=playbooks&account=$id"
+    "target": "/u/$id/playbooks?checks=open"
   },
   {
     "screen": "/leaderboard",

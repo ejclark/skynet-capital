@@ -2,7 +2,7 @@
 // house playbook listed On / Off / Can't fire, over the real built shell + stubbed APIs.
 //
 // `roll-call-*` mirrors production as found on 2026-10-02: no house playbook armed, so S1 and G1
-// read Off; TACO-DJT and HC-SAURON read Can't fire whatever is armed (`PLAYBOOK_WIRING_GAPS`).
+// read Off; TACO-DJT reads Can't fire whatever is armed (`PLAYBOOK_WIRING_GAPS`).
 //
 // `roll-call-armed-*` is the frame an ARMED roster produces — what lands the moment slice 2 flips
 // the house roster on. It is built by calling the real `playbookRollCall`, never by hand-writing
@@ -75,12 +75,6 @@ const heartbeat = {
         playbookId: "TACO-DJT",
         status: "blocked",
         reason: "No news feed is wired to it yet, so its trigger never arrives.",
-      },
-      {
-        playbookId: "HC-SAURON",
-        status: "blocked",
-        reason:
-          "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
       },
       { playbookId: "U-wheel-spy", status: "armed", mode: "conservative", reason: why.armed },
     ],

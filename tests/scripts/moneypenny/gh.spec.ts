@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { isTransientGhError, withRetry } from "../../../scripts/moneypenny/gh.mjs";
+import { ensureGhToken, isTransientGhError, withRetry } from "../../../scripts/moneypenny/gh.mjs";
 
 // 2026-09-05: one `HTTP 504: Gateway Timeout` from `gh api graphql` inside gatherDeps killed a
 // whole Moneypenny route run and dispatched a repair session for GitHub's own hiccup
@@ -14,6 +14,14 @@ describe("moneypenny gh retry", () => {
     expect(isTransientGhError("gh: HTTP 404: Not Found")).toBe(false);
     expect(isTransientGhError("API rate limit already exceeded for user ID 3472134")).toBe(false);
     expect(isTransientGhError(undefined)).toBe(false);
+  });
+
+  // #5354: `ghRest` is curl, which words a 5xx its own way; a 4xx in that wording stays fatal.
+  it("classifies curl's wording of a 5xx as transient, and its 4xx as not", () => {
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 500\n")).toBe(true);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 503")).toBe(true);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 403")).toBe(false);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 429")).toBe(false);
   });
 
   // #4675: GitHub's GraphQL internal error names no HTTP status, so `item-edit` got one attempt.
@@ -72,5 +80,55 @@ describe("moneypenny gh retry", () => {
       ),
     ).toThrow();
     expect(calls).toBe(3);
+  });
+});
+
+// #5056: the steer read-back hands a live session `node scripts/issues.mjs …` commands; without a
+// token in the environment every one died on `curl --fail`'s 401. The gh login is the fallback.
+describe("ensureGhToken", () => {
+  const withEnv = (env: Record<string, string | undefined>, fn: () => void) => {
+    const saved = { GH_TOKEN: process.env.GH_TOKEN, GITHUB_TOKEN: process.env.GITHUB_TOKEN };
+    for (const [k, v] of Object.entries(env)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try {
+      fn();
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  };
+
+  it("leaves a token that is already set alone, and never asks gh", () => {
+    withEnv({ GH_TOKEN: "set", GITHUB_TOKEN: undefined }, () => {
+      ensureGhToken({
+        run: () => {
+          throw new Error("gh must not be asked");
+        },
+      });
+      expect(process.env.GH_TOKEN).toBe("set");
+    });
+  });
+
+  it("fills GH_TOKEN from the gh login when nothing is set", () => {
+    withEnv({ GH_TOKEN: undefined, GITHUB_TOKEN: undefined }, () => {
+      ensureGhToken({ run: () => "from-gh" });
+      expect(process.env.GH_TOKEN).toBe("from-gh");
+    });
+  });
+
+  it("says how to sign in when there is no token and no gh login", () => {
+    withEnv({ GH_TOKEN: undefined, GITHUB_TOKEN: undefined }, () => {
+      expect(() =>
+        ensureGhToken({
+          run: () => {
+            throw new Error("not logged in");
+          },
+        }),
+      ).toThrow(/gh auth login/);
+    });
   });
 });

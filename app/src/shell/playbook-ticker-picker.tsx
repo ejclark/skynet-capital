@@ -225,6 +225,7 @@ export function TickerPicker({
                   <SubscribeForm
                     accountId={accountId}
                     card={pickedCard}
+                    needsConviction={pickedPair.needsConviction === true}
                     onSaved={() => {
                       onChanged();
                       close();

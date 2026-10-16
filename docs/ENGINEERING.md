@@ -76,7 +76,10 @@ post-deploy.
 
 Baselines are committed PNGs, so they carry repo weight — one per surface, not one per component.
 Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a finding until
-something explains it.
+something explains it. Baselines are Linux-only, so off Linux re-baseline from CI's own run:
+`node scripts/rebaseline-from-ci.mjs <pr>` saves each failing shot's expected, actual and diff for
+reading, then `--run <id> --apply --commit` copies the actuals over the baselines. It refuses
+anything that is not a pixel mismatch on an existing baseline.
 
 ### Requirements in EARS (the upstream half of BDD)
 
@@ -178,6 +181,13 @@ production with no code change. New execution or data backends are new adapters,
 UI is built from a shared component library — reusable, modular
 components with one source of truth for look, feel, and behavior. No bespoke one-off widgets,
 no god components. The same principle the backend already follows, applied to the frontend.
+
+Where that layer lives today: primitives in `app/src/ui/` (barrel `index.ts`, contract in its
+README), indexed by the generated `app/src/ui/CATALOG.md` (`npm run ui:catalog`) — read it before
+building a part. Domain widgets stay in `app/src/shell/`; root `src/ui/` is the legacy server-side
+string-HTML helpers, which the React app does not import. Extract a primitive only after a shape
+repeats three times or a house rule fixes it, never ahead of need — the study behind this is
+`docs/research/component-library-study.md`.
 
 ## State management — the deliberate stance
 

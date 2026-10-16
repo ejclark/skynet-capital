@@ -1,0 +1,11 @@
+{
+  "id": "eurostat-hicp-final-2026-10-16",
+  "kind": "macro-print",
+  "title": "Eurostat euro-area HICP, complete September 2026 data — the component detail behind the 3.8% flash",
+  "date": "2026-10-16",
+  "status": "estimate",
+  "source": "EST: Eurostat September 2026 flash-estimate release (2 Oct 2026) — press and aggregator coverage (Bloomberg/CNBC/tradingeconomics, searched 2026-10-13) states 'Eurostat is scheduled to publish the complete September inflation data on Oct. 16'; consistent with the ECB statistical calendar (press/calendars/statscal/ges/html/sthicp, fetched direct 2026-09-05), which lists the Sep-2026 full release at 16/10/2026 12:00 CET. Filed estimate per this lane's no-self-confirm limit; the Eurostat release page itself was not re-fetched. Checked 2026-10-13",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the ecb-decision-2026-10-29 D-16 pulse-check adjacency sweep (2026-10-13). It earns a row because it is the scoring date for that ledger's supply-side kill switch: the Sep flash showed services HICP 3.2% (from 3.0%) and core 2.5% (from 2.4%) with headline 3.8% and energy 18.8%, so the complete release confirms or revises whether the shock is spreading from energy into services, the last full inflation datum the ECB Council sees before 10-29. Impact LOW and symbols empty, deliberately: no house playbook is rates-keyed and no tracked name carries euro-inflation exposure; the same coverage-gap reasoning as eurostat-hicp-final-2026-09-17. Proposed as an estimate; it widens caution and licenses nothing."
+}

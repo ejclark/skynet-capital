@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { ruleTemplateOf } from "../live/playbook-rule";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
@@ -6,6 +7,7 @@ import type {
   PlaybookStoreCardView,
   StrategyCardView,
 } from "../live/playbook-store";
+import { AllocationPanel } from "./playbook-allocation";
 import type { MetricsScope } from "./playbook-metrics";
 import { PairRow, pairTitle } from "./playbook-store-cards";
 import { SubscriptionRow } from "./playbook-subscription-row";
@@ -31,19 +33,26 @@ import { TickerPicker } from "./playbook-ticker-picker";
  * The client never builds an id from a strategy and a ticker, or splits one.
  */
 
-/** "the wheel" → "The wheel": how a strategy's name heads its card. */
-const capitalized = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
+/** "the wheel" → "The wheel": how a strategy's name heads its card and its list row. */
+export const capitalized = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
+
+/** The card's element id, which a list row opens (`#pb-wheel`). */
+export const strategyAnchor = (strategy: string): string => `pb-${strategy}`;
 
 /** A row stays open when it is the pair to look at: researched, an owner's conviction, or held. */
 const staysOpen = (pair: PairRowView): boolean =>
   pair.subscription !== undefined || pair.status === "researched" || pair.status === "conviction";
+
+/** "△ researched, below the house bar · past its shelf date" → "△ researched": a status label
+ *  without its qualifier or staleness, for a count or a list row. */
+export const bareStatus = (label: string): string => label.replace(/,.*| ·.*/, "");
 
 /** "3 more: ? 2 not studied · – 1 can't run" — the folded rows counted by the word each one wears,
  *  so a fold never hides how many rows it holds or why they are there. */
 function foldedLine(pairs: readonly PairRowView[]): string {
   const counts = new Map<string, number>();
   for (const pair of pairs) {
-    const label = pair.statusLabel.replace(/,.*| ·.*/, "");
+    const label = bareStatus(pair.statusLabel);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   const parts = [...counts].map(([label, n]) => {
@@ -64,9 +73,12 @@ export function StrategyCard({
   accountName,
   metricsFor,
   houseFor,
+  selected = false,
 }: {
   readonly accountId: string;
   readonly strategy: StrategyCardView;
+  /** The strategy the list has open — the only card a wide screen shows beside the list (#5448). */
+  readonly selected?: boolean;
   /** Every pair's rules and numbers, by pair id. */
   readonly cardsById: ReadonlyMap<string, PlaybookStoreCardView>;
   readonly canManage: boolean;
@@ -101,15 +113,22 @@ export function StrategyCard({
         accountName={accountName}
         {...(metrics ? { metrics } : {})}
         {...(house ? { house } : {})}
+        reportKeyed={ruleTemplateOf(strategy.strategy) === "window"}
       />
     );
   };
   return (
-    <section className="pb-card pb-strategy" data-subscribed={mine.length > 0 || undefined}>
+    <section
+      className="pb-card pb-strategy"
+      id={strategyAnchor(strategy.strategy)}
+      data-subscribed={mine.length > 0 || undefined}
+      data-selected={selected || undefined}
+    >
+      {/* The name is the lore; the plain line under it says what it does (#5445). */}
       <h2 className="pb-card-h">
-        <span className="pb-card-id">{capitalized(strategy.name)}</span>{" "}
-        <span className="pb-card-symbols">trades {strategy.instrument}</span>
+        <span className="pb-card-id">{capitalized(strategy.name)}</span>
       </h2>
+      {strategy.line ? <p className="pb-card-line">{strategy.line}</p> : null}
       {mine.map(({ pair, card }) => (
         // An existing subscription keeps every exit it had, on every account — pausing and
         // leaving are never gated. Behind the fog an edit may only lower exposure; the server
@@ -121,10 +140,20 @@ export function StrategyCard({
             card={{ ...card, ...(pair.subscription ? { subscription: pair.subscription } : {}) }}
             human={human}
             reduceOnly={delegation.locked}
+            runsOnConviction={pair.status === "conviction" || pair.needsConviction === true}
             onChanged={onChanged}
           />
         </div>
       ))}
+      {canManage && !human && (mine.length > 0 || strategy.allocation) ? (
+        <AllocationPanel
+          accountId={accountId}
+          strategy={strategy.strategy}
+          strategyName={strategy.name}
+          {...(strategy.allocation ? { allocation: strategy.allocation } : {})}
+          onChanged={onChanged}
+        />
+      ) : null}
       <p className="pb-card-description">{strategy.summary}</p>
       <div className="pb-pairs">{open.map(row)}</div>
       {canManage ? (

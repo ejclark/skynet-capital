@@ -85,10 +85,95 @@ describe("PositionsBlotter", () => {
         />,
       ),
     );
-    // The table and the phone's cards (#3689 slice 8) both list what the filter kept.
-    expect(screen.getAllByText("MSFT put").length).toBeGreaterThan(0);
+    // The table and the phone's cards (#3689 slice 8) both list what the filter kept, each in
+    // Eric's row spec (#5061, #5071); the table row's opener names it by its display.
+    expect(screen.getByRole("button", { name: "Detail for MSFT put" })).toBeInTheDocument();
+    expect(screen.getAllByText("LONG PUT")).toHaveLength(2);
     expect(screen.queryByText("SPY")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Options" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // #5042: "Losing" filtered on lifetime P/L while members tapped it for today's losers.
+  describe("today's change and lifetime against cost are two chips, each named for what it keeps", () => {
+    const msft = position({
+      symbol: "MSFT",
+      display: "MSFT",
+      dayPl: "−$76",
+      dayPct: "−0.6%",
+      dayTone: "neg",
+      totalPl: "+$414",
+      totalPlRaw: 414,
+      totalTone: "pos",
+    });
+    const book = [msft, position({ symbol: "SPY", display: "SPY", dayTone: "pos" })];
+
+    it("labels the chips by today's change and by cost — never Losing or In profit", () => {
+      render(
+        withClient(
+          <PositionsBlotter
+            deskId="d"
+            positions={book}
+            query=""
+            onFilterChange={() => undefined}
+          />,
+        ),
+      );
+      for (const label of ["Up today", "Down today", "Above cost", "Below cost"]) {
+        expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+      }
+      expect(screen.queryByRole("button", { name: "Losing" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "In profit" })).not.toBeInTheDocument();
+    });
+
+    it("Down today writes day:<0 and keeps MSFT, −$76 today though +$414 overall", () => {
+      const seen: string[] = [];
+      const { rerender } = render(
+        withClient(
+          <PositionsBlotter
+            deskId="d"
+            positions={book}
+            query=""
+            onFilterChange={(q) => seen.push(q)}
+          />,
+        ),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Down today" }));
+      expect(seen).toEqual(["day:<0"]);
+      rerender(
+        withClient(
+          <PositionsBlotter
+            deskId="d"
+            positions={book}
+            query="day:<0"
+            onFilterChange={() => undefined}
+          />,
+        ),
+      );
+      expect(screen.getAllByText("MSFT").length).toBeGreaterThan(0);
+      expect(screen.queryByText("SPY")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Down today" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("Below cost still reads pl:<0, so a saved view or an old link keeps working", () => {
+      render(
+        withClient(
+          <PositionsBlotter
+            deskId="d"
+            positions={book}
+            query="pl:<0"
+            onFilterChange={() => undefined}
+          />,
+        ),
+      );
+      expect(screen.getByRole("button", { name: "Below cost" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.queryByText("MSFT")).not.toBeInTheDocument();
+    });
   });
 
   it("renders the one New trade card", () => {

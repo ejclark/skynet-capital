@@ -56,6 +56,15 @@ describe("researchCalendarJson", () => {
     expect(Object.keys(view).sort()).toEqual(["calls", "closures", "events"]);
   });
 
+  it("marks an estimated date, so Events never draws it as confirmed (#5510)", () => {
+    const shelf = {
+      ...SHELF,
+      events: [{ ...event("nvda-2026-11-18-print", ["NVDA"]), estimated: true as const }],
+    };
+    expect(researchCalendarJson(shelf).events[0]?.estimated).toBe(true);
+    expect(view.events[0]).not.toHaveProperty("estimated");
+  });
+
   it("marks called events, so the fog line counts calls without carrying them", () => {
     const bare = researchCalendarJson({ ...SHELF, calls: [] });
     expect(bare.events.every((e) => !("called" in e))).toBe(true);

@@ -1,7 +1,8 @@
 // Visual harness for an account's Activity paged and narrowed (#4650, plan #4642) — Eric watching the
 // option trades a bot makes through each playbook it runs. PHONE FIRST (docs/PICTURES.md): the 390px
 // frames prove the symbol box, the owner's playbook chips, "Load older orders" and the honest empty
-// line all fit a phone; one desktop frame shows the wider screen only adds room.
+// line all fit a phone, and (#5101) that each order is a day-headed card that opens in place; one
+// desktop frame shows the wider screen only adds room.
 //
 // Every `/api/desk/bot-sauron/activity` read — the first page, each older page, each filter — is
 // answered by the REAL route (`serveDeskJson`) over a real in-memory decision store and a fixture
@@ -11,10 +12,13 @@
 // CRWV-WHEEL puts — each placed by its own decision, so the first page is full and has a cursor.
 // No sign-in is configured, so the viewer is the owner and the chips are drawn.
 //
+// The last frame is Profile → Activity at the list's end on a phone (#5165).
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/activity-filters.mjs [outdir]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
 import { filledRecord, HIGH, LOW, PUT } from "./option-fill-fixture.mjs";
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const DAY = 86_400_000;
@@ -151,6 +155,12 @@ const { page, origin, shoot, close } = await openShell({
       },
     },
     "/api/desk/bot-sauron/probes": { available: false },
+    // The Profile head's one other read, for frame 5.
+    "/api/accounts/networth": profileStubs([
+      { id: "bot-sauron", name: "Sauron", kind: "bot", suspended: false },
+    ])["/api/accounts/networth"],
+    // The deep dive's "now" ring (#5101): CRWV a few dollars above the put's $85 strike.
+    "/api/trade/quote": { symbol: "CRWV", last: 88.4, change: 1.2, changePct: 1.38, tone: "pos" },
   },
 });
 // The real route, query string and all (the shell's pathname-only stubs cannot see `?symbol=`).
@@ -185,15 +195,38 @@ for (const [tag, viewport] of [
   // page as it opens (its account head is sticky there too, so it is not scrolled under it).
   if (tag === "desktop") {
     await shoot(`activity-filters-${tag}`);
+    // 1c — the put's full detail as a side panel (#5101): not modal, the table live beside it.
+    await page.goto(`${origin}/app/u/bot-sauron/activity?order=opt-put-1#act-opt-put-1`);
+    await page.locator(".act-deep-panel").waitFor();
+    await settle();
+    await shoot(`activity-deep-${tag}`);
     break;
   }
   await toTop(page.locator(".page-header"));
   await shoot(`activity-filters-${tag}`);
 
-  // 2 — narrowed to one playbook: the chip pressed (✓), only the spread's row, its why open.
-  await page.getByRole("button", { name: "NVDA-CALL-SPREAD" }).click();
+  // 1b — the phone's cards (#5101): the put opened in place, under its own row — the time, the
+  // price a share, then the decision that placed it.
+  await page.locator("#act-opt-put-1 .act-card-head").click();
+  await settle();
+  await toTop(page.locator("#act-opt-put-1"));
+  await shoot(`activity-card-open-${tag}`);
+
+  // 1c — "Full detail ›": the put's deep dive as a page, its one way back at the top.
+  await page.getByRole("button", { name: /Full detail/ }).click();
+  await page.locator(".act-deep-page").waitFor();
+  await settle();
+  await shoot(`activity-deep-${tag}`);
+  await page.locator(".act-deep-page").evaluate((el) => el.scrollIntoView({ block: "end" }));
+  await shoot(`activity-deep-end-${tag}`);
+  await page.getByRole("button", { name: "‹ Activity" }).click();
+  await page.locator("#act-opt-put-1[data-open]").waitFor();
+  await page.locator("#act-opt-put-1 .act-card-head").click();
+
+  // 2 — narrowed to one playbook: the chip pressed (✓), only the spread's card, its why open.
+  await page.getByRole("button", { name: "NVDA-CALL-SPREAD", exact: true }).click();
   await page.locator("#act-opt-put-1").waitFor({ state: "detached" });
-  await page.getByRole("button", { name: /Why NVDA \$185\/\$200 CALL SPREAD/ }).click();
+  await page.locator("#act-opt-spread-1 .act-card-head").click();
   await settle();
   await toTop(page.locator(".activity-filter-bar"));
   await shoot(`activity-playbook-${tag}`);
@@ -216,6 +249,22 @@ for (const [tag, viewport] of [
   await toTop(page.locator(".page-header"));
   await shoot(`activity-no-match-${tag}`);
 }
+
+// 5 — Profile → Activity at the end of its list (#5165): the owner's own page walks back the same
+// way, and once the oldest order is loaded it says so. A build without the walk shoots the list
+// where it simply stopped — the before frame.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?section=activity`);
+await page.locator("#act-opt-spread-1").waitFor();
+await settle();
+const profileOlder = page.getByRole("button", { name: "Load older orders" });
+if (await profileOlder.isVisible()) {
+  await profileOlder.click();
+  await profileOlder.waitFor({ state: "detached" });
+  await settle();
+}
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await shoot("profile-activity-end-phone");
 
 store.close();
 await close();

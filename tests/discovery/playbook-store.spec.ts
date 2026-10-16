@@ -18,9 +18,11 @@ describe("playbookStoreCatalog", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
       "BETA-SCOUT",
+      "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
-      "HC-SAURON",
+      "MU-DIP-BOUNCE",
+      "NBIS-DIP-BOUNCE",
       "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "SAURON",
@@ -63,6 +65,25 @@ describe("playbookStoreCatalog", () => {
     expect(s1?.evidenceHref).toMatch(/^\/research\//);
   });
 
+  // #5432: the Store draws each stretch's move as a bar — the study's numbers, carried as a cited
+  // field beside `evidence`, never literals in the component.
+  it("carries S1's measured stretches, cited to the study's F2 table, beside its window", () => {
+    const s1 = byId("S1-NVDA");
+    expect(s1?.stretches?.source).toBe("docs/research/nvda-earnings-cycle.md F2");
+    expect(s1?.stretches?.reports).toBe(14);
+    expect(s1?.stretches?.stretches).toEqual([
+      { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+      { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+      { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+    ]);
+    const study = readFileSync("docs/research/nvda-earnings-cycle.md", "utf8");
+    expect(study).toContain("| D-20 → D-10 | **+6.30%** | 93% |");
+    expect(study).toContain("| D-10 → D-5 | +3.61% | 79% |");
+    expect(study).toContain("| **D-5 → D** | **-0.77%** | **50%** |");
+    // A pair whose study measured no stretches sends none: the line draws, the bars do not.
+    expect(byId("G1-GOOG")?.stretches).toBeUndefined();
+  });
+
   it("names S1's and G1's windows in trading sessions, the unit their code counts in (#4776)", () => {
     const s1 = byId("S1-NVDA");
     expect(s1?.enter).toContain(
@@ -81,13 +102,13 @@ describe("playbookStoreCatalog", () => {
     }
   });
 
-  it("shows a tactical playbook's whole basket and no invented window", () => {
-    const hc = byId("HC-SAURON");
-    expect(hc?.symbols.length).toBeGreaterThan(1);
-    expect(hc?.symbol).toBe(hc?.symbols[0]);
-    expect(hc?.window).toBeUndefined();
-    expect(hc?.size).toBeUndefined();
-    expect(hc?.traits).toEqual([]);
+  it("shows a basket playbook's whole basket and no invented window", () => {
+    const basket = byId("SAURON");
+    expect(basket?.symbols.length).toBeGreaterThan(1);
+    expect(basket?.symbol).toBe(basket?.symbols[0]);
+    expect(basket?.window).toBeUndefined();
+    expect(basket?.size).toBeUndefined();
+    expect(basket?.traits).toEqual([]);
   });
 
   it("shows an option playbook's rules as copy, never a probed window or a percent size", () => {
@@ -105,7 +126,10 @@ describe("playbookStoreCatalog", () => {
     expect(wheel?.description).toContain("about 89%");
     expect(wheel?.description).toContain("below $0 on 2027-01-29");
     expect(wheel?.description).toContain("more than 1 in 3 of its sold puts");
-    expect(wheel?.description).toContain("nothing switches it off automatically");
+    // From #4469 slice 3c part 3 the check is the bots' own (`with-conviction-gate.ts`), on every
+    // subscription to the pair: the ◆ row's conviction rides on each one (`row-conviction.ts`).
+    expect(wheel?.description).toContain("stops selling new puts on its own");
+    expect(wheel?.description).not.toContain("by hand");
     expect(wheel?.exitCutLosses).toContain("The real loss is owning a falling stock");
     expect(wheel?.exitCutLosses).toContain("ride through an earnings print");
   });
@@ -361,7 +385,8 @@ describe("playbookStoreCatalog", () => {
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
     });
 
-    // A member cannot see which build runs, and HC-SAURON's card carries no numbers to point at.
+    // A member cannot see which build runs, and no other card describes the hardcore build
+    // (HC-SAURON, its tactical translation, was dissolved on 2026-10-16).
     it("describes his research settings in its own words rather than pointing at another card", () => {
       expect(copy()).not.toContain("HC-SAURON");
       expect(note("Research settings")).toContain("This card cannot show which his account runs");

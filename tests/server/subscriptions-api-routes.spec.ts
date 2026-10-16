@@ -67,6 +67,7 @@ function storeWith(calls: unknown[] = []) {
       calls.push({ op: "unsubscribe", id, playbookId }),
     setEnabled: (id: string, playbookId: string, enabled: boolean) =>
       calls.push({ op: "setEnabled", id, playbookId, enabled }),
+    loadAllocations: () => ({}),
   } as never;
 }
 

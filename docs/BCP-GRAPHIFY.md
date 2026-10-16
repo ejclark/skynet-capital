@@ -64,7 +64,7 @@ rule:**
 
 - **Real god-nodes are the trading domain model:** `MarketContext` (38), `OrderIntent` (36), `Persona`
   (32), `Portfolio` (30) — the *engine*. I had guessed the UI files (`authenticator.ts`,
-  `render-dashboard.ts`) would top the list. They did **not**.
+  and render-dashboard.ts, since deleted) would top the list. They did **not**.
 - **Why the guess was wrong is the lesson.** `authenticator.ts` is the most *brand-dense* file (the
   entire `/login` world) yet structurally *light* — it's one giant inline canvas template, so
   tree-sitter sees few nodes. **Structural centrality and identity density are near-inverse here.**

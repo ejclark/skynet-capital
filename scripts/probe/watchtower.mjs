@@ -236,20 +236,36 @@ try {
     "R&D",
     "Profile",
   ];
+  // Settings left the bar for the member menu (#5064): open it, then take its Settings link, the
+  // way a member does — a missing menu or link is a note, never a hang.
+  const openSettings = async () => {
+    try {
+      await page
+        .getByRole("button", { name: "Member menu", exact: true })
+        .click({ timeout: 5_000 });
+      await page
+        .getByRole("navigation", { name: "Member menu" })
+        .getByRole("link", { name: "Settings" })
+        .click({ timeout: 5_000 });
+      return true;
+    } catch {
+      return false;
+    }
+  };
   let max = 0;
   let count = 0;
   for (const step of plan) {
-    const went = await page.evaluate(
-      (name) => {
-        const links = [...document.querySelectorAll('nav[aria-label="Views"] a, a[aria-label]')];
-        const hit = links.find(
-          (a) => (a.getAttribute("aria-label") ?? a.textContent?.trim()) === name,
-        );
-        hit?.click();
-        return Boolean(hit);
-      },
-      step === "settings" ? "Settings" : step,
-    );
+    const went =
+      step === "settings"
+        ? await openSettings()
+        : await page.evaluate((name) => {
+            const links = [...document.querySelectorAll('nav[aria-label="Views"] a')];
+            const hit = links.find(
+              (a) => (a.getAttribute("aria-label") ?? a.textContent?.trim()) === name,
+            );
+            hit?.click();
+            return Boolean(hit);
+          }, step);
     await page.waitForTimeout(500);
     if (went) count++;
     else

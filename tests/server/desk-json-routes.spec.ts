@@ -549,6 +549,88 @@ describe("serveDeskJson", () => {
     });
   });
 
+  // #5327 — the drawn play names the play, so it rides to the owner alone, like every other id.
+  describe("the Thesis tab's drawn play is the bot owner's alone (#885, #5327)", () => {
+    const claim = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 6,
+      type: "market" as const,
+      reason: "claiming the discarded",
+      strategy: "sauron-panic-claim",
+      playbookId: "SAURON",
+      playbookMode: "standard" as const,
+    };
+    const pass = {
+      at: Date.now(),
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [claim],
+      guardedIntents: [claim],
+      outcomes: [{ intent: claim, action: "placed" as const }],
+      context: {
+        asOf: "2026-09-20T15:00:00.000Z",
+        quotes: {},
+        momentum: { NVDA: 0.003 },
+        newsSentiment: { NVDA: -0.82 },
+      },
+      playbookVerdicts: [
+        { playbookId: "SAURON", mode: "standard" as const, state: "long" as const },
+      ],
+    };
+    const fill = {
+      orderId: "ord-1",
+      participantId: "sauron",
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 6,
+      filledQuantity: 6,
+      status: "filled",
+      at: "2026-09-20T15:00:00.000Z",
+      source: "stream" as const,
+    };
+    const sauron = { ...bot, personaId: "sauron" };
+    const gated = configWith({
+      hub: {
+        getState: () => ({ generatedAt: "t", participants: [sauron], collisions: [] }),
+      } as never,
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      readDecisions: () => Promise.resolve([pass]),
+      readTradeActivity: async () => [fill],
+      findByOrderId: (orderId) =>
+        orderId === "ord-1" ? { record: pass, intent: claim } : undefined,
+      signalWindows: { momentum: 20, sentiment: 10 },
+    });
+    const thesisFor = async (who: string) => {
+      const { res, out } = fakeRes();
+      const path = "/api/desk/sauron/thesis";
+      await serveDeskJson(res, path, path, gated, { email: who, provider: "google", exp: 0 });
+      return out.body ?? "";
+    };
+
+    it("draws the play, with its windows and each mark's recorded news score, for the owner", async () => {
+      const { thesis } = JSON.parse(await thesisFor("owner@x"));
+      expect(thesis.play).toMatchObject({
+        playbookId: "SAURON",
+        name: "Buy the rumor, sell the news",
+        buyAtOrBelow: -0.7,
+        sellAtOrAbove: 0.7,
+        windows: { momentum: 20, sentiment: 10 },
+      });
+      expect(thesis.markers[0]).toMatchObject({ playbookId: "SAURON", sentiment: -0.82 });
+    });
+
+    it("sends a non-owner the marks' news scores but neither the play nor its name", async () => {
+      const body = await thesisFor("guest@x");
+      const { thesis } = JSON.parse(body);
+      expect(thesis.play).toBeUndefined();
+      expect(thesis.markers[0]).toMatchObject({ symbol: "NVDA", sentiment: -0.82 });
+      expect(body).not.toContain("SAURON");
+      expect(body).not.toContain("Buy the rumor");
+    });
+  });
+
   it("serves the pulse with each section owning its empty state", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/pulse", "/api/desk/sauron/pulse", configWith());
@@ -699,5 +781,49 @@ describe("/heartbeat — the roll call reads the bot's subscriptions", () => {
     for (const word of ["CRWV-WHEEL", "NVDA-CALL-SPREAD", "paused", "starting", "Paused"]) {
       expect(guest.body).not.toContain(word);
     }
+  });
+});
+
+/** #4950: the Overview's idea cards skip a playbook the bot already runs — on the owner's copy only,
+ *  since a non-owner's copy missing exactly those ideas would name them (#885). */
+describe("the desk's ideas skip a playbook the account already subscribes to", () => {
+  const subscribedTo = (...ids: string[]) =>
+    ({
+      loadIfReadable: () => ({
+        sauron: ids.map((playbookId) => ({ playbookId, enabled: false, accountId: "sauron" })),
+      }),
+    }) as unknown as DashboardServerConfig["subscriptions"];
+  const ideasFor = async (who: string, subscriptions = subscribedTo()) => {
+    const { res, out } = fakeRes();
+    const gated = configWith({
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      subscriptions,
+    });
+    await serveDeskJson(res, "/api/desk/sauron", "/api/desk/sauron", gated, {
+      email: who,
+      provider: "google",
+      exp: 0,
+    });
+    const desk = answered(out).desk as {
+      considerations: { id: string; action: { href: string } }[];
+    };
+    return desk.considerations;
+  };
+
+  it("pitches the NVDA playbook until the owner's bot subscribes, even paused", async () => {
+    const before = await ideasFor("owner@x");
+    const nvda = before.filter((c) => c.id.endsWith("-NVDA"));
+    expect(nvda.length).toBeGreaterThan(0);
+    const ids = nvda.map((c) => c.id.replace(/^opportunity-/, "").replace(/-NVDA$/, ""));
+    expect(await ideasFor("owner@x", subscribedTo(...ids))).toEqual([]);
+    expect(nvda[0]?.action.href).toBe("/app/research?section=playbooks&account=sauron");
+  });
+
+  it("filters nothing on a non-owner's copy", async () => {
+    const owners = await ideasFor("owner@x");
+    expect(owners.length).toBeGreaterThan(0);
+    const ids = owners.map((c) => c.id.replace(/^opportunity-/, "").replace(/-NVDA$/, ""));
+    expect(await ideasFor("guest@x", subscribedTo(...ids))).toEqual(owners);
   });
 });

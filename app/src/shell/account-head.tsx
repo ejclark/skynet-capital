@@ -2,8 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
+import { EnvPill, KindChip } from "../ui";
+import { BookHealthLine } from "./book-health-line";
 import { PageFrame } from "./frame";
-import { HeartbeatChip } from "./heartbeat";
+import { PlaybooksHeadLine } from "./heartbeat";
+import { publishClearance } from "./landing";
+import { SauronCard } from "./sauron-card";
 
 /**
  * THE ANY-ACCOUNT PAGE'S HEAD (#3807 slice 2d; docs/IA.md §8) — `/u/:id` is the page for ANY
@@ -12,12 +16,19 @@ import { HeartbeatChip } from "./heartbeat";
  * users belong outside of profile"; #3345/#3350: Accounts is self-scoped). 2a's link row became
  * this page's own head, cockpit-shaped like `/accounts`' (`cockpit.css`): the account's name, its
  * kind and the SIM pill on the first line, the section switch on the second — Overview · Activity
- * · Pulse, and for a bot Heartbeat · Thesis. Sticky at ≥861 exactly like the cockpit head; at
+ * · Pulse, and for a bot Playbooks · Thesis. Sticky at ≥861 exactly like the cockpit head; at
  * ≤860 it scrolls away with the page (`.acct-head`), so a phone keeps its height for the book.
  *
- * "Decisions" folds into "Heartbeat" (#3687): the item is named for what the Profile page calls a
- * bot's passes, and it opens `/u/:id/decisions`, which now reads as Heartbeat. The old rail's way
- * back to the Leaderboard stays gone — the topbar's Leaderboard tab is that.
+ * "Decisions" folded into "Heartbeat" (#3687), and Heartbeat into "Playbooks" (#5073): the item is
+ * named for what the Profile page calls the section, and so is its address, `/u/:id/playbooks`
+ * (#5073's IA call; a saved `/u/:id/decisions` link redirects there with the check log open). The
+ * bot's head line ("● Running · 7 playbooks ›") and every fill's "the whole pass" link there too.
+ * Beside it, on any account, the book's health line (#5493 slice 2, `book-health-line.tsx`):
+ * "■ 1 gate · ◆ 2 signals" or "● Balanced"; on your own account its counts open that account's
+ * Balance section on your Accounts page (slice 3) — bot or human, since idle cash and a name over
+ * its share are findings on any book. Anyone else's reads the counts as plain words (a finding
+ * names a playbook, and which playbooks an account runs is its owner's, #885). The old rail's way back to the Leaderboard stays
+ * gone — the topbar's Leaderboard tab is that.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
  * account, so it appears only on a page the session owns — ownership from the same
@@ -42,12 +53,38 @@ export function AccountHead({
 }): ReactElement {
   const isOwn = useOwnsAccount(id);
   return (
-    <div className="cockpit-head acct-head">
+    <div className="cockpit-head acct-head" ref={publishClearance}>
       <div className="acct-head-id">
         <h1>{name}</h1>
-        <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
-        <span className="env-pill">SIM</span>
-        {kind === "bot" ? <HeartbeatChip deskId={id} showPlaybooks={isOwn} /> : null}
+        <KindChip kind={kind} />
+        <EnvPill />
+        {kind === "bot" ? (
+          <PlaybooksHeadLine
+            deskId={id}
+            showPlaybooks={isOwn}
+            renderLink={(label) => (
+              <Link to="/u/$id/playbooks" params={{ id }} className="hb-line-link">
+                {label}
+              </Link>
+            )}
+          />
+        ) : null}
+        <BookHealthLine
+          deskId={id}
+          renderLink={
+            isOwn
+              ? (label) => (
+                  <Link
+                    to="/accounts"
+                    search={{ account: id, section: "balance" }}
+                    className="hb-line-link"
+                  >
+                    {label}
+                  </Link>
+                )
+              : undefined
+          }
+        />
         {isOwn ? (
           <Link to="/accounts" search={{ account: id }} className="acct-head-own">
             Open in your Accounts
@@ -65,8 +102,8 @@ export function AccountHead({
           Pulse
         </Link>
         {kind === "bot" ? (
-          <Link to="/u/$id/decisions" params={{ id }}>
-            Heartbeat
+          <Link to="/u/$id/playbooks" params={{ id }}>
+            Playbooks
           </Link>
         ) : null}
         {kind === "bot" ? (
@@ -81,7 +118,8 @@ export function AccountHead({
 }
 
 /** The page chrome every `/u/:id` child shares: the frame, the head, then the section's body —
- *  one wrapper so the five sections read identically (`.acct-page` scopes the card's glance). */
+ *  rendered once by the layout route (`u.$id.tsx`, #4951), so the head stays put while a section
+ *  reads, and the five sections read identically (`.acct-page` scopes the card's glance). */
 export function AccountPage({
   desk,
   tower,
@@ -99,6 +137,30 @@ export function AccountPage({
         {children}
       </div>
     </PageFrame>
+  );
+}
+
+/** The account's league card on its Overview: under the frame's tower from the bench width (the
+ *  layout stands it there, `under`), boxed in the page's own flow below it. One component for both
+ *  places so the two never disagree on whose league it is. */
+export function AccountLeague({
+  landmark,
+  under,
+}: {
+  /** The account's landmark dials, when it has one (persona-mapped bots). */
+  readonly landmark?: { readonly power: number; readonly health: number } | undefined;
+  readonly under: boolean;
+}): ReactElement {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const owned = settings.data?.accounts ?? [];
+  return (
+    <SauronCard
+      {...(landmark ? { landmark } : {})}
+      ownedIds={owned.map((a) => a.id)}
+      meId={owned.find((a) => a.kind === "human")?.id}
+      scope=".acct-page"
+      under={under}
+    />
   );
 }
 

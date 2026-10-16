@@ -13,7 +13,7 @@ import type {
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { type Pair, pairFor, pairTable } from "../../src/playbooks/pair-table.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
-import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
+import { CRWV_WHEEL, CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
 import { wheel } from "../../src/playbooks/wheel.js";
 import { buildOccSymbol, humanizeOptionSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
@@ -34,7 +34,14 @@ const CRWV_SETTING = {
   findings:
     "AGAINST this play: implied 69.9% vs a median 88.7% realized (6th percentile); Δ0.20 puts " +
     "priced 19.4% to assign vs 33.3% delivered.",
-  studySays: "our study found CRWV's option premium underpays its moves",
+  dataShows:
+    "Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the " +
+    "past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned " +
+    "would have been assigned 33% of the time in CRWV's own price history.",
+  bet:
+    "So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its " +
+    "owner runs this against the study, betting the market has CRWV about right: that its swings " +
+    "calm to the pace options price.",
 } as const;
 
 // A row the real table does not have yet: a ✓ wheel on AMZN (the screen's only fit, unstudied).
@@ -92,9 +99,13 @@ function market(symbol: string, spot = 92): MarketContext {
 }
 const flat = (): Portfolio => aPortfolio({ cash: 100_000, positions: [] });
 
+// Template parity is measured on CRWV's classic setting (month out, the mode's delta, one contract);
+// its 2026-10-16 conviction settings are pinned in crwv-wheel.spec.ts.
+const CLASSIC = wheel(CRWV_WHEEL_SETTING);
+
 describe("CRWV-WHEEL — still the playbook it was", () => {
   it("equals main's playbook field by field (criterion 7)", () => {
-    expect(CRWV_WHEEL).toMatchObject({
+    expect(CLASSIC).toMatchObject({
       id: "CRWV-WHEEL",
       symbols: ["CRWV"],
       thesis: CRWV_SETTING.thesis,
@@ -112,7 +123,7 @@ describe("CRWV-WHEEL — still the playbook it was", () => {
 
   it("sells the same put under the same id, reason and quantity as main", () => {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -124,8 +135,7 @@ describe("CRWV-WHEEL — still the playbook it was", () => {
       reason:
         `Selling one cash-secured ${humanizeOptionSymbol(putAt("CRWV", 80))} for about $2.30 a share ` +
         "($230 for the contract): $8,000 stays set aside in case CRWV finishes below $80 and the " +
-        "shares are put to the bot. Run on its owner's conviction — our study found CRWV's option " +
-        "premium underpays its moves.",
+        `shares are put to the bot. ${CRWV_SETTING.dataShows} ${CRWV_SETTING.bet}`,
     });
   });
 });
@@ -147,7 +157,8 @@ describe("wheel — the verdict comes from the pair row", () => {
         symbol: "AMZN",
         thesis: "a test wheel",
         findings: "FOR this play: a test finding.",
-        studySays: "our study found AMZN's premium pays for its moves",
+        dataShows: "Our study of AMZN: a test of what the data shows.",
+        bet: "A bet the house's research has no need of.",
       },
       withRow(AMZN_PAIR),
     );
@@ -161,8 +172,9 @@ describe("wheel — the verdict comes from the pair row", () => {
     const [put] = amzn.decide?.(market("AMZN"), flat(), calendarFor("AMZN"), "standard") ?? [];
     expect(put).toMatchObject({ symbol: "AMZN", quantity: 1, strategy: "amzn-wheel-put" });
     expect(put?.reason).toContain("in case AMZN finishes below $80");
-    expect(put?.reason).toContain(
-      "Run on the house's research — our study found AMZN's premium pays for its moves.",
+    // Run WITH its study, the Why is the data alone — the setting's bet is never said.
+    expect(put?.reason).toMatch(
+      /put to the bot\. Our study of AMZN: a test of what the data shows\.$/,
     );
     expect(put?.reason).not.toContain("CRWV");
     expect(put?.forecast?.invalidator).toContain("below 0 on 2027-04-30");
@@ -181,6 +193,11 @@ describe("wheel — a pair it cannot sell puts on", () => {
     for (const status of ["screened", "stand-aside", "not-studied", "cant-run"] as const) {
       expect(amznWith({ status, call: "x", study: "docs/research/x.md" })).toThrow(/no verdict/);
     }
+  });
+
+  it("throws for a conviction whose setting states no bet against the study (#5326)", () => {
+    const { bet: _bet, ...betless } = CRWV_SETTING;
+    expect(() => wheel(betless)).toThrow(/runs against its study but its setting states no bet/);
   });
 
   it("throws for a verdict with no date to test it on, or no study to cite", () => {
@@ -223,7 +240,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
   /** The template's own put, placed, filled at its limit, and expired worthless. */
   function sellAndExpire(): OrderIntent {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -276,7 +293,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
     // One $80 put holds $8,000; $7,800 allocated is short until the $230 premium compounds in.
     const subscription = (compoundAllocation: boolean): PlaybookSubscription => ({
       accountId: "sauron",
-      playbookId: CRWV_WHEEL.id,
+      playbookId: CLASSIC.id,
       mode: "standard",
       capitalAllocated: 7_800,
       enabled: true,
@@ -285,7 +302,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
       updatedAt: "2026-10-01T00:00:00.000Z",
     });
     const next = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),

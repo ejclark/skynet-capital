@@ -236,7 +236,8 @@
   color: var(--muted);
   white-space: nowrap;
 }
-.wire-fdbk li {
+/* Direct children only: a Council line carries its own reply list (#5097), whose rows are `.fc-list`'s. */
+.wire-fdbk > li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -245,7 +246,7 @@
   font-size: 12.5px;
   border-bottom: 1px solid var(--border);
 }
-.wire-fdbk li:last-child {
+.wire-fdbk > li:last-child {
   border-bottom: none;
 }
 .wire-fdbk a {
@@ -313,7 +314,10 @@
   gap: 8px;
   margin-bottom: 4px;
 }
-.council-compose input {
+/* One text box for every member write on this page: the Council line and a thread's compose box
+   (#5097 — the thread's used to fall through to the browser's own unstyled input). */
+.council-compose input,
+.fc-compose input {
   flex: 1;
   min-width: 0;
   padding: 8px 10px;
@@ -333,7 +337,7 @@
   font-size: 10.5px;
   color: var(--muted);
 }
-.council-entries li span {
+.council-entries > li > span {
   line-height: 1.5;
   /* one member's unbroken 280-char line (a URL, "WWWW…") must wrap, never widen everyone's list
      at phone width; isolate keeps its text direction from spilling onto the play tag (#2224 shape 3). */
@@ -401,9 +405,11 @@
   white-space: nowrap;
 }
 
-/* A filing's comments on its feed row (issue #2224 shape 3) — a full-width row under the row's
-   title line, collapsed by default so the feed stays one line per event at 390px. */
-.wire-filing .fc {
+/* A filing's comments on its feed row (issue #2224 shape 3), and the replies under a Council line
+   (#5097) — the same thread (`shell/member-thread.tsx`): a full-width row under the row's own line,
+   collapsed by default so the list stays one line per item at 390px. */
+.wire-filing .fc,
+.council-entries .fc {
   flex-basis: 100%;
 }
 .fc-toggle,
@@ -436,11 +442,11 @@
   flex-direction: column;
   gap: 4px;
 }
-/* A comment row's own layout, stated rather than inherited: these rules used to ride on
+/* A thread row's own layout, stated rather than inherited: these rules used to ride on
    `.wire-fdbk li`, which matched every descendant `<li>` as well as the card itself. With the
-   filing row on its own class (#784 slice 3) the nesting no longer does that for free, and without
-   it a comment's text and its date run together. */
-.wire-filing .fc-list li {
+   filing row on its own class (#784 slice 3) and `.wire-fdbk` scoped to its direct rows (#5097),
+   the nesting no longer does that for free, and without it a row's text and its date run together. */
+.fc-list > li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -448,7 +454,7 @@
   padding: 0 0 6px;
   border-bottom: 1px dashed var(--border);
 }
-.wire-filing .fc-list li:last-child {
+.fc-list > li:last-child {
   padding-bottom: 0;
   border-bottom: none;
 }
@@ -463,9 +469,18 @@
   font-size: 10px;
   color: var(--muted);
 }
-.fc-you {
+/* Who wrote it, as a word: "you", or "line's writer" under a Council line — never a hue alone. */
+.fc-you,
+.fc-tag {
   color: var(--text);
   font-weight: 700;
+}
+/* Context a row needs to read honestly — a reply to an earlier version of its line (#5097). */
+.fc-aside {
+  flex: 1 1 100%;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--muted);
 }
 .fc-compose {
   display: flex;
@@ -473,8 +488,13 @@
   gap: 6px;
 }
 .fc-compose input {
-  flex: 1 1 200px;
-  min-width: 0;
+  flex: 1 1 180px;
+}
+/* The action sits beside the box, not under it: `.btn` is `width: 100%` (gate.css, imported after
+   admin.css's `.mc-btn`), so the thread says `auto` with the specificity to win. */
+.fc-compose .btn {
+  width: auto;
+  flex: none;
 }
 .fc-note {
   margin: 0;

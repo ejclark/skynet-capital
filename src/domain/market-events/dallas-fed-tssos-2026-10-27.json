@@ -1,0 +1,11 @@
+{
+  "id": "dallas-fed-tssos-2026-10-27",
+  "kind": "macro-print",
+  "title": "Dallas Fed Texas Service Sector Outlook Survey (Oct 2026 data) — 9:30 a.m. CT / 10:30 ET on day 1 of the Oct 27–28 FOMC, the only 2026 edition whose data lands while the Committee is in the room",
+  "date": "2026-10-27",
+  "status": "confirmed",
+  "source": "FRB: TWO independent primaries on dallasfed.org, both read direct 2026-10-12 with a desktop user-agent (HTTP 200 each) and quoted from their own markup. (1) The Texas Service Sector Outlook Survey page (dallasfed.org/research/surveys/tssos, 42,619 bytes) carries the table headed `2026 Release Dates` with the column header `Release (9:30 a.m. CT)` and the row `October | Tuesday, Oct. 27`. (2) The publisher's own September 2026 report (dallasfed.org/research/surveys/tssos/2026/2609, 68,573 bytes) states `Next release: October 27, 2026` in its own prose. 9:30 a.m. CT = 10:30 ET, and the publisher says only that its publishing process begins then. PROMOTED estimate -> confirmed 2026-10-12 by this event's own initial research on the `FRB:` slot #3117 added for exactly this case (a regional Reserve Bank's own release table) — the same closing path dallas-fed-mfg-2026-10-26 took in #5128; the 09-15 proposal's two stated limits (no taxonomy slot; no in-sweep self-confirm) are both closed. Checked 2026-10-12",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL FILE WRITTEN 2026-10-12 by this event's own never-assessed initial research, which read the single prior proposal first per docs/process/EVENT-RESEARCH.md — proposals/dallas-fed-tssos-2026-10-27.from-dallas-fed-tssos-2026-09-29.json, now shadowed and inert. The proposal's content stands: this is the October edition of a monthly series, filed on calendar hygiene, and the only 2026 edition that prints on day 1 of an FOMC meeting (fomc-2026-10-28, `high`, `confirmed`). Its 10:30 ET slot sits 30 minutes behind consumer-confidence-2026-10-27 (10:00 ET, `medium`, `estimate`) and durable-goods and new-home-sales (`confirmed`), so any 10:00–11:00 tape on this date is attributable to those prints, not to this survey — the same configuration the 09-29 close-out scored (FT-4 passed on the mechanism; FT-3 killed on magnitude). Read-it-do-not-trade-it: `symbols: []`, `low` impact. Full workup: docs/research/events/dallas-fed-tssos-2026-10-27.md"
+}

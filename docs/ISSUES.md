@@ -249,7 +249,9 @@ rather than a formality. A `plan` issue has a second, equivalent door: a ready-s
 an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
-so a lane quoting the word in prose can never flip itself.
+so a lane quoting the word in prose can never flip itself. When admission queues a comment-flip (cap,
+work-mode) or open blockers hold it back, `claimPlan` applies `ready` to *record* that go — not to
+grant one — so the retry sweep starts it later instead of dropping it (#5334).
 
 **Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
 carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and
@@ -324,7 +326,8 @@ lanes pick up the next slice without reading the thread. Pilot: #3955, five slic
   a one-line ask, the metadata table (Status · Parent `#N, slice k of n` · Size · As of), an EARS
   `Done when` line, and nothing else — the brief is the parent's (#4059 is the reference shape).
 - A child inherits the parent's `ready`; say so in its Status cell. A slice that waits on another
-  gets a native **blocked-by** link, not prose.
+  gets a native **blocked-by** link, not prose. `issues.mjs create --blocked-by` adds `ready` only
+  after the link lands, so no claim lane sees the slice unblocked for that one second (#5266).
 - **Only the last child closes the parent.** A slice PR writes `Closes #<child>` and `Part of
   #<parent>` — never the parent's number next to a closing keyword anywhere in the body, follow-ups
   included (#4179's "closes #3955" in a follow-up line closed the parent with a slice still open).

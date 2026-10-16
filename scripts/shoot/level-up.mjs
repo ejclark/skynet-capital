@@ -75,8 +75,8 @@ const stats = {
 };
 const networth = {
   generatedAt: "2026-09-30T00:00:00Z",
-  accounts: [{ ...eric, ...stats, idle: "81% idle", idlePct: 80.9 }],
-  total: { ...stats, idle: "81% idle", idlePct: 80.9 },
+  accounts: [{ ...eric, ...stats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" }],
+  total: { ...stats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" },
 };
 
 const { page, origin, shoot, close } = await openShell({

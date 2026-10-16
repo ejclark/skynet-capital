@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ManageCall } from "../../../src/options/position-guidance-types";
 import type { DeskSnapshot } from "../../src/live/desk";
-import { openCallsOf } from "../../src/live/guidance";
+import { heldStake, openCallsOf } from "../../src/live/guidance";
 import { focusFrom, manageSearch } from "../../src/live/manage-handoff";
 import type { OptionPositions } from "../../src/live/options";
 import { GuidanceManage } from "../../src/shell/guidance-manage";
@@ -48,6 +48,22 @@ describe("openCallsOf — the account's open covered calls", () => {
 
   it("still lists a call with no quote yet — the engine then says it has no price", () => {
     expect(openCallsOf(desk, "CRWV")[0]).not.toHaveProperty("ask");
+  });
+
+  // #5091: the size is read by the one shared parser (`parseQuantity`), so a typographic minus
+  // still reads as sold — a strip-everything regex dropped it and took the call for a holding.
+  it("reads a sold call written with a typographic minus, and counts it against the shares", () => {
+    const typographic = {
+      generatedAt: "",
+      desk: {
+        positions: [
+          { symbol: "CRWV", isOption: false, quantity: "400", costPerShare: "$70.00" },
+          { symbol: OCC, isOption: true, quantity: "−2", costPerShare: "$165.00" },
+        ],
+      },
+    } as unknown as DeskSnapshot;
+    expect(openCallsOf(typographic, "CRWV").map((c) => c.contracts)).toEqual([2]);
+    expect(heldStake(typographic, "CRWV")).toMatchObject({ shares: 400, callsSold: 2 });
   });
 });
 

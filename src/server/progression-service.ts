@@ -8,7 +8,6 @@ import {
   pointsFor,
   type Rank,
   rankFor,
-  unlockedLevels,
 } from "../domain/curriculum.js";
 import {
   deriveEngagementEarned,
@@ -27,7 +26,12 @@ import { collapseActivity, type TradeActivityRecord } from "../observatory/activ
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
-import { gateSatisfiedIds, openLadder, seedRecord } from "./progression-service-support.js";
+import {
+  gateSatisfiedIds,
+  openLadder,
+  openLevels,
+  seedRecord,
+} from "./progression-service-support.js";
 import type { ProgressionStore } from "./progression-store.js";
 
 /**
@@ -65,6 +69,7 @@ export interface ParticipantProgression {
   readonly nextUp?: TradeTypeCode;
   readonly points: number;
   readonly rank: Rank;
+  /** Course levels the Milestones page shows open — the desk's lock rule (`openLevels`). */
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
   /** Earned but not yet celebrated — drives the one-time unlock banner. */
   readonly celebrating: readonly EarnedMilestone[];
@@ -186,12 +191,6 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       const codes = earnedCodes(earned);
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
       const points = pointsFor(milestoneIds);
-      // Course locks follow completion order, UNIONED with any course already holding an earn —
-      // seeded history with gaps must never render an earned milestone inside a "locked" course.
-      const levels = unlockedLevels(milestoneIds);
-      for (const c of COURSES) {
-        if (c.milestones.some((m) => milestoneIds.has(m.id))) levels.add(c.level);
-      }
 
       const record = seedRecord(deps.store, participantId, now, fills, [
         ...earned,
@@ -223,7 +222,8 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         ...(ladder.next ? { nextUp: ladder.next } : {}),
         points,
         rank: rankFor(points),
-        unlockedLevels: levels,
+        // Course locks follow the desk's lock rule — one truth for the chapter and the ticket.
+        unlockedLevels: openLevels(ladder.wheels, milestoneIds, ladder.unlocked),
         celebrating,
         pendingChecks,
         engagementEarned,

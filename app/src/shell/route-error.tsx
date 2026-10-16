@@ -310,7 +310,7 @@ export function RouteNotFound(): ReactElement {
   );
 }
 
-/** One caught route error, in the shape slice 6's beacon will send. */
+/** One caught route error — the body `POST /api/client-error` accepts (`client-error-route.ts`). */
 interface RouteErrorReport {
   readonly kind: "stale-chunk" | "render";
   readonly name: string;
@@ -318,15 +318,27 @@ interface RouteErrorReport {
   readonly path: string;
 }
 
-/** The no-op hook slice 6 of #4612 wires to a browser error beacon, so a member's crash reaches an
- *  incident instead of only their console. Until then the console is the only record. */
-function sendErrorBeacon(_report: RouteErrorReport): void {
-  // Intentionally empty until slice 6 (#4612) gives it an endpoint to POST to.
+/** The longest message the server keeps; anything longer is cut here rather than refused there. */
+const BEACON_MESSAGE_MAX = 500;
+
+/** The browser error beacon (#4618, slice 6 of #4612): a caught route error reaches the server log
+ *  instead of only the member's console. Fire-and-forget — `keepalive` lets it outlive the reload
+ *  a stale chunk triggers, and a failed beacon must never become a second error. */
+function sendErrorBeacon(report: RouteErrorReport): void {
+  if (typeof fetch === "undefined") return;
+  const body = JSON.stringify({ ...report, message: report.message.slice(0, BEACON_MESSAGE_MAX) });
+  void fetch("/api/client-error", {
+    method: "POST",
+    credentials: "same-origin",
+    keepalive: true,
+    headers: { "content-type": "application/json" },
+    body,
+  }).catch(() => undefined);
 }
 
 /** `defaultOnCatch`: every error a route boundary catches passes through here. */
 export function reportRouteError(error: unknown, info?: Pick<ErrorInfo, "componentStack">): void {
-  // biome-ignore lint/suspicious/noConsole: a caught route error's only record until slice 6's beacon; production has no other client log.
+  // biome-ignore lint/suspicious/noConsole: the console keeps the stack and component trace the beacon leaves out.
   console.error("[skynet] route error", error, info?.componentStack);
   sendErrorBeacon({
     kind: isStaleChunkError(error) ? "stale-chunk" : "render",

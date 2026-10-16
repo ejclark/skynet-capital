@@ -1,0 +1,17 @@
+[
+  { "finding": "F15", "gold": null, "score": 0 },
+  { "finding": "F14", "gold": null, "score": 0 },
+  { "finding": "F13", "gold": "B1", "score": 1 },
+  { "finding": "F12", "gold": null, "score": 0 },
+  { "finding": "F11", "gold": null, "score": 0 },
+  { "finding": "F10", "gold": null, "score": 0 },
+  { "finding": "F9", "gold": null, "score": 0 },
+  { "finding": "F8", "gold": null, "score": 0 },
+  { "finding": "F7", "gold": null, "score": 0 },
+  { "finding": "F6", "gold": "A5", "score": 1 },
+  { "finding": "F5", "gold": "A6", "score": 0.5 },
+  { "finding": "F4", "gold": null, "score": 0 },
+  { "finding": "F3", "gold": "A2", "score": 0.5 },
+  { "finding": "F2", "gold": "A1", "score": 1 },
+  { "finding": "F1", "gold": "A4", "score": 1 }
+]

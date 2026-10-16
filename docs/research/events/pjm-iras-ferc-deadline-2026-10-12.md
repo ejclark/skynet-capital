@@ -280,6 +280,7 @@ Registered as `FT-pjm-iras-ferc-deadline-2026-10-12-1` through `-3` so the tape 
 | 2026-10-05 | D-7 | **Full pulse — dispatched by the staleness ceiling** (3rd consecutive screen forced material), not by a threshold break. **No FERC order in ER26-3515** — federalregister.gov API (`term=ER26-3515`, pub-date ≥2026-08-01) still returns **count 2**, the same two filing notices; silence through the window holds, and the **2026-10-09** operative deadline (Leg 2) stands. **No FERC Sunshine Act notice since 2026-09-15** — API returns zero; no open-meeting PJM item has surfaced, and ferc.gov itself still 403s this runner (re-confirmed today on its EL26-67 commissioner-concurrence news page) — absence, not denial. **Cadence band ticked medium:8+ → medium:0+** (daysUntil crossed 8→7), interval tightens 7d→2d — informational, no action implied. **Adjacency sweep:** 38 tracked events now in the 5-day corridor (was 37) — new: `bobl-5y-auction-2026-10-13` (low, recorded not assessed); strong set unchanged, `cpi-2026-10-14` and `retail-sales-2026-10-15` (both confirmed high). **VIX 15.31** (2026-10-02 close) vs 16.07 last pulse, -0.76pt — no regime break. **Tape (adjusted closes, `scripts/research/market-data.mjs`, caches busted, 09-15→10-02):** the AI-energy complex richened broadly rather than diverging on this docket — CRWV 81.32→**89.62 (+10.2%)**, TLN 285.42→**320.77 (+12.4%)** partly unwound the prior pulse's supply-sleeve selloff, while CEG **-1.8%**, NRG **-11.0%**, VST **-1.3%** stayed soft; the demand side IRAS would charge also rose — META **+9.2%**, MSFT **+3.7%**, AMZN **+1.2%**, GOOG **+0.2%** (NVDA **+10.4%**) — nothing in the tape attributes to ER26-3515; still nobody trading this docket. **New context beyond the horizon, per THE HORIZON LEASH — not proposed:** FERC granted PJM and all five peer RTOs/ISOs a 90-day abeyance in the parallel §206 show-cause docket **EL26-67**, pushing substantive large-load tariff-reform filings to **2026-11-16** (42 days out, past this medium-impact item's 30-day `allImpactsWithinDays` floor) — search-relayed (mgrid.org, industry alerts), not a FERC primary this session. This also means the IMM's ask that FERC resolve the fight via §206 in EL26-67 rather than accept IRAS here has no substantive filing due before 2026-10-12 either, which if anything reinforces the stance. **Stance unchanged: Stand aside.** | — (no change) | 2026-10-07 (medium, 0+d band: every 2d) |
 | 2026-10-07 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 15.0 (-0.3pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-09 |
 | 2026-10-09 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 15.4 (+0.4pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-11 |
+| 2026-10-11 | D-1 | **Full pulse — dispatched by the staleness ceiling** (3rd consecutive screen forced material), not a threshold break. **Still no FERC order in ER26-3515** — federalregister.gov API (`term=ER26-3515`, pub-date ≥2026-08-01) now returns **count 3**: the two filing notices plus FR 2026-20746 (2026-10-09, off-the-record log) listing an *exempt* communication from Rep. Frank Pallone Jr. dated 2026-09-28 on ER26-3380/ER26-3515 — a notice, not an order. No FERC Sunshine notice since 10-05; the 10-15 meeting is after the date; ferc.gov still unreachable and web search surfaced no order, so silence is an absence, not a denial. **New primary:** PJM's **2026-09-23 Motion for Leave to Answer** (pjm.com, read) re-requests acceptance "effective October 12, 2026, as requested" — date unchanged — and ties a timely order to removing eligible large loads from the 2029/30 BRA's VRR curve this December. **Gate/deadline legs stand (silence through 10-09).** **Tape (adjusted closes, caches busted, 10-02→10-09):** supply sleeve rebounded — TLN **+18.0%**, CEG **+15.8%**, VST **+15.3%**, NRG **+13.4%**, CRWV **-8.4%**; demand side flat-to-mixed — MSFT **+3.4%**, AMZN **+4.3%**, GOOG **+2.2%**, META **-1.3%**. Nothing sourced ties any of it to ER26-3515 (no tracked symbols on this event). **VIX 14.84** (10-09) vs 15.41, no regime break. Adjacency: 40 events in the 5-day corridor, new `warsh-imf-fireside-2026-10-15`; strong set unchanged (`cpi-2026-10-14`, `retail-sales-2026-10-15`). Beyond-horizon: EL26-67 abeyance filings still due 2026-11-16 — noted, not proposed. **Stance unchanged: Stand aside.** | — (no change) | 2026-10-13 (post-event; close-out follows) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -305,3 +306,97 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-09
 <!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":2} -->
+
+**Last assessed:** 2026-10-11
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-16, D+4 of `closeOutWithinDays: 6`).** Sector kind — no price instrument is the
+subject, so the *docket* is scored from sourced coverage and the Federal Register API, and the *tape* from
+`scripts/research/market-data.mjs` re-run today after the cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`). Date label unchanged: **estimate** (no FERC member in the confirmed-prefix
+taxonomy). **The order text itself was not read** — ferc.gov still 403s this runner and eLibrary serves no list —
+so every statement about its contents is **secondary, relayed from trade press**, and the sources disagree on
+one point (below).
+
+**What happened (estimate; secondary sources).** FERC issued an order in **ER26-3515 on Friday 2026-10-09** —
+the deadline this ledger derived in Leg 2, three days before the requested date, and **not** silence. It was a
+**split decision on the filing**: *accepted* the **Large Load definition (≥50 MW at a single site)** and the
+**Large Load Registry**; *rejected* **IRAS**, **BYONC**, and the **exclusion of new large loads from the
+capacity-auction demand curve**. Stated ground (APPA, Dominion Post, mgrid, 2026-10-09/13): IRAS and BYONC are
+"either outside of the Commission's authority or have not been sufficiently demonstrated to be just and
+reasonable"; a regional tariff may not put service-reduction obligations on retail customers, choose which
+retail customers are curtailed, or set that compensation — an "impermissible intrusion on retail rate
+regulation." The rejected pieces were held "inextricably linked", so none was severable. PJM was told to file
+a **compliance filing within 30 days** (≈ 2026-11-09, a derived date) carrying only the definition and
+registry, and may **refile a modified IRAS**. Vote **5-0 with a Commissioner Rosner concurrence** (one source,
+energynewsbeat.co). **No new FPA §206 proceeding is reported by any source read** — an absence in press, not a
+read of the order. The federalregister.gov API (`term=ER26-3515`) returns **count 3** today, unchanged from
+10-11: no FR order notice yet (orders publish in eLibrary first).
+
+**One conflict left open — the accepted pieces' effective date.** Three sources (enerknol.com, energynewsbeat.co,
+and a search summary of the order) say the definition and registry took effect **2026-10-12 as requested**;
+APPA says **2027-06-01**; mgrid says IRAS itself would have applied from 2027-06-01. Unresolved without the
+order; the registry-effective-date half of FT-1 does not depend on it (the kill fires on the rejection alone).
+
+**The stance, scored.** *Stand aside, no date-keyed action* — **held**, and cost nothing: no position was
+licensed, and the day published no number (the 10-12 federal holiday made the observable the 10-09 order, as
+the ledger said). The **base case was wrong**: it said the tariff "takes effect 2026-10-12 by operation of the
+FPA §205(d) default" on FERC silence. FERC did not stay silent; it acted on the deadline day the ledger
+named, and rejected the part that mattered to the demand side. The ledger's own lean — lower confidence than
+the sibling docket "because the IMM and EPSA both asked for rejection" — pointed the right way and was not
+heavy enough. The **Leg 2 deadline correction was right on the specifics** (order dated 10-09, not 10-12) and
+is this event's one non-obvious call. **Leg 8** (names carry sensitivity, but not on this date) was right in
+direction: the curtail-first rule that would have charged MSFT/META/GOOG/AMZN/CRWV's demand side was removed,
+and none of them moved on it (below).
+
+**Forward tests, scored** (fragment [`forward-tests/pjm-iras-ferc-deadline-2026-10-12.md`](../forward-tests/pjm-iras-ferc-deadline-2026-10-12.md)):
+
+| Test | Verdict | Why |
+|---|---|---|
+| FT-…-1 silence is acceptance | **kill** | An order rejecting most of the filing issued 2026-10-09 — inside the kill window. The deadline half survived (order dated 10-09, not 10-12) |
+| FT-…-2 no ≥3% move attributed | **pass** | META moved **+3.4% (10-12)** and CRWV **−3.1% (10-13)**; the only coverage found for META's day attributes it to analyst support and AI-product momentum, none to the docket. Absence of found coverage, not proof |
+| FT-…-3 IMM's full relief not granted | **pass** | FERC kept the definition and registry, so it did not reject the filing "in its entirety"; no §206 institution reported. Rests on press, not on the order |
+
+The scored kill is **not** a symbol-keyed hypothesis, so no entry goes to `multi-symbol-sweep.md` (it carries
+no regulatory-docket rows). One observation, never a base rate: a heavily protested §205(d) filing on a
+politically live subject drew a partial-reject order *on the last business day*, not default effectiveness.
+
+**What the tape did — adjusted closes, `market-data.mjs`, cache busted 2026-10-16** (% vs prior close).
+The order day is 10-09; the hour FERC issued it is **not established**, so no move below is attributed to it.
+
+| | 10-08 | 10-09 | 10-12 | 10-13 | 10-14 |
+|---|---|---|---|---|---|
+| MSFT | 522.61 | 535.07 (+2.4%) | 541.15 (+1.1%) | 543.45 (+0.4%) | 533.69 (−1.8%) |
+| META | 720.89 | 718.67 (−0.3%) | 742.96 (**+3.4%**) | 762.50 (+2.6%) | 737.54 (−3.3%) |
+| GOOG | 344.86 | 347.86 (+0.9%) | 348.97 (+0.3%) | 349.52 (+0.2%) | 343.65 (−1.7%) |
+| AMZN | 254.06 | 262.43 (+3.3%) | 259.53 (−1.1%) | 258.58 (−0.4%) | 254.08 (−1.7%) |
+| CRWV | 81.58 | 82.08 (+0.6%) | 80.26 (−2.2%) | 77.81 (−3.1%) | 65.78 (**−15.5%**) |
+| CEG | 285.07 | 298.07 (+4.6%) | 293.89 (−1.4%) | 295.79 (+0.6%) | 279.54 (−5.5%) |
+| VST | 156.14 | 161.48 (+3.4%) | 158.13 (−2.1%) | 162.36 (+2.7%) | 151.79 (−6.5%) |
+| TLN | 359.22 | 378.57 (+5.4%) | 379.77 (+0.3%) | 382.14 (+0.6%) | 358.42 (−6.2%) |
+| NRG | 106.32 | 107.97 (+1.6%) | 106.37 (−1.5%) | 107.18 (+0.8%) | 100.85 (−5.9%) |
+
+VIX **14.84 → 15.21 → 15.27** (10-09 → 10-12 → 10-13), **16.87 on 10-14** (CPI day, a strong-set adjacent),
+16.46 on 10-15: no regime break on the order. The IPP sleeve rebounded on 10-09 (TLN +5.4%, CEG +4.6%, VST +3.4%)
+after a 10-08 drop, then sold off together on 10-14 with the AI complex (NVDA −3.2%, CRWV −15.5%) — a broad
+move the docket does not explain, and which this lane did not research (**cpi-2026-10-14** sat on that day).
+One trade-press account (mgrid.org) has analysts expecting the rejection to keep capacity prices
+elevated longer, to the benefit of the IPPs; the tape on 10-12/10-13 (CEG −1.4%/+0.6%, VST −2.1%/+2.7%, NRG
+−1.5%/+0.8%) shows no clean read on that.
+
+**Beyond the research horizon, noted not proposed (#2946):** PJM's compliance filing (~2026-11-09) and any
+refiled IRAS; EL26-67 large-load tariff filings due 2026-11-16 (abeyance); PJM Members Committee special
+meeting 2026-10-22 and the RBP revised filing in ER26-3380 (2026-10-29), both single-source from energynewsbeat.co.
+The sibling [`pjm-reliability-backstop-procurement-2026-09-30.md`](pjm-reliability-backstop-procurement-2026-09-30.md)
+and [`pjm-capacity-auction-2026-12.md`](pjm-capacity-auction-2026-12.md) own those clocks; the ledger-worthy
+fact for them is that the curtail-first mechanism IRAS built was rejected on jurisdiction, which weakens the
+"data centers curtailed first" input to the December 2029/30 auction.
+
+**Calendar file** `src/domain/market-events/pjm-iras-ferc-deadline-2026-10-12.json` left unchanged: it stays
+`estimate` (no FERC prefix in the taxonomy), and its date field records the *requested* effective date, which
+the order partly honoured on one source's account.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.ferc.gov/","status":"403","at":"2026-10-16"},{"url":"https://www.rtoinsider.com/147920-ferc-rejects-pjm-interim-resource-adequacy-service-proposal/","status":"PAYWALL_HEADLINE_ONLY","at":"2026-10-16"}]} -->

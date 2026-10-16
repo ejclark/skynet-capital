@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { botControlRequest, type OwnedAccount } from "../live/settings";
+import { InlineResult } from "../ui";
 
 /**
  * THE OWN-BOT SWITCH (#738 phase 9b) — `/account/bot-control`'s fold-in, on the shell's account
@@ -57,7 +58,11 @@ export function BotSwitch({
       >
         {busy ? "Saving…" : account.suspended ? "Resume trading" : "Suspend trading"}
       </button>
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
       <span className="mc-note">Takes effect within ~30 seconds — no restart, no env push.</span>
     </div>
   );

@@ -118,7 +118,11 @@ role of responsible owner/steward — shipping lovable work while protecting the
   eye, each pointing at its row in [`docs/PATTERNS.md`](docs/PATTERNS.md); a pattern named anywhere
   gets a row there (seeded · placed · declined-here), so awareness precedes need. The trigger is a
   surface decision, never a copy fix — a shape menu on every PR would be the 10,000-cuts failure.
-  First instance: #1740's call sheet, which settled *kind / section / sub-view*.
+  First instance: #1740's call sheet, which settled *kind / section / sub-view*. Design work runs
+  the redesign loop by default ([`docs/process/REDESIGN.md`](docs/process/REDESIGN.md), `/redesign`;
+  Eric, 2026-10-11: "fwiw, i really like this style of iteration on designs and would prefer more of
+  this as a permanent process that I can continue to refine"); he keeps refining it with `process:`
+  notes, and each one lands as a dated line in that page's *Process changes*.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal:
   engagement, trust, and compounding capital all come from one gamified design (see
   [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md)).
@@ -430,6 +434,17 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
 
+**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
+Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
+cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
+working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
+charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
+Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
+round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
+The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
+it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
+2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
+
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
 with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for
@@ -596,8 +611,9 @@ is expected and fine; the docs are the memory.
 
 - Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
   checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
-  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first
-  means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04; an isolated
+  worktree refuses that chain — its git rules are [`docs/DELEGATION.md`](docs/DELEGATION.md)
+  rail 2) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps

@@ -15,7 +15,7 @@ Ground rules:
 - **Model facts never come from this mirror.** What the `opus` / `sonnet` / `fable` / `haiku`
   aliases resolve to, default models and effort levels, fallback targets, and prices change with
   model releases, and a snapshot can predate the current generation. Take API model IDs and prices
-  from the claude-api skill (`shared/models.md`). Take Claude Code's alias resolution, defaults and
+  from the claude-api skill's model reference (its `models` page). Take Claude Code's alias resolution, defaults and
   fallbacks from `/model` in a live session or the live page
   (`https://code.claude.com/docs/en/model-config`). Where the mirror disagrees, the mirror is stale.
   Read the mirror for mechanics: hook events, frontmatter fields, CLI flags, settings keys.

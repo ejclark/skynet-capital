@@ -37,10 +37,13 @@
   border-radius: 8px;
   font-size: 12.5px;
 }
+/* Short ids stay on one line; a long one (`russell-style-quarter-end-capping-effective-…`) breaks at
+ * its hyphens instead of overflowing a 390px card (#5149) — the full id stays readable, untruncated. */
 .rx-call-event {
   font-size: 11px;
   font-weight: 600;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rx-call-event:hover {
   color: var(--accent);
@@ -50,10 +53,16 @@
   min-width: 200px;
   line-height: 1.5;
 }
+/* The chips wrap onto a second line rather than push the card — and the page — sideways at 390px
+ * (#5149: horizon + confidence + "assessed … · stale (33d)" + "source blocked" ran to 478px). A
+ * single chip wider than the card truncates; its title carries the full text. */
 .rx-call-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 .rx-chip {
   font-size: 10px;
@@ -63,6 +72,14 @@
   padding: 1px 8px;
   color: var(--muted);
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The doc lists' `.rx-assessed` stamp (below) pins itself to the row's right edge; in a wrapped
+ * chip row that would strand the assessed chip on its own line, flush right, away from its siblings. */
+.rx-call-meta .rx-assessed {
+  margin-left: 0;
 }
 .rx-conf {
   color: var(--accent);
@@ -104,10 +121,13 @@
   align-items: center;
   gap: 6px;
 }
+/* A `FilterChip` laid out as a tile: the ✓ slot leads the name, the date runs under both, so the
+   slot costs the tile no width. The pressed mark (✓, ring, tint) is filter-chip.css's. */
 .rx-symbol {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 1px 0;
   padding: 7px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -121,24 +141,21 @@
     transform var(--dur-quick) var(--ease-spatial),
     box-shadow var(--dur-quick) var(--ease-spatial);
 }
-.rx-symbol[aria-pressed="true"] {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    var(--elev-base);
-}
-.rx-symbol[aria-pressed="true"] .rx-symbol-name {
-  color: var(--accent);
-}
 .rx-symbol:hover {
   transform: translateY(-1px);
   box-shadow: var(--elev-raised);
+}
+.rx-symbol[aria-pressed="true"]:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    var(--elev-raised);
 }
 .rx-symbol-name {
   font-weight: 700;
   font-size: 13px;
 }
 .rx-symbol-next {
+  grid-column: 1 / -1;
   font-size: 10px;
   color: var(--muted);
 }

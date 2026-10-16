@@ -142,16 +142,60 @@ function readItemsFromGh() {
   return { items, totalCount: raw?.totalCount };
 }
 
-function readFieldsFromGh() {
-  const fields = ghProjectJson([
-    "field-list",
-    String(PROJECT_NUMBER),
-    "--owner",
-    OWNER,
-    "--limit",
-    "100",
+// #4933 — THE PER-RUN READS SKIP gh's OWNER LOOKUP. Every `gh project <cmd> --owner ejclark` first
+// runs gh's `UserOrgOwner` query, which asks for BOTH `user(login)` and `organization(login)` and
+// counts on the org half failing with exactly `NOT_FOUND`; any other error shape on either half
+// becomes `unknown owner type` (cli/cli queries.go, `OwnerIDAndType`). So each call paid a second
+// query whose only job is to rediscover a hard-coded constant, through the one path that destroys
+// GitHub's error. Run 37881706331 lost `field-list` there three times in ~8s while a plain GraphQL
+// probe on the same token succeeded. Asked of `user(login)` directly, a GitHub fault keeps its own
+// words, which `isTransientGhError` already retries (#4675's "Something went wrong" included).
+// A token blind to the board gets `projectV2: null` + NOT_FOUND and gh exits non-zero — still loud.
+// `item-add` / `item-list` stay on `gh project`, behind #3914's retry and diagnosis: neither runs
+// on a sync whose issue is already on the board.
+const PROJECT_SHAPE_QUERY = `query($owner:String!,$project:Int!){
+  user(login:$owner){ projectV2(number:$project){ id number
+    fields(first:100){ nodes{
+      __typename
+      ... on ProjectV2FieldCommon{ id name }
+      ... on ProjectV2SingleSelectField{ options{ id name } }
+    } }
+  } }
+}`;
+
+/**
+ * The project's id and its fields, shaped like `gh project list` / `field-list` rows, in one
+ * GraphQL call with no owner lookup (#4933). `gh` injected so the argv and the fail-closed parse
+ * are provable without a network call.
+ */
+export function readProjectShapeFromGh({
+  gh = (argv) => runGh("`gh api graphql` (project fields)", argv),
+} = {}) {
+  const out = gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${PROJECT_SHAPE_QUERY}`,
+    "-F",
+    `owner=${OWNER}`,
+    "-F",
+    `project=${PROJECT_NUMBER}`,
   ]);
-  return Array.isArray(fields) ? fields : (fields.fields ?? []);
+  const node = JSON.parse(out || "null")?.data?.user?.projectV2;
+  if (!node?.id) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+  const fields = (node.fields?.nodes ?? [])
+    .filter((f) => f?.id && f?.name)
+    .map(({ __typename, id, name, options }) => ({
+      id,
+      name,
+      type: __typename,
+      ...(options ? { options } : {}),
+    }));
+  return { project: { id: node.id, number: node.number }, fields };
+}
+
+function readFieldsFromGh() {
+  return readProjectShapeFromGh().fields;
 }
 
 // The one question the events lane actually has — "which item does THIS issue already have on the
@@ -220,11 +264,7 @@ export function readIssueItemsFromGh(
 }
 
 function readProjectFromGh() {
-  const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
-  const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
-  const project = projectList.find((p) => p.number === PROJECT_NUMBER);
-  if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
-  return project;
+  return readProjectShapeFromGh().project;
 }
 
 /**

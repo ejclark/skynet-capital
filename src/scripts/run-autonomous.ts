@@ -40,6 +40,7 @@ import {
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import { followBotsStream } from "../autonomous/bots-stream.js";
+import { createCycleWatch } from "../autonomous/cycle-watch.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
@@ -47,6 +48,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
 import {
   acceptAndKeep,
@@ -68,6 +70,7 @@ import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
+import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
 import {
   type BotRoster,
   bootMissionControl,
@@ -211,8 +214,9 @@ async function runLive(): Promise<void> {
   };
   const playbookRoster = enabledPlaybooks(process.env);
   announceRoster(playbookRoster);
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
-  const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
+  const windows = signalWindows(process.env);
+  const tracker = new MomentumTracker(windows.momentum);
+  const sentiment = new SentimentTracker(windows.sentiment);
   const universeSet = new Set(UNIVERSE);
 
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
@@ -294,6 +298,9 @@ async function runLive(): Promise<void> {
   // The forced daily pick's arming (ops, Eric's) — read here because the bot it runs on, the first,
   // carries it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
   const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
+  // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
+  const intradayBars = intradayBarsFeed(currentCredentials);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -304,6 +311,7 @@ async function runLive(): Promise<void> {
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
       {
         runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
+        intradayBars: intradayBars.barsOf,
         // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
         ...(decisionDb
           ? {
@@ -475,10 +483,19 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = contextNow();
-    await runner.runCycle(context);
+    void intradayBars.refresh(); // never awaited: a slow bar read can't stall a cycle, it lands next one
+    // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
+    await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
     evaluating = false;
   };
+  // Halts, stalls and a market-hours heartbeat, in the logs (#4995) — a quiet bot is now legible.
+  const cycleWatch = createCycleWatch({
+    isMarketOpen: () => marketClock.isOpen(),
+    blockedReason,
+    log: console.log,
+  });
+  setInterval(() => cycleWatch.tick(), 60_000);
   // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
   if (betaForcing.stageAfterClose && scoutBroker) {
     armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });

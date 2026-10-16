@@ -84,13 +84,14 @@ export interface WireReasoningDeps {
 }
 
 /** A fill's attached decision as a viewer who does not own the account reads it: without its
- *  `playbookId`/`playbookMode` (#885: "we do not show what playbooks others are using"), and without
- *  what the broker said about the order, which can name the account's specifics. The why, the
- *  persona and the order's own words all stay. */
+ *  `playbookId`/`playbookMode` (#885: "we do not show what playbooks others are using"), without
+ *  the intent's `strategy` tag — a playbook's own slug (`crwv-wheel-put`), so it names the playbook
+ *  by inference (#4971) — and without what the broker said about the order, which can name the
+ *  account's specifics. The why, the persona and the order's own words all stay. */
 export function withoutOwnerReasoning(
   reasoning: WireTradeReasoning,
-): Omit<WireTradeReasoning, "playbookId" | "playbookMode" | "brokerReason"> {
-  const { playbookId: _p, playbookMode: _m, brokerReason: _b, ...rest } = reasoning;
+): Omit<WireTradeReasoning, "playbookId" | "playbookMode" | "strategy" | "brokerReason"> {
+  const { playbookId: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...rest } = reasoning;
   return rest;
 }
 
@@ -136,8 +137,8 @@ export function reasoningForOrder(
 
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
- *  never a placeholder object). The Wire lists every account's fills, so a row's playbook and the
- *  broker's words ride only to that account's owner (`ownsAccount`). */
+ *  never a placeholder object). The Wire lists every account's fills, so a row's playbook, its
+ *  strategy tag and the broker's words ride only to that account's owner (`ownsAccount`). */
 export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,

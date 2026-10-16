@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { fetchJourney } from "../live/learn";
 import { fetchOnboarding } from "../live/onboarding";
+import { KindChip } from "../ui";
 
 /**
  * THE PROFILE STRIP (#1119, the canvas's stage meta): who you are on the board and where you
@@ -19,9 +20,11 @@ export function ProfileMeta(): ReactElement | null {
   if (!(journey.data || onboarding.data)) return null;
   return (
     <div className="pmeta">
-      <span className="chip chip-human pmeta-who num">
-        HUMAN · {name ?? (onboarding.data?.linked ? "unlinked" : "guest")}
-      </span>
+      <KindChip
+        kind="human"
+        className="pmeta-who num"
+        detail={name ?? (onboarding.data?.linked ? "unlinked" : "guest")}
+      />
       {journey.data ? (
         <span className="pmeta-rank num">
           {journey.data.rank} · {points} PTS

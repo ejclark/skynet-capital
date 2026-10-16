@@ -40,8 +40,8 @@ export function keepFocus(event: { preventDefault: () => void }): void {
 export function DisarmNote(): ReactElement {
   return (
     <p className="gate-note">
-      Editing the order re-arms this gate, which re-checks the live account at submit — approval
-      never outlives the thing it approved.
+      Editing the order re-arms this gate, which re-checks your paper account's buying power and
+      positions at submit — approval never outlives the thing it approved.
     </p>
   );
 }

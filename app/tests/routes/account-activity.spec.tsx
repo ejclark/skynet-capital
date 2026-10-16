@@ -6,11 +6,11 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { configure, render, screen, waitFor, within } from "@testing-library/react";
+import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import type { DeskActivity, DeskActivityEvent, DeskActivityQuery } from "../../src/live/desk";
 import { Route } from "../../src/routes/u.$id.activity";
+import { SYMBOL_BEAT_MS } from "../../src/shell/account-activity";
 import { FIND_PAGES } from "../../src/shell/use-activity-pages";
 
 /**
@@ -20,23 +20,22 @@ import { FIND_PAGES } from "../../src/shell/use-activity-pages";
  * call is recorded so a spec can say exactly what the page asked the server for.
  */
 
-// The walk is several reads in a row, each a render, and the symbol box waits out its debounce:
-// room for a busy machine (the full gate runs every suite in parallel).
-configure({ asyncUtilTimeout: 5000 });
+// Each test mounts a 30-row ledger and walks it a read at a time: genuine render work (0.1-1 s on a
+// quiet machine), so these specs get 15 s rather than the default 5 s (#5498). Nothing in them waits
+// on the clock: the symbol box's debounce is held and released by `typeSymbolBox` below.
+rstest.setConfig({ testTimeout: 15_000 });
+configure({ asyncUtilTimeout: 12_000 });
 
 let answer: (query: DeskActivityQuery) => DeskActivity = () => ({ available: true, activity: [] });
 const calls: DeskActivityQuery[] = [];
 
 rstest.mock("../../src/live/desk", () => ({
-  fetchDesk: (id: string) =>
-    Promise.resolve({ desk: { id, name: "Sauron", kind: "bot", positions: [] } }),
   fetchDeskActivity: (_id: string, query: DeskActivityQuery = {}) => {
     calls.push(query);
     return Promise.resolve(answer(query));
   },
 }));
 rstest.mock("../../src/shell/account-head", () => ({
-  AccountPage: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   useOwnsAccount: () => true,
 }));
 
@@ -77,6 +76,51 @@ function mount(path: string) {
     </QueryClientProvider>,
   );
   return router;
+}
+
+/** Let the promise chains a render started run out — a macrotask yield, not a sleep on the clock. */
+const flush = () =>
+  act(async () => {
+    for (let i = 0; i < 10; i++) await new Promise((resolve) => setImmediate(resolve));
+  });
+
+/** Types into the symbol box, and holds its debounce until the spec lets the beat pass (#5498).
+ *  The box writes the URL `SYMBOL_BEAT_MS` after the last letter; waiting that out on the real clock
+ *  made the spec's length depend on how busy the machine was. Only a timer of exactly that length is
+ *  held — everything else (waitFor, the router, the query client) keeps the real clock — and
+ *  `release` runs what is held. Nothing held means the page did not debounce at all, which fails the
+ *  spec's `held` check rather than passing quietly. */
+function typeSymbolBox(box: HTMLElement, text: string) {
+  const realSet = globalThis.setTimeout;
+  const realClear = globalThis.clearTimeout;
+  const held = new Map<number, () => void>();
+  let next = 0;
+  globalThis.setTimeout = ((fn: () => void, ms?: number, ...args: unknown[]) => {
+    if (ms !== SYMBOL_BEAT_MS) return realSet(fn, ms, ...args);
+    held.set(--next, () => fn(...(args as [])));
+    return next;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((id?: number) => {
+    if (id !== undefined && held.delete(id)) return;
+    realClear(id);
+  }) as typeof clearTimeout;
+  try {
+    // A change per letter, as typing does: each one restarts the beat, so one timer is left.
+    for (let n = 1; n <= text.length; n++) {
+      fireEvent.change(box, { target: { value: text.slice(0, n) } });
+    }
+  } finally {
+    globalThis.setTimeout = realSet;
+    globalThis.clearTimeout = realClear;
+  }
+  return {
+    held: held.size,
+    release: () =>
+      act(() => {
+        for (const run of held.values()) run();
+        held.clear();
+      }),
+  };
 }
 
 const loadOlder = () => screen.findByRole("button", { name: "Load older orders" });
@@ -129,7 +173,7 @@ describe("older orders", () => {
     answer = endlessLedger();
     mount("/u/sauron/activity");
     await waitFor(() => expect(document.getElementById("act-old-3")).not.toBeNull());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await flush();
     expect(olderReads()).toHaveLength(3);
   });
 
@@ -150,7 +194,12 @@ describe("narrowing by symbol", () => {
     const first = firstPage();
     answer = (q) => (q.before ? { available: true, activity: [row("old-1", 40)] } : first);
     const router = mount("/u/sauron/activity");
-    await userEvent.type(await screen.findByLabelText("Filter by symbol"), "nvda");
+    const typed = typeSymbolBox(await screen.findByLabelText("Filter by symbol"), "nvda");
+    // A beat behind: one timer is waiting, and neither the URL nor the read has moved yet.
+    expect(typed.held).toBe(1);
+    expect(router.state.location.search).toEqual({});
+    expect(calls).toEqual([{}]);
+    await typed.release();
     await waitFor(() => expect(router.state.location.search).toMatchObject({ symbol: "NVDA" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ symbol: "NVDA" }));
     await userEvent.click(await loadOlder());
@@ -204,5 +253,117 @@ describe("narrowing by playbook", () => {
     await waitFor(() => expect(document.getElementById("act-ord-0")).not.toBeNull());
     expect(screen.queryByRole("group", { name: "Playbook" })).toBeNull();
     expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
+  });
+});
+
+/** #5101 (R2-deep): an order's full detail lives in the URL — `?order=<id>#act-<id>` — so it is
+ *  linkable, and its one way back returns to the same row. */
+describe("an order's full detail", () => {
+  /** happy-dom has no `matchMedia` — the desktop default. A phone installs one that matches. */
+  function phone(): () => void {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    return () => Reflect.deleteProperty(window, "matchMedia");
+  }
+
+  it("opens from a link as a panel beside the live list on a desktop, and Close drops it", async () => {
+    answer = () => firstPage();
+    const router = mount("/u/sauron/activity?order=ord-3");
+    const panel = await screen.findByRole("complementary");
+    expect(within(panel).getByRole("heading", { level: 3 })).toHaveTextContent(
+      "NVDA rises from $181.40",
+    );
+    expect(document.getElementById("act-ord-0")).not.toBeNull();
+    expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole("button", { name: /Close/ }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  /** A bot's rows: each has a why, so each opens to a "Full detail ›" while a panel is up. */
+  const reasoned = (): DeskActivity => {
+    const page = firstPage();
+    return {
+      ...page,
+      activity: page.activity.map((e) => ({
+        ...e,
+        reasoning: { reason: `bought ${e.orderId}`, personaId: "sauron" },
+      })),
+    };
+  };
+  const tableRow = (id: string) => document.getElementById(`act-${id}`) as HTMLElement;
+  /** Opens a table row's why if it is shut, then presses its "Full detail ›". */
+  const fullDetail = async (id: string) => {
+    await waitFor(() => expect(tableRow(id)).not.toBeNull());
+    if (tableRow(id).querySelector("[aria-expanded='false']")) {
+      await userEvent.click(within(tableRow(id)).getByRole("button", { name: /Why/ }));
+    }
+    const why = tableRow(id).nextElementSibling as HTMLElement;
+    await userEvent.click(within(why).getByRole("button", { name: /Full detail/ }));
+  };
+  const close = () =>
+    userEvent.click(
+      within(screen.getByRole("complementary")).getByRole("button", { name: /Close/ }),
+    );
+
+  it("swaps one panel for another from the live list, and one Close returns to the list", async () => {
+    answer = () => reasoned();
+    const router = mount("/u/sauron/activity");
+    await fullDetail("ord-3");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+    // The list stays live beside the panel: a second order's full detail takes the panel's place.
+    await fullDetail("ord-5");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-5" }));
+    expect(router.state.location.hash).toBe("act-ord-5");
+    await close();
+    // One Close: back to the list at the row it left — never the first order's panel again.
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(router.state.location.hash).toBe("act-ord-5");
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("keeps a filter narrowed beside the open panel when Close returns to the list", async () => {
+    answer = () => reasoned();
+    const router = mount("/u/sauron/activity");
+    await fullDetail("ord-3");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+    await typeSymbolBox(screen.getByLabelText("Filter by symbol"), "nvda").release();
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ order: "ord-3", symbol: "NVDA" }),
+    );
+    await close();
+    await waitFor(() => expect(router.state.location.search).toEqual({ symbol: "NVDA" }));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.getByLabelText("Filter by symbol")).toHaveValue("nvda");
+  });
+
+  it("on a phone, opens as a page from the card and steps back to the same row, opened", async () => {
+    const restore = phone();
+    try {
+      answer = () => firstPage();
+      const router = mount("/u/sauron/activity");
+      const card = () => document.getElementById("act-ord-3") as HTMLElement;
+      await waitFor(() => expect(card()).not.toBeNull());
+      await userEvent.click(within(card()).getAllByRole("button")[0] as HTMLElement);
+      await userEvent.click(within(card()).getByRole("button", { name: /Full detail/ }));
+      await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      // A page in the list's place: the list, its heading and its filter step aside.
+      expect(screen.queryByLabelText("Filter by symbol")).toBeNull();
+      expect(document.getElementById("act-ord-0")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "‹ Activity" }));
+      await waitFor(() => expect(router.state.location.search).toEqual({}));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      await waitFor(() => expect(card()).toHaveAttribute("data-open"));
+    } finally {
+      restore();
+    }
   });
 });

@@ -1,0 +1,11 @@
+{
+  "id": "dhi-q4-fy2026-2026-10-29",
+  "kind": "sector",
+  "title": "D.R. Horton FY2026 Q4 and fiscal-year results — released before the open 2026-10-29, call 08:30 ET, ninety minutes ahead of the NAR metro price restatement",
+  "date": "2026-10-29",
+  "status": "estimate",
+  "source": "EST: the company's own primary, fetched direct 2026-10-16 by this lane. investor.drhorton.com/news-and-events/press-releases/2025/10-16-2025-150019990 (HTTP 200, 46,832 bytes), the D.R. Horton release 'Announces Fiscal 2026 Earnings Release Dates', lists verbatim 'Fourth quarter and fiscal year: Thursday, October 29, 2026'; a search-engine result for the company's later reminder release (finviz) adds pre-market timing and an 8:30 a.m. ET call, which was NOT fetched direct and is not relied on for the date. That is an `IR:` primary and would ordinarily carry the confirmed prefix; it is filed `estimate` because a sweep-discovered proposal is always `estimate` by contract (docs/process/EVENT-RESEARCH.md) and this lane may not self-confirm an event it discovered in-sweep. Checked 2026-10-16",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the nar-metro-home-prices-2026-10-29 D-13 pulse (2026-10-16). That ledger's Leg 5 inferred DHI's 8-K for ~10-28/29 from filing lags (2024-10-29, 2025-10-28) and registered it as FT-nar-metro-home-prices-2026-10-29-3 while deliberately declining to propose it, because 'a lag pattern is not a source'. The company has since published the source, so the inference is now a dated fact. WHY IT MATTERS TO THE PROPOSER: DHI is ITB's largest holding and reports on the same morning as the 10:00 NAR print, so it is the builder event in that session and the reason the proposer's call is 'attribute nothing in the session to the NAR print'. FILED `low` AND `symbols: []` DELIBERATELY, mirroring lennar-q3-fy2026-2026-09-16: DHI is not a tracked name (src/domain/earnings-calendar.ts covers NVDA/MRVL/AVGO/CRWV/MU and this lane may not edit it), no house playbook is keyed to it, and it enters as a housing-SECTOR read. NOT FILED alongside it: PulteGroup's Q3 on 2026-10-22 (search-sourced, not fetched direct this pulse) and NVR, whose date is unpublished. The proposing ledger's call is unchanged by this proposal: stand aside, an estimate widens caution and licenses nothing."
+}

@@ -1,7 +1,11 @@
 import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
-import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
-import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
+import {
+  contractMultiplier,
+  humanizeOptionSymbol,
+  isOccSymbol,
+} from "../trading/option-symbols.js";
+import type { OpenLot, RoundTrip, RoundTripLedger } from "../trading/round-trips.js";
 import { type ActivityNarrowOptions, narrowActivity } from "./activity-filter.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
@@ -11,7 +15,8 @@ import {
   type PositionForConsiderations,
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
-import { formatPrice } from "./desk-data.js";
+import { allocationOf, type DeskAllocation } from "./desk-allocation.js";
+import { formatPrice, type RoundTripLinks } from "./desk-data.js";
 import { NO_ORIGIN_EVIDENCE, type OrderOriginIndex } from "./order-origin.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
@@ -20,6 +25,7 @@ import {
   type ParticipantSnapshot,
   unrealizedPl,
 } from "./participant-snapshot.js";
+import { type OpenedBy, openedBy } from "./position-opened-by.js";
 import { type PlainPosition, plainPosition } from "./position-plain.js";
 import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
 import {
@@ -85,10 +91,25 @@ interface DeskPositionView extends PlainPosition {
   readonly totalPlRaw: number;
   readonly returnPct: string;
   readonly totalTone: Tone;
+  /** This position's share of what's HELD (long value), the same base the allocation's slices use,
+   *  so the map can scale it by `sharesPct + optionsPct`. A written contract holds none of it: 0,
+   *  and `allocation.optionsSold` names what it owes (#4964). */
   readonly weightPct: number;
   /** Present only when the fill ledger's open lots for this symbol are all long and their
-   *  quantities sum exactly to the position's own — see `lotsFor`. */
+   *  quantities sum exactly to the position's own, sign included — see `lotsFor`. */
   readonly lots?: readonly PositionLot[];
+  /** The playbook that opened the whole position (#5073 slice 4b, `position-opened-by.ts`). Only
+   *  on a ledger the route tagged, which it does for the bot's owner alone (#885). */
+  readonly playbookId?: OpenedBy["playbookId"];
+  readonly playbookMode?: OpenedBy["playbookMode"];
+}
+
+/** A position's return: "+3.63%" to the hundredth, but whole percent once it is past ±100%
+ *  ("-116%" on a sold put that would cost $550 to close against $255 collected). Past 100 the
+ *  hundredths are noise, and on a phone card they push the size line onto a second row (#5059). */
+function returnLabel(value: number): string {
+  if (Math.abs(value) < 100) return pct(value);
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
 }
 
 /**
@@ -117,9 +138,11 @@ function lotsFor(
   if (lots.length === 0) return undefined;
   if (lots.some((lot) => lot.short)) return undefined;
 
-  const wantQty = Math.abs(position.quantity);
+  // Signed (#5091): every lot here is a buy, so only a long position can be their sum. A cut-off
+  // window can leave buys whose sizes match a SHORT position's in absolute terms; listed, each
+  // would offer "Close this buy" — a sell that adds to the short.
   const gotQty = lots.reduce((sum, lot) => sum + lot.quantity, 0);
-  if (Math.abs(gotQty - wantQty) > 1e-6) return undefined;
+  if (Math.abs(gotQty - position.quantity) > 1e-6) return undefined;
 
   const lastday = position.lastdayPrice ?? 0;
   return lots.map((lot, index): PositionLot => {
@@ -139,7 +162,7 @@ function lotsFor(
       dayPl: formatSigned(day),
       dayTone: plClass(day),
       totalPl: formatSigned(total),
-      returnPct: basis > 0 ? pct((total / basis) * 100) : "—",
+      returnPct: basis > 0 ? returnLabel((total / basis) * 100) : "—",
       totalTone: plClass(total),
     };
   });
@@ -164,50 +187,6 @@ interface DeskTiles {
   readonly cashRaw: number;
 }
 
-/** Where the money is (#3689 slice 5): long market value split into shares and options, plus cash.
- *  Percentages are of that three-way total (shorts and a negative cash balance are left out of the
- *  bar, since a bar can't draw a negative slice), so the three always add to 100. */
-export interface DeskAllocation {
-  readonly shares: string;
-  readonly options: string;
-  readonly cash: string;
-  readonly sharesPct: number;
-  readonly optionsPct: number;
-  readonly cashPct: number;
-  /** "32.9%" — cash's share, for the "cash ready to use" line. */
-  readonly cashShare: string;
-  /** Signed shares held across every stock position. Their delta, which the Money strip adds to
-   *  the option book's delta for "market exposure". */
-  readonly shareCount: number;
-}
-
-function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
-  let shares = 0;
-  let options = 0;
-  let shareCount = 0;
-  for (const p of snapshot.positions) {
-    const long = Math.max(0, p.marketValue);
-    if (isOccSymbol(p.symbol)) options += long;
-    else {
-      shares += long;
-      shareCount += p.quantity;
-    }
-  }
-  const cash = Math.max(0, snapshot.cash);
-  const total = shares + options + cash;
-  const share = (x: number) => (total > 0 ? (x / total) * 100 : 0);
-  return {
-    shares: formatCurrency(shares),
-    options: formatCurrency(options),
-    cash: formatCurrency(snapshot.cash),
-    sharesPct: share(shares),
-    optionsPct: share(options),
-    cashPct: share(cash),
-    cashShare: `${share(cash).toFixed(1)}%`,
-    shareCount,
-  };
-}
-
 export interface DeskView {
   readonly id: string;
   readonly name: string;
@@ -227,12 +206,17 @@ export function deskView(
   playbooks: readonly PlaybookStoreEntry[] = [],
   /** The clock for "expires in N days" (#3689 slice 6); the server's `config.now`, pinned in specs. */
   clock: () => Date = () => new Date(),
+  /** Playbooks this account already subscribes to, left out of its ideas (#4950). */
+  subscribed: ReadonlySet<string> = new Set(),
 ): DeskView {
   const now = clock();
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
   const dayTotal = snapshot.positions.reduce((sum, p) => sum + dayPl(p).amount, 0);
+  // Not `invested`: that nets a sold option's liability, so beside one every held weight
+  // overshot (1,000 in stock next to a -900 put read 1,000%) and the map's tiles crowded out cash.
+  const held = snapshot.positions.reduce((sum, p) => sum + Math.max(0, p.marketValue), 0);
   const forConsiderations: PositionForConsiderations[] = [];
   const positions = [...snapshot.positions]
     .sort((a, b) => b.marketValue - a.marketValue)
@@ -243,6 +227,7 @@ export function deskView(
       const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
       const option = isOccSymbol(position.symbol);
       const lots = lotsFor(position.symbol, ledger?.open, position, mark);
+      const opener = openedBy(position.symbol, position.quantity, ledger?.open);
       const display = humanizeOptionSymbol(position.symbol);
       forConsiderations.push({
         symbol: position.symbol,
@@ -274,13 +259,20 @@ export function deskView(
         dayTone: plClass(day.amount),
         totalPl: formatSigned(pl),
         totalPlRaw: pl,
-        returnPct: basis > 0 ? pct((pl / basis) * 100) : "—",
+        // A written position's basis is the premium it collected, signed negative (#5059): its
+        // return is measured against that, as a broker's statement prints it ($550 to buy back a
+        // $255 put is -116%). No basis at all has no return.
+        returnPct: basis !== 0 ? returnLabel((pl / Math.abs(basis)) * 100) : "—",
         totalTone: plClass(pl),
-        weightPct: invested > 0 ? (Math.max(0, position.marketValue) / invested) * 100 : 0,
+        weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...(lots ? { lots } : {}),
+        ...opener,
       };
     });
-  const considerations = considerationsFor(forConsiderations, playbooks);
+  const considerations = considerationsFor(forConsiderations, playbooks, {
+    id: snapshot.id,
+    subscribed,
+  });
   return {
     id: snapshot.id,
     name: snapshot.displayName,
@@ -326,6 +318,17 @@ export interface DeskActivityEvent extends DeskActivityLine {
   readonly net?: string;
   readonly legs?: readonly DeskActivityLeg[];
   readonly missingLegs?: readonly DeskMissingLeg[];
+  /** A closing fill (#5317): each order whose lot it closed, the newest first — so the ledger shows
+   *  a sale with the buy it closed even when that buy is on an older page. */
+  readonly opened?: readonly DeskOpenedLeg[];
+  /** An opening fill with nothing of it still open (#5317): when its last lot closed. */
+  readonly closedOn?: string;
+}
+
+/** An order a closing fill closed (part of), as its own line — `matched` is how much of it this
+ *  close took: a buy of 15 sold as 10 and then 5 is two closes of one buy. */
+export interface DeskOpenedLeg extends DeskActivityLine {
+  readonly matched: number;
 }
 
 export interface DeskActivityPage {
@@ -358,6 +361,8 @@ export function deskActivityView(
       { readonly realized: number; readonly returnPct: number }
     >;
     readonly spreadOf?: SpreadOf | undefined;
+    /** The matcher's pairing (`roundTripLinks`) — a close's opening legs, a buy's close date. */
+    readonly roundTrips?: RoundTripLinks;
   } & ActivityNarrowOptions = {},
 ): DeskActivityPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
@@ -367,12 +372,19 @@ export function deskActivityView(
     limit,
     ...(opts.before !== undefined ? { before: opts.before } : {}),
   });
+  const byOrder = new Map(sorted.map((record) => [record.orderId, record]));
+  const pairing = (row: DeskActivityLine) =>
+    opts.roundTrips ? pairedFields(row, opts.roundTrips, byOrder, origins) : {};
   const activity = items.map((item): DeskActivityEvent => {
-    if (item.kind === "spread") return spreadActivityEvent(item, origins, opts.realizedByOrder);
+    if (item.kind === "spread") {
+      const spread = spreadActivityEvent(item, origins, opts.realizedByOrder);
+      return { ...spread, ...spreadClosedOn(spread.legs, opts.roundTrips) };
+    }
     const { record } = item;
     const pl = opts.realizedByOrder?.get(record.orderId);
+    const line = orderLineFields(record, origins);
     return {
-      ...orderLineFields(record, origins),
+      ...line,
       ...(pl
         ? {
             realizedPl: formatSigned(pl.realized),
@@ -380,7 +392,76 @@ export function deskActivityView(
             realizedTone: plClass(pl.realized) as Tone,
           }
         : {}),
+      ...pairing(line),
     };
   });
   return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}), ...narrowed.facets };
+}
+
+/** A row's place in a round trip (#5317): the orders a close closed, or the day a buy was closed. */
+function pairedFields(
+  row: DeskActivityLine,
+  links: RoundTripLinks,
+  byOrder: ReadonlyMap<string, TradeActivityRecord>,
+  origins: OrderOriginIndex,
+): Pick<DeskActivityEvent, "opened" | "closedOn"> {
+  const trips = links.closes.get(row.orderId);
+  const closedOn = links.closedOn.get(row.orderId);
+  return {
+    ...(trips?.length ? { opened: openedLegs(trips, byOrder, origins) } : {}),
+    ...(closedOn ? { closedOn } : {}),
+  };
+}
+
+/** The trips one close made, one leg an opening order — the order's own line when the ledger holds
+ *  it, else what the trip itself knows (its price is per contract, so it is put back per share). */
+function openedLegs(
+  trips: readonly RoundTrip[],
+  byOrder: ReadonlyMap<string, TradeActivityRecord>,
+  origins: OrderOriginIndex,
+): DeskOpenedLeg[] {
+  const legs: DeskOpenedLeg[] = [];
+  for (const trip of trips) {
+    const same = trip.entryOrderId
+      ? legs.findIndex((leg) => leg.orderId === trip.entryOrderId)
+      : -1;
+    const prior = legs[same];
+    if (prior) {
+      legs[same] = { ...prior, matched: prior.matched + trip.quantity };
+      continue;
+    }
+    const record = trip.entryOrderId ? byOrder.get(trip.entryOrderId) : undefined;
+    legs.push(
+      record ? { ...orderLineFields(record, origins), matched: trip.quantity } : tripLeg(trip),
+    );
+  }
+  return legs;
+}
+
+function tripLeg(trip: RoundTrip): DeskOpenedLeg {
+  return {
+    orderId: trip.entryOrderId ?? "",
+    symbol: trip.symbol,
+    display: humanizeOptionSymbol(trip.symbol),
+    side: trip.short ? "sell" : "buy",
+    quantity: trip.quantity,
+    filled: trip.quantity,
+    price: formatPrice(trip.entryPrice / contractMultiplier(trip.symbol)),
+    status: "filled",
+    at: trip.openedAt,
+    backfilled: false,
+    origin: "unknown",
+    matched: trip.quantity,
+  };
+}
+
+/** A spread is closed once every leg is: the day its last leg closed. */
+function spreadClosedOn(
+  legs: readonly DeskActivityLeg[],
+  links: RoundTripLinks | undefined,
+): Pick<DeskActivityEvent, "closedOn"> {
+  if (!links || legs.length === 0) return {};
+  const days = legs.map((leg) => links.closedOn.get(leg.orderId));
+  if (days.some((day) => day === undefined)) return {};
+  return { closedOn: (days as string[]).sort().at(-1) as string };
 }

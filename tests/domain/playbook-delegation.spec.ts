@@ -65,7 +65,7 @@ describe("the playbook delegation fog (#1707)", () => {
 describe("raisesDelegation (#4649) — only an edit that hands the bot MORE is behind the fog", () => {
   const prior: PlaybookSubscription = {
     accountId: "sauron",
-    playbookId: "HC-SAURON",
+    playbookId: "SAURON",
     mode: "standard",
     capitalAllocated: 5_000,
     enabled: true,

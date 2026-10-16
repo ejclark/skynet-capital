@@ -212,9 +212,8 @@
   flex: 1;
 }
 
-/* The symbols filter (#4649): chips from the card's own basket, many on at once. Pressed carries a
-   ✓ in a fixed slot as well as the accent border, so the state is never hue alone (the chart
-   studies' idiom, chart-section.css). */
+/* The symbols filter (#4649): `FilterChip`s from the card's own basket, many on at once; the ✓ and
+   the pressed ring are filter-chip.css's. */
 .pb-symbols {
   margin: 0;
   padding: 0;
@@ -236,30 +235,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.pb-symbols .railctl {
-  width: auto;
-  padding: 5px 10px 5px 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-.pb-symbols .railctl::before {
-  content: "";
-  display: inline-block;
-  width: 1.1em;
-  text-align: center;
-}
-
-.pb-symbols .railctl[aria-pressed="true"] {
-  border-color: var(--accent);
-}
-
-.pb-symbols .railctl[aria-pressed="true"]::before {
-  content: "✓";
 }
 
 .pb-symbols-hint {
@@ -286,28 +261,6 @@
   font-size: 12.5px;
   font-weight: 400;
   color: var(--muted);
-}
-
-/* "Subscribe as" in the Playbooks section's own head (#3807 slice 2a — it left the rail with the
-   rail): a labelled row of chips under the heading, wrapping at a phone's width. */
-.pb-subscribe {
-  border: 0;
-  margin: 0 0 12px;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-.pb-subscribe .rail-label {
-  margin: 0 8px 0 0;
-  padding: 0;
-  float: left;
-}
-.pb-subscribe .railctl {
-  width: auto;
-  white-space: nowrap;
 }
 
 /* The selected account's own numbers on this playbook (#3665 slice 3). Its own bordered block, so
@@ -365,8 +318,9 @@
   grid-column: 1 / -1;
 }
 
-/* Who started the bots' closed trades (#4450 slice 4): above the deck, one cell per initiator —
-   stacked at phone width, three across once there is room. Rows differ by their words, never hue. */
+/* Who started the bots' closed trades (#4450 slice 4): one cell per initiator — stacked at phone
+   width, three across once there is room. Rows differ by their words, never hue. It lives on the
+   book's Balance section now (#5493 slice 3); `balance.css` sets its margin there. */
 .pb-initiators {
   margin: 0 0 12px;
 }
@@ -638,4 +592,35 @@
    words carry it, so this only sets the weight. */
 .pb-preflight {
   font-weight: 600;
+}
+
+/* An owner's conviction and a strategy's allocation (#4469 slice 3c part 3b). Each is a status line
+   in the owner's block with one control under it, and a form that opens in place — the same shape
+   Edit uses, so a phone scrolls one block, not a second surface. The ◆ / ◇ glyph and the words
+   carry the state; nothing here means anything by hue. */
+.pb-conviction,
+.pb-allocation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pb-conviction-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.pb-conviction-fields legend {
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pb-conviction-fields textarea {
+  resize: vertical;
 }

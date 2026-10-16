@@ -1,0 +1,4 @@
+{"n":0,"as_member":"As the night owl, I want the hallway list","noticed":"A hallway with rugs","confusion":1,"action":{"type":"tap","x":120,"y":300},"step":0}
+{"n":1,"as_member":"As the night owl, I'm choosing the red rug to narrow the list","noticed":"Where did the list go? I was just looking at it.","confusion":3,"action":{"type":"tap","x":80,"y":420},"step":1}
+{"n":2,"as_member":"As the night owl, I scroll back down","noticed":"The list is back at the top","confusion":2,"action":{"type":"scroll","dir":"down","screens":1},"step":2}
+{"n":3,"as_member":"As the night owl, I give up","noticed":"","confusion":2,"action":{"type":"give_up","why":"I keep losing my place"},"step":3}

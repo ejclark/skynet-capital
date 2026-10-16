@@ -1,0 +1,7 @@
+{
+  "world": "made-up-house",
+  "viewport": "desktop",
+  "task": "t1",
+  "oracle": { "success": true, "endedBy": "done" },
+  "ease": { "score": 6 }
+}
