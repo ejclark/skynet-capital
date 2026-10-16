@@ -107,6 +107,7 @@ export const VERDICT_WORDS_MIRROR = {
   flat: "wants out",
   "no-window": "waiting for its window",
   tactical: "trading on live signals",
+  observing: "observing, places nothing",
 };
 
 /** A region a page may print elsewhere too: a bare number of four characters or fewer. */

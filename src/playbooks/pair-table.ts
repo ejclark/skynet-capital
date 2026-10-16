@@ -20,6 +20,7 @@
  */
 
 import { marketDayKey } from "../domain/market-day.js";
+import { DIP_BOUNCE_STUDY } from "./dip-bounce-play.js";
 
 /** A strategy is the playbook with its ticker taken out: what it does, not what it trades. */
 export type StrategyId =
@@ -29,7 +30,8 @@ export type StrategyId =
   | "long-call"
   | "event"
   | "persona-rules"
-  | "forced-pick";
+  | "forced-pick"
+  | "dip-bounce";
 
 export interface Strategy {
   readonly id: StrategyId;
@@ -117,6 +119,14 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
       "A few small picks on a quiet session, sold the next trading day, to test the order path.",
     instrument: "shares",
     noScreen: "It tests the order path on a quiet day; no ticker is chosen for fit.",
+  },
+  "dip-bounce": {
+    id: "dip-bounce",
+    name: "the dip-to-bounce",
+    summary:
+      "Buys small tranches when a stock dips well below its average price for the day and sells each one a small bounce higher; observe-only for now.",
+    instrument: "shares",
+    screen: "node scripts/research/dip-bounce.mjs <SYM>",
   },
 };
 
@@ -287,6 +297,39 @@ const PAIRS: readonly Pair[] = [
     evidence: {
       status: "not-studied",
       call: "The first time in a session no bot has traded yet, a few small picks ranked on whatever signal exists, sold the next trading day. A test of the order path, not a call on any name.",
+    },
+  },
+  {
+    // #5489 slice 2: both dip-to-bounce pairs run observe-only (`observeOnly`); the re-run on fresh
+    // bars on or after 2027-01-15 is the study's falsifier, so it is the shelf date too.
+    id: "MU-DIP-BOUNCE",
+    strategy: "dip-bounce",
+    symbols: ["MU"],
+    evidence: {
+      status: "researched",
+      call: "Observe only, size zero: buy a $1,000 tranche when a 5-minute bar after 10:00 ET closes two ranges below the session's average price, sell one range higher. The one setting that cleared costs, over one 58-session stretch.",
+      confidence: "low",
+      measuredExit: "one 5-minute range above the buy",
+      number: "+0.39% per buy after 5 bps a side, t 5.3 (the bar for 45 tests is about 3.5)",
+      verdictOn: "2026-10-16",
+      shelfOn: "2027-01-15",
+      study: DIP_BOUNCE_STUDY,
+    },
+  },
+  {
+    id: "NBIS-DIP-BOUNCE",
+    strategy: "dip-bounce",
+    symbols: ["NBIS"],
+    evidence: {
+      status: "researched",
+      qualifier: "weakened",
+      call: "Observe beside MU, size zero: the same rule made money on NBIS but missed the bar for 45 tests, and its stuck buys came on the same days as CRWV's.",
+      confidence: "low",
+      measuredExit: "one 5-minute range above the buy",
+      number: "+0.62% per buy after 5 bps a side, t 2.2 (the bar for 45 tests is about 3.5)",
+      verdictOn: "2026-10-16",
+      shelfOn: "2027-01-15",
+      study: DIP_BOUNCE_STUDY,
     },
   },
 ];

@@ -230,6 +230,15 @@ export interface Playbook {
     mode: PlaybookMode,
   ): OptionDemand;
   /**
+   * Optional — DARK (#5489 slice 2): the playbook records its verdict ("observing") every pass and
+   * places nothing. `playbookIntents` and `exitSafetyIntents` contribute no order for it whatever
+   * its `decide` or `desiredState` would answer, and it takes no name from the base persona
+   * (`managedSymbols`), so subscribing a bot to it changes nothing that bot does. What it would have
+   * done is its own module's reading (`dip-bounce.ts`), in a type that is not an order. Going live
+   * is a PR that deletes this field, after the observed days its plan asks for.
+   */
+  readonly observeOnly?: true;
+  /**
    * Optional — the widened decision surface (#3208). PURE: `context.asOf` is the only clock. When
    * present, `playbookIntents` calls this INSTEAD of `desiredState`, keeps only intents on
    * the playbook's own symbols that no exit-safety trip claimed, and stamps `playbookId`/
@@ -324,7 +333,7 @@ export function exitSafetyIntents(
   const trips: ExitSafetyTrip[] = [];
   for (const { playbook, mode } of enabled) {
     const dial = playbook.exitSafety?.[mode];
-    if (!dial) {
+    if (!dial || playbook.observeOnly) {
       continue;
     }
     for (const symbol of playbook.symbols) {
@@ -452,9 +461,11 @@ export function playbookVerdicts(
   return enabled.map(({ playbook, mode }) => ({
     playbookId: playbook.id,
     mode,
-    state: readsLiveSignals(playbook)
-      ? "tactical"
-      : playbook.desiredState(asOfIso, calendar, events),
+    state: playbook.observeOnly
+      ? "observing"
+      : readsLiveSignals(playbook)
+        ? "tactical"
+        : playbook.desiredState(asOfIso, calendar, events),
   }));
 }
 
@@ -496,6 +507,8 @@ function entryIntents(
   events: readonly PlaybookEvent[],
   trippedSymbols: ReadonlySet<string>,
 ): OrderIntent[] {
+  // Dark: it records a verdict and places nothing, whatever its own rules would answer.
+  if (playbook.observeOnly) return [];
   if (playbook.decide) {
     return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
   }

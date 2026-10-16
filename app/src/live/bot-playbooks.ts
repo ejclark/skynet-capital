@@ -62,6 +62,7 @@ const ORDER: readonly CardState[] = [
   "long",
   "flat",
   "no-window",
+  "observing",
   "starting",
   "armed",
   "paused",
@@ -105,6 +106,14 @@ export const CARD_WORDS: Record<
     word: "Waiting for its window",
     tag: "waiting",
     counted: () => "waiting for a window",
+  },
+  // A dark playbook (#5489): it reads the tape and places nothing. An open eye-ring, so it borrows
+  // neither ● (trading) nor ◉ (on).
+  observing: {
+    glyph: "◌",
+    word: "Observing, places nothing",
+    tag: "observing",
+    counted: () => "observing",
   },
   starting: {
     glyph: ROLL_CALL_WORDS.starting.glyph,

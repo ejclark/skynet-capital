@@ -129,13 +129,15 @@ export type PlaybookMode = "conservative" | "standard" | "aggressive";
 export const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
 /** What one playbook concluded on one decision pass (#3687). `tactical` marks a rule-chain
- *  playbook, which has no single book-level state — only that it was consulted. */
-export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical";
+ *  playbook, which has no single book-level state — only that it was consulted. `observing` marks a
+ *  dark playbook (`observeOnly`, #5489): it read the tape and placed nothing, by construction. */
+export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical" | "observing";
 export const PLAYBOOK_VERDICT_STATES: readonly PlaybookVerdictState[] = [
   "long",
   "flat",
   "no-window",
   "tactical",
+  "observing",
 ];
 
 export interface PlaybookVerdict {

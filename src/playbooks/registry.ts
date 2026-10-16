@@ -12,6 +12,7 @@ import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING } from "../news/taco-signal.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
+import { dipBounce } from "./dip-bounce-play.js";
 import { longCall } from "./long-call.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
@@ -202,6 +203,25 @@ export const CRWV_LONG_CALL: Playbook = longCall({
     "has tested this play; it is checked on 2027-01-29.",
 });
 
+/**
+ * MU-DIP-BOUNCE and NBIS-DIP-BOUNCE (#5489 slice 2) — buy a dip two ranges below session VWAP, sell
+ * one range higher, DARK on both: the study (`docs/research/intraday-dip-bounce-2026-10.md`) calls
+ * MU "build it dark; size zero" and NBIS "observe beside MU", both at low confidence over one
+ * 58-session regime. They record a verdict and place nothing (`observeOnly`); going live is slice 4,
+ * after 30 observed days. CRWV, AMD and NVDA are the study's "don't", so they have no pair.
+ */
+export const MU_DIP_BOUNCE: Playbook = dipBounce({
+  id: "MU-DIP-BOUNCE",
+  symbol: "MU",
+  finding: "+0.39% per $1k buy after 5 bps/side, day-clustered t 5.3 over 117 buys",
+});
+
+export const NBIS_DIP_BOUNCE: Playbook = dipBounce({
+  id: "NBIS-DIP-BOUNCE",
+  symbol: "NBIS",
+  finding: "+0.62% per $1k buy after 5 bps/side, t 2.2 — under the 45-test bar of about 3.5",
+});
+
 /** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,
  *  `beta-scout.ts`); re-exported here because the Store catalog and the roll call read the house
  *  roster off what this module exports. None of the option plays, nor these, is on any default
@@ -217,6 +237,8 @@ const ROSTER: readonly Playbook[] = [
   NVDA_CALL_SPREAD,
   SAURON,
   BETA_SCOUT,
+  MU_DIP_BOUNCE,
+  NBIS_DIP_BOUNCE,
 ];
 
 /**
@@ -227,6 +249,10 @@ const ROSTER: readonly Playbook[] = [
  */
 export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
+  "MU-DIP-BOUNCE":
+    "No 5-minute bar feed reaches the bots' pass yet, so it records its verdict but no would-be order.",
+  "NBIS-DIP-BOUNCE":
+    "No 5-minute bar feed reaches the bots' pass yet, so it records its verdict but no would-be order.",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:

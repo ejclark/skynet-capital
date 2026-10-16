@@ -5,7 +5,7 @@
  */
 
 export type HeartbeatState = "beating" | "stale" | "market-closed" | "no-record";
-export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical";
+export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical" | "observing";
 
 export interface PlaybookHeartbeat {
   /** Absent for a viewer who does not own the bot — the server strips it (#885). */
@@ -196,6 +196,7 @@ export const VERDICT_WORDS: Record<PlaybookVerdictState, string> = {
   flat: "wants out",
   "no-window": "waiting for its window",
   tactical: "trading on live signals",
+  observing: "observing, places nothing",
 };
 
 /** "since 9:30 AM" today, "since Sep 22" otherwise; "at least since" when the run may be older. */
