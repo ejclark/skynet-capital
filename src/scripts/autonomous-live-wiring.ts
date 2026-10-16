@@ -28,6 +28,7 @@ import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -364,8 +365,12 @@ export function tradingRoster(
   {
     runsScout = false,
     ledgerOf,
+    intradayBars,
   }: {
     readonly runsScout?: boolean;
+    /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
+     *  feed is wired, and the playbook then records its verdict and nothing more. */
+    readonly intradayBars?: IntradayBarsOf;
     /** Each pair's history on this bot, for the conviction check — absent when the store is dark. */
     readonly ledgerOf?: ConvictionGateDeps["ledgerOf"];
   } = {},
@@ -395,6 +400,7 @@ export function tradingRoster(
             [],
             console,
             (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+            intradayBars,
           ),
           {
             subscriptions: roster.subscriptions,
@@ -522,6 +528,11 @@ export function buildLiveBot(
         if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
         opts.onDecision(r);
       },
+      onObservationError: (personaId, error) =>
+        console.warn(
+          `[observe] ${personaId}: a dark playbook's reading failed, none recorded:`,
+          error,
+        ),
     }),
   };
 }

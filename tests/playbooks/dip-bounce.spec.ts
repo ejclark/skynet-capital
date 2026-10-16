@@ -138,6 +138,9 @@ describe("the entry: two ranges under session VWAP, from 10:00 ET", () => {
     expect(read.held).toHaveLength(1);
     expect(read.held[0]).toMatchObject({ boughtOn: day(1), boughtAt: 700, entry: 97.5 });
     expect(read.held[0]?.target).toBeCloseTo(98.5, 6);
+    // The tranche keeps the session VWAP and the range unit it was priced from.
+    expect(read.held[0]?.vwap).toBeCloseTo(100, 1);
+    expect(read.held[0]?.range).toBeCloseTo(1, 6);
   });
 
   it("never buys in the first 30 minutes, nor before a full session sets the range", () => {
@@ -218,8 +221,16 @@ describe("the late-recovery rule, as the study amended it", () => {
     expect(read.held[0]).toMatchObject({ age: 3, level: "signal" });
     expect(read.level).toBe("signal");
     expect(read.refused).toEqual([
-      { on: day(4), at: 700, price: 95, why: "signal: a tranche is 3 sessions old" },
+      expect.objectContaining({
+        on: day(4),
+        at: 700,
+        price: 95,
+        why: "signal: a tranche is 3 sessions old",
+      }),
     ]);
+    // The refused buy keeps the numbers it was priced from, for the dark run's record.
+    expect(read.refused[0]?.range).toBeCloseTo(1, 6);
+    expect(read.refused[0]?.vwap).toBeCloseTo(97.5, 1);
   });
 
   it("gates at day 5 and keeps the tranche's target sell working — no hand-off, no sale", () => {

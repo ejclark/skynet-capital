@@ -57,6 +57,8 @@ import {
   nextPrint,
   sessionsUntil,
 } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
   ListedExpirations,
@@ -66,6 +68,7 @@ import type {
   PlaybookMode,
   PlaybookVerdict,
   Portfolio,
+  Quote,
 } from "../domain/types.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
 import type { PlayTargetBounds } from "./play-target.js";
@@ -243,6 +246,20 @@ export interface Playbook {
    * is a PR that deletes this field, after the observed days its plan asks for.
    */
   readonly observeOnly?: true;
+  /**
+   * Optional — what a dark playbook RECORDS in place of an order (#5489 slice 2): its would-be
+   * orders and the late-recovery level, from the 5-minute bars the pass can see. PURE: `asOf` is the
+   * only clock, `bars` a synchronous read of the feed's cache (asking for a ticker is what makes the
+   * feed fetch it). The return type has no path to an order, and `observeOnly` already guarantees
+   * the engine places nothing for this playbook; the two together are the "records, never trades"
+   * guarantee (`tests/playbooks/dip-bounce-wiring.spec.ts`).
+   */
+  readonly observe?: (input: {
+    readonly bars: IntradayBarsOf;
+    readonly asOf: string;
+    readonly quotes: Readonly<Record<string, Quote>>;
+    readonly calendar: readonly EarningsPrint[];
+  }) => readonly PlaybookObservation[];
   /**
    * Optional — the widened decision surface (#3208). PURE: `context.asOf` is the only clock. When
    * present, `playbookIntents` calls this INSTEAD of `desiredState`, keeps only intents on

@@ -1,3 +1,4 @@
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
   ListedExpirations,
@@ -28,6 +29,11 @@ export interface Persona {
   /** What each composed playbook concluded for this context — present only on a persona wrapped
    *  by `withPlaybooks`, so the trader can record verdicts without knowing the playbook layer. */
   playbookVerdicts?(context: MarketContext): readonly PlaybookVerdict[];
+  /** What a dark (`observeOnly`) playbook on this persona would have done, as would-be orders in a
+   *  type that is not an order (#5489). Present only on a persona composed with one; says each
+   *  observation once and again only when it moves, so unlike `decide` it keeps a memory. Never
+   *  feeds a decision. */
+  playbookObservations?(context: MarketContext): readonly PlaybookObservation[];
   /** The underlyings this persona's option plays trade — whose listed expirations the trader reads.
    *  Present only on a persona composed with an option playbook. */
   readonly optionUnderlyings?: readonly string[];

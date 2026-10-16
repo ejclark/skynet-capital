@@ -201,6 +201,15 @@ than staying a setting on his. The question this section left open is closed.
 - `src/playbooks/dip-bounce.ts` — the rule as the bots observe it (#5489 slice 2): the same entries
   and target fills as `dip-bounce-sim.mjs` (pinned by `tests/playbooks/dip-bounce.spec.ts`), with
   §5's amended late-recovery rule. `MU-DIP-BOUNCE` and `NBIS-DIP-BOUNCE` run it observe-only.
+- The dark run's record (#5489 slice 2, wiring): the bots read Alpaca's free IEX 5-minute bars on
+  their existing data credential (`src/alpaca/alpaca-intraday-bars.ts`) and file every dip signal in
+  the decision store's `playbook_observations` (`db.playbookObservations("MU-DIP-BOUNCE")`) with the
+  would-be buy, its session VWAP and range, the quote read when the pass first saw it, the would-be
+  resting sell and the late-recovery level, plus one level reading per name per session. **Read the
+  numbers with one difference in mind:** this study used consolidated Yahoo bars, and IEX prints a
+  few percent of the volume, so VWAP is IEX's own and a thin bar can be missing. The 2026-12-31
+  dark-run check compares both, and the recorded quote is what finally measures the spread the
+  study had to assume.
 - `scripts/research/intraday-bars.mjs` — the Yahoo bar fetch, moved out of `intraday-edges.mjs` so
   both studies share it and its cache (`node_modules/.cache/intraday-edges/`). The cache never
   expires; delete `<SYM>-5m-60d.json` to take a fresh window.

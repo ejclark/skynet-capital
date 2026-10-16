@@ -70,6 +70,7 @@ import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
+import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
 import {
   type BotRoster,
   bootMissionControl,
@@ -297,6 +298,9 @@ async function runLive(): Promise<void> {
   // The forced daily pick's arming (ops, Eric's) — read here because the bot it runs on, the first,
   // carries it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
   const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
+  // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
+  const intradayBars = intradayBarsFeed(currentCredentials);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -307,6 +311,7 @@ async function runLive(): Promise<void> {
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
       {
         runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
+        intradayBars: intradayBars.barsOf,
         // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
         ...(decisionDb
           ? {
@@ -478,6 +483,7 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = contextNow();
+    void intradayBars.refresh(); // never awaited: a slow bar read can't stall a cycle, it lands next one
     // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
     await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
