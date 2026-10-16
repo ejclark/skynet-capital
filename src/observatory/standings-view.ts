@@ -158,7 +158,7 @@ function cohortCard(stats: CohortStats, leads: boolean): string {
       <dl class="cohort-metrics">
         <div><dt>Avg equity</dt><dd class="num" data-field="avgEquity">${formatCurrency(stats.avgEquity)}</dd></div>
         <div><dt>Unrealized P/L</dt><dd class="num ${plClass(stats.totalUnrealized)}" data-field="unrealized" data-field-tone="unrealized">${formatSigned(stats.totalUnrealized)}</dd></div>
-        <div><dt>Cohort return</dt><dd class="num ${plClass(stats.returnPct)}" data-field="return" data-field-tone="return">${pct(stats.returnPct)}</dd></div>
+        <div><dt>Open-position return</dt><dd class="num ${plClass(stats.returnPct)}" data-field="return" data-field-tone="return">${pct(stats.returnPct)}</dd></div>
         <div><dt>In profit</dt><dd class="num" data-field="breadth">${stats.breadthPct.toFixed(0)}%</dd></div>
         <div><dt>Best</dt><dd><span data-field="bestName">${stats.best ? escapeHtml(stats.best.name) : "—"}</span> <span class="num ${plClass(stats.best?.pct ?? 0)}" data-field="bestPct" data-field-tone="bestPct">${stats.best ? pct(stats.best.pct) : ""}</span></dd></div>
         <div><dt>Spread</dt><dd class="num" data-field="spread">${stats.spread.toFixed(2)}%</dd></div>
@@ -238,7 +238,7 @@ function compareColumn(snapshot: ParticipantSnapshot): string {
         <div><dt>Cash</dt><dd class="num">${formatCurrency(snapshot.cash)}</dd></div>
         <div><dt>Invested</dt><dd class="num">${formatCurrency(invested)}</dd></div>
         <div><dt>Unrealized</dt><dd class="num ${plClass(pl)}">${formatSigned(pl)}</dd></div>
-        <div><dt>Return</dt><dd class="num ${plClass(participantReturnPct(snapshot))}">${pct(
+        <div><dt>Open-position return</dt><dd class="num ${plClass(participantReturnPct(snapshot))}">${pct(
           participantReturnPct(snapshot),
         )}</dd></div>
       </dl>
@@ -290,7 +290,7 @@ function headToHead(a: ParticipantSnapshot, b: ParticipantSnapshot, metric: Lead
       <div class="cmp-mid">
         ${deltaRow("Equity", a.equity, b.equity, formatCurrency)}
         ${deltaRow("Unrealized", participantUnrealized(a), participantUnrealized(b), formatSigned)}
-        ${deltaRow("Return", participantReturnPct(a), participantReturnPct(b), pct)}
+        ${deltaRow("Open-position return", participantReturnPct(a), participantReturnPct(b), pct)}
         <div class="cmp-legend"><span class="pos">◀</span> ${escapeHtml(a.displayName)} · <span class="neg">▶</span> ${escapeHtml(b.displayName)}</div>
       </div>
       ${compareColumn(b)}

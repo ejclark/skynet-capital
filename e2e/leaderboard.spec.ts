@@ -30,11 +30,11 @@ test.describe("leaderboard", () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const reading = await page.evaluate(() => Math.round(window.scrollY));
     expect(reading).toBeGreaterThan(0);
-    await page.getByRole("link", { name: "Return %" }).click();
-    await expect(page.getByText("Return %", { exact: true })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await page.getByRole("link", { name: "Open-position return" }).click();
+    // The label also heads the cohort cards now, so read the chip inside its own group.
+    await expect(
+      page.getByLabel("Rank the field by").getByText("Open-position return", { exact: true }),
+    ).toHaveAttribute("aria-current", "page");
     await expect(page.locator(".ladder")).not.toHaveAttribute("aria-busy", "true");
     expect(
       Math.abs((await page.evaluate(() => Math.round(window.scrollY))) - reading),

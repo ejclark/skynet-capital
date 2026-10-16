@@ -19,7 +19,7 @@
  */
 
 import { type EarningsPrint, nextPrint } from "../../../src/domain/earnings-calendar";
-import { nextSession, sessionsBefore } from "../../../src/domain/market-calendar";
+import { nextSession, sessionsBefore, sessionsBetween } from "../../../src/domain/market-calendar";
 import { marketDayKey } from "../../../src/domain/market-day";
 import { OPTION_MULTIPLIER, parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "./desk";
@@ -165,6 +165,14 @@ export interface WindowPlan {
   readonly outBy?: string;
   readonly today: string;
   readonly phase: WindowPhase;
+  /** The same edges in trading days before the report (#5432): it buys `buyAway` out and sells
+   *  `sellAway` out — 0 when it sells on report day, before the close. */
+  readonly buyAway: number;
+  readonly sellAway: number;
+  /** Trading days from today to the report. */
+  readonly todayAway: number;
+  /** An estimate's researched spread, laid on the buy day: the first and last day it could be. */
+  readonly buyRange?: readonly [string, string];
 }
 
 /**
@@ -185,6 +193,7 @@ export function windowPlan(
   const lastLong = sessionsBefore(print.date, window.closes);
   const today = marketDayKey(nowIso);
   const phase: WindowPhase = today < opens ? "before" : today <= lastLong ? "inside" : "out";
+  const spread = print.status === "estimate" ? print.window : undefined;
   return {
     symbol,
     print: { date: print.date, confirmed: print.status === "confirmed" },
@@ -193,6 +202,17 @@ export function windowPlan(
     ...(window.closes > 0 ? { outBy: nextSession(lastLong) } : {}),
     today,
     phase,
+    buyAway: window.opens,
+    sellAway: Math.max(window.closes - 1, 0),
+    todayAway: sessionsBetween(today, print.date),
+    ...(spread
+      ? {
+          buyRange: [
+            sessionsBefore(spread.start, window.opens),
+            sessionsBefore(spread.end, window.opens),
+          ] as const,
+        }
+      : {}),
   };
 }
 

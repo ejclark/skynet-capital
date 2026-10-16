@@ -1,0 +1,11 @@
+{
+  "id": "uk-ashe-earnings-2026-10-22",
+  "kind": "macro-print",
+  "title": "UK Employee earnings in the UK: 2026 — the Annual Survey of Hours and Earnings (ONS, 09:30 London / 04:30 ET), two days after the labour market print and six days before the Autumn Budget",
+  "date": "2026-10-22",
+  "status": "estimate",
+  "source": "EST: gov.uk/government/statistics/announcements/employee-earnings-in-the-uk-2026, fetched direct 2026-10-16 (HTTP 200) — the UK statutory pre-announcement register reads verbatim 'Release date: 22 October 2026 9:30am (confirmed)', producer Office for National Statistics. It read 'October 2026 (provisional)', month-only, on 2026-09-09 and 2026-10-06 and gained its day between those readings and this one. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy has no slot for the ONS; the DATE is not in doubt. Discovered in the 2026-10-16 pulse of uk-labour-market-2026-10-20",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-10-20 LANE, 2026-10-16. ASHE is the UK's definitive earnings survey (the Low Pay Commission's evidence base) and had been hunted and deliberately NOT proposed twice while its date was month-only ('a guessed date is worse than a gap'); the register now carries a day, so it is proposed. It lands 2 days after the 10-20 labour market print (07:00 London) and 6 days before the 2026-10-28 Autumn Budget, on a morning with no tracked UK release at 07:00 (UK CPI, PPI and public finances are 10-21). Tiered LOW on the argued grounds of its sibling ledgers: symbols: [], this repo tracks no UK-listed symbol and no house playbook is rates- or sterling-keyed. Estimate widens caution only; nothing date-keyed may act on this."
+}

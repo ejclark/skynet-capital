@@ -15,6 +15,8 @@ import {
 } from "../../scripts/study/worlds/instant.mjs";
 import { marketClient } from "../../scripts/study/worlds/market.mjs";
 import { serverConfig, sessionFor } from "../../scripts/study/worlds/server-config.mjs";
+import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
+import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { createBoardChannel } from "../../src/server/board-patch-routes.js";
 
 /**
@@ -85,9 +87,12 @@ describe("buildBook", () => {
   it("records each pass's verdicts as the playbooks gave them at that pass, never typed", () => {
     const wheel = (book: ReturnType<typeof buildBook>) =>
       book.decisions.sauron?.[0]?.playbookVerdicts?.find((v) => v.playbookId === "CRWV-WHEEL");
-    // Thursday sits outside the wheel's sale window; the stopped bot's Tuesday pass sat inside it.
-    expect(wheel(today)?.state).toBe("no-window");
-    expect(wheel(buildBook("profile-bad-day"))?.state).toBe("long");
+    // Each pass's verdict is the live playbook's own answer at that pass's time.
+    for (const book of [today, buildBook("profile-bad-day")]) {
+      const pass = book.decisions.sauron?.[0];
+      const asOf = new Date(pass?.at ?? 0).toISOString();
+      expect(wheel(book)?.state).toBe(CRWV_WHEEL.desiredState(asOf, UPCOMING_PRINTS));
+    }
   });
 });
 

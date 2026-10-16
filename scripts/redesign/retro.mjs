@@ -13,16 +13,18 @@
 // (the loop, his reader profile, the personas, the screen) is the session's judgment.
 //
 // What it reads: the issue's comments over REST (scripts/moneypenny/gh.mjs, the core bucket).
-// What it prints: per round, its date, question, picks (Fix first · More of · Not · Build) and his
-// notes word for word (pin notes and quoted notes), then the ledger row's numbers.
+// What it prints: per round, its date, question, picks (Fix first · Pick · More of · Not · Build) and his
+// notes word for word (pin notes, notes under an option, and quoted notes), then the ledger row's
+// numbers.
 
 import { pathToFileURL } from "node:url";
 
 /** A read-back comment's first line, carrying the round id. */
 const READBACK = /Answered on the decisions page, design-(\d+)-r([\w-]+)\./;
 /** The pick lines a read-back writes under a question. */
-const PICK = /^- (Fix first|More of|Not|Build|Look closer|Not a problem):\s*(.*)$/;
-/** A per-pin line that carries his note: `- Option B · pin 2 (label) — 👍 keep — “note”`. */
+const PICK = /^- (Fix first|Pick|More of|Not|Build|Look closer|Not a problem):\s*(.*)$/;
+/** A line that carries his note: a pin's, `- Option B · pin 2 (label) — 👍 keep — “note”`, or one
+ *  under an option (option-notes.mjs, #5429), `- Option B (its name) — more of this — “note”`. */
 const PIN_NOTE = /^- (.+?) \((.*?)\)(?: — (.+?))? — “([\s\S]*)”?$/;
 
 /** A pin note may run over several lines (the read-back indents the later ones): join them back
@@ -38,7 +40,7 @@ function joinNotes(lines) {
   return joined;
 }
 
-/** One line's note — a pin note or a quoted note on the round — or null. */
+/** One line's note — a pin's, an option's, or a quoted note on the round — or null. */
 function noteOf(l) {
   if (l.startsWith("- ") && l.includes("“")) {
     const n = PIN_NOTE.exec(l);

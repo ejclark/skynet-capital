@@ -2,10 +2,12 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
+import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
@@ -143,6 +145,14 @@ export interface DecisionDb {
   /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
    *  what a restart hands back to the settle loop. */
   unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
+  /** What one dark playbook would have done (#5489): its dip signals and daily level readings,
+   *  oldest session first, from `fromSession` (`YYYY-MM-DD`) on. Written by `record()` from a
+   *  decision's `playbookObservations`, merged on re-say; this is how thirty observed days are
+   *  scored. Local to the store that recorded them — they do not ride the replication wire. */
+  playbookObservations(
+    playbookId: string,
+    opts?: { readonly fromSession?: string },
+  ): PlaybookObservation[];
   close(): void;
 }
 
@@ -274,6 +284,7 @@ export function openDecisionDb(path: string): DecisionDb {
   // Before any read below is prepared: they join it (`SETTLED_JOIN`).
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
+  const observations = openObservationTables(db);
   const results = openIntentResults(db);
   const week = openCheckWeekReads(db);
 
@@ -554,6 +565,9 @@ export function openDecisionDb(path: string): DecisionDb {
     for (const v of entry.playbookVerdicts ?? []) {
       insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
     }
+    // Also before the early return, and merged by key, so a re-say moves an outcome on.
+    if (entry.playbookObservations?.length)
+      observations.write(entry.at, entry.playbookObservations);
     if (hasIntents.get(decisionId)) return;
 
     insertIntents(decisionId, entry);
@@ -827,6 +841,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 
     close() {
       db.close();

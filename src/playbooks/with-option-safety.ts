@@ -43,6 +43,12 @@ export function withOptionSafety(
     ...(inner.playbookVerdicts
       ? { playbookVerdicts: (context: MarketContext) => inner.playbookVerdicts?.(context) ?? [] }
       : {}),
+    ...(inner.playbookObservations
+      ? {
+          playbookObservations: (context: MarketContext) =>
+            inner.playbookObservations?.(context) ?? [],
+        }
+      : {}),
     ...(inner.optionUnderlyings ? { optionUnderlyings: inner.optionUnderlyings } : {}),
     optionDemand: (
       asOfIso: string,

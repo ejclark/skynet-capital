@@ -10,6 +10,7 @@ import {
   type SubscriptionWriteResult,
   subscribeRequest,
 } from "../live/playbook-store";
+import { defaultCheckOn, initialCapital } from "../live/subscribe-defaults";
 import { FilterChip, InlineResult } from "../ui";
 import { ConvictionFields, convictionOf } from "./playbook-conviction";
 
@@ -114,9 +115,8 @@ export function SubscribeForm({
   readonly onCancel?: () => void;
 }): ReactElement {
   const [mode, setMode] = useState<PlaybookMode>(editing?.mode ?? "standard");
-  const [capital, setCapital] = useState(
-    editing?.capitalAllocated === undefined ? "" : String(editing.capitalAllocated),
-  );
+  // A new subscription opens filled in (`subscribe-defaults.ts`); an edit opens on what it has.
+  const [capital, setCapital] = useState(initialCapital(editing));
   // "Uncapped" is offered only to keep a subscription that already is (#4535's seeded roster).
   // A member's own budget is always a number, the same rule subscribe has always had.
   const offerUncapped = editing !== undefined && editing.capitalAllocated === undefined;
@@ -126,7 +126,7 @@ export function SubscribeForm({
     editing?.compoundAllocation === true,
   );
   const [reason, setReason] = useState("");
-  const [checkOn, setCheckOn] = useState("");
+  const [checkOn, setCheckOn] = useState(() => defaultCheckOn());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // The preflight answer is keyed on the question it answered; a changed mode or budget hides it.

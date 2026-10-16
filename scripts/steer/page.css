@@ -17,6 +17,10 @@
   --ink: #35d0ba;
   --warm: #ffc24d;
   --bar: rgba(15, 21, 28, 0.96);
+  /* a round's areas (areas.mjs): the faint outline holds 3:1 on a dark frame and a light one; the
+     active one is the accent, ringed in the ground colour for the frame it doesn't suit */
+  --area: #2ba091;
+  --area-on: #35d0ba;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
@@ -34,6 +38,8 @@
     --ink: #0a5f54;
     --warm: #8a5300;
     --bar: rgba(247, 249, 251, 0.96);
+    --area: #397e75;
+    --area-on: #0a5f54;
   }
 }
 :root[data-theme="light"] {
@@ -49,6 +55,8 @@
   --ink: #0a5f54;
   --warm: #8a5300;
   --bar: rgba(247, 249, 251, 0.96);
+  --area: #397e75;
+  --area-on: #0a5f54;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -532,6 +540,44 @@ details.ev summary {
   width: 100%;
 }
 
+/* A note under an option (option-notes.mjs): one quiet line under its buttons until tapped. The
+   fold's state is the ▸/▾ shape, never a colour. */
+details.onote {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.onote summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+details.onote summary::-webkit-details-marker {
+  display: none;
+}
+details.onote summary::before {
+  content: "▸\00a0";
+}
+details.onote[open] summary::before {
+  content: "▾\00a0";
+}
+details.onote summary:hover {
+  color: var(--text);
+}
+.onote-t {
+  font: 14px / 1.45 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  max-width: 80ch;
+  box-sizing: border-box;
+}
+
 /* Reaction buttons — a pressed state is a glyph plus a border or strike, never a colour alone. */
 .btns {
   display: flex;
@@ -889,6 +935,246 @@ details.ev summary {
   border: 2px solid var(--text);
 }
 
+/* Comparing an option with Today (compare.mjs + compare-client.js, #5411). One switch above the
+   option's phone frame — a glyph and a word per mode, the pressed one a heavy border and a ✓, never
+   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SIDE BY SIDE (#5430)
+   sets them in two columns, both whole, a clear button over each half that opens it in Flip (so a
+   tap there never places a mark); DIVIDER stacks them and clips the option from the left to
+   --split (%), Today showing through, a line in the text colour ringed in the ground colour where
+   they meet, dragged by a thumb-sized handle under the picture. */
+.cmp {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cmp-modes,
+.cmp-flip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.cmp-lead {
+  font-size: 14px;
+  color: var(--muted);
+}
+.cmp-b {
+  font: 600 13px var(--sans);
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.cmp-b[aria-pressed="true"] {
+  border: 3px solid var(--text);
+  padding: 4px 10px;
+}
+.cmp-b[aria-pressed="true"]::after {
+  content: " ✓";
+}
+.cmp-b:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--muted);
+}
+.cmp-stage {
+  position: relative;
+  display: grid;
+}
+.cmp-cell {
+  grid-area: 1 / 1;
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmp-tag {
+  font: 600 13px var(--sans);
+}
+.cmp-pic {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.cmp-pic img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.cmp .cmp-cell > .shot,
+.cmp .cmp-cell > .shot.phone.areas {
+  /* the cell is a column, so .shot.phone's 390px flex-basis would set its height: at half width
+     (Side by side) the picture is shorter than that and the frame ran on empty below it */
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cmp-line {
+  display: none;
+}
+/* Flip: the toggle above names the picture showing, so its own tag would say it twice. */
+.cmp[data-mode="flip"] .cmp-tag {
+  display: none;
+}
+.cmp[data-mode="flip"][data-side="option"] .cmp-cell[data-cell="today"],
+.cmp[data-mode="flip"][data-side="today"] .cmp-cell[data-cell="option"] {
+  visibility: hidden;
+}
+.cmp[data-mode="side"] .cmp-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+}
+.cmp[data-mode="side"] .cmp-cell[data-cell="option"] {
+  grid-area: 1 / 2;
+}
+/* Side by side with areas (#5163): it is the before | after shot, so both pictures get the room.
+   The callout words and their lines need a gutter or a band a half-width picture can't spare (at
+   desktop width the 172px gutter left each picture 0px, 2026-10-15), so they go; the outlines and
+   numbers stay, the same on both halves. */
+.cmp[data-mode="side"] .shot.areas :is(.agut, .aband, .arail, .aline) {
+  display: none;
+}
+.cmp[data-mode="side"] .shot.areas .arow {
+  padding: 0 0 0 28px;
+}
+.cmp-open {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: zoom-in;
+}
+.cmp-open:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+.cmp-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] {
+  clip-path: inset(0 0 0 calc(var(--split) * 1%));
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] .cmp-tag {
+  text-align: right;
+}
+.cmp[data-mode="divider"] .cmp-line {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--split) * 1%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+  pointer-events: none;
+}
+/* The divider's grip sits on the line itself and stays in view as the picture scrolls past it
+   (sticky inside the line's full-height box), so the handle is always beside the part he is
+   looking at; a drag on it moves the line (compare-client.js). The track under the picture stays
+   for the keyboard. Eric, 2026-10-15: the handle was "often out of view of the actual change". */
+.cmp-grip {
+  display: none;
+}
+.cmp[data-mode="divider"] .cmp-grip {
+  display: block;
+  position: sticky;
+  top: calc(50vh - 22px);
+  width: 44px;
+  height: 44px;
+  margin: 12px 0 12px -21px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font: 700 15px / 40px var(--sans);
+  text-align: center;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 7;
+}
+.cmp-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  font: 600 13px var(--sans);
+}
+.cmp-knob {
+  position: absolute;
+  left: calc(var(--split) * 1%);
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cmp-split {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.cmp-track:has(.cmp-split:focus-visible) .cmp-knob {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* One picture, two widths (widths.mjs + widths-client.js, #5417). A holder's phone and desktop
+   frames share one slot under a "▯ Phone · ▭ Desktop" switch in the compare switch's button style
+   (.cmp-b: the pressed one a heavy border and a ✓, never a colour alone); the slot shows the width
+   its data-width names and hides the other, so the phone frame keeps its real width and the
+   desktop one gets the card's. */
+.wsw {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wsw[data-width="desk"] {
+  flex-basis: 100%;
+}
+.wsw-b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.wsw[data-width="phone"] > .wsw-pic[data-w="desk"],
+.wsw[data-width="desk"] > .wsw-pic[data-w="phone"] {
+  display: none;
+}
+.wsw-pic {
+  min-width: 0;
+}
+
 /* A round's focus (focus.mjs + focus-client.js). The focused view (the default) crops the frame to
    the focus box plus a margin: the clip keeps the crop's proportions (--fa), and inside it the
    plane — the whole frame, its picture, pins and marks — is sized and moved by % of the crop
@@ -980,6 +1266,131 @@ details.ev summary {
   top: 2px;
   bottom: auto;
   left: 2px;
+}
+
+/* A round's areas (areas.mjs, #5391). The shot is three rows: a band of words above the picture,
+   the picture between its margins, a band below. The plane is the picture's own box, so every
+   outline, number, line, pin and mark is placed in % of the frame. Every area is a 1.5px dashed
+   outline with a hollow number in the left margin, level with its top; an active one is a 2.5px
+   solid outline with a filled number — dashed vs solid and hollow vs filled, never colour alone.
+   Phone width: an active area's words sit in a band, its line runs out to the right margin
+   (`--rail`, one lane per line, `--d` from the picture's edge), along it, and in to the outline's
+   right edge; a band's own stretch of line is clipped at the band's edge, where the plane's picks
+   it up. Desktop width (below): the words sit in a gutter beside the picture, level with the line. */
+.shot.areas {
+  position: relative;
+  overflow: visible;
+  border: 0;
+  background: none;
+}
+.shot.phone.areas {
+  flex: 0 1 calc(390px + 28px + var(--rail));
+}
+.arow {
+  padding: 0 var(--rail) 0 28px;
+}
+.aplane {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.abox {
+  position: absolute;
+  border: 1.5px dashed var(--area);
+  pointer-events: none;
+}
+.abox[data-on] {
+  border: 2.5px solid var(--area-on);
+  box-shadow: 0 0 0 1.5px var(--bg);
+}
+.anum {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--area);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 11px / 15px var(--sans);
+  text-align: center;
+  flex: none;
+}
+.anum[data-on] {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--area-on);
+  background: var(--area-on);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 18px;
+}
+.aplane > .anum {
+  position: absolute;
+  right: calc(100% + 5px);
+  pointer-events: none;
+}
+.aline,
+.arail {
+  position: absolute;
+  background: var(--area-on);
+  pointer-events: none;
+}
+.aline {
+  height: 2px;
+  margin-top: -1px;
+  right: calc(-1 * var(--d));
+}
+.arail {
+  width: 2px;
+  left: calc(100% + var(--d) - 1px);
+}
+.aband {
+  position: relative;
+  overflow: hidden;
+}
+.aband.above {
+  padding-bottom: 8px;
+}
+.aband.below {
+  padding-top: 8px;
+}
+.acall {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px calc(var(--rail) - var(--d)) 4px 0;
+  font: 600 15px / 1.3 var(--sans);
+}
+.ajoin {
+  flex: 1 1 12px;
+  min-width: 12px;
+  height: 2px;
+  background: var(--area-on);
+}
+.acall::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--rail) - var(--d) - 1px);
+  width: 2px;
+  height: 9999px;
+  background: var(--area-on);
+}
+.above > .acall::after {
+  top: 50%;
+}
+.below > .acall::after {
+  bottom: 50%;
+}
+.agut {
+  display: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  width: 156px;
+  margin: 0;
+  transform: translateY(-50%);
+  font: 600 15px / 1.3 var(--sans);
 }
 
 /* The round page's how-to, folded under its one line. */
@@ -1162,6 +1573,8 @@ body.noting * {
     display: contents;
   }
   .opt > .pics > .shot.phone,
+  .opt > .pics > .cmp,
+  .opt > .pics > .wsw,
   .opt > .pics > .muted {
     grid-column: 1;
     grid-row: 1;
@@ -1172,6 +1585,51 @@ body.noting * {
   }
   .opt > .pics > .shot.desk {
     grid-column: 1 / -1;
+  }
+  /* A round's areas: the words move from the bands to a gutter beside the picture, joined by a
+     straight line to the outline's right edge; the phone frame keeps its real width beside them. */
+  .shot.areas .aband,
+  .shot.areas .arail {
+    display: none;
+  }
+  .shot.areas .agut {
+    display: block;
+  }
+  .shot.areas .arow {
+    padding-right: 172px;
+  }
+  .shot.areas .aline {
+    right: -12px;
+  }
+  .shot.phone.areas {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* A width slot showing the desktop frame takes the card's width, under the option's words. */
+  .opt > .pics > .wsw[data-width="desk"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .opt:has(> .pics > .shot.phone.areas),
+  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas),
+  .opt:has(> .pics > .cmp .shot.phone.areas) {
+    grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
+  }
+  .opt > .pics > .cmp:has(.shot.phone.areas) {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* Side by side is the before | after shot: it takes the card's whole width under the option's
+     words, each picture up to its real phone width beside the other. */
+  .opt > .pics > .cmp[data-mode="side"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+  }
+  .opt:has(> .pics > .cmp[data-mode="side"]) > .side {
+    grid-column: 1 / -1;
+  }
+  .cmp[data-mode="side"] .cmp-stage {
+    grid-template-columns: repeat(2, minmax(0, calc(390px + 28px)));
+    column-gap: 24px;
   }
   /* no phone frame: the words lead, the desktop frame spans below them */
   .opt:not(:has(.shot.phone)) > .side {

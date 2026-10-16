@@ -8,7 +8,7 @@ import {
   observeMixedSignals,
 } from "../../src/playbooks/mixed-signals.js";
 import type { EnabledPlaybook, Playbook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, HC_SAURON, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import { G1_GOOG, S1_NVDA, SAURON, TACO_DJT } from "../../src/playbooks/registry.js";
 import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
 import { aContext, aPortfolio } from "../support/builders.js";
 
@@ -114,9 +114,9 @@ describe("detectMixedSignals: opt-in, off by default", () => {
 
   it("opts in exactly one house playbook, S1-NVDA, and only to observe", () => {
     expect(S1_NVDA.mixedSignals).toEqual({ action: "observe" });
-    // HC-SAURON trades this very disagreement (contrarian); TACO-DJT has no news feed; G1-GOOG
+    // SAURON trades this very disagreement (contrarian); TACO-DJT has no news feed; G1-GOOG
     // is the runner-up, left dark so the falsifier reads one playbook's tape.
-    for (const p of [G1_GOOG, TACO_DJT, HC_SAURON]) {
+    for (const p of [G1_GOOG, TACO_DJT, SAURON]) {
       expect(p.mixedSignals).toBeUndefined();
     }
     const context = aContext({
@@ -124,7 +124,7 @@ describe("detectMixedSignals: opt-in, off by default", () => {
       GOOG: { momentum: 0.1, sentiment: -0.9 },
       DJT: { momentum: 0.1, sentiment: -0.9 },
     });
-    const all = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON].map(on);
+    const all = [S1_NVDA, G1_GOOG, TACO_DJT, SAURON].map(on);
     expect(detectMixedSignals(all, context).map((o) => `${o.playbookId}/${o.symbol}`)).toEqual([
       "S1-NVDA/NVDA",
     ]);

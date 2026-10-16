@@ -16,6 +16,10 @@ export interface Picture {
   focus?: { x: number; y: number; w: number; h: number; label: string };
   /** The frame's height ÷ width, read from its file, for a focused crop's shape. */
   ratio?: number;
+  /** The question's areas on this frame (areas.mjs), every number in % of the frame. */
+  areas?: import("./areas.mjs").Area[];
+  /** Its pixel size, read from its file, on a compared question's phone frames (compare.mjs). */
+  px?: { w: number; h: number };
 }
 export interface Option {
   key: string;
@@ -27,6 +31,8 @@ export interface Option {
   pin?: number;
   /** The scope's outcome ids this shape works toward (scope.mjs). */
   serves?: string[];
+  /** On a question with `widths`: its desktop layout only widens the phone one (widths.mjs). */
+  deskSame?: boolean;
 }
 /** A round's goal and the outcomes it is drawn to meet (scope.mjs). */
 export interface Scope {
@@ -40,6 +46,13 @@ export interface Decision {
   problems?: boolean;
   /** A problems question that opens on clean frames, Claude's problems folded away (marks.mjs). */
   opening?: boolean;
+  /** Each option's phone picture offers Flip · Side by side · Divider against Today's
+   *  (compare.mjs). */
+  compare?: boolean;
+  /** Each holder's phone and desktop pictures share one slot with a width switch (widths.mjs). */
+  widths?: boolean;
+  /** Each option gets its own note box under its buttons (option-notes.mjs, #5429). */
+  notesPer?: "option";
   scope?: Scope;
   issue: number;
   isPr: boolean;
@@ -62,7 +75,14 @@ export interface Decision {
     saw?: string[];
   } | null;
   /** `clean`: Today's frames before pin.mjs drew on them, for a round that opens on them (marks.mjs). */
-  today: { pictures: Picture[]; clean?: Picture[]; caption: string; real: boolean } | null;
+  today: {
+    pictures: Picture[];
+    clean?: Picture[];
+    caption: string;
+    real: boolean;
+    /** On a question with `widths`: its desktop layout only widens the phone one (widths.mjs). */
+    deskSame?: boolean;
+  } | null;
   options: Option[];
   changes?: string | null;
   topic?: string | null;
@@ -94,6 +114,8 @@ export interface Saved {
   >;
   /** Outcomes he added to the scope (outcomes.mjs), by `o<unique>`; a removed one is null. */
   outcomesAdded?: Record<string, { text: string; at: string } | null>;
+  /** His note under an option, by option key (option-notes.mjs); an emptied one is null. */
+  optionNotes?: Record<string, string | null>;
   /** When he pressed "Show what Claude found" on an opening question. */
   revealAt?: string | null;
   at?: string;

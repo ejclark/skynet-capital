@@ -1,6 +1,7 @@
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { pointAtRecord, restated } from "../subscriptions/conviction-pointer.js";
 import {
   carriedOnResubscribe,
   EMPTY_SUBSCRIPTIONS,
@@ -108,7 +109,10 @@ export class SubscriptionStore {
    * The owner's conviction on an existing subscription (#4469 criteria 2 and 12): why they hold the
    * pair, and the market day it is checked. Setting a new date is how a pair stopped by a failed
    * check resumes. Every other field is kept, so it never resumes a paused subscription or touches
-   * a budget. Returns undefined and writes nothing when the account has no such subscription.
+   * a budget. The pointer at a conviction record is recomputed from the new conviction (#5482
+   * slice 2, `restated`): the record it matches, else none, so a new day no record holds is never
+   * overridden by the record's. Returns undefined and writes nothing when the account has no such
+   * subscription.
    */
   setConviction(
     accountId: string,
@@ -120,7 +124,7 @@ export class SubscriptionStore {
     const existing = state[accountId] ?? [];
     const prior = existing.find((s) => s.playbookId === playbookId);
     if (!prior) return undefined;
-    const next: PlaybookSubscription = { ...prior, conviction, updatedAt: at.toISOString() };
+    const next = restated({ ...prior, conviction, updatedAt: at.toISOString() });
     const nextState: SubscriptionsState = {
       ...state,
       [accountId]: existing.map((s) => (s === prior ? next : s)),
@@ -138,7 +142,9 @@ export class SubscriptionStore {
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
    * existing subscription preserves its original `createdAt`, and every field a subscribe does not
-   * set — a conviction, a newer build's field (#4772).
+   * set — a conviction, a newer build's field (#4772). A subscribe that states a conviction points
+   * the subscription at the record it matches (#5482 slice 2); one that states none keeps the
+   * pointer it had, or gains one when its carried conviction matches a record.
    */
   subscribe(
     accountId: string,
@@ -148,13 +154,17 @@ export class SubscriptionStore {
     const state = this.load();
     const existing = state[accountId] ?? [];
     const prior = existing.find((s) => s.playbookId === sub.playbookId);
-    const next: PlaybookSubscription = {
+    const written: PlaybookSubscription = {
       ...(prior ? carriedOnResubscribe(prior) : {}),
       ...sub,
       accountId,
       createdAt: prior?.createdAt ?? at.toISOString(),
       updatedAt: at.toISOString(),
     };
+    // A conviction stated here replaces the carried one, so a carried pointer is recomputed from it;
+    // a pointer the caller names is its own call.
+    const next =
+      sub.conviction && sub.convictionId === undefined ? restated(written) : pointAtRecord(written);
     const nextState: SubscriptionsState = {
       ...state,
       [accountId]: [...existing.filter((s) => s.playbookId !== sub.playbookId), next],
@@ -238,7 +248,7 @@ export class SubscriptionStore {
     };
     const nextState: SubscriptionsState = {
       ...state,
-      [accountId]: existing.map((s) => (s === prior ? next : s)),
+      [accountId]: existing.map((s) => (s === prior ? pointAtRecord(next) : s)),
     };
     this.file.write(nextState);
     return nextState;
