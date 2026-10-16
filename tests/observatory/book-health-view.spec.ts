@@ -292,7 +292,7 @@ describe("book health — STUCK BY AGE: held past what the play declares", () =>
   });
 });
 
-describe("book health — IMBALANCED (placeholder until #5483 targets)", () => {
+describe("book health — IMBALANCED, the placeholder for a play with no target", () => {
   const budget = (over = {}) =>
     aSubscription("sauron", "S1-NVDA", { capitalAllocated: 2_000, ...over });
 

@@ -104,3 +104,48 @@ describe("the desk payload's health field", () => {
     expect(payload).toEqual({ available: false });
   });
 });
+
+describe("the desk payload's health field — imbalance against a play's target (#5493 slice 4)", () => {
+  // Sauron's CRWV wheel carries the first-run default target (70%, signal at 5, gate at 10) for the
+  // account the store keys "sauron". 700 CRWV bought at 100 and worth 200: 82.4% of the budget.
+  const wheelBot = {
+    ...bot,
+    cash: 30_000,
+    equity: 170_000,
+    positions: [{ symbol: "CRWV", quantity: 700, avgPrice: 100, marketValue: 140_000 }],
+  };
+  const config = (id: string) =>
+    ({
+      ...configFor(wheelBot),
+      readDecisions: async () => [],
+      subscriptions: {
+        loadIfReadable: () => ({
+          [id]: [aSubscription(id, "CRWV-WHEEL", { capitalAllocated: 100_000 })],
+        }),
+      },
+    }) as unknown as DashboardServerConfig;
+  const served = (id: string, owner: boolean) =>
+    deskHealthPayload({ ...wheelBot, id }, config(id), owner, undefined) as Promise<
+      Record<string, unknown>
+    >;
+
+  it("gives the owner the gate finding with its measure, and the play's reading", async () => {
+    const view = await served("sauron", true);
+    const findings = view.findings as { detector: string; level: string; band?: object }[];
+    expect(findings.find((f) => f.detector === "imbalanced")).toMatchObject({
+      level: "gate",
+      band: { direction: "over", target: 0.7, signal: 0.05, gate: 0.1 },
+    });
+    expect((view.plays as { target?: object }[])[0]?.target).toMatchObject({ level: "gate" });
+  });
+
+  it("counts it for anyone else without a measure or a name, and reads nothing for another account", async () => {
+    const other = await served("sauron", false);
+    expect((other.counts as { byDetector: Record<string, number> }).byDetector.imbalanced).toBe(1);
+    expect(JSON.stringify(other)).not.toContain("CRWV-WHEEL");
+    expect(other).not.toHaveProperty("findings");
+    // The first-run target is Sauron's: another account's wheel has none, so no target reading.
+    const mine = await served("human-eric", true);
+    expect((mine.plays as { target?: object }[])[0]).not.toHaveProperty("target");
+  });
+});

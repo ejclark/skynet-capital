@@ -39,6 +39,7 @@ export async function deskHealthPayload(
   const weekRows = bot ? config.readCheckWeek?.(found.id) : undefined;
   const view = bookHealthView({
     asOf: (config.now?.() ?? new Date()).toISOString(),
+    accountId: found.id,
     portfolio: { cash: found.cash, positions: found.positions },
     subscriptions: config.subscriptions?.loadIfReadable()?.[found.id] ?? [],
     ...(records ? { records } : {}),

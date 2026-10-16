@@ -31,6 +31,28 @@ export interface HealthCounts {
  *  guard's refusal reason, an open window it never enters, or a window that never opens. */
 export type HealthLoop = string;
 
+/** Mirrors `ImbalanceBand` in `src/observatory/book-health-view.ts`: an imbalance finding's measure
+ *  against the play's target. Every figure is a fraction of the play's budget (0.05 = 5 points). */
+export interface ImbalanceBand {
+  readonly target: number;
+  readonly direction: "over" | "under";
+  /** `share - target`, signed. */
+  readonly drift: number;
+  readonly signal: number;
+  readonly gate: number;
+}
+
+/** Mirrors `PlayTargetHealth` in `src/observatory/book-health-view.ts`: a play's active share read
+ *  against its own target and band, present only for a play that has one. */
+export interface PlayTargetHealth {
+  readonly share: number;
+  readonly target: number;
+  readonly drift: number;
+  readonly level: "inside" | HealthLevel;
+  readonly signal: number;
+  readonly gate: number;
+}
+
 /** Mirrors `HealthFinding` in `src/observatory/book-health-view.ts`. The sentence is the server's:
  *  it is worded once there, for the owner (names the play) or anyone else (does not). */
 export interface HealthFinding {
@@ -45,6 +67,8 @@ export interface HealthFinding {
   /** The line the reading crossed to reach this level. */
   readonly threshold: number;
   readonly loop?: HealthLoop;
+  /** IMBALANCED against a play's target only (#5493 slice 4). */
+  readonly band?: ImbalanceBand;
   readonly words: string;
 }
 
@@ -58,6 +82,8 @@ export interface PlayHealth {
   readonly allocation?: number;
   readonly committed?: number;
   readonly idle?: number;
+  /** Its active share against its target and band; absent for a play with no target. */
+  readonly target?: PlayTargetHealth;
   readonly openPositions: number;
   readonly oldestOpenSessions?: number;
   readonly lastEntryAt?: string;
@@ -164,6 +190,10 @@ export function balanceRead(health: DeskHealth | undefined): BalanceRead {
 }
 
 const wholePct = (share: number): string => `${Math.round(share * 100)}%`;
+/** A share to a tenth of a point, a trailing ".0" dropped — "75.2%", "70%". */
+const tenthPct = (share: number): string => `${Math.round(share * 1000) / 10}%`;
+/** Points of share, unsigned, to a tenth — "5.2", "10". */
+const points = (fraction: number): string => `${Math.round(Math.abs(fraction) * 1000) / 10}`;
 const sessions = (n: number): string => `${n} ${n === 1 ? "session" : "sessions"}`;
 
 /**
@@ -173,11 +203,16 @@ const sessions = (n: number): string => `${n} ${n === 1 ? "session" : "sessions"
  * refused) or of sessions (a window that never opened, or opened and was never entered).
  */
 export function findingReading(finding: HealthFinding): string {
-  const { reading, threshold } = finding;
+  const { reading, threshold, band } = finding;
   switch (finding.detector) {
+    case "imbalanced":
+      // Against a play's target: "75.2% · over the 70% target by 5.2 points, signal at 5". The
+      // generic line is the placeholder for a play with no target.
+      if (band)
+        return `${tenthPct(reading)} · ${band.direction} the ${tenthPct(band.target)} target by ${points(band.drift)} points, ${finding.level} at ${points(finding.level === "gate" ? band.gate : band.signal)}`;
+      return `${wholePct(reading)} · ${reading > threshold ? "over" : "under"} the ${wholePct(threshold)} line`;
     case "idle":
     case "concentrated":
-    case "imbalanced":
       return `${wholePct(reading)} · ${reading > threshold ? "over" : "under"} the ${wholePct(threshold)} line`;
     case "stuck":
       return `held ${sessions(reading)} · ${finding.level} at ${threshold}`;
@@ -186,6 +221,17 @@ export function findingReading(finding: HealthFinding): string {
         ? `${sessions(reading)} in a row`
         : `refused on all ${reading} checks`;
   }
+}
+
+/** A play's standing against its target, in one line: "Target 70% · now 75.2% · 5.2 points over,
+ *  signal at 5", or inside its band — "Target 70% · now 66.1% · inside its 5-point band". The
+ *  level is always a word here (the row's flag carries the glyph), never a colour. */
+export function targetLine(target: PlayTargetHealth): string {
+  const head = `Target ${tenthPct(target.target)} · now ${tenthPct(target.share)}`;
+  if (target.level === "inside") return `${head} · inside its ${points(target.signal)}-point band`;
+  const edge = target.level === "gate" ? target.gate : target.signal;
+  const way = target.drift > 0 ? "over" : "under";
+  return `${head} · ${points(target.drift)} points ${way}, ${target.level} at ${points(edge)}`;
 }
 
 /** A play's idle budget as a share of its allocation, when both are known. */

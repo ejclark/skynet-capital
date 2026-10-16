@@ -209,6 +209,13 @@
 .bal-budget-words b {
   font-weight: 600;
 }
+/* Where the play stands against its target; the level is a word in it, the flag above is a glyph. */
+.bal-target {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
 
 .bal-play-nums {
   display: grid;

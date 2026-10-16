@@ -195,7 +195,8 @@ export function detectStuck(
 }
 
 /**
- * IMBALANCED (a placeholder until #5483 gives each play a target and a band) — an enabled play
+ * IMBALANCED, for a play with NO target (one that has a target is read against it, #5493 slice 4,
+ * `book-health-imbalance.ts`) — a placeholder; an enabled play
  * with an allocation whose committed share sits above the high line or below the low one. Signal
  * only. A play whose newest verdict is "no window" holds nothing by design, so its empty budget is
  * not read as imbalance; neither is an uncapped play, nor one whose basket is unknown.
@@ -209,6 +210,8 @@ export function detectImbalanced(
   const verdicts = latestVerdictPass(records)?.verdicts ?? [];
   return plays.flatMap((play): HealthFinding[] => {
     const { allocation, committed } = play;
+    // A play with a target is read against it instead (`book-health-imbalance.ts`).
+    if (play.target) return [];
     if (!(play.enabled && allocation) || allocation <= 0 || committed === undefined) return [];
     const share = committed / allocation;
     const outOfWindow = verdicts.some(
