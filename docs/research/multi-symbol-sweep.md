@@ -71,6 +71,14 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
+  |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
+  [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
+  voided test. On the 2026-10-05 print (Prices **74.0**) `^TNX` closed **+0.644%** vs the 0.627% bar — a kill by 0.017pp,
+  ~3.4bp of yield. Do not re-register "no ordering" for this release off a median-|move| threshold on one day: the margin is
+  inside the noise of how the median is estimated (0.627 → 0.638 as sessions were added). The surviving question is the
+  ordering across releases (Spearman +0.225 at n=10, insignificant), which needs the 11-04 print, not a threshold.
+
 - **"A proportional restatement of retail cancels in the total business inventories/sales ratio, so the restated June ratio stays
   within 0.01 of its pre-restatement print" (FT-mtis-2026-10-15-2)** — added 2026-10-16 from the
   [mtis-2026-10-15 close-out](events/mtis-2026-10-15.md). Registered 2026-09-06: June 2026 re-prints at 1.29–1.31
