@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A ±5-point window around the prior month's value is a sharp test that the Empire State headline is
+  unforecastable" (FT-empire-state-mfg-2026-10-15-2)** — added 2026-10-16 from the
+  [empire-state-mfg-2026-10-15 close-out](events/empire-state-mfg-2026-10-15.md). Registered 2026-09-08:
+  the October headline prints outside 15.6–25.6 (±5 of August's 20.6), registered 64%. It printed **25.5**,
+  inside the window by 0.1, after a +17.9 September-to-October swing (92nd percentile of 303 monthly
+  moves). The window compares two months that straddle a swing, so it scores a coincidence of landing
+  spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
+  index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
+
 - **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
 
 - **"The 09-10 operation's 23-issue spread is a regime change in how the long end buys"
