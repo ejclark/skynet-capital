@@ -764,7 +764,7 @@ scenarios found it joined on the wrong field; "no" means a field the server know
 
 Numbered so the groups above can cite them. Each names the nearest type and endpoint the scenario
 found, so a slice starts from the field, not from the page. The first ten are ordered by how many
-scenarios asked; 33–36 were added by the red passes.
+scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
 
 1. **Absolute playbook window dates** — resolved `windowStart`/`windowEnd` per basket symbol,
    counted in sessions, plus the print's estimate/confirmed status the window waits on; today
@@ -985,6 +985,16 @@ scenarios asked; 33–36 were added by the red passes.
     account is absent from the ladder, not red, and `readLeague`'s `me` goes undefined so the gap
     sentence vanishes with the row (`league-data.ts:62-63`). A watcher cannot see Sauron "quiet";
     they see no Sauron.
+37. **A market reading per session** (#5496) — `{date, score −100..+100, reading (bull · leaning
+    bull · mixed · leaning bear · bear), votes {trend, drawdown, vixLevel, vixTerm, breadth}}`,
+    market-wide and the same for every member, plus each reading's graded forward band (median,
+    1-in-10 tail, 5%-dip odds) kept apart from it as the forecast. Today per-symbol
+    `sentiment`/`momentum` live only inside the bots process (`src/observatory/morning-brief.ts:9,70`)
+    and the call mix (`app/src/live/call-mix.ts`) is a posture count, not direction; the rules and
+    history exist only as a research instrument (`scripts/research/market-reading.mjs`,
+    `docs/research/market-reading-2026-10.md`). Readers: Profile → Events' range head (a strip of
+    the 5-session mean), the playbook check (signal at −20, gate at −60, narrowing only; #5482,
+    #5483 amendment 3), Moneypenny. Members only; showing it pre-auth is a separate call.
 
 ## 8. The IA decision — written down before any lift (#895)
 
