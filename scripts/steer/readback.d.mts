@@ -27,6 +27,14 @@ export interface ReadbackPlan {
   nextRound: { issue: number; key: string; pick: string | null; instruction: string }[];
   /** Comments whose anchor is not a shown decision: the session answers them on the page. */
   unplacedComments: PageComment[];
+  /** Each opening question (marks.mjs): when he pressed "Show what Claude found", or null. */
+  reveals: { issue: number; key: string; revealAt: string | null }[];
+  /** "Notes about the page:" with each note quoted under where he left it; "" for none. */
+  pageNotes: string;
+  /** One per note about the page: `commons.mjs add --kind process --what … --where …`. */
+  processLines: { what: string; where: string }[];
+  /** Outcomes he added to a scope (outcomes.mjs), word for word, for the session to classify. */
+  outcomesAdded: { issue: number; key: string; text: string; at: string }[];
   commands?: string[][];
 }
 
@@ -56,6 +64,13 @@ export function readComments(file: string): PageComment[];
 /** The next round's instruction after a problems question is read back (round 0). */
 export function nextRoundInstruction(
   d: TouchPointData["decisions"][number],
-  r: { pick?: string | null; react?: Record<string, string> },
+  r: {
+    pick?: string | null;
+    react?: Record<string, string>;
+    pins?: Record<string, unknown>;
+    pinNotes?: Record<string, unknown>;
+  },
+  /** `pinClauses(d, r)` (pins.mjs), when the caller already has it; computed when left out. */
+  pins?: string,
 ): string;
 export function commandsFor(plan: ReadbackPlan, dir: string): string[][];

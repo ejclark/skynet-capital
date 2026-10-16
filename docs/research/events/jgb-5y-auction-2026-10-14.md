@@ -435,8 +435,82 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-10-15, D+1 — inside the `closeOutWithinDays` deadline).** Rates mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design), so "re-run instrument data"
+means every number below was re-fetched from a primary this session, after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`): MOF's announcement,
+result page and October calendar, MOF's par-yield CSVs, and MOF's `Auction_Results_for_JGBs.xls`
+(re-downloaded, HTTP 200, 493,056 bytes). Yahoo readings (equities, VIX, USD/JPY, `^TNX`) are
+secondary and labelled so. Nothing is scored from memory of the tape. Date and size stay `estimate`
+on this lane's no-self-confirm limit; MOF's own pages now carry both.
+
+**Verdict: the stand-aside was right, and all three scoreable forward tests passed.** The auction
+cleared at an unremarkable level — in neither the weak nor the strong band — on a day when the
+tracked equities fell hard for reasons nobody tied to Japan.
+
+### What Japan sold — MOF's own result page, verbatim
+
+`policy/jgbs/auction/calendar/eresul/eresul20261014.htm`, fetched direct 2026-10-15 (HTTP 200):
+
+| Field | Value |
+|---|---|
+| Security · issue · coupon · maturity | 5-Year · **188** · **2.4%** · **9/20/2031** |
+| Auction / issue date | **10/14/2026** / **10/15/2026** |
+| Competitive bids · accepted | **¥6,818.2bn** · **¥1,915.1bn** |
+| **Bid-to-cover** | **3.56x** (6,818.2 ÷ 1,915.1) |
+| Lowest accepted price · **yield** | 100.07 · **2.384%** |
+| Weighted average price · **yield** | 100.09 · **2.379%** |
+| **Tail** | **0.5bp** (2.384 − 2.379) |
+| Allotment at the low | **40.4279%** |
+| Non-price-competitive I · non-competitive | ¥583.7bn · ¥0.56bn |
+| **Total issued** | **¥2,499.4bn** — the announced "about ¥2,500bn" |
+
+The cover convention is the one the ledger's thresholds were written on (competitive bids ÷
+competitive accepted), so 3.56x sits on the same ruler as the 2024+ workbook rows: **3.63x mean, n=32**
+(through 2026-08-18), 14 of 32 below this print.
+
+### The reading rules and kill switches, adjudicated
+
+- **Calibration (kill switch 7) — NOT fired, and not a strong print either.** Weak was cover
+  < 3.12x or tail ≥ 1.26bp: **3.56x / 0.5bp** clears both. Strong needed cover ≥ 4.12x: it missed.
+  The ordinary middle.
+- **Reference class — 2025's 1.3bp was an outlier, not a pattern.** The post-convention Q4
+  openings now read 0.2 · 0.6 · 0.2 · 0.2 · 0.2 · 0.4 · 0.6 · 1.3 · **0.5bp** (2018→2026). The
+  trigger for calling it a pattern, a second consecutive tail above 1.0bp, did not occur.
+- **Maturity and issue number (kill switches 2, 3) — NOT fired.** See `FT-…-1` and `-2`, both pass,
+  both resolved from the 10-07 announcement and the settled calendar row.
+- **Terms rhythm (kill switch 4) — NOT fired.** Published 10-07, size ¥2,500bn.
+- **Kill switches 5 and 6 are not yet scoreable.** `FT-…-4` settles 2026-12-31 and `FT-…-5` settles
+  2027-01-31; both sit past the close-out window and are left `_open_` on purpose, because the
+  scanner re-dispatches this lane's owner when each date arrives (EVENT-RESEARCH.md,
+  `forward-test-due`).
+- **No-price-channel premise (kill switch 1) — not fired on the evidence in hand, with a caveat
+  stated.** The Japan leg was quiet: the MOF 5Y par yield moved **2.371 → 2.379 (+0.8bp)** on 10-14,
+  the 10Y 3.019 → 3.015, and the auction itself printed mid-range. US 10Y (`^TNX`) *fell*, 5.217 →
+  5.190, and USD/JPY was 158.32 on 10-13 and 157.65 on 10-15 (no 10-14 bar returned) — no yen shock.
+  Against that, several tracked names did move more than 2% in the window — **10-14: CRWV −15.5%,
+  MRVL −8.7%, NVDA −3.2%, AVGO −3.1%** (Yahoo, secondary) — but the only attribution this session's
+  searches returned was generic AI-bubble and leverage coverage, none naming a JGB or yen headline,
+  and 10-14 was also the US CPI day the ledger already flagged. **The attribution for 10-14 itself
+  was not retrievable**, so this is "no JGB/yen attribution found", not "attributed elsewhere".
+  Nikkei 225 fell 67,744 → 64,489 on 10-15 (D+1), after the auction.
+
+### What is banked
+
+- **The maturity convention is 34 of 34 under the first-of-quarter regime** (2018Q3 → 2026Q4),
+  extending the ledger's own 33 of 33. The next test is 2027Q1 (`FT-…-5`).
+- **The issue-number prediction the sibling declined to make was makeable for an opening, and it
+  landed.** The sibling's 11-12 decline remains right for a second-of-quarter auction.
+- **Not learned here:** whether openings deserve their own calibration (`FT-…-4`, 2026-12-31).
+  Today's 3.56x / 0.5bp adds one 2026 opening to that sample and settles nothing.
+
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["sudan-sanctions-regime-expiry-2026-10-09","imf-world-bank-annual-meetings-2026-10-12","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","existing-home-sales-2026-10-13","sp-global-investment-manager-index-2026-10-13","beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","iea-omr-2026-10-14","ssa-cola-2027-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","uk-monthly-gdp-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","opex-2026-10-16","tic-monthly-2026-10-16","treasury-primary-dealer-agenda-2026-10-16","fomc-blackout-start-2026-10-17","nahb-hmi-2026-10-19"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"blocked":[],"screenStreak":0} -->
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

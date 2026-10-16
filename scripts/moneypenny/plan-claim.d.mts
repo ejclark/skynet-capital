@@ -23,6 +23,8 @@ export interface PlanReadyIntent {
   ready: boolean;
   reason: string;
   issue?: PlanIssue;
+  /** #5334: a comment-flip refused only for open blockers — `claimPlan` records it as `ready`. */
+  blocked?: boolean;
 }
 
 /** Does this comment read as a ready-flip ("ready", "go", "aligned, execute", or similar)? */

@@ -8,6 +8,7 @@ import {
   MARK_WORD,
   type MarkKind,
 } from "../live/position-mark";
+import { FilterChip } from "../ui";
 import { useSavedViews, VIEW_CAP_REASON, viewCapReached } from "./saved-views";
 
 /**
@@ -129,19 +130,17 @@ export function PositionsHead({
           <div className="pos-filter-line">
             <span className="pos-filter-label">Mark</span>
             {MARK_KINDS.map((kind) => (
-              <button
+              <FilterChip
                 key={kind}
-                type="button"
-                className={`filter-chip pos-mark-chip pos-mark-chip--${kind}`}
-                aria-pressed={filter.mark === kind}
-                onClick={() => onChange(toggleQualifier(query, MARK_TOKEN[kind]))}
+                pressed={filter.mark === kind}
+                onPress={() => onChange(toggleQualifier(query, MARK_TOKEN[kind]))}
               >
                 <span aria-hidden="true">{MARK_GLYPH[kind]} </span>
                 {MARK_WORD[kind]}
                 <span aria-hidden="true"> · </span>
                 <span className="visually-hidden">, </span>
                 <span className="num">{counts[kind]}</span>
-              </button>
+              </FilterChip>
             ))}
           </div>
           {/* Last in reading order; drawn at the panel's top right. */}

@@ -182,6 +182,13 @@ UI is built from a shared component library — reusable, modular
 components with one source of truth for look, feel, and behavior. No bespoke one-off widgets,
 no god components. The same principle the backend already follows, applied to the frontend.
 
+Where that layer lives today: primitives in `app/src/ui/` (barrel `index.ts`, contract in its
+README), indexed by the generated `app/src/ui/CATALOG.md` (`npm run ui:catalog`) — read it before
+building a part. Domain widgets stay in `app/src/shell/`; root `src/ui/` is the legacy server-side
+string-HTML helpers, which the React app does not import. Extract a primitive only after a shape
+repeats three times or a house rule fixes it, never ahead of need — the study behind this is
+`docs/research/component-library-study.md`.
+
 ## State management — the deliberate stance
 
 The question of whether a tool like **Redux Toolkit** helps is really a question about

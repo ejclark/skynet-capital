@@ -43,13 +43,26 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * once the bots with part 2 were live; v1 stays readable for a rollback. A v1 snapshot's version does not describe a
  * conviction, so the bots drop the one it carries rather than act on a field the version never
  * vouched for.
+ *
+ * `subscriptions.v3` (#5482 slice 2) adds the second: a subscription's `convictionId`, the pointer
+ * at a conviction record whose check date then gates the pair (`with-conviction-gate.ts`). The same
+ * expand-first order: the bots read v3 from this slice on, the app keeps sending v2 until a later
+ * slice writes a pointer and these bots are live. A v1 or v2 snapshot does not vouch for a pointer,
+ * so the bots drop it, and the pair is checked on its own conviction as before.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
 export const SUBSCRIPTIONS_SNAPSHOT_KIND_V2 = "subscriptions.v2";
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V3 = "subscriptions.v3";
 export type SubscriptionsSnapshotKind =
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V3;
+const SNAPSHOT_KINDS: readonly string[] = [
+  SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+];
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -99,7 +112,9 @@ function behavioralFields(
     sub.compoundAllocation === true,
   ];
   if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND) return v1;
-  return [...v1, sub.conviction ? [sub.conviction.reason, sub.conviction.checkOn] : null];
+  const v2 = [...v1, sub.conviction ? [sub.conviction.reason, sub.conviction.checkOn] : null];
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2) return v2;
+  return [...v2, sub.convictionId ?? null];
 }
 
 /**
@@ -139,12 +154,19 @@ export function buildSubscriptionsSnapshot(
   };
 }
 
-/** The state with every conviction left off — what a v1 version vouches for. */
-function withoutConvictions(state: SubscriptionsState): SubscriptionsState {
+/** The state with only the fields `kind`'s version vouches for: v1 leaves off every conviction
+ *  and pointer, v2 every pointer, v3 nothing. */
+function vouchedFor(
+  state: SubscriptionsState,
+  kind: SubscriptionsSnapshotKind,
+): SubscriptionsState {
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V3) return state;
   return Object.fromEntries(
     Object.entries(state).map(([accountId, subs]) => [
       accountId,
-      subs.map(({ conviction: _conviction, ...rest }) => rest),
+      subs.map(({ conviction, convictionId: _pointer, ...rest }) =>
+        kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2 && conviction ? { ...rest, conviction } : rest,
+      ),
     ]),
   );
 }
@@ -178,21 +200,20 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
   const { kind, at, version, accounts } = value;
-  if (kind !== SUBSCRIPTIONS_SNAPSHOT_KIND && kind !== SUBSCRIPTIONS_SNAPSHOT_KIND_V2) {
-    return undefined;
-  }
+  if (typeof kind !== "string" || !SNAPSHOT_KINDS.includes(kind)) return undefined;
+  const known = kind as SubscriptionsSnapshotKind;
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed, kind) !== version) return undefined;
+  if (!parsed || subscriptionsVersion(parsed, known) !== version) return undefined;
   const allocations = parseAllocations(value.allocations);
   return {
-    kind,
+    kind: known,
     at,
     version,
-    // A v1 version does not describe a conviction, so none of its convictions is applied.
-    accounts: kind === SUBSCRIPTIONS_SNAPSHOT_KIND ? withoutConvictions(parsed) : parsed,
+    // A version applies only what it describes: no conviction under v1, no pointer under v1 or v2.
+    accounts: vouchedFor(parsed, known),
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }

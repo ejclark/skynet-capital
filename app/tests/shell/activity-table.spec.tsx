@@ -1,6 +1,8 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render as mount, screen } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
+import { orderStamp, orderTime } from "../../src/live/order-facts";
 import { ActivityTable } from "../../src/shell/activity-table";
 import { LANDED_MS } from "../../src/shell/landing";
 
@@ -38,6 +40,20 @@ rstest.mock("@tanstack/react-router", () => ({
     );
   },
 }));
+
+rstest.mock("../../src/live/quote", () => ({
+  fetchQuote: () => Promise.resolve({ last: 86.1 }),
+}));
+
+/** An opened row asks for the stock's quote (the price line's "now"), so it needs a client. */
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return mount(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
 
 const event = (over: Partial<DeskActivityEvent> = {}): DeskActivityEvent => ({
   orderId: "ord-1",
@@ -115,7 +131,7 @@ describe("ActivityTable — the round behind a fill", () => {
     expect(screen.getByText(/3 ideas → 2 past the guards/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "the whole pass" })).toHaveAttribute(
       "href",
-      `/u/sauron/decisions#cycle-${Date.parse("2026-09-22T18:59:00.000Z")}`,
+      `/u/sauron/playbooks#cycle-${Date.parse("2026-09-22T18:59:00.000Z")}`,
     );
   });
 
@@ -150,8 +166,9 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 });
 
-/** #4642 criterion 8 — a bot's option fill opens to the order in words, the dollars that moved and
- *  what would prove it wrong, beside the playbook its owner already sees. */
+/** #4642 criterion 8 gave a bot's option fill its order in words, its cost and what proves it wrong
+ *  here; #5262 (#5160 round 16) moved all three to Full detail. The row opens to the phone card's
+ *  view instead: the price line on the left, Placed by and Why on the right. */
 describe("ActivityTable — a bot's option fill", () => {
   const sold = event({
     symbol: "CRWV261106P00085000",
@@ -171,16 +188,21 @@ describe("ActivityTable — a bot's option fill", () => {
     },
   });
 
-  it("names the order, its cost, the playbook and what proves it wrong", () => {
-    render(<ActivityTable events={[sold]} />);
+  it("opens to the price line beside Placed by and Why, leaving the rest to Full detail", async () => {
+    const { container } = render(<ActivityTable events={[sold]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
-    expect(screen.getByText("SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10")).toBeInTheDocument();
-    expect(
-      screen.getByText("$205.00 received — 1 contract × 100 shares × $2.05"),
-    ).toBeInTheDocument();
+    const opened = container.querySelector(".row-why .oo");
+    expect(opened).toHaveClass("oo-wide");
+    expect(await screen.findByText("$86.10")).toBeInTheDocument();
+    const pivots = [...container.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
+    expect(pivots).toEqual(["Breakeven $82.95", "Strike $85", "now $86.10"]);
+    expect(container.querySelector(".pv-side-below")).toHaveTextContent("ITM · below $85");
     expect(screen.getByText("CRWV-WHEEL · standard")).toBeInTheDocument();
-    expect(screen.getByText("Proves it wrong")).toBeInTheDocument();
-    expect(screen.getByText("CRWV settles below $85 on 2026-11-06")).toBeInTheDocument();
+    const labels = [...container.querySelectorAll(".oo-table dt")].map((dt) => dt.textContent);
+    expect(labels).toEqual(["Placed by", "Why"]);
+    expect(screen.queryByText(/limit \$2\.10/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$205\.00 received/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Proves it wrong")).not.toBeInTheDocument();
   });
 
   it("draws none of the three on a share fill", () => {
@@ -286,7 +308,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
 
   it("shows each leg beneath the spread's row, its side in words and its own dollars", () => {
     const { container } = render(<ActivityTable events={[spread, event({ orderId: "ord-2" })]} />);
-    const rows = [...container.querySelectorAll("tbody tr")].map((tr) => tr.id);
+    const rows = [...container.querySelectorAll("tbody tr[id]")].map((tr) => tr.id);
     expect(rows).toEqual(["act-mleg-1", "act-leg-low", "act-leg-high", "act-ord-2"]);
     const low = container.querySelector("#act-leg-low");
     expect(low).toHaveTextContent("BUY");
@@ -299,16 +321,16 @@ describe("ActivityTable — a bot's spread and its legs", () => {
 
   it("says the spread's net once, on its own row, whether or not its decision is open", () => {
     const { container } = render(<ActivityTable events={[spread]} />);
-    const nets = () => container.textContent?.match(/\$335\.00/g) ?? [];
-    expect(screen.getByText("net $335.00 paid")).toBeInTheDocument();
+    const nets = () => container.textContent?.match(/\$335/g) ?? [];
+    expect(container.querySelector("#act-mleg-1 td.num")).toHaveTextContent("−$335");
     expect(nets()).toHaveLength(1);
     fireEvent.click(
       screen.getByRole("button", { name: "Why NVDA $185/$200 CALL SPREAD · 13 NOV 26 was bought" }),
     );
     expect(screen.getByText("NVDA-CALL-SPREAD · standard")).toBeInTheDocument();
-    expect(
-      screen.getByText("NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints"),
-    ).toBeInTheDocument();
+    // A spread draws no price line (one strike can't describe it); its proof is Full detail's.
+    expect(container.querySelector(".pv")).toBeNull();
+    expect(screen.queryByText(/D-20→D-5/)).not.toBeInTheDocument();
     expect(nets()).toHaveLength(1);
   });
 
@@ -326,13 +348,13 @@ describe("ActivityTable — a bot's spread and its legs", () => {
     expect(missing).toHaveTextContent("SELL");
     expect(missing).toHaveTextContent("NVDA $200 CALL · 13 NOV 26");
     expect(missing).toHaveTextContent("not in this account's ledger yet");
-    expect(screen.getByText("1 of 2 legs")).toBeInTheDocument();
+    expect(screen.getByText("◷ 1 of 2 legs")).toBeInTheDocument();
   });
 
   it("draws no leg rows for any other row", () => {
     const { container } = render(<ActivityTable events={[scouted]} />);
     expect(container.querySelector(".row-leg")).toBeNull();
-    expect(screen.queryByText(/^net /)).not.toBeInTheDocument();
+    expect(container.querySelector(".row-leg-missing")).toBeNull();
   });
 });
 
@@ -410,10 +432,20 @@ describe("ActivityTable — the row a link points at", () => {
  *  under the put's real sale read as a second sale on a phone, stamped at a time it never had. */
 describe("ActivityTable — what the broker reported instead of an order", () => {
   const PUT = "CRWV $85 PUT · 13 NOV 26";
-  const sold = event({ orderId: "opt-put-1", display: PUT, side: "sell", quantity: 1, filled: 1 });
+  const OCC = "CRWV261113P00085000";
+  const sold = event({
+    orderId: "opt-put-1",
+    symbol: OCC,
+    display: PUT,
+    side: "sell",
+    quantity: 1,
+    filled: 1,
+    price: "$2.10",
+  });
   const report = (lifecycle: DeskActivityEvent["lifecycle"], orderId: string) =>
     event({
       orderId,
+      symbol: OCC,
       display: PUT,
       side: "sell",
       quantity: 1,
@@ -424,28 +456,49 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
       lifecycle,
     });
 
-  it("names the event where a side would be — EXPIRED, ASSIGNED — never a second SELL", () => {
-    const { container } = render(
+  it("names the event where a side would be — EXPIRED, ASSIGNED — never a second SOLD", () => {
+    render(
       <ActivityTable
         events={[report("OPEXP", "lifecycle:a"), report("OPASN", "lifecycle:b"), sold]}
       />,
     );
-    expect(screen.getByText("EXPIRED")).toHaveClass("tl-side", "tl-lifecycle");
-    expect(screen.getByText("ASSIGNED")).toHaveClass("tl-side", "tl-lifecycle");
-    // The one real sale keeps its SELL; neither report borrows the sell hue.
-    expect(screen.getAllByText("SELL")).toHaveLength(1);
-    expect(container.querySelectorAll(".tl-sell")).toHaveLength(1);
+    expect(screen.getByText("EXPIRED")).toHaveClass("act-side", "act-lifecycle");
+    expect(screen.getByText("ASSIGNED")).toHaveClass("act-side", "act-lifecycle");
+    // The one real sale keeps its SOLD; neither report borrows a side's word, cash or price.
+    expect(screen.getAllByText("SOLD")).toHaveLength(1);
+    const expired = document.getElementById("act-lifecycle:a");
+    expect(expired).toHaveTextContent("EXPIRED 1 contract CRWV $85 PUT · Nov 13");
+    expect(expired).not.toHaveTextContent("$0.00");
   });
 
-  it("dates a report by its day alone, never the synthetic end-of-day time", () => {
+  it("files a report under its own day, never the synthetic end-of-day instant's", () => {
     render(<ActivityTable events={[report("OPEXP", "lifecycle:a"), sold]} />);
-    const reportRow = document.getElementById("act-lifecycle:a");
-    expect(reportRow?.querySelector("td.num")?.textContent).toBe("Nov 13");
-    // An order still carries its time of day.
-    const saleStamp = document
-      .getElementById("act-opt-put-1")
-      ?.querySelector("td.num")?.textContent;
-    expect(saleStamp).toMatch(/\d{1,2}:\d{2}/);
+    const days = [...document.querySelectorAll(".act-day-row th")].map((th) => th.textContent);
+    expect(days).toEqual([
+      expect.stringMatching(/^FRI · NOV 13/),
+      expect.stringMatching(/^WED · SEP 23/),
+    ]);
+    expect(document.getElementById("act-lifecycle:a")?.querySelector("td[title]")).toHaveAttribute(
+      "title",
+      expect.stringMatching(/^Fri Nov 13/),
+    );
+  });
+});
+
+/** #5164: the table once printed "Oct 6, 09:31 AM" — the browser's zone, unnamed — for a fill the
+ *  phone card read "10:31 AM ET". One order, one time, at every width; since #5317 the day is the
+ *  divider's and the time waits on the row, one hover away. */
+describe("ActivityTable — one fill, one time", () => {
+  it("keeps an order's day and time in New York time, naming the zone, as the card does", () => {
+    const fill = event({ orderId: "crwv-put", at: "2026-10-06T14:31:00Z" });
+    render(<ActivityTable events={[fill]} />);
+    const stamp = document
+      .getElementById("act-crwv-put")
+      ?.querySelector(".act-what-cell")
+      ?.getAttribute("title");
+    expect(stamp).toBe(orderStamp(fill));
+    expect(stamp).toContain(orderTime(fill) as string);
+    expect(stamp).toMatch(/^Tue Oct 6(, 2026)? · 10:31 AM ET$/);
   });
 });
 
@@ -465,10 +518,16 @@ describe("ActivityTable — the playbook, as a way in to its card", () => {
 
   it("links the playbook to its card, naming the mode, the check and the order", () => {
     render(<ActivityTable events={[placed]} deskId="sauron" />);
-    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
-    const link = screen.getByRole("link", {
+    // The Playbook column names it bare; the opened order adds the mode it ran in.
+    const [inList] = screen.getAllByRole("link", {
       name: "SAURON · aggressive — open its card on Playbooks",
     });
+    expect(inList?.textContent).toBe("SAURON ›");
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    const [, link] = screen.getAllByRole("link", {
+      name: "SAURON · aggressive — open its card on Playbooks",
+    });
+    if (!link) throw new Error("the opened order drew no playbook link");
     expect(link.textContent).toBe("SAURON · aggressive ›");
     expect(link).toHaveAttribute(
       "href",
@@ -487,5 +546,125 @@ describe("ActivityTable — the playbook, as a way in to its card", () => {
     render(<ActivityTable events={[placed]} deskId="sauron" showPlaybook={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.queryByText(/SAURON/)).not.toBeInTheDocument();
+  });
+});
+
+/** #5317 (#5160 rounds 9–15, the receipt): no date column — a day divider per market day with the
+ *  entries under it — and an entry is its legs. A close lists itself, then the buy it closed
+ *  (quieter), then a total under a dashed rule; a single order is one row with where it stands. */
+describe("ActivityTable — the Ledger as a receipt", () => {
+  const bought = event({
+    orderId: "buy-1",
+    symbol: "META",
+    display: "META",
+    quantity: 15,
+    filled: 15,
+    price: "$742.00",
+    at: "2026-09-22T14:00:00Z",
+    closedOn: "2026-10-01T19:30:00Z",
+  });
+  const { realizedPl: _none, ...boughtLine } = bought;
+  const sold = event({
+    orderId: "sell-1",
+    symbol: "META",
+    display: "META",
+    side: "sell",
+    quantity: 15,
+    filled: 15,
+    price: "$761.00",
+    at: "2026-10-01T19:30:00Z",
+    realizedPl: "+$285",
+    realizedTone: "pos",
+    opened: [{ ...boughtLine, matched: 15 }],
+  });
+  const cells = (row: Element | null | undefined) =>
+    [...(row?.querySelectorAll("td") ?? [])].map((td) => td.textContent?.trim());
+
+  it("heads the columns What happened · Cash · Outcome, with no date column", () => {
+    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const heads = [...container.querySelectorAll("thead th")].map((th) => th.textContent);
+    expect(heads).toEqual(["What happened", "Cash", "Outcome"]);
+  });
+
+  it("adds a Playbook column only when a row carries one the viewer may see", () => {
+    const { container } = render(<ActivityTable events={[scouted]} deskId="beta-scout" />);
+    const heads = [...container.querySelectorAll("thead th")].map((th) => th.textContent);
+    expect(heads).toEqual(["Why", "What happened", "Playbook", "Cash", "Outcome"]);
+  });
+
+  it("starts each market day with a divider, newest first", () => {
+    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const days = [...container.querySelectorAll(".act-day-row th")].map((th) => th.textContent);
+    expect(days).toEqual([
+      expect.stringMatching(/^THU · OCT 1/),
+      expect.stringMatching(/^TUE · SEP 22/),
+    ]);
+  });
+
+  it("lists a round trip as the sale, then the buy it closed, then the total and its result", () => {
+    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const sale = container.querySelector("#act-sell-1");
+    expect(cells(sale)).toEqual(["SOLD 15 shares META at $761.00", "+$11,415", ""]);
+    const buy = sale?.nextElementSibling;
+    expect(buy).toHaveClass("act-opened");
+    expect(cells(buy)).toEqual(["BOUGHT 15 shares META at $742.00", "−$11,130", ""]);
+    const total = buy?.nextElementSibling;
+    expect(total).toHaveClass("act-total-row");
+    expect(cells(total)).toEqual(["META · 9 days · Sep 22 → Oct 1", "+$285"]);
+    expect(total?.querySelector(".tone-pos")).toHaveTextContent("+$285");
+  });
+
+  it("keeps the buy on its own day too, as closed on the sale's date — its anchor there only", () => {
+    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    expect(cells(container.querySelector("#act-buy-1"))).toEqual([
+      "BOUGHT 15 shares META at $742.00",
+      "−$11,130",
+      "closed Oct 1",
+    ]);
+    expect(container.querySelectorAll('[id="act-buy-1"]')).toHaveLength(1);
+  });
+
+  it("says a single order with nothing closing it is open, in one row", () => {
+    const { container } = render(<ActivityTable events={[event({ orderId: "solo" })]} />);
+    const row = container.querySelector("#act-solo");
+    expect(cells(row)).toEqual(["BOUGHT 9 shares MSFT at $428.10", "−$3,853", "open"]);
+    expect(row?.nextElementSibling).toBeNull();
+  });
+
+  it("names a dead order's status where open would be, and no cash it never moved", () => {
+    const dead = event({ orderId: "dead", filled: 0, price: "—", status: "canceled" });
+    const { container } = render(<ActivityTable events={[dead]} />);
+    expect(cells(container.querySelector("#act-dead"))).toEqual([
+      "BUY 9 shares MSFT",
+      "",
+      "✕ canceled",
+    ]);
+  });
+
+  it("lists each lot a sale closed as its own leg, newest first, the part it took", () => {
+    const early = {
+      ...boughtLine,
+      orderId: "buy-0",
+      quantity: 5,
+      filled: 5,
+      price: "$700.00",
+      matched: 5,
+    };
+    const later = {
+      ...boughtLine,
+      at: "2026-09-24T14:00:00Z",
+      quantity: 15,
+      filled: 15,
+      matched: 10,
+    };
+    const both = { ...sold, opened: [later, early] };
+    const { container } = render(<ActivityTable events={[both]} />);
+    const legs = [...container.querySelectorAll(".act-opened")].map((tr) => cells(tr)[0]);
+    expect(legs).toEqual([
+      "BOUGHT 10 of 15 shares META at $742.00",
+      "BOUGHT 5 shares META at $700.00",
+    ]);
+    // The range starts at the earliest buy.
+    expect(container.querySelector(".act-total-row")).toHaveTextContent("Sep 22 → Oct 1");
   });
 });

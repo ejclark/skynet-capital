@@ -5,6 +5,7 @@
  * value arrives server-formatted; the one raw numeric (`totalPlRaw`) exists for FILTERING only.
  */
 
+import type { DeskHealth } from "./book-health";
 import type { MarkKind } from "./position-mark";
 
 export type Tone = "pos" | "neg" | "flat";
@@ -203,6 +204,8 @@ export interface DeskSnapshot {
   readonly desk: Desk;
   /** Present only for desks the world projection gives a landmark (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
+  /** The book read as one system (#5493): optional so an older server or fixture still renders. */
+  readonly health?: DeskHealth;
 }
 
 export async function fetchDesk(id: string): Promise<DeskSnapshot> {
@@ -355,6 +358,16 @@ export interface DeskActivityEvent extends DeskActivityLine {
   /** A bot's spread only: a leg it placed whose line the ledger does not hold yet. Until none is
    *  missing, the spread row carries no result (nothing filled, no P/L). */
   readonly missingLegs?: readonly DeskMissingLeg[];
+  /** A closing fill (#5317): each order whose lot it closed, the newest first. */
+  readonly opened?: readonly DeskOpenedLeg[];
+  /** An opening fill with nothing of it still open (#5317): when its last lot closed. */
+  readonly closedOn?: string;
+}
+
+/** An order a closing fill closed (part of) — `matched` is how much of it this close took.
+ *  Mirrors the server's `DeskOpenedLeg`. */
+export interface DeskOpenedLeg extends DeskActivityLine {
+  readonly matched: number;
 }
 
 /** One leg of a spread, as the account filled it — a whole order line of its own, for the ticket of
@@ -556,10 +569,32 @@ export interface ThesisMarker {
   readonly kind: "entry" | "exit";
   readonly at: string;
   readonly label: string;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
   readonly activityAnchor: string;
   /** Absent for a fill that predates the audit trail, or when no lookup is configured — never
    *  fabricated. */
   readonly reasoning?: ThesisMarkerReasoning;
+  /** The playbook that placed it — the owner's alone (#885). */
+  readonly playbookId?: string;
+  /** The news score and momentum its decision read (#5327); absent when not recorded. */
+  readonly sentiment?: number;
+  readonly momentum?: number;
+}
+
+/** The bot's own play, drawn (#5327) — mirrors `ThesisPlay` in
+ *  `src/observatory/thesis-play-view.ts`. The owner's alone. */
+export interface ThesisPlay {
+  readonly playbookId: string;
+  readonly name: string;
+  readonly buyAtOrBelow: number;
+  readonly buyMomentumAtLeast: number;
+  readonly sellAtOrAbove: number;
+  readonly sellMomentumAtMost: number;
+  readonly windows?: { readonly momentum: number; readonly sentiment: number };
+  readonly researchBuild: boolean;
+  /** This play's trades the research build placed — never drawn on the standard line. */
+  readonly researchTrades: readonly number[];
 }
 
 export interface ThesisHealth {
@@ -580,6 +615,7 @@ export interface ThesisData {
   readonly health: ThesisHealth;
   readonly equity: readonly ThesisEquityPoint[];
   readonly markers: readonly ThesisMarker[];
+  readonly play?: ThesisPlay;
 }
 
 /** What one safeguard stage does to a play's position today (#3194 slice 6a). The word IS the

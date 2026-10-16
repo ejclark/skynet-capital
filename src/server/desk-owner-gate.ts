@@ -111,7 +111,7 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
   }));
 }
 
-type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {
+type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning" | "playbookId"> & {
   readonly reasoning?: ReturnType<typeof withoutOwnerReasoning>;
 };
 
@@ -121,13 +121,15 @@ type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {
  * SAME audit rows `/activity` does (both through `config.findByOrderId`), so it was handing a
  * non-owner the one key `/activity` already withheld — found by #3194 slice 6a's own gate spec,
  * which asked the thesis payload the question this block had only ever asked the other three.
+ * The marker's own `playbookId` and the drawn play (#5327) go too: the play's name names it.
  */
 export function withoutThesisOwnerFields(
   thesis: ThesisView,
-): Omit<ThesisView, "markers"> & { readonly markers: readonly WithheldMarker[] } {
+): Omit<ThesisView, "markers" | "play"> & { readonly markers: readonly WithheldMarker[] } {
+  const { play: _play, ...rest } = thesis;
   return {
-    ...thesis,
-    markers: thesis.markers.map(({ reasoning, ...marker }) =>
+    ...rest,
+    markers: thesis.markers.map(({ reasoning, playbookId: _p, ...marker }) =>
       reasoning ? { ...marker, reasoning: withoutOwnerReasoning(reasoning) } : marker,
     ),
   };

@@ -8,12 +8,14 @@ import {
   queueNote,
   readInFlight,
   readOpenPlans,
+  recheckPullable,
   startedPlanInputs,
   surfaceOf,
   waitingPlans,
 } from "../../../scripts/moneypenny/admission.mjs";
 import {
   type ClaimCtx,
+  claimFeedback,
   claimNext,
   peekNext,
   SWEEP_HELD_SKIPS,
@@ -361,6 +363,57 @@ describe("gateAdmission — the impure call, reads injected", () => {
   });
 });
 
+// #5266 — a `ready` label event carries the issue as it stood when the label landed. #5262 and
+// #5317 were filed `ready` and linked to their blocker a second later, so the payload said 0
+// blockers and the lane claimed both. The claim now asks the pull rule again on a fresh read.
+describe("recheckPullable — the fresh re-read before a claim (#5266)", () => {
+  const payloadRow = {
+    number: 5262,
+    state: "open",
+    labels: [{ name: "feedback" }, { name: "ready" }],
+    issue_dependencies_summary: { blocked_by: 0 },
+  };
+  const blockedRow = { ...payloadRow, issue_dependencies_summary: { blocked_by: 1 } };
+
+  it("refuses with the blocker reason when the fresh row has an open blocker", () => {
+    expect(recheckPullable(payloadRow, () => blockedRow)).toBe(
+      "#5262 is blocked by 1 open issue — it starts when they close",
+    );
+  });
+
+  it("passes when the fresh row agrees with the payload", () => {
+    expect(recheckPullable(payloadRow, () => payloadRow)).toBeNull();
+  });
+
+  it("fails closed when the issue cannot be re-read", () => {
+    const reason = recheckPullable(payloadRow, () => {
+      throw new Error("HTTP 502");
+    });
+    expect(reason).toBe("queued: #5262 could not be re-read — HTTP 502");
+  });
+
+  it("makes claimFeedback refuse a blocked issue whatever the event payload said", () => {
+    const reads: string[] = [];
+    const result = claimFeedback(
+      { payload: { action: "labeled", label: { name: "ready" }, issue: payloadRow } },
+      0,
+      "abc",
+      {
+        readIssue: () => blockedRow,
+        readMode: () => {
+          reads.push("mode");
+          return { ...mode("normal"), until: null, reason: "x" };
+        },
+      },
+    );
+    expect(result).toEqual({
+      claimed: false,
+      reason: "#5262 is blocked by 1 open issue — it starts when they close",
+    });
+    expect(reads).toEqual([]); // refused before the admission gate or the lease
+  });
+});
+
 // #4393 slice 4, criterion 6 — stop starting, start finishing. When the board's Waiting column
 // holds `startedPlanCap` plans, a FRESH plan is refused; the next slice of a started plan never is.
 describe("the started-plan cap (#4393 criterion 6)", () => {
@@ -554,6 +607,20 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(called[0]?.lane).toBe("feedback");
   });
 
+  // #5332: #5164/#5165/#5175/#5266 sat ready 2–3 days because no lane read `bug`.
+  it("claims a ready bug with no feedback label through the feedback lane", () => {
+    const { deps, called } = setup([issue(5164, "a", ["ready", "bug", "fast-track"])]);
+    const r = claimNext(0, "abc", deps);
+    expect(r).toMatchObject({ claimed: true, lane: "feedback", number: 5164 });
+    expect(called[0]?.lane).toBe("feedback");
+  });
+
+  it("hands a bug that is also a plan to the plan lane", () => {
+    const { deps, called } = setup([issue(9, "a", ["ready", "bug", "plan"])]);
+    expect(claimNext(0, "abc", deps).lane).toBe("plan");
+    expect(called[0]?.lane).toBe("plan");
+  });
+
   it("ignores ready issues that belong to neither lane", () => {
     const { deps, called } = setup([issue(8, "a", ["ready", "enhancement"])]);
     expect(claimNext(0, "abc", deps).claimed).toBe(false);
@@ -671,6 +738,10 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
   it("returns the pick claimNext would take, without taking a lease", () => {
     const pick = peekNext(deps([issue(8, "a", ["ready", "plan"])]));
     expect(pick?.number).toBe(8);
+  });
+
+  it("sees a ready bug with no feedback label as something to claim (#5332)", () => {
+    expect(peekNext(deps([issue(5165, "a", ["ready", "bug", "fast-track"])]))?.number).toBe(5165);
   });
 
   it("returns null when nothing in either lane is admissible", () => {

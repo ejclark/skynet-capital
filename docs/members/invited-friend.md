@@ -51,6 +51,12 @@ heading, the account picker); if it names someone else, nothing else on the page
 They skip the owner's tools entirely — they would not know what a guest list or a fleet switch is
 for, and seeing one would read as "I am in the wrong place".
 
+- **Attention: easily distracted.** Anything on the screen that isn't their task can pull them off
+  it, and a crowded page can lose them before the task is done. This is a study setting, not a
+  guess about one person: Eric, 2026-10-14, "my brother DEFINITELY has ADHD too.. so that is a good
+  attribute to factor into personas in our user studies", and his brother is the kind of friend this
+  file stands for.
+
 ## 5. What frustrates them
 
 - **The playbook names of another member's bot (fixed, #3834)** — `docs/IA.md` §5.2 says a

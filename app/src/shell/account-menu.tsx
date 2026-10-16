@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useCallback, useId, useState } from "react";
 import type { OwnedAccount } from "../live/settings";
+import { PAPER_WORD } from "../ui";
 import { ALL_ACCOUNTS } from "./account-switcher";
 import { useDismiss } from "./use-dismiss";
 
@@ -125,7 +126,9 @@ export function AccountMenu({
                 >
                   <span className="acct-menu-mark" aria-hidden="true" />
                   <span className="acct-menu-who">{a.name}</span>
-                  <span className="acct-menu-kind">{KIND[a.kind]} · SIM</span>
+                  <span className="acct-menu-kind">
+                    {KIND[a.kind]} · {PAPER_WORD}
+                  </span>
                 </button>
                 <DefaultStar
                   account={a}

@@ -13,6 +13,12 @@ describe("onboarding milestone (M·01)", () => {
     expect(ONBOARDING_MILESTONE.code).toBe("M·01");
   });
 
+  it("tells a member the connect step's keys also send the orders they place (#5175)", () => {
+    const detail = ONBOARDING_STEPS.find((s) => s.id === "connect")?.detail ?? "";
+    expect(detail).toContain("send the orders you place");
+    expect(detail).not.toMatch(/read keys only/i);
+  });
+
   it("prices the message step from the engagement track — one source of truth", () => {
     const engagement = ENGAGEMENT_MILESTONES.find((m) => m.id === "first-message");
     const step = ONBOARDING_STEPS.find((s) => s.id === "first-message");

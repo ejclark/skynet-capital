@@ -17,6 +17,10 @@
   --ink: #35d0ba;
   --warm: #ffc24d;
   --bar: rgba(15, 21, 28, 0.96);
+  /* a round's areas (areas.mjs): the faint outline holds 3:1 on a dark frame and a light one; the
+     active one is the accent, ringed in the ground colour for the frame it doesn't suit */
+  --area: #2ba091;
+  --area-on: #35d0ba;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
@@ -34,6 +38,8 @@
     --ink: #0a5f54;
     --warm: #8a5300;
     --bar: rgba(247, 249, 251, 0.96);
+    --area: #397e75;
+    --area-on: #0a5f54;
   }
 }
 :root[data-theme="light"] {
@@ -49,6 +55,8 @@
   --ink: #0a5f54;
   --warm: #8a5300;
   --bar: rgba(247, 249, 251, 0.96);
+  --area: #397e75;
+  --area-on: #0a5f54;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -283,10 +291,174 @@ input:focus-visible {
   height: auto;
 }
 .shot.phone {
-  flex: 0 1 240px;
+  /* its real width: a 390 frame shown at 390, so 14px app text reads at 14px (it was capped at
+     240px — 62% — and the desktop frame at about 330px of 1280, 26%; Eric, 2026-10-14: "the size
+     of the screenshots, text instructions is extremely small") */
+  flex: 0 1 390px;
 }
 .shot.desk {
   flex: 1 1 100%;
+}
+
+/* Pin reactions (#5143, pins.mjs + pins-client.js). The picture is the positioning box: each pin
+   button sits on its baked badge by %, so it tracks the scaled image. The button is a 32px tap
+   target; what shows is smaller, so it hides as little of the frame as it can. Untouched, a ring
+   around the badge; reacted, a filled disc with the glyph, a heavier border and its number in a
+   corner — a shape and a weight, never a colour alone. */
+.shot.pinned {
+  position: relative;
+  overflow: visible;
+}
+.shot.pinned .frame {
+  display: block;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.pin {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.pin:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.pin .pg {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+  display: grid;
+  place-items: center;
+  font: 14px / 1 var(--sans);
+}
+.pin:hover .pg {
+  border-width: 3px;
+}
+.pin[data-r] .pg {
+  width: 26px;
+  height: 26px;
+  background: var(--surface);
+  border: 3px solid var(--text);
+}
+.pin .pn {
+  display: none;
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font: 700 11px / 18px var(--sans);
+  text-align: center;
+}
+.pin[data-r] .pn {
+  display: block;
+}
+/* A pin with a note: ✎ in a solid disc on the badge's top corner — a glyph and a shape. */
+.pin .pk {
+  display: none;
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  font: 700 11px / 18px var(--sans);
+  text-align: center;
+}
+.pin[data-noted] .pk {
+  display: block;
+}
+.pinpop {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* its own width, not what is left of the picture beside it; wraps only at a narrow screen */
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.pcs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* The note: a small text control under the choices until he opens it, then a field as wide as
+   the choices above it. 16px text, so a phone doesn't zoom on focus. */
+.pna {
+  align-self: flex-start;
+  font: 600 13px var(--sans);
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 8px 6px;
+  min-height: 40px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+.pnb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+}
+.pnt {
+  box-sizing: border-box;
+  width: 100%;
+  font: 16px / 1.4 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.pcount {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+.pc {
+  font: 600 14px var(--sans);
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pc[aria-pressed="true"] {
+  border: 3px solid var(--text);
+  padding: 4px 10px;
+}
+.pc[aria-pressed="true"]::after {
+  content: " ✓";
 }
 .side {
   display: flex;
@@ -366,6 +538,44 @@ details.ev summary {
   border-radius: 8px;
   padding: 8px 10px;
   width: 100%;
+}
+
+/* A note under an option (option-notes.mjs): one quiet line under its buttons until tapped. The
+   fold's state is the ▸/▾ shape, never a colour. */
+details.onote {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.onote summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+details.onote summary::-webkit-details-marker {
+  display: none;
+}
+details.onote summary::before {
+  content: "▸\00a0";
+}
+details.onote[open] summary::before {
+  content: "▾\00a0";
+}
+details.onote summary:hover {
+  color: var(--text);
+}
+.onote-t {
+  font: 14px / 1.45 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  max-width: 80ch;
+  box-sizing: border-box;
 }
 
 /* Reaction buttons — a pressed state is a glyph plus a border or strike, never a colour alone. */
@@ -540,6 +750,719 @@ details.ev summary {
   font-variant-numeric: tabular-nums;
 }
 
+/* Marks (marks.mjs + marks-client.js): on a design round's own page every frame is a box a tap
+   marks. A mark is a pin button (a 32px tap target) whose visible part is a 12px dot with a ring,
+   so it hides as little of the frame as it can; reacted, it shows its glyph in a small disc with a
+   heavier border, never a colour alone. */
+.shot.markable {
+  position: relative;
+  overflow: visible;
+}
+.shot.markable .frame {
+  display: block;
+  border-radius: 7px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+.shot.markable.off .frame {
+  cursor: default;
+}
+.pin.mark .pg {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--text);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.pin.mark[data-r] .pg {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--text);
+  background: var(--surface);
+  font: 12px / 1 var(--sans);
+}
+
+/* The opening stage (marks.mjs): his marks on the clean frames, then Claude's problems behind a
+   disclosure whose glyph turns (▸ folded, ▾ open) with its words. */
+.opening {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stage {
+  font-weight: 600;
+  max-width: 72ch;
+}
+.revealer {
+  align-self: flex-start;
+  font: 600 14px var(--sans);
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--text);
+  border-radius: 8px;
+  padding: 9px 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.revealer[aria-expanded="true"] {
+  border-width: 1px;
+  border-color: var(--border);
+}
+.found {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* One frame for every problem: each problem is a compact row in Today's side panel, beside the
+   frame its numbered pin is on. */
+.pinrows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.opt.pinrow {
+  background: var(--surface);
+  border-style: solid;
+  padding: 10px;
+}
+.opt.pinrow .okey {
+  color: var(--text);
+}
+
+/* A round's scope (scope.mjs): the goal, then each outcome with its state as a glyph and a word. */
+.scope {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 3px solid var(--border);
+  padding: 2px 0 2px 10px;
+}
+.outcomes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+.ostate {
+  font: 600 12px var(--mono);
+  color: var(--muted);
+  margin-right: 4px;
+}
+.outcomes li[data-met="yes"] .ostate {
+  color: var(--text);
+}
+.serves {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+
+/* Outcomes he adds (outcomes.mjs + outcomes-client.js): under the scope's list, each "＋ his words
+   (added by you)" with a remove ×; "＋ Add an outcome" opens one line with Save and Cancel. */
+.added {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+.added li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.added .otx {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.oby {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+.addout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.addout button {
+  font: 600 14px var(--sans);
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.addout .orm {
+  flex: none;
+  min-height: 32px;
+  min-width: 32px;
+  margin-top: -6px;
+  padding: 0 8px;
+}
+.addout button:disabled,
+.addout input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.oform {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+.oform .otext {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  font: 15px var(--sans);
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.oform .osave {
+  border: 2px solid var(--text);
+}
+
+/* Comparing an option with Today (compare.mjs + compare-client.js, #5411). One switch above the
+   option's phone frame — a glyph and a word per mode, the pressed one a heavy border and a ✓, never
+   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SIDE BY SIDE (#5430)
+   sets them in two columns, both whole, a clear button over each half that opens it in Flip (so a
+   tap there never places a mark); DIVIDER stacks them and clips the option from the left to
+   --split (%), Today showing through, a line in the text colour ringed in the ground colour where
+   they meet, dragged by a thumb-sized handle under the picture. */
+.cmp {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cmp-modes,
+.cmp-flip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.cmp-lead {
+  font-size: 14px;
+  color: var(--muted);
+}
+.cmp-b {
+  font: 600 13px var(--sans);
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.cmp-b[aria-pressed="true"] {
+  border: 3px solid var(--text);
+  padding: 4px 10px;
+}
+.cmp-b[aria-pressed="true"]::after {
+  content: " ✓";
+}
+.cmp-b:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--muted);
+}
+.cmp-stage {
+  position: relative;
+  display: grid;
+}
+.cmp-cell {
+  grid-area: 1 / 1;
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmp-tag {
+  font: 600 13px var(--sans);
+}
+.cmp-pic {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.cmp-pic img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.cmp .cmp-cell > .shot,
+.cmp .cmp-cell > .shot.phone.areas {
+  /* the cell is a column, so .shot.phone's 390px flex-basis would set its height: at half width
+     (Side by side) the picture is shorter than that and the frame ran on empty below it */
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cmp-line {
+  display: none;
+}
+/* Flip: the toggle above names the picture showing, so its own tag would say it twice. */
+.cmp[data-mode="flip"] .cmp-tag {
+  display: none;
+}
+.cmp[data-mode="flip"][data-side="option"] .cmp-cell[data-cell="today"],
+.cmp[data-mode="flip"][data-side="today"] .cmp-cell[data-cell="option"] {
+  visibility: hidden;
+}
+.cmp[data-mode="side"] .cmp-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+}
+.cmp[data-mode="side"] .cmp-cell[data-cell="option"] {
+  grid-area: 1 / 2;
+}
+/* Side by side with areas (#5163): it is the before | after shot, so both pictures get the room.
+   The callout words and their lines need a gutter or a band a half-width picture can't spare (at
+   desktop width the 172px gutter left each picture 0px, 2026-10-15), so they go; the outlines and
+   numbers stay, the same on both halves. */
+.cmp[data-mode="side"] .shot.areas :is(.agut, .aband, .arail, .aline) {
+  display: none;
+}
+.cmp[data-mode="side"] .shot.areas .arow {
+  padding: 0 0 0 28px;
+}
+.cmp-open {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: zoom-in;
+}
+.cmp-open:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+.cmp-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] {
+  clip-path: inset(0 0 0 calc(var(--split) * 1%));
+}
+.cmp[data-mode="divider"] .cmp-cell[data-cell="option"] .cmp-tag {
+  text-align: right;
+}
+.cmp[data-mode="divider"] .cmp-line {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--split) * 1%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+  pointer-events: none;
+}
+/* The divider's grip sits on the line itself and stays in view as the picture scrolls past it
+   (sticky inside the line's full-height box), so the handle is always beside the part he is
+   looking at; a drag on it moves the line (compare-client.js). The track under the picture stays
+   for the keyboard. Eric, 2026-10-15: the handle was "often out of view of the actual change". */
+.cmp-grip {
+  display: none;
+}
+.cmp[data-mode="divider"] .cmp-grip {
+  display: block;
+  position: sticky;
+  top: calc(50vh - 22px);
+  width: 44px;
+  height: 44px;
+  margin: 12px 0 12px -21px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font: 700 15px / 40px var(--sans);
+  text-align: center;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 7;
+}
+.cmp-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  font: 600 13px var(--sans);
+}
+.cmp-knob {
+  position: absolute;
+  left: calc(var(--split) * 1%);
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cmp-split {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.cmp-track:has(.cmp-split:focus-visible) .cmp-knob {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* One picture, two widths (widths.mjs + widths-client.js, #5417). A holder's phone and desktop
+   frames share one slot under a "▯ Phone · ▭ Desktop" switch in the compare switch's button style
+   (.cmp-b: the pressed one a heavy border and a ✓, never a colour alone); the slot shows the width
+   its data-width names and hides the other, so the phone frame keeps its real width and the
+   desktop one gets the card's. */
+.wsw {
+  flex: 0 1 390px;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wsw[data-width="desk"] {
+  flex-basis: 100%;
+}
+.wsw-b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.wsw[data-width="phone"] > .wsw-pic[data-w="desk"],
+.wsw[data-width="desk"] > .wsw-pic[data-w="phone"] {
+  display: none;
+}
+.wsw-pic {
+  min-width: 0;
+}
+
+/* A round's focus (focus.mjs + focus-client.js). The focused view (the default) crops the frame to
+   the focus box plus a margin: the clip keeps the crop's proportions (--fa), and inside it the
+   plane — the whole frame, its picture, pins and marks — is sized and moved by % of the crop
+   (--cx/--cy/--cw/--ch), so the crop shows at the whole frame's scale and every % still lands. The
+   whole view lets the plane sit in place and draws the focus as a dashed outline in the text colour,
+   ringed in the ground colour so it reads on a dark frame or a light one, with its label on it. */
+.shot[data-view] {
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+.flabel {
+  font-weight: 600;
+}
+.ftoggle {
+  font: 600 13px var(--sans);
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.fclip {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.fplane {
+  position: relative;
+}
+.shot.phone[data-view="focus"] {
+  flex: 0 1 auto;
+  width: calc(390px * var(--cw) / 100);
+}
+.shot.desk[data-view="focus"] {
+  flex: 0 1 auto;
+  width: calc(1% * var(--cw));
+}
+.shot[data-view="focus"] .fclip {
+  aspect-ratio: var(--fa, auto);
+}
+.shot[data-view="focus"] .fplane {
+  position: absolute;
+  width: calc(100% * 100 / var(--cw));
+  left: calc(-100% * var(--cx) / var(--cw));
+  top: calc(-100% * var(--cy) / var(--ch));
+}
+.fbox {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed var(--text);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    inset 0 0 0 2px var(--bg);
+  pointer-events: none;
+}
+.shot[data-view="focus"] .fbox {
+  display: none;
+}
+.ftag {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: -2px;
+  max-width: calc(100% - 4px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--text);
+  color: var(--bg);
+  font: 600 12px / 1.3 var(--sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fbox[data-edge] .ftag {
+  top: 2px;
+  bottom: auto;
+  left: 2px;
+}
+
+/* A round's areas (areas.mjs, #5391). The shot is three rows: a band of words above the picture,
+   the picture between its margins, a band below. The plane is the picture's own box, so every
+   outline, number, line, pin and mark is placed in % of the frame. Every area is a 1.5px dashed
+   outline with a hollow number in the left margin, level with its top; an active one is a 2.5px
+   solid outline with a filled number — dashed vs solid and hollow vs filled, never colour alone.
+   Phone width: an active area's words sit in a band, its line runs out to the right margin
+   (`--rail`, one lane per line, `--d` from the picture's edge), along it, and in to the outline's
+   right edge; a band's own stretch of line is clipped at the band's edge, where the plane's picks
+   it up. Desktop width (below): the words sit in a gutter beside the picture, level with the line. */
+.shot.areas {
+  position: relative;
+  overflow: visible;
+  border: 0;
+  background: none;
+}
+.shot.phone.areas {
+  flex: 0 1 calc(390px + 28px + var(--rail));
+}
+.arow {
+  padding: 0 var(--rail) 0 28px;
+}
+.aplane {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.abox {
+  position: absolute;
+  border: 1.5px dashed var(--area);
+  pointer-events: none;
+}
+.abox[data-on] {
+  border: 2.5px solid var(--area-on);
+  box-shadow: 0 0 0 1.5px var(--bg);
+}
+.anum {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--area);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 11px / 15px var(--sans);
+  text-align: center;
+  flex: none;
+}
+.anum[data-on] {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--area-on);
+  background: var(--area-on);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 18px;
+}
+.aplane > .anum {
+  position: absolute;
+  right: calc(100% + 5px);
+  pointer-events: none;
+}
+.aline,
+.arail {
+  position: absolute;
+  background: var(--area-on);
+  pointer-events: none;
+}
+.aline {
+  height: 2px;
+  margin-top: -1px;
+  right: calc(-1 * var(--d));
+}
+.arail {
+  width: 2px;
+  left: calc(100% + var(--d) - 1px);
+}
+.aband {
+  position: relative;
+  overflow: hidden;
+}
+.aband.above {
+  padding-bottom: 8px;
+}
+.aband.below {
+  padding-top: 8px;
+}
+.acall {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px calc(var(--rail) - var(--d)) 4px 0;
+  font: 600 15px / 1.3 var(--sans);
+}
+.ajoin {
+  flex: 1 1 12px;
+  min-width: 12px;
+  height: 2px;
+  background: var(--area-on);
+}
+.acall::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--rail) - var(--d) - 1px);
+  width: 2px;
+  height: 9999px;
+  background: var(--area-on);
+}
+.above > .acall::after {
+  top: 50%;
+}
+.below > .acall::after {
+  bottom: 50%;
+}
+.agut {
+  display: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  width: 156px;
+  margin: 0;
+  transform: translateY(-50%);
+  font: 600 15px / 1.3 var(--sans);
+}
+
+/* The round page's how-to, folded under its one line. */
+details.how {
+  color: var(--muted);
+  max-width: 70ch;
+}
+details.how summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* A note about the page (page-notes.mjs + page-notes-client.js): while armed, the page shows a
+   crosshair; the note opens where he tapped, as a small card above everything but the bar. */
+body.noting,
+body.noting * {
+  cursor: crosshair;
+}
+.pnpop {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 9;
+  width: min(320px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  font-family: var(--sans);
+  color: var(--text);
+}
+.pnpop[hidden] {
+  display: none;
+}
+.pnnear {
+  font: 12px var(--mono);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.pnacts {
+  display: flex;
+  gap: 6px;
+}
+.pnacts button {
+  font: 600 14px var(--sans);
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.pnacts .pns {
+  border: 2px solid var(--text);
+}
+.bar #pnote[aria-pressed="true"] {
+  border: 2px solid var(--text);
+}
+.bar #pnote:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.bar .pncount {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+
 /* The bar */
 .bar {
   position: fixed;
@@ -581,6 +1504,17 @@ details.ev summary {
   font: 600 13px / 1.4 var(--sans);
   color: var(--text);
   overflow-wrap: anywhere;
+}
+/* Whether Claude is listening: a quiet mono line with its glyph (● listening). Not listening is a
+   warning he acts on (⊘), so it takes full ink and weight — the glyph and words carry it, not hue. */
+.bar #ear {
+  font: 12px / 1.4 var(--mono);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.bar #ear[data-state="lost"] {
+  font: 600 13px / 1.4 var(--sans);
+  color: var(--text);
 }
 /* Reopen is a small text control beside a pressed Done — underlined, never a second big button. */
 .bar .reopen {
@@ -628,17 +1562,78 @@ details.ev summary {
   .pairs {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
+  /* Wide: the phone frame at its real width with the option's words beside it, and the desktop
+     frame on its own row across the whole card, so neither shrinks to share a row. The pictures'
+     box dissolves into the card's grid to place them. */
   .opt {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 390px) minmax(0, 1fr);
+    column-gap: 20px;
   }
-  .pics {
-    flex-wrap: nowrap;
+  .opt > .pics {
+    display: contents;
   }
-  .shot.phone {
-    flex: 0 0 min(40%, 240px);
+  .opt > .pics > .shot.phone,
+  .opt > .pics > .cmp,
+  .opt > .pics > .wsw,
+  .opt > .pics > .muted {
+    grid-column: 1;
+    grid-row: 1;
   }
-  .shot.desk {
-    flex: 1 1 auto;
+  .opt > .side {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .opt > .pics > .shot.desk {
+    grid-column: 1 / -1;
+  }
+  /* A round's areas: the words move from the bands to a gutter beside the picture, joined by a
+     straight line to the outline's right edge; the phone frame keeps its real width beside them. */
+  .shot.areas .aband,
+  .shot.areas .arail {
+    display: none;
+  }
+  .shot.areas .agut {
+    display: block;
+  }
+  .shot.areas .arow {
+    padding-right: 172px;
+  }
+  .shot.areas .aline {
+    right: -12px;
+  }
+  .shot.phone.areas {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* A width slot showing the desktop frame takes the card's width, under the option's words. */
+  .opt > .pics > .wsw[data-width="desk"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .opt:has(> .pics > .shot.phone.areas),
+  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas),
+  .opt:has(> .pics > .cmp .shot.phone.areas) {
+    grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
+  }
+  .opt > .pics > .cmp:has(.shot.phone.areas) {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* Side by side is the before | after shot: it takes the card's whole width under the option's
+     words, each picture up to its real phone width beside the other. */
+  .opt > .pics > .cmp[data-mode="side"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+  }
+  .opt:has(> .pics > .cmp[data-mode="side"]) > .side {
+    grid-column: 1 / -1;
+  }
+  .cmp[data-mode="side"] .cmp-stage {
+    grid-template-columns: repeat(2, minmax(0, calc(390px + 28px)));
+    column-gap: 24px;
+  }
+  /* no phone frame: the words lead, the desktop frame spans below them */
+  .opt:not(:has(.shot.phone)) > .side {
+    grid-column: 1 / -1;
   }
   .shiplist .ship {
     flex-direction: row;

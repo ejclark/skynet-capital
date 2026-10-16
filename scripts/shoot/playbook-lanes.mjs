@@ -49,7 +49,7 @@ const lanes = [
   { playbookId: "S1-NVDA", mode: "standard", states: lane(() => "no-window") },
   { playbookId: "NVDA-CALL-SPREAD", mode: "aggressive", states: lane(() => "no-window") },
   { playbookId: "G1-GOOG", mode: "standard", states: lane(() => "no-window") },
-  { playbookId: "HC-SAURON", mode: "standard", states: lane(() => "tactical") },
+  { playbookId: "TACO-DJT", mode: "standard", states: lane(() => "no-window") },
 ].map((l) => ({ ...l, slot: slot(l.playbookId) }));
 const trades = [
   {

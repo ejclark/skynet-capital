@@ -36,7 +36,7 @@
 // SHAPE — decide/do, like every other lane here: `routeRelay()` is pure (closed issues and the open
 // titles in, intents out) and `gatherRelayDeps()` is the only part that reads GitHub. Every branch is
 // specced from data in tests/scripts/moneypenny/relay.spec.ts.
-import { ghRestAll, sh } from "./gh.mjs";
+import { ghRestAll, sh, sleepSync, withRetry } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS, labelNames } from "./labels.mjs";
 
 /** The labels that each mean "a remainder is written on this issue and nobody has built it".
@@ -232,12 +232,18 @@ export function sourceCommentBody(issue) {
  * whole hour). One query per remainder label, because REST's `labels=` is an AND.
  *
  * FAIL CLOSED, like `gatherDeps` itself: a read that throws must never look like "nothing was
- * dropped", which is this lane's whole failure mode in miniature.
+ * dropped", which is this lane's whole failure mode in miniature. Retried first, like `gatherDeps`
+ * too: one GitHub 500 here took a whole `route` tick down (#5354), and a pause would have done.
  */
-export function gatherRelayDeps({ read = ghRestAll, labels = REMAINDER_LABELS } = {}) {
+export function gatherRelayDeps({
+  read = ghRestAll,
+  labels = REMAINDER_LABELS,
+  sleep = sleepSync,
+} = {}) {
   const byNumber = new Map();
   for (const label of labels) {
-    for (const row of read(`issues?state=closed&labels=${encodeURIComponent(label)}`)) {
+    const path = `issues?state=closed&labels=${encodeURIComponent(label)}`;
+    for (const row of withRetry(() => read(path), { sleep })) {
       if (row.pull_request) continue;
       byNumber.set(row.number, {
         number: row.number,

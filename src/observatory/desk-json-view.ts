@@ -1,7 +1,11 @@
 import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
-import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
-import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
+import {
+  contractMultiplier,
+  humanizeOptionSymbol,
+  isOccSymbol,
+} from "../trading/option-symbols.js";
+import type { OpenLot, RoundTrip, RoundTripLedger } from "../trading/round-trips.js";
 import { type ActivityNarrowOptions, narrowActivity } from "./activity-filter.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
@@ -12,7 +16,7 @@ import {
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
 import { allocationOf, type DeskAllocation } from "./desk-allocation.js";
-import { formatPrice } from "./desk-data.js";
+import { formatPrice, type RoundTripLinks } from "./desk-data.js";
 import { NO_ORIGIN_EVIDENCE, type OrderOriginIndex } from "./order-origin.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
@@ -314,6 +318,17 @@ export interface DeskActivityEvent extends DeskActivityLine {
   readonly net?: string;
   readonly legs?: readonly DeskActivityLeg[];
   readonly missingLegs?: readonly DeskMissingLeg[];
+  /** A closing fill (#5317): each order whose lot it closed, the newest first — so the ledger shows
+   *  a sale with the buy it closed even when that buy is on an older page. */
+  readonly opened?: readonly DeskOpenedLeg[];
+  /** An opening fill with nothing of it still open (#5317): when its last lot closed. */
+  readonly closedOn?: string;
+}
+
+/** An order a closing fill closed (part of), as its own line — `matched` is how much of it this
+ *  close took: a buy of 15 sold as 10 and then 5 is two closes of one buy. */
+export interface DeskOpenedLeg extends DeskActivityLine {
+  readonly matched: number;
 }
 
 export interface DeskActivityPage {
@@ -346,6 +361,8 @@ export function deskActivityView(
       { readonly realized: number; readonly returnPct: number }
     >;
     readonly spreadOf?: SpreadOf | undefined;
+    /** The matcher's pairing (`roundTripLinks`) — a close's opening legs, a buy's close date. */
+    readonly roundTrips?: RoundTripLinks;
   } & ActivityNarrowOptions = {},
 ): DeskActivityPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
@@ -355,12 +372,19 @@ export function deskActivityView(
     limit,
     ...(opts.before !== undefined ? { before: opts.before } : {}),
   });
+  const byOrder = new Map(sorted.map((record) => [record.orderId, record]));
+  const pairing = (row: DeskActivityLine) =>
+    opts.roundTrips ? pairedFields(row, opts.roundTrips, byOrder, origins) : {};
   const activity = items.map((item): DeskActivityEvent => {
-    if (item.kind === "spread") return spreadActivityEvent(item, origins, opts.realizedByOrder);
+    if (item.kind === "spread") {
+      const spread = spreadActivityEvent(item, origins, opts.realizedByOrder);
+      return { ...spread, ...spreadClosedOn(spread.legs, opts.roundTrips) };
+    }
     const { record } = item;
     const pl = opts.realizedByOrder?.get(record.orderId);
+    const line = orderLineFields(record, origins);
     return {
-      ...orderLineFields(record, origins),
+      ...line,
       ...(pl
         ? {
             realizedPl: formatSigned(pl.realized),
@@ -368,7 +392,76 @@ export function deskActivityView(
             realizedTone: plClass(pl.realized) as Tone,
           }
         : {}),
+      ...pairing(line),
     };
   });
   return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}), ...narrowed.facets };
+}
+
+/** A row's place in a round trip (#5317): the orders a close closed, or the day a buy was closed. */
+function pairedFields(
+  row: DeskActivityLine,
+  links: RoundTripLinks,
+  byOrder: ReadonlyMap<string, TradeActivityRecord>,
+  origins: OrderOriginIndex,
+): Pick<DeskActivityEvent, "opened" | "closedOn"> {
+  const trips = links.closes.get(row.orderId);
+  const closedOn = links.closedOn.get(row.orderId);
+  return {
+    ...(trips?.length ? { opened: openedLegs(trips, byOrder, origins) } : {}),
+    ...(closedOn ? { closedOn } : {}),
+  };
+}
+
+/** The trips one close made, one leg an opening order — the order's own line when the ledger holds
+ *  it, else what the trip itself knows (its price is per contract, so it is put back per share). */
+function openedLegs(
+  trips: readonly RoundTrip[],
+  byOrder: ReadonlyMap<string, TradeActivityRecord>,
+  origins: OrderOriginIndex,
+): DeskOpenedLeg[] {
+  const legs: DeskOpenedLeg[] = [];
+  for (const trip of trips) {
+    const same = trip.entryOrderId
+      ? legs.findIndex((leg) => leg.orderId === trip.entryOrderId)
+      : -1;
+    const prior = legs[same];
+    if (prior) {
+      legs[same] = { ...prior, matched: prior.matched + trip.quantity };
+      continue;
+    }
+    const record = trip.entryOrderId ? byOrder.get(trip.entryOrderId) : undefined;
+    legs.push(
+      record ? { ...orderLineFields(record, origins), matched: trip.quantity } : tripLeg(trip),
+    );
+  }
+  return legs;
+}
+
+function tripLeg(trip: RoundTrip): DeskOpenedLeg {
+  return {
+    orderId: trip.entryOrderId ?? "",
+    symbol: trip.symbol,
+    display: humanizeOptionSymbol(trip.symbol),
+    side: trip.short ? "sell" : "buy",
+    quantity: trip.quantity,
+    filled: trip.quantity,
+    price: formatPrice(trip.entryPrice / contractMultiplier(trip.symbol)),
+    status: "filled",
+    at: trip.openedAt,
+    backfilled: false,
+    origin: "unknown",
+    matched: trip.quantity,
+  };
+}
+
+/** A spread is closed once every leg is: the day its last leg closed. */
+function spreadClosedOn(
+  legs: readonly DeskActivityLeg[],
+  links: RoundTripLinks | undefined,
+): Pick<DeskActivityEvent, "closedOn"> {
+  if (!links || legs.length === 0) return {};
+  const days = legs.map((leg) => links.closedOn.get(leg.orderId));
+  if (days.some((day) => day === undefined)) return {};
+  return { closedOn: (days as string[]).sort().at(-1) as string };
 }

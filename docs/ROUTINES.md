@@ -65,6 +65,6 @@ time, ~115 empty hourly fires). Their jobs moved into the repo, where the failur
 | Routine | Fate |
 |---|---|
 | Handoff build (hourly, `trig_01D95znC5tuGNCxDawHqyaaj`) | deleted — its job was already the postmaster's push trigger (docs/HANDOFFS.md, "one hop, no polling"); the daily schedule is now the net under it. The 2026-08-17 lesson (a poller masking a severed chain while producing nothing) stands as the epitaph. |
-| Event scan (daily 11:00, `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`) | deleted — replaced by the event router's `build-events` lane: same EVENT-RESEARCH protocol, now ticked by merges instead of a clock, prompt version-controlled in `moneypenny-events.yml` (formerly `postmaster.yml`). |
+| Event scan (daily 11:00, `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`) | deleted — replaced by the event router's `build-events` lane: same EVENT-RESEARCH protocol, now ticked by merges instead of a clock, prompt version-controlled in `moneypenny-events.yml` (formerly postmaster.yml). |
 | Config audit digest (daily 14:00, `trig_01GrqFFLqYSCbm9BZWKWaKjF`) | deleted — the audit now rides the secretary digest Routine (still claude.ai-side, preserving the duel-log rationale in docs/COACHES.md) instead of holding its own clock. |
 | Design handoff poke (poke-only, `trig_017zC6G25nbJNcCzFMFz957F`) | deleted — never fired once, was never registered here (a house-rule violation this review caught), and the handoff inbox (zip on a labeled issue → postmaster import) superseded it on 2026-08-16. |

@@ -538,3 +538,13 @@ size grid, and neither predicts a size revision this session's data contradicts.
 detail lives in the row itself,
 [`forward-tests/treasury-coupon-announcement-2026-09-10.md`](../forward-tests/treasury-coupon-announcement-2026-09-10.md).
 This is a note on the register, not a second verdict on the event — the close-out above stands.
+
+**Forward test scored 2026-10-16 (`forward-test-due`, at the 2026-10-16 score-by).**
+`FT-treasury-coupon-announcement-2026-09-10-1` **PASSED** — the 2026-10-15 coupon announcement published the
+20-Year reopening (CUSIP 912810UX4, `ReOpeningIndicator Y`) at **$13B**, read from treasurydirect.gov's
+`A_20261015_3.xml` and corroborated on fiscaldata `auctions_query` and `TA_WS/securities/upcoming`, all HTTP 200.
+Scored as registered: near-uninformative, a confirmation that Treasury did what `sb0590` had written down, with
+no void condition met. The register's remaining open row here is `FT-…-09-10-2` (scores 2026-11-13). Full detail
+lives in the row itself,
+[`forward-tests/treasury-coupon-announcement-2026-09-10.md`](../forward-tests/treasury-coupon-announcement-2026-09-10.md).
+This is a note on the register, not a second verdict on the event — the close-out above stands.

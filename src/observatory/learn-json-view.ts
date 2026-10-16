@@ -30,6 +30,9 @@ interface MilestoneView {
   readonly title: string;
   readonly detail: string;
   readonly points: number;
+  /** The rung's ladder code (`tradeType`) — how the shell pairs a milestone with its play on
+   *  `/api/trade/plays` by name, never by position (#5242). */
+  readonly code?: string;
   /** The ticket pre-set to this play, when the milestone IS a trade. */
   readonly ticket?: string;
   /** The proof: present exactly when a real filled order earned it. */
@@ -162,7 +165,7 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
           detail: m.detail,
           points: m.points,
           // In-shell since 10b: the shell ticket speaks ?play=, so the milestone lands there.
-          ...(m.tradeType ? { ticket: `/app/trade?play=${m.tradeType}` } : {}),
+          ...(m.tradeType ? { code: m.tradeType, ticket: `/app/trade?play=${m.tradeType}` } : {}),
           ...(earned ? { earned: { on: earned.at.slice(0, 10), orderId: earned.orderId } } : {}),
         };
       });

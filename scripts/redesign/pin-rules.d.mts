@@ -38,5 +38,7 @@ export function readPins(raw: unknown): {
   tag?: string;
   problems: string[];
 };
+/** The manifest's `pins` for a frame: the list readPins filled, without box/quote/tag. */
+export function manifestPins(pins: Pin[]): Pick<Pin, "n" | "x" | "y" | "label" | "side">[];
 export function layoutProblems(items: Drawn[], frame: { width: number; height: number }): string[];
 export function imageSize(buf: Buffer): { width: number; height: number };

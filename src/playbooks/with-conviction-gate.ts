@@ -13,6 +13,7 @@ import {
   type PairLedger,
   putStrategyTag,
 } from "./conviction-check.js";
+import { type ConvictionLookup, lookupConviction, statedCheck } from "./conviction-store.js";
 import { findPair } from "./pair-table.js";
 import { pausedMayPlace } from "./playbook.js";
 
@@ -35,6 +36,13 @@ import { pausedMayPlace } from "./playbook.js";
  * With no ledger (the decision store is dark), or a held position the feed has no mark for, a due
  * check cannot be read, and an unread check is neither passed nor failed: entries continue, said
  * once, nothing is latched, and the next cycle reads it again.
+ *
+ * WHICH DATE (#5482 slice 2): a subscription that points at a conviction record steering its pair
+ * is checked on the record's date, so one view gates every pair it steers on one day. Every other
+ * subscription is checked on its own conviction's date, as before; a pointer the store cannot
+ * resolve, or one at a record that does not steer the pair, is said once and falls back to that
+ * (`statedCheck`). The P/L read is still the pair's own: judging the pairs a record steers in
+ * aggregate is a later slice.
  */
 export interface ConvictionGateDeps {
   /** The bot's own subscriptions — the convictions ride on them. */
@@ -42,12 +50,20 @@ export interface ConvictionGateDeps {
   /** One pair's history on this bot, or absent when the decision store is dark. */
   readonly ledgerOf?: (playbookId: string, putStrategy: string | undefined) => PairLedger;
   readonly log?: (line: string) => void;
+  /** The conviction records a pointer resolves against; the build's store when absent. */
+  readonly convictionOf?: ConvictionLookup;
 }
 
 export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Persona {
-  const convictions = deps.subscriptions.filter((sub) => sub.enabled && sub.conviction);
-  if (convictions.length === 0) return inner;
   const log = deps.log ?? (() => undefined);
+  const convictions: { readonly sub: PlaybookSubscription; readonly checkOn: string }[] = [];
+  for (const sub of deps.subscriptions) {
+    if (!sub.enabled) continue;
+    const check = statedCheck(sub, deps.convictionOf ?? lookupConviction);
+    if (check.note) log(`${check.note} — checking its own conviction instead`);
+    if (check.checkOn) convictions.push({ sub, checkOn: check.checkOn });
+  }
+  if (convictions.length === 0) return inner;
   const latched = new Map<string, ConvictionVerdict>();
   const unread = new Set<string>();
 
@@ -98,9 +114,8 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
       const intents = inner.decide(context, portfolio);
       const today = marketDayKey(context.asOf);
       const stopped = new Set<string>();
-      for (const sub of convictions) {
-        const checkOn = sub.conviction?.checkOn;
-        if (!checkOn || today < checkOn) continue;
+      for (const { sub, checkOn } of convictions) {
+        if (today < checkOn) continue;
         if (read(sub, checkOn, context, portfolio)?.pass === false) stopped.add(sub.playbookId);
       }
       if (stopped.size === 0) return intents;

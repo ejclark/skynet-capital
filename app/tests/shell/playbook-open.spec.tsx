@@ -298,7 +298,8 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
     open(card, "S1-NVDA");
     const timeline = await within(card).findByRole("img", { name: /^NVDA's window: holds from / });
     expect(timeline.querySelector(".pbr-print")?.textContent).toBe("◆");
-    expect(timeline.textContent).toContain("● today");
+    expect(timeline.querySelector(".pbr-today")).not.toBeNull();
+    expect(timeline.textContent).toContain("today");
     expect(
       within(card).getByRole("region", { name: "Whose say-so it runs on" }).textContent,
     ).toContain("✓ Researched, weakened");

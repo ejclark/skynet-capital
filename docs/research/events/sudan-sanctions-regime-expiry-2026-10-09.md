@@ -318,3 +318,20 @@ deadline with no symbol.
 
 **Last assessed:** 2026-10-10
 <!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0} -->
+
+**Forward-test scoring (2026-10-16, `forward-test-due`).** Both rows scored **pass** in
+[`forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md`](../forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md);
+no registered prediction and no earlier row was edited. The facts the 10-10 close-out read through search
+summaries were re-read this session straight from `press.un.org/en/2026/sc16470.doc.htm` (fetched direct):
+resolution **2830**, adopted **8 October 2026**, unanimous, measures to **11 December**, Panel of Experts to
+**11 January 2027**, embargo still "in relation to actors operating in Darfur" — which also settles the 10-08 vs
+10-09 adoption-day conflict recorded at close-out (10-08). A fresh search for any later Sudan text turned up
+nothing past 10-10 (the US nationwide-embargo draft is withdrawn), so neither kill condition (lapse/veto, or an
+expansion adopted by 10-16) was met. The resolution's own operative text is still unfetched, so the date label
+stays **estimate**. No kill-list entry (no symbol). Tape, recorded only: **VIX 21.09** on 10-16 (16.46 on 10-15,
+VIX3M 20.97) — a jump with no Sudan headline behind it, so the "VIX ≥ 20 on a Sudan headline" switch does not
+fire; any read of it belongs to the 10-16 macro corridor, not this file. Next real deadline **2026-12-11**
+(56 days out, past the horizon for a low-impact event), so no proposal file; stance unchanged — stand aside.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":21.09,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"docs.un.org/S/RES/2830(2026)","status":"NOT_FETCHED","at":"2026-10-16"}]} -->

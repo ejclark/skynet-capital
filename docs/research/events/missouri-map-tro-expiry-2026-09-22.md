@@ -478,3 +478,18 @@ whichever session next touches those files, per the same-PR-never-another-file's
 continuing to watch; the residual uncertainty (the 09-28 stay window, the recall-mandate motion) is a
 new dated question for a different ledger, not a reason to keep this one open. Scanner goes quiet on
 this event now, with one forward test left genuinely open (`-3`, 2026-10-15) rather than closed out.
+
+**Forward test scored 2026-10-15 (`forward-test-due`, score-by arrived).** `FT-…-3` → **PASS**; the
+close-out above is not reopened or edited. Re-pulled direct this session: the Eighth Circuit opinion
+(`ecf.ca8.uscourts.gov/opndir/26/09/262797P.pdf`, HTTP 200, 215,085 bytes), doc. 35, 49 and 50 from the
+CourtListener RECAP archive (HTTP 200), and both dockets via the v4 search API. One correction to the
+close-out's wording: it called the Eighth Circuit opinion "the next stage", but the next substantive
+written decision was **doc. 49** (E.D. Mo., 2026-09-09, denying the intervenors' stay application),
+which already analyses Rooker-Feldman and *Younger* abstention under their own headings; doc. 50 (the
+All Writs Act denial the same day) rests on comity only. The prediction holds on either reading. Docket
+note, outside this row's question: the Eighth Circuit docket shows a Supreme Court opinion "granting
+application for stay" filed 2026-09-25 (SC No. 26A388); only that docket line was read, not the order,
+so the map question's current posture belongs to whichever ledger tracks 26A388, not to this one.
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->

@@ -8,6 +8,10 @@
 //
 // The palette is the app's own tokens (app/src/styles/theme.css): annotations wear the accent, as
 // the round-3 frames did, so the pin look matches what Eric has already judged.
+//
+// A label's limit is the round page's and the lint's own (steer/pins.mjs, #5244): one number, so
+// a label this draws is one the page accepts.
+import { MAX_PIN_LABEL as MAX_LABEL } from "../steer/pins.mjs";
 
 export const PALETTE = {
   dark: { bg: "#0b0f14", text: "#e6edf3", accent: "#35d0ba", onAccent: "#04302b" },
@@ -22,7 +26,6 @@ const PAIRS = [
 const SIDES = ["right", "left", "top", "bottom"];
 const MIN_FONT = 12;
 const MIN_GAP = 8;
-const MAX_LABEL = 48;
 
 const channel = (hex, i) => {
   const c = Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
@@ -91,12 +94,12 @@ export function readPins(raw) {
     return { pins: [], problems: ["pins: not a JSON object"] };
   const list = raw.pins ?? [];
   const problems = Array.isArray(list) ? [] : ["pins: `pins` is a list"];
-  const pins = (Array.isArray(list) ? list : []).map((p, i) => ({
-    ...p,
-    n: p.n ?? i + 1,
-    side: p.side ?? "right",
-    label: String(p.label ?? ""),
-  }));
+  // A list entry that isn't an object (`null`, a number, a list) is a pin with nothing set: refused by
+  // name below, never a TypeError.
+  const pins = (Array.isArray(list) ? list : []).map((raw, i) => {
+    const p = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    return { ...p, n: p.n ?? i + 1, side: p.side ?? "right", label: String(p.label ?? "") };
+  });
   const seen = new Set();
   for (const p of pins) problems.push(...pinProblems(p, seen));
   problems.push(...quoteProblems(raw.quote));
@@ -106,6 +109,14 @@ export function readPins(raw) {
     problems.push("pins: nothing to draw");
   return { pins, quote: raw.quote, tag: raw.tag, problems };
 }
+
+/**
+ * The pins a round manifest names on an option (`pins` / `pinsDesk`, #5143), from `readPins`'s
+ * list: the badge number, the spot and the label the page puts a reaction button on, defaults
+ * filled exactly as this kit draws them — so the frame and the page can't disagree.
+ */
+export const manifestPins = (pins) =>
+  pins.map(({ n, x, y, label, side }) => ({ n, x, y, label, side }));
 
 const EDGES = [
   ["left", (r) => -r.x],

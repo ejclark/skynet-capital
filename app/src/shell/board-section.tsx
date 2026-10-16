@@ -30,6 +30,7 @@ import {
   toggleSymbolScope,
   unsearchedSymbols,
 } from "../live/research";
+import { FilterChip } from "../ui";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
 
@@ -359,11 +360,10 @@ export function ResearchFilters({
             const selected = scope.includes(entry.symbol);
             return (
               <span key={entry.symbol} className="rx-symbol-wrap">
-                <button
-                  type="button"
+                <FilterChip
                   className="rx-symbol"
-                  aria-pressed={selected}
-                  onClick={() => toggleSymbol(entry.symbol)}
+                  pressed={selected}
+                  onPress={() => toggleSymbol(entry.symbol)}
                 >
                   <span className="rx-symbol-name">{entry.symbol}</span>
                   {entry.next ? (
@@ -371,7 +371,7 @@ export function ResearchFilters({
                   ) : (
                     <span className="rx-symbol-next">no dated event</span>
                   )}
-                </button>
+                </FilterChip>
               </span>
             );
           })}

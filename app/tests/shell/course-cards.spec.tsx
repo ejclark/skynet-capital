@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import type { Journey } from "../../src/live/learn";
-import { Hud, ladderProgress, MilestoneRow } from "../../src/shell/course-cards";
+import { Hud, ladderProgress } from "../../src/shell/course-cards";
 
-// The ladder's cards moved out of the /learn route (#1119). Same honesty rule: an earned row
-// shows its proof (fill date + order id); an unearned one shows the ticket link and never a tick.
+// The journey's HUD and ladder count. The level cards that lived beside them retired into the
+// trading chapter's one ladder list (#5242) — its rows are pinned in ladder-list.spec.tsx.
 const journey = (points: number): Journey => ({
   linked: true,
   points,
@@ -32,47 +32,6 @@ const journey = (points: number): Journey => ({
   celebrating: [],
   engagementCelebrating: [],
   pendingChecks: 0,
-});
-
-describe("MilestoneRow", () => {
-  it("shows the proof on an earned row, no ticket link", () => {
-    render(
-      <ul>
-        <MilestoneRow
-          milestone={{
-            id: "first-buy",
-            title: "Buy your first stock",
-            detail: "",
-            points: 25,
-            ticket: "/app/trade?play=101",
-            earned: { on: "2026-09-01", orderId: "ord-1" },
-          }}
-        />
-      </ul>,
-    );
-    expect(screen.getByText(/filled 2026-09-01 · order ord-1/)).toBeInTheDocument();
-    expect(screen.queryByText("open Trade →")).not.toBeInTheDocument();
-  });
-
-  it("offers the ticket on an unearned row", () => {
-    render(
-      <ul>
-        <MilestoneRow
-          milestone={{
-            id: "first-sell",
-            title: "Sell",
-            detail: "",
-            points: 25,
-            ticket: "/app/trade?play=102",
-          }}
-        />
-      </ul>,
-    );
-    expect(screen.getByRole("link", { name: "open Trade →" })).toHaveAttribute(
-      "href",
-      "/app/trade?play=102",
-    );
-  });
 });
 
 describe("Hud", () => {

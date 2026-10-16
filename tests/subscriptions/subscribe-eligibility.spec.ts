@@ -50,7 +50,7 @@ describe("a new subscription takes what its pair needs (criterion 9)", () => {
   });
 
   it("takes the wheel on CRWV, SAURON and the forced pick on a fresh bot", () => {
-    for (const playbookId of ["CRWV-WHEEL", "SAURON", "BETA-SCOUT", "HC-SAURON", "G1-GOOG"]) {
+    for (const playbookId of ["CRWV-WHEEL", "SAURON", "BETA-SCOUT", "G1-GOOG"]) {
       expect(
         newSubscriptionRefusal({ playbookId, subscriptions: [], asOfIso: TODAY }),
         playbookId,
@@ -209,8 +209,8 @@ describe("a ticker is taken only by a pair of the same kind on the bot", () => {
   });
 
   it("never takes a ticker from, or for, a basket", () => {
-    expect(takenBy(pair("HC-SAURON"), [pair("S1-NVDA")])).toBeUndefined();
-    expect(takenBy(pair("S1-NVDA"), [pair("HC-SAURON"), pair("SAURON")])).toBeUndefined();
+    expect(takenBy(pair("SAURON"), [pair("S1-NVDA")])).toBeUndefined();
+    expect(takenBy(pair("S1-NVDA"), [pair("SAURON")])).toBeUndefined();
   });
 });
 
@@ -219,8 +219,8 @@ describe("what the Store draws on a subscribed row", () => {
     expect(handOffNote(pair("S1-NVDA"), [pair("S1-NVDA"), pair("NVDA-CALL-SPREAD")])).toBe(
       "The call spread trades NVDA on this bot; the pre-print run-up yields it.",
     );
-    expect(handOffNote(pair("HC-SAURON"), [pair("NVDA-CALL-SPREAD")])).toBe(
-      "The call spread trades NVDA on this bot; hardcore Sauron's tactics yields it.",
+    expect(handOffNote(pair("SAURON"), [pair("NVDA-CALL-SPREAD")])).toBe(
+      "The call spread trades NVDA on this bot; Sauron's own rules yields it.",
     );
   });
 

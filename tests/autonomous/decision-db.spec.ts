@@ -105,7 +105,7 @@ describe("DecisionDb", () => {
       playbookVerdicts: [
         { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
         { playbookId: "S1-NVDA", mode: "aggressive", state: "no-window" },
-        { playbookId: "HC-SAURON", mode: "standard", state: "tactical" },
+        { playbookId: "SAURON", mode: "standard", state: "tactical" },
       ],
     });
 

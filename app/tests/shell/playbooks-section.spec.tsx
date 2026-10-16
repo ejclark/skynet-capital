@@ -77,7 +77,7 @@ const strategyOf = (c: ReturnType<typeof card>) => ({
     },
   ],
 });
-const fixtureCards = [card("S1-NVDA", 3), card("HC-SAURON", 0), card("E1-AMD", 1), card("G1-NONE")];
+const fixtureCards = [card("S1-NVDA", 3), card("SAURON", 0), card("E1-AMD", 1), card("G1-NONE")];
 
 const requested: (string | undefined)[] = [];
 
@@ -127,8 +127,12 @@ function mount(accountId?: string) {
   );
 }
 
+/** A strategy's card, not its row in the list above the cards (the list names it too, #5435). */
 const cardOf = (id: string) => {
-  const section = screen.getByText(`The ${id.toLowerCase()}`).closest(".pb-card");
+  const section = screen
+    .getAllByText(`The ${id.toLowerCase()}`)
+    .map((el) => el.closest(".pb-card"))
+    .find((el) => el !== null);
   if (!(section instanceof HTMLElement)) throw new Error(`no card ${id}`);
   return within(section);
 };
@@ -165,7 +169,7 @@ describe("PlaybooksSection metric blocks", () => {
     mount(undefined);
     await screen.findAllByRole("region", { name: /House — every account/ });
     expect(
-      cardOf("HC-SAURON").getByText(/No account has closed a trade on this playbook yet/),
+      cardOf("SAURON").getByText(/No account has closed a trade on this playbook yet/),
     ).toBeInTheDocument();
   });
 });
@@ -202,7 +206,7 @@ describe("PlaybooksSection subscriber count", () => {
     expect(await screen.findByText("3 active subscribers")).toBeInTheDocument();
     expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
     expect(cardOf("E1-AMD").getByText("1 active subscriber")).toBeInTheDocument();
-    expect(cardOf("HC-SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
+    expect(cardOf("SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
   });
 
   it("shows the same count when an account is selected", async () => {

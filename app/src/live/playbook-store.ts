@@ -15,6 +15,20 @@ export interface PlaybookTraitView {
   readonly claim: string;
 }
 
+/** A study's measured moves before its past reports — mirrors `PrintStretches` in
+ *  `src/playbooks/playbook.ts`. Trading days before the report; `from` > `to`, 0 = report day. */
+export interface PrintStretchesView {
+  readonly source: string;
+  readonly era: string;
+  readonly reports: number;
+  readonly stretches: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly meanPct: number;
+    readonly rose: number;
+  }[];
+}
+
 export interface PlaybookStoreCardView {
   readonly id: string;
   readonly symbol: string;
@@ -26,6 +40,8 @@ export interface PlaybookStoreCardView {
   /** The probe's date window and per-mode target exposure — absent for a tactical playbook. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** The study's move in each stretch before a report (#5432) — sent only with `window`. */
+  readonly stretches?: PrintStretchesView;
   readonly traits: readonly PlaybookTraitView[];
   readonly description: string;
   readonly enter: string;
@@ -119,6 +135,34 @@ export interface PairRowView {
   readonly handOff?: string;
   /** "not trading — the call spread owns NVDA" — the bots skip this held pair. */
   readonly notTrading?: string;
+  /** A ✓ that is not a clean ✓: below the house bar, or another pair's verdict borrowed. */
+  readonly qualifier?: "weakened" | "borrowed";
+  /** "Buy NVDA's run-up before its earnings report" — the call in plain words, no date (#5444). */
+  readonly plainCall?: string;
+  /** The study's record in plain words, with the count it rests on when it is one (#5444). */
+  readonly past?: PastRecordView;
+  /** R&D's call for this ticker's next earnings report — mirrors `PairForecast` (#5444). */
+  readonly forecast?: PairForecastView;
+  /** Enabled subscriptions to this pair across every account — a bare count (#3970). */
+  readonly subscribers?: number;
+}
+
+/** Mirrors `PastRecord` in `src/playbooks/pair-table.ts`. */
+export interface PastRecordView {
+  readonly line: string;
+  readonly up?: number;
+  readonly of?: number;
+  readonly era?: string;
+}
+
+/** Mirrors `PairForecast` in `src/server/pair-forecast.ts`: absent `call` = no call yet. */
+export interface PairForecastView {
+  readonly reportOn: string;
+  readonly dateSet: boolean;
+  readonly call?: string;
+  readonly confidence?: string;
+  readonly wrongIf?: string;
+  readonly href?: string;
 }
 
 /** One strategy and the pairs it runs on, ✓ first — mirrors `StrategyCardView`. */
@@ -128,6 +172,8 @@ export interface StrategyCardView {
   readonly name: string;
   readonly instrument: "shares" | "options";
   readonly summary: string;
+  /** The name in plain words, under it on the list and the card (#5445). */
+  readonly line?: string;
   readonly pairs: readonly PairRowView[];
   /** The account's allocation for this strategy, once its owner sets one (#4469 slice 3c). */
   readonly allocation?: StrategyAllocationView;

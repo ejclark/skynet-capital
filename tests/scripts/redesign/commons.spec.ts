@@ -39,7 +39,7 @@ describe("makeFinding", () => {
     const { problems } = makeFinding({ screen: "trade", kind: "idea", what: "x".repeat(141) }, IDS);
     expect(problems).toEqual([
       "--screen is one of: activity, trade-ticket, profile-events",
-      "--kind is one of: component, pattern, wording, data, request, ia-move",
+      "--kind is one of: component, pattern, wording, data, request, ia-move, process",
       "--what is 141 characters — keep it to 140",
     ]);
   });
@@ -54,6 +54,49 @@ describe("makeFinding", () => {
     expect(
       makeFinding({ screen: "activity", kind: "request", what: "One row" }, IDS).problems,
     ).toEqual(["a request needs --to (the owner it is asked of)"]);
+  });
+});
+
+// Eric, 2026-10-11, with nineteen sessions running: "is there an organic way I can add these types
+// of improvements to the process inline that carry forward to the current and other parallel
+// sessions?" A `process: …` line he types in any session lands in the commons as kind "process" —
+// his words, whole, from whichever session heard it — and the curator's digest reads them first.
+describe("a process line", () => {
+  const WORDS =
+    "i wish the process had thumbs up/down and 'mixed' icons to give granular feedback at the comment level for the iterations. That would greatly improve iteration times on my side";
+
+  it("needs only his words; the screen is optional, and his words are kept whole", () => {
+    const { finding, problems } = makeFinding({ kind: "process", what: WORDS }, IDS, NOW);
+    expect(problems).toEqual([]);
+    expect(finding).toEqual({ at: "2026-10-11T05:30:00Z", kind: "process", what: WORDS });
+    const from = makeFinding({ kind: "process", what: WORDS, screen: "activity" }, IDS);
+    expect(from.finding?.screen).toBe("activity");
+  });
+
+  it("still refuses a screen that isn't one, and a line with no words", () => {
+    expect(makeFinding({ kind: "process", what: "x", screen: "trade" }, IDS).problems).toEqual([
+      "--screen is one of: activity, trade-ticket, profile-events",
+    ]);
+    expect(makeFinding({ kind: "process", what: " " }, IDS).problems).toEqual([
+      "--what says the finding in one line",
+    ]);
+  });
+
+  it("formats on one line with no screen, and leads the digest, newest first", () => {
+    const older = { at: "2026-10-11T05:00:00Z", kind: "process", what: "one round per page" };
+    const newer = { at: "2026-10-11T06:00:00Z", screen: "activity", kind: "process", what: "pins" };
+    expect(formatFinding(older)).toBe("- 2026-10-11 05:00 · process: one round per page");
+    const md = digest([...F, older, newer]);
+    expect(md.indexOf("## Process changes — 2, newest first")).toBeLessThan(md.indexOf("| Kind |"));
+    expect(md).toContain(
+      [
+        "## Process changes — 2, newest first",
+        "- 2026-10-11 06:00 · activity · process: pins",
+        "- 2026-10-11 05:00 · process: one round per page",
+      ].join("\n"),
+    );
+    expect(md).toContain("# Commons digest — 6 findings from 4 screens");
+    expect(md).not.toContain("## process —");
   });
 });
 

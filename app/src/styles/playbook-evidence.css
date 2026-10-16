@@ -1,0 +1,191 @@
+/* R&D → Playbooks: a ticker's evidence as a call (#5444, `playbook-evidence.tsx`) — the sentence,
+   how sure on a blue → teal → amber scale with its words, this report, past reports — and the wide
+   layout that sets the list beside the open strategy (#5448). Tokens only. */
+
+.pbe {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pbe-call {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.pbe-h {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pbe [data-level="low"] {
+  color: var(--sure-low);
+}
+.pbe [data-level="medium"] {
+  color: var(--sure-mid);
+}
+.pbe [data-level="high"] {
+  color: var(--sure-high);
+}
+
+.pbe-scale {
+  position: relative;
+  height: 10px;
+  margin: 8px 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sure-low), var(--sure-mid), var(--sure-high));
+}
+
+/* the marker: a ring in the ground's colour with a text-colour edge, so it reads on every band */
+.pbe .pbe-marker {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--text);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translate(-50%, -50%);
+}
+.pbe .pbe-marker[data-level="low"] {
+  left: 16.67%;
+}
+.pbe .pbe-marker[data-level="medium"] {
+  left: 50%;
+}
+.pbe .pbe-marker[data-level="high"] {
+  left: 83.33%;
+}
+
+.pbe-words {
+  display: flex;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pbe-words span {
+  flex: 1;
+  text-align: center;
+}
+
+.pbe-words [data-on] {
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* this report first (dashed amber edge), past reports second (solid teal edge): line style and
+   heading carry the difference, the hue only repeats it */
+.pbe-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+}
+.pbe-now {
+  border-top: 2px dashed var(--sure-high);
+}
+.pbe-past {
+  border-top: 2px solid var(--sure-mid);
+}
+
+.pbe-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pbe-muted {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.pbe-link {
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pbe-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 0;
+}
+
+.pbe-dots span {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--text);
+  border-radius: 50%;
+}
+
+.pbe-dots span[data-up] {
+  background: var(--text);
+}
+
+.pb-initiators-fold {
+  margin-top: 20px;
+}
+
+.pb-initiators-fold > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+/* ── a wide screen adds room (#5448) ───────────────────────────────────────────────────────── */
+
+@container pbsec (min-width: 760px) {
+  .pb-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .pbl {
+    position: sticky;
+    top: 140px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+
+  .pbl-pic {
+    width: 56px;
+  }
+
+  /* the open strategy, alone beside the list; a row selects it rather than scrolling past others */
+  .pb-layout > .pb-deck {
+    display: block;
+  }
+  .pb-layout .pb-strategy:not([data-selected]) {
+    display: none;
+  }
+
+  .pbl-row[data-selected] {
+    outline: 2px solid var(--text);
+    outline-offset: -1px;
+  }
+}
+
+/* room for three: each ticker's evidence beside how it trades */
+@container pbsec (min-width: 1100px) {
+  .pb-strategy .pb-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+}

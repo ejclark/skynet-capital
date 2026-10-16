@@ -30,7 +30,8 @@ export function MilestoneRow({ earn }: { readonly earn: WireMilestoneItem }): Re
         {earn.who}
       </Link>
       <span className="wire-earn-title">{earn.title}</span>
-      <span className="wire-fdbk-meta num">{earn.meta}</span>
+      {/* Points only — the day divider states the date (#5257) — so an uncounted earn has none. */}
+      {earn.meta ? <span className="wire-fdbk-meta num">{earn.meta}</span> : null}
     </li>
   );
 }

@@ -35,63 +35,6 @@
   display: block;
   height: 8px;
 }
-.course {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--elev-base);
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.course-locked {
-  opacity: 0.7;
-}
-.course-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: var(--tile-py) 16px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  flex-wrap: wrap;
-}
-.course-head:hover {
-  background: var(--surface-2);
-}
-.course-badge {
-  font-weight: 700;
-  font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 8px;
-  background: var(--surface-2);
-}
-.course-names {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.course-title {
-  font-weight: 700;
-  font-size: 13.5px;
-}
-.course-sub {
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.course-prog {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--muted);
-}
 .course-bar {
   display: inline-block;
   width: 120px;
@@ -112,71 +55,187 @@
   );
   transition: width 0.4s var(--ease-spatial);
 }
-.course-lock {
-  font-size: 11px;
+/* The trading chapter's ladder, drawn once (#5242) — one teal-edged card, rungs under their levels.
+   Phone first: every row is one line at 390; the open row is the only one that wraps to a body. */
+.ladder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: var(--col-read);
+  padding: 12px 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  box-shadow: var(--elev-base);
+}
+.ll-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ll-eyebrow {
+  color: var(--accent);
+}
+.ll-count {
   color: var(--muted);
 }
-.ms-list {
+.ll-status {
+  margin: -6px 0 0;
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+.ll-status b {
+  color: var(--text);
+  font-weight: 600;
+}
+.ll-level-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ll-badge {
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 7px;
+  background: var(--surface-2);
+}
+.ll-level-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.ll-level-count {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ll-lock {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.ll-rungs {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
 }
-.ms-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: var(--row-py) 16px;
-  border-bottom: 1px solid var(--border);
-  animation: fold-open var(--dur-quick) var(--ease-spatial) both;
+.ll-level-locked .ll-rungs,
+.ll-locked {
+  opacity: 0.7;
 }
-.ms-row:last-child {
-  border-bottom: none;
-}
-.ms-mark {
-  color: var(--border);
-  font-weight: 700;
-}
-.ms-done .ms-mark {
-  color: var(--pos);
-}
-.ms-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.ms-title {
-  font-weight: 600;
+.ll-rung {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   font-size: 13px;
 }
-.ms-done .ms-title {
-  color: var(--muted);
+.ll-rung:last-child {
+  border-bottom: none;
 }
-.ms-detail {
+.ll-rung > details > summary,
+.ll-next {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: var(--row-py) 2px;
+}
+.ll-rung > details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.ll-rung > details > summary::-webkit-details-marker {
+  display: none;
+}
+/* The "one tap deep" tell — a chevron that turns when the row is open, never colour alone. */
+.ll-rung > details > summary::after {
+  content: "›";
+  color: var(--muted);
+  transition: transform var(--dur-quick) var(--ease-spatial);
+}
+.ll-rung > details[open] > summary::after {
+  transform: rotate(90deg);
+}
+.ll-rung > details > :not(summary) {
+  display: block;
+  padding: 0 2px 8px 46px;
+}
+.ll-mark {
+  width: 14px;
+  flex: none;
+  color: var(--muted);
+  font-weight: 700;
+}
+.ll-earned .ll-mark {
+  color: var(--pos);
+}
+.ll-code {
+  flex: none;
+  font-weight: 700;
+  font-size: 12px;
+}
+.ll-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.ll-proof {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--pos);
+}
+.ll-title + .ll-proof {
+  flex: none;
+}
+.ll-pts,
+.ll-opens {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ll-detail {
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.5;
 }
-.ms-proof {
-  font-size: 10px;
-  color: var(--pos);
+.ll-order {
+  font-size: 11px;
+  color: var(--muted);
 }
-.ms-go {
-  margin-left: auto;
+.ll-go {
+  flex: none;
   font-size: 11.5px;
-  color: var(--accent);
   font-weight: 500;
+  color: var(--accent);
   white-space: nowrap;
 }
-.ms-pts {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
+/* The open row: the next rung — title, explanation, then the Trade link and points under them. */
+.ll-next {
+  padding: 10px 2px;
 }
-.ms-go + .ms-pts {
-  margin-left: 0;
+.ll-next .ll-mark {
+  color: var(--accent);
 }
-.ms-row:not(:has(.ms-go)) .ms-pts {
-  margin-left: auto;
+.ll-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ll-rung > details .ll-go {
+  margin-top: 4px;
+}
+.ll-act {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 4px;
 }

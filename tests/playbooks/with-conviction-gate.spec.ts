@@ -1,6 +1,7 @@
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
 import type { PairLedger } from "../../src/playbooks/conviction-check.js";
+import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { withConvictionGate } from "../../src/playbooks/with-conviction-gate.js";
 import { aContext, anOptionIntent, aPortfolio, aSubscription } from "../support/builders.js";
 
@@ -172,5 +173,89 @@ describe("withConvictionGate", () => {
     });
     expect(gated.optionUnderlyings).toBe(optionUnderlyings);
     expect(gated.id).toBe("sauron");
+  });
+});
+
+/**
+ * #5482 slice 2 — a subscription may point at a conviction record. When the record steers its pair,
+ * the record's check date gates it; otherwise the subscription's own conviction does, as before.
+ */
+describe("withConvictionGate, with a conviction record", () => {
+  const record = (steers: readonly string[], checkOn = "2027-03-31"): Conviction => ({
+    id: "ai-dip-test",
+    owner: "Eric",
+    statedOn: "2026-10-16",
+    checkOn,
+    claims: [],
+    steers,
+  });
+  const lookup = (steers: readonly string[]) => (id: string) =>
+    id === "ai-dip-test" ? record(steers) : undefined;
+  const failing = { ledgerOf: () => ledger({ realizedPl: -50 }) };
+
+  it("checks a pointed subscription on the record's date, not its own", () => {
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", {
+      conviction,
+      convictionId: "ai-dip-test",
+    });
+    const gated = withConvictionGate(inner([put]), {
+      subscriptions: [pointed],
+      convictionOf: lookup(["CRWV-WHEEL"]),
+      ...failing,
+    });
+    // Its own date (01-29) has passed, the record's (03-31) has not: entries continue.
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
+    expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
+  });
+
+  it("gates a pointed subscription that states no conviction of its own", () => {
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    const persona = inner([put]);
+    const gated = withConvictionGate(persona, {
+      subscriptions: [pointed],
+      convictionOf: lookup(["CRWV-WHEEL"]),
+      ...failing,
+    });
+    expect(gated).not.toBe(persona);
+    expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
+  });
+
+  it("one record's date gates every pair it steers", () => {
+    const longCall = anOptionIntent({ playbookId: "CRWV-LONG-CALL" });
+    const gated = withConvictionGate(inner([put, longCall]), {
+      subscriptions: [
+        aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" }),
+        aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: "ai-dip-test" }),
+      ],
+      convictionOf: lookup(["CRWV-WHEEL", "CRWV-LONG-CALL"]),
+      ...failing,
+    });
+    expect(gated.decide(at("2027-03-30T15:00:00Z"), book())).toEqual([put, longCall]);
+    expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
+  });
+
+  it("falls back to the subscription's own date, said once, when the record does not steer the pair", () => {
+    const log = rstest.fn();
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", {
+      conviction,
+      convictionId: "ai-dip-test",
+    });
+    const gated = withConvictionGate(inner([put]), {
+      subscriptions: [pointed],
+      convictionOf: lookup(["CRWV-LONG-CALL"]),
+      log,
+      ...failing,
+    });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0]?.[0]).toContain("does not steer it");
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([]);
+  });
+
+  it("an unknown pointer with no conviction of its own gates nothing", () => {
+    const persona = inner([put]);
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "gone" });
+    expect(
+      withConvictionGate(persona, { subscriptions: [pointed], convictionOf: lookup([]) }),
+    ).toBe(persona);
   });
 });
