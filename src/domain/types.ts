@@ -353,6 +353,14 @@ export interface PlaybookSubscription {
    * fingerprints it, so the bots stop new entries when its check fails (`with-conviction-gate.ts`).
    */
   readonly conviction?: SubscriptionConviction;
+  /**
+   * A pointer at a conviction record (#5482 slice 2, `playbooks/conviction-record.ts`): one view
+   * that steers several pairs, checked on one date. When the record steers this subscription's
+   * pair, its check date replaces `conviction.checkOn` (`conviction-store.ts` `statedCheck`).
+   * Optional and additive: `conviction` keeps working exactly as before until a later slice
+   * removes it. Behavioral only on a `subscriptions.v3` snapshot, the first whose version names it.
+   */
+  readonly convictionId?: string;
 }
 
 /** An owner's conviction on one pair — why they hold it, and the market day it is checked. */

@@ -1,6 +1,7 @@
 import { type OptionBook, optionBook } from "../domain/option-book.js";
 import type { PlaybookSubscription, Portfolio, Quote } from "../domain/types.js";
 import { OPTION_MULTIPLIER } from "../trading/option-symbols.js";
+import { statedCheck } from "./conviction-store.js";
 import { findPair, type Pair, pairName } from "./pair-table.js";
 import { wheelStrategyTag } from "./wheel.js";
 
@@ -35,10 +36,11 @@ export interface PairLedger {
   readonly putsAssigned: number;
 }
 
-/** A pair the house did not mark ✓, whose owner has stated no conviction. Authored plays and ids
- *  the pair table does not know are not pairs, so they are never labelled. */
+/** A pair the house did not mark ✓, whose owner has stated no conviction — neither its own nor a
+ *  record's that steers it (#5482 slice 2). Authored plays and ids the pair table does not know are
+ *  not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {
-  if (!sub.enabled || sub.conviction) return false;
+  if (!sub.enabled || statedCheck(sub).checkOn) return false;
   const pair = findPair(sub.playbookId);
   return pair !== undefined && pair.evidence.status !== "researched";
 }
