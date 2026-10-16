@@ -246,7 +246,7 @@ const PAIRS: readonly Pair[] = [
     symbols: ["CRWV"],
     evidence: {
       status: "conviction",
-      call: "Runs as its owner's conviction against the study's stand-aside (#4642): one cash-secured put about a month out, covered calls once assigned.",
+      call: "Runs as its owner's conviction against the study's stand-aside (#4642): cash-secured puts 14 to 45 days out at about 0.15 delta, as many as the budget secures, then covered calls once assigned.",
       confidence: "medium",
       number: "implied volatility at the 6th percentile of what CRWV went on to move",
       verdictOn: "2026-10-02",

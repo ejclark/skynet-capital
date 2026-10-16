@@ -61,8 +61,11 @@ import type { Playbook } from "./playbook.js";
  */
 
 /** Days to expiry the wheel sells — about a month: enough premium to be worth the collateral,
- *  short enough to fit between a ticker's prints. */
+ *  short enough to fit between a ticker's prints. A ticker's setting may start its window as early
+ *  as `MIN_DTE_FLOOR` (CRWV, #5482: the month-out rule is a rule of thumb, and it left the wheel dark
+ *  for the whole six weeks before CRWV's print) — the print rule itself never moves. */
 const MIN_DTE = 30;
+const MIN_DTE_FLOOR = 14;
 const MAX_DTE = 45;
 
 /** One ticker's wheel. Its id, verdict, study and dated test come from the pair row, never from
@@ -79,6 +82,15 @@ export interface WheelSetting {
    *  which number the market has wrong and which way, said "against the study" plainly. A pair the
    *  house's research backs has no bet to state — its Why is the data alone. */
   readonly bet?: string;
+  /** The shortest expiry this ticker sells, in days: `MIN_DTE_FLOOR`–`MIN_DTE`. Absent = `MIN_DTE`. */
+  readonly minDte?: number;
+  /** The |delta| this ticker's puts aim at in every mode, when its study sets a floor the mode's
+   *  target would sell above (CRWV: the cycle detector's floor band, #5487). Never above the mode's
+   *  own target — a setting only narrows. */
+  readonly putDelta?: number;
+  /** Cash-secured puts asked for per sale, by mode; the guards cut it to whole contracts the budget
+   *  and cash secure. Absent = one, the wheel's original rule. Calls stay one per cycle. */
+  readonly putContracts?: Readonly<Record<PlaybookMode, number>>;
 }
 
 /** The strategy tag a wheel order carries on its decision record — `crwv-wheel-put`. One definition,
@@ -93,6 +105,9 @@ interface Wheel {
   readonly basis: string;
   /** The falsifier, stated on every order so the record can grade the play by it. */
   readonly retireRule: string;
+  readonly minDte: number;
+  readonly putDelta?: number;
+  readonly putContracts?: Readonly<Record<PlaybookMode, number>>;
 }
 
 /** The wheel's retire test (criterion 12) on the pair's dated check. */
@@ -160,12 +175,13 @@ function saleWindow(
   symbol: string,
   asOfIso: string,
   calendar: readonly EarningsPrint[],
+  minDte: number = MIN_DTE,
 ): PrintBlackout | undefined {
   const blackout = optionPrintBlackout(symbol, asOfIso, calendar);
   if (!blackout) return undefined;
   const today = marketDayKey(asOfIso);
   if (today >= blackout.start) return undefined;
-  return daysBetween(today, sessionsBefore(blackout.start, 1)) >= MIN_DTE ? blackout : undefined;
+  return daysBetween(today, sessionsBefore(blackout.start, 1)) >= minDte ? blackout : undefined;
 }
 
 interface WheelSale {
@@ -182,13 +198,14 @@ function nextSale(
   portfolio: Portfolio,
   listed: readonly string[],
   calendar: readonly EarningsPrint[],
+  minDte: number = MIN_DTE,
 ): WheelSale | undefined {
   const phase = wheelPhase(optionBook(portfolio, symbol));
   if (phase !== "flat" && phase !== "assigned") return undefined;
-  const blackout = saleWindow(symbol, asOfIso, calendar);
+  const blackout = saleWindow(symbol, asOfIso, calendar, minDte);
   if (!blackout) return undefined;
   const expiration = eligibleExpirations(listed, marketDayKey(asOfIso), {
-    minDte: MIN_DTE,
+    minDte,
     maxDte: MAX_DTE,
     before: blackout.start,
   }).at(-1);
@@ -215,12 +232,16 @@ function saleText(
     const collateral = (strike * OPTION_MULTIPLIER).toLocaleString("en-US");
     return {
       reason:
-        `Selling one cash-secured ${name} for about ${paid}: $${collateral} stays ` +
-        `set aside in case ${symbol} finishes below ${k} and the shares are put to the bot. ` +
+        (wheel.putContracts
+          ? `Selling cash-secured ${name} puts for about ${paid} each: $${collateral} a contract stays ` +
+            `set aside in case ${symbol} finishes below ${k} and the shares are put to the bot, as many ` +
+            `contracts as the budget secures. `
+          : `Selling one cash-secured ${name} for about ${paid}: $${collateral} stays ` +
+            `set aside in case ${symbol} finishes below ${k} and the shares are put to the bot. `) +
         wheel.basis,
       expectation:
         `${symbol} stays above ${k} to ${sale.expiration}: the put expires and the premium is kept. Below ` +
-        `it, the bot buys 100 shares at ${k} and sells covered calls on them next.`,
+        `it, the bot buys 100 shares a contract at ${k} and sells covered calls on them next.`,
       forecast: {
         direction: "up",
         invalidator: `${symbol} settles below ${k} on ${sale.expiration} — the wheel buys 100 shares at ${k}; ${retireRule}`,
@@ -252,11 +273,15 @@ function wheelIntents(
 ): OrderIntent[] {
   const { symbol } = wheel;
   const listed = context.options?.listed[symbol] ?? [];
-  const sale = nextSale(symbol, context.asOf, portfolio, listed, calendar);
+  const sale = nextSale(symbol, context.asOf, portfolio, listed, calendar, wheel.minDte);
   const spot = context.quotes[symbol]?.last;
   if (!(sale && spot !== undefined && spot > 0)) return [];
   const { shareCost } = optionBook(portfolio, symbol);
-  const target = WHEEL_DELTAS[mode][sale.type];
+  const modeTarget = WHEEL_DELTAS[mode][sale.type];
+  const target =
+    sale.type === "put" && wheel.putDelta !== undefined
+      ? Math.min(wheel.putDelta, modeTarget)
+      : modeTarget;
   // A call is struck at or above what the shares cost, so being called away never locks in a loss;
   // the picker keeps it above spot (out of the money) too.
   const bounds = {
@@ -281,6 +306,7 @@ function wheelIntents(
     underlying: symbol,
     structure: sale.type === "put" ? "cash-secured-put" : "covered-call",
     legs: [{ occSymbol: pick.quote.occSymbol, side: "sell" }],
+    ...(sale.type === "put" && wheel.putContracts ? { quantity: wheel.putContracts[mode] } : {}),
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     assignment: "intended",
@@ -325,6 +351,9 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     symbol,
     basis: verdict.against ? `${setting.dataShows} ${setting.bet}` : setting.dataShows,
     retireRule: `the play retires if its ${retireTest(verdict.date)}`,
+    minDte: Math.min(MIN_DTE, Math.max(MIN_DTE_FLOOR, setting.minDte ?? MIN_DTE)),
+    ...(setting.putDelta !== undefined ? { putDelta: setting.putDelta } : {}),
+    ...(setting.putContracts ? { putContracts: setting.putContracts } : {}),
   };
   return {
     id: pair.id,
@@ -337,14 +366,21 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     options: { underlyings: [symbol], holdsShortToExpiry: ["put", "call"], requiredLevel: 1 },
     // The verdict is the sale window alone; what the wheel sells inside it depends on the book.
     desiredState: (asOfIso, calendar) =>
-      saleWindow(symbol, asOfIso, calendar) ? "long" : "no-window",
+      saleWindow(symbol, asOfIso, calendar, spec.minDte) ? "long" : "no-window",
     optionDemand(
       asOfIso: string,
       portfolio: Portfolio,
       listed: ListedExpirations,
       calendar: readonly EarningsPrint[],
     ): OptionDemand {
-      const sale = nextSale(symbol, asOfIso, portfolio, listed[symbol] ?? [], calendar);
+      const sale = nextSale(
+        symbol,
+        asOfIso,
+        portfolio,
+        listed[symbol] ?? [],
+        calendar,
+        spec.minDte,
+      );
       return sale
         ? {
             chains: [{ underlying: symbol, expiration: sale.expiration, type: sale.type }],
