@@ -37,9 +37,14 @@ export interface PairRowEntry extends PairEvidence {
   readonly stale: boolean;
   /** `study` as its route on the research shelf — this pair's own study, one verdict per pair. */
   readonly studyHref?: string;
+  /** What the strategy does on this one ticker, in the member's words ("Buy NVDA's run-up before
+   *  its earnings report") — the strategy's `act` on the pair's ticker; the app adds the until-date.
+   *  Absent on a basket or a pick on the day: no one ticker to say it of (#5444). */
+  readonly plainCall?: string;
 }
 
-export interface StrategyCardEntry extends Pick<Strategy, "name" | "instrument" | "summary"> {
+export interface StrategyCardEntry
+  extends Pick<Strategy, "name" | "instrument" | "summary" | "line"> {
   readonly strategy: StrategyId;
   readonly screen?: string;
   readonly noScreen?: string;
@@ -54,6 +59,9 @@ const rank = (pair: Pair): number => EVIDENCE_ORDER.indexOf(pair.evidence.status
 function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
   const stale = isStale(pair.evidence, asOfIso);
   const href = pair.evidence.study ? researchHref(pair.evidence.study) : undefined;
+  const { act } = STRATEGIES[pair.strategy];
+  const [only] = pair.symbols;
+  const plainCall = act && only && pair.symbols.length === 1 ? act.replaceAll("<SYM>", only) : "";
   return {
     ...pair.evidence,
     id: pair.id,
@@ -63,6 +71,7 @@ function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
       : statusLabel(pair.evidence),
     stale,
     ...(href ? { studyHref: href } : {}),
+    ...(plainCall ? { plainCall } : {}),
   };
 }
 
@@ -74,12 +83,13 @@ export function strategyCatalog(asOfIso: string): readonly StrategyCardEntry[] {
     byStrategy.set(pair.strategy, [...(byStrategy.get(pair.strategy) ?? []), pair]);
   }
   return [...byStrategy].map(([id, pairs]) => {
-    const { name, instrument, summary, screen, noScreen } = STRATEGIES[id];
+    const { name, instrument, summary, line, screen, noScreen } = STRATEGIES[id];
     return {
       strategy: id,
       name,
       instrument,
       summary,
+      line,
       ...(screen ? { screen } : {}),
       ...(noScreen ? { noScreen } : {}),
       pairs: [...pairs].sort((a, b) => rank(a) - rank(b)).map((pair) => rowOf(pair, asOfIso)),

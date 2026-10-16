@@ -276,7 +276,7 @@ function StretchBars({
     const soldBy = plan.sellAway > 0 && s.from <= plan.sellAway;
     const lines = [
       movePct(s.meanPct),
-      `${s.rose} of ${stretches.reports}${down ? " rose" : ""}`,
+      `${s.rose} of ${stretches.reports}${down ? " went up" : ""}`,
       ...(soldBy ? ["sold by then"] : []),
     ];
     return { s, h, down, lines };
@@ -296,7 +296,7 @@ function StretchBars({
   const said = bars
     .map(
       ({ s }) =>
-        `${s.from} to ${s.to === 0 ? "the report" : `${s.to} trading days before`}, ${movePct(s.meanPct)}, rose in ${s.rose} of ${stretches.reports}`,
+        `${s.from} to ${s.to === 0 ? "the report" : `${s.to} trading days before`}, ${movePct(s.meanPct)}, went up in ${s.rose} of ${stretches.reports}`,
     )
     .join("; ");
   return (

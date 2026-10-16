@@ -131,7 +131,7 @@ export function WheelLoop({
         <text className="pbr-edge-label" x={170} y={158} textAnchor="middle">
           called away: back to 1
         </text>
-        {stop(1, "Sell a put", "about a month out")}
+        {stop(1, "Sell a put", "2 to 6 weeks out")}
         {stop(2, `Own 100 ${symbol}`, "if assigned")}
         {stop(3, "Sell a call", "on those shares")}
       </svg>
