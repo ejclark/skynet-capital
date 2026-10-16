@@ -50,11 +50,14 @@ import {
 /** Every option open is exactly one contract (or one spread) — sized by the Store allocation, never
  *  by the share position cap, which cannot secure even one put. */
 const MAX_OPTION_OPEN_UNITS = 1;
-/** The one exception: a bought call, whose most it can lose is the premium it pays, may open up to
- *  this many contracts at once — cut to what the budget and the cash can pay for (#5484 follow-up:
- *  Eric, 2026-10-16, allocating $25k–$100k, "weight/funnel more capital towards those
- *  opportunities"). One at a time would take hours to put a budget that size to work. */
-const MAX_LONG_CALL_UNITS = 20;
+/** The exceptions: a bought call (its most it can lose is the premium it pays) and a cash-secured
+ *  put (fully secured by cash set aside) may open up to this many contracts at once — cut to whole
+ *  contracts the budget and the cash can pay for or secure (Eric, 2026-10-16, allocating $25k–$100k:
+ *  "weight/funnel more capital towards those opportunities"; "cash secured puts are a safer bet to
+ *  be aggressive on"). One at a time would take hours to put a budget that size to work. A covered
+ *  call stays one, since the shares cover it lot by lot, and a spread stays one. */
+const MAX_MULTI_UNITS = 20;
+const MULTI_UNIT_STRUCTURES: ReadonlySet<string> = new Set(["long-call", "cash-secured-put"]);
 
 /** The slice of `RiskConfig` the option rules read — declared here so this module never imports the
  *  file that imports it. */
@@ -224,10 +227,11 @@ function coverProblem(
   return { cash };
 }
 
-/** How many units this open may take: one, except a bought call, which takes what it asked for up
- *  to `MAX_LONG_CALL_UNITS`, cut to whole contracts its budget room and the unspent cash can pay
- *  for. Never below one — a single unit that cannot be paid for is refused by the rules below with
- *  the reason a one-contract open would get. */
+/** How many units this open may take: one, except a `MULTI_UNIT_STRUCTURES` open, which takes what
+ *  it asked for up to `MAX_MULTI_UNITS`, cut to whole contracts its budget room and the unspent cash
+ *  can pay for (a bought call's premium) or secure (a put's collateral, less its premium). Never
+ *  below one — a single unit that cannot be paid for is refused by the rules below with the reason
+ *  a one-contract open would get. */
 function openUnits(
   intent: OrderIntent,
   option: OptionOrderIntent,
@@ -236,11 +240,14 @@ function openUnits(
   capital: number | undefined,
   pnlLessCommitted: number,
 ): number {
-  if (option.structure !== "long-call") return MAX_OPTION_OPEN_UNITS;
-  const perUnit = premiumOut(option);
+  if (!MULTI_UNIT_STRUCTURES.has(option.structure)) return MAX_OPTION_OPEN_UNITS;
+  const perUnit = worsens(portfolio, ledger, intent.symbol, {
+    legs: orderLegs(option, 1),
+    pays: premiumOut(option),
+  }).newCash;
   if (!(perUnit > 0) || capital === undefined) return MAX_OPTION_OPEN_UNITS;
   const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger));
-  const asked = Math.min(Math.floor(intent.quantity), MAX_LONG_CALL_UNITS);
+  const asked = Math.min(Math.floor(intent.quantity), MAX_MULTI_UNITS);
   return Math.max(MAX_OPTION_OPEN_UNITS, Math.min(asked, Math.floor(room / perUnit)));
 }
 

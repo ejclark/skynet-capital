@@ -126,7 +126,9 @@ function botRecords(bot) {
     const orders = (pass.placed ?? []).map((o) => placedOrder(o, at, bot.id, bot.id));
     if (pass.wheelSale) {
       const intent = wheelIntent(pass.wheelSale, at);
-      const order = { intent, orderId: pass.wheelSale.orderId, quantity: intent.quantity ?? 1 };
+      // The playbook asks for as many contracts as its budget secures; the world records what filled.
+      const quantity = pass.wheelSale.filled ?? intent.quantity ?? 1;
+      const order = { intent, orderId: pass.wheelSale.orderId, quantity };
       const placed = placedOrder(order, at, bot.id, bot.id);
       saleFill = placed.fill;
       orders.push(placed);

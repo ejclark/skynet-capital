@@ -230,13 +230,15 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "new check date. A put still open runs to expiry, and assigned shares keep selling covered " +
       "calls until they are called away.",
     enter:
-      "Sells one put at the strike nearest 0.20 delta — roughly a 1-in-5 chance the market " +
-      "prices for finishing in the money (0.15 conservative, 0.25 aggressive) — on the latest " +
-      "expiry 30 to 45 days out that ends before CRWV's next earnings blackout. Once assigned, " +
+      "Sells puts at the strike nearest 0.15 delta in every mode — roughly a 1-in-7 chance the " +
+      "market prices for finishing in the money, about where our cycle study puts CRWV's floor — " +
+      "on the latest expiry 14 to 45 days out that ends before CRWV's next earnings blackout: as " +
+      "many contracts as your capital secures, up to 3 / 6 / 10 (conservative / standard / " +
+      "aggressive), in one order. Once assigned, " +
       "it sells one call at or above both the shares' cost and today's price, nearest 0.25 delta " +
       "(0.20 / 0.30). Either strike must sit within 0.05 delta of that aim and never above 0.30 " +
       "— when CRWV's quotes are too wide for any strike that close to trade, it sells nothing " +
-      "that cycle. One contract at a time, inside the capital you allocate.",
+      "that cycle. Covered calls go one lot at a time, a lot every cycle.",
     exitTakeProfit:
       "No early take-profit and no roll: each put or call is held to expiry. Expiring worthless " +
       "keeps the whole premium; a call that is exercised sells the shares at its strike, at or " +
@@ -248,7 +250,7 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "never sold out from under it.",
     hold:
       "While a put or call is open it waits for expiry. From CRWV's earnings blackout through the " +
-      "session after the print — or when no 30-to-45-day expiry ends before the next one — it " +
+      "session after the print — or when no 14-to-45-day expiry ends before the next one — it " +
       "sells nothing.",
   },
   "CRWV-LONG-CALL": {
