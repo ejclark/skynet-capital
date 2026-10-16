@@ -1,0 +1,11 @@
+{
+  "id": "uk-gilt-auction-long-2026-11-10",
+  "kind": "rates",
+  "title": "UK DMO long conventional gilt auction — the first long-end gilt supply test after the 28 Oct Budget",
+  "date": "2026-11-10",
+  "status": "estimate",
+  "source": "EST: dmo.gov.uk/media/qpeksrc0/pr280826.pdf — UK Debt Management Office press notice of 28 August 2026 (calendar of gilt auctions, October to December 2026), fetched direct 2026-10-16 (HTTP 200, text layer decoded locally): 'Tuesday 10 November | 10.00am', size and details announced Tuesday 3 November; the 17 August consultation agenda (dmo.gov.uk/media/5kek12uu/sa170826.pdf) types it 'A long conventional gilt' and the Q3 plan is one long auction. The gilt itself is NOT named in either notice and is not asserted here. Filed estimate: this lane may not self-confirm an event it discovered in-sweep, and the calendar's confirmed-prefix list has no slot for the DMO",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY uk-gilt-auction-short-2026-10-27 AT ITS 2026-10-16 INITIAL RESEARCH. The only long-conventional auction in the October-December quarter, and the first after the Budget (28 Oct) and the BoE decision (5 Nov): the long end is where the fiscal-credibility question lives, and the DMO's own 2026-10-13 tender of the 4% Treasury Gilt 2063 (£500m, 3.98x, tail 0.2bp, lowest accepted yield 5.804%) is the pre-Budget baseline. No position is or will be sized to this: symbols [], low impact, estimate-dated."
+}
