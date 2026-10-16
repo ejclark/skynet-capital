@@ -93,7 +93,7 @@ describe("CRWV-LONG-CALL — registered as a conviction pair", () => {
 });
 
 describe("CRWV-LONG-CALL — buying", () => {
-  it("buys one call on the latest expiry 120–200 days out, nearest the mode's delta", () => {
+  it("asks for a third of its cap on the latest expiry 120–200 days out, nearest the mode's delta", () => {
     const [intent, ...rest] = decide(market());
     expect(rest).toEqual([]);
     expect(intent?.option).toMatchObject({
@@ -102,7 +102,7 @@ describe("CRWV-LONG-CALL — buying", () => {
       legs: [{ occSymbol: occ(60), side: "buy" }],
     });
     expect(intent?.side).toBe("buy");
-    expect(intent?.quantity).toBe(1);
+    expect(intent?.quantity).toBe(10);
     expect(intent?.reason).toMatch(/held through earnings/);
     expect(optionOrderProblems(intent as OrderIntent)).toEqual([]);
   });
@@ -235,11 +235,16 @@ describe("a long call through the real guards", () => {
     expect(intent?.option && requiredOptionLevel(intent.option)).toBe(2);
   });
 
-  it("approves a call whose expiry spans CRWV's November print", () => {
+  it("approves a call whose expiry spans CRWV's November print, the whole tranche the budget pays", () => {
     const result = trade(2);
     expect(result.approved).toEqual([
-      expect.objectContaining({ playbookId: "CRWV-LONG-CALL", quantity: 1 }),
+      expect.objectContaining({ playbookId: "CRWV-LONG-CALL", quantity: 10 }),
     ]);
+  });
+
+  it("cuts the tranche to the contracts the budget can pay for", () => {
+    // About $1,550 a contract: $5,000 pays for 3.
+    expect(trade(2, 5_000).approved).toEqual([expect.objectContaining({ quantity: 3 })]);
   });
 
   it("refuses it on an account approved only for level 1", () => {
