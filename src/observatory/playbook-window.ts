@@ -134,6 +134,12 @@ export function readPlaybookWindow(
         "On, reading live price and sentiment every pass — there is no date window to wait for.",
     };
   }
+  if (state === "observing") {
+    return {
+      nextEntry: null,
+      reason: `On, observe-only — it records what it would buy and sell in ${names} and places nothing.`,
+    };
+  }
   if (state === "long") {
     return { nextEntry: null, reason: `On, and its window is open — it wants to hold ${names}.` };
   }

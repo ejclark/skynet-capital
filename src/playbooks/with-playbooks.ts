@@ -86,7 +86,10 @@ function optionSurface(
  */
 export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook[]): Set<string> {
   return new Set(
-    enabled.filter((e) => e.playbook.rulesOf !== baseId).flatMap((e) => e.playbook.symbols),
+    enabled
+      // A dark playbook (`observeOnly`, #5489) holds nothing, so it takes no name from anyone.
+      .filter((e) => e.playbook.rulesOf !== baseId && !e.playbook.observeOnly)
+      .flatMap((e) => e.playbook.symbols),
   );
 }
 

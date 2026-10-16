@@ -252,6 +252,47 @@ describe("SubscriptionStore", () => {
     });
   });
 
+  it("keeps a play target through a re-tune, a pause and a re-subscribe (#5483 slice 3)", async () => {
+    const playTarget = {
+      weight: 0.7,
+      lean: { min: 0.6, max: 0.8 },
+      band: { signal: 0.05, gate: 0.1 },
+    };
+    await writeFile(
+      path,
+      JSON.stringify({
+        "acct-1": [
+          {
+            playbookId: "CRWV-WHEEL",
+            mode: "standard",
+            capitalAllocated: 100_000,
+            enabled: true,
+            createdAt: AT.toISOString(),
+            updatedAt: AT.toISOString(),
+            playTarget,
+          },
+        ],
+      }),
+    );
+    const store = new SubscriptionStore(path);
+    store.configure(
+      "acct-1",
+      "CRWV-WHEEL",
+      { mode: "aggressive", capitalAllocated: 50_000 },
+      LATER,
+    );
+    expect(store.load()["acct-1"]?.[0]?.playTarget).toEqual(playTarget);
+    store.setEnabled("acct-1", "CRWV-WHEEL", false, LATER);
+    expect(store.load()["acct-1"]?.[0]?.playTarget).toEqual(playTarget);
+    store.subscribe(
+      "acct-1",
+      { playbookId: "CRWV-WHEEL", mode: "standard", capitalAllocated: 80_000, enabled: true },
+      LATER,
+    );
+    expect(store.load()["acct-1"]?.[0]).toMatchObject({ capitalAllocated: 80_000, playTarget });
+    expect(JSON.parse(await readFile(path, "utf8"))["acct-1"][0].playTarget).toEqual(playTarget);
+  });
+
   it("writes durable JSON a fresh store can read back", async () => {
     new SubscriptionStore(path).subscribe(
       "acct-1",

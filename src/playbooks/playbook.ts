@@ -68,6 +68,7 @@ import type {
   Portfolio,
 } from "../domain/types.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
+import type { PlayTargetBounds } from "./play-target.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
@@ -200,6 +201,10 @@ export interface Playbook {
    *  `mixed-signals.ts`). OBSERVE-ONLY: a reading is logged, never read by `playbookIntents`.
    *  Absent (every playbook today) means the detector never looks at this playbook. */
   readonly mixedSignals?: MixedSignalsDial;
+  /** Optional — the widest target weight, lean range and band a subscription to this playbook may
+   *  set (#5483 criterion 13, `play-target.ts`). A subscription's target may only NARROW these.
+   *  Absent means the house bounds, the ranges the rebalancing-band backtest covered. */
+  readonly targetBounds?: PlayTargetBounds;
   /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
    *  "unknown", never as a default. */
   readonly keyedOn?: PlaybookKey;
@@ -229,6 +234,15 @@ export interface Playbook {
     calendar: readonly EarningsPrint[],
     mode: PlaybookMode,
   ): OptionDemand;
+  /**
+   * Optional — DARK (#5489 slice 2): the playbook records its verdict ("observing") every pass and
+   * places nothing. `playbookIntents` and `exitSafetyIntents` contribute no order for it whatever
+   * its `decide` or `desiredState` would answer, and it takes no name from the base persona
+   * (`managedSymbols`), so subscribing a bot to it changes nothing that bot does. What it would have
+   * done is its own module's reading (`dip-bounce.ts`), in a type that is not an order. Going live
+   * is a PR that deletes this field, after the observed days its plan asks for.
+   */
+  readonly observeOnly?: true;
   /**
    * Optional — the widened decision surface (#3208). PURE: `context.asOf` is the only clock. When
    * present, `playbookIntents` calls this INSTEAD of `desiredState`, keeps only intents on
@@ -324,7 +338,7 @@ export function exitSafetyIntents(
   const trips: ExitSafetyTrip[] = [];
   for (const { playbook, mode } of enabled) {
     const dial = playbook.exitSafety?.[mode];
-    if (!dial) {
+    if (!dial || playbook.observeOnly) {
       continue;
     }
     for (const symbol of playbook.symbols) {
@@ -452,9 +466,11 @@ export function playbookVerdicts(
   return enabled.map(({ playbook, mode }) => ({
     playbookId: playbook.id,
     mode,
-    state: readsLiveSignals(playbook)
-      ? "tactical"
-      : playbook.desiredState(asOfIso, calendar, events),
+    state: playbook.observeOnly
+      ? "observing"
+      : readsLiveSignals(playbook)
+        ? "tactical"
+        : playbook.desiredState(asOfIso, calendar, events),
   }));
 }
 
@@ -496,6 +512,8 @@ function entryIntents(
   events: readonly PlaybookEvent[],
   trippedSymbols: ReadonlySet<string>,
 ): OrderIntent[] {
+  // Dark: it records a verdict and places nothing, whatever its own rules would answer.
+  if (playbook.observeOnly) return [];
   if (playbook.decide) {
     return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
   }

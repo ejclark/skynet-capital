@@ -44,6 +44,7 @@ import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
+import { withTargetObservation } from "../playbooks/with-target-observation.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import {
@@ -385,19 +386,29 @@ export function tradingRoster(
     persona: withOptionSafety(
       // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
       // hygiene around it, so the gate sits between the two.
-      withConvictionGate(
-        withPlaybooks(
-          withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-          roster.enabled,
-          UPCOMING_PRINTS,
-          [],
-          console,
-          (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+      withTargetObservation(
+        withConvictionGate(
+          withPlaybooks(
+            withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+            roster.enabled,
+            UPCOMING_PRINTS,
+            [],
+            console,
+            (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+          ),
+          {
+            subscriptions: roster.subscriptions,
+            ...(ledgerOf ? { ledgerOf } : {}),
+            log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+          },
         ),
+        // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+        // intents come back untouched. Hygiene still wraps it all.
         {
+          accountId: roster.bot.persona.id,
           subscriptions: roster.subscriptions,
-          ...(ledgerOf ? { ledgerOf } : {}),
-          log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+          enabled: roster.enabled,
+          log: console,
         },
       ),
       roster.enabled,

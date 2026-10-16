@@ -21,6 +21,8 @@ describe("playbookStoreCatalog", () => {
       "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
+      "MU-DIP-BOUNCE",
+      "NBIS-DIP-BOUNCE",
       "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "SAURON",

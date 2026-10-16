@@ -19,6 +19,7 @@ export interface TimingTally {
 
 export function cashGrowth(dates: readonly string[], yields: readonly (number | null)[]): number[];
 export function basketIndex(memberCloses: readonly (readonly number[])[]): number[];
+export function activeShare(active: number, holding: number): number;
 export function simulate(
   closes: readonly number[],
   growth: readonly number[],
