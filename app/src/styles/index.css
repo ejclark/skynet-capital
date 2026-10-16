@@ -27,6 +27,7 @@
 @import "./council-line.css";
 @import "./decision-card.css";
 @import "./position-guidance.css";
+@import "./position-picture.css";
 @import "./position-playbook-tag.css";
 @import "./decisions.css";
 @import "./desk.css";
@@ -73,6 +74,13 @@
 @import "./sauron-card.css";
 @import "./tower-column.css";
 @import "./playbook-store.css";
+/* after playbook-store.css: the list, the + panel, the evidence and the wide layout build on its
+   cards; the wide layout (in playbook-evidence.css) comes last so it overrides the phone rules. */
+@import "./playbook-list.css";
+@import "./playbook-subscribe-bots.css";
+@import "./playbook-evidence.css";
+/* after playbook-store.css: the Balance section's closed-trades block reuses its `.pb-metrics*`. */
+@import "./balance.css";
 @import "./positions-lens.css";
 @import "./profile.css";
 @import "./pulse.css";

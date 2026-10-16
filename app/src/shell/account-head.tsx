@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { fetchSettings, ownsAccount } from "../live/settings";
 import { EnvPill, KindChip } from "../ui";
+import { BookHealthLine } from "./book-health-line";
 import { PageFrame } from "./frame";
 import { PlaybooksHeadLine } from "./heartbeat";
 import { publishClearance } from "./landing";
@@ -21,7 +22,12 @@ import { SauronCard } from "./sauron-card";
  * "Decisions" folded into "Heartbeat" (#3687), and Heartbeat into "Playbooks" (#5073): the item is
  * named for what the Profile page calls the section, and so is its address, `/u/:id/playbooks`
  * (#5073's IA call; a saved `/u/:id/decisions` link redirects there with the check log open). The
- * bot's head line ("● Running · 7 playbooks ›") and every fill's "the whole pass" link there too. The old rail's way back to the Leaderboard stays
+ * bot's head line ("● Running · 7 playbooks ›") and every fill's "the whole pass" link there too.
+ * Beside it, on any account, the book's health line (#5493 slice 2, `book-health-line.tsx`):
+ * "■ 1 gate · ◆ 2 signals" or "● Balanced"; on your own account its counts open that account's
+ * Balance section on your Accounts page (slice 3) — bot or human, since idle cash and a name over
+ * its share are findings on any book. Anyone else's reads the counts as plain words (a finding
+ * names a playbook, and which playbooks an account runs is its owner's, #885). The old rail's way back to the Leaderboard stays
  * gone — the topbar's Leaderboard tab is that.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
@@ -63,6 +69,22 @@ export function AccountHead({
             )}
           />
         ) : null}
+        <BookHealthLine
+          deskId={id}
+          renderLink={
+            isOwn
+              ? (label) => (
+                  <Link
+                    to="/accounts"
+                    search={{ account: id, section: "balance" }}
+                    className="hb-line-link"
+                  >
+                    {label}
+                  </Link>
+                )
+              : undefined
+          }
+        />
         {isOwn ? (
           <Link to="/accounts" search={{ account: id }} className="acct-head-own">
             Open in your Accounts

@@ -36,6 +36,23 @@
   border-radius: 3px;
 }
 
+/* The book's health line (#5493 slice 2, `shell/book-health-line.tsx`) — "■ 1 gate · ◆ 2 signals ›"
+   or "● Balanced", beside the head line above and dressed like it: the level rides its glyph and
+   its word, never hue; the counts are the link where there is a detail to open. */
+.bh-line {
+  margin: 6px 0 0;
+  font-size: var(--text-base);
+  line-height: 1.35;
+  color: var(--text);
+  white-space: nowrap;
+}
+.bh-line b {
+  font-weight: 600;
+}
+.bh-line[data-level="balanced"] b {
+  font-weight: 500;
+}
+
 .hb-card {
   border: 1px solid var(--border);
   border-radius: 14px;

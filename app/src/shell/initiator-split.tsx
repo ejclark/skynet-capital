@@ -4,8 +4,10 @@ import { EnvPill } from "../ui";
 import { signedMoney } from "./option-preview";
 
 /**
- * WHO STARTED THE BOTS' CLOSED TRADES (#4450 slice 4) — three rows above the playbook deck: a
- * playbook's own signal, the forced daily pick, and a bot's own rules. Eric's brief (2026-10-02)
+ * WHO STARTED THE BOTS' CLOSED TRADES (#4450 slice 4) — three rows: a playbook's own signal, the
+ * forced daily pick, and a bot's own rules. It sat above the R&D playbook deck, then folded at its
+ * foot, and now closes the book's Balance section (#5493 slice 3, #5451 P3: a metrics view, not
+ * part of the catalog) — `balance-section.tsx` is its one home. Eric's brief (2026-10-02)
  * was that nearly every automatic trade looked forced; this is the number that says whether that
  * is still true, so the playbook row always renders, zero included, and comes first.
  *

@@ -96,19 +96,20 @@ function pickAside() {
 }
 
 describe("subscribing to a pair the study does not back", () => {
-  it("offers the ✗ row, and will not save without a reason and a check day", () => {
+  it("offers the ✗ row with a budget and check day filled in, and will not save without a reason", () => {
     pickAside();
     const save = screen.getByRole("button", { name: "Subscribe" });
-    fireEvent.change(screen.getByLabelText("Capital to delegate ($)"), {
-      target: { value: "20000" },
-    });
+    expect(screen.getByLabelText("Capital to delegate ($)")).toHaveValue(50_000);
+    expect((screen.getByLabelText("Check it on") as HTMLInputElement).value).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
     expect(save).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Why you are taking it"), {
       target: { value: "Premium looks rich into the print." },
     });
-    expect(save).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Check it on"), { target: { value: "2027-01-15" } });
     expect(save).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Check it on"), { target: { value: "" } });
+    expect(save).toBeDisabled();
   });
 
   it("sends the conviction with the subscription, trimmed", async () => {

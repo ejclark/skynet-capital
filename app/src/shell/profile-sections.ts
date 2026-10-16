@@ -7,7 +7,10 @@ import type { PageSection } from "./sections";
  * without a DOM (`app/tests/routes/accounts-section.spec.ts`).
  *
  * Three families, in this order on the switch:
- *   - the BOOK's — Overview · Activity · Events — keyed on the account the switcher picks;
+ *   - the BOOK's — Overview · Balance · Activity · Events — keyed on the account the switcher picks.
+ *     Balance (#5493 slice 3) is the book read as one system — findings, the plays behind them, the
+ *     closed trades — and, like the head's health line it opens from, is ONE account's: "All
+ *     accounts" has no single book to judge, so the aggregate switch leaves it out;
  *   - a BOT's — Playbooks · Thesis — only while one bot account is selected (#3687; Playbooks
  *     took Heartbeat's slot when the two merged, #5073);
  *   - the VIEWER's — Milestones · Feedback (#3807 slice 2b; #888, Eric 2026-08-29: "a user-level
@@ -19,6 +22,7 @@ import type { PageSection } from "./sections";
  */
 export type AccountsSection =
   | "overview"
+  | "balance"
   | "activity"
   | "events"
   | "playbooks"
@@ -44,6 +48,11 @@ const BOT: readonly PageSection<AccountsSection>[] = [
   { id: "thesis", label: "Thesis" },
 ];
 
+/** Balance sits straight after Overview — the book's worth, then whether it is in balance — on a
+ *  human account and a bot alike (idle cash and a name over its share are findings on any book).
+ *  Never "All accounts", never a member with nothing linked. */
+const BALANCE: PageSection<AccountsSection> = { id: "balance", label: "Balance" };
+
 const VIEWER: readonly PageSection<AccountsSection>[] = [
   { id: "milestones", label: "Milestones" },
   { id: "feedback", label: "Feedback" },
@@ -53,7 +62,18 @@ const VIEWER: readonly PageSection<AccountsSection>[] = [
  *  per account ({@link sectionsFor}); an unknown or now-inapplicable value falls back via
  *  `resolveSection`, never strands the reader. A stale `?section=summary` or `?section=positions`
  *  link (from before the Overview merge) resolves the same way. */
-export const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [...BOOK, ...BOT, ...VIEWER];
+export const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
+  ...withBalance(BOOK),
+  ...BOT,
+  ...VIEWER,
+];
+
+/** The book's sections with Balance after the first (Overview). */
+function withBalance(
+  book: readonly PageSection<AccountsSection>[],
+): readonly PageSection<AccountsSection>[] {
+  return [...book.slice(0, 1), BALANCE, ...book.slice(1)];
+}
 
 /** A viewer-level section: rendered identically on every account selection (#888). */
 export function isViewerSection(id: AccountsSection): boolean {
@@ -61,13 +81,15 @@ export function isViewerSection(id: AccountsSection): boolean {
 }
 
 /** The sections this viewer can see — `kind` is the selected account's (undefined for All
- *  accounts), `linked` false when the member owns no account at all. */
+ *  accounts, which has no Balance or bot sections), `linked` false when the member owns no account
+ *  at all. */
 export function sectionsFor(
   kind: "human" | "bot" | undefined,
   linked = true,
 ): readonly PageSection<AccountsSection>[] {
   if (!linked) return [...BOOK.filter((s) => s.id !== "overview"), ...VIEWER];
-  return kind === "bot" ? ALL_SECTIONS : [...BOOK, ...VIEWER];
+  if (kind === undefined) return [...BOOK, ...VIEWER];
+  return kind === "bot" ? ALL_SECTIONS : [...withBalance(BOOK), ...VIEWER];
 }
 
 /**

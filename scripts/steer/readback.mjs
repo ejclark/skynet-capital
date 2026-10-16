@@ -53,6 +53,9 @@
 //     are quoted word for word under "Outcomes he added:", count as an answer, and come back as
 //     `outcomesAdded` ({ issue, key, text, at }) — the session classifies each as one today's design
 //     can reach or one that needs something new (docs/IA.md §7, §10), which becomes a plan issue.
+//   - A note under an option (option-notes.mjs, #5429; a question with `notesPer: "option"`) is
+//     quoted word for word on that option's line under "Per option:", after its tap if it has one,
+//     counts as an answer, and the next round applies it ("Per option: option B: apply his note …").
 //   - Notes about the page itself (page-notes.mjs) are about the PROCESS, so they never go on the
 //     screen's issue: they come back as the `pageNotes` block and as `processLines`
 //     ({ what, where }), for `scripts/redesign/commons.mjs add --kind process`.
@@ -64,6 +67,7 @@ import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
 import { when } from "./html.mjs";
 import { isOpening, markInstruction, marksBlock, marksSaid, revealLine } from "./marks.mjs";
 import { activeMinutes, isAnswered, roundRecords } from "./model.mjs";
+import { optionClauses, optionNotesSaid, perOptionBlock } from "./option-notes.mjs";
 import { CLASSIFY, outcomesBlock, outcomesOf, outcomesSaid } from "./outcomes.mjs";
 import { pageNotesBlock, processLines } from "./page-notes.mjs";
 import { perPinBlock, pinClauses } from "./pins.mjs";
@@ -142,6 +146,7 @@ function designPart(d, r) {
   if (by("not").length) lines.push(`- Not: ${by("not").join(", ")}`);
   return [
     lines.join("\n"),
+    perOptionBlock(d, r),
     perPinBlock(d, r),
     marksBlock(d, r),
     outcomesBlock(r),
@@ -251,6 +256,7 @@ export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
     drop.length
       ? `Drop ${named(d, drop)}: he says ${drop.length === 1 ? "it is" : "they are"} not a problem.`
       : "",
+    optionClauses(d, r),
     pins ? `Per pin: ${pins}` : "",
     marks,
     r.pick ? "Nothing is filed from this pick." : "Nothing is filed.",
@@ -271,6 +277,7 @@ function problemsPart(d, r) {
   if (marked(r, "not").length) lines.push(`- Not a problem: ${named(d, marked(r, "not"))}`);
   return [
     lines.join("\n"),
+    perOptionBlock(d, r),
     perPinBlock(d, r),
     marksBlock(d, r),
     outcomesBlock(r),
@@ -288,7 +295,8 @@ function problemsAnswer(d, r, acc, said) {
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
   // A note and no tap: quoted above, and the next round still has to answer it.
-  if (!(r.pick || Object.keys(r.react ?? {}).length || pins || marksSaid(d, r) || outcomesSaid(r)))
+  const spoke = pins || marksSaid(d, r) || outcomesSaid(r) || optionNotesSaid(d, r).length;
+  if (!(r.pick || Object.keys(r.react ?? {}).length || spoke))
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
@@ -298,9 +306,11 @@ function designAnswer(d, r, acc, id, said) {
   // No Build: his pin reactions and his own marks are the next round's instructions, spot by spot.
   const pins = r.pick ? "" : pinClauses(d, r);
   const marks = r.pick ? "" : markInstruction(d, r);
-  if (pins || marks) {
+  const options = r.pick ? "" : optionClauses(d, r);
+  if (pins || marks || options) {
     const instruction = [
       `${nextRoundName(d)} on #${d.issue}${pins ? `, per pin: ${pins}` : ":"}`,
+      options,
       marks,
     ]
       .filter(Boolean)
@@ -310,7 +320,7 @@ function designAnswer(d, r, acc, id, said) {
   }
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
-  } else if (!(r.pick || pins || marks || outcomesSaid(r))) {
+  } else if (!(r.pick || pins || marks || options || outcomesSaid(r))) {
     // A note and no tap: quoted above, and the next round still has to answer it.
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
   }

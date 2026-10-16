@@ -9,15 +9,7 @@ import { INSTANT } from "./instant.mjs";
 const ACCOUNTS = ["eric", "sauron", "jordan"];
 const BOTS = new Set(["sauron"]);
 /** Filters a member can apply on Activity: every playbook that placed an order, every symbol. */
-const PLAYBOOKS = [
-  "CRWV-WHEEL",
-  "HC-SAURON",
-  "SAURON",
-  "S1-NVDA",
-  "NVDA-CALL-SPREAD",
-  "G1-GOOG",
-  "TACO-DJT",
-];
+const PLAYBOOKS = ["CRWV-WHEEL", "SAURON", "S1-NVDA", "NVDA-CALL-SPREAD", "G1-GOOG", "TACO-DJT"];
 const SYMBOLS = ["NVDA", "CRWV", "AMZN", "TSLA", "META", "AAPL", "MSFT", "SPY"];
 const CURVE_RANGES = ["7D", "1M", "3M", "1Y", "YTD", "ALL"];
 const BOARD_METRICS = ["equity", "month", "pl", "return", "realized"];

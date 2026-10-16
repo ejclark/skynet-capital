@@ -53,6 +53,9 @@ interface EventView {
   readonly symbols: readonly string[];
   /** Whether a ledger exists for this event — a dot the calendar can trust. */
   readonly researched: boolean;
+  /** Present (and true) only when the date is a cadence estimate, not a confirmed day (#5510) —
+   *  so a calendar draws it hollow (◇) instead of claiming a confirmed date. */
+  readonly estimated?: true;
 }
 
 interface SymbolView {
@@ -110,6 +113,7 @@ export function researchShelfJson(
       impact: event.impact,
       symbols: event.symbols,
       researched: researched.has(`events/${event.id}`),
+      ...(event.status === "estimate" ? { estimated: true as const } : {}),
     })),
     calls: [...calls.entries()].map(([eventId, call]) => ({
       eventId,
