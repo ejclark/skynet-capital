@@ -100,6 +100,16 @@ export async function performAct(page, act) {
   }
 }
 
+/** Enough to render a route; a page holding an SSE open never idles, so idle is best-effort.
+ *  Shared by `phone-one.mjs` and the study's parity check (`scripts/study/parity.mjs`). */
+export async function settle(page) {
+  await page.waitForLoadState("load");
+  await page.waitForLoadState("networkidle", { timeout: 1500 }).catch(() => {
+    /* a held-open stream — the short wait below is the fallback */
+  });
+  await page.waitForTimeout(300);
+}
+
 /** The cookie the session fixtures sign in with — the crawl mints it, the spec adds it. */
 export function sessionCookie(token, baseURL) {
   const { hostname } = new URL(baseURL);

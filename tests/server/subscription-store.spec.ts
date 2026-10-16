@@ -178,7 +178,7 @@ describe("SubscriptionStore", () => {
       store.subscribe(
         "acct-1",
         {
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "standard",
           capitalAllocated: 5_000,
           enabled,
@@ -193,14 +193,14 @@ describe("SubscriptionStore", () => {
       seed(store, false);
       store.configure(
         "acct-1",
-        "HC-SAURON",
+        "SAURON",
         { mode: "aggressive", capitalAllocated: 8_000, symbols: ["NVDA", "CRWV"] },
         LATER,
       );
       expect(store.load()["acct-1"]).toEqual([
         {
           accountId: "acct-1",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "aggressive",
           capitalAllocated: 8_000,
           enabled: false,
@@ -214,14 +214,14 @@ describe("SubscriptionStore", () => {
     it("keeps an active subscription active", () => {
       const store = new SubscriptionStore(path);
       seed(store, true);
-      store.configure("acct-1", "HC-SAURON", { mode: "conservative", capitalAllocated: 1_000 });
+      store.configure("acct-1", "SAURON", { mode: "conservative", capitalAllocated: 1_000 });
       expect(store.load()["acct-1"]?.[0]?.enabled).toBe(true);
     });
 
     it("absent capital is uncapped and absent symbols is the whole basket", () => {
       const store = new SubscriptionStore(path);
       seed(store, true);
-      store.configure("acct-1", "HC-SAURON", { mode: "standard" });
+      store.configure("acct-1", "SAURON", { mode: "standard" });
       const [sub] = store.load()["acct-1"] ?? [];
       expect(sub).not.toHaveProperty("capitalAllocated");
       expect(sub).not.toHaveProperty("symbols");
@@ -232,7 +232,7 @@ describe("SubscriptionStore", () => {
       const store = new SubscriptionStore(path);
       seed(store, true);
       expect(store.configure("acct-1", "S1-NVDA", { mode: "standard" })).toBeUndefined();
-      expect(store.configure("acct-2", "HC-SAURON", { mode: "standard" })).toBeUndefined();
+      expect(store.configure("acct-2", "SAURON", { mode: "standard" })).toBeUndefined();
       expect(store.load()["acct-1"]).toHaveLength(1);
       expect(store.load()).not.toHaveProperty("acct-2");
     });
@@ -247,9 +247,50 @@ describe("SubscriptionStore", () => {
       seed(store, true);
       store.configure("acct-1", "S1-NVDA", { mode: "aggressive", capitalAllocated: 3_000 }, LATER);
       const subs = store.load()["acct-1"] ?? [];
-      expect(subs.map((s) => s.playbookId)).toEqual(["S1-NVDA", "HC-SAURON"]);
+      expect(subs.map((s) => s.playbookId)).toEqual(["S1-NVDA", "SAURON"]);
       expect(subs[1]).toMatchObject({ mode: "standard", symbols: ["NVDA"] });
     });
+  });
+
+  it("keeps a play target through a re-tune, a pause and a re-subscribe (#5483 slice 3)", async () => {
+    const playTarget = {
+      weight: 0.7,
+      lean: { min: 0.6, max: 0.8 },
+      band: { signal: 0.05, gate: 0.1 },
+    };
+    await writeFile(
+      path,
+      JSON.stringify({
+        "acct-1": [
+          {
+            playbookId: "CRWV-WHEEL",
+            mode: "standard",
+            capitalAllocated: 100_000,
+            enabled: true,
+            createdAt: AT.toISOString(),
+            updatedAt: AT.toISOString(),
+            playTarget,
+          },
+        ],
+      }),
+    );
+    const store = new SubscriptionStore(path);
+    store.configure(
+      "acct-1",
+      "CRWV-WHEEL",
+      { mode: "aggressive", capitalAllocated: 50_000 },
+      LATER,
+    );
+    expect(store.load()["acct-1"]?.[0]?.playTarget).toEqual(playTarget);
+    store.setEnabled("acct-1", "CRWV-WHEEL", false, LATER);
+    expect(store.load()["acct-1"]?.[0]?.playTarget).toEqual(playTarget);
+    store.subscribe(
+      "acct-1",
+      { playbookId: "CRWV-WHEEL", mode: "standard", capitalAllocated: 80_000, enabled: true },
+      LATER,
+    );
+    expect(store.load()["acct-1"]?.[0]).toMatchObject({ capitalAllocated: 80_000, playTarget });
+    expect(JSON.parse(await readFile(path, "utf8"))["acct-1"][0].playTarget).toEqual(playTarget);
   });
 
   it("writes durable JSON a fresh store can read back", async () => {
@@ -261,5 +302,94 @@ describe("SubscriptionStore", () => {
     const raw = JSON.parse(await readFile(path, "utf8"));
     expect(raw["acct-1"][0].playbookId).toBe("S1-NVDA");
     expect(new SubscriptionStore(path).load()["acct-1"]?.[0]?.playbookId).toBe("S1-NVDA");
+  });
+
+  describe("a rewrite keeps what this build could not read (#4772)", () => {
+    const record = (playbookId: string, over: Record<string, unknown> = {}) => ({
+      accountId: "sauron",
+      playbookId,
+      mode: "standard",
+      capitalAllocated: 50_000,
+      enabled: true,
+      createdAt: AT.toISOString(),
+      updatedAt: AT.toISOString(),
+      ...over,
+    });
+    // What a newer build might have written: a field on a record, a record this build cannot
+    // parse, and a file-level key.
+    const newerField = record("CRWV-WHEEL", { window: { avoid: ["print"] } });
+    const unread = record("G1-GOOG", { mode: "observe-v2" });
+    const allocations = { sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "x" } } };
+    const file = { sauron: [newerField, unread], $allocations: allocations };
+
+    const writes: readonly [string, (store: SubscriptionStore) => unknown][] = [
+      [
+        "subscribe",
+        (store) =>
+          store.subscribe(
+            "banker",
+            { playbookId: "S1-NVDA", mode: "standard", enabled: true },
+            LATER,
+          ),
+      ],
+      ["setEnabled", (store) => store.setEnabled("sauron", "CRWV-WHEEL", false, LATER)],
+      [
+        "configure",
+        (store) =>
+          store.configure(
+            "sauron",
+            "CRWV-WHEEL",
+            { mode: "aggressive", capitalAllocated: 9 },
+            LATER,
+          ),
+      ],
+      ["unsubscribe", (store) => store.unsubscribe("sauron", "S1-NVDA")],
+      ["replace", (store) => store.replace(store.load())],
+    ];
+
+    for (const [name, write] of writes) {
+      it(`${name} keeps a newer build's field, an unread record and the allocations, and says so`, async () => {
+        await writeFile(path, JSON.stringify(file), "utf8");
+        const reports: string[] = [];
+        const store = new SubscriptionStore(path, (m) => reports.push(m));
+
+        write(store);
+
+        const raw = JSON.parse(await readFile(path, "utf8"));
+        expect(
+          raw.sauron.find((r: { playbookId: string }) => r.playbookId === "CRWV-WHEEL").window,
+        ).toEqual({
+          avoid: ["print"],
+        });
+        expect(raw.sauron).toContainEqual(unread);
+        expect(raw.$allocations).toEqual(allocations);
+        expect(reports).toEqual([expect.stringContaining("sauron: kept 1 record unchanged")]);
+      });
+    }
+
+    it("a re-subscribe keeps the conviction and newer fields on the record it replaces", async () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      await writeFile(path, JSON.stringify({ sauron: [{ ...newerField, conviction }] }), "utf8");
+      const store = new SubscriptionStore(path);
+
+      store.subscribe(
+        "sauron",
+        { playbookId: "CRWV-WHEEL", mode: "aggressive", enabled: true },
+        LATER,
+      );
+
+      const [after] = store.load().sauron ?? [];
+      expect(after).toMatchObject({ mode: "aggressive", conviction, window: { avoid: ["print"] } });
+      expect(after).not.toHaveProperty("capitalAllocated");
+    });
+
+    it("reads the allocations, and an empty set for a file with none or a torn one", async () => {
+      await writeFile(path, JSON.stringify(file), "utf8");
+      expect(new SubscriptionStore(path).loadAllocations()).toEqual(allocations);
+      await writeFile(path, JSON.stringify({ sauron: [newerField] }), "utf8");
+      expect(new SubscriptionStore(path).loadAllocations()).toEqual({});
+      await writeFile(path, "{ torn", "utf8");
+      expect(new SubscriptionStore(path).loadAllocations()).toEqual({});
+    });
   });
 });

@@ -21,6 +21,8 @@ export class JsonFileStore<T> {
   private readonly empty: T;
   private readonly label: string;
   private readonly onReadError: (message: string) => void;
+  private readonly readsWhole: (raw: unknown, parsed: T) => boolean;
+  private readonly serialize: ((state: T, onDisk: unknown) => unknown) | undefined;
 
   constructor(options: {
     readonly path: string;
@@ -30,12 +32,20 @@ export class JsonFileStore<T> {
     /** Short tag for error messages, e.g. "controls" → `[controls] …`. */
     readonly label: string;
     readonly onReadError?: (message: string) => void;
+    /** `loadIfReadable`'s bar for "read whole" — `survivesParse` unless a store keeps, on its
+     *  own rewrite, something its parse leaves out (`subscriptions-file.ts`'s `readsWhole`). */
+    readonly readsWhole?: (raw: unknown, parsed: T) => boolean;
+    /** What `write` puts on disk, given the state and the file as it is now (undefined when
+     *  missing or unreadable) — so a store can keep what its parse cannot read (#4772). */
+    readonly serialize?: (state: T, onDisk: unknown) => unknown;
   }) {
     this.path = options.path;
     this.parse = options.parse;
     this.empty = options.empty;
     this.label = options.label;
     this.onReadError = options.onReadError ?? (() => undefined);
+    this.readsWhole = options.readsWhole ?? survivesParse;
+    this.serialize = options.serialize;
   }
 
   load(): T {
@@ -64,7 +74,7 @@ export class JsonFileStore<T> {
         this.onReadError(
           `[${this.label}] ${this.path} did not parse as a ${this.label} state — ${fallback}`,
         );
-      } else if (whole && !survivesParse(raw, parsed)) {
+      } else if (whole && !this.readsWhole(raw, parsed)) {
         this.onReadError(
           `[${this.label}] ${this.path} parsed only in part (a record or field in it did not ` +
             `parse, so a rewrite would lose it) — ${fallback}`,
@@ -81,9 +91,19 @@ export class JsonFileStore<T> {
   }
 
   write(state: T): void {
+    const body = this.serialize ? this.serialize(state, this.onDisk()) : state;
     mkdirSync(dirname(this.path), { recursive: true });
     const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    writeFileSync(tmp, `${JSON.stringify(body, null, 2)}\n`, "utf8");
     renameSync(tmp, this.path);
+  }
+
+  private onDisk(): unknown {
+    if (!existsSync(this.path)) return undefined;
+    try {
+      return JSON.parse(readFileSync(this.path, "utf8"));
+    } catch {
+      return undefined;
+    }
   }
 }

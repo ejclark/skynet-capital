@@ -290,6 +290,48 @@ describe("thesisView", () => {
     });
   });
 
+  // #5327 — the drawn play places each mark at the news score its decision read, and keeps only
+  // this play's trades, so the marker carries both off the decision record.
+  it("carries the fill's symbol, side, playbook and the news score and momentum its decision read", () => {
+    const guarded = intent({ playbookId: "SAURON", playbookMode: "standard" });
+    const pass = record({
+      context: {
+        asOf: "2026-09-10T14:00:00Z",
+        quotes: {},
+        momentum: { NVDA: 0.003 },
+        newsSentiment: { NVDA: -0.82 },
+      },
+    });
+    const view = thesisView(
+      "sauron",
+      { cycles: [] },
+      [activityEvent({ orderId: "ord-1" })],
+      [],
+      (orderId) => (orderId === "ord-1" ? { record: pass, intent: guarded } : undefined),
+    );
+    expect(view.markers[0]).toMatchObject({
+      symbol: "NVDA",
+      side: "buy",
+      playbookId: "SAURON",
+      sentiment: -0.82,
+      momentum: 0.003,
+    });
+  });
+
+  it("leaves the news score, momentum and playbook off a marker whose decision did not record them", () => {
+    const view = thesisView(
+      "sauron",
+      { cycles: [] },
+      [activityEvent({ orderId: "ord-1", side: "sell" })],
+      [],
+      (orderId) => (orderId === "ord-1" ? { record: record(), intent: intent() } : undefined),
+    );
+    expect(view.markers[0]).toMatchObject({ symbol: "NVDA", side: "sell" });
+    expect(view.markers[0]).not.toHaveProperty("sentiment");
+    expect(view.markers[0]).not.toHaveProperty("momentum");
+    expect(view.markers[0]).not.toHaveProperty("playbookId");
+  });
+
   it("omits reasoning when no decision resolves for the fill's order id, or no lookup is given", () => {
     const unresolved = thesisView(
       "sauron",

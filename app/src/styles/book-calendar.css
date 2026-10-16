@@ -1,0 +1,568 @@
+/* The calendar of what you hold (#5074; #5037 round 2, the calendar's R2): the Events card's head
+   (`shell/book-range-head.tsx`) and the lanes picture it drives (`shell/book-lanes.tsx`). Phone
+   first: the head stacks — the range in words, then ‹ Week · Month · Quarter › as one 44px row
+   (the arrows flank the options, Eric 2026-10-10); from 861 the words and that row share one line
+   and the card adds room, nothing else. Every
+   signal is a shape or a word first (⧗ ◆ ◇ ○, a hatch, a ✓, a dashed zero, a tile), the hue
+   second. */
+
+.range-head {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.range-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.range-arrow {
+  flex: 0 0 40px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.range-arrow:hover {
+  border-color: var(--accent);
+}
+.range-words {
+  min-width: 0;
+  text-align: center;
+}
+.range-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.range-line {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.range-pick {
+  min-width: 0;
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+}
+.range-options {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.range-option {
+  transition:
+    background-color var(--dur-quick) var(--ease-spatial),
+    border-color var(--dur-quick) var(--ease-spatial),
+    color var(--dur-quick) var(--ease-spatial);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.range-option:hover {
+  color: var(--text);
+}
+.range-option[aria-pressed="true"] {
+  border: 1.5px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--text);
+  font-weight: 650;
+  cursor: default;
+}
+.range-check {
+  margin-right: -4px;
+  color: var(--accent);
+  font-size: 12px;
+}
+/* A count is a filled chip; a zero is hollow and dashed — the shape says "nothing here". */
+.range-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--border);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.range-count[data-zero] {
+  background: transparent;
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+}
+/* A phone's three options share ~240px between the arrows: the count rides the option's corner as
+   a badge, still filled or dashed, so the word and the ✓ keep the face. */
+@media (max-width: 480px) {
+  .range-options {
+    padding-top: 6px;
+  }
+  .range-option {
+    position: relative;
+  }
+  .range-count {
+    position: absolute;
+    top: -7px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 10.5px;
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .range-count[data-zero] {
+    background: var(--surface);
+  }
+}
+.range-caption {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (min-width: 861px) {
+  .range-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 470px);
+    column-gap: 28px;
+    align-items: center;
+    padding: 14px 18px;
+  }
+  .range-words {
+    text-align: left;
+    padding-left: 6px;
+  }
+  .range-title {
+    font-size: 22px;
+  }
+  .range-pick {
+    margin: 0;
+  }
+  .range-arrow {
+    flex-basis: 44px;
+  }
+  .range-options {
+    gap: 6px;
+  }
+  .range-option {
+    font-size: 14px;
+  }
+}
+
+/* ---- The lanes ---- */
+/* A calm track (#5098, Eric: "I don't like the overly dark calendar, especially when a large
+   portion of it is so empty"): most of a lane is empty most of the time, so its track is a quiet
+   shade of the card — in the dark palette lifted above it, no longer a well sunk below it — with
+   softer rules, so the empty days recede and the tiles carry the eye. A hollow glyph's hole is
+   whatever it sits on (`--glyph-hole`). */
+.lanes {
+  --lane-bg: color-mix(in srgb, var(--text) 7%, var(--surface));
+  --lane-rule: color-mix(in srgb, var(--text) 15%, var(--surface));
+  --lane-tile-bg: color-mix(in srgb, var(--text) 20%, var(--surface));
+  --lane-gutter: 0px;
+  margin: 0;
+  min-width: 0;
+  padding: 0 14px 4px;
+}
+.lanes-note {
+  margin: 4px 0 10px;
+}
+.lanes-folded {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Phone: the name and a past-range edge over the track. From 600 the name takes a left column on
+   the track's own line and the edge rides the track's empty right end (it only shows on a lane
+   with nothing in range), so a lane is one line. */
+.lane {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "head edge" "track track";
+  column-gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.lane-head {
+  grid-area: head;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  min-height: 22px;
+  font-size: 12px;
+}
+.lane-name {
+  font-weight: 650;
+}
+.lane:not([data-market]) .lane-name {
+  text-transform: uppercase;
+}
+.lane-detail {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.lane-edge {
+  grid-area: edge;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 600 12px var(--mono);
+  cursor: pointer;
+}
+.lane-edge:hover,
+.lane-edge:focus-visible {
+  border-color: var(--accent);
+}
+.lane-track {
+  --glyph-hole: var(--lane-bg);
+  grid-area: track;
+  position: relative;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--lane-bg);
+}
+.lane-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--lane-rule);
+}
+.lane-closed {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(45deg, var(--muted) 0 1.5px, transparent 1.5px 5px);
+  opacity: 0.7;
+}
+.lane-closed--early {
+  top: 50%;
+}
+.lane-picked {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.lane-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+.lane-mark {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.lane-mark:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.lane-words {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text);
+  pointer-events: none;
+}
+.lane-words--after {
+  left: calc(50% + 9px);
+}
+.lane-words--before {
+  right: calc(50% + 9px);
+}
+/* YOUR DAYS ON A TILE (#5098; #3977 option C): a mark on a holding's lane sits on a bold outlined
+   square — shape and weight in the text colour, no new hue — and the market-wide rings stay bare,
+   so a member's own days stand out of a busy month at a glance. The words clear the tile's edge
+   (`WORDS_PAD` in `book-lanes.tsx` keeps placement in step). */
+.lane-tile {
+  --glyph-hole: var(--lane-tile-bg);
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--text);
+  border-radius: 6px;
+  background: var(--lane-tile-bg);
+  color: var(--text);
+}
+.lane-mark--tile .lane-words--after {
+  left: calc(50% + 15px);
+}
+.lane-mark--tile .lane-words--before {
+  right: calc(50% + 15px);
+}
+
+/* Moving between ranges blends (#5098, Eric: "I like animations to blend transition states"): a
+   day both ranges hold — its mark, its rule, its tick, the picked day, today — slides to where it
+   sits in the new range, and whatever is new fades in. Each element is keyed by its date, so the
+   slide is the same day moving. The motion tokens zero under reduced motion (`theme.css`), so the
+   change is instant for anyone who asked for that. */
+.lane-mark,
+.lane-rule,
+.lane-closed,
+.lane-picked,
+.lane-today,
+.lane-tick,
+.lane-now {
+  transition:
+    left var(--dur-spatial) var(--ease-spatial),
+    width var(--dur-spatial) var(--ease-spatial),
+    opacity var(--dur-spatial) var(--ease-spatial);
+}
+.lane-words {
+  transition: opacity var(--dur-spatial) var(--ease-spatial);
+}
+@starting-style {
+  .lane-mark,
+  .lane-words,
+  .lane-rule,
+  .lane-closed,
+  .lane-picked,
+  .lane-tick {
+    opacity: 0;
+  }
+}
+
+.lane-glyph {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: -1px;
+  fill: currentColor;
+  stroke: none;
+}
+.lane-glyph--estimated,
+.lane-glyph--market {
+  fill: var(--glyph-hole, var(--surface-2));
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.lane-glyph--market {
+  color: var(--muted);
+}
+.lane-glyph--closed {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+@media (min-width: 600px) {
+  .lanes {
+    --lane-gutter: 148px;
+  }
+  .lane {
+    grid-template-columns: var(--lane-gutter) minmax(0, 1fr);
+    grid-template-areas: "head track";
+    column-gap: 0;
+    margin-bottom: 6px;
+  }
+  .lane-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    min-height: 0;
+    padding-right: 10px;
+    line-height: 1.25;
+  }
+  .lane-track {
+    height: 30px;
+  }
+  .lane-edge {
+    grid-area: track;
+    justify-self: end;
+    z-index: 2;
+    margin-right: 3px;
+  }
+}
+
+/* The axis heads the picture (Eric, 2026-10-10: labels "at the top… ensures information is read in
+   the correct order"): the ticks, then today in a word over its rule — or the way back when it is
+   off. It sticks under the page's sticky head (`--landing-clear`, published by the cockpit head)
+   while the lanes scroll; the card clips rather than hides its overflow so sticky still works. */
+.lane-axis {
+  position: sticky;
+  top: var(--landing-clear, 0px);
+  z-index: 3;
+  margin: 0 -14px 4px;
+  padding: 8px 14px 2px calc(14px + var(--lane-gutter));
+  background: var(--surface);
+}
+.lane-ticks,
+.lane-when {
+  position: relative;
+  min-height: 18px;
+}
+.lane-ticks:has(.lane-tick-dow) {
+  min-height: 30px;
+}
+.lane-when {
+  display: flex;
+}
+.lane-tick,
+.lane-now {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.lane-tick:has(.lane-tick-dow) {
+  text-align: center;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--text);
+}
+.lane-tick-dow {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.lane-tick.start,
+.lane-now.start {
+  transform: translateX(-6px);
+}
+.lane-tick.end,
+.lane-now.end {
+  transform: translateX(calc(-100% + 6px));
+}
+.lane-now {
+  padding-bottom: 1px;
+  border-bottom: 2px solid var(--accent);
+  font-weight: 650;
+  color: var(--text);
+}
+.lane-back {
+  appearance: none;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 11.5px var(--mono);
+  cursor: pointer;
+}
+.lane-back.end {
+  margin-left: auto;
+}
+.lane-back:hover,
+.lane-back:focus-visible {
+  text-decoration: underline;
+}
+.lanes-key {
+  --glyph-hole: var(--surface);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.lanes-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lanes-key .lane-glyph:not(.lane-glyph--market, .lane-glyph--closed) {
+  color: var(--text);
+}
+/* The key draws a held glyph on its tile, as the frame does — a size down, so the words lead. */
+.lanes-key .lane-tile {
+  width: 18px;
+  height: 18px;
+  border-width: 1.5px;
+  border-radius: 5px;
+}
+.lanes-key .lane-tile .lane-glyph {
+  width: 10px;
+  height: 10px;
+}
+
+/* THE ZOOM BOX (`zoomWindow`): the range you left, outlined, shrinking onto or growing out of its
+   place in the range you picked, then fading — over the tracks only, behind nothing a thumb needs.
+   Reduced motion zeroes `--dur-spatial`, so the box ends before it is drawn. */
+.lanes-stage {
+  position: relative;
+}
+.lanes-zoom-frame {
+  position: absolute;
+  inset: 0 0 0 var(--lane-gutter);
+  pointer-events: none;
+  z-index: 2;
+}
+.lanes-zoom {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  animation: lanes-zoom calc(var(--dur-spatial) * 2.6) var(--ease-spatial) both;
+}
+@keyframes lanes-zoom {
+  from {
+    left: calc(var(--x0) * 100%);
+    width: calc(var(--w0) * 100%);
+    opacity: 1;
+  }
+  65% {
+    left: calc(var(--x1) * 100%);
+    width: calc(var(--w1) * 100%);
+    opacity: 0.9;
+  }
+  to {
+    left: calc(var(--x1) * 100%);
+    width: calc(var(--w1) * 100%);
+    opacity: 0;
+  }
+}

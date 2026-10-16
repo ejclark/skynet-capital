@@ -28,6 +28,7 @@ import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -37,10 +38,14 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import { withQuoteUniverse } from "../personas/universe-view.js";
+import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
+import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
+import { withTargetObservation } from "../playbooks/with-target-observation.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import {
@@ -276,11 +281,22 @@ export function resolveBotRoster(
   bot: Bot,
   houseEnabled: readonly EnabledPlaybook[],
   subscriptions: readonly PlaybookSubscription[],
+  // This bot's own compiled authored plays (`authoredRoster`, #809), so a `U-*` subscription runs
+  // and pauses exactly like a house one (#4450 slice 3). Only a subscription on the account the
+  // roster was compiled for resolves one (`subscriptionRoster`). Nothing persists a spec yet, so
+  // both callers pass none and every `U-*` subscription is refused below, as before.
+  authored?: AuthoredRoster,
 ): BotRoster {
-  const acctRoster = subscriptionRoster(subscriptions);
+  const acctRoster = subscriptionRoster(subscriptions, authored);
   for (const bad of acctRoster.rejected) {
     console.error(
       `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
+    );
+  }
+  // An author whose play is dark deserves to know which field did it (`authoredRoster`).
+  for (const bad of authored?.rejected ?? []) {
+    console.error(
+      `[playbooks] ${bot.persona.id}'s authored play "${bad.slug}" is out of bounds — ${bad.problems.map((p) => `${p.field} ${p.problem}`).join("; ")}`,
     );
   }
   if (acctRoster.enabled.length > 0) {
@@ -289,10 +305,18 @@ export function resolveBotRoster(
     );
   }
   // Paused: opens nothing new (a covered call excepted); its names and exits are unchanged.
-  const paused = pausedRoster(subscriptions);
+  const paused = pausedRoster(subscriptions, authored);
   if (paused.length > 0) {
     console.log(
       `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
+    );
+  }
+  // Criterion 11 (#4469): a pair the house never marked ✓ keeps trading without a stated conviction,
+  // and says so — a label, never a stop.
+  const unstated = subscriptions.filter(isConvictionNotStated);
+  if (unstated.length > 0) {
+    console.log(
+      `[playbooks] ${bot.persona.id} runs ${unstated.map((s) => s.playbookId).join(", ")} — ${CONVICTION_NOT_STATED}; still trading`,
     );
   }
   // An env-roster playbook with no subscription opens nothing (#4642 slice 10): it takes the shape a
@@ -338,7 +362,18 @@ export function tradingRoster(
   full: BotRoster,
   baseRisk: RiskConfig,
   realizedPlForPlaybook?: (playbookId: string) => number,
-  { runsScout = false }: { readonly runsScout?: boolean } = {},
+  {
+    runsScout = false,
+    ledgerOf,
+    intradayBars,
+  }: {
+    readonly runsScout?: boolean;
+    /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
+     *  feed is wired, and the playbook then records its verdict and nothing more. */
+    readonly intradayBars?: IntradayBarsOf;
+    /** Each pair's history on this bot, for the conviction check — absent when the store is dark. */
+    readonly ledgerOf?: ConvictionGateDeps["ledgerOf"];
+  } = {},
 ): TradingRoster {
   const roster = runsScout
     ? full
@@ -354,13 +389,33 @@ export function tradingRoster(
     // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
     // bot, a bot with no playbook included.
     persona: withOptionSafety(
-      withPlaybooks(
-        withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-        roster.enabled,
-        UPCOMING_PRINTS,
-        [],
-        console,
-        (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+      // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+      // hygiene around it, so the gate sits between the two.
+      withTargetObservation(
+        withConvictionGate(
+          withPlaybooks(
+            withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+            roster.enabled,
+            UPCOMING_PRINTS,
+            [],
+            console,
+            (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+            intradayBars,
+          ),
+          {
+            subscriptions: roster.subscriptions,
+            ...(ledgerOf ? { ledgerOf } : {}),
+            log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+          },
+        ),
+        // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+        // intents come back untouched. Hygiene still wraps it all.
+        {
+          accountId: roster.bot.persona.id,
+          subscriptions: roster.subscriptions,
+          enabled: roster.enabled,
+          log: console,
+        },
       ),
       roster.enabled,
       UPCOMING_PRINTS,
@@ -473,6 +528,11 @@ export function buildLiveBot(
         if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
         opts.onDecision(r);
       },
+      onObservationError: (personaId, error) =>
+        console.warn(
+          `[observe] ${personaId}: a dark playbook's reading failed, none recorded:`,
+          error,
+        ),
     }),
   };
 }

@@ -1,0 +1,11 @@
+{
+  "id": "tic-shca-annual-final-2026-10-30",
+  "kind": "macro-print",
+  "title": "Treasury TIC annual survey of U.S. portfolio holdings of foreign securities (SHCA, end-December 2025) — final results, 4:00 p.m. ET",
+  "date": "2026-10-30",
+  "status": "estimate",
+  "source": "EST: home.treasury.gov/data/treasury-international-capital-tic-system/release-dates-of-tic-data, fetched direct 2026-10-16 (plain curl, HTTP 200) by the tic-monthly-2026-10-16 D-0 pulse. The 2026 table's October row reads '16' (Monthly) and '30 - final' (Annual), under the page header 'All data releases occur at 4 p.m. Washington, D.C. time'; the page's column key defines the Annual column as 'U.S. portfolio holdings of foreign securities at end-December of previous year', and the same table's 'August 31 - prelim.' row is this survey's preliminary edition. Filed estimate per this lane's no-self-confirm limit on an event discovered in-sweep — the owning event's own session may confirm it",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the tic-monthly-2026-10-16 D-0 pulse (2026-10-16). Final edition of the end-December 2025 survey of U.S. holders' foreign securities (the outbound mirror of the foreign-holdings-of-U.S.-securities survey already tracked as tic-annual-survey-*-2027). It revises the 2026-08-31 preliminary and moves no U.S. rate or equity tape on its own; carried so the capital-account series has its full 2026 annual cadence on the calendar. Impact LOW and symbols empty for the standing reasons (16:00 ET is after the equity cash close, no macro-keyed house playbook). Proposed as an estimate; nothing here licenses an entry."
+}

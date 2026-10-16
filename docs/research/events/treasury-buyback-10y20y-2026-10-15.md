@@ -9,10 +9,10 @@
 **TL;DR.** Still **a read, not a trade** — and the base case flips **back**. The 09-15 row withdrew
 "full take" after 09-10's partial fill (86.4%, cover 1.75x); the **2026-10-01** operation then took
 **$6.000B of $6.000B — 100%, in just 2 of 41 issues** — on **$46.391B offered (cover 7.73x)**, the
-largest offer total in this sector's 27 liquidity-support operations. Together the three enlarged-cap
-prints (09-10, 09-24 20-30Y, 10-01) fit one rule — **cover decides the fill, not a regime change** —
-so 10-15 is a question about *offers*, which have run $10.5B then $46.4B at the enlarged cap. Lean:
-**full take, concentrated in few issues, medium-low confidence** (so: stand aside). The schedule PDF
+largest offer total in this sector's 27 liquidity-support operations. The three enlarged-cap
+prints to 10-01 fit a cover rule, but **the two since (10-06, 10-08) broke it from both sides** — 3.69x
+filled only 33.2% (2Y-3Y), 2.48x filled 100% (20-30Y) — so offers alone no longer predict the fill. Lean:
+**full take, low confidence** (so: stand aside). The schedule PDF
 is **byte-identical** to the 09-09 one (89,250 bytes, md5 `c49a5351…`): this row still reads
 **"= or > $4 billion"** (`estimate`; the confirming primary is the 10-14 announcement), though all
 three enlarged operations so far ran at **$6.000B**. The long end kept selling off through both: 10Y
@@ -22,9 +22,9 @@ three enlarged operations so far ran at **$6.000B**. The long end kept selling o
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (2026-10-06, D-9) | Stand aside | High | `symbols: []`, no house playbook is macro-keyed, and yields made new cycle highs **through** two enlarged operations (10Y +29.9bp, 30Y +28.6bp since 09-15) — the ~1bp scale finding showing up in the tape, not in a model. | The **2026-10-14** announcement printing a maximum at or above **$10B**, or Treasury adding sectors/frequency or confirming a TGA-funded programme — a materially bigger lever than anything dated here |
-| This week | Read the **10-08 20-30Y** operation's cover and fill (announced 10-07); hold nothing through it | Medium | The free out-of-sample test of the cover rule one week before this event, in the sector 09-24 filled at 67.97% on 1.745x. | The 10-08 operation taking its **full maximum on offers under 2.5x the announced maximum** — the cover rule is broken and the 10-15 lean loses its basis |
-| This month | Stand aside through **10-14 / 10-15**; lean **full take in few issues** on the 10-15 operation (`estimate`) | Medium-low | Cover ≥3.5x filled fully every time at a $4B+ cap in the sibling's 10-02 close-out; <2.5x never did. Offers in this sector are bimodal at the enlarged cap, so the lean is a read, not a size. | The 10-15 operation accepting **less than its announced maximum with offers ≥3.5x that maximum** (breaks the cover rule), or accepting **more than 5 issues** at ≥3.5x cover (breaks the concentration read) — both scored **2026-10-16** |
+| Today (2026-10-09, D-6) | Stand aside | High | `symbols: []`, no house playbook is macro-keyed, and yields made new cycle highs **through** two enlarged operations (10Y +29.9bp, 30Y +28.6bp since 09-15) — the ~1bp scale finding showing up in the tape, not in a model. | The **2026-10-14** announcement printing a maximum at or above **$10B**, or Treasury adding sectors/frequency or confirming a TGA-funded programme — a materially bigger lever than anything dated here |
+| This week | Read the **10-14** announcement's maximum and the 10-15 eligible list; hold nothing through CPI **10-14** | Medium | The 10-08 test ran (100% on 2.48x) and broke the cover rule; the maximum is now the only number left to learn before the operation. | A 10-14 maximum at or above **$10B**, or the schedule row changing |
+| This month | Stand aside through **10-14 / 10-15**; lean **full take** on the 10-15 operation (`estimate`) | Low | 10-08 took 100% on 2.48x and 10-06 took 33% on 3.69x, so no cover threshold predicts the fill; 4 of 4 enlarged long-end nominal operations filled ≥67.97%. A read, not a size. | The 10-15 operation accepting **under 70% of its announced maximum** (the lean is wrong), or the **10-14** maximum printing at or above **$10B** — both scored **2026-10-16** |
 | This quarter | Stand aside on the programme as a yield driver; the **2026-11-04** refunding is where sizing is decided | Medium | `sb0607`'s increase expires 11-04 by its own text. Long-end yields are **higher** than at the doubling and 10s30s sits at **35.4bp**, flatter than 46.2bp on 09-04 — the bought sector has not outperformed. | Long-end yields easing durably across the 10-15, 10-27 and 11-04 operations with no macro explanation, or the 11-04 statement making the enlarged size permanent and larger |
 
 **Signals & conditions** — the buy/sell/hold triggers:
@@ -261,6 +261,13 @@ Treasury accepts **the full announced maximum in few issues if offers clear ~3.5
 than the maximum if they do not** (lean: full take, medium-low), and the operation passes without a
 tape effect distinguishable from PPI, retail sales and a coupon announcement on the same date.
 
+**Stance change, 2026-10-09 — confidence cut, cover rule retired; lean unchanged.** The receipt is the
+ledger's sixth row. The 10-08 20-30Y operation took its full $6.000B on 2.481x cover, firing this doc's
+*full maximum under 2.5x* kill switch, while the 10-06 2Y-3Y took 33.2% on 3.69x. The fill is not a function of
+cover; the lean stays full take (4 of 4 enlarged long-end nominal operations filled ≥67.97%, 2 at 100%) but the
+doc no longer claims a rule. `FT-…-2` (full take) still leans pass; `FT-…-4` (>5 issues) now also leans
+pass (10 issues on 10-08 vs 2 on 10-01) — both stand as registered. No new test registered.
+
 **Stance change, 2026-10-06 — the acceptance base case reverts from partial take to a cover-conditional
 full take.** The receipt is the ledger's fifth row. The 10-01 operation took **$6.000B of $6.000B in
 2 of 41 issues** on $46.391B offered, so 09-10's 23-issue partial fill reads as a **1.75x-cover**
@@ -357,6 +364,11 @@ first covers a CUSIP being reopened) earns an entry; sector cadence alone does n
 | 2026-09-22 | D-23 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-2.7pt since last), band unchanged (medium:8+), 33 adjacent event(s) tracked, new in corridor since last pulse: `eia-weekly-petroleum-status-2026-10-15`, `iea-omr-2026-10-14`, `saudi-east-west-pipeline-repair-window-close-2026-10-15`, `uk-monthly-gdp-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
 | 2026-09-29 | D-16 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (medium:8+), 33 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-06 |
 | 2026-10-06 | D-9 | **The 10-01 operation ran and flips the base case back.** `fiscaldata` pulled direct, HTTP 200: **2026-10-01** max **$6.000B**, offered **$46.391B** (**7.73x**; the sector's largest offer total in 27 operations, but **not** its highest cover — 2026-03-26 ran 18.0x at a $2B cap, so the 10-01 sibling's "highest ever" does not reproduce), accepted **$6.000B = 100% in 2 of 41 issues** (912810SY5 $1.05B, 912810TH1 $4.95B). 09-24 20-30Y (not this sector): $4.078B of $6B, 1.745x, 12 issues. **Cover, not regime, fits all three enlarged prints.** Eligible list again holds UT3/RT7, excludes UV8/UX4; count 40→41 (TW8, TZ1 in; UL0 out). **Schedule PDF byte-identical** (89,250 B, md5 `c49a5351…`); row still "= or > $4 billion". **Kill switches:** ≤5-issue full take **FIRED**; offers-vs-yields-at-highs **FIRED** (overshot at $46.39B). **FT-…-5 registered** ($6.000B on 10-14). **Rates (`^TNX`/`^TYX`, 10-05):** 10Y **5.311**, 30Y **5.665**, 10s30s 35.4bp. **VIX 15.52** (−2.09 vs 17.61). **Macro:** Fed hiked 25bp 09-16 to 3.75–4.00%; Sept payrolls **+29K vs ~84K**, UR 4.2% (10-02). **Peers:** n/a. **Corridor:** 35 tracked (new: `bobl-5y-auction-2026-10-13`, `meta-nm-privacy-penalty-ruling-2026-10-20`); **nothing proposed** — 10-08, 10-27 and 11-04 operations are already tracked. | **Base case reverts: partial take → cover-conditional full take (lean full, medium-low).** Read-not-trade unchanged | 2026-10-08 (medium; D-9 sits in the 8+/7d band, tightening to 2d at D-7) |
+| 2026-10-09 | D-6 | **The 10-08 20-30Y operation ran and breaks the cover rule from the other side.** `fiscaldata` pulled direct, HTTP 200: **2026-10-08** max **$6.000B**, offered **$14.886B** (**2.481x**), accepted **$6.000B = 100% in 10 of 34 issues** (largest clip $2.623B) — this ledger's own kill switch (*full maximum on offers under 2.5x*) **FIRED by 0.019x**. Same week, **10-06 2Y-3Y** took **$1.327B of $4B = 33.2%** on **3.69x** (12 of 33 issues) — cover ≥3.5x *without* a full fill. So cover is **neither necessary nor sufficient** across sectors; the enlarged-cap series is now 1.75x→86.5% · 1.74x→68.0% · 7.73x→100% · 3.69x→33.2% (2-3Y) · 2.48x→100%. Price/clip depth, not the offer total, is what the model lacks. **Schedule PDF byte-identical** (89,250 B, md5 `c49a5351…`, HTTP 200); this row still "= or > $4 billion"; every enlarged long-end operation so far ran **$6.000B** (`FT-…-5` untouched). **Rates (`^TNX`/`^TYX`, 10-08):** 10Y **5.231** · 30Y **5.606**, 10s30s **37.5bp** (35.4 on 10-05) — 8bp/6bp off the 10-05 highs through two more enlarged operations; no attribution. **VIX 15.41** (−0.11 vs 15.52). **Macro:** nothing new dated since row 5; **CPI 10-14** is next, then PPI + retail sales + coupon announcement + this operation on 10-15. A web search for 10-07 FOMC-minutes colour returned only prior-year pages and was not used. **Peers:** n/a. **Corridor:** 36 tracked (new: `opec-momr-2026-10-13`); **nothing proposed** — no new dated adjacency; 10-27 and 11-04 operations already tracked. **Cadence band** `medium:8+` → `medium:0+` (interval 7d→2d). | **Lean kept (full take) but confidence cut medium-low → low; the "cover decides the fill" rule is retired.** Read-not-trade unchanged | 2026-10-11 (medium; D-6 sits in the 0+/2d band) |
+| 2026-10-11 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.6pt since last), band unchanged (medium:0+), 37 adjacent event(s) tracked, new in corridor since last pulse: `warsh-imf-fireside-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-13 |
+| 2026-10-13 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 15.2 (+0.4pt since last), band unchanged (medium:0+), 37 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-15 |
+| 2026-10-15 | D-0 | **The 10-14 announcement is out and answers the schedule’s open number: max exactly $6.000B.** `fiscaldata` pulled direct 03:47 UTC (the operation, 1:40pm ET, has not run): `buybacks_operations` 10-15 row reads max **6,000,000,000**, **42 eligible** (41 on 10-01, the prior high this quarter), results null. The only churn vs 10-01 is **912810UL0 back in** (in 09-10, out 10-01, in 10-15 — still unexplained; no exit this time). **912810UT3 and RT7 in, UX4 and UV8 out** — the mechanism holds a 3rd operation. Schedule PDF byte-identical (89,250 B, md5 `c49a5351…`). **Observed, not scored (both score 2026-10-16):** `FT-…-5` ($6.000B) reads pass on the announcement; `FT-…-3` leans pass on the list; `FT-…-2` and `-4` depend on the 1:40pm fill. **Macro (inherited from the [FOMC](fomc-2026-10-28.md) ledger, dated):** CPI 10-14 headline +0.6% m/m, core +0.3% (a tenth hot); Oct hike odds ~24–29%. **Rates (`^TNX`/`^TYX`, 10-14):** 10Y **5.190** · 30Y **5.525**, 10s30s **33.5bp** (37.5 on 10-08) — 10Y −4.1bp, 30Y −8.1bp vs 10-08 through CPI and two more enlarged operations; no attribution. **VIX 16.87** (+1.60 vs 15.27; vs 15.21 last row). **Peers:** n/a. PPI + retail sales + coupon announcement land the same morning, so 10-15’s tape stays unattributable. **Corridor:** 38 tracked (new: `eurostat-hicp-final-2026-10-16`, recorded not assessed); **nothing proposed**. Full session because the screen streak hit its ceiling (2). | **None — lean full take (low) and read-not-trade stand.** Announced max is now a fact, not a forecast | 2026-10-16 (close-out + score FT-…2/3/4/5) |
+| 2026-10-16 | D+1 | **Close-out. The operation ran: full $6.000B in 3 of 42 issues on 6.81x cover — the lean was right, and the 09-10 spread is explained.** `fiscaldata` pulled direct (HTTP 200): offered **$40.836B**, accepted **$6.000B = 100%**, **912810TC2 $5.580B** (93%), TH1 $0.400B, UL0 $0.020B. **Scored:** FT-2 **pass**, -3 **pass**, -5 **pass**, -4 **KILL** (3 ≤ 5 issues). Mechanism held a 3rd operation (UT3/RT7 in, UV8/UX4 out). **Rates (`^TNX`/`^TYX`, 10-15):** 10Y **5.089** · 30Y **5.429**, 10s30s **34.0bp** — ~10bp off 10-14 on a PPI + retail sales + coupon announcement morning; no attribution. **VIX 16.46** (−0.41). Adjacency sweep not run (close-outs are not pulses); nothing proposed. | **None — stand aside held; lean full take vindicated (low).** Event closed | — (scanner goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -374,3 +386,79 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-06
 <!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"medium:8+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-11
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-13
+<!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":2} -->
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-10-16 (D+1, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument cache was busted (`rm -rf` run)
+with nothing to refill. Every number below is a fresh pull this session: `api.fiscaldata.treasury.gov`
+`buybacks_operations` and `buybacks_security_details` (plain curl, HTTP 200, `operation_date:eq:2026-10-15`)
+and Yahoo daily closes for `^VIX`/`^TNX`/`^TYX`.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** |
+| Total par offered | **$40,836,000,000** |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **6.81x** |
+| Fill (accepted ÷ max) | **100% — a full take** |
+| Issues | **3 accepted of 42 eligible** |
+| Accepted lines | 912810TC2 (2.000% 2041-11-15) **$5.580B** @ 65.246 · 912810TH1 (3.250% 2042-05-15) $0.400B @ 77.504 · 912810UL0 (5.000% 2045-05-15) $0.020B @ 94.453 |
+| Window / settlement | 1:40–2:00pm ET **2026-10-15**, settled **2026-10-16** |
+
+This is the sector's third enlarged-cap operation, and it lands on the 10-01 side of the pair, not the
+09-10 side. The question the 10-01 close-out handed forward — *why 23 issues at 1.75x, but 2 at
+7.73x?* — gets its third observation: **6.81x cover, 3 issues, 93% of the dollars in one low-coupon
+line.** Breadth followed the thin book; with a deep book Treasury bids the cheapest-to-deliver
+discount bond and is done. The 40.8B book is the sector's second-largest ever, behind 10-01's $46.4B.
+The announced maximum was **exactly $6.000B** for the fifth enlarged long-end operation running (09-10, 09-24, 10-01, 10-08, 10-15), so
+the schedule's "= or > $4 billion" floor has yet to print as anything but $6B.
+
+### Forward tests scored
+
+- **`FT-…-2` — PASS.** Accepted par equalled the announced maximum. The sector's full-take record is
+  **27 of 28**, 09-10 the lone exception; since the cap doubled it is two for three.
+- **`FT-…-3` — PASS.** 912810UT3 on the 42-line list; 912810UV8 and 912810UX4 absent — the third
+  operation in a row the 20Y-exclusion mechanism held with no count predicted.
+- **`FT-…-4` — KILL.** Registered as "more than 5 issues accepted"; **3** were. The 23-issue print was
+  a thin-book necessity, not a regime change. Recorded on the sweep doc's kill list.
+- **`FT-…-5` — PASS.** The 10-14 announcement printed exactly $6.000B.
+
+(`FT-…-1` was scored KILL on 2026-09-15 and is untouched.) No new forward test is registered: the
+close-out is terminal for this document, so a prediction filed here would have no session left to
+score it. The open threads — whether the cover-to-concentration pattern holds a fourth time, and what
+the enlarged cap becomes after it expires — belong to the
+[11-04 operation's ledger](treasury-buyback-10y20y-2026-11-04.md).
+
+### Tape, for the record (no attribution claimed)
+
+VIX **16.46** (10-15 close) vs **16.87** (10-14) — −0.41pt, no regime shift. 10Y **5.089%** / 30Y
+**5.429%** on 10-15 vs 5.190% / 5.525% on 10-14 (−10.1bp / −9.6bp); 10s30s **34.0bp** (33.5bp on
+10-14). The same morning carried PPI and retail sales at 08:30 and the coupon announcement at ~11:00,
+all before this ~1bp-scale 1:40pm window, so none of the move can be attributed to it. Read as a
+data release, not a catalyst — unchanged from the day-one stance.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — no position was ever keyed
+to a single liquidity-support operation, and none is retrofitted now.** The lean (full take, low
+confidence) was right on the number; what the five-week run bought is a better model: the fill binary
+and the issue count both track the *book*, and the book is bimodal ($10.49B on 09-10, $46.39B and
+$40.84B since). The schedule PDF never moved (89,250 B). The scanner goes quiet on this event.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

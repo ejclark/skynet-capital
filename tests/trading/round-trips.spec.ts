@@ -84,6 +84,20 @@ describe("matchRoundTrips — playbook attribution (#885)", () => {
     expect(ledger.trips[0]).toMatchObject({ playbookId: "S1-NVDA", playbookMode: "standard" });
   });
 
+  it("carries the OPENING fill's initiator, even with no playbook behind it (#4450)", () => {
+    const ledger = matchRoundTrips(
+      [
+        fill({ side: "buy", quantity: 10, price: 100, at: "2026-08-01T14:00:00.000Z" }),
+        fill({ side: "buy", quantity: 5, price: 100, at: "2026-08-01T15:00:00.000Z" }),
+        fill({ side: "sell", quantity: 15, price: 110, at: "2026-08-03T14:00:00.000Z" }),
+      ].map((f, i) => (i === 0 ? { ...f, initiator: "persona" as const } : f)),
+    );
+    expect(ledger.trips[0]).toMatchObject({ initiator: "persona" });
+    expect(ledger.trips[0]).not.toHaveProperty("playbookId");
+    // The second lot's opening fill named no initiator, and the close lends it none.
+    expect(ledger.trips[1]).not.toHaveProperty("initiator");
+  });
+
   it("leaves an unattributed fill's trip with no playbookId at all", () => {
     const ledger = matchRoundTrips([
       fill({ side: "buy", quantity: 10, price: 100, at: "2026-08-01T14:00:00.000Z" }),

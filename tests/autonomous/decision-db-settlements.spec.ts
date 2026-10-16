@@ -100,6 +100,13 @@ describe("DecisionDb — late fills of working orders", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("WHEN a working order carried no id, its settlement still names the persona that decided it", () => {
+    db.record(cycle(T0, soldPut, working()));
+    db.recordSettlements([putFilled()]);
+
+    expect(db.personasOfOrders(["opt-1"])).toEqual(["sauron"]);
+  });
+
   it("WHEN a working option order later fills, its decision reads as filled, with quantity and price", () => {
     db.record(cycle(T0, soldPut, working("opt-1")));
     expect(resultOf(db)?.status).toBe("working");

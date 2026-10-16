@@ -66,6 +66,28 @@ describe("readAccountDecisions", () => {
     expect(records).toBe(sauronRecords);
   });
 
+  it("asks for the personas of all the account's orders at once, when the store can say", async () => {
+    const asked: string[][] = [];
+    const records = await readAccountDecisions("sauron", {
+      readDecisions: async (id) =>
+        id === "sauron" ? [decision({ at: 1 })] : [decision({ at: 2, personaId: id })],
+      readTradeActivity: async () => [
+        trade({ orderId: "a" }),
+        trade({ orderId: "a" }),
+        trade({ orderId: "b" }),
+      ],
+      personasOfOrders: (ids) => {
+        asked.push([...ids]);
+        return ["sauron", "beta-scout"];
+      },
+      findByOrderId: () => {
+        throw new Error("a record per order is exactly what this path avoids");
+      },
+    });
+    expect(asked).toEqual([["a", "b"]]);
+    expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
+  });
+
   it("dedupes a foreign persona discovered via multiple trades — one fetch, not two", async () => {
     let betaFetches = 0;
     const records = await readAccountDecisions("sauron", {

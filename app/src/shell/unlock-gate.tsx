@@ -10,6 +10,7 @@ import {
   type LevelUp,
   submitCheckAnswers,
 } from "../live/learn";
+import { InlineResult } from "../ui";
 import { flareTower } from "./tower-bus";
 
 /**
@@ -78,7 +79,11 @@ function UnlockBannerShell({
             {line}
           </span>
         ))}
-        {error ? <span className="unlock-err">{error}</span> : null}
+        {error ? (
+          <InlineResult as="span" tone="err" live={false}>
+            {error}
+          </InlineResult>
+        ) : null}
       </div>
       <button
         type="button"
@@ -280,7 +285,11 @@ export function CheckGateCard({
           </li>
         ))}
       </ol>
-      {error ? <p className="unlock-err">{error}</p> : null}
+      {error ? (
+        <InlineResult tone="err" live={false}>
+          {error}
+        </InlineResult>
+      ) : null}
       <button
         type="button"
         className="btn btn-primary"

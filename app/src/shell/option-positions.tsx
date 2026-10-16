@@ -13,6 +13,9 @@ import {
   submitOption,
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
+import { InlineResult } from "../ui";
+import { optionCloseWords } from "./close-panel";
+import { land } from "./landing";
 import { RollRow } from "./roll-row";
 
 /**
@@ -20,7 +23,8 @@ import { RollRow } from "./roll-row";
  * provided, in the shell: the desk's held option contracts, each with the same review-then-
  * confirm discipline as every order. Direction and size resolve SERVER-side from the live
  * holding (a long closes with a sell, a written contract with a buy), so one button is always
- * the right direction — this component only shows what the desk answered.
+ * the right direction — this component only shows what the desk answered, and its Confirm says
+ * that side and count in words ("buy to close 1 contract"), as the desk's close panel does (#5091).
  *
  * LIMIT CLOSE (#3407 P1 slice 3; closes were market-only): each row carries a Market / Limit
  * choice and, on Limit, the premium per share it will accept. Market stays the default the row
@@ -160,11 +164,17 @@ function CloseRow({
   useEffect(() => {
     if (!focus) return;
     // Next frame: on the docked bench the pane's own scroll-to-pane effect (a parent effect, so
-    // it runs after this one) would otherwise win, leaving the member at the pane's top.
-    const frame = requestAnimationFrame(() =>
-      rowRef.current?.scrollIntoView?.({ block: "center" }),
-    );
-    return () => cancelAnimationFrame(frame);
+    // it runs after this one) would otherwise win, leaving the member at the pane's top. Then
+    // `land` keeps the row centred while the ticket and chart above it finish loading: the row can
+    // render before them, and a single scroll left it pushed off screen below them (#5216).
+    let undo: (() => void) | undefined;
+    const frame = requestAnimationFrame(() => {
+      if (rowRef.current) undo = land(rowRef.current);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      undo?.();
+    };
   }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
@@ -194,10 +204,13 @@ function CloseRow({
       setState({ step: "error", message: String(error) });
     }
   };
-  const confirm = async () => {
+  // The review goes bare (the server sizes it from the live holding), but Confirm names the count
+  // that review answered and its button read: bare again, the server would close whatever is held
+  // when Confirm lands. A holding that shrank in between is then refused, never resized (#5090).
+  const confirm = async (contracts: number) => {
     setState({ step: "submitting" });
     try {
-      const result = await submitOption(draft);
+      const result = await submitOption({ ...draft, contracts });
       setState({ step: "done", result });
       if (result.ok) onFilled();
     } catch (error) {
@@ -266,8 +279,12 @@ function CloseRow({
         {state.step === "reviewing" ? <span className="tkt-close-note">reviewing…</span> : null}
         {state.step === "reviewed" ? (
           state.preview.ok ? (
-            <button type="button" className="btn btn-primary mc-btn" onClick={() => void confirm()}>
-              Confirm — close {state.preview.contracts}
+            <button
+              type="button"
+              className="btn btn-primary mc-btn"
+              onClick={() => void confirm(state.preview.contracts)}
+            >
+              Confirm — {optionCloseWords(state.preview).toLowerCase()}
               {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
                 ? ` · limit ${money(state.preview.limitPrice)}`
                 : " · market"}
@@ -279,21 +296,27 @@ function CloseRow({
                 : ""}
             </button>
           ) : (
-            <span className="tkt-close-note gate-refusal">✕ {state.preview.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.preview.refusals[0]}
+            </InlineResult>
           )
         ) : null}
         {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
         {state.step === "done" ? (
           state.result.ok ? (
-            <span className="tkt-close-note gate-ok">
+            <InlineResult as="span" tone="ok" className="tkt-close-note">
               order {state.result.orderId} {state.result.status}
-            </span>
+            </InlineResult>
           ) : (
-            <span className="tkt-close-note gate-refusal">✕ {state.result.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.result.refusals[0]}
+            </InlineResult>
           )
         ) : null}
         {state.step === "error" ? (
-          <span className="tkt-close-note gate-refusal">{state.message}</span>
+          <InlineResult as="span" tone="err" className="tkt-close-note">
+            {state.message}
+          </InlineResult>
         ) : null}
         <button
           type="button"
@@ -351,7 +374,7 @@ export function OptionPositionsCard({
       <h2 className="panel-title">Option positions</h2>
       <p className="panel-sub">
         Held contracts on this account — Close reviews first, and works out the direction from the
-        live holding.
+        contracts you hold now.
       </p>
       <div className="tkt-close-rows">
         {held.map((position) => (

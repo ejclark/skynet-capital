@@ -1,3 +1,4 @@
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { MarketContext, OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
@@ -49,6 +50,9 @@ export interface AutonomousTraderConfig {
   /** Minimum gap between option attempts (approved OR refused, observe OR live) on one underlying.
    *  Default 10 minutes. In-memory. */
   readonly optionCooldownMs?: number;
+  /** Called when a dark playbook's observation throws (#5489). The cycle goes on with none: a
+   *  recording must never cost a decision. */
+  readonly onObservationError?: (personaId: string, error: unknown) => void;
 }
 
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
@@ -213,6 +217,7 @@ export class AutonomousTrader {
     const enriched = options ? { ...context, options } : context;
     const rawIntents = persona.decide(enriched, decidedOn);
     const playbookVerdicts = persona.playbookVerdicts?.(enriched) ?? [];
+    const playbookObservations = this.observationsOf(persona, enriched);
     const { open, portfolio } = await this.readOpenShares(mode, rawIntents, decidedOn);
     const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
       rawIntents,
@@ -255,8 +260,20 @@ export class AutonomousTrader {
       context,
       ...(refusals.length > 0 ? { refusals } : {}),
       ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
+      ...(playbookObservations.length > 0 ? { playbookObservations } : {}),
     });
     return results;
+  }
+
+  /** What the persona's dark playbooks would have done (#5489) — a recording, never a decision, so a
+   *  reading that throws costs the record its observations and the cycle nothing. */
+  private observationsOf(persona: Persona, context: MarketContext): readonly PlaybookObservation[] {
+    try {
+      return persona.playbookObservations?.(context) ?? [];
+    } catch (error) {
+      this.config.onObservationError?.(persona.id, error);
+      return [];
+    }
   }
 
   /** Underlyings no option order may be attempted on this cycle: one still working at the broker,

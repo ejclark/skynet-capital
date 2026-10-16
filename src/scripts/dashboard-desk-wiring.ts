@@ -9,7 +9,6 @@
  * own access/ops-status wiring sits between them and reads `liveRoster`/`findParticipant`.
  */
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
-import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import { publishingOrderAuditLog } from "../observatory/activity-publishing.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
@@ -22,6 +21,7 @@ import { resolveDeskTrading } from "../server/account-identity-gate.js";
 import { createAccountService } from "../server/account-service.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog, type OrderAuditLog } from "../server/order-audit-log.js";
+import { createQuotePoller } from "../server/quote-poller.js";
 import { createQuoteStreamHub, type QuoteStreamHub } from "../server/quote-stream-hub.js";
 
 export interface AccountDeskAccessDeps {
@@ -90,21 +90,13 @@ export interface QuoteStreamWiringDeps {
 export function wireQuoteStream(deps: QuoteStreamWiringDeps): QuoteStreamHub {
   return createQuoteStreamHub({
     openSocket: (requesterId, sinks) => {
-      const credentials = deps.findParticipant(requesterId)?.credentials;
-      if (!(credentials?.apiKey && credentials.apiSecret)) return undefined;
-      return new AlpacaMarketDataStream({
-        apiKey: credentials.apiKey,
-        apiSecret: credentials.apiSecret,
-        // Nothing until a surface asks: the hub resubscribes the moment it has a symbol.
-        symbols: [],
-        quotes: true,
-        onEvent: (event) => {
-          if (event.type === "price") {
-            sinks.onTrade({ symbol: event.symbol, price: event.price, at: event.at });
-          }
-        },
-        onQuote: sinks.onQuote,
-      });
+      const participant = deps.findParticipant(requesterId);
+      const credentials = participant?.credentials;
+      if (!(participant && credentials?.apiKey && credentials.apiSecret)) return undefined;
+      // REST polling, never a market-data socket (#5001): Alpaca's one socket per LOGIN belongs to
+      // the bots app, and a socket here on a member sharing that login starves the bots' eval loop.
+      const options = deps.optionsClientFactory(participant);
+      return createQuotePoller({ sinks, snapshot: (symbol) => options.getUnderlyingQuote(symbol) });
     },
     snapshot: (requesterId, symbol) => {
       const participant = deps.findParticipant(requesterId);

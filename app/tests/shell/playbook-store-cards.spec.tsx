@@ -1,18 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
+  PairRowView,
   PlaybookStoreCardView,
   PlaybookStoreView,
+  StrategyCardView,
   SubscriptionView,
 } from "../../src/live/playbook-store";
-import { PlaybookCard } from "../../src/shell/playbook-store-cards";
+import { StrategyCard } from "../../src/shell/playbook-strategy-cards";
 import { PAUSED_NOTE } from "../../src/shell/playbook-subscription-row";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
 /**
- * The Store card's controls (#4642 slice 7, #4649; #4610):
+ * The Store strategy card's controls (#4642 slice 7, #4649; #4610):
  *  - WHEN an owner edits a bot's subscription, the card SHALL post mode, capital and symbols to
  *    configure — never resubscribe, so a paused subscription stays paused.
  *  - The symbols filter SHALL be chips drawn from the card's basket (shown only for a basket of
@@ -38,7 +40,7 @@ const card = (
   symbols: readonly string[],
   subscription?: SubscriptionView,
 ): PlaybookStoreCardView => ({
-  id: symbols.length > 1 ? "HC-SAURON" : "S1-NVDA",
+  id: symbols.length > 1 ? "SAURON" : "S1-NVDA",
   symbol: symbols[0] ?? "",
   symbols,
   evidence: "fixture evidence",
@@ -78,20 +80,47 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+/** A pair row for a card, as the server would send it: researched, with the card's subscription. */
+const pairOf = (c: PlaybookStoreCardView, over: Partial<PairRowView> = {}): PairRowView => ({
+  id: c.id,
+  symbols: c.symbols,
+  status: "researched",
+  statusLabel: "✓ researched",
+  stale: false,
+  call: "The call.",
+  ...(c.subscription ? { subscription: c.subscription } : {}),
+  ...over,
+});
+
+const strategyOf = (pairs: readonly PairRowView[]): StrategyCardView => ({
+  strategy: "pre-print-run-up",
+  name: "the pre-print run-up",
+  instrument: "shares",
+  summary: "One line on the strategy.",
+  pairs,
+});
+
 function mount(
   c: PlaybookStoreCardView,
-  over: { delegation?: DelegationGateView; botsOnly?: BotsOnlyGateView } = {},
+  over: {
+    delegation?: DelegationGateView;
+    botsOnly?: BotsOnlyGateView;
+    pair?: Partial<PairRowView>;
+  } = {},
 ) {
   const onChanged = rstest.fn();
   render(
-    <PlaybookCard
+    <StrategyCard
       accountId="sauron"
-      card={c}
+      strategy={strategyOf([pairOf(c, over.pair)])}
+      cardsById={new Map([[c.id, c]])}
       canManage
       delegation={over.delegation ?? OPEN}
       botsOnly={over.botsOnly ?? BOT}
       onChanged={onChanged}
       accountName="Sauron"
+      metricsFor={() => undefined}
+      houseFor={() => undefined}
     />,
   );
   return onChanged;
@@ -122,7 +151,7 @@ describe("subscribing a bot", () => {
         url: "/api/playbook-store/subscribe",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "standard",
           capitalAllocated: 5000,
           symbols: ["NVDA", "CRWV"],
@@ -240,7 +269,7 @@ describe("a subscribed card", () => {
         url: "/api/playbook-store/configure",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "aggressive",
           capitalAllocated: 8000,
           symbols: ["NVDA"],
@@ -296,9 +325,7 @@ describe("a subscribed card", () => {
     expect(screen.queryByText(PAUSED_NOTE)).not.toBeInTheDocument();
     expect(screen.queryByText(/On$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    const section = screen.getByText("S1-NVDA").closest("section");
-    if (!(section instanceof HTMLElement)) throw new Error("no card");
-    fireEvent.click(within(section).getByRole("button", { name: "Unsubscribe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe" }));
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toEqual({
       url: "/api/playbook-store/unsubscribe",
@@ -326,27 +353,36 @@ describe("the deck, for an owned account", () => {
     id,
   });
 
-  it("leads with the playbooks the account is subscribed to, catalog order otherwise", async () => {
+  it("leads with the strategies the account holds a pair of, catalog order otherwise", async () => {
+    const cards = [
+      named("A-FIRST", ["NVDA"]),
+      named("B-ON", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: true }),
+      named("C-PLAIN", ["NVDA"]),
+      named("D-PAUSED", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: false }),
+    ];
     mountSection({
-      cards: [
-        named("A-FIRST", ["NVDA"]),
-        named("B-ON", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: true }),
-        named("C-PLAIN", ["NVDA"]),
-        named("D-PAUSED", ["NVDA"], { mode: "standard", capitalAllocated: 1, enabled: false }),
-      ],
+      cards,
+      strategies: cards.map((c) => ({
+        ...strategyOf([pairOf(c)]),
+        strategy: c.id,
+        name: `the ${c.id.toLowerCase()}`,
+      })),
       capitalUnderManagement: 1,
       canManage: true,
       delegation: OPEN,
       botsOnly: BOT,
     });
-    await screen.findByText("B-ON");
-    const order = [...document.querySelectorAll(".pb-card-id")].map((el) => el.textContent);
-    expect(order).toEqual(["B-ON", "D-PAUSED", "A-FIRST", "C-PLAIN"]);
+    await screen.findAllByText("The b-on");
+    const order = [...document.querySelectorAll(".pb-strategy .pb-card-id")].map(
+      (el) => el.textContent,
+    );
+    expect(order).toEqual(["The b-on", "The d-paused", "The a-first", "The c-plain"]);
   });
 
   it("says the bots-only rule once at the top on a human account", async () => {
     mountSection({
       cards: [named("S1-NVDA", ["NVDA"])],
+      strategies: [strategyOf([pairOf(named("S1-NVDA", ["NVDA"]))])],
       capitalUnderManagement: 0,
       canManage: true,
       delegation: OPEN,
@@ -389,5 +425,59 @@ describe("a card's labelled rows after the rules", () => {
   it("draws only the four rule rows on a card with no notes", () => {
     mount(card(["AAPL"]));
     expect(rowNames()).toEqual(["Enter", "Exit — take profit", "Exit — cut losses", "Hold"]);
+  });
+});
+
+/** #5432: a pre-earnings pair draws its rule as one line counted back from the earnings report, in
+ *  place of its Enter / Exit / Hold rows — on the study world's clock, against the real calendar. */
+describe("a pre-earnings pair drawn as one line", () => {
+  beforeEach(() => {
+    rstest.useFakeTimers({ toFake: ["Date"] });
+    rstest.setSystemTime(new Date("2026-10-08T19:00:00Z"));
+  });
+  afterEach(() => {
+    rstest.useRealTimers();
+  });
+  const s1: PlaybookStoreCardView = {
+    ...card(["NVDA"]),
+    window: "20 to 6 sessions before the print",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    stretches: {
+      source: "docs/research/nvda-earnings-cycle.md F2",
+      era: "2023–26",
+      reports: 14,
+      stretches: [
+        { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+        { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+        { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+      ],
+    },
+  };
+
+  it("shows the line, the rows and the bars, and no Enter / Exit / Hold paragraphs", () => {
+    mount(s1);
+    expect(screen.getByRole("img", { name: /^NVDA's window: holds from Oct 21/ })).toBeVisible();
+    expect(screen.getByText("① Buy · Oct 21 · 20 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("② Sell · Nov 11 · 5 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("Average move in each stretch")).toBeInTheDocument();
+    expect(document.querySelector(".pb-card-triggers")).toBeNull();
+    expect(screen.queryByText("enter rule")).toBeNull();
+    // The window is drawn, so it is not said again as a sentence; target exposure stays as it was.
+    expect(screen.queryByText("20 to 6 sessions before the print")).toBeNull();
+    expect(screen.getByText("Target exposure")).toBeInTheDocument();
+  });
+
+  it("keeps a pair's own labelled notes under the line", () => {
+    mount({ ...s1, notes: [{ label: "Pause", text: "pause rule" }] });
+    expect(
+      [...document.querySelectorAll(".pb-card-triggers dt")].map((dt) => dt.textContent),
+    ).toEqual(["Pause"]);
+  });
+
+  it("falls back to the rows when the ticker has no report on file to count back from", () => {
+    mount({ ...s1, id: "S1-NVDA", symbol: "ZZZZ", symbols: ["ZZZZ"] });
+    expect(screen.queryByRole("img", { name: /window/ })).toBeNull();
+    expect(screen.getByText("enter rule")).toBeInTheDocument();
+    expect(screen.getByText("20 to 6 sessions before the print")).toBeInTheDocument();
   });
 });

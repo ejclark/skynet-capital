@@ -13,13 +13,13 @@ import userEvent from "@testing-library/user-event";
 import { horizonSearch } from "../../src/live/horizon-params";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import type { ResearchCalendarData } from "../../src/live/research";
-import { CockpitClock } from "../../src/shell/cockpit-clock";
+import { EventsSection } from "../../src/shell/events-section";
 import { TradeClock } from "../../src/shell/trade-clock";
 
 /**
- * The market calendar's head on Trade (#3807 slice 3b-2): the Profile page's head, with its line
- * scoped to the ticket's symbol — ◆ "on <SYM>" and ○ "market-wide" — and its range the ROOT
- * `?on=&span=`, so a week stepped to on the Profile page is the week Trade opens on. Two routes
+ * The market calendar's head on Trade (#3807 slice 3b-2): R&D's head row, with its line scoped to
+ * the ticket's symbol — ◆ "on <SYM>" and ○ "market-wide" — and its range the ROOT `?on=&span=`,
+ * so a week stepped to on the Profile page's Events (#5074) is the week Trade opens on. Two routes
  * over one real memory-history router whose root retains the range exactly as `__root.tsx` does;
  * the research corpus is a fixture (META prints Oct 28, the Fed decides Oct 28, the jobs report
  * lands Oct 2, a Treasury sale and an AAPL launch sit in the week of Oct 19 and are neither).
@@ -64,7 +64,16 @@ function mount(initialPath: string) {
   const accounts = createRoute({
     getParentRoute: () => rootRoute,
     path: "/accounts",
-    component: () => <CockpitClock />,
+    // The Profile page's one range control is its Events section's head (#5074).
+    component: () => (
+      <EventsSection
+        desks={[]}
+        desksLoading={false}
+        desksError={false}
+        day={undefined}
+        onPickDay={() => undefined}
+      />
+    ),
   });
   const trade = createRoute({
     getParentRoute: () => rootRoute,

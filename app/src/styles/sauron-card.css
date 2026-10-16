@@ -86,10 +86,14 @@
 }
 
 /* ---- the shade: the forge seat and the mist, over the bottom 90px of the art ---- */
+/* Decoration lets go of the pointer (#4970): below the bench width the card has no art and the
+ * pull lands on the decision card or the book above it, so the box would take their taps. The
+ * league under the shade takes them back (`.char-body`). */
 .char-blend {
   position: relative;
   z-index: 1;
   margin-top: -90px;
+  pointer-events: none;
 }
 .char-shade {
   display: block;
@@ -111,6 +115,7 @@
 
 /* ---- the league, as the card's body ---- */
 .char-body {
+  pointer-events: auto;
   margin-top: -1px;
   padding: 2px 28px 20px;
   background: var(--surface);

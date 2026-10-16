@@ -9,10 +9,12 @@ import type { PositionFocus } from "../shell/option-positions";
  */
 
 /** "Use this" on a call you've already sold (#3729): the Orders pane, that contract marked, and —
- *  for a roll — the suggested target in `?rollTo=` (expiry:strike) for its Roll row to seed. */
+ *  for a roll — the suggested target in `?rollTo=` (expiry:strike) for its Roll row to seed. Only
+ *  the contract and the roll are read, so a held position with no guidance call can hand off too
+ *  (the phone's position cards, #4947). */
 export function manageSearch<T extends { section?: string; rollTo?: string }>(
   prev: T,
-  call: ManageCall,
+  call: Pick<ManageCall, "occ" | "rollTo">,
 ) {
   const next: T & { section: "orders"; manage: string; rollTo?: string } = {
     ...prev,

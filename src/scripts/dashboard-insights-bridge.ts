@@ -19,18 +19,24 @@ import {
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
-import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
+import {
+  buildSubscriptionsSnapshot,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+} from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
+import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
-import { createSubscriptionStore } from "../server/subscription-store.js";
+import { createSubscriptionStore, type SubscriptionStore } from "../server/subscription-store.js";
+import { memoPerKey } from "../storage/ttl-memo.js";
 
 /**
  * Opens the app-side decision store — this listener's own copy of what `bots` replicates over
@@ -78,11 +84,16 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** Which personas decided these orders, ids only — the Decisions tab's cross-persona join
+   *  without a decision record per order (#4612 slice 7). */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
   /** A spread leg's order id → its spread — the same store, filled by the same replicated
    *  records, so a leg resolves the moment its decision has landed. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
+  /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
+  readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
@@ -98,6 +109,23 @@ export interface CredentialsBridgeDeps {
   readonly knownPersonaIds: readonly string[];
   /** The live roster resolver every other credential seam in this app already uses. */
   readonly findParticipant: (id: string) => Participant | undefined;
+}
+
+const FUNNEL_TTL_MS = 30_000;
+/** A bot's week of checks (#5073 slice 2) is re-read at most this often per bot — every viewer of
+ *  the Playbooks section polls it every 30s. Short enough that the newest check it holds is never
+ *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
+const CHECK_WEEK_TTL_MS = 15_000;
+
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v3`, with each
+ *  subscription's conviction and its pointer at a conviction record in the version. */
+export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
+  return buildSubscriptionsSnapshot(
+    store.load(),
+    at,
+    store.loadAllocations(),
+    SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+  );
 }
 
 /** Start the internal insights listener; logs the port it bound once it's up. */
@@ -153,7 +181,11 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    subscriptions: () => buildSubscriptionsSnapshot(subscriptions.load(), Date.now()),
+    // v3 adds each subscription's pointer at a conviction record to its version (#5482 slice 2),
+    // on top of v2's conviction (#4469 slice 3c part 3). Sent only once the bots that read v3
+    // (#5511) were deployed: a bots build that predates it reads v3 as "not reported" and keeps
+    // the roster it had. v1 and v2 stay readable by the bots for a rollback.
+    subscriptions: () => subscriptionsOnTheWire(subscriptions),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
@@ -187,8 +219,19 @@ export function startInsightsBridge(
               ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
-          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
+          // Remembered for 30 s: a grouped scan of the persona's whole history (~190 ms at 180
+          // days) that no viewer can tell is half a minute old (#4612 slice 7).
+          funnelFor: memoPerKey(FUNNEL_TTL_MS, (personaId: string) =>
+            decisionDb.funnelFor(personaId),
+          ),
+          readCheckWeek: memoPerKey(CHECK_WEEK_TTL_MS, (personaId: string) => {
+            const window = checkWeekWindow(new Date());
+            return window
+              ? decisionDb.checkWeek(personaId, window.from, window.to, WEEK_BUCKET_MS)
+              : undefined;
+          }),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.

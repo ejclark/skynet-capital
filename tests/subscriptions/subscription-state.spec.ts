@@ -1,5 +1,7 @@
 import {
+  carriedOnResubscribe,
   EMPTY_SUBSCRIPTIONS,
+  isCalendarDay,
   parseSubscriptionsState,
 } from "../../src/subscriptions/subscription-state.js";
 
@@ -116,6 +118,149 @@ describe("parseSubscriptionsState", () => {
       });
       expect(state?.["acct-1"]).toHaveLength(1);
       expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
+    });
+  });
+
+  describe("fields a newer build wrote (#4772)", () => {
+    it("keeps a field this build does not know on the parsed record, unchanged", () => {
+      const window = { from: "D-20", to: "D-6" };
+      const state = parseSubscriptionsState({ "acct-1": [{ ...valid, window }] });
+      expect(state?.["acct-1"]?.[0]).toEqual({ ...valid, accountId: "acct-1", window });
+    });
+
+    it("never lets an unknown field stand in for a known one", () => {
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, accountId: "someone-else", compoundAllocation: "yes" }],
+      });
+      expect(state?.["acct-1"]?.[0]?.accountId).toBe("acct-1");
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
+    });
+
+    it("skips a reserved $ key even when it holds an array — it is never an account", () => {
+      const state = parseSubscriptionsState({ "acct-1": [valid], $allocations: [valid] });
+      expect(Object.keys(state ?? {})).toEqual(["acct-1"]);
+    });
+
+    it("a re-subscribe carries a conviction and a newer build's field, never what it sets", () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      const [prior] =
+        parseSubscriptionsState({
+          "acct-1": [{ ...valid, symbols: ["NVDA"], conviction, window: { from: "D-20" } }],
+        })?.["acct-1"] ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({
+        conviction,
+        window: { from: "D-20" },
+      });
+    });
+  });
+
+  describe("conviction (#4469 slice 3c part 1)", () => {
+    const conviction = {
+      reason: "CRWV runs as Eric's conviction, against the study's stand-aside",
+      checkOn: "2027-01-29",
+    };
+
+    it("parses an owner's reason and the day it is checked", () => {
+      const state = parseSubscriptionsState({ "acct-1": [{ ...valid, conviction }] });
+      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
+    });
+
+    it("leaves it absent when there is none on record", () => {
+      const state = parseSubscriptionsState({ "acct-1": [valid] });
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("conviction");
+    });
+
+    it("drops a malformed conviction, never the subscription — the bots keep trading it (criterion 11)", () => {
+      for (const bad of [
+        "Eric's call",
+        { reason: "", checkOn: "2027-01-29" },
+        { reason: "   ", checkOn: "2027-01-29" },
+        { reason: "x".repeat(2049), checkOn: "2027-01-29" },
+        { reason: 7, checkOn: "2027-01-29" },
+        { reason: "Eric's call" },
+        { reason: "Eric's call", checkOn: "2027-02-30" },
+        { reason: "Eric's call", checkOn: "2027-1-29" },
+        { reason: "Eric's call", checkOn: "2027-01-29T00:00:00Z" },
+      ]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, conviction: bad }] });
+        expect(state?.["acct-1"]).toHaveLength(1);
+        expect(state?.["acct-1"]?.[0]).not.toHaveProperty("conviction");
+      }
+    });
+
+    it("isCalendarDay: a real day only", () => {
+      expect(isCalendarDay("2028-02-29")).toBe(true);
+      expect(isCalendarDay("2027-02-29")).toBe(false);
+      expect(isCalendarDay(20270129)).toBe(false);
+    });
+  });
+
+  describe("convictionId (#5482 slice 2)", () => {
+    it("parses a pointer at a conviction record beside the subscription's own conviction", () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, conviction, convictionId: "ai-dip-2026-10" }],
+      });
+      expect(state?.["acct-1"]?.[0]?.convictionId).toBe("ai-dip-2026-10");
+      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
+    });
+
+    it("drops a malformed pointer, never the subscription", () => {
+      for (const bad of ["", "AI Dip", "a".repeat(65), 7, { id: "ai-dip-2026-10" }]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: bad }] });
+        expect(state?.["acct-1"]).toHaveLength(1);
+        expect(state?.["acct-1"]?.[0]).not.toHaveProperty("convictionId");
+      }
+    });
+
+    it("a re-subscribe carries the pointer forward", () => {
+      const [prior] =
+        parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: "ai-dip-2026-10" }] })?.[
+          "acct-1"
+        ] ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ convictionId: "ai-dip-2026-10" });
+    });
+  });
+
+  describe("playTarget (#5483 slice 3)", () => {
+    const target = {
+      weight: 0.7,
+      lean: { min: 0.6, max: 0.8 },
+      band: { signal: 0.05, gate: 0.1 },
+    };
+    const parsed = (playTarget: unknown) =>
+      parseSubscriptionsState({ "acct-1": [{ ...valid, playTarget }] })?.["acct-1"];
+
+    it("parses a target beside the rest of the subscription", () => {
+      expect(parsed(target)?.[0]?.playTarget).toEqual(target);
+      expect(parsed({ weight: 0.7 })?.[0]?.playTarget).toEqual({ weight: 0.7 });
+    });
+
+    it("drops a malformed target, never the subscription", () => {
+      const bad: unknown[] = [
+        7,
+        "70%",
+        { weight: 70 },
+        { weight: 1 },
+        { weight: 0.7, lean: { min: 0.8, max: 0.6 } },
+        { weight: 0.7, lean: { min: 0.6 } },
+        { weight: 0.7, band: { signal: 0.1, gate: 0.05 } },
+        { weight: 0.7, band: { signal: 0.05 } },
+      ];
+      for (const playTarget of bad) {
+        expect(parsed(playTarget)).toHaveLength(1);
+        expect(parsed(playTarget)?.[0]).not.toHaveProperty("playTarget");
+      }
+    });
+
+    it("carries a sub-field a newer build added, as a conviction's does", () => {
+      const next = { ...target, band: { ...target.band, hold: 3 }, owner: "eric" };
+      expect(parsed(next)?.[0]?.playTarget).toEqual(next);
+    });
+
+    it("a re-subscribe carries the target forward", () => {
+      const [prior] = parsed(target) ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ playTarget: target });
     });
   });
 });

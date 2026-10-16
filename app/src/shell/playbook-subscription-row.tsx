@@ -7,6 +7,8 @@ import {
   setSubscriptionEnabledRequest,
   unsubscribeRequest,
 } from "../live/playbook-store";
+import { InlineResult } from "../ui";
+import { ConvictionPanel } from "./playbook-conviction";
 import { SubscribeForm } from "./playbook-subscribe-form";
 
 /**
@@ -71,6 +73,7 @@ export function SubscriptionRow({
   card,
   human,
   reduceOnly,
+  runsOnConviction = false,
   onChanged,
 }: {
   readonly accountId: string;
@@ -80,6 +83,10 @@ export function SubscriptionRow({
   /** The viewer's delegation fog is down: Edit still opens, but only to LOWER exposure — the
    *  server refuses an edit that delegates more, exactly as it refuses a subscribe. */
   readonly reduceOnly: boolean;
+  /** The pair runs as its owner's conviction (a ◆ row, or one the study does not back), so the
+   *  conviction and its check day are drawn and can be re-dated here. Any pair that already holds a
+   *  conviction shows it, whatever its evidence says. */
+  readonly runsOnConviction?: boolean;
   readonly onChanged: () => void;
 }): ReactElement | null {
   const sub = card.subscription;
@@ -115,6 +122,14 @@ export function SubscriptionRow({
         ))}
       </p>
       {!(human || sub.enabled) ? <p className="pb-form-note">{PAUSED_NOTE}</p> : null}
+      {!human && (runsOnConviction || sub.conviction) ? (
+        <ConvictionPanel
+          accountId={accountId}
+          playbookId={card.id}
+          {...(sub.conviction ? { conviction: sub.conviction } : {})}
+          onChanged={onChanged}
+        />
+      ) : null}
       {editing ? (
         <SubscribeForm
           accountId={accountId}
@@ -159,7 +174,11 @@ export function SubscriptionRow({
           </button>
         </div>
       )}
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }

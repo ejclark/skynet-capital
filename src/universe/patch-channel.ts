@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { WorldPatchOp } from "./world-patch.js";
 
 /**
@@ -20,7 +21,14 @@ import type { WorldPatchOp } from "./world-patch.js";
  * can derive its OWN extra ops on replay (the board stores the pair of dashboard states the field
  * ops are formatted from). The channel never inspects it.
  *
- * No I/O and no clock: `at` is supplied by the caller, so the whole thing is specifiable.
+ * A fourth question only a restart asks (#4620): *is this the same run of seqs?* A new process
+ * numbers from 1 again, so a client's "I'm at 40" means nothing to it — worse, a short-lived page
+ * can sit inside the new buffer's range and be replayed patches from a run it never saw. Each
+ * channel therefore carries a `boot` id, and the board stamps it on every frame; a client whose
+ * boot differs takes a fresh frame instead of trusting its seq.
+ *
+ * No I/O and no clock: `at` is supplied by the caller, so the whole thing is specifiable (the boot
+ * id is the one random value, and a spec pins it through the options).
  */
 
 export interface WorldPatch<TContext = undefined> {
@@ -42,6 +50,8 @@ export interface PatchChannelOptions {
   readonly buffer?: number;
   /** How many cue ids stay remembered for the fire-once guarantee. */
   readonly cueMemory?: number;
+  /** Names this run of seqs; a restart must yield a different one. Random unless a spec pins it. */
+  readonly boot?: string;
 }
 
 type PatchListener<TContext> = (patch: WorldPatch<TContext>) => void;
@@ -53,10 +63,13 @@ export class WorldPatchChannel<TContext = undefined> {
   private readonly listeners = new Set<PatchListener<TContext>>();
   private readonly bufferSize: number;
   private readonly cueMemory: number;
+  /** Which run of seqs this is — see the header; clients compare it before trusting a seq. */
+  readonly boot: string;
 
   constructor(options: PatchChannelOptions = {}) {
     this.bufferSize = Math.max(1, options.buffer ?? 64);
     this.cueMemory = Math.max(1, options.cueMemory ?? 512);
+    this.boot = options.boot ?? randomUUID().slice(0, 8);
   }
 
   /** The seq of the newest published patch; 0 before anything has been published. */

@@ -36,19 +36,6 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.nw-value {
-  font-family: var(--mono);
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.nw-cents {
-  font-size: 24px;
-  color: var(--muted);
-}
-
 .nw-stats {
   display: flex;
   flex-wrap: wrap;
@@ -119,9 +106,12 @@
   height: 190px;
 }
 
+/* Wraps: where the Form strip's squares and the gap to a new high do not fit one line (a narrow
+   tablet), the gap and its meter drop below the strip together instead of crushing either. */
 .nw-foot {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
@@ -133,6 +123,13 @@
 /* a single account with no closes yet and no known high: no footer rule over nothing */
 .nw-foot:empty {
   display: none;
+}
+.nw-high {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .nw-to-high b {
   color: var(--charged);
@@ -170,16 +167,14 @@
     border-right: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
-  .nw-value {
-    font-size: 32px;
-  }
   .nw-foot {
     justify-content: space-between;
   }
 }
 
-/* Phone (#3689 slice 8, handoff 3b): the value and one line (today · this month · vs the S&P).
-   The stats, windows table, chart and footer are the wider screens' room. */
+/* Phone (#3689 slice 8, handoff 3b): one line (this month · vs the S&P) — the value and today ride
+   the Profile head (#5072). The stats, windows table, chart and footer are the wider screens'
+   room. */
 .nw-phone-line {
   display: none;
   margin: 0;

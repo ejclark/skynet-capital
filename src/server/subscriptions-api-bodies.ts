@@ -1,4 +1,7 @@
-import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
+import { PLAYBOOK_MODES, type PlaybookMode, type SubscriptionConviction } from "../domain/types.js";
+import { STRATEGIES, type StrategyId } from "../playbooks/pair-table.js";
+import { isRecord } from "../storage/parse-guards.js";
+import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import { boundedString, parseJsonRecord } from "./page-shell.js";
 import type { SubscriptionTuning } from "./subscription-store.js";
 
@@ -19,6 +22,8 @@ interface SubscribeBody {
   /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue #3527
    *  slice 3). Absent/false means unchanged, flat-budget behavior. */
   readonly compoundAllocation?: boolean;
+  /** The owner's conviction (#4469 slice 3c part 3) — optional; a malformed one is a 400. */
+  readonly conviction?: SubscriptionConviction;
 }
 
 interface PlaybookRefBody {
@@ -33,6 +38,20 @@ interface SetEnabledBody extends PlaybookRefBody {
 interface ConfigureBody extends PlaybookRefBody {
   readonly tuning: SubscriptionTuning;
 }
+
+interface ConvictionBody extends PlaybookRefBody {
+  readonly conviction: SubscriptionConviction;
+}
+
+interface AllocationBody {
+  readonly id: string;
+  readonly strategy: StrategyId;
+  /** Dollars, above zero; `undefined` clears the allocation (sent as `null`). */
+  readonly capitalAllocated: number | undefined;
+}
+
+/** A conviction's reason is the owner's own sentence or two, never an essay. */
+export const MAX_REASON_LENGTH = 500;
 
 const MAX_SYMBOLS = 20;
 
@@ -57,9 +76,25 @@ function parseMode(raw: unknown): PlaybookMode | undefined {
 const isCapital = (raw: unknown): raw is number =>
   typeof raw === "number" && Number.isFinite(raw) && raw >= 0;
 
+/** `{reason, checkOn}`: a non-blank reason within the cap, trimmed, and a real calendar day.
+ *  Whether the day is one a conviction may be checked on is the route's call (`checkOnRefusal`). */
+function parseConviction(raw: unknown): SubscriptionConviction | undefined {
+  if (!isRecord(raw)) return undefined;
+  const { reason, checkOn } = raw;
+  const text = typeof reason === "string" ? reason.trim() : "";
+  if (!(text.length > 0 && text.length <= MAX_REASON_LENGTH && isCalendarDay(checkOn))) {
+    return undefined;
+  }
+  return { reason: text, checkOn };
+}
+
 export function parseSubscribeBody(raw: string): SubscribeBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
+  // Unlike `symbols`, a conviction that does not parse is refused, never dropped: dropped, it would
+  // save a subscription that trades without the dated test its owner meant to set.
+  const conviction = body.conviction === undefined ? undefined : parseConviction(body.conviction);
+  if (body.conviction !== undefined && !conviction) return undefined;
   const id = boundedString(body.id, 100);
   const playbookId = boundedString(body.playbookId, 60);
   const mode = parseMode(body.mode);
@@ -74,8 +109,33 @@ export function parseSubscribeBody(raw: string): SubscribeBody | undefined {
         capitalAllocated,
         ...(symbols ? { symbols } : {}),
         ...(compoundAllocation ? { compoundAllocation: true } : {}),
+        ...(conviction ? { conviction } : {}),
       }
     : undefined;
+}
+
+/** Conviction (#4469 slice 3c part 3): the whole conviction, both fields, or a 400. */
+export function parseConvictionBody(raw: string): ConvictionBody | undefined {
+  const ref = parsePlaybookRefBody(raw);
+  const conviction = parseConviction(parseJsonRecord(raw)?.conviction);
+  return ref && conviction ? { ...ref, conviction } : undefined;
+}
+
+/** Allocation (#4469 slice 3c part 3): a known strategy, and dollars above zero or `null` to clear.
+ *  Leaving the amount out is a 400, so no client clears an allocation by forgetting a field. */
+export function parseAllocationBody(raw: string): AllocationBody | undefined {
+  const body = parseJsonRecord(raw);
+  if (!body) return undefined;
+  const id = boundedString(body.id, 100);
+  const { strategy, capitalAllocated: capital } = body;
+  const known = typeof strategy === "string" && Object.hasOwn(STRATEGIES, strategy);
+  const amount = capital === null || (isCapital(capital) && capital > 0);
+  if (!(id && known && amount)) return undefined;
+  return {
+    id,
+    strategy: strategy as StrategyId,
+    capitalAllocated: capital === null ? undefined : (capital as number),
+  };
 }
 
 export function parsePlaybookRefBody(raw: string): PlaybookRefBody | undefined {

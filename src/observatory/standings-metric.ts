@@ -1,4 +1,4 @@
-import { participantInvested, participantUnrealized } from "./participant-card.js";
+import { participantReturnPct, participantUnrealized } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency, formatSigned } from "./render-atoms.js";
 
@@ -19,7 +19,7 @@ export const LEADER_METRICS: ReadonlyArray<{ key: LeaderMetric; label: string }>
   { key: "equity", label: "Equity" },
   { key: "month", label: "1M return" },
   { key: "pl", label: "Unrealized P/L" },
-  { key: "return", label: "Return %" },
+  { key: "return", label: "Open-position return" },
   { key: "realized", label: "Realized P/L" },
 ];
 
@@ -61,10 +61,7 @@ export function metricValue(snapshot: ParticipantSnapshot, metric: LeaderMetric)
   if (metric === "pl") return pl;
   if (metric === "realized") return snapshot.realizedPl ?? 0;
   if (metric === "month") return snapshot.monthReturnPct ?? 0;
-  if (metric === "return") {
-    const invested = participantInvested(snapshot);
-    return invested > 0 ? (pl / invested) * 100 : 0;
-  }
+  if (metric === "return") return participantReturnPct(snapshot);
   return snapshot.equity;
 }
 

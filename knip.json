@@ -1,7 +1,45 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/scripts/*.ts", "scripts/*.mjs", "tests/**/*.spec.ts"],
-  "project": ["src/**/*.ts", "scripts/*.mjs"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/scripts/*.ts",
+        "scripts/*.mjs",
+        "scripts/study/parity.mjs",
+        "scripts/study/session.mjs",
+        "scripts/study/drive.mjs",
+        "scripts/study/packets.mjs",
+        "scripts/study/lint.mjs",
+        "scripts/study/rescore.mjs",
+        "scripts/study/pin.mjs",
+        "scripts/study/census.mjs",
+        "scripts/study/harvest.mjs",
+        "scripts/study/round.mjs",
+        "scripts/study/grade.mjs",
+        "scripts/study/readout.mjs",
+        "scripts/study/worlds/*.mjs",
+        "scripts/redesign/shoot.mjs",
+        "scripts/redesign/frames.mjs",
+        "scripts/redesign/pin.mjs",
+        "scripts/redesign/lint.mjs",
+        "scripts/redesign/commons.mjs",
+        "scripts/redesign/board.mjs",
+        "tests/**/*.spec.ts",
+        "e2e/ct/**/*.spec.tsx"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "scripts/*.mjs",
+        "scripts/instructions/*.mjs",
+        "scripts/study/**/*.mjs",
+        "scripts/redesign/*.mjs"
+      ]
+    },
+    "app": {
+      "entry": ["src/routes/**/*.tsx", "tests/**/*.spec.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  },
   "ignore": ["scripts/duel-log.mjs", "src/server/trade-service.ts"],
   "ignoreDependencies": ["@commitlint/config-conventional", "husky", "playwright-core"]
 }

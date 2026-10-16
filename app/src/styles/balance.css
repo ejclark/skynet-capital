@@ -1,0 +1,288 @@
+/* The Balance section (#5493 slice 3): `shell/balance-section.tsx`, `balance-findings.tsx` and
+ * `balance-plays.tsx`. The book read as one system — findings first, then the plays they are read
+ * against, then the closed trades (the scoreboard that used to sit folded at the foot of R&D →
+ * Playbooks, #5451 P3).
+ *
+ * PHONE FIRST (390): one column. A finding is three lines — its level and what it is, the
+ * sentence, the measure and the play to open. A play is a card: name and whether it is on, one bar
+ * of how much of its budget is committed, and three facts. The section is a size container, so a
+ * wide screen adds room by the width the shell gives it (the 3D rail takes some), never by the
+ * viewport: findings lay their three parts side by side, and a play's facts join the row — the
+ * ones a phone leaves a tap away (`.bal-wide`) appear and nothing new is added.
+ *
+ * Nothing here means anything by hue (a standing reader is red/green colourblind, docs/BRAND.md →
+ * Accessibility). A level rides its glyph and word; a gate's row is also ruled heavy on its left
+ * edge and a signal's dotted; the meter's committed part is solid and the rest hatched. Existing
+ * tokens only, so the contrast gate's palettes already cover every text colour used. */
+
+.bal {
+  container: bal / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.bal-lede {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.bal-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.bal-block-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px var(--space-3);
+}
+
+.bal-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.bal-key {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.bal-clear {
+  margin: 0;
+  padding: 14px var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.bal-findings,
+.bal-plays {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── a finding: level + detector · the sentence · the measure and the play ─────────────────── */
+.bal-finding {
+  display: grid;
+  gap: 6px;
+  padding: 12px var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--elev-base);
+  min-width: 0;
+}
+.bal-finding[data-level="gate"] {
+  border-left: 5px solid var(--text);
+}
+.bal-finding[data-level="signal"] {
+  border-left: 2px dotted var(--text);
+}
+.bal-finding p {
+  margin: 0;
+}
+.bal-finding-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-3);
+}
+.bal-level b {
+  font-size: 14px;
+  font-weight: 700;
+}
+.bal-detector {
+  font: 10.5px / 1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bal-finding-words {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.bal-finding-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+}
+.bal-reading {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The way into a play's card: a 32px target on a phone, in the card-link idiom (`.pos-pb-tag`). */
+.bal-play-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  font: 600 12.5px / 1.2 var(--mono);
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.bal-play-link:hover {
+  text-decoration: underline;
+}
+.bal-play-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── a play: name · the budget bar · the facts ──────────────────────────────────────────────── */
+.bal-play {
+  display: grid;
+  gap: 6px;
+  padding: 10px var(--space-4) 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 0;
+}
+.bal-play[data-on="false"] {
+  border-style: dashed;
+}
+.bal-play-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+  min-width: 0;
+}
+.bal-play-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.bal-play-flag {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bal-play-budget {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.bal-meter {
+  height: 8px;
+  border: 1px solid var(--text);
+  border-radius: 4px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--text) 30%, transparent) 3px 4px
+  );
+}
+.bal-meter span {
+  display: block;
+  height: 100%;
+  background: var(--text);
+}
+.bal-budget-words {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.bal-budget-words b {
+  font-weight: 600;
+}
+
+.bal-play-nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px var(--space-3);
+  margin: 4px 0 0;
+}
+.bal-play-nums dt {
+  font: 10px / 1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bal-play-nums dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+/* What a phone leaves a tap away: only a wide section draws it. */
+.bal-wide {
+  display: none;
+}
+
+.bal-closed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.bal-closed .pb-initiators {
+  margin: 0;
+}
+
+/* ── a wide section adds room, never concepts ──────────────────────────────────────────────── */
+@container bal (min-width: 600px) {
+  .bal-finding {
+    grid-template-columns: minmax(150px, 190px) minmax(0, 1fr) minmax(170px, 230px);
+    align-items: center;
+    column-gap: var(--space-4);
+  }
+  .bal-finding-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bal-finding-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bal-play {
+    grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.6fr);
+    align-items: center;
+    column-gap: var(--space-4);
+  }
+  .bal-play-nums {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .bal-wide {
+    display: block;
+  }
+
+  .bal-closed {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+/* Room for the whole row on one line: name, budget, then the six facts. */
+@container bal (min-width: 1000px) {
+  .bal-play {
+    grid-template-columns: minmax(170px, 0.9fr) minmax(200px, 1.3fr) minmax(0, 2.6fr);
+  }
+  .bal-play-nums {
+    grid-column: auto;
+    margin: 0;
+  }
+}

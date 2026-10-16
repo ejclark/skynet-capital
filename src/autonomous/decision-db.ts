@@ -2,10 +2,12 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
+import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
@@ -17,6 +19,7 @@ import {
   type SettledIntent,
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
+import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -64,6 +67,12 @@ export interface DecisionDb {
   /** The exact `orderId` join `playbook-attribution.ts` wants — O(1) via the `intents.order_id`
    *  index, never `decision-context.ts`'s fuzzy symbol+side+time match. */
   findByOrderId(orderId: string): { record: DecisionRecord; intent: OrderIntent } | undefined;
+  /** Which personas decided these orders — only the ids, with no decision record built. The
+   *  Decisions tab asks "who else trades on this account" once per unique order in a ledger that
+   *  grows daily; `findByOrderId` assembles a whole record per order to answer it, which cost
+   *  1.5 s a request at 180 days (#4612 slice 7). Same join as `findByOrderId`: the intent's own
+   *  order id, or a working order's settlement. */
+  personasOfOrders(orderIds: readonly string[]): string[];
   /** A spread leg's own broker order id → the spread order it belongs to. The account
    *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
    *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
@@ -88,6 +97,10 @@ export interface DecisionDb {
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
    *  totals would be a worse lie than a slow query. */
   funnelFor(personaId: string): DecisionFunnel;
+  /** One persona's passes, grouped verdicts and placed trades in `[from, to)` (#5073 slice 2) —
+   *  the week strip and each playbook's lane. Bounded by the window, never a page: see
+   *  `decision-db-week.ts`. */
+  checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
   /** Total realized P/L across every closed retrospective attributed to one playbook, for one
    *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
@@ -96,6 +109,15 @@ export interface DecisionDb {
    *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
    *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** How the sold puts one playbook opened under one strategy tag have ended for one persona
+   *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
+   *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
+   *  still open is neither. */
+  putOutcomesForPlaybook(
+    personaId: string,
+    playbookId: string,
+    strategy: string,
+  ): { readonly closed: number; readonly assigned: number };
   /** The broker's option expiry/assignment reports for one persona's account (#4642 slice 8),
    *  stored once each by activity id; an expiry or assignment closes the contract it names at $0.
    *  Returns how many were new. One transaction; throws only if the store itself fails. */
@@ -123,6 +145,14 @@ export interface DecisionDb {
   /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
    *  what a restart hands back to the settle loop. */
   unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
+  /** What one dark playbook would have done (#5489): its dip signals and daily level readings,
+   *  oldest session first, from `fromSession` (`YYYY-MM-DD`) on. Written by `record()` from a
+   *  decision's `playbookObservations`, merged on re-say; this is how thirty observed days are
+   *  scored. Local to the store that recorded them — they do not ride the replication wire. */
+  playbookObservations(
+    playbookId: string,
+    opts?: { readonly fromSession?: string },
+  ): PlaybookObservation[];
   close(): void;
 }
 
@@ -254,7 +284,9 @@ export function openDecisionDb(path: string): DecisionDb {
   // Before any read below is prepared: they join it (`SETTLED_JOIN`).
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
+  const observations = openObservationTables(db);
   const results = openIntentResults(db);
+  const week = openCheckWeekReads(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -299,6 +331,28 @@ export function openDecisionDb(path: string): DecisionDb {
       JOIN order_settlements s ON s.client_order_id = o.client_order_id WHERE s.order_id = ?1))
     LIMIT 1
   `);
+  // `personasOfOrders` binds one `?` per id, so a long ledger is asked for in chunks that stay under
+  // SQLite's variable limit (32766 in node:sqlite's build, 999 on older ones — this stays under both).
+  const PERSONAS_CHUNK = 500;
+  function personasOfOrderChunk(ids: readonly string[], into: Set<string>): void {
+    const marks = ids.map(() => "?").join(",");
+    const direct = db
+      .prepare(
+        `SELECT DISTINCT decisions.persona_id AS persona_id FROM intents
+         JOIN decisions ON decisions.id = intents.decision_id WHERE intents.order_id IN (${marks})`,
+      )
+      .all(...ids) as { persona_id: string }[];
+    // A working order recorded without an id and filled later is found through its settlement.
+    const settled = db
+      .prepare(
+        `SELECT DISTINCT decisions.persona_id AS persona_id FROM order_settlements s
+         JOIN intent_options o ON o.client_order_id = s.client_order_id
+         JOIN intents ON intents.id = o.intent_id AND intents.order_id IS NULL
+         JOIN decisions ON decisions.id = intents.decision_id WHERE s.order_id IN (${marks})`,
+      )
+      .all(...ids) as { persona_id: string }[];
+    for (const row of [...direct, ...settled]) into.add(row.persona_id);
+  }
   // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
   // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
   // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
@@ -358,6 +412,16 @@ export function openDecisionDb(path: string): DecisionDb {
     JOIN intents ON intents.id = retrospectives.entry_intent_id
     JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ?
+  `);
+
+  const selectPutOutcomes = db.prepare(`
+    SELECT COUNT(*) AS closed,
+           COALESCE(SUM(CASE WHEN retrospectives.exit_reason = ? THEN 1 ELSE 0 END), 0) AS assigned
+    FROM retrospectives
+    JOIN intents ON intents.id = retrospectives.entry_intent_id
+    JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.strategy = ?
+      AND retrospectives.exit_reason IN (?, ?)
   `);
 
   /**
@@ -501,6 +565,9 @@ export function openDecisionDb(path: string): DecisionDb {
     for (const v of entry.playbookVerdicts ?? []) {
       insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
     }
+    // Also before the early return, and merged by key, so a re-say moves an outcome on.
+    if (entry.playbookObservations?.length)
+      observations.write(entry.at, entry.playbookObservations);
     if (hasIntents.get(decisionId)) return;
 
     insertIntents(decisionId, entry);
@@ -650,6 +717,8 @@ export function openDecisionDb(path: string): DecisionDb {
       }));
     },
 
+    checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
+
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
@@ -726,6 +795,19 @@ export function openDecisionDb(path: string): DecisionDb {
       return row.total ?? 0;
     },
 
+    putOutcomesForPlaybook(personaId, playbookId, strategy) {
+      const assigned = LIFECYCLE_STATUS.OPASN;
+      const row = selectPutOutcomes.get(
+        assigned,
+        playbookId,
+        personaId,
+        strategy,
+        assigned,
+        LIFECYCLE_STATUS.OPEXP,
+      ) as { closed: number; assigned: number };
+      return { closed: row.closed, assigned: row.assigned };
+    },
+
     findByOrderId(orderId) {
       const row = selectByOrderId.get(orderId) as
         | {
@@ -751,7 +833,16 @@ export function openDecisionDb(path: string): DecisionDb {
       return matched ? { record, intent: matched.intent } : undefined;
     },
 
+    personasOfOrders(orderIds) {
+      const found = new Set<string>();
+      for (let i = 0; i < orderIds.length; i += PERSONAS_CHUNK)
+        personasOfOrderChunk(orderIds.slice(i, i + PERSONAS_CHUNK), found);
+      return [...found];
+    },
+
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 
     close() {
       db.close();

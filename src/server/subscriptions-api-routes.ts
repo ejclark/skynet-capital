@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { BOTS_ONLY_NOTE } from "../domain/playbook-bots-only.js";
 import {
@@ -7,7 +8,13 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import {
+  allocationChangeRefusal,
+  allocationRefusal,
+  checkOnRefusal,
+} from "../subscriptions/strategy-budgets.js";
 import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
+import { liveNeedsRefusal } from "../subscriptions/subscribe-live-needs.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
@@ -15,12 +22,17 @@ import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
+import { withForecasts } from "./pair-forecast.js";
+import { subscribeLiveReads } from "./subscribe-live-reads.js";
 import {
+  parseAllocationBody,
   parseConfigureBody,
+  parseConvictionBody,
   parsePlaybookRefBody,
   parseSetEnabledBody,
   parseSubscribeBody,
 } from "./subscriptions-api-bodies.js";
+import { servePreflight } from "./subscriptions-preflight-route.js";
 
 /**
  * THE PLAYBOOK STORE API (issue #885) — an account's own subscriptions, never another's.
@@ -28,11 +40,17 @@ import {
  *   GET  /api/playbook-store?id=<accountId>   → the catalog, merged with that account's own
  *                                                subscriptions IF the session owns it — otherwise
  *                                                the bare catalog (no cross-account visibility).
+ *   GET  /api/playbook-store/preflight        → what Subscribe would say to a pair at a budget,
+ *                                                asked first, writing nothing (`subscriptions-preflight-route.ts`).
  *   POST /api/playbook-store/subscribe        → SubscriptionStore.subscribe (create or replace).
  *   POST /api/playbook-store/configure        → SubscriptionStore.configure — re-tune an existing
  *                                                subscription, never touching enabled (#4649).
  *   POST /api/playbook-store/unsubscribe      → SubscriptionStore.unsubscribe.
  *   POST /api/playbook-store/set-enabled      → SubscriptionStore.setEnabled.
+ *   POST /api/playbook-store/conviction       → SubscriptionStore.setConviction — the owner's reason
+ *                                                and check day on a pair they hold (#4469 3c part 3).
+ *   POST /api/playbook-store/allocation       → SubscriptionStore.setAllocation — the account's
+ *                                                allocation for one strategy, or null to clear it.
  *
  * Same posture as settings-api-routes.ts: bodies must be application/json, strict shape gate
  * (400, never coerce — `subscriptions-api-bodies.ts`), size-capped, identity from the session and
@@ -54,6 +72,13 @@ import {
  * file for a date-keyed window, a ticker no same-kind pair on the bot already trades. A subscription
  * the account already holds is never re-checked — Edit, Pause, Unsubscribe and a replacing
  * re-subscribe go through as before.
+ *
+ * EACH TICKER'S BUDGET FITS ITS STRATEGY'S ALLOCATION (#4469 slice 3c part 3, criterion 5,
+ * `subscriptions/strategy-budgets.ts`): a subscribe or an Edit that raises a budget past what the
+ * account gave the strategy is refused in words; one that keeps or lowers it never is. Setting an
+ * allocation caps what may be delegated and delegates nothing, so it passes ownership and bots-only,
+ * never the fog. A conviction's new date can resume a pair a failed check stopped — more delegation
+ * — so it passes all three gates, like Edit.
  */
 
 const BODY_CAP_BYTES = 4_096;
@@ -159,13 +184,18 @@ async function serveStoreIndex(
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
   const subscriptions = owns && id && state ? (state[id] ?? []) : undefined;
-  const view = playbookStoreView(
+  const bare = playbookStoreView(
     subscriptions,
     await viewerDelegationLocked(config, session),
     [],
     Boolean(owns && id && isHumanAccount(config, id)),
     asOfIso(config),
+    id ? envNamedFor(config.readHouseRoster?.(), id) : undefined,
+    // The viewed account's own allocations, only for a viewer who owns it — as its subscriptions.
+    subscriptions && id ? config.subscriptions?.loadAllocations()[id] : undefined,
   );
+  // Each single-ticker row carries R&D's call for its next earnings report (#5444).
+  const view = { ...bare, strategies: withForecasts(bare.strategies, asOfIso(config)) };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state
     ? subscriberCounts(state, (accountId) => isHumanAccount(config, accountId))
@@ -202,19 +232,40 @@ async function handleSubscribe(
     sendJson(res, 400, { error: "malformed subscribe body" });
     return;
   }
+  const envNamed = envNamedFor(config.readHouseRoster?.(), body.id);
+  const held = store.load()[body.id] ?? [];
+  const delegation = await delegationRefusal(
+    body.id,
+    ownedIds,
+    "You can only subscribe your own account.",
+    config,
+    session,
+  );
+  const needs = {
+    playbookId: body.playbookId,
+    subscriptions: held,
+    asOfIso: asOfIso(config),
+    ...(body.conviction ? { conviction: true } : {}),
+    ...(envNamed ? { envNamed } : {}),
+  };
   const refusal =
-    (await delegationRefusal(
-      body.id,
-      ownedIds,
-      "You can only subscribe your own account.",
-      config,
-      session,
-    )) ??
-    newSubscriptionRefusal({
+    delegation ??
+    (body.conviction ? checkOnRefusal(body.conviction.checkOn, asOfIso(config)) : undefined) ??
+    newSubscriptionRefusal(needs) ??
+    allocationRefusal({
       playbookId: body.playbookId,
-      subscriptions: store.load()[body.id] ?? [],
-      asOfIso: asOfIso(config),
-    });
+      capitalAllocated: body.capitalAllocated,
+      subscriptions: held,
+      allocations: store.loadAllocations()[body.id],
+    }) ??
+    // The live reads cost broker calls, so they run last and only for a subscription the account
+    // does not already hold — a replacing re-subscribe is never re-judged.
+    (held.some((sub) => sub.playbookId === body.playbookId)
+      ? undefined
+      : await liveNeedsRefusal(
+          { ...needs, mode: body.mode, capitalAllocated: body.capitalAllocated },
+          subscribeLiveReads(config, body.id),
+        ));
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });
     return;
@@ -226,6 +277,7 @@ async function handleSubscribe(
     enabled: true,
     ...(body.symbols ? { symbols: body.symbols } : {}),
     ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
+    ...(body.conviction ? { conviction: body.conviction } : {}),
   });
   sendJson(res, 200, { ok: true });
 }
@@ -248,9 +300,8 @@ async function handleConfigure(
     sendJson(res, 400, { error: "malformed configure body" });
     return;
   }
-  const prior = ownedIds.includes(body.id)
-    ? store.load()[body.id]?.find((s) => s.playbookId === body.playbookId)
-    : undefined;
+  const held = ownedIds.includes(body.id) ? (store.load()[body.id] ?? []) : [];
+  const prior = held.find((s) => s.playbookId === body.playbookId);
   const refusal =
     (await delegationRefusal(
       body.id,
@@ -259,7 +310,16 @@ async function handleConfigure(
       config,
       session,
       prior === undefined || raisesDelegation(prior, body.tuning),
-    )) ?? basketRefusal(body.playbookId, body.tuning.symbols);
+    )) ??
+    basketRefusal(body.playbookId, body.tuning.symbols) ??
+    (prior
+      ? allocationRefusal({
+          playbookId: body.playbookId,
+          capitalAllocated: body.tuning.capitalAllocated,
+          subscriptions: held,
+          allocations: store.loadAllocations()[body.id],
+        })
+      : undefined);
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });
     return;
@@ -274,11 +334,81 @@ async function handleConfigure(
   );
 }
 
+/** Conviction — the owner's reason and check day on a pair the account already holds. */
+async function handleConviction(
+  res: ServerResponse,
+  raw: string,
+  store: Store,
+  ownedIds: readonly string[],
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const body = parseConvictionBody(raw);
+  if (!body) {
+    sendJson(res, 400, { error: "malformed conviction body" });
+    return;
+  }
+  const refusal =
+    (await delegationRefusal(
+      body.id,
+      ownedIds,
+      "You can only change your own account's playbooks.",
+      config,
+      session,
+    )) ?? checkOnRefusal(body.conviction.checkOn, asOfIso(config));
+  if (refusal) {
+    sendJson(res, 200, { ok: false, error: refusal });
+    return;
+  }
+  const saved = store.setConviction(body.id, body.playbookId, body.conviction);
+  sendJson(
+    res,
+    200,
+    saved
+      ? { ok: true }
+      : { ok: false, error: `Not subscribed to ${body.playbookId} — subscribe first.` },
+  );
+}
+
+/** Allocation — what the account gives one strategy; the budgets already set must fit under it. */
+async function handleAllocation(
+  res: ServerResponse,
+  raw: string,
+  store: Store,
+  ownedIds: readonly string[],
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const body = parseAllocationBody(raw);
+  if (!body) {
+    sendJson(res, 400, { error: "malformed allocation body" });
+    return;
+  }
+  const refusal =
+    (await delegationRefusal(
+      body.id,
+      ownedIds,
+      "You can only change your own account's allocations.",
+      config,
+      session,
+      false,
+    )) ??
+    allocationChangeRefusal(store.load()[body.id] ?? [], body.strategy, body.capitalAllocated);
+  if (refusal) {
+    sendJson(res, 200, { ok: false, error: refusal });
+    return;
+  }
+  store.setAllocation(body.id, body.strategy, body.capitalAllocated);
+  sendJson(res, 200, { ok: true });
+}
+
 const WRITE_PATHS: readonly string[] = [
   "/api/playbook-store/subscribe",
   "/api/playbook-store/configure",
   "/api/playbook-store/unsubscribe",
   "/api/playbook-store/set-enabled",
+  "/api/playbook-store/conviction",
+  "/api/playbook-store/allocation",
 ];
 
 /** Handle `/api/playbook-store*`. Returns true when the request was answered. */
@@ -291,6 +421,10 @@ export async function serveSubscriptionsApi(
 ): Promise<boolean> {
   if (path === "/api/playbook-store") {
     await serveStoreIndex(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/playbook-store/preflight") {
+    await servePreflight(req, res, config, session);
     return true;
   }
   if (!WRITE_PATHS.includes(path)) return false;
@@ -310,6 +444,14 @@ export async function serveSubscriptionsApi(
   }
   if (path === "/api/playbook-store/configure") {
     await handleConfigure(res, raw, store, ownedIds, config, session);
+    return true;
+  }
+  if (path === "/api/playbook-store/conviction") {
+    await handleConviction(res, raw, store, ownedIds, config, session);
+    return true;
+  }
+  if (path === "/api/playbook-store/allocation") {
+    await handleAllocation(res, raw, store, ownedIds, config, session);
     return true;
   }
 

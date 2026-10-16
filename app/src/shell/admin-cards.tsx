@@ -9,6 +9,7 @@ import {
   type LinkedAccount,
   linkRequest,
 } from "../live/admin";
+import { InlineResult } from "../ui";
 
 /**
  * THE OWNER'S CARDS (#738 phase 9e) — `/invite` and `/claim` on the settings page, self-gating
@@ -17,7 +18,8 @@ import {
  * linking stays deliberately owner-only (it grants order placement).
  *
  * The ops-status card was the third of these and is gone (#1296): fleet health is group-visible
- * now, so it belongs to the shell's status pill rather than to an owner-gated settings section.
+ * now, so it belongs to the top bar's status line (its panel, one tap down) rather than to an
+ * owner-gated settings section.
  */
 
 function useAnswer() {
@@ -90,11 +92,11 @@ export function GuestListCard(): ReactElement | null {
           </button>
         </div>
       ) : (
-        <p className="set-err">
+        <InlineResult tone="err" live={false}>
           Invites are off: the guest list can't be written encrypted without the store secret.
-        </p>
+        </InlineResult>
       )}
-      {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
+      {note ? <InlineResult tone={note.ok ? "ok" : "err"}>{note.text}</InlineResult> : null}
     </section>
   );
 }
@@ -144,7 +146,11 @@ function LinkRow({
           {busy ? "…" : "Unlink"}
         </button>
       ) : null}
-      {note ? <span className={note.ok ? "set-ok" : "set-err"}>{note.text}</span> : null}
+      {note ? (
+        <InlineResult as="span" tone={note.ok ? "ok" : "err"}>
+          {note.text}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }
@@ -192,7 +198,12 @@ export function AccountOwnershipLine({
       >
         {busy ? "…" : "Unlink"}
       </button>
-      {note ? <span className={note.ok ? "set-ok" : "set-err"}> {note.text}</span> : null}
+      {note ? (
+        <InlineResult as="span" tone={note.ok ? "ok" : "err"}>
+          {" "}
+          {note.text}
+        </InlineResult>
+      ) : null}
     </p>
   );
 }
@@ -259,7 +270,7 @@ export function UnclaimedAccountsCard(): ReactElement | null {
           {busy ? "Linking…" : "Link this account"}
         </button>
       </div>
-      {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
+      {note ? <InlineResult tone={note.ok ? "ok" : "err"}>{note.text}</InlineResult> : null}
     </section>
   );
 }

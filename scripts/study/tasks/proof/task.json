@@ -1,0 +1,9 @@
+{
+  "id": "proof-losing-shares",
+  "purpose": "harness proof for scripts/study/drive.mjs with the scripted actor — NOT a study task; no member ever reads it",
+  "scenario": "Among the companies you own shares in, one is showing a loss. Find out how much that loss is, in dollars, and report it.",
+  "start": "/app/accounts?account=sauron",
+  "optimal": 4,
+  "answer": { "kind": "number", "value": 412, "abs": 1, "ignoreSign": true },
+  "answerRegion": ["$412"]
+}

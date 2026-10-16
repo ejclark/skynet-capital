@@ -3,17 +3,23 @@ import type { MarketQuoteTick } from "../alpaca/market-data-stream-events.js";
 import { type QuoteView, quoteView } from "../trading/quote-view.js";
 
 /**
+ * SUPERSEDED UPSTREAM (#5001): the hub's "socket" is now `quote-poller.ts` — REST snapshots, never a
+ * market-data websocket, because Alpaca's one socket is per LOGIN and belongs to the bots app. The
+ * per-member shape and frame rules below still hold; read "socket" as "the member's poller".
+ *
  * THE QUOTE STREAM'S UPSTREAM (#3407 P4, the last capability slice) — one market-data socket per
  * MEMBER, on that member's own credential, carrying only the symbols that member is actually
  * looking at. Every surface-facing SSE connection rents a reference to it; the socket opens on the
  * first subscriber and closes on the last.
  *
  * WHY PER MEMBER, and not one shared stream for the whole app (priced on #3407, 2026-10-01):
- *  - Alpaca allows ONE concurrent market-data connection per account, and the bot loop already
- *    holds the host account's (`run-autonomous.ts` → `autonomous-data-connections.ts`, all ten
- *    universe symbols). A second socket on that credential is not a cap problem, it is the
- *    outage written up in `market-data-stream.ts`'s own header: Alpaca kills one as a duplicate
- *    and BOTH readers go quiet.
+ *  - Alpaca allows ONE concurrent market-data connection per USER LOGIN, per endpoint — not per
+ *    paper account, so every key under one login shares it (#4864) — and the bot loop already
+ *    holds the bots' login's (`run-autonomous.ts` → `autonomous-data-connections.ts`, all ten
+ *    universe symbols). A second socket there is not a cap problem, it is the outage written up
+ *    in `market-data-stream.ts`'s own header: Alpaca refuses or kills one and a reader goes
+ *    quiet. OPEN RISK (#4992): a member whose key sits under the bots' login takes their slot for
+ *    as long as this hub holds that member's socket — per-member keys alone don't prevent it.
  *  - The trade surface's identity doctrine is already per-requester — `quote-route.ts` and
  *    `option-chain-route.ts` read "through the REQUESTER'S OWN options client only". A shared
  *    stream would price the header from a different account than the chain beside it.
@@ -59,7 +65,7 @@ export const STREAM_BUDGET_FULL = `This account is already streaming ${SYMBOLS_P
 export type QuoteListener = (quote: StreamedQuote) => void;
 
 /** The upstream socket, narrowed to what this hub drives — so a spec supplies a fake and the hub
- *  needs no network. `AlpacaMarketDataStream` satisfies it structurally. */
+ *  needs no network. `createQuotePoller` (quote-poller.ts) implements it in production. */
 export interface QuoteStreamSocket {
   start(): void;
   stop(): void;

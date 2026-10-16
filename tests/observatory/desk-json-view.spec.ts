@@ -57,6 +57,52 @@ describe("deskView", () => {
     expect(aapl?.totalPl.startsWith("+") || aapl?.totalPl.startsWith("-")).toBe(true);
   });
 
+  // #5059 (Eric's row spec, #5037): a sold option's return is measured against the premium it
+  // collected, as a broker's statement prints it. Over a negative cost basis it read "—", so the
+  // phone card's second line had a total and no return. The profile world's put: $255 in, $550
+  // to buy back.
+  it("measures a sold option's return against the premium collected", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "CRWV261106P00080000", quantity: -1, avgPrice: 255, marketValue: -550 },
+        ],
+      }),
+    );
+    expect(view.positions[0]).toMatchObject({
+      totalPl: "-$295",
+      totalTone: "neg",
+      returnPct: "-116%",
+    });
+  });
+
+  // Past ±100% the hundredths are noise, and on the phone card they push the size line onto a
+  // second row (#5059). Under it they stay: "+3.63%".
+  it("rounds a return past 100% to the whole percent", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AMD261120C00180000", quantity: 2, avgPrice: 200, marketValue: 1_024 },
+        ],
+      }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("+156%");
+  });
+
+  it("keeps a bought position's return against what it cost", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[0]?.returnPct).toBe(
+      `+${((42_930 / (200 * 189.2) - 1) * 100).toFixed(2)}%`,
+    );
+  });
+
+  it("reads a position with no cost basis as having no return, never a made-up one", () => {
+    const view = deskView(
+      snapshot({ positions: [{ symbol: "AAPL", quantity: 10, avgPrice: 0, marketValue: 2_300 }] }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("—");
+  });
+
   it("keeps an errored account honest — zeros stay absent, the error rides along", () => {
     const view = deskView(snapshot({ positions: [], error: "account unreachable" }));
     expect(view.error).toBe("account unreachable");
@@ -126,6 +172,26 @@ describe("deskView allocation (#3689 slice 5)", () => {
     // The short still counts toward exposure: 100 − 10 shares.
     expect(allocation.shareCount).toBe(90);
   });
+
+  // #4964: the map scales each weight by `sharesPct + optionsPct`, so weights must share the
+  // bar's long-only base. Over net invested, the stock below read 1,000% beside a -900 sold put.
+  it("weighs each position against what's held, so a sold option can't inflate the rest", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AAPL", quantity: 10, avgPrice: 100, marketValue: 1_000 },
+          { symbol: "TSLA261017P00400000", quantity: -1, avgPrice: 9, marketValue: -900 },
+        ],
+        cash: 9_000,
+      }),
+    );
+    const [aapl, put] = view.positions;
+    expect(aapl?.weightPct).toBeCloseTo(100, 10);
+    expect(put?.weightPct).toBe(0);
+    // Stock's share of the whole account, as the map computes it: 1,000 of 10,000.
+    const investedShare = view.allocation.sharesPct + view.allocation.optionsPct;
+    expect(((aapl?.weightPct ?? 0) / 100) * investedShare).toBeCloseTo(10, 10);
+  });
 });
 
 describe("deskView lots", () => {
@@ -180,6 +246,19 @@ describe("deskView lots", () => {
       { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z", short: true },
     ]);
     expect(deskView(snapshot(), ledger).positions[0]?.lots).toBeUndefined();
+  });
+
+  // #5091: a cut-off fill window can leave only buys on the ledger under a position that is now
+  // short. Their sizes match the short's in absolute terms, but they are not its buys — listed,
+  // each would offer "Close this buy", a sell that adds to the short.
+  it("omits lots when buys sum to a short position's size — the sign has to match too", () => {
+    const short = snapshot({
+      positions: [{ symbol: "TSLA", quantity: -100, avgPrice: 400, marketValue: -40_000 }],
+    });
+    const ledger = ledgerWith([
+      { symbol: "TSLA", quantity: 100, price: 380, at: "2026-09-10T14:00:00Z" },
+    ]);
+    expect(deskView(short, ledger).positions[0]?.lots).toBeUndefined();
   });
 
   it("omits lots for a symbol the ledger never opened", () => {

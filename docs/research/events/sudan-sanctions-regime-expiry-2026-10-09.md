@@ -207,6 +207,8 @@ Zero capital by construction.
 |---|---|---|---|---|
 | 2026-09-24 | D-15 | **Initial research**, and the canonical `src/domain/market-events/sudan-sanctions-regime-expiry-2026-10-09.json` written this PR after reading the one proposal that named the id (`from-unsc-haiti-gsf-mandate-expiry-2026-09-30`, now shadowed and inert); nothing in it was contradicted. **Leg 1 — 10-09 is a silent lapse date:** `--on-date=2026-10-09` returns exactly this one entry, so unlike the Haiti sibling's crowded quarter-end this date has no other tracked release to contend with. **Leg 2 — the rollover doctrine applies and the regime has never lapsed:** resolution 2828 (unanimous, 2026-09-11) is itself one of the sibling ledger's own three dated rollover instances; general search found no reported lapse of the 1591 regime since its 2005 creation, and SCR's own account (via the sibling) names one mandate ever lost to a missed deadline across the whole Council — UNOMIG, vetoed 2009-06-15, never Sudan. **Leg 3 — this document's own finding:** res 2828 is the regime's first-ever one-month emergency rollover rather than its normal one-year cadence, because the U.S. (sponsor) is pushing to expand the arms embargo from Darfur to all of Sudan and widen designation criteria, while Russia, China, the A3 (DRC/Liberia/Somalia) and Pakistan oppose the expansion and are reported to prefer a plain renewal at the existing scope — opposing scope, not continuation. **Leg 4 — no listed channel exists either way:** no Sudan/Darfur-listed instrument; Darfur artisanal gold (UN Panel of Experts: helps finance conflict actors) is too small against global mine supply to move `GC=F`; the Port Sudan pipeline carries South Sudan's transit barrels, not a source `CL=F`/`BZ=F` price. **Leg 5 — the clean date buys nothing tradeable:** confirms leg 1's finding forecloses a false-attribution risk for a later pulse, not a trading edge, since leg 4 leaves no channel to attribute anything to. **Adjacency sweep:** (1) peers n/a, `symbols: []`; (2) macro — **30** other tracked events within ±5 days of 10-09 (`opec-jmmc-68th`/`opec-plus-meeting` 10-04, `ism-services` 10-05 confirmed-high, `mrvl-investor-day` 10-06, `fomc-minutes` 10-07, `treasury-30y-bond`/`jgb-30y-auction`/`wholesale-trade`/`ecb-account` 10-08, `imf-world-bank-annual-meetings` 10-12, `cpi` 10-14 confirmed-high, `beige-book` 10-14); two confirmed-and-high in the corridor (`ism-services-2026-10-05`, `cpi-2026-10-14`); (3) **VIX 15.18** vs **VIX3M 18.11** (both fresh Yahoo pulls, cache busted), contango intact, calm regime, 4.82pt from the ≥20 flag; (4) geopolitical/fuel — **CL=F 91.36, BZ=F 97.42, GC=F 4,318.00** (fresh pulls) recorded for the record though leg 4 finds no attribution channel to this event either way; **OPEC+ 10-04** is the adjacent that actually owns any fuel-tape reading in this corridor, not this file; (5) tape — no Sudan/Darfur-linked instrument exists to check. **Proposed this PR:** none — no new dated adjacent event surfaced during this sweep. **Blocked, recorded not substituted:** `docs.un.org/S/RES/2828(2026)` returned only a landing page (no operative-paragraph text), so resolution 2828's own text is characterised from press coverage, never quoted as fetched. | **Stance opened: stand aside, for the structural reason that no listed instrument has a channel to this event.** No position; `symbols: []`. Registered `FT-sudan-sanctions-regime-expiry-2026-10-09-1/-2`. | 2026-10-01 (the `low:15+` band matched today would say 2026-10-24, well past the event, but the band steps to `low:0+` at D-14 tomorrow and the scanner re-matches every scan) |
 | 2026-10-01 | D-8 | **Pulse — cadence band stepped to `low:0+` (7d) as flagged at initial research.** No stance change: `--on-date=2026-10-09` still returns only this entry; no Council vote, veto, or scheduled session surfaced since 2026-09-24 (Greece now holds the October presidency; no October Sudan session found in the Oct-2026 forecast or What's in Blue — consistent with past rollovers landing at/just before the deadline, not announced weeks out). **Adjacency sweep:** (1) peers n/a, `symbols: []`; (2) macro — no CPI/FOMC/jobs print landed since the last row (FOMC minutes 10-07, CPI 10-14, jobs 10-02, all still ahead); (3) **VIX 16.34** vs **VIX3M 18.37** (fresh pulls), contango intact, **+1.16pt** since 15.18 — under the ≥3pt screen and ≥20pt kill switch; (4) geopolitical — no new Sudan/Darfur development beyond the recorded scope fight; (5) tape — no instrument to read. **Corridor re-swept 10-04→10-14:** one new low-impact id (`bobl-5y-auction-2026-10-13`), 31 tracked, still only `ism-services-2026-10-05`/`cpi-2026-10-14` confirmed-high — no new strong adjacent. **Proposed:** none. **No kill switch fired.** | **No stance change — stand aside holds.** | 2026-10-08 (`low:0+` band, 7-day interval) |
+| 2026-10-09 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 15.4 (-0.9pt since last), band unchanged (low:0+), 32 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-16 |
+| 2026-10-10 | D+1 | **Close-out** (full session). Council adopted a two-month technical rollover (res. **2830**, unanimous, Thursday 10-08 per The National / Sudan Tribune; Al Jazeera's copy is dated 10-09 — sources disagree by a day) to **2026-12-11**; US withdrew its nationwide-embargo draft; embargo stays Darfur-only. No lapse, no veto. VIX 14.84 (10-09 close), VIX3M 17.77; GC=F 4,220.30, CL=F 91.66 (no channel, recorded only). FT-1/-2 observed pass but **left open** to 10-16. Proposed: none (12-11 is past the horizon, noted here). Detail in `## Outcome`. | None — stand aside held; no kill switch fired. | — (closed; `forward-test-due` 2026-10-17) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -219,3 +221,117 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-10, D+1).** Geopolitical kind, `symbols: []`: no `earnings-cycle` / `intraday-edges`
+instrument applies (cache busted first, nothing reads it). Scored from sourced reporting plus fresh Yahoo
+daily bars (`^VIX`, `^VIX3M`, `GC=F`, `CL=F`, pulled 2026-10-10). The date label stays **estimate**: this lane
+does not self-confirm, and the resolution text itself was **not** read (`docs.un.org` is not reachable by the
+fetch tool, as with 2828) — the facts below rest on press coverage.
+
+| Question | What happened | Source (read 2026-10-10) | Result |
+|---|---|---|---|
+| Renew / roll over / lapse? | **Rolled over**, two months, to **2026-12-11**; unanimous | Security Council Report Sudan page (draft: "two months, until 11 December"); The National 10-08 ("voted unanimously on Thursday"); Al Jazeera 10-09 | **FT-1 observed pass** |
+| Veto on a Sudan text? | None. The US **withdrew** its nationwide-embargo draft rather than force a vote | Sudan Tribune headline via search ("after US drops arms embargo push"); The National | consistent with FT-1 |
+| Scope expanded beyond Darfur? | **No**; embargo stays Darfur-only | Al Jazeera ("blocks broader Sudan sanctions proposal"); The National | **FT-2 observed pass** |
+| Panel of Experts | Reported to **2027-01-11** (single source, Al Jazeera fetch summary; not corroborated) | Al Jazeera | not registered |
+| Tape | VIX **14.84** (15.41 the day before; 15.18 at initial), VIX3M 17.77, contango intact; GC=F 4,220.30 (+1.5% on 10-09), CL=F 91.66 | Yahoo daily bars | no attribution channel; the gold move is not read as Sudan-driven |
+
+**What happened vs the stance.** Stand aside held and the base rate held: the regime's 22nd year opens with
+a second short rollover, not a lapse. Two surprises against the initial research, neither tradeable. (1) The
+Council acted **a day early** (10-08, a Thursday), not at the deadline — consistent with the 10-01 row's
+note that rollovers land at or just before the date. (2) The scope fight was settled by the **proponent
+backing off**, not by an opposing veto: the US withdrew its draft "after failing to secure broad support"
+(Sudan Tribune via search summary), so leg 3's veto framing (Russia/China "can veto") was never tested. The
+fight is deferred, not resolved — the new deadline **2026-12-11** is the next place it reopens, and the US
+line that "a long-term technical rollover is not an option" (SCR forecast) has now been overtaken twice.
+Rollover sample on this file: **2 of 2 short rollovers, 0 lapses** (2828, 2830).
+
+**None of the four kill switches fired.** Lapse/veto: no. Listed Sudan-linked instrument named: no. VIX ≥ 20
+on a Sudan headline: no (14.84). Embargo expanded by 10-16: no, and the US draft is withdrawn.
+
+**Source conflicts, recorded not smoothed.** The adoption day is 10-08 per The National and the Sudan Tribune
+("Thursday"), 10-09 per an Al Jazeera fetch summary; 10-09 is a Friday and the Al Jazeera piece is dated 10-09,
+so the likelier reading is its publication date, but the UN text would settle it. The resolution number
+**2830** comes from search summaries of those articles, not a UN document.
+
+**FT-1 and FT-2 are left open on purpose.** Both settle on the facts above but carry `Score by` 2026-10-16;
+filling the Outcome cells before then would shorten the registered window (falsification), and an
+`unscoreable` verdict would end the re-dispatch built for exactly this case. Both windows could in principle
+still be broken by a new Sudan text before 10-16, which nothing reported suggests. The scanner re-opens them
+as `forward-test-due` once 10-16 passes; the interim reading is **pass / pass**, to be confirmed against
+a fresh look at the Council's record then (a UN text if reachable). Next real deadline: **2026-12-11**,
+past this lane's horizon, so no proposal file; a future sweep will pick it up if it falls in range.
+
+Forward tests: `FT-sudan-sanctions-regime-expiry-2026-10-09-1`, `-2` — open, in
+[`forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md`](../forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md).
+
+**Last assessed:** 2026-10-10
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"docs.un.org/S/RES/2830(2026)","status":"NOT_FETCHED","at":"2026-10-10"},{"url":"sudantribune.com/article/319788","status":"403","at":"2026-10-10"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-10, D+1).** `symbols: []` by design, so no `earnings-cycle` / `intraday-edges` run applies;
+the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and
+nothing here reads it. The *outcome* is scored from the Council's own meeting coverage; the *tape* from Yahoo
+daily bars pulled today via `scripts/research/market-data.mjs`. Date label stays **estimate** (`NEWS:`): the
+confirmed-prefix taxonomy has no UN slot, so this close-out does not flip it.
+
+| Measure | Stance said | What happened | Result |
+|---|---|---|---|
+| Lapse vs renew/rollover | Renewal or further technical rollover, not a lapse | Council **unanimously** adopted a **two-month technical rollover** on **2026-10-08**, one day before the 10-09 lapse; sanctions measures now run to **2026-12-11** | **held** |
+| Scope (Darfur vs all of Sudan) | Embargo stays Darfur-scoped | Press coverage: scope "remained unchanged — limited to actors operating in Darfur"; the Council called it "a short-term technical rollover" to allow talks on extending beyond December | **held** (to date) |
+| Veto / lapse kill switch | Neither | No veto, no lapse | **not fired** |
+| VIX ≥ 20 on a Sudan headline | — | VIX 14.84 on 10-09 (15.41 on 10-08), VIX3M 17.77; contango intact | **not fired** |
+
+**Read from a single press release.** Resolution number (**2830**), the 8 Oct date, the 11 Dec measures date and
+the Panel of Experts date (reported as 11 Jan 2027) all come from one fetch of `press.un.org/en/2026/sc16470.doc.htm`
+(summarised by the fetch tool, not quoted from the operative text). A second search summary independently says
+the Council voted unanimously on a two-month renewal after the U.S. withdrew its expansion proposal; that
+detail is **not** in the press release as read, so treat it as search-relayed. The resolution text itself
+(`docs.un.org` / `main.un.org/securitycouncil/en/content/sres28302026`) was again not obtainable. Sudan Tribune
+and SCR monthly-forecast pages were reached by search only (the Tribune returned HTTP 403 to a direct fetch).
+
+**The stance, scored.** *Stand aside; expect renewal or rollover, not a lapse* — held on every leg, and cost
+nothing (no position exists). Two things moved the picture without changing the call. The rollover was
+**longer than the first** (two months against one), which reads as friction easing, not tightening; and the
+fight is **not settled** — the same press release describes members "crossing swords" over whether the measures
+should be abolished or expanded, so the 12-11 decision re-opens the scope question.
+
+**Forward tests — held open on purpose, not scored.** Both rows carry `Score by 2026-10-16`, past this event's
+close-out window (`closeOutWithinDays: 6` → 2026-10-15), so `event-scan --due` lists them under
+`forwardTestsBeyondWindow` and they re-open as `forward-test-due` on the score-by date. The evidence above
+points to **FT-1 pass** (rollover adopted before the lapse) and **FT-2 pass** (no scope expansion adopted), but
+scoring before the registered date is the falsification the doc forbids and nothing here is time-critical, so
+the Outcome cells are left `—` for the owning lane to fill from a fresh read on 2026-10-16. Their kill
+conditions (a lapse, a veto, or an adopted expansion on or before 10-16) were not met as of 2026-10-10.
+
+**Beyond the horizon, named not filed.** The next measures expiry, **2026-12-11**, is 62 days out; for a
+low-impact event `assessment-cadence.json` makes nothing past 30 days due, so no proposal file is written
+(`--on-date=2026-12-11` already shows seven other entries, none of them this deadline). A later sweep inside
+the horizon (from about 2026-11-11) should file it. No kill-list entry: the hypothesis is about a diplomatic
+deadline with no symbol.
+
+**Last assessed:** 2026-10-10
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0} -->
+
+**Forward-test scoring (2026-10-16, `forward-test-due`).** Both rows scored **pass** in
+[`forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md`](../forward-tests/sudan-sanctions-regime-expiry-2026-10-09.md);
+no registered prediction and no earlier row was edited. The facts the 10-10 close-out read through search
+summaries were re-read this session straight from `press.un.org/en/2026/sc16470.doc.htm` (fetched direct):
+resolution **2830**, adopted **8 October 2026**, unanimous, measures to **11 December**, Panel of Experts to
+**11 January 2027**, embargo still "in relation to actors operating in Darfur" — which also settles the 10-08 vs
+10-09 adoption-day conflict recorded at close-out (10-08). A fresh search for any later Sudan text turned up
+nothing past 10-10 (the US nationwide-embargo draft is withdrawn), so neither kill condition (lapse/veto, or an
+expansion adopted by 10-16) was met. The resolution's own operative text is still unfetched, so the date label
+stays **estimate**. No kill-list entry (no symbol). Tape, recorded only: **VIX 21.09** on 10-16 (16.46 on 10-15,
+VIX3M 20.97) — a jump with no Sudan headline behind it, so the "VIX ≥ 20 on a Sudan headline" switch does not
+fire; any read of it belongs to the 10-16 macro corridor, not this file. Next real deadline **2026-12-11**
+(56 days out, past the horizon for a low-impact event), so no proposal file; stance unchanged — stand aside.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":21.09,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","ssa-cola-2027-2026-10-14","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"docs.un.org/S/RES/2830(2026)","status":"NOT_FETCHED","at":"2026-10-16"}]} -->

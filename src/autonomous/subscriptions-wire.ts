@@ -5,6 +5,7 @@ import {
   parseSubscriptionsState,
   type SubscriptionsState,
 } from "../subscriptions/subscription-state.js";
+import { type AllocationsState, parseAllocations } from "../subscriptions/subscriptions-file.js";
 
 /**
  * THE SUBSCRIPTIONS WIRE — how the Playbook Store's saved subscriptions reach the `bots` process
@@ -28,9 +29,44 @@ import {
  * future wire change that adds a BEHAVIORAL field must add a new kind rather than silently
  * reinterpreting this one, because `subscriptionsVersion` below is computed over exactly the
  * behavioral fields this version knows about.
+ *
+ * Carried, never behavioral (#4469 slice 3c): any field a newer build put on a record (#4772), and
+ * `allocations`, each account's capital per strategy (the app checks budgets against them). The
+ * version names its fields, so neither moves it. A subscription's `playTarget` (#5483 slice 3) is
+ * carried the same way, because it is observe-only: a bot logs where the play stands against it and
+ * trades exactly as it would without it. The slice that lets a target change what a bot does adds a
+ * new kind, as v2 and v3 did.
+ *
+ * `subscriptions.v2` (#4469 slice 3c part 2) is the one wire change that adds a behavioral field:
+ * a subscription's `conviction` (its reason and check date), which a bot acts on (criteria 11 and
+ * 12, `conviction-check.ts`). It fingerprints v1's fields plus that one and nothing else, so a spec
+ * can show only the added field moved. EXPAND FIRST: the bots read both kinds from part 2 on, and
+ * the app sent v1 until part 3 writes a conviction, so an app that deployed ahead of its bots never
+ * sent a kind they could not read. The app sends v2 from part 3 (`dashboard-insights-bridge.ts`),
+ * once the bots with part 2 were live; v1 stays readable for a rollback. A v1 snapshot's version does not describe a
+ * conviction, so the bots drop the one it carries rather than act on a field the version never
+ * vouched for.
+ *
+ * `subscriptions.v3` (#5482 slice 2) adds the second: a subscription's `convictionId`, the pointer
+ * at a conviction record whose check date then gates the pair (`with-conviction-gate.ts`). The same
+ * expand-first order: the bots read v3 from #5511 on, and the app sends v3 from the migrate step
+ * (`dashboard-insights-bridge.ts`), once those bots were live; v2 stays readable for a rollback. A
+ * v1 or v2 snapshot does not vouch for a pointer, so the bots drop it, and the pair is checked on
+ * its own conviction as before — the migrate step keeps that inline conviction on the same day.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V2 = "subscriptions.v2";
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V3 = "subscriptions.v3";
+export type SubscriptionsSnapshotKind =
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V3;
+const SNAPSHOT_KINDS: readonly string[] = [
+  SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+];
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -46,7 +82,7 @@ const MAX_SUBSCRIPTIONS_PER_ACCOUNT = 64;
 const VERSION = /^[0-9a-f]{16}$/;
 
 export interface SubscriptionsSnapshot {
-  readonly kind: typeof SUBSCRIPTIONS_SNAPSHOT_KIND;
+  readonly kind: SubscriptionsSnapshotKind;
   /**
    * Epoch ms, stamped by the APP as it read its own store. The ordering the bots side uses to
    * refuse a snapshot older than the one already in force — a reordered response, or an app that
@@ -57,6 +93,8 @@ export interface SubscriptionsSnapshot {
   readonly version: string;
   /** Every account's subscriptions, keyed by `accountId` (a bot's `persona.id`). */
   readonly accounts: SubscriptionsState;
+  /** Each account's allocation per strategy; omitted when none is set. Outside `version`. */
+  readonly allocations?: AllocationsState;
 }
 
 /**
@@ -65,8 +103,11 @@ export interface SubscriptionsSnapshot {
  * back on is the same roster with newer timestamps. Bumping the version there would churn a swap
  * (and, from slice 2, every `DecisionRecord`'s `subscriptionsVersion`) for no behavioral change.
  */
-function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
-  return [
+function behavioralFields(
+  sub: PlaybookSubscription,
+  kind: SubscriptionsSnapshotKind,
+): readonly unknown[] {
+  const v1 = [
     sub.playbookId,
     sub.mode,
     sub.capitalAllocated,
@@ -74,6 +115,10 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
     sub.symbols ? [...sub.symbols].sort() : null,
     sub.compoundAllocation === true,
   ];
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND) return v1;
+  const v2 = [...v1, sub.conviction ? [sub.conviction.reason, sub.conviction.checkOn] : null];
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2) return v2;
+  return [...v2, sub.convictionId ?? null];
 }
 
 /**
@@ -82,14 +127,17 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
  * filters sorted) so the same roster written in a different order is the same version — otherwise
  * a rewrite of the store file would look like a change and swap every bot's roster for nothing.
  */
-export function subscriptionsVersion(state: SubscriptionsState): string {
+export function subscriptionsVersion(
+  state: SubscriptionsState,
+  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
+): string {
   const canonical = Object.keys(state)
     .sort()
     .map((accountId) => [
       accountId,
       [...(state[accountId] ?? [])]
         .sort((a, b) => a.playbookId.localeCompare(b.playbookId))
-        .map(behavioralFields),
+        .map((sub) => behavioralFields(sub, kind)),
     ]);
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 16);
 }
@@ -98,13 +146,33 @@ export function subscriptionsVersion(state: SubscriptionsState): string {
 export function buildSubscriptionsSnapshot(
   state: SubscriptionsState,
   at: number,
+  allocations?: AllocationsState,
+  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
 ): SubscriptionsSnapshot {
   return {
-    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
+    kind,
     at,
-    version: subscriptionsVersion(state),
+    version: subscriptionsVersion(state, kind),
     accounts: state,
+    ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
+}
+
+/** The state with only the fields `kind`'s version vouches for: v1 leaves off every conviction
+ *  and pointer, v2 every pointer, v3 nothing. */
+function vouchedFor(
+  state: SubscriptionsState,
+  kind: SubscriptionsSnapshotKind,
+): SubscriptionsState {
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V3) return state;
+  return Object.fromEntries(
+    Object.entries(state).map(([accountId, subs]) => [
+      accountId,
+      subs.map(({ conviction, convictionId: _pointer, ...rest }) =>
+        kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2 && conviction ? { ...rest, conviction } : rest,
+      ),
+    ]),
+  );
 }
 
 /** Bounds check on the RAW payload, before any parsing — so an oversized body is refused by shape
@@ -131,15 +199,25 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
  * reproduce the app's own claim about it, and is otherwise read as "not reported" — never as a
  * partial roster. (A payload carrying EXTRA junk that parses away to exactly the claimed version
  * passes, and correctly so: what is applied is then precisely the roster the version describes.)
+ * `allocations` sits outside the version, so it is read leniently and never sinks a snapshot.
  */
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
-  if (value.kind !== SUBSCRIPTIONS_SNAPSHOT_KIND) return undefined;
-  const { at, version, accounts } = value;
+  const { kind, at, version, accounts } = value;
+  if (typeof kind !== "string" || !SNAPSHOT_KINDS.includes(kind)) return undefined;
+  const known = kind as SubscriptionsSnapshotKind;
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed) !== version) return undefined;
-  return { kind: SUBSCRIPTIONS_SNAPSHOT_KIND, at, version, accounts: parsed };
+  if (!parsed || subscriptionsVersion(parsed, known) !== version) return undefined;
+  const allocations = parseAllocations(value.allocations);
+  return {
+    kind: known,
+    at,
+    version,
+    // A version applies only what it describes: no conviction under v1, no pointer under v1 or v2.
+    accounts: vouchedFor(parsed, known),
+    ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
+  };
 }

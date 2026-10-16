@@ -13,10 +13,11 @@ import { money } from "../live/ticket";
  * `.visually-hidden` sentence states it again in words.
  */
 
-const GLYPH: Record<QuoteTone, string> = { pos: "▲", neg: "▼", flat: "·" };
+/** Exported for the phone position card's day change (#5041), which draws the same move. */
+export const GLYPH: Record<QuoteTone, string> = { pos: "▲", neg: "▼", flat: "·" };
 const DIRECTION_WORD: Record<QuoteTone, string> = { pos: "up", neg: "down", flat: "flat" };
 /** The real minus sign (U+2212) — a hyphen reads as a dash, not a negative, at a glance. */
-const MINUS = "−";
+export const MINUS = "−";
 
 export function signedMoney(change: number, tone: QuoteTone): string {
   if (tone === "pos") return `+${money(Math.abs(change))}`;

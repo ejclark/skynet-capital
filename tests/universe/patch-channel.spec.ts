@@ -36,6 +36,11 @@ describe("WorldPatchChannel", () => {
     expect(channel.head).toBe(2);
   });
 
+  it("names its run: two channels never share a boot id unless one is pinned (#4620)", () => {
+    expect(new WorldPatchChannel().boot).not.toBe(new WorldPatchChannel().boot);
+    expect(new WorldPatchChannel({ boot: "b1" }).boot).toBe("b1");
+  });
+
   it("publishes an empty op list — the caller's context is what carries the change", () => {
     const channel = new WorldPatchChannel<string>();
     expect(channel.publish(at, [], "state-moved")?.context).toBe("state-moved");

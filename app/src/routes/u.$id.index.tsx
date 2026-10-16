@@ -3,12 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDesk } from "../live/desk";
-import { fetchSettings } from "../live/settings";
-import { AccountPage, useOwnsAccount } from "../shell/account-head";
+import { initialPositionsQuery } from "../live/look-sort";
+import { useRefineSearch } from "../live/refine-search";
+import { AccountLeague, useOwnsAccount } from "../shell/account-head";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
-import { PageFrame } from "../shell/frame";
 import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
-import { SauronCard } from "../shell/sauron-card";
 import { useTowerColumn } from "../shell/use-tower-column";
 
 /**
@@ -33,57 +32,36 @@ import { useTowerColumn } from "../shell/use-tower-column";
 function DeskPage(): ReactElement {
   const { id } = Route.useParams();
   const { q } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const refine = useRefineSearch<{ q?: string }>();
   const desk = useQuery({
     queryKey: ["desk", id],
     queryFn: () => fetchDesk(id),
     refetchOnWindowFocus: true,
   });
-  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
-  const owned = settings.data?.accounts ?? [];
   const canTrade = useOwnsAccount(id);
   const towerColumn = useTowerColumn();
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
-  // a beat behind (replace, no history spam) — so a refresh or a shared link keeps the filter.
-  const [query, setQuery] = useState(q ?? "");
+  // a beat behind (replace, no history spam, no jump to the top: #4944) — so a refresh or a shared
+  // link keeps the filter.
+  // No filter in the URL: the list opens sorted worth-a-look-first unless turned off (#5070).
+  const [query, setQuery] = useState(() => initialPositionsQuery(q));
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: next.trim() === "" ? {} : { q: next },
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(() => refine(next.trim() === "" ? {} : { q: next }), 300);
   };
 
-  if (desk.isPending)
-    return (
-      <PageFrame>
-        <p className="note">Reading the account…</p>
-      </PageFrame>
-    );
+  // The frame and head are the layout's (`u.$id.tsx`, #4951), which renders this section only
+  // once the shared desk read has data, so these guards narrow the type and never show.
+  if (desk.isPending) return <p className="note">Reading the account…</p>;
   if (desk.isError)
-    return (
-      <PageFrame>
-        <p className="note">This account is unreachable — {String(desk.error)}</p>
-      </PageFrame>
-    );
+    return <p className="note">This account is unreachable — {String(desk.error)}</p>;
   const { desk: d, generatedAt, landmark } = desk.data;
-  const card = (under: boolean) => (
-    <SauronCard
-      {...(landmark ? { landmark } : {})}
-      ownedIds={owned.map((a) => a.id)}
-      meId={owned.find((a) => a.kind === "human")?.id}
-      scope=".acct-page"
-      under={under}
-    />
-  );
 
   return (
-    <AccountPage desk={d} tower={card(true)}>
+    <>
       {d.error ? (
         <p className="note-stop">Account unreachable — positions can't be read right now.</p>
       ) : (
@@ -91,7 +69,7 @@ function DeskPage(): ReactElement {
           <div className="overview-worth">
             <DeskTilesGrid tiles={d.tiles} />
           </div>
-          <div className="overview-decide acct-book">
+          <div className="overview-decide">
             {canTrade ? null : (
               <p className="acct-own-note">You can trade only your own accounts.</p>
             )}
@@ -101,14 +79,20 @@ function DeskPage(): ReactElement {
               query={query}
               onFilterChange={setFilter}
               canTrade={canTrade}
-            />
-            {canTrade ? <NewTradeCard deskId={d.id} /> : null}
+              decisions={d.decisions ?? []}
+            >
+              {canTrade ? <NewTradeCard deskId={d.id} /> : null}
+            </PositionsBlotter>
           </div>
-          {towerColumn ? null : <div className="overview-card">{card(false)}</div>}
+          {towerColumn ? null : (
+            <div className="overview-card">
+              <AccountLeague landmark={landmark} under={false} />
+            </div>
+          )}
         </div>
       )}
       <footer className="obs-foot num">as of {generatedAt}</footer>
-    </AccountPage>
+    </>
   );
 }
 

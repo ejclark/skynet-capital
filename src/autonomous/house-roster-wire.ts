@@ -37,6 +37,18 @@ export interface HouseRosterReport {
 const MAX_ACCOUNTS = 32;
 const MAX_ENTRIES = 64;
 
+/** App side: the playbook ids the bots app's own setting runs on `accountId`, in the bots' order —
+ *  or `undefined` when no report names the account (none yet, or not a house bot), which is "not
+ *  known", never "none". */
+export function envNamedFor(
+  report: HouseRosterReport | undefined,
+  accountId: string,
+): string[] | undefined {
+  return report?.accounts.includes(accountId)
+    ? report.roster.map((entry) => entry.playbookId)
+    : undefined;
+}
+
 /** Bots side: the report for this boot's wired bots and the env roster's enabled playbooks. */
 export function houseRosterReport(
   accounts: readonly string[],

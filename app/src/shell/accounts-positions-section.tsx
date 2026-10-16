@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { DeskSnapshot } from "../live/desk";
+import { KindChip } from "../ui";
 import { NewTradeCard, PositionsBlotter } from "./positions-blotter";
 import { useLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
@@ -25,26 +26,21 @@ function SingleAccountPositions({
 }): ReactElement {
   const { desk: d } = desk;
   const [lens, setLens] = useLens();
-  return (
-    <>
-      {d.error ? (
-        <p className="note-stop">Account unreachable — positions can't be read right now.</p>
-      ) : (
-        <>
-          <PositionsBlotter
-            deskId={d.id}
-            positions={d.positions}
-            query={query}
-            onFilterChange={onFilterChange}
-            lens={lens}
-            onLensChange={setLens}
-            {...(d.allocation ? { allocation: d.allocation } : {})}
-            decisions={d.decisions ?? []}
-          />
-          <NewTradeCard deskId={d.id} />
-        </>
-      )}
-    </>
+  return d.error ? (
+    <p className="note-stop">Account unreachable — positions can't be read right now.</p>
+  ) : (
+    <PositionsBlotter
+      deskId={d.id}
+      positions={d.positions}
+      query={query}
+      onFilterChange={onFilterChange}
+      lens={lens}
+      onLensChange={setLens}
+      {...(d.allocation ? { allocation: d.allocation } : {})}
+      decisions={d.decisions ?? []}
+    >
+      <NewTradeCard deskId={d.id} />
+    </PositionsBlotter>
   );
 }
 
@@ -68,10 +64,7 @@ export function AccountsPositionsSection({
       {desks.map((d) => (
         <section key={d.desk.id} className="accounts-group">
           <h2 className="accounts-group-head">
-            {d.desk.name}{" "}
-            <span className={`chip chip-${d.desk.kind}`}>
-              {d.desk.kind === "bot" ? "BOT" : "HUMAN"}
-            </span>
+            {d.desk.name} <KindChip kind={d.desk.kind} />
           </h2>
           <PositionsTable
             positions={d.desk.positions}

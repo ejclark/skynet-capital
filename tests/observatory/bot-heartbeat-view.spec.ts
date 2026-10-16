@@ -7,9 +7,15 @@ import {
   STALE_AFTER_MS,
   unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
 const NOW = new Date("2026-09-24T15:00:00Z");
+const pair = (id: string): Pair => {
+  const found = findPair(id);
+  if (!found) throw new Error(`no pair ${id}`);
+  return found;
+};
 const pass = (
   agoMs: number,
   verdicts?: readonly PlaybookVerdict[],
@@ -43,10 +49,52 @@ describe("botHeartbeatView — silence has three causes, and they never read ali
     expect(botHeartbeatView([pass(STALE_AFTER_MS)], NOW, true).state).toBe("beating");
   });
 
-  it("reads market-closed, never stale, however old the last pass is", () => {
+  it("reads market-closed overnight when the bot passed during the last session", () => {
     const view = botHeartbeatView([pass(16 * 60 * 60_000)], NOW, false);
     expect(view.state).toBe("market-closed");
     expect(view.lastPassAt).toBe(new Date(NOW.getTime() - 16 * 60 * 60_000).toISOString());
+  });
+
+  // #4949: a closed market explains silence back to the last session's open, no further — a bot
+  // that sat out a whole session has stopped, and "market closed · idle" hid it until the next open.
+  describe("closed market — did the bot pass at all last session?", () => {
+    const at = (iso: string): DecisionRecord => ({ ...pass(0), at: Date.parse(iso) });
+    const saturday = new Date("2026-09-26T15:00:00Z"); // 11:00 ET; last session Fri Sep 25
+
+    it("stays market-closed when the newest pass fell inside the last session", () => {
+      const lastMinute = at("2026-09-25T19:59:45Z"); // Fri 3:59:45 PM ET
+      expect(botHeartbeatView([lastMinute], saturday, false).state).toBe("market-closed");
+      const atTheOpen = at("2026-09-25T13:30:00Z"); // Fri 9:30 AM ET
+      expect(botHeartbeatView([atTheOpen], saturday, false).state).toBe("market-closed");
+    });
+
+    it("goes stale when the newest pass predates the last session's open", () => {
+      const thursday = at("2026-09-24T19:59:45Z"); // Thu 3:59:45 PM ET — none all Friday
+      expect(botHeartbeatView([thursday], saturday, false).state).toBe("stale");
+      const preMarket = at("2026-09-25T13:29:00Z"); // Fri 9:29 AM ET, then silence
+      expect(botHeartbeatView([preMarket], saturday, false).state).toBe("stale");
+    });
+
+    it("judges the morning before the open against the previous session, not today's", () => {
+      const mondayEarly = new Date("2026-09-28T12:00:00Z"); // Mon 8:00 AM ET
+      const friday = at("2026-09-25T18:00:00Z");
+      expect(botHeartbeatView([friday], mondayEarly, false).state).toBe("market-closed");
+    });
+
+    it("reads the exchange calendar — an early close counts, a holiday is skipped", () => {
+      // Fri Nov 27 closes at 1:00 PM ET (EST — 9:30 AM is 14:30Z); Thu Nov 26 is Thanksgiving.
+      const afterEarlyClose = new Date("2026-11-27T19:00:00Z"); // 2:00 PM ET
+      expect(botHeartbeatView([at("2026-11-27T14:30:00Z")], afterEarlyClose, false).state).toBe(
+        "market-closed",
+      );
+      expect(botHeartbeatView([at("2026-11-25T20:00:00Z")], afterEarlyClose, false).state).toBe(
+        "stale",
+      );
+      const thanksgiving = new Date("2026-11-26T17:00:00Z"); // the holiday; last session Wed
+      expect(botHeartbeatView([at("2026-11-25T15:00:00Z")], thanksgiving, false).state).toBe(
+        "market-closed",
+      );
+    });
   });
 
   it("says no-record, with nulls rather than zeros, for a bot that never recorded a pass", () => {
@@ -253,6 +301,34 @@ describe("playbookRollCall — reads the bot's own subscriptions", () => {
       expect(line).toMatchObject({ status: "off" });
       expect(line.reason).toMatch(/find no playbook by this id/);
     }
+  });
+
+  it("WHEN a second option pair holds a ticker another owns, says it is not trading — never starting", () => {
+    const wheelNvda: Pair = { ...pair("CRWV-WHEEL"), id: "NVDA-WHEEL", symbols: ["NVDA"] };
+    const lookup = (id: string) => (id === wheelNvda.id ? wheelNvda : findPair(id));
+    const withWheel = [...house, play("NVDA-WHEEL")];
+    const roll = (roster: NonNullable<Parameters<typeof playbookRollCall>[5]>) =>
+      playbookRollCall(null, NOW, withWheel, gaps, [], roster, lookup).find(
+        (l) => l.playbookId === "NVDA-WHEEL",
+      );
+    const subscribed = roll({ subscriptions: [sub("NVDA-CALL-SPREAD"), sub("NVDA-WHEEL")] });
+    expect(subscribed).toMatchObject({ status: "off" });
+    expect(subscribed?.reason).toMatch(/^Not trading — the call spread owns NVDA\. /);
+    // The bots app's own roster owns it just the same, with no subscription behind it.
+    const envOwned = roll({ subscriptions: [sub("NVDA-WHEEL")], envNamed: ["NVDA-CALL-SPREAD"] });
+    expect(envOwned?.reason).toMatch(/^Not trading — the call spread owns NVDA/);
+    // The first in the bot's order is not the one skipped.
+    expect(
+      playbookRollCall(
+        null,
+        NOW,
+        withWheel,
+        gaps,
+        [],
+        { subscriptions: [sub("NVDA-WHEEL")] },
+        lookup,
+      ).find((l) => l.playbookId === "NVDA-WHEEL"),
+    ).toMatchObject({ status: "starting" });
   });
 
   it("WHEN the bots app's own setting names one this bot holds no subscription to, says its exits still run", () => {

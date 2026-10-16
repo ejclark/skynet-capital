@@ -11,11 +11,10 @@ import { CalendarHead, headLine } from "./calendar-head";
 import { CalendarSheet } from "./calendar-sheet";
 
 /**
- * THE MARKET CALENDAR'S HEAD ON TRADE (#3807 slice 3b-2): the same row the Profile page's head is
- * (`cockpit-clock.tsx` — range · arrows · lens row · fog line), leading Trade's stage the way R&D's
- * band head leads its board. Its
- * range is the ROOT `?on=&span=` (`live/horizon-params.ts`), so a week picked on the Profile page
- * is the week Trade opens on, and a step here follows you back.
+ * THE MARKET CALENDAR'S HEAD ON TRADE (#3807 slice 3b-2): R&D's head row (`calendar-head.tsx` —
+ * range · arrows · lens row · fog line), leading Trade's stage the way R&D's band head leads its
+ * board. Its range is the ROOT `?on=&span=` (`live/horizon-params.ts`), so a range picked on the
+ * Profile page's Events is the range Trade opens on, and a step here follows you back.
  *
  * What differs is the line: scoped to THE TICKET'S SYMBOL (`?symbol=`), not a book — tier 1 "on
  * <SYM>", the symbol's own dated events in range; tier 2 "market-wide", the Fed / CPI / jobs print

@@ -18,6 +18,140 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The skill we teach is aiming AI, and the system heals its own friction.** Eric, 2026-10-16:
+  "we should be improving ai processes for loop engineering and self healing/improving
+  architecture. We need people that know how to use ai. With that they can aim ai to work through
+  any problem… AI enables our human experience to self heal friction and foster innovation to
+  autonomously do what we command to enhance our lives." Two readings, one thesis. **For members:**
+  the lesson under options is directing a bot, the same skill this repo uses to build itself (#5451
+  P1, "teach them how to build with AI"). **For us:** every loop ends by routing what it learned
+  into the layer that prevents a repeat, the way the redesign loop's retro does
+  (`docs/process/REDESIGN.md` step i, `docs/process/LEARNING-LOOP.md`). Two guardrails.
+  "People that know how to use AI" is the end state, not the entry bar: the app is the ramp from
+  "meet people where they are". And "autonomously do what we command" stays inside *safety scales
+  to stakes*: self-healing covers reversible friction, never capital or governance (`envelope.json`).
+  The next concrete step is the *Align → scope as a general type* item below. #5451 is its second
+  domain (a brain-dump, not a screen), which was that item's trigger.
+  _(src: Eric · while: running his playbook notes through the redesign loop, #5451)_
+
+### Playbooks that mirror real portfolios, compose, and get played by a team (Eric, 2026-10-16)
+One brain-dump, five threads; each is parked with the objection the code raised, so the plan that
+picks it up starts from the fork, not the wish.
+- **Trading mechanics meet people where they are, and teach them to build with AI.** The member
+  isn't only learning options; they're learning to direct a bot. Read as a product rule for the
+  bot-creation flow (character sheet, above) and the playbook Store: every step explains what the
+  bot will do in plain words and lets the member adjust it by describing intent, not parameters.
+  The same "vocabulary over technique" rule CLAUDE.md applies to Eric, pointed at members.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **A mirror playbook: replicate a real portfolio on a paper account.** The household book is
+  ~$1M, the same size as the paper accounts we open, so a mirror is 1:1 with no scaling. It's the
+  most useful playbook for Eric himself: test a change on the paper copy before the real one.
+  Objections to settle in the plan: (1) **the holdings source.** Manual or CSV entry is in
+  envelope; a live brokerage link is a credential, so it's Eric's step (`envelope.json`).
+  (2) **Visibility.** A mirrored account shows real household holdings to every member inside the
+  invite gate. The shared-universe rule allows that, but it should be his explicit choice per
+  account, not a default. (3) **Season 1 is bots-only for subscriptions** (#4610), so the mirror
+  runs on a bot account. That fits as is.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **Playbooks inside playbooks: a mirror becomes one play in a bigger playbook.** This is the
+  fund-of-funds or **sleeve** pattern: the parent gives each child a share of capital and the
+  child trades only inside it. The strongest objection is in the code:
+  `src/playbooks/with-playbooks.ts` enforces *one position, one decision-maker* per symbol, and two
+  nested children holding the same ticker break that. The sleeve shape keeps the rule: ownership
+  goes to (playbook, sleeve) instead of the account, and the parent's guards cap the sum. The
+  deciding question before slicing: should two sleeves ever hold the same symbol at once? If not,
+  nesting is just roster composition plus a capital split. `playbooks/registry.ts` and
+  `engine/guards.ts` are envelope-protected, so the build boards the platter.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **Eric as game master: recruit Tony or Phil to run bot accounts, up to 6 bots in S1, as teams.**
+  This changes a written frame. Era 1 says the only autonomous bots are Eric-account bots
+  (`docs/LIVING-UNIVERSE.md` → Era 1), and member-run bots were Era 2. The amended shape keeps
+  #4610 intact: invited **co-GMs** operate *house* bot accounts (bots-only subscriptions still
+  hold), on teams of human + bot. What's open: does a co-GM's bot count toward their own
+  leaderboard row or the team's? Is 6 the cap, or 2 per GM? It needs a line in LIVING-UNIVERSE.md
+  before any build, per the write-the-IA-down rule.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **A Vision · JARVIS · Ultron theme (and a "vision quest" arc), with the copyright question
+  answered first.** All three are Marvel characters (JARVIS is already a bot alias here). Inside
+  the invite gate, a non-commercial homage among friends is low risk. On anything a non-member can
+  reach (`/login`, public pages, the repo if it goes public), the names and likeness are the
+  exposure. Shapes for Eric: **(a)** Marvel names only behind the gate; **(b)** original names
+  that rhyme with the archetypes (the helpful steward, the synthesis, the rogue optimizer), with
+  the homage left in lore text; **(c)** generic words only ("vision quest" is a common phrase, not
+  a mark). The archetype trio maps well onto bots: assistant, judge, and the cautionary
+  autonomous one that ignores guards, which is the safeguards story told as a character. Not legal
+  advice; if the repo or `/login` ever goes public, it's worth a real check.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+
+- **Align → scope as a general type, beyond redesign.** The redesign loop's front half (his
+  unprompted marks first, then ours revealed; the agreed goal · outcomes · problems as the scope;
+  the work sized by that scope; a retro routing his notes to process, reader profile and personas)
+  fits research briefs and plan issues too. Build it as an anatomy like
+  `docs/process/LEARNING-LOOP.md` when a second domain asks for it, not from one example.
+  _(src: Eric · while: redesign loop v3, 2026-10-14: "we should have enough ideas on our iterative
+  structure that we can recognize opportunities to build additional process / structure")_
+- **A redesign shoot leaves the 3D scene built, and local e2e then times out under it.**
+  `scripts/redesign/shoot.mjs` builds `public/three/scene.js` (ignored) when missing; after that,
+  `ship open`'s local `test:e2e` renders the tower beside the Profile Overview under software GL
+  and `positions-refine-scroll.spec.ts` (1280px) times out in `settled()` — 2/2 local repeats red,
+  green on clean `main` and green again once `public/three` was deleted (18.9s vs 1.2m). CI never
+  builds the scene, so it never sees it. Cheap fixes to weigh: shoot builds the scene into a temp
+  dir, or the e2e webServer serves without `public/three`.
+  _(src: Claude · while: shipping #5242, a feedback build that shot its 390 frame first)_
+
+- **Put events where planning happens — a direction for the next IA pass, not one surface.** Eric,
+  2026-10-10, on Profile → Events: "Having awareness of events is valuable when I am planning my
+  day, week, month; integrate the two" — then, asked which two: "that is the direction we want to
+  move with our designs, but doesn't have to be this instance. There is still more architecture to
+  consolidate, simplify." Read it as a consolidation rule: a date on what you hold belongs beside
+  the decision it bears on (a position row, the Overview's day, the trade form), not only on its own
+  tab. Candidates to run it against when the next IA pass opens: the Overview's held-events line
+  (`held-events-line.tsx`), positions rows, the Events card's own timeline + list split.
+  _(src: Eric · while: refining the Events lanes, #5037 R2 follow-up)_
+
+- **R&D's month grid is the same dark block Eric reacted to on Events.** His note on #3977's
+  decisions page ("I don't like the overly dark calendar, especially when a large portion of it is
+  so empty") was answered on Profile → Events by #5134's lighter tracks; R&D's market board grid
+  was left as is on purpose (it is the market board, not your days). Show him the
+  live R&D page beside Events and let him place it: carry the lighter tracks over, or keep R&D dark.
+  _(src: Eric · while: closing #3977, #5134's follow-up)_
+
+- **Re-baseline in CI on a label, so a visual PR never needs the round trip.** CI already holds
+  every actual. A `rebaseline` label on a PR whose only red is screenshot mismatches would run
+  `scripts/rebaseline-from-ci.mjs`'s classifier on the run, copy the actuals and push one commit —
+  still refusing logic failures and new snapshots, and still asking a human to read the diffs
+  first (the label is that read). Lives in `.github/workflows/` (protected, `envelope.json`), so it
+  boards the platter as a proposal, never a lane edit.
+  _(src: Claude · while: retro on #5079/#5080 red first runs)_
+
+- **Let a drawing keep an approval an approval.** Since the steering page asks nothing without a
+  picture, an approve or fork row reaches it only through a design manifest — which makes it a
+  design question, so a plan's Approve → ready line and a skipped approval's default no longer
+  fire. Fix: a manifest attaches Today + options to the row and keeps its kind and default.
+  _(src: Claude · while: #5056, pictures on every decision)_
+
+- **Unisolated workflow agents share the primary checkout's mutable state.** Review and ship
+  agents run without `isolation: worktree`, so their working directory is the primary. An `npm ci`,
+  an `npm run build --prefix app` (rewrites the `app/dist` the shoot scripts read) or a branch
+  checkout there lands on everyone. Worktrees made by older sessions also still carry
+  `node_modules` links until their next `worktree-setup.sh` run. Cheapest guard: a `guard-bash.mjs`
+  rule that refuses `npm ci`/`npm install` when the target `node_modules` is a symlink, plus a note
+  in `docs/DELEGATION.md` that review/ship agents `cd` into the worktree they act on.
+  _(src: Claude · while: retro on the 2026-10-09 emptied install)_
+
+- **Make the crawl's report stop saying more than it checked.** Two quiet false passes found while
+  writing up why the member tests missed the profile breakage (#4943). The friction ledger's
+  `judge` column says `pending (grind)` on every row, and no lane schedules that grind, so it reads
+  as a check that is coming and never does. `scripts/crawl/coverage.mjs` labels a screen `covered`
+  when a step only loaded it. Cheapest fix: rename `covered` to `visited`, and have the ledger
+  headline say how old the ungraded rows are. Or drop the column until something runs it.
+  _(src: Claude · while: retro on the 2026-10-08 profile report)_
+
+- **Alert when the bots' price feed is down during market hours.** #4864: the feed failed for days
+  and a human noticing "no trades" was the only detector. A market-hours check that the bots app
+  logged `authenticated` and saw a tick in the last N minutes (health.json already stamps) would
+  page on day one. _(src: Claude · while: retro on #4864)_
+
 - **Fold a stale-echo run into its capsule's drafted lesson.** `lesson-draft.mjs` (#4212) drafts a
   capsule's LESSONS entry at the close, but repair.mjs posts a stale echo (a run that started before
   the fix merged) only after the close, so that run's sha never reaches the entry's `COVERS:` and
@@ -157,6 +291,12 @@ Eric-sourced.
 - **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
   chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
   for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
+- **Nobody is told their Council line got a reply.** Replies (#5097) render only under the line on
+  Activity → The Council; the member's own line card on the Overview (`council-line-card.tsx`)
+  says nothing when someone answers. A "2 replies to your line ›" link there closes the loop an
+  argument needs. Eric's pick note also said "the trading section": the Trade page for a symbol
+  could show the week's lines tagged with that symbol's play, replies included. _(src: Claude ·
+  while: #5097)_
 - **NYSE Day Trader's Alpaca keys are rejected** — prod logs `NYSE Day Trader: unauthorized` on
   every boot since #4159, so that bot gets no fill updates until its keys are rotated (a credential
   step, Eric's). The 2026-09-30 outage was this rejection looping. _(src: Claude · while: #4159)_
@@ -187,14 +327,6 @@ Eric-sourced.
   about 30 minutes: request one past date's CRWV option bars and see whether they come back, and
   whether both sides are there or only a close (a close solved against a later spot is a fabricated
   IV). _(src: Claude · while: interrogating the position guidance plan, #3729)_
-- **The phone check is blind to a box that spills off the LEFT edge.** `page-sideways-scroll` and
-  `overflow` in `scripts/crawl/phone.mjs` measure `scrollWidth` only, which grows rightward. So the
-  topbar status popover hung 113px off the left of a 390px screen with 0 findings. It was caught by
-  reading the code, and `--click .status` then measured its rect. A candidate `offscreen-left` kind:
-  a shown box whose `getBoundingClientRect().left < -TOLERANCE` and that is not inside a horizontal
-  scroller. It needs the same skips the tap check has (a skip link parked at -999px, a fully
-  off-canvas drawer). The noise has to be measured over one `--phone-audit` crawl before this
-  becomes a new severity. _(src: Claude · while: #3816 slice 5, fixing the status popover)_
 - **"GraphQL is blocked from interactive Claude Code sessions" is false — sweep the claim out of the
   Projects scripts.** It is asserted in `projects.mjs`, `projects-setup.mjs`,
   `projects-backfill.mjs` and `projects.spec.ts`, and it is why three Projects v2 PRs shipped with

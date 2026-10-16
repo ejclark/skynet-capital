@@ -311,3 +311,18 @@ score-by 2026-10-09) remains `_open_` and unscored — not due yet. Full scoring
 [`forward-tests/google-adtech-opinion-unseal-2026-09-16.md`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md);
 kill-list entry: [`multi-symbol-sweep.md`](../multi-symbol-sweep.md#kill-list--recorded-so-they-are-never-re-proposed).
 This is a scoring note only — the close-out above is not reopened or amended.
+
+### Forward test scored (2026-10-09, `forward-test-due` re-dispatch)
+
+`FT-google-adtech-opinion-unseal-2026-09-16-2` reached its 2026-10-09 score-by. **PASSED** — read from
+the opinion itself this time, not press: the 106-page Memorandum Opinion (ECF No. 1858) imposes **no
+divestiture, mandated sale or forced open-sourcing**; its Conclusion rejects AdX divestiture, open-sourcing
+DFP's final auction logic and the contingent DFP Remainder divestiture, and accepts the behavioral set
+(First/Last Look barred, Unified Pricing Rules deprecated, an AdX–Prebid real-time-bid API, non-discriminatory
+signals, bid-data export, a Monitor, a 6-year global term). The stand-aside's premise — 09-16 was a procedural
+day — survives. Detail and the one-observation caveat:
+[`forward-tests/google-adtech-opinion-unseal-2026-09-16.md`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md).
+Scoring note only — the close-out above is not reopened or amended. Nothing left open on this event.
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{"GOOG":344.86},"vix":15.41,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","lennar-q3-fy2026-2026-09-16","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->

@@ -7,7 +7,6 @@ import {
 import { parseEventsJsonl, ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
@@ -26,8 +25,6 @@ type ActivitySink = (record: TradeActivityRecord) => void;
 
 interface StartStreamsInput {
   readonly participants: readonly Participant[];
-  /** Symbols currently held — what the live market-data stream subscribes to. */
-  readonly heldSymbols: readonly string[];
   readonly sink: EventSink;
   /** Durable trade-activity capture, fed by each account's trade_updates stream (live mode only). */
   readonly onActivity?: ActivitySink;
@@ -52,7 +49,7 @@ export interface DataSource {
   readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
   /** The roster (live: env; offline: fixture file). */
   loadParticipants(): Participant[];
-  /** Start the realtime price/fill streams, pushing into `sink`. */
+  /** Start the realtime streams, pushing into `sink` — live: fills only, no price socket (#4864). */
   startStreams(input: StartStreamsInput): void;
   /**
    * Start one account's fill stream — used when a participant is added at runtime. Live
@@ -141,20 +138,16 @@ function liveDataSource(env: Env): DataSource {
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
     stopParticipantStream,
-    startStreams: ({ participants, heldSymbols, sink, onActivity, onStatus }) => {
-      const dataCreds = participants[0]?.credentials;
-      if (heldSymbols.length > 0 && dataCreds) {
-        new AlpacaMarketDataStream({
-          apiKey: dataCreds.apiKey,
-          apiSecret: dataCreds.apiSecret,
-          symbols: heldSymbols,
-          onEvent: sink,
-          onStatus: (status) => onStatus?.("market-data", status),
-        }).start();
-        onStatus?.("market-data", `streaming ${heldSymbols.join(", ")}`);
-      } else {
-        onStatus?.("market-data", "no open positions yet — price stream idle");
-      }
+    startStreams: ({ participants, sink, onActivity, onStatus }) => {
+      // No held-symbol price socket here, by design (#4864). Alpaca allows ONE market-data
+      // connection per USER LOGIN per endpoint — not per paper account — and the bots app holds
+      // that login's for its eval loop (no tick → no evaluation → no trades). Any socket this app
+      // opens on a key under the same login is refused or starves the bots, and a key can't say
+      // which login owns it. Held prices still move on the broker re-sync (60s).
+      onStatus?.(
+        "market-data",
+        "off — the bots app owns the login's one price connection; prices refresh on broker re-sync",
+      );
 
       for (const participant of participants) {
         startParticipantStream(participant, sink, onStatus, onActivity);

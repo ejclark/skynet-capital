@@ -224,6 +224,13 @@ export const LABELS = {
     color: "5319e7",
     description: "CI failures are piling up and the repair lane is not running",
   },
+  // Owned by the dashboard server's run marker (#4618): it files one when a boot finds the last run
+  // ended without its clean shutdown (an OOM kill, a crash). Closed once `/retro` banks the lesson.
+  incident: {
+    name: "incident",
+    color: "b60205",
+    description: "Production stopped uncleanly: an OOM kill or crash, awaiting a /retro",
+  },
 };
 
 /** The labels this file applies and therefore guarantees. The rest are registered for lookup. */
@@ -315,6 +322,19 @@ const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocke
 
 /** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
 export const pullable = (issue) => notPullableReason(issue) === null;
+
+/**
+ * WHICH ISSUES THE FEEDBACK LANE BUILDS (#5332): `feedback`, and a `bug` that is not a `plan`.
+ * CLAUDE.md files a mid-build bug `bug` + `fast-track` and says it is "pulled next", but both lane
+ * picks looked only for `plan` and `feedback`, so #5164/#5165/#5175/#5266 sat ready 2–3 days until
+ * someone hand-added `feedback`. A `bug` + `plan` stays the plan lane's — both claim steps run on
+ * one `ready` event, so letting each lane see it would start two builds.
+ */
+export function inFeedbackLane(issue) {
+  const names = labelNames(issue?.labels);
+  if (names.includes(LABELS.feedback.name)) return true;
+  return names.includes(LABELS.bug.name) && !names.includes(LABELS.plan.name);
+}
 
 /**
  * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →

@@ -9,7 +9,7 @@
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
 import type { PlaybookMode } from "../domain/types.js";
-import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
+import { type Playbook, type PrintStretches, readsLiveSignals } from "../playbooks/playbook.js";
 import {
   evidenceHref,
   housePlaybooks,
@@ -49,7 +49,7 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   readonly id: string;
   readonly symbol: string;
   /** The whole basket (#3564). `symbol` stays as its first entry for existing readers; the card
-   *  shows every name, so a ten-name tactical basket never reads as one ticker. */
+   *  shows every name, so SAURON's ten-name basket never reads as one ticker. */
   readonly symbols: readonly string[];
   /** The citation the playbook carries — verbatim from the registry — and, when it names a
    *  research doc we serve, that doc's route. Ported from the retired Plays cards (#3623). */
@@ -60,6 +60,9 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
    *  option playbook, which is sized by its allocation — the rules of either are the copy above. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** The study's move in each stretch before a report, beside `evidence` (#5432) — sent only with a
+   *  window, which is what the stretches are drawn under. */
+  readonly stretches?: PrintStretches;
   /** Probe-proven traits ("Confirmed dates only"…) — empty when nothing was proven. */
   readonly traits: readonly PlayTrait[];
   /** Performance/eval data for the playbook (#885: "shape TBD"; #3543 slice 2 fills it in). Empty
@@ -144,17 +147,6 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "Converges to flat once the hold window elapses with no live signal — the same discipline as a missed print exit.",
     hold: "No qualifying story detected: correctly dark, same as a date-keyed play with no upcoming print.",
   },
-  "HC-SAURON": {
-    description:
-      "Research-volume mode across a ten-name tech universe — the goal is trade COUNT for a confidence-rating dataset, not P/L. Small, frequent tranches probe every sentiment extreme and every momentum run, never one big bet.",
-    enter:
-      "Small tranches on panic (mean-reversion) or an ordinary momentum run (no extreme required) — loosened thresholds trade far more often than the standard read of the same signals.",
-    exitTakeProfit:
-      "Takes half off into exhausted euphoria, letting the rest ride for the next signal — never one all-or-nothing exit.",
-    exitCutLosses:
-      "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
-    hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
-  },
   // Every number below is pinned to the persona's own behavior by
   // tests/discovery/playbook-store.spec.ts ("quotes only numbers his persona actually trades on").
   // The Pause row says what the guards do since #4642 slice 10: an order no subscribed playbook
@@ -224,17 +216,21 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "they are called away. It runs on its owner's conviction, AGAINST our own study: CRWV's " +
       "options imply about 70% volatility while the stock has delivered a median of about 89% " +
       "over the last year, and its 0.20-delta puts are priced to be assigned 19% of the time " +
-      "against 33% in CRWV's own history — the premium has underpaid the moves. It retires if " +
-      "its net P/L is below $0 on 2027-01-29, or if more than 1 in 3 of its sold puts finish in " +
-      "the money — a check made on that date by hand: nothing switches it off automatically.",
+      "against 33% in CRWV's own history — the premium has underpaid the moves. It is checked on " +
+      "2027-01-29: if its net P/L is below $0 on 2027-01-29, or more than 1 in 3 of its sold puts " +
+      "have finished in the money, it stops selling new puts on its own until its owner sets a " +
+      "new check date. A put still open runs to expiry, and assigned shares keep selling covered " +
+      "calls until they are called away.",
     enter:
-      "Sells one put at the strike nearest 0.20 delta — roughly a 1-in-5 chance the market " +
-      "prices for finishing in the money (0.15 conservative, 0.25 aggressive) — on the latest " +
-      "expiry 30 to 45 days out that ends before CRWV's next earnings blackout. Once assigned, " +
+      "Sells puts at the strike nearest 0.15 delta in every mode — roughly a 1-in-7 chance the " +
+      "market prices for finishing in the money, about where our cycle study puts CRWV's floor — " +
+      "on the latest expiry 14 to 45 days out that ends before CRWV's next earnings blackout: as " +
+      "many contracts as your capital secures, up to 3 / 6 / 10 (conservative / standard / " +
+      "aggressive), in one order. Once assigned, " +
       "it sells one call at or above both the shares' cost and today's price, nearest 0.25 delta " +
       "(0.20 / 0.30). Either strike must sit within 0.05 delta of that aim and never above 0.30 " +
       "— when CRWV's quotes are too wide for any strike that close to trade, it sells nothing " +
-      "that cycle. One contract at a time, inside the capital you allocate.",
+      "that cycle. Covered calls go one lot at a time, a lot every cycle.",
     exitTakeProfit:
       "No early take-profit and no roll: each put or call is held to expiry. Expiring worthless " +
       "keeps the whole premium; a call that is exercised sells the shares at its strike, at or " +
@@ -246,8 +242,30 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "never sold out from under it.",
     hold:
       "While a put or call is open it waits for expiry. From CRWV's earnings blackout through the " +
-      "session after the print — or when no 30-to-45-day expiry ends before the next one — it " +
+      "session after the print — or when no 14-to-45-day expiry ends before the next one — it " +
       "sells nothing.",
+  },
+  "CRWV-LONG-CALL": {
+    description:
+      "Calls on CRWV about four to six months out, held through its earnings reports. A call " +
+      "gains when CRWV rises, and the most one can lose is what was paid for it. It runs on its " +
+      "owner's conviction (2026-10-16): CRWV's drop with the AI names is temporary and it " +
+      "recovers well above today's price over the next 3 to 6 months. No study has tested this " +
+      "play. What the data does say: options have priced CRWV's earnings moves smaller than they " +
+      "turned out, which is why this play may hold through a report when no sold option may. It " +
+      "is checked on 2027-01-29: if its net P/L is below $0, it stops buying until its owner sets " +
+      "a new date.",
+    enter:
+      "Buys calls on the latest expiry 120 to 200 days out, at the strike nearest 0.60 delta " +
+      "(0.70 conservative, 0.50 aggressive), in about three orders ten minutes apart, up to the " +
+      "capital you allocate (and at most 30 contracts; 15 / 60). " +
+      "Adds are the same contract, only while it costs within 10% of what was paid and 90 or " +
+      "more days remain. Never buys during an earnings blackout.",
+    exitTakeProfit: "Sells every call once it is worth double what it cost.",
+    exitCutLosses:
+      "No stop: the most it can lose is the premium paid. It sells everything with 45 days left, " +
+      "before time decay speeds up, whatever the price.",
+    hold: "Holds through earnings reports. After a sale it may buy again at once, at the new price.",
   },
   "NVDA-CALL-SPREAD": {
     description:
@@ -281,7 +299,45 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "and is left alone. While it is subscribed (on or paused), S1-NVDA stops trading NVDA " +
       "shares on the same bot.",
   },
+  // #5489 slice 2: every fact is `src/playbooks/dip-bounce.ts` (DIP_BOUNCE_RULE), pinned by
+  // tests/playbooks/dip-bounce.spec.ts; observe-only by `observeOnly` (observe-only.spec.ts).
+  "MU-DIP-BOUNCE": dipBounceCopy("MU"),
+  "NBIS-DIP-BOUNCE": dipBounceCopy("NBIS"),
 };
+
+/** The dip-to-bounce's rules, said once for each ticker it watches. */
+function dipBounceCopy(symbol: string): PlaybookStoreCopy {
+  return {
+    description:
+      `Observe-only: it watches ${symbol} for a dip well below its average price for the day and ` +
+      "records the $1,000 buy it would make and the small bounce it would sell into. It places no " +
+      "order and changes nothing a subscribed bot does.",
+    enter:
+      "From 10:00 ET, a 5-minute bar that closes two of the stock's own 5-minute ranges below the " +
+      "day's volume-weighted average price. One buy per dip; another only two ranges lower. Not " +
+      "on an earnings report day or the trading day either side of it.",
+    exitTakeProfit:
+      "Sells each buy one 5-minute range above what it paid, once a later bar trades through that " +
+      "price, the same day or any day after.",
+    exitCutLosses:
+      "No stop. A buy held 3 trading days, or buys holding 30% of the allocation, stop new buys in " +
+      "the name; at 5 days, or 50%, or down 8% in a week, no new buys at all, and every held buy " +
+      "keeps its sell working until the bounce comes.",
+    hold:
+      "A buy not sold by the close is held overnight with its sell still working; a morning that " +
+      "opens above it sells at the open.",
+    notes: [
+      {
+        label: "Observe-only",
+        text:
+          "Its size is zero in every mode. Each dip it sees is recorded with the price, the day's " +
+          "average, the buy it would make and the sell it would rest, and what a delayed bounce " +
+          "would do to both. It goes live only after 30 recorded trading days and a change that " +
+          "lights it.",
+      },
+    ],
+  };
+}
 
 function entryOf(playbook: Playbook): PlaybookStoreEntry {
   const copy = COPY[playbook.id] ?? {
@@ -308,6 +364,7 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     evidence: playbook.evidence,
     ...(href ? { evidenceHref: href } : {}),
     ...(probe ? { window: spanOf(probe), size: playbook.size } : {}),
+    ...(probe && playbook.stretches ? { stretches: playbook.stretches } : {}),
     traits: probe ? traitsOf(probe) : [],
     metrics: [],
     ...copy,

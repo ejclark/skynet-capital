@@ -79,8 +79,12 @@ function Fine(): ReactElement {
 
 let reload: ReturnType<typeof rstest.spyOn>;
 let logged: ReturnType<typeof rstest.spyOn>;
+let beacon: ReturnType<typeof rstest.fn>;
 
 beforeEach(() => {
+  // The catch seam beacons every caught error to the server (#4618); no spec reaches a network.
+  beacon = rstest.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+  rstest.stubGlobal("fetch", beacon);
   sessionStorage.clear();
   reload = rstest.spyOn(pageControls, "reload").mockImplementation(() => undefined);
   rstest.spyOn(pageControls, "now").mockReturnValue(T0);
@@ -254,5 +258,30 @@ describe("the catch seam", () => {
       error,
       "\n    at Boom",
     );
+  });
+
+  it("beacons the caught error to the server, outliving a reload", () => {
+    reportRouteError(chunkError("42"));
+    expect(beacon).toHaveBeenCalledTimes(1);
+    const [url, init] = beacon.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/client-error");
+    expect(init).toMatchObject({ method: "POST", keepalive: true, credentials: "same-origin" });
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      kind: "stale-chunk",
+      name: "ChunkLoadError",
+      message: expect.stringContaining("Loading chunk 42 failed"),
+    });
+  });
+
+  it("cuts a long message to what the server keeps", () => {
+    reportRouteError(new Error("x".repeat(5_000)));
+    const [, init] = beacon.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).message).toHaveLength(500);
+  });
+
+  it("never turns a failed beacon into a second error", async () => {
+    beacon.mockImplementation(() => Promise.reject(new Error("offline")));
+    expect(() => reportRouteError(new Error("first"))).not.toThrow();
+    await Promise.resolve();
   });
 });

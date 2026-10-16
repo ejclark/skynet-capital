@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { claimFeedbackReply } from "../../../scripts/moneypenny/index.mjs";
-import { replyResumeIntent } from "../../../scripts/moneypenny/reply-resume.mjs";
+import { laneOf, replyResumeIntent } from "../../../scripts/moneypenny/reply-resume.mjs";
 
 // #3959 slice 1 (sub-issue #4299) — the second door into the feedback lane: not "this was readied"
 // but "the question we asked got answered". Fixture-shaped payloads, no network and no clock; the
@@ -46,7 +46,7 @@ describe("replyResumeIntent — an authorized reply on a blocked feedback issue"
     expect(intent.reason).toContain("needs-info");
   });
 
-  it("refuses a second parking label — `needs-eric` is slice 2's, and still blocks", () => {
+  it("refuses while a SECOND parking label is on — one reply answers one question", () => {
     const intent = replyResumeIntent(reply(["feedback", "ready", "needs-info", "needs-eric"]));
     expect(intent.resume).toBe(false);
     expect(intent.reason).toContain("parked by needs-eric");
@@ -58,10 +58,10 @@ describe("replyResumeIntent — an authorized reply on a blocked feedback issue"
     expect(intent.reason).toContain("in-progress");
   });
 
-  it("is not this lane's without the feedback label", () => {
-    const intent = replyResumeIntent(reply(["plan", "ready", "needs-info"]));
+  it("is no lane's without a lane label — a research ask has nobody waiting on it", () => {
+    const intent = replyResumeIntent(reply(["bottleneck", "ready", "needs-eric"]));
     expect(intent.resume).toBe(false);
-    expect(intent.reason).toContain("not a feedback issue");
+    expect(intent.reason).toContain("no lane is waiting");
   });
 
   it("refuses a closed issue", () => {
@@ -91,6 +91,50 @@ describe("replyResumeIntent — an authorized reply on a blocked feedback issue"
     expect(
       replyResumeIntent({ payload: { ...noComment.payload, comment: undefined } }).resume,
     ).toBe(false);
+  });
+});
+
+// #3959 slice 2 (sub-issue #4301) — the same door for ANY blocked lane. The lane is derived from the
+// issue's own labels and the answered question from which parking label is on; nothing is recorded.
+describe("replyResumeIntent — any blocked lane", () => {
+  it("resumes a `needs-eric` feedback issue, naming the label it answered", () => {
+    const intent = replyResumeIntent(reply(["feedback", "ready", "needs-eric"], "yes, option B"));
+    expect(intent.resume).toBe(true);
+    expect(intent.lane).toBe("feedback");
+    expect(intent.answered).toBe("needs-eric");
+  });
+
+  it("resumes a `needs-eric` plan issue — the plan lane is a lane too", () => {
+    const intent = replyResumeIntent(reply(["plan", "ready", "needs-eric"], "go with the default"));
+    expect(intent.resume).toBe(true);
+    expect(intent.lane).toBe("plan");
+    expect(intent.answered).toBe("needs-eric");
+  });
+
+  it("resumes a `needs-info` plan issue as well", () => {
+    expect(replyResumeIntent(reply(["plan", "ready", "needs-info"])).lane).toBe("plan");
+  });
+
+  it("derives the lane from labels — `feedback` wins a dual-labelled issue, none gives none", () => {
+    expect(laneOf({ labels: [{ name: "plan" }, { name: "feedback" }] })).toBe("feedback");
+    expect(laneOf({ labels: [{ name: "plan" }] })).toBe("plan");
+    expect(laneOf({ labels: [{ name: "enhancement" }] })).toBeNull();
+    expect(laneOf(undefined)).toBeNull();
+  });
+
+  it.each(["needs-design", "hold-merge"])(
+    "does NOT treat a reply as answering `%s` — a comment is not a design session or a merge click",
+    (label) => {
+      const intent = replyResumeIntent(reply(["plan", "ready", label]));
+      expect(intent.resume).toBe(false);
+      expect(intent.reason).toContain("none of");
+    },
+  );
+
+  it("still refuses a plan issue already in flight", () => {
+    const intent = replyResumeIntent(reply(["plan", "ready", "needs-eric", "in-progress"]));
+    expect(intent.resume).toBe(false);
+    expect(intent.reason).toContain("in-progress");
   });
 });
 
@@ -149,5 +193,44 @@ describe("claimFeedbackReply — a refused resume still leaves the answer pullab
       [4299, ["--add-label", "ready"]],
       [4299, ["--remove-label", "needs-info"]],
     ]);
+  });
+});
+
+// The plan lane's door is an UNPARK, not a claim: the plan gate's own `unlabeled` path does the lease
+// and the admission gate, so a reply must write the same two labels a human would and nothing else.
+describe("claimFeedbackReply — a plan reply unparks and leaves the claim to the plan gate", () => {
+  it("adds `ready`, removes the answered label, and takes no lease of its own", () => {
+    const edits: [number, string[]][] = [];
+    const result = claimFeedbackReply(
+      reply(["plan", "ready", "needs-eric"], "go with B"),
+      0,
+      "sha",
+      {
+        edit: (n: number, args: string[]) => {
+          edits.push([n, args]);
+          return true;
+        },
+      },
+    );
+    expect(result.claimed).toBe(false);
+    expect(result.unparked).toBe(true);
+    expect(result.lane).toBe("plan");
+    expect(edits).toEqual([
+      [77, ["--add-label", "ready"]],
+      [77, ["--remove-label", "needs-eric"]],
+    ]);
+  });
+
+  it("writes nothing for a plan issue that is not parked", () => {
+    const edits: [number, string[]][] = [];
+    const result = claimFeedbackReply(reply(["plan", "ready"]), 0, "sha", {
+      edit: (n: number, args: string[]) => {
+        edits.push([n, args]);
+        return true;
+      },
+    });
+    expect(result.claimed).toBe(false);
+    expect(result.unparked).toBeUndefined();
+    expect(edits).toEqual([]);
   });
 });

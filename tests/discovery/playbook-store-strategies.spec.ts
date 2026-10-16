@@ -38,9 +38,25 @@ describe("strategyCatalog", () => {
   it("says every row's status as a glyph plus words", () => {
     for (const row of catalog.flatMap((c) => c.pairs)) {
       const { glyph, word } = EVIDENCE_STATUS[row.status];
-      expect(row.statusLabel.startsWith(`${glyph} ${word}`), row.id).toBe(true);
+      // A ✓ below the house bar wears an open triangle instead (#5444), its word unchanged.
+      const lead = row.qualifier === "weakened" ? "△" : glyph;
+      expect(row.statusLabel.startsWith(`${lead} ${word}`), row.id).toBe(true);
     }
-    expect(card("pre-print-run-up")?.pairs[0]?.statusLabel).toBe("✓ researched, weakened");
+    expect(card("pre-print-run-up")?.pairs[0]?.statusLabel).toBe(
+      "△ researched, below the house bar",
+    );
+  });
+
+  it("gives every strategy a plain line and every single-ticker row its call in plain words", () => {
+    for (const c of catalog) expect(c.line.length, c.strategy).toBeGreaterThan(0);
+    expect(card("wheel")?.pairs[0]?.plainCall).toBe(
+      "Sell cash-secured puts on CRWV, then covered calls on any shares assigned",
+    );
+    expect(card("pre-print-run-up")?.pairs[0]?.plainCall).toBe(
+      "Buy NVDA's run-up before its earnings report",
+    );
+    // A basket is not one ticker: it carries no sentence built on one.
+    expect(card("persona-rules")?.pairs[0]?.plainCall).toBeUndefined();
   });
 
   it("links each row to its own study on the research shelf", () => {
@@ -61,8 +77,18 @@ describe("strategyCatalog", () => {
     const s1 = later.flatMap((c) => c.pairs).find((row) => row.id === "S1-NVDA");
     expect(s1).toMatchObject({
       stale: true,
-      statusLabel: "✓ researched, weakened · past its shelf date",
+      statusLabel: "△ researched, below the house bar · past its shelf date",
     });
     expect(catalog.flatMap((c) => c.pairs).every((row) => !row.stale)).toBe(true);
+  });
+});
+
+describe("strategyCatalog summaries", () => {
+  it("gives every card a one-line summary of the strategy, never of a ticker", () => {
+    for (const c of catalog) {
+      expect(c.summary.length).toBeGreaterThan(20);
+      expect(c.summary).not.toContain("\n");
+    }
+    expect(card("wheel")?.summary).toMatch(/cash-secured put/);
   });
 });

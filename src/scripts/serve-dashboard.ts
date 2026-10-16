@@ -15,6 +15,7 @@
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
@@ -58,6 +59,7 @@ import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
 import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
+import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
 
 const PORT = resolvePort(process.env);
@@ -65,6 +67,9 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
+  // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
+  // run marker for this one (#4618). The gauge and any incident start once we are listening.
+  const telemetry = bootTelemetry(process.env, dataSource.mode);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
   const roster = mergeRoster(envRoster, store.load());
@@ -134,10 +139,7 @@ async function main(): Promise<void> {
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
   const auditDir = process.env.SKYNET_AUDIT_DIR;
 
-  const heldSymbols = [
-    ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
-  ];
-  dataSource.startStreams({ participants: roster, heldSymbols, sink, onActivity, onStatus });
+  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus });
 
   const owners = ownerEmails(process.env);
   const service = new ParticipantService({
@@ -194,9 +196,11 @@ async function main(): Promise<void> {
     allowlist,
     botControls,
     council,
+    councilReplies,
     filingComments,
     subscriptions,
     savedPositions,
+    authoredPlays,
     knownPersonaIds,
     auth,
     password,
@@ -281,6 +285,7 @@ async function main(): Promise<void> {
 
   const server = createDashboardServer({
     hub,
+    logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
     password,
@@ -290,6 +295,7 @@ async function main(): Promise<void> {
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
     savedPositions,
+    authoredPlays,
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
@@ -373,6 +379,18 @@ async function main(): Promise<void> {
         council.retract(week, memberId);
       },
     },
+    // Replies under each weekly Council line (#5097): the app's own store, reading the Council's
+    // lines so a reply only hangs on one that is up — no GitHub, no companion in reach.
+    councilReplies: {
+      load: () => councilReplies.load(),
+      add: (week, lineId, reply) => {
+        councilReplies.add(week, lineId, reply);
+      },
+      remove: (week, lineId, replyId, authorId) => {
+        councilReplies.remove(week, lineId, replyId, authorId);
+      },
+      loadCouncil: () => council.load(),
+    },
     // Comments on another member's filing (issue #2224 shape 3): the app's own store plus the
     // app's own feedback log — deliberately no GitHub client in reach.
     filingComments: {
@@ -399,16 +417,21 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    ...(insightsBridge.personasOfOrders
+      ? { personasOfOrders: insightsBridge.personasOfOrders }
+      : {}),
     ...(insightsBridge.findSpreadLeg ? { findSpreadLeg: insightsBridge.findSpreadLeg } : {}),
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
+    ...(insightsBridge.readCheckWeek ? { readCheckWeek: insightsBridge.readCheckWeek } : {}),
     // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
     readCondScout: insightsBridge.readCondScout,
     readHouseRoster: insightsBridge.readHouseRoster,
+    signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
@@ -430,14 +453,21 @@ async function main(): Promise<void> {
     ...(spotChecks ? { spotChecks } : {}),
   });
   // Fly's deploy sends SIGTERM to the old machine: stop accepting, end SSE with a retry hint,
-  // exit 0 inside kill_timeout (#4616).
-  installGracefulShutdown(server, { log: (line) => console.log(line) });
+  // exit 0 inside kill_timeout (#4616). The one exit that clears the run marker (#4618).
+  installGracefulShutdown(server, {
+    log: (line) => console.log(line),
+    exit: (code) => {
+      telemetry.cleanExit();
+      process.exit(code);
+    },
+  });
   server.listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
       `Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate} — feedback: ${feedback ? "on" : "off"}`,
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
+    telemetry.listening();
   });
 }
 

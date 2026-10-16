@@ -28,6 +28,7 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const EVENTS_DIR = join(ROOT, "docs", "research", "events");
 const WEEKS_DIR = join(ROOT, "docs", "research", "weeks");
+const CONVICTIONS_DIR = join(ROOT, "docs", "research", "convictions");
 const BUDGET_FILE = join(ROOT, "research-budget.json");
 const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 
@@ -48,6 +49,8 @@ export const MAX_HEADER_CHARS = 2400;
  * only stops a structural fact from reading as drift.
  */
 export const MAX_WEEK_HEADER_CHARS = 8000;
+/** A conviction's call sheet carries one row per CLAIM (#5482), so it grows the same way. */
+export const MAX_CONVICTION_HEADER_CHARS = 8000;
 /** One short line per signal, the same ceiling ship.sh checkbody puts on PR summary bullets. */
 export const MAX_BULLET = 160;
 /** An append-only ledger row is a note to the next session, not an essay. Advisory only. */
@@ -255,7 +258,7 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
 }
 
 function mdFilesIn(dir) {
-  // Reached only for the weekly studies (the ledger dir is checked up front, exit 2). Optional:
+  // Reached only for the optional dirs (the ledger dir is checked up front, exit 2). Optional:
   // the ledger verdict still means what it says without them, so it is named, not failed.
   if (!existsSync(dir)) {
     console.error(`· no research dir at ${dir} — its documents were not checked`);
@@ -268,13 +271,15 @@ function mdFilesIn(dir) {
 
 /**
  * Every gated research document: the event ledgers, plus the weekly studies under
- * `docs/research/weeks/` (#1716 — same `## The call` contract, so the same eye reads both). Each
- * result carries its own path so `--candidate` can point at a real file in either directory.
+ * `docs/research/weeks/` (#1716) and the convictions under `docs/research/convictions/` (#5482: a
+ * member's view as one call-sheet row per claim). Same `## The call` contract, so the same eye
+ * reads all three. Each result carries its own path so `--candidate` can point at a real file.
  */
 function auditAll() {
   const dirs = [
     { dir: EVENTS_DIR, prefix: "", maxHeaderChars: MAX_HEADER_CHARS },
     { dir: WEEKS_DIR, prefix: "weeks/", maxHeaderChars: MAX_WEEK_HEADER_CHARS },
+    { dir: CONVICTIONS_DIR, prefix: "convictions/", maxHeaderChars: MAX_CONVICTION_HEADER_CHARS },
   ];
   return dirs.flatMap(({ dir, prefix, maxHeaderChars }) =>
     mdFilesIn(dir).map((f) => ({
@@ -342,7 +347,9 @@ if (process.argv.includes("--update")) {
   process.exit(0);
 }
 
-console.log("🔬 Research lint — the decision-header contract on ledgers and weekly studies\n");
+console.log(
+  "🔬 Research lint — the decision-header contract on ledgers, weekly studies, convictions\n",
+);
 console.log(`  documents: ${results.length} · without a usable call sheet: ${debt}`);
 const noted = results.filter((r) => r.notes.length > 0).length;
 console.log(`  advisory notes on ${noted} document(s)\n`);

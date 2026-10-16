@@ -22,7 +22,9 @@ export interface SauronConfig {
   readonly maxConviction: number;
 }
 
-const DEFAULT_SAURON_CONFIG: SauronConfig = {
+/** Exported for the Thesis tab's drawn rule (`thesis-play-view.ts`, #5327), which draws these
+ *  numbers rather than restating them. */
+export const DEFAULT_SAURON_CONFIG: SauronConfig = {
   euphoriaSentiment: 0.7,
   panicSentiment: -0.7,
   rolloverMomentumMax: 0,

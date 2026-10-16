@@ -64,11 +64,11 @@ describe("the any-account head's settings ownership", () => {
       expect(railSource).not.toMatch(/^\s*<Link to="\/settings">/m);
     });
 
-    it("folds Decisions into Heartbeat and drops the rail's way out (#3807 slices 2a, 2d)", () => {
+    it("folds Decisions into Playbooks and drops the rail's way out (#3807 slices 2a, 2d; #5073)", () => {
       expect(railSource).toContain("Overview");
-      expect(railSource).toContain("Heartbeat");
+      expect(railSource).toContain("Playbooks");
       expect(railSource).not.toMatch(/>\s*Decisions\s*</);
-      expect(railSource).toContain('<Link to="/u/$id/decisions" params={{ id }}>');
+      expect(railSource).toContain('<Link to="/u/$id/playbooks" params={{ id }}>');
       expect(railSource).not.toContain("← Leaderboard");
       expect(railSource).not.toContain('className="rail-label"');
     });

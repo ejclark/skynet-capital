@@ -31,6 +31,21 @@ import { isClaudeComment } from "./plan-claim.mjs";
  * so a resume cannot start work the board would not show in Ready: a second parking label
  * (`needs-eric`, `needs-design`, `hold-merge`) still refuses, and so does a live `in-progress`.
  */
+/**
+ * The parking labels a REPLY can answer, in the order they are looked for. A reply cannot answer the
+ * other two (`needs-design`, `hold-merge`) — see the header — and `notPullableReason` still refuses
+ * a resume while either is on.
+ */
+export const ANSWERABLE = [LABELS.needsInfo.name, LABELS.needsEric.name];
+
+/** The lane that owns an issue, derived from its labels (`feedback` wins a dual-labelled one). */
+export const laneOf = (issue) => {
+  const names = labelNames(issue?.labels);
+  if (names.includes(LABELS.feedback.name)) return "feedback";
+  if (names.includes(LABELS.plan.name)) return "plan";
+  return null;
+};
+
 const asResumed = (issue, answered) => ({
   ...issue,
   labels: [
@@ -42,7 +57,7 @@ const no = (reason) => ({ resume: false, reason });
 
 /**
  * The pure decision: given an `issue_comment: created` payload the workflow's authorization gate has
- * already let through, does this reply resume a blocked feedback build?
+ * already let through, does this reply resume the lane that is blocked on it?
  *
  * Deliberately NOT a signal-shape match like `isReadySignal`. A ready-flip has to be recognised
  * among prose that merely uses the word; a reply to "which account did you mean?" is an answer
@@ -50,7 +65,7 @@ const no = (reason) => ({ resume: false, reason });
  * remove. Any non-empty reply from an authorized human counts; if it turns out to answer nothing,
  * the resumed build asks again and lands back on `needs-info` — human-paced, no loop.
  *
- * @returns {{ resume: boolean, reason: string, issue?: object, answered?: string }}
+ * @returns {{ resume: boolean, reason: string, issue?: object, answered?: string, lane?: "feedback" | "plan" }}
  */
 export function replyResumeIntent(ctx) {
   const issue = ctx.payload?.issue;
@@ -65,15 +80,17 @@ export function replyResumeIntent(ctx) {
     return no(`issue #${issue.number} is not open`);
   }
   const names = labelNames(issue.labels);
-  if (!names.includes(LABELS.feedback.name)) {
-    return no(`#${issue.number} is not a feedback issue — not this lane's`);
+  const lane = laneOf(issue);
+  if (!lane) {
+    return no(
+      `#${issue.number} carries neither \`feedback\` nor \`plan\` — no lane is waiting on it`,
+    );
   }
-  // Slice 1 is scoped to ONE blocked state on purpose (the brief's first open question): the lane's
-  // own question to the member. `needs-eric` is slice 2's, and it is a different judgment — Eric
-  // answering a decision may or may not mean "and now build it".
-  const answered = LABELS.needsInfo.name;
-  if (!names.includes(answered)) {
-    return no(`#${issue.number} does not carry \`${answered}\` — no question of ours is waiting`);
+  const answered = ANSWERABLE.find((l) => names.includes(l));
+  if (!answered) {
+    return no(
+      `#${issue.number} carries none of ${ANSWERABLE.map((l) => `\`${l}\``).join(" / ")} — no question of ours is waiting`,
+    );
   }
   if (isClaudeComment(comment.body)) {
     return no(`#${issue.number} — the lane's own comment never resumes it (the loop guard)`);
@@ -85,8 +102,9 @@ export function replyResumeIntent(ctx) {
   if (notPullable) return no(notPullable);
   return {
     resume: true,
-    reason: `authorized reply on a \`${answered}\` feedback issue`,
+    reason: `authorized reply on a \`${answered}\` ${lane} issue`,
     issue,
     answered,
+    lane,
   };
 }

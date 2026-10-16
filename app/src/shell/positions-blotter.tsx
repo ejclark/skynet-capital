@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
-import { useId, useMemo } from "react";
+import type { ReactElement, ReactNode, Ref } from "react";
+import { useId, useMemo, useRef } from "react";
 import {
   type Decision,
   type DeskAllocation,
@@ -10,11 +10,21 @@ import {
   parseDeskQuery,
   toggleQualifier,
 } from "../live/desk";
-import { fetchOptionPositions, type OptionPositions } from "../live/options";
+import { fetchOptionPositions } from "../live/options";
+import { MARK_KINDS, MARK_TOKEN, MARK_WORD } from "../live/position-mark";
+import { rowCallOf } from "../live/row-call";
+import { FilterChip } from "../ui";
+import { decayBySymbol, deltaBySymbol } from "./holding-decay";
+import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
+import { GuidanceSlot } from "./position-guidance-slot";
+import { PositionPicture } from "./position-picture";
+import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
+import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
+import { decisionsByRow, lookOrder, shownKind, useRowMarks } from "./use-row-marks";
 import { ViewTabs } from "./view-tabs";
 
 /**
@@ -28,19 +38,32 @@ import { ViewTabs } from "./view-tabs";
  */
 
 /** The plain filter chips (#3689 slice 6b), each a qualifier in the one query model. "All" isn't
- *  here: it's the absence of every chip's qualifier, and clearing them is its action. */
+ *  here: it's the absence of every chip's qualifier and every mark's (#5083: a mark narrows the
+ *  list too, so All let go of neither while one did), and clearing them is its action.
+ *
+ *  Each P/L chip says which of the two questions it answers (#5042): today's change, or lifetime
+ *  against cost. It used to read "In profit" / "Losing" over lifetime P/L, and members tapped
+ *  "Losing" for what was down today — 6 of 6 study sessions got "No positions match" while MSFT
+ *  was −$76 on the day. The `pl:` tokens are unchanged, so a saved `pl:<0` view still resolves.
+ *  "Up today" rides along because it adds no line to the chip row at 390 (three either way). */
 export const POSITION_CHIPS = [
   ["is:option", "Options"],
   ["is:share", "Shares"],
-  ["pl:>0", "In profit"],
-  ["pl:<0", "Losing"],
+  ["day:>0", "Up today"],
+  ["day:<0", "Down today"],
+  ["pl:>0", "Above cost"],
+  ["pl:<0", "Below cost"],
   ["dte:<21", "Expiring within 3 weeks"],
   ["event:before-expiry", "Earnings before expiry"],
 ] as const;
 
-const CHIP_QUALIFIERS: readonly string[] = POSITION_CHIPS.map(([q]) => q);
+/** Everything All clears: the chips and the Filter's marks. The sort stays — it narrows nothing. */
+const CHIP_QUALIFIERS: readonly string[] = [
+  ...POSITION_CHIPS.map(([q]) => q),
+  ...MARK_KINDS.map((kind) => MARK_TOKEN[kind]),
+];
 
-/** The query with every chip qualifier removed, keeping any typed search words. */
+/** The query with every chip and mark qualifier removed, keeping any typed search words. */
 export function clearChips(query: string): string {
   return query
     .split(/\s+/)
@@ -51,15 +74,18 @@ export function clearChips(query: string): string {
 export function PositionsFilterBar({
   query,
   onChange,
+  ref,
 }: {
   readonly query: string;
   readonly onChange: (next: string) => void;
+  /** The blotter keeps this bar still across a refinement (#5021). */
+  readonly ref?: Ref<HTMLDivElement>;
 }): ReactElement {
   const inputId = useId();
   const tokens = query.toLowerCase().split(/\s+/);
-  const noChip = !POSITION_CHIPS.some(([q]) => tokens.includes(q));
+  const noChip = !CHIP_QUALIFIERS.some((q) => tokens.includes(q));
   return (
-    <div className="filter-bar">
+    <div className="filter-bar" ref={ref}>
       <div className="filter-query">
         <label className="visually-hidden" htmlFor={inputId}>
           Search or filter positions
@@ -77,50 +103,27 @@ export function PositionsFilterBar({
         </span>
       </div>
       <div className="filter-chips">
-        <button
-          type="button"
-          className="filter-chip"
-          aria-pressed={noChip}
-          onClick={() => onChange(clearChips(query))}
-        >
+        <FilterChip pressed={noChip} onPress={() => onChange(clearChips(query))}>
           All
-        </button>
+        </FilterChip>
         {POSITION_CHIPS.map(([qualifier, label]) => (
-          <button
+          <FilterChip
             key={qualifier}
-            type="button"
-            className="filter-chip"
-            aria-pressed={tokens.includes(qualifier)}
-            onClick={() => onChange(toggleQualifier(query, qualifier))}
+            pressed={tokens.includes(qualifier)}
+            onPress={() => onChange(toggleQualifier(query, qualifier))}
           >
             {label}
-          </button>
+          </FilterChip>
         ))}
       </div>
     </div>
   );
 }
 
+/** One empty list, so a page without decisions keeps the rows' lookup memoised. */
+const NO_DECISIONS: readonly Decision[] = [];
+
 /** Tabs + filter bar + the filtered table, for one account. */
-const dollars = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
-/** "−$12/day" per held contract, from the option book's per-holding theta (#3689 slice 6). A
- *  contract the feed didn't quote has no entry, so its cell reads "—" rather than a made-up zero. */
-export function decayBySymbol(statement: OptionPositions | undefined): ReadonlyMap<string, string> {
-  const out = new Map<string, string>();
-  if (!statement?.available) return out;
-  for (const row of statement.rows) {
-    const theta = row.positionGreeks?.theta;
-    if (theta === undefined || !Number.isFinite(theta)) continue;
-    out.set(row.symbol, `${theta < 0 ? "−" : "+"}${dollars.format(Math.abs(theta))}/day`);
-  }
-  return out;
-}
-
 export function PositionsBlotter({
   deskId,
   positions,
@@ -129,8 +132,9 @@ export function PositionsBlotter({
   lens,
   onLensChange,
   allocation,
-  decisions = [],
+  decisions = NO_DECISIONS,
   canTrade = true,
+  children,
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
@@ -144,9 +148,11 @@ export function PositionsBlotter({
   readonly decisions?: readonly Decision[];
   /** Does the viewer own this account (#3807 slice 2d)? Off it, the rows offer no write. */
   readonly canTrade?: boolean;
+  /** What sits under the list (the New trade card). It rides in the held region, so the space a
+   *  refinement holds (#5021) opens below it, where the page ends, not between it and the rows. */
+  readonly children?: ReactNode;
 }): ReactElement {
   const filter = parseDeskQuery(query);
-  const shown = positions.filter((p) => matchesFilter(p, filter));
   const hasOptions = positions.some((p) => p.isOption);
   // Same cache as the Money strip and the Trade page's option card: one read of the option book.
   const statement = useQuery({
@@ -156,39 +162,147 @@ export function PositionsBlotter({
     staleTime: 30_000,
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
+  const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
+  const bookRows = useMemo(
+    () => new Map((statement.data?.rows ?? []).map((r) => [r.symbol, r] as const)),
+    [statement.data],
+  );
+  // Every row's fact badge and this viewer's Not now on it (#5070): the marks filter (`is:review`
+  // …) and sort (`sort:look`) the list, and the pager they replace is gone.
+  const marks = useRowMarks(deskId, positions, statement.data);
+  const kindOf = (p: DeskPosition) => shownKind(marks.rows.get(p.symbol));
+  const kept = positions.filter((p) => matchesFilter(p, filter, kindOf(p)));
+  // Inside each mark the fact's urgency (#5083), then the server's order (largest first).
+  const shown = filter.sortLook
+    ? kept
+        .map((p, i) => ({ p, i, row: marks.rows.get(p.symbol) }))
+        .sort(lookOrder)
+        .map(({ p }) => p)
+    : kept;
+  // What a mark filter hides, by name, so a narrowed list never reads as the whole book.
+  const hiddenByMark = filter.mark
+    ? positions.filter((p) => matchesFilter(p, { ...filter, mark: undefined }) && !kept.includes(p))
+    : [];
+  const counts = { review: 0, consider: 0, onplan: 0 };
+  for (const p of positions) {
+    const kind = kindOf(p);
+    if (kind) counts[kind] += 1;
+  }
+  // The decision engine's cards, each on the row it speaks about: its lesson opens there (#5083).
+  const said = useMemo(() => decisionsByRow(positions, decisions), [positions, decisions]);
+  // The playbook that opened each position, on a bot's own book (#5073 slice 4b).
+  const cardOf = usePlaybookCards(deskId, positions);
+  const guide = (p: DeskPosition) => {
+    const row = marks.rows.get(p.symbol);
+    const call = rowCallOf(positions, p);
+    const card = cardOf(p);
+    return row ? (
+      <GuidanceSlot
+        position={p}
+        row={row}
+        deskId={deskId}
+        canTrade={canTrade}
+        {...(call ? { call } : {})}
+        decisions={said.get(p.symbol) ?? []}
+        picture={
+          <PositionPicture
+            position={p}
+            positions={positions}
+            book={bookRows.get(p.symbol)}
+            bookRead={statement.isSuccess}
+          />
+        }
+        playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
+        onAside={() => marks.setAside(p.symbol)}
+        onUndo={() => marks.undo(p.symbol)}
+      />
+    ) : null;
+  };
   const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
   // An Events row's `#pos-<symbol>` link (#4348): land on the row or card once it has rendered.
   useLandOnPosition(`${view}:${shown.map((p) => p.symbol).join(",")}`);
+  // A refinement that shortens the list keeps the filter bar under the finger (#5021): the list
+  // is the last thing on the Overview, so a shorter one would let the browser clamp the scroll.
+  const bar = useRef<HTMLDivElement>(null);
+  const result = useRef<HTMLDivElement>(null);
+  const keepPlace = useKeepPlace(bar, result, `${view}|${query}`);
+  const refine = (next: string) => {
+    if (next !== query) keepPlace();
+    onFilterChange(next);
+  };
+  const pickLens = (next: Lens) => {
+    if ((next === "map" && !allocation ? "list" : next) !== view) keepPlace();
+    onLensChange?.(next);
+  };
   return (
     <>
-      {lens && onLensChange ? (
-        <div className="positions-head">
-          <h2 className="positions-title">
-            Positions <span className="num">{positions.length}</span>
-          </h2>
-          <LensSwitch lens={view} onChange={onLensChange} />
-        </div>
-      ) : null}
-      <ViewTabs deskId={deskId} query={query} onPick={onFilterChange} />
-      <PositionsFilterBar query={query} onChange={onFilterChange} />
-      {view === "map" && allocation ? (
-        <MapLens positions={shown} allocation={allocation} decisions={decisions} />
-      ) : view === "runway" ? (
-        <RunwayLens positions={shown} />
-      ) : (
-        <div className="pos-blotter">
-          <PositionsTable
+      <PositionsHead
+        deskId={deskId}
+        count={positions.length}
+        query={query}
+        filter={filter}
+        counts={counts}
+        onChange={refine}
+        lens={lens && onLensChange ? <LensSwitch lens={view} onChange={pickLens} /> : undefined}
+      />
+      <ViewTabs deskId={deskId} query={query} onPick={refine} />
+      <PositionsFilterBar query={query} onChange={refine} ref={bar} />
+      <div className="positions-result" ref={result}>
+        {view === "map" && allocation ? (
+          <MapLens
             positions={shown}
-            deskId={deskId}
-            totalCount={positions.length}
-            decayBySymbol={decay}
-            canTrade={canTrade}
+            allocation={allocation}
+            decisions={decisions}
+            marks={marks.rows}
           />
-          {shown.length > 0 ? (
-            <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
-          ) : null}
-        </div>
-      )}
+        ) : view === "runway" ? (
+          <RunwayLens positions={shown} />
+        ) : (
+          <div className="pos-blotter">
+            <PositionsTable
+              positions={shown}
+              deskId={deskId}
+              totalCount={positions.length}
+              decayBySymbol={decay}
+              deltaBySymbol={delta}
+              canTrade={canTrade}
+              guide={guide}
+            />
+            {shown.length > 0 ? (
+              <PositionCards
+                positions={shown}
+                deskId={deskId}
+                decayBySymbol={decay}
+                deltaBySymbol={delta}
+                guide={guide}
+              />
+            ) : null}
+          </div>
+        )}
+        {hiddenByMark.length > 0 ? (
+          <p className="pos-hidden-line">
+            <span>
+              {hiddenByMark.length} hidden by Filter:{" "}
+              {hiddenByMark
+                .map((p) => {
+                  const kind = kindOf(p);
+                  return `${p.display} (${kind ? MARK_WORD[kind] : "set aside"})`;
+                })
+                .join(", ")}
+            </span>{" "}
+            <button
+              type="button"
+              className="pos-hidden-clear"
+              onClick={() =>
+                refine(filter.mark ? toggleQualifier(query, MARK_TOKEN[filter.mark]) : query)
+              }
+            >
+              Clear
+            </button>
+          </p>
+        ) : null}
+        {children}
+      </div>
     </>
   );
 }

@@ -7,8 +7,12 @@ import type { PageSection } from "./sections";
  * without a DOM (`app/tests/routes/accounts-section.spec.ts`).
  *
  * Three families, in this order on the switch:
- *   - the BOOK's — Overview · Activity · Events — keyed on the account the switcher picks;
- *   - a BOT's — Heartbeat · Thesis — only while one bot account is selected (#3687);
+ *   - the BOOK's — Overview · Balance · Activity · Events — keyed on the account the switcher picks.
+ *     Balance (#5493 slice 3) is the book read as one system — findings, the plays behind them, the
+ *     closed trades — and, like the head's health line it opens from, is ONE account's: "All
+ *     accounts" has no single book to judge, so the aggregate switch leaves it out;
+ *   - a BOT's — Playbooks · Thesis — only while one bot account is selected (#3687; Playbooks
+ *     took Heartbeat's slot when the two merged, #5073);
  *   - the VIEWER's — Milestones · Feedback (#3807 slice 2b; #888, Eric 2026-08-29: "a user-level
  *     feature belongs on the page itself, not repeated inside every account row") — the same on
  *     every selection incl. All accounts, so the switcher hides while one is open.
@@ -18,9 +22,10 @@ import type { PageSection } from "./sections";
  */
 export type AccountsSection =
   | "overview"
+  | "balance"
   | "activity"
   | "events"
-  | "heartbeat"
+  | "playbooks"
   | "thesis"
   | "milestones"
   | "feedback";
@@ -33,14 +38,20 @@ const BOOK: readonly PageSection<AccountsSection>[] = [
   { id: "events", label: "Events" },
 ];
 
-/** Heartbeat and Thesis only make sense for one bot account at a time, never the "All accounts"
- *  aggregate or a human account — Heartbeat is the bot loop's liveness plus its passes that placed
- *  nothing (the Decisions tab folded into it and into Activity, #3687; Eric: "tied to autonomous
- *  trading... currently only bot accounts"), and Thesis is a persona's own standing call. */
+/** Playbooks and Thesis only make sense for one bot account at a time, never the "All accounts"
+ *  aggregate or a human account — Playbooks is the bot's checks (the loop's liveness and every
+ *  check it made, once the Heartbeat section, #3687) heading one card per playbook those checks
+ *  ask (#5073; Eric on autonomous trading: "currently only bot accounts"), and Thesis is a
+ *  persona's own standing call. */
 const BOT: readonly PageSection<AccountsSection>[] = [
-  { id: "heartbeat", label: "Heartbeat" },
+  { id: "playbooks", label: "Playbooks" },
   { id: "thesis", label: "Thesis" },
 ];
+
+/** Balance sits straight after Overview — the book's worth, then whether it is in balance — on a
+ *  human account and a bot alike (idle cash and a name over its share are findings on any book).
+ *  Never "All accounts", never a member with nothing linked. */
+const BALANCE: PageSection<AccountsSection> = { id: "balance", label: "Balance" };
 
 const VIEWER: readonly PageSection<AccountsSection>[] = [
   { id: "milestones", label: "Milestones" },
@@ -51,7 +62,18 @@ const VIEWER: readonly PageSection<AccountsSection>[] = [
  *  per account ({@link sectionsFor}); an unknown or now-inapplicable value falls back via
  *  `resolveSection`, never strands the reader. A stale `?section=summary` or `?section=positions`
  *  link (from before the Overview merge) resolves the same way. */
-export const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [...BOOK, ...BOT, ...VIEWER];
+export const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
+  ...withBalance(BOOK),
+  ...BOT,
+  ...VIEWER,
+];
+
+/** The book's sections with Balance after the first (Overview). */
+function withBalance(
+  book: readonly PageSection<AccountsSection>[],
+): readonly PageSection<AccountsSection>[] {
+  return [...book.slice(0, 1), BALANCE, ...book.slice(1)];
+}
 
 /** A viewer-level section: rendered identically on every account selection (#888). */
 export function isViewerSection(id: AccountsSection): boolean {
@@ -59,13 +81,15 @@ export function isViewerSection(id: AccountsSection): boolean {
 }
 
 /** The sections this viewer can see — `kind` is the selected account's (undefined for All
- *  accounts), `linked` false when the member owns no account at all. */
+ *  accounts, which has no Balance or bot sections), `linked` false when the member owns no account
+ *  at all. */
 export function sectionsFor(
   kind: "human" | "bot" | undefined,
   linked = true,
 ): readonly PageSection<AccountsSection>[] {
   if (!linked) return [...BOOK.filter((s) => s.id !== "overview"), ...VIEWER];
-  return kind === "bot" ? ALL_SECTIONS : [...BOOK, ...VIEWER];
+  if (kind === undefined) return [...BOOK, ...VIEWER];
+  return kind === "bot" ? ALL_SECTIONS : [...withBalance(BOOK), ...VIEWER];
 }
 
 /**
@@ -86,13 +110,21 @@ export function defaultSection(linked: boolean): AccountsSection {
   return linked ? "overview" : "milestones";
 }
 
-/** Decisions folded into Activity and Heartbeat (#3687 slice 4): a saved `?section=decisions`
- *  link lands on Heartbeat, where its no-trade passes now live, never back on Overview. */
-export function sectionFromSearch(raw: unknown): { section?: AccountsSection } {
-  const id = raw === "decisions" ? "heartbeat" : raw;
-  return typeof id === "string" && ALL_SECTIONS.some((s) => s.id === id)
-    ? { section: id as AccountsSection }
-    : {};
+/** The two names the bot's check log was once reached by: Decisions (folded into Heartbeat,
+ *  #3687 slice 4) and Heartbeat itself (merged into Playbooks as its top strip, #5073). */
+const CHECK_LOG_ALIASES: readonly unknown[] = ["decisions", "heartbeat"];
+
+/** `?section=` (and `?checks=open`, the Playbooks section's check log unfolded). A saved Heartbeat
+ *  or Decisions link was asking for the bot's checks, so it lands on Playbooks with that log
+ *  already open — never back on Overview, and never on cards with the log it came for folded. */
+export function sectionFromSearch(
+  raw: unknown,
+  checks?: unknown,
+): { section?: AccountsSection; checks?: "open" } {
+  if (CHECK_LOG_ALIASES.includes(raw)) return { section: "playbooks", checks: "open" };
+  if (typeof raw !== "string" || !ALL_SECTIONS.some((s) => s.id === raw)) return {};
+  const section = raw as AccountsSection;
+  return section === "playbooks" && checks === "open" ? { section, checks } : { section };
 }
 
 /** `?chapter=` — the Milestones chapter open beneath the cards; anything else drops. */

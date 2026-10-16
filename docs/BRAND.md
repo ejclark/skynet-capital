@@ -121,7 +121,7 @@ The recurring visual/narrative language. New work should draw from these, or *ex
   the market (session lighting), and reads as a living market surface (ticker billboards, red rail).
 - **Named surfaces** — sanctioned, consistently-used feature names, not internal shorthand: **the
   Playbook Store** (R&D → Playbooks — every house playbook as a card, with its evidence, and
-  "Subscribe as" to put an account's capital behind one). Use the proper name every time the
+  a + on each play to put your bots' capital behind it, #5442). Use the proper name every time the
   surface is referenced.
 
 ## The signature — the Living Universe
@@ -168,7 +168,8 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
 - **A radio and a checkbox never look the same.** Two controls that share a style but not a
   behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
   (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
-  its **filter toggles** turn any number on (`.railctl`, no bar). On a phone the group labels are
+  its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` — a ✓ and a ring, no bar;
+  every multi-select chip in the app is one, #5365). On a phone the group labels are
   hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
   controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where

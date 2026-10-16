@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { fetchDesk } from "../live/desk";
 import {
   type DeskPulse,
   fetchDeskPulse,
@@ -9,8 +8,6 @@ import {
   type PulseStreakGroupData,
   type PulseWeekData,
 } from "../live/pulse";
-import { AccountPage } from "../shell/account-head";
-import { PageFrame } from "../shell/frame";
 
 /**
  * DESK PULSE (#738 phase 4a) — the Insights template on a desk: how the account breathes over
@@ -189,29 +186,16 @@ function PulseBody({ pulse }: { readonly pulse: DeskPulse }): ReactElement {
 
 function PulsePage(): ReactElement {
   const { id } = Route.useParams();
-  const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const pulse = useQuery({
     queryKey: ["desk-pulse", id],
     queryFn: () => fetchDeskPulse(id),
     refetchOnWindowFocus: true,
   });
 
-  if (desk.isPending || pulse.isPending)
-    return (
-      <PageFrame>
-        <p className="note">Taking the pulse…</p>
-      </PageFrame>
-    );
-  if (desk.isError || pulse.isError)
-    return (
-      <PageFrame>
-        <p className="note">The pulse is unreachable.</p>
-      </PageFrame>
-    );
-
-  const d = desk.data.desk;
+  // The frame and head are the layout's (`u.$id.tsx`, #4951): the explainer stands while the
+  // pulse reads, and only the body below it waits.
   return (
-    <AccountPage desk={d}>
+    <>
       <header className="page-header">
         <h2>Pulse</h2>
         <p>
@@ -221,8 +205,14 @@ function PulsePage(): ReactElement {
           section says which.
         </p>
       </header>
-      <PulseBody pulse={pulse.data} />
-    </AccountPage>
+      {pulse.isPending ? (
+        <p className="note">Taking the pulse…</p>
+      ) : pulse.isError ? (
+        <p className="note">The pulse is unreachable.</p>
+      ) : (
+        <PulseBody pulse={pulse.data} />
+      )}
+    </>
   );
 }
 

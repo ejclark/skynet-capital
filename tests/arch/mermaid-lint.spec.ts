@@ -149,6 +149,21 @@ describe("mermaid lint — every block parses under GitHub's Mermaid", () => {
     expect(notes.join(" ")).toContain("is a house noun");
   });
 
+  it("notes a flow with no moving edge, and stays quiet once it moves or is one fact", () => {
+    const still = lint(fence("flowchart LR\n  a --> b\n  b ==> c\n  c -.-> d"));
+    expect(still.code).toBe(0);
+    expect(still.notes.join(" ")).toContain("a flow of 2 live edges and none moves");
+    const moving = lint(
+      fence(
+        "flowchart LR\n  a e1@--> b\n  b e2@==> c\n  e1@{ animate: true }\n  e2@{ animation: fast }",
+      ),
+    );
+    expect(moving.notes.join(" ")).not.toContain("none moves");
+    expect(lint(fence("flowchart LR\n  a --> b\n  b -.-> c")).notes.join(" ")).not.toContain(
+      "none moves",
+    );
+  });
+
   it("reads the question through rule 18's bold headline and its fact lines", () => {
     const { notes } = lint(
       fence(

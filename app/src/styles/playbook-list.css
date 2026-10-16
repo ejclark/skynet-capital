@@ -1,0 +1,224 @@
+/* R&D → Playbooks in one build (#5494 step 1): the mission line, the list of the plays (#5435), the +
+   that subscribes your bots (#5442), a plain line per strategy (#5445), each ticker's evidence as a
+   call (#5444) and the wide layout (#5448). Tokens only. Phone first; the section is a size
+   container, so a wide layout follows the width the shell gives it, never the viewport. */
+
+.pb-section {
+  container: pbsec / inline-size;
+}
+
+.page-header .pb-mission {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+.pb-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pb-strategy {
+  scroll-margin-top: 150px;
+}
+
+.pb-card-line {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ── the list ──────────────────────────────────────────────────────────────────────────────── */
+
+.pbl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pbl-h {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pbl-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pbl-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+}
+
+.pbl-open {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 4px 12px 12px;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pbl-pic {
+  display: flex;
+  width: 84px;
+}
+
+.pbl-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pbl-thumb .pbr-print {
+  font-size: 16px;
+}
+
+.pbl-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--text);
+}
+
+/* the spread's ceiling over the held stretch: the most it can make */
+.pbl-cap {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
+.pbl-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pbl-name {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.pbl-line {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.pbl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.pbl-trades {
+  color: var(--muted);
+}
+
+.pbl-status {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pbl-chev {
+  font-size: 20px;
+  color: var(--muted);
+}
+
+.pbl-plus {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 12px;
+  border: 1.5px solid var(--text);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pbl-plus[aria-expanded="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.pbl-open:focus-visible,
+.pbl-plus:focus-visible,
+.pbl-fold > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pbl-row > .pbs {
+  grid-column: 1 / -1;
+}
+
+/* the folded row: dashed (a shape, not a hue), says how many it holds and why */
+.pbl-fold > summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border: 1.5px dashed var(--muted);
+  border-radius: 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.pbl-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pbl-fold-why::before {
+  content: "▸ ";
+}
+
+.pbl-fold[open] .pbl-fold-why::before {
+  content: "▾ ";
+}
+
+.pbl-fold-names {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.pbl-fold[open] > .pbl-rows {
+  margin-top: 8px;
+}

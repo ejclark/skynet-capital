@@ -2,8 +2,10 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
@@ -17,11 +19,13 @@ import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
+import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
+import type { CouncilRepliesDeps } from "./council-replies-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
@@ -51,6 +55,9 @@ import type { WireRouteDeps } from "./wire-routes.js";
  */
 export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps {
   readonly hub: ObservatoryHub;
+  /** Where an operational line lands — the shell's error beacon today (#4618). The composition
+   *  root passes stdout; omitted (specs), lines go to `process.emitWarning`. */
+  readonly logLine?: (line: string) => void;
   /**
    * Derived ceremony transitions (`ceremony-channel.ts`). When wired, each one rides the board's
    * seq-numbered patch stream as a fire-once cue, so a celebration can never be delivered twice —
@@ -126,6 +133,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     participantId: string,
     page?: { readonly before?: number; readonly limit?: number },
   ) => Promise<readonly DecisionRecord[]>;
+  /** One bot's week of checks, grouped answers and placed trades (#5073 slice 2,
+   *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
+   *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
+  readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
   /**
    * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
    * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach
@@ -136,6 +147,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /**
+   * Which personas decided these orders — ids only, no decision record built (#4612 slice 7). The
+   * Decisions tab's "who else trades on this account" join; falls back to `findByOrderId` per
+   * order when unset. Same dark-when-unset posture.
+   */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
   /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
    * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
@@ -160,6 +177,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * without a subscription runs exits only. Omit, or no report yet, and no line claims it.
    */
   readonly readHouseRoster?: () => HouseRosterReport | undefined;
+  /** How many price ticks and news stories the bots' momentum and sentiment read (#5327) — named
+   *  by the Thesis tab's drawn play. Omit and it names neither count. */
+  readonly signalWindows?: SignalWindows;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
@@ -286,6 +306,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section still renders, with saves/loads answering "not wired in this deployment."
    */
   readonly savedPositions?: SavedPositionsStore;
+  /**
+   * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
+   * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
+   * Nothing in it reaches a bot; a draft is not on any roster.
+   */
+  readonly authoredPlays?: AuthoredPlayStore;
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;
@@ -301,4 +327,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * its cards with no comment fold.
    */
   readonly filingComments?: FilingCommentsDeps;
+  /**
+   * `GET/POST /api/council/replies` — replies under each weekly Council line (#5097, #2224 option
+   * A), kept in the app. Omit to disable — the Council then shows its lines with no reply fold.
+   */
+  readonly councilReplies?: CouncilRepliesDeps;
 }

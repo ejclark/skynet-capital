@@ -37,6 +37,11 @@ describe("learnJsonView", () => {
     expect(view.courses.find((c) => c.level === 200)?.locked).toBe(false);
   });
 
+  it("names each milestone's rung code, so the shell pairs it with its play by code (#5242)", () => {
+    const codes = learnJsonView().courses.flatMap((c) => c.milestones.map((m) => m.code));
+    expect(codes.slice(0, 4)).toEqual(["101", "102", "201", "202"]);
+  });
+
   it("carries the celebration whole — name, code, and the rung it opened", () => {
     const view = learnJsonView({
       earned: [],

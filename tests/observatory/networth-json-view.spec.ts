@@ -192,4 +192,121 @@ describe("idle share (#3689 slice 10)", () => {
     expect(view.accounts[1]).toMatchObject({ idle: "0% idle" });
     expect(view.total).toMatchObject({ idle: "17% idle" });
   });
+
+  // #5100: the head's bar prints both of its parts in dollars — invested is everything that is
+  // not cash (the positions at their mark, net of anything sold), so the two add to the total.
+  it("says what is invested beside the cash, for each account and the book", () => {
+    const view = accountsNetWorthView("t", [
+      account({ id: "a", equity: 996_966, cash: 962_800 }),
+      account({ id: "b", equity: 100_000, cash: 100_000 }),
+    ]);
+    expect(view.accounts[0]).toMatchObject({ invested: "$34,166", cash: "$962,800" });
+    expect(view.accounts[1]).toMatchObject({ invested: "$0", idlePct: 100 });
+    expect(view.total).toMatchObject({ invested: "$34,166" });
+  });
+
+  it("adds to the worth it sits under, to the dollar, when the cents round apart", () => {
+    // $996,966.40 worth, $962,800.60 cash: the head prints $996,966 and $962,801, so the invested
+    // part it prints beside them must be $34,165 — rounding the $34,165.80 difference says $34,166
+    // and the two parts would add to a dollar more than the number above them.
+    const view = accountsNetWorthView("t", [
+      account({ id: "a", equity: 996_966.4, cash: 962_800.6 }),
+      account({ id: "b", equity: 100_000.4, cash: -2.5 }),
+    ]);
+    expect(view.accounts[0]).toMatchObject({
+      value: "$996,966",
+      cash: "$962,801",
+      invested: "$34,165",
+    });
+    // a negative half rounds up when printed ("-$2"), so the rest is $100,002, not $100,003
+    expect(view.accounts[1]).toMatchObject({
+      value: "$100,000",
+      cash: "-$2",
+      invested: "$100,002",
+    });
+  });
+
+  it("signs a book that is net short — only sold options — rather than calling it nothing", () => {
+    // $255 collected for a put that now costs $550 to buy back: the positions are worth −$550
+    const view = accountsNetWorthView("t", [account({ id: "a", equity: 99_705, cash: 100_255 })]);
+    expect(view.accounts[0]).toMatchObject({ invested: "-$550", idlePct: 100 });
+  });
+
+  it("leaves invested out when the value or the cash is unknown, as it does the share", () => {
+    const view = accountsNetWorthView("t", [account({ id: "a", cash: undefined })]);
+    expect(view.accounts[0]?.invested).toBeUndefined();
+    expect(view.accounts[0]?.idlePct).toBeUndefined();
+  });
+});
+
+describe("windows longer than the account's history (#5211)", () => {
+  // History began 9/8; on 10/11 the 1M window reaches back to 9/11 (inside the record) while 3M and
+  // 1Y reach past 9/8 — Alpaca answers both with the same since-day-one return.
+  const NOW = "2026-10-11T15:00:00.000Z";
+  const SAME = { returnFraction: 0.0225, base: 100_000, end: 102_250 };
+  const young = {
+    ...WINDOWS,
+    "1M": { returnFraction: 0.02, base: 100_250, end: 102_250 },
+    "3M": SAME,
+    "1Y": SAME,
+  };
+  const bench = { "7D": 0.005, "1M": 0.01, "3M": 0.04, "1Y": 0.15 };
+
+  it("says 'since' the first day for the first window past it and drops the longer ones", () => {
+    const view = accountsNetWorthView(
+      NOW,
+      [account({ id: "a", windows: young, historyStart: "2026-09-08T04:00:00.000Z" })],
+      bench,
+    );
+    const ws = must(view.accounts[0], "accounts[0]").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "Since 9/8"]);
+    const since = must(ws[2], "since window");
+    expect(since.value).toBe("+2.25%");
+    expect(since.note).toBe("the whole record, from 9/8");
+    // SPY's 3M return was measured over a quarter the account never had — no comparison
+    expect(since.vsBenchmark).toBeUndefined();
+    expect(must(ws[1], "1M").vsBenchmark).toBe("+1.0 pts vs S&P");
+  });
+
+  it("never shows the same figure under two window labels", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const values = must(view.accounts[0], "accounts[0]").windows.map((w) => w.value);
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("keeps every window when the history is longer than all of them", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", historyStart: "2024-01-02T05:00:00.000Z" }),
+    ]);
+    const ws = must(view.accounts[0], "accounts[0]").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "3M", "1Y"]);
+  });
+
+  it("leaves the windows alone when the history start is unknown", () => {
+    const view = accountsNetWorthView(NOW, [account({ id: "a", windows: young })]);
+    expect(must(view.accounts[0], "accounts[0]").windows).toHaveLength(4);
+  });
+
+  it("marks a book window partial when only some accounts are younger than it", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "old", historyStart: "2024-01-02T05:00:00.000Z" }),
+      account({ id: "new", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const ws = must(view.total, "total").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "3M", "1Y"]);
+    expect(ws.map((w) => w.partial === true)).toEqual([false, false, true, true]);
+  });
+
+  it("says 'since' the earliest start on the book when every account is younger than a window", () => {
+    const view = accountsNetWorthView(NOW, [
+      account({ id: "a", windows: young, historyStart: "2026-08-20T04:00:00.000Z" }),
+      account({ id: "b", windows: young, historyStart: "2026-09-08T04:00:00.000Z" }),
+    ]);
+    const ws = must(view.total, "total").windows;
+    expect(ws.map((w) => w.label)).toEqual(["7D", "1M", "Since 8/20"]);
+    // b's record is shorter than the book's, so the figure covers it only in part
+    expect(ws[2]?.partial).toBe(true);
+  });
 });

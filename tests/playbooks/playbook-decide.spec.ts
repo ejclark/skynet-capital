@@ -57,10 +57,9 @@ describe("playbookIntents — a decide playbook", () => {
     expect(intents.map((i) => i.symbol)).toEqual(["NVDA"]);
   });
 
-  it("is called instead of desiredState and tactics, and hands them the cycle's own inputs", () => {
+  it("is called instead of desiredState, and hands it the cycle's own inputs", () => {
     const seen: unknown[] = [];
     const play = deciding([], {
-      tactics: [],
       decide: (context, portfolio, cal, mode: PlaybookMode) => {
         seen.push([context, portfolio, cal, mode]);
         return [];
@@ -72,13 +71,9 @@ describe("playbookIntents — a decide playbook", () => {
     ).toEqual([]);
     expect(seen).toEqual([[ctx, portfolio, calendar, "aggressive"]]);
     // The verdict still comes from desiredState: a decide play is still an honest roll-call entry.
-    expect(
-      playbookVerdicts(
-        [{ playbook: { ...play, tactics: undefined }, mode: "standard" }],
-        ctx.asOf,
-        calendar,
-      ),
-    ).toEqual([{ playbookId: "NVDA-PLAY", mode: "standard", state: "long" }]);
+    expect(playbookVerdicts([{ playbook: play, mode: "standard" }], ctx.asOf, calendar)).toEqual([
+      { playbookId: "NVDA-PLAY", mode: "standard", state: "long" },
+    ]);
   });
 
   it("skips a symbol an exit-safety trip already claimed this cycle", () => {

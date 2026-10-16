@@ -16,6 +16,7 @@
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
 //   node scripts/moneypenny/index.mjs --check-callout          # needs-eric just landed: is the ask actually written?
+//   node scripts/moneypenny/index.mjs --end-build plan-1234    # a build's job ended: take in-progress off (#5056)
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -60,6 +61,7 @@ import {
   readInFlight,
   readOpenIssues,
   readOpenPlans,
+  recheckPullable,
   waitingPlans,
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
@@ -82,6 +84,7 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
   ensureLabel,
   ensureVocabulary,
+  inFeedbackLane,
   issueNumberFromSlug,
   LABELS,
   labelNames,
@@ -95,6 +98,7 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
+import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
 // Named re-exports, not `export … from` — this router keeps substantial logic of its own (the
@@ -135,11 +139,13 @@ export const slugify = (s) =>
  *
  * (Issue-label events reach the workflow but carry no router lane here — the feedback claim is a
  * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone. One
- * issue event does: a repair capsule closing drafts its LESSONS entry, #4212.)
+ * issue event does: a repair capsule closing drafts its LESSONS entry, #4212. And since #5056 slice 2
+ * a second: `in-progress` coming off an issue wakes the build queue — wake.mjs.)
  */
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
-  if (ctx.eventName === "issues") return routeLessonDraft(ctx);
+  // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
+  if (ctx.eventName === "issues") return [...routeLessonDraft(ctx), ...routeWake(ctx)];
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -291,7 +297,8 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  * Triggered on the `ready` label now, not `feedback` (#3818 consolidation, 2026-09-28) — see
  * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
  * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
- * being present rather than trusting the workflow's cheap `if:` alone.
+ * being present rather than trusting the workflow's cheap `if:` alone — or `bug` (#5332,
+ * `inFeedbackLane`), which takes `feedback` on a win (`adoptFeedbackLabel`).
  *
  * #3960: also runs on an `unlabeled` event that clears the last parking label from a still-`ready`
  * issue (`feedbackReadyIntent`), and asks the admission gate (admission.mjs) before the lease — a
@@ -316,6 +323,12 @@ export function claimFeedback(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  // #5266 — the payload predates any link added after `ready`; ask the pull rule on a fresh read.
+  const stale = recheckPullable(issue, admission.readIssue);
+  if (stale) {
+    console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
+    return { claimed: false, reason: stale };
+  }
   // #3960 — the work spigot, the in-flight cap and the surface fence, BEFORE any lease is taken.
   const gate = gateAdmission(issue, admission);
   if (!gate.admit) return { claimed: false, reason: gate.reason };
@@ -330,8 +343,26 @@ export function claimFeedback(
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
   // #3960: the board's In Progress column reads this label; the release path takes it back off.
   setInProgress(issue.number, true);
+  adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * A `bug` the lane claimed without `feedback` takes it here (#5332). The shipped sweep, the reply
+ * resume (`laneOf`) and `feedback-scan` all key on `feedback`, so one label write keeps every
+ * downstream reader unchanged — instead of each learning `bug` and the sweep paying a second
+ * GraphQL list per push. Best-effort like `setInProgress`: the lease already made the claim safe.
+ */
+function adoptFeedbackLabel(issue) {
+  if (labelNames(issue.labels).includes(LABELS.feedback.name)) return;
+  try {
+    sh("gh", ["issue", "edit", String(issue.number), "--add-label", LABELS.feedback.name]);
+  } catch (err) {
+    console.log(
+      `::warning::could not add \`${LABELS.feedback.name}\` to bug #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+  }
 }
 
 /**
@@ -378,6 +409,8 @@ export function claimFeedbackReply(
   // `admission.edit` is this lane's one injected write, same reason `gateAdmission` injects its own:
   // the refusal path's label fix-up is a behaviour worth a spec, not a side effect to discover live.
   const edit = admission.edit ?? editLabels;
+  // #3959 slice 2 — a PLAN issue's lane is woken by the unpark itself, see `resumePlanOnReply`.
+  if (intent.lane === "plan") return resumePlanOnReply(issue, intent, edit);
   const gate = gateAdmission(issue, admission); // #3960 — the same gate as every other claim
   if (!gate.admit) {
     unpark(issue.number, intent.answered, edit); // see WHY THE REFUSAL PATH UNPARKS TOO, above
@@ -409,6 +442,37 @@ export function claimFeedbackReply(
   unpark(issue.number, intent.answered, edit);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model, reply, replyAt };
+}
+
+/**
+ * THE PLAN LANE'S DOOR (#3959 slice 2, sub-issue #4301). A reply on a blocked `plan` issue does the
+ * one thing a human would do by hand — takes the answered label off — and leaves the rest to the
+ * machinery that already exists for exactly that event: `moneypenny-events.yml`'s plan gate wakes on
+ * `unlabeled` of a parking label, and `labelEventReady` → `claimPlan` then runs the SAME admission
+ * gate, lease, `in-progress` and model tier as every other plan claim. No second claim path, so no
+ * second place for the plan lane's rules to drift.
+ *
+ * The App token's label writes DO start workflow runs (a GITHUB_TOKEN's do not) — the same fact
+ * slice 1's feedback path leans on for the board's live Blocked → In Progress move.
+ *
+ * What it deliberately does NOT do: take a lease or hand the build a reply id. The plan build reads
+ * every trusted comment as step 0 and the reply is one of them; `plan-build.md`'s resume section
+ * makes its receipt say what that reply decided, which is criterion 3's forcing function. A downstream
+ * refusal (spigot, cap) leaves the issue `ready` and un-parked with the queue note — the retry
+ * sweep's contract, the same one `claimFeedbackReply`'s refusal path restores by hand.
+ */
+function resumePlanOnReply(issue, intent, edit) {
+  unpark(issue.number, intent.answered, edit);
+  console.log(
+    `::notice::unparked plan #${issue.number} (\`${intent.answered}\` answered) — the plan gate's unlabeled path claims it`,
+  );
+  return {
+    claimed: false,
+    unparked: true,
+    lane: "plan",
+    number: issue.number,
+    reason: intent.reason,
+  };
 }
 
 /**
@@ -535,6 +599,13 @@ export function checkCallout(ctx, deps = {}) {
  * no-op, never a second build. WHO may say ready is the workflow's job (`moneypenny-events.yml`'s `if:`,
  * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
  * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
+ *
+ * A REFUSED COMMENT-FLIP IS RECORDED AS THE LABEL (#5334). The retry sweep reads only `ready`
+ * issues, and a comment-flip carries no label — so a flip that admission queued (cap, work-mode)
+ * or that open blockers held back used to be dropped until someone re-posted it (#5281). Both
+ * refusals now apply `ready` before returning, as `unpark` does for a reply: the label records the
+ * go the comment already gave, the board shows it in Ready, and the sweep claims it once admitted
+ * (blockers honoured by `notPullableReason`). A parked or `in-progress` plan is never labelled.
  */
 export function claimPlan(
   ctx,
@@ -542,16 +613,21 @@ export function claimPlan(
   sha = process.env.GITHUB_SHA ?? "",
   admission = {},
 ) {
+  const edit = admission.edit ?? editLabels;
   const intent = planReadyIntent(ctx);
   if (!intent.ready) {
     console.log(`::notice::not building a plan issue — ${intent.reason}`);
+    if (intent.blocked) recordPlanFlip(ctx, intent.issue, edit);
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
   // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
   // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
   const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });
-  if (!gate.admit) return { claimed: false, reason: gate.reason };
+  if (!gate.admit) {
+    recordPlanFlip(ctx, issue, edit);
+    return { claimed: false, reason: gate.reason };
+  }
   const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
@@ -570,6 +646,20 @@ export function claimPlan(
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * `ready` on a plan whose comment-flip was refused (#5334, see `claimPlan`). Only for the comment
+ * door — a label event already carries the label — and only when the issue lacks it, so a re-posted
+ * flip writes nothing. Best-effort, `unpark`'s doctrine.
+ */
+function recordPlanFlip(ctx, issue, edit) {
+  if (!ctx.payload?.comment || labelNames(issue.labels).includes(LABELS.ready.name)) return;
+  if (edit(issue.number, ["--add-label", LABELS.ready.name])) {
+    console.log(
+      `::notice::plan #${issue.number} — refused flip recorded as \`ready\` for the sweep`,
+    );
+  }
 }
 
 /**
@@ -599,11 +689,7 @@ export function peekNext(deps = {}) {
     continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
@@ -630,11 +716,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   } = deps;
   const mode = readMode();
   const inFlight = inFlightOf();
-  const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  let pool = withoutOpenPr(
-    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
-    readPrIssues(),
-  );
+  let pool = withoutOpenPr(readReady().filter(inALane), readPrIssues());
   // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
   // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
   const { openPlans, waiting } = waitingOrSkip(readPlans);
@@ -698,6 +780,9 @@ function waitingOrSkip(readPlans) {
     return { openPlans: undefined, waiting: undefined };
   }
 }
+
+/** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */
+const inALane = (i) => labelNames(i.labels).includes(LABELS.plan.name) || inFeedbackLane(i);
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
@@ -1356,21 +1441,57 @@ function executeSweepIntent(i) {
 }
 
 /**
+ * The intents that are one call and a receipt line, as a table rather than as more branches in
+ * `executeOne` — which sat at cognitive complexity 22 against a ceiling of 20 when #5056 slice 2
+ * needed one more kind (`wake-next`). Moving the four one-liners here takes it back under.
+ */
+const ONE_CALL_INTENTS = {
+  noop: (i) => {
+    console.log(`· nothing to do (${i.reason})`);
+    return `noop — ${i.reason}`;
+  },
+  error: (i) => {
+    console.error(`::error::${i.reason}`);
+    process.exitCode = 1;
+    return `❌ refused — ${i.reason}`;
+  },
+  comment: (i) => {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    console.log(`· commented on #${i.issueNumber}`);
+    return `commented on #${i.issueNumber}`;
+  },
+  "draft-lesson": (i) => draftLesson(i),
+  "wake-next": (i) => wakeAfter(i.issueNumber),
+};
+
+/**
+ * #5056 slice 2 — a freed build slot: peek the retry sweep (the same reads and pick as the push
+ * pass), and dispatch the scan when it names work. `peek(n)` leaves #n out of the ready list, for
+ * `wakeNext`'s look past a pick its own lease still holds; `isHeld` is the lease peek either lane
+ * would take (`isClaimed`, read-only). Every read is injectable, for night-chain.spec.ts.
+ */
+export function wakeAfter(
+  freed,
+  { peekDeps = {}, claimed = (slug) => isClaimed(slug).claimed, dispatch } = {},
+) {
+  const readReady = peekDeps.readReady ?? (() => readOpenIssues(LABELS.ready.name));
+  return wakeNext({
+    freed,
+    peek: (skip) =>
+      peekNext({ ...peekDeps, readReady: () => readReady().filter((x) => x.number !== skip) }),
+    isHeld: (n) => claimed(`plan-${n}`) || claimed(`feedback-${n}`),
+    ...(dispatch ? { dispatch } : {}),
+  }).line;
+}
+
+/**
  * @param i the intent to carry out.
  * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
  *   so an issue whose memory could not be written is not dispatched either, exactly as before.
  */
 function executeOne(i, stallRepairs = []) {
-  if (i.kind === "noop") {
-    console.log(`· nothing to do (${i.reason})`);
-    return `noop — ${i.reason}`;
-  }
-  if (i.kind === "error") {
-    console.error(`::error::${i.reason}`);
-    process.exitCode = 1;
-    return `❌ refused — ${i.reason}`;
-  }
+  if (Object.hasOwn(ONE_CALL_INTENTS, i.kind)) return ONE_CALL_INTENTS[i.kind](i);
   if (i.kind === "open-issue") {
     ensureLabel(i.label);
     const url = sh("gh", [
@@ -1386,12 +1507,6 @@ function executeOne(i, stallRepairs = []) {
     console.log(`▶ queued ${url}`);
     return `opened issue \`${i.title}\` → ${url}`;
   }
-  if (i.kind === "comment") {
-    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-    console.log(`· commented on #${i.issueNumber}`);
-    return `commented on #${i.issueNumber}`;
-  }
-  if (i.kind === "draft-lesson") return draftLesson(i);
   if (i.kind === "release-claim") {
     const freed = releaseBuild(i.slug);
     console.log(
@@ -1502,6 +1617,14 @@ function runCliFlag(argv, ctx) {
         ? `::notice::released the lease for ${slug}`
         : `::notice::no lease held for ${slug} — nothing to release`,
     );
+    return true;
+  }
+
+  // `--end-build <slug>` (#5056 slice 2): a build's job ended — take `in-progress` off its issue,
+  // leave the lease. The removal's own `unlabeled` event wakes the queue (`routeWake`).
+  const endIdx = argv.indexOf("--end-build");
+  if (endIdx >= 0 && argv[endIdx + 1]) {
+    endBuild(slugify(argv[endIdx + 1]));
     return true;
   }
 

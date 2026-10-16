@@ -229,4 +229,38 @@ describe("relay — reading the closed queue", () => {
 
     expect(gatherRelayDeps({ read, labels: ["next-slice"] }).map((r) => r.number)).toEqual([2]);
   });
+
+  // #5354 (2026-10-14): one curl 500 on this read took a whole `route` tick down (run 38496303201).
+  it("reads through a GitHub 500, in curl's own words, on the next try", () => {
+    let calls = 0;
+    const read = () => {
+      calls += 1;
+      if (calls === 1)
+        throw Object.assign(new Error("Command failed: curl"), {
+          stderr: "curl: (22) The requested URL returned error: 500\n",
+        });
+      return [{ number: 2, title: "an issue", labels: [{ name: "next-slice" }] }];
+    };
+    const sleep = () => {
+      /* no backoff in a spec */
+    };
+
+    expect(gatherRelayDeps({ read, labels: ["next-slice"], sleep }).map((r) => r.number)).toEqual([
+      2,
+    ]);
+    expect(calls).toBe(2);
+  });
+
+  it("still fails closed on a 4xx, at once", () => {
+    let calls = 0;
+    const read = () => {
+      calls += 1;
+      throw Object.assign(new Error("Command failed: curl"), {
+        stderr: "curl: (22) The requested URL returned error: 404\n",
+      });
+    };
+
+    expect(() => gatherRelayDeps({ read, labels: ["next-slice"] })).toThrow(/Command failed/);
+    expect(calls).toBe(1);
+  });
 });
