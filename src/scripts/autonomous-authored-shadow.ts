@@ -33,6 +33,10 @@ export interface AuthoredShadowWiring {
   accept(orders: ShadowOrders): void;
   /** Each cycle's portfolios, in the bots' own order — the author's book the sizing reads. */
   observe(accountIds: readonly string[], portfolios: readonly Portfolio[]): void;
+  /** The tickers the tests need priced, before the runner exists too (the orders parked at boot). */
+  symbols(): readonly string[];
+  /** Called whenever the set of tests changes — the price stream re-reads its symbols. */
+  onChange(listener: () => void): void;
   /** Builds the runner and returns the per-cycle hook: never throws, never blocks the loop. */
   arm(arming: AuthoredShadowArming): (context: MarketContext) => void;
 }
@@ -41,10 +45,17 @@ export function authoredShadowWiring(log: Log = console): AuthoredShadowWiring {
   let runner: AuthoredShadowRunner | undefined;
   let parked: ShadowOrders | undefined;
   const books = new Map<string, Portfolio>();
+  let changed: () => void = () => undefined;
   return {
     accept: (orders) => {
       if (runner) runner.setOrders(orders.plays);
       else parked = orders;
+      changed();
+    },
+    symbols: () =>
+      runner ? runner.symbols() : (parked?.plays.flatMap((play) => play.spec.symbols) ?? []),
+    onChange: (listener) => {
+      changed = listener;
     },
     observe: (accountIds, portfolios) => {
       accountIds.forEach((id, i) => {

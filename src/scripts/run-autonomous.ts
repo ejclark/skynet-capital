@@ -359,8 +359,10 @@ async function runLive(): Promise<void> {
     tracker,
     universe: UNIVERSE,
     rosters: () => botRosters,
+    wanted: authoredShadow.symbols, // a draft in its shadow test is priced too (#5457)
     log: console.log,
   });
+  authoredShadow.onChange(() => botsStream.refresh());
   botsStream.refresh();
   // ONE swap path (Store change, options-level change), so every later read sees what is traded.
   const swapIn = (i: number, next: BotRoster) => {

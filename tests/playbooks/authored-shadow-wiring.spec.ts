@@ -128,6 +128,20 @@ describe("it records and never trades", () => {
     expect(warned[0]).toContain("[authored-shadow] pass failed");
   });
 
+  it("tells the price stream which tickers it needs, before and after the runner exists, and when they change", () => {
+    const wiring = authoredShadowWiring(quiet);
+    let changes = 0;
+    wiring.onChange(() => changes++);
+    wiring.accept({ kind: SHADOW_ORDERS_KIND, at: 1, plays: [anOrder()] });
+    expect(wiring.symbols()).toEqual(["AMD"]); // parked at boot, already priced
+    expect(changes).toBe(1);
+    wiring.arm({ risk: DEFAULT_RISK_CONFIG, blockedReason: () => null, botsStateDb: undefined });
+    expect(wiring.symbols()).toEqual(["AMD"]);
+    wiring.accept({ kind: SHADOW_ORDERS_KIND, at: 2, plays: [] });
+    expect(wiring.symbols()).toEqual([]);
+    expect(changes).toBe(2);
+  });
+
   it("orders that arrive before the runner exists are kept and applied when it does", () => {
     const wiring = authoredShadowWiring(quiet);
     wiring.accept({ kind: SHADOW_ORDERS_KIND, at: 1, plays: [anOrder()] });

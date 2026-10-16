@@ -122,6 +122,11 @@ export class AuthoredShadowRunner {
     }
   }
 
+  /** The tickers the tests decide on — the price stream must carry them (`bots-stream.ts`). */
+  symbols(): readonly string[] {
+    return [...this.runs.values()].flatMap((run) => run.spec.symbols);
+  }
+
   /** Plays currently in their test — read-only, for health lines and specs. */
   runIds(): readonly string[] {
     return [...this.runs.keys()];
