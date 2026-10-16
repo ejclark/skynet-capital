@@ -2,29 +2,34 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * The positions table's `<colgroup>` (#4945). Its `<col>` elements carry the same disclosure
- * classes as their `<th>`/`<td>` cells (`col-detail`, `fold-col`) so a hidden column's width drops
- * out with it. That only works while no stylesheet gives one of those classes a CELL display: a
- * `<col>` inside a `<colgroup>` that is not `display: table-column` is treated as `display: none`,
- * so a bare `.col-detail { display: table-cell }` silently dropped four widths, slid every later
- * width one column left, and left the action column 0px wide at 1280. The rule that shows the
- * cells must name `th`/`td`; the one that shows the column says `table-column`.
+ * The positions table's `<colgroup>` (#4945; ranked columns #5071). Each `<col>` carries its
+ * column's class (`pos-col-*`), like its `<th>`/`<td>`, and the stylesheets step a column aside
+ * by its WIDTH, never its display:
+ *  - a `<col>` that is not `display: table-column` is treated as `display: none`, so a bare
+ *    `.col-detail { display: table-cell }` once dropped four widths, slid every later width one
+ *    column left, and left the action column 0px wide at 1280 (#4945);
+ *  - a column hidden with `display: none` leaves the table's column model, and the full-width rows
+ *    under each position (`colSpan` = every column) then span past the last real one, so the
+ *    browser invents unheaded columns and shares Position's room with them (Position fell to ~80px
+ *    at 1280 in #5071's first build).
+ * So no stylesheet may give a column's class any `display` through a selector that names its
+ * `<col>`, `<th>` or `<td>`; `positions-columns.css` zeroes the width and hides the cell's one
+ * `.pos-cell` instead.
  *
- * The layout outcome itself — every owner row's buttons inside their own cell and the table's
- * right edge at 1024/1100/1280/1440, on both `/app/accounts` and `/app/u/:id` — is held by a real
- * browser in `e2e/positions-table.spec.ts`; this is the mechanical half that runs in `npm test`.
+ * The layout outcome — no sideways scroll, the header spanning the whole table, Position keeping its
+ * room, every opened row's buttons inside the visible table — is held by a real browser in
+ * `e2e/positions-columns.spec.ts` and `e2e/positions-table.spec.ts`; this is the mechanical half
+ * that runs in `npm test`.
  */
 
 const STYLES = "app/src/styles";
 const table = readFileSync("app/src/shell/positions-table.tsx", "utf8");
-const colgroup = table.slice(table.indexOf("<colgroup>"), table.indexOf("</colgroup>"));
-const colClasses = [
-  ...new Set(
-    [...colgroup.matchAll(/<col className="([^"]+)"/g)].flatMap((m) =>
-      (m[1] as string).split(/\s+/),
-    ),
-  ),
-];
+const columns = readFileSync("app/src/shell/position-columns.tsx", "utf8");
+const list = columns.slice(columns.indexOf("export const POS_COLUMNS = ["));
+const keys = [...list.slice(0, list.indexOf("] as const")).matchAll(/"(\w+)"/g)].map(
+  (m) => m[1] as string,
+);
+const colClasses = keys.map((k) => `pos-col-${k}`);
 
 interface Rule {
   readonly file: string;
@@ -48,31 +53,35 @@ const rules: readonly Rule[] = readdirSync(STYLES)
   );
 
 describe("the positions table's colgroup", () => {
-  it("puts disclosure classes on its <col> elements (the premise this spec guards)", () => {
-    expect(colClasses).toContain("col-detail");
-    expect(colClasses).toContain("fold-col");
+  it("gives every column a <col> carrying its column's class (the premise this spec guards)", () => {
+    expect(keys).toEqual(["pos", "greeks", "value", "pl", "model", "event", "best", "open"]);
+    expect(table).toMatch(
+      /POS_COLUMNS\.map\(\(key\) => \(\s*<col key=\{key\} className=\{colClass\(key\)\} \/>/,
+    );
   });
 
-  it("never gives a <col>'s class a non-column display through a selector a <col> matches", () => {
+  it("never sets a display on a column's class through a selector its col, th or td matches", () => {
     const offenders: string[] = [];
     for (const { file, selector, body } of rules) {
       const display = body.match(/display:\s*([^;]+)/)?.[1]?.trim();
-      if (!display || display === "none" || display === "table-column") continue;
-      // The subject is the last compound; a `<col>` matches it unless it names another element.
+      if (!display) continue;
+      // The subject is the last compound; a column's elements match it unless it names another.
       const subject = selector.split(/[\s>+~]+/).pop() ?? "";
       const element = subject.match(/^[a-z][a-z0-9-]*/)?.[0];
-      if (element && element !== "col") continue;
+      if (element && !["col", "th", "td"].includes(element)) continue;
       for (const cls of colClasses) {
         if (new RegExp(`\\.${cls}(?![\\w-])`).test(subject)) {
           offenders.push(`${file}: ${selector} { display: ${display} }`);
         }
       }
     }
-    expect(offenders, "scope the rule to th/td (col gets display: table-column)").toEqual([]);
+    expect(offenders, "step a column aside by its width (positions-columns.css)").toEqual([]);
   });
 
-  it("lets the action column's buttons keep their own width, not .btn's 100%", () => {
-    const own = rules.find((r) => r.selector === ".act-col .btn");
-    expect(own?.body).toMatch(/width:\s*auto/);
+  it("lets an opened row's buttons keep their own width, not .btn's 100%", () => {
+    for (const selector of [".pos-open-acts .btn", ".pos-buy-acts .btn"]) {
+      const own = rules.find((r) => r.selector === selector);
+      expect(own?.body, selector).toMatch(/width:\s*auto/);
+    }
   });
 });

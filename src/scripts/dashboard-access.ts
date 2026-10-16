@@ -12,6 +12,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import {
@@ -26,6 +27,7 @@ export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
   council: ReturnType<typeof createCouncilStore>;
+  councilReplies: ReturnType<typeof createCouncilRepliesStore>;
   filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
@@ -59,6 +61,8 @@ export function setupAccess(
   // The Sunday Council's weekly thesis lines (issue #2224 shape 1) — a sibling file next to
   // bot-controls.json, no new env var, no fly.toml change (envelope-protected).
   const council = createCouncilStore(env, (m) => console.error(m));
+  // Replies under each weekly Council line (#5097) — its sibling, same file posture, in-app only.
+  const councilReplies = createCouncilRepliesStore(env, (m) => console.error(m));
   // Comments on another member's filing (issue #2224 shape 3) — the council's sibling, same file
   // posture; kept in the app so they never reach the GitHub thread a build reads.
   const filingComments = createFilingCommentsStore(env, (m) => console.error(m));
@@ -108,6 +112,7 @@ export function setupAccess(
     allowlist,
     botControls,
     council,
+    councilReplies,
     filingComments,
     subscriptions,
     savedPositions,

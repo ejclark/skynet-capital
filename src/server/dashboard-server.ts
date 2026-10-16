@@ -16,6 +16,7 @@ import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
 import { serveCouncilApi } from "./council-api-routes.js";
+import { serveCouncilRepliesApi } from "./council-replies-api-routes.js";
 import { gateRequest } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -166,6 +167,7 @@ async function serveWriteApis(
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveCouncilApi(req, res, path, config.council, session)) return true;
+  if (await serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
   if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;

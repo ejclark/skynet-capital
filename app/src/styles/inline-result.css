@@ -1,0 +1,24 @@
+/* InlineResult (app/src/ui/inline-result.tsx) — one action's outcome in one sentence: saved,
+ * refused, failed. Moved here from settings.css, where it began as the settings save line; ~14
+ * surfaces had borrowed the `set-*` names, and the unlock banner and the close/roll rows each grew
+ * their own red line beside it, two of them hue-only (#5365).
+ *
+ * The mark is the second carrier: green-vs-red alone is invisible to a red/green colourblind
+ * reader, so the tick and the cross ride the colour (docs/BRAND.md -> Accessibility). The class
+ * names stay `set-ok` / `set-err` so no rendered line changed while the callers moved. */
+.set-ok {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pos);
+}
+.set-ok::before {
+  content: "\2713\00a0";
+}
+.set-err {
+  margin: 0;
+  font-size: 12px;
+  color: var(--neg);
+}
+.set-err::before {
+  content: "\2715\00a0";
+}

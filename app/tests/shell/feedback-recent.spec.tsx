@@ -24,7 +24,11 @@ describe("RecentFeedback — the completed filter", () => {
       <RecentFeedback
         recent={[
           filing({ issueNumber: 1, title: "Chart glitch", status: "open" }),
-          filing({ issueNumber: 2, title: "Needs your info", status: "needs-info" }),
+          filing({
+            issueNumber: 2,
+            title: "Needs your info",
+            status: "needs-info",
+          }),
         ]}
         followupEnabled={false}
       />,
@@ -39,7 +43,11 @@ describe("RecentFeedback — the completed filter", () => {
       <RecentFeedback
         recent={[
           filing({ issueNumber: 1, title: "Still open", status: "open" }),
-          filing({ issueNumber: 2, title: "Already shipped", status: "shipped" }),
+          filing({
+            issueNumber: 2,
+            title: "Already shipped",
+            status: "shipped",
+          }),
         ]}
         followupEnabled={false}
       />,
@@ -54,7 +62,11 @@ describe("RecentFeedback — the completed filter", () => {
       <RecentFeedback
         recent={[
           filing({ issueNumber: 1, title: "Still open", status: "open" }),
-          filing({ issueNumber: 2, title: "Already shipped", status: "shipped" }),
+          filing({
+            issueNumber: 2,
+            title: "Already shipped",
+            status: "shipped",
+          }),
         ]}
         followupEnabled={false}
       />,
@@ -68,7 +80,11 @@ describe("RecentFeedback — the completed filter", () => {
     render(
       <RecentFeedback
         recent={[
-          filing({ issueNumber: 1, title: "First slice shipped", status: "next-slice" }),
+          filing({
+            issueNumber: 1,
+            title: "First slice shipped",
+            status: "next-slice",
+          }),
           filing({ issueNumber: 2, title: "Fully shipped", status: "shipped" }),
         ]}
         followupEnabled={false}
@@ -111,7 +127,7 @@ describe("RecentFeedback — the shipped celebration", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getByText(/confirmed live in v1\.129\.0/)).toBeInTheDocument();
-    expect(screen.getByText("🚀 shipped")).toBeInTheDocument();
+    expect(screen.getByText("Shipped")).toBeInTheDocument();
   });
 
   it("omits the version line rather than showing a blank one when appVersion is empty", () => {
@@ -123,18 +139,95 @@ describe("RecentFeedback — the shipped celebration", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "All" }));
-    expect(screen.getByText("🚀 shipped")).toBeInTheDocument();
+    expect(screen.getByText("Shipped")).toBeInTheDocument();
     expect(screen.queryByText(/confirmed live in/)).not.toBeInTheDocument();
   });
 
   it("never stamps a version on a filing that hasn't shipped", () => {
     render(
       <RecentFeedback
-        recent={[filing({ issueNumber: 1, title: "Still cooking", status: "needs-info" })]}
+        recent={[
+          filing({
+            issueNumber: 1,
+            title: "Still cooking",
+            status: "needs-info",
+          }),
+        ]}
         followupEnabled={false}
         appVersion="1.129.0"
       />,
     );
     expect(screen.queryByText(/confirmed live in/)).not.toBeInTheDocument();
+  });
+});
+
+// #5253 (option B of #5159's round 2): a small three-step track at the right end of each filed
+// line, plain words below it. The words carry the meaning; the track names its steps for a reader.
+describe("RecentFeedback — the status track and its words", () => {
+  const filing = (over: Partial<RecentFiling>): RecentFiling => ({
+    issueNumber: 1,
+    title: "Untitled",
+    kind: "bug",
+    filedAt: "2026-08-01T00:00:00Z",
+    url: "https://github.com/x/y/issues/1",
+    ...over,
+  });
+  const show = (status: RecentFiling["status"]) =>
+    render(<RecentFeedback recent={[filing({ status })]} followupEnabled={false} />);
+
+  it.each([
+    ["open", "In the build queue", "Filed: done · Being built: not yet · Shipped: not yet"],
+    [
+      "needs-info",
+      "Waiting on your answer",
+      "Filed: done · Being built: paused · Shipped: not yet",
+    ],
+    [
+      "needs-eric",
+      "Waiting on Eric's decision",
+      "Filed: done · Being built: paused · Shipped: not yet",
+    ],
+    ["next-slice", "First part shipped", "Filed: done · Being built: done · Shipped: partly"],
+  ] as const)("a %s filing reads %s, with its track", (status, words, track) => {
+    show(status);
+    expect(screen.getByText(words)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: track })).toBeInTheDocument();
+  });
+
+  it("draws every step filled once a filing has shipped", () => {
+    show("shipped");
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(
+      screen.getByRole("img", {
+        name: "Filed: done · Being built: done · Shipped: done",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("says a declined filing in words alone — no track implies it was built", () => {
+    show("not-built");
+    expect(screen.getByText("Closed, not built")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("shows neither track nor words while a filing's status is unknown", () => {
+    show(undefined);
+    expect(screen.getByText(/Untitled/)).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("keeps the same three steps for every kind of filing", () => {
+    render(
+      <RecentFeedback
+        recent={[
+          filing({ issueNumber: 1, kind: "bug", status: "open" }),
+          filing({ issueNumber: 2, kind: "idea", status: "open" }),
+          filing({ issueNumber: 3, kind: "feature", status: "open" }),
+        ]}
+        followupEnabled={false}
+      />,
+    );
+    const name = "Filed: done · Being built: not yet · Shipped: not yet";
+    expect(screen.getAllByRole("img", { name })).toHaveLength(3);
   });
 });

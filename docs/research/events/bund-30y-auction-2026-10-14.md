@@ -405,6 +405,76 @@ Four predictions carry score-by dates and are registered in
 [`forward-tests/bund-30y-auction-2026-10-14.md`](../forward-tests/bund-30y-auction-2026-10-14.md).
 A fifth was added on the 2026-09-30 pulse (below) — see the ledger row and `FT-bund-30y-auction-2026-10-14-5`.
 
+## Outcome
+
+**Close-out (2026-10-15, D+1 — inside the `closeOutWithinDays: 6` deadline of 2026-10-20).** Rates
+mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []`; their caches were busted
+anyway). Every figure below was fetched this session from a primary: Finanzagentur's issuance-results
+page (HTTP 200) and the Bundesbank press releases of 2026-10-08 (announcement) and 2026-10-14
+(result), both PDFs read in full; the Treasury daily par-yield CSV; the Bundesbank SDMX 30Y
+term-structure series; Cboe `VIX_History.csv`. The CPI figures come from a bls.gov/cpi fetch
+summarised by a small model, not read from the release table — treat them as secondary. Nothing here
+is a verdict on the date, which stays `estimate`.
+
+### What printed vs the stance
+
+| Item | Stance said | What printed |
+|---|---|---|
+| Terms | both ISINs by 2026-10-09 | announced **2026-10-08**, on schedule (kill switch 4 did not fire) |
+| Second line | "30-year duration", EUR 1.0bn | **DE000BU2T000, 3.40% 2047 — a 20-year bond**; kill switch 7 **fired** (`FT-5` killed) |
+| Planned split | 1.5bn on the 2056, 1.0bn on the 2047 | **reversed in the allotment:** 2047 got 1,141.40m, 2056 got 747.39m |
+| Bids | — | 2047: 2,802m (cover 2.5, b2o 1.9) · 2056: 1,058m (cover 1.4, b2o 1.1) |
+| Yield | — | **3.80%** on both lines; Bundesbank 30Y 3.79% (10-13) → 3.80% (10-14, provisional) |
+| Allotment | EUR 1,850–2,100m | **EUR 1,888.79m**; retention 611.21m (24.4%); no bids rejected |
+
+- **The headline correction repeats.** This is the second time the calendar's generic `Bund 30 Y`
+  tag overstated the tenor: the 09-16 sibling's second line was a 20-year, and so was this one.
+  The 09-30 pulse downgraded leg 1 on exactly that suspicion; the 10-08 notice settled it. Only
+  **EUR 747m of 30-year paper was actually sold**, not the EUR 2.5bn the title and leg 1 claimed.
+- **Realised mix was the reverse of the plan.** The announcement planned EUR 1.5bn of 2056 and
+  EUR 1.0bn of 2047; the 2056 line drew only EUR 1,058m of bids against that 1.5bn share, so the
+  allotment shifted weight to the 2047. This is a read of one auction, not a rule.
+- **Not a weak print by this ledger's own definition** (b2o < 1.0 *and* retention > 30%): combined
+  b2o 1.54, retention 24.4%. The 2056 line alone was the thinnest 30Y cover in this series' recent
+  prints (2.03 on 09-16, 3.55 on 08-26 against 1.06 here), a single data point.
+- **CPI owned the day, as written.** September CPI (8:30 ET, `cpi-2026-10-14`, confirmed): headline
+  +0.6% m/m, 3.7% y/y; core +0.3% m/m, 2.6% y/y. US 30Y CMT **5.56% → 5.52% (−4bp)**, 20Y 5.60% →
+  5.57%. VIX closed **16.87** (+1.60 from 15.27; intraday high 17.45). The auction cannot be credited
+  with any of it, which is the sequencing rule the stance stated.
+
+### Forward tests
+
+Five registered; `FT-5` scored, four deliberately left open because their stated `Score by` has not
+arrived (scoring early would be falsification — `FT-1…3` on 2026-10-21, `FT-4` on 2027-01-08).
+Interim readings are written in each row's Outcome cell, marked as recorded-not-scored:
+
+- **`FT-5` — kill.** The EUR 1.0bn second line was a 2047 bond. Moved to the sweep doc's kill list.
+- **`FT-1` — tracking with the null:** combined b2o 1.54, US 30Y −4bp; the joint kill did not occur.
+- **`FT-2` — tracking with the hypothesis:** EUR 1,888.79m, inside the band.
+- **`FT-3` — tracking with the hypothesis:** Bundesbank 30Y −7bp from 10-07 to 10-13.
+- **`FT-4` — no reading taken** this session.
+- **Not mine to score, flagged for its owner:** `FT-bund-30y-auction-2026-09-16-3` (due 2027-01-08,
+  kill at ≥ +170bp). On the same two primaries the spread read 5.52 − 3.80 = **+172bp** on 10-14,
+  up from +142bp on 09-08. Its kill is judged on 2026-12-31, so this is a reading, not a fire.
+
+### Kill switches (Stance section) — checked today
+
+1. No-price-channel premise — no evidence of a tracked name moving > 2% on a Bund headline; not fired.
+2. Spillover null — b2o not < 1.0 combined and US 30Y fell; not fired.
+3. Retention band — EUR 1,888.79m in band; not fired (formal score 10-21).
+4. Terms by 10-09 — announced 10-08; not fired.
+5. Concession ≥ +21bp — −7bp; not fired (formal score 10-21).
+6. Supply plateau reverses — not re-checked; open until 2027-01-08.
+7. Size commitment — **fired**: the second line is a 20-year bond.
+
+### Verdict
+
+**The stand-aside held; the framing did not.** Nothing tradeable existed on this auction and
+nothing was traded. The structural claim the entry rested on — EUR 2.5bn of 30-year duration — was
+wrong for the second consecutive Bund "30Y" ledger, so every allotment statistic keyed to a
+"two 30Y lines" reference class is on a mixed 20Y/30Y auction. The 09-16 and 10-14 prints are the
+only two data points for this mixed format; do not widen the allotment band on them alone.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
@@ -413,6 +483,8 @@ A fifth was added on the 2026-09-30 pulse (below) — see the ledger row and `FT
 
 | 2026-09-30 | D-14 | **Terms still `-`/`-` on the authoritative Q4 issuance-calendar table** (re-fetched today, HTTP 200) — unchanged from D-35. **NEW primary, and it matters: Finanzagentur's Q4 quarterly-issuance press release (No. 8, 24 September 2026, fetched direct today, 143,466 bytes) — published after the D-35 row — names the EUR 1,500m line outright: `Bund 30 R`, **DE000BU2D012**, 2.90%, 15-Aug-2056, the exact bond reopened 09-16.** One ISIN is now fixed at D-14, where D-35 had zero. **But the EUR 1,000m second line is tagged `Bund 15/20/30 R`** — Finanzagentur's own combined-segment label, footnoted as covering "all bonds maturing from 2037 (inclusive) onwards" (~11 to 30 years) — **not** a firm 30-year commitment. This is exactly the ambiguity the 09-16 sibling's own close-out flagged for "whoever next assesses this sibling ledger": there, the identical `Bund 15/20/30` framing resolved to a 20-year bond (DE000BU2T000), and this ledger's own leg 1 ("EUR 2.5bn of 30-year duration … a real commitment") and `FT-2`'s "23 identical-shape, exactly-two-30Y-lines" reference class rested on the interactive calendar's generic `Bund 30 Y` rendering, the same rendering the sibling proved unreliable. Confidence in leg 1's tenor claim is downgraded from the D-35 row pending the actual announcement (due ~2026-10-08 per the four-bank-business-day rule, restated in the same press release as "the week prior to the … auction"); the allotment-band statistic itself (a combined-auction offered/allotted ratio, tenor-agnostic) is unaffected. **Registered `FT-bund-30y-auction-2026-10-14-5`** (score by 2026-10-09) to settle the second line's true maturity bucket before the auction. **One new dated adjacent PROPOSED (`estimate`):** `bobl-5y-auction-2026-10-13` — a EUR 5.0bn Bobl (5Y) reopening, DE000BU25075, one session before this auction and CPI, read off the same Q4 press release; other German dates in the same Annex (Schatz/Bund-7Y new issues 10-06/10-07, a green issue 10-20) sit outside the 5-day corridor and are recorded here, not filed. **Macro surprises since D-35:** the Fed hiked 25bp to 3.75–4.00% on 2026-09-16 (unanimous, first hike in three years) with a hawkish SEP (2026 median 4.1%, up from 3.8% in June — `fomc-2026-09-16` `FT-4` killed), and August core CPI printed +0.3% m/m / 2.4% y/y on 2026-09-11, a tenth above the 65%-priced 0.2% side (`cpi-2026-09-11`, scored). Neither carries a euro-rates or German-symbol channel this ledger tracks, but both repriced the long end: **UST 30Y 5.25% (09-08) → 5.59% (09-29, Treasury primary, +34bp)**; **Bund 30Y 3.83% (09-08) → 3.94% (09-29, Bundesbank primary, +11bp)**; **UST−Bund 30Y spread +142bp → +165bp** — five basis points from the +170bp kill level already registered on the sibling's `FT-bund-30y-auction-2026-09-16-3` (due 2026-12-31, not owned here but cited in this ledger's leg 8). **Volatility:** VIX 15.72 (09-08) → **16.04** (09-29 close, Cboe primary) — peaked intraday near 18 around the 09-16 FOMC per the sibling's own close-out, since receded; no regime shift by this calendar's own ≥3pt threshold. **Geopolitical:** checked `g20-trade-ministerial-milwaukee-2026-09-30` and the broader corridor for anything touching German rates or this auction's symbols (none — `symbols: []`); nothing found. **Peers:** n/a. **Kill switch 1** (a tracked name moving >2% on a Bund/euro-rates headline) — no evidence found. **Adjacency corridor (±5d of 10-14), 31 ids**, two confirmed high-impact: `cpi-2026-10-14` and `retail-sales-2026-10-15`; the rest unchanged in tier from D-35 plus routine same-window entries (`jgb-5y-auction-2026-10-14`, `iea-omr-2026-10-14`, `sp-global-investment-manager-index-2026-10-13`, `sudan-sanctions-regime-expiry-2026-10-09`, `pjm-iras-ferc-deadline-2026-10-12`, `eia-weekly-petroleum-status-2026-10-15`, `saudi-east-west-pipeline-repair-window-close-2026-10-15`). | No flip — **stand aside** still holds, no price channel exists regardless of tenor mix; confidence in leg 1's tenor claim and `FT-2`'s reference class narrowed pending the ~2026-10-08 announcement (`FT-5`, receipt above) | 2026-10-07 (low, 0+ band: every 7 days — one day before the D-4 announcement window closes on 10-08, so the next pulse should catch the actual second-line ISIN) |
 | 2026-10-07 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.0 (-1.0pt since last), band unchanged (low:0+), 32 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-14 |
+
+| 2026-10-15 | D+1 | **Close-out** (see `## Outcome`). Second line was DE000BU2T000, a 2047 (20Y) bond — `FT-5` killed, kill switch 7 fired; EUR 1,888.79m allotted, in band; US 30Y −4bp on CPI day; `FT-1…4` left open to their score-by dates. Adjacency sweep: no new dated event proposed (the 11-11 sibling is already on the calendar; anything beyond is outside the horizon). Beyond-horizon note: UST−Bund 30Y spread +172bp on 10-14 (sibling `FT-3` kill ≥ +170bp, judged 12-31). | None — stand aside held; leg 1's tenor claim is withdrawn | — |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -428,3 +500,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-5y-auction-2026-10-14","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","mtis-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->

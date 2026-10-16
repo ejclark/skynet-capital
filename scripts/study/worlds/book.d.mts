@@ -30,6 +30,10 @@ export interface Book {
   activity: Record<string, { orderId: string; symbol: string; at: string }[]>;
   decisions: Record<string, BookDecision[]>;
   history: Record<string, { at: string; equity: number }[]>;
+  /** Yesterday's closing equity per participant, derived (yesterdayEquity). */
+  lastEquity: Record<string, number>;
+  /** P/L booked today on positions already closed, as the input declares it. */
+  closedToday: Record<string, number>;
   market: {
     expirations: string[];
     symbols: Record<string, { spot: number; prevClose: number; iv: number }>;
@@ -37,3 +41,7 @@ export interface Book {
 }
 
 export function buildBook(name: string): Book;
+export function yesterdayEquity(
+  input: { id: string; cash: number; lastEquity?: number; closedToday?: number },
+  snapshot: { positions: { quantity: number; lastdayPrice: number }[] },
+): number;

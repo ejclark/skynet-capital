@@ -44,6 +44,8 @@ export function sourceCommentBody(issue: ClosedWithRemainder): string;
 export function gatherRelayDeps(opts?: {
   read?: (path: string) => readonly Record<string, unknown>[];
   labels?: readonly string[];
+  /** The backoff between retries of a GitHub 5xx — a spec passes a no-op. */
+  sleep?: (ms: number) => void;
 }): ClosedWithRemainder[];
 export function executeRelay(
   intent: RelayIntent,

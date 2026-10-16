@@ -14,3 +14,10 @@ export function memberCard(
   markdown: string,
   opts: { cutoff: string; name: string },
 ): { text: string; sha256: string };
+/** The area's roles, one `<member>: <role>` paragraph each, in `members` order; throws on a missing role. */
+export function rolesPacket(
+  roles: Record<string, string> | undefined,
+  members: string[],
+): { text: string; sha256: string };
+/** The members whose card shares a five-word run with `rolesText`. */
+export function cardEchoes(rolesText: string, cards: Record<string, string>): string[];

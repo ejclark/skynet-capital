@@ -10,7 +10,8 @@ import { settle } from "./session.mjs";
 const BLANK = "/__study-fresh-start";
 
 /**
- * A FRESH load of `path` on the session's page — the origin's storage and cookies cleared, the
+ * A FRESH load of `path` on the session's page — the origin's storage and cookies cleared (the
+ * member's sign-in then restored), the
  * page loaded and settled, the log re-marked — so the next `act` measures from a clean start, as a
  * new member would land. The machine census (census.mjs) operates each control this way.
  *
@@ -35,6 +36,9 @@ export async function reopen(session, path) {
   await page.goto(`${origin}${BLANK}`, { waitUntil: "domcontentloaded" });
   await page.evaluate(clearStorage);
   await page.context().clearCookies();
+  // Fresh means no stored state, not signed out: a member landing anew is still signed in. A world
+  // whose sign-in is a cookie (world-route.mjs) restores it; a world without one has no signIn.
+  await session.shell.signIn?.();
   const url = new URL(path, origin);
   session.startPath = url.pathname;
   // The old document's requests died with it; one the browser never reported finished must not

@@ -10,6 +10,21 @@ export const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20, ...opts }).trim();
 
 /**
+ * A REST token for a CLI a live session runs by hand: GH_TOKEN, GITHUB_TOKEN, else the gh login —
+ * the same fallback scripts/ship.sh uses. Sets GH_TOKEN, so `ghRest` and any child process see it.
+ * CI always has a token, so this changes nothing there; a session without one used to get a 401
+ * from `curl --fail` on the first read (#5056: the read-back's commands run in Eric's session).
+ */
+export function ensureGhToken({ run = sh } = {}) {
+  if (process.env.GH_TOKEN || process.env.GITHUB_TOKEN) return;
+  try {
+    process.env.GH_TOKEN = run("gh", ["auth", "token"]);
+  } catch {
+    throw new Error("no GH_TOKEN, GITHUB_TOKEN or `gh auth token` — sign in with `gh auth login`");
+  }
+}
+
+/**
  * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
  * `HTTP 504: Gateway Timeout` from graphql killed a whole Moneypenny route run and dispatched a
  * repair session for it), a reset or a timeout — never a 4xx, which a retry only repeats.
@@ -19,9 +34,14 @@ export const sh = (cmd, args, opts = {}) =>
  * reporting this issue.` — GitHub's server-side fault, one red among ~40 green runs of the same
  * job that evening — and got exactly one attempt because nothing here said "5xx". Matched on
  * GitHub's fixed wording, which no 4xx or validation error uses.
+ *
+ * #5354: `ghRest` is curl, and curl says a 5xx in its own words — `curl: (22) The requested URL
+ * returned error: 500`. projects.mjs learned that for its one read (#4182, `CURL_SERVER_ERROR`),
+ * but every other `withRetry(() => ghRest…)` still got one attempt, and a `route` tick died on a
+ * single 500 from the relay's closed-issue read (run 38496303201, 2026-10-14). Only 5xx, as there.
  */
 const TRANSIENT_GH_ERROR =
-  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
+  /HTTP 5\d\d|returned error: 5\d\d\b|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
 
 export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 

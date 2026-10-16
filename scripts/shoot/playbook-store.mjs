@@ -7,8 +7,9 @@
 //
 // Two frame groups:
 //   · `store`  — the catalog, the metric blocks, the subscriber count and the delegation fog
-//                (#1707: the same card before and after rung 102 is earned). Entered through the
-//                retired desk URL `/app/u/<id>/playbooks`, so the shots also prove the redirect.
+//                (#1707: the same card before and after rung 102 is earned). Entered through
+//                R&D's own address; `/app/u/<id>/playbooks` is the bot's Playbooks section now
+//                (#5073), no longer a redirect to the Store.
 //   · `tune`   — #4642 slice 7 (#4649, #4610): a bot account (Sauron) with one subscription on and
 //                aimed at two symbols and one paused, leading their cards; the Edit form; a human
 //                account behind the bots-only door; the bot's roll call linking here.
@@ -25,6 +26,8 @@
 //   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the
 //                CRWV wheel states its reason and check day with "Set a new date", and the card says
 //                what is budgeted inside the allocation.
+//   · `window` — a pre-earnings play as one line (#5432): NVDA's buy, hold and sell counted back from
+//                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -32,7 +35,7 @@ import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
-// Each card's closed-trade numbers (#3665): S1-NVDA with a record, HC-SAURON without one.
+// Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
 import { performance } from "./playbook-store-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -71,7 +74,7 @@ const deskFor = (account) => ({
 });
 
 // The subscriber count (#3970): enabled subscriptions across every account, a bare number.
-const COUNTS = { "S1-NVDA": 3, "HC-SAURON": 1 };
+const COUNTS = { "S1-NVDA": 3, SAURON: 1 };
 const withCounts = (view, counts = COUNTS) => ({
   ...view,
   cards: view.cards.map((card) => ({ ...card, subscribers: counts[card.id] ?? 0 })),
@@ -87,9 +90,9 @@ const subscription = (playbookId, over) => ({
   updatedAt: AT,
   ...over,
 });
-// HC-SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
+// SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
 const SAURON_SUBSCRIPTIONS = [
-  subscription("HC-SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
+  subscription("SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
   subscription("S1-NVDA", { mode: "conservative", capitalAllocated: 10_000, enabled: false }),
 ];
 
@@ -102,9 +105,9 @@ const views = {
 };
 
 // The bot's own Heartbeat, with the roll call the live code would read for this roster —
-// `playbookRollCall` over a pass that ran HC-SAURON, never hand-written sentences.
+// `playbookRollCall` over a pass that ran SAURON, never hand-written sentences.
 const NOW = new Date("2026-10-05T15:00:00Z");
-const verdicts = [{ playbookId: "HC-SAURON", mode: "standard", state: "flat" }];
+const verdicts = [{ playbookId: "SAURON", mode: "standard", state: "tactical" }];
 const heartbeat = {
   available: true,
   heartbeat: {
@@ -142,6 +145,7 @@ async function frame({
   scrollTo,
   path,
   act,
+  clockAt,
   extraStubs = {},
   ...shell
 }) {
@@ -159,10 +163,10 @@ async function frame({
       ...extraStubs,
     },
   });
-  const to = path ?? `/app/u/${account.id}/playbooks`;
+  const to = path ?? `/app/research?section=playbooks&account=${encodeURIComponent(account.id)}`;
+  // A dated picture (the window's dates are counted from today) is shot on a fixed day.
+  if (clockAt) await page.clock.setFixedTime(new Date(clockAt));
   await page.goto(`${origin}${to}`);
-  if (to.endsWith("/playbooks"))
-    await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=/);
   await page.getByText(expect).first().waitFor();
   if (act) await act(page);
   if (scrollTo) await page.getByText(scrollTo).first().evaluate(underHeader);
@@ -406,7 +410,7 @@ groups["subscribed-only"] = [
 
 // #4469 slice 3b: the Store by strategy. Sauron holds the wheel on CRWV (the owner's conviction) and
 // the run-up on NVDA, so those two strategy cards lead with his pairs; the catalog frame is the same
-// deck with no account. The wheel and run-up rows, then the tactical card's folded "? not studied".
+// deck with no account. The wheel and run-up rows, then Sauron's own rules' folded "? not studied".
 views.byStrategy = withCounts(
   playbookStoreView([
     subscription("CRWV-WHEEL", { mode: "aggressive", capitalAllocated: 75_000 }),
@@ -433,8 +437,8 @@ groups.strategies = [
   }),
   strategyFrame("phone-3-folded-line", {
     view: views.catalog,
-    expect: "Hardcore Sauron's tactics",
-    act: toStrategy("Hardcore Sauron's tactics"),
+    expect: "Sauron's own rules",
+    act: toStrategy("Sauron's own rules"),
   }),
   strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
   strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),
@@ -521,6 +525,46 @@ groups.conviction = [
     path: undefined,
     act: openConviction,
   }),
+];
+
+// #5432: the run-up's NVDA row drawn as one line, its dates counted on the real calendar from the
+// study world's Thursday — Nov 18 est., so buy Oct 21, sell Nov 11.
+const STUDY_DAY = "2026-10-08T19:00:00Z";
+const toNvdaLine = (page) =>
+  page
+    .locator(".pbr-window")
+    .first()
+    .evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 190);
+    });
+groups.window = [
+  {
+    tag: "phone-1-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+  },
+  {
+    tag: "phone-2-nvda-bars",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    scrollTo: "Average move in each stretch",
+  },
+  {
+    tag: "desktop-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+    quality: 55,
+  },
 ];
 
 const only = process.env.FRAMES;

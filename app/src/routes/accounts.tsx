@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,18 +9,25 @@ import {
   fetchDeskActivity,
 } from "../live/desk";
 import { parseOn } from "../live/horizon-params";
+import { initialPositionsQuery } from "../live/look-sort";
 import { fetchNetWorth } from "../live/networth";
+import { landingFromSearch, landingOf, type PlaybookLanding } from "../live/playbook-landing";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import {
+  AccountActivity,
+  type ActivityNarrowing,
+  narrowingFromSearch,
+} from "../shell/account-activity";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
-import { ActivityTable } from "../shell/activity-table";
+import { ActivityLedger } from "../shell/activity-ledger";
+import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
 import { EventsSection } from "../shell/events-section";
 import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
-import { HeartbeatSection } from "../shell/heartbeat";
 import type { MilestoneChapter } from "../shell/milestone-card";
 import { MilestonesSection } from "../shell/milestones-section";
 import { parseLens } from "../shell/positions-lens";
@@ -35,6 +42,7 @@ import { ProfileTower } from "../shell/profile-tower";
 import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
+import { useOrderDetail } from "../shell/use-order-detail";
 
 /**
  * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
@@ -45,10 +53,13 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter), **Activity** and **Events** (#3807 slice 2c — the book's calendar: the grid beside an
- * agenda of what falls on each day for the tickers held; its grid head is the page's one range
- * control there, a picked day is `?events=`) apply to every account; **Heartbeat** and **Thesis**
- * are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are the VIEWER's (#3807 slice
+ * blotter), **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * range is the section's own head and the page's only date control, over one lane per position and
+ * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
+ * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
+ * check log; `?card=` arrives on one playbook's card open, from an order's playbook link —
+ * `live/playbook-landing.ts`) and **Thesis** are bot-only (#3345/#3350/#3687). **Milestones** and
+ * **Feedback** are the VIEWER's (#3807 slice
  * 2b, #888): what `/learn` (+ its chapters `/onboarding`, `/learn/trading`, `/playbooks`, now
  * `?chapter=`) and `/feedback` were, moved as they were — those routes are redirects now, and the
  * Profile link row is gone from this page because the switch is the map. PROGRESSIVE DISCLOSURE:
@@ -69,29 +80,83 @@ function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
   return Promise.all(ids.map((id) => fetchDesk(id)));
 }
 
-function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): ReactElement {
+/** "All accounts" — every account's newest page merged, newest first. There is no single cursor
+ *  across several ledgers, so this view never walks back: it says plainly that it holds each
+ *  account's newest orders and opens one account's full list for the rest (#5165). */
+function MergedActivity({
+  accounts,
+}: {
+  readonly accounts: readonly OwnedAccount[];
+}): ReactElement {
+  const ids = accounts.map((a) => a.id);
   const activity = useQuery({
-    queryKey: ["accounts-activity", deskIds.join(",")],
+    queryKey: ["accounts-activity", ids.join(",")],
     queryFn: async () => {
-      const pages = await Promise.all(deskIds.map((id) => fetchDeskActivity(id)));
+      const pages = await Promise.all(ids.map((id) => fetchDeskActivity(id)));
       const merged: DeskActivityEvent[] = pages.flatMap((p) => p.activity);
       merged.sort((a, b) => (a.at < b.at ? 1 : -1));
-      return { available: pages.every((p) => p.available), events: merged };
+      const more = accounts.filter((_, i) => pages[i]?.nextCursor !== undefined);
+      // A page with a cursor was a full one, so its length is the server's page size — said as
+      // read, never a copy of the server's constant that could drift from it.
+      const page = Math.max(0, ...pages.map((p) => (p.nextCursor ? p.activity.length : 0)));
+      return { available: pages.every((p) => p.available), events: merged, more, page };
     },
-    enabled: deskIds.length > 0,
   });
-  if (deskIds.length === 0)
-    return <p className="note">No account linked yet — its orders will be listed here.</p>;
+  // An order's full detail (#5101): `?order=` — a panel beside the list, or a page on a phone.
+  const { detail, setDetail } = useOrderDetail();
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
   if (activity.isError) return <p className="note">The ledger is unreachable.</p>;
   if (!activity.data.available)
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  // One account linked → each bot fill can link to its round on that account's Heartbeat (#3961).
-  // Several merged → a row carries no account of its own, so the link is honestly left off.
-  const only = deskIds.length === 1 ? deskIds[0] : undefined;
-  return <ActivityTable events={activity.data.events} {...(only ? { deskId: only } : {})} />;
+  const { events, more, page } = activity.data;
+  // Several merged → a row carries no account of its own, so its round link is honestly left off.
+  return (
+    <>
+      <ActivityLedger events={events} detail={detail} onDetail={setDetail} />
+      {more.length === 0 ? (
+        <p className="note activity-end">That's the oldest order in every account's ledger.</p>
+      ) : (
+        <p className="note activity-end">
+          These are the newest {page} orders from each account. To load older ones, open one
+          account:{" "}
+          {more.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 ? " · " : null}
+              <Link to="/accounts" search={{ account: a.id, section: "activity" }}>
+                {a.name} ›
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
+    </>
+  );
+}
+
+function ActivitySection({
+  accounts,
+  deskIds,
+  narrowing,
+  onNarrow,
+}: {
+  readonly accounts: readonly OwnedAccount[];
+  readonly deskIds: readonly string[];
+  readonly narrowing: ActivityNarrowing;
+  readonly onNarrow: (next: ActivityNarrowing) => void;
+}): ReactElement {
+  const [only, ...rest] = deskIds;
+  if (only === undefined)
+    return <p className="note">No account linked yet — its orders will be listed here.</p>;
+  if (rest.length > 0)
+    return <MergedActivity accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
+  // One account: the same paged, narrowed list `/u/<id>/activity` shows. Every account here is the
+  // viewer's own, so a bot's playbook is theirs to see. Keyed by the account, so switching starts
+  // the symbol box and the walk back over.
+  return (
+    <AccountActivity key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
+  );
 }
 
 const asId = (raw: unknown): string | undefined =>
@@ -110,7 +175,9 @@ function AccountsPage(): ReactElement {
 
   // URL-stateful positions filter — the same immediate-locally/debounced-replace discipline
   // `research.tsx` uses, ported from the retired `/u/:id` positions view.
-  const [query, setQuery] = useState(q ?? "");
+  // With no filter in the URL the list opens sorted worth-a-look-first (#5070), unless this viewer
+  // turned the sort off.
+  const [query, setQuery] = useState(() => initialPositionsQuery(q));
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const onFilterChange = (next: string) => {
@@ -136,10 +203,11 @@ function AccountsPage(): ReactElement {
   // The default account (shell/default-account.ts) is a viewer-chosen FALLBACK, never trusted
   // once it no longer names an owned account — a removed account can't strand the page.
   const storedDefaultId = defaultAccount.id;
-  const fallbackId =
+  const defaultId =
     storedDefaultId !== undefined && accounts.some((a) => a.id === storedDefaultId)
       ? storedDefaultId
-      : (accounts[0]?.id ?? "");
+      : undefined;
+  const fallbackId = defaultId ?? accounts[0]?.id ?? "";
   const selected =
     asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? (asked as string) : fallbackId;
   const deskIds = !linked ? [] : selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected];
@@ -159,18 +227,31 @@ function AccountsPage(): ReactElement {
       section={section}
       sections={sections}
       chapter={chapter}
+      checksOpen={search.checks === "open"}
+      landing={landingOf(search)}
       accounts={accounts}
+      narrowing={{ symbol: search.symbol, playbook: search.playbook }}
+      onNarrow={(next) => refine((prev) => ({ ...prev, ...next }))}
       query={query}
       onFilterChange={onFilterChange}
-      isDefault={linked && storedDefaultId === selected}
-      onToggleDefault={() =>
-        storedDefaultId === selected
-          ? defaultAccount.clearDefault()
-          : defaultAccount.setDefault(selected)
-      }
+      defaultId={defaultId}
+      onSetDefault={defaultAccount.setDefault}
+      onClearDefault={defaultAccount.clearDefault}
       onSelectAccount={(id) =>
         void navigate({
-          search: (prev) => ({ ...prev, account: id === fallbackId ? undefined : id }),
+          search: (prev) => ({
+            ...prev,
+            account: id === fallbackId ? undefined : id,
+            // An order's card belongs to the bot that placed it — never landed on another's. The
+            // Activity filter's playbook is one bot's too, so the narrowing goes with it.
+            card: undefined,
+            symbol: undefined,
+            playbook: undefined,
+            mode: undefined,
+            fill: undefined,
+            from: undefined,
+            pos: undefined,
+          }),
           replace: true,
         })
       }
@@ -184,7 +265,7 @@ function AccountsPage(): ReactElement {
         const crossing = next === "events" || section === "events";
         if (crossing) {
           clearTimeout(urlTimer.current);
-          setQuery("");
+          setQuery(initialPositionsQuery());
         }
         void navigate({
           search: (prev: ProfileSearch) => ({
@@ -192,8 +273,21 @@ function AccountsPage(): ReactElement {
             // The page's own default rides no param — so the default is written out whenever
             // the member picks anything else, and omitted when they pick it back.
             section: next === opening ? undefined : next,
-            // A chapter belongs to Milestones; leaving it closes the chapter.
+            // A chapter belongs to Milestones; leaving it closes the chapter. The check log's
+            // unfold belongs to Playbooks the same way.
             chapter: next === "milestones" ? prev.chapter : undefined,
+            checks: next === "playbooks" ? prev.checks : undefined,
+            // An order's or a position's way in to one card is spent once the member goes anywhere else.
+            card: undefined,
+            mode: undefined,
+            fill: undefined,
+            from: undefined,
+            pos: undefined,
+            // An order's full detail and the list's narrowing belong to Activity; leaving it
+            // closes the detail and drops the filter.
+            ...(next === "activity"
+              ? {}
+              : { order: undefined, symbol: undefined, playbook: undefined }),
             ...(crossing ? { q: undefined, events: undefined } : {}),
           }),
           replace: true,
@@ -212,8 +306,12 @@ function CockpitBody({
   accountId,
   accounts,
   chapter,
+  checksOpen,
+  landing,
   query,
   onFilterChange,
+  narrowing,
+  onNarrow,
   pinnedDay,
   onPickDay,
   onJoined,
@@ -224,8 +322,15 @@ function CockpitBody({
   /** Every account the session owns — the league card highlights all of them (#3689). */
   readonly accounts: readonly OwnedAccount[];
   readonly chapter: MilestoneChapter | undefined;
+  /** `?checks=open` — Playbooks arrives with its check log unfolded (an old Heartbeat link). */
+  readonly checksOpen: boolean;
+  /** `?card=` — Playbooks arrives on that card, open, from an order's playbook link (#5073). */
+  readonly landing: PlaybookLanding | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  /** Activity's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/activity`). */
+  readonly narrowing: ActivityNarrowing;
+  readonly onNarrow: (next: ActivityNarrowing) => void;
   readonly pinnedDay: string | undefined;
   readonly onPickDay: (day: string | undefined) => void;
   readonly onJoined: () => void;
@@ -234,7 +339,7 @@ function CockpitBody({
     queryKey: ["desks", deskIds.join(",")],
     queryFn: () => fetchDesks(deskIds),
     // Overview needs the desk snapshot both for the considerations rail and for the positions
-    // blotter it carries; Heartbeat, Thesis and the viewer's sections read their own endpoints.
+    // blotter it carries; Playbooks, Thesis and the viewer's sections read their own endpoints.
     enabled:
       deskIds.length > 0 &&
       (section === "overview" || section === "activity" || section === "events"),
@@ -254,7 +359,17 @@ function CockpitBody({
       />
     );
   if (section === "feedback") return <FeedbackSection />;
-  if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
+  if (section === "playbooks")
+    return (
+      <BotPlaybooksSection
+        // Keyed by the bot, so switching bots starts each one with its own log folded.
+        key={accountId}
+        deskId={accountId}
+        botName={accounts.find((a) => a.id === accountId)?.name}
+        checksOpen={checksOpen}
+        {...(landing ? { landing } : {})}
+      />
+    );
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "events")
     return (
@@ -264,6 +379,7 @@ function CockpitBody({
         desksError={desks.isError}
         day={pinnedDay}
         onPickDay={onPickDay}
+        accounts={new Map(accounts.map((a) => [a.id, a.name]))}
       />
     );
   if (section === "overview") {
@@ -286,20 +402,29 @@ function CockpitBody({
       />
     );
   }
-  return <ActivitySection deskIds={deskIds} />;
+  return (
+    <ActivitySection
+      accounts={accounts}
+      deskIds={deskIds}
+      narrowing={narrowing}
+      onNarrow={onNarrow}
+    />
+  );
 }
 
 function AccountsBody({
   sections,
-  isDefault,
-  onToggleDefault,
+  defaultId,
+  onSetDefault,
+  onClearDefault,
   onSelectAccount,
   onSelectSection,
   ...body
 }: Parameters<typeof CockpitBody>[0] & {
   readonly sections: readonly PageSection<AccountsSection>[];
-  readonly isDefault: boolean;
-  readonly onToggleDefault: () => void;
+  readonly defaultId: string | undefined;
+  readonly onSetDefault: (id: string) => void;
+  readonly onClearDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
@@ -314,8 +439,9 @@ function AccountsBody({
           sections={sections}
           onSelectSection={onSelectSection}
           onSelectAccount={onSelectAccount}
-          isDefault={isDefault}
-          onToggleDefault={onToggleDefault}
+          defaultId={defaultId}
+          onSetDefault={onSetDefault}
+          onClearDefault={onClearDefault}
         />
         <CockpitBody {...body} />
       </div>
@@ -326,7 +452,10 @@ function AccountsBody({
 export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
-    ...sectionFromSearch(search.section),
+    ...sectionFromSearch(search.section, search.checks),
+    // One playbook's card, arrived at from an order or a position (#5073 slices 4a, 4b) — read
+    // on Playbooks alone.
+    ...landingFromSearch(search),
     // The Milestones chapter open beneath the cards (#3807 slice 2b; once its own route, #1119).
     ...chapterFromSearch(search.chapter),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
@@ -336,6 +465,10 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
+    // Activity's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
+    ...narrowingFromSearch(search),
+    // Activity's open full detail (#5101, `use-order-detail.ts`).
+    ...(asId(search.order) ? { order: asId(search.order) } : {}),
   }),
   component: AccountsPage,
 });

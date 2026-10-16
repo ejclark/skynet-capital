@@ -61,6 +61,7 @@ Each is a row above and a card in `/mermaid`.
 |---|---|---|
 | new in this change | thick edge `==>`, or `subgraph "this PR"` | a green fill |
 | removed / the old path | dotted edge `-.->` | a red fill |
+| a live path (anything that runs) | animate every live edge: `a e1@--> b` then `e1@{ animate: true }` — dotted removed paths stay still, so motion says "this runs" | one animated edge among many |
 | changed | `classDef changed stroke-width:3px` (no colour) | a hue shift |
 | a fork | a diamond `{ }` | — |
 | a store / a document / a person | `@{ shape: cyl }` / `@{ shape: doc }` / `@{ shape: person }` | — |
@@ -102,8 +103,10 @@ config:
 ---
 flowchart TD
     body@{ shape: doc, label: "**PR body, a diagram**<br/>any type GitHub draws" }
-    body ==> door{"`**parses like<br/>GitHub?**<br/>same build, 11.17.2`"}
-    door ==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>light and dark" }
+    body e1@==> door{"`**parses like<br/>GitHub?**<br/>same build, 11.17.2`"}
+    door e2@==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>light and dark" }
+    e1@{ animate: true }
+    e2@{ animate: true }
     door ==x stop["`**push refused**<br/>the line named,<br/>fixed first`"]
     body -.-> red["`**went straight<br/>through**<br/>a red box<br/>as the frame`"]
     class body,draws,stop paper
@@ -140,13 +143,19 @@ config:
 ---
 flowchart TD
     body@{ shape: doc, label: "PR body<br/>with a diagram" }
-    body ==> door{"parses like<br/>GitHub?"}
+    body e1@==> door{"parses like<br/>GitHub?"}
     subgraph checks ["what the door checks, in order"]
         direction TB
-        v["the same Mermaid<br/>GitHub runs, 11.17.2"] --> ty["a type GitHub<br/>draws, not 12-only"] --> th["no pinned theme,<br/>both canvases"] --> ic["no icon pack,<br/>it draws a ?"] --> hx["every colour from<br/>a checked-in snippet"]
+        v["the same Mermaid<br/>GitHub runs, 11.17.2"] e2@--> ty["a type GitHub<br/>draws, not 12-only"] e3@--> th["no pinned theme,<br/>both canvases"] e4@--> ic["no icon pack,<br/>it draws a ?"] e5@--> hx["every colour from<br/>a checked-in snippet"]
     end
     door -.- checks
-    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    door e6@==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
+    e5@{ animate: true }
+    e6@{ animate: true }
     door ==x stop["push refused,<br/>the line and<br/>the token named"]
     subgraph was ["what it replaced"]
         direction LR
@@ -208,9 +217,13 @@ config:
 flowchart TD
     items@{ shape: docs, label: "**three protected changes**<br/>one commit each,<br/>each verified green" }
     pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
-    items ==> pr ==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
-    button ==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
+    items e1@==> pr e2@==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
+    button e3@==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
+    button e4@-->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
     class items,pr,merged paper
     class button gold
     class squashed defect
@@ -361,9 +374,11 @@ and `changed` live in the stroke alone. Copy it whole; never pick a hex in fligh
 
 ```mermaid
 flowchart LR
-    a[existing step] ==> b[new step]:::new
+    a[existing step] e1@==> b[new step]:::new
     a -.-> c[old step]:::removed
-    b --> d[adjusted step]:::changed
+    b e2@--> d[adjusted step]:::changed
+    e1@{ animate: true }
+    e2@{ animate: true }
     classDef new fill:#35D0BA,color:#04302B,stroke:#04302B,stroke-width:3px
     classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
     classDef changed stroke:#0E9F8C,stroke-width:3px
@@ -387,9 +402,12 @@ pictures (`scripts/platter-picture.mjs`) wear it.
 
 ```mermaid
 flowchart TD
-    a["what exists"]:::paper ==> b{"the decision?"}:::gold
-    b ==> c["done"]:::paper
-    b --> d["the defect beside it"]:::defect
+    a["what exists"]:::paper e1@==> b{"the decision?"}:::gold
+    b e2@==> c["done"]:::paper
+    b e3@--> d["the defect beside it"]:::defect
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
     a -.-> e["the old path"]:::removed
     classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
     classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px

@@ -15,6 +15,7 @@
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
@@ -195,6 +196,7 @@ async function main(): Promise<void> {
     allowlist,
     botControls,
     council,
+    councilReplies,
     filingComments,
     subscriptions,
     savedPositions,
@@ -375,6 +377,18 @@ async function main(): Promise<void> {
         council.retract(week, memberId);
       },
     },
+    // Replies under each weekly Council line (#5097): the app's own store, reading the Council's
+    // lines so a reply only hangs on one that is up — no GitHub, no companion in reach.
+    councilReplies: {
+      load: () => councilReplies.load(),
+      add: (week, lineId, reply) => {
+        councilReplies.add(week, lineId, reply);
+      },
+      remove: (week, lineId, replyId, authorId) => {
+        councilReplies.remove(week, lineId, replyId, authorId);
+      },
+      loadCouncil: () => council.load(),
+    },
     // Comments on another member's filing (issue #2224 shape 3): the app's own store plus the
     // app's own feedback log — deliberately no GitHub client in reach.
     filingComments: {
@@ -408,12 +422,14 @@ async function main(): Promise<void> {
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
+    ...(insightsBridge.readCheckWeek ? { readCheckWeek: insightsBridge.readCheckWeek } : {}),
     // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
     readCondScout: insightsBridge.readCondScout,
     readHouseRoster: insightsBridge.readHouseRoster,
+    signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,

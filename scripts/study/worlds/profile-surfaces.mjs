@@ -12,12 +12,15 @@
 
 const SAURON = "/app/accounts?account=sauron";
 const PUT = "CRWV $80 PUT · 6 NOV 26";
-const PUT_ROW = "#pos-CRWV261106P00080000";
+// The put's row opened (#5071): its writes sit in the row under its guidance line.
+const PUT_OPENED = "#pos-CRWV261106P00080000 + .row-guide + .row-open";
+const PUT_CARD = "CRWV $80 SHORT PUT";
+/** A desk row's one disclosure (#5071): the buys, Close and the rest open behind it. */
+const opener = (display) => `Detail for ${display}`;
 const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
 const click = (r, name, extra = {}) => ({ click: role(r, name, extra) });
 const SECTIONS = 'nav[aria-label="Sections"]';
-const PAGER = 'section[aria-label="Needs a decision"]';
 
 /** The owner's book on a normal day, plus the invited friend's non-owner view of the bot. */
 const TODAY = [
@@ -41,61 +44,54 @@ const TODAY = [
   },
   { id: "cash", label: "cash ready to use", route: SAURON, expect: [text("Cash ready to use")] },
   {
-    id: "decision-put",
-    label: "decision: the sold put",
+    id: "mark-put",
+    label: "mark: the sold put's fact badge",
     route: SAURON,
-    expect: [role("article", `At risk: ${PUT}`)],
+    // The "Needs a decision" pager retired with #5070: its job is the fact badge on every row.
+    expect: [
+      text("$2.60 above strike", { within: ".pos-cards", only: "phone" }),
+      text("$2.60 above strike", { within: ".blotter", only: "desktop" }),
+    ],
   },
   {
     id: "decision-idea",
     label: "decision: an idea card",
     route: SAURON,
-    // Before #4961 this book's desk carries an idea; after it, ideas skip a playbook the account
-    // already subscribes to, and this bot subscribes to every windowed playbook on a symbol it
-    // holds — so the composed desk decides, and a pinned run of an older commit shows the card.
-    strikeUnless: {
-      read: "/api/desk/sauron",
-      holds: (body) => body?.desk?.decisions?.some((d) => d.kind === "idea") ?? false,
-      why:
-        "#4961 — the composed desk has no idea: ideas skip a playbook the account already" +
-        " subscribes to, and this bot subscribes to every windowed playbook on a symbol it holds",
-    },
-    // Decisions page one at a time, most money at stake first: the put leads, the idea is next.
-    // The pager's arrows sit in its head on desktop and inside the card at 390.
-    act: [
-      { ...click("button", "Next decision", { within: `${PAGER} > header` }), only: "desktop" },
-      {
-        ...click("button", "Next decision", { within: `${PAGER} article` }),
-        only: "phone",
-        knownBug: "#4970",
-      },
-    ],
-    expect: [role("article", "Idea:")],
+    struck:
+      "#5070 — the Needs a decision pager retired; an idea has no row of its own yet, and the" +
+      " Map lens's stacked decisions still list it",
   },
   {
     id: "positions-rows",
     label: "positions: put + both share rows",
     route: SAURON,
     expect: [
-      role("row", PUT, { only: "desktop" }),
-      role("button", "3 buys for NVDA", { only: "desktop" }),
-      role("button", "1 buy for CRWV", { only: "desktop" }),
-      role("link", PUT, { only: "phone" }),
-      role("link", "NVDA +$1,056", { only: "phone" }),
-      role("link", "CRWV -$412", { only: "phone" }),
+      // Both layouts name the put by its row spec (#5061 on the phone, #5071 on the desk).
+      role("row", PUT_CARD, { only: "desktop" }),
+      role("button", opener("NVDA"), { exact: true, only: "desktop" }),
+      role("button", opener("CRWV"), { exact: true, only: "desktop" }),
+      // "CRWV $80 SHORT PUT, 29 days left".
+      role("link", PUT_CARD, { only: "phone" }),
+      // Each card's name says its figures in words (#5049): "… total +$1,056, return +3.63%".
+      role("link", "total +$1,056", { only: "phone" }),
+      role("link", "total −$412", { only: "phone" }),
     ],
   },
   {
     id: "positions-actions",
     label: "positions: row actions",
     route: SAURON,
-    // At 390 a position is a card, and the card itself is the action: tapping it opens Trade.
-    act: [{ ...click("link", PUT), only: "phone" }],
+    // At 390 a position is a card, and the card itself is the action: tapping it opens Trade. On
+    // the desk the writes open with the row (#5071).
+    act: [
+      { ...click("link", PUT_CARD), only: "phone" },
+      { ...click("button", opener("NVDA"), { exact: true }), only: "desktop" },
+      { ...click("button", opener(PUT), { exact: true }), only: "desktop" },
+    ],
     expect: [
       role("button", "Close all", { only: "desktop" }),
-      // The put's own Close, not any Close on the page (a dialog's, a toast's): inside its row,
-      // whose anchor is the one the decision card's "Show in table" links to.
-      role("button", "Close", { exact: true, within: PUT_ROW, only: "desktop" }),
+      // The put's own Close, not any Close on the page (a dialog's, a toast's): in its opened row.
+      role("button", "Close", { exact: true, within: PUT_OPENED, only: "desktop" }),
       { url: "/app/trade", only: "phone" },
     ],
   },
@@ -103,21 +99,27 @@ const TODAY = [
     id: "positions-filters",
     label: "positions: filter chips",
     route: SAURON,
-    expect: ["Options", "Shares", "In profit", "Losing", "Expiring within 3 weeks"].map((n) =>
-      role("button", n, { exact: true }),
-    ),
+    expect: [
+      "Options",
+      "Shares",
+      "Up today",
+      "Down today",
+      "Above cost",
+      "Below cost",
+      "Expiring within 3 weeks",
+    ].map((n) => role("button", n, { exact: true })),
   },
   {
     id: "bot-chip",
     label: "bot status chip",
     route: SAURON,
-    expect: [role("button", "Beating · last pass")],
+    expect: [role("button", "Running · checked the market")],
   },
   {
     id: "bot-table",
     label: "bot chip: playbook table (opened)",
     route: SAURON,
-    act: [click("button", "Beating · last pass")],
+    act: [click("button", "Running · checked the market")],
     // Verdicts are the playbooks' own at the newest pass (book.mjs): a Thursday is outside the
     // wheel's sale window.
     expect: [
@@ -150,10 +152,12 @@ const TODAY = [
     id: "guidance",
     label: "trade guidance hand-off landing",
     route: SAURON,
+    // A row's guidance opens in place (#5070), and hands off to the full read on Trade.
     act: [
-      click("link", "Review on Trade ↗"),
-      { ...click("button", "Guidance", { exact: true }), only: "phone" },
-      { ...click("link", "Guidance for this stock"), only: "desktop" },
+      { ...click("button", "Guidance for NVDA", { within: ".pos-cards" }), only: "phone" },
+      { ...click("button", "Guidance for NVDA", { within: ".blotter" }), only: "desktop" },
+      { ...click("link", "Guidance for NVDA on Trade", { within: ".pos-cards" }), only: "phone" },
+      { ...click("link", "Guidance for NVDA on Trade", { within: ".blotter" }), only: "desktop" },
     ],
     expect: [role("region", "Guidance", { exact: true })],
   },
@@ -171,7 +175,7 @@ const FRIEND = [
     id: "friend-chip",
     label: "friend: chip verdicts, no playbook ids",
     route: "/app/u/sauron",
-    act: [click("button", "Beating · last pass")],
+    act: [click("button", "Running · checked the market")],
     expect: [
       role("row", "aggressive waiting for its window"),
       text("CRWV-WHEEL", { absent: true }),
@@ -200,7 +204,7 @@ const BAD_DAY = [
     id: "bad-chip",
     label: "bot chip: stopped",
     route: SAURON,
-    expect: [role("button", "Stale · no pass for")],
+    expect: [role("button", "Not checking · last check")],
   },
   {
     id: "bad-decision",
@@ -219,8 +223,9 @@ const BAD_DAY = [
     label: "positions: the losing row",
     route: SAURON,
     expect: [
-      role("button", "1 buy for CRWV", { only: "desktop" }),
-      role("link", "CRWV -$594", { only: "phone" }),
+      role("button", opener("CRWV"), { exact: true, only: "desktop" }),
+      // The card's name says its total in words, with a real minus (#5049).
+      role("link", "total −$594", { only: "phone" }),
     ],
   },
 ].map((s) => ({ viewer: "eric", ...s }));

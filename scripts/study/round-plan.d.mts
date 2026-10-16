@@ -30,6 +30,8 @@ export interface AreaConfig {
   experts: number;
   matrix: MatrixRow[];
   pages: string[];
+  /** Who each member is in this area, in plain words — what the experts and the words pass read. */
+  roles: Record<string, string>;
   census?: CensusRow[];
   thin: { member: string; world: string; viewport: string; task: number; expertRoute: string };
 }
@@ -159,6 +161,10 @@ export function resolveTasks(args: {
   unit: Unit;
   file: string;
 }): { tasks: Record<string, unknown>[]; problems: string[] };
+export function gradableFacts<F extends Fact>(
+  facts: F[],
+  regions: { seen?: string[]; missing?: string[] } | null | undefined,
+): { facts: F[]; withheld: string[] };
 export function mergeFacts(sheets: { world: string; facts: Fact[]; dataNames?: string[] }[]): {
   worlds: string[];
   facts: Fact[];

@@ -8,6 +8,7 @@ import { InMemoryBroker } from "../adapters/in-memory-broker.js";
 import { ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AutonomousTrader } from "../autonomous/autonomous-trader.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { enabledBotIds } from "../bots/bot-registry.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 import { resolveRoster } from "./autonomous-live-wiring.js";
@@ -24,7 +25,7 @@ export function runOffline(): void {
     process.exit(1);
   }
   const risk = { maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03") };
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
+  const tracker = new MomentumTracker(signalWindows(process.env).momentum);
 
   const audit = auditStore(process.env);
   const onDecision = decisionSink(audit);

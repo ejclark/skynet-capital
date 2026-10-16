@@ -3,7 +3,7 @@
 // accessibility tree, in its order; nothing here picks, skips or ranks a control by what it is.
 //
 //   npx tsx scripts/study/census.mjs --run <compose dir> --world <name> --viewer <who> \
-//     --out <fresh dir> [--viewport phone,desktop] [--cap 60] [--route <path> …]
+//     --out <fresh dir> [--viewport phone,desktop] [--cap 60] [--route <path> …] [--clock <zone>,<locale>]
 //
 // PER ROUTE × VIEWPORT (the routes are the world's surfaces list, for that viewer):
 //  1. WALK — open the composed world (session.mjs → `open`), then screen by screen from the top:
@@ -46,6 +46,7 @@ import {
   tapPoint,
 } from "./census-plan.mjs";
 import { measured, readTree, revealed, SCREEN_MS, walk } from "./census-walk.mjs";
+import { parseClock } from "./clock.mjs";
 import { act, close, frame, open, settle } from "./session.mjs";
 import { remark, reopen } from "./session-fresh.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";
@@ -263,7 +264,10 @@ async function main(argv) {
   if (existsSync(join(opts.out, "census.json")))
     throw new Error(`${opts.out} already holds a census`);
   mkdirSync(opts.out, { recursive: true });
-  const world = await loadWorld(opts.world, { run: opts.run, viewer: opts.viewer });
+  // The member's clock (./clock.mjs): the page's own times read as the members' sessions read them,
+  // so harvest.mjs can check the facts sheet's regions against this walk's text.
+  const clock = parseClock(opts.clock);
+  const world = await loadWorld(opts.world, { run: opts.run, viewer: opts.viewer, clock });
   if (!world.run)
     throw new Error(`census runs over a composed world (--run); ${opts.world} is scripted`);
   const routes = await censusRoutes(opts, world.viewer);
@@ -284,6 +288,7 @@ async function main(argv) {
     viewer: world.viewer,
     run: world.run,
     instant: world.pinnedInstant,
+    clock,
     cap: opts.cap,
   };
   writeFileSync(

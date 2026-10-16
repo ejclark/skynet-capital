@@ -791,3 +791,28 @@ describe("ship — integration tests gate every merge path", () => {
     expect(source).not.toMatch(/NEXT \(per \.claude\/skills\/ship\) — one enable_pr_auto_merge/);
   });
 });
+
+/**
+ * THE WAY BACK FROM A RED FIRST RUN (2026-10-10). Baselines are Linux-only, so off Linux the local
+ * e2e is skipped and a visual PR meets its new pictures first in CI — #5079 and #5080 both went
+ * red that way, and #5079 was re-baselined by hand. Once the PR exists, ship names the one command
+ * (scripts/rebaseline-from-ci.mjs) with that PR's number, for a diff that can move a screenshot.
+ */
+describe("ship — a visual PR is told the way back from a red first run", () => {
+  const source = readFileSync("scripts/ship.sh", "utf8");
+  const hint = source.slice(source.indexOf("visual_hint()"), source.indexOf("cmd_open()"));
+  const open = source.slice(source.indexOf("cmd_open()"), source.indexOf("cmd_automerge()"));
+
+  it("speaks only off Linux, and only for a diff under app/src or e2e", () => {
+    expect(hint).toMatch(/uname -s\)" != "Linux" \] \|\| return 0/);
+    expect(hint).toContain("grep -qE '^(app/src|e2e)/'");
+  });
+
+  it("names the re-baseline command with the PR's own number, after the PR is opened", () => {
+    expect(hint).toContain("node scripts/rebaseline-from-ci.mjs $1");
+    expect(hint).toMatch(/read each diff, then \\`--apply --commit\\`/);
+    expect(open.indexOf('visual_hint "$num" "$base"')).toBeGreaterThan(
+      open.indexOf("opened PR #$num"),
+    );
+  });
+});

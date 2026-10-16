@@ -1,17 +1,24 @@
 import { describe, expect, it } from "@rstest/core";
 import { VERDICT_WORDS } from "../../app/src/live/heartbeat";
+import { DEFAULT_CLOCK } from "../../scripts/study/clock.mjs";
 import {
+  clockDate,
   dataNames,
   type Fact,
   factSheet,
+  leadClause,
   nyDate,
   occParts,
   parseAmount,
   rowStamp,
   shortDate,
+  stripDay,
   VERDICT_WORDS_MIRROR,
   weakRegion,
 } from "../../scripts/study/worlds/facts-sheet.mjs";
+
+const NEW_YORK = { timeZone: "America/New_York", locale: "en-US" };
+const blank = (r?: string[]) => r?.map((x) => x.replace(/\s/g, " "));
 
 // The world-facts sheet (#4943): what the blind task author may ask a member to find, taken from the
 // payloads the member's page is served — so a fact can only be one the page could show — each with
@@ -41,17 +48,28 @@ describe("reading the server's formatted values", () => {
     expect(occParts("NVDA")).toBeNull();
   });
 
-  it("writes the app's short month-day: calendar days as days, instants on New York's clock", () => {
+  it("writes the app's short month-day: calendar days as days, instants on the world's clock", () => {
     expect(shortDate("2026-11-06")).toBe("Nov 6");
-    // 01:30 UTC on Oct 7 is still Oct 6 in New York, where the world's page reads it.
+    // 01:30 UTC on Oct 7 is still Oct 6 on the member's clock, where the world's page reads it.
     expect(shortDate("2026-10-07T01:30:00.000Z")).toBe("Oct 6");
+    expect(shortDate("2026-10-07T01:30:00.000Z", NEW_YORK)).toBe("Oct 6");
+    expect(clockDate("2026-10-07T04:30:00.000Z")).toBe("2026-10-06");
+    expect(clockDate("2026-10-07T04:30:00.000Z", NEW_YORK)).toBe("2026-10-07");
     expect(nyDate("2026-10-07T01:30:00.000Z")).toBe("2026-10-06");
   });
 
-  it("stamps an order as the activity ledger does, on New York's clock", () => {
+  it("stamps an order as the activity ledger does, on the member's clock and in their language", () => {
     // ICU may space "AM" with a narrow no-break space; the oracle's match is whitespace-blind.
-    expect(rowStamp("2026-10-05T15:20:00.000Z").replace(/\s/g, " ")).toBe("Oct 5, 11:20 AM");
-    expect(rowStamp("2026-10-05T13:05:00.000Z").replace(/\s/g, " ")).toBe("Oct 5, 09:05 AM");
+    const at = "2026-10-05T15:20:00.000Z";
+    expect(DEFAULT_CLOCK.timeZone).toBe("America/Chicago");
+    expect(rowStamp(at).replace(/\s/g, " ")).toBe("Oct 5, 10:20 AM");
+    expect(rowStamp(at, NEW_YORK).replace(/\s/g, " ")).toBe("Oct 5, 11:20 AM");
+    expect(rowStamp(at, { timeZone: "Europe/London", locale: "en-GB" })).toBe("5 Oct, 16:20");
+  });
+
+  it("writes a calendar strip's day after an event's name", () => {
+    expect(stripDay("2026-10-14")).toBe("Wed Oct 14");
+    expect(stripDay("2026-10-27")).toBe("Tue Oct 27");
   });
 
   it("mirrors the app's verdict words exactly", () => {
@@ -94,7 +112,7 @@ const payloads = {
           costPerShare: "$100.00",
           price: "$105.00",
           totalPl: "+$50",
-          nextEvent: { label: "Earnings Nov 1", at: "2026-11-01" },
+          nextEvent: { label: "Earnings Nov 1", at: "2026-11-01", scope: "stock" },
         },
         {
           symbol: "ABC261106P00080000",
@@ -104,13 +122,21 @@ const payloads = {
           quantity: "-1",
           costBasis: "-$255",
           totalPl: "-$295",
-          nextEvent: { label: "Earnings Nov 1", at: "2026-11-01" },
+          nextEvent: { label: "Earnings Nov 1", at: "2026-11-01", scope: "stock" },
         },
       ],
     },
   },
   "/api/desk/bot/heartbeat": {
     heartbeat: {
+      rollCall: [
+        {
+          playbookId: "P-ONE",
+          status: "armed",
+          mode: "aggressive",
+          reason: "On and waiting for its own window to open.",
+        },
+      ],
       playbooks: [
         { playbookId: "P-ONE", mode: "aggressive", state: "no-window" },
         { mode: "standard", state: "tactical" },
@@ -146,7 +172,40 @@ const payloads = {
       { id: "past", title: "Old print", date: "2026-10-01" },
       { id: "soon", title: "CPI release", date: "2026-10-14" },
       { id: "far", title: "Far print", date: "2026-12-01" },
+      {
+        id: "abc-print",
+        title: "ABC earnings print",
+        date: "2026-11-01",
+        kind: "earnings",
+        symbols: ["ABC"],
+      },
+      {
+        id: "xyz-print",
+        title: "XYZ earnings print",
+        date: "2026-11-01",
+        kind: "earnings",
+        symbols: ["XYZ"],
+      },
     ],
+  },
+  "/api/wire": {
+    wire: {
+      trades: [
+        {
+          side: "sell",
+          symbol: "ABC261106P00080000",
+          display: "ABC $80 PUT · 6 NOV 26",
+          quantity: 1,
+          price: "$2.55",
+          who: "Bot",
+          whoId: "bot",
+          kind: "bot",
+          reconstructed: false,
+          when: "Oct 6, 14:31",
+          at: "2026-10-06T14:31:00.000Z",
+        },
+      ],
+    },
   },
 };
 
@@ -198,11 +257,63 @@ describe("the sheet", () => {
     });
   });
 
-  it("gives a playbook's mode and verdict in the app's words, as its table row reads", () => {
+  it("gives a playbook's verdict in the app's words, as its table row and its roll call read", () => {
     expect(byId("bot.playbook.P-ONE.verdict")).toMatchObject({
-      answer: { kind: "text", value: "waiting for its window" },
-      answerRegion: ["P-ONE aggressive waiting for its window"],
+      answer: {
+        kind: "text",
+        value: "waiting for its window",
+        alternatives: ["waiting for its own window to open"],
+      },
+      answerRegion: [
+        "P-ONE aggressive waiting for its window",
+        "On and waiting for its own window to open.",
+      ],
     });
+  });
+
+  it("cuts a roll-call reason to the words that say what the playbook is doing", () => {
+    expect(
+      leadClause(
+        "On, reading live price and sentiment every pass — there is no date window to wait for.",
+      ),
+    ).toBe("reading live price and sentiment every pass");
+    expect(leadClause("On, and its window is open — it wants to hold NVDA.")).toBe(
+      "its window is open",
+    );
+  });
+
+  it("takes nothing from a roll call that holds the playbook back, or says one line for two", () => {
+    const heartbeat = (rollCall: unknown[]) =>
+      factSheet({
+        viewer: "member",
+        instant: INSTANT,
+        payloads: {
+          "/api/desk/bot": { desk: { id: "bot", positions: [] } },
+          "/api/desk/bot/heartbeat": {
+            heartbeat: {
+              rollCall,
+              playbooks: [
+                { playbookId: "A", mode: "standard", state: "tactical" },
+                { playbookId: "B", mode: "standard", state: "tactical" },
+              ],
+            },
+          },
+        },
+      }).find((f) => f.id === "bot.playbook.A.verdict");
+    const live = "On, reading live price and sentiment every pass — there is no date window.";
+    const blocked = heartbeat([
+      { playbookId: "A", status: "blocked", reason: "Arming it would run a second copy." },
+    ]);
+    expect(blocked?.answer).toEqual({ kind: "text", value: "trading on live signals" });
+    expect(blocked?.answerRegion).toEqual(["A standard trading on live signals"]);
+    const shared = heartbeat([
+      { playbookId: "A", status: "armed", reason: live },
+      { playbookId: "B", status: "armed", reason: live },
+    ]);
+    expect(shared?.answer).toMatchObject({
+      alternatives: ["reading live price and sentiment every pass"],
+    });
+    expect(shared?.answerRegion).toEqual(["A standard trading on live signals"]);
   });
 
   it("never invents a playbook the viewer's copy does not carry", () => {
@@ -215,9 +326,8 @@ describe("the sheet", () => {
   });
 
   it("finds an order's quantity by its row, from its date-and-time cell to the Qty cell", () => {
-    const blank = (r?: string[]) => r?.map((x) => x.replace(/\s/g, " "));
-    expect(blank(byId("bot.activity.o1.quantity")?.answerRegion)).toEqual([
-      "Oct 6, 10:31 AM ABC $80 PUT · 6 NOV 26 SELL 1",
+    expect(blank(byId("bot.activity.o2.quantity")?.answerRegion)).toEqual([
+      "Oct 5, 09:00 AM ABC BUY 10",
     ]);
     const partial = factSheet({
       viewer: "member",
@@ -241,7 +351,27 @@ describe("the sheet", () => {
     });
     const p = partial.find((f) => f.id === "bot.activity.p.quantity");
     expect(p?.answer).toMatchObject({ value: 4 });
-    expect(blank(p?.answerRegion)).toEqual(["Oct 8, 03:00 PM ABC BUY 4/10"]);
+    expect(blank(p?.answerRegion)).toEqual(["Oct 8, 02:00 PM ABC BUY 4/10"]);
+  });
+
+  it("reads an order on the league feed too, from the server's own row — its stamp included", () => {
+    expect(blank(byId("bot.activity.o1.quantity")?.answerRegion)).toEqual([
+      "Oct 6, 09:31 AM ABC $80 PUT · 6 NOV 26 SELL 1",
+      "SELL ABC $80 PUT · 6 NOV 26 1 $2.55 Bot BOT Oct 6, 14:31",
+    ]);
+    for (const f of ["side", "price", "date"]) {
+      expect(byId(`bot.activity.o1.${f}`)?.answerRegion).toContain(
+        "SELL ABC $80 PUT · 6 NOV 26 1 $2.55 Bot BOT Oct 6, 14:31",
+      );
+    }
+    expect(byId("bot.activity.o2.side")?.answerRegion).toHaveLength(1);
+  });
+
+  it("dates a position's next event as the table, a calendar strip and the agenda print it", () => {
+    expect(byId("bot.event.earnings-nov-1.date")).toMatchObject({
+      answer: { kind: "text", value: "2026-11-01" },
+      answerRegion: ["Earnings Nov 1", "Earnings Sun Nov 1", "ABC earnings print"],
+    });
   });
 
   it("tells two orders of one symbol, side and size apart by their stamp", () => {
@@ -271,7 +401,7 @@ describe("the sheet", () => {
     }
   });
 
-  it("answers an order's date as the New York day the ledger shows, not the UTC one", () => {
+  it("answers an order's date as the day the member's ledger shows, not the UTC one", () => {
     const late = factSheet({
       viewer: "member",
       instant: INSTANT,
@@ -286,7 +416,7 @@ describe("the sheet", () => {
               quantity: 1,
               filled: 1,
               price: "$1.00",
-              // 9:30pm EDT on Oct 5 — already Oct 6 in UTC.
+              // 8:30pm CDT on Oct 5 — already Oct 6 in UTC.
               at: "2026-10-06T01:30:00.000Z",
             },
           ],

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import {
   countHits,
@@ -8,9 +10,11 @@ import {
   termList,
 } from "../../scripts/study/lint.mjs";
 import {
+  cardEchoes,
   dropHypotheses,
   dropLateSentences,
   memberCard,
+  rolesPacket,
   sections,
   stripRefs,
 } from "../../scripts/study/packets.mjs";
@@ -175,5 +179,50 @@ describe("the leak check", () => {
     });
     expect(problems).toEqual([]);
     expect(primes).toBe(2);
+  });
+});
+
+// The experts and the words pass read the area's roles, never the member cards (#5099): a card's
+// own words are what can hint at an item, so a reader that never saw one finds unprimed. A role
+// that copies a card's words would carry the hint straight back in — refused, by member.
+describe("the area's roles", () => {
+  const ROOT = join(import.meta.dirname, "../..");
+  const profile = JSON.parse(
+    readFileSync(join(ROOT, "scripts/study/tasks/profile.json"), "utf8"),
+  ) as { cutoff: string; roles: Record<string, string>; matrix: { member: string }[] };
+
+  it("writes one paragraph per member, in the order given, so the lint names the one to rewrite", () => {
+    const packet = rolesPacket({ b: " checks in on a phone ", a: "reads at a desk" }, ["a", "b"]);
+    expect(packet.text).toBe("a: reads at a desk\n\nb: checks in on a phone\n");
+    expect(packet.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(() => rolesPacket({ a: "x" }, ["a", "b"])).toThrow(/no role for b/);
+  });
+
+  it("names each member whose card a role repeats five words of", () => {
+    const cards = {
+      a: "# Member card: a\n\nA careful saver who checks the book once a day.",
+      b: "# Member card: b\n\nSomeone new.",
+    };
+    const echoing = rolesPacket({ a: "a saver who checks the book once a day", b: "new" }, [
+      "a",
+      "b",
+    ]);
+    expect(cardEchoes(echoing.text, cards)).toEqual(["a"]);
+    const plain = rolesPacket({ a: "saves carefully, daily", b: "new" }, ["a", "b"]);
+    expect(cardEchoes(plain.text, cards)).toEqual([]);
+  });
+
+  it("ships profile roles that repeat no member card", () => {
+    const members = [...new Set(profile.matrix.map((r) => r.member))];
+    const cards = Object.fromEntries(
+      members.map((m) => [
+        m,
+        memberCard(readFileSync(join(ROOT, "docs/members", `${m}.md`), "utf8"), {
+          cutoff: profile.cutoff,
+          name: m,
+        }).text,
+      ]),
+    );
+    expect(cardEchoes(rolesPacket(profile.roles, members).text, cards)).toEqual([]);
   });
 });

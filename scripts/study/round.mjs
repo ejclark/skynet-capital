@@ -3,7 +3,7 @@
 //   node scripts/study/round.mjs --pin <pin dir> --out <dir> --sealed <dir>
 //        [--profile scripts/study/tasks/<area>.json] [--thin] [--dry-run] [--stub <dir>]
 //        [--concurrency N] [--only-world <name>] [--cap N] [--runs N] [--experts N]
-//        [--frozen-from <main round> --control negative|positive --expect <key ids file>]
+//        [--frozen-from <main round> --control negative|positive --expect <expect file>]
 //
 // With --frozen-from it is a CONTROL round (round-control.mjs): the main round's frozen tasks,
 // re-verified and copied in, against this --pin — no framer, no task author, no words pass or
@@ -19,18 +19,23 @@
 //   0 preflight   the area config; the pin's record (its harness must be this checkout's), a composed run;
 //                 census + facts + harvest at the area's cap, if absent       (round-prepare.mjs)
 //   1 cards       member cards by script (packets.mjs), linted as cards (priming counted); the
-//                 page list linted as a role packet                            (round-prepare.mjs)
+//                 page list and the area's roles linted as role packets        (round-prepare.mjs)
 //   2 canary      every blind role once — any knowledge fails the round        (round-prepare.mjs)
 //   3 framer      cards + page list → job map                                  (round-steps.mjs)
 //   4 tasks       per member × world, linted; ONLY the lint's lines go back, ≤ 3 rewrites; frozen
 //   5 sessions    drive.mjs --actor sealed per member × world × viewport × task × run, N at once
 //   6 analysts    one per member: turns, summaries, key frames at half scale   (round-review.mjs)
-//   7 experts     ×N, the census verbatim in batches of ≤ 20, then one consolidation each
-//   8 words       the harvested strings
+//   7 experts     ×N at once (≤ --concurrency), the census verbatim in batches of ≤ 20, then one
+//                 consolidation each; the area's roles, never the cards (#5099). A batch that
+//                 times out is asked once more, then recorded missing: done.json's `coverage`
+//                 names it and counts it against the batches asked; the round goes on (#5155)
+//   8 words       the harvested strings and the area's roles
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
 // The out dir is a round directory exactly as grade.mjs and readout.mjs read it: its layout, the
 // finding record and the classes are round-contract.mjs's, owned there for writer and readers both.
+// Every step's done.json carries what its sealed calls cost (`usage`, read back from their records
+// by usage.mjs), and <out>/usage.json sums the round, stopped or finished.
 // A step whose <out>/<step>/done.json exists is skipped, so a round resumes where it stopped —
 // but only under the mode the out dir was made with (<out>/round.json: the profile and its hash,
 // the pin, the sealed dir, thin, the stub, --only-world, --cap); any other mode is refused. A real
@@ -57,6 +62,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
+import { roundClock } from "./clock.mjs";
 import { FILES, SESSIONS } from "./round-contract.mjs";
 import { adoptSource } from "./round-control.mjs";
 import {
@@ -72,6 +78,7 @@ import { canary, cards, preflight } from "./round-prepare.mjs";
 import { analysts, audit, collect, experts, words } from "./round-review.mjs";
 import { framer, sessions, tasks } from "./round-steps.mjs";
 import { halfFrame, makeCaller, ROLES, signedIn } from "./sealed.mjs";
+import { roundUsage, stepUsage } from "./usage.mjs";
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -138,13 +145,15 @@ function lint(ctx, kind, files) {
 /**
  * The round's shared state: options, area config, paths, callers, the log, the tools. `seams`
  * replace the pinned tools (`tool`, `toolAsync`), the frame scaler (`half`) and the console line
- * (`say`) — for a stub round only, so the end-to-end spec runs with no build and no browser.
+ * (`say`), and `wrapCall` wraps a step's caller (to make a call fail as a real one would) — for a
+ * stub round only, so the end-to-end spec runs with no build and no browser.
  */
 function context(opts, seams = {}) {
   const p = JSON.parse(readFileSync(resolve(opts.profile), "utf8"));
   const out = resolve(opts.out);
   mkdirSync(out, { recursive: true });
   const callers = new Map();
+  const matrix = selectMatrix(p, opts);
   const ctx = {
     opts,
     p,
@@ -155,8 +164,14 @@ function context(opts, seams = {}) {
     roles: ROLES,
     sealed: resolve(opts.sealed),
     stub: opts.stub ? resolve(opts.stub) : null,
-    matrix: selectMatrix(p, opts),
+    matrix,
     censuses: censusPlan(p, opts),
+    // One clock for the round, from the members' own files (clock.mjs): the census, the facts
+    // sheet and every session read the page on it.
+    clock: roundClock(
+      matrix.map((r) => r.member),
+      join(HERE, "docs/members"),
+    ),
     dir: (step) => {
       const d = join(out, step);
       mkdirSync(d, { recursive: true });
@@ -171,7 +186,8 @@ function context(opts, seams = {}) {
     /** One caller per step (the stub counts per role), recording under <step>/requests/. */
     call: (step) => {
       if (!callers.has(step)) {
-        callers.set(step, makeCaller({ stub: ctx.stub, record: join(out, step, "requests") }));
+        const caller = makeCaller({ stub: ctx.stub, record: join(out, step, "requests") });
+        callers.set(step, seams.wrapCall ? seams.wrapCall(step, caller) : caller);
       }
       return callers.get(step);
     },
@@ -179,15 +195,19 @@ function context(opts, seams = {}) {
     toolAsync:
       seams.toolAsync ?? ((script, args, logFile) => toolAsync(ctx, script, args, logFile)),
     lint: (kind, files) => lint(ctx, kind, files),
-    /** A frame at half scale, base64 — one browser for the round, opened on first use. */
+    /**
+     * A frame at half scale, base64 — one browser for the round, opened on first use. `browser`
+     * holds the launch's promise, not the browser: the experts ask at once, and each awaiting its
+     * own launch would open one browser apiece and close only the last.
+     */
     half:
       seams.half ??
       (async (path) => {
         if (!ctx.browser) {
           const exe = resolveChromium();
-          ctx.browser = await chromium.launch(exe ? { executablePath: exe } : {});
+          ctx.browser = chromium.launch(exe ? { executablePath: exe } : {});
         }
-        return halfFrame(ctx.browser, readFileSync(path));
+        return halfFrame(await ctx.browser, readFileSync(path));
       }),
   };
   return ctx;
@@ -246,6 +266,9 @@ export async function runRound(argv, seams = {}) {
       }
       ctx.log(step, "start");
       const result = (await RUN[step](ctx)) ?? {};
+      // What the step's sealed calls cost, read back from their own records (usage.mjs).
+      const usage = stepUsage(ctx.out, step);
+      if (usage.calls > 0) result.usage = usage;
       const stamp = { at: new Date().toISOString(), ...result };
       writeFileSync(join(ctx.dir(step), "done.json"), `${JSON.stringify(stamp, null, 1)}\n`);
       ctx.log(step, "done", result);
@@ -254,7 +277,17 @@ export async function runRound(argv, seams = {}) {
     ctx.log("round", "stopped", { note: e instanceof Error ? e.message : String(e) });
     return 1;
   } finally {
-    await ctx.browser?.close();
+    try {
+      // Written stopped or finished: a round that dies late has still spent what it spent.
+      writeFileSync(
+        join(ctx.out, FILES.usage),
+        `${JSON.stringify(roundUsage(ctx.out, STEPS), null, 1)}\n`,
+      );
+    } finally {
+      // A launch that failed already stopped the round above; awaiting its rejection again here
+      // would throw out of `finally`, turn the logged stop into a crash and skip usage.json.
+      await (await ctx.browser?.catch(() => null))?.close();
+    }
   }
   ctx.log("round", "complete", { findings: FILES.findings, classes: FILES.classes });
   return 0;

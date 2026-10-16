@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { PlaybookMetricsView } from "../live/playbook-performance";
 import { money } from "../live/ticket";
+import { EnvPill } from "../ui";
 import { signedMoney } from "./option-preview";
 
 /**
@@ -106,7 +107,7 @@ export function AccountPlaybookMetrics({
   return (
     <section className="pb-metrics" aria-label={`${accountName} on this playbook`}>
       <h3 className="pb-metrics-h">
-        {accountName} on this playbook <span className="env-pill">SIM</span>
+        {accountName} on this playbook <EnvPill />
       </h3>
       {scope.kind === "unreadable" ? (
         <p className="pb-metrics-empty">This account's trade history isn't readable right now.</p>
@@ -127,7 +128,7 @@ export function HousePlaybookMetrics({ scope }: { readonly scope: MetricsScope }
   return (
     <section className="pb-metrics pb-metrics-house" aria-label="House — every account">
       <h3 className="pb-metrics-h">
-        House — every account <span className="env-pill">SIM</span>
+        House — every account <EnvPill />
       </h3>
       {scope.kind === "unreadable" ? (
         <p className="pb-metrics-empty">The house-wide trade history isn't readable right now.</p>

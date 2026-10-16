@@ -10,6 +10,8 @@ import {
   type SubscriptionWriteResult,
   subscribeRequest,
 } from "../live/playbook-store";
+import { defaultCheckOn, initialCapital } from "../live/subscribe-defaults";
+import { FilterChip, InlineResult } from "../ui";
 import { ConvictionFields, convictionOf } from "./playbook-conviction";
 
 /**
@@ -72,15 +74,14 @@ function SymbolAim({
       <legend>Symbols — new entries only</legend>
       <div className="pb-symbols-chips">
         {basket.map((symbol) => (
-          <button
+          <FilterChip
             key={symbol}
-            type="button"
-            className="railctl num"
-            aria-pressed={picked.includes(symbol)}
-            onClick={() => onToggle(symbol)}
+            className="num"
+            pressed={picked.includes(symbol)}
+            onPress={() => onToggle(symbol)}
           >
             {symbol}
-          </button>
+          </FilterChip>
         ))}
       </div>
       <p className="pb-symbols-hint">
@@ -114,9 +115,8 @@ export function SubscribeForm({
   readonly onCancel?: () => void;
 }): ReactElement {
   const [mode, setMode] = useState<PlaybookMode>(editing?.mode ?? "standard");
-  const [capital, setCapital] = useState(
-    editing?.capitalAllocated === undefined ? "" : String(editing.capitalAllocated),
-  );
+  // A new subscription opens filled in (`subscribe-defaults.ts`); an edit opens on what it has.
+  const [capital, setCapital] = useState(initialCapital(editing));
   // "Uncapped" is offered only to keep a subscription that already is (#4535's seeded roster).
   // A member's own budget is always a number, the same rule subscribe has always had.
   const offerUncapped = editing !== undefined && editing.capitalAllocated === undefined;
@@ -126,7 +126,7 @@ export function SubscribeForm({
     editing?.compoundAllocation === true,
   );
   const [reason, setReason] = useState("");
-  const [checkOn, setCheckOn] = useState("");
+  const [checkOn, setCheckOn] = useState(() => defaultCheckOn());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // The preflight answer is keyed on the question it answered; a changed mode or budget hides it.
@@ -322,7 +322,11 @@ export function SubscribeForm({
           <span aria-hidden="true">{verdict.glyph}</span> {verdict.text}
         </p>
       ) : null}
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }

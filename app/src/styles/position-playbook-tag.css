@@ -1,0 +1,46 @@
+/* A position's playbook tag (#5073 slice 4b): `shell/position-playbook-tag.tsx`. One line under the
+ * guidance line, under the same hairline box: "Opened by ◷ CRWV-WHEEL · waiting ›". The state
+ * rides a glyph and a word, never hue alone (a standing reader is red/green colourblind). */
+.pos-pb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.pos-pb-label {
+  flex: none;
+  color: var(--muted);
+}
+/* The link keeps a 32px target on a phone. One run of inline text, not a flex box: the spaces in
+   "◷ CRWV-WHEEL · waiting ›" survive, and a name too long for the card ends in an ellipsis — the
+   whole of it is still in the link's accessible name. */
+.pos-pb-tag {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 32px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.pos-pb-word {
+  font-weight: 500;
+  color: var(--muted);
+}
+.pos-pb-chev {
+  color: var(--accent);
+}
+.pos-pb-tag:hover .pos-pb-name,
+.pos-pb-tag:focus-visible .pos-pb-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

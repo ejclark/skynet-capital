@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@rstest/core";
 import type { Seen } from "../../scripts/study/metrics.mjs";
 import {
+  datesIn,
   grade,
   gradeAnswer,
   hedged,
@@ -103,6 +104,83 @@ describe("gradeAnswer — the fact the member reports", () => {
   });
   it("fails an empty answer", () => {
     expect(gradeAnswer("  ", NUMBER_TASK.answer)).toEqual({ matched: false, why: "no answer" });
+  });
+});
+
+// The first full round's audit (2026-10-09, #5009): 20 of 42 failed answers were right. These are
+// the shapes the grader got wrong, in the members' own words.
+describe("gradeAnswer — a date, written any common way", () => {
+  const DATE = { kind: "text" as const, value: "2026-11-06" };
+  it("reads the same calendar day in words, abbreviations, ordinals and numbers", () => {
+    for (const given of [
+      "it runs out on 6 November 2026",
+      "expires Nov 6",
+      "Friday, November 6, 2026",
+      "on the 6th of November",
+      "Nov. 6th, 2026",
+      "11/6/2026",
+      "11/06",
+      "2026-11-06",
+      "CRWV $80 PUT · 6 NOV 26",
+    ]) {
+      expect({ given, ...gradeAnswer(given, DATE) }).toMatchObject({ given, matched: true });
+    }
+  });
+  it("refuses another day, another month or another stated year", () => {
+    for (const given of ["Nov 7", "6 October 2026", "6 November 2025", "11/16", "no idea"]) {
+      expect({ given, ...gradeAnswer(given, DATE) }).toMatchObject({ given, matched: false });
+    }
+  });
+  it("keeps a right date beside a later one it names as context", () => {
+    const given =
+      "MSFT earnings on Tuesday, Oct 27, 2026 (45 shares), with AAPL earnings two days later on Thursday, Oct 29, 2026";
+    expect(gradeAnswer(given, { kind: "text", value: "2026-10-27" }).matched).toBe(true);
+  });
+  it("refuses a guess between two days", () => {
+    expect(gradeAnswer("Oct 14 or Oct 28", { kind: "text", value: "2026-10-14" })).toEqual({
+      matched: false,
+      why: "it offers a choice of dates — a guess",
+    });
+  });
+  it("finds no date inside a clock time, an amount or a percentage", () => {
+    expect(datesIn("at 11:06, down $11.06 or 11.6%")).toEqual([]);
+  });
+  it("still matches a text answer that is not a date by its tokens", () => {
+    expect(gradeAnswer("it is sold", { kind: "text", value: "sold" }).matched).toBe(true);
+  });
+});
+
+describe("gradeAnswer — labelled context is not a list of candidates", () => {
+  it("keeps a figure given with its parts, each named", () => {
+    const given =
+      "I'd say about $25,200 — $25,212 to be exact ($20,111 cash and $5,101 in shares).";
+    expect(gradeAnswer(given, { kind: "number", value: 25212, abs: 1 }).matched).toBe(true);
+  });
+  it("keeps a total whose account and cash are named beside it", () => {
+    const given =
+      "About $1.1 million — $1,095,445 across the whole book. That's my own account at $98,479 plus the Sauron bot account at $996,966, up $1,880 (+0.17%) today, with $1,024,280 of it sitting in cash and 5 positions open.";
+    expect(gradeAnswer(given, { kind: "number", value: 1095445, abs: 1 }).matched).toBe(true);
+  });
+  it("keeps one holding's figure beside another holding named as separate", () => {
+    const given =
+      "his AAPL line shows 60 shares worth $14,166, bought at $228.40 and now $236.10, with a total profit of +$462, which is +3.37%. His other holding, MSFT, is a separate +$414, and his whole paper gain is +$876.";
+    expect(gradeAnswer(given, { kind: "number", value: 462, abs: 1 }).matched).toBe(true);
+  });
+  it("still refuses bare candidates, however the answer opens", () => {
+    for (const given of [
+      "$380, $412, $455",
+      "I'd say $380, $412, $455",
+      "maybe $380 / $412 / $455",
+    ]) {
+      expect({ given, ...gradeAnswer(given, NUMBER_TASK.answer) }).toMatchObject({
+        given,
+        matched: false,
+      });
+    }
+  });
+  it("counts a rounded restatement of the answer as the answer, not a rival", () => {
+    expect(gradeAnswer("about $400 — $412 exactly", NUMBER_TASK.answer).matched).toBe(true);
+    expect(gradeAnswer("$500, $412, $300", NUMBER_TASK.answer).matched).toBe(false);
   });
   it("folds case and accents into tokens", () => {
     expect(tokens("Café-Déjà vu")).toEqual(["cafe", "deja", "vu"]);

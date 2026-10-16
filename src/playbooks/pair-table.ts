@@ -26,8 +26,8 @@ export type StrategyId =
   | "pre-print-run-up"
   | "wheel"
   | "call-spread"
+  | "long-call"
   | "event"
-  | "tactical"
   | "persona-rules"
   | "forced-pick";
 
@@ -85,19 +85,22 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     // is a separate question no screen answers yet.
     screen: "node scripts/research/earnings-cycle.mjs <SYM>",
   },
+  "long-call": {
+    id: "long-call",
+    name: "the long call",
+    summary:
+      "Buys calls four to six months out and holds them through earnings; sells at double the cost or with 45 days left.",
+    instrument: "options",
+    runsOnConviction: true,
+    noScreen:
+      "No study measures long calls held through prints yet; it runs only on its owner's dated conviction.",
+  },
   event: {
     id: "event",
     name: "the TACO event play",
     summary: "Trades a news-driven pump story; dark until a news feed is wired to it.",
     instrument: "shares",
     noScreen: "Its trigger is a news story, and no news feed is wired to it yet.",
-  },
-  tactical: {
-    id: "tactical",
-    name: "hardcore Sauron's tactics",
-    summary: "Small tranches at every extreme and every run across a basket of ten names.",
-    instrument: "shares",
-    noScreen: "It trades as research, measured by trade volume, not by a backtest.",
   },
   "persona-rules": {
     id: "persona-rules",
@@ -167,7 +170,7 @@ export interface Pair {
   /** The id every record keys on. Opaque: look it up, never build or split it. */
   readonly id: string;
   readonly strategy: StrategyId;
-  /** One ticker per pair; HC-SAURON's and SAURON's ten-name baskets are the exceptions, kept as they are
+  /** One ticker per pair; SAURON's ten-name basket is the exception, kept as it is
    *  (a subscriber's chips narrow it), and BETA-SCOUT names none — it picks among the bots' ten
    *  names on the day. Must equal the registry playbook's `symbols`. */
   readonly symbols: readonly string[];
@@ -221,26 +224,31 @@ const PAIRS: readonly Pair[] = [
     },
   },
   {
-    id: "HC-SAURON",
-    strategy: "tactical",
-    symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],
-    evidence: {
-      status: "not-studied",
-      call: "Small tranches at every extreme and every run; the trades are the research, not the P/L.",
-    },
-  },
-  {
     id: "CRWV-WHEEL",
     strategy: "wheel",
     symbols: ["CRWV"],
     evidence: {
       status: "conviction",
-      call: "Runs as its owner's conviction against the study's stand-aside (#4642): one cash-secured put about a month out, covered calls once assigned.",
+      call: "Runs as its owner's conviction against the study's stand-aside (#4642): cash-secured puts 14 to 45 days out at about 0.15 delta, as many as the budget secures, then covered calls once assigned.",
       confidence: "medium",
       number: "implied volatility at the 6th percentile of what CRWV went on to move",
       verdictOn: "2026-10-02",
       checkOn: "2027-01-29",
       study: "docs/research/crwv-premium-fit.md",
+    },
+  },
+  {
+    id: "CRWV-LONG-CALL",
+    strategy: "long-call",
+    symbols: ["CRWV"],
+    evidence: {
+      status: "conviction",
+      call: "Runs as its owner's conviction (#5482): CRWV recovers well above today's price over the next 3 to 6 months, through earnings; options have priced CRWV's print moves smaller than they turned out.",
+      confidence: "low",
+      number: "CRWV's print moves have run larger than the options priced them",
+      verdictOn: "2026-10-16",
+      checkOn: "2027-01-29",
+      study: "docs/research/events/crwv-2026-11-10-print.md",
     },
   },
   {
@@ -260,8 +268,8 @@ const PAIRS: readonly Pair[] = [
     },
   },
   {
-    // A persona's rules over the bots' ten names (#4651), like HC-SAURON's basket; its claims live
-    // in docs/BOTS-SAURON.md, not in a per-ticker study.
+    // A persona's rules over the bots' ten names (#4651), a basket; its claims live in
+    // docs/BOTS-SAURON.md, not in a per-ticker study.
     id: "SAURON",
     strategy: "persona-rules",
     symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],

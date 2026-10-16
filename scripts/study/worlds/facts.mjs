@@ -3,7 +3,7 @@
 // bytes each viewer's page is served), never from the inputs JSON:
 //
 //   node scripts/study/worlds/facts.mjs --run <compose dir> --world <name> [--viewer <who> …] \
-//     --out <facts.json>
+//     [--clock <zone>,<locale>] --out <facts.json>
 //
 // One fact per stable name (`sauron.NVDA.average-cost`, `sauron.playbook.CRWV-WHEEL.verdict`, …),
 // each with the oracle's answer shape and an `answerRegion` — the text the page prints where the
@@ -13,16 +13,19 @@
 // run, the git checkout holding the run dir), never the checkout this script runs from — and it
 // must still be at the composed commit. Also writes `dataNames`, the world's own names in the
 // payloads, so harvest.mjs can tell data on screen from the interface's words.
-// Check the regions against what a member can actually see with harvest.mjs --facts.
+// Check the regions against what a member can actually see with harvest.mjs --facts. Times the
+// page formats itself are written on `--clock` (../clock.mjs; default the owner's) — the clock the
+// census and the members' sessions run on, so a region is text their screens show.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { clockArg, parseClock } from "../clock.mjs";
 import { dataNames, factSheet, VERDICT_WORDS_MIRROR } from "./facts-sheet.mjs";
 
 const USAGE =
-  "usage: facts.mjs --run <compose dir> --world <name> [--viewer <who> …] --out <facts.json>";
+  "usage: facts.mjs --run <compose dir> --world <name> [--viewer <who> …] [--clock <zone>,<locale>] --out <facts.json>";
 
 function args(argv) {
   const out = { viewers: [] };
@@ -33,6 +36,7 @@ function args(argv) {
     else if (flag === "--world") out.world = value;
     else if (flag === "--viewer") out.viewers.push(value);
     else if (flag === "--out") out.out = value;
+    else if (flag === "--clock") out.clock = value;
     else throw new Error(`unknown flag ${flag}\n${USAGE}`);
   }
   if (!(out.run && out.world && out.out)) throw new Error(USAGE);
@@ -90,13 +94,20 @@ async function main() {
   const missing = viewers.filter((v) => !existsSync(join(dir, `${v}.json`)));
   if (missing.length > 0) throw new Error(`no composed viewer ${missing} (have: ${composed})`);
   const at = composedCheckout(run, manifest);
+  const clock = parseClock(opts.clock);
   const fmt = await verdictWords(at);
   const names = new Set();
   const facts = viewers.flatMap((viewer) => {
     const entries = JSON.parse(readFileSync(join(dir, `${viewer}.json`), "utf8"));
     const payloads = Object.fromEntries(Object.entries(entries).map(([k, v]) => [k, v.body]));
     for (const n of dataNames(payloads)) names.add(n);
-    return factSheet({ viewer, instant: manifest.instant, payloads, verdictWords: fmt.words });
+    return factSheet({
+      viewer,
+      instant: manifest.instant,
+      payloads,
+      verdictWords: fmt.words,
+      clock,
+    });
   });
   const dupes = facts.map((f) => `${f.viewer}:${f.id}`).filter((k, i, all) => all.indexOf(k) !== i);
   if (dupes.length > 0)
@@ -105,6 +116,7 @@ async function main() {
     world: opts.world,
     run,
     instant: manifest.instant,
+    clock,
     formatters: {
       verdictWords: fmt.from,
       checkout: at.checkout,
@@ -119,7 +131,7 @@ async function main() {
   writeFileSync(resolve(opts.out), `${JSON.stringify(sheet, null, 1)}\n`);
   const per = viewers.map((v) => `${v} ${facts.filter((f) => f.viewer === v).length}`).join(" · ");
   console.log(
-    `facts: ${facts.length} facts (${per}) · verdict words from ${fmt.from} at ${at.commit?.slice(0, 8)} · ${names.size} data names → ${opts.out}`,
+    `facts: ${facts.length} facts (${per}) · clock ${clockArg(clock)} · verdict words from ${fmt.from} at ${at.commit?.slice(0, 8)} · ${names.size} data names → ${opts.out}`,
   );
 }
 

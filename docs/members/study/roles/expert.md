@@ -6,8 +6,9 @@ You review alone; other experts review the same frames separately.
 
 ## Step 1 — context
 
-From the member cards, note who uses this area and what they come to do. A design that is wrong for
-a newcomer may be right for a daily user; say which member each finding hurts.
+You get one line per member on who uses this area: who they are, and the device they use. Note who
+comes here and how often. A design that is wrong for a newcomer may be right for a daily user; say
+which member each finding hurts. You are not given the members' own words; judge from the frames.
 
 ## Step 2 — first impression (per page, five seconds)
 
@@ -21,6 +22,14 @@ H4 consistency and standards · H5 error prevention · H6 recognition rather tha
 H7 flexibility and efficiency · H8 aesthetic and minimalist design · H9 help users recover from
 errors · H10 help and documentation.
 Severity: 0 not a problem · 1 cosmetic · 2 minor · 3 major · 4 prevents the task.
+
+Two checks run on every page, whatever else it shows (Eric, 2026-10-14, on round pages: "the
+interactable elements to provide context to changes and/or to leave feedback cover content I need to
+evaluate"; and "between mobile and desktop… doubles the work to leave feedback"): **does any control,
+label or bar cover content the person came to read?** (H8, severity 3 when it hides a number or a
+label), **does the same answer have to be given twice?** (H7, severity 2), and **is anything on
+screen not part of this task?** (H8, severity 2 — a distraction costs an easily-distracted member
+the task; Eric, 2026-10-14: "simple and elegant design that is free of distraction").
 
 ## Step 4 — wasted steps (excise audit)
 

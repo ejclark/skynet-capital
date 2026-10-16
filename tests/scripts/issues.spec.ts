@@ -8,6 +8,10 @@ import {
   nextLabels,
   parseArgs,
   row,
+  scanIssues,
+  searchQuery,
+  searchRemote,
+  splitLabels,
   titleWords,
   withFooter,
 } from "../../scripts/issues.mjs";
@@ -123,5 +127,113 @@ describe("issues cli: followUps (slices as sub-issues)", () => {
 
   it("writes nothing for a plain filing", () => {
     expect(followUps({ child })).toEqual([]);
+  });
+
+  // #5266 — `ready` fires the claim lanes, so it lands only after every link exists.
+  it("adds the held-back labels after every link and before the close", () => {
+    const ops = followUps({
+      child,
+      parentNumber: 7,
+      blockers: [{ id: 11 }, { id: 12 }],
+      afterLinks: ["ready"],
+      closed: true,
+    });
+    expect(ops.map((o) => `${o.method} ${o.path}`)).toEqual([
+      "POST issues/7/sub_issues",
+      "POST issues/42/dependencies/blocked_by",
+      "POST issues/42/dependencies/blocked_by",
+      "POST issues/42/labels",
+      "PATCH issues/42",
+    ]);
+    expect(ops[3]?.payload).toEqual({ labels: ["ready"] });
+  });
+});
+
+describe("issues cli: splitLabels (#5266 — ready waits for the links)", () => {
+  const labels = ["feedback", "ready", "bug"];
+
+  it("holds `ready` back when the filing has a blocker", () => {
+    expect(splitLabels(labels, { blockers: [{ id: 11 }] })).toEqual({
+      initial: ["feedback", "bug"],
+      afterLinks: ["ready"],
+    });
+  });
+
+  it("holds `ready` back when the filing has a parent", () => {
+    expect(splitLabels(labels, { parentNumber: 7 }).afterLinks).toEqual(["ready"]);
+  });
+
+  it("files every label at once when there is nothing to link", () => {
+    expect(splitLabels(labels)).toEqual({ initial: labels, afterLinks: [] });
+  });
+
+  it("holds nothing back when the filing is not `ready`", () => {
+    expect(splitLabels(["feedback"], { blockers: [{ id: 11 }] })).toEqual({
+      initial: ["feedback"],
+      afterLinks: [],
+    });
+  });
+});
+
+// #5196: closed/all passed ghRestAll's 2,000-row ceiling, so they ask GitHub's search instead.
+describe("issues cli: search past the list ceiling", () => {
+  const REPO = "ejclark/skynet-capital";
+
+  it("builds the search query, leaving out state for all (state:all matches nothing)", () => {
+    expect(searchQuery({ repo: REPO, words: "rtk tokens", state: "closed" })).toBe(
+      `repo:${REPO} is:issue in:title,body state:closed rtk tokens`,
+    );
+    expect(searchQuery({ repo: REPO, words: "rtk", state: "all", label: "needs eric" })).toBe(
+      `repo:${REPO} is:issue in:title,body label:"needs eric" rtk`,
+    );
+  });
+
+  it("asks the search endpoint once, newest first, and keeps the first --limit hits", () => {
+    const paths: string[] = [];
+    const read = (path: string) => {
+      paths.push(path);
+      return { items: [1, 2, 3].map((n) => ({ number: n, title: `T${n}`, state: "closed" })) };
+    };
+    const items = searchRemote({ words: "rtk", state: "all", limit: 2, repo: REPO, read });
+    expect(items.map((i) => i.number)).toEqual([1, 2]);
+    expect(paths).toHaveLength(1);
+    expect(paths[0]).toContain("https://api.github.com/search/issues?q=");
+    expect(paths[0]).toContain("sort=created&order=desc&per_page=2");
+    expect(decodeURIComponent(paths[0] ?? "")).toContain(`repo:${REPO} is:issue`);
+  });
+
+  it("pages the search when --limit is above 100, and stops on a short page", () => {
+    let calls = 0;
+    const read = () => {
+      calls++;
+      const n = calls === 1 ? 100 : 5;
+      return { items: Array.from({ length: n }, (_, k) => ({ number: calls * 1000 + k })) };
+    };
+    const items = searchRemote({ words: "x", state: "closed", limit: 150, repo: REPO, read });
+    expect(items).toHaveLength(105);
+    expect(calls).toBe(2);
+  });
+
+  it("falls back to a list scan that stops once it has --limit matches, skipping PRs", () => {
+    let pages = 0;
+    const read = () => {
+      pages++;
+      return Array.from({ length: 100 }, (_, k) => ({
+        number: k,
+        title: k % 2 ? "rtk" : "other",
+        ...(k === 1 ? { pull_request: {} } : {}),
+      }));
+    };
+    const keep = (i: { title: string }) => i.title === "rtk";
+    const scan = scanIssues("all", keep, 3, { read });
+    expect(scan.items.map((i) => i.number)).toEqual([3, 5, 7]);
+    expect(scan.partial).toBe(false);
+    expect(pages).toBe(1);
+  });
+
+  it("says the scan was partial when it reaches the page ceiling short of --limit", () => {
+    const read = () => Array.from({ length: 100 }, (_, k) => ({ number: k, title: "other" }));
+    const scan = scanIssues("closed", () => false, 5, { read, maxPages: 2 });
+    expect(scan).toEqual({ items: [], partial: true, scanned: 200 });
   });
 });

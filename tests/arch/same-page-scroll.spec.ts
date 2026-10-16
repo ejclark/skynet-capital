@@ -22,6 +22,7 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   // Whether some of them should keep the scroll is a design call held by #4943, not #4944.
   "app/src/routes/accounts.tsx": [
     ["account: id === fallbackId", "account switch (held by #4943)"],
+    ['account: a.id, section: "activity"', "All accounts' way into one account's list (#5165)"],
     ["section: next === opening ? undefined : next", "section switch (held by #4943)"],
   ],
   "app/src/routes/activity.tsx": [['next === "feed"', "section switch (held by #4943)"]],
@@ -44,6 +45,9 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/events-agenda.tsx": [
     ["section: undefined, events: undefined", "leaves Events for the row's #pos- anchor"],
   ],
+  "app/src/shell/held-events-line.tsx": [
+    ['section: "events" as const', "Overview's door into Events, a section switch (#5074)"],
+  ],
   "app/src/shell/level-up-ceremony.tsx": [
     ['chapter: "trading" as const', "the ceremony's door into Milestones, a section switch"],
   ],
@@ -53,15 +57,12 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/money-strip.tsx": [
     ['chapter: "playbooks" as const', "Overview's door into Milestones, a section switch"],
   ],
-  // The compare toggles render their result ABOVE the field, so keeping the scroll would hide
-  // it — #4944's non-goals, held by #4943. (The rank chips are filter chips: they keep the scroll.)
-  "app/src/routes/leaderboard.tsx": [
-    ['aria-label="Cancel compare"', "compare cancel, on the armed row (held by #4943)"],
-    ['className="cmp-clear"', "compare cancel, in the hint above the field (held by #4943)"],
-    ["b: rowKey", "compare pick (held by #4943)"],
-    ["a: rowKey", "compare arm (held by #4943)"],
-    ["search: { by }", "compare clear (held by #4943)"],
+  "app/src/shell/moneypenny-rail.tsx": [
+    ["{ href: path }", "a place Moneypenny names on another page (#5238); same-page keeps it"],
   ],
+  // No Leaderboard entries: its compare toggles keep the scroll and move the view to the result
+  // themselves, never to the top (#5057, Eric's pick on #5037 question 8). "The view follows the
+  // result" — docs/PATTERNS.md.
 };
 
 const APP_SRC = join("app", "src");

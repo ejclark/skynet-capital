@@ -20,8 +20,8 @@ Knobs:
 |---|---|---|
 | `SKYNET_AUTONOMOUS_BOTS` | `day-trader` | Comma-separated persona ids to enable |
 | `SKYNET_MAX_POSITION_PCT` | `0.03` | Max single position as a fraction of equity |
-| `SKYNET_MOMENTUM_WINDOW` | `20` | Ticks in the momentum window |
-| `SKYNET_SENTIMENT_WINDOW` | `10` | Articles kept in the rolling sentiment window |
+| `SKYNET_MOMENTUM_WINDOW` | `20` | Ticks in the momentum window (`src/autonomous/signal-windows.ts`; the dashboard reads it too, for the Thesis tab's walked-through trade — set it on both apps) |
+| `SKYNET_SENTIMENT_WINDOW` | `10` | Articles kept in the rolling sentiment window (same file, same both-apps rule) |
 
 Two live signals feed the personas: **momentum** (from the price stream) and **news sentiment**
 (from Alpaca news, scored and polled). That means the news-driven personas now act too — enable

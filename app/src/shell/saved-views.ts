@@ -93,3 +93,6 @@ export const useSavedViews = create<SavedViewsState>((set, get) => ({
 }));
 
 export const viewCapReached = (views: readonly SavedView[]): boolean => views.length >= VIEW_CAP;
+
+/** Why a save is refused at the cap: every door that saves a view says it the same way. */
+export const VIEW_CAP_REASON = "Eight views is plenty — delete one first";

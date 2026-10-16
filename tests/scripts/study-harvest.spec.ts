@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@rstest/core";
 import {
+  factKey,
   factWords,
   groupStrings,
   KINDS,
@@ -160,7 +161,12 @@ describe("answer regions against what the walk saw", () => {
       ],
       [seen as Walk & { viewer: string }],
     );
-    expect(out).toEqual({ judged: 4, covered: 3, missing: ["member:d"] });
+    expect(out).toEqual({
+      judged: 4,
+      covered: 3,
+      missing: ["member:d"],
+      seen: ["member:a", "member:b", "member:c"],
+    });
   });
 
   it("never bridges two places that share no block", () => {
@@ -180,6 +186,19 @@ describe("answer regions against what the walk saw", () => {
       [{ id: "x", viewer: "someone-else", answerRegion: ["ABC"] }],
       [seen as Walk & { viewer: string }],
     );
-    expect(out).toEqual({ judged: 0, covered: 0, missing: [] });
+    expect(out).toEqual({ judged: 0, covered: 0, missing: [], seen: [] });
+  });
+
+  it("judges a fact only against its own world's walks, when both name one", () => {
+    const today = { id: "x", viewer: "member", world: "today", answerRegion: ["now $23.00"] };
+    const facts = [today, { ...today, world: "bad-day" }];
+    const out = regionCoverage(facts, [{ ...seen, world: "today" } as Walk & { viewer: string }]);
+    expect(out).toEqual({
+      judged: 1,
+      covered: 1,
+      missing: [],
+      seen: [factKey(today)],
+    });
+    expect(factKey(today)).toBe("today/member:x");
   });
 });

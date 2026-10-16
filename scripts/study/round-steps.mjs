@@ -3,12 +3,14 @@
 // and writes its own folder; round.mjs runs them in order. The decisions are round-plan.mjs's.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { clockArg } from "./clock.mjs";
 import { SESSIONS } from "./round-contract.mjs";
 import { adoptTasks } from "./round-control.mjs";
 import { framerText, taskAuthorText } from "./round-messages.mjs";
 import {
+  gradableFacts,
   isControl,
   lintFeedback,
   planSessions,
@@ -32,6 +34,20 @@ export function readCards(ctx, members) {
   return Object.fromEntries(
     members.map((m) => [m, readFileSync(join(ctx.out, "1-cards", `${m}.md`), "utf8")]),
   );
+}
+
+/** The area's roles packet, beside the cards in step 1's folder. */
+export const ROLES = "roles.md";
+
+/** The roles step 1 wrote: what the experts and the words pass read instead of the cards (#5099). */
+export function readRoles(ctx) {
+  const path = join(ctx.out, "1-cards", ROLES);
+  if (!existsSync(path)) {
+    throw new Error(
+      "1-cards/roles.md is missing — this round's cards step ran before the experts read roles (#5099); start a fresh round",
+    );
+  }
+  return readFileSync(path, "utf8");
 }
 
 /** Step 3: the framer reads every card and the page list → the job map. */
@@ -115,10 +131,26 @@ export async function tasks(ctx) {
   if (isControl(ctx.opts)) return adoptTasks(ctx);
   const dir = ctx.dir(step);
   const jobMap = readJson(join(ctx.out, "3-framer", "job-map.json"));
-  const { facts } = readJson(join(ctx.out, "0-preflight", "facts.json"));
+  const sheet = readJson(join(ctx.out, "0-preflight", "facts.json")).facts;
+  // Only facts a census screen showed: a region no screen prints can never be graded (#5009).
+  const regionsFile = join(ctx.out, "0-preflight", "harvest", "regions.json");
+  const { facts, withheld } = gradableFacts(
+    sheet,
+    existsSync(regionsFile) ? readJson(regionsFile) : null,
+  );
+  ctx.log(step, "facts", { gradable: facts.length, withheld: withheld.length });
+  const units = taskUnits(ctx.matrix);
+  const bare = units.filter(
+    (u) => !facts.some((f) => f.world === u.world && f.viewer === u.viewer),
+  );
+  if (bare.length > 0) {
+    throw new Error(
+      `no fact on ${bare.map((u) => `${u.world}/${u.viewer}`).join(", ")}'s sheet was seen on a census screen — see 0-preflight/harvest/regions.json`,
+    );
+  }
   const call = ctx.call(step);
   const all = [];
-  for (const unit of taskUnits(ctx.matrix)) {
+  for (const unit of units) {
     all.push(...(await authorUnit(ctx, unit, { jobMap, facts, call })));
   }
   mkdirSync(join(dir, "tasks"), { recursive: true });
@@ -178,6 +210,19 @@ export async function pool(items, n, fn) {
   return results;
 }
 
+/**
+ * A session folder about to be driven again keeps what its earlier attempt paid for: its recorded
+ * calls move to <step>/superseded/, where usage.mjs (which prices every requests/ folder under the
+ * step) still counts them, and no reader looks for a session (#5099).
+ */
+function keepSpent(stepDir, sessionRel, out) {
+  const spent = join(out, "requests");
+  if (!existsSync(spent)) return;
+  const aside = join(stepDir, "superseded", `${sessionRel.split("/").join("--")}--${Date.now()}`);
+  mkdirSync(aside, { recursive: true });
+  renameSync(spent, join(aside, "requests"));
+}
+
 /** Step 5: every session through drive.mjs --actor sealed, each in its own directory. */
 export async function sessions(ctx) {
   const step = SESSIONS;
@@ -208,6 +253,7 @@ export async function sessions(ctx) {
     if (existsSync(join(out, "summary.json")) && ran === s.taskSha) {
       return { ...s, status: 0, kept: true };
     }
+    keepSpent(dir, s.dir, out);
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
     const args = ["--run", ctx.run, "--world", s.world, "--viewer", s.viewer];
@@ -218,7 +264,7 @@ export async function sessions(ctx) {
       join(ctx.out, "4-tasks", "tasks", `${s.task}.json`),
     );
     args.push("--card", join(ctx.out, "1-cards", `${s.member}.md`), "--actor", "sealed");
-    args.push("--out", out, "--roles", ctx.roles);
+    args.push("--out", out, "--roles", ctx.roles, "--clock", clockArg(ctx.clock));
     if (ctx.stub) args.push("--stub", ctx.stub);
     const status = await ctx.toolAsync("drive.mjs", args, `${out}.log`);
     const summary = existsSync(join(out, "summary.json"))

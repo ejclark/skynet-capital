@@ -11,7 +11,6 @@ import {
 import {
   CRWV_WHEEL,
   G1_GOOG,
-  HC_SAURON,
   NVDA_CALL_SPREAD,
   S1_NVDA,
   TACO_DJT,
@@ -113,7 +112,8 @@ describe("withPlaybooks", () => {
 
 describe("withPlaybooks — per-playbook verdicts (#3687)", () => {
   const darkPlay: Playbook = { ...nvdaPlay, id: "TEST-DARK", desiredState: () => "no-window" };
-  const tactical: Playbook = { ...nvdaPlay, id: "TEST-TACTICS", tactics: [] };
+  // Another persona's rules (not this bot's own): no window, so its verdict reads "tactical".
+  const liveSignals: Playbook = { ...nvdaPlay, id: "TEST-RULES", rulesOf: "another-persona" };
 
   it("reports what every composed playbook concluded, one entry per playbook and mode", () => {
     const composed = withPlaybooks(
@@ -121,14 +121,14 @@ describe("withPlaybooks — per-playbook verdicts (#3687)", () => {
       [
         { playbook: nvdaPlay, mode: "standard" },
         { playbook: darkPlay, mode: "conservative" },
-        { playbook: tactical, mode: "aggressive" },
+        { playbook: liveSignals, mode: "aggressive" },
       ],
       calendar,
     );
     expect(composed.playbookVerdicts?.(ctx)).toEqual([
       { playbookId: "TEST-NVDA", mode: "standard", state: "long" },
       { playbookId: "TEST-DARK", mode: "conservative", state: "no-window" },
-      { playbookId: "TEST-TACTICS", mode: "aggressive", state: "tactical" },
+      { playbookId: "TEST-RULES", mode: "aggressive", state: "tactical" },
     ]);
   });
 
@@ -157,7 +157,7 @@ describe("withPlaybooks — per-playbook verdicts (#3687)", () => {
  * PARITY (#4651): a roster with no paused entry and no persona's-own-rules entry composes exactly as
  * withPlaybooks always did — the plays, then the base persona's reflexes off every enabled basket,
  * and a verdict per entry. The reference below restates that original composition, and the grid
- * walks every house persona against share, tactical, event and option rosters across tapes and books.
+ * walks every house persona against share, event and option rosters across tapes and books.
  */
 describe("withPlaybooks — unchanged for every roster without a paused or own-rules entry", () => {
   const reference = (
@@ -179,7 +179,7 @@ describe("withPlaybooks — unchanged for every roster without a paused or own-r
     [],
     on(S1_NVDA),
     on(S1_NVDA, G1_GOOG),
-    on(HC_SAURON),
+    on(G1_GOOG),
     on(TACO_DJT, S1_NVDA),
     on(CRWV_WHEEL, NVDA_CALL_SPREAD),
   ];

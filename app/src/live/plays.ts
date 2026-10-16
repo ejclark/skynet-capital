@@ -46,3 +46,21 @@ export function playForNav(nav: TicketNavState): PlayCode {
   if (nav.side === "sell") return nav.optionType === "put" ? "201" : "202";
   return nav.optionType === "put" ? "301" : "302";
 }
+
+/** The option rung a chain tap names (#5166) — the one rule both chains share (`chain-section.tsx`
+ *  and the ticket's own inline chain in `option-gate.tsx`). A price cell says the side itself: a bid
+ *  is what a buyer pays you, so tapping it is a SELL to open; an ask is what a seller charges, so
+ *  tapping it is a BUY to open — a call bid lands on the covered call (202), a put bid on the
+ *  cash-secured put (201); there is no uncovered-call rung to land on. A bare strike tap carries no
+ *  price, so it keeps the current side (a stock or spread rung lands on the long side) and only
+ *  takes the tapped column's type. */
+export function rungForChainTap(
+  currentPlay: string,
+  optionType: "call" | "put",
+  price?: "bid" | "ask",
+): PlayCode {
+  const nav = navForPlay(currentPlay);
+  const kept = nav.instrument === "option" ? nav.side : "buy";
+  const side = price === undefined ? kept : price === "bid" ? "sell" : "buy";
+  return playForNav({ instrument: "option", side, optionType });
+}

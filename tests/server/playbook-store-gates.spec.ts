@@ -263,14 +263,14 @@ describe("bots-only subscriptions (#4610)", () => {
 describe("configure (#4649) — edit without un-pausing", () => {
   const edit = (over: Record<string, unknown> = {}) => ({
     id: "sauron",
-    playbookId: "HC-SAURON",
+    playbookId: "SAURON",
     mode: "aggressive",
     capitalAllocated: 8_000,
     symbols: ["nvda", "CRWV"],
     compoundAllocation: true,
     ...over,
   });
-  const subscribed = { sauron: ["HC-SAURON", "S1-NVDA"], "human-eric": ["S1-NVDA"] };
+  const subscribed = { sauron: ["SAURON", "S1-NVDA"], "human-eric": ["S1-NVDA"] };
 
   it("hands the store the four tunables and nothing about enabled", async () => {
     const calls: Calls = [];
@@ -284,7 +284,7 @@ describe("configure (#4649) — edit without un-pausing", () => {
       {
         op: "configure",
         id: "sauron",
-        playbookId: "HC-SAURON",
+        playbookId: "SAURON",
         tuning: {
           mode: "aggressive",
           capitalAllocated: 8_000,

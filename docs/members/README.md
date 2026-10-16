@@ -21,7 +21,12 @@ owner — the only one who walks the app as someone other than Eric), and Eric, 
    carries its falsifier. The file is theirs to edit (below).
 2. **What they own** — the fixture participant (or none), rungs earned, accounts, device.
 3. **What they are trying to do** — goals, ranked; **needs in their words**.
-4. **How they decide** — by outcome or by mechanism; what they read first; what they skip.
+4. **How they decide** — by outcome or by mechanism; what they read first; what they skip; and
+   their **attention**: *focused* (reads a page through) or *easily distracted* (anything on screen
+   that isn't the task pulls them off it). Eric, 2026-10-14: *"I feel I have A.D.H.D. and am easily
+   distracted"*, and *"my brother DEFINITELY has ADHD too.. so that is a good attribute to factor
+   into personas in our user studies that help shape designs"* — so a study tests a design against
+   distraction, not only against the owner.
 5. **What frustrates them** — the dead ends they meet, each tagged with its number below; a fixed
    one keeps its line, marked fixed.
 6. **Journeys** — numbered; each step is `goto` · what they see · an **EARS acceptance line**

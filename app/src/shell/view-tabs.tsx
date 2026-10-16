@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
-import { type SavedView, useSavedViews, viewCapReached } from "./saved-views";
+import { useEffect, useId, useState } from "react";
+import { type SavedView, useSavedViews, VIEW_CAP_REASON, viewCapReached } from "./saved-views";
 
 /**
  * VIEW TABS (#738 phase 3b) — the Projects view model on the blotter. Each tab is a saved filter
@@ -73,6 +73,15 @@ export function ViewTabs({
     () => views.find((view) => view.q === query.trim())?.id ?? null,
   );
   const [naming, setNaming] = useState(false);
+  // A view saved from outside the tabs — the sort line's "Save as a view" (#5070) — is selected
+  // as if it were saved here: the newest view, when its query is the one on screen.
+  const newest = views.at(-1);
+  const newestId = newest?.id;
+  const newestHere = newest !== undefined && newest.q !== "" && newest.q === query.trim();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a NEW view selects itself; a later edit of the query must not re-select it
+  useEffect(() => {
+    if (newestHere && newestId) setSelected(newestId);
+  }, [newestId]);
 
   const current = views.find((view) => view.id === selected);
   const dirty = current !== undefined && query.trim() !== current.q;
@@ -137,7 +146,7 @@ export function ViewTabs({
           type="button"
           className="view-tab view-add"
           disabled={viewCapReached(views)}
-          title={viewCapReached(views) ? "Eight views is plenty — delete one first" : undefined}
+          title={viewCapReached(views) ? VIEW_CAP_REASON : undefined}
           onClick={() => setNaming(true)}
         >
           + New view

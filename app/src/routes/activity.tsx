@@ -13,10 +13,13 @@ import {
   toggleActivityQualifier,
 } from "../live/activity-feed";
 import { fetchCouncil } from "../live/council";
+import { fetchCouncilReplies } from "../live/council-replies";
 import { fetchFilingComments } from "../live/filing-comments";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
+import { ActivityDays } from "../shell/activity-days";
 import { CouncilCompose } from "../shell/council-compose";
+import { CouncilLines } from "../shell/council-lines";
 import { FilingOnramp } from "../shell/filing-onramp";
 import { PageFrame } from "../shell/frame";
 import { PnlStrip } from "../shell/pnl-strip";
@@ -26,6 +29,7 @@ import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
 import { TradeRow } from "../shell/wire-trade-row";
+import { FilterChip, InlineResult } from "../ui";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
@@ -54,7 +58,8 @@ import { TradeRow } from "../shell/wire-trade-row";
  * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
  * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
  * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
- * the same rows more room, never new concepts.
+ * the same rows more room, never new concepts. Each day opens with a centred divider and the rows
+ * keep only their time (#5257, `shell/activity-days.tsx`).
  */
 
 /** The chip groups, in the order the controls row reads them. Kind leads, because it decides which
@@ -115,15 +120,13 @@ function WireControls({
     <>
       <p className="rail-label">{label}</p>
       {chips.map(([qualifier, text]) => (
-        <button
+        <FilterChip
           key={qualifier}
-          type="button"
-          className="railctl"
-          aria-pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
-          onClick={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
+          pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
+          onPress={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
         >
           {text}
-        </button>
+        </FilterChip>
       ))}
     </>
   );
@@ -183,10 +186,15 @@ function WireFilterBar({
  *  (`docs/THE-GAME.md:117`: "the argument is the product"). This is the league's shared view:
  *  everyone's lines. The composer itself is `shell/council-compose.tsx` since #3963, because the
  *  member's own line also renders beside their standing on the Profile Overview and it is ONE
- *  record — same endpoint, same `["council"]` query key, no copy to drift. */
+ *  record — same endpoint, same `["council"]` query key, no copy to drift.
+ *
+ *  Replies under each line (#5097) are their own read, `["council-replies"]`: a failed or unwired
+ *  one leaves the lines without their fold, never the section without its lines. A reply write
+ *  refreshes both reads, because a refused reply usually means the line itself moved. */
 function CouncilSection(): ReactElement {
   const queryClient = useQueryClient();
   const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
+  const replies = useQuery({ queryKey: ["council-replies"], queryFn: fetchCouncilReplies });
 
   if (council.isPending) return <p className="note">Tuning in…</p>;
   if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
@@ -204,21 +212,28 @@ function CouncilSection(): ReactElement {
       </p>
       <CouncilCompose
         week={data}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["council"] })}
+        // An edited line re-marks its replies as answering an earlier version — refresh both.
+        onSaved={() =>
+          Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["council"] }),
+            queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
+          ])
+        }
       />
       {data.entries.length === 0 ? (
         <p className="note">Nobody's spoken yet this week — be the first.</p>
       ) : (
-        <ul className="wire-fdbk council-entries">
-          {data.entries.map((entry) => (
-            <li key={entry.id}>
-              <span>{entry.text}</span>
-              {entry.playbookId ? (
-                <span className="council-play-tag">{entry.playbookId}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <CouncilLines
+          week={data.week}
+          entries={data.entries}
+          {...(replies.data ? { threads: replies.data } : {})}
+          onReplySaved={() =>
+            Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
+              queryClient.invalidateQueries({ queryKey: ["council"] }),
+            ])
+          }
+        />
       )}
     </section>
   );
@@ -272,8 +287,9 @@ function FeedSection({
             : "Nothing here matches this filter."}
         </p>
       ) : (
-        <ul className="wire-feed">
-          {shown.map((item) => {
+        <ActivityDays
+          items={shown}
+          renderItem={(item) => {
             if (item.kind === "trade") return <TradeRow key={item.key} trade={item.trade} />;
             if (item.kind === "development") {
               return <DevelopmentRow key={item.key} merge={item.merge} />;
@@ -289,8 +305,8 @@ function FeedSection({
                 }
               />
             );
-          })}
-        </ul>
+          }}
+        />
       )}
       {onLoadMore ? (
         <button
@@ -302,7 +318,9 @@ function FeedSection({
           {loadingMore ? "Loading…" : "Load older trades"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>
+      ) : null}
       {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
           unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
           is an invitation rather than a gap. Neither is the feed's own empty state, which is about

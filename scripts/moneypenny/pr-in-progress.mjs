@@ -16,6 +16,16 @@
 //     off when it ends (#3960). A stale lease (past the 2h TTL) does not hold the label: the stall
 //     audit's 6h sweep exists because a dead session's label otherwise sticks.
 //
+// A CLAIM LANE'S OWN PR IS NEVER MARKED (#5056 slice 2, the night chain). A `feedback/<n>` or
+// `plan/<n>` PR is opened by a session whose claim already put `in-progress` on, and whose last
+// write takes it off — "every ending removes `in-progress`", a held PR included. This sync landed
+// seconds AFTER that last write and put the label back (plan/4469 on 2026-10-06: off 04:45:30Z,
+// back on 04:45:54Z), so a build that had ended kept its slot until the 6h sweep ran on the next
+// merge — on two nights that week the cap sat full of finished builds and the queue idled until
+// morning. The spirit of #4393 holds (every build path is counted): a claim lane is counted by its
+// claim, and the sweep stays off an issue its open PR names (`withoutOpenPr`, index.mjs). Closing
+// such a PR still takes a leftover label off, exactly as before.
+//
 // Pure decision (`planPrInProgress`) + injected IO (`syncPrInProgress`), the split projects.mjs /
 // projects-sync.mjs already use, so a spec drives the whole flow with no network. Every read is
 // REST (the core bucket — #4183 is what spending GraphQL on a sweep costs); the label write is the
@@ -33,6 +43,12 @@ import { readIssue } from "./projects-sync.mjs";
 const APPLY_EVENTS = new Set(["opened", "reopened", "edited", "ready_for_review"]);
 const RELEASE_EVENTS = new Set(["closed"]);
 
+/** The feedback and plan lanes' build branches: `feedback/<n>`, `plan/<n>` (their prompts' own). */
+const CLAIM_LANE_BRANCH = /^(?:feedback|plan)\/\d+$/;
+
+/** Is this PR a claim lane's own build — the one kind whose `in-progress` the claim owns? */
+export const isClaimLaneBuild = (headRef) => CLAIM_LANE_BRANCH.test(String(headRef ?? ""));
+
 /** "apply" for an event that means a build is (still) open, "release" for one that ends it. */
 export function intentOf(event) {
   if (APPLY_EVENTS.has(event)) return "apply";
@@ -42,7 +58,8 @@ export function intentOf(event) {
 
 /**
  * The pure decision for each issue a PR names. `facts` per issue: `isOpenIssue` (open, and an issue
- * rather than a PR), `hasLabel`, `namedByOtherOpenPr`, `leased`. Returns one row per issue:
+ * rather than a PR), `hasLabel`, `namedByOtherOpenPr`, `leased`, `laneBuild` (the PR is a claim
+ * lane's own — `isClaimLaneBuild`). Returns one row per issue:
  * `{number, action: "add" | "remove" | "none", reason}`.
  */
 export function planPrInProgress({ event, facts = [] } = {}) {
@@ -52,7 +69,9 @@ export function planPrInProgress({ event, facts = [] } = {}) {
     if (!intent) return row("none", `event "${event}" neither opens nor ends a build`);
     if (!f.isOpenIssue) return row("none", "not an open issue");
     if (intent === "apply") {
-      return f.hasLabel ? row("none", "already in-progress") : row("add", "an open PR names it");
+      if (f.hasLabel) return row("none", "already in-progress");
+      if (f.laneBuild) return row("none", "a claim lane build's own PR — its claim owns the label");
+      return row("add", "an open PR names it");
     }
     if (!f.hasLabel) return row("none", "carries no in-progress");
     if (f.namedByOtherOpenPr) return row("none", "another open PR still names it");
@@ -94,13 +113,14 @@ export function syncPrInProgress(
   const pr = readPr(prNumber);
   const named = derivePrIssues(prEvidence(pr));
   const intent = intentOf(event);
+  const laneBuild = isClaimLaneBuild(pr?.head?.ref);
 
   const facts = named.map((number) => {
     if (!intent) return { number };
     const issue = readIssueFn(number);
     const isOpenIssue = issue?.state === "open" && !issue?.pull_request;
     const hasLabel = (issue?.labels ?? []).some((l) => l?.name === LABELS.inProgress.name);
-    return { number, isOpenIssue, hasLabel };
+    return { number, isOpenIssue, hasLabel, laneBuild };
   });
 
   if (intent === "release" && facts.some((f) => f.isOpenIssue && f.hasLabel)) {

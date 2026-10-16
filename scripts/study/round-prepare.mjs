@@ -15,7 +15,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, relative } from "node:path";
-import { memberCard } from "./packets.mjs";
+import { clockArg } from "./clock.mjs";
+import { cardEchoes, memberCard, rolesPacket } from "./packets.mjs";
 import { isHarnessPath, overlayManifest } from "./pin-plan.mjs";
 import { checkCards } from "./round-control.mjs";
 import {
@@ -28,6 +29,7 @@ import {
   primingCounts,
   profileProblems,
 } from "./round-plan.mjs";
+import { ROLES } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -102,10 +104,17 @@ function takeCensuses(ctx, step, dir) {
     rmSync(cdir, { recursive: true, force: true });
     const args = ["--run", ctx.run, "--world", c.world, "--viewer", c.viewer, "--out", cdir];
     args.push("--cap", String(cap), "--viewport", c.viewports.join(","));
+    args.push("--clock", clockArg(ctx.clock));
     for (const r of c.routes) args.push("--route", r);
     const status = ctx.tool("census.mjs", args, `${cdir}.log`);
     if (status !== 0) throw new Error(`census ${c.key} exited ${status} — ${cdir}.log`);
     const census = readJson(join(cdir, "census.json"));
+    const reach = censusReach(census.controls);
+    if (!reach.ok) {
+      throw new Error(
+        `census ${c.key} operated ${reach.operated} of ${reach.eligible} controls (${reach.why}) — ${cdir}.log`,
+      );
+    }
     const unstubbed = [...new Set(census.routes.flatMap((r) => r.world?.unstubbed ?? []))];
     ctx.log(step, "census", { key: c.key, controls: census.controls.length, cap, unstubbed });
   }
@@ -125,6 +134,7 @@ function factsAndHarvest(ctx, step, dir) {
         ...ctx.censuses.filter((c) => c.world === world).map((c) => c.viewer),
       ]);
       const args = ["--run", ctx.run, "--world", world, "--out", file];
+      args.push("--clock", clockArg(ctx.clock));
       for (const v of viewers) args.push("--viewer", v);
       const status = ctx.tool("worlds/facts.mjs", args, `${file}.log`);
       if (status !== 0) throw new Error(`facts ${world} exited ${status} — ${file}.log`);
@@ -156,22 +166,29 @@ export function preflight(ctx) {
     if (!existsSync(join(ctx.sealed, f))) throw new Error(`--sealed ${ctx.sealed} holds no ${f}`);
   }
   checkPin(ctx, step, dir);
+  ctx.log(step, "clock", { clock: clockArg(ctx.clock) });
   takeCensuses(ctx, step, dir);
   factsAndHarvest(ctx, step, dir);
   return { censuses: ctx.censuses.map((c) => c.key) };
 }
 
-/** Step 1: the member cards, by script, linted as cards; the page list linted as a role packet. */
+/**
+ * Step 1: the member cards, by script, linted as cards; the area's roles and the page list, each
+ * linted as a role packet. The roles are what the experts and the words pass read instead of the
+ * cards (#5099), so they are refused when they repeat five words of any card.
+ */
 export function cards(ctx) {
   const step = "1-cards";
   const dir = ctx.dir(step);
   const members = [...new Set(ctx.matrix.map((r) => r.member))];
   const hashes = {};
+  const texts = {};
   for (const m of members) {
     const md = readFileSync(join(ctx.here, "docs/members", `${m}.md`), "utf8");
     const card = memberCard(md, { cutoff: ctx.p.cutoff, name: m });
     writeFileSync(join(dir, `${m}.md`), card.text);
     hashes[m] = card.sha256;
+    texts[m] = card.text;
   }
   writeFileSync(join(dir, "hashes.json"), `${JSON.stringify(hashes, null, 2)}\n`);
   // A control round asks the main round's questions of the main round's members, verbatim.
@@ -189,10 +206,38 @@ export function cards(ctx) {
     throw new Error(`page list lint refused: ${lintFeedback(pages.stdout).join(" · ")}`);
   }
   ctx.log(step, "pages-clean", { pages: ctx.p.pages.length });
-  return { members, priming };
+  const roles = rolesPacket(ctx.p.roles, members);
+  writeFileSync(join(dir, ROLES), roles.text);
+  const echoes = cardEchoes(roles.text, texts);
+  if (echoes.length > 0) {
+    throw new Error(`the area's roles repeat words from the member card of ${echoes.join(", ")}`);
+  }
+  const rolesLint = ctx.lint("role", [join(dir, ROLES)]);
+  if (rolesLint.status !== 0) {
+    throw new Error(`roles lint refused: ${lintFeedback(rolesLint.stdout).join(" · ")}`);
+  }
+  ctx.log(step, "roles-clean", { roles: members.length, sha256: roles.sha256 });
+  return { members, priming, roles: roles.sha256 };
 }
 
 /** Step 2: every blind role, asked what it knows, before it is shown anything. */
+
+/** The share of listed controls a census must actually operate before experts are shown it. */
+const MIN_OPERATED = 0.8;
+
+/**
+ * Did a census operate what it listed? Skipped controls (they leave the app) don't count against
+ * it. The first full round's census listed 856 controls and operated none — every fresh load had
+ * signed the member out — and preflight still said done (2026-10-09). Never again silently.
+ */
+export function censusReach(controls) {
+  const eligible = controls.filter((c) => c.status !== "skipped").length;
+  const operated = controls.filter((c) => c.status === "operated").length;
+  if (eligible === 0) return { ok: false, operated, eligible, why: "nothing to operate" };
+  const ok = operated / eligible >= MIN_OPERATED;
+  return { ok, operated, eligible, why: ok ? "ok" : `under ${MIN_OPERATED * 100}%` };
+}
+
 export async function canary(ctx) {
   const step = "2-canary";
   const dir = ctx.dir(step);

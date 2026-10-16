@@ -1,0 +1,84 @@
+/* The Ledger on a desk (#5317; `activity-table.tsx`): a day divider per market day, the entries
+   indented under it, no date column (Eric, #5160 round 15: "indenting feels better"). A round
+   trip's legs sit with no rule between them, the orders it closed muted, and its total under a
+   dashed rule — the grouping is drawn in shapes, never a tone alone. */
+
+.act-day-row > th {
+  padding: 16px 12px 6px;
+  border-bottom: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: var(--muted);
+}
+.act-day-group:first-of-type .act-day-row > th {
+  padding-top: 10px;
+}
+.act-day-row > th > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.act-day-row > th > span::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+/* The indent under the divider: the entries start inside the day's label. */
+.act-ledger-table .act-what-cell {
+  padding-left: 24px;
+}
+.act-ledger-table .why-col + .act-what-cell {
+  padding-left: 8px;
+}
+.act-ledger-table td.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.act-ledger-table tr.act-opened > td {
+  padding-top: 2px;
+  color: var(--muted);
+}
+.act-ledger-table tr.act-opened .act-inst {
+  font-weight: 400;
+}
+.act-ledger-table tr.act-total-row > td {
+  border-top: 1px dashed var(--border);
+}
+/* One entry, one group: no rule between a close, the orders it closed and its total. */
+.act-ledger-table tr.act-entry:has(+ tr.act-opened) > td,
+.act-ledger-table tr.act-opened:has(+ tr.act-opened) > td,
+.act-ledger-table tr.act-opened:has(+ tr.act-total-row) > td,
+.act-ledger-table tr.act-entry:has(+ tr.act-total-row) > td {
+  border-bottom: none;
+}
+.act-ledger-table tr.act-entry:has(+ tr.act-opened) > td {
+  padding-bottom: 2px;
+}
+.act-total-row .act-total-name {
+  font-weight: 700;
+}
+.act-total-range {
+  color: var(--muted);
+}
+.act-outcome-cell .act-outcome {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.act-outcome-cell .act-outcome b {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.act-outcome-cell .act-outcome b.tone-pos {
+  color: var(--pos);
+}
+.act-outcome-cell .act-outcome b.tone-neg {
+  color: var(--neg);
+}

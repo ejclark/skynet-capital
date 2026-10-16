@@ -14,6 +14,7 @@ import { serveCompanionApi } from "../../src/server/companion-routes.ts";
 import { serveJsonApi } from "../../src/server/content-api-routes.ts";
 import { serveControlsApi } from "../../src/server/controls-api-routes.ts";
 import { serveCouncilApi } from "../../src/server/council-api-routes.ts";
+import { serveCouncilRepliesApi } from "../../src/server/council-replies-api-routes.ts";
 import { serveDeskAlertsApi } from "../../src/server/desk-alerts-route.ts";
 import { serveFeedbackApi } from "../../src/server/feedback-api-routes.ts";
 import { serveFilingCommentsApi } from "../../src/server/filing-comments-api-routes.ts";
@@ -71,6 +72,8 @@ const FAMILIES = [
   servePlaybooksApi,
   serveControlsApi,
   (req, res, path, config, session) => serveCouncilApi(req, res, path, config.council, session),
+  (req, res, path, config, session) =>
+    serveCouncilRepliesApi(req, res, path, config.councilReplies, session),
   (req, res, path, config, session) =>
     serveFilingCommentsApi(req, res, path, config.filingComments, session),
   serveFeedbackApi,

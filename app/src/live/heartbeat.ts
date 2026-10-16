@@ -31,6 +31,44 @@ export interface Heartbeat {
   /** Share tickers held that nothing on this bot will sell (#4777). Absent for a non-owner, and
    *  when the server could not read the bot's book or subscriptions. */
   readonly unmanaged?: readonly string[];
+  /** This week on one clock (#5073 slice 2) — mirrors `CheckWeekView`
+   *  (`src/observatory/check-week-view.ts`). Absent when the server could not read the week. */
+  readonly week?: CheckWeek;
+}
+
+export interface CheckWeek {
+  readonly bucketMs: number;
+  readonly now: number;
+  /** This week's trading days, New York's calendar; epoch ms bounds. */
+  readonly sessions: readonly {
+    readonly date: string;
+    readonly openAt: number;
+    readonly closeAt: number;
+  }[];
+  /** Per session, per bucket: checks recorded; null for a bucket not yet begun. */
+  readonly checks: readonly (readonly (number | null)[])[];
+  /** Open-market spans longer than the stale window with no check recorded. */
+  readonly gaps: readonly { readonly from: number; readonly to: number }[];
+  readonly lanes: readonly WeekLane[];
+  readonly trades: readonly WeekTrade[];
+}
+
+export interface WeekLane {
+  /** Absent for a non-owner (#885), who matches a lane to its card by `slot`. */
+  readonly playbookId?: string;
+  readonly mode: string;
+  /** Its index in `Heartbeat.playbooks`, when it is one of the newest verdict pass's lines. */
+  readonly slot?: number;
+  readonly states: readonly (readonly (PlaybookVerdictState | null)[])[];
+}
+
+export interface WeekTrade {
+  readonly at: number;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
+  /** Absent for a non-owner: their trades ride the strip, never a lane. */
+  readonly playbookId?: string;
+  readonly mode?: string;
 }
 
 export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked";
@@ -57,9 +95,9 @@ export function entryDateText(date: string): string {
 
 /** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). Each
  *  glyph is unique on the page (#4650): "Paused" takes the pause bars, not the Store row's ○,
- *  because ○ already means Off here and ◐ means Market closed on the state card above; "Starts next
- *  pass" is the play mark beside them — a dotted ◌ read as ○ at this size, and the quarter-filled
- *  circles fall back to a speck in common fonts. */
+ *  because ○ already means Off here and ◐ means waiting for the open on the state card above;
+ *  "Starts next pass" is the play mark beside them — a dotted ◌ read as ○ at this size, and the
+ *  quarter-filled circles fall back to a speck in common fonts. */
 export const ROLL_CALL_WORDS: Record<
   RollCallStatus,
   { readonly glyph: string; readonly word: string }
@@ -75,6 +113,8 @@ export const ROLL_CALL_WORDS: Record<
 export const UNMANAGED_WORDS = {
   glyph: "◇",
   word: "Nothing sells it",
+  /** What its closed card says (#5073); the reason is what it opens to. */
+  fact: "Held, and no playbook this bot runs will sell it",
   reason:
     "Held, but no playbook this bot runs trades it, and the bot's own rules only trade the ten " +
     "names every bot watches. It keeps a live price; nothing here will sell it. Subscribe this " +
@@ -111,15 +151,22 @@ const GLYPH: Record<HeartbeatState, string> = {
   "no-record": "○",
 };
 
+/** What each state measures, in plain words (#5044): whether the bot is checking the market, and
+ *  when it last did. Nothing here compares the bot with the market or anyone else — "Beating" read
+ *  as "beating the market", so the enum's own word stays internal. A closed market is said as what
+ *  the BOT is doing, "Waiting for the open" (#5072): the market's own state is the top bar's, and
+ *  the Profile head beside it saying "Market closed" too was a second market badge (Eric,
+ *  2026-10-10: "the information is only needed in one spot without redundancy"). */
 const WORD: Record<HeartbeatState, string> = {
-  beating: "Beating",
-  stale: "Stale",
-  "market-closed": "Market closed",
-  "no-record": "No passes yet",
+  beating: "Running",
+  stale: "Not checking",
+  "market-closed": "Waiting for the open",
+  "no-record": "Hasn't run yet",
 };
 
-/** One short line: the state, then the one fact that explains it. The market's own open/close
- *  time is the topbar clock's job, so a closed market doesn't repeat it here. */
+/** One short line: the state, then the one fact that explains it — empty when the word already
+ *  says it all. The market's own open/close time is the topbar clock's job, so a closed market
+ *  doesn't repeat it here. */
 export function heartbeatLine(h: Heartbeat): {
   readonly glyph: string;
   readonly word: string;
@@ -128,18 +175,18 @@ export function heartbeatLine(h: Heartbeat): {
   const ago = h.sinceLastPassMs === null ? null : agoText(h.sinceLastPassMs);
   const detail =
     h.state === "beating"
-      ? `last pass ${ago} ago`
+      ? `checked the market ${ago} ago`
       : h.state === "stale"
-        ? // Stale with the market closed means no pass in the whole last session (#4949) — "for
-          // 3 days" would blur a stopped bot with a weekend's ordinary quiet.
+        ? // Stale with the market closed means no check in the whole last session (#4949) —
+          // "3 days ago" would blur a stopped bot with a weekend's ordinary quiet.
           h.marketOpen
-          ? `no pass for ${ago}`
-          : "no pass last session"
+          ? `last check ${ago} ago`
+          : "no check last session"
         : h.state === "market-closed"
           ? ago
-            ? `idle, last pass ${ago} ago`
-            : "idle"
-          : "this bot hasn't run a pass yet";
+            ? `last check ${ago} ago`
+            : ""
+          : "";
   return { glyph: GLYPH[h.state], word: WORD[h.state], detail };
 }
 

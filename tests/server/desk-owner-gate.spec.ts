@@ -57,6 +57,48 @@ describe("the playbook strips", () => {
     expect(withoutHeartbeatPlaybookIds({ ...heartbeat, playbooks: null }).playbooks).toBeNull();
   });
 
+  it("keeps the week's strip and the running lanes, and drops every name on them", () => {
+    const states = [["long" as const, null]];
+    const heartbeat = {
+      state: "beating" as const,
+      marketOpen: true,
+      lastPassAt: null,
+      sinceLastPassMs: null,
+      cadenceMs: 15_000,
+      staleAfterMs: 120_000,
+      playbooks: null,
+      rollCall: [],
+      week: {
+        bucketMs: 1_800_000,
+        now: 0,
+        sessions: [],
+        checks: [[3, null]],
+        gaps: [],
+        lanes: [
+          { playbookId: "S1-NVDA", mode: "standard" as const, slot: 0, states },
+          // No longer one of the newest verdict lines: a nameless lane with no card to sit under.
+          { playbookId: "OLD-PLAY", mode: "standard" as const, states },
+        ],
+        trades: [
+          {
+            at: 1,
+            symbol: "CRWV",
+            side: "sell" as const,
+            playbookId: "CRWV-WHEEL",
+            mode: "aggressive" as const,
+          },
+        ],
+      },
+    };
+    const { week } = withoutHeartbeatPlaybookIds(heartbeat);
+    expect(week?.checks).toEqual([[3, null]]);
+    expect(week?.lanes).toEqual([{ mode: "standard", slot: 0, states }]);
+    expect(week?.trades).toEqual([{ at: 1, symbol: "CRWV", side: "sell" }]);
+    expect(withoutHeartbeatPlaybookIds({ ...heartbeat, week: undefined })).not.toHaveProperty(
+      "week",
+    );
+  });
+
   it("drops each outcome's playbook chip and keeps the trade", () => {
     const [cycle] = withoutCycleOwnerFields([
       {

@@ -1,6 +1,7 @@
 /* The Overview's top (#3725 → #3727): `shell/accounts-overview-section.tsx`. The money story on the
- * left (net worth with its money row, then decisions); on the right, from 1200px, Sauron's
- * character card spanning both rows. One column below that, in DOM order: worth, decide, card. */
+ * left (net worth with its money row; under it the "All accounts" roster, or on `/u/:id` the
+ * book); on the right, from 1200px, Sauron's character card spanning both rows. One column below
+ * that, in DOM order: worth, decide, card. The "Needs a decision" pager left the grid (#5070). */
 
 .overview-grid {
   display: grid;
@@ -17,8 +18,7 @@
   flex-direction: column;
   gap: 16px;
 }
-.overview-grid .nw-card,
-.overview-grid .decisions {
+.overview-grid .nw-card {
   margin: 0;
 }
 .overview-decide:empty {

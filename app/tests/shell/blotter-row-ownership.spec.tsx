@@ -82,10 +82,13 @@ const inTable = (row: ReactElement) => (
     </table>
   </QueryClientProvider>
 );
+/** Every write lives in the opened row since #5071, so each case opens it first. */
+const openRow = () => fireEvent.click(screen.getByRole("button", { name: /^Detail for/ }));
 
 describe("BlotterRow — ownership gates the writes", () => {
   it("offers Close and Guidance on an account the viewer owns", () => {
     render(inTable(<BlotterRow position={position()} deskId="human-eric" canTrade />));
+    openRow();
 
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Guidance" })).toBeInTheDocument();
@@ -93,12 +96,14 @@ describe("BlotterRow — ownership gates the writes", () => {
 
   it("offers Close by default — the Profile page only ever shows the viewer's own accounts", () => {
     render(inTable(<BlotterRow position={position()} deskId="human-eric" />));
+    openRow();
 
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
   it("renders no Close on an account the viewer does not own, and keeps Guidance", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" canTrade={false} />));
+    openRow();
 
     expect(screen.queryByRole("button", { name: /Close/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Guidance" })).toHaveAttribute(
@@ -109,7 +114,7 @@ describe("BlotterRow — ownership gates the writes", () => {
 
   it("renders no Close this buy and no Roll on another account's lots", () => {
     render(inTable(<BlotterRow position={option()} deskId="sauron" canTrade={false} />));
-    fireEvent.click(screen.getByRole("button", { name: /buys for/ }));
+    openRow();
 
     expect(screen.getByText("2026-09-01")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Close/ })).not.toBeInTheDocument();
@@ -118,7 +123,7 @@ describe("BlotterRow — ownership gates the writes", () => {
 
   it("offers Close this buy and Roll on the viewer's own lots", () => {
     render(inTable(<BlotterRow position={option()} deskId="human-eric" canTrade />));
-    fireEvent.click(screen.getByRole("button", { name: /buys for/ }));
+    openRow();
 
     expect(screen.getAllByRole("button", { name: "Close this buy" })).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: /Roll/ })).toHaveLength(2);

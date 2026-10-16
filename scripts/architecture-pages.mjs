@@ -34,6 +34,27 @@ const MAP_TITLES = {
 /** The operating-model map draws the two deployed runtime containers again; they link, never duplicate. */
 const MIRRORS = { dashboard: "runtime-api.md", bots: "runtime-bots.md" };
 
+/**
+ * HAND-KEPT PAGES — one component's anatomy, cut across containers and written from the code with
+ * `path:line` citations rather than derived from the C4 maps (a playbook spans the bot runtime, the
+ * Store and the guards, so no one container page can hold it). The index links each one and the
+ * stale check leaves it alone; tests/arch/architecture-pages.spec.ts keeps the honesty rule for
+ * them instead: the page exists, and every `src/…:line` it cites names a file with that many lines.
+ */
+export const HAND_KEPT_PAGES = [
+  {
+    file: "playbook-anatomy.md",
+    title: "Playbook anatomy",
+    covers:
+      "What a playbook is made of, today and proposed: strategy, pair, setting, subscription, allocation; the decision surface; cycles; signals; thresholds; invariants",
+    roots: [
+      "src/playbooks",
+      "src/engine/option-guards.ts",
+      "src/subscriptions/strategy-budgets.ts",
+    ],
+  },
+];
+
 const slug = (s) =>
   String(s)
     .toLowerCase()
@@ -215,6 +236,22 @@ function indexMapSection(mapKey, m, findVerdict) {
   return lines.join("\n");
 }
 
+function indexHandKept() {
+  const lines = [
+    "## Component anatomy — hand-kept pages",
+    "",
+    "A component that cuts across containers, written from the code with `path:line` citations; the spec checks every cited line still exists.",
+    "",
+    "| Page | Covers | Code roots |",
+    "|---|---|---|",
+  ];
+  for (const p of HAND_KEPT_PAGES) {
+    const roots = p.roots.map((r) => `\`${r}\``).join(", ");
+    lines.push(`| [${p.title}](${p.file}) | ${cell(p.covers)} | ${roots} |`);
+  }
+  return `${lines.join("\n")}\n\n`;
+}
+
 function indexParity(parity) {
   if (!parity) return "";
   const lines = ["## Graphify parity", "", "| Community | Hubs | Mapped to |", "|---|---|---|"];
@@ -250,6 +287,7 @@ export function renderPages({ maps, verdicts, parity }) {
           : containerPage(mapKey, m, c, findVerdict);
     }
   }
+  index += indexHandKept();
   index += indexParity(parity);
   pages["README.md"] = index;
   return pages;
@@ -266,7 +304,10 @@ function main() {
       if (!existsSync(path) || readFileSync(path, "utf8") !== content) drift.push(file);
     } else writeFileSync(path, content);
   }
-  const stale = readdirSync(OUT).filter((f) => f.endsWith(".md") && !(f in pages));
+  const handKept = new Set(HAND_KEPT_PAGES.map((p) => p.file));
+  const stale = readdirSync(OUT).filter(
+    (f) => f.endsWith(".md") && !(f in pages) && !handKept.has(f),
+  );
   if (check) {
     if (drift.length || stale.length) {
       console.error(

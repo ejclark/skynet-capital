@@ -15,8 +15,8 @@ validated), not in any session's memory. Load this page when drawing; open one c
 
 ## The contract in one line
 
-**Pick the type by the story, draw ≤15 nodes in plain words, mark the delta without hue, run the
-lint, caption it.** Every step has an owner below.
+**Pick the type by the story, draw ≤15 nodes in plain words, mark the delta without hue, animate
+the flow, run the lint, caption it.** Every step has an owner below.
 
 ## 1. Pick by the story — `docs/PICTURES.md` → decision table
 
@@ -62,6 +62,7 @@ Cross-cutting cards (open one when the question is not "which type" but "how do 
 |---|---|---|
 | new in this change | thick edge `==>`, or `subgraph "this PR"` | a green fill |
 | removed / the old path | dotted edge `-.->` | a red fill |
+| a live path (anything that runs) | animate every live edge: `a e1@--> b` then `e1@{ animate: true }` — dotted removed paths stay still, so motion says "this runs" | one animated edge among many |
 | changed | `classDef changed stroke-width:3px` (no colour) | a hue shift |
 | a fork / decision | diamond `{ }` | — |
 | a store | `@{ shape: cyl }` | — |

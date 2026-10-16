@@ -171,8 +171,12 @@ const blind = (s) =>
  * substring of ONE element's text: each text unit alone, and the units of each enclosing block
  * (`groups`: a table row, a card) read in order, so a region may span a name and its amount in
  * one row but never bridge two unrelated places on the page.
- * @param {{id: string, viewer: string, answerRegion: string[]}[]} facts
- * @param {{viewer: string, route: string, text: {text: string, groups?: number[]}[],
+ * A fact and a walk that both name their world are matched within that world only: one viewer's
+ * fact of one world is not proved by a screen of another (a bad-day world prints other amounts).
+ * → `{judged, covered, missing, seen}`, `seen` and `missing` as fact keys (`factKey`), so the
+ * round can hand the task author only facts a screen showed (#5009).
+ * @param {{id: string, viewer: string, world?: string, answerRegion: string[]}[]} facts
+ * @param {{viewer: string, world?: string, route: string, text: {text: string, groups?: number[]}[],
  *          revealed?: {text: {text: string, groups?: number[]}[]}[]}[]} walks
  */
 export function regionCoverage(facts, walks) {
@@ -184,24 +188,30 @@ export function regionCoverage(facts, walks) {
     }
     return [...units.map((u) => blind(u.text)), ...blocks.values()];
   };
+  const worldly = facts.some((f) => f.world) && walks.some((w) => w.world);
+  const where = (x) => (worldly ? `${x.world}/${x.viewer}` : x.viewer);
   for (const w of walks) {
-    const list = pages.get(w.viewer) ?? [];
+    const list = pages.get(where(w)) ?? [];
     list.push(read(w.text));
     for (const r of w.revealed ?? []) list.push(read(r.text));
-    pages.set(w.viewer, list);
+    pages.set(where(w), list);
   }
-  const seenBy = (viewer, snippet) =>
-    (pages.get(viewer) ?? []).some((units) => units.some((u) => u.includes(blind(snippet))));
+  const seenBy = (at, snippet) =>
+    (pages.get(at) ?? []).some((units) => units.some((u) => u.includes(blind(snippet))));
   const rows = facts.map((f) => ({
-    id: f.id,
-    viewer: f.viewer,
-    seen: (f.answerRegion ?? []).filter((s) => seenBy(f.viewer, s)),
+    key: factKey(f),
+    at: where(f),
+    seen: (f.answerRegion ?? []).filter((s) => seenBy(where(f), s)),
   }));
-  const judged = rows.filter((r) => pages.has(r.viewer));
+  const judged = rows.filter((r) => pages.has(r.at));
   return {
     judged: judged.length,
     covered: judged.filter((r) => r.seen.length > 0).length,
-    // Ids repeat across viewers (two viewers can see one account), so a miss names its viewer.
-    missing: judged.filter((r) => r.seen.length === 0).map((r) => `${r.viewer}:${r.id}`),
+    // Ids repeat across viewers and worlds (two viewers can see one account), so a key names both.
+    missing: judged.filter((r) => r.seen.length === 0).map((r) => r.key),
+    seen: judged.filter((r) => r.seen.length > 0).map((r) => r.key),
   };
 }
+
+/** A fact's key in regions.json: `<viewer>:<id>`, led by `<world>/` when the fact names one. */
+export const factKey = (f) => `${f.world ? `${f.world}/` : ""}${f.viewer}:${f.id}`;

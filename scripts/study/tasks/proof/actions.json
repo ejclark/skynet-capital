@@ -4,8 +4,8 @@
     { "action": { "type": "scroll", "dir": "down", "screens": 1 } },
     { "action": { "type": "scroll", "dir": "down", "screens": 1 } },
     {
-      "expect": "only the positions that are losing stay in the list",
-      "action": { "type": "tap", "text": "Losing" }
+      "expect": "only the positions worth less than they cost stay in the list",
+      "action": { "type": "tap", "text": "Below cost" }
     },
     { "action": { "type": "done", "answer": "CRWV shares are down $412" } }
   ],

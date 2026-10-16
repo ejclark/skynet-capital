@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useState } from "react";
 import type { BoardMetric } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
+import { KindChip } from "../ui";
 import { type LeagueLine, type LeagueReading, readLeague } from "./league-data";
 
 /**
@@ -29,12 +30,7 @@ function Line({ line, me }: { readonly line: LeagueLine; readonly me?: string })
     <li className={owned ? "league-row is-owned" : "league-row"}>
       <span className="league-rank num">{rank}</span>
       <span className="league-name">
-        {row.name}{" "}
-        {isMe ? (
-          <span className="chip chip-you">you</span>
-        ) : (
-          <span className={`chip chip-${row.kind}`}>{row.kind === "bot" ? "Bot" : "Human"}</span>
-        )}
+        {row.name} <KindChip kind={row.kind} you={isMe} />
         {owned && !isMe ? <span className="league-yours">Yours</span> : null}
       </span>
       <span className={`league-value num tone-${row.tone}`}>{row.value}</span>

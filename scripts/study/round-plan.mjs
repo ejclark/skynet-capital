@@ -40,7 +40,7 @@ const USAGE =
   "usage: round.mjs --pin <pin dir> --out <dir> --sealed <dir> [--profile <area.json>] " +
   "[--thin] [--dry-run] [--stub <dir>] [--concurrency N] [--only-world <name>] [--cap N] " +
   "[--runs N] [--experts N] " +
-  "[--frozen-from <main round dir> --control negative|positive --expect <key ids file>]";
+  "[--frozen-from <main round dir> --control negative|positive --expect <expect file>]";
 
 /** The two control rounds a study grades its main round against (grade.mjs --negative/--positive). */
 export const CONTROL_KINDS = ["negative", "positive"];
@@ -185,6 +185,11 @@ export function profileProblems(p) {
   if (!(Array.isArray(p?.pages) && p.pages.every(isText) && p.pages.length > 0)) {
     out.push("pages must list plain descriptions");
   }
+  // What the experts and the words pass read in place of the member cards (#5099).
+  const unroled = [...new Set((p?.matrix ?? []).map((r) => r.member))].filter(
+    (m) => isText(m) && !isText(p?.roles?.[m]),
+  );
+  if (unroled.length > 0) out.push(`roles must describe every member: ${unroled.join(", ")}`);
   for (const [i, c] of (p?.census ?? []).entries()) {
     if (!(isText(c.world) && isText(c.viewer))) out.push(`census[${i}] needs world and viewer`);
     if (!(Array.isArray(c.for) && c.for.length > 0)) out.push(`census[${i}].for is required`);
@@ -392,6 +397,22 @@ export function resolveTasks({ drafts, facts, unit, file }) {
     });
   });
   return { tasks, problems };
+}
+
+/**
+ * The facts a task author may build on: only those whose answer region a census screen showed
+ * (harvest.mjs → regions.json `seen`, keyed by harvest-plan.mjs → factKey). A fact no screen shows
+ * cannot be graded — its member can be right and still fail — so it never becomes a task (#5009:
+ * 304 of the first full round's 435 facts had a region no screen printed). An older regions.json
+ * with no `seen` list withholds only the facts it names `missing`. → {facts, withheld}.
+ */
+export function gradableFacts(facts, regions) {
+  if (!regions) return { facts, withheld: [] };
+  const key = (f) => `${f.world ? `${f.world}/` : ""}${f.viewer}:${f.id}`;
+  const keep = Array.isArray(regions.seen)
+    ? (f) => regions.seen.includes(key(f))
+    : (f) => !(regions.missing ?? []).includes(key(f));
+  return { facts: facts.filter(keep), withheld: facts.filter((f) => !keep(f)).map(key) };
 }
 
 /** Several facts sheets as one (harvest takes one): facts concatenated, data names unioned. */

@@ -1,22 +1,71 @@
 import { Route } from "../../src/routes/accounts";
 import { defaultSection, isViewerSection, sectionsFor } from "../../src/shell/profile-sections";
 
-/** Decisions folded into Activity and Heartbeat (#3687 slice 4): the tab is gone, and a saved
- *  `?section=decisions` link lands on Heartbeat, where its no-trade passes now live. */
+/** Heartbeat merged into Playbooks (#5073, #5037 round 2): the bot's checks head the Playbooks
+ *  section, so a saved `?section=heartbeat` link — and the older `?section=decisions`, folded into
+ *  Heartbeat by #3687 — lands there with the check log open, never back on Overview. */
 describe("/accounts validateSearch — section", () => {
   const validateSearch = Route.options.validateSearch as (search: Record<string, unknown>) => {
     section?: string;
+    checks?: string;
   };
 
-  it("sends an old Decisions link to Heartbeat", () => {
-    expect(validateSearch({ section: "decisions" })).toMatchObject({ section: "heartbeat" });
+  it("sends an old Heartbeat or Decisions link to Playbooks, with the check log open", () => {
+    for (const section of ["heartbeat", "decisions"]) {
+      expect(validateSearch({ section })).toEqual({ section: "playbooks", checks: "open" });
+    }
+  });
+
+  it("keeps the check log open only on Playbooks, and only as `open`", () => {
+    expect(validateSearch({ section: "playbooks", checks: "open" })).toEqual({
+      section: "playbooks",
+      checks: "open",
+    });
+    expect(validateSearch({ section: "playbooks", checks: "yes" }).checks).toBeUndefined();
+    expect(validateSearch({ section: "activity", checks: "open" }).checks).toBeUndefined();
   });
 
   it("keeps the live sections, and drops anything unknown", () => {
-    for (const section of ["activity", "heartbeat", "thesis"]) {
+    for (const section of ["activity", "playbooks", "thesis"]) {
       expect(validateSearch({ section })).toMatchObject({ section });
     }
     expect(validateSearch({ section: "nope" }).section).toBeUndefined();
+  });
+});
+
+/** An order's playbook link (#5073 slice 4a): `?card=` with its mode, the check that placed the
+ *  order and the order itself survive the URL; a malformed part drops, never the section. */
+describe("/accounts validateSearch — arriving on a playbook's card", () => {
+  const validateSearch = Route.options.validateSearch as (
+    search: Record<string, unknown>,
+  ) => Record<string, unknown>;
+
+  it("keeps the card, its mode, the check and the order", () => {
+    expect(
+      validateSearch({
+        section: "playbooks",
+        card: "SAURON",
+        mode: "aggressive",
+        fill: "1791206400000",
+        from: "ord-1",
+      }),
+    ).toEqual({
+      section: "playbooks",
+      card: "SAURON",
+      mode: "aggressive",
+      fill: 1791206400000,
+      from: "ord-1",
+    });
+  });
+
+  it("drops a landing with no card, and a check that is not a time", () => {
+    expect(validateSearch({ section: "playbooks", mode: "aggressive" })).toEqual({
+      section: "playbooks",
+    });
+    expect(validateSearch({ section: "playbooks", card: "SAURON", fill: "soon" })).toEqual({
+      section: "playbooks",
+      card: "SAURON",
+    });
   });
 });
 
@@ -87,7 +136,7 @@ describe("the Profile page's section list and its default (the zero-account door
       "overview",
       "activity",
       "events",
-      "heartbeat",
+      "playbooks",
       "thesis",
       "milestones",
       "feedback",

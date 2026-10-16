@@ -35,6 +35,88 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: retry a github 500 on the spend breaker's and relay's reads
+- **SHA:** a990afa   **DATE:** 2026-10-14   **STATUS:** closed
+- **COVERS:** bb6d999 143153d
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [38495812047](https://github.com/ejclark/skynet-capital/actions/runs/38495812047) at 2026-10-14T01:27:19Z. Repair capsule #5354 filed 2026-10-14T01:33:38Z, closed 13m later by #5355.
+- **ROOT CAUSE:** Two `route` ticks went red on `main` within six minutes, both on a single GitHub-side 500: **Run 38495812047** (this issue): `checkCircuitBreaker` read run 38494372525's log, got `HTTP 500`, fell back to the job list, got another `HTTP 500` a second later, and refused. I read that same log locally minutes later and it came back fine (308 KB, exit 0). Not a breaker bug and not a runaway, just two unretried reads. **Run 38496303201**: the relay's closed-issue read (`ghRestAll`, i.e. curl) got `curl: (22) The requested URL returned error: 500`. `isTransientGhError` only knew gh's `HTTP 5xx` wording, so even a `withRetry`-wrapped `ghRest` read got one attempt. projects.mjs had already found thi…
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts`, `tests/scripts/moneypenny/gh.spec.ts`, `tests/scripts/moneypenny/relay.spec.ts` (#5355).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### Two visual PRs red on their first CI run: Linux-only baselines, and four builds on one surface
+- **SHA:** n/a   **DATE:** 2026-10-10   **STATUS:** closed
+- **SIGNAL:** Eric, on #5080: "fails CI out of the gate too. red flag for avoidable process
+  friction, possible process thrashing."
+  - **What happened:** #5079's first two runs (16:26, 16:47) and #5080's first run (17:00, red at
+    17:05) failed `integration tests` on `matches the known-good page screenshot` only — no logic
+    failure among them. #5079 was re-baselined by hand (902daaed, 17:21); #5064 earlier the same
+    day took two hand re-baseline commits (68348966, f3b51581).
+  - **Detection lag:** each red was seen within minutes, but the class — a visual PR's first run
+    failing on its own new pictures — was paid at least three times in one day before anyone named
+    it. Eric named it; nothing counts first-run reds.
+- **ROOT CAUSE:** three mechanisms.
+  1. Screenshot baselines are `*-chromium-linux.png` only and builders run on macOS, so `ship.sh`
+     skips the local Playwright run (2026-10-02, PR #4519). A visual PR meets its new pictures
+     first in CI, and the way back was six manual steps: download `playwright-report`, decode the
+     zip embedded in its `index.html`, map each attachment to a baseline path, read each diff, copy
+     each actual, commit.
+  2. Four builds ran in parallel on one surface, the profile page (#5078, #5079, #5080, #5081 — all
+     four edited `app/src/routes/accounts.tsx`, three the profile head `cockpit-head.tsx`). Each
+     head change moved the same page screenshots, so whichever merged second failed on pictures it
+     never drew: #5079 moved five page shots (four of them 51px shorter), #5080 moved the same
+     five (four of them 1px taller) plus two more, and the code collided (#5079 against #5078).
+  3. (Found in review, after #5080 merged.) `captureWholeFrame` (`e2e/determinism.ts`) asserted
+     the frame and then the top bar's market clock, both hard, so a red frame hid its clock. #5080's
+     first red run (38069939238) showed six frames and one clock; the re-baseline of those seven
+     (91c38a4) went red on the six clocks it had hidden (run 38072789546), and a16511d paid the
+     second round trip. The script reads only what a run compared, so it could not have caught it.
+- **PREVENTION:**
+  1. **Script (rank 1):** `scripts/rebaseline-from-ci.mjs <pr>` finds the PR's failed `integration
+     tests` run, decodes the report, saves expected/actual/diff side by side and lists them — a
+     dry run by default, ending in a reminder to read every diff. `--run <id> --apply --commit`
+     copies the actuals and makes one commit. It refuses any failure that is not a pixel mismatch
+     and any snapshot with no baseline yet (`tests/scripts/rebaseline-from-ci.spec.ts`).
+  2. **`ship.sh` line:** off Linux, a diff under `app/src/` or `e2e/` prints that command with the
+     new PR's number as soon as it opens (`tests/arch/ship.spec.ts`).
+  3. **Doctrine:** `docs/DELEGATION.md` rail 7 — one build per surface at a time (WIP 1 per
+     surface); a later build on a busy surface is linked `--blocked-by` the first
+     (`scripts/issues.mjs update` now takes it), and every puller waits. Echoed in
+     `.claude/skills/steer/SKILL.md`'s read-back and `docs/ENGINEERING.md`.
+  4. **Soft frame shot:** `captureWholeFrame` now asserts the frame with `expect.soft`, so every
+     run compares both pictures and one dry run lists both. The test still fails on either.
+     The review also tightened the script: a logic failure on ANY attempt refuses the test (not
+     only the last one), a snapshot CI reported missing is refused even if a file has appeared
+     locally since, and `--apply` refuses a run that did not test the PR's head (a dry run on one
+     still lists it, read only).
+- **SIDE QUESTS:** a CI job that re-baselines on a label would remove the round trip entirely (CI
+  already holds the actuals), but it lives in `.github/workflows/` — protected by `envelope.json` —
+  so it boards the platter as a proposal only (→ docs/IDEAS.md). No workflow file was touched here.
+
+---
+
+### A member study's census reported done after operating none of its controls
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's full round (#4943).
+  - **What the census is:** the step that operates every control on the area once and frames each
+    result, so the blind experts review the whole area, not a hand-picked sample.
+  - **What happened:** it operated 0 of 856 controls, and preflight still marked it done.
+  - **How it was caught:** by reading the experts' inputs after the round, which showed sign-in
+    doors instead of the profile. No gate fired.
+- **ROOT CAUSE:** a world change (#4998) made every fresh page load clear the member's session, and
+  the census opens each control on a fresh load. `openComposed` never passed the world's sign-in
+  step back to its caller. The census measured "did each step run", not "did it reach the screen it
+  was meant to".
+- **PREVENTION:** gate (#5008): sign-in is passed through, a census reaching under 80% of its
+  controls stops the round before any expert runs, and an expert batch with no frames refuses to
+  start.
+- **SIDE QUESTS:** the same "ran, so done" shape exists anywhere a step is checked for having run
+  rather than for its output (README Lessons, the oracle audit row: the answer grader was trusted
+  until two auditors read its fails).
+
+---
+
 ### Stub-only dry runs passed a study harness that failed its first real call three ways
 - **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
 - **SIGNAL:** The profile member study's first real thin slice (#4943).

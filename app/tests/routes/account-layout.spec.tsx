@@ -40,8 +40,8 @@ rstest.mock("../../src/live/settings", () => ({
   fetchSettings: () => Promise.resolve({ accounts: [] }),
   ownsAccount: () => false,
 }));
-// The head's bot chip reads the heartbeat; it has its own spec.
-rstest.mock("../../src/shell/heartbeat", () => ({ HeartbeatChip: () => null }));
+// The head's bot line reads the heartbeat; it has its own spec.
+rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
 
 const PULSE: DeskPulse = { curve: null, weeks: [], tiles: [], race: null, streaks: [] };
 

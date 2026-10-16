@@ -1,8 +1,10 @@
 // Type surface for facts-sheet.mjs (`allowJs` is off; same arrangement as ../lint.d.mts).
 
+import type { Clock } from "../clock.mjs";
+
 export type Answer =
   | { kind: "number"; value: number; abs?: number; rel?: number }
-  | { kind: "text"; value: string };
+  | { kind: "text"; value: string; alternatives?: string[] };
 
 export interface Fact {
   viewer: string;
@@ -21,9 +23,12 @@ export function parseAmount(text: unknown): number | null;
 export function occParts(
   symbol: unknown,
 ): { root: string; expiry: string; type: "put" | "call"; strike: number } | null;
-export function shortDate(iso: string): string;
+export function shortDate(iso: string, clock?: Clock): string;
 export function nyDate(iso: string): string;
-export function rowStamp(iso: string): string;
+export function clockDate(iso: string, clock?: Clock): string;
+export function rowStamp(iso: string, clock?: Clock): string;
+export function stripDay(iso: string): string;
+export function leadClause(reason: unknown): string;
 export function dataNames(payloads: Record<string, unknown>): string[];
 export function weakRegion(snippet: unknown): boolean;
 export function factSheet(opts: {
@@ -33,4 +38,5 @@ export function factSheet(opts: {
   verdictWords?: Record<string, string>;
   activityRows?: number;
   calendarDays?: number;
+  clock?: Clock;
 }): Fact[];

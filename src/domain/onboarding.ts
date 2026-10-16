@@ -37,7 +37,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "connect",
     title: "Connect your Alpaca paper account",
     detail:
-      "Set up a free Alpaca paper account and link it here in five short steps, detailed below. We read keys only to verify and show your balance — no orders are ever placed on your behalf.",
+      "Set up a free Alpaca paper account and link it here in five short steps, detailed below. Your keys let us check your balance and send the orders you place here. Nothing trades unless you place it.",
     points: ONBOARDING_STEP_POINTS,
     route: "/app/accounts?section=milestones&chapter=onboarding",
   },

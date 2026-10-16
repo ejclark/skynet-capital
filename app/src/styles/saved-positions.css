@@ -1,0 +1,88 @@
+/* `/saved-positions` (#3968) — `shell/saved-positions-section.tsx`, `saved-position-card.tsx`.
+ * Minimal on purpose (#5179): it only stops the list rendering as browser defaults (bullets, a
+ * white name box, a lever name running into its call). The card's real design is the
+ * saved-positions redesign's, after #5037's position row — no new layout or numbers here.
+ * Theme tokens only; the stake form and kickers come from guidance.css. */
+.saved-positions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+.saved-positions p {
+  margin: 0;
+}
+.saved-position-add,
+.saved-position-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+/* Save and Import keep their own width, as before this sheet; the column would stretch them. */
+.saved-position-add > .guidance-btn,
+.saved-position-import > .guidance-btn {
+  align-self: flex-start;
+}
+.saved-position-add-fields,
+.saved-position-import-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.saved-position-list,
+.saved-position-calls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.saved-position-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.saved-position-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.saved-position-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The same box as `.field input` (gate.css), so the name reads as editable, not as a UA default. */
+.saved-position-name {
+  flex: 1 1 10em;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: var(--sans);
+}
+.saved-position-symbol {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.saved-position-calls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+/* The lever's name and its call are two words with a gap between, never "SharesHold". */
+.saved-position-calls li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}

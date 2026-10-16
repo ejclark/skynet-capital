@@ -1,4 +1,5 @@
 import { Fragment, type ReactElement } from "react";
+import { type WindowPlan, windowPlan } from "../live/playbook-rule";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
@@ -11,10 +12,12 @@ import {
   type MetricsScope,
 } from "./playbook-metrics";
 import { SubscribeForm } from "./playbook-subscribe-form";
+import { WindowTimeline } from "./playbook-window";
 
 /**
  * THE PLAYBOOK STORE's pair rows (issue #885; by strategy since #4469 slice 3b), moved here whole
- * from the retired desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). A
+ * from the desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623; that
+ * address now holds the bot's own Playbooks section, #5073). A
  * strategy card (`playbook-strategy-cards.tsx`) holds one row per pair. The account is a parameter
  * of the action, never a page of its own.
  */
@@ -105,18 +108,27 @@ const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
  * The facts the probe derives from the playbook's own code — window, target exposure per mode, and
  * the traits it proved — ported from the retired Plays cards (#3623) so they can never drift from
  * what the playbook does. A tactical playbook has no window, so it shows none rather than a false
- * "0%, no window" row; its rules are the Enter / Exit / Hold copy below.
+ * "0%, no window" row; its rules are the Enter / Exit / Hold copy below. A window drawn as a line
+ * (#5432) is not said again as a sentence.
  */
-function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): ReactElement | null {
+function PlaybookFacts({
+  card,
+  drawn,
+}: {
+  readonly card: PlaybookStoreCardView;
+  readonly drawn: boolean;
+}): ReactElement | null {
   if (!(card.window && card.size) && card.traits.length === 0) return null;
   return (
     <>
       {card.window && card.size ? (
         <dl className="pb-card-facts">
-          <div>
-            <dt>Window</dt>
-            <dd className="num">{card.window}</dd>
-          </div>
+          {drawn ? null : (
+            <div>
+              <dt>Window</dt>
+              <dd className="num">{card.window}</dd>
+            </div>
+          )}
           <div>
             <dt>Target exposure</dt>
             <dd className="num">
@@ -171,6 +183,51 @@ function evidenceFacts(pair: PairRowView): string[] {
     ...(pair.shelfOn ? [`verdict holds to ${pair.shelfOn}`] : []),
     ...(pair.checkOn ? [`conviction checked ${pair.checkOn}`] : []),
   ];
+}
+
+/** A pre-earnings pair's window laid on its ticker's next report, when there is one to draw: a
+ *  single ticker, a window with one span, and a report on file (`windowPlan`). */
+function drawnWindow(card: PlaybookStoreCardView): WindowPlan | undefined {
+  const [symbol] = card.symbols;
+  if (card.symbols.length !== 1 || !symbol) return undefined;
+  return windowPlan(symbol, card.window, new Date().toISOString());
+}
+
+/** The pair's rule: a pre-earnings pair draws it as one line (#5432) in place of the Enter / Exit /
+ *  Hold rows; its own labelled notes still follow. Anything else says its rule in the rows. */
+function PairRule({ card }: { readonly card: PlaybookStoreCardView }): ReactElement {
+  const plan = drawnWindow(card);
+  const notes = card.notes?.map((note) => (
+    <Fragment key={note.label}>
+      <dt>{note.label}</dt>
+      <dd>{note.text}</dd>
+    </Fragment>
+  ));
+  if (plan) {
+    return (
+      <>
+        <WindowTimeline plan={plan} {...(card.stretches ? { stretches: card.stretches } : {})} />
+        <PlaybookFacts card={card} drawn />
+        {card.notes?.length ? <dl className="pb-card-triggers">{notes}</dl> : null}
+      </>
+    );
+  }
+  return (
+    <>
+      <PlaybookFacts card={card} drawn={false} />
+      <dl className="pb-card-triggers">
+        <dt>Enter</dt>
+        <dd>{card.enter}</dd>
+        <dt>Exit — take profit</dt>
+        <dd>{card.exitTakeProfit}</dd>
+        <dt>Exit — cut losses</dt>
+        <dd>{card.exitCutLosses}</dd>
+        <dt>Hold</dt>
+        <dd>{card.hold}</dd>
+        {notes}
+      </dl>
+    </>
+  );
 }
 
 /**
@@ -261,23 +318,7 @@ export function PairRow({
       <details className="pb-pair-rules" open>
         <summary>Rules and record</summary>
         <p className="pb-card-description">{card.description}</p>
-        <PlaybookFacts card={card} />
-        <dl className="pb-card-triggers">
-          <dt>Enter</dt>
-          <dd>{card.enter}</dd>
-          <dt>Exit — take profit</dt>
-          <dd>{card.exitTakeProfit}</dd>
-          <dt>Exit — cut losses</dt>
-          <dd>{card.exitCutLosses}</dd>
-          <dt>Hold</dt>
-          <dd>{card.hold}</dd>
-          {card.notes?.map((note) => (
-            <Fragment key={note.label}>
-              <dt>{note.label}</dt>
-              <dd>{note.text}</dd>
-            </Fragment>
-          ))}
-        </dl>
+        <PairRule card={card} />
         <footer className="pb-card-evidence">
           <span className="num">{card.evidence}</span>
           {card.evidenceHref && card.evidenceHref !== pair.studyHref ? (

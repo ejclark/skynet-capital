@@ -20,8 +20,10 @@ import {
 import {
   analystText,
   expertBatchText,
+  expertConsolidationText,
   recorderView,
   taskAuthorText,
+  wordsText,
 } from "../../scripts/study/round-messages.mjs";
 import {
   type AreaConfig,
@@ -29,6 +31,7 @@ import {
   canaryQuestion,
   canaryVerdict,
   censusPlan,
+  gradableFacts,
   keepClean,
   lintFeedback,
   mergeFacts,
@@ -96,6 +99,17 @@ describe("the profile area config", () => {
     expect(profileProblems(bad)).toContain("thin must name a member and world from the matrix");
     const vp = { ...profile, matrix: [{ ...profile.matrix[0], viewports: ["tablet"] }] };
     expect(profileProblems(vp).join(" ")).toMatch(/phone and\/or desktop only/);
+  });
+
+  // The experts and the words pass read these instead of the member cards (#5099), so a find of
+  // theirs is never primed by a member's own words. Every member in the matrix needs one.
+  it("gives every member in the matrix a role in plain words", () => {
+    const { roles: _, ...none } = profile;
+    expect(profileProblems(none as AreaConfig)).toContain(
+      "roles must describe every member: eric, returning-trader, bot-watcher, phone-only, invited-friend, first-timer",
+    );
+    const blank = { ...profile, roles: { ...profile.roles, "phone-only": " " } };
+    expect(profileProblems(blank)).toEqual(["roles must describe every member: phone-only"]);
   });
 });
 
@@ -284,6 +298,25 @@ describe("what the task author hears back", () => {
     expect(m.facts.map((f) => f.world)).toEqual(["a", "b"]);
     expect(m.dataNames).toEqual(["X", "Y"]);
   });
+
+  it("hands the task author only facts a census screen showed, by world and viewer", () => {
+    const fact = (world: string, id: string) => ({
+      world,
+      viewer: "v",
+      id,
+      answer: {},
+      answerRegion: ["r"],
+    });
+    const facts = [fact("a", "seen"), fact("a", "unseen"), fact("b", "seen")];
+    const regions = { seen: ["a/v:seen"], missing: ["a/v:unseen", "b/v:seen"] };
+    expect(gradableFacts(facts, regions)).toEqual({
+      facts: [facts[0]],
+      withheld: ["a/v:unseen", "b/v:seen"],
+    });
+    // An older regions.json names only what it missed; no regions at all withholds nothing.
+    expect(gradableFacts(facts, { missing: ["a/v:unseen"] }).withheld).toEqual(["a/v:unseen"]);
+    expect(gradableFacts(facts, null).facts).toHaveLength(3);
+  });
 });
 
 describe("the canary", () => {
@@ -455,8 +488,24 @@ describe("batching the census for the experts", () => {
 
   it("hands the expert the entries verbatim", () => {
     const batch = { route: "/a", viewport: "phone", entries: [{ weird: "exact ✓ text" }] };
-    const text = expertBatchText({ cards: { m: "card" }, batch, frames: [], n: 1, of: 1 });
+    const text = expertBatchText({ roles: "m: someone", batch, frames: [], n: 1, of: 1 });
     expect(text).toContain('"weird": "exact ✓ text"');
+  });
+
+  // Round one handed the experts every member card, then counted their finds as unprimed — so
+  // every item came out "unprimed" (#5099). They and the words pass read the roles now.
+  it("hands the experts and the words pass the area's roles, never a member card", () => {
+    const roles = "m: someone who checks in on a phone";
+    const batch = { route: "/a", viewport: "phone", entries: [] };
+    const texts = [
+      expertBatchText({ roles, batch, frames: [], n: 1, of: 1 }),
+      expertConsolidationText({ roles, batchFindings: [], impressions: [] }),
+      wordsText({ roles, strings: { routes: {} } }),
+    ];
+    for (const text of texts) {
+      expect(text).toContain(roles);
+      expect(text).not.toMatch(/member card/i);
+    }
   });
 });
 

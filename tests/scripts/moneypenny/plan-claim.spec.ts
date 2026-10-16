@@ -319,6 +319,25 @@ describe("feedbackReadyIntent — the existing shape is kept", () => {
     const intent = feedbackReadyIntent({
       payload: { issue: { number: 1, labels: [{ name: "ready" }] } },
     });
-    expect(intent.reason).toContain("not a feedback issue");
+    expect(intent.reason).toContain("not a feedback or bug issue");
+  });
+
+  // #5332 — a mid-build bug is filed `bug` + `fast-track` and "pulled next"; it needs no `feedback`.
+  it("is ready on `labeled: ready` for a bug that carries no feedback label", () => {
+    const labels = ["bug", "fast-track", "ready"].map((name) => ({ name }));
+    const intent = feedbackReadyIntent({
+      payload: {
+        action: "labeled",
+        label: { name: "ready" },
+        issue: { number: 5164, state: "open", labels },
+      },
+    });
+    expect(intent.ready).toBe(true);
+  });
+
+  it("leaves a bug that is also a plan to the plan lane — one ready event, one build", () => {
+    const labels = ["bug", "plan", "ready"].map((name) => ({ name }));
+    const intent = feedbackReadyIntent({ payload: { issue: { number: 1, labels } } });
+    expect(intent.ready).toBe(false);
   });
 });
