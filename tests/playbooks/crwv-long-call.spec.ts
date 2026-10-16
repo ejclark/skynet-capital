@@ -158,6 +158,28 @@ describe("CRWV-LONG-CALL — buying", () => {
   });
 });
 
+describe("CRWV-LONG-CALL — adding stays on one line", () => {
+  it("adds the same contract it holds, not a fresh delta pick", () => {
+    const [add] = decide(market(), book(held(55, 1, 17.9)));
+    expect(add?.option?.legs[0]?.occSymbol).toBe(occ(55));
+  });
+
+  it("adds nothing once fewer than 90 days remain on the held expiry", () => {
+    // 2027-01-20 is 86 days before Apr 16.
+    const jan = "2027-01-20T15:00:00Z";
+    expect(decide(market(jan, chain(jan)), book(held(60, 2, 15.5)))).toEqual([]);
+  });
+
+  it("buys nothing while a time exit is due, even when the held call has no quote", () => {
+    const late = "2027-03-05T15:00:00Z";
+    const unquoted = market(
+      late,
+      chain(late).filter((q) => q.occSymbol !== occ(60)),
+    );
+    expect(decide(unquoted, book(held(60, 2, 15.5)))).toEqual([]);
+  });
+});
+
 describe("CRWV-LONG-CALL — selling", () => {
   it("sells everything once the bid is double the cost", () => {
     const [close] = decide(market(), book(held(60, 3, 7.5)));

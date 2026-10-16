@@ -264,15 +264,14 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
     enter:
       "Buys one call per cycle on the latest expiry 120 to 200 days out, at the strike nearest " +
       "0.60 delta (0.70 conservative, 0.50 aggressive), up to 6 contracts (3 / 10) and never past " +
-      "the capital you allocate. It adds only while the price is within 10% of what the held " +
-      "calls cost, so it never chases a run. Never buys during an earnings blackout.",
+      "the capital you allocate — about one every ten minutes, so it can fill within the hour. " +
+      "Adds are the same contract, only while it costs within 10% of what was paid and 90 or " +
+      "more days remain. Never buys during an earnings blackout.",
     exitTakeProfit: "Sells every call once it is worth double what it cost.",
     exitCutLosses:
       "No stop: the most it can lose is the premium paid. It sells everything with 45 days left, " +
       "before time decay speeds up, whatever the price.",
-    hold:
-      "Holds through earnings reports. Between buying and selling it waits; after a sale it may " +
-      "buy again on the next window.",
+    hold: "Holds through earnings reports. After a sale it may buy again at once, at the new price.",
   },
   "NVDA-CALL-SPREAD": {
     description:

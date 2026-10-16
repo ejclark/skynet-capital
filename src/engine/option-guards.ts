@@ -167,10 +167,11 @@ function clampClose(
 }
 
 /** Rule 6: the open must close before the earliest live print blackout begins — except a bought
- *  call, which may hold through a print but never opens inside one. Its worst case is the premium
- *  paid, and on CRWV the market has priced the print move SMALLER than it turned out
- *  (`docs/research/events/crwv-2026-11-10-print.md`), so holding one across is the side the data
- *  favours; the never-across-a-print rule is about sold options (#5482). */
+ *  call, which may hold through a print but never opens inside one. The rule guards against a gap
+ *  the account cannot cover: a sold option's loss on a print gap has no floor, a bought call's is
+ *  the premium, which rule 8 has already reserved inside the playbook's budget. Whether holding a
+ *  print is WISE is the playbook's evidence to state (CRWV-LONG-CALL's pair row, #5482), not a
+ *  cover question this guard can answer. */
 function printProblem(
   option: OptionOrderIntent,
   underlying: string,

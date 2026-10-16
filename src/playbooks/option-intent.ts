@@ -3,6 +3,7 @@ import type {
   OptionOrderIntent,
   OptionQuoteBand,
   OptionSelection,
+  OptionStructure,
   OrderForecast,
   OrderIntent,
   PlaybookMode,
@@ -36,7 +37,7 @@ export interface OptionLegSpec {
 }
 
 export interface OptionOpenSpec extends IntentFrame {
-  readonly structure: "cash-secured-put" | "covered-call" | "call-debit-spread" | "long-call";
+  readonly structure: Exclude<OptionStructure, "close">;
   /** One leg, or a debit spread's [long, short]. */
   readonly legs: readonly OptionLegSpec[];
   /** Per share: a single leg's premium, or a vertical's signed net. */

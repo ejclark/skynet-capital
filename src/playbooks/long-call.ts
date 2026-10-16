@@ -1,11 +1,12 @@
 import { type EarningsPrint, etTimeOf } from "../domain/earnings-calendar.js";
-import { daysBetween } from "../domain/market-calendar.js";
+import { daysBetween, sessionsBetween } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import { type HeldContract, optionBook } from "../domain/option-book.js";
 import {
   type ListedExpirations,
   type MarketContext,
   NO_OPTION_DEMAND,
+  type OptionContractQuote,
   type OptionDemand,
   type OrderIntent,
   type PlaybookMode,
@@ -40,9 +41,11 @@ import type { Playbook } from "./playbook.js";
  * "own the gamma" mirror trade). A bought call's worst case is its premium. The guard exempts the
  * `long-call` structure from the spans-a-print rule, and still refuses an open inside a blackout.
  *
- * SIZE. Every option open is one contract (`option-guards.ts`), so the play adds one per cycle up to
- * its mode's cap; the Store allocation is the hard ceiling (the guard refuses past it). It never
- * chases: a new contract is bought only while its ask is within 10% of what the held ones cost.
+ * SIZE. Every option open is one contract (`option-guards.ts`), so the play adds one per cycle (the
+ * per-symbol cooldown spaces them about ten minutes apart) up to its mode's cap; the Store
+ * allocation is the hard ceiling (the guard refuses past it). Adds buy the SAME contract it holds,
+ * only while its ask is within 10% of the held cost and 90+ days remain. After a sale it may buy
+ * again at once, at the new price: this version keeps no memory between cycles.
  *
  * STATE COMES FROM THE POSITIONS ALONE, as the wheel's does: a restart reads correctly.
  */
@@ -52,6 +55,8 @@ const MIN_DTE = 120;
 const MAX_DTE = 200;
 /** Sell everything once this few days remain. */
 const EXIT_DTE = 45;
+/** Add to a held expiry only while at least this many days remain — never just before the exit. */
+const MIN_ADD_DTE = 90;
 /** Sell everything once the bid is this multiple of the average cost. */
 const TAKE_PROFIT = 2;
 /** Add only while the ask is at most this multiple of the held contracts' average cost. */
@@ -133,7 +138,12 @@ function closeIntents(symbol: string, context: MarketContext, held: readonly Hel
     const { bid, ask, quotedAt } = quote ?? {};
     const cause = exitCause(contract, bid, today);
     if (!cause || bid === undefined || ask === undefined || quotedAt === undefined) continue;
-    const towardNatural = closeAggression(0, etTimeOf(context.asOf));
+    // A time exit that has not filled walks toward the bid as sessions pass, as hygiene's does.
+    const dueOn = new Date(Date.parse(contract.expiration) - EXIT_DTE * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const late = cause === "time" && dueOn < today ? sessionsBetween(dueOn, today) : 0;
+    const towardNatural = closeAggression(late, etTimeOf(context.asOf));
     const limitPrice = priceInside(
       { low: bid, high: ask },
       "sell",
@@ -162,6 +172,38 @@ function closeIntents(symbol: string, context: MarketContext, held: readonly Hel
   return out;
 }
 
+interface Pick {
+  readonly quote: OptionContractQuote;
+  readonly absDelta?: number;
+  readonly deltaSource?: "feed" | "model";
+  readonly candidates?: number;
+}
+
+/** A first buy: the latest expiry in the window, the strike nearest the mode's delta. */
+function enterPick(
+  symbol: string,
+  context: MarketContext,
+  target: number,
+  spot: number,
+): Pick | undefined {
+  const expiration = entryExpiry(context.options?.listed[symbol] ?? [], context.asOf);
+  if (!expiration) return undefined;
+  const rows = chainQuotes(context.options, symbol, expiration, "call");
+  return pickByDelta(rows, target, spot, context.asOf, { otm: false, maxDeltaMiss: DELTA_MISS });
+}
+
+/** An add: the SAME contract already held, so the book stays one line and "near what it paid"
+ *  compares like with like — and only while it has room before the time exit and its ask is within
+ *  10% of the held cost, so it never chases a run. */
+function addPick(held: readonly HeldContract[], context: MarketContext): Pick | undefined {
+  const [line] = held;
+  if (!line || held.some((c) => c.occSymbol !== line.occSymbol)) return undefined;
+  if (daysBetween(marketDayKey(context.asOf), line.expiration) < MIN_ADD_DTE) return undefined;
+  const quote = context.options?.contracts[line.occSymbol];
+  if (quote?.ask === undefined || quote.ask > NO_CHASE * averageCost(held)) return undefined;
+  return { quote };
+}
+
 function openIntent(
   setting: LongCallSetting,
   symbol: string,
@@ -171,20 +213,13 @@ function openIntent(
 ): OrderIntent[] {
   if (contractsOf(held) >= LONG_CALL_MAX_CONTRACTS[mode]) return [];
   const spot = context.quotes[symbol]?.last;
-  // Add to the expiry already held, so the book stays one line; otherwise the latest in the window.
-  const expiration =
-    held[0]?.expiration ?? entryExpiry(context.options?.listed[symbol] ?? [], context.asOf);
-  if (!(expiration && spot !== undefined && spot > 0)) return [];
+  if (!(spot !== undefined && spot > 0)) return [];
   const target = LONG_CALL_DELTAS[mode];
-  const rows = chainQuotes(context.options, symbol, expiration, "call");
-  const pick = pickByDelta(rows, target, spot, context.asOf, {
-    otm: false,
-    maxDeltaMiss: DELTA_MISS,
-  });
+  const pick = held[0] ? addPick(held, context) : enterPick(symbol, context, target, spot);
   if (!pick) return [];
   const { bid, ask, quotedAt } = pick.quote;
+  const expiration = pick.quote.expiration;
   if (bid === undefined || ask === undefined || quotedAt === undefined) return [];
-  if (held.length > 0 && ask > NO_CHASE * averageCost(held)) return [];
   const towardNatural = OPEN_TOWARD_NATURAL[mode];
   const limitPrice = priceInside(
     { low: bid, high: ask },
@@ -214,9 +249,9 @@ function openIntent(
       spot,
       dte: daysBetween(marketDayKey(context.asOf), expiration),
       targetDelta: target,
-      pickedDelta: pick.absDelta,
-      deltaSource: pick.deltaSource,
-      candidates: pick.candidates,
+      ...(pick.absDelta !== undefined ? { pickedDelta: pick.absDelta } : {}),
+      ...(pick.deltaSource ? { deltaSource: pick.deltaSource } : {}),
+      ...(pick.candidates !== undefined ? { candidates: pick.candidates } : {}),
       towardNatural,
     },
   });
@@ -261,7 +296,10 @@ export function longCall(setting: LongCallSetting, lookup: typeof pairFor = pair
       if (foreign(portfolio, symbol)) return [];
       const held = heldCalls(portfolio, symbol);
       const closes = closeIntents(symbol, context, held);
-      if (closes.length > 0) return closes;
+      // A due exit with no usable quote yet still blocks buying: never add to what it is selling.
+      const today = marketDayKey(context.asOf);
+      const due = held.some((c) => daysBetween(today, c.expiration) <= EXIT_DTE);
+      if (closes.length > 0 || due) return closes;
       return openIntent(setting, symbol, context, held, mode);
     },
   };
