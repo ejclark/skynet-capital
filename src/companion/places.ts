@@ -11,7 +11,7 @@
  * router navigates by; a query string rides along because every route here validates its own
  * search (`validateSearch`), dropping anything it doesn't know.
  *
- * Domain honesty: a link takes the member to a place, it never does anything there. "Return %"
+ * Domain honesty: a link takes the member to a place, it never does anything there. "Open-position return"
  * re-ranks the board; "open Trade" opens the ticket, and an order still needs the member's own
  * click on its review screen.
  */
@@ -45,7 +45,7 @@ export const BOARD_RANKINGS: ReadonlyArray<{ readonly by: string; readonly label
   { by: "equity", label: "Equity" },
   { by: "month", label: "1M return" },
   { by: "pl", label: "Unrealized P/L" },
-  { by: "return", label: "Return %" },
+  { by: "return", label: "Open-position return" },
   { by: "realized", label: "Realized P/L" },
 ];
 
@@ -60,4 +60,4 @@ export function placeHref(raw: string): string | undefined {
 
 /** The prompt's half: the form, the list, and the honesty rule, built from the same data the
  *  panel checks against so the two can't drift. */
-export const PLACE_LINK_RULE = `LINKING A PLACE: when you name a place in the app, write it as a link the rail renders — [your words](/path) — so the member can tap straight to it: "[open Trade](/trade)", "rank by [Return %](/leaderboard?by=return)". Use ONLY these paths, never one you make up (anything else shows as plain text): ${PLACES.map((p) => `${p.path} (${p.name} — ${p.what})`).join("; ")}. The Leaderboard's rankings are ?by=${BOARD_RANKINGS.map((r) => `${r.by} (${r.label})`).join(", ")}. A ticket link (/trade?…) lands on the review screen, never an order. A link takes the member somewhere; never word it as if tapping it did anything.`;
+export const PLACE_LINK_RULE = `LINKING A PLACE: when you name a place in the app, write it as a link the rail renders — [your words](/path) — so the member can tap straight to it: "[open Trade](/trade)", "rank by [Open-position return](/leaderboard?by=return)". Use ONLY these paths, never one you make up (anything else shows as plain text): ${PLACES.map((p) => `${p.path} (${p.name} — ${p.what})`).join("; ")}. The Leaderboard's rankings are ?by=${BOARD_RANKINGS.map((r) => `${r.by} (${r.label})`).join(", ")}. A ticket link (/trade?…) lands on the review screen, never an order. A link takes the member somewhere; never word it as if tapping it did anything.`;
