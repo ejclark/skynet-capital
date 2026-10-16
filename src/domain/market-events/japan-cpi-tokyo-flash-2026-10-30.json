@@ -1,0 +1,11 @@
+{
+  "id": "japan-cpi-tokyo-flash-2026-10-30",
+  "kind": "macro-print",
+  "title": "Japan Ku-area of Tokyo CPI (October 2026, preliminary) — the flash that lands the morning of the BoJ decision, one week after the national September print",
+  "date": "2026-10-30",
+  "status": "estimate",
+  "source": "EST: stat.go.jp/english/data/cpi/1582.html ('Consumer Price Index — Schedule of Release', page's own 'Last Update : 23 January 2026'), re-fetched direct 2026-10-16 (HTTP 200, 13,839 bytes) and parsed row-by-row against the header 'Japan: Survey month | Date of release || Ku-area of Tokyo (preliminary): Survey month | Date of release || Remarks'; the row reads exactly ['September', 'October 23', 'October', 'October 30', ''] — the Tokyo October-2026 preliminary CPI releases 2026-10-30 (a Friday), empty Remarks cell. Filed estimate: the confirmed-prefix taxonomy has no slot for Japan's Statistics Bureau, this lane may not self-confirm an event it discovered in-sweep, and the page stamp is 8+ months old. Release time is not stated on the schedule page; the Bureau's own Tokyo September flash PDF (stat.go.jp/data/cpi/sokuhou/tsuki/pdf/kubu.pdf, HTTP 200, 429,530 bytes) carries Last-Modified Thu 01 Oct 2026 23:31:16 GMT = 08:31 JST on 2026-10-02, a proxy for the usual 08:30 JST slot, not a stated time. Checked 2026-10-16",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Canonical file written 2026-10-16 by this event's own never-assessed initial research, shadowing proposals/japan-cpi-tokyo-flash-2026-10-30.from-japan-cpi-2026-10-23.json (read first; its notes — a separate Statistics Bureau release from the BoJ decision it shares a date with, and the freshest Japanese inflation datapoint a hold-or-hike conversation can cite — still stand). Impact stays LOW: symbols is empty and no house playbook is keyed to Japanese prices. What changed since it was proposed: the Bureau's own Tokyo September PDF was located (the sibling ledger had only press), and it shows roughly half of September's 0.9pp jump in Tokyo core y/y came from two policy-timing items, Tokyo's water-bill waiver (0.24pp) and childcare fees (0.29pp), not broad price momentum. October's y/y therefore sheds the water item mechanically. See docs/research/events/japan-cpi-tokyo-flash-2026-10-30.md."
+}
