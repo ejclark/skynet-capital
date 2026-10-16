@@ -26,6 +26,7 @@ export type StrategyId =
   | "pre-print-run-up"
   | "wheel"
   | "call-spread"
+  | "long-call"
   | "event"
   | "tactical"
   | "persona-rules"
@@ -84,6 +85,16 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     // The spread trades the run-up's window, so the run-up's screen is its fit test; its own P/L
     // is a separate question no screen answers yet.
     screen: "node scripts/research/earnings-cycle.mjs <SYM>",
+  },
+  "long-call": {
+    id: "long-call",
+    name: "the long call",
+    summary:
+      "Buys calls four to six months out and holds them through earnings; sells at double the cost or with 45 days left.",
+    instrument: "options",
+    runsOnConviction: true,
+    noScreen:
+      "No study measures long calls held through prints yet; it runs only on its owner's dated conviction.",
   },
   event: {
     id: "event",
@@ -239,6 +250,20 @@ const PAIRS: readonly Pair[] = [
       confidence: "medium",
       number: "implied volatility at the 6th percentile of what CRWV went on to move",
       verdictOn: "2026-10-02",
+      checkOn: "2027-01-29",
+      study: "docs/research/crwv-premium-fit.md",
+    },
+  },
+  {
+    id: "CRWV-LONG-CALL",
+    strategy: "long-call",
+    symbols: ["CRWV"],
+    evidence: {
+      status: "conviction",
+      call: "Runs as its owner's conviction (#5482): CRWV recovers well above today's price over the next 3 to 6 months, through earnings; options have priced CRWV's print moves smaller than they turned out.",
+      confidence: "low",
+      number: "implied volatility at the 63rd percentile of what CRWV went on to move (2026-10-16)",
+      verdictOn: "2026-10-16",
       checkOn: "2027-01-29",
       study: "docs/research/crwv-premium-fit.md",
     },

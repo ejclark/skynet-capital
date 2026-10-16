@@ -36,7 +36,7 @@ export interface OptionLegSpec {
 }
 
 export interface OptionOpenSpec extends IntentFrame {
-  readonly structure: "cash-secured-put" | "covered-call" | "call-debit-spread";
+  readonly structure: "cash-secured-put" | "covered-call" | "call-debit-spread" | "long-call";
   /** One leg, or a debit spread's [long, short]. */
   readonly legs: readonly OptionLegSpec[];
   /** Per share: a single leg's premium, or a vertical's signed net. */

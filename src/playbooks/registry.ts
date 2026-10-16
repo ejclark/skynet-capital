@@ -14,6 +14,7 @@ import { TACO_TIMING } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
+import { longCall } from "./long-call.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import type { TacticalRule } from "./tactical-playbook.js";
@@ -223,6 +224,22 @@ export const CRWV_WHEEL: Playbook = wheel({
     "calm to the pace options price.",
 });
 
+/**
+ * CRWV-LONG-CALL (#5482) — calls about four to six months out, held through CRWV's prints, on its
+ * owner's 2026-10-16 conviction that CRWV recovers well above today's price over 3 to 6 months. No
+ * study measures the play itself; the pair row is a ◆ conviction checked on 2027-01-29.
+ */
+export const CRWV_LONG_CALL: Playbook = longCall({
+  symbol: "CRWV",
+  thesis:
+    "Buy CRWV calls four to six months out near 0.60 delta and hold them through earnings; sell at " +
+    "double the cost or with 45 days left — run on its owner's conviction.",
+  bet:
+    "Its owner's view (2026-10-16): CRWV's selloff with the AI names is temporary, demand and its " +
+    "backlog hold, and it recovers well above today's price over the next 3 to 6 months. No study " +
+    "has tested this play; it is checked on 2027-01-29.",
+});
+
 /** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,
  *  `beta-scout.ts`); re-exported here because the Store catalog and the roll call read the house
  *  roster off what this module exports. None of the option plays, nor these, is on any default
@@ -235,6 +252,7 @@ const ROSTER: readonly Playbook[] = [
   TACO_DJT,
   HC_SAURON,
   CRWV_WHEEL,
+  CRWV_LONG_CALL,
   NVDA_CALL_SPREAD,
   SAURON,
   BETA_SCOUT,

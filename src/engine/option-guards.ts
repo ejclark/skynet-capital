@@ -166,7 +166,11 @@ function clampClose(
   return { ok: true, intent: { ...intent, quantity: units } };
 }
 
-/** Rule 6: the open must close before the earliest live print blackout begins. */
+/** Rule 6: the open must close before the earliest live print blackout begins — except a bought
+ *  call, which may hold through a print but never opens inside one. Its worst case is the premium
+ *  paid, and on CRWV the market has priced the print move SMALLER than it turned out
+ *  (`docs/research/events/crwv-2026-11-10-print.md`), so holding one across is the side the data
+ *  favours; the never-across-a-print rule is about sold options (#5482). */
 function printProblem(
   option: OptionOrderIntent,
   underlying: string,
@@ -177,6 +181,7 @@ function printProblem(
   if (!blackout) return "option-print-unknown";
   const today = marketDayKey(asOfIso);
   if (today >= blackout.start && today <= blackout.end) return "option-spans-print";
+  if (option.structure === "long-call") return undefined;
   const spans = option.legs.some((leg) => {
     const expiration = parseOccSymbol(leg.occSymbol)?.expiration;
     return expiration === undefined || expiration >= blackout.start;

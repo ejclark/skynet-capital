@@ -77,11 +77,12 @@ export function opensRisk(intent: OrderIntent): boolean {
   return intent.option ? intent.option.effect === "open" : intent.side === "buy";
 }
 
-/** The Alpaca options level an order needs: 1 for a cash-secured put or covered call, 3 for a
- *  spread, 0 for a close (closing never needs an approval). */
+/** The Alpaca options level an order needs: 1 for a cash-secured put or covered call, 2 for a
+ *  bought call, 3 for a spread, 0 for a close (closing never needs an approval). */
 export function requiredOptionLevel(option: OptionOrderIntent): 0 | 1 | 2 | 3 {
   if (option.effect === "close" || option.structure === "close") return 0;
-  return option.structure === "call-debit-spread" ? 3 : 1;
+  if (option.structure === "call-debit-spread") return 3;
+  return option.structure === "long-call" ? 2 : 1;
 }
 
 /** One contract line the cover arithmetic sees. `contracts` is signed: + long, − short. */

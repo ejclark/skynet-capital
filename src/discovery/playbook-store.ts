@@ -251,6 +251,29 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "session after the print — or when no 30-to-45-day expiry ends before the next one — it " +
       "sells nothing.",
   },
+  "CRWV-LONG-CALL": {
+    description:
+      "Calls on CRWV about four to six months out, held through its earnings reports. A call " +
+      "gains when CRWV rises, and the most one can lose is what was paid for it. It runs on its " +
+      "owner's conviction (2026-10-16): CRWV's drop with the AI names is temporary and it " +
+      "recovers well above today's price over the next 3 to 6 months. No study has tested this " +
+      "play. What the data does say: options have priced CRWV's earnings moves smaller than they " +
+      "turned out, which is why this play may hold through a report when no sold option may. It " +
+      "is checked on 2027-01-29: if its net P/L is below $0, it stops buying until its owner sets " +
+      "a new date.",
+    enter:
+      "Buys one call per cycle on the latest expiry 120 to 200 days out, at the strike nearest " +
+      "0.60 delta (0.70 conservative, 0.50 aggressive), up to 6 contracts (3 / 10) and never past " +
+      "the capital you allocate. It adds only while the price is within 10% of what the held " +
+      "calls cost, so it never chases a run. Never buys during an earnings blackout.",
+    exitTakeProfit: "Sells every call once it is worth double what it cost.",
+    exitCutLosses:
+      "No stop: the most it can lose is the premium paid. It sells everything with 45 days left, " +
+      "before time decay speeds up, whatever the price.",
+    hold:
+      "Holds through earnings reports. Between buying and selling it waits; after a sale it may " +
+      "buy again on the next window.",
+  },
   "NVDA-CALL-SPREAD": {
     description:
       "The options form of S1-NVDA's pre-earnings run-up: a call debit spread — buy one NVDA call " +
