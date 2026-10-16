@@ -11,6 +11,7 @@
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
+//   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
@@ -28,6 +29,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { stuckLine } from "./stuck-pr-decide.mjs";
 
 const ROOT = process.cwd();
 const DIGEST_DIR = join(ROOT, "docs", "digests");
@@ -182,6 +184,14 @@ async function main() {
       encoding: "utf8",
     });
     console.log(learningLine(JSON.parse(out)));
+    return;
+  }
+  if (has("stuck")) {
+    const out = execFileSync("node", [join(ROOT, "scripts/stuck-pr-scan.mjs"), "--count"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    console.log(stuckLine(JSON.parse(out).stuck));
     return;
   }
   if (has("needs-you")) {

@@ -181,6 +181,14 @@ job name with a matrix leg's values stripped (#3913): keying on the leg made one
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
 
+**The failure that is green has its own eye** (2026-10-16, docs/LESSONS.md "A green, armed PR sat
+blocked for 5 days…"). Every net above fires on red; a PR that is green and not merging raises
+nothing, and two fortnight-apart incidents (29 hours, then 135) were found by luck.
+`scripts/stuck-pr-scan.mjs` (`npm run pr:stuck`) names every open PR green longer than a healthy merge
+takes (3 h) that is armed-and-`blocked`, never armed, or headless behind a check suite that ran no job
+— with the ghost suite named and the one-line clear. It rides `scripts/ship.sh` beside
+`incident-scan.mjs` and gives the digest a `--stuck` line; REST core only, advisory.
+
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
 `scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
