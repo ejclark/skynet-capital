@@ -71,6 +71,8 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
+
 - **"The 09-10 operation's 23-issue spread is a regime change in how the long end buys"
   (FT-treasury-buyback-10y20y-2026-10-15-4)** — added 2026-10-16 from the
   [treasury-buyback-10y20y-2026-10-15 close-out](events/treasury-buyback-10y20y-2026-10-15.md). The
