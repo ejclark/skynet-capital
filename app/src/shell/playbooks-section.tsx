@@ -7,7 +7,6 @@ import {
   type StrategyCardView,
 } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
-import { InitiatorSplit } from "./initiator-split";
 import { isReady, PlaybookList } from "./playbook-list";
 import type { MetricsScope } from "./playbook-metrics";
 import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
@@ -27,6 +26,10 @@ import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
  * open strategy (a row selects it instead of scrolling to it); with room for three, each ticker's
  * evidence and how it trades sit side by side as well. While the 3D rail takes its space (#5207),
  * the third column simply doesn't fit and how it trades stays under the evidence.
+ *
+ * The closed-trades scoreboard that used to sit folded at the foot of this page ("Who started the
+ * bots' closed trades") lives on the book's Balance section now (#5493 slice 3, #5451 P3): it is a
+ * metrics view, not part of the catalog. The cards keep their own per-playbook numbers.
  *
  * `?account=` is kept as the address a bot's own Playbooks page links to for changing what it runs
  * (`playbook-cards.tsx` → "Change"): with it, an account the viewer owns gets its subscriptions,
@@ -189,23 +192,6 @@ export function PlaybooksSection({
           ))}
         </div>
       </div>
-      {performance.data?.byInitiator ? (
-        // Who started the bots' closed trades is a metrics view, not the catalog's head (#5451 P3):
-        // it waits here, folded, until the book's metrics home takes it (#5494 step 5).
-        <details className="pb-initiators-fold">
-          <summary>Who started the bots' closed trades</summary>
-          {manages && performance.data.byInitiator.mine ? (
-            <InitiatorSplit
-              heading={`Who started ${accountName ?? accountId}'s closed trades`}
-              split={performance.data.byInitiator.mine}
-            />
-          ) : null}
-          <InitiatorSplit
-            heading="Who started the bots' closed trades — every bot"
-            split={performance.data.byInitiator.house}
-          />
-        </details>
-      ) : null}
     </div>
   );
 }

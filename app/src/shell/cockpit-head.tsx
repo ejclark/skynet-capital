@@ -32,8 +32,8 @@ import type { PageSection } from "./sections";
  *      (`PlaybooksHeadLine`, #5073: a plain link into the Playbooks section, never a popover),
  *      and under it, on any one account, the book's health — "■ 1 gate · ◆ 2 signals ›" or
  *      "● Balanced" (`BookHealthLine`, #5493 slice 2). The two stack in the row's right slot, so
- *      the row keeps its height; on a bot the counts open Playbooks until the Balance section
- *      lands (slice 3), and on a human account they are words with nothing yet to open.
+ *      the row keeps its height; the counts open the Balance section (slice 3), on a bot and a
+ *      human account alike.
  *   2. THE VITALS — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
  *      that cut across every section, said once (Eric's Level 2 note: "the most relevant dimensions
  *      that overlap/intersect across various views… minimal content"). On a phone the cash is a
@@ -86,38 +86,34 @@ const VIEWER: Record<"milestones" | "feedback", { readonly who: string; readonly
   },
 };
 
-/** The account row's right slot: a bot's head line, then the book's health under it (#5493
- *  slice 2). On a bot both open Playbooks — the health counts only until the book's Balance
- *  section lands (slice 3); on a human account the counts are words with nothing yet to open. */
+/** The account row's right slot: a bot's head line opening Playbooks, then the book's health
+ *  under it opening Balance (#5493 slices 2–3) — the findings behind the counts, on a human
+ *  account too, where there is no head line above it. */
 function HeadStatus({
   account,
-  playbooksOpen,
-  onOpenPlaybooks,
+  section,
+  onSelectSection,
 }: {
   readonly account: OwnedAccount;
-  readonly playbooksOpen: boolean;
-  readonly onOpenPlaybooks: () => void;
+  readonly section: AccountsSection;
+  readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
-  const bot = account.kind === "bot";
-  const toPlaybooks = (label: ReactNode, current?: boolean) => (
+  const door = (to: AccountsSection) => (label: ReactNode) => (
     <button
       type="button"
       className="hb-line-link"
-      aria-current={current ? "true" : undefined}
-      onClick={onOpenPlaybooks}
+      aria-current={section === to ? "true" : undefined}
+      onClick={() => onSelectSection(to)}
     >
       {label}
     </button>
   );
   return (
     <div className="head-status">
-      {bot ? (
-        <PlaybooksHeadLine
-          deskId={account.id}
-          renderLink={(label) => toPlaybooks(label, playbooksOpen)}
-        />
+      {account.kind === "bot" ? (
+        <PlaybooksHeadLine deskId={account.id} renderLink={door("playbooks")} />
       ) : null}
-      <BookHealthLine deskId={account.id} renderLink={bot ? toPlaybooks : undefined} />
+      <BookHealthLine deskId={account.id} renderLink={door("balance")} />
     </div>
   );
 }
@@ -179,11 +175,7 @@ export function CockpitHead({
             {picked ? <KindChip kind={picked.kind} /> : null}
             <EnvPill />
             {picked ? (
-              <HeadStatus
-                account={picked}
-                playbooksOpen={section === "playbooks"}
-                onOpenPlaybooks={() => onSelectSection("playbooks")}
-              />
+              <HeadStatus account={picked} section={section} onSelectSection={onSelectSection} />
             ) : null}
           </>
         )}

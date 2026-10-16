@@ -78,6 +78,8 @@
 @import "./playbook-list.css";
 @import "./playbook-subscribe-bots.css";
 @import "./playbook-evidence.css";
+/* after playbook-store.css: the Balance section's closed-trades block reuses its `.pb-metrics*`. */
+@import "./balance.css";
 @import "./positions-lens.css";
 @import "./profile.css";
 @import "./pulse.css";

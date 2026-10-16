@@ -12,7 +12,9 @@
  *
  * WHO SEES WHAT (#885): the owner is served every finding, anyone else the counts only. The line
  * reads the counts, which both are served, so it says the same words to both; it never names a
- * playbook. Which detectors fired, and the play behind each, is the Balance section's (slice 3).
+ * playbook. Which detectors fired, and the play behind each, is the Balance section's (slice 3) —
+ * its half of this module is below the line: the owner's findings and per-play numbers, and the
+ * few words each needs, pure so the section's ranking and wording are specced without a DOM.
  */
 
 export type HealthLevel = "signal" | "gate";
@@ -25,11 +27,58 @@ export interface HealthCounts {
   readonly byDetector: Partial<Record<HealthDetector, number>>;
 }
 
-/** Mirrors `DeskHealth` in `src/server/book-health-payload.ts`, keeping only what the client
- *  reads: the owner's copy also carries `findings` and `plays`, which the Balance section will. */
+/** What a looping play keeps hitting (`LoopKind` in `src/observatory/book-health-view.ts`): one
+ *  guard's refusal reason, an open window it never enters, or a window that never opens. */
+export type HealthLoop = string;
+
+/** Mirrors `HealthFinding` in `src/observatory/book-health-view.ts`. The sentence is the server's:
+ *  it is worded once there, for the owner (names the play) or anyone else (does not). */
+export interface HealthFinding {
+  readonly detector: HealthDetector;
+  readonly level: HealthLevel;
+  /** The play behind it — the owner's copy only. */
+  readonly playbookId?: string;
+  /** The position or underlying it is about, when it is about one. */
+  readonly symbol?: string;
+  /** The measured number: a share (0–1), or a count of checks or sessions (see `findingReading`). */
+  readonly reading: number;
+  /** The line the reading crossed to reach this level. */
+  readonly threshold: number;
+  readonly loop?: HealthLoop;
+  readonly words: string;
+}
+
+/** Mirrors `PlayHealth` in `src/observatory/book-health-view.ts`: one subscription's numbers. A
+ *  figure the server could not derive is absent, never 0. */
+export interface PlayHealth {
+  readonly playbookId: string;
+  readonly mode: string;
+  readonly enabled: boolean;
+  /** The budget the owner set; absent = uncapped. */
+  readonly allocation?: number;
+  readonly committed?: number;
+  readonly idle?: number;
+  readonly openPositions: number;
+  readonly oldestOpenSessions?: number;
+  readonly lastEntryAt?: string;
+  /** Its intents the guards refused in the last session on hand, by reason. */
+  readonly refusalsLastSession: Readonly<Record<string, number>>;
+}
+
+/** Mirrors `DeskHealth` in `src/server/book-health-payload.ts`. Anyone but the owner is served
+ *  `counts` alone; the owner's copy adds the findings and each play's numbers. */
 export type DeskHealth =
   | { readonly available: false }
-  | { readonly available: true; readonly counts: HealthCounts };
+  | {
+      readonly available: true;
+      readonly counts: HealthCounts;
+      readonly findings?: readonly HealthFinding[];
+      readonly plays?: readonly PlayHealth[];
+      readonly equity?: number;
+      readonly uncommittedCash?: number;
+      /** `uncommittedCash / equity`; null when equity is not positive. */
+      readonly idleShare?: number | null;
+    };
 
 /** The line's overall state: its worst level, or nothing found. */
 export type HealthLineLevel = HealthLevel | "balanced";
@@ -79,4 +128,105 @@ export function healthLine(health: DeskHealth | undefined): HealthLine | null {
     parts,
     label: `Book health: ${parts.map((p) => p.text).join(", ")}`,
   };
+}
+
+// ── The Balance section's half (#5493 slice 3) ─────────────────────────────────────────────────
+
+/** Each detector said as the job it does, for a finding's row. */
+export const DETECTOR_NAME: Record<HealthDetector, string> = {
+  looping: "Looping",
+  idle: "Idle cash",
+  concentrated: "Concentrated",
+  stuck: "Stuck",
+  imbalanced: "Imbalanced",
+};
+
+/** A level as a word; its glyph is {@link HEALTH_GLYPH}. A finding shows both, never hue alone. */
+export const LEVEL_WORD: Record<HealthLevel, string> = { gate: "Gate", signal: "Signal" };
+
+/** What the section draws from the server's `health` field: three honest cases. */
+export type BalanceRead =
+  /** The server has not read the book (`available: false`), or is too old to serve the field. */
+  | { readonly kind: "unread" }
+  /** Anyone but the owner: counts by level only, no playbook to name (#885). */
+  | { readonly kind: "counts" }
+  /** The owner: every finding (gate first) and every play's numbers. */
+  | {
+      readonly kind: "owner";
+      readonly findings: readonly HealthFinding[];
+      readonly plays: readonly PlayHealth[];
+    };
+
+export function balanceRead(health: DeskHealth | undefined): BalanceRead {
+  if (!health?.available) return { kind: "unread" };
+  if (!health.findings) return { kind: "counts" };
+  return { kind: "owner", findings: health.findings, plays: health.plays ?? [] };
+}
+
+const wholePct = (share: number): string => `${Math.round(share * 100)}%`;
+const sessions = (n: number): string => `${n} ${n === 1 ? "session" : "sessions"}`;
+
+/**
+ * The number behind a finding, against the line it crossed — "46% · over the 40% line", "held 5
+ * sessions · gate at 5". The server's sentence says what happened; this is the measure, short
+ * enough to sit under it on a phone. A looping play's reading is a count of checks (every one
+ * refused) or of sessions (a window that never opened, or opened and was never entered).
+ */
+export function findingReading(finding: HealthFinding): string {
+  const { reading, threshold } = finding;
+  switch (finding.detector) {
+    case "idle":
+    case "concentrated":
+    case "imbalanced":
+      return `${wholePct(reading)} · ${reading > threshold ? "over" : "under"} the ${wholePct(threshold)} line`;
+    case "stuck":
+      return `held ${sessions(reading)} · ${finding.level} at ${threshold}`;
+    case "looping":
+      return finding.loop === "no-window" || finding.loop === "open-no-entry"
+        ? `${sessions(reading)} in a row`
+        : `refused on all ${reading} checks`;
+  }
+}
+
+/** A play's idle budget as a share of its allocation, when both are known. */
+export function idleShareOf(play: PlayHealth): number | undefined {
+  return play.idle !== undefined && play.allocation ? play.idle / play.allocation : undefined;
+}
+
+/** A play's committed budget as a share of its allocation, held to 0–1 for a bar. */
+export function committedShareOf(play: PlayHealth): number | undefined {
+  if (play.committed === undefined || !play.allocation) return undefined;
+  return Math.min(1, Math.max(0, play.committed / play.allocation));
+}
+
+/** The plays most idle first (AC 5: after the findings, "plays by idle share"). A play whose idle
+ *  share can't be derived (uncapped, or a basket this process doesn't know) sorts after those that
+ *  can, and ties fall back to the id so the order never shuffles between reads. */
+export function playsByIdle(plays: readonly PlayHealth[]): PlayHealth[] {
+  return [...plays].sort((a, b) => {
+    const [x, y] = [idleShareOf(a), idleShareOf(b)];
+    if (x !== undefined && y !== undefined && x !== y) return y - x;
+    if ((x === undefined) !== (y === undefined)) return x === undefined ? 1 : -1;
+    return a.playbookId.localeCompare(b.playbookId);
+  });
+}
+
+/** A budget in whole dollars — "$45,000": a play's allocation is a round number the owner set, and
+ *  cents on it would be noise a phone has no room for. */
+export function dollars(value: number): string {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+}
+
+/** How many intents the guards refused on a play in its last session on hand. */
+export function refusedCount(play: PlayHealth): number {
+  return Object.values(play.refusalsLastSession).reduce((sum, n) => sum + n, 0);
+}
+
+/** "Oct 14" — the day of a play's newest entry, on the reader's own clock. */
+export function entryDay(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }

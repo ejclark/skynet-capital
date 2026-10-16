@@ -318,8 +318,9 @@
   grid-column: 1 / -1;
 }
 
-/* Who started the bots' closed trades (#4450 slice 4): above the deck, one cell per initiator —
-   stacked at phone width, three across once there is room. Rows differ by their words, never hue. */
+/* Who started the bots' closed trades (#4450 slice 4): one cell per initiator — stacked at phone
+   width, three across once there is room. Rows differ by their words, never hue. It lives on the
+   book's Balance section now (#5493 slice 3); `balance.css` sets its margin there. */
 .pb-initiators {
   margin: 0 0 12px;
 }
