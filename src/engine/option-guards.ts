@@ -166,7 +166,12 @@ function clampClose(
   return { ok: true, intent: { ...intent, quantity: units } };
 }
 
-/** Rule 6: the open must close before the earliest live print blackout begins. */
+/** Rule 6: the open must close before the earliest live print blackout begins — except a bought
+ *  call, which may hold through a print but never opens inside one. The rule guards against a gap
+ *  the account cannot cover: a sold option's loss on a print gap has no floor, a bought call's is
+ *  the premium, which rule 8 has already reserved inside the playbook's budget. Whether holding a
+ *  print is WISE is the playbook's evidence to state (CRWV-LONG-CALL's pair row, #5482), not a
+ *  cover question this guard can answer. */
 function printProblem(
   option: OptionOrderIntent,
   underlying: string,
@@ -177,6 +182,7 @@ function printProblem(
   if (!blackout) return "option-print-unknown";
   const today = marketDayKey(asOfIso);
   if (today >= blackout.start && today <= blackout.end) return "option-spans-print";
+  if (option.structure === "long-call") return undefined;
   const spans = option.legs.some((leg) => {
     const expiration = parseOccSymbol(leg.occSymbol)?.expiration;
     return expiration === undefined || expiration >= blackout.start;
