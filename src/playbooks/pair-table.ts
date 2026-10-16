@@ -143,6 +143,8 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   "dip-bounce": {
     id: "dip-bounce",
     name: "the dip-to-bounce",
+    line: "Buys intraday dips, sells a small bounce",
+    act: "Buy small dips in <SYM> below its average price for the day and sell the bounce",
     summary:
       "Buys small tranches when a stock dips well below its average price for the day and sells each one a small bounce higher; observe-only for now.",
     instrument: "shares",
@@ -373,6 +375,9 @@ const PAIRS: readonly Pair[] = [
       verdictOn: "2026-10-16",
       shelfOn: "2027-01-15",
       study: DIP_BOUNCE_STUDY,
+      past: {
+        line: "117 dip buys of MU over 58 trading days made 0.39% each after costs; 99% sold within five days.",
+      },
     },
   },
   {
@@ -389,6 +394,9 @@ const PAIRS: readonly Pair[] = [
       verdictOn: "2026-10-16",
       shelfOn: "2027-01-15",
       study: DIP_BOUNCE_STUDY,
+      past: {
+        line: "157 dip buys of NBIS over 58 trading days made 0.62% each after costs; 96% sold within five days.",
+      },
     },
   },
 ];
