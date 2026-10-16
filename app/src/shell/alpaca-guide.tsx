@@ -155,8 +155,8 @@ export function AlpacaGuide({
               ) : null}
               <p className="ag-caveat">
                 Paper keys only · balance verified at {STARTING_LINE_LABEL} USD · alpaca.markets →
-                Paper Trading → API Keys. Keys are checked with read-only calls, then stored
-                encrypted — no orders are ever placed on your behalf.
+                Paper Trading → API Keys. Keys are checked with read-only calls when you connect,
+                then stored encrypted and used only to send the orders you place.
               </p>
             </div>
           ) : null}

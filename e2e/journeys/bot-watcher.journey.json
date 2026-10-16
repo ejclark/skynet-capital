@@ -40,7 +40,7 @@
         },
         {
           "id": "s4",
-          "goto": "/app/u/sauron/decisions",
+          "goto": "/app/u/sauron/playbooks",
           "sees": "Playbooks: is the bot checking the market (the strip on top), one card per playbook with its state, and every check folded behind the strip",
           "ears": "WHEN a viewer reads a bot's checks, the app shall name the section Playbooks, as the Profile page does, and gloss its own words where they appear.",
           "expect": [{ "role": "heading", "name": "Playbooks", "exact": true }],

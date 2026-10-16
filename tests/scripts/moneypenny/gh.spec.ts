@@ -16,6 +16,14 @@ describe("moneypenny gh retry", () => {
     expect(isTransientGhError(undefined)).toBe(false);
   });
 
+  // #5354: `ghRest` is curl, which words a 5xx its own way; a 4xx in that wording stays fatal.
+  it("classifies curl's wording of a 5xx as transient, and its 4xx as not", () => {
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 500\n")).toBe(true);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 503")).toBe(true);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 403")).toBe(false);
+    expect(isTransientGhError("curl: (22) The requested URL returned error: 429")).toBe(false);
+  });
+
   // #4675: GitHub's GraphQL internal error names no HTTP status, so `item-edit` got one attempt.
   it("classifies GraphQL's status-less internal error as transient", () => {
     const GH_SAID =

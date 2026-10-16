@@ -102,7 +102,7 @@ describe("CRWV-WHEEL through the guards", () => {
   });
   const wheel = subscribed("CRWV-WHEEL", 10_000);
 
-  it("sells a cash-secured $80 put the guards approve as one contract", () => {
+  it("sells a cash-secured $75 put (CRWV's 0.15-delta pin) the guards cut to the one contract $10,000 secures", () => {
     const run = cycle(wheel, CALENDAR, context, aPortfolio({ cash: 100_000 }));
     expect(run.refused).toEqual([]);
     expect(run.approved).toHaveLength(1);
@@ -112,12 +112,12 @@ describe("CRWV-WHEEL through the guards", () => {
       quantity: 1,
       playbookId: "CRWV-WHEEL",
       playbookMode: "standard",
-      option: { structure: "cash-secured-put", legs: [{ occSymbol: occ("put", 80) }] },
+      option: { structure: "cash-secured-put", legs: [{ occSymbol: occ("put", 75) }] },
     });
   });
 
   it("is refused put-not-secured when the account lacks the strike × 100 in cash", () => {
-    const run = cycle(wheel, CALENDAR, context, aPortfolio({ cash: 7_999 }));
+    const run = cycle(wheel, CALENDAR, context, aPortfolio({ cash: 7_000 }));
     expect(run.intents).toHaveLength(1);
     expect(run.approved).toEqual([]);
     expect(run.refused).toEqual(["put-not-secured"]);

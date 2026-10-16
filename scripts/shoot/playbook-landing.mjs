@@ -42,7 +42,7 @@ const lanes = [
   { playbookId: "S1-NVDA", mode: "standard", states: lane(() => "no-window") },
   { playbookId: "NVDA-CALL-SPREAD", mode: "aggressive", states: lane(() => "no-window") },
   { playbookId: "G1-GOOG", mode: "standard", states: lane(() => "no-window") },
-  { playbookId: "HC-SAURON", mode: "standard", states: lane(() => "tactical") },
+  { playbookId: "TACO-DJT", mode: "standard", states: lane(() => "no-window") },
 ].map((l) => ({ ...l, slot: slot(l.playbookId) }));
 
 const NVDA_CHECK = "2026-10-05T15:20:00.000Z";
@@ -135,7 +135,7 @@ const activity = {
       origin: "app",
       reasoning: {
         reason:
-          "Run on its owner's conviction — CRWV's premium pays to wait for a lower entry. Sold the $80 put, 28 days out.",
+          "Sold the $80 put, 28 days out. Its owner runs this against our study, betting the market has CRWV's swings about right.",
         personaId: "sauron",
         playbookId: "CRWV-WHEEL",
         playbookMode: "aggressive",

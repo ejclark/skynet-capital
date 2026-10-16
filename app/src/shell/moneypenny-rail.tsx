@@ -1,8 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { KeyboardEvent, ReactElement, ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
+import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
+import { linkPieces } from "../live/moneypenny-links";
 import { chipsFor } from "../live/moneypenny-script";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * THE MONEYPENNY RAIL (design handoff 2026-09-03, §6; P1/P2 of `docs/research/moneypenny-chat-ux.md`)
@@ -24,36 +27,50 @@ import { chipsFor } from "../live/moneypenny-script";
  * @category feedback
  */
 
-const URL_RE =
-  /(https?:\/\/[^\s”"'<>)]+|(?<![\w/])\/(?:trade|learn|onboarding|playbooks|feedback|settings)(?:[/?#][^\s”"'<>)]*)?)/g;
+/** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
+ *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
+ *  stays open beside it. A modified click (new tab, new window) keeps the browser's own handling
+ *  — the `href` is the real URL — and with no router mounted the plain href is the whole link. */
+function PlaceLink({ path, text }: { readonly path: string; readonly text: string }): ReactElement {
+  const router = useRouter({ warn: false });
+  const closeRail = useMoneypenny((s) => s.closeRail);
+  const phone = usePhoneWidth();
+  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (phone) closeRail();
+    if (!router) return;
+    e.preventDefault();
+    // "Return %" while the board is already showing re-ranks it in place — the member keeps
+    // their spot; any other page opens at its top, as a new view should.
+    const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
+    void (samePage
+      ? router.navigate({ href: path, resetScroll: false })
+      : router.navigate({ href: path }));
+  };
+  return (
+    <a className="mp-place" href={`/app${path}`} onClick={onClick}>
+      {text}
+    </a>
+  );
+}
 
-/** Her lines can carry a link — the issue she just filed, a ticket's review screen — so http(s)
- *  URLs and the app's own routes become anchors; everything else stays text. */
+/** Her lines can carry links — a place in the app she names, the issue she just filed — and
+ *  `linkPieces` decides which words are which; everything else stays text. */
 function linkify(text: string): readonly ReactNode[] {
-  const nodes: ReactNode[] = [];
   let offset = 0;
-  for (const part of text.split(URL_RE)) {
-    if (part === undefined) continue;
-    const external = /^https?:\/\//.test(part);
-    const internal =
-      !external && /^\/(trade|learn|onboarding|playbooks|feedback|settings)/.test(part);
+  return linkPieces(text).map((p) => {
     // keyed by where the piece starts in the line — stable, and unique within one message
-    nodes.push(
-      external || internal ? (
-        <a
-          key={offset}
-          href={part}
-          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        >
-          {part}
+    const key = offset;
+    offset += p.text.length;
+    if (p.kind === "place") return <PlaceLink key={key} path={p.path} text={p.text} />;
+    if (p.kind === "url")
+      return (
+        <a key={key} href={p.href} target="_blank" rel="noopener noreferrer">
+          {p.text}
         </a>
-      ) : (
-        part
-      ),
-    );
-    offset += part.length;
-  }
-  return nodes;
+      );
+    return p.text;
+  });
 }
 
 function Message({ m }: { readonly m: MpMessage }): ReactElement {

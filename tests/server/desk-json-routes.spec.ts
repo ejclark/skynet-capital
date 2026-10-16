@@ -549,6 +549,88 @@ describe("serveDeskJson", () => {
     });
   });
 
+  // #5327 — the drawn play names the play, so it rides to the owner alone, like every other id.
+  describe("the Thesis tab's drawn play is the bot owner's alone (#885, #5327)", () => {
+    const claim = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 6,
+      type: "market" as const,
+      reason: "claiming the discarded",
+      strategy: "sauron-panic-claim",
+      playbookId: "SAURON",
+      playbookMode: "standard" as const,
+    };
+    const pass = {
+      at: Date.now(),
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [claim],
+      guardedIntents: [claim],
+      outcomes: [{ intent: claim, action: "placed" as const }],
+      context: {
+        asOf: "2026-09-20T15:00:00.000Z",
+        quotes: {},
+        momentum: { NVDA: 0.003 },
+        newsSentiment: { NVDA: -0.82 },
+      },
+      playbookVerdicts: [
+        { playbookId: "SAURON", mode: "standard" as const, state: "long" as const },
+      ],
+    };
+    const fill = {
+      orderId: "ord-1",
+      participantId: "sauron",
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 6,
+      filledQuantity: 6,
+      status: "filled",
+      at: "2026-09-20T15:00:00.000Z",
+      source: "stream" as const,
+    };
+    const sauron = { ...bot, personaId: "sauron" };
+    const gated = configWith({
+      hub: {
+        getState: () => ({ generatedAt: "t", participants: [sauron], collisions: [] }),
+      } as never,
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      readDecisions: () => Promise.resolve([pass]),
+      readTradeActivity: async () => [fill],
+      findByOrderId: (orderId) =>
+        orderId === "ord-1" ? { record: pass, intent: claim } : undefined,
+      signalWindows: { momentum: 20, sentiment: 10 },
+    });
+    const thesisFor = async (who: string) => {
+      const { res, out } = fakeRes();
+      const path = "/api/desk/sauron/thesis";
+      await serveDeskJson(res, path, path, gated, { email: who, provider: "google", exp: 0 });
+      return out.body ?? "";
+    };
+
+    it("draws the play, with its windows and each mark's recorded news score, for the owner", async () => {
+      const { thesis } = JSON.parse(await thesisFor("owner@x"));
+      expect(thesis.play).toMatchObject({
+        playbookId: "SAURON",
+        name: "Buy the rumor, sell the news",
+        buyAtOrBelow: -0.7,
+        sellAtOrAbove: 0.7,
+        windows: { momentum: 20, sentiment: 10 },
+      });
+      expect(thesis.markers[0]).toMatchObject({ playbookId: "SAURON", sentiment: -0.82 });
+    });
+
+    it("sends a non-owner the marks' news scores but neither the play nor its name", async () => {
+      const body = await thesisFor("guest@x");
+      const { thesis } = JSON.parse(body);
+      expect(thesis.play).toBeUndefined();
+      expect(thesis.markers[0]).toMatchObject({ symbol: "NVDA", sentiment: -0.82 });
+      expect(body).not.toContain("SAURON");
+      expect(body).not.toContain("Buy the rumor");
+    });
+  });
+
   it("serves the pulse with each section owning its empty state", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/pulse", "/api/desk/sauron/pulse", configWith());

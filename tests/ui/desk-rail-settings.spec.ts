@@ -68,7 +68,7 @@ describe("the any-account head's settings ownership", () => {
       expect(railSource).toContain("Overview");
       expect(railSource).toContain("Playbooks");
       expect(railSource).not.toMatch(/>\s*Decisions\s*</);
-      expect(railSource).toContain('<Link to="/u/$id/decisions" params={{ id }}>');
+      expect(railSource).toContain('<Link to="/u/$id/playbooks" params={{ id }}>');
       expect(railSource).not.toContain("← Leaderboard");
       expect(railSource).not.toContain('className="rail-label"');
     });

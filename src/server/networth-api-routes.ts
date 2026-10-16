@@ -58,6 +58,15 @@ function highestClose(
   return best;
 }
 
+/** The first day the account held money, from the same full-history read — where its record
+ *  begins, so a window reaching further back is never shown as complete (#5211). */
+function firstFundedDay(h: AlpacaPortfolioHistory | undefined): string | undefined {
+  if (!(h && Array.isArray(h.equity) && Array.isArray(h.timestamp))) return undefined;
+  const i = h.equity.findIndex((v) => typeof v === "number" && Number.isFinite(v) && v > 0);
+  const ts = i < 0 ? undefined : h.timestamp[i];
+  return typeof ts === "number" ? new Date(ts * 1000).toISOString() : undefined;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** SPY's per-window return, through the first owned account with a market-data client. One feed
@@ -121,6 +130,7 @@ async function accountNetWorth(
     ...WINDOW_KEYS.map((key) => client.getPortfolioHistory(PERIOD[key]).catch(() => undefined)),
   ]);
   const allTimeHigh = highestClose(fullHistory);
+  const historyStart = firstFundedDay(fullHistory);
 
   const lastEquityStr = account?.last_equity;
   const lastEquity =
@@ -152,6 +162,7 @@ async function accountNetWorth(
     ...(typeof found.realizedPl === "number" ? { realizedPl: found.realizedPl } : {}),
     ...(typeof unrealizedPl === "number" && Number.isFinite(unrealizedPl) ? { unrealizedPl } : {}),
     ...(allTimeHigh ? { allTimeHigh } : {}),
+    ...(historyStart ? { historyStart } : {}),
     windows,
   };
 }

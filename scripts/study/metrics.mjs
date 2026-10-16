@@ -167,6 +167,58 @@ export function landingScreens(top, scrollY, innerHeight) {
   return offset >= 0 && offset < 1 ? 0 : round(offset, 1);
 }
 
+/** Search params whose change swaps the account, or the section of the same page. */
+const ACCOUNT_PARAMS = new Set(["account"]);
+const SECTION_PARAMS = new Set(["section", "chapter"]);
+
+/** The search param names whose value differs between two `?a=b&…` strings. */
+function changedParams(before = "", after = "") {
+  const [b, a] = [new URLSearchParams(before), new URLSearchParams(after)];
+  const keys = new Set([...b.keys(), ...a.keys()]);
+  return [...keys].filter((k) => b.getAll(k).join("\n") !== a.getAll(k).join("\n")).sort();
+}
+
+/**
+ * What an action changed, by kind — so a scroll that comes with it can be read for what it is: an
+ * account or section switch resets the scroll on purpose (#4965), a filter keeps it (#4944), and a
+ * matcher cannot tell the two apart from the tapped text alone ("All accounts" read as a filter in
+ * the fixed-build control, #5218). `{kind, params}` — kind is navigation (another page) · account ·
+ * section · filter (any other search param) · in-page (same address, the page's text or controls
+ * changed) — or null when nothing did. An account switch wins over the params it clears with it.
+ */
+export function changeKind(rec) {
+  const { before: b, after: a } = rec;
+  if (b.pathname !== a.pathname) return { kind: "navigation", params: [] };
+  // A snapshot without `search` (an older trace) still carries `section`.
+  const params =
+    b.search === undefined && a.search === undefined
+      ? b.section !== a.section
+        ? ["section"]
+        : []
+      : changedParams(b.search, a.search);
+  if (params.some((p) => ACCOUNT_PARAMS.has(p))) return { kind: "account", params };
+  if (params.some((p) => SECTION_PARAMS.has(p))) return { kind: "section", params };
+  if (params.length > 0) return { kind: "filter", params };
+  if (b.href !== a.href || b.textHash !== a.textHash) return { kind: "in-page", params: [] };
+  return null;
+}
+
+/** The change kind as a clause after the action: ` (a section switch: section)`, or "". */
+function changeNote(rec) {
+  if (rec.action.kind === "scroll" || rec.action.kind === "back") return "";
+  const c = changeKind(rec);
+  if (!c) return "";
+  const which = c.params.length > 0 ? `: ${c.params.join(", ")}` : "";
+  const phrase = {
+    navigation: `a move to ${rec.after.pathname}`,
+    account: `an account switch${which}`,
+    section: `a section switch${which}`,
+    filter: `a filter change${which}`,
+    "in-page": "a change on the page, same address",
+  }[c.kind];
+  return ` (${phrase})`;
+}
+
 const actionLabel = (rec) => {
   const a = rec.action;
   if (a.kind === "tap")
@@ -293,7 +345,7 @@ function scrollFindings(rec, name) {
     out.push(
       finding(
         "involuntary-scroll",
-        `${actionLabel(rec)} scrolled the page ${Math.round(involuntary)}px on its own (${rec.before.scrollY} → ${rec.after.scrollY})`,
+        `${actionLabel(rec)}${changeNote(rec)} scrolled the page ${Math.round(involuntary)}px on its own (${rec.before.scrollY} → ${rec.after.scrollY})`,
         name,
         "high",
       ),
@@ -321,7 +373,7 @@ function tapFindings(rec, name) {
     out.push(
       finding(
         "tap-displacement",
-        `the control under the tap moved ${moved.px}px after ${actionLabel(rec)}`,
+        `the control under the tap moved ${moved.px}px after ${actionLabel(rec)}${changeNote(rec)}`,
         name,
         "medium",
       ),
@@ -342,7 +394,7 @@ export function actionFindings(rec) {
     out.push(
       finding(
         "layout-shift",
-        `the layout shifted ${shifts.total} (${shifts.input} within 500ms of the input) after ${actionLabel(rec)}`,
+        `the layout shifted ${shifts.total} (${shifts.input} within 500ms of the input) after ${actionLabel(rec)}${changeNote(rec)}`,
         name,
         "medium",
       ),

@@ -68,7 +68,7 @@ export function MilestoneStrip({
           <Rung key={p.code} deskId={deskId} play={p} current={p.code === current} />
         ))}
       </nav>
-      <p className="ladder-strip-status">{status({ plays, wheels, gate, nextUp })}</p>
+      <p className="ladder-strip-status">{ladderStatus({ plays, wheels, gate, nextUp })}</p>
     </section>
   );
 }
@@ -127,8 +127,9 @@ function Rung({
   );
 }
 
-/** The one line under the rail — what's next, and what opens after it. Server words only. */
-function status({
+/** The one line under the rail — what's next, and what opens after it. Server words only. The
+ *  trading chapter's ladder list says the same line under its count (#5242). */
+export function ladderStatus({
   plays,
   wheels,
   gate,

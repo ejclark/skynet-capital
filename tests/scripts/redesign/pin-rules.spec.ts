@@ -1,13 +1,19 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import {
   contrast,
   type Drawn,
   imageSize,
   layoutProblems,
+  manifestPins,
   PALETTE,
   paletteProblems,
   readPins,
 } from "../../../scripts/redesign/pin-rules.mjs";
+import { MAX_PIN_LABEL, pinProblems } from "../../../scripts/steer/pins.mjs";
 
 // #5143: pin.mjs refuses a frame that breaks Eric's standing rules — text he can read on a phone,
 // contrast a red/green colourblind reader can see, nothing cut off, badges that don't touch — and
@@ -69,6 +75,15 @@ describe("readPins", () => {
     ]);
     expect(readPins({}).problems).toEqual(["pins: nothing to draw"]);
   });
+
+  it("names a list entry that isn't a pin at all, instead of throwing", () => {
+    expect(readPins({ pins: [null, 7] }).problems).toEqual([
+      'pin 1 (""): x and y are % of the frame, 0–100',
+      "pin 1: needs a label — a few words on what is wrong here",
+      'pin 2 (""): x and y are % of the frame, 0–100',
+      "pin 2: needs a label — a few words on what is wrong here",
+    ]);
+  });
 });
 
 describe("layoutProblems", () => {
@@ -119,5 +134,62 @@ describe("imageSize", () => {
     png.writeUInt32BE(3120, 20);
     expect(imageSize(png)).toEqual({ width: 2560, height: 3120 });
     expect(() => imageSize(Buffer.from("GIF89a"))).toThrow(/not a JPEG or PNG/);
+  });
+});
+
+// Eric, 2026-10-11: a reaction on each pin. The manifest's `pins` is the JSON pin.mjs drew, so
+// there is no second copy to keep in sync; `--emit-manifest-pins` prints it, defaults filled.
+describe("manifestPins", () => {
+  it("keeps what the page needs from the pins pin.mjs drew, defaults filled", () => {
+    const { pins } = readPins({
+      pins: [
+        { x: 50, y: 12, label: "range strip", box: [4, 10, 92, 6] },
+        { x: 30, y: 40, label: "order line", side: "left" },
+      ],
+      tag: "illustrative values",
+    });
+    const out = manifestPins(pins);
+    expect(out).toEqual([
+      { n: 1, x: 50, y: 12, label: "range strip", side: "right" },
+      { n: 2, x: 30, y: 40, label: "order line", side: "left" },
+    ]);
+    expect(pinProblems(out, "q1 option B pins")).toEqual([]);
+  });
+
+  // #5244: pin.mjs refused a label past 48 while the page and the lint allowed 60, so a label could
+  // pass one check and fail the other. Both read the one exported limit now.
+  it("holds a label to the same limit the page and the lint read", () => {
+    const at = (n: number) => ({ x: 10, y: 10, label: "x".repeat(n) });
+    expect(readPins({ pins: [at(MAX_PIN_LABEL)] }).problems).toEqual([]);
+    expect(pinProblems([{ n: 1, ...at(MAX_PIN_LABEL) }], "q1")).toEqual([]);
+    expect(readPins({ pins: [at(MAX_PIN_LABEL + 1)] }).problems).toEqual([
+      expect.stringMatching(
+        new RegExp(`: ${MAX_PIN_LABEL + 1} characters — .*≤${MAX_PIN_LABEL}\\)`),
+      ),
+    ]);
+    expect(pinProblems([{ n: 1, ...at(MAX_PIN_LABEL + 1) }], "q1")).toEqual([
+      `q1 pin 1: label is ${MAX_PIN_LABEL + 1} characters — keep it to ${MAX_PIN_LABEL}`,
+    ]);
+  });
+
+  it("is what `pin.mjs --emit-manifest-pins` prints, and it refuses a pins file it can't draw", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pin-emit-"));
+    const file = join(dir, "pins.json");
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        ["scripts/redesign/pin.mjs", "--pins", file, "--emit-manifest-pins"],
+        { encoding: "utf8" },
+      );
+    writeFileSync(file, JSON.stringify({ pins: [{ x: 50, y: 12, label: "range strip" }] }));
+    const ok = run();
+    expect(ok.status).toBe(0);
+    expect(JSON.parse(ok.stdout)).toEqual([
+      { n: 1, x: 50, y: 12, label: "range strip", side: "right" },
+    ]);
+    writeFileSync(file, JSON.stringify({ pins: [{ x: 150, y: 12, label: "range strip" }] }));
+    const bad = run();
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toContain('pin 1 ("range strip"): x and y are % of the frame');
   });
 });

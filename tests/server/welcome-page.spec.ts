@@ -10,4 +10,10 @@ describe("the public /welcome guide", () => {
     expect(html).toContain('href="/login"');
     expect(html).toContain('href="/learn"');
   });
+
+  it("says the keys also send the orders a member places, never that they are only read (#5175)", () => {
+    const html = welcomeHtml();
+    expect(html).toContain("send the orders you place");
+    expect(html).not.toContain("We read them only");
+  });
 });

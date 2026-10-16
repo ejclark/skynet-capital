@@ -14,8 +14,9 @@
 // bare path matches any query. Everything else is the composed world; a read neither covers is
 // reported (`unstubbed`), never guessed.
 
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { sectionsFromBoxes } from "../steer/frame-sections.mjs";
 import { answerFrom, canonicalUrl } from "../study/payloads.mjs";
 import { openWorld } from "../study/world-route.mjs";
 import { INSTANT } from "../study/worlds/instant.mjs";
@@ -105,6 +106,27 @@ async function shootOne(w, spec, kind, frame) {
   const maxH = spec.maxH?.[kind] ?? (kind === "phone" ? height * 2 : 1560);
   const path = join(spec.out, `${spec.id}-${kind}.jpg`);
   const shot = await capture(page, path, width, Math.min(Math.max(doc, height), maxH));
+  // Where each named part sits on this frame (frame-sections.mjs), so a mark Eric leaves on it can
+  // be read back by name. Containers and small controls both count; the read-back takes the
+  // smallest box holding the mark.
+  const raw = await page.evaluate(() => {
+    const PARTS =
+      "section, article, li, form, nav, header, fieldset, [aria-label], [data-section], button, [role=tab], th, dt, h1, h2, h3, h4";
+    const name = (el) =>
+      el.getAttribute("aria-label") ||
+      el.querySelector?.("h1, h2, h3, h4, legend, dt, th")?.textContent ||
+      el.innerText ||
+      el.textContent ||
+      "";
+    return [...document.querySelectorAll(PARTS)].map((el) => {
+      const r = el.getBoundingClientRect();
+      return { text: name(el), x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height };
+    });
+  });
+  writeFileSync(
+    path.replace(/\.jpg$/, ".sections.json"),
+    `${JSON.stringify(sectionsFromBoxes(raw, { width, height: shot.cssH }))}\n`,
+  );
   return {
     kind,
     path,

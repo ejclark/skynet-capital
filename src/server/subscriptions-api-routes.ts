@@ -22,6 +22,7 @@ import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
+import { withForecasts } from "./pair-forecast.js";
 import { subscribeLiveReads } from "./subscribe-live-reads.js";
 import {
   parseAllocationBody,
@@ -183,7 +184,7 @@ async function serveStoreIndex(
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
   const subscriptions = owns && id && state ? (state[id] ?? []) : undefined;
-  const view = playbookStoreView(
+  const bare = playbookStoreView(
     subscriptions,
     await viewerDelegationLocked(config, session),
     [],
@@ -193,6 +194,8 @@ async function serveStoreIndex(
     // The viewed account's own allocations, only for a viewer who owns it — as its subscriptions.
     subscriptions && id ? config.subscriptions?.loadAllocations()[id] : undefined,
   );
+  // Each single-ticker row carries R&D's call for its next earnings report (#5444).
+  const view = { ...bare, strategies: withForecasts(bare.strategies, asOfIso(config)) };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state
     ? subscriberCounts(state, (accountId) => isHumanAccount(config, accountId))

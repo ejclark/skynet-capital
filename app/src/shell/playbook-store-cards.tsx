@@ -1,20 +1,24 @@
 import { Fragment, type ReactElement } from "react";
+import { type WindowPlan, windowPlan } from "../live/playbook-rule";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
   PairRowView,
   PlaybookStoreCardView,
 } from "../live/playbook-store";
+import { PairEvidence, readyPair } from "./playbook-evidence";
 import {
   AccountPlaybookMetrics,
   HousePlaybookMetrics,
   type MetricsScope,
 } from "./playbook-metrics";
 import { SubscribeForm } from "./playbook-subscribe-form";
+import { WindowTimeline } from "./playbook-window";
 
 /**
  * THE PLAYBOOK STORE's pair rows (issue #885; by strategy since #4469 slice 3b), moved here whole
- * from the retired desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). A
+ * from the desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623; that
+ * address now holds the bot's own Playbooks section, #5073). A
  * strategy card (`playbook-strategy-cards.tsx`) holds one row per pair. The account is a parameter
  * of the action, never a page of its own.
  */
@@ -105,18 +109,27 @@ const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
  * The facts the probe derives from the playbook's own code — window, target exposure per mode, and
  * the traits it proved — ported from the retired Plays cards (#3623) so they can never drift from
  * what the playbook does. A tactical playbook has no window, so it shows none rather than a false
- * "0%, no window" row; its rules are the Enter / Exit / Hold copy below.
+ * "0%, no window" row; its rules are the Enter / Exit / Hold copy below. A window drawn as a line
+ * (#5432) is not said again as a sentence.
  */
-function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): ReactElement | null {
+function PlaybookFacts({
+  card,
+  drawn,
+}: {
+  readonly card: PlaybookStoreCardView;
+  readonly drawn: boolean;
+}): ReactElement | null {
   if (!(card.window && card.size) && card.traits.length === 0) return null;
   return (
     <>
       {card.window && card.size ? (
         <dl className="pb-card-facts">
-          <div>
-            <dt>Window</dt>
-            <dd className="num">{card.window}</dd>
-          </div>
+          {drawn ? null : (
+            <div>
+              <dt>Window</dt>
+              <dd className="num">{card.window}</dd>
+            </div>
+          )}
           <div>
             <dt>Target exposure</dt>
             <dd className="num">
@@ -173,6 +186,97 @@ function evidenceFacts(pair: PairRowView): string[] {
   ];
 }
 
+/** A pre-earnings pair's window laid on its ticker's next report, when there is one to draw: a
+ *  single ticker, a window with one span, and a report on file (`windowPlan`). */
+function drawnWindow(card: PlaybookStoreCardView): WindowPlan | undefined {
+  const [symbol] = card.symbols;
+  if (card.symbols.length !== 1 || !symbol) return undefined;
+  return windowPlan(symbol, card.window, new Date().toISOString());
+}
+
+/** The pair's rule: a pre-earnings pair draws it as one line (#5432) in place of the Enter / Exit /
+ *  Hold rows; its own labelled notes still follow. Anything else says its rule in the rows. */
+function PairRule({ card }: { readonly card: PlaybookStoreCardView }): ReactElement {
+  const plan = drawnWindow(card);
+  const notes = card.notes?.map((note) => (
+    <Fragment key={note.label}>
+      <dt>{note.label}</dt>
+      <dd>{note.text}</dd>
+    </Fragment>
+  ));
+  if (plan) {
+    return (
+      <>
+        <WindowTimeline plan={plan} {...(card.stretches ? { stretches: card.stretches } : {})} />
+        <PlaybookFacts card={card} drawn />
+        {card.notes?.length ? <dl className="pb-card-triggers">{notes}</dl> : null}
+      </>
+    );
+  }
+  return (
+    <>
+      <PlaybookFacts card={card} drawn={false} />
+      <dl className="pb-card-triggers">
+        <dt>Enter</dt>
+        <dd>{card.enter}</dd>
+        <dt>Exit — take profit</dt>
+        <dd>{card.exitTakeProfit}</dd>
+        <dt>Exit — cut losses</dt>
+        <dd>{card.exitCutLosses}</dd>
+        <dt>Hold</dt>
+        <dd>{card.hold}</dd>
+        {notes}
+      </dl>
+    </>
+  );
+}
+
+/** What a row says under its head: a ready row reads as a call (#5444); a row that can't run or
+ *  isn't studied keeps its own words. Then any hand-off or refusal note the server sent. */
+function PairWords({
+  pair,
+  reportKeyed,
+}: {
+  readonly pair: PairRowView;
+  readonly reportKeyed: boolean;
+}): ReactElement {
+  // A stale ✓ is not a call to act on: it keeps its words and dates, never a present-tense sentence.
+  const ready = readyPair(pair);
+  const facts = ready ? [] : evidenceFacts(pair);
+  return (
+    <>
+      {ready ? (
+        <PairEvidence pair={pair} reportKeyed={reportKeyed} />
+      ) : (
+        <p className="pb-pair-call">{pair.call}</p>
+      )}
+      {pair.reason ? <p className="pb-pair-note">Can't run: {pair.reason}.</p> : null}
+      {facts.length > 0 ? <p className="pb-pair-facts">{facts.join(" · ")}</p> : null}
+      {!ready && pair.number ? <p className="pb-pair-facts">{pair.number}</p> : null}
+      {pair.handOff ? <p className="pb-pair-note">{pair.handOff}.</p> : null}
+      {pair.notTrading ? <p className="pb-pair-note">{pair.notTrading}</p> : null}
+    </>
+  );
+}
+
+/** "3 active subscribers · its study →" — the count, never who, and the way to the study. */
+function CountLine({
+  subscribers,
+  studyHref,
+}: {
+  readonly subscribers?: number;
+  readonly studyHref?: string;
+}): ReactElement | null {
+  if (subscribers === undefined && !studyHref) return null;
+  return (
+    <p className="pb-card-subscribers">
+      {subscribers !== undefined ? subscriberLine(subscribers) : null}
+      {subscribers !== undefined && studyHref ? " · " : null}
+      {studyHref ? <a href={studyHref}>its study →</a> : null}
+    </p>
+  );
+}
+
 /**
  * One pair on a strategy card (#4469 slice 3b): a strategy on a ticker, headed by the ticker and its
  * evidence as a glyph AND a word. Rows read by what the owner came to do, as `PlaybookCard` did:
@@ -205,11 +309,14 @@ export function PairRow({
   accountName,
   metrics,
   house,
+  reportKeyed = true,
 }: {
   readonly accountId: string;
   /** The pair's rules and numbers, joined on `pair.id`. */
   readonly card: PlaybookStoreCardView;
   readonly pair: PairRowView;
+  /** Its strategy is timed to the earnings report, so R&D's call on the report is its forecast. */
+  readonly reportKeyed?: boolean;
   readonly canManage: boolean;
   readonly delegation: DelegationGateView;
   /** Bots only for now (#4610) — absent reads as open (a server from before the rule). */
@@ -222,68 +329,44 @@ export function PairRow({
   readonly house?: MetricsScope;
 }): ReactElement {
   const subscribed = canManage && pair.subscription !== undefined;
-  const facts = evidenceFacts(pair);
   return (
     <div className="pb-pair" data-subscribed={subscribed || undefined} data-status={pair.status}>
-      <h3 className="pb-pair-h">
-        <span className="num pb-pair-ticker">{pairTitle(pair.symbols)}</span>{" "}
-        <span className="pb-pair-status">{pair.statusLabel}</span>
-      </h3>
-      {pair.symbols.length > 1 ? (
-        <p className="num pb-card-symbols">{pair.symbols.join(" · ")}</p>
-      ) : null}
-      <p className="pb-pair-call">{pair.call}</p>
-      {pair.reason ? <p className="pb-pair-note">Can't run: {pair.reason}.</p> : null}
-      {facts.length > 0 || pair.studyHref ? (
-        <p className="pb-pair-facts">
-          {facts.join(" · ")}
-          {facts.length > 0 && pair.studyHref ? " · " : ""}
-          {pair.studyHref ? <a href={pair.studyHref}>its study →</a> : null}
-        </p>
-      ) : null}
-      {pair.number ? <p className="pb-pair-facts">{pair.number}</p> : null}
-      {pair.handOff ? <p className="pb-pair-note">{pair.handOff}.</p> : null}
-      {pair.notTrading ? <p className="pb-pair-note">{pair.notTrading}</p> : null}
-      {card.subscribers !== undefined ? (
-        <p className="pb-card-subscribers">{subscriberLine(card.subscribers)}</p>
-      ) : null}
-      {canManage && !subscribed ? (
-        <NewSubscription
-          accountId={accountId}
-          card={card}
-          delegation={delegation}
-          {...(botsOnly ? { botsOnly } : {})}
-          {...(pair.subscribeRefusal ? { refusal: pair.subscribeRefusal } : {})}
-          {...(pair.needsConviction ? { needsConviction: true } : {})}
-          onChanged={onChanged}
+      {/* The evidence, then how it trades: one column on a phone, side by side on a wide card. */}
+      <div className="pb-pair-evidence">
+        <h3 className="pb-pair-h">
+          <span className="num pb-pair-ticker">{pairTitle(pair.symbols)}</span>{" "}
+          <span className="pb-pair-status">{pair.statusLabel}</span>
+        </h3>
+        {pair.symbols.length > 1 ? (
+          <p className="num pb-card-symbols">{pair.symbols.join(" · ")}</p>
+        ) : null}
+        <PairWords pair={pair} reportKeyed={reportKeyed} />
+        <CountLine
+          {...(card.subscribers !== undefined ? { subscribers: card.subscribers } : {})}
+          {...(pair.studyHref ? { studyHref: pair.studyHref } : {})}
         />
-      ) : null}
+        {canManage && !subscribed ? (
+          <NewSubscription
+            accountId={accountId}
+            card={card}
+            delegation={delegation}
+            {...(botsOnly ? { botsOnly } : {})}
+            {...(pair.subscribeRefusal ? { refusal: pair.subscribeRefusal } : {})}
+            {...(pair.needsConviction ? { needsConviction: true } : {})}
+            onChanged={onChanged}
+          />
+        ) : null}
+      </div>
       <details className="pb-pair-rules" open>
-        <summary>Rules and record</summary>
+        <summary>How it trades</summary>
         <p className="pb-card-description">{card.description}</p>
-        <PlaybookFacts card={card} />
-        <dl className="pb-card-triggers">
-          <dt>Enter</dt>
-          <dd>{card.enter}</dd>
-          <dt>Exit — take profit</dt>
-          <dd>{card.exitTakeProfit}</dd>
-          <dt>Exit — cut losses</dt>
-          <dd>{card.exitCutLosses}</dd>
-          <dt>Hold</dt>
-          <dd>{card.hold}</dd>
-          {card.notes?.map((note) => (
-            <Fragment key={note.label}>
-              <dt>{note.label}</dt>
-              <dd>{note.text}</dd>
-            </Fragment>
-          ))}
-        </dl>
-        <footer className="pb-card-evidence">
-          <span className="num">{card.evidence}</span>
-          {card.evidenceHref && card.evidenceHref !== pair.studyHref ? (
+        <PairRule card={card} />
+        {/* The study's repo path leaves the member view (#5444): "its study →" carries it. */}
+        {card.evidenceHref && card.evidenceHref !== pair.studyHref ? (
+          <footer className="pb-card-evidence">
             <a href={card.evidenceHref}>the study behind it →</a>
-          ) : null}
-        </footer>
+          </footer>
+        ) : null}
         {metrics ? <AccountPlaybookMetrics accountName={accountName} scope={metrics} /> : null}
         {house ? <HousePlaybookMetrics scope={house} /> : null}
       </details>

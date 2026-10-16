@@ -7,11 +7,12 @@ import {
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
+import { EnvPill, InlineResult } from "../ui";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
  * ACCOUNTS' DECISIONS SECTION — ported from the `/u/:id/decisions` route ("the bot's mind"),
- * which is still live while its content folds into `/accounts` (#3345/#3350/#3687): the
+ * since folded into the Playbooks section's check log (#3345/#3350/#3687; #5073): the
  * autonomous-trading audit trail, run-row style. Bot-only (Eric: "tied to autonomous
  * trading... folded somewhere within those types of accounts, which is currently only bot
  * accounts") — `AccountsBody` only shows this section in the switch when the selected account's
@@ -27,6 +28,9 @@ import { cycleAnchor } from "./cycle-anchor";
 export const GUARDS_GLOSS =
   "the risk checks every order must clear before it is placed: only a playbook the bot is subscribed to may open a position, a cap on any one position's share of the account, the cash to pay for it, never selling more than is held, and no new buys once the day's loss passes its limit";
 
+// Not an account kind: this chip, the strategy chips in OutcomeLine / RefusedLine and the
+// "via <persona>" tag borrow `.chip-bot` for a name. They want a chip style of their own — a taste
+// call left open on #5365 — so they are not `KindChip` (app/src/ui).
 /** The outcome's playbook, mode appended — never the mode standalone. */
 function PlaybookChip({
   outcome,
@@ -64,8 +68,8 @@ function ResultWords({
   ) : null;
 }
 
-/** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
- *  rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
+/** Exported so the Playbooks section's check log (`bot-playbooks.tsx`, on `/accounts` and
+ *  `/u/:id/playbooks`) reuses this same rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
  *  (#885: "we do not show what playbooks others are using") — the server already withholds it
  *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. What
  *  the broker said about an order that never traded rides the same gate: a broker's message can
@@ -84,6 +88,7 @@ export function OutcomeLine({
         {outcome.contract ?? `${outcome.side.toUpperCase()} ${outcome.quantity} ${outcome.symbol}`}
       </span>
       {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       <ResultWords outcome={outcome} showBroker={showPlaybook} />
@@ -119,6 +124,7 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
         {intent.contract ?? `${intent.side.toUpperCase()} ${intent.quantity} ${intent.symbol}`}
       </span>
       {intent.guardReason ? <span className="cycle-guard">{intent.guardReason}</span> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
       <span className="cycle-reason">“{intent.reason}”</span>
       {intent.expectation ? (
@@ -191,6 +197,7 @@ export function CycleRow({
       >
         <span className="cycle-glyph" aria-hidden="true" />
         <span className="cycle-headline">{cycle.headline}</span>
+        {/* a persona name, not an account kind — its own chip style is open on #5365 */}
         {cycle.authorPersona ? (
           <span
             className="chip chip-bot"
@@ -199,9 +206,7 @@ export function CycleRow({
             via {cycle.authorPersona}
           </span>
         ) : null}
-        <span className={`chip chip-${cycle.mode === "live" ? "human" : "bot"}`}>
-          {cycle.mode.toUpperCase()}
-        </span>
+        <EnvPill mode={cycle.mode} />
         <span className="cycle-when num">{sinceStamp ? `${sinceStamp} – ${stamp}` : stamp}</span>
       </button>
       {open ? (
@@ -339,7 +344,9 @@ export function DecisionsSection({
           {loadingMore ? "Loading…" : "Load older cycles"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older cycles — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older cycles — try again.</InlineResult>
+      ) : null}
     </>
   );
 }

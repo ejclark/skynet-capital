@@ -1,39 +1,31 @@
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { DeskActivityEvent } from "../live/desk";
-import {
-  byDay,
-  cashMoved,
-  dayHeader,
-  instrumentWords,
-  orderBet,
-  orderTime,
-  sideWord,
-  signedDollars,
-  sizeWord,
-  statusMark,
-} from "../live/order-facts";
-import { findActivityRow, rowKey, WhyDetail } from "./activity-table";
-import { BetGlyph } from "./bet-glyph";
+import { type EntryLeg, type LedgerEntry, ledgerEntry, legTail } from "../live/ledger-entry";
+import { byDay, dayHeader, instrumentWords, orderTime, signedDollars } from "../live/order-facts";
+import { findActivityRow, rowKey } from "./activity-table";
 import { useLandOnHash } from "./landing";
-import { withMinus } from "./position-row-spec";
+import { OpenedOrder, PlaybookLine } from "./opened-order";
 
 /**
- * THE PHONE'S ACTIVITY, ONE CARD AN ORDER (#5101; round 2 of #5037, the activity question, slice 1).
- * At ≤700px the wide ledger gives way to cards under a day header ("TUE · OCT 6"), so the date
- * leaves the row and nothing scrolls sideways. Each card is two lines:
- *  - line 1 is what happened: "SOLD 1 CRWV $80 PUT · Nov 6", and on the right the cash it moved,
- *    the word before the number so the digits share one edge — "received +$255", "paid −$9,044";
- *  - line 2 is the decision: the bet as a shape and a few words read off the contract ("Stays above
- *    $80"), the playbook it ran under for the owner alone (#885), a status only when it isn't
- *    "filled" (◷ working, ✕ canceled), and on the right what the order booked if it closed one.
- * Tapping the card opens it in place, under its own row: the time it filled, the price a share, and
- * — for a bot's order — the decision that placed it, the same words the desk table opens to.
+ * THE PHONE'S LEDGER, ONE CARD AN ENTRY (#5101; the receipt, #5317 — #5160 rounds 9–15). At ≤700px
+ * the wide ledger gives way to cards under a day header ("TUE · OCT 6"), so the date leaves the row
+ * and nothing scrolls sideways. A card is its legs (`ledger-entry.ts`), never a symbol header:
+ *  - a single order: what happened with its signed cash on the right, then its contract or price on
+ *    a quieter second line, then the playbook it ran under (the owner's alone, #885) with where it
+ *    stands on the right — `open`, `closed Oct 1`, `✕ canceled`;
+ *  - a round trip: the close, then each order it closed (quieter, its own day beside its price),
+ *    then a dashed rule and the total — "META · 9 days" with the signed result.
+ * Tapping the card opens it in place, under its own row: the time it filled and the price a share,
+ * then the view the desk table's row opens to (#5262, `opened-order.tsx`). The bet lives there,
+ * never in the list (#5317).
  *
- * Every figure keeps its sign and its word, so neither the gain nor the cash direction rides on hue
- * (a standing reader is red/green colourblind). The card carries `id="act-<orderId>"`, the anchor a
- * Thesis marker or a FORM square links, and lands the way the table's rows do (`landing.ts`): only
- * one of the two layouts is ever mounted (`activity-ledger.tsx`), so the id is never doubled.
+ * Every figure keeps its sign, so neither the gain nor the cash direction rides on hue (a standing
+ * reader is red/green colourblind). The card carries `id="act-<orderId>"`, the anchor a Thesis
+ * marker or a FORM square links, and lands the way the table's rows do (`landing.ts`): only one of
+ * the two layouts is ever mounted (`activity-ledger.tsx`), so the id is never doubled. An order a
+ * close closed is drawn inside the close's card too, but carries no anchor there — its own card,
+ * on its own day, keeps it.
  */
 export function ActivityCards({
   events,
@@ -56,7 +48,7 @@ export function ActivityCards({
       {byDay(events).map((day) => (
         <section key={day.key} className="act-day" aria-labelledby={`ledger-day-${day.key}`}>
           <h3 id={`ledger-day-${day.key}`} className="act-day-head">
-            {dayHeader(day.key)}
+            <span>{dayHeader(day.key)}</span>
           </h3>
           <ol className="act-day-list">
             {day.events.map((event) => (
@@ -77,15 +69,6 @@ export function ActivityCards({
   );
 }
 
-/** Where a side would be on an expiry or assignment report: the event's name, on a dashed chip —
- *  nothing was bought or sold (#4650), so it never borrows a side's word. */
-const LIFECYCLE_WORD: Record<NonNullable<DeskActivityEvent["lifecycle"]>, string> = {
-  OPEXP: "EXPIRED",
-  OPASN: "ASSIGNED",
-  OPEXC: "EXERCISED",
-  OPTRD: "SETTLED",
-};
-
 function ActivityCard({
   event,
   showPlaybook,
@@ -101,10 +84,11 @@ function ActivityCard({
 }): ReactElement {
   const [open, setOpen] = useState(startOpen);
   const bodyId = useId();
-  const bet = orderBet(event);
-  const cash = cashMoved(event);
-  const status = statusMark(event);
+  const entry = ledgerEntry(event);
   const playbook = showPlaybook ? event.reasoning?.playbookId : undefined;
+  // A single order's standing sits beside its playbook on the last line; with no playbook to sit
+  // beside, it moves up to the right of the second line rather than holding a line alone.
+  const standingBelow = !entry.total && playbook !== undefined;
   return (
     <article id={`act-${event.orderId}`} className="act-card" data-open={open ? "" : undefined}>
       <button
@@ -114,66 +98,85 @@ function ActivityCard({
         aria-controls={bodyId}
         onClick={() => setOpen(!open)}
       >
-        <span className="act-what">
-          {event.lifecycle ? (
-            <span className="act-side act-lifecycle">{LIFECYCLE_WORD[event.lifecycle]}</span>
-          ) : (
-            <span className="act-side">{sideWord(event)}</span>
-          )}{" "}
-          <span className="act-size">{sizeWord(event)}</span>{" "}
-          <span className="act-inst">{instrumentWords(event)}</span>
-        </span>
-        <span className="act-cash">
-          {cash ? (
-            <>
-              {cash.word} <b>{signedDollars(cash.dollars)}</b>
-            </>
-          ) : null}
-        </span>
-        <span className="act-bet">
-          {bet ? (
-            <span className="act-bet-words">
-              <BetGlyph shape={bet.shape} />
-              {bet.words}
-            </span>
-          ) : event.lifecycle ? (
-            <span className="act-bet-words">{event.status}</span>
-          ) : null}
-          {playbook ? <span className="act-playbook">{playbook}</span> : null}
-          {status ? <span className="act-status">{status}</span> : null}
-        </span>
-        <span className="act-result">
-          {event.realizedPl ? (
-            <>
-              booked{" "}
-              <b className={event.realizedTone ? `tone-${event.realizedTone}` : undefined}>
-                {withMinus(event.realizedPl)}
-              </b>
-            </>
-          ) : null}
-        </span>
+        {entry.legs.map((leg, i) => (
+          <CardLeg
+            key={leg.key}
+            leg={leg}
+            {...(i === 0 && !entry.total && !standingBelow ? { outcome: entry.outcome } : {})}
+          />
+        ))}
+        {entry.total ? <CardTotal entry={entry} /> : null}
       </button>
       {event.legs || event.missingLegs ? <CardLegs event={event} /> : null}
+      {playbook && event.reasoning ? (
+        <p className="act-foot">
+          <PlaybookLine
+            why={event.reasoning}
+            playbookId={playbook}
+            orderId={event.orderId}
+            deskId={deskId}
+            bare
+          />
+          {standingBelow ? <Outcome outcome={entry.outcome} /> : null}
+        </p>
+      ) : null}
       {open ? (
         <div id={bodyId} className="act-card-body">
           <Receipt event={event} />
-          {event.reasoning ? (
-            <WhyDetail
-              why={event.reasoning}
-              showPlaybook={showPlaybook}
-              costShown={event.net !== undefined}
-              orderId={event.orderId}
-              {...(deskId ? { deskId } : {})}
-            />
-          ) : null}
-          {onDetail && !event.lifecycle ? (
-            <button type="button" className="act-full" onClick={() => onDetail(event.orderId)}>
-              Full detail <span aria-hidden="true">›</span>
-            </button>
-          ) : null}
+          <OpenedOrder
+            event={event}
+            showPlaybook={showPlaybook}
+            {...(deskId ? { deskId } : {})}
+            {...(onDetail ? { onDetail } : {})}
+          />
         </div>
       ) : null}
     </article>
+  );
+}
+
+/** One leg in two lines: what happened with its cash, then its contract or price (and, for an order
+ *  the close closed, its own day) — the outcome on the right when this card has no last line. */
+function CardLeg({
+  leg,
+  outcome,
+}: {
+  readonly leg: EntryLeg;
+  readonly outcome?: LedgerEntry["outcome"];
+}): ReactElement {
+  const sub = [legTail(leg.words), leg.opened?.day].filter(Boolean).join(" · ");
+  return (
+    <span className="act-leg-row" data-opened={leg.opened ? "" : undefined}>
+      <span className="act-what">
+        <span className="act-side">{leg.words.side}</span> {leg.words.size}{" "}
+        <span className="act-inst">{leg.words.name}</span>
+      </span>
+      <span className="act-cash">{leg.cash !== undefined ? signedDollars(leg.cash) : null}</span>
+      {sub ? <span className="act-sub">{sub}</span> : null}
+      {outcome ? <Outcome outcome={outcome} /> : null}
+    </span>
+  );
+}
+
+/** A round trip's bottom line, under a dashed rule: "META · 9 days" and the signed result. */
+function CardTotal({ entry }: { readonly entry: LedgerEntry }): ReactElement | null {
+  if (!entry.total) return null;
+  return (
+    <span className="act-total">
+      <span className="act-total-name">
+        {entry.total.name} · {entry.total.held}
+      </span>
+      <Outcome outcome={entry.outcome} />
+    </span>
+  );
+}
+
+function Outcome({ outcome }: { readonly outcome: LedgerEntry["outcome"] }): ReactElement | null {
+  if (!outcome) return null;
+  return (
+    <span className="act-outcome">
+      <b className={outcome.tone ? `tone-${outcome.tone}` : undefined}>{outcome.text}</b>
+    </span>
   );
 }
 
@@ -186,7 +189,8 @@ function Receipt({ event }: { readonly event: DeskActivityEvent }): ReactElement
     event.filled > 0 && !event.lifecycle && event.price !== "—"
       ? `${event.symbol === "" ? "net" : "filled at"} ${event.price} a share`
       : undefined,
-    event.lifecycle ? undefined : event.status.replace(/_/g, " "),
+    // "filled" is what the price before it already says; any other status is news (#5262).
+    event.lifecycle || event.status === "filled" ? undefined : event.status.replace(/_/g, " "),
     event.backfilled ? "backfilled" : undefined,
     event.origin === "alpaca-direct"
       ? "placed directly in Alpaca, not through this app"

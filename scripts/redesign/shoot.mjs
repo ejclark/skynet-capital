@@ -2,7 +2,8 @@
 //
 //   node scripts/redesign/shoot.mjs --screen <id> --out <dir> [--state <json>] [--scheme dark|light] [--rebuild]
 //
-// → <dir>/<id>-phone.jpg (390 at 2x) and <dir>/<id>-desk.jpg (1280 at 2x), each ≤200KB; the paths
+// → <dir>/<id>-phone.jpg (390 at 2x) and <dir>/<id>-desk.jpg (1280 at 2x), each ≤200KB, each with a
+// <id>-<phone|desk>.sections.json beside it (where each named part sits — frame-sections.mjs); the paths
 // print on stdout, one per line, and anything the frame could not show goes to stderr.
 //
 // WHY A SCRIPT: on 2026-10-10 nineteen redesign sessions each hand-rolled Playwright for their

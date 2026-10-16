@@ -4,6 +4,7 @@
 // carries the marker the next reel reads to say "because you said …". Pure.
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { steerMarker } from "./model.mjs";
+import { perPinBlock } from "./pins.mjs";
 
 /** Eric's words, quoted exactly: every line kept, blank lines kept as a bare `>`. */
 export const quote = (text) =>
@@ -19,6 +20,9 @@ export const cut = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 export function buildIssue(d, r, id) {
   const opt = d.options.find((o) => o.key === r.pick) ?? { key: r.pick, name: r.pick, delta: "" };
   const title = cut(`Build "${opt.name}" for ${d.title}`, 110);
+  const pins = perPinBlock(d, r, { option: opt.key });
+  const said = r.optionNotes?.[opt.key];
+  const optNote = typeof said === "string" && said.trim() ? said : "";
   const body = [
     `**Build option ${opt.key}, "${cut(opt.name, 60)}", from #${d.issue} — Eric picked it on the decisions page.**`,
     "",
@@ -37,7 +41,11 @@ export function buildIssue(d, r, id) {
     "",
     opt.delta ? `What changes: ${opt.delta}` : "",
     "",
-    noteBlock(r.note) || "_No note — the pick is the whole answer._",
+    noteBlock(r.note) || (optNote ? "" : "_No note — the pick is the whole answer._"),
+    // His note under the picked option itself (option-notes.mjs, #5429), word for word.
+    ...(optNote ? ["", `Eric's note on this option:\n\n${quote(optNote)}`] : []),
+    // His reactions on the picked option's own pins (#5143): the build keeps a 👍 as drawn.
+    ...(pins ? ["", pins] : []),
     "",
     "</details>",
     "",

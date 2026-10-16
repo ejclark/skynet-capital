@@ -26,7 +26,9 @@
 //   5 sessions    drive.mjs --actor sealed per member × world × viewport × task × run, N at once
 //   6 analysts    one per member: turns, summaries, key frames at half scale   (round-review.mjs)
 //   7 experts     ×N at once (≤ --concurrency), the census verbatim in batches of ≤ 20, then one
-//                 consolidation each; the area's roles, never the cards (#5099)
+//                 consolidation each; the area's roles, never the cards (#5099). A batch that
+//                 times out is asked once more, then recorded missing: done.json's `coverage`
+//                 names it and counts it against the batches asked; the round goes on (#5155)
 //   8 words       the harvested strings and the area's roles
 //   9 member types  the cards → proposals
 //  10 collect     <out>/findings.jsonl + <out>/classes.json (+ findings-unlabelled.jsonl)
@@ -143,7 +145,8 @@ function lint(ctx, kind, files) {
 /**
  * The round's shared state: options, area config, paths, callers, the log, the tools. `seams`
  * replace the pinned tools (`tool`, `toolAsync`), the frame scaler (`half`) and the console line
- * (`say`) — for a stub round only, so the end-to-end spec runs with no build and no browser.
+ * (`say`), and `wrapCall` wraps a step's caller (to make a call fail as a real one would) — for a
+ * stub round only, so the end-to-end spec runs with no build and no browser.
  */
 function context(opts, seams = {}) {
   const p = JSON.parse(readFileSync(resolve(opts.profile), "utf8"));
@@ -183,7 +186,8 @@ function context(opts, seams = {}) {
     /** One caller per step (the stub counts per role), recording under <step>/requests/. */
     call: (step) => {
       if (!callers.has(step)) {
-        callers.set(step, makeCaller({ stub: ctx.stub, record: join(out, step, "requests") }));
+        const caller = makeCaller({ stub: ctx.stub, record: join(out, step, "requests") });
+        callers.set(step, seams.wrapCall ? seams.wrapCall(step, caller) : caller);
       }
       return callers.get(step);
     },

@@ -4,6 +4,8 @@ export interface Screen {
   id: string;
   name: string;
   purpose: string;
+  /** Where a member finds the screen ("Trade tab", "Member menu"): the feedback board's label. */
+  where?: string;
   route: string;
   world: string;
   viewer: string;

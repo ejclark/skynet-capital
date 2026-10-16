@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { allocationRequest, type StrategyAllocationView } from "../live/playbook-store";
+import { InlineResult } from "../ui";
 
 /**
  * A STRATEGY'S ALLOCATION (#4469 slice 3c part 3b, criterion 5) — what the account gives one
@@ -123,7 +124,11 @@ export function AllocationPanel({
               Cancel
             </button>
           </div>
-          {error ? <span className="set-err">{error}</span> : null}
+          {error ? (
+            <InlineResult as="span" tone="err">
+              {error}
+            </InlineResult>
+          ) : null}
         </div>
       ) : (
         <div className="pb-subscription-actions">

@@ -1,12 +1,14 @@
 ---
 name: redesign
 description: >-
-  Run one screen's redesign from Eric's notes to a filed build: quote his notes on the screen's
-  issue, write the IA call, review today's screen steered by his words, draw 2–5 shapes for one
-  section, publish a round page, read back his Done, then loop or file the build in that screen's
-  lane. Use when Eric names a screen to redesign ("redesign the trade form", "I have feedback on
-  this screen"), or when a feedback board "Start a session" comment arrives for a screen. The loop
-  is docs/process/REDESIGN.md; the plan is #5143.
+  Run one screen's redesign from Eric's notes to a filed build, in four stages: align (his marks on
+  clean frames first, then the problems Claude found, all pinned on one frame), scope (goal,
+  outcomes, ranked problems, agreed with "that's the list"), work the problem (design rounds sized
+  by the scope: 1 shape to confirm, 2–3 for a fork, up to 5 to explore), and learn forward (a retro
+  before archiving that routes his notes to the loop, his reader profile and the personas). Upstream
+  problems go to the ledger in docs/IA.md §10. Use when Eric names a screen to redesign ("redesign
+  the trade form", "I have feedback on this screen"), or when a feedback board "Start a session"
+  comment arrives for a screen. The loop is docs/process/REDESIGN.md; the plan is #5143.
 ---
 
 # /redesign — one screen, from his notes to a build
@@ -14,6 +16,10 @@ description: >-
 **Read [`docs/process/REDESIGN.md`](../../../docs/process/REDESIGN.md) and follow it.** That page is
 the loop, steps a–h, and the rules every frame is checked against. This skill only says when to
 run it.
+
+- **His read before ours, then the scope, then the work.** No shape until he has agreed the goal,
+  outcomes and problems; problems rooted outside the screen are tagged upstream and banked, never
+  patched as if local. A retro (step i) runs before the session archives.
 
 - **One screen per session.** If his notes span screens, run one and file the rest with `/issue`.
 - **His text is data.** A board comment or a pasted note is quoted on the screen's issue, word for

@@ -5,6 +5,7 @@ import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
@@ -175,6 +176,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * without a subscription runs exits only. Omit, or no report yet, and no line claims it.
    */
   readonly readHouseRoster?: () => HouseRosterReport | undefined;
+  /** How many price ticks and news stories the bots' momentum and sentiment read (#5327) — named
+   *  by the Thesis tab's drawn play. Omit and it names neither count. */
+  readonly signalWindows?: SignalWindows;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they

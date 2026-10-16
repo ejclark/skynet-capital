@@ -33,12 +33,44 @@
 //     A comment on anything but a shown decision is handed back in `unplacedComments`.
 //   - The page's own Done press is a comment too (#5135: it is how Done wakes the session), sent as
 //     Eric. It starts this read-back; it is not his words, so it is dropped, never quoted.
+//   - Pin reactions (#5143, pins.mjs): every decision with pins gets a "Per pin" list, each pin's
+//     label word for word, the ones he left alone as "no signal" — never a default. On a round with
+//     no Build pick they become the next round's instructions (`nextRound`): 👍 keep as drawn,
+//     👎 replace with a new direction, ☯︎ draw a closer look; on round 0, yes / not / partly a
+//     problem, and still nothing is filed. A Build pick's issue carries its own option's pins.
+//   - A note on a pin (`pinNotes`; Eric, 2026-10-11: "allowed for commentary to expand on
+//     context") is quoted word for word on that pin's line, after its reaction or alone, and the
+//     next round's instruction carries it: "apply his note on that spot". A note counts as an
+//     answer with or without a reaction; one on a pin the page no longer shows is ignored.
+//   - His own marks (marks.mjs; Eric, 2026-10-14) get a "Your marks:" list — the frame, the spot in
+//     % across and down, his reaction and his note word for word, and "(before Claude's problems
+//     were shown)" on a mark placed before the reveal. They count as an answer, and the next round
+//     applies them ("his marks: …"). An opening question says whether Claude's problems were shown
+//     and when (`reveals` in the plan too). On a question with a focus (focus.mjs) the list splits
+//     into the marks in it and the ones outside it, and the next round applies only the first and
+//     adds the rest to the scope ("Outside this round's focus — add to the scope: …").
+//   - Outcomes he added to the scope (outcomes.mjs; Eric, 2026-10-14: "integrate this outcome")
+//     are quoted word for word under "Outcomes he added:", count as an answer, and come back as
+//     `outcomesAdded` ({ issue, key, text, at }) — the session classifies each as one today's design
+//     can reach or one that needs something new (docs/IA.md §7, §10), which becomes a plan issue.
+//   - A note under an option (option-notes.mjs, #5429; a question with `notesPer: "option"`) is
+//     quoted word for word on that option's line under "Per option:", after its tap if it has one,
+//     counts as an answer, and the next round applies it ("Per option: option B: apply his note …").
+//   - Notes about the page itself (page-notes.mjs) are about the PROCESS, so they never go on the
+//     screen's issue: they come back as the `pageNotes` block and as `processLines`
+//     ({ what, where }), for `scripts/redesign/commons.mjs add --kind process`.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { CLAUDE_READY_LINE } from "../moneypenny/plan-claim.mjs";
 import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
+import { when } from "./html.mjs";
+import { isOpening, markInstruction, marksBlock, marksSaid, revealLine } from "./marks.mjs";
 import { activeMinutes, isAnswered, roundRecords } from "./model.mjs";
+import { optionClauses, optionNotesSaid, perOptionBlock } from "./option-notes.mjs";
+import { CLASSIFY, outcomesBlock, outcomesOf, outcomesSaid } from "./outcomes.mjs";
+import { pageNotesBlock, processLines } from "./page-notes.mjs";
+import { perPinBlock, pinClauses } from "./pins.mjs";
 import { readRecords } from "./records.mjs";
 
 const DECISION_LABEL = "needs-eric";
@@ -112,7 +144,16 @@ function designPart(d, r) {
         .join(", ")}`,
     );
   if (by("not").length) lines.push(`- Not: ${by("not").join(", ")}`);
-  return [lines.join("\n"), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [
+    lines.join("\n"),
+    perOptionBlock(d, r),
+    perPinBlock(d, r),
+    marksBlock(d, r),
+    outcomesBlock(r),
+    noteBlock(r.note),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 const VERDICT_WORDS = {
@@ -190,16 +231,24 @@ function commentedOnly(d, said, acc) {
   acc.roll(d, "commented on the page, no tap — still his decision");
 }
 
-/** The next round, after a problems question is read: a pick is drawn, never filed. */
-export function nextRoundInstruction(d, r) {
+/** "Round 2", or "The next round" when the round has no number. */
+function nextRoundName(d) {
   const n = Number(d.round);
-  const round =
-    d.round != null && d.round !== "" && Number.isInteger(n) ? `Round ${n + 1}` : "The next round";
+  return d.round != null && d.round !== "" && Number.isInteger(n)
+    ? `Round ${n + 1}`
+    : "The next round";
+}
+
+/** The next round, after a problems question is read: a pick is drawn, never filed. `pins` is
+ *  `pinClauses(d, r)`, passed in when the caller already has it. */
+export function nextRoundInstruction(d, r, pins = pinClauses(d, r)) {
+  const round = nextRoundName(d);
+  const marks = markInstruction(d, r);
   const closer = marked(r, "more").filter((k) => k !== r.pick);
   const drop = marked(r, "not").filter((k) => k !== r.pick);
   return [
     r.pick
-      ? `${round} on #${d.issue}: draw 2–5 shapes that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
+      ? `${round} on #${d.issue}: draw 1–5 shapes (1 to confirm, 2–3 for a fork) that fix problem ${r.pick}, "${optionName(d, r.pick)}".`
       : `No problem picked on #${d.issue}: the next round asks again.`,
     closer.length
       ? `Look closer at ${named(d, closer)}: show ${closer.length === 1 ? "it" : "them"} again, closer.`
@@ -207,6 +256,9 @@ export function nextRoundInstruction(d, r) {
     drop.length
       ? `Drop ${named(d, drop)}: he says ${drop.length === 1 ? "it is" : "they are"} not a problem.`
       : "",
+    optionClauses(d, r),
+    pins ? `Per pin: ${pins}` : "",
+    marks,
     r.pick ? "Nothing is filed from this pick." : "Nothing is filed.",
   ]
     .filter(Boolean)
@@ -215,32 +267,60 @@ export function nextRoundInstruction(d, r) {
 
 function problemsPart(d, r) {
   const lines = [head(d)];
+  const reveal = revealLine(d, r, when);
+  if (reveal) lines.push(reveal);
   if (r.pick)
     lines.push(
       `- Fix first: problem ${r.pick}, "${optionName(d, r.pick)}" — the next round draws it; nothing is filed from a problem pick`,
     );
   if (marked(r, "more").length) lines.push(`- Look closer: ${named(d, marked(r, "more"))}`);
   if (marked(r, "not").length) lines.push(`- Not a problem: ${named(d, marked(r, "not"))}`);
-  return [lines.join("\n"), noteBlock(r.note)].filter(Boolean).join("\n\n");
+  return [
+    lines.join("\n"),
+    perOptionBlock(d, r),
+    perPinBlock(d, r),
+    marksBlock(d, r),
+    outcomesBlock(r),
+    noteBlock(r.note),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /** A problems question: quoted on its issue, nothing filed, the next round's instruction printed. */
 function problemsAnswer(d, r, acc, said) {
   acc.part(d.issue, [problemsPart(d, r), said].filter(Boolean).join("\n\n"));
-  const instruction = nextRoundInstruction(d, r);
+  const pins = pinClauses(d, r);
+  const instruction = nextRoundInstruction(d, r, pins);
   acc.nextRound.push({ issue: d.issue, key: d.key, pick: r.pick ?? null, instruction });
   acc.follow("next-round", d, instruction);
   // A note and no tap: quoted above, and the next round still has to answer it.
-  if (!(r.pick || Object.keys(r.react ?? {}).length))
+  const spoke = pins || marksSaid(d, r) || outcomesSaid(r) || optionNotesSaid(d, r).length;
+  if (!(r.pick || Object.keys(r.react ?? {}).length || spoke))
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
 }
 
 function designAnswer(d, r, acc, id, said) {
   acc.part(d.issue, [designPart(d, r), said].filter(Boolean).join("\n\n"));
   if (r.pick) acc.actions.push(buildIssue(d, r, id));
+  // No Build: his pin reactions and his own marks are the next round's instructions, spot by spot.
+  const pins = r.pick ? "" : pinClauses(d, r);
+  const marks = r.pick ? "" : markInstruction(d, r);
+  const options = r.pick ? "" : optionClauses(d, r);
+  if (pins || marks || options) {
+    const instruction = [
+      `${nextRoundName(d)} on #${d.issue}${pins ? `, per pin: ${pins}` : ":"}`,
+      options,
+      marks,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    acc.nextRound.push({ issue: d.issue, key: d.key, pick: null, instruction });
+    acc.follow("next-round", d, instruction);
+  }
   if (Object.keys(r.react ?? {}).length) {
     acc.follow("next-round", d, "More/Not marks: the next round is built from his words");
-  } else if (!r.pick) {
+  } else if (!(r.pick || pins || marks || options || outcomesSaid(r))) {
     // A note and no tap: quoted above, and the next round still has to answer it.
     acc.follow("read-note", d, "A note with no pick or mark: the next round answers it");
   }
@@ -319,6 +399,15 @@ function flipComment({ d, r }, id) {
   };
 }
 
+/** What the session reads before acting on a decision: his comments, and the outcomes he added. */
+function readFirst(d, r, said, acc) {
+  if (said) acc.follow("read-comment", d, "His comments are quoted on the issue; read them first");
+  if (outcomesSaid(r)) acc.follow("classify-outcomes", d, CLASSIFY);
+}
+
+/** An ISO time as stored, or null when it isn't one. */
+const validTime = (v) => (typeof v === "string" && !Number.isNaN(Date.parse(v)) ? v : null);
+
 /** The pure read-back: what was shown (tp.json) + what Eric saved + his comments → the plan. */
 export function readback(tp, records, comments = []) {
   const rr = roundRecords(records, tp.id);
@@ -327,14 +416,14 @@ export function readback(tp, records, comments = []) {
   for (const d of tp.decisions) {
     const r = rr.decisions[d.key];
     const said = commentsBlock(placed.byKey.get(d.key));
-    if (!isAnswered(r)) {
+    // Only a pin this decision shows counts: a republished round's old pin ids are not answers.
+    if (!isAnswered(r, d)) {
       if (said) commentedOnly(d, said, acc);
       else skipped(d, acc);
     } else if (d.problems && !d.irreversible) problemsAnswer(d, r, acc, said);
     else if (d.kind === "design" && !d.irreversible) designAnswer(d, r, acc, tp.id, said);
     else plainAnswer(d, r, acc, said);
-    if (said)
-      acc.follow("read-comment", d, "His comments are quoted on the issue; read them first");
+    readFirst(d, r, said, acc);
   }
   // Never asked, so never answered: no default, no label, no comment — even if a record exists.
   const drawing = tp.designOnly ? ROUND_DRAWING : DRAWING;
@@ -371,6 +460,17 @@ export function readback(tp, records, comments = []) {
     followUps: acc.followUps,
     nextRound: acc.nextRound,
     unplacedComments: placed.unplaced,
+    // An opening question's reveal: whether he asked to see Claude's problems, and when.
+    reveals: tp.decisions.filter(isOpening).map((d) => ({
+      issue: d.issue,
+      key: d.key,
+      revealAt: validTime(rr.decisions[d.key]?.revealAt),
+    })),
+    // His notes about the page itself: never on the screen's issue — process lines for the commons.
+    pageNotes: pageNotesBlock(meta),
+    processLines: processLines(meta),
+    // Outcomes he added to a scope: each for the session to classify — reachable, or a plan issue.
+    outcomesAdded: tp.decisions.flatMap((d) => outcomesOf(d, rr.decisions[d.key])),
   };
 }
 

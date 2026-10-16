@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: retry a github 500 on the spend breaker's and relay's reads
+- **SHA:** a990afa   **DATE:** 2026-10-14   **STATUS:** closed
+- **COVERS:** bb6d999 143153d
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [38495812047](https://github.com/ejclark/skynet-capital/actions/runs/38495812047) at 2026-10-14T01:27:19Z. Repair capsule #5354 filed 2026-10-14T01:33:38Z, closed 13m later by #5355.
+- **ROOT CAUSE:** Two `route` ticks went red on `main` within six minutes, both on a single GitHub-side 500: **Run 38495812047** (this issue): `checkCircuitBreaker` read run 38494372525's log, got `HTTP 500`, fell back to the job list, got another `HTTP 500` a second later, and refused. I read that same log locally minutes later and it came back fine (308 KB, exit 0). Not a breaker bug and not a runaway, just two unretried reads. **Run 38496303201**: the relay's closed-issue read (`ghRestAll`, i.e. curl) got `curl: (22) The requested URL returned error: 500`. `isTransientGhError` only knew gh's `HTTP 5xx` wording, so even a `withRetry`-wrapped `ghRest` read got one attempt. projects.mjs had already found thi…
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts`, `tests/scripts/moneypenny/gh.spec.ts`, `tests/scripts/moneypenny/relay.spec.ts` (#5355).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### Two visual PRs red on their first CI run: Linux-only baselines, and four builds on one surface
 - **SHA:** n/a   **DATE:** 2026-10-10   **STATUS:** closed
 - **SIGNAL:** Eric, on #5080: "fails CI out of the gate too. red flag for avoidable process

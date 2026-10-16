@@ -448,7 +448,7 @@ export function callSpread(setting: CallSpreadSetting, lookup: typeof pairFor = 
     symbols: [symbol],
     thesis: setting.thesis,
     evidence: setting.evidence,
-    // Unused, as on HC-SAURON: one spread at a time, sized by its Store allocation.
+    // Unused, as on SAURON: one spread at a time, sized by its Store allocation.
     size: { conservative: 0, standard: 0, aggressive: 0 },
     keyedOn: "earnings",
     ...(runUp ? { derivesFrom: runUp } : {}),

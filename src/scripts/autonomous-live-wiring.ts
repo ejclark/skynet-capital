@@ -37,6 +37,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import { withQuoteUniverse } from "../personas/universe-view.js";
+import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
@@ -278,11 +279,22 @@ export function resolveBotRoster(
   bot: Bot,
   houseEnabled: readonly EnabledPlaybook[],
   subscriptions: readonly PlaybookSubscription[],
+  // This bot's own compiled authored plays (`authoredRoster`, #809), so a `U-*` subscription runs
+  // and pauses exactly like a house one (#4450 slice 3). Only a subscription on the account the
+  // roster was compiled for resolves one (`subscriptionRoster`). Nothing persists a spec yet, so
+  // both callers pass none and every `U-*` subscription is refused below, as before.
+  authored?: AuthoredRoster,
 ): BotRoster {
-  const acctRoster = subscriptionRoster(subscriptions);
+  const acctRoster = subscriptionRoster(subscriptions, authored);
   for (const bad of acctRoster.rejected) {
     console.error(
       `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
+    );
+  }
+  // An author whose play is dark deserves to know which field did it (`authoredRoster`).
+  for (const bad of authored?.rejected ?? []) {
+    console.error(
+      `[playbooks] ${bot.persona.id}'s authored play "${bad.slug}" is out of bounds — ${bad.problems.map((p) => `${p.field} ${p.problem}`).join("; ")}`,
     );
   }
   if (acctRoster.enabled.length > 0) {
@@ -291,7 +303,7 @@ export function resolveBotRoster(
     );
   }
   // Paused: opens nothing new (a covered call excepted); its names and exits are unchanged.
-  const paused = pausedRoster(subscriptions);
+  const paused = pausedRoster(subscriptions, authored);
   if (paused.length > 0) {
     console.log(
       `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,

@@ -13,7 +13,9 @@ import type { ResearchShelfJson } from "./research-json-view.js";
  *   events   id · title · date for every grid (its dots and day titles); `researched` is the dot;
  *            `kind` names an earnings print on Trade's line; `symbols` is how Events and Trade
  *            match a ticker. `called` marks an event whose ledger states a call, so R&D's fog line
- *            can count the calls held behind the day lens without the calls themselves. `impact`
+ *            can count the calls held behind the day lens without the calls themselves.
+ *            `estimated` marks a date that is a cadence estimate, so Events never draws it as
+ *            confirmed (#5510). `impact`
  *            is left out: only R&D's facet filter reads it, and that reads the full shelf.
  *   closures the grid's struck-through days and every session count.
  *   calls    only the rows a calendar can PRINT: the Profile page's agenda shows a call beside an
@@ -34,6 +36,8 @@ export interface CalendarEventView {
   readonly researched: boolean;
   /** Present (and true) only when the event's ledger states a call. */
   readonly called?: true;
+  /** Present (and true) only when the date is an estimate — Events draws it ◇, not ◆ (#5510). */
+  readonly estimated?: true;
 }
 
 export type CalendarCallView = Pick<ShelfCall, "eventId" | "call" | "horizon" | "href"> &
@@ -61,6 +65,7 @@ export function researchCalendarJson(shelf: ResearchShelfJson): ResearchCalendar
       symbols: event.symbols,
       researched: event.researched,
       ...(called.has(event.id) ? { called: true as const } : {}),
+      ...(event.estimated ? { estimated: true as const } : {}),
     })),
     closures: shelf.closures,
     calls: shelf.calls

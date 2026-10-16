@@ -31,7 +31,7 @@ const wheel: DeskActivityEvent = {
   origin: "unknown",
   reasoning: {
     reason:
-      "Selling one cash-secured CRWV $80 PUT. Run on its owner's conviction — our study found CRWV's option premium underpays its moves.",
+      "Selling one cash-secured CRWV $80 PUT. Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned would have been assigned 33% of the time in CRWV's own price history. So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its owner runs this against the study, betting the market has CRWV about right: that its swings calm to the pace options price.",
     personaId: "sauron",
     playbookId: "CRWV-WHEEL",
     playbookMode: "aggressive",
@@ -102,7 +102,7 @@ describe("OrderDeepDive — what it shows", () => {
       "above $80the put expires · keeps +$255",
       "below $80✕ wrong ifbuys 100 CRWV at $80 (net $77.45 a share)",
     ]);
-    expect(screen.getByText(/our study found CRWV's option premium/)).toBeInTheDocument();
+    expect(screen.getByText(/Our study of CRWV: options price its next month/)).toBeInTheDocument();
   });
 
   it("puts the playbook, its plan and what retires it in the owner's block alone", () => {
@@ -120,7 +120,7 @@ describe("OrderDeepDive — what it shows", () => {
       wrap(<OrderDeepDive event={wheel} variant="page" showPlaybook={false} onClose={noop} />),
     );
     expect(screen.getByRole("region", { name: "At Nov 6, the play" })).toBeInTheDocument();
-    expect(screen.getByText(/our study found/)).toBeInTheDocument();
+    expect(screen.getByText(/Our study of CRWV/)).toBeInTheDocument();
     expect(screen.queryByText(/only you see this/)).not.toBeInTheDocument();
     expect(screen.queryByText(/CRWV-WHEEL/)).not.toBeInTheDocument();
     expect(screen.queryByText(/covered calls/)).not.toBeInTheDocument();

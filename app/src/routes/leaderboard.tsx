@@ -14,6 +14,7 @@ import { useComparePlace } from "../shell/compare-place";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
 import { HeadToHead } from "../shell/head-to-head";
+import { KindChip } from "../ui";
 
 /**
  * LEADERBOARD (#2321: split out of Profile — every player/bot ranked here belongs to no one
@@ -68,7 +69,7 @@ function CohortFigure({
   return (
     <article className="cohort">
       <header>
-        <span className={`chip chip-${label === "Humans" ? "human" : "bot"}`}>{label}</span>
+        <KindChip kind={label === "Humans" ? "human" : "bot"} plural />
         <span className="cohort-count num">
           {block.text.count}
           {block.text.countUnit}

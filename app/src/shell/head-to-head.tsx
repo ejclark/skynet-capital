@@ -1,5 +1,6 @@
 import type { ReactElement, Ref } from "react";
 import type { BoardCompare, CompareDelta, CompareSide, FieldTone } from "../live/board";
+import { KindChip } from "../ui";
 
 /**
  * THE HEAD-TO-HEAD, SIDE BY SIDE (#5057; Eric's pick on #5037 question 8, 2026-10-10: "side by
@@ -93,8 +94,7 @@ function Label({
 function Who({ side }: { readonly side: CompareSide }): ReactElement {
   return (
     <>
-      <span className="h2h-name">{side.name}</span>{" "}
-      <span className={`chip chip-${side.kind}`}>{side.kind === "bot" ? "BOT" : "HUMAN"}</span>
+      <span className="h2h-name">{side.name}</span> <KindChip kind={side.kind} />
     </>
   );
 }

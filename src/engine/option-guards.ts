@@ -50,6 +50,14 @@ import {
 /** Every option open is exactly one contract (or one spread) — sized by the Store allocation, never
  *  by the share position cap, which cannot secure even one put. */
 const MAX_OPTION_OPEN_UNITS = 1;
+/** The exceptions: a bought call (its most it can lose is the premium it pays) and a cash-secured
+ *  put (fully secured by cash set aside) may open up to this many contracts at once — cut to whole
+ *  contracts the budget and the cash can pay for or secure (Eric, 2026-10-16, allocating $25k–$100k:
+ *  "weight/funnel more capital towards those opportunities"; "cash secured puts are a safer bet to
+ *  be aggressive on"). One at a time would take hours to put a budget that size to work. A covered
+ *  call stays one, since the shares cover it lot by lot, and a spread stays one. */
+const MAX_MULTI_UNITS = 20;
+const MULTI_UNIT_STRUCTURES: ReadonlySet<string> = new Set(["long-call", "cash-secured-put"]);
 
 /** The slice of `RiskConfig` the option rules read — declared here so this module never imports the
  *  file that imports it. */
@@ -166,7 +174,12 @@ function clampClose(
   return { ok: true, intent: { ...intent, quantity: units } };
 }
 
-/** Rule 6: the open must close before the earliest live print blackout begins. */
+/** Rule 6: the open must close before the earliest live print blackout begins — except a bought
+ *  call, which may hold through a print but never opens inside one. The rule guards against a gap
+ *  the account cannot cover: a sold option's loss on a print gap has no floor, a bought call's is
+ *  the premium, which rule 8 has already reserved inside the playbook's budget. Whether holding a
+ *  print is WISE is the playbook's evidence to state (CRWV-LONG-CALL's pair row, #5482), not a
+ *  cover question this guard can answer. */
 function printProblem(
   option: OptionOrderIntent,
   underlying: string,
@@ -177,6 +190,7 @@ function printProblem(
   if (!blackout) return "option-print-unknown";
   const today = marketDayKey(asOfIso);
   if (today >= blackout.start && today <= blackout.end) return "option-spans-print";
+  if (option.structure === "long-call") return undefined;
   const spans = option.legs.some((leg) => {
     const expiration = parseOccSymbol(leg.occSymbol)?.expiration;
     return expiration === undefined || expiration >= blackout.start;
@@ -192,10 +206,11 @@ function coverProblem(
   option: OptionOrderIntent,
   portfolio: Portfolio,
   { ledger }: OptionBatch,
+  units: number,
 ): { readonly reason?: OptionRefusalReason; readonly cash: number } {
-  const pays = premiumOut(option) * MAX_OPTION_OPEN_UNITS;
+  const pays = premiumOut(option) * units;
   const worse = worsens(portfolio, ledger, intent.symbol, {
-    legs: orderLegs(option, MAX_OPTION_OPEN_UNITS),
+    legs: orderLegs(option, units),
     pays,
   });
   const cash = worse.newCash;
@@ -210,6 +225,30 @@ function coverProblem(
   }
   if (worse.shares) return { reason: "call-not-covered", cash };
   return { cash };
+}
+
+/** How many units this open may take: one, except a `MULTI_UNIT_STRUCTURES` open, which takes what
+ *  it asked for up to `MAX_MULTI_UNITS`, cut to whole contracts its budget room and the unspent cash
+ *  can pay for (a bought call's premium) or secure (a put's collateral, less its premium). Never
+ *  below one — a single unit that cannot be paid for is refused by the rules below with the reason
+ *  a one-contract open would get. */
+function openUnits(
+  intent: OrderIntent,
+  option: OptionOrderIntent,
+  portfolio: Portfolio,
+  { ledger }: OptionBatch,
+  capital: number | undefined,
+  pnlLessCommitted: number,
+): number {
+  if (!MULTI_UNIT_STRUCTURES.has(option.structure)) return MAX_OPTION_OPEN_UNITS;
+  const perUnit = worsens(portfolio, ledger, intent.symbol, {
+    legs: orderLegs(option, 1),
+    pays: premiumOut(option),
+  }).newCash;
+  if (!(perUnit > 0) || capital === undefined) return MAX_OPTION_OPEN_UNITS;
+  const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger));
+  const asked = Math.min(Math.floor(intent.quantity), MAX_MULTI_UNITS);
+  return Math.max(MAX_OPTION_OPEN_UNITS, Math.min(asked, Math.floor(room / perUnit)));
 }
 
 /** Rules 4–11. */
@@ -232,26 +271,27 @@ function clampOpen(
   const print = printProblem(option, intent.symbol, context.asOf, config.discipline?.calendar);
   if (print) return refuse(print);
 
-  const cover = coverProblem(intent, option, portfolio, batch);
+  const capital = terms.subscription?.capitalAllocated;
+  const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
+  const units = openUnits(intent, option, portfolio, batch, capital, terms.realizedPl - committed);
+  const cover = coverProblem(intent, option, portfolio, batch, units);
   if (cover.reason) return refuse(cover.reason);
 
-  const capital = terms.subscription?.capitalAllocated;
   if (capital === undefined) return refuse("option-unallocated");
   // A covered call risks no cash of its own, so no allocation can refuse it — not even one the
   // stock's own rise has pushed past (#4645 review); a sold put risks its collateral, a spread its
   // debit.
   const risk = Math.max(0, cover.cash);
-  const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
   if (risk > 0 && risk > capital + terms.realizedPl - committed) {
     return refuse("subscription-budget");
   }
 
   claim(batch.ledger, {
-    order: { underlying: intent.symbol, option, units: MAX_OPTION_OPEN_UNITS },
+    order: { underlying: intent.symbol, option, units },
     ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
     risk,
   });
-  return { ok: true, intent: { ...intent, quantity: MAX_OPTION_OPEN_UNITS } };
+  return { ok: true, intent: { ...intent, quantity: units } };
 }
 
 /**

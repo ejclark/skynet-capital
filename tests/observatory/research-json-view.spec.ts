@@ -117,6 +117,25 @@ describe("researchShelfJson", () => {
     expect(researchShelfJson({ studies: [], ledgers: [] }, [], new Map()).closures).toEqual([]);
   });
 
+  it("marks an estimated date and leaves a confirmed one unmarked (#5510)", () => {
+    const print = (date: string, status: "confirmed" | "estimate") => ({
+      id: `nvda-${date}-print`,
+      kind: "earnings" as const,
+      title: "NVDA earnings print",
+      date,
+      status,
+      source: "test",
+      impact: "high" as const,
+      symbols: ["NVDA"],
+    });
+    const { events } = researchShelfJson({ studies: [], ledgers: [] }, [], new Map(), [
+      print("2026-08-26", "confirmed"),
+      print("2026-11-18", "estimate"),
+    ]);
+    expect(events[0]).not.toHaveProperty("estimated");
+    expect(events[1]?.estimated).toBe(true);
+  });
+
   it("carries each symbol's next dated event, or its honest absence", () => {
     const view = researchShelfJson(
       { studies: [], ledgers: [] },

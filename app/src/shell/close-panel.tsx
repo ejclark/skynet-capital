@@ -11,6 +11,7 @@ import {
   type TicketPreview,
   type TicketResult,
 } from "../live/ticket";
+import { InlineResult } from "../ui";
 import { plural } from "./position-row-spec";
 
 /* Moved from blotter-row.tsx (#5071), when a row's Close moved into its opened row. */
@@ -215,22 +216,28 @@ export function ClosePanel({
               </button>
             </>
           ) : (
-            <span className="tkt-close-note gate-refusal">✕ {state.preview.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.preview.refusals[0]}
+            </InlineResult>
           )}
         </div>
       ) : null}
       {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
       {state.step === "done" ? (
         state.result.ok ? (
-          <span className="tkt-close-note gate-ok">
+          <InlineResult as="span" tone="ok" className="tkt-close-note">
             order {state.result.orderId} {state.result.status}
-          </span>
+          </InlineResult>
         ) : (
-          <span className="tkt-close-note gate-refusal">✕ {state.result.refusals[0]}</span>
+          <InlineResult as="span" tone="err" className="tkt-close-note">
+            {state.result.refusals[0]}
+          </InlineResult>
         )
       ) : null}
       {state.step === "error" ? (
-        <span className="tkt-close-note gate-refusal">{state.message}</span>
+        <InlineResult as="span" tone="err" className="tkt-close-note">
+          {state.message}
+        </InlineResult>
       ) : null}
     </div>
   );

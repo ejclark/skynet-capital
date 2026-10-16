@@ -1,6 +1,7 @@
 import type { FormEvent, ReactElement } from "react";
 import { useId, useState } from "react";
 import { type CouncilWeek, retractThesis, submitThesis } from "../live/council";
+import { InlineResult } from "../ui";
 
 /**
  * THE COUNCIL COMPOSER (issue #2224 shape 1; lifted out of `routes/activity.tsx` by #3963) — one
@@ -157,7 +158,7 @@ export function CouncilCompose({
           ) : null}
         </p>
       ) : null}
-      {note ? <p className="set-err">{note}</p> : null}
+      {note ? <InlineResult tone="err">{note}</InlineResult> : null}
     </>
   );
 }

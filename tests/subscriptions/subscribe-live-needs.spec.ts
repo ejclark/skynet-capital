@@ -134,7 +134,7 @@ describe("a new subscription takes what the live market and the account say", ()
 
   it("refuses a budget under one contract's cash, naming both numbers", async () => {
     expect(await liveNeedsRefusal({ ...wheelInput, capitalAllocated: 5_000 }, healthy())).toBe(
-      "One contract of the wheel on CRWV ties up about $8,000 right now, and the budget is $5,000. Raise the budget to at least that.",
+      "One contract of the wheel on CRWV ties up about $7,500 right now, and the budget is $5,000. Raise the budget to at least that.",
     );
     expect(
       await liveNeedsRefusal({ ...wheelInput, capitalAllocated: 8_000 }, healthy()),
@@ -174,7 +174,7 @@ describe("a new subscription takes what the live market and the account say", ()
 
     const basketPrice = rstest.fn(feed(undefined));
     expect(
-      await liveNeedsRefusal({ ...wheelInput, playbookId: "HC-SAURON" }, { price: basketPrice }),
+      await liveNeedsRefusal({ ...wheelInput, playbookId: "SAURON" }, { price: basketPrice }),
     ).toBeUndefined();
     expect(basketPrice).not.toHaveBeenCalled();
   });
@@ -188,13 +188,13 @@ describe("a new subscription takes what the live market and the account say", ()
 
 describe("the preflight reports what a contract ties up, not only whether it is refused", () => {
   it("gives one contract's cash for a budget that fits, so the Store can state the idle share", async () => {
-    expect(await liveNeeds(wheelInput, healthy())).toEqual({ oneContractCash: 8_000 });
+    expect(await liveNeeds(wheelInput, healthy())).toEqual({ oneContractCash: 7_500 });
   });
 
   it("gives the cash beside the refusal when the budget falls short", async () => {
     const verdict = await liveNeeds({ ...wheelInput, capitalAllocated: 5_000 }, healthy());
-    expect(verdict.oneContractCash).toBe(8_000);
-    expect(verdict.refusal).toMatch(/ties up about \$8,000/);
+    expect(verdict.oneContractCash).toBe(7_500);
+    expect(verdict.refusal).toMatch(/ties up about \$7,500/);
   });
 
   it("gives no cash when no chain was judged (outside the session, or a share pair)", async () => {
