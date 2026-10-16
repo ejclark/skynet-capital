@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A proportional restatement of retail cancels in the total business inventories/sales ratio, so the restated June ratio stays
+  within 0.01 of its pre-restatement print" (FT-mtis-2026-10-15-2)** — added 2026-10-16 from the
+  [mtis-2026-10-15 close-out](events/mtis-2026-10-15.md). Registered 2026-09-06: June 2026 re-prints at 1.29–1.31
+  (was 1.30). It re-printed **1.33**: the AIES restatement moved retail inventories **+4.8%** and retail sales
+  **−3.4%** — opposite signs, ~8pp of asymmetry — so the weight coincidence (retail 30.4% of inventories, 31.5% of
+  sales) that makes a *proportional* move cancel was irrelevant. Do not carry any pre-2026-10-15 total-business
+  ratio level (1.28 trough, 1.30 June, percentile ranks) across the restated basis; re-derive levels from the
+  post-restatement series.
+
 - **"A ±5-point window around the prior month's value is a sharp test that the Empire State headline is
   unforecastable" (FT-empire-state-mfg-2026-10-15-2)** — added 2026-10-16 from the
   [empire-state-mfg-2026-10-15 close-out](events/empire-state-mfg-2026-10-15.md). Registered 2026-09-08:
