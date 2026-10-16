@@ -214,6 +214,38 @@ describe("bookEventsIn — the book's own days (#3977 slice 4)", () => {
     expect(join(desk, october, []).held.map((e) => e.id)).toEqual(["print META 2026-10-28"]);
   });
 
+  // #5510: Sauron's NVDA Nov 18 print is a cadence estimate, but the corpus delivered the day —
+  // Events drew it ◆ "confirmed date".
+  describe("an estimated print the corpus delivered (#5510)", () => {
+    const nov = rangeFor("2026-11-18", "day");
+    const nvda = withPrints("sauron", [["NVDA", print("estimate", "2026-11-18")]]);
+    const corpus = (estimated?: true): ResearchEvent => ({
+      ...ev("nvda-2026-11-18-print", "2026-11-18", ["NVDA"]),
+      title: "NVDA earnings print",
+      ...(estimated ? { estimated } : {}),
+    });
+
+    it("draws the calendar's estimate as estimated, said in words", () => {
+      const [held] = join(nvda, nov, [corpus(true)]).held;
+      expect(held?.estimated).toBe(true);
+      expect(held?.title).toBe("NVDA earnings print (estimated date)");
+    });
+
+    it("takes the position's estimate when the corpus event carries no mark", () => {
+      const { held } = join(nvda, nov, [corpus()]);
+      expect(held.map((e) => [e.id, e.estimated, e.title])).toEqual([
+        ["nvda-2026-11-18-print", true, "NVDA earnings print (estimated date)"],
+      ]);
+    });
+
+    it("leaves a confirmed day as it was", () => {
+      const confirmed = withPrints("sauron", [["NVDA", print("confirmed", "2026-11-18")]]);
+      const [held] = join(confirmed, nov, [corpus()]).held;
+      expect(held?.estimated).toBeUndefined();
+      expect(held?.title).toBe("NVDA earnings print");
+    });
+  });
+
   it("puts each decision's due day in its own tier, landing on the held row", () => {
     const desk = withPrints(
       "day-trader",
