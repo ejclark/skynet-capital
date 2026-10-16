@@ -95,6 +95,11 @@ any other bot it is an ordinary playbook. `optionDemand` sits beside all of thes
 option chains to price this cycle, and is never an order. Exit-safety trips (a drawdown dial, opt-in
 per mode) run **first** and claim their tickers before any of them.
 
+A playbook marked **`observeOnly`** (the dip-to-bounce pairs on MU and NBIS, #5489) is dark: the
+engine returns no intent for it from any of these entry points or from exit safety, it takes no
+ticker from the base persona, and the roll call records its verdict as `observing`. What it would do
+is its own module's reading (`src/playbooks/dip-bounce.ts`), in a type that is not an order.
+
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
 filtered); then every intent passes the guards. The guards refuse opens and never refuse a close.
@@ -234,6 +239,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | Order: `decide`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:445-484` | grounded |
 | `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:386-400` | grounded |
 | A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |
+| An `observeOnly` playbook places nothing, takes no ticker and records `observing` | `src/playbooks/playbook.ts:240`, `src/playbooks/playbook.ts:336`, `src/playbooks/playbook.ts:465`, `src/playbooks/playbook.ts:511`, `src/playbooks/with-playbooks.ts:91` | grounded |
 | Option traits: underlyings, shorts held to expiry, options level | `src/playbooks/playbook.ts:125-133` | grounded |
 | Wrapping order: hygiene around the conviction gate around the playbooks | `src/scripts/autonomous-live-wiring.ts:373-394`, `src/playbooks/with-option-safety.ts:34-42` | grounded |
 | Guards run after: options through `clampOption`, shares through `clampBuy`/`clampSell` | `src/engine/guards.ts:408-419`, `src/engine/option-guards.ts:269-282` | grounded |

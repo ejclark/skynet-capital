@@ -630,6 +630,14 @@ groups["one-build"] = [
       await page.locator(".pbl-fold").evaluate(underHeader);
     },
   }),
+  // #5489 slice 2: the dip-to-bounce, dark on MU and NBIS — its row and its evidence.
+  oneBuild("phone-5-dip-bounce", {
+    viewport: PHONE,
+    act: async (page) => {
+      await page.getByRole("button", { name: /^The dip-to-bounce/ }).click();
+      await page.locator(".pbe", { hasText: "MU" }).first().evaluate(underHeader);
+    },
+  }),
   oneBuild("desktop-1-wide", { quality: 60 }),
   oneBuild("desktop-2-wheel", {
     quality: 60,

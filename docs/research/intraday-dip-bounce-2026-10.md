@@ -198,6 +198,9 @@ than staying a setting on his. The question this section left open is closed.
 - `scripts/research/dip-bounce-sim.mjs` — pure: VWAP and range annotation, entries, tranche walk,
   recovery rates. Pinned by `tests/research/dip-bounce-sim.spec.ts`.
 - `scripts/research/dip-bounce-book.mjs` — pure: the 50 × $1k book under `rule: full | signal | off`.
+- `src/playbooks/dip-bounce.ts` — the rule as the bots observe it (#5489 slice 2): the same entries
+  and target fills as `dip-bounce-sim.mjs` (pinned by `tests/playbooks/dip-bounce.spec.ts`), with
+  §5's amended late-recovery rule. `MU-DIP-BOUNCE` and `NBIS-DIP-BOUNCE` run it observe-only.
 - `scripts/research/intraday-bars.mjs` — the Yahoo bar fetch, moved out of `intraday-edges.mjs` so
   both studies share it and its cache (`node_modules/.cache/intraday-edges/`). The cache never
   expires; delete `<SYM>-5m-60d.json` to take a fresh window.

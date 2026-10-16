@@ -226,6 +226,8 @@ describe("playbookRoster", () => {
       { id: "CRWV-LONG-CALL", symbol: "CRWV" },
       { id: "NVDA-CALL-SPREAD", symbol: "NVDA" },
       { id: "SAURON", symbol: SAURON.symbols[0] },
+      { id: "MU-DIP-BOUNCE", symbol: "MU" },
+      { id: "NBIS-DIP-BOUNCE", symbol: "NBIS" },
     ]);
   });
 });
