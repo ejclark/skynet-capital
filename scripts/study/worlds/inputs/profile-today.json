@@ -89,7 +89,6 @@
       { "playbookId": "CRWV-WHEEL", "mode": "aggressive" },
       { "playbookId": "NVDA-CALL-SPREAD", "mode": "aggressive" },
       { "playbookId": "G1-GOOG", "mode": "standard" },
-      { "playbookId": "HC-SAURON", "mode": "standard" },
       { "playbookId": "SAURON", "mode": "aggressive" },
       { "playbookId": "TACO-DJT", "mode": "standard" }
     ],
@@ -147,8 +146,8 @@
             "side": "buy",
             "quantity": 55,
             "price": 90.1,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-extreme-tranche",
             "reason": "CRWV at a 20-day extreme with momentum −0.064; a small tranche to learn from the bounce."
           }
@@ -163,8 +162,8 @@
             "side": "buy",
             "quantity": 40,
             "price": 225.1,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-run-tranche",
             "reason": "NVDA running three sessions up on rising volume; a small tranche on the run."
           }
@@ -211,8 +210,8 @@
             "side": "sell",
             "quantity": 20,
             "price": 429.5,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-stop",
             "reason": "TSLA closed below the tranche's stop; out."
           }
@@ -227,8 +226,8 @@
             "side": "sell",
             "quantity": 60,
             "price": 226.9,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-target",
             "reason": "AMZN reached the tranche's target; taking it."
           }
@@ -259,8 +258,8 @@
             "side": "buy",
             "quantity": 20,
             "price": 441.0,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-extreme-tranche",
             "reason": "TSLA at a 20-day extreme; a small tranche to learn from the bounce."
           }
@@ -275,8 +274,8 @@
             "side": "buy",
             "quantity": 60,
             "price": 218.3,
-            "playbookId": "HC-SAURON",
-            "mode": "standard",
+            "playbookId": "SAURON",
+            "mode": "aggressive",
             "strategy": "hc-extreme-tranche",
             "reason": "AMZN at a 20-day extreme; a small tranche to learn from the bounce."
           }

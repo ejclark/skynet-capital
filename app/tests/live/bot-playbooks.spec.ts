@@ -12,9 +12,9 @@ import {
   type RollCallLine,
 } from "../../src/live/heartbeat";
 
-/** Sauron's book on the day #5037's round 2 was drawn: seven playbooks on, BETA-SCOUT off, and
- *  HC-SAURON both "can't fire" on the roll call and "trading on live signals" on the verdict
- *  table — the contradiction one card per playbook exists to end. Reasons are the server's own
+/** Sauron's book on the day #5037's round 2 was drawn (HC-SAURON, dissolved 2026-10-16, left out):
+ *  six playbooks on, BETA-SCOUT off, and TACO-DJT both "can't fire" on the roll call and a verdict
+ *  on the verdict table — the contradiction one card per playbook exists to end. Reasons are the server's own
  *  sentences (`playbook-window.ts`, `registry.ts`). */
 const verdict = (
   playbookId: string,
@@ -47,12 +47,6 @@ const rollCall: RollCallLine[] = [
     playbookId: "TACO-DJT",
     status: "blocked",
     reason: "No news feed is wired to it yet, so its trigger never arrives.",
-  },
-  {
-    playbookId: "HC-SAURON",
-    status: "blocked",
-    mode: "standard",
-    reason: "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
   },
   {
     playbookId: "CRWV-WHEEL",
@@ -91,7 +85,7 @@ const sauron: Heartbeat = {
   playbooks: [
     verdict("S1-NVDA", "no-window"),
     verdict("G1-GOOG", "no-window"),
-    verdict("HC-SAURON", "tactical"),
+    verdict("TACO-DJT", "no-window"),
     verdict("CRWV-WHEEL", "no-window", "aggressive"),
     verdict("NVDA-CALL-SPREAD", "no-window", "aggressive"),
     verdict("SAURON", "tactical", "aggressive"),
@@ -104,15 +98,15 @@ describe("botPlaybooks — the roll call and the verdict table become one card e
     const { cards, off } = botPlaybooks(sauron);
     const ids = cards.map((c) => c.playbookId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(7);
+    expect(ids).toHaveLength(6);
     expect(ids).not.toContain("BETA-SCOUT");
     expect(off.map((l) => l.playbookId)).toEqual(["BETA-SCOUT"]);
   });
 
-  it("lets can't fire win over the verdict — HC-SAURON never reads as trading", () => {
-    const hc = botPlaybooks(sauron).cards.find((c) => c.playbookId === "HC-SAURON");
-    expect(hc?.state).toBe("blocked");
-    expect(CARD_WORDS[hc?.state ?? "armed"].word).toBe("Can't fire");
+  it("lets can't fire win over the verdict — TACO-DJT never reads as waiting", () => {
+    const taco = botPlaybooks(sauron).cards.find((c) => c.playbookId === "TACO-DJT");
+    expect(taco?.state).toBe("blocked");
+    expect(CARD_WORDS[taco?.state ?? "armed"].word).toBe("Can't fire");
   });
 
   it("lets paused and starts-next-pass win over a verdict too", () => {
@@ -125,11 +119,11 @@ describe("botPlaybooks — the roll call and the verdict table become one card e
     expect(cards.find((c) => c.playbookId === "SAURON")?.state).toBe("starting");
   });
 
-  it("counts the line from the cards' own words: 1 trading · 4 waiting · 2 can't fire", () => {
+  it("counts the line from the cards' own words: 1 trading · 4 waiting · 1 can't fire", () => {
     const { counts } = botPlaybooks(sauron);
     expect(
       counts.map(({ state, count }) => `${count} ${CARD_WORDS[state].counted(count)}`),
-    ).toEqual(["1 trading on live signals", "4 waiting for a window", "2 can't fire"]);
+    ).toEqual(["1 trading on live signals", "4 waiting for a window", "1 can't fire"]);
   });
 
   it("orders the cards as the line reads, the waiting ones by soonest window", () => {
@@ -140,7 +134,6 @@ describe("botPlaybooks — the roll call and the verdict table become one card e
       "S1-NVDA",
       "CRWV-WHEEL",
       "TACO-DJT",
-      "HC-SAURON",
     ]);
   });
 
@@ -165,7 +158,7 @@ describe("botPlaybooks — the roll call and the verdict table become one card e
     const { cards } = botPlaybooks({ ...rest, playbooks: anonymous });
     expect(cards.map((c) => c.state)).toEqual([
       "tactical",
-      "tactical",
+      "no-window",
       "no-window",
       "no-window",
       "no-window",
@@ -252,8 +245,8 @@ describe("plainReason — the card's word already says On or Paused", () => {
       "No news feed is wired to it yet, so its trigger never arrives.",
     ],
     [
-      "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
-      "Arming it would run a second copy beside the Sauron persona, not replace it.",
+      "Its trigger never arrives until a feed is wired to it (#778).",
+      "Its trigger never arrives until a feed is wired to it.",
     ],
   ])("%s", (raw, plain) => {
     expect(plainReason(raw)).toBe(plain);

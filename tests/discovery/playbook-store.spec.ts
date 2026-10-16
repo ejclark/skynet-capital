@@ -21,7 +21,6 @@ describe("playbookStoreCatalog", () => {
       "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
-      "HC-SAURON",
       "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "SAURON",
@@ -82,13 +81,13 @@ describe("playbookStoreCatalog", () => {
     }
   });
 
-  it("shows a tactical playbook's whole basket and no invented window", () => {
-    const hc = byId("HC-SAURON");
-    expect(hc?.symbols.length).toBeGreaterThan(1);
-    expect(hc?.symbol).toBe(hc?.symbols[0]);
-    expect(hc?.window).toBeUndefined();
-    expect(hc?.size).toBeUndefined();
-    expect(hc?.traits).toEqual([]);
+  it("shows a basket playbook's whole basket and no invented window", () => {
+    const basket = byId("SAURON");
+    expect(basket?.symbols.length).toBeGreaterThan(1);
+    expect(basket?.symbol).toBe(basket?.symbols[0]);
+    expect(basket?.window).toBeUndefined();
+    expect(basket?.size).toBeUndefined();
+    expect(basket?.traits).toEqual([]);
   });
 
   it("shows an option playbook's rules as copy, never a probed window or a percent size", () => {
@@ -365,7 +364,8 @@ describe("playbookStoreCatalog", () => {
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
     });
 
-    // A member cannot see which build runs, and HC-SAURON's card carries no numbers to point at.
+    // A member cannot see which build runs, and no other card describes the hardcore build
+    // (HC-SAURON, its tactical translation, was dissolved on 2026-10-16).
     it("describes his research settings in its own words rather than pointing at another card", () => {
       expect(copy()).not.toContain("HC-SAURON");
       expect(note("Research settings")).toContain("This card cannot show which his account runs");

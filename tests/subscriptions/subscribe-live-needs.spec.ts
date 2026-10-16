@@ -174,7 +174,7 @@ describe("a new subscription takes what the live market and the account say", ()
 
     const basketPrice = rstest.fn(feed(undefined));
     expect(
-      await liveNeedsRefusal({ ...wheelInput, playbookId: "HC-SAURON" }, { price: basketPrice }),
+      await liveNeedsRefusal({ ...wheelInput, playbookId: "SAURON" }, { price: basketPrice }),
     ).toBeUndefined();
     expect(basketPrice).not.toHaveBeenCalled();
   });

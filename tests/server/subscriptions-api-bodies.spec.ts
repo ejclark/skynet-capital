@@ -12,13 +12,13 @@ import {
  * would loosen a live subscription.
  */
 const body = (over: Record<string, unknown>) =>
-  JSON.stringify({ id: "sauron", playbookId: "HC-SAURON", mode: "standard", ...over });
+  JSON.stringify({ id: "sauron", playbookId: "SAURON", mode: "standard", ...over });
 
 describe("parseSubscribeBody — unchanged by #4649", () => {
   it("drops a malformed symbol filter to unrestricted rather than refusing", () => {
     expect(parseSubscribeBody(body({ capitalAllocated: 100, symbols: "NVDA" }))).toEqual({
       id: "sauron",
-      playbookId: "HC-SAURON",
+      playbookId: "SAURON",
       mode: "standard",
       capitalAllocated: 100,
     });
@@ -37,7 +37,7 @@ describe("parseConfigureBody (#4649)", () => {
       ),
     ).toEqual({
       id: "sauron",
-      playbookId: "HC-SAURON",
+      playbookId: "SAURON",
       tuning: {
         mode: "standard",
         capitalAllocated: 0,
@@ -97,7 +97,7 @@ describe("parseConvictionBody and parseAllocationBody (#4469 slice 3c part 3)", 
       parseConvictionBody(body({ conviction: { reason: "mine", checkOn: "2027-01-29" } })),
     ).toEqual({
       id: "sauron",
-      playbookId: "HC-SAURON",
+      playbookId: "SAURON",
       conviction: { reason: "mine", checkOn: "2027-01-29" },
     });
     expect(parseConvictionBody(body({}))).toBeUndefined();

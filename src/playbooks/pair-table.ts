@@ -28,7 +28,6 @@ export type StrategyId =
   | "call-spread"
   | "long-call"
   | "event"
-  | "tactical"
   | "persona-rules"
   | "forced-pick";
 
@@ -103,13 +102,6 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     instrument: "shares",
     noScreen: "Its trigger is a news story, and no news feed is wired to it yet.",
   },
-  tactical: {
-    id: "tactical",
-    name: "hardcore Sauron's tactics",
-    summary: "Small tranches at every extreme and every run across a basket of ten names.",
-    instrument: "shares",
-    noScreen: "It trades as research, measured by trade volume, not by a backtest.",
-  },
   "persona-rules": {
     id: "persona-rules",
     name: "Sauron's own rules",
@@ -178,7 +170,7 @@ export interface Pair {
   /** The id every record keys on. Opaque: look it up, never build or split it. */
   readonly id: string;
   readonly strategy: StrategyId;
-  /** One ticker per pair; HC-SAURON's and SAURON's ten-name baskets are the exceptions, kept as they are
+  /** One ticker per pair; SAURON's ten-name basket is the exception, kept as it is
    *  (a subscriber's chips narrow it), and BETA-SCOUT names none — it picks among the bots' ten
    *  names on the day. Must equal the registry playbook's `symbols`. */
   readonly symbols: readonly string[];
@@ -232,15 +224,6 @@ const PAIRS: readonly Pair[] = [
     },
   },
   {
-    id: "HC-SAURON",
-    strategy: "tactical",
-    symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],
-    evidence: {
-      status: "not-studied",
-      call: "Small tranches at every extreme and every run; the trades are the research, not the P/L.",
-    },
-  },
-  {
     id: "CRWV-WHEEL",
     strategy: "wheel",
     symbols: ["CRWV"],
@@ -285,8 +268,8 @@ const PAIRS: readonly Pair[] = [
     },
   },
   {
-    // A persona's rules over the bots' ten names (#4651), like HC-SAURON's basket; its claims live
-    // in docs/BOTS-SAURON.md, not in a per-ticker study.
+    // A persona's rules over the bots' ten names (#4651), a basket; its claims live in
+    // docs/BOTS-SAURON.md, not in a per-ticker study.
     id: "SAURON",
     strategy: "persona-rules",
     symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],

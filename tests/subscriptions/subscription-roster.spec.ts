@@ -53,6 +53,17 @@ describe("subscriptionRoster", () => {
   it("is empty for an empty subscription list", () => {
     expect(subscriptionRoster([])).toEqual({ enabled: [], rejected: [] });
   });
+
+  // HC-SAURON was dissolved on 2026-10-16 (docs/BOTS-SAURON.md → adaptation ledger). A subscription
+  // still on file for it must name itself as rejected and leave the rest of the roster running.
+  it("names a stale HC-SAURON subscription as rejected and keeps resolving the rest", () => {
+    const stale = sub({ playbookId: "HC-SAURON" });
+    expect(subscriptionRoster([stale, sub()])).toEqual({
+      enabled: [{ playbook: S1_NVDA, mode: "standard" }],
+      rejected: ["HC-SAURON"],
+    });
+    expect(pausedRoster([{ ...stale, enabled: false }])).toEqual([]);
+  });
 });
 
 /**

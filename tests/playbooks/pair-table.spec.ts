@@ -65,7 +65,7 @@ describe("the resolver looks an id up and never builds one", () => {
     expect(pairFor("pre-print-run-up", "NVDA")?.id).toBe("S1-NVDA");
     expect(pairFor("call-spread", "nvda")?.id).toBe("NVDA-CALL-SPREAD");
     expect(pairFor("wheel", "CRWV")?.id).toBe("CRWV-WHEEL");
-    expect(pairFor("tactical", "TSLA")?.id).toBe("HC-SAURON");
+    expect(pairFor("persona-rules", "TSLA")?.id).toBe("SAURON");
   });
 
   it("answers undefined for a pair that does not exist, never an invented id", () => {
@@ -134,7 +134,7 @@ describe("every row carries the evidence its status promises", () => {
     });
     expect(seeded["CRWV-WHEEL"]).toMatchObject({ status: "conviction", checkOn: "2027-01-29" });
     expect(seeded["TACO-DJT"]?.status).toBe("cant-run");
-    expect(seeded["HC-SAURON"]?.status).toBe("not-studied");
+    expect(seeded.SAURON?.status).toBe("not-studied");
   });
 });
 
@@ -201,7 +201,7 @@ describe("a pair is named by what it does, never by its id (criterion 14)", () =
     };
     expect(nameOf("CRWV-WHEEL")).toBe("the wheel on CRWV");
     expect(nameOf("S1-NVDA")).toBe("the pre-print run-up on NVDA");
-    expect(nameOf("HC-SAURON")).toBe("hardcore Sauron's tactics");
+    expect(nameOf("SAURON")).toBe("Sauron's own rules");
   });
 });
 
