@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "@rstest/core";
+import { afterAll, beforeAll, describe, expect, it } from "@rstest/core";
 import { guardNetwork } from "../../scripts/study/no-network.mjs";
 import { serverRead } from "../../scripts/study/server-reads.mjs";
 import { buildBook } from "../../scripts/study/worlds/book.mjs";
@@ -279,14 +279,22 @@ describe("profile-today's reads, as production answers them", () => {
 
 describe("a composed world", () => {
   type Manifest = { payloads: { world: string; viewer: string; key: string; sha256: string }[] };
+  // Each run directory holds a whole composed world (~56MB), so every one this block makes is
+  // removed in afterAll — pass or fail — or a busy box fills its disk (#5583). The compose script
+  // only writes inside the directory it is handed, so the spec, which makes it, owns its cleanup.
+  const made: string[] = [];
   const compose = (...names: string[]) => {
     const dir = mkdtempSync(join(tmpdir(), "study-compose-"));
+    made.push(dir);
     const out = spawnSync("npx", ["tsx", "scripts/study/worlds/compose.mjs", dir, ...names], {
       encoding: "utf8",
     });
     if (out.status !== 0) throw new Error(`compose exited ${out.status}: ${out.stderr}`);
     return dir;
   };
+  afterAll(() => {
+    for (const dir of made) rmSync(dir, { recursive: true, force: true });
+  });
   const hashes = (dir: string, world: string) => {
     const m = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
     return Object.fromEntries(
