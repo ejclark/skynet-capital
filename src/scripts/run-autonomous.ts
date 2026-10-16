@@ -66,6 +66,7 @@ import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { authoredShadowWiring } from "./autonomous-authored-shadow.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
@@ -146,6 +147,8 @@ async function runLive(): Promise<void> {
   // The hook below therefore PARKS the boot fetch's own snapshot instead of dropping it, and the
   // roster replays it the moment it exists: a member's saved subscriptions are in force from this
   // process's first cycle, not 30s into it.
+  // The members' draft playbooks in a shadow test (#5457 slice 2): parked here until the runner exists.
+  const authoredShadow = authoredShadowWiring();
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
   // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
@@ -159,6 +162,7 @@ async function runLive(): Promise<void> {
       if (subscriptionSync) acceptAndKeep(subscriptionSync, keptSubscriptions, snapshot);
       else parkedSubscriptions = snapshot;
     },
+    (orders) => authoredShadow.accept(orders),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -449,7 +453,13 @@ async function runLive(): Promise<void> {
     onResult: logResult,
     onDecision,
     onEquityReadError: (error) => console.error("[equity] read failed:", error),
-    onPortfolios: (portfolios) => botsStream.observeHoldings(portfolios),
+    onPortfolios: (portfolios) => {
+      botsStream.observeHoldings(portfolios);
+      authoredShadow.observe(
+        botRosters.map((r) => r.bot.persona.id),
+        portfolios,
+      );
+    },
     onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
     onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
     onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
@@ -472,6 +482,14 @@ async function runLive(): Promise<void> {
     publish: replication.publishCondScout,
   });
 
+  // Members' drafts in a shadow test (#5457 slice 2): would-be trades on a ledger only, no broker held.
+  const authoredShadowPass = authoredShadow.arm({
+    risk,
+    blockedReason,
+    botsStateDb,
+    publish: replication.publishAuthoredShadow,
+  });
+
   armMomentumPersistence(botsStateDb, tracker);
 
   const contextNow = () => sentiment.overlay(tracker.context(new Date().toISOString()));
@@ -487,6 +505,7 @@ async function runLive(): Promise<void> {
     // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
     await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
+    authoredShadowPass(context); // after the real cycle; synchronous, never throws, holds no broker
     evaluating = false;
   };
   // Halts, stalls and a market-hours heartbeat, in the logs (#4995) — a quiet bot is now legible.

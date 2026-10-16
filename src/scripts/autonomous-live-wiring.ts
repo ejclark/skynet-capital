@@ -7,6 +7,7 @@
  */
 
 import type { AlpacaAccount } from "../alpaca/alpaca-trading-client.js";
+import type { ShadowOrders } from "../autonomous/authored-shadow-wire.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import {
   type ControlsState,
@@ -80,6 +81,9 @@ export async function bootMissionControl(
   // Fires on every poll carrying a well-formed Playbook Store snapshot (subscription-sync.ts's
   // hook) — threaded straight through to resolveBotControls, same shape as the cursor above.
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
+  // Fires on every poll carrying the members' playbooks in a shadow test (authored-shadow-wire.ts) —
+  // threaded straight through, same shape as the two above.
+  onAuthoredShadow?: (orders: ShadowOrders) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -95,6 +99,7 @@ export async function bootMissionControl(
     },
     onDecisionsCursor,
     onSubscriptions,
+    onAuthoredShadow,
   );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);

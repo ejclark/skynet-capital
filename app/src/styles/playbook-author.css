@@ -71,6 +71,80 @@
   cursor: pointer;
 }
 
+/* ── a draft's shadow test (#5457 slice 2, `playbook-shadow.tsx`) ────────────────────────────────
+   Under the row, one quiet block: a line, a count, up to five would-be trades, one button. A top rule
+   separates it from the row's open button; nothing here is a colour alone (◐ + "Shadow test", and a
+   trade is "Buy" or "Sell" in words). */
+
+.pba-shadow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.pba-shadow p {
+  margin: 0;
+}
+
+.pba-shadow-head {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pba-shadow-line {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.pba-shadow-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pba-trades {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  margin: 2px 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.pba-trade {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.pba-trade + .pba-trade {
+  border-top: 1px solid var(--border);
+}
+
+.pba-trade-when {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pba-shadow .pba-shadow-btn {
+  width: auto;
+  min-height: 44px;
+  padding-inline: 16px;
+}
+
+.pba-shadow-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* ── the form ──────────────────────────────────────────────────────────────────────────────── */
 
 .pba-form {
@@ -273,6 +347,10 @@
   }
 
   .pba-row {
+    max-width: var(--col-read);
+  }
+
+  .pba-trades {
     max-width: var(--col-read);
   }
 }

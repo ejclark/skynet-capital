@@ -1,5 +1,6 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
@@ -171,6 +172,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * feeds `/api/desk/:id/probes`. Omit and that panel reports itself unavailable.
    */
   readonly readCondScout?: () => CondScoutSnapshot | undefined;
+  /**
+   * The bots' latest report on the members' playbooks in a shadow test (#5457 slice 2), replicated
+   * whole on every bots poll — memory only. Feeds each draft row's status line and would-be trades
+   * on `/api/authored-plays`. Omit and a row reads "no report yet".
+   */
+  readonly readAuthoredShadow?: () => ShadowReport | undefined;
   /**
    * The bots app's own playbook setting (`SKYNET_PLAYBOOKS`) and the bots it runs on, as its latest
    * `/controls` poll reported it (#4650) — memory only. Lets the roll call say a playbook it names

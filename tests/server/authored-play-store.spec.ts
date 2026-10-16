@@ -142,6 +142,67 @@ describe("AuthoredPlayStore", () => {
     expect(store.load()).toEqual({});
   });
 
+  describe("the shadow test (#5457 slice 2)", () => {
+    const seed = () => {
+      const store = new AuthoredPlayStore(path);
+      store.save("member-a", "Earnings run-up", spec(), undefined, AT);
+      return store;
+    };
+
+    it("puts a draft in its test, stamping when it began, and reads it back from disk", () => {
+      const store = seed();
+      const started = store.setShadow("member-a", "U-futurist-earnings-runup", true, LATER);
+      expect(started.ok && started.record).toMatchObject({
+        status: "shadow",
+        shadowSince: LATER.toISOString(),
+        updatedAt: LATER.toISOString(),
+        createdAt: AT.toISOString(),
+      });
+      expect(new AuthoredPlayStore(path).list("member-a")[0]?.status).toBe("shadow");
+    });
+
+    it("starting a test already running keeps its stamp: the bots keep the ledger", () => {
+      const store = seed();
+      store.setShadow("member-a", "U-futurist-earnings-runup", true, AT);
+      const again = store.setShadow("member-a", "U-futurist-earnings-runup", true, LATER);
+      expect(again.ok && again.record.shadowSince).toBe(AT.toISOString());
+    });
+
+    it("taking it out returns the draft, without a stamp; a second test gets a new one", () => {
+      const store = seed();
+      store.setShadow("member-a", "U-futurist-earnings-runup", true, AT);
+      const stopped = store.setShadow("member-a", "U-futurist-earnings-runup", false, LATER);
+      expect(stopped.ok && stopped.record).toMatchObject({ status: "draft" });
+      expect(stopped.ok && stopped.record).not.toHaveProperty("shadowSince");
+      const restarted = store.setShadow("member-a", "U-futurist-earnings-runup", true, LATER);
+      expect(restarted.ok && restarted.record.shadowSince).toBe(LATER.toISOString());
+    });
+
+    it("editing a play in its test ends the test: a new spec is not the one that was watched", () => {
+      const store = seed();
+      store.setShadow("member-a", "U-futurist-earnings-runup", true, AT);
+      const edited = store.save(
+        "member-a",
+        "Earnings run-up",
+        spec({ thesis: "a newer, sharper reason to hold into the print" }),
+        "U-futurist-earnings-runup",
+        LATER,
+      );
+      expect(edited.ok && edited.record.status).toBe("draft");
+      expect(edited.ok && edited.record).not.toHaveProperty("shadowSince");
+    });
+
+    it("a draft that is gone cannot be tested, and one member cannot test another's", () => {
+      const store = seed();
+      expect(store.setShadow("member-a", "U-futurist-missing", true)).toEqual({
+        ok: false,
+        reason: "That draft is gone, so it can't be tested.",
+      });
+      expect(store.setShadow("member-b", "U-futurist-earnings-runup", true).ok).toBe(false);
+      expect(store.list("member-a")[0]?.status).toBe("draft");
+    });
+  });
+
   it("a torn file reads as empty and says so once", async () => {
     await writeFile(path, "{not json");
     const heard: string[] = [];

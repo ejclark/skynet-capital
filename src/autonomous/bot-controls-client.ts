@@ -1,5 +1,6 @@
 import { fetchJson } from "../http/fetch-json.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { parseShadowOrders, type ShadowOrders } from "./authored-shadow-wire.js";
 import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
@@ -86,6 +87,11 @@ export function resolveBotControls(
    *  `parseSubscriptionsSnapshot`, simply never fires this — which leaves the fleet on the last
    *  roster it received, never on a partial one. */
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of shadow tests
+   *  (`authored-shadow-wire.ts`, #5457 slice 2) — the whole set every time, so a play taken out of
+   *  its test simply stops appearing. Parsed from the RAW body like the two above. An app that
+   *  predates the field never fires this, and the bots keep the tests they have. */
+  onAuthoredShadow?: (orders: ShadowOrders) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -140,6 +146,13 @@ export function resolveBotControls(
           const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
           const snapshot = parseSubscriptionsSnapshot(rawSubs);
           if (snapshot) onSubscriptions?.(snapshot);
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
+        }
+        try {
+          const raw = isRecord(response.body) ? response.body.authoredShadow : undefined;
+          const orders = parseShadowOrders(raw);
+          if (orders) onAuthoredShadow?.(orders);
         } catch {
           /* never let a downstream hook fail the poll it rides on */
         }

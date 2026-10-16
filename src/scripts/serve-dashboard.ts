@@ -430,6 +430,7 @@ async function main(): Promise<void> {
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
     readCondScout: insightsBridge.readCondScout,
+    readAuthoredShadow: insightsBridge.readAuthoredShadow,
     readHouseRoster: insightsBridge.readHouseRoster,
     signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,

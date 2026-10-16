@@ -18,6 +18,12 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The bots' decision pass is handed no outside events, so an event play never opens.**
+  `tradingRoster` composes every roster with an empty event list, so the house `TACO-DJT` and a
+  member's event-window play (#5457) have nothing to open on; a shadow test of one records nothing
+  and its row says so (`EVENT_FEED_REACHES_BOTS`). Worth a look at whether `TACO-DJT` is dark on
+  purpose or a gap, and what would feed it. _(src: Claude · while: #5457 slice 2, shadow test)_
+
 - **The skill we teach is aiming AI, and the system heals its own friction.** Eric, 2026-10-16:
   "we should be improving ai processes for loop engineering and self healing/improving
   architecture. We need people that know how to use ai. With that they can aim ai to work through

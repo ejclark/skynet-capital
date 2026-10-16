@@ -3,6 +3,7 @@ import {
   type AuthoredPlayRecord,
   parseAuthoredPlaysState,
   runnableSpecs,
+  shadowOrders,
   TRADING_STATUSES,
 } from "../../src/playbooks/authored-play-draft.js";
 import { newSubscriptionRefusal } from "../../src/subscriptions/subscribe-eligibility.js";
@@ -35,7 +36,7 @@ const record = (over: Partial<AuthoredPlayRecord> = {}): AuthoredPlayRecord => (
 });
 
 describe("a draft never trades", () => {
-  it("no status may trade yet — the list is empty until a shadow test and a promotion exist", () => {
+  it("no status may trade yet — the list is empty until a promotion (slice 3) exists", () => {
     expect(TRADING_STATUSES).toEqual([]);
   });
 
@@ -78,6 +79,67 @@ describe("a draft never trades", () => {
       asOfIso: "2026-10-16T12:00:00.000Z",
     });
     expect(refusal).toBe("No playbook is called U-futurist-earnings-runup.");
+  });
+});
+
+describe("a play in its shadow test never trades either (#5457 slice 2)", () => {
+  const shadowed = (over: Partial<AuthoredPlayRecord> = {}) =>
+    record({ status: "shadow", shadowSince: "2026-10-17T12:00:00.000Z", ...over });
+
+  it("shadow is not a trading status: promotion (slice 3) is what adds the first", () => {
+    expect(TRADING_STATUSES).not.toContain("shadow");
+    expect(TRADING_STATUSES).toEqual([]);
+  });
+
+  it("a play in its test compiles to nothing on any roster, whatever its author", () => {
+    expect(runnableSpecs([shadowed()])).toEqual([]);
+    expect(authoredRoster(runnableSpecs([shadowed()]), "futurist").plays).toEqual([]);
+  });
+
+  it("a subscription to it resolves to nothing, even on its author's own account", () => {
+    const roster = subscriptionRoster(
+      [
+        {
+          accountId: "futurist",
+          playbookId: "U-futurist-earnings-runup",
+          mode: "standard",
+          enabled: true,
+          createdAt: "2026-10-16T12:00:00.000Z",
+          updatedAt: "2026-10-16T12:00:00.000Z",
+        },
+      ],
+      authoredRoster(runnableSpecs([shadowed()]), "futurist"),
+    );
+    expect(roster.enabled).toEqual([]);
+  });
+
+  it("the other door hands the spec to the shadow runner, and only for a play in its test", () => {
+    const state = {
+      "member-a": [shadowed(), record({ id: "U-futurist-two", name: "Two" })],
+      "member-b": [shadowed({ id: "U-other-three", name: "Three" })],
+    };
+    expect(shadowOrders(state)).toEqual([
+      { id: "U-futurist-earnings-runup", since: "2026-10-17T12:00:00.000Z", spec: record().spec },
+      { id: "U-other-three", since: "2026-10-17T12:00:00.000Z", spec: record().spec },
+    ]);
+    expect(shadowOrders({ "member-a": [record()] })).toEqual([]);
+  });
+
+  it("a test saved without its start falls back to the last change, never to nothing", () => {
+    const { shadowSince: _gone, ...bare } = shadowed();
+    expect(shadowOrders({ m: [bare as AuthoredPlayRecord] })[0]?.since).toBe(bare.updatedAt);
+  });
+
+  it("round-trips a play in its test, with its start", () => {
+    const state = { "member-a": [shadowed()] };
+    expect(parseAuthoredPlaysState(JSON.parse(JSON.stringify(state)))).toEqual(state);
+  });
+
+  it("a stray start on a draft is dropped: a draft is not in a test", () => {
+    const parsed = parseAuthoredPlaysState({
+      "member-a": [{ ...record(), shadowSince: "2026-10-17T12:00:00.000Z" }],
+    });
+    expect(parsed?.["member-a"]?.[0]).not.toHaveProperty("shadowSince");
   });
 });
 

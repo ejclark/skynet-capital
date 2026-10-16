@@ -9,6 +9,7 @@ import {
 import type { OwnedAccount } from "../live/settings";
 import { InlineResult } from "../ui";
 import { AuthorPlaybook } from "./playbook-author";
+import { ShadowBlock } from "./playbook-shadow";
 
 /**
  * YOUR PLAYBOOKS (#5457 slice 1) — the member's own drafts and the door to write one, at the top of
@@ -18,8 +19,10 @@ import { AuthorPlaybook } from "./playbook-author";
  * one more entry in it.
  *
  * One row per draft, one tap to open it: its name, its ticker and numbers on one line, and its
- * standing as a glyph and a word ("◌ Draft · doesn't trade") — the only standing a saved play can
- * have until a shadow test exists. The row opens the form on what was saved, and Discard lives
+ * standing as a glyph and a word ("◌ Draft · doesn't trade", "◐ Shadow test · doesn't trade") — the
+ * only standings a saved play has until promotion exists. Under the row sits its shadow test
+ * (`playbook-shadow.tsx`, #5457 slice 2): the button to start one, or how it is going. The row
+ * opens the form on what was saved, and Discard lives
  * there, asking once (a phone's first screens stay the catalog's, so a draft costs one row, not two
  * buttons). The "New playbook"
  * button is always drawn: with no bot to run it, it is disabled and says why in words (a visible,
@@ -29,18 +32,23 @@ import { AuthorPlaybook } from "./playbook-author";
  * their drafts has lost nothing the list could restore.
  */
 
+const SHADOW_REFRESH_MS = 30_000;
+
 const botName = (bot: OwnedAccount): string => bot.profile?.displayName ?? bot.name;
 
 function DraftRow({
   play,
   bots,
   onChange,
+  onShadowChanged,
 }: {
   readonly play: AuthoredPlayView;
   readonly bots: readonly OwnedAccount[];
   readonly onChange: () => void;
+  readonly onShadowChanged: () => void;
 }): ReactElement {
   const runsOn = bots.find((bot) => bot.id === play.runsOn);
+  const testing = play.status === "shadow";
   return (
     <li className="pba-row">
       <button
@@ -56,7 +64,8 @@ function DraftRow({
           </span>
           <span className="pbl-meta">
             <span className="pbl-status">
-              <span aria-hidden="true">◌</span> Draft · doesn't trade
+              <span aria-hidden="true">{testing ? "◐" : "◌"}</span>{" "}
+              {testing ? "Shadow test" : "Draft"} · doesn't trade
             </span>
             <span className="pbl-trades">{runsOn ? `for ${botName(runsOn)}` : "for a bot"}</span>
           </span>
@@ -65,6 +74,11 @@ function DraftRow({
           ›
         </span>
       </button>
+      <ShadowBlock
+        play={play}
+        botName={runsOn ? botName(runsOn) : "its bot"}
+        onChanged={onShadowChanged}
+      />
     </li>
   );
 }
@@ -80,7 +94,13 @@ export function YourPlaybooks({
 }): ReactElement {
   const queryClient = useQueryClient();
   const bots = accounts.filter((account) => account.kind === "bot");
-  const drafts = useQuery({ queryKey: authoredPlaysKey, queryFn: fetchAuthoredPlays });
+  const drafts = useQuery({
+    queryKey: authoredPlaysKey,
+    queryFn: fetchAuthoredPlays,
+    // A test in progress moves with the bots' passes (reported on their ~30s poll): keep reading.
+    refetchInterval: (query) =>
+      query.state.data?.some((play) => play.status === "shadow") ? SHADOW_REFRESH_MS : false,
+  });
   const [writing, setWriting] = useState<{ readonly editing?: AuthoredPlayView } | undefined>();
   const [saved, setSaved] = useState<string | undefined>();
   const refresh = () => queryClient.invalidateQueries({ queryKey: authoredPlaysKey });
@@ -124,6 +144,7 @@ export function YourPlaybooks({
                   key={play.id}
                   play={play}
                   bots={bots}
+                  onShadowChanged={() => void refresh()}
                   onChange={() => {
                     setSaved(undefined);
                     setWriting({ editing: play });
