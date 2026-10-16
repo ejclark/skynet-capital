@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The September PPI's core 12-month rise is a soft-base artifact, so read the core y/y into a soft base month as mechanical"
+  (FT-ppi-2026-10-15-1)** — added 2026-10-16 from the
+  [ppi-2026-10-15 close-out](events/ppi-2026-10-15.md). Registered 2026-09-15: core-ex-trade-services
+  12-month ≥ 4.8% on a m/m ≤ +0.4%. The 10-15 release printed **5.0% on +0.5% m/m** (final demand
+  +1.3% m/m, 6.3% y/y, the largest advance since March 2022; gasoline +20.3%). The base-month identity
+  was accurate to ~0.1pp but the rise was earned. What survives: the identity as arithmetic. Do not
+  re-propose a "mechanical lift" read of a core y/y in a month where energy or transport is already
+  running hot; check the m/m first.
+
 - **"A chair-less, contested standing committee still files its quarterly report" (FT-unsc-iran-panel-mandate-expiry-2026-09-26-2)** — added 2026-10-15 from the [unsc-iran-panel-mandate-expiry-2026-09-26 forward-test scoring](events/unsc-iran-panel-mandate-expiry-2026-09-26.md). Registered 2026-09-04 on a Secretariat cycle table listing 12 March and 9 June 2026 as 1737 Committee report dates. Security Council Report shows those were briefings: China and Russia objected to the draft 90-day report in March, June and September, so no report was presented. Do not read a mandate-cycle table's occurrence dates as delivery of a document; check that a report was adopted, not that a meeting was held.
 
 - **"A Social Security COLA projection that needs September to accelerate is running hot; fade it toward the
