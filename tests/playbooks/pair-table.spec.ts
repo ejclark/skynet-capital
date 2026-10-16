@@ -169,7 +169,7 @@ describe("a status reads as a glyph plus a word (criterion 10)", () => {
   };
 
   it("adds the qualifier a ✓ carries", () => {
-    expect(labelOf("S1-NVDA")).toBe("✓ researched, weakened");
+    expect(labelOf("S1-NVDA")).toBe("△ researched, below the house bar");
     expect(labelOf("NVDA-CALL-SPREAD")).toBe("✓ researched, borrowed");
     expect(labelOf("G1-GOOG")).toBe("✓ researched");
     expect(labelOf("CRWV-WHEEL")).toBe("◆ conviction");
@@ -221,5 +221,38 @@ describe("a ✓ verdict has a shelf life (criterion 4)", () => {
     const later = "2030-01-01T14:00:00.000Z";
     expect(isStale(evidenceOf("CRWV-WHEEL"), later)).toBe(false);
     expect(isStale(evidenceOf("SAURON"), later)).toBe(false);
+  });
+});
+
+/**
+ * The plain line under each strategy's name (#5445, Eric's pick on #5163 round 13). WHEN a strategy
+ * is listed on R&D → Playbooks, its name SHALL carry one line in plain words under it. Member copy
+ * never says "print" or counts in "D-" days (#5163 round 2: "What does 'print' mean").
+ */
+describe("each strategy says what it does in one plain line", () => {
+  it("keeps every line to 50 characters, with no 'print' and no D- count", () => {
+    for (const strategy of Object.values(STRATEGIES)) {
+      expect(strategy.line.length, strategy.id).toBeLessThanOrEqual(50);
+      expect(strategy.line, strategy.id).not.toMatch(/print|\bD-/i);
+      expect(strategy.act ?? "", strategy.id).not.toMatch(/print|\bD-/i);
+    }
+  });
+});
+
+/** The past-reports row (#5444, #5448) uses the numbers the run-up's picture draws, never a second
+ *  source: NVDA's first stretch, 13 of 14, in plain words with no p-value and no "rose". */
+describe("a pair's record reads in plain words", () => {
+  it("holds NVDA's record to the first stretch its study measured", () => {
+    const measured = findPlaybook("S1-NVDA")?.stretches;
+    const past = findPair("S1-NVDA")?.evidence.past;
+    expect(past?.up).toBe(measured?.stretches[0]?.rose);
+    expect(past?.of).toBe(measured?.reports);
+    expect(past?.era).toBe(measured?.era);
+  });
+
+  it("never says 'rose', 'print' or a p-value in a record", () => {
+    for (const pair of pairTable()) {
+      expect(pair.evidence.past?.line ?? "", pair.id).not.toMatch(/\brose\b|print|p=/i);
+    }
   });
 });

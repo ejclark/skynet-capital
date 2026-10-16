@@ -73,7 +73,7 @@ common and nobody had written down.
 | `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker since #3407 P3, #3422) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | shipped (#1671 slice 2 — the zero-DTE gate at option review/submit) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4); rung 501 exists since #1671 slice 1, so the fog names an earnable rung |
-| R&D → Playbooks "Subscribe as" (`/u/:id/playbooks` redirects here since 2026-09-23) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
+| R&D → Playbooks, the + on a play (was "Subscribe as" until #5442) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
 | wheels-off button (both surfaces above) | ~~one-click self-serve bypass of every fog~~ removed | n/a — wheels off only by the seeding rule or a coach's hand | shipped (#1671 decision 1) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.

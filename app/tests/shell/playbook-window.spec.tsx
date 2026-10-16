@@ -85,7 +85,7 @@ describe("a pre-earnings play as one line", () => {
       "+3.6%",
       "11 of 14",
       "−0.8%",
-      "7 of 14 rose",
+      "7 of 14 went up",
       "sold by then",
     ]);
     const hatched = bars.querySelectorAll("rect.pbr-lose");

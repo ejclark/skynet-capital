@@ -127,8 +127,12 @@ function mount(accountId?: string) {
   );
 }
 
+/** A strategy's card, not its row in the list above the cards (the list names it too, #5435). */
 const cardOf = (id: string) => {
-  const section = screen.getByText(`The ${id.toLowerCase()}`).closest(".pb-card");
+  const section = screen
+    .getAllByText(`The ${id.toLowerCase()}`)
+    .map((el) => el.closest(".pb-card"))
+    .find((el) => el !== null);
   if (!(section instanceof HTMLElement)) throw new Error(`no card ${id}`);
   return within(section);
 };

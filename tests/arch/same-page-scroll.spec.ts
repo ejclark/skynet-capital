@@ -26,10 +26,8 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
     ["section: next === opening ? undefined : next", "section switch (held by #4943)"],
   ],
   "app/src/routes/activity.tsx": [['next === "feed"', "section switch (held by #4943)"]],
-  "app/src/routes/research.tsx": [
-    ["({ ...prev, account: id })", "Playbooks' subscribe-as account switch (held by #4943)"],
-    ['next === "board"', "section switch (held by #4943)"],
-  ],
+  // Playbooks' "Subscribe as" account switch left with the picker (#5442): one reset remains.
+  "app/src/routes/research.tsx": [['next === "board"', "section switch (held by #4943)"]],
   "app/src/routes/settings.tsx": [['next === "preferences"', "section switch (held by #4943)"]],
   "app/src/routes/trade.tsx": [
     ['next === "ticket"', "section switch (held by #4943)"],
