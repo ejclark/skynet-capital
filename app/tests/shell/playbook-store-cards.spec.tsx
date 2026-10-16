@@ -40,7 +40,7 @@ const card = (
   symbols: readonly string[],
   subscription?: SubscriptionView,
 ): PlaybookStoreCardView => ({
-  id: symbols.length > 1 ? "HC-SAURON" : "S1-NVDA",
+  id: symbols.length > 1 ? "SAURON" : "S1-NVDA",
   symbol: symbols[0] ?? "",
   symbols,
   evidence: "fixture evidence",
@@ -151,7 +151,7 @@ describe("subscribing a bot", () => {
         url: "/api/playbook-store/subscribe",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "standard",
           capitalAllocated: 5000,
           symbols: ["NVDA", "CRWV"],
@@ -269,7 +269,7 @@ describe("a subscribed card", () => {
         url: "/api/playbook-store/configure",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "aggressive",
           capitalAllocated: 8000,
           symbols: ["NVDA"],

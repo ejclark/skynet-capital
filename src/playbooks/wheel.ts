@@ -360,7 +360,7 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     symbols: [symbol],
     thesis: setting.thesis,
     evidence: `${study} — ${setting.findings} Retires if ${retireTest(verdict.date)}.`,
-    // Unused, as on HC-SAURON: the wheel is sized by its Store allocation, one contract at a time.
+    // Unused, as on SAURON: the wheel is sized by its Store allocation, one contract at a time.
     size: { conservative: 0, standard: 0, aggressive: 0 },
     keyedOn: "earnings",
     options: { underlyings: [symbol], holdsShortToExpiry: ["put", "call"], requiredLevel: 1 },

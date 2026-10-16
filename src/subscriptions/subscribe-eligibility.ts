@@ -31,7 +31,7 @@ interface Claim {
   readonly symbol: string;
 }
 
-/** A pair that trades one ticker. Baskets (HC-SAURON, SAURON) and the forced pick neither take a
+/** A pair that trades one ticker. Baskets (SAURON) and the forced pick neither take a
  *  ticker from a pair nor are refused for one: their own yield rules already hand a name over. */
 const single = (pair: Pair): string | undefined =>
   pair.symbols.length === 1 ? pair.symbols[0] : undefined;

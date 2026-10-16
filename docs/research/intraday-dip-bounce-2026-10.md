@@ -30,7 +30,7 @@ printed by it. Paper only; educational.
 - Enter only 2 ranges below VWAP, after 10:00 ET, never on a print day ±1. A 1-range dip loses.
 - The stuck buys come in waves: CRWV and NBIS stuck on the same days. One bet, not fifty.
 - Today (10-16) is such a wave: the cycle-phase study reads a sector-wide pullback.
-- HC-SAURON's record is not reachable offline, so "adapt HC-SAURON" stays open (see §6).
+- "Adapt HC-SAURON" is moot: it was dissolved on 2026-10-16, its tranche-buys moved here (see §6).
 
 ## The calls in full
 
@@ -171,6 +171,10 @@ copy, `scripts/study/worlds/inputs/profile-today.json`, is sanitized sample data
 on sentiment and momentum readings (`src/playbooks/registry.ts`), not on a distance below VWAP, and
 no sentiment history is stored to backtest them (see [`dip-entries-nvda-crwv.md`](dip-entries-nvda-crwv.md)). So this study cannot
 settle "make it an HC-SAURON setting", and the playbook stays separate.
+
+**Update 2026-10-16.** HC-SAURON was dissolved (`docs/BOTS-SAURON.md` → adaptation ledger): `SAURON`
+runs hardcore Sauron's rules exactly, and his tranche-buys at extremes move to this playbook rather
+than staying a setting on his. The question this section left open is closed.
 
 ## 7. Where this could be wrong
 

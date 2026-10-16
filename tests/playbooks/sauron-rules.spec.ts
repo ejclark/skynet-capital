@@ -16,7 +16,6 @@ import { type EnabledPlaybook, playbookVerdicts } from "../../src/playbooks/play
 import {
   CRWV_WHEEL,
   findPlaybook,
-  HC_SAURON,
   PLAYBOOK_WIRING_GAPS,
   S1_NVDA,
 } from "../../src/playbooks/registry.js";
@@ -233,18 +232,6 @@ describe("no SAURON subscription — withPlaybooks is exactly what it was", () =
     expect(intents).toEqual(bare.decide(context, portfolio).filter((i) => i.symbol !== "NVDA"));
     for (const intent of intents) expect(intent).not.toHaveProperty("playbookId");
   });
-
-  it("beside HC-SAURON: a playbook named for him is not his own rules — no stamping", () => {
-    const intents = withPlaybooks(
-      bare,
-      [{ playbook: HC_SAURON, mode: "standard" }],
-      NO_PRINTS,
-    ).decide(context, portfolio);
-    // HC-SAURON owns the universe (NVDA, AAPL); his GLD reflex passes through, unlabelled.
-    const reflexes = intents.filter((i) => i.playbookId !== "HC-SAURON");
-    expect(reflexes).toEqual(bare.decide(context, portfolio).filter((i) => i.symbol === "GLD"));
-    expect(intents.some((i) => i.playbookId === "SAURON")).toBe(false);
-  });
 });
 
 describe("SAURON on another bot — the standard rules, on the universe only", () => {
@@ -286,11 +273,10 @@ describe("SAURON on another bot — the standard rules, on the universe only", (
 });
 
 describe("the SAURON definition", () => {
-  it("names whose rules it runs, and trades the bots' universe — the same list HC-SAURON uses", () => {
+  it("names whose rules it runs, and trades the bots' universe — the same list his persona sees", () => {
     expect(findPlaybook("SAURON")).toBe(SAURON); // the Store and the roster resolve this object
     expect(SAURON.rulesOf).toBe(new SauronPersona().id);
     expect(SAURON.symbols).toBe(BOTS_UNIVERSE);
-    expect(HC_SAURON.symbols).toBe(BOTS_UNIVERSE);
     expect([...BOTS_UNIVERSE]).toEqual([
       "AAPL",
       "MSFT",
@@ -307,7 +293,6 @@ describe("the SAURON definition", () => {
 
   it("carries no exit-safety dial and no window — a trip would add a sell his rules never make", () => {
     expect(SAURON.exitSafety).toBeUndefined();
-    expect(SAURON.tactics).toBeUndefined();
     expect(SAURON.options).toBeUndefined();
     expect(
       playbookVerdicts([{ playbook: SAURON, mode: "standard" }], "2026-10-06T15:00:00Z", []),
@@ -316,7 +301,6 @@ describe("the SAURON definition", () => {
 
   it("is wired: the roll call never calls it blocked, and reads it as live signals when armed", () => {
     expect(PLAYBOOK_WIRING_GAPS.SAURON).toBeUndefined();
-    expect(PLAYBOOK_WIRING_GAPS["HC-SAURON"]).toBeDefined();
     const [line] = playbookRollCall([
       { playbookId: "SAURON", mode: "standard", state: "tactical" },
     ]).filter((l) => l.playbookId === "SAURON");

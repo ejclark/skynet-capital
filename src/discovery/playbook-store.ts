@@ -49,7 +49,7 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   readonly id: string;
   readonly symbol: string;
   /** The whole basket (#3564). `symbol` stays as its first entry for existing readers; the card
-   *  shows every name, so a ten-name tactical basket never reads as one ticker. */
+   *  shows every name, so SAURON's ten-name basket never reads as one ticker. */
   readonly symbols: readonly string[];
   /** The citation the playbook carries — verbatim from the registry — and, when it names a
    *  research doc we serve, that doc's route. Ported from the retired Plays cards (#3623). */
@@ -146,17 +146,6 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
     exitCutLosses:
       "Converges to flat once the hold window elapses with no live signal — the same discipline as a missed print exit.",
     hold: "No qualifying story detected: correctly dark, same as a date-keyed play with no upcoming print.",
-  },
-  "HC-SAURON": {
-    description:
-      "Research-volume mode across a ten-name tech universe — the goal is trade COUNT for a confidence-rating dataset, not P/L. Small, frequent tranches probe every sentiment extreme and every momentum run, never one big bet.",
-    enter:
-      "Small tranches on panic (mean-reversion) or an ordinary momentum run (no extreme required) — loosened thresholds trade far more often than the standard read of the same signals.",
-    exitTakeProfit:
-      "Takes half off into exhausted euphoria, letting the rest ride for the next signal — never one all-or-nothing exit.",
-    exitCutLosses:
-      "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
-    hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
   },
   // Every number below is pinned to the persona's own behavior by
   // tests/discovery/playbook-store.spec.ts ("quotes only numbers his persona actually trades on").

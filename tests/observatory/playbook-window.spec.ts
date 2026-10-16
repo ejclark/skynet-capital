@@ -105,9 +105,9 @@ describe("readPlaybookWindow — what an armed playbook is actually waiting for"
     expect(read.reason).not.toContain(`${NEXT_ENTRY_HORIZON_DAYS}`);
   });
 
-  it("does not try to date a rule-chain playbook's window — it has none to date", () => {
+  it("does not try to date a live-signals playbook's window — it has none to date", () => {
     const read = readPlaybookWindow(
-      dated({ tactics: [] }),
+      dated({ rulesOf: "another-persona" }),
       "tactical",
       NOW,
       confirmed("2026-11-01"),

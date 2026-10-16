@@ -35,7 +35,7 @@ import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
-// Each card's closed-trade numbers (#3665): S1-NVDA with a record, HC-SAURON without one.
+// Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
 import { performance } from "./playbook-store-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -74,7 +74,7 @@ const deskFor = (account) => ({
 });
 
 // The subscriber count (#3970): enabled subscriptions across every account, a bare number.
-const COUNTS = { "S1-NVDA": 3, "HC-SAURON": 1 };
+const COUNTS = { "S1-NVDA": 3, SAURON: 1 };
 const withCounts = (view, counts = COUNTS) => ({
   ...view,
   cards: view.cards.map((card) => ({ ...card, subscribers: counts[card.id] ?? 0 })),
@@ -90,9 +90,9 @@ const subscription = (playbookId, over) => ({
   updatedAt: AT,
   ...over,
 });
-// HC-SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
+// SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
 const SAURON_SUBSCRIPTIONS = [
-  subscription("HC-SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
+  subscription("SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
   subscription("S1-NVDA", { mode: "conservative", capitalAllocated: 10_000, enabled: false }),
 ];
 
@@ -105,9 +105,9 @@ const views = {
 };
 
 // The bot's own Heartbeat, with the roll call the live code would read for this roster —
-// `playbookRollCall` over a pass that ran HC-SAURON, never hand-written sentences.
+// `playbookRollCall` over a pass that ran SAURON, never hand-written sentences.
 const NOW = new Date("2026-10-05T15:00:00Z");
-const verdicts = [{ playbookId: "HC-SAURON", mode: "standard", state: "flat" }];
+const verdicts = [{ playbookId: "SAURON", mode: "standard", state: "tactical" }];
 const heartbeat = {
   available: true,
   heartbeat: {
@@ -410,7 +410,7 @@ groups["subscribed-only"] = [
 
 // #4469 slice 3b: the Store by strategy. Sauron holds the wheel on CRWV (the owner's conviction) and
 // the run-up on NVDA, so those two strategy cards lead with his pairs; the catalog frame is the same
-// deck with no account. The wheel and run-up rows, then the tactical card's folded "? not studied".
+// deck with no account. The wheel and run-up rows, then Sauron's own rules' folded "? not studied".
 views.byStrategy = withCounts(
   playbookStoreView([
     subscription("CRWV-WHEEL", { mode: "aggressive", capitalAllocated: 75_000 }),
@@ -437,8 +437,8 @@ groups.strategies = [
   }),
   strategyFrame("phone-3-folded-line", {
     view: views.catalog,
-    expect: "Hardcore Sauron's tactics",
-    act: toStrategy("Hardcore Sauron's tactics"),
+    expect: "Sauron's own rules",
+    act: toStrategy("Sauron's own rules"),
   }),
   strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
   strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),

@@ -8,7 +8,7 @@ import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
 import { BOTS_UNIVERSE } from "../../src/domain/bots-universe.js";
 import type { Portfolio } from "../../src/domain/types.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, HC_SAURON, registeredPlaybooks } from "../../src/playbooks/registry.js";
+import { G1_GOOG, registeredPlaybooks, SAURON } from "../../src/playbooks/registry.js";
 import { aPortfolio } from "../support/builders.js";
 
 const roster = (id: string, ...playbooks: EnabledPlaybook["playbook"][]): StreamRoster => ({
@@ -40,11 +40,7 @@ describe("streamedSymbols (#4777)", () => {
 
   it("adds an enabled playbook's ticker and a held ticker, never repeating one of the ten", () => {
     expect(
-      streamedSymbols(
-        BOTS_UNIVERSE,
-        [roster("a", G1_GOOG), roster("b", HC_SAURON)],
-        ["ZS", "NVDA"],
-      ),
+      streamedSymbols(BOTS_UNIVERSE, [roster("a", G1_GOOG), roster("b", SAURON)], ["ZS", "NVDA"]),
     ).toEqual([...BOTS_UNIVERSE, "GOOG", "ZS"]);
   });
 

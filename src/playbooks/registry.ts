@@ -8,16 +8,13 @@
  * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
  * subscriptions (plan #4535).
  */
-import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING } from "../news/taco-signal.js";
-import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
 import { longCall } from "./long-call.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
-import type { TacticalRule } from "./tactical-playbook.js";
 import { eventPlay, prePrintRunUp } from "./templates.js";
 import { type WheelSetting, wheel } from "./wheel.js";
 
@@ -122,72 +119,6 @@ export const TACO_DJT: Playbook = eventPlay({
   size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
 });
 
-/** Hardcore Sauron's exact thresholds (`HARDCORE_SAURON_CONFIG`), translated into the tactic
- *  chain's four generic kinds, in the same priority order `SauronHardcorePersona.decideSymbol`
- *  checks them — stop, fade, claim, scalp. `tests/playbooks/tactical-playbook.spec.ts`'s parity
- *  suite proves this exact translation matches the persona intent-for-intent. */
-const HC_SAURON_TACTICS: readonly TacticalRule[] = [
-  { kind: "momentum-stop", momentumAtOrBelow: HARDCORE_SAURON_CONFIG.stopMomentum },
-  {
-    kind: "sentiment-fade",
-    sentimentAtOrAbove: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
-    momentumAtOrBelow: HARDCORE_SAURON_CONFIG.rolloverMomentumMax,
-    exitFraction: HARDCORE_SAURON_CONFIG.exitFraction,
-    dustNotional: HARDCORE_SAURON_CONFIG.dustNotional,
-  },
-  {
-    kind: "sentiment-claim",
-    sentimentAtOrBelow: HARDCORE_SAURON_CONFIG.panicSentiment,
-    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.reboundMomentumMin,
-    trancheNotional: HARDCORE_SAURON_CONFIG.trancheNotional,
-    maxConviction: HARDCORE_SAURON_CONFIG.maxConviction,
-    maxTrancheValue:
-      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
-  },
-  {
-    kind: "momentum-scalp",
-    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.scalpEntryMomentum,
-    sentimentAbove: HARDCORE_SAURON_CONFIG.panicSentiment,
-    sentimentBelow: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
-    notional: HARDCORE_SAURON_CONFIG.scalpNotional,
-    maxTrancheValue:
-      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
-  },
-];
-
-/**
- * HC-SAURON (issue #3527 plan, slice 3) — hardcore Sauron's exact behavior, re-expressed as
- * configuration on the tactical rule chain (`tactical-playbook.ts`) instead of the bespoke
- * `SauronHardcorePersona` class. `desiredState`/`size` are present only to satisfy `Playbook`'s
- * shape — a tactical playbook's `tactics` field is what the engine actually reads
- * (`playbookIntents`); those two fields go uncalled and their values carry no meaning.
- *
- * HONESTY GAP — READ BEFORE ENABLING, same posture as TACO-DJT's own gap above. This playbook is
- * REGISTERED but the live hardcore roster (`SKYNET_HARDCORE_BOTS`) still arms
- * `SauronHardcorePersona`, not this definition — naming "HC-SAURON" in `SKYNET_PLAYBOOKS` and
- * subscribing capital to it runs a SECOND, independent instance of the same logic alongside the
- * persona, never a replacement. The actual cutover (retiring the persona, pointing
- * `SKYNET_HARDCORE_BOTS` at this playbook instead) is deferred to its own slice, gated on this
- * definition's characterization tests staying green.
- */
-export const HC_SAURON: Playbook = {
-  id: "HC-SAURON",
-  // The production watch list `SauronHardcorePersona.decide()` actually sees (its own loop is
-  // `Object.keys(context.quotes)`): the live runner's universe, shared rather than copied.
-  symbols: BOTS_UNIVERSE,
-  thesis:
-    "Impose order on the market's chaos — hardcore research mode: the same eye, faster hands; " +
-    "small tranches probe every extreme and every run, and each order carries its thesis.",
-  evidence:
-    "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not " +
-    "P/L; not yet a docs/research/ backtest of its own.",
-  // Unused — a tactical playbook's sizing lives entirely in `tactics`, never `playbook.size`.
-  size: { conservative: 0, standard: 0, aggressive: 0 },
-  // Unused — a tactical playbook's condition lives entirely in `tactics`, never `desiredState`.
-  desiredState: () => "no-window",
-  tactics: HC_SAURON_TACTICS,
-};
-
 /**
  * NVDA-CALL-SPREAD (#4642 slice 6) — S1-NVDA's pre-earnings run-up as a call debit spread, the
  * loss capped at the debit paid. The window is the run-up's own, in trading sessions: long from
@@ -281,7 +212,6 @@ const ROSTER: readonly Playbook[] = [
   S1_NVDA,
   G1_GOOG,
   TACO_DJT,
-  HC_SAURON,
   CRWV_WHEEL,
   CRWV_LONG_CALL,
   NVDA_CALL_SPREAD,
@@ -297,8 +227,6 @@ const ROSTER: readonly Playbook[] = [
  */
 export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
-  "HC-SAURON":
-    "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:
@@ -358,7 +286,7 @@ export function findPlaybook(id: string): Playbook | undefined {
  *  #2224 shape 1's slicing sketch item 3). Deliberately unfiltered by `SKYNET_PLAYBOOKS`: naming
  *  which house play your bot's stance backs is a declaration, not an enable switch, so a play
  *  still registered but not live this week is still nameable. Council's tag selector shows one
- *  symbol per play; a basket playbook's first symbol stands in (HC-SAURON's ten-symbol universe
+ *  symbol per play; a basket playbook's first symbol stands in (SAURON's ten-symbol universe
  *  included) — widening the tag itself to a full basket is a Council-UI decision for whenever
  *  showing more than one symbol per play actually matters there. */
 export function playbookRoster(): readonly { readonly id: string; readonly symbol: string }[] {

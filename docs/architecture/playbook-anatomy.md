@@ -81,13 +81,15 @@ and its criterion).
 
 ## 2. The decision: one question per cycle, guards after, hygiene beside
 
-A playbook answers through one of three entry points, checked in this order by `playbookIntents`:
+A playbook answers through one of two entry points, checked in this order by `playbookIntents`:
 
 1. **`decide`**: whole order intents (the option plays). The engine keeps only intents on the playbook's own tickers and stamps them with its id and mode, so a playbook cannot attribute an order to anyone else.
-2. **`tactics`**: a ranked chain of rules per ticker (HC-SAURON).
-3. **`desiredState`**: the simplest form, returning `long`, `flat` or `no-window`. The engine turns the gap between that answer and what is held into a buy or a sell. Option plays still return one, and the roll call records it as their verdict.
+2. **`desiredState`**: the simplest form, returning `long`, `flat` or `no-window`. The engine turns the gap between that answer and what is held into a buy or a sell. Option plays still return one, and the roll call records it as their verdict.
 
-A fourth form, **`rulesOf`** (SAURON), names a persona whose own rules the playbook is. On that
+A ranked chain of rules per ticker (`tactics`) was a third entry point until 2026-10-16, when it
+left with its only user, HC-SAURON (`docs/BOTS-SAURON.md` → adaptation ledger).
+
+A third form, **`rulesOf`** (SAURON), names a persona whose own rules the playbook is. On that
 persona's own bot, `withPlaybooks` runs the persona as it always has and only stamps its orders; on
 any other bot it is an ordinary playbook. `optionDemand` sits beside all of these: it names which
 option chains to price this cycle, and is never an order. Exit-safety trips (a drawdown dial, opt-in
@@ -206,13 +208,13 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 
 | Claim | Cited at | Verdict |
 |---|---|---|
-| A strategy is the playbook with its ticker taken out; eight ids | `src/playbooks/pair-table.ts:24-33`, `src/playbooks/pair-table.ts:35-57` | grounded |
-| `runsOnConviction`: a conviction may run it where the study says stand aside | `src/playbooks/pair-table.ts:53-56` | grounded (the wheel and the long call) |
-| A pair row: status glyph + word, call, confidence, measured exit, shelf or check date, study | `src/playbooks/pair-table.ts:152-186` | grounded |
-| An id is looked up, never built; `findPair` / `pairFor` | `src/playbooks/pair-table.ts:13-16`, `src/playbooks/pair-table.ts:317-326` | grounded |
-| A ✓ past its shelf date takes no new entries; a conviction is never stale | `src/playbooks/pair-table.ts:333-339` | grounded |
+| A strategy is the playbook with its ticker taken out; seven ids | `src/playbooks/pair-table.ts:24-32`, `src/playbooks/pair-table.ts:34-56` | grounded |
+| `runsOnConviction`: a conviction may run it where the study says stand aside | `src/playbooks/pair-table.ts:52-55` | grounded (the wheel and the long call) |
+| A pair row: status glyph + word, call, confidence, measured exit, shelf or check date, study | `src/playbooks/pair-table.ts:144-178` | grounded |
+| An id is looked up, never built; `findPair` / `pairFor` | `src/playbooks/pair-table.ts:13-16`, `src/playbooks/pair-table.ts:300-309` | grounded |
+| A ✓ past its shelf date takes no new entries; a conviction is never stale | `src/playbooks/pair-table.ts:316-322` | grounded |
 | A template refuses a ticker with no row or no dated verdict | `src/playbooks/wheel.ts:309-323`, `src/playbooks/call-spread.ts:433-439` | grounded |
-| The roster: nine house playbooks | `src/playbooks/registry.ts:249-259` | grounded |
+| The roster: eight house playbooks | `src/playbooks/registry.ts:200-209` | grounded |
 | The wheel's setting is words only; bounds are strategy constants capped at `MAX_SHORT_DELTA` | `src/playbooks/wheel.ts:65-82`, `src/playbooks/wheel.ts:121-125`, `src/playbooks/wheel.ts:262-266` | grounded |
 | The spread's setting cannot say "hold to the print" | `src/playbooks/call-spread.ts:55-60` | grounded |
 | **Not enforced:** window numbers carry no bound check | `src/playbooks/call-spread.ts:93-105`, `src/playbooks/templates.ts:48-53` | grounded — the gap #4469 criterion 6 closes |
@@ -224,11 +226,11 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 
 | Claim | Cited at | Verdict |
 |---|---|---|
-| The `Playbook` interface: `desiredState`, `tactics`, `rulesOf`, `optionDemand`, `decide`, `options`, `exitSafety`, `derivesFrom`, `mixedSignals` | `src/playbooks/playbook.ts:136-228` | grounded |
-| Order: `decide`, then `tactics`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:483-525` | grounded |
-| `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:422-436` | grounded |
-| A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:192-199`, `src/playbooks/playbook.ts:479-481` | grounded |
-| Option traits: underlyings, shorts held to expiry, options level | `src/playbooks/playbook.ts:126-134` | grounded |
+| The `Playbook` interface: `desiredState`, `rulesOf`, `optionDemand`, `decide`, `options`, `exitSafety`, `derivesFrom`, `mixedSignals` | `src/playbooks/playbook.ts:135-218` | grounded |
+| Order: `decide`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:445-484` | grounded |
+| `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:386-400` | grounded |
+| A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |
+| Option traits: underlyings, shorts held to expiry, options level | `src/playbooks/playbook.ts:125-133` | grounded |
 | Wrapping order: hygiene around the conviction gate around the playbooks | `src/scripts/autonomous-live-wiring.ts:373-394`, `src/playbooks/with-option-safety.ts:34-42` | grounded |
 | Guards run after: options through `clampOption`, shares through `clampBuy`/`clampSell` | `src/engine/guards.ts:408-419`, `src/engine/option-guards.ts:269-282` | grounded |
 | Expiry hygiene closes every contract at T-2 unless its owner holds that short on purpose; a short spanning a print is closed | `src/playbooks/option-hygiene.ts:18-35`, `src/playbooks/option-hygiene.ts:66-69` | grounded |
@@ -238,9 +240,9 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | Claim | Cited at | Verdict |
 |---|---|---|
 | The wheel's phase is read from positions alone | `src/playbooks/wheel.ts:132-154` | grounded |
-| `derivesFrom`: the spread declares its run-up pair; unaudited | `src/playbooks/playbook.ts:170-173`, `src/playbooks/call-spread.ts:454` | grounded |
-| Mixed signals: observe-only, opt-in, falsifier 30 observations or 2026-11-30 | `src/playbooks/mixed-signals.ts:1-31`, `src/playbooks/mixed-signals.ts:44-48`, `src/playbooks/registry.ts:37-42` | grounded |
-| Exit-safety: one level per mode, `enforce` or `alert-only`; drawdown from cost basis, not peak | `src/playbooks/playbook.ts:103-106`, `src/playbooks/playbook.ts:274-288` | grounded |
+| `derivesFrom`: the spread declares its run-up pair; unaudited | `src/playbooks/playbook.ts:169-172`, `src/playbooks/call-spread.ts:454` | grounded |
+| Mixed signals: observe-only, opt-in, falsifier 30 observations or 2026-11-30 | `src/playbooks/mixed-signals.ts:1-31`, `src/playbooks/mixed-signals.ts:44-48`, `src/playbooks/registry.ts:34-39` | grounded |
+| Exit-safety: one level per mode, `enforce` or `alert-only`; drawdown from cost basis, not peak | `src/playbooks/playbook.ts:102-105`, `src/playbooks/playbook.ts:264-278` | grounded |
 | Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:19-38`, `src/playbooks/conviction-check.ts:97-121` | grounded |
 | A non-✓ pair with no conviction keeps trading, labelled | `src/playbooks/conviction-check.ts:38-44` | grounded |
 | Compounding is the only automatic budget tilt | `src/domain/types.ts:336-346` | grounded |
@@ -250,10 +252,10 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 
 | # | Cited at | Verdict |
 |---|---|---|
-| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:101-111`, `src/playbooks/playbook.ts:247-261`, `src/subscriptions/strategy-budgets.ts:91-95` | grounded |
+| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:101-111`, `src/playbooks/playbook.ts:237-251`, `src/subscriptions/strategy-budgets.ts:91-95` | grounded |
 | 2 | see Layers: wheel and spread by type shape; windows unchecked | partly grounded |
 | 3 | `src/playbooks/option-ownership.ts:3-47`, `src/playbooks/option-ownership.ts:58-76` | grounded |
 | 4 | `src/bots/bot.ts:14`; `envelope.json` → `$openOnPurpose` (paper-only is a judgment stop, not a path) | grounded as default and policy; there is no code-level refusal of a live URL |
 | 5 | `src/engine/option-guards.ts:169-191` (rule 6; line 185 exempts `long-call`), `src/playbooks/long-call.ts:29-51`, `src/playbooks/long-call.ts:263-280`, `src/playbooks/option-hygiene.ts:28-29` | grounded |
 | 6 | `src/playbooks/pair-table.ts:13-16` | grounded |
-| 7 | `src/playbooks/playbook.ts:417-436`, `src/playbooks/option-ownership.ts:78-106` | grounded |
+| 7 | `src/playbooks/playbook.ts:381-400`, `src/playbooks/option-ownership.ts:78-106` | grounded |
