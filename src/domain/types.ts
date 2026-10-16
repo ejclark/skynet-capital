@@ -153,11 +153,17 @@ export type OptionEffect = "open" | "close";
 export const OPTION_EFFECTS: readonly OptionEffect[] = ["open", "close"];
 
 /** The structures a bot may send — a closed set the wire validates and the dashboard words. */
-export type OptionStructure = "cash-secured-put" | "covered-call" | "call-debit-spread" | "close";
+export type OptionStructure =
+  | "cash-secured-put"
+  | "covered-call"
+  | "call-debit-spread"
+  | "long-call"
+  | "close";
 export const OPTION_STRUCTURES: readonly OptionStructure[] = [
   "cash-secured-put",
   "covered-call",
   "call-debit-spread",
+  "long-call",
   "close",
 ];
 

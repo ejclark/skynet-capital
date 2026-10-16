@@ -7,6 +7,7 @@ import {
 import type { Playbook } from "../../src/playbooks/playbook.js";
 import {
   BETA_SCOUT,
+  CRWV_LONG_CALL,
   CRWV_WHEEL,
   G1_GOOG,
   HC_SAURON,
@@ -34,6 +35,7 @@ describe("housePlaybooks", () => {
     expect(housePlaybooks().map((p) => p.id)).toEqual(
       [
         BETA_SCOUT.id,
+        CRWV_LONG_CALL.id,
         CRWV_WHEEL.id,
         G1_GOOG.id,
         HC_SAURON.id,
