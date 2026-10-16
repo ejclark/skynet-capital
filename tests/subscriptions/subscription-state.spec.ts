@@ -221,4 +221,46 @@ describe("parseSubscriptionsState", () => {
       expect(prior && carriedOnResubscribe(prior)).toEqual({ convictionId: "ai-dip-2026-10" });
     });
   });
+
+  describe("playTarget (#5483 slice 3)", () => {
+    const target = {
+      weight: 0.7,
+      lean: { min: 0.6, max: 0.8 },
+      band: { signal: 0.05, gate: 0.1 },
+    };
+    const parsed = (playTarget: unknown) =>
+      parseSubscriptionsState({ "acct-1": [{ ...valid, playTarget }] })?.["acct-1"];
+
+    it("parses a target beside the rest of the subscription", () => {
+      expect(parsed(target)?.[0]?.playTarget).toEqual(target);
+      expect(parsed({ weight: 0.7 })?.[0]?.playTarget).toEqual({ weight: 0.7 });
+    });
+
+    it("drops a malformed target, never the subscription", () => {
+      const bad: unknown[] = [
+        7,
+        "70%",
+        { weight: 70 },
+        { weight: 1 },
+        { weight: 0.7, lean: { min: 0.8, max: 0.6 } },
+        { weight: 0.7, lean: { min: 0.6 } },
+        { weight: 0.7, band: { signal: 0.1, gate: 0.05 } },
+        { weight: 0.7, band: { signal: 0.05 } },
+      ];
+      for (const playTarget of bad) {
+        expect(parsed(playTarget)).toHaveLength(1);
+        expect(parsed(playTarget)?.[0]).not.toHaveProperty("playTarget");
+      }
+    });
+
+    it("carries a sub-field a newer build added, as a conviction's does", () => {
+      const next = { ...target, band: { ...target.band, hold: 3 }, owner: "eric" };
+      expect(parsed(next)?.[0]?.playTarget).toEqual(next);
+    });
+
+    it("a re-subscribe carries the target forward", () => {
+      const [prior] = parsed(target) ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ playTarget: target });
+    });
+  });
 });

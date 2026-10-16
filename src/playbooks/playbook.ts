@@ -68,6 +68,7 @@ import type {
   Portfolio,
 } from "../domain/types.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
+import type { PlayTargetBounds } from "./play-target.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
@@ -200,6 +201,10 @@ export interface Playbook {
    *  `mixed-signals.ts`). OBSERVE-ONLY: a reading is logged, never read by `playbookIntents`.
    *  Absent (every playbook today) means the detector never looks at this playbook. */
   readonly mixedSignals?: MixedSignalsDial;
+  /** Optional — the widest target weight, lean range and band a subscription to this playbook may
+   *  set (#5483 criterion 13, `play-target.ts`). A subscription's target may only NARROW these.
+   *  Absent means the house bounds, the ranges the rebalancing-band backtest covered. */
+  readonly targetBounds?: PlayTargetBounds;
   /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
    *  "unknown", never as a default. */
   readonly keyedOn?: PlaybookKey;

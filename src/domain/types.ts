@@ -361,6 +361,27 @@ export interface PlaybookSubscription {
    * removes it. Behavioral only on a `subscriptions.v3` snapshot, the first whose version names it.
    */
   readonly convictionId?: string;
+  /**
+   * The play's target weight, lean range and band (#5483 slice 3, criterion 13): how much of its
+   * budget the owner wants deployed at center, how far that may lean, and how far the actual share
+   * may drift before it is flagged. Optional and additive; observe-only today, so it changes
+   * nothing a bot trades and sits outside the wire's version (`subscriptions-wire.ts`). It may
+   * only narrow the playbook's own bounds (`playbooks/play-target.ts`).
+   */
+  readonly playTarget?: PlayTarget;
+}
+
+/**
+ * Fractions of the play's budget, `0.7` = 70%. Only `weight` is required; a missing lean or band
+ * takes the house default, clipped to the playbook's bounds (`resolvePlayTarget`).
+ */
+export interface PlayTarget {
+  /** Share of the budget deployed at center. */
+  readonly weight: number;
+  /** The range the weight may lean within; contains `weight`. */
+  readonly lean?: { readonly min: number; readonly max: number };
+  /** Drift, in points of share, past which the reading is a signal (soft) and then a gate (hard). */
+  readonly band?: { readonly signal: number; readonly gate: number };
 }
 
 /** An owner's conviction on one pair — why they hold it, and the market day it is checked. */
