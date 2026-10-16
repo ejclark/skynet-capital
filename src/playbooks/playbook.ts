@@ -133,6 +133,29 @@ interface OptionPlaybookTraits {
   readonly requiredLevel: 1 | 2 | 3;
 }
 
+/**
+ * A study's measured moves in the stretches before a report (#5432): "from 20 to 10 trading days
+ * before, the stock rose 6.30% on average, in 13 of 14 reports". Typed and cited beside `evidence`
+ * so the Store draws the study's numbers, never literals typed into a component.
+ */
+export interface PrintStretches {
+  /** Where the numbers are, e.g. "docs/research/nvda-earnings-cycle.md F2". */
+  readonly source: string;
+  /** The years the reports span, as the member reads it: "2023–26". */
+  readonly era: string;
+  /** How many reports each average is over. */
+  readonly reports: number;
+  /** Trading days before the report, `from` > `to` (0 = the report day). */
+  readonly stretches: readonly {
+    readonly from: number;
+    readonly to: number;
+    /** The average move over the stretch, in percent. */
+    readonly meanPct: number;
+    /** In how many of `reports` the stock rose over the stretch. */
+    readonly rose: number;
+  }[];
+}
+
 export interface Playbook {
   /** e.g. "S1-NVDA" — the id that flows through the attribution seam into every record. */
   readonly id: string;
@@ -146,6 +169,9 @@ export interface Playbook {
   readonly thesis: string;
   /** Citation into docs/research/ — the record of why this play exists. */
   readonly evidence: string;
+  /** Optional — how the stock moved in each stretch before its past reports, as the study behind a
+   *  pre-print window measured it (#5432). Display only; nothing decides on it. */
+  readonly stretches?: PrintStretches;
   /** Target exposure as a fraction of equity, per mode. Risk guards still clamp on top. */
   readonly size: Readonly<Record<PlaybookMode, number>>;
   /**

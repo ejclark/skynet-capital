@@ -33,6 +33,17 @@ export const S1_NVDA: Playbook = prePrintRunUp({
   window: { unit: "sessions", enter: 20, exit: { kind: "before", count: 5 } },
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
+  // F2's table, modern era: the win rates 93% / 79% / 50% of n = 14 are 13, 11 and 7 reports.
+  stretches: {
+    source: "docs/research/nvda-earnings-cycle.md F2",
+    era: "2023–26",
+    reports: 14,
+    stretches: [
+      { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+      { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+      { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+    ],
+  },
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
   // #3194 step 5b-i: the first opt-in to the mixed-signals detector, OBSERVE-ONLY — a reading is
   // logged and never reaches this playbook's intents. S1 is a trend-with-the-bid play (news and

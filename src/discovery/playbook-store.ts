@@ -9,7 +9,7 @@
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
 import type { PlaybookMode } from "../domain/types.js";
-import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
+import { type Playbook, type PrintStretches, readsLiveSignals } from "../playbooks/playbook.js";
 import {
   evidenceHref,
   housePlaybooks,
@@ -60,6 +60,9 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
    *  option playbook, which is sized by its allocation — the rules of either are the copy above. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** The study's move in each stretch before a report, beside `evidence` (#5432) — sent only with a
+   *  window, which is what the stretches are drawn under. */
+  readonly stretches?: PrintStretches;
   /** Probe-proven traits ("Confirmed dates only"…) — empty when nothing was proven. */
   readonly traits: readonly PlayTrait[];
   /** Performance/eval data for the playbook (#885: "shape TBD"; #3543 slice 2 fills it in). Empty
@@ -334,6 +337,7 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     evidence: playbook.evidence,
     ...(href ? { evidenceHref: href } : {}),
     ...(probe ? { window: spanOf(probe), size: playbook.size } : {}),
+    ...(probe && playbook.stretches ? { stretches: playbook.stretches } : {}),
     traits: probe ? traitsOf(probe) : [],
     metrics: [],
     ...copy,

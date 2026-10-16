@@ -64,6 +64,25 @@ describe("playbookStoreCatalog", () => {
     expect(s1?.evidenceHref).toMatch(/^\/research\//);
   });
 
+  // #5432: the Store draws each stretch's move as a bar — the study's numbers, carried as a cited
+  // field beside `evidence`, never literals in the component.
+  it("carries S1's measured stretches, cited to the study's F2 table, beside its window", () => {
+    const s1 = byId("S1-NVDA");
+    expect(s1?.stretches?.source).toBe("docs/research/nvda-earnings-cycle.md F2");
+    expect(s1?.stretches?.reports).toBe(14);
+    expect(s1?.stretches?.stretches).toEqual([
+      { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+      { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+      { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+    ]);
+    const study = readFileSync("docs/research/nvda-earnings-cycle.md", "utf8");
+    expect(study).toContain("| D-20 → D-10 | **+6.30%** | 93% |");
+    expect(study).toContain("| D-10 → D-5 | +3.61% | 79% |");
+    expect(study).toContain("| **D-5 → D** | **-0.77%** | **50%** |");
+    // A pair whose study measured no stretches sends none: the line draws, the bars do not.
+    expect(byId("G1-GOOG")?.stretches).toBeUndefined();
+  });
+
   it("names S1's and G1's windows in trading sessions, the unit their code counts in (#4776)", () => {
     const s1 = byId("S1-NVDA");
     expect(s1?.enter).toContain(

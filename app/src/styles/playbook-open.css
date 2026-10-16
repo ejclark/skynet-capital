@@ -170,3 +170,41 @@
   font-weight: 700;
   fill: var(--text);
 }
+
+/* a pre-earnings window as one line (#5432): today as a dot, the ruler's zero line, the rows */
+.pbr-today {
+  fill: var(--text);
+}
+.pbr-zero {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.pbr-window {
+  margin-bottom: 10px;
+}
+.pbr-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+.pbr-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pbr-bars-h {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.pbr-muted {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
