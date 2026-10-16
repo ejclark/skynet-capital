@@ -402,6 +402,13 @@ EOF_SHOTS
     echo "ship: ^^ an unlearned incident on $base is above. Run /retro before stacking more on it."
   }
 
+  # Stalled-PR advisory (docs/LESSONS.md, 2026-10-16): every net above fires on RED, and a PR that is
+  # green, armed and "blocked" (#5221, 5 days) or green and never armed (#4449, 29 hours) raises
+  # nothing. Same rides-the-path doctrine: REST core only, a no-op without a token, advisory.
+  node scripts/stuck-pr-scan.mjs || {
+    echo "ship: ^^ a green PR above is not merging. Each line names its one-command fix; do not stack on it."
+  }
+
   # Digest advisory (same rides-the-path doctrine): the altitude instrument going quiet is drift
   # nobody sees — surface DUE-ness at the moment every change already passes through. Advisory only.
   node scripts/digest-scan.mjs 2>/dev/null || true

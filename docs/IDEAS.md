@@ -1353,6 +1353,14 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **A lane PR's screenshots force a second push after the PR exists, and that push is what starts the
+  ghost run.** `docs/shots/pr-<n>/` needs the PR number, so every feedback/plan PR with a picture is
+  pushed twice. A stable id known before opening (the issue number the branch is already named for)
+  would remove the second push. _(src: Claude · while: retro on #5221's 5-day stall, 2026-10-16)_
+- **Make "a job that can push with a bot token also sets `persist-credentials: false`" a workflow
+  spec rule.** #3334 fixed it in `moneypenny-repair.yml` and it was never carried to
+  `moneypenny-events.yml`; a `tests/arch/workflows.spec.ts` check turns a per-file memory into a rule.
+  _(src: Claude · while: retro on #5221's 5-day stall, 2026-10-16)_
 - **Activity's Feedback pulse mixes open and shipped filings in one flat list.** `/app/feedback`
   (now the Profile page's Feedback section) already built a real Active/All toggle for exactly this (#1308, #1312: shipped filings hidden by
   default); the condensed widget on Activity never inherited it — needs-info, needs-eric, next-slice
