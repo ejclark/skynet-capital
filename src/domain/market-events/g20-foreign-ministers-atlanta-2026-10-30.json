@@ -1,0 +1,11 @@
+{
+  "id": "g20-foreign-ministers-atlanta-2026-10-30",
+  "kind": "geopolitical",
+  "title": "G20 Foreign Ministers' Meeting — Atlanta, Georgia (US presidency, Rubio hosting)",
+  "date": "2026-10-30",
+  "status": "estimate",
+  "source": "EST: state.gov, read direct 2026-10-16 (HTTP 200 with a full browser header set — the plain fetch that returned 403 on 2026-09-15 now works). Two Office of the Spokesperson Media Notes, both fetched in full: (1) 'The United States to Host G20 Foreign Ministers' Meeting in Atlanta, Georgia' (dated May 18, 2026) — 'Secretary of State Marco Rubio will host the G20 Foreign Ministers' Meeting in Atlanta, Georgia on October 30-31, 2026'; (2) 'Media Logistics for the G20 Foreign Ministers' Meeting in Atlanta, Georgia' (dated July 21, 2026) — 'on Friday, October 30, 2026, and Saturday, October 31, 2026, bringing together foreign ministers and senior officials from the world's leading economies to advance shared priorities focused on economic prosperity, energy security, and technological innovation', with media credentials due August 21. The weekdays check out (2026-10-30 is a Friday). Corroborated by Atlanta News First (2026-05-19), Hoodline and Deccan Herald. Stays estimate on a schema gap and not on doubt: CONFIRMED_PREFIXES in scripts/event-scan-validation.mjs has no slot for a State Department press release, and this lane may not self-confirm without a listed primary prefix (IR:/BLS:/FED:). Checked 2026-10-16",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Two-day ministerial, Friday 10-30 and Saturday 10-31 — so unlike its Bangkok sibling (over before the US open) the opening day runs inside US cash hours, and the closing day (the chair's statement, if any) lands on a Saturday and reaches markets as a Monday 11-02 gap into ISM manufacturing. Filed LOW: a G20 foreign-ministers meeting has no scheduled market-moving release and its siblings in this calendar carry the same grade. Proposed 2026-09-15 by us-china-tariff-truce-expiry-2026-11-10's pulse sweep as a possible pre-deadline venue; since then the Washington summit (09-23/25) extended the truce to 2027-01-10, so the venue no longer sits in front of a live 11-10 cliff. South Africa is formally excluded from every US-presidency G20 event, this one included. Initial research: docs/research/events/g20-foreign-ministers-atlanta-2026-10-30.md."
+}
