@@ -262,9 +262,9 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "is checked on 2027-01-29: if its net P/L is below $0, it stops buying until its owner sets " +
       "a new date.",
     enter:
-      "Buys one call per cycle on the latest expiry 120 to 200 days out, at the strike nearest " +
-      "0.60 delta (0.70 conservative, 0.50 aggressive), up to 6 contracts (3 / 10) and never past " +
-      "the capital you allocate — about one every ten minutes, so it can fill within the hour. " +
+      "Buys calls on the latest expiry 120 to 200 days out, at the strike nearest 0.60 delta " +
+      "(0.70 conservative, 0.50 aggressive), in about three orders ten minutes apart, up to the " +
+      "capital you allocate (and at most 30 contracts; 15 / 60). " +
       "Adds are the same contract, only while it costs within 10% of what was paid and 90 or " +
       "more days remain. Never buys during an earnings blackout.",
     exitTakeProfit: "Sells every call once it is worth double what it cost.",

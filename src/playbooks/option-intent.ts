@@ -45,6 +45,8 @@ export interface OptionOpenSpec extends IntentFrame {
   /** The quote the limit was priced inside. An open always has one. */
   readonly band: OptionQuoteBand;
   readonly assignment?: "intended";
+  /** Units asked for; 1 when absent. Only a long call may be granted more (`option-guards.ts`). */
+  readonly quantity?: number;
 }
 
 export interface OptionCloseSpec extends IntentFrame {
@@ -99,7 +101,7 @@ export function optionOpenIntent(spec: OptionOpenSpec): OrderIntent | undefined 
       ...(spec.assignment ? { assignment: spec.assignment } : {}),
       ...(spec.selection ? { selection: spec.selection } : {}),
     },
-    1,
+    spec.quantity ?? 1,
   );
 }
 

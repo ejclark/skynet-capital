@@ -41,9 +41,10 @@ import type { Playbook } from "./playbook.js";
  * "own the gamma" mirror trade). A bought call's worst case is its premium. The guard exempts the
  * `long-call` structure from the spans-a-print rule, and still refuses an open inside a blackout.
  *
- * SIZE. Every option open is one contract (`option-guards.ts`), so the play adds one per cycle (the
- * per-symbol cooldown spaces them about ten minutes apart) up to its mode's cap; the Store
- * allocation is the hard ceiling (the guard refuses past it). Adds buy the SAME contract it holds,
+ * SIZE. Each buy asks for a third of its mode's cap (15 / 30 / 60 contracts), and the guard cuts it
+ * to what the Store allocation and the cash can pay for — so the allocation, not the cap, is what
+ * usually binds, and a budget is in the market in about three orders (the per-symbol cooldown spaces
+ * them about ten minutes apart). Adds buy the SAME contract it holds,
  * only while its ask is within 10% of the held cost and 90+ days remain. After a sale it may buy
  * again at once, at the new price: this version keeps no memory between cycles.
  *
@@ -73,10 +74,19 @@ export const LONG_CALL_DELTAS: Readonly<Record<PlaybookMode, number>> = {
 
 /** At most this many contracts held at once, per mode. The budget usually binds first. */
 export const LONG_CALL_MAX_CONTRACTS: Readonly<Record<PlaybookMode, number>> = {
-  conservative: 3,
-  standard: 6,
-  aggressive: 10,
+  conservative: 15,
+  standard: 30,
+  aggressive: 60,
 };
+
+/** Buys come in thirds: each open asks for a third of the mode's cap (the guard cuts it to what the
+ *  budget and cash can pay for), so a budget is put to work in about three orders, ten minutes
+ *  apart, rather than one contract at a time. */
+const tranche = (mode: PlaybookMode, held: number): number =>
+  Math.max(
+    1,
+    Math.min(Math.ceil(LONG_CALL_MAX_CONTRACTS[mode] / 3), LONG_CALL_MAX_CONTRACTS[mode] - held),
+  );
 
 export interface LongCallSetting {
   readonly symbol: string;
@@ -234,11 +244,12 @@ function openIntent(
     underlying: symbol,
     structure: "long-call",
     legs: [{ occSymbol: pick.quote.occSymbol, side: "buy" }],
+    quantity: tranche(mode, contractsOf(held)),
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     strategy: longCallTag(symbol),
-    reason: `Buying one ${name} for about ${cents(limitPrice)} a share ($${cost} for the contract), held through earnings. ${setting.bet}`,
-    expectation: `${symbol} rises before ${expiration}: the calls are sold at double their cost, or with ${EXIT_DTE} days left. The most this contract can lose is the $${cost} paid.`,
+    reason: `Buying ${name} calls for about ${cents(limitPrice)} a share ($${cost} a contract), held through earnings. ${setting.bet}`,
+    expectation: `${symbol} rises before ${expiration}: the calls are sold at double their cost, or with ${EXIT_DTE} days left. The most each contract can lose is the $${cost} paid for it.`,
     forecast: {
       direction: "up",
       invalidator: `${symbol} is below ${cents(spot)} with ${EXIT_DTE} days left on the ${name}`,
