@@ -222,7 +222,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | A conviction record: at least one claim, each tagged, bucketed and dated; checked after it was stated; steers only ◆ pairs | `src/playbooks/conviction-record.ts:115-141`, `src/playbooks/conviction-store.ts:6-53` | grounded |
 | A pointer at a record that steers the pair takes the record's check date; any other falls back to the subscription's own, said | `src/playbooks/conviction-store.ts:63-97` | grounded |
 | A conviction matches a record when the record steers its pair and states the same check day; a pointer is written on a subscribe or edit, migrated on the poll, and never replaces one already there | `src/subscriptions/conviction-pointer.ts:34-98`, `src/server/subscription-seed-store.ts:168-178` | grounded |
-| A record's check adds its steered pairs' net P/L (a paused pair still counts); below $0 stops new entries on every one; a strategy's retire test stops only its own pair | `src/playbooks/conviction-check.ts:134-175`, `src/playbooks/with-conviction-gate.ts:71-210` | grounded |
+| A record's check adds its steered pairs' net P/L (a paused pair still counts); below $0 stops new entries on every one; a strategy's retire test stops only its own pair | `src/playbooks/conviction-check.ts:134-175`, `src/playbooks/with-conviction-gate.ts:83-244` | grounded |
 | Ticker budgets fit inside the strategy allocation; lowering is never refused | `src/subscriptions/strategy-budgets.ts:12-30`, `src/subscriptions/strategy-budgets.ts:85-108` | grounded |
 | A conviction's check day is a future market day within a year | `src/subscriptions/strategy-budgets.ts:130-139` | grounded |
 
@@ -247,7 +247,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | `derivesFrom`: the spread declares its run-up pair; unaudited | `src/playbooks/playbook.ts:169-172`, `src/playbooks/call-spread.ts:454` | grounded |
 | Mixed signals: observe-only, opt-in, falsifier 30 observations or 2026-11-30 | `src/playbooks/mixed-signals.ts:1-31`, `src/playbooks/mixed-signals.ts:44-48`, `src/playbooks/registry.ts:34-39` | grounded |
 | Exit-safety: one level per mode, `enforce` or `alert-only`; drawdown from cost basis, not peak | `src/playbooks/playbook.ts:102-105`, `src/playbooks/playbook.ts:264-278` | grounded |
-| Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:21-52`, `src/playbooks/conviction-check.ts:95-125` | grounded |
+| Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:24-62`, `src/playbooks/conviction-check.ts:95-125` | grounded |
 | A non-✓ pair with no conviction keeps trading, labelled | `src/playbooks/conviction-check.ts:39-46` | grounded |
 | Compounding is the only automatic budget tilt | `src/domain/types.ts:336-346` | grounded |
 | The hand-off, holding place, band, tilt, two-level thresholds, phase reading, weighting | #5483 criteria 1–4, 9, 10 and amendments 1 and 3; #5482 criteria 1–4 and its amendment; this page §4 and §6 | proposed, not in code |
@@ -256,7 +256,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 
 | # | Cited at | Verdict |
 |---|---|---|
-| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:101-111`, `src/playbooks/playbook.ts:237-251`, `src/subscriptions/strategy-budgets.ts:91-95` | grounded |
+| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:232-242`, `src/playbooks/playbook.ts:237-251`, `src/subscriptions/strategy-budgets.ts:91-95` | grounded |
 | 2 | see Layers: wheel and spread by type shape; windows unchecked | partly grounded |
 | 3 | `src/playbooks/option-ownership.ts:3-47`, `src/playbooks/option-ownership.ts:58-76` | grounded |
 | 4 | `src/bots/bot.ts:14`; `envelope.json` → `$openOnPurpose` (paper-only is a judgment stop, not a path) | grounded as default and policy; there is no code-level refusal of a live URL |

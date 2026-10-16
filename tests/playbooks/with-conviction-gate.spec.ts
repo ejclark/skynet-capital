@@ -311,7 +311,7 @@ describe("withConvictionGate, a record's check across the pairs it steers", () =
     // The wheel alone is in profit; the view is judged on both, so it stops too.
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([callClose, shareSell]);
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log.mock.calls[0]?.[0]).toContain('conviction "ai-dip-test" check FAILED');
+    expect(log.mock.calls[0]?.[0]).toContain('conviction "ai-dip-test" (2027-01-29) check FAILED');
     expect(log.mock.calls[0]?.[0]).toContain("-$200.00 together");
     expect(log.mock.calls[0]?.[0]).toContain("exits still run");
   });
@@ -323,13 +323,20 @@ describe("withConvictionGate, a record's check across the pairs it steers", () =
   });
 
   it("stops the wheel on its own retire test while the view holds, and leaves the long call open", () => {
+    const log = rstest.fn();
     const gated = gate(undefined, undefined, {
       ledgerOf: (id: string) =>
         id === "CRWV-WHEEL"
           ? ledger({ realizedPl: 900, putsClosed: 4, putsAssigned: 2 })
           : ledger({ realizedPl: 10 }),
+      log,
     });
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([callOpen, callClose, shareSell]);
+    // The line says the view held; it is the wheel's own test that stopped the wheel.
+    const said = String(log.mock.calls[0]?.[0]);
+    expect(said).toContain("check passed");
+    expect(said).not.toContain("FAILED");
+    expect(said).toContain("no new entries on CRWV-WHEEL");
   });
 
   it("counts a paused pair's loss: pausing a loser does not hide it from the view", () => {

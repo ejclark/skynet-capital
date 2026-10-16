@@ -119,6 +119,18 @@ function readSteered(
   return { readings };
 }
 
+/** What a record's reading said, in words: held, held but a strategy retired its own pair, or failed. */
+function recordLine(id: string, checkOn: string, verdict: RecordVerdict, pairs: number): string {
+  const view = `conviction "${id}" (${checkOn})`;
+  if (verdict.stopped.length === 0) {
+    return `${view} check passed: net P/L ${verdict.netPl} across ${pairs} pair(s)`;
+  }
+  const stopped = `no new entries on ${verdict.stopped.join(", ")}`;
+  return verdict.pass
+    ? `${view} check passed: net P/L ${verdict.netPl} across ${pairs} pair(s), but ${verdict.reason}; ${stopped} until its owner sets a new date, exits still run`
+    : `${view} check FAILED — ${verdict.reason}; ${stopped} until its owner sets a new date, exits still run`;
+}
+
 export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Persona {
   const log = deps.log ?? (() => undefined);
   const { own: convictions, records } = checksOf(deps, log);
@@ -175,7 +187,7 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
     context: MarketContext,
     portfolio: Portfolio,
   ): RecordVerdict | undefined => {
-    const key = `${id}|${group.checkOn}`;
+    const key = `record ${id}|${group.checkOn}`;
     const kept = latchedRecords.get(key);
     if (kept) return kept;
     const once = (note: string, line: string) => {
@@ -201,11 +213,7 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
     if (steered.readings.length === 0) return undefined;
     const verdict = checkRecord(group.checkOn, steered.readings);
     latchedRecords.set(key, verdict);
-    log(
-      verdict.stopped.length === 0
-        ? `conviction "${id}" check passed (${group.checkOn}): net P/L ${verdict.netPl} across ${steered.readings.length} pair(s)`
-        : `conviction "${id}" check FAILED — ${verdict.reason}; no new entries on ${verdict.stopped.join(", ")} until its owner sets a new date, exits still run`,
-    );
+    log(recordLine(id, group.checkOn, verdict, steered.readings.length));
     return verdict;
   };
 
