@@ -146,6 +146,7 @@ interface PairCopy {
   readonly thesis: string;
   /** Citation into docs/research/ — the record of why this pair exists. */
   readonly evidence: string;
+  readonly stretches?: Playbook["stretches"];
   readonly size: Readonly<Record<PlaybookMode, number>>;
   readonly mixedSignals?: Playbook["mixedSignals"];
 }
@@ -173,10 +174,11 @@ function pairIdOf(strategy: StrategyId, symbol: string): string {
 function copyOf(
   setting: PairCopy,
   keyedOn: PlaybookKey,
-): Pick<Playbook, "thesis" | "evidence" | "size" | "keyedOn" | "mixedSignals"> {
+): Pick<Playbook, "thesis" | "evidence" | "stretches" | "size" | "keyedOn" | "mixedSignals"> {
   return {
     thesis: setting.thesis,
     evidence: setting.evidence,
+    ...(setting.stretches ? { stretches: setting.stretches } : {}),
     size: setting.size,
     keyedOn,
     ...(setting.mixedSignals ? { mixedSignals: setting.mixedSignals } : {}),

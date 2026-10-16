@@ -5,6 +5,7 @@
  * value arrives server-formatted; the one raw numeric (`totalPlRaw`) exists for FILTERING only.
  */
 
+import type { DeskHealth } from "./book-health";
 import type { MarkKind } from "./position-mark";
 
 export type Tone = "pos" | "neg" | "flat";
@@ -203,6 +204,8 @@ export interface DeskSnapshot {
   readonly desk: Desk;
   /** Present only for desks the world projection gives a landmark (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
+  /** The book read as one system (#5493): optional so an older server or fixture still renders. */
+  readonly health?: DeskHealth;
 }
 
 export async function fetchDesk(id: string): Promise<DeskSnapshot> {

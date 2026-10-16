@@ -22,6 +22,7 @@ import {
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityLedger } from "../shell/activity-ledger";
+import { BalanceSection } from "../shell/balance-section";
 import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
@@ -53,7 +54,9 @@ import { useOrderDetail } from "../shell/use-order-detail";
  * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter), **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * blotter), **Balance** (#5493 slice 3 — the book as one system: the findings, the playbook
+ * behind each, the plays' numbers and the closed trades; one account's, so not "All accounts"),
+ * **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
  * range is the section's own head and the page's only date control, over one lane per position and
  * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
  * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
@@ -371,6 +374,15 @@ function CockpitBody({
       />
     );
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
+  if (section === "balance")
+    return (
+      <BalanceSection
+        // Keyed by the account, so switching accounts never shows the last one's book.
+        key={accountId}
+        deskId={accountId}
+        accountName={accounts.find((a) => a.id === accountId)?.name}
+      />
+    );
   if (section === "events")
     return (
       <EventsSection

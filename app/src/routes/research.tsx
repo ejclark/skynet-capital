@@ -6,7 +6,7 @@ import { useRefineSearch } from "../live/refine-search";
 import { DEFAULT_LENS } from "../live/research";
 import { useBoardView } from "../shell/board-section";
 import { PageFrame } from "../shell/frame";
-import { PlaybooksSection, SubscribeAs, usePlaybooksSection } from "../shell/playbooks-section";
+import { PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 
@@ -20,8 +20,8 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * SECTIONS (#3333 slice 9; #3623): the same `SectionSwitch`/`sections.ts` mechanism
  * `accounts.tsx`/`activity.tsx`/`settings.tsx`/`trade.tsx` already use, URL-stateful via
  * `?section=`. "Playbooks" (`playbooks-section.tsx`) is the catalog plus subscribe. Each section
- * keeps its own controls in its own head (the market calendar for Board, the "Subscribe as" account
- * row for Playbooks) — the section switch leads the stage, per the frame's "higher dimensions
+ * keeps its own controls in its own head (the market calendar for Board; Playbooks subscribes from
+ * a + on each play, #5442) — the section switch leads the stage, per the frame's "higher dimensions
  * steer lower ones" rule. This file stays thin
  * route glue; each section's own markup, queries, and helpers live in its own `shell/*.tsx` file
  * (the arch fitness gate's cap forced the split).
@@ -85,8 +85,6 @@ function ResearchPage(): ReactElement {
   const board = useBoardView({ active: section === "board", query, setFilter });
 
   const playbooks = usePlaybooksSection(section === "playbooks", search.account);
-  const onSelectAccount = (id: string | undefined) =>
-    void navigate({ search: (prev) => ({ ...prev, account: id }), replace: true });
 
   const onSelectSection = (next: ResearchSection) =>
     void navigate({
@@ -95,8 +93,8 @@ function ResearchPage(): ReactElement {
     });
 
   // THE RAIL LEFT THE FRAME (#3807 slice 2a): the section switch is the controls row at the top of
-  // the stage; the Board's calendar is the band head that leads its content (`board.band`), and
-  // "Subscribe as" sits in the Playbooks section's own head.
+  // the stage; the Board's calendar is the band head that leads its content (`board.band`). Playbooks
+  // has no head control since #5442: a bot subscribes from the + on a play.
   return (
     <PageFrame
       controls={<SectionSwitch sections={SECTIONS} current={section} onSelect={onSelectSection} />}
@@ -111,13 +109,8 @@ function ResearchPage(): ReactElement {
           store={playbooks.store}
           accountId={search.account}
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
-          subscribeAs={
-            <SubscribeAs
-              accounts={playbooks.accounts}
-              currentId={search.account}
-              onSelect={onSelectAccount}
-            />
-          }
+          accounts={playbooks.accounts}
+          accountsReady={playbooks.accountsReady}
         />
       ) : null}
     </PageFrame>

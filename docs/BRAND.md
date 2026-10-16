@@ -121,7 +121,7 @@ The recurring visual/narrative language. New work should draw from these, or *ex
   the market (session lighting), and reads as a living market surface (ticker billboards, red rail).
 - **Named surfaces** — sanctioned, consistently-used feature names, not internal shorthand: **the
   Playbook Store** (R&D → Playbooks — every house playbook as a card, with its evidence, and
-  "Subscribe as" to put an account's capital behind one). Use the proper name every time the
+  a + on each play to put your bots' capital behind it, #5442). Use the proper name every time the
   surface is referenced.
 
 ## The signature — the Living Universe

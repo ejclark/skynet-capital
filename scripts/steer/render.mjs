@@ -5,6 +5,7 @@
 // queued until the next page · the 14-day strip · Done (in the fixed bar). Page text names each
 // thing by what it does; no invented labels (CLAUDE.md → "No coined names").
 import { readFileSync } from "node:fs";
+import { COMPARE_CLIENT, compareHtml } from "./compare.mjs";
 import { FOCUS_CLIENT } from "./focus.mjs";
 import { buttons, DAY, e, ext, note, plural, VERBS, when } from "./html.mjs";
 import {
@@ -15,6 +16,7 @@ import {
   OPENING_LINE,
   REVEAL_SHOW,
 } from "./marks.mjs";
+import { optionNoteHtml, perOption, QUESTION_NOTE_LABEL } from "./option-notes.mjs";
 import { OUTCOME_CLIENT, outcomesControl } from "./outcomes.mjs";
 import { PAGE_NOTE_CLIENT } from "./page-notes.mjs";
 import { hasPins, PIN_CLIENT, pinnedShot } from "./pins.mjs";
@@ -27,6 +29,7 @@ import {
 } from "./round-header.mjs";
 import { scopeHtml, servesHtml } from "./scope.mjs";
 import { queueHtml, reelHtml, stripHtml } from "./sections.mjs";
+import { bothWidths, widthsHtml } from "./widths.mjs";
 
 // The round page's header and its words live in round-header.mjs; the page's words stay readable
 // from here, where the specs and the steer skill have always found them.
@@ -36,9 +39,10 @@ export { COMMENTS_COUNT, HOW_SUMMARY, ROUND_INTRO, ROUND_LINE };
 export const TITLE = "Skynet Steering";
 const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // The pin reactions' script defines `steerPins`, the listening line's `steerEar`, the marks'
-// `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes` and the page
-// notes' `steerPageNotes`; the page script calls each (pins-client.js, ear-client.js,
-// marks-client.js, focus-client.js, outcomes-client.js, page-notes-client.js).
+// `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes`, the page
+// notes' `steerPageNotes`, the compare modes `steerCompare` and the width switch `steerWidths`;
+// the page script calls each (pins-client.js, ear-client.js, marks-client.js, focus-client.js,
+// outcomes-client.js, page-notes-client.js, compare-client.js, widths-client.js).
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
@@ -46,6 +50,8 @@ const CLIENT = [
   "./focus-client.js",
   "./outcomes-client.js",
   "./page-notes-client.js",
+  "./compare-client.js",
+  "./widths-client.js",
   "./page-client.js",
 ]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
@@ -53,20 +59,45 @@ const CLIENT = [
 
 /** The pictures of one holder. `at` names the holder (its decision key and option, or "today"),
  *  so a picture with pins gets a button on each badge (pins.mjs); on a design round's own page
- *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. */
-function shots(pictures, img, issue, at) {
-  const h = pictures
+ *  (`at.markable`) every frame is a box a tap marks (marks.mjs), never a link. `wrap(picture,
+ *  html)` may set a frame inside more (a compared option's phone frame, compare.mjs). `slot`
+ *  (`{ name, same }`, a question with `widths`) puts a holder's two widths in one slot with a
+ *  switch (widths.mjs). */
+function shots(pictures, img, issue, at, wrap = (_p, h) => h, slot = null) {
+  const drawn = pictures
     .map((p) => {
       const src = img(p);
-      if (!src) return "";
-      if (p.pins?.length) return pinnedShot(p, src, at);
-      const size = p.size === "phone" ? "phone" : "desk";
-      if (at.markable)
-        return markableShot(size, src, p.alt, { ...at, focus: p.focus, ratio: p.ratio });
-      return `<a class="shot ${p.size === "phone" ? "phone" : "desk"}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
+      return src ? { p, h: wrap(p, shot(p, src, at)) } : null;
     })
-    .join("");
-  return h || `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
+    .filter(Boolean);
+  if (!drawn.length)
+    return `<p class="muted">No picture for this one; the write-up is on #${issue}.</p>`;
+  if (slot && bothWidths(drawn.map((x) => x.p))) {
+    const of = (w) =>
+      drawn
+        .filter((x) => x.p.size === w)
+        .map((x) => x.h)
+        .join("");
+    return widthsHtml({ ...slot, phone: of("phone"), desk: of("desk") });
+  }
+  return drawn.map((x) => x.h).join("");
+}
+
+/** A holder's width slot on a question with `widths` (widths.mjs), else null. */
+const slotOf = (d, name, holder) => (d.widths ? { name, same: Boolean(holder?.deskSame) } : null);
+
+/** One picture's frame: pinned, markable, or a link to the file. */
+function shot(p, src, at) {
+  if (p.pins?.length) return pinnedShot(p, src, at);
+  const size = p.size === "phone" ? "phone" : "desk";
+  if (at.markable)
+    return markableShot(size, src, p.alt, {
+      ...at,
+      focus: p.focus,
+      ratio: p.ratio,
+      areas: p.areas,
+    });
+  return `<a class="shot ${size}" href="${e(src)}" ${ext}><img src="${e(src)}" alt="${e(p.alt)}" loading="lazy"></a>`;
 }
 
 /** A problem that names its pin on Today's frame (`pin`): a compact row, no pictures, labelled
@@ -77,7 +108,7 @@ function pinRowHtml(d, o) {
   return (
     `<article class="opt pinrow" id="d-${e(d.key)}-${e(o.key)}"><div class="side"><h4 class="oname">` +
     `<span class="okey">Pin ${e(o.pin)}</span>${e(o.name)}${tag}</h4>${delta}${servesHtml(o.serves)}` +
-    `${buttons([VERBS.problems[0]], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+    `${buttons([VERBS.problems[0]], { sec: "decisions", key: d.key, opt: o.key })}${perOption(d) ? optionNoteHtml(d, o) : ""}</div></article>`
   );
 }
 
@@ -89,7 +120,7 @@ function todayHtml(d, img, markable, pinRows = "") {
   const at = { key: d.key, option: "today", markable };
   const rows = pinRows ? `<div class="pinrows">${pinRows}</div>` : "";
   return (
-    `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, at)}</div>` +
+    `<article class="opt today"><div class="pics">${shots(d.today.pictures, img, d.issue, at, undefined, slotOf(d, "Today", d.today))}</div>` +
     `<div class="side"><h4 class="oname"><span class="okey">Today</span>${src}</h4><p>${e(d.today.caption)}</p>${rows}</div></article>`
   );
 }
@@ -103,14 +134,19 @@ function optionHtml(d, o, img, markable) {
   const said = d.problems ? "The problem:" : "Changes:";
   const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
   const at = { key: d.key, option: o.key, markable };
+  // A compared question (compare.mjs): the phone frame sits in Flip · Side by side · Divider with
+  // Today's.
+  const wrap = d.compare
+    ? (p, h) => (p.size === "phone" ? compareHtml({ d, o, pic: p, shot: h, img }) : h)
+    : undefined;
   const pics =
     d.kind === "design"
-      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at)}</div>`
+      ? `<div class="pics">${shots(o.pictures ?? [], img, d.issue, at, wrap, slotOf(d, `Option ${o.key}`, o))}</div>`
       : "";
   const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
   return (
     `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
-    `${delta}${servesHtml(o.serves)}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+    `${delta}${servesHtml(o.serves)}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key }) + (perOption(d) ? optionNoteHtml(d, o) : "")}</div></article>`
   );
 }
 
@@ -160,6 +196,14 @@ function openingHtml(d, img, call) {
  *  there even with no scope, so he can say what the screen should reach. */
 const scopeBlock = (d, markable) => scopeHtml(d.scope, markable ? outcomesControl(d) : "");
 
+/** The question's own note, at its end: "on the whole question" when each option has its own. */
+const questionNote = (d) =>
+  note({
+    sec: "decisions",
+    key: d.key,
+    label: `${perOption(d) ? QUESTION_NOTE_LABEL : "Your note, in your words (optional)"} — it is quoted on the issue word for word`,
+  });
+
 function decisionHtml(d, i, total, img, markable) {
   const rec = d.recommendation;
   const recLine = rec
@@ -184,11 +228,7 @@ function decisionHtml(d, i, total, img, markable) {
     `<h3>${e(d.title)}</h3>${scopeBlock(d, markable)}${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${opening ? "" : recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
     `${opening ? openingHtml(d, img, recLine + ev) : optionsHtml(d, img, markable)}${controls(d)}${opening ? "" : ev}` +
-    note({
-      sec: "decisions",
-      key: d.key,
-      label: "Your note, in your words (optional) — it is quoted on the issue word for word",
-    }) +
+    questionNote(d) +
     `</section>`
   );
 }
@@ -270,6 +310,7 @@ export function renderPage(tp, { img = (p) => p.local ?? null } = {}) {
           outcomes: OUTCOME_CLIENT,
         }
       : {}),
+    ...(tp.decisions.some((d) => d.compare) ? { compare: COMPARE_CLIENT } : {}),
   };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const decisions = tp.decisions

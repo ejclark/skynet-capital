@@ -109,7 +109,7 @@ describe("the field — unrealized P/L ranking", () => {
 });
 
 describe("the field — return % ranking", () => {
-  it("computes return as unrealized P/L over the current market value invested", () => {
+  it("ranks the open-position return as unrealized P/L over what the positions cost", () => {
     const html = renderStandingsBody(
       data([
         {
@@ -118,7 +118,7 @@ describe("the field — return % ranking", () => {
           kind: "human",
           cash: 0,
           equity: 10_000,
-          // pl = 150 - 100 = +50; invested (market value) = 150 -> +33.33%
+          // pl = 150 - 100 = +50; cost = 100 -> +50.00%
           positions: [{ symbol: "AAA", quantity: 10, avgPrice: 10, marketValue: 150 }],
         },
         {
@@ -127,7 +127,7 @@ describe("the field — return % ranking", () => {
           kind: "human",
           cash: 0,
           equity: 10_000,
-          // pl = 1,050 - 1,000 = +50; invested (market value) = 1,050 -> +4.76%
+          // pl = 1,050 - 1,000 = +50; cost = 1,000 -> +5.00%
           positions: [{ symbol: "BBB", quantity: 100, avgPrice: 10, marketValue: 1_050 }],
         },
       ]),
@@ -138,8 +138,8 @@ describe("the field — return % ranking", () => {
     expect(html.indexOf('href="/u/small-base">SmallBase ')).toBeLessThan(
       html.indexOf('href="/u/big-base">BigBase '),
     );
-    expect(html).toContain("+33.33%");
-    expect(html).toContain("+4.76%");
+    expect(html).toContain("+50.00%");
+    expect(html).toContain("+5.00%");
   });
 
   it("treats zero invested cost basis as a 0% return rather than dividing by zero", () => {

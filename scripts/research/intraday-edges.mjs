@@ -36,63 +36,9 @@
  * Offline research tooling: no broker credential, touches no trading path, places nothing.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { sessions } from "./intraday-bars.mjs";
 import { reportStrategies } from "./intraday-strategies.mjs";
 import { ret, stats } from "./session-stats.mjs";
-
-const CACHE = join(process.cwd(), "node_modules", ".cache", "intraday-edges");
-const UA = "skynet-capital research (ejclark83@gmail.com)";
-const ET = "America/New_York";
-
-async function cached(name, url) {
-  mkdirSync(CACHE, { recursive: true });
-  const path = join(CACHE, name);
-  if (existsSync(path)) return JSON.parse(readFileSync(path, "utf8"));
-  const res = await fetch(url, { headers: { "User-Agent": UA } });
-  if (!res.ok) throw new Error(`${url} -> ${res.status} ${res.statusText}`);
-  const body = await res.json();
-  writeFileSync(path, JSON.stringify(body));
-  return body;
-}
-
-/** Wall-clock ET for an epoch — Yahoo returns UTC, and the whole study is anchored on 9:30 ET. */
-const etParts = (epoch) => {
-  const d = new Date(epoch * 1000);
-  const [date, time] = d.toLocaleString("sv-SE", { timeZone: ET }).split(" ");
-  return { date, minutes: Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) };
-};
-
-/** Intraday bars grouped into regular-hours sessions, in ET. */
-async function sessions(symbol, interval, range) {
-  const raw = await cached(
-    `${symbol}-${interval}-${range}.json`,
-    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}`,
-  );
-  const r = raw.chart?.result?.[0];
-  if (!r) throw new Error(`no ${interval} data for ${symbol}`);
-  const q = r.indicators.quote[0];
-  const byDay = new Map();
-  for (let i = 0; i < r.timestamp.length; i++) {
-    if (q.open[i] == null || q.close[i] == null) continue;
-    const { date, minutes } = etParts(r.timestamp[i]);
-    // Regular hours only: 9:30 (570) through the 15:30 bar. Pre/post prints are a different game.
-    if (minutes < 570 || minutes >= 960) continue;
-    if (!byDay.has(date)) byDay.set(date, []);
-    byDay.get(date).push({
-      minutes,
-      open: q.open[i],
-      high: q.high[i],
-      low: q.low[i],
-      close: q.close[i],
-      volume: q.volume[i] ?? 0,
-    });
-  }
-  return [...byDay.entries()]
-    .map(([date, bars]) => ({ date, bars: bars.sort((a, b) => a.minutes - b.minutes) }))
-    .filter((s) => s.bars.length >= 6)
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
-}
 
 const label = (m) =>
   `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;

@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { configure, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import { Route } from "../../src/routes/trade";
@@ -87,6 +87,11 @@ function mountTrade(initialPath: string) {
   );
   return router;
 }
+
+// Each test mounts a route tree and waits for its data to render: genuine work (0.1-1 s on a quiet
+// machine), so these specs get 15 s rather than the default 5 s (#5498). None waits on the clock.
+rstest.setConfig({ testTimeout: 15_000 });
+configure({ asyncUtilTimeout: 12_000 });
 
 describe("/trade validateSearch — section", () => {
   const validateSearch = Route.options.validateSearch as (search: Record<string, unknown>) => {

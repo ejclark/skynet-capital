@@ -16,6 +16,7 @@
 // Pure: no network, no clock, no filesystem.
 import { classOf } from "../rank.mjs";
 import { marksSaid } from "./marks.mjs";
+import { optionNotesSaid } from "./option-notes.mjs";
 import { outcomesSaid } from "./outcomes.mjs";
 import { PIN_REACTIONS, pinReactions, pinSaid } from "./pins.mjs";
 
@@ -241,11 +242,11 @@ export function parseSteerMarker(body = "") {
 }
 
 /** Did Eric leave anything on this record — a pick, a verdict, a reaction, a note, a reaction
- *  or note on one of its pins (#5143), a mark he left on a frame (marks.mjs), or an outcome he
- *  added to its scope (outcomes.mjs)? Given the
- *  decision `d`, only a pin or a mark on a frame it shows counts: a round republished with fewer
- *  or renumbered pins leaves the old ids in the store, and the page doesn't count those either
- *  (pins-client.js `said`, marks-client.js `said`). */
+ *  or note on one of its pins (#5143), a mark he left on a frame (marks.mjs), an outcome he
+ *  added to its scope (outcomes.mjs), or a note under one of its options (option-notes.mjs)?
+ *  Given the decision `d`, only a pin, a mark or an option note on something it shows counts: a
+ *  round republished with fewer or renumbered pins leaves the old ids in the store, and the page
+ *  doesn't count those either (pins-client.js `said`, marks-client.js `said`). */
 export const isAnswered = (rec, d) =>
   Boolean(
     rec &&
@@ -255,7 +256,11 @@ export const isAnswered = (rec, d) =>
         String(rec.note ?? "").trim() ||
         outcomesSaid(rec) ||
         (d
-          ? pinReactions(d, rec).some(pinSaid) || marksSaid(d, rec)
+          ? pinReactions(d, rec).some(pinSaid) ||
+            marksSaid(d, rec) ||
+            optionNotesSaid(d, rec).length > 0
           : Object.values(rec.pins ?? {}).some((v) => PIN_REACTIONS.includes(v)) ||
-            Object.values(rec.pinNotes ?? {}).some((v) => typeof v === "string" && v.trim()))),
+            [rec.pinNotes, rec.optionNotes].some((m) =>
+              Object.values(m ?? {}).some((v) => typeof v === "string" && v.trim()),
+            ))),
   );

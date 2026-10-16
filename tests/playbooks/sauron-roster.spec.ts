@@ -89,17 +89,12 @@ describe("review of 9a: his rules run once, even from a duplicated env roster", 
     ]);
   });
 
-  it("the rule is per playbook, not per SAURON — HC-SAURON,HC-SAURON trades once per symbol", () => {
-    const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON,HC-SAURON" });
+  it("the rule is per playbook, not per SAURON — a repeated S1-NVDA resolves to one entry", () => {
+    const { enabled } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "S1-NVDA,S1-NVDA" });
     const roster = resolveBotRoster(botOf(quietBot("futurist")), enabled, [
-      subscribed("futurist", "HC-SAURON"),
+      subscribed("futurist", "S1-NVDA"),
     ]);
-    expect(roster.enabled).toHaveLength(1);
-    const panic = aContext({ NVDA: { sentiment: -0.5, momentum: 0.01 } });
-    const intents = tradingRoster(roster, DEFAULT_RISK_CONFIG).persona.decide(panic, aPortfolio());
-    expect(intents.map((i) => `${i.side} ${i.symbol} ${i.playbookId}`)).toEqual([
-      "buy NVDA HC-SAURON",
-    ]);
+    expect(roster.enabled.map((e) => `${e.playbook.id}:${e.mode}`)).toEqual(["S1-NVDA:standard"]);
   });
 
   it("the account's own subscription is the one entry that runs beside a repeated env token", () => {

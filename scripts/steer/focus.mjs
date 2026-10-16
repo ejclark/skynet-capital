@@ -115,11 +115,18 @@ export const inFocus = (focus, x, y) =>
 
 /** A picture's height ÷ width from its file's first bytes (PNG or JPEG), or null for neither. */
 export function imageRatio(buf) {
+  const px = imageSize(buf);
+  return px ? px.h / px.w : null;
+}
+
+/** A picture's pixel size `{ w, h }` from its file's first bytes (PNG or JPEG), or null for
+ *  neither — compare.mjs offers the divider only on two pictures that share it. */
+export function imageSize(buf) {
   if (!buf || buf.length < 24) return null;
   if (buf.readUInt32BE(0) === 0x89504e47) {
     const w = buf.readUInt32BE(16);
     const h = buf.readUInt32BE(20);
-    return w > 0 && h > 0 ? h / w : null;
+    return w > 0 && h > 0 ? { w, h } : null;
   }
   if (!(buf[0] === 0xff && buf[1] === 0xd8)) return null;
   // Walk the JPEG's segments to its frame header (SOF0–SOF15, never DHT, JPG or DAC).
@@ -131,7 +138,7 @@ export function imageRatio(buf) {
     if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
       const h = buf.readUInt16BE(i + 5);
       const w = buf.readUInt16BE(i + 7);
-      return w > 0 && h > 0 ? h / w : null;
+      return w > 0 && h > 0 ? { w, h } : null;
     }
     i += 2 + len;
   }

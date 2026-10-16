@@ -19,6 +19,7 @@ import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
+import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
@@ -305,6 +306,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section still renders, with saves/loads answering "not wired in this deployment."
    */
   readonly savedPositions?: SavedPositionsStore;
+  /**
+   * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
+   * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
+   * Nothing in it reaches a bot; a draft is not on any roster.
+   */
+  readonly authoredPlays?: AuthoredPlayStore;
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;

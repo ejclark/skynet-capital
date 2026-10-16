@@ -51,8 +51,9 @@ function withClient(node: ReactElement) {
 }
 
 const since = "2026-10-09T13:31:00Z";
-/** Sauron, #5037 round 2's world, in the server's own words: HC-SAURON is "can't fire" on the
- *  roll call and "trading on live signals" on the verdict table — the contradiction this ends. */
+/** Sauron, #5037 round 2's world, in the server's own words (HC-SAURON, dissolved 2026-10-16, left
+ *  out): TACO-DJT is "can't fire" on the roll call and still has a verdict on the verdict table —
+ *  the contradiction this ends. */
 const sauron: Heartbeat = {
   state: "beating",
   marketOpen: true,
@@ -69,9 +70,9 @@ const sauron: Heartbeat = {
       sinceIsLowerBound: false,
     },
     {
-      playbookId: "HC-SAURON",
+      playbookId: "TACO-DJT",
       mode: "standard",
-      state: "tactical",
+      state: "no-window",
       since,
       sinceIsLowerBound: false,
     },
@@ -89,13 +90,6 @@ const sauron: Heartbeat = {
       playbookId: "TACO-DJT",
       status: "blocked",
       reason: "No news feed is wired to it yet, so its trigger never arrives.",
-    },
-    {
-      playbookId: "HC-SAURON",
-      status: "blocked",
-      mode: "standard",
-      reason:
-        "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
     },
     {
       playbookId: "SAURON",
@@ -123,29 +117,29 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
   it("draws each playbook once, under the counted line", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    expect(await screen.findByText("HC-SAURON")).toBeInTheDocument();
-    for (const id of ["SAURON", "HC-SAURON", "S1-NVDA", "TACO-DJT"]) {
+    expect(await screen.findByText("TACO-DJT")).toBeInTheDocument();
+    for (const id of ["SAURON", "S1-NVDA", "TACO-DJT"]) {
       expect(screen.getAllByText(id)).toHaveLength(1);
     }
     const line = document.querySelector(".pbb-count")?.textContent ?? "";
     expect(line).toContain("● 1 trading on live signals");
     expect(line).toContain("◷ 1 waiting for a window");
-    expect(line).toContain("⊘ 2 can't fire");
+    expect(line).toContain("⊘ 1 can't fire");
     // No second list: no verdict table, no roll call.
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByText("Which playbooks this bot runs")).toBeNull();
   });
 
-  it("says Can't fire on HC-SAURON's card, never trading on live signals", async () => {
+  it("says Can't fire on TACO-DJT's card, never the verdict it also recorded", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("HC-SAURON");
-    const hc = cardOf("HC-SAURON");
-    expect(hc.getAttribute("data-state")).toBe("blocked");
-    expect(hc.textContent).toContain("Can't fire");
-    expect(hc.textContent).not.toMatch(/trading on live signals/i);
+    await screen.findByText("TACO-DJT");
+    const taco = cardOf("TACO-DJT");
+    expect(taco.getAttribute("data-state")).toBe("blocked");
+    expect(taco.textContent).toContain("Can't fire");
+    expect(taco.textContent).not.toMatch(/waiting for (a|its) window/i);
     // Its "since" belongs to the verdict it no longer shows, so it never borrows that clock.
-    expect(hc.textContent).not.toMatch(/since/);
+    expect(taco.textContent).not.toMatch(/since/);
   });
 
   it("heads the cards with the bot's checks: running, how often, and what each check asks", async () => {
@@ -157,7 +151,7 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
     expect(strip.textContent).toContain(
       "Sauron checks the market about every 15 seconds while it's open.",
     );
-    expect(strip.textContent).toContain("Each check asks the 4 playbooks below what to do.");
+    expect(strip.textContent).toContain("Each check asks the 3 playbooks below what to do.");
   });
 
   it("explains Not checking, and claims no on-time check, when the loop has gone quiet", async () => {
@@ -262,13 +256,13 @@ describe("BotPlaybooksSection — someone else's bot", () => {
       withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" showPlaybooks={false} />),
     );
     expect(await screen.findByText(/is the bot owner's to see/)).toBeInTheDocument();
-    for (const id of ["SAURON", "HC-SAURON", "S1-NVDA", "TACO-DJT", "BETA-SCOUT"]) {
+    for (const id of ["SAURON", "S1-NVDA", "TACO-DJT", "BETA-SCOUT"]) {
       expect(screen.queryByText(new RegExp(id))).toBeNull();
     }
     expect(screen.queryByRole("link", { name: /R&D/ })).toBeNull();
     // One card per verdict, read by its state and its mode.
     expect(document.querySelectorAll(".pbb-card")).toHaveLength(3);
-    expect(screen.getAllByText("Trading on live signals")).toHaveLength(2);
+    expect(screen.getAllByText("Trading on live signals")).toHaveLength(1);
     expect(screen.getByText("Aggressive mode")).toBeInTheDocument();
   });
 
@@ -320,7 +314,7 @@ const week: NonNullable<Heartbeat["week"]> = {
   gaps: [],
   lanes: [
     { playbookId: "SAURON", mode: "aggressive", slot: 0, states: grid("tactical", null) },
-    { playbookId: "HC-SAURON", mode: "standard", slot: 1, states: grid("tactical", null) },
+    { playbookId: "TACO-DJT", mode: "standard", slot: 1, states: grid("no-window", null) },
     { playbookId: "S1-NVDA", mode: "standard", slot: 2, states: grid("no-window", null) },
   ],
   trades: [
@@ -405,12 +399,17 @@ describe("BotPlaybooksSection — the week on one clock", () => {
   it("hatches a can't-fire card's lane, whatever its checks recorded", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("HC-SAURON");
-    const lane = within(cardOf("HC-SAURON")).getByRole("img");
+    await screen.findByText("TACO-DJT");
+    const lane = within(cardOf("TACO-DJT")).getByRole("img");
     expect(lane.getAttribute("aria-label")).toBe("This week: can't fire.");
     expect(lane.querySelectorAll('[data-s="blocked"]')).toHaveLength(64);
-    expect(lane.querySelectorAll('[data-s="tactical"]')).toHaveLength(0);
-    // TACO-DJT never ran, so it has no lane rows of its own — still hatched, still on the clock.
+    expect(lane.querySelectorAll('[data-s="no-window"]')).toHaveLength(0);
+  });
+
+  it("hatches a can't-fire card that never ran, still on the clock", async () => {
+    next = withWeek({ lanes: week.lanes.filter((l) => l.playbookId !== "TACO-DJT") });
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    await screen.findByText("TACO-DJT");
     expect(
       within(cardOf("TACO-DJT")).getByRole("img").querySelectorAll('[data-s="blocked"]'),
     ).toHaveLength(64);
@@ -445,7 +444,7 @@ describe("BotPlaybooksSection — the week on one clock", () => {
     await screen.findByText("Aggressive mode");
     const lanes = [...document.querySelectorAll(".pbb-card .wk-lane")];
     expect(lanes).toHaveLength(3);
-    expect(lanes.map((l) => l.querySelectorAll('[data-s="tactical"]').length)).toEqual([64, 64, 0]);
+    expect(lanes.map((l) => l.querySelectorAll('[data-s="tactical"]').length)).toEqual([64, 0, 0]);
     expect(document.querySelectorAll(".pbb-card .wk-mark")).toHaveLength(0);
     expect(document.querySelectorAll(".wk-strip .wk-mark")).toHaveLength(2);
   });

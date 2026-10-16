@@ -5,6 +5,11 @@
     "mustBeSeenBy": "member with a linked account (hidden with zero accounts)"
   },
   {
+    "screen": "/accounts ?section=balance",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with one linked account selected (not All accounts; #5493 slice 3)"
+  },
+  {
     "screen": "/accounts ?section=activity",
     "verdict": "keep",
     "mustBeSeenBy": "member (honest empty state with no account)"
