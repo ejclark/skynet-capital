@@ -259,3 +259,144 @@ describe("withConvictionGate, with a conviction record", () => {
     ).toBe(persona);
   });
 });
+
+/**
+ * #5482 criterion 5 — a record's check is read over every pair it steers, together. When it
+ * fails, every one of them stops new entries; exits never stop.
+ */
+describe("withConvictionGate, a record's check across the pairs it steers", () => {
+  const view: Conviction = {
+    id: "ai-dip-test",
+    owner: "Eric",
+    statedOn: "2026-10-16",
+    checkOn: "2027-01-29",
+    claims: [],
+    steers: ["CRWV-WHEEL", "CRWV-LONG-CALL"],
+  };
+  const convictionOf = (id: string) => (id === view.id ? view : undefined);
+  const wheel = aSubscription("sauron", "CRWV-WHEEL", { convictionId: view.id });
+  const longCall = aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: view.id });
+  const wheelPut = anOptionIntent({ playbookId: "CRWV-WHEEL" });
+  const callOpen = anOptionIntent({ playbookId: "CRWV-LONG-CALL" });
+  const callClose = anOptionIntent({
+    playbookId: "CRWV-LONG-CALL",
+    side: "sell",
+    option: {
+      effect: "close",
+      structure: "close",
+      legs: [{ occSymbol: "CRWV270318C00090000", side: "sell", ratio: 1 }],
+    },
+  });
+  const orders = [wheelPut, callOpen, callClose, shareSell];
+  const pairs = (realized: Readonly<Record<string, number>>) => ({
+    ledgerOf: (id: string) => ledger({ realizedPl: realized[id] ?? 0 }),
+  });
+  const gate = (
+    subscriptions = [wheel, longCall],
+    intents: readonly OrderIntent[] = orders,
+    deps: Partial<Parameters<typeof withConvictionGate>[1]> = {},
+  ) => withConvictionGate(inner(intents), { subscriptions, convictionOf, ...deps });
+
+  it("holds when the pairs together are in profit, even though one of them alone is under water", () => {
+    const gated = gate(undefined, undefined, pairs({ "CRWV-WHEEL": -50, "CRWV-LONG-CALL": 200 }));
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual(orders);
+  });
+
+  it("fails every pair it steers when they are under water together, and keeps their exits", () => {
+    const log = rstest.fn();
+    const gated = gate(undefined, undefined, {
+      ...pairs({ "CRWV-WHEEL": 100, "CRWV-LONG-CALL": -300 }),
+      log,
+    });
+    // The wheel alone is in profit; the view is judged on both, so it stops too.
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([callClose, shareSell]);
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0]?.[0]).toContain('conviction "ai-dip-test" (2027-01-29) check FAILED');
+    expect(log.mock.calls[0]?.[0]).toContain("-$200.00 together");
+    expect(log.mock.calls[0]?.[0]).toContain("exits still run");
+  });
+
+  it("does not touch orders for pairs the record does not steer", () => {
+    const other = anOptionIntent({ playbookId: "NVDA-CALL-SPREAD" });
+    const gated = gate(undefined, [wheelPut, other, bare], pairs({ "CRWV-WHEEL": -500 }));
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([other, bare]);
+  });
+
+  it("stops the wheel on its own retire test while the view holds, and leaves the long call open", () => {
+    const log = rstest.fn();
+    const gated = gate(undefined, undefined, {
+      ledgerOf: (id: string) =>
+        id === "CRWV-WHEEL"
+          ? ledger({ realizedPl: 900, putsClosed: 4, putsAssigned: 2 })
+          : ledger({ realizedPl: 10 }),
+      log,
+    });
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([callOpen, callClose, shareSell]);
+    // The line says the view held; it is the wheel's own test that stopped the wheel.
+    const said = String(log.mock.calls[0]?.[0]);
+    expect(said).toContain("check passed");
+    expect(said).not.toContain("FAILED");
+    expect(said).toContain("no new entries on CRWV-WHEEL");
+  });
+
+  it("counts a paused pair's loss: pausing a loser does not hide it from the view", () => {
+    const paused = aSubscription("sauron", "CRWV-LONG-CALL", {
+      convictionId: view.id,
+      enabled: false,
+    });
+    const gated = gate(
+      [wheel, paused],
+      undefined,
+      pairs({ "CRWV-WHEEL": 100, "CRWV-LONG-CALL": -300 }),
+    );
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([callClose, shareSell]);
+  });
+
+  it("is the persona itself when every pair the record steers is paused", () => {
+    const persona = inner();
+    const paused = aSubscription("sauron", "CRWV-WHEEL", { convictionId: view.id, enabled: false });
+    expect(withConvictionGate(persona, { subscriptions: [paused], convictionOf })).toBe(persona);
+  });
+
+  it("reads nothing before the date and once after it: a recovered book does not resume the pairs", () => {
+    let realized = -300;
+    const ledgerOf = rstest.fn(() => ledger({ realizedPl: realized }));
+    const gated = gate(undefined, undefined, { ledgerOf });
+    expect(gated.decide(at("2027-01-28T15:00:00Z"), book())).toEqual(orders);
+    expect(ledgerOf).not.toHaveBeenCalled();
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([callClose, shareSell]);
+    realized = 5_000;
+    expect(gated.decide(at("2027-02-03T15:00:00Z"), book())).toEqual([callClose, shareSell]);
+  });
+
+  it("leaves the check unread while a held position has no mark, then reads it", () => {
+    const shares = aPortfolio({ positions: [{ symbol: "CRWV", quantity: 100, avgPrice: 80 }] });
+    const gated = gate(undefined, undefined, pairs({ "CRWV-WHEEL": 100, "CRWV-LONG-CALL": 100 }));
+    const unquoted: MarketContext = { ...at(CHECK_DAY), quotes: {} };
+    expect(gated.decide(unquoted, shares)).toEqual(orders);
+    // Both pairs read the one CRWV book: 100 shares at 80 now 76.5 lose $350 against $100 each.
+    expect(gated.decide(aContext({ CRWV: { last: 76.5 } }, CHECK_DAY), shares)).toEqual([
+      callClose,
+      shareSell,
+    ]);
+  });
+
+  it("with no decision store entries continue, said once", () => {
+    const log = rstest.fn();
+    const gated = gate(undefined, undefined, { log });
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual(orders);
+    gated.decide(at(CHECK_DAY), book());
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a subscription on its own conviction alone, beside a record's group", () => {
+    const own = aSubscription("sauron", "CRWV-WHEEL", { conviction });
+    const gated = gate(
+      [own, longCall],
+      undefined,
+      pairs({ "CRWV-WHEEL": -50, "CRWV-LONG-CALL": 500 }),
+    );
+    // The wheel's own check fails by itself; the long call's record holds on its own book.
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([callOpen, callClose, shareSell]);
+  });
+});

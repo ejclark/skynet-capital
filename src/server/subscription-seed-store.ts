@@ -3,6 +3,7 @@ import type { ControlsPollReport } from "../autonomous/controls-poll-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { pointAtRecords } from "../subscriptions/conviction-pointer.js";
 import { carryRowConvictions } from "../subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
@@ -158,7 +159,26 @@ export function carryConvictions(
 }
 
 /**
- * Both seeds for each `/controls` poll, then the ◆ conviction carry, built from the environment
+ * The MIGRATE step of #5482 slice 2 (`conviction-pointer.ts`): a pointer at its conviction record
+ * on every subscription whose conviction the record states (it steers the pair, same check day) and
+ * that has none. Same care as the carry beside it: an unmarked invariant, never over a file it
+ * could not read whole, and no write when nothing needed a pointer — so a second poll, or a second
+ * deploy, is one small read.
+ */
+export function pointConvictions(
+  subscriptions: SubscriptionStore,
+  at = new Date(),
+): readonly string[] {
+  const state = subscriptions.loadIfReadable();
+  if (!state) return [];
+  const { state: next, pointed } = pointAtRecords(state, at);
+  if (pointed.length === 0) return [];
+  subscriptions.replace(next);
+  return pointed;
+}
+
+/**
+ * Both seeds for each `/controls` poll, then the ◆ conviction carry and the pointer at its record, built from the environment
  * (beside `SKYNET_SUBSCRIPTIONS_FILE`, over the registry's playbooks); returns a log line for each
  * that wrote. The env roster seeds first, so a `SAURON` named in `SKYNET_PLAYBOOKS` keeps its env mode
  * and the own-rules seed only marks it. The own-rules seed reads the poll's gate verdicts — one per
@@ -195,6 +215,11 @@ export function pollSeedsFromEnv(
       ...lines(
         carryConvictions(subscriptions, at),
         "carried the ◆ row's conviction onto each subscription stating none (checked on its row's date)",
+      ),
+      // After the carry, so a conviction it just wrote is pointed at its record on the same poll.
+      ...lines(
+        pointConvictions(subscriptions, at),
+        "pointed each subscription whose conviction a record states at that record (its inline conviction kept)",
       ),
     ];
   };
