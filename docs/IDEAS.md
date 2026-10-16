@@ -18,6 +18,22 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The skill we teach is aiming AI, and the system heals its own friction.** Eric, 2026-10-16:
+  "we should be improving ai processes for loop engineering and self healing/improving
+  architecture. We need people that know how to use ai. With that they can aim ai to work through
+  any problem… AI enables our human experience to self heal friction and foster innovation to
+  autonomously do what we command to enhance our lives." Two readings, one thesis. **For members:**
+  the lesson under options is directing a bot, the same skill this repo uses to build itself (#5451
+  P1, "teach them how to build with AI"). **For us:** every loop ends by routing what it learned
+  into the layer that prevents a repeat, the way the redesign loop's retro does
+  (`docs/process/REDESIGN.md` step i, `docs/process/LEARNING-LOOP.md`). Two guardrails.
+  "People that know how to use AI" is the end state, not the entry bar: the app is the ramp from
+  "meet people where they are". And "autonomously do what we command" stays inside *safety scales
+  to stakes*: self-healing covers reversible friction, never capital or governance (`envelope.json`).
+  The next concrete step is the *Align → scope as a general type* item below. #5451 is its second
+  domain (a brain-dump, not a screen), which was that item's trigger.
+  _(src: Eric · while: running his playbook notes through the redesign loop, #5451)_
+
 ### Playbooks that mirror real portfolios, compose, and get played by a team (Eric, 2026-10-16)
 One brain-dump, five threads; each is parked with the objection the code raised, so the plan that
 picks it up starts from the fork, not the wish.
