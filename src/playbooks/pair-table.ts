@@ -143,8 +143,9 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
   "dip-bounce": {
     id: "dip-bounce",
     name: "the dip-to-bounce",
-    line: "Buys intraday dips, sells a small bounce",
-    act: "Buy small dips in <SYM> below its average price for the day and sell the bounce",
+    // Dark for now (#5489): the line and the call say so, and the PR that lights it rewords both.
+    line: "Buys dips, sells the bounce — observe-only",
+    act: "Watch <SYM> for dips below its average price for the day and record each bounce",
     summary:
       "Buys small tranches when a stock dips well below its average price for the day and sells each one a small bounce higher; observe-only for now.",
     instrument: "shares",

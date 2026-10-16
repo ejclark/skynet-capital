@@ -299,7 +299,44 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "and is left alone. While it is subscribed (on or paused), S1-NVDA stops trading NVDA " +
       "shares on the same bot.",
   },
+  // #5489 slice 2: every fact is `src/playbooks/dip-bounce.ts` (DIP_BOUNCE_RULE), pinned by
+  // tests/playbooks/dip-bounce.spec.ts; observe-only by `observeOnly` (observe-only.spec.ts).
+  "MU-DIP-BOUNCE": dipBounceCopy("MU"),
+  "NBIS-DIP-BOUNCE": dipBounceCopy("NBIS"),
 };
+
+/** The dip-to-bounce's rules, said once for each ticker it watches. */
+function dipBounceCopy(symbol: string): PlaybookStoreCopy {
+  return {
+    description:
+      `Observe-only: it watches ${symbol} for a dip well below its average price for the day and ` +
+      "records the $1,000 buy it would make and the small bounce it would sell into. It places no " +
+      "order and changes nothing a subscribed bot does.",
+    enter:
+      "From 10:00 ET, a 5-minute bar that closes two of the stock's own 5-minute ranges below the " +
+      "day's volume-weighted average price. One buy per dip; another only two ranges lower. Not " +
+      "on an earnings report day or the trading day either side of it.",
+    exitTakeProfit:
+      "Sells each buy one 5-minute range above what it paid, once a later bar trades through that " +
+      "price, the same day or any day after.",
+    exitCutLosses:
+      "No stop. A buy held 3 trading days, or buys holding 30% of the allocation, stop new buys in " +
+      "the name; at 5 days, or 50%, or down 8% in a week, no new buys at all, and every held buy " +
+      "keeps its sell working until the bounce comes.",
+    hold:
+      "A buy not sold by the close is held overnight with its sell still working; a morning that " +
+      "opens above it sells at the open.",
+    notes: [
+      {
+        label: "Observe-only",
+        text:
+          "Its size is zero in every mode. It goes live only after 30 recorded trading days and a " +
+          "change that lights it; until a 5-minute price feed reaches the bots, it records only " +
+          "that it ran.",
+      },
+    ],
+  };
+}
 
 function entryOf(playbook: Playbook): PlaybookStoreEntry {
   const copy = COPY[playbook.id] ?? {
