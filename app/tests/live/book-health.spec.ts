@@ -1,4 +1,18 @@
-import { HEALTH_GLYPH, healthLine } from "../../src/live/book-health";
+import {
+  balanceRead,
+  committedShareOf,
+  DETECTOR_NAME,
+  dollars,
+  findingReading,
+  HEALTH_GLYPH,
+  type HealthFinding,
+  healthLine,
+  idleShareOf,
+  LEVEL_WORD,
+  type PlayHealth,
+  playsByIdle,
+  refusedCount,
+} from "../../src/live/book-health";
 
 const counts = (gate: number, signal: number) => ({
   available: true as const,
@@ -36,5 +50,145 @@ describe("healthLine", () => {
   it("gives every level a glyph unique among the levels — the word and shape carry it", () => {
     const glyphs = Object.values(HEALTH_GLYPH);
     expect(new Set(glyphs).size).toBe(glyphs.length);
+  });
+});
+
+const found = (over: Partial<HealthFinding> & Pick<HealthFinding, "detector">): HealthFinding => ({
+  level: "signal",
+  reading: 0.5,
+  threshold: 0.25,
+  words: "A sentence.",
+  ...over,
+});
+
+const play = (over: Partial<PlayHealth> & Pick<PlayHealth, "playbookId">): PlayHealth => ({
+  mode: "standard",
+  enabled: true,
+  openPositions: 0,
+  refusalsLastSession: {},
+  ...over,
+});
+
+/** #5493 slice 3 — what the Balance section draws from the server's field: the owner's findings
+ *  and plays, counts alone for anyone else, nothing for a book that was not read. */
+describe("balanceRead", () => {
+  it("is unread for a book the server could not read, and for an older server", () => {
+    expect(balanceRead({ available: false })).toEqual({ kind: "unread" });
+    expect(balanceRead(undefined)).toEqual({ kind: "unread" });
+  });
+
+  it("is counts-only when the payload carries no findings — a non-owner's copy", () => {
+    expect(balanceRead(counts(0, 2))).toEqual({ kind: "counts" });
+  });
+
+  it("is the owner's findings and plays, and an empty list of findings is a read book, not a missing one", () => {
+    const f = found({ detector: "idle" });
+    expect(balanceRead({ ...counts(0, 1), findings: [f], plays: [] })).toEqual({
+      kind: "owner",
+      findings: [f],
+      plays: [],
+    });
+    expect(balanceRead({ ...counts(0, 0), findings: [] })).toEqual({
+      kind: "owner",
+      findings: [],
+      plays: [],
+    });
+  });
+});
+
+describe("the words a finding wears", () => {
+  it("names every detector and both levels, and a level's word is never its glyph", () => {
+    expect(Object.keys(DETECTOR_NAME).sort()).toEqual([
+      "concentrated",
+      "idle",
+      "imbalanced",
+      "looping",
+      "stuck",
+    ]);
+    expect(LEVEL_WORD).toEqual({ gate: "Gate", signal: "Signal" });
+  });
+
+  it("reads a share against its line, over or under", () => {
+    expect(findingReading(found({ detector: "concentrated", reading: 0.46, threshold: 0.4 }))).toBe(
+      "46% · over the 40% line",
+    );
+    expect(findingReading(found({ detector: "imbalanced", reading: 0.04, threshold: 0.1 }))).toBe(
+      "4% · under the 10% line",
+    );
+    expect(findingReading(found({ detector: "idle", reading: 0.61, threshold: 0.6 }))).toBe(
+      "61% · over the 60% line",
+    );
+  });
+
+  it("reads a stuck position as sessions held against the level's line", () => {
+    expect(
+      findingReading(found({ detector: "stuck", level: "gate", reading: 5, threshold: 5 })),
+    ).toBe("held 5 sessions · gate at 5");
+    expect(
+      findingReading(found({ detector: "stuck", level: "signal", reading: 1, threshold: 1 })),
+    ).toBe("held 1 session · signal at 1");
+  });
+
+  it("reads a looping play as checks all refused, or as sessions in a row", () => {
+    expect(findingReading(found({ detector: "looping", loop: "options-level", reading: 6 }))).toBe(
+      "refused on all 6 checks",
+    );
+    expect(findingReading(found({ detector: "looping", loop: "no-window", reading: 5 }))).toBe(
+      "5 sessions in a row",
+    );
+    expect(findingReading(found({ detector: "looping", loop: "open-no-entry", reading: 5 }))).toBe(
+      "5 sessions in a row",
+    );
+  });
+});
+
+describe("a play's numbers", () => {
+  it("derives idle and committed shares only from an allocation, never a guessed zero", () => {
+    const p = play({ playbookId: "A", allocation: 20_000, committed: 5_000, idle: 15_000 });
+    expect(idleShareOf(p)).toBe(0.75);
+    expect(committedShareOf(p)).toBe(0.25);
+    const uncapped = play({ playbookId: "B", committed: 5_000 });
+    expect(idleShareOf(uncapped)).toBeUndefined();
+    expect(committedShareOf(uncapped)).toBeUndefined();
+    expect(
+      committedShareOf(play({ playbookId: "C", allocation: 0, committed: 0 })),
+    ).toBeUndefined();
+  });
+
+  it("holds a bar to the budget even when the book is over it", () => {
+    expect(committedShareOf(play({ playbookId: "A", allocation: 10, committed: 25 }))).toBe(1);
+  });
+
+  it("orders the plays most idle first, the unknown last, and the id breaks a tie", () => {
+    const plays = [
+      play({ playbookId: "UNCAPPED" }),
+      play({ playbookId: "FULL", allocation: 100, committed: 100, idle: 0 }),
+      play({ playbookId: "TIE-B", allocation: 100, committed: 50, idle: 50 }),
+      play({ playbookId: "EMPTY", allocation: 100, committed: 0, idle: 100 }),
+      play({ playbookId: "TIE-A", allocation: 200, committed: 100, idle: 100 }),
+    ];
+    expect(playsByIdle(plays).map((p) => p.playbookId)).toEqual([
+      "EMPTY",
+      "TIE-A",
+      "TIE-B",
+      "FULL",
+      "UNCAPPED",
+    ]);
+    // The input is never reordered in place.
+    expect(plays[0]?.playbookId).toBe("UNCAPPED");
+  });
+
+  it("sums what the guards refused across reasons", () => {
+    expect(
+      refusedCount(
+        play({ playbookId: "A", refusalsLastSession: { "options-level": 4, "no-quote": 2 } }),
+      ),
+    ).toBe(6);
+    expect(refusedCount(play({ playbookId: "A" }))).toBe(0);
+  });
+
+  it("writes a budget in whole dollars", () => {
+    expect(dollars(45_000)).toBe("$45,000");
+    expect(dollars(1_234_567)).toBe("$1,234,567");
   });
 });

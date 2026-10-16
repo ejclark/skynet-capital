@@ -201,8 +201,8 @@ describe("the account row", () => {
   });
 });
 
-/** #5493 slice 2 — the book's health under the bot's head line, in the row's right slot, so the
- *  head stays three rows at three heights. */
+/** #5493 slices 2–3 — the book's health under the bot's head line, in the row's right slot, so the
+ *  head stays three rows at three heights; its counts open the Balance section (slice 3). */
 describe("the book's health on the account row", () => {
   const withHealth = (gate: number, signal: number) => {
     const stub = globalThis.fetch;
@@ -220,7 +220,7 @@ describe("the book's health on the account row", () => {
         : stub(input)) as typeof fetch;
   };
 
-  it("stacks the counts under the bot's head line and opens Playbooks from them", async () => {
+  it("stacks the counts under the bot's head line and opens Balance from them", async () => {
     withHealth(1, 2);
     const calls = mount();
     const counts = await screen.findByRole("button", { name: /1 gate.*2 signals/ });
@@ -229,7 +229,10 @@ describe("the book's health on the account row", () => {
     expect([...slot.children].map((el) => el.className)).toEqual(["hb-line", "bh-line"]);
     expect(counts.closest(".bh-line")).toHaveTextContent("■ 1 gate · ◆ 2 signals ›");
     fireEvent.click(counts);
-    expect(calls.sections).toEqual(["playbooks"]);
+    expect(calls.sections).toEqual(["balance"]);
+    // The head line beside it still opens Playbooks: two doors, two sections.
+    fireEvent.click(await screen.findByRole("button", { name: "7 playbooks" }));
+    expect(calls.sections).toEqual(["balance", "playbooks"]);
     const head = document.querySelector(".cockpit-head") as HTMLElement;
     expect([...head.children].map((el) => el.className)).toEqual([
       "head-account",
@@ -238,13 +241,29 @@ describe("the book's health on the account row", () => {
     ]);
   });
 
-  it("says Balanced on a human account, with no link — there is no section yet to open", async () => {
+  it("says Balanced on a human account, with no link — nothing found, nothing to open", async () => {
     withHealth(0, 0);
     mount({ accountId: "human-eric" });
     const word = await screen.findByText("Balanced");
     expect(word.closest(".bh-line")).toHaveTextContent("● Balanced");
     expect(word.closest(".head-status")?.querySelector(".hb-line")).toBeNull();
     expect(within(word.closest(".bh-line") as HTMLElement).queryByRole("button")).toBeNull();
+  });
+
+  it("opens Balance from a human account's counts too — idle cash is a finding on any book", async () => {
+    withHealth(0, 1);
+    const calls = mount({ accountId: "human-eric" });
+    const counts = await screen.findByRole("button", { name: /1 signal/ });
+    expect(counts.closest(".bh-line")).toHaveTextContent("◆ 1 signal ›");
+    fireEvent.click(counts);
+    expect(calls.sections).toEqual(["balance"]);
+  });
+
+  it("marks the counts as the current door while Balance is the open section", async () => {
+    withHealth(1, 0);
+    mount({ section: "balance" });
+    const counts = await screen.findByRole("button", { name: /1 gate/ });
+    expect(counts).toHaveAttribute("aria-current", "true");
   });
 
   it("says nothing of health on All accounts — the line is one book's", async () => {
@@ -357,7 +376,14 @@ describe("the vitals line", () => {
   });
 
   it("is the same three rows on every account section", async () => {
-    for (const section of ["overview", "activity", "events", "playbooks", "thesis"] as const) {
+    for (const section of [
+      "overview",
+      "balance",
+      "activity",
+      "events",
+      "playbooks",
+      "thesis",
+    ] as const) {
       mount({ section });
       await vitals();
       const head = document.querySelector(".cockpit-head") as HTMLElement;
@@ -559,10 +585,17 @@ describe("the section switch", () => {
     viewport(390);
     mount();
     await accountButton("Sauron");
-    expect(shown()).toEqual(["Overview", "Activity", "Events", "Playbooks", "More"]);
+    // Balance (#5493 slice 3) takes the second seat, so the book's four stay on the row and a
+    // bot's Playbooks moves into More — its head line, one row up, is still a door to it.
+    expect(shown()).toEqual(["Overview", "Balance", "Activity", "Events", "More"]);
     fireEvent.click(screen.getByRole("button", { name: "More sections" }));
     const more = within(group()).getAllByRole("button").slice(5);
-    expect(more.map((b) => b.textContent)).toEqual(["Thesis", "Milestones", "Feedback"]);
+    expect(more.map((b) => b.textContent)).toEqual([
+      "Playbooks",
+      "Thesis",
+      "Milestones",
+      "Feedback",
+    ]);
   });
 
   it("gives More's slot to the current section when it lives there, marked current", async () => {
@@ -582,6 +615,7 @@ describe("the section switch", () => {
     await accountButton("Sauron");
     expect(shown()).toEqual([
       "Overview",
+      "Balance",
       "Activity",
       "Events",
       "Playbooks",

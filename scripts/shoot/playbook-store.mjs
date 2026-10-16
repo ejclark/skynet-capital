@@ -17,8 +17,6 @@
 //   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
 //   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
 //                playbooks open (#4642 slice 10, #4652).
-//   · `initiators` — who started the bots' closed trades: a playbook, the forced pick or a bot's
-//                own rules, the account's split above every bot's (#4450 slice 4).
 //   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
 //                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
 //   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
@@ -228,23 +226,6 @@ const groups = {
       view: views.fresh,
       expect: "Subscribe",
       act: openSubscribe,
-    },
-  ],
-  // Who started the bots' closed trades (#4450 slice 4): the account's split, then every bot's.
-  initiators: [
-    {
-      tag: "phone-initiators",
-      view: views.fresh,
-      expect: "Who started the bots' closed trades",
-      viewport: PHONE,
-      scrollTo: "Who started Sauron's closed trades",
-    },
-    {
-      tag: "desktop-initiators",
-      view: views.fresh,
-      expect: "Who started the bots' closed trades",
-      scrollTo: "Who started Sauron's closed trades",
-      quality: 60,
     },
   ],
   tune: [

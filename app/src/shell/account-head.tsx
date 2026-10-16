@@ -24,8 +24,10 @@ import { SauronCard } from "./sauron-card";
  * (#5073's IA call; a saved `/u/:id/decisions` link redirects there with the check log open). The
  * bot's head line ("● Running · 7 playbooks ›") and every fill's "the whole pass" link there too.
  * Beside it, on any account, the book's health line (#5493 slice 2, `book-health-line.tsx`):
- * "■ 1 gate · ◆ 2 signals" or "● Balanced"; on your own bot its counts open the Playbooks section
- * until the book's Balance section lands (slice 3). The old rail's way back to the Leaderboard stays
+ * "■ 1 gate · ◆ 2 signals" or "● Balanced"; on your own account its counts open that account's
+ * Balance section on your Accounts page (slice 3) — bot or human, since idle cash and a name over
+ * its share are findings on any book. Anyone else's reads the counts as plain words (a finding
+ * names a playbook, and which playbooks an account runs is its owner's, #885). The old rail's way back to the Leaderboard stays
  * gone — the topbar's Leaderboard tab is that.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
@@ -70,9 +72,13 @@ export function AccountHead({
         <BookHealthLine
           deskId={id}
           renderLink={
-            isOwn && kind === "bot"
+            isOwn
               ? (label) => (
-                  <Link to="/u/$id/playbooks" params={{ id }} className="hb-line-link">
+                  <Link
+                    to="/accounts"
+                    search={{ account: id, section: "balance" }}
+                    className="hb-line-link"
+                  >
                     {label}
                   </Link>
                 )
