@@ -28,6 +28,7 @@
  * nothing here differs from a roster without the field.
  */
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
 import {
   type ListedExpirations,
   type MarketContext,
@@ -42,6 +43,7 @@ import {
   observeMixedSignals,
   SILENT_MIXED_SIGNALS_SINK,
 } from "./mixed-signals.js";
+import { observationDelta } from "./observation-delta.js";
 import { mergeOptionDemand } from "./option-demand.js";
 import {
   type EnabledPlaybook,
@@ -107,6 +109,10 @@ export function withPlaybooks(
   /** Where a refused run-up open is said (#4469 2e), once per distinct line however many cycles
    *  repeat it. Defaults to silence; the live wiring points it at its `[playbooks]` log. */
   refusalLog: (line: string) => void = () => undefined,
+  /** The 5-minute bars a dark playbook (`observeOnly`, #5489) records its would-be orders from. A
+   *  synchronous read of the feed's cache; asking for a ticker is what makes the feed fetch it.
+   *  Defaults to no bars, so a roster built without a feed records its verdict and nothing else. */
+  intradayBars: IntradayBarsOf = () => undefined,
 ): Persona {
   if (enabled.length === 0) {
     return base;
@@ -131,6 +137,8 @@ export function withPlaybooks(
     told.add(line);
     refusalLog(line);
   };
+  // What a dark playbook would have done, said once and again only when it moves (`observation-delta`).
+  const newly = observationDelta();
   return {
     id: base.id,
     name: base.name,
@@ -151,6 +159,25 @@ export function withPlaybooks(
     },
     // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
     playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),
+    // What a dark playbook records. Present only when one is on the roster, read after the intents
+    // are fixed, and never handed to them: its return type is not an order.
+    ...(enabled.some((e) => e.playbook.observe)
+      ? {
+          playbookObservations: (context: MarketContext) =>
+            newly(
+              running.flatMap(({ playbook }) =>
+                playbook.observe
+                  ? playbook.observe({
+                      bars: intradayBars,
+                      asOf: context.asOf,
+                      quotes: context.quotes,
+                      calendar,
+                    })
+                  : [],
+              ),
+            ),
+        }
+      : {}),
     ...optionSurface(enabled, calendar),
   };
 }

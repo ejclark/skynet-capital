@@ -102,6 +102,16 @@ engine returns no intent for it from any of these entry points or from exit safe
 ticker from the base persona, and the roll call records its verdict as `observing`. What it would do
 is its own module's reading (`src/playbooks/dip-bounce.ts`), in a type that is not an order.
 
+What a dark playbook records is its `observe` function (`Playbook.observe`): handed the 5-minute bars
+the bots' feed holds for its ticker, it returns every dip signal in the window as a would-be buy
+(the quote, the time, the session average price and the range at the signal) with the would-be sell
+that the late-recovery rule never gates, and the day's level. The bars come from Alpaca's data host
+on the credential the bots already hold (`src/alpaca/alpaca-intraday-bars.ts`,
+`src/playbooks/intraday-bars-feed.ts`), fetched only once some bot subscribes. The trader files the
+observations in the decision store beside the verdicts (`playbook_observations`,
+`src/autonomous/decision-db-observations.ts`); they never reach an order intent, the guards or the
+broker.
+
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
 filtered); then every intent passes the guards. The guards refuse opens and never refuse a close.
@@ -258,7 +268,8 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | Order: `decide`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:445-484` | grounded |
 | `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:386-400` | grounded |
 | A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |
-| An `observeOnly` playbook places nothing, takes no ticker and records `observing` | `src/playbooks/playbook.ts:240`, `src/playbooks/playbook.ts:336`, `src/playbooks/playbook.ts:465`, `src/playbooks/playbook.ts:511`, `src/playbooks/with-playbooks.ts:91` | grounded |
+| An `observeOnly` playbook places nothing, takes no ticker and records `observing` | `src/playbooks/playbook.ts:243`, `src/playbooks/playbook.ts:353`, `src/playbooks/playbook.ts:481`, `src/playbooks/playbook.ts:528`, `src/playbooks/with-playbooks.ts:93` | grounded |
+| A dark playbook's `observe` returns would-be orders (not intents), read after the intents are fixed and filed in the decision store | `src/playbooks/playbook.ts:252`, `src/playbooks/with-playbooks.ts:162-179`, `src/autonomous/autonomous-trader.ts:220`, `src/autonomous/decision-db.ts` (`playbook_observations`) | grounded |
 | Option traits: underlyings, shorts held to expiry, options level | `src/playbooks/playbook.ts:125-133` | grounded |
 | Wrapping order: hygiene around the conviction gate around the playbooks | `src/scripts/autonomous-live-wiring.ts:373-394`, `src/playbooks/with-option-safety.ts:34-42` | grounded |
 | Guards run after: options through `clampOption`, shares through `clampBuy`/`clampSell` | `src/engine/guards.ts:408-419`, `src/engine/option-guards.ts:269-282` | grounded |
