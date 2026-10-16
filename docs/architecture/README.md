@@ -305,6 +305,14 @@ C4Dynamic
   RelIndex(14, mp_events, github, "Close the issue as Shipped, naming the PR", "shipped.mjs")
 ```
 
+## Component anatomy — hand-kept pages
+
+A component that cuts across containers, written from the code with `path:line` citations; the spec checks every cited line still exists.
+
+| Page | Covers | Code roots |
+|---|---|---|
+| [Playbook anatomy](playbook-anatomy.md) | What a playbook is made of, today and proposed: strategy, pair, setting, subscription, allocation; the decision surface; cycles; signals; thresholds; invariants | `src/playbooks`, `src/engine/option-guards.ts`, `src/subscriptions/strategy-budgets.ts` |
+
 ## Graphify parity
 
 | Community | Hubs | Mapped to |
