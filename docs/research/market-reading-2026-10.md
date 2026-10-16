@@ -16,9 +16,9 @@ Paper only; educational.
 
 | Question | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| The reading on 10-16 | **Leaning bull, +30 and sliding** (+80 on 10-13, +50 at 10-15's close). No playbook narrows on it | high | Trend still up on SPY and QQQ; VIX jumped 16.5 → 20.4, so the VIX level and term votes went neutral; 4 of 9 sectors sit above their 50-day | SPY's lowest close by **2026-11-16** (21 sessions) is 6.7% or more under 10-16's close: the leaning-bull 1-in-10 tail |
-| What a reading predicts | **The size of the next dip, not its direction** | high | After a bear reading SPY dipped 5% or more within 21 sessions 42% of the time, against 11% after bull; yet the median return after bear was higher (+3.9% vs +0.6% per episode) | The **2027-10-15** re-run, with the new year added, shows bear's 5%-dip odds under twice bull's |
-| Inform or gate? | **Inform and narrow; never block an entry on direction.** A reading may only narrow a playbook, as a conviction does (#5482) | medium | A hard stand-aside at bear would have skipped the best median entries (bear: +3.9% median, 58% up). What the reading should change is size and strike distance on sold premium, the side a dip hurts | The **2027-10-15** re-run shows bear's median 21-session SPY return below zero per episode: then a direction gate earns its place |
+| The reading on 10-16 | **Leaning bull, +30 and sliding** (+80 on 10-13, +50 at 10-15's close). No playbook narrows on it | high | Trend still up on SPY and QQQ; VIX jumped 16.5 → 20.4, so the VIX level and term votes went neutral; 4 of 9 sectors sit above their 50-day | SPY's lowest close by **2026-11-16** (21 sessions) is 6.7% or more under 10-16's last price (the 15:00 ET read, not a close): the leaning-bull 1-in-10 tail |
+| What a reading predicts | **The size of the next dip, not its direction** | high | After a bear reading SPY dipped 5% or more within 21 sessions 42% of the time, against 11% after bull; yet the median return after bear was not lower: +3.9% vs +0.6% per episode, +1.5% vs +1.2% per session (up in 58% of windows vs 66%, so direction does not sort) | The **2027-10-15** re-run, with the new year added, shows bear's 5%-dip odds under twice bull's |
+| Inform or gate? | **Inform and narrow; never block an entry on direction.** A reading may only narrow a playbook, as a conviction does (#5482) | medium | A hard stand-aside at bear would have skipped entries whose median return was no worse than bull's (bear: +3.9% per episode, +1.5% per session; 58% up). What the reading should change is size and strike distance on sold premium, the side a dip hurts | The **2027-10-15** re-run shows bear's median 21-session SPY return below zero per episode: then a direction gate earns its place |
 | Signal and gate levels (#5483 amendment 3) | **Signal at leaning bear (−20 or lower); gate at bear (−60 or lower), observe-only first** | low | −20 is where the 5%-dip odds double (11% → 28%); −60 is where they quadruple (42%). The gate would halve new short-premium size; it logs what it would have narrowed until scored, like S1-NVDA's `mixedSignals: observe` dial | Of the first 30 shadow gate hits, or by **2027-04-16**, the entries it would have narrowed finish their 21 sessions no worse than that playbook's other entries |
 | Which inputs | **All five votes stay; the house call mix stays out of the score** | high | Every vote alone sorts the tail the same way (bear vote: 27–40% 5%-dip odds; bull vote: 12–15%). The call mix read 88–100% stand-aside every week since 08-24 while the score ranged 52 to 92 | By **2026-12-31** the weekly stand-aside share moves 20 points or more between weeks: then test it as a sixth vote |
 | Drawing it on Events | **Draw the 5-session mean, not the daily label** | medium | The three middle readings last a median 2 sessions day to day, so a daily strip flickers; the 5-session mean lifts that to 4–5 and bull runs from 5 to 20 | Over **2026-10-19 → 2026-12-18** the smoothed reading changes more often than once a week on average |
@@ -26,7 +26,8 @@ Paper only; educational.
 
 **TL;DR.** The market today reads leaning bull (+30), sliding from bull in three sessions as the VIX
 jumped. History says a bad reading means a fatter left tail, not a falling market: the median return
-after a bear reading is the best of the five, but the odds of a 5% dip are four times bull's. So the
+after a bear reading is no lower than after bull (+3.9% vs +0.6% per episode; +1.5% vs +1.2% per
+session), but the odds of a 5% dip are four times bull's. So the
 reading should narrow sold premium in bad conditions and never stop a playbook on direction alone.
 
 **Signals & conditions:**
@@ -142,8 +143,9 @@ The reading follows the tape; it does not lead it.
 
 **What sorts and what does not.** The tail sorts cleanly and in order: the 1-in-10 lowest close runs
 −5.2% → −6.7% → −8.1% → −9.6% → −15.4% from bull to bear, and the 5%-dip odds 11% → 42%. The
-direction does not: the share of up windows barely moves (66% → 58%) and the median return is
-*higher* after the worse readings. That is volatility clustering plus mean reversion: bad weather
+direction does not: the share of up windows drifts down a little (66% → 58%) while the median
+return does not fall with it (bull has the lowest per-episode median, +0.6%; per session the five sit
+between +1.2% and +2.2%, bear +1.5%). That is volatility clustering plus mean reversion: bad weather
 means a wide range, and wide ranges in a rising market resolve up more often than not.
 
 **Check, sessions from 2006-07-17 (all five votes present).** Same shape: SPY 5%-dip odds 12% bull,
@@ -202,8 +204,9 @@ events, not a market reading. It stays beside the score as context and out of it
   may shrink a new entry's size or push a sold strike further out; a good reading never licenses
   more size. The data agree: bull has the *lowest* median forward return of the five readings.
 - **Sold premium is the side to narrow.** The wheel's cash-secured puts and any short put lose on
-  the dip, and the dip is what the reading sorts. Long calls bought in a bear reading sat on the
-  best median entries; narrowing them on the reading would cost return.
+  the dip, and the dip is what the reading sorts. Long calls bought in a bear reading did not
+  face a lower median return than in a bull one (+1.5% vs +1.2% per session, QQQ +1.8% vs +1.4%);
+  narrowing them on the reading has no direction case behind it.
 - **Two levels, per #5483 amendment 3.** Signal at −20: record the reading on every new entry and
   notify, change nothing. Gate at −60: halve new short-premium size, observe-only (a shadow log of
   what it would have narrowed) until 30 hits or 2027-04-16 grade it. The gate never touches exits.
