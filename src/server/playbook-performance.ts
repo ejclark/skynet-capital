@@ -77,14 +77,17 @@ async function tripsFor(
  *  A spread leg reaches its decision through its spread's order (`findSpreadLeg`) and takes the
  *  initiator only, never the playbook id: per-playbook stats keep leaving legs out, as they always
  *  have (`DecisionDb.findSpreadLeg`'s note), while the initiator split counts them the way the
- *  account's own trade list does — one trip per leg. */
-function tagsByOrder(
-  fills: readonly { readonly orderId: string }[],
+ *  account's own trade list does — one trip per leg. A position's "opened by" (#5073 slice 4b)
+ *  asks a different question — which rule put this leg on the book — so it passes
+ *  `legsTakePlaybook` and a spread's legs name their spread's playbook. */
+export function tagsByOrder(
+  fills: readonly { readonly orderId?: string | undefined }[],
   findByOrderId: NonNullable<PlaybookPerformanceDeps["findByOrderId"]>,
   findSpreadLeg: PlaybookPerformanceDeps["findSpreadLeg"],
+  legsTakePlaybook = false,
 ): PlaybookTagsByOrder {
   const tags: PlaybookTag[] = [];
-  const orderIds = new Set(fills.map((f) => f.orderId));
+  const orderIds = new Set(fills.flatMap((f) => (f.orderId ? [f.orderId] : [])));
   for (const orderId of orderIds) {
     const found = findByOrderId(orderId);
     if (found) {
@@ -100,9 +103,12 @@ function tagsByOrder(
     const parentOrderId = findSpreadLeg?.(orderId)?.parentOrderId;
     const spread = parentOrderId ? findByOrderId(parentOrderId) : undefined;
     if (spread) {
+      const { playbookId, playbookMode } = spread.intent;
       tags.push({
         orderId,
-        initiator: initiatorOf(spread.intent.playbookId, spread.record.personaId),
+        ...(legsTakePlaybook && playbookId ? { playbookId } : {}),
+        ...(legsTakePlaybook && playbookId && playbookMode ? { playbookMode } : {}),
+        initiator: initiatorOf(playbookId, spread.record.personaId),
       });
     }
   }

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import type { WirePnl } from "../live/wire";
+import { KindChip } from "../ui";
 
 /**
  * BOOKED P&L AS A SUMMARY STRIP (#784 slice 3) — the page's standing snapshot, no longer one of its
@@ -34,9 +35,7 @@ export function PnlStrip({ rows }: { readonly rows: readonly WirePnl[] }): React
               <Link to="/u/$id" params={{ id: row.whoId }}>
                 {row.who}
               </Link>
-              <span className={`chip chip-${row.kind}`}>
-                {row.kind === "bot" ? "BOT" : "HUMAN"}
-              </span>
+              <KindChip kind={row.kind} />
               <span className={`num tone-${row.tone}`}>{row.realized}</span>
             </li>
           ))}

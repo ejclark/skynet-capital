@@ -1,5 +1,6 @@
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { siblingPath } from "../storage/sibling-path.js";
 
 /**
  * THE COUNCIL — one line per member per week, visible inside the gate (`docs/THE-GAME.md:117`:
@@ -138,9 +139,7 @@ export class CouncilStore {
  *  `fly.toml` change (envelope-protected), same move `decision-db.ts`'s `decisionDbPathFrom` makes
  *  for its own sibling file next to `SKYNET_BOTS_DB_PATH`. */
 export function councilFilePathFrom(controlsFilePath: string): string {
-  const lastSlash = Math.max(controlsFilePath.lastIndexOf("/"), controlsFilePath.lastIndexOf("\\"));
-  const dir = lastSlash >= 0 ? controlsFilePath.slice(0, lastSlash + 1) : "";
-  return `${dir}council.json`;
+  return siblingPath(controlsFilePath, "council.json");
 }
 
 /** Build the store from the environment, riding the same file `bot-controls-store.ts` resolves. */

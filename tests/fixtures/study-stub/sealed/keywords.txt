@@ -1,0 +1,2 @@
+# a stand-in sealed keyword list for dry runs — never the real key
+zeppelin

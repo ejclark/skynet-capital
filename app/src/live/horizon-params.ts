@@ -1,5 +1,6 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import { type DayRange, marketToday, rangeFor, stepAnchor } from "./horizon-range";
+import { useRefineSearch } from "./refine-search";
 import {
   DEFAULT_LENS,
   LENSES,
@@ -113,21 +114,17 @@ export function useHorizonRange(
   options: { readonly fogged?: boolean; readonly fiscalYearEndMonth?: number } = {},
 ): HorizonRange {
   const search: Record<string, unknown> = useSearch({ strict: false });
-  const navigate = useNavigate();
+  const refine = useRefineSearch();
   const today = marketToday();
   const on = parseOn(search.on);
   const asked = parseSpan(search.span) ?? DEFAULT_LENS;
   const lens: Lens = options.fogged && asked === "day" ? "week" : asked;
   const anchor = on ?? today;
   const fiscalYearEndMonth = options.fiscalYearEndMonth;
-  const write = (patch: { on?: string | undefined; span?: Lens | undefined }): void => {
-    // `useNavigate()` without a `from` types the target route's search as `never` — the route is
-    // only known at runtime — while this write is a plain merge into whatever route is current.
-    void navigate({
-      search: ((prev: Record<string, unknown>) => ({ ...prev, ...patch })) as never,
-      replace: true,
-    });
-  };
+  // A plain merge into whatever route is current, and the page stays where it is: a lens or an
+  // arrow step changes the range under the head, never the page (#4944).
+  const write = (patch: { on?: string | undefined; span?: Lens | undefined }): void =>
+    refine((prev) => ({ ...prev, ...patch }));
   return {
     anchor,
     lens,

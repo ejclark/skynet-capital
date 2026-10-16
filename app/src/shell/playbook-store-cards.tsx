@@ -14,7 +14,8 @@ import { SubscribeForm } from "./playbook-subscribe-form";
 
 /**
  * THE PLAYBOOK STORE's pair rows (issue #885; by strategy since #4469 slice 3b), moved here whole
- * from the retired desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). A
+ * from the desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623; that
+ * address now holds the bot's own Playbooks section, #5073). A
  * strategy card (`playbook-strategy-cards.tsx`) holds one row per pair. The account is a parameter
  * of the action, never a page of its own.
  */
@@ -56,12 +57,15 @@ function NewSubscription({
   delegation,
   botsOnly,
   refusal,
+  needsConviction,
   onChanged,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
   readonly delegation: DelegationGateView;
   readonly botsOnly?: BotsOnlyGateView;
+  /** The study does not back this pair: Subscribe asks for the owner's conviction first. */
+  readonly needsConviction?: boolean;
   /** Why the server would refuse a new subscription to this pair (criterion 9) — said in words. */
   readonly refusal?: string;
   readonly onChanged: () => void;
@@ -86,7 +90,12 @@ function NewSubscription({
   return (
     <details className="pb-subscribe-disclosure">
       <summary>Subscribe</summary>
-      <SubscribeForm accountId={accountId} card={card} onSaved={onChanged} />
+      <SubscribeForm
+        accountId={accountId}
+        card={card}
+        needsConviction={needsConviction === true}
+        onSaved={onChanged}
+      />
     </details>
   );
 }
@@ -246,6 +255,7 @@ export function PairRow({
           delegation={delegation}
           {...(botsOnly ? { botsOnly } : {})}
           {...(pair.subscribeRefusal ? { refusal: pair.subscribeRefusal } : {})}
+          {...(pair.needsConviction ? { needsConviction: true } : {})}
           onChanged={onChanged}
         />
       ) : null}

@@ -1,0 +1,76 @@
+/* THE MEMBER MENU (#5037 round 2, question 9) — `shell/member-menu.tsx`: the topbar's gear and
+ * sign-out icons, folded into one round button wearing the member's initial. Its list hangs from the
+ * button's right edge (the bar's gutter), so it stays on screen at 390. A floating menu covers
+ * nothing in the flow, so it can close on a click outside without moving the page. Each item is a
+ * 44px row: an icon and a word, never an icon alone. Tokens only; the short reveal is motion, so it
+ * sits behind `prefers-reduced-motion: no-preference`. */
+
+.member-menu-wrap {
+  position: relative;
+  display: flex;
+}
+.member-menu-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.member-menu-btn:hover,
+.member-menu-btn[aria-expanded="true"] {
+  border-color: color-mix(in oklab, var(--accent) 60%, var(--border));
+}
+.member-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 200px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--elev-overlay);
+}
+.member-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+.member-menu-item svg {
+  color: var(--muted);
+}
+.member-menu-item:hover {
+  background: var(--surface-2);
+}
+.member-menu-item[aria-current="page"] {
+  font-weight: 600;
+  background: var(--surface-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .member-menu {
+    animation: member-menu-in 0.12s ease-out;
+  }
+  @keyframes member-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+}

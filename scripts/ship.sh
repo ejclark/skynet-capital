@@ -217,6 +217,17 @@ sys.stdout.write(re.sub(
 PY
 }
 
+# visual_hint <pr> <base> — the way back from a red first run, said before it happens
+# (2026-10-10, docs/LESSONS.md: #5079 and #5080 both went red on their first CI run). Baselines are
+# Linux-only, so the local e2e above is skipped off Linux and a visual PR meets its new pictures
+# first in CI; the re-baseline is one command, not six manual steps. Here-string, not a pipe: the
+# SIGPIPE-under-pipefail trap (see checkbody) would silently swallow the line.
+visual_hint() {
+  [ "$(uname -s)" != "Linux" ] || return 0
+  grep -qE '^(app/src|e2e)/' <<<"$(git diff --name-only "origin/$2...HEAD" 2>/dev/null)" || return 0
+  echo "ship: visual change: CI's first run may fail on Linux-only screenshots — after it does, run \`node scripts/rebaseline-from-ci.mjs $1\`, read each diff, then \`--apply --commit\`"
+}
+
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
@@ -414,6 +425,7 @@ EOF_SHOTS
     local num url; num="$(printf '%s' "$body" | json_field number)"; url="$(printf '%s' "$body" | json_field html_url)"
     echo "ship: opened PR #$num  $url"
     echo "$num"
+    visual_hint "$num" "$base"
     if [ "$hold" = 1 ]; then
       # A hold has to be ENUMERABLE, not merely true. `--hold` used to set a local flag and print a
       # line, so nothing recorded WHICH PRs were waiting on Eric: on 2026-09-04 the `hold-merge`

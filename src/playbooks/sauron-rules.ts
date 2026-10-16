@@ -34,6 +34,7 @@ const STANDARD_RULES = new SauronPersona();
 export const SAURON: Playbook = {
   id: "SAURON",
   rulesOf: STANDARD_RULES.id,
+  displayName: "Buy the rumor, sell the news",
   symbols: BOTS_UNIVERSE,
   thesis:
     "Sauron's own rules: sell a held name into euphoria once momentum has rolled over, and buy a " +

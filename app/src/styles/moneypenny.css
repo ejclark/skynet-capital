@@ -172,6 +172,14 @@
   text-underline-offset: 2px;
   word-break: break-all;
 }
+/* A place she names (#5238): words, not a URL, so they wrap as words; underlined as well as
+   coloured, so hue never carries it alone. Her line is ~14px tall at 390 — the block padding
+   grows the tap target to ≥24px without moving a single line of the text around it. */
+.mp-msg a.mp-place {
+  word-break: normal;
+  padding-block: 6px;
+  text-decoration-thickness: 1px;
+}
 .mp-typing {
   font-size: 10.5px;
   color: var(--muted);

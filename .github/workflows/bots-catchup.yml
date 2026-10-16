@@ -1,0 +1,78 @@
+# Bots deploy catch-up (#5006).
+#
+# pipeline.yml's deploy-bots preflight debounces: at most one bots redeploy per 15m cooldown, and a
+# skipped deploy is promised to "the next preflight past it". But a preflight only runs on a push —
+# with no further merge, a bot fix sat merged-but-not-live (#5005 on 2026-10-09: merged 18:23Z,
+# skipped "3m ago, under the 15m cooldown", live only after a manual force_bots_deploy at 18:38Z).
+#
+# This is that "next preflight", on a clock. Every 15 minutes it asks the SAME decision script
+# (scripts/bots-deploy-preflight.mjs — baseline diff, debounce, bot-relevance; never forced) whether
+# the bots app is behind main, and if so pulls pipeline.yml's own recovery lever. It never deploys
+# anything itself, so every deploy still goes through the one audited path.
+#
+# Guards, each against a real double-restart or stale-image failure:
+#  - any pipeline run in progress → skip (its own deploy-bots job is about to answer);
+#  - main's HEAD without a successful dashboard deploy → skip (the recovery lever reuses the
+#    dashboard's image, which would not yet contain HEAD).
+name: Bots deploy catch-up
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # dispatch pipeline.yml's force_bots_deploy — GITHUB_TOKEN may trigger workflow_dispatch
+
+concurrency:
+  group: bots-catchup
+  cancel-in-progress: false
+
+jobs:
+  catch-up:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0 # the preflight diffs from the machine's stamped GIT_SHA
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
+          version: 0.4.99
+
+      - name: Is a bot-relevant commit stranded?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+          FORCE: "false"
+        run: |
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [ "$(gh run list --workflow pipeline.yml --status in_progress --json databaseId --jq length)" != "0" ] \
+            || [ "$(gh run list --workflow pipeline.yml --status queued --json databaseId --jq length)" != "0" ]; then
+            echo "skip: a pipeline run is in flight — its own deploy-bots job decides"; echo "dispatch=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          RUN_ID=$(gh run list --workflow pipeline.yml --event push --commit "$HEAD_SHA" --json databaseId --jq '.[0].databaseId // empty')
+          DEPLOY=$( [ -n "$RUN_ID" ] && gh run view "$RUN_ID" --json jobs --jq '.jobs[] | select(.name == "release · deploy") | .conclusion' || true)
+          if [ "$DEPLOY" != "success" ]; then
+            echo "skip: main $HEAD_SHA has no successful dashboard deploy (got '${DEPLOY:-none}') — the lever would reuse an older image"
+            echo "dispatch=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          MACHINE_JSON=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null || true)
+          DEPLOYED_SHA=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          DEPLOYED_AT=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].updated_at // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" DEPLOYED_AT="$DEPLOYED_AT" HEAD_SHA="$HEAD_SHA" node scripts/bots-deploy-preflight.mjs)
+          DECISION=$(head -n1 <<<"$VERDICT")
+          echo "$DECISION: $(tail -n1 <<<"$VERDICT")"
+          echo "dispatch=$([ "$DECISION" = deploy ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Pull the recovery lever
+        if: ${{ steps.check.outputs.dispatch == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pipeline.yml --ref main -f force_bots_deploy=true
+          echo "::notice::bots app behind main — dispatched pipeline.yml force_bots_deploy (#5006)"

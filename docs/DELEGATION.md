@@ -14,7 +14,10 @@ and irreversible) applied to autonomy itself.
 The foreground thread (Eric + Claude) dispatches **subagents**, each in its **own isolated git
 worktree**, to build a scoped item to completion — build → verify → screenshot → open a PR — then report.
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
-feeding thoughts; work moves underneath.
+feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
+fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
+into separate lint, typecheck and per-suite calls (#5191).
 
 ## The rails (addressing single-point-of-failure & oversight)
 
@@ -24,7 +27,23 @@ feeding thoughts; work moves underneath.
    one un-merged PR.
 2. **Isolation & disposability.** Each agent works in its own worktree with no shared mutable state. A
    failed, stuck, or wrong agent blocks nothing — it's abandoned, not merged. Agents don't run forever;
-   they complete and notify.
+   they complete and notify. **An agent that finds shared state broken** — the primary checkout's
+   install, `main`'s build, a lockfile — **stops and reports it as an incident, never repairs around
+   it silently**: the one that did on 2026-10-09 left everyone else broken for most of an hour
+   (`docs/LESSONS.md`). A worktree's `node_modules` is a clone of the primary's, never a link
+   (`scripts/worktree-setup.sh`). **An isolated agent's first call is `bash scripts/wt-start.sh
+   <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
+   work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
+   is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
+   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
+   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
+   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
+   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
+   worktree agent's prompt. **Temp files are yours alone:** write them inside your own worktree
+   (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
+   label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
+   scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
+   (#5240, #5245).
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
@@ -37,6 +56,20 @@ feeding thoughts; work moves underneath.
    replaceable, not a point of failure for the *record* — only for in-the-moment orchestration.
 6. **Escalation & circuit breakers.** A red PR never merges; a genuine design fork or ambiguity escalates
    to Eric rather than being guessed; a tripped rail halts and reports.
+7. **One build per surface at a time — WIP 1 per surface.** Builds that touch the same surface — the
+   same route or shell component, or the same page screenshots — run one after another, never in
+   parallel. Builds on independent surfaces may still run side by side. Two parallel builds on one
+   surface each change what the other's screenshots expect, so whichever merges second goes red on
+   pictures it never drew, and their code collides in the same files. Before dispatching, name each
+   build's surface (the route and shell files it edits, the `e2e/*-snapshots/` it will move); a second
+   build on a named surface waits — `node scripts/issues.mjs update <second> --blocked-by <first>`,
+   and every puller holds it until the first closes. Evidence, 2026-10-10: four builds ran at once on
+   the profile page (#5078, #5079, #5080, #5081 — all four edited `app/src/routes/accounts.tsx`, three
+   edited the profile head `cockpit-head.tsx`). Both #5079 and #5080 went red on their first CI run;
+   #5079 re-baselined five page shots by hand (902daaed), and #5080's run failed on those same five
+   plus two more — the same pictures, moved by two builds at once (`docs/LESSONS.md`, 2026-10-10).
+   A red first run on a visual PR is one command, not a re-plan: `node scripts/rebaseline-from-ci.mjs
+   <pr>`.
 
 ## Reliability — do we need Routines to keep agents working?
 

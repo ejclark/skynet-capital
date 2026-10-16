@@ -22,15 +22,19 @@
 //   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
+//                                      [--blocked-by a,b]
+//     (--blocked-by on an existing issue: the second build on one surface waits for the first —
+//      every puller honours an open blocker. docs/DELEGATION.md → one build per surface.)
 //   node scripts/issues.mjs search "words" [--label x] [--state open|closed|all] [--limit 20] [--json]
-//     (every word must appear in title or body; --label filters; newest first)
+//     (every word must appear in title or body; --label filters; newest first. open reads the list;
+//      closed/all ask GitHub's search, #5196 — the full list passed ghRestAll's 2,000-row ceiling)
 //   node scripts/issues.mjs show 123 [--json]
 //
-// Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
+// Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket), else `gh auth token` (ensureGhToken). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
 import { readFileSync } from "node:fs";
 import { lintIssue } from "./issue-lint.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
-import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
 
@@ -148,11 +152,62 @@ export function matches(issue, words, { label } = {}) {
 }
 
 /**
- * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
- * then close a slice that already shipped. Ids, not numbers — both endpoints take the issue's
- * database id. Pure so the order is specced: closing before linking would leave the bar short.
+ * The `q` for GitHub's issue search (#5196). `state:all` is not a qualifier — measured 2026-10-11, it
+ * matched 0 where the same words with no state matched 3 — so `all` means "say nothing". `in:` keeps
+ * the local rule's scope (title or body, never comments); a label is quoted so one with a space
+ * stays one qualifier.
  */
-export function followUps({ child, parentNumber, blockers = [], closed = false }) {
+export function searchQuery({ repo, words, state = "open", label }) {
+  const parts = [`repo:${repo}`, "is:issue", "in:title,body"];
+  if (state !== "all") parts.push(`state:${state}`);
+  if (label) parts.push(`label:"${label}"`);
+  const terms = String(words ?? "").trim();
+  return terms ? `${parts.join(" ")} ${terms}` : parts.join(" ");
+}
+
+/**
+ * The newest `limit` issues `keep` accepts, read a page at a time and stopped as soon as there are
+ * enough — the fallback for a session that is refused /search. Not ghRestAll: that one must read a
+ * whole list or refuse, and this one never needs the whole list. Hitting `maxPages` short of `limit`
+ * returns what it found with `partial` set, so the caller says how far back it looked.
+ */
+export function scanIssues(state, keep, limit, { read, perPage = 100, maxPages = 20 }) {
+  const found = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = read(
+      `issues?state=${state}&sort=created&direction=desc&per_page=${perPage}&page=${page}`,
+    );
+    if (!Array.isArray(batch))
+      throw new Error("scanIssues: the issues list did not return a list.");
+    for (const i of batch) {
+      if (!i.pull_request && keep(i)) found.push(i);
+      if (found.length >= limit) return { items: found, partial: false };
+    }
+    if (batch.length < perPage) return { items: found, partial: false };
+  }
+  return { items: found, partial: true, scanned: maxPages * perPage };
+}
+
+/**
+ * Which of a filing's labels go on the POST and which wait for its links (#5266). `ready` is the
+ * claim lanes' trigger, and its label event carries the issue as it stood that instant — filed
+ * with `ready` and linked a second later, #5262 and #5317 were both claimed while blocked. So a
+ * filing with a parent or a blocker POSTs without `ready` and `followUps` adds it once linked.
+ */
+export function splitLabels(labels = [], { parentNumber = 0, blockers = [] } = {}) {
+  const links = Boolean(parentNumber) || blockers.length > 0;
+  if (!(links && labels.includes("ready"))) return { initial: labels, afterLinks: [] };
+  return { initial: labels.filter((l) => l !== "ready"), afterLinks: ["ready"] };
+}
+
+/**
+ * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
+ * add the labels that waited for those links (`splitLabels`), then close a slice that already
+ * shipped. Ids, not numbers — both endpoints take the issue's database id. Pure so the order is
+ * specced: closing before linking would leave the bar short, labelling `ready` before linking
+ * would let a claim lane start a blocked build.
+ */
+export function followUps({ child, parentNumber, blockers = [], afterLinks = [], closed = false }) {
   const ops = [];
   if (parentNumber) {
     ops.push({
@@ -166,6 +221,14 @@ export function followUps({ child, parentNumber, blockers = [], closed = false }
       method: "POST",
       path: `issues/${child.number}/dependencies/blocked_by`,
       payload: { issue_id: b.id },
+    });
+  }
+  if (afterLinks.length) {
+    // POST adds to the label set; a PATCH `labels` would replace it.
+    ops.push({
+      method: "POST",
+      path: `issues/${child.number}/labels`,
+      payload: { labels: afterLinks },
     });
   }
   if (closed) {
@@ -253,17 +316,22 @@ function create({ flags }) {
     }
   }
   if (flags["dry-run"]) return console.log(`dry-run ok: would file "${title}" [${labels}]`);
-  const issue = ghWrite("POST", "issues", { title, body, labels });
+  // Blockers are read before the POST so a bad number refuses before anything is filed.
   const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  const parentNumber = Number(flags.parent) || 0;
+  const { initial, afterLinks } = splitLabels(labels, { parentNumber, blockers });
+  const issue = ghWrite("POST", "issues", { title, body, labels: initial });
   const ops = followUps({
     child: issue,
-    parentNumber: Number(flags.parent) || 0,
+    parentNumber,
     blockers,
+    afterLinks,
     closed: Boolean(flags.closed),
   });
-  let last = issue;
-  for (const op of ops) last = ghWrite(op.method, op.path, op.payload) ?? last;
-  console.log(`${row(flags.closed ? last : issue)}  ${issue.html_url}`);
+  for (const op of ops) ghWrite(op.method, op.path, op.payload);
+  // The POST's row predates the deferred label and the close, so print a fresh read when either ran.
+  const shown = afterLinks.length || flags.closed ? ghRest(`issues/${issue.number}`) : issue;
+  console.log(`${row(shown)}  ${issue.html_url}`);
 }
 
 function link({ positional }) {
@@ -300,14 +368,57 @@ function update({ positional, flags }) {
   if (flags["comment-file"]) {
     ghWrite("POST", `issues/${n}/comments`, { body: withFooter(readBody(flags["comment-file"])) });
   }
+  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  for (const op of followUps({ child: issue, blockers })) ghWrite(op.method, op.path, op.payload);
+  for (const b of blockers)
+    console.log(`#${n} blocked by #${b.number} — it starts when that closes`);
   console.log(`${row(issue)}  ${issue.html_url}`);
+}
+
+/**
+ * GitHub's issue search, newest first, `limit` hits — one request per 100 (the search bucket allows
+ * 30 a minute). The endpoint caps a page at 100 and a query at 1,000 results.
+ */
+export function searchRemote({ words, state, label, limit, repo = REPO(), read = ghRest }) {
+  const q = encodeURIComponent(searchQuery({ repo, words, state, label }));
+  const items = [];
+  for (let page = 1; items.length < limit; page++) {
+    const per = Math.min(100, limit);
+    const res = read(
+      `https://api.github.com/search/issues?q=${q}&sort=created&order=desc&per_page=${per}&page=${page}`,
+    );
+    const batch = res?.items ?? [];
+    items.push(...batch);
+    if (batch.length < per || page * per >= 1000) break;
+  }
+  return items.slice(0, limit);
 }
 
 function search({ positional, flags }) {
   const words = positional.join(" ");
-  const items = listIssues(flags.state ?? "open")
-    .filter((i) => matches(i, words, { label: flags.label }))
-    .slice(0, Number(flags.limit ?? 20));
+  const state = flags.state ?? "open";
+  const limit = Number(flags.limit ?? 20);
+  let items;
+  if (state === "open") {
+    // The open list is short enough to read whole, and local matching works in every session.
+    items = listIssues("open")
+      .filter((i) => matches(i, words, { label: flags.label }))
+      .slice(0, limit);
+  } else {
+    // #5196: closed + all passed ghRestAll's 2,000-row ceiling, so ask GitHub's search instead.
+    try {
+      items = searchRemote({ words, state, label: flags.label, limit });
+    } catch (err) {
+      // A cloud session is refused /search ("bound to their configured repositories") — fall back
+      // to the repo-scoped list, stopping at `limit` hits rather than reading it all.
+      console.error(`note: search endpoint refused (${String(err.stderr || err.message).trim()})`);
+      const keep = (i) => matches(i, words, { label: flags.label });
+      const scan = scanIssues(state, keep, limit, { read: ghRest });
+      if (scan.partial)
+        console.error(`note: searched only the newest ${scan.scanned} issues and PRs`);
+      items = scan.items;
+    }
+  }
   if (flags.json)
     return console.log(JSON.stringify(items.map((i) => ({ ...i, board: boardStatus(i) }))));
   for (const i of items) console.log(row(i));
@@ -332,6 +443,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(2);
   }
   try {
+    ensureGhToken();
     run(args);
   } catch (err) {
     console.error(`issues: ${err.stderr || err.message}`);

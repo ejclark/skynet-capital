@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
 import { openIntentResults } from "./decision-db-results.js";
@@ -17,6 +17,7 @@ import {
   type SettledIntent,
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
+import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -94,6 +95,10 @@ export interface DecisionDb {
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
    *  totals would be a worse lie than a slow query. */
   funnelFor(personaId: string): DecisionFunnel;
+  /** One persona's passes, grouped verdicts and placed trades in `[from, to)` (#5073 slice 2) —
+   *  the week strip and each playbook's lane. Bounded by the window, never a page: see
+   *  `decision-db-week.ts`. */
+  checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
   /** Total realized P/L across every closed retrospective attributed to one playbook, for one
    *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
@@ -102,6 +107,15 @@ export interface DecisionDb {
    *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
    *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** How the sold puts one playbook opened under one strategy tag have ended for one persona
+   *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
+   *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
+   *  still open is neither. */
+  putOutcomesForPlaybook(
+    personaId: string,
+    playbookId: string,
+    strategy: string,
+  ): { readonly closed: number; readonly assigned: number };
   /** The broker's option expiry/assignment reports for one persona's account (#4642 slice 8),
    *  stored once each by activity id; an expiry or assignment closes the contract it names at $0.
    *  Returns how many were new. One transaction; throws only if the store itself fails. */
@@ -261,6 +275,7 @@ export function openDecisionDb(path: string): DecisionDb {
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
   const results = openIntentResults(db);
+  const week = openCheckWeekReads(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -386,6 +401,16 @@ export function openDecisionDb(path: string): DecisionDb {
     JOIN intents ON intents.id = retrospectives.entry_intent_id
     JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ?
+  `);
+
+  const selectPutOutcomes = db.prepare(`
+    SELECT COUNT(*) AS closed,
+           COALESCE(SUM(CASE WHEN retrospectives.exit_reason = ? THEN 1 ELSE 0 END), 0) AS assigned
+    FROM retrospectives
+    JOIN intents ON intents.id = retrospectives.entry_intent_id
+    JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.strategy = ?
+      AND retrospectives.exit_reason IN (?, ?)
   `);
 
   /**
@@ -678,6 +703,8 @@ export function openDecisionDb(path: string): DecisionDb {
       }));
     },
 
+    checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
+
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
@@ -752,6 +779,19 @@ export function openDecisionDb(path: string): DecisionDb {
         total: number | null;
       };
       return row.total ?? 0;
+    },
+
+    putOutcomesForPlaybook(personaId, playbookId, strategy) {
+      const assigned = LIFECYCLE_STATUS.OPASN;
+      const row = selectPutOutcomes.get(
+        assigned,
+        playbookId,
+        personaId,
+        strategy,
+        assigned,
+        LIFECYCLE_STATUS.OPEXP,
+      ) as { closed: number; assigned: number };
+      return { closed: row.closed, assigned: row.assigned };
     },
 
     findByOrderId(orderId) {

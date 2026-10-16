@@ -8,7 +8,8 @@ import type { PageSection } from "./sections";
  *
  * Three families, in this order on the switch:
  *   - the BOOK's — Overview · Activity · Events — keyed on the account the switcher picks;
- *   - a BOT's — Heartbeat · Thesis — only while one bot account is selected (#3687);
+ *   - a BOT's — Playbooks · Thesis — only while one bot account is selected (#3687; Playbooks
+ *     took Heartbeat's slot when the two merged, #5073);
  *   - the VIEWER's — Milestones · Feedback (#3807 slice 2b; #888, Eric 2026-08-29: "a user-level
  *     feature belongs on the page itself, not repeated inside every account row") — the same on
  *     every selection incl. All accounts, so the switcher hides while one is open.
@@ -20,7 +21,7 @@ export type AccountsSection =
   | "overview"
   | "activity"
   | "events"
-  | "heartbeat"
+  | "playbooks"
   | "thesis"
   | "milestones"
   | "feedback";
@@ -33,12 +34,13 @@ const BOOK: readonly PageSection<AccountsSection>[] = [
   { id: "events", label: "Events" },
 ];
 
-/** Heartbeat and Thesis only make sense for one bot account at a time, never the "All accounts"
- *  aggregate or a human account — Heartbeat is the bot loop's liveness plus its passes that placed
- *  nothing (the Decisions tab folded into it and into Activity, #3687; Eric: "tied to autonomous
- *  trading... currently only bot accounts"), and Thesis is a persona's own standing call. */
+/** Playbooks and Thesis only make sense for one bot account at a time, never the "All accounts"
+ *  aggregate or a human account — Playbooks is the bot's checks (the loop's liveness and every
+ *  check it made, once the Heartbeat section, #3687) heading one card per playbook those checks
+ *  ask (#5073; Eric on autonomous trading: "currently only bot accounts"), and Thesis is a
+ *  persona's own standing call. */
 const BOT: readonly PageSection<AccountsSection>[] = [
-  { id: "heartbeat", label: "Heartbeat" },
+  { id: "playbooks", label: "Playbooks" },
   { id: "thesis", label: "Thesis" },
 ];
 
@@ -86,13 +88,21 @@ export function defaultSection(linked: boolean): AccountsSection {
   return linked ? "overview" : "milestones";
 }
 
-/** Decisions folded into Activity and Heartbeat (#3687 slice 4): a saved `?section=decisions`
- *  link lands on Heartbeat, where its no-trade passes now live, never back on Overview. */
-export function sectionFromSearch(raw: unknown): { section?: AccountsSection } {
-  const id = raw === "decisions" ? "heartbeat" : raw;
-  return typeof id === "string" && ALL_SECTIONS.some((s) => s.id === id)
-    ? { section: id as AccountsSection }
-    : {};
+/** The two names the bot's check log was once reached by: Decisions (folded into Heartbeat,
+ *  #3687 slice 4) and Heartbeat itself (merged into Playbooks as its top strip, #5073). */
+const CHECK_LOG_ALIASES: readonly unknown[] = ["decisions", "heartbeat"];
+
+/** `?section=` (and `?checks=open`, the Playbooks section's check log unfolded). A saved Heartbeat
+ *  or Decisions link was asking for the bot's checks, so it lands on Playbooks with that log
+ *  already open — never back on Overview, and never on cards with the log it came for folded. */
+export function sectionFromSearch(
+  raw: unknown,
+  checks?: unknown,
+): { section?: AccountsSection; checks?: "open" } {
+  if (CHECK_LOG_ALIASES.includes(raw)) return { section: "playbooks", checks: "open" };
+  if (typeof raw !== "string" || !ALL_SECTIONS.some((s) => s.id === raw)) return {};
+  const section = raw as AccountsSection;
+  return section === "playbooks" && checks === "open" ? { section, checks } : { section };
 }
 
 /** `?chapter=` — the Milestones chapter open beneath the cards; anything else drops. */

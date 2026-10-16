@@ -1,0 +1,18 @@
+{
+  "stages": [
+    {
+      "stage": "Monitor",
+      "served": true,
+      "outcomes": ["minimize the time it takes to know whether anything needs attention"],
+      "holds": "a long list of every room"
+    },
+    {
+      "stage": "Modify",
+      "served": true,
+      "outcomes": ["minimize the steps it takes to change one thing"],
+      "holds": "a door to another room"
+    },
+    { "stage": "Conclude", "served": false, "outcomes": [] }
+  ],
+  "measure": ["Task success", "Happiness (ease)"]
+}

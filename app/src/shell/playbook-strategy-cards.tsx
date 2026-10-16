@@ -6,6 +6,7 @@ import type {
   PlaybookStoreCardView,
   StrategyCardView,
 } from "../live/playbook-store";
+import { AllocationPanel } from "./playbook-allocation";
 import type { MetricsScope } from "./playbook-metrics";
 import { PairRow, pairTitle } from "./playbook-store-cards";
 import { SubscriptionRow } from "./playbook-subscription-row";
@@ -121,10 +122,20 @@ export function StrategyCard({
             card={{ ...card, ...(pair.subscription ? { subscription: pair.subscription } : {}) }}
             human={human}
             reduceOnly={delegation.locked}
+            runsOnConviction={pair.status === "conviction" || pair.needsConviction === true}
             onChanged={onChanged}
           />
         </div>
       ))}
+      {canManage && !human && (mine.length > 0 || strategy.allocation) ? (
+        <AllocationPanel
+          accountId={accountId}
+          strategy={strategy.strategy}
+          strategyName={strategy.name}
+          {...(strategy.allocation ? { allocation: strategy.allocation } : {})}
+          onChanged={onChanged}
+        />
+      ) : null}
       <p className="pb-card-description">{strategy.summary}</p>
       <div className="pb-pairs">{open.map(row)}</div>
       {canManage ? (

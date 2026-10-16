@@ -13,6 +13,8 @@ export function withRetry<T>(
   },
 ): T;
 export function ghRest(path: string, opts?: { token?: string }): unknown;
+/** Fill GH_TOKEN from `gh auth token` when no token is set (a live session's CLIs, #5056). */
+export function ensureGhToken(opts?: { run?: (cmd: string, args: string[]) => string }): void;
 
 export interface RateLimitBucket {
   limit?: number;

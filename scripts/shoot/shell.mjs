@@ -29,6 +29,7 @@ import { outputDir, resolveChromium, shooter, stubBody } from "./lib.mjs";
  * @param {object} opts
  * @param {string} opts.name    the surface, used in the dist-missing message and the output dir
  * @param {Record<string, unknown | ((path: string) => unknown)>} [opts.stubs]  pathname → JSON body
+ * @param {boolean} [opts.hasTouch]  emulate a touch screen (the phone frame); default false
  * @returns {Promise<{page: import("playwright-core").Page, origin: string, out: string,
  *                    shoot: (tag: string) => Promise<string>, close: () => Promise<void>}>}
  */
@@ -36,6 +37,7 @@ export async function openShell({
   name,
   stubs = {},
   viewport = { width: 1280, height: 900 },
+  hasTouch = false,
   colorScheme = "dark",
   quality = 62,
   out = outputDir(name),
@@ -74,7 +76,8 @@ export async function openShell({
     ...(exe ? { executablePath: exe } : {}),
     args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });
-  const page = await browser.newPage({ viewport, colorScheme });
+  // `hasTouch` so a phone-frame caller (the member study's recorder) taps instead of clicking.
+  const page = await browser.newPage({ viewport, colorScheme, hasTouch });
   await page.route("**/events*", () => {
     // Deliberately empty: never answered, never aborted. The shell's EventSource stays pending and
     // the header renders "connecting…", exactly as the hand-rolled servers left it.

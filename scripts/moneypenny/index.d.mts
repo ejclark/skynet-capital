@@ -52,12 +52,13 @@ export function checkCallout(
 ): { posted: boolean; reason?: string; actor?: string };
 export type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
 /** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
- *  then asks the admission gate (#3960) — a refusal takes no lease and adds no label. */
+ *  re-reads the issue for a blocker the payload predates (#5266, `readIssue`), then asks the
+ *  admission gate (#3960) — a refusal takes no lease and adds no label. */
 export function claimFeedback(
   ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
-  admission?: AdmissionDeps,
+  admission?: AdmissionDeps & { readIssue?: (n: number) => AdmissionIssue },
 ): ClaimResult;
 /** #3959 slices 1–2: an authorized reply on a blocked issue resumes the lane that owns it. A
  *  `feedback` issue takes the same lease, sets `in-progress`, clears the answered label, and reports
@@ -97,14 +98,26 @@ export function peekNext(
   deps?: AdmissionDeps & {
     readReady?: () => AdmissionIssue[];
     readPrIssues?: () => Map<number, number>;
+    /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
+    continuation?: () => unknown;
   },
 ): AdmissionIssue | null;
+/** #5056 slice 2: a freed build slot — peek the sweep, dispatch the scan when it names work. */
+export function wakeAfter(
+  freed: number,
+  deps?: {
+    peekDeps?: Parameters<typeof peekNext>[0];
+    claimed?: (slug: string) => boolean;
+    dispatch?: () => void;
+  },
+): string;
 /** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
 export function claimPlan(
   ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
-  admission?: AdmissionDeps,
+  /** `edit` records a refused comment-flip as the `ready` label (#5334). */
+  admission?: AdmissionDeps & { edit?: (n: number, args: string[]) => boolean },
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];

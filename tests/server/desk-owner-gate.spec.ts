@@ -57,6 +57,48 @@ describe("the playbook strips", () => {
     expect(withoutHeartbeatPlaybookIds({ ...heartbeat, playbooks: null }).playbooks).toBeNull();
   });
 
+  it("keeps the week's strip and the running lanes, and drops every name on them", () => {
+    const states = [["long" as const, null]];
+    const heartbeat = {
+      state: "beating" as const,
+      marketOpen: true,
+      lastPassAt: null,
+      sinceLastPassMs: null,
+      cadenceMs: 15_000,
+      staleAfterMs: 120_000,
+      playbooks: null,
+      rollCall: [],
+      week: {
+        bucketMs: 1_800_000,
+        now: 0,
+        sessions: [],
+        checks: [[3, null]],
+        gaps: [],
+        lanes: [
+          { playbookId: "S1-NVDA", mode: "standard" as const, slot: 0, states },
+          // No longer one of the newest verdict lines: a nameless lane with no card to sit under.
+          { playbookId: "OLD-PLAY", mode: "standard" as const, states },
+        ],
+        trades: [
+          {
+            at: 1,
+            symbol: "CRWV",
+            side: "sell" as const,
+            playbookId: "CRWV-WHEEL",
+            mode: "aggressive" as const,
+          },
+        ],
+      },
+    };
+    const { week } = withoutHeartbeatPlaybookIds(heartbeat);
+    expect(week?.checks).toEqual([[3, null]]);
+    expect(week?.lanes).toEqual([{ mode: "standard", slot: 0, states }]);
+    expect(week?.trades).toEqual([{ at: 1, symbol: "CRWV", side: "sell" }]);
+    expect(withoutHeartbeatPlaybookIds({ ...heartbeat, week: undefined })).not.toHaveProperty(
+      "week",
+    );
+  });
+
   it("drops each outcome's playbook chip and keeps the trade", () => {
     const [cycle] = withoutCycleOwnerFields([
       {
@@ -73,15 +115,38 @@ describe("the playbook strips", () => {
             quantity: 1,
             playbook: "S1-NVDA",
             playbookMode: "standard",
+            strategy: "s1-nvda-fade",
             reason: "fade",
             action: "placed",
           },
+        ],
+        refusedIntents: [
+          { symbol: "NVDA", side: "buy", quantity: 5, strategy: "s1-nvda-fade", reason: "fade" },
         ],
       },
     ]);
     expect(cycle?.outcomes).toEqual([
       { symbol: "NVDA", side: "buy", quantity: 1, reason: "fade", action: "placed" },
     ]);
+    // The strategy tag is the playbook's own slug, so it names the playbook too (#4971).
+    expect(cycle?.refusedIntents).toEqual([
+      { symbol: "NVDA", side: "buy", quantity: 5, reason: "fade" },
+    ]);
+  });
+
+  it("leaves a cycle with no refused ideas without the key", () => {
+    const [cycle] = withoutCycleOwnerFields([
+      {
+        at: "2026-09-22T15:00:00Z",
+        mode: "live",
+        status: "quiet",
+        headline: "nothing fired",
+        rawCount: 0,
+        guardedCount: 0,
+        outcomes: [],
+      },
+    ]);
+    expect(cycle).not.toHaveProperty("refusedIntents");
   });
 
   it("drops a decision's playbook and keeps who decided and why", () => {
@@ -93,5 +158,20 @@ describe("the playbook strips", () => {
         playbookMode: "standard",
       }),
     ).toEqual({ reason: "fade", personaId: "sauron" });
+  });
+
+  it("drops a decision's strategy tag, which names its playbook, and keeps its expectation", () => {
+    expect(
+      withoutOwnerReasoning({
+        reason: "sell a put a month out",
+        personaId: "sauron",
+        strategy: "crwv-wheel-put",
+        expectation: "CRWV stays above $80",
+      }),
+    ).toEqual({
+      reason: "sell a put a month out",
+      personaId: "sauron",
+      expectation: "CRWV stays above $80",
+    });
   });
 });

@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-router";
 import { configure, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import type { DeskActivity, DeskActivityEvent, DeskActivityQuery } from "../../src/live/desk";
 import { Route } from "../../src/routes/u.$id.activity";
 import { FIND_PAGES } from "../../src/shell/use-activity-pages";
@@ -28,15 +27,12 @@ let answer: (query: DeskActivityQuery) => DeskActivity = () => ({ available: tru
 const calls: DeskActivityQuery[] = [];
 
 rstest.mock("../../src/live/desk", () => ({
-  fetchDesk: (id: string) =>
-    Promise.resolve({ desk: { id, name: "Sauron", kind: "bot", positions: [] } }),
   fetchDeskActivity: (_id: string, query: DeskActivityQuery = {}) => {
     calls.push(query);
     return Promise.resolve(answer(query));
   },
 }));
 rstest.mock("../../src/shell/account-head", () => ({
-  AccountPage: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   useOwnsAccount: () => true,
 }));
 
@@ -204,5 +200,117 @@ describe("narrowing by playbook", () => {
     await waitFor(() => expect(document.getElementById("act-ord-0")).not.toBeNull());
     expect(screen.queryByRole("group", { name: "Playbook" })).toBeNull();
     expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
+  });
+});
+
+/** #5101 (R2-deep): an order's full detail lives in the URL — `?order=<id>#act-<id>` — so it is
+ *  linkable, and its one way back returns to the same row. */
+describe("an order's full detail", () => {
+  /** happy-dom has no `matchMedia` — the desktop default. A phone installs one that matches. */
+  function phone(): () => void {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    return () => Reflect.deleteProperty(window, "matchMedia");
+  }
+
+  it("opens from a link as a panel beside the live list on a desktop, and Close drops it", async () => {
+    answer = () => firstPage();
+    const router = mount("/u/sauron/activity?order=ord-3");
+    const panel = await screen.findByRole("complementary");
+    expect(within(panel).getByRole("heading", { level: 3 })).toHaveTextContent(
+      "NVDA rises from $181.40",
+    );
+    expect(document.getElementById("act-ord-0")).not.toBeNull();
+    expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole("button", { name: /Close/ }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  /** A bot's rows: each has a why, so each opens to a "Full detail ›" while a panel is up. */
+  const reasoned = (): DeskActivity => {
+    const page = firstPage();
+    return {
+      ...page,
+      activity: page.activity.map((e) => ({
+        ...e,
+        reasoning: { reason: `bought ${e.orderId}`, personaId: "sauron" },
+      })),
+    };
+  };
+  const tableRow = (id: string) => document.getElementById(`act-${id}`) as HTMLElement;
+  /** Opens a table row's why if it is shut, then presses its "Full detail ›". */
+  const fullDetail = async (id: string) => {
+    await waitFor(() => expect(tableRow(id)).not.toBeNull());
+    if (tableRow(id).querySelector("[aria-expanded='false']")) {
+      await userEvent.click(within(tableRow(id)).getByRole("button", { name: /Why/ }));
+    }
+    const why = tableRow(id).nextElementSibling as HTMLElement;
+    await userEvent.click(within(why).getByRole("button", { name: /Full detail/ }));
+  };
+  const close = () =>
+    userEvent.click(
+      within(screen.getByRole("complementary")).getByRole("button", { name: /Close/ }),
+    );
+
+  it("swaps one panel for another from the live list, and one Close returns to the list", async () => {
+    answer = () => reasoned();
+    const router = mount("/u/sauron/activity");
+    await fullDetail("ord-3");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+    // The list stays live beside the panel: a second order's full detail takes the panel's place.
+    await fullDetail("ord-5");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-5" }));
+    expect(router.state.location.hash).toBe("act-ord-5");
+    await close();
+    // One Close: back to the list at the row it left — never the first order's panel again.
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(router.state.location.hash).toBe("act-ord-5");
+    expect(screen.queryByRole("complementary")).toBeNull();
+  }, 15_000);
+
+  it("keeps a filter narrowed beside the open panel when Close returns to the list", async () => {
+    answer = () => reasoned();
+    const router = mount("/u/sauron/activity");
+    await fullDetail("ord-3");
+    await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+    await userEvent.type(screen.getByLabelText("Filter by symbol"), "nvda");
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ order: "ord-3", symbol: "NVDA" }),
+    );
+    await close();
+    await waitFor(() => expect(router.state.location.search).toEqual({ symbol: "NVDA" }));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.getByLabelText("Filter by symbol")).toHaveValue("nvda");
+  }, 15_000);
+
+  it("on a phone, opens as a page from the card and steps back to the same row, opened", async () => {
+    const restore = phone();
+    try {
+      answer = () => firstPage();
+      const router = mount("/u/sauron/activity");
+      const card = () => document.getElementById("act-ord-3") as HTMLElement;
+      await waitFor(() => expect(card()).not.toBeNull());
+      await userEvent.click(within(card()).getAllByRole("button")[0] as HTMLElement);
+      await userEvent.click(within(card()).getByRole("button", { name: /Full detail/ }));
+      await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      // A page in the list's place: the list, its heading and its filter step aside.
+      expect(screen.queryByLabelText("Filter by symbol")).toBeNull();
+      expect(document.getElementById("act-ord-0")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "‹ Activity" }));
+      await waitFor(() => expect(router.state.location.search).toEqual({}));
+      expect(router.state.location.hash).toBe("act-ord-3");
+      await waitFor(() => expect(card()).toHaveAttribute("data-open"));
+    } finally {
+      restore();
+    }
   });
 });

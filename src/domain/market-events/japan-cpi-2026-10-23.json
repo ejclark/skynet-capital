@@ -1,0 +1,11 @@
+{
+  "id": "japan-cpi-2026-10-23",
+  "kind": "macro-print",
+  "title": "Japan national CPI (September 2026) — the last national print the BoJ's October Outlook Report sees, and an already-registered forward test's missing input",
+  "date": "2026-10-23",
+  "status": "estimate",
+  "source": "EST: stat.go.jp/english/data/cpi/1582.html ('Consumer Price Index — Schedule of Release'), re-fetched direct 2026-10-09 (HTTP 200, 13,839 bytes — byte-identical to the 2026-09-15 read) and parsed cell-by-cell by this event's own never-assessed initial research: the row reads exactly ['September', 'October 23', 'October', 'October 30', ''] — the September-2026 NATIONAL CPI releases 2026-10-23 (a Friday), empty Remarks cell. Corroborated as a pattern, not a date: the August row's 'September 18' held exactly (the national flash PDF's Last-Modified header is Thu 17 Sep 2026 23:31:12 GMT = 08:31 JST on Fri 09-18), and the page's own stamp is still 'Last Update : 23 January 2026'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy has no slot for Japan's Statistics Bureau. Release time is not stated on the schedule page; the 08:31 JST Last-Modified stamp on the August release is a proxy, not a source. Checked 2026-10-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Canonical file written 2026-10-09 by this event's own never-assessed initial research, shadowing proposals/japan-cpi-2026-10-23.from-japan-cpi-2026-09-18.json (read first; its notes — why the date is tracked at all: FT-japan-cpi-2026-11-20-1 consumes it as an input, and it is the last whole-country print the 2026-10-30 BoJ Outlook Report sees — still stand and are not repeated). Impact stays LOW: symbols is empty and no house playbook is keyed to Japanese prices. What changed since it was proposed: the Tokyo September flash (2026-10-02) printed core +2.7% y/y against a 2.4% consensus and 1.8% prior, so this print is now the live test of whether that jump is a national signal or a Tokyo base effect — see docs/research/events/japan-cpi-2026-10-23.md."
+}

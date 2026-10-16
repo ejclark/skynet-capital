@@ -3,6 +3,7 @@ import {
   bookEventsIn,
   describeTouch,
   isHeadlineMacro,
+  nextOnBook,
   touchedPositions,
 } from "../../src/live/book-events";
 import type { DecisionDue, NextPrint, PositionEvent } from "../../src/live/desk";
@@ -90,10 +91,11 @@ describe("bookEventsIn — the three fixtures across October 2026", () => {
       const { held, market } = join(b);
       return [b.desk.id, held.length, market.length];
     });
+    // The day-trader's third held date is its Oct 16 call's expiry (#5074).
     expect(counts).toEqual([
       ["human-eric", 0, 3],
       ["sauron", 1, 3],
-      ["day-trader", 2, 3],
+      ["day-trader", 3, 3],
     ]);
     expect([eric, sauron, dayTrader].map((b) => join(b).decide.length)).toEqual([0, 0, 0]);
   });
@@ -138,7 +140,10 @@ describe("bookEventsIn — the range predicate", () => {
 describe("bookEventsIn — the backstop when the corpus is missing", () => {
   it("still dates each position's own next event, once per day", () => {
     const { held, market } = join(dayTrader, october, []);
-    expect(held.map((e) => `${e.date} ${e.title}`)).toEqual(["2026-10-29 AAPL earnings"]);
+    expect(held.map((e) => `${e.date} ${e.title}`)).toEqual([
+      "2026-10-16 NVDA $180 long call expires",
+      "2026-10-29 AAPL earnings",
+    ]);
     expect(market.map((e) => `${e.date} ${e.title}`)).toEqual(["2026-10-02 Jobs report"]);
   });
 });
@@ -243,6 +248,97 @@ describe("bookEventsIn — the book's own days (#3977 slice 4)", () => {
     ]);
     expect(decide[0]?.touches.map((t) => t.rowSymbol)).toEqual(["NVDA261016C00180000"]);
     expect(join(desk, rangeFor("2026-11-02", "week"), []).decide).toEqual([]);
+  });
+});
+
+describe("bookEventsIn — an option's expiry is a date on what you hold (#5074)", () => {
+  it("dates each contract's expiry, landing on the contract's own row", () => {
+    const { held } = join(dayTrader, ALL, []);
+    const expiries = held.filter((e) => e.id.startsWith("expiry "));
+    expect(expiries.map((e) => [e.date, e.title, e.mark])).toEqual([
+      ["2026-10-16", "NVDA $180 long call expires", "Expires"],
+      ["2026-11-20", "NVDA $200 long call expires", "Expires"],
+    ]);
+    expect(expiries[0]?.on).toEqual({ deskId: "day-trader", symbol: "NVDA261016C00180000" });
+    expect(expiries[0]?.touches.map((t) => t.rowSymbol)).toEqual(["NVDA261016C00180000"]);
+  });
+
+  it("adds no expiry where a decision is already due on that contract that day", () => {
+    const due: BookDesk = {
+      desk: {
+        id: "sauron",
+        positions: [{ symbol: "CRWV261106P00080000", quantity: "-1", isOption: true }],
+        decisions: [
+          {
+            id: "crwv-put",
+            symbol: "CRWV261106P00080000",
+            display: "CRWV Nov 6 $80 Put",
+            title: "Expires soon: keep, roll or buy back",
+            due: { at: "2026-11-06", reason: "expiry", label: "Expires Nov 6" },
+          },
+        ],
+      },
+    };
+    const { decide, held } = join(due, ALL, []);
+    expect(held).toEqual([]);
+    expect(decide.map((e) => [e.date, e.what, e.mark])).toEqual([
+      ["2026-11-06", "CRWV $80 short put expires", "Expires"],
+    ]);
+  });
+
+  it("flags an estimated print or due day, so the lane draws it hollow", () => {
+    const desk: BookDesk = {
+      desk: {
+        id: "sauron",
+        positions: [
+          {
+            symbol: "AMD",
+            quantity: "10",
+            isOption: false,
+            nextPrint: { status: "estimate", at: "2026-10-27", label: "Earnings Oct 27" },
+          },
+        ],
+      },
+    };
+    expect(join(desk, ALL, []).held.map((e) => e.estimated)).toEqual([true]);
+  });
+});
+
+describe("nextOnBook — what an empty range names (#5045)", () => {
+  const all = (desk: BookDesk) => join(desk, ALL);
+
+  it("is the earliest event on what you hold after the range — never a market-wide print", () => {
+    expect(nextOnBook(all(sauron), "2026-10-11")?.id).toBe("meta-2026-10-28-print");
+    expect(nextOnBook(all(dayTrader), "2026-10-11")?.id).toBe(
+      "expiry day-trader NVDA261016C00180000",
+    );
+    expect(nextOnBook(all(dayTrader), "2026-10-16")?.id).toBe("aapl-iphone-duo-launch-2026-10-23");
+    // EEM has no print: the jobs report, CPI and the Fed are market-wide, so nothing is named.
+    expect(nextOnBook(all(eric), "2026-10-11")).toBeUndefined();
+  });
+
+  it("starts the day after the range ends, and is undefined when nothing later is dated", () => {
+    expect(nextOnBook(all(sauron), "2026-10-27")?.date).toBe("2026-10-28");
+    expect(nextOnBook(all(sauron), "2026-10-28")?.id).toBe("nvda-2026-11-19-print");
+    expect(nextOnBook(all(sauron), "2026-11-19")).toBeUndefined();
+  });
+
+  it("leads with a decision due on the same day as a held event", () => {
+    const due: BookDesk = {
+      desk: {
+        ...sauron.desk,
+        decisions: [
+          {
+            id: "lock-meta",
+            symbol: "META",
+            display: "META",
+            title: "Up 42%: consider locking some of it in",
+            due: { at: "2026-10-28", reason: "event", label: "Earnings Oct 28" },
+          },
+        ],
+      },
+    };
+    expect(nextOnBook(all(due), "2026-10-11")?.tier).toBe("decide");
   });
 });
 

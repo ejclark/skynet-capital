@@ -178,6 +178,7 @@ function serveBoardJson(
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   res.end(
     JSON.stringify({
+      boot: channel.boot,
       seq: channel.head,
       generatedAt: state.generatedAt,
       metric,

@@ -1,7 +1,11 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import type { CSSProperties, ReactElement } from "react";
 import type { Decision, DeskAllocation, DeskPosition } from "../live/desk";
+import { useRefineSearch } from "../live/refine-search";
+import { LessonTerm } from "./glossary-term";
+import { FactBadge } from "./position-guidance-slot";
 import { squarify } from "./treemap";
+import type { RowMark } from "./use-row-marks";
 
 /**
  * THE POSITIONS LENSES (#3689 slices 9–10, design handoff 3c): three ways to look at the same
@@ -10,7 +14,9 @@ import { squarify } from "./treemap";
  *  - List: the table (the landing).
  *  - Map: a treemap of where the capital sits. Tile size is money, tile colour is return (red or
  *    green by sign, with the sign in the text too). The options get their own strip, scaled up so
- *    they're readable, and the legend says by how much. The decisions stack in a column beside it.
+ *    they're readable, and the legend says by how much. The decision engine's cards stack in a
+ *    column beside it, "Worth a look", each wearing its row's fact badge (◆ Review · …, ▲ Consider
+ *    · …) where the retired verdicts "Needs a decision" / "At risk" stood (#5083), and its lesson.
  *  - Runway: a 90-day expiry timeline. Each option is a bar to its expiry, with its last three
  *    weeks hatched (when time decay speeds up).
  */
@@ -25,20 +31,14 @@ const LENSES: ReadonlyArray<{ id: Lens; label: string }> = [
 export const parseLens = (raw: unknown): Lens | undefined =>
   raw === "map" || raw === "runway" || raw === "list" ? raw : undefined;
 
-/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean). */
+/** The lens in the URL, and a setter that replaces it (list, the default, leaves the URL clean)
+ *  without moving the page: a lens is a view of the list you're already scrolled to (#4944). */
 export function useLens(): readonly [Lens, (next: Lens) => void] {
   const search = useSearch({ strict: false }) as { lens?: unknown };
-  const navigate = useNavigate();
+  const refine = useRefineSearch();
   const lens = parseLens(search.lens) ?? "list";
   const set = (next: Lens) =>
-    void navigate({
-      to: ".",
-      search: ((prev: Record<string, unknown>) => ({
-        ...prev,
-        lens: next === "list" ? undefined : next,
-      })) as never,
-      replace: true,
-    });
+    refine((prev) => ({ ...prev, lens: next === "list" ? undefined : next }));
   return [lens, set] as const;
 }
 
@@ -89,6 +89,21 @@ type MapItem =
 
 const pct = (x: number) => `${x}%`;
 
+/** The legend's line on the options strip. `optionsPct` counts held options only, so a book of
+ *  sold ones read "Its true share of your account is 0.0%", as though nothing were owed (#4964).
+ *  A liability is no share of the account: it is named, signed as the positions table shows it. */
+function optionsNote(allocation: DeskAllocation): string {
+  const held = allocation.optionsPct > 0;
+  const sold = allocation.optionsSold;
+  if (sold === undefined || held) {
+    const share = `The options strip is scaled up so you can read it. ${
+      sold === undefined ? "Its true share" : "Held options' share"
+    } of your account is ${allocation.optionsPct.toFixed(1)}%.`;
+    return sold === undefined ? share : `${share} Sold ones are owed: ${sold} to buy them back.`;
+  }
+  return `Sold options are owed, not held, so they take no share of your account: ${sold} to buy them back.`;
+}
+
 function PositionTile({
   p,
   style,
@@ -113,14 +128,48 @@ function PositionTile({
   );
 }
 
+/** One decision card on the Map: its row's badge (a playbook idea says so in words), the figure,
+ *  the name, the sentence, the lesson and the way on. */
+function MapDecision({
+  d,
+  row,
+}: {
+  readonly d: Decision;
+  readonly row: RowMark | undefined;
+}): ReactElement {
+  return (
+    <article className={`map-decision decision--${d.kind}`}>
+      <span className="map-decision-top">
+        {d.kind === "idea" ? (
+          <span className="decision-kind">Playbook idea</span>
+        ) : row ? (
+          <FactBadge row={row} />
+        ) : (
+          <span />
+        )}
+        <span className={`num tone-${d.plTone}`}>{d.pl}</span>
+      </span>
+      <span className="map-decision-sym">{d.display}</span>
+      <span className="map-decision-title">{d.title}</span>
+      <LessonTerm learn={d.learn} />
+      <a className="decision-btn decision-btn--primary" href={d.primary.href}>
+        {d.primary.label}
+      </a>
+    </article>
+  );
+}
+
 export function MapLens({
   positions,
   allocation,
   decisions,
+  marks,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly allocation: DeskAllocation;
   readonly decisions: readonly Decision[];
+  /** Every row's fact badge, so a card reads as its row does. */
+  readonly marks?: ReadonlyMap<string, RowMark>;
 }): ReactElement {
   // Every weight is a share of the whole account (shares + options + cash = 100), from the server's
   // own percentages: a position's weightPct is of what's invested, so it scales by invested's share.
@@ -183,34 +232,15 @@ export function MapLens({
             <span>+40%</span>
           </span>
           {options.length > 0 ? (
-            <span className="map-legend-note">
-              The options strip is scaled up so you can read it. Its true share of your account is{" "}
-              {allocation.optionsPct.toFixed(1)}%.
-            </span>
+            <span className="map-legend-note">{optionsNote(allocation)}</span>
           ) : null}
         </div>
       </div>
       {decisions.length > 0 ? (
-        <aside className="map-decisions" aria-label="Needs a decision">
-          <span className="decisions-eyebrow">Needs a decision</span>
+        <aside className="map-decisions" aria-label="Worth a look">
+          <span className="decisions-eyebrow">Worth a look</span>
           {decisions.map((d) => (
-            <article key={d.id} className={`map-decision decision--${d.kind}`}>
-              <span className="map-decision-top">
-                <span className="decision-kind">
-                  {d.kind === "at-risk"
-                    ? "At risk"
-                    : d.kind === "lock-in"
-                      ? "Lock in profit"
-                      : "Idea"}
-                </span>
-                <span className={`num tone-${d.plTone}`}>{d.pl}</span>
-              </span>
-              <span className="map-decision-sym">{d.display}</span>
-              <span className="map-decision-title">{d.title}</span>
-              <a className="decision-btn decision-btn--primary" href={d.primary.href}>
-                {d.primary.label}
-              </a>
-            </article>
+            <MapDecision key={d.id} d={d} row={marks?.get(d.symbol)} />
           ))}
         </aside>
       ) : null}

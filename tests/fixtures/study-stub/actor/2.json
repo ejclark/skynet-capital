@@ -1,0 +1,20 @@
+{
+  "as_member": "As this member, I am looking for the number I came for.",
+  "noticed": "stub: a page of numbers",
+  "candidates": [
+    {
+      "target": "the list further down",
+      "confidence": 40
+    }
+  ],
+  "expect": "",
+  "last_expectation": {
+    "verdict": "surprise",
+    "note": "the page moved but I did not find it"
+  },
+  "confusion": 2,
+  "action": {
+    "type": "done",
+    "answer": "I am not sure — about 20"
+  }
+}

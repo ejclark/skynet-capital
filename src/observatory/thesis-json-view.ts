@@ -5,6 +5,7 @@ import type { DeskActivityEvent } from "./desk-json-view.js";
 import { downsampleMinMax } from "./downsample.js";
 import { equityDrawdown } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-record.js";
+import type { ThesisPlay } from "./thesis-play-view.js";
 import {
   reasoningForOrder,
   type WireReasoningDeps,
@@ -46,12 +47,21 @@ export interface ThesisMarker {
   readonly kind: "entry" | "exit";
   readonly at: string;
   readonly label: string;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
   /** The Activity row this marker cross-links to (`id="act-<orderId>"` on `activity-table.tsx`). */
   readonly activityAnchor: string;
   /** The decision behind this fill, joined by exact order id (same lookup the `/wire` feed
    *  already uses). Absent for a fill that predates the audit trail, or when no lookup is
    *  configured — never fabricated. */
   readonly reasoning?: WireTradeReasoning;
+  /** The playbook that placed this fill, off its decision (#5327) — the owner's alone (#885,
+   *  `withoutThesisOwnerFields`). */
+  readonly playbookId?: string;
+  /** The news score and momentum its decision's pass read at this symbol — what the drawn rule
+   *  places the mark by (#5327). Absent when the record predates context capture. */
+  readonly sentiment?: number;
+  readonly momentum?: number;
 }
 
 export interface ThesisHealth {
@@ -77,6 +87,9 @@ export interface ThesisView {
   readonly health: ThesisHealth;
   readonly equity: readonly ThesisEquityPoint[];
   readonly markers: readonly ThesisMarker[];
+  /** The persona's own-rules play, drawn (#5327, `thesis-play-view.ts`) — attached by the route
+   *  for the bot's owner alone: its name names the play (#885). */
+  readonly play?: ThesisPlay;
 }
 
 /** The persona's one-line thesis, by id — absent if the id names no persona in the roster. */
@@ -158,13 +171,22 @@ function markersFrom(
     .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   return filled.map((event, index) => {
     const reasoning = reasoningForOrder(event.orderId, { findByOrderId });
+    const found = findByOrderId?.(event.orderId);
+    const context = found?.record.context;
+    const sentiment = found ? context?.newsSentiment?.[found.intent.symbol] : undefined;
+    const momentum = found ? context?.momentum?.[found.intent.symbol] : undefined;
     return {
       n: index + 1,
       kind: markerKind(event, findByOrderId),
       at: event.at,
       label: `${event.side === "sell" ? "Sell" : "Buy"} ${event.filled} ${event.display}`,
+      symbol: event.symbol,
+      side: event.side,
       activityAnchor: `act-${event.orderId}`,
       ...(reasoning ? { reasoning } : {}),
+      ...(found?.intent.playbookId ? { playbookId: found.intent.playbookId } : {}),
+      ...(sentiment !== undefined ? { sentiment } : {}),
+      ...(momentum !== undefined ? { momentum } : {}),
     };
   });
 }

@@ -1,0 +1,2 @@
+{"n":0,"as_member":"As the commuter, I look for the attic","noticed":"Stairs, no sign","confusion":1,"action":{"type":"tap","x":300,"y":200},"step":0}
+{"n":1,"as_member":"As the commuter, I found it","noticed":"Attic: 3 boxes","confusion":0,"action":{"type":"done","answer":"3 boxes"},"step":1}

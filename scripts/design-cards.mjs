@@ -113,14 +113,14 @@ const cards = [
     body: `
     <header class="topbar" style="position:static">
       <span class="brand"><span class="brand-mark" aria-hidden="true">SC</span>Skynet Capital</span>
-      <nav class="topnav"><a class="topnav-link" aria-current="page" href="#">Standings</a><a class="topnav-link" href="#">The Wire</a><a class="topnav-link" href="#">Research</a><a class="topnav-link" href="#">Collections</a><a class="topnav-link" href="#">Milestones</a></nav>
+      <nav class="topnav"><a class="topnav-link" href="#">Leaderboard</a><a class="topnav-link" aria-current="page" href="#">Profile</a><a class="topnav-link" href="#">Trade</a><a class="topnav-link" href="#">Activity</a><a class="topnav-link" href="#">R&amp;D</a></nav>
+      <button type="button" class="status-line" data-state="open" data-fleet="ok" aria-expanded="false"><span class="status-clock" style="--elapsed:77.44%;--power:84.62%"><span class="status-clock-words"><span class="session-eyebrow"><span class="session-dot"></span><span class="session-state">Market open</span></span><span class="session-left"><b>1h 28m</b> left<span class="session-today"> today</span></span></span><span class="session-track"><span class="session-fill"></span><span class="session-power"></span><span class="session-knob"></span></span></span></button>
       <div class="topbar-actions">
-        <fieldset class="toggle-group"><button type="button" aria-pressed="true"><span class="toggle-text">Comfortable</span></button><button type="button"><span class="toggle-text">Compact</span></button></fieldset>
-        <span class="env-pill">SIM</span>
-        <span class="status status-live"><span class="status-dot"></span>live · seq 1338</span>
+        <button type="button" class="mp-toggle" aria-pressed="false">✦</button>
+        <div class="member-menu-wrap"><button type="button" class="member-menu-btn" aria-expanded="false">E</button></div>
       </div>
     </header>
-    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own left-rail sub-nav. Underline marks current; the dot alone survives on mobile.</p>`,
+    <p class="ds-note">App-level navigation dimension (Eric, live review): views ride the topbar; each view brings its own sub-nav. Beside them, three marks only (#5037 round 2): the status line — the market clock made compact, its state and time left over the session's track; the full clock and fleet health one tap down, in place (#5075) — Moneypenny, and the member menu (Settings, Sign out).</p>`,
   },
   {
     file: "chrome/rail.html",
@@ -185,8 +185,9 @@ const cards = [
     <div class="filter-bar">
       <div class="filter-query"><input type="text" value="pl:>0 NVDA" spellcheck="false"></div>
       <button type="button" class="filter-chip">Options only</button>
-      <button type="button" class="filter-chip" aria-pressed="true">In profit</button>
-      <button type="button" class="filter-chip">Under water</button>
+      <button type="button" class="filter-chip">Down today</button>
+      <button type="button" class="filter-chip" aria-pressed="true">Above cost</button>
+      <button type="button" class="filter-chip">Below cost</button>
     </div>
     <p class="ds-note">Chips ⇄ query text are ONE model; the URL keeps the query. A saved view is a named query; the unsaved dot appears the moment the live filter drifts (the Projects rule).</p>`,
   },

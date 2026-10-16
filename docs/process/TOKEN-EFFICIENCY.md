@@ -77,6 +77,9 @@ in the claude-api skill's `shared/models.md`, not here)
   reads and returns a summary (docs' worked example: 6,100 tokens read → 420 returned). A fork
   (`/subtask`) reuses the parent's cache; a fresh subagent starts cold. Keep fan-out siblings
   homogeneous (same model/effort/tools) so they share one prefix cache.
+- **Read a workflow run with `node scripts/wf-read.mjs`, never a parser written on the spot.** Each
+  hand-rolled read of `journal.jsonl` or a task's `.output` lands its raw dump in the dearest
+  context in the repo and rides along for every later turn (#5194: 71 such calls in three days).
 - **Watch it:** `/usage` (behavior flags fire at ≥10% of recent usage — long context, cache misses),
   `/context` (what's eating the window), `/insights` (HTML patterns report). On the statusline,
   `cache_creation` staying high turn after turn means something is churning the prefix.

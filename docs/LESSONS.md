@@ -35,6 +35,157 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: retry a github 500 on the spend breaker's and relay's reads
+- **SHA:** a990afa   **DATE:** 2026-10-14   **STATUS:** closed
+- **COVERS:** bb6d999 143153d
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [38495812047](https://github.com/ejclark/skynet-capital/actions/runs/38495812047) at 2026-10-14T01:27:19Z. Repair capsule #5354 filed 2026-10-14T01:33:38Z, closed 13m later by #5355.
+- **ROOT CAUSE:** Two `route` ticks went red on `main` within six minutes, both on a single GitHub-side 500: **Run 38495812047** (this issue): `checkCircuitBreaker` read run 38494372525's log, got `HTTP 500`, fell back to the job list, got another `HTTP 500` a second later, and refused. I read that same log locally minutes later and it came back fine (308 KB, exit 0). Not a breaker bug and not a runaway, just two unretried reads. **Run 38496303201**: the relay's closed-issue read (`ghRestAll`, i.e. curl) got `curl: (22) The requested URL returned error: 500`. `isTransientGhError` only knew gh's `HTTP 5xx` wording, so even a `withRetry`-wrapped `ghRest` read got one attempt. projects.mjs had already found thi…
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts`, `tests/scripts/moneypenny/gh.spec.ts`, `tests/scripts/moneypenny/relay.spec.ts` (#5355).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### Two visual PRs red on their first CI run: Linux-only baselines, and four builds on one surface
+- **SHA:** n/a   **DATE:** 2026-10-10   **STATUS:** closed
+- **SIGNAL:** Eric, on #5080: "fails CI out of the gate too. red flag for avoidable process
+  friction, possible process thrashing."
+  - **What happened:** #5079's first two runs (16:26, 16:47) and #5080's first run (17:00, red at
+    17:05) failed `integration tests` on `matches the known-good page screenshot` only — no logic
+    failure among them. #5079 was re-baselined by hand (902daaed, 17:21); #5064 earlier the same
+    day took two hand re-baseline commits (68348966, f3b51581).
+  - **Detection lag:** each red was seen within minutes, but the class — a visual PR's first run
+    failing on its own new pictures — was paid at least three times in one day before anyone named
+    it. Eric named it; nothing counts first-run reds.
+- **ROOT CAUSE:** three mechanisms.
+  1. Screenshot baselines are `*-chromium-linux.png` only and builders run on macOS, so `ship.sh`
+     skips the local Playwright run (2026-10-02, PR #4519). A visual PR meets its new pictures
+     first in CI, and the way back was six manual steps: download `playwright-report`, decode the
+     zip embedded in its `index.html`, map each attachment to a baseline path, read each diff, copy
+     each actual, commit.
+  2. Four builds ran in parallel on one surface, the profile page (#5078, #5079, #5080, #5081 — all
+     four edited `app/src/routes/accounts.tsx`, three the profile head `cockpit-head.tsx`). Each
+     head change moved the same page screenshots, so whichever merged second failed on pictures it
+     never drew: #5079 moved five page shots (four of them 51px shorter), #5080 moved the same
+     five (four of them 1px taller) plus two more, and the code collided (#5079 against #5078).
+  3. (Found in review, after #5080 merged.) `captureWholeFrame` (`e2e/determinism.ts`) asserted
+     the frame and then the top bar's market clock, both hard, so a red frame hid its clock. #5080's
+     first red run (38069939238) showed six frames and one clock; the re-baseline of those seven
+     (91c38a4) went red on the six clocks it had hidden (run 38072789546), and a16511d paid the
+     second round trip. The script reads only what a run compared, so it could not have caught it.
+- **PREVENTION:**
+  1. **Script (rank 1):** `scripts/rebaseline-from-ci.mjs <pr>` finds the PR's failed `integration
+     tests` run, decodes the report, saves expected/actual/diff side by side and lists them — a
+     dry run by default, ending in a reminder to read every diff. `--run <id> --apply --commit`
+     copies the actuals and makes one commit. It refuses any failure that is not a pixel mismatch
+     and any snapshot with no baseline yet (`tests/scripts/rebaseline-from-ci.spec.ts`).
+  2. **`ship.sh` line:** off Linux, a diff under `app/src/` or `e2e/` prints that command with the
+     new PR's number as soon as it opens (`tests/arch/ship.spec.ts`).
+  3. **Doctrine:** `docs/DELEGATION.md` rail 7 — one build per surface at a time (WIP 1 per
+     surface); a later build on a busy surface is linked `--blocked-by` the first
+     (`scripts/issues.mjs update` now takes it), and every puller waits. Echoed in
+     `.claude/skills/steer/SKILL.md`'s read-back and `docs/ENGINEERING.md`.
+  4. **Soft frame shot:** `captureWholeFrame` now asserts the frame with `expect.soft`, so every
+     run compares both pictures and one dry run lists both. The test still fails on either.
+     The review also tightened the script: a logic failure on ANY attempt refuses the test (not
+     only the last one), a snapshot CI reported missing is refused even if a file has appeared
+     locally since, and `--apply` refuses a run that did not test the PR's head (a dry run on one
+     still lists it, read only).
+- **SIDE QUESTS:** a CI job that re-baselines on a label would remove the round trip entirely (CI
+  already holds the actuals), but it lives in `.github/workflows/` — protected by `envelope.json` —
+  so it boards the platter as a proposal only (→ docs/IDEAS.md). No workflow file was touched here.
+
+---
+
+### A member study's census reported done after operating none of its controls
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's full round (#4943).
+  - **What the census is:** the step that operates every control on the area once and frames each
+    result, so the blind experts review the whole area, not a hand-picked sample.
+  - **What happened:** it operated 0 of 856 controls, and preflight still marked it done.
+  - **How it was caught:** by reading the experts' inputs after the round, which showed sign-in
+    doors instead of the profile. No gate fired.
+- **ROOT CAUSE:** a world change (#4998) made every fresh page load clear the member's session, and
+  the census opens each control on a fresh load. `openComposed` never passed the world's sign-in
+  step back to its caller. The census measured "did each step run", not "did it reach the screen it
+  was meant to".
+- **PREVENTION:** gate (#5008): sign-in is passed through, a census reaching under 80% of its
+  controls stops the round before any expert runs, and an expert batch with no frames refuses to
+  start.
+- **SIDE QUESTS:** the same "ran, so done" shape exists anywhere a step is checked for having run
+  rather than for its output (README Lessons, the oracle audit row: the answer grader was trusted
+  until two auditors read its fails).
+
+---
+
+### Stub-only dry runs passed a study harness that failed its first real call three ways
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's first real thin slice (#4943).
+  - **Earlier:** the round had passed a full end-to-end dry run of 54 sessions on stand-in answers (#4985, #4986).
+  - **Then it stopped three times before any member ran:**
+    1. at the canary in 0.6s ("no result event");
+    2. at task writing, after four blind rewrites;
+    3. at the canary again, on CLI boilerplate.
+  - **Detection lag:** none past the first real call. The thin slice exists for exactly this.
+- **ROOT CAUSE:** stubs answer at the result-parsing layer. So the dry run proved the plumbing and never the contract with the real `claude -p`. Three things lay outside that contract test:
+  1. **Schema validity:** a `$schema` 2020-12 key the CLI's validator rejects, reported only on a stderr the code discarded.
+  2. **Real model behaviour against a blind lint:** the lint hid every word, so the author could not learn which everyday word was also an on-screen label.
+  3. **Context the CLI injects even under `--safe-mode`:** the account email, the environment block and tool-use instructions, worded differently on every call.
+- **PREVENTION:** doctrine: `docs/members/study/README.md` → Lessons: no full round before a real thin slice completes. Stubs prove plumbing, never the CLI contract. Each gap was also fixed where it lives:
+  - schemas carry no draft key, and stderr is kept (#4988);
+  - lint names screen labels and reads only what members read (#4989);
+  - the canary classifies context by kind (#4988, #4990).
+  - A planted note still fails the canary in a real call.
+- **SIDE QUESTS:** the native `<select>` blind spot and the test world's placeholder pages, both found by the same thin slice, are being fixed in the recorder and the world (README Lessons).
+
+---
+
+### An athlete's `npm ci` emptied the primary checkout's install through the worktree symlink
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The primary checkout's `node_modules` and `app/node_modules` were found empty (0 entries each) while reading a slice-2 athlete's report for #4943. Timeline (UTC):
+  - 05:38 — the first detectable moment: a fix-track athlete ran a plain `npm ci` inside its isolated worktree.
+  - 05:39 — another athlete noticed the primary was empty, installed its own copy and carried on.
+  - ~06:33 — the foreground session saw it, ~55 min after the cause.
+  - Meanwhile every worktree linked to the primary, and the primary itself, had no install. Restored with `npm ci` + `npm ci --prefix app` from the lockfiles.
+- **ROOT CAUSE:** `scripts/worktree-setup.sh` gave each isolated worktree a *symlink* to the primary checkout's `node_modules`, extended to `app/node_modules` the same morning (#4954).
+  - Git isolation is not filesystem isolation: the link made one shared, mutable install look private.
+  - `npm ci` deletes `node_modules` first, so run in a linked worktree it deleted the primary's install through the link.
+  - What else crosses this system: the primary checkout (dev server, husky hooks, Eric's terminal), every other session's linked worktrees, and the workflow agents that run without isolation and so use the primary as their working directory.
+  - The second failure is detection. The athlete that saw the empty install treated it as its own environment quirk and worked around it, so a shared outage stayed silent for most of an hour.
+- **PREVENTION:** script — `scripts/worktree-setup.sh` now gives each worktree a copy-on-write *clone* (APFS `cp -c`, `--reflink` elsewhere, ~5s), never a link, and converts any old link it finds.
+  - Tested by running `npm ci` and `npm ci --prefix app` inside a set-up worktree: the primary kept all 416 + 79 packages.
+  - Doctrine for the detection half: `docs/DELEGATION.md` rail 2 now says an athlete that finds shared state broken (the primary's install, `main`'s build) stops and reports it, never repairs around it silently.
+- **SIDE QUESTS:** → docs/IDEAS.md: other shared mutable state an unisolated workflow agent can clobber in the primary (`app/dist` used by the shoot scripts, the primary's branch); worktrees left by older sessions still carry links until their next setup run.
+
+---
+
+### A filter chip jumped the Profile page to the top — Trade's 2026-09-22 fix stayed per call site
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study (#4943) caught a chip tap scrolling the page to the top ~300ms later, the filter's debounce. Detection lag: the same symptom was reported and fixed on Trade on 2026-09-22 ("the same effect as extreme content shift"); every other page with a filter, lens or calendar range kept it for ~17 days.
+- **ROOT CAUSE:** TanStack Router resets the window's scroll after every navigation unless the call says `resetScroll: false` (router-core: `resetScroll ?? true`), a same-page search refinement included. The 2026-09-22 fix wrote `resetScroll: false` into Trade's own calls; nothing named the class, so the Profile page's filter, the positions lens, the calendar range, R&D's filter, both Activity filters and the milestone cards each still reset.
+- **PREVENTION:** gate (rank 1) — `tests/arch/same-page-scroll.spec.ts` reads every `navigate({...})` and `<Link search=…>` under `app/src` that targets the page it's on, and fails one that resets the scroll unless its ledger says why (a section or account switch, a jump to a ticket). The fix is one helper, `useRefineSearch()` (`app/src/live/refine-search.ts`), every refinement routed through it; `app/tests/live/refine-search.spec.tsx` asserts the outcome (#4944).
+- **SIDE QUESTS:** whether section and account switches, and the leaderboard's compare toggles, should also keep the scroll is a design call held by #4943, not this fix.
+
+---
+
+### The member journeys and the crawl passed every profile screen Eric found broken on 2026-10-08
+- **SHA:** a8587fd   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** Eric, using the profile on 2026-10-08, found screens broken on which no member journey failed and no crawl row was flagged. A human was the only detector. Detection lag: the harness landed 2026-09-26 (#3801, `a8587fd`; phone checks and coverage in #3830) as the verification for plan #3807, which closed on its green 2026-09-29. That is 9 days from the close (12 from the landing), and in that time no journey failed and no crawl row flagged those screens (journeys with a `known_gap` pass by design through `test.fail`, `e2e/journeys.spec.ts:47`). His individual findings are sealed outside the repo for a blind study (#4943), so this entry names the class only.
+- **ROOT CAUSE:** the harness checks that things *exist*, never that a member can *use* them. Each check, confirmed in code at `origin/main` 2026-10-09: (1) `e2e/journeys.spec.ts:48` reloads the page for every step, so a journey is a set of separate cold loads and nothing a member did earlier is still on screen; (2) `scripts/crawl/steps.mjs:68` waits for Playwright's `visible`, which is true for an element scrolled far off-screen, not "in the viewport"; (3) a step's act is its last line and nothing looks after it (`journeys.spec.ts:53`), and the crawl takes its frame *before* the act (`scripts/crawl/run.mjs:147` frame vs `:175` act), so what a press does is never seen; (4) the one human-like check, the `judge` column, never ran: `run.mjs:104` writes `pending (grind)` and all 54 rows of `docs/members/friction-ledger.md` still say so; (5) `scripts/crawl/phone.mjs:33-35` treats `overflow-x: auto` as contained, so a box that scrolls sideways on a phone is never reported; (6) coverage counts *visits*, not interactions (`scripts/crawl/coverage.mjs:277-291`, `visitsOf`): a screen a step only loaded reads `covered`; (7) the crawl fixture cannot draw an at-risk card: the cutoff is −10% (`src/observatory/decisions-view.ts:99`, `considerations-view.ts:43`) and every linked member's position in the fixture is up. *What else crosses this system?* The green read as "verified" in three places: the journeys, the coverage report, and the closure of the plan the crawl was built to check.
+- **PREVENTION:** ledger-only until #4943 lands (then script, rank 1). Nothing is mechanized yet. The profile member study, plan #4943, replaces "does it exist" with "can a member do it". Its recorder keeps the page alive between actions. It records scrolling, sideways overflow at page *and* container level, layout shift and navigations away. It grades success from a fact the member reports or an answer seen in the viewport, never from a route. That covers causes 1–6 as a class rather than one line at a time. The fixture gap (7) is the study's world-building slice. This lesson is the ledger half and changes no code. Whether the harness lines above get patched or retired follows the study's readout, which stops for Eric's call.
+- **SIDE QUESTS:** a ledger column that promises a check no lane schedules is a quiet false pass; `coverage.mjs`'s `covered` reads as "tested" when it means "visited" (→ docs/IDEAS.md).
+
+---
+
+### `sync project status` red on main: read board fields without gh's owner lookup
+- **SHA:** b95b1d5   **DATE:** 2026-10-09   **STATUS:** closed
+- **COVERS:** 49eb85d
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [37881706331](https://github.com/ejclark/skynet-capital/actions/runs/37881706331) at 2026-10-09T03:58:25Z. Repair capsule #4933 filed 2026-10-09T03:59:11Z, closed 10m later by #4937.
+- **ROOT CAUSE:** `sync project status` went red on `main` (run 37881706331): `gh project field-list 2 --owner ejclark` failed three times in ~8s with `unknown owner type`, while a direct GraphQL call on the same token succeeded seconds later. A parallel run four seconds later went green. So the token was fine; the failure was in gh's own owner lookup. That string comes from gh's `UserOrgOwner` query (cli/cli `queries.go`, `OwnerIDAndType`). It asks for **both** `user(login)` and `organization(login)` and expects the org half to fail with exactly `NOT_FOUND`. Any other error shape on either half becomes `unknown owner type`, with GitHub's real message thrown away. Every `gh project --owner` call pays for thi…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-owner-lookup.spec.ts` (#4937).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy bots` red on main: retry a registry 404 once fly's api has found the image
 - **SHA:** f72d873   **DATE:** 2026-10-06   **STATUS:** closed
 - **COVERS:** 43d3f5c
@@ -54,6 +205,14 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 - **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
 
 ---
+
+### The dashboard took the bots' one Alpaca price-feed connection, so Sauron never traded
+- **SHA:** b668953d   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** Eric asked "no trades made today?" on 2026-10-08 21:14 CT. The bots app had logged a bare `[market-data] error` / `closed` loop for days; #4774 (2026-10-05) saw the same drop and added a reconnect without finding the cause. Detection lag: the opener landed 2026-07-24 (`4ac30090`, `participants[0]`) and was latent until a held position made the dashboard stream start; observable from at least 2026-10-05; root cause named 2026-10-09 02:33Z, minutes after #4865 made the socket log Alpaca's refusal (`406 connection limit exceeded`).
+- **ROOT CAUSE:** Alpaca allows one market-data websocket per paper account. Three files open one; the dashboard's held-symbol stream used `participants[0]`, and `loadParticipants` lists bots first, so it opened on Sauron's key and evicted the bots app's socket. No ticks → no eval cycle → no trades, in live mode. The rule was already written in `src/server/quote-stream-hub.ts`'s header and `docs/architecture/runtime-api.md` — for the quote hub only; nobody enumerated the *other* consumers of that one connection ("what else crosses this system?"). The socket also swallowed its failure reason, which is why #4774 treated a symptom.
+- **PREVENTION:** gate (rank 1) — `tests/arch/market-data-owners.spec.ts` lists every file that constructs `AlpacaMarketDataStream` with whose credential it uses; a new opener fails CI until its owner is stated, and the dashboard stream is pinned off `participants[0]`. Detection: `market-data-stream.ts` now logs close code/reason, the runtime error, and Alpaca's `T:"error"` frame (#4865). Fix: `heldPriceStreamPlan` (#4872).
+- **CORRECTION (2026-10-09 open):** the first fix (#4872, a member's key) failed — Alpaca's limit is per **user login** per endpoint, not per paper account (docs → streaming-market-data → Connection limit), so every key under one login shares the socket. The dashboard now opens no held-symbol socket at all. Lesson inside the lesson: the per-account assumption was flagged as a risk and shipped unverified; a two-line docs read would have settled it.
+- **SIDE QUESTS:** a market-hours "feed down for N minutes" alert would have caught this on day one instead of by a human noticing no trades (#4864 slice 3, → docs/IDEAS.md). The local Alpaca MCP also returned 401 the same evening — likely a separate stale local key, unverified.
 
 ### A smoke test of a new claim path took a real lease and labelled a real issue
 - **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed

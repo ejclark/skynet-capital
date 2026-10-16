@@ -20,7 +20,7 @@ export const sold = {
   playbookMode: "standard",
   clientOrderId: "sk1-sauron-CRWV-mgf2a-0",
   reason:
-    "Selling one cash-secured CRWV $85 PUT · 13 NOV 26 for about $2.10 a share ($210 for the contract): $8,500 stays set aside in case CRWV finishes below $85 and the shares are put to the bot. Run on its owner's conviction — our study found CRWV's option premium underpays its moves.",
+    "Selling one cash-secured CRWV $85 PUT · 13 NOV 26 for about $2.10 a share ($210 for the contract): $8,500 stays set aside in case CRWV finishes below $85 and the shares are put to the bot. Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned would have been assigned 33% of the time in CRWV's own price history. So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its owner runs this against the study, betting the market has CRWV about right: that its swings calm to the pace options price.",
   expectation:
     "CRWV stays above $85 to 2026-11-13: the put expires and the premium is kept. Below it, the bot buys 100 shares at $85 and sells covered calls on them next.",
   forecast: {

@@ -1,56 +1,15 @@
 import type { ReactElement } from "react";
-import type { AccountNetWorthView, NetWorthStatsView, NetWorthWindowView } from "../live/networth";
-import { GlossaryTerm } from "./glossary-term";
+import type { AccountNetWorthView } from "../live/networth";
+import { KindChip } from "../ui";
 import { RosterSparkline } from "./roster-sparkline";
 
 /**
- * The Accounts page's net-worth components (#2321) — the Cockpit's sticky at-a-glance
- * ({@link NetWorthCondensed}), the per-account roster ({@link NetWorthRoster}), and the legacy
- * composite ({@link NetWorthSummary}). Every figure arrives server-formatted; these components
- * only place it. The same shape serves one account (its row) and all accounts (the aggregate),
- * so the view never branches on how many accounts are selected beyond choosing which stats to show.
+ * The Accounts page's per-account net-worth roster ({@link NetWorthRoster}, #2321). The sticky
+ * at-a-glance that lived here became the Profile head's vitals line (`head-vitals.tsx`, #5072), and
+ * the legacy hero composite (`NetWorthSummary`) was buried once knip's app scope flagged it as
+ * unimported. Every figure arrives server-formatted; the roster only places it.
  * @category desk
  */
-
-function WindowTile({ w }: { readonly w: NetWorthWindowView }): ReactElement {
-  return (
-    <div className={`networth-tile${w.partial ? " networth-tile--partial" : ""}`}>
-      <span className="desk-k">{w.label}</span>
-      <span className={`desk-v num tone-${w.tone}`}>{w.value}</span>
-      <span className="desk-note">{w.partial ? `${w.note} · partial` : w.note}</span>
-    </div>
-  );
-}
-
-function NetWorthHero({
-  stats,
-  caption,
-}: {
-  readonly stats: NetWorthStatsView;
-  readonly caption: string;
-}): ReactElement {
-  return (
-    <div className="networth-hero">
-      <div className="networth-hero-main">
-        <span className="desk-k">Net worth · {caption}</span>
-        <span className="networth-value num">{stats.value}</span>
-        <span className={`networth-day num tone-${stats.dayTone}`}>
-          {stats.dayChange}
-          <span className="desk-note">today</span>
-        </span>
-        <span className="desk-note networth-hero-note">
-          {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount}{" "}
-          open positions
-        </span>
-      </div>
-      <div className="networth-roi">
-        {stats.windows.map((w) => (
-          <WindowTile key={w.label} w={w} />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * The All-accounts roster (#3689 slice 10, handoff 2b): one row per owned account with its month
@@ -96,10 +55,7 @@ export function NetWorthRoster({
             return (
               <tr key={a.id}>
                 <th scope="row">
-                  {a.name}{" "}
-                  <span className={`chip chip-${a.kind}`}>
-                    {a.kind === "bot" ? "BOT" : "HUMAN"}
-                  </span>
+                  {a.name} <KindChip kind={a.kind} />
                   {a.error ? <span className="desk-note"> · {a.error}</span> : null}
                 </th>
                 <td>
@@ -134,65 +90,5 @@ export function NetWorthRoster({
         </tbody>
       </table>
     </div>
-  );
-}
-
-export function NetWorthCondensed({
-  stats,
-  caption,
-}: {
-  readonly stats: NetWorthStatsView;
-  readonly caption: string;
-}): ReactElement {
-  return (
-    <div className="networth-condensed">
-      <div className="networth-condensed-main">
-        <span className="desk-k">Net worth · {caption}</span>
-        <div className="networth-condensed-values">
-          <span className="networth-condensed-value num">{stats.value}</span>
-          <span className={`networth-condensed-day num tone-${stats.dayTone}`}>
-            {stats.dayChange}
-            <span className="desk-note">today</span>
-          </span>
-          {stats.bookedKnown ? (
-            <span className={`networth-condensed-booked num tone-${stats.bookedTone}`}>
-              {stats.bookedPl}
-              <span className="desk-note">
-                <GlossaryTerm term="lockedIn">locked in</GlossaryTerm>
-              </span>
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="networth-condensed-roi">
-        {stats.windows.map((w) => (
-          <span
-            key={w.label}
-            className={`networth-pill tone-${w.tone}${w.partial ? " networth-pill--partial" : ""}`}
-          >
-            <span className="networth-pill-label">{w.label}</span>
-            <span className="networth-pill-value num">{w.value}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function NetWorthSummary({
-  stats,
-  caption,
-  roster,
-}: {
-  readonly stats: NetWorthStatsView;
-  readonly caption: string;
-  /** The per-account rows; shown only when more than one account is in view (the "All accounts" book). */
-  readonly roster: readonly AccountNetWorthView[];
-}): ReactElement {
-  return (
-    <section className="networth">
-      <NetWorthHero stats={stats} caption={caption} />
-      <NetWorthRoster accounts={roster} />
-    </section>
   );
 }

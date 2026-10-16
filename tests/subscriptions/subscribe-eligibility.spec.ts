@@ -2,6 +2,7 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import {
   handOffNote,
+  needsConviction,
   newSubscriptionRefusal,
   notTradingNote,
   subscribedPairs,
@@ -302,5 +303,74 @@ describe("the bots app's own roster holds tickers too (#4469 slice 3a part 2)", 
     expect(
       subscribedPairs([{ playbookId: "S1-NVDA", enabled: true }], lookup).map((p) => p.id),
     ).toEqual(["S1-NVDA"]);
+  });
+});
+
+describe("a pair the study does not back runs only as its owner's conviction (criterion 2)", () => {
+  const standAside = (
+    base: string,
+    id: string,
+    status: "stand-aside" | "not-studied",
+    symbol = id.split("-")[0] ?? id,
+  ): Pair => ({
+    ...pair(base),
+    id,
+    symbols: [symbol],
+    evidence: { ...pair(base).evidence, status },
+  });
+  const TSLA_WHEEL = standAside("CRWV-WHEEL", "TSLA-WHEEL", "stand-aside");
+  const lookup = (id: string) => (id === TSLA_WHEEL.id ? TSLA_WHEEL : findPair(id));
+  const base = { playbookId: "TSLA-WHEEL", subscriptions: [], asOfIso: TODAY, lookup };
+
+  it("asks the wheel's ✗ row for a conviction, in words an owner can act on", () => {
+    expect(newSubscriptionRefusal({ ...base, runnable: () => true })).toBe(
+      "The wheel on TSLA is ✗ stand aside. It takes a subscription only as your conviction: say why, and the day it is checked.",
+    );
+  });
+
+  it("takes it once a conviction comes with the request", () => {
+    expect(
+      newSubscriptionRefusal({ ...base, conviction: true, runnable: () => true }),
+    ).toBeUndefined();
+  });
+
+  it("asks for one on a wheel row that is only screened or not studied, too", () => {
+    for (const status of ["not-studied", "stand-aside"] as const) {
+      expect(needsConviction(standAside("CRWV-WHEEL", "X-WHEEL", status)), status).toBe(true);
+    }
+  });
+
+  it("does not ask for one where a verdict already stands: ◆ and ✓", () => {
+    expect(needsConviction(pair("CRWV-WHEEL"))).toBe(false);
+    expect(needsConviction(pair("S1-NVDA"))).toBe(false);
+  });
+
+  it("leaves today's ? rows on other strategies as they were — SAURON still subscribes plainly", () => {
+    expect(needsConviction(pair("SAURON"))).toBe(false);
+    expect(
+      newSubscriptionRefusal({ playbookId: "SAURON", subscriptions: [], asOfIso: TODAY }),
+    ).toBeUndefined();
+  });
+
+  it("refuses a ✗ on a strategy that acts on its study, even with a conviction", () => {
+    const killed = standAside("S1-NVDA", "S1-TSLA", "stand-aside", "TSLA");
+    expect(
+      newSubscriptionRefusal({
+        playbookId: killed.id,
+        subscriptions: [],
+        asOfIso: TODAY,
+        conviction: true,
+        lookup: (id) => (id === killed.id ? killed : findPair(id)),
+        runnable: () => true,
+      }),
+    ).toBe(
+      "The pre-print run-up on TSLA is a stand aside, and the pre-print run-up acts on its study, so it takes no subscription.",
+    );
+  });
+
+  it("never asks of a subscription already held — Edit, Pause and Unsubscribe stay open", () => {
+    expect(
+      newSubscriptionRefusal({ ...base, subscriptions: held("TSLA-WHEEL"), runnable: () => true }),
+    ).toBeUndefined();
   });
 });

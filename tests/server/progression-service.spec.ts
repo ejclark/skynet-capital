@@ -2,6 +2,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkFor } from "../../src/domain/comprehension-checks.js";
+import { COURSES } from "../../src/domain/curriculum.js";
+import { TRADE_TYPES } from "../../src/domain/trade-types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { CompanionMessageLogEntry } from "../../src/server/companion-message-log.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
@@ -9,7 +11,9 @@ import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import {
   createProgressionService,
   type ParticipantProgression,
+  playLocked,
 } from "../../src/server/progression-service.js";
+import { openLadder, openLevels } from "../../src/server/progression-service-support.js";
 import { ProgressionStore } from "../../src/server/progression-store.js";
 
 const journalLine = (over: Partial<TradeActivityRecord>): TradeActivityRecord => ({
@@ -212,6 +216,43 @@ describe("progression service + store — seeding, the toggle, and one-time cele
       store: new ProgressionStore(join(dir, "progression.json")),
     });
     expect((await again.view("ann")).wheels).toBe(false);
+  });
+
+  it("locks no course level with training wheels off — the chapter agrees with the desk (#5178)", async () => {
+    const { svc } = stored([journalLine({ at: "2026-08-01T10:00:00.000Z" })]); // seeds wheels off
+    const view = await svc.view("ann");
+    expect(view.wheels).toBe(false);
+    expect([...view.unlockedLevels].sort()).toEqual(COURSES.map((c) => c.level));
+    expect(TRADE_TYPES.some((t) => playLocked(t.code, view))).toBe(false);
+  });
+});
+
+describe("openLevels — a level shows a lock only where the desk refuses its rungs (#5178)", () => {
+  const ALL = new Set(TRADE_TYPES.map((t) => t.code));
+  const refusedEverywhere = (level: number, open: ReadonlySet<string>) =>
+    COURSES.find((c) => c.level === level)?.milestones.every(
+      (m) => m.tradeType === undefined || !open.has(m.tradeType),
+    );
+
+  it("opens every level when wheels are off", () => {
+    expect([...openLevels(false, new Set(), ALL)].sort()).toEqual(COURSES.map((c) => c.level));
+  });
+
+  it("opens a level the desk would trade even when the one below is unfinished", () => {
+    // Seeded history with a gap: a sell on record, no buy. The desk opens 201 on the 102 earn.
+    const ladder = openLadder(true, new Set(["102"] as const), new Set(["first-message"]));
+    expect(ladder.unlocked.has("201")).toBe(true);
+    const levels = openLevels(true, new Set(["first-sell"]), ladder.unlocked);
+    expect(levels.has(200)).toBe(true);
+    for (const c of COURSES) {
+      if (!levels.has(c.level)) expect(refusedEverywhere(c.level, ladder.unlocked)).toBe(true);
+    }
+  });
+
+  it("keeps level 100 open while the hello gate holds — that lock has its own note", () => {
+    const ladder = openLadder(true, new Set(), new Set());
+    expect(ladder.gated).toBe(true);
+    expect([...openLevels(true, new Set(), ladder.unlocked)]).toEqual([100]);
   });
 });
 

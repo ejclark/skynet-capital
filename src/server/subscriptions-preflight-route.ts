@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import { findPlaybook } from "../playbooks/registry.js";
+import { allocationRefusal } from "../subscriptions/strategy-budgets.js";
 import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
 import { liveNeeds } from "../subscriptions/subscribe-live-needs.js";
 import type { Session } from "./auth/session.js";
@@ -13,8 +14,9 @@ import { subscribeLiveReads } from "./subscribe-live-reads.js";
 /**
  * THE STORE'S PREFLIGHT (#4469 slice 3b part 2) — `GET /api/playbook-store/preflight?id=&playbookId=
  * &mode=&capital=`: what Subscribe would say to this pair at this budget, asked BEFORE the owner
- * submits. It runs exactly the checks a NEW subscription passes (`newSubscriptionRefusal`, then
- * `liveNeeds` — the same functions subscribe calls, so the two cannot drift) and writes nothing.
+ * submits. It runs exactly the checks a NEW subscription passes (`newSubscriptionRefusal`, the
+ * strategy's allocation, then `liveNeeds` — the same functions subscribe calls, so the two cannot
+ * drift) and writes nothing.
  *
  * It is a read the owner asks for by tapping "Check first", never one the page makes on load: the
  * live half costs broker calls (a price, the options level, a chain), and a Store row per pair per
@@ -42,7 +44,9 @@ const parseQuery = (url: URL) => {
     url.searchParams.get("capital") !== null &&
     Number.isFinite(capital) &&
     capital >= 0;
-  return valid ? { id, playbookId, mode, capital } : undefined;
+  // A conviction the form has filled in; its text is judged when Subscribe is pressed, not here.
+  const conviction = url.searchParams.get("conviction") === "1";
+  return valid ? { id, playbookId, mode, capital, conviction } : undefined;
 };
 
 export async function servePreflight(
@@ -71,9 +75,17 @@ export async function servePreflight(
     playbookId: query.playbookId,
     subscriptions: held,
     asOfIso: (config.now?.() ?? new Date()).toISOString(),
+    ...(query.conviction ? { conviction: true } : {}),
     ...(envNamed ? { envNamed } : {}),
   };
-  const refusal = newSubscriptionRefusal(needs);
+  const refusal =
+    newSubscriptionRefusal(needs) ??
+    allocationRefusal({
+      playbookId: query.playbookId,
+      capitalAllocated: query.capital,
+      subscriptions: held,
+      allocations: config.subscriptions?.loadAllocations()[query.id],
+    });
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });
     return;

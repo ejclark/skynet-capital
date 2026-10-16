@@ -16,7 +16,7 @@ const filing = (over: Partial<WireFeedbackItem> = {}): WireFeedbackItem => ({
   kindLabel: "Bug",
   title: "The feed drops a filing",
   url: "https://github.com/ejclark/skynet-capital/issues/4271",
-  meta: "#4271 · 10/1/2026",
+  meta: "#4271",
   at: "2026-10-01T12:00:00.000Z",
   ...over,
 });

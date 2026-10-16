@@ -76,6 +76,20 @@
   font-size: 11px;
   flex-shrink: 0;
 }
+/* At phone width the headline takes its own line and the chips and the time wrap under it (#5073):
+   side by side, a two-day time range squeezed "no signals fired for 148 cycles" to a word a line. */
+@media (max-width: 860px) {
+  .cycle-row {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .cycle-headline {
+    flex-basis: calc(100% - 20px);
+  }
+  .cycle-headline + * {
+    margin-left: 20px;
+  }
+}
 .cycle-body {
   padding: 4px 16px 14px 36px;
   background: var(--surface-2);

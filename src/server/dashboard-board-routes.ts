@@ -8,6 +8,19 @@ import { welcomeHtml } from "./welcome-page.js";
  * Returns true when the request has been fully handled.
  */
 export function servePublicRoute(path: string, res: ServerResponse, hub: ObservatoryHub): boolean {
+  // The health check (#4618, slice 6 of #4612): a host's load balancer or Fly's http check asks
+  // "is this process up and answering?" — and nothing else. It is registered only once boot has
+  // finished (`listen` runs last), touches no store, and says nothing about members or money, so
+  // it is safe before the gate. A wedged event loop fails it by not answering at all.
+  if (path === "/healthz") {
+    res.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(JSON.stringify({ ok: true, uptimeS: Math.round(process.uptime()) }));
+    return true;
+  }
+
   // Public cohort pulse: two aggregate equity totals (humans vs bots) and head counts.
   // Deliberately served before any auth gate so the logged-out login page can show the
   // live "Man vs. Machine" standing. Exposes only cohort sums — never individual accounts.

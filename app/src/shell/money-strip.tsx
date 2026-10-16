@@ -10,6 +10,7 @@ import { GlossaryTerm } from "./glossary-term";
  * the net-worth card's bottom row rather than a card of its own: value, then what the value is
  * made of, in one frame.
  *  1. The split: shares, options, and cash as a stacked bar, each slice also named with its amount.
+ *     Sold options, which a bar can't draw, are named beside them as what they'd cost to buy back.
  *  2. Cash ready to use, linking to the plays that fit your playbooks (this replaces the old
  *     "dry powder" note).
  *  3. The book's two greeks that matter most to a beginner, in plain words with the Greek one hover
@@ -93,10 +94,19 @@ export function MoneyStrip({
             <span className="money-swatch money-slice--shares" /> Shares{" "}
             <b className="num">{allocation.shares}</b>
           </li>
-          <li>
-            <span className="money-swatch money-slice--options" /> Options{" "}
-            <b className="num">{allocation.options}</b>
-          </li>
+          {/* A sold option is a liability, not a slice (#4948): named in words with its minus sign,
+              never folded into "Options $0". No swatch, since nothing in the bar is its colour. */}
+          {allocation.optionsSold && allocation.optionsPct <= 0 ? null : (
+            <li>
+              <span className="money-swatch money-slice--options" /> Options{" "}
+              <b className="num">{allocation.options}</b>
+            </li>
+          )}
+          {allocation.optionsSold ? (
+            <li className="money-legend-sold">
+              Sold options <b className="num">{allocation.optionsSold}</b>
+            </li>
+          ) : null}
           <li>
             <span className="money-swatch money-slice--cash" /> Cash{" "}
             <b className="num">{allocation.cash}</b>

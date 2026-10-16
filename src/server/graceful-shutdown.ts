@@ -36,7 +36,10 @@ export function installGracefulShutdown(server: Server, seams: ShutdownSeams = {
   const budgetMs = seams.budgetMs ?? DRAIN_BUDGET_MS;
   const log = seams.log ?? (() => undefined); // library code: the caller owns the console
   const exit = seams.exit ?? ((code: number) => process.exit(code));
-  const on = seams.on ?? ((signal, handler) => process.once(signal, handler));
+  // `on`, not `once`: a second signal mid-drain must hit the `draining` guard, not Node's default
+  // handler — that would kill the process without the chosen exit, and the run marker it leaves
+  // would file an incident for a stop somebody asked for (#4618).
+  const on = seams.on ?? ((signal, handler) => process.on(signal, handler));
   let draining = false;
 
   const drain = (): void => {

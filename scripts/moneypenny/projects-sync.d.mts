@@ -45,6 +45,12 @@ export function readIssueItemsFromGh(
   deps?: { gh?: (argv: string[]) => string },
 ): BoardItem[];
 
+/** The project's id and fields in one GraphQL call that skips gh's owner lookup (#4933). */
+export function readProjectShapeFromGh(deps?: { gh?: (argv: string[]) => string }): {
+  project: { id: string; number: number };
+  fields: { id: string; name: string; type?: string; options?: { id: string; name: string }[] }[];
+};
+
 export function readIssue(
   issueNumber: string,
   deps?: { read?: (path: string) => unknown; sleep?: (ms: number) => void },

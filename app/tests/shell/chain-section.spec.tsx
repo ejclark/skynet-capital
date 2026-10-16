@@ -3,10 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { ChainAnswer } from "../../src/live/options";
 import {
+  CHAIN_TAP_COPY,
   type ChainPick,
   ChainSection,
   chainPickLeg,
   chainPickTarget,
+  lockedTapNote,
 } from "../../src/shell/chain-section";
 
 /**
@@ -84,6 +86,22 @@ describe("ChainSection", () => {
     ]);
   });
 
+  // The words and the behaviour, pinned together (#5166): the line promised "tap a bid to sell it"
+  // for weeks while a bid opened a buy at the mid. `chainPickTarget`'s bid/ask rows below are the
+  // behaviour half; this is the words half.
+  it("says a bid sells at the bid and an ask buys at the ask, off the Spread rung", async () => {
+    render(
+      withClient(
+        <ChainSection symbol="NVDA" play="302" strike="" plays={plays} onPick={() => undefined} />,
+      ),
+    );
+    expect(await screen.findByText(CHAIN_TAP_COPY)).toBeInTheDocument();
+    expect(CHAIN_TAP_COPY).toMatch(/bid to sell that contract at the bid/);
+    expect(CHAIN_TAP_COPY).toMatch(/ask to buy it at the ask/);
+    expect(chainPickTarget("302", "call", plays, "bid").target).toBe("202"); // sell to open
+    expect(chainPickTarget("202", "call", plays, "ask")).toMatchObject({ play: "302" }); // buy
+  });
+
   it("reads spread-aware copy on the Spread rung (#3407)", async () => {
     render(
       withClient(
@@ -121,16 +139,72 @@ describe("ChainSection", () => {
 });
 
 describe("chainPickTarget — the ticket's own fail-safe rule", () => {
-  it("keeps the side and flips the type; a stock play lands on the long side", () => {
-    expect(chainPickTarget("201", "call", plays)).toEqual({ play: undefined, locked: true }); // 202 locked
-    expect(chainPickTarget("301", "call", plays)).toEqual({ play: "302", locked: false });
-    expect(chainPickTarget("101", "put", plays)).toEqual({ play: "301", locked: false });
+  it("a bare strike tap keeps the side and flips the type; a stock play lands on the long side", () => {
+    expect(chainPickTarget("201", "call", plays)).toEqual({
+      play: undefined,
+      locked: true,
+      target: "202",
+    }); // 202 locked
+    expect(chainPickTarget("301", "call", plays)).toEqual({
+      play: "302",
+      locked: false,
+      target: "302",
+    });
+    expect(chainPickTarget("101", "put", plays)).toEqual({
+      play: "301",
+      locked: false,
+      target: "301",
+    });
+  });
+
+  // #5166: the cell says the side — the 225 call bid on "Buy a long call" used to open a buy.
+  it("a bid sells to open and an ask buys to open, whatever rung the ticket was on", () => {
+    expect(chainPickTarget("301", "put", plays, "bid")).toMatchObject({ play: "201" });
+    expect(chainPickTarget("101", "put", plays, "bid")).toMatchObject({ play: "201" });
+    expect(chainPickTarget("201", "put", plays, "ask")).toMatchObject({ play: "301" });
+    expect(chainPickTarget("201", "call", plays, "ask")).toMatchObject({ play: "302" });
+    expect(chainPickTarget("201", "put", plays, "bid")).toMatchObject({ play: undefined }); // same rung
+  });
+
+  it("never widens a locked rung from a bid — the strike travels, the rung stays", () => {
+    // 202 (the covered call) is locked in this fixture; there is no uncovered-call rung to fall to.
+    expect(chainPickTarget("302", "call", plays, "bid")).toEqual({
+      play: undefined,
+      locked: true,
+      target: "202",
+    });
   });
 
   it("presets nothing for the same rung, and reads an unknown target as locked", () => {
-    expect(chainPickTarget("201", "put", plays)).toEqual({ play: undefined, locked: false });
-    expect(chainPickTarget("301", "put", plays)).toEqual({ play: undefined, locked: false });
-    expect(chainPickTarget("101", "call", undefined)).toEqual({ play: undefined, locked: true });
+    expect(chainPickTarget("201", "put", plays)).toEqual({
+      play: undefined,
+      locked: false,
+      target: "201",
+    });
+    expect(chainPickTarget("301", "put", plays)).toEqual({
+      play: undefined,
+      locked: false,
+      target: "301",
+    });
+    expect(chainPickTarget("101", "call", undefined)).toEqual({
+      play: undefined,
+      locked: true,
+      target: "302",
+    });
+  });
+});
+
+describe("lockedTapNote — why the side stayed", () => {
+  it("names the refused rung, and says the strike filled only where one did", () => {
+    expect(lockedTapNote("Sell a covered call", true)).toBe(
+      "Strike filled — “Sell a covered call” isn't unlocked yet, so the side didn't change.",
+    );
+    expect(lockedTapNote("Sell a covered call", false)).toBe(
+      "“Sell a covered call” isn't unlocked yet, so the ticket didn't change.",
+    );
+    expect(lockedTapNote(undefined, false)).toBe(
+      "That side isn't unlocked yet, so the ticket didn't change.",
+    );
   });
 });
 

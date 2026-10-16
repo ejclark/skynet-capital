@@ -6,6 +6,7 @@ import {
   parseAllocations,
   readsWhole,
   rewrite,
+  withAllocations,
 } from "../../src/subscriptions/subscriptions-file.js";
 
 /**
@@ -171,5 +172,50 @@ describe("readsWhole — the seeders' bar", () => {
   it("still fails an account key holding something other than records", () => {
     const raw = { sauron: [record("S1-NVDA")], banker: "not an array" };
     expect(readsWhole(raw, parsed(raw))).toBe(false);
+  });
+});
+
+describe("withAllocations — the allocation write (#4469 slice 3c part 3)", () => {
+  const RUN_UP = { capitalAllocated: 60_000, updatedAt: "2026-10-09T00:00:00.000Z" };
+
+  it("lays the allocations over the file and leaves every account's records as they are", () => {
+    const disk = { sauron: [record("CRWV-WHEEL")], $future: { x: 1 } };
+    expect(withAllocations({ sauron: { wheel: WHEEL } }, disk)).toEqual({
+      ...disk,
+      [ALLOCATIONS_KEY]: { sauron: { wheel: WHEEL } },
+    });
+  });
+
+  it("keeps an entry this build cannot read, and clears one it reads that is gone", () => {
+    const disk = {
+      [ALLOCATIONS_KEY]: {
+        sauron: { wheel: WHEEL, "iron-condor": WHEEL, "call-spread": { capitalAllocated: "x" } },
+        banker: "not a record",
+      },
+    };
+    expect(withAllocations({ sauron: { "pre-print-run-up": RUN_UP } }, disk)).toEqual({
+      [ALLOCATIONS_KEY]: {
+        sauron: {
+          "iron-condor": WHEEL,
+          "call-spread": { capitalAllocated: "x" },
+          "pre-print-run-up": RUN_UP,
+        },
+        banker: "not a record",
+      },
+    });
+  });
+
+  it("drops the key once nothing is left in it", () => {
+    expect(
+      withAllocations(
+        {},
+        { sauron: [record("S1-NVDA")], [ALLOCATIONS_KEY]: { sauron: { wheel: WHEEL } } },
+      ),
+    ).toEqual({ sauron: [record("S1-NVDA")] });
+  });
+
+  it("round-trips through allocationsIn", () => {
+    const file = withAllocations({ sauron: { wheel: WHEEL } }, undefined);
+    expect(allocationsIn(file)).toEqual({ sauron: { wheel: WHEEL } });
   });
 });

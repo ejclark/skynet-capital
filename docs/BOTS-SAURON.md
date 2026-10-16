@@ -1,12 +1,10 @@
 # Bots: Sauron — doctrine dossier
 
 The reference doc for what Sauron (plain and hardcore) actually does, as coded — not as the
-docblocks *say* he does. Top level, deliberately: `doc-rot-scan.mjs` only reads top-level
-`docs/*.md` (a subdirectory doc is enforced by nothing), and an unenforced call sheet is exactly
-what rots. Two parts: a **doctrine call sheet** (this persona's coded rules, graded honestly) and
-an **adaptation ledger** (append-only — every real change to that doctrine, going forward, gets a
-row here; never edit a past row). PR 8's doctrine-scan loop reads the ledger table below and flags
-`Next check` dates that have passed with nothing appended to resolve them.
+docblocks *say* he does. Two parts: a **doctrine call sheet** (this persona's coded rules, graded
+honestly) and an **adaptation ledger** (append-only — every real change to that doctrine, going
+forward, gets a row here; never edit a past row). PR 8's doctrine-scan loop reads the ledger table
+below and flags `Next check` dates that have passed with nothing appended to resolve them.
 
 Honest grade throughout is **low** — most rows are verified against code, not against outcomes; no
 backtest or live-P&L review sits behind most of these calls yet.

@@ -1,6 +1,13 @@
 import { type EarningsPrint, nextPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookSubscription } from "../domain/types.js";
-import { findPair, isStale, type Pair, pairName, STRATEGIES } from "../playbooks/pair-table.js";
+import {
+  EVIDENCE_STATUS,
+  findPair,
+  isStale,
+  type Pair,
+  pairName,
+  STRATEGIES,
+} from "../playbooks/pair-table.js";
 import { findPlaybook } from "../playbooks/registry.js";
 
 /**
@@ -92,6 +99,20 @@ export function handOffNote(pair: Pair, others: readonly Pair[]): string | undef
   return undefined;
 }
 
+/**
+ * A pair the study does not back, on a strategy whose rules read no study (today the wheel): it takes
+ * a new subscription only as its owner's labelled, dated conviction (criterion 2). ✗ stand aside, ~
+ * screened and ? not studied all count; ✓ and ◆ already have a verdict to stand on, and – can't run
+ * is refused on its own.
+ */
+export function needsConviction(pair: Pair): boolean {
+  const { status } = pair.evidence;
+  return (
+    STRATEGIES[pair.strategy].runsOnConviction === true &&
+    (status === "stand-aside" || status === "screened" || status === "not-studied")
+  );
+}
+
 export interface EligibilityInput {
   readonly playbookId: string;
   /** The bot's own subscriptions, on or paused. */
@@ -100,6 +121,9 @@ export interface EligibilityInput {
    *  reported them. One with no subscription opens nothing but still holds its tickers. */
   readonly envNamed?: readonly string[];
   readonly asOfIso: string;
+  /** The request states a conviction (a reason and a check day). The Store's row view passes true to
+   *  ask "would this be taken with one?"; the write passes what the body carried. */
+  readonly conviction?: boolean;
   /** The caller's own authored plays (#809) — nothing persists one yet, so callers pass none. */
   readonly authoredIds?: readonly string[];
   readonly prints?: readonly EarningsPrint[];
@@ -120,6 +144,7 @@ export function newSubscriptionRefusal(input: EligibilityInput): string | undefi
     subscriptions,
     envNamed,
     asOfIso,
+    conviction = false,
     authoredIds = [],
     prints = UPCOMING_PRINTS,
     lookup = findPair,
@@ -140,6 +165,13 @@ export function newSubscriptionRefusal(input: EligibilityInput): string | undefi
   const { evidence } = pair;
   if (isStale(evidence, asOfIso)) {
     return `${capitalized(name)}'s research ran past its shelf date (${evidence.shelfOn}); it takes no new subscriptions until it is re-researched.`;
+  }
+  if (evidence.status === "stand-aside" && !STRATEGIES[pair.strategy].runsOnConviction) {
+    return `${capitalized(name)} is a stand aside, and ${STRATEGIES[pair.strategy].name} acts on its study, so it takes no subscription.`;
+  }
+  if (needsConviction(pair) && !conviction) {
+    const { glyph, word } = EVIDENCE_STATUS[evidence.status];
+    return `${capitalized(name)} is ${glyph} ${word}. It takes a subscription only as your conviction: say why, and the day it is checked.`;
   }
   if (STRATEGIES[pair.strategy].dateKeyed) {
     if (!evidence.measuredExit) {

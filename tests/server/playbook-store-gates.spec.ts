@@ -82,6 +82,7 @@ function storeWith(calls: Calls, subscribed: Record<string, string[]> = {}) {
       calls.push({ op: "unsubscribe", id, playbookId }),
     setEnabled: (id: string, playbookId: string, enabled: boolean) =>
       calls.push({ op: "setEnabled", id, playbookId, enabled }),
+    loadAllocations: () => ({}),
   };
 }
 

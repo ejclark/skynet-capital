@@ -40,6 +40,7 @@ import {
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import { followBotsStream } from "../autonomous/bots-stream.js";
+import { createCycleWatch } from "../autonomous/cycle-watch.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
@@ -47,6 +48,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
 import {
   acceptAndKeep,
@@ -211,8 +213,9 @@ async function runLive(): Promise<void> {
   };
   const playbookRoster = enabledPlaybooks(process.env);
   announceRoster(playbookRoster);
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
-  const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
+  const windows = signalWindows(process.env);
+  const tracker = new MomentumTracker(windows.momentum);
+  const sentiment = new SentimentTracker(windows.sentiment);
   const universeSet = new Set(UNIVERSE);
 
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
@@ -302,7 +305,24 @@ async function runLive(): Promise<void> {
       optionLevels.risk(r.bot.persona.id, risk),
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
-      { runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id },
+      {
+        runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
+        // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
+        ...(decisionDb
+          ? {
+              ledgerOf: (playbookId: string, putStrategy: string | undefined) => {
+                const puts = putStrategy
+                  ? decisionDb.putOutcomesForPlaybook(r.bot.persona.id, playbookId, putStrategy)
+                  : { closed: 0, assigned: 0 };
+                return {
+                  realizedPl: decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId),
+                  putsClosed: puts.closed,
+                  putsAssigned: puts.assigned,
+                };
+              },
+            }
+          : {}),
+      },
     );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {
@@ -458,10 +478,18 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = contextNow();
-    await runner.runCycle(context);
+    // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
+    await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
     evaluating = false;
   };
+  // Halts, stalls and a market-hours heartbeat, in the logs (#4995) — a quiet bot is now legible.
+  const cycleWatch = createCycleWatch({
+    isMarketOpen: () => marketClock.isOpen(),
+    blockedReason,
+    log: console.log,
+  });
+  setInterval(() => cycleWatch.tick(), 60_000);
   // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
   if (betaForcing.stageAfterClose && scoutBroker) {
     armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
