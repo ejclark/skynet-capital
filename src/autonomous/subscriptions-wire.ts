@@ -46,9 +46,10 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  *
  * `subscriptions.v3` (#5482 slice 2) adds the second: a subscription's `convictionId`, the pointer
  * at a conviction record whose check date then gates the pair (`with-conviction-gate.ts`). The same
- * expand-first order: the bots read v3 from this slice on, the app keeps sending v2 until a later
- * slice writes a pointer and these bots are live. A v1 or v2 snapshot does not vouch for a pointer,
- * so the bots drop it, and the pair is checked on its own conviction as before.
+ * expand-first order: the bots read v3 from #5511 on, and the app sends v3 from the migrate step
+ * (`dashboard-insights-bridge.ts`), once those bots were live; v2 stays readable for a rollback. A
+ * v1 or v2 snapshot does not vouch for a pointer, so the bots drop it, and the pair is checked on
+ * its own conviction as before — the migrate step keeps that inline conviction on the same day.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";

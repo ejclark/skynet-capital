@@ -96,6 +96,15 @@ export type ConvictionVerdict =
   | { readonly pass: true; readonly netPl: number }
   | { readonly pass: false; readonly netPl: number; readonly reason: string };
 
+/** The wheel's retire test: more than 1 in 3 sold puts finished in the money. A strategy with no
+ *  put-based test never fails it. In words when it fails, else undefined. */
+function retireFailure(pair: Pair, checkOn: string, ledger: PairLedger): string | undefined {
+  if (putStrategyTag(pair) === undefined || ledger.putsAssigned * 3 <= ledger.putsClosed) {
+    return undefined;
+  }
+  return `${pairName(pair)}: ${ledger.putsAssigned} of ${ledger.putsClosed} sold puts finished in the money at its ${checkOn} check, more than 1 in 3`;
+}
+
 /** Read one pair's check: net P/L at or above $0, and the strategy's retire test not failed. */
 export function checkConviction(
   pair: Pair,
@@ -103,21 +112,64 @@ export function checkConviction(
   ledger: PairLedger,
   net: number,
 ): ConvictionVerdict {
-  const name = pairName(pair);
   if (net < 0) {
     return {
       pass: false,
       netPl: net,
-      reason: `${name}: net P/L is ${dollars(net)} at its ${checkOn} check`,
+      reason: `${pairName(pair)}: net P/L is ${dollars(net)} at its ${checkOn} check`,
     };
   }
-  // The wheel's retire test: more than 1 in 3 sold puts finished in the money.
-  if (putStrategyTag(pair) !== undefined && ledger.putsAssigned * 3 > ledger.putsClosed) {
+  const retired = retireFailure(pair, checkOn, ledger);
+  return retired ? { pass: false, netPl: net, reason: retired } : { pass: true, netPl: net };
+}
+
+/** One steered pair's reading for a record's check: its history and its net P/L now. */
+export interface SteeredReading {
+  readonly pair: Pair;
+  readonly ledger: PairLedger;
+  readonly net: number;
+}
+
+/** A record's verdict (#5482 criterion 5): whether the view held, and which pairs stop new entries. */
+export interface RecordVerdict {
+  /** False when the pairs' net P/L together is below $0. */
+  readonly pass: boolean;
+  /** The steered pairs' net P/L added together — the number the view is judged on. */
+  readonly netPl: number;
+  /** The pair ids that take no new entries. Empty when the view held and no pair retired. */
+  readonly stopped: readonly string[];
+  /** In words, why; empty when nothing stopped. */
+  readonly reason: string;
+}
+
+/**
+ * Read a conviction record's check (#5482 criterion 5), over every pair it steers on this bot.
+ * The view is judged on the pairs together, never trade by trade (the call sheet's stance): the
+ * sum of their net P/L below $0 fails the view and stops new entries on EVERY pair it steers, so
+ * a gain on one pair holds a loss on another, and a loss on all of them stops all of them. A
+ * strategy's own retire test (the wheel's 1 in 3 puts in the money) is a fact about that strategy,
+ * not about the view: it stops its own pair even when the view held. Exits never stop — the gate
+ * only drops opens (`with-conviction-gate.ts`).
+ */
+export function checkRecord(checkOn: string, readings: readonly SteeredReading[]): RecordVerdict {
+  const netPl = Math.round(readings.reduce((sum, r) => sum + r.net, 0) * 100) / 100;
+  if (netPl < 0) {
+    const names = readings.map((r) => pairName(r.pair)).join(" + ");
     return {
       pass: false,
-      netPl: net,
-      reason: `${name}: ${ledger.putsAssigned} of ${ledger.putsClosed} sold puts finished in the money at its ${checkOn} check, more than 1 in 3`,
+      netPl,
+      stopped: readings.map((r) => r.pair.id),
+      reason: `${names}: net P/L is ${dollars(netPl)} together at the ${checkOn} check`,
     };
   }
-  return { pass: true, netPl: net };
+  const retired = readings.flatMap((r) => {
+    const why = retireFailure(r.pair, checkOn, r.ledger);
+    return why ? [{ id: r.pair.id, why }] : [];
+  });
+  return {
+    pass: true,
+    netPl,
+    stopped: retired.map((r) => r.id),
+    reason: retired.map((r) => r.why).join("; "),
+  };
 }
