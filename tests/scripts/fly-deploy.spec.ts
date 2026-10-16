@@ -113,6 +113,46 @@ describe("fly deploy runner (transient-failure retry)", () => {
     expect(run.status).toBe(0);
   });
 
+  it("retries a bracketed registry status — `[http 502]`", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 1,
+      message: "Error: request failed: bad gateway [http 502]",
+    });
+    expect(run.attempts).toBe(2);
+  });
+
+  // Run 38951606211 (#5519): flyctl prints the image size before releasing, and the image was
+  // 502 MB — a bare status-number pattern read that as an HTTP 502 and retried a dead end 3 times.
+  const SIZED = (error: string) => `image size: 502 MB\n${error}`;
+
+  it("does not read `image size: 502 MB` as an HTTP 502 — health-check failures stay one attempt", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: SIZED("Error: timeout reached waiting for health checks to pass for machine 148e2"),
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
+  it("refuses to retry Fly's `requires manual intervention` — a volume on an unreachable host", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: SIZED(
+        "Error: failed to update machine configuration for e8205e5fe93638 [app]: machine 'e8205e5fe93638' requires manual intervention, it can't be automatically replaced because its volume 'vol_458exw282gpjg7j4' is on an unreachable host",
+      ),
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
+  it("lets a human-intervention verdict win over a transient token in the same output", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: `${EOF_ERROR}\nmachine 'e82' requires manual intervention`,
+    });
+    expect(run.attempts).toBe(1);
+  });
+
   // Run 37476037256 (#4796): Fly's API found the dashboard's freshly pushed image, then the bots
   // machine's host 404'd pulling the same digest — registry lag, not a bad reference.
   const MANIFEST_404 =

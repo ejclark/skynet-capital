@@ -22,9 +22,9 @@ import { join } from "node:path";
  * does that says so (`{ detached: true }`), so its finished shelf is not cloned a second time.
  */
 
-/** The directories the shelf reads (see `listResearch`): studies, weekly studies, event ledgers,
- *  and the forward-test register's fragments (see `composeRegister`). */
-const SHELVED_DIRS = ["", "weeks", "events", "forward-tests"] as const;
+/** The directories the shelf reads (see `listResearch`): studies, weekly studies, convictions,
+ *  event ledgers, and the forward-test register's fragments (see `composeRegister`). */
+const SHELVED_DIRS = ["", "weeks", "convictions", "events", "forward-tests"] as const;
 
 /** Cheap stand-in for the corpus contents: stat calls only, no file reads. */
 export function corpusFingerprint(root: string): string {

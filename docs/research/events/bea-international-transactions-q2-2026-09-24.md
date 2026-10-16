@@ -489,3 +489,17 @@ came out inside the band anyway, but for a different internal reason than Leg 3(
 duplicate-retirement call (Leg 2) is unresolved at this close-out**: both ids are still live, `-3`
 isn't due until 2026-10-15, and retiring the duplicate remains the surviving id's lane's call, not
 this one's. Scanner goes quiet on this event now.
+
+### `FT-bea-international-transactions-q2-2026-09-24-3` — scored 2026-10-15 (forward-test-due)
+
+**PASS.** Scored from the calendar on `origin/main` on its score-by date, narrow mode: no re-opened
+assessment, no edit to any registered prediction. Both `bea-international-transactions-q2-2026-09-24`
+(`estimate`) and `intl-transactions-q2-2026-09-24` (`confirmed`) remain loaded as separate ids;
+`event-scan.mjs --on-date=2026-09-24` lists both with no `RETIRED` mark, and neither file carries
+`supersededBy`. The kill switch (either id gone by 10-15) did not fire. The registered premise has aged:
+`supersededBy` (#3101) now exists and `--validate` reports 4 superseded entries not loaded, so a
+duplicate *can* be retired in its owner's file — this pair simply has not been. `--validate` still warns
+on the pair (86% title overlap) and on `us-iip-q2-2026-2026-09-24` (67%).
+
+**Last assessed:** 2026-10-15
+<!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"low:0+","adjacentIds":["case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->

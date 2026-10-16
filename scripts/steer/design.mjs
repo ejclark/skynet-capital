@@ -11,7 +11,15 @@
 // pictures of its own), and `scope` with each option's `serves` (scope.mjs). And `focus` (Eric,
 // 2026-10-14: narrow a round to the section under the microscope): a section's label, or a box per
 // frame — resolved here on every picture into `focus: { x, y, w, h, label }` (focus.mjs), so the
-// page opens each frame cropped to it. Two wrappers are accepted:
+// page opens each frame cropped to it. And `areas` / `active` (#5391): the parts of the screen a
+// redesign tracks, resolved per picture into `areas` (areas.mjs) and drawn as numbered outlines.
+// And `compare: true` (#5411): each option's phone picture offers Flip · Side by side · Divider
+// against Today's (compare.mjs); its phone pictures then carry `px`, their pixel size, for the
+// divider.
+// And `widths: true` (#5417): a holder's phone and desktop pictures share one slot with a
+// Phone · Desktop switch (widths.mjs), its `deskSame: true` labelling the desktop "same layout".
+// And `notesPer: "option"` (#5429): a note box folded under each option's buttons (option-notes.mjs).
+// Two wrappers are accepted:
 //   - an object `{ issue, round, root?, questions: [entry…] }`, or
 //   - a bare array of entries, with the issue and round passed as options.
 // Image paths resolve against `root`, else the manifest's folder, else its parent (round 1's
@@ -19,10 +27,14 @@
 // an error — a round that silently lost its Today shot is the failure this page exists to avoid.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { focusBoxProblems, focusFor, imageRatio } from "./focus.mjs";
+import { areaSpecProblems, areasFor } from "./areas.mjs";
+import { compareProblems } from "./compare.mjs";
+import { focusBoxProblems, focusFor, imageRatio, imageSize } from "./focus.mjs";
 import { estimateMinutes, roundPath, safeKey, splitByPictures } from "./model.mjs";
+import { NOTES_PER, notesPerProblems } from "./option-notes.mjs";
 import { holderPins } from "./pins.mjs";
 import { scopeOf, servesOf } from "./scope.mjs";
+import { widthsProblems } from "./widths.mjs";
 
 /** A design round's questions from a manifest file, as page decisions (minutes added later). */
 export function loadDesign(file, { issue, round } = {}) {
@@ -65,12 +77,21 @@ export function loadDesign(file, { issue, round } = {}) {
       return null;
     }
   };
+  // A picture's pixel size, for a compared question's divider; null when it can't be read.
+  const sizeOf = (p) => {
+    try {
+      return imageSize(readFileSync(p));
+    } catch {
+      return null;
+    }
+  };
   return designDecisions(wrap.questions, {
     issue: n,
     round: wrap.round ?? round ?? null,
     at,
     pinsFrom,
     ratioOf,
+    sizeOf,
   });
 }
 
@@ -123,21 +144,41 @@ const WIDTH = { phone: "phone width", desk: "desktop width" };
 /** A holder's pictures (Today, or an option), phone first, each carrying the pins drawn on it
  *  and, when the manifest names them, its sections (frame-sections.mjs: where each named part of
  *  the screen sits, so the read-back can name the part a mark landed on). */
-const pics = (o, alt, at, pins = {}, sections = {}, focus = NO_FOCUS) =>
+const pics = (o, alt, at, pins = {}, sections = {}, focus = NO_FOCUS, areas = null) =>
   ["phone", "desk"]
     .filter((size) => o?.[size])
     .map((size) =>
-      withFocus(
-        {
-          src: at(o[size]),
-          alt: `${alt} at ${WIDTH[size]}`,
-          size,
-          ...(pins[size]?.length ? { pins: pins[size] } : {}),
-          ...(sections[size]?.length ? { sections: sections[size] } : {}),
-        },
-        focus,
+      withAreas(
+        withFocus(
+          {
+            src: at(o[size]),
+            alt: `${alt} at ${WIDTH[size]}`,
+            size,
+            ...(pins[size]?.length ? { pins: pins[size] } : {}),
+            ...(sections[size]?.length ? { sections: sections[size] } : {}),
+          },
+          focus,
+        ),
+        areas,
       ),
     );
+
+/** A picture with the question's areas resolved on it (areas.mjs), or as it was when it has none
+ *  or this frame holds none of them. */
+function withAreas(pic, spec) {
+  const areas = spec ? areasFor(spec, pic) : [];
+  return areas.length ? { ...pic, areas } : pic;
+}
+
+/** A question's `areas` / `active`, checked: null for none. A malformed one throws, as a malformed
+ *  focus box does — an outline drawn from it would point at the wrong part of the screen. */
+function areasSpec(q, n) {
+  const problems = areaSpecProblems(q, `q${n}`);
+  if (q.areas !== undefined && q.focus !== undefined)
+    problems.push(`q${n}: narrow a round by "focus" or by "areas", not both`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.areas === undefined ? null : { areas: q.areas, active: q.active ?? [] };
+}
 
 /** No `focus` on the question: pictures as they always were. */
 const NO_FOCUS = { spec: undefined, ratioOf: undefined };
@@ -207,6 +248,55 @@ function pinsOf(q, n, pinsFrom) {
   return { today, options };
 }
 
+/** A question's `compare`, checked (compare.mjs): true to compare each option with Today. */
+function compareOf(q, n) {
+  const problems = compareProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.compare === true;
+}
+
+/** A question's `widths`, checked with its holders' `deskSame` (widths.mjs): true to give each
+ *  holder's two widths one slot and a switch. */
+function widthsOf(q, n) {
+  const problems = widthsProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.widths === true;
+}
+
+/** A question's `notesPer`, checked (option-notes.mjs): true for a note box under each option. */
+function notesPerOf(q, n) {
+  const problems = notesPerProblems(q, `q${n}`);
+  if (problems.length) throw new Error(`steer/design: ${problems.join("\n")}`);
+  return q.notesPer === NOTES_PER;
+}
+
+/** The page features a question opted into (#5380: one test screen at a time), as its fields. */
+const optIns = ({ compare, widths, notesPer }) => ({
+  ...(compare ? { compare: true } : {}),
+  ...(widths ? { widths: true } : {}),
+  ...(notesPer ? { notesPer: NOTES_PER } : {}),
+});
+
+/** A holder as the page holds it, with `deskSame` when the question switches widths and the
+ *  manifest says the desktop layout only widens the phone one. */
+const sameLayout = (holder, raw, widths) =>
+  holder && widths && raw?.deskSame === true ? { ...holder, deskSame: true } : holder;
+
+/** A holder's phone pictures, each with its pixel size when its file gives one (compare.mjs: the
+ *  divider is offered only on two pictures of one size). */
+function sized(holder, sizeOf) {
+  if (!(holder && sizeOf)) return holder;
+  const px = (p) => {
+    const size = p.size === "phone" ? sizeOf(p.src) : null;
+    return size ? { ...p, px: size } : p;
+  };
+  return {
+    ...holder,
+    pictures: (holder.pictures ?? []).map(px),
+    ...(holder.clean ? { clean: holder.clean.map(px) } : {}),
+  };
+}
+
 /**
  * What a question asks. `design` (the default) shows shapes, and a pick is a build; `problems`
  * (round 0, docs/process/REDESIGN.md) shows the problems pinned on today, and a pick only chooses
@@ -225,13 +315,13 @@ function questionKind(q, n) {
 }
 
 /** One manifest option as the page holds it, its pictures carrying the pins drawn on them. */
-function optionOf(o, q, at, pins, readJson, focus) {
+function optionOf(o, q, at, pins, readJson, focus, areas) {
   return {
     key: safeKey(o.key),
     name: o.name ?? `Option ${o.key}`,
     delta: o.delta ?? "",
     recommended: q.rec != null && String(o.key) === String(q.rec),
-    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson), focus),
+    pictures: pics(o, `Option ${o.key}`, at, pins, sectionsOf(o, readJson), focus, areas),
     // One frame for every problem: the option names its pin on Today's frame instead of carrying
     // pictures of its own (render.mjs draws it as a compact row).
     ...(Number.isInteger(o.pin) ? { pin: o.pin } : {}),
@@ -241,13 +331,13 @@ function optionOf(o, q, at, pins, readJson, focus) {
 
 /** Today as the page holds it: its pictures with their pins, and — for a round that opens on clean
  *  frames (marks.mjs) — `clean`, the same frames before pin.mjs drew on them, so his first look
- *  carries none of Claude's badges. */
-function todayOf(today, source, at, pins, readJson, focus) {
+ *  carries none of Claude's badges (nor the areas' outlines). */
+function todayOf(today, source, at, pins, readJson, focus, areas) {
   if (!today) return null;
   // The clean frames are the same screen before pin.mjs drew on it, so they share its sections.
   const sections = sectionsOf(today, readJson);
   return {
-    pictures: pics(today, "Today", at, pins, sections, focus),
+    pictures: pics(today, "Today", at, pins, sections, focus, areas),
     ...(today.clean
       ? { clean: pics(today.clean, "Today, before any pin", at, {}, sections, focus) }
       : {}),
@@ -266,30 +356,45 @@ function stages(q, problems) {
   };
 }
 
-/** Pure once `at`, `pinsFrom` and `ratioOf` are: manifest entries → decisions. `at` maps a
- *  manifest path to a usable one; `pinsFrom` reads a pins (or sections) file a manifest names;
- *  `ratioOf` reads a picture's height ÷ width, for a question with a focus (loadDesign passes all
- *  three). A problems question stays a design decision (pictures, minutes, the store) and carries
+/** Pure once `at`, `pinsFrom`, `ratioOf` and `sizeOf` are: manifest entries → decisions. `at`
+ *  maps a manifest path to a usable one; `pinsFrom` reads a pins (or sections) file a manifest
+ *  names; `ratioOf` reads a picture's height ÷ width, for a question with a focus; `sizeOf` its
+ *  pixel size, for a compared one (loadDesign passes all four). A problems question stays a design decision (pictures, minutes, the store) and carries
  *  `problems: true`, which changes only its words and its read-back. */
 export function designDecisions(
   questions,
-  { issue, round = null, at = (p) => p, pinsFrom, ratioOf },
+  { issue, round = null, at = (p) => p, pinsFrom, ratioOf, sizeOf },
 ) {
   return questions.map((q, i) => {
     const n = Number(q.q ?? i + 1);
     const problems = questionKind(q, n) === "problems";
     const pins = pinsOf(q, n, pinsFrom);
     const focus = focusSpec(q, n, ratioOf);
-    const options = (q.options ?? []).map((o, j) =>
-      optionOf(o, q, at, pins.options[j], pinsFrom, focus),
-    );
+    const areas = areasSpec(q, n);
+    const compare = compareOf(q, n);
+    const widths = widthsOf(q, n);
+    const notesPer = notesPerOf(q, n);
+    const options = (q.options ?? []).map((o, j) => {
+      const opt = sameLayout(
+        optionOf(o, q, at, pins.options[j], pinsFrom, focus, areas),
+        o,
+        widths,
+      );
+      return compare ? sized(opt, sizeOf) : opt;
+    });
     const rec = options.find((o) => o.recommended);
     const source = String(q.today?.source ?? "");
+    const today = sameLayout(
+      todayOf(q.today, source, at, pins.today, pinsFrom, focus, areas),
+      q.today,
+      widths,
+    );
     return {
       key: safeKey(`${issue}-q${n}`),
       kind: "design",
       ...(problems ? { problems: true } : {}),
       ...stages(q, problems),
+      ...optIns({ compare, widths, notesPer }),
       issue,
       isPr: false,
       round,
@@ -309,7 +414,7 @@ export function designDecisions(
             saw: q.saw ?? [],
           }
         : null,
-      today: todayOf(q.today, source, at, pins.today, pinsFrom, focus),
+      today: compare ? sized(today, sizeOf) : today,
       options,
     };
   });

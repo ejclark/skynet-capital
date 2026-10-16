@@ -1,0 +1,11 @@
+{
+  "id": "uk-ashe-earnings-2026-10-22",
+  "kind": "macro-print",
+  "title": "UK Employee earnings in the UK: 2026 — the Annual Survey of Hours and Earnings (ONS, 09:30 London / 04:30 ET), two days after the labour market print and six days before the Autumn Budget",
+  "date": "2026-10-22",
+  "status": "estimate",
+  "source": "EST: two ONS-side primaries fetched direct 2026-10-16 (HTTP 200). (1) gov.uk/government/statistics/announcements/employee-earnings-in-the-uk-2026 reads verbatim 'Release date: 22 October 2026 9:30am (confirmed)', producer Office for National Statistics, 'Published: 11 May 2026 Last updated: 21 September 2026'. (2) ons.gov.uk/releases/employeeearningsintheuk2026 reads 'Release date: 22 October 2026 9:30am', 'This release is not yet published', and lists THREE bulletins: Employee earnings in the UK: 2026, Low and high pay in the UK: 2026, Gender pay gap in the UK: 2026. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy has no slot for the ONS; the DATE is not in doubt. The proposing lane reported the register as month-only ('October 2026 (provisional)') on 2026-10-06, which the page's own 'Last updated: 21 September 2026' stamp does not obviously fit — unresolved, immaterial to the date. Prior editions for cadence: 2022-10-26, 2024-10-29, 2025-10-23 (each from the bulletin's own release-date line). Checked 2026-10-16",
+  "impact": "low",
+  "symbols": [],
+  "notes": "INITIAL RESEARCH 2026-10-16 (never-assessed; read the one standing proposal, from uk-labour-market-2026-10-20, first — it is now inert). ASHE is an April-pay-period snapshot published six months later, so by 22 October it is the stalest wage read on the UK calendar; the monthly AWE series (whole-economy SA regular pay, 3-month average ending April 2026) already says 3.4% y/y against 5.0% a year earlier, which is the only quantified expectation this ledger carries. Lands 2 days after the 10-20 labour market print and 6 days before the 2026-10-28 Autumn Budget; the Low Pay Commission's advice on April-2027 minimum wage rates is due by the end of October 2026 (gov.uk LPC remit 2026). Tiered LOW: symbols: [], no tracked UK-listed name, no house playbook keyed to rates or sterling. Estimate widens caution only; nothing date-keyed may act on this."
+}

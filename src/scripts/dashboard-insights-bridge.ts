@@ -26,7 +26,7 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import {
   buildSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
 } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
@@ -35,7 +35,7 @@ import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
-import { createSubscriptionStore } from "../server/subscription-store.js";
+import { createSubscriptionStore, type SubscriptionStore } from "../server/subscription-store.js";
 import { memoPerKey } from "../storage/ttl-memo.js";
 
 /**
@@ -117,6 +117,17 @@ const FUNNEL_TTL_MS = 30_000;
  *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
 const CHECK_WEEK_TTL_MS = 15_000;
 
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v3`, with each
+ *  subscription's conviction and its pointer at a conviction record in the version. */
+export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
+  return buildSubscriptionsSnapshot(
+    store.load(),
+    at,
+    store.loadAllocations(),
+    SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+  );
+}
+
 /** Start the internal insights listener; logs the port it bound once it's up. */
 export function startInsightsBridge(
   env: NodeJS.ProcessEnv,
@@ -170,16 +181,11 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    // v2 carries each subscription's conviction in its version (#4469 slice 3c part 3). Sent only
-    // once the bots that read v2 (part 2, #4901) were deployed: a bots build that predates it would
-    // read v2 as "not reported" and keep the roster it had.
-    subscriptions: () =>
-      buildSubscriptionsSnapshot(
-        subscriptions.load(),
-        Date.now(),
-        subscriptions.loadAllocations(),
-        SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-      ),
+    // v3 adds each subscription's pointer at a conviction record to its version (#5482 slice 2),
+    // on top of v2's conviction (#4469 slice 3c part 3). Sent only once the bots that read v3
+    // (#5511) were deployed: a bots build that predates it reads v3 as "not reported" and keeps
+    // the roster it had. v1 and v2 stay readable by the bots for a rollback.
+    subscriptions: () => subscriptionsOnTheWire(subscriptions),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;

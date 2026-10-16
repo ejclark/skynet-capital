@@ -13,7 +13,7 @@ import type {
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { type Pair, pairFor, pairTable } from "../../src/playbooks/pair-table.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
-import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
+import { CRWV_WHEEL, CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
 import { wheel } from "../../src/playbooks/wheel.js";
 import { buildOccSymbol, humanizeOptionSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
@@ -99,9 +99,13 @@ function market(symbol: string, spot = 92): MarketContext {
 }
 const flat = (): Portfolio => aPortfolio({ cash: 100_000, positions: [] });
 
+// Template parity is measured on CRWV's classic setting (month out, the mode's delta, one contract);
+// its 2026-10-16 conviction settings are pinned in crwv-wheel.spec.ts.
+const CLASSIC = wheel(CRWV_WHEEL_SETTING);
+
 describe("CRWV-WHEEL — still the playbook it was", () => {
   it("equals main's playbook field by field (criterion 7)", () => {
-    expect(CRWV_WHEEL).toMatchObject({
+    expect(CLASSIC).toMatchObject({
       id: "CRWV-WHEEL",
       symbols: ["CRWV"],
       thesis: CRWV_SETTING.thesis,
@@ -119,7 +123,7 @@ describe("CRWV-WHEEL — still the playbook it was", () => {
 
   it("sells the same put under the same id, reason and quantity as main", () => {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -236,7 +240,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
   /** The template's own put, placed, filled at its limit, and expired worthless. */
   function sellAndExpire(): OrderIntent {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -289,7 +293,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
     // One $80 put holds $8,000; $7,800 allocated is short until the $230 premium compounds in.
     const subscription = (compoundAllocation: boolean): PlaybookSubscription => ({
       accountId: "sauron",
-      playbookId: CRWV_WHEEL.id,
+      playbookId: CLASSIC.id,
       mode: "standard",
       capitalAllocated: 7_800,
       enabled: true,
@@ -298,7 +302,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
       updatedAt: "2026-10-01T00:00:00.000Z",
     });
     const next = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),

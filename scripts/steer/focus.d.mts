@@ -37,6 +37,7 @@ export function inFocus(
   y: number,
 ): boolean;
 export function imageRatio(buf: Buffer | null | undefined): number | null;
+export function imageSize(buf: Buffer | null | undefined): { w: number; h: number } | null;
 export function hasFocus(d: Partial<Decision> | null | undefined): boolean;
 export function focusedFrame(
   inner: string,

@@ -807,6 +807,18 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
+      # THE NIGHT CHAIN'S BACKSTOP (#5056 slice 2). Every ending takes `in-progress` off — the
+      # session's own last write promises it, and a cancelled job or a session that stopped short
+      # (#4612 on the night of 2026-10-04) leaves it on, holding a slot until the 6h stale sweep runs
+      # on the next merge. `always()` so a cancel or timeout is covered too; the App token so the
+      # removal's `unlabeled` event wakes the build queue (scripts/moneypenny/wake.mjs). The lease is
+      # left alone. A no-op when the label is already off.
+      - if: always() && needs.route.outputs.feedback_issue != ''
+        name: End the build — take in-progress off
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --end-build feedback-${{ needs.route.outputs.feedback_issue }}
+
   # ═══ THE PLAN LANE (#823) ═══
   # Eric (or another authorized identity — see the `route` job's `plan` step) commented a ready-flip
   # on a `plan`-labeled issue. Structurally identical to `build-feedback` above — same claim lease,
@@ -861,6 +873,12 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
+      # The night chain's backstop — see the same step on `build-feedback` above (#5056 slice 2).
+      - if: always() && needs.route.outputs.plan_issue != ''
+        name: End the build — take in-progress off
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --end-build plan-${{ needs.route.outputs.plan_issue }}
 
   sync-project:
     name: sync project status

@@ -102,6 +102,35 @@ describe("weekly studies on the shelf", () => {
   });
 });
 
+describe("convictions on the shelf (#5482)", () => {
+  /** The shared fixture plus one conviction, a README the shelf must skip, and a link back out. */
+  const withConviction = (): string => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, "convictions"));
+    writeFileSync(
+      join(root, "convictions", "ai-dip-2026-10.md"),
+      "# The AI dip — a conviction\n\n**Last assessed:** 2026-10-16\n\n## The call\n\n**TL;DR.** One claim tested.\n\n## What it steers\n\nSee [the study](../alpha-study.md) and [the ledger](../events/nvda-2026-08-26-print.md).\n",
+    );
+    writeFileSync(join(root, "convictions", "README.md"), "# Never listed\n");
+    return root;
+  };
+
+  it("shelves a conviction with the studies, skipping the directory's README", () => {
+    const slugs = listResearch(withConviction()).studies.map((d) => d.slug);
+    expect(slugs.filter((s) => s.startsWith("convictions/"))).toEqual([
+      "convictions/ai-dip-2026-10",
+    ]);
+  });
+
+  it("resolves and renders a convictions/ slug, rewriting its links to live routes", () => {
+    const doc = findResearchDoc("convictions/ai-dip-2026-10", withConviction());
+    expect(doc?.title).toBe("The AI dip — a conviction");
+    expect(doc?.glanceHtml).toContain("One claim tested");
+    expect(doc?.html).toContain('href="/research/alpha-study"');
+    expect(doc?.html).toContain('href="/research/events/nvda-2026-08-26-print"');
+  });
+});
+
 describe("findResearchDoc", () => {
   it("renders a known slug to HTML, GFM tables included", () => {
     const doc = findResearchDoc("alpha-study", fixtureRoot());

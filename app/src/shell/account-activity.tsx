@@ -30,6 +30,8 @@ export interface ActivityNarrowing {
   readonly playbook?: string | undefined;
 }
 
+/** How long the symbol box waits after the last letter before it writes the URL (and so the read). */
+export const SYMBOL_BEAT_MS = 300;
 const MAX_SYMBOL = 32;
 const MAX_PLAYBOOK = 80;
 
@@ -173,7 +175,7 @@ export function AccountActivity({
     const clean = next.trim().toUpperCase();
     urlTimer.current = setTimeout(
       () => onNarrow({ symbol: clean === "" ? undefined : clean }),
-      300,
+      SYMBOL_BEAT_MS,
     );
   };
   const clear = () => {

@@ -165,9 +165,10 @@ globalThis.steerPins = (api) => {
     close(false);
     if (!pop) build();
     fill(pin);
-    // On a focused frame (focus.mjs) the pin sits in a clipped plane: the popover goes on the
-    // picture's own box instead, where `place` measures from and nothing clips it.
-    const plane = pin.closest(".fplane");
+    // On a focused frame (focus.mjs) the pin sits in a clipped plane, and on one with areas
+    // (areas.mjs) in a plane inset by its margins: the popover goes on the picture's own box
+    // instead, where `place` measures from and nothing clips it.
+    const plane = pin.closest(".fplane, .aplane");
     if (plane) plane.closest(".shot").append(pop);
     else pin.after(pop);
     pop.hidden = false;

@@ -126,6 +126,8 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Decision cycle (a bot's pass) | `DecisionCycle` / `DecisionOutcome` / `RefusedIntent` `app/src/live/desk.ts:345,312,336` (`src/observatory/decision-json-view.ts:80`) | `GET /api/desk/:id/decisions?before=` `src/server/desk-json-routes.ts:107` | account (bot) · date (`at`) · symbol · playbook · order (`activityAnchor`) | forecast (`desk.ts:305`) | `DecisionsSection` `app/src/shell/decisions-section.tsx:178` (`heartbeat.tsx:127`, `u.$id.decisions.tsx:56`) | bot accounts |
 | Thesis | `ThesisData` / `ThesisCall` / `ThesisMarker` `app/src/live/desk.ts:433,395,411` (`src/observatory/thesis-json-view.ts:69`) | `GET /api/desk/:id/thesis` `src/server/desk-json-routes.ts:107` | account (bot) · date (`window`, `asOf`, `markers[].at`) · order (`activityAnchor`) | persona id | `ThesisDrawer` `app/src/shell/thesis-drawer.tsx:207` (`accounts.tsx:252`, `u.$id.thesis.tsx:38`) | bot accounts; `BotControls` is a `<fieldset disabled>` for everyone — a prospective subscriber's control, not the owner's (`thesis-drawer.tsx:36-42`; corrected in 1b, §5.2) |
 | Landmark (power, health) | `DeskSnapshot.landmark` `app/src/live/desk.ts:164-169` | rides `GET /api/desk/:id` (`desk-json-routes.ts:229-231`) | account (persona-mapped bot) | drives the tower iframe URL | `SauronCard` `app/src/shell/sauron-card.tsx:145` (`accounts-overview-section.tsx:108`) | persona-mapped bots only |
+| Book health (findings by level) | `DeskHealth` `app/src/live/book-health.ts:70` (`src/server/book-health-payload.ts:25`, `src/observatory/book-health-view.ts:305`) | rides `GET /api/desk/:id` (`desk-json-routes.ts:414`) | account · playbook (owner's findings only) | a finding is needs-a-decision, keyed account × playbook (#5493) | `BookHealthLine` `app/src/shell/book-health-line.tsx:21` — "■ 1 gate · ◆ 2 signals ›" or "● Balanced", under the bot's head line on the Profile head (`cockpit-head.tsx`) and beside it on `/u/:id` (`account-head.tsx`); its counts open the **Balance section** — `BalanceSection` `app/src/shell/balance-section.tsx:52`, `/accounts?section=balance`, one account's (never "All accounts"), bot or human: the findings gate first, each with its level as a glyph and a word and a link to the play behind it (`balance-findings.tsx`), then the plays most idle first (`balance-plays.tsx`), then the closed trades below | non-owners get counts only (#885) |
+| Closed trades by who started them (#4450) | `PlaybookPerformanceView.byInitiator` `app/src/live/playbook-performance.ts:53` | `GET /api/outpost/performance` `src/server/content-api-routes.ts:141` | account (bot) · playbook initiator (a playbook's own signal · the forced daily pick · a bot's own rules) | the scoreboard Eric marked on R&D → Playbooks (#5451 P3: "a high level metrics dashboard… belongs in a metrics view"); **moved here, one home** (#5493 slice 3) | `InitiatorSplit` `app/src/shell/initiator-split.tsx:28`, last on the Balance section — this account's split, then every bot's; R&D → Playbooks keeps only each card's own per-playbook numbers | none — the house split is every member's; `mine` only for an account the viewer owns |
 | Playbook subscription | `SubscriptionView` `app/src/live/playbook-store.ts:43` (`src/domain/types.ts:162`) | `GET /api/playbook-store?id=` `src/server/subscriptions-api-routes.ts:128`; writes subscribe `:164`, configure `:204` (#4649) | account · playbook · rung (delegation) · symbol (the filter) | account × playbook × mode — the playbook id is a **pair id** (a strategy on a ticker, `src/playbooks/pair-table.ts`, #4469); every join and write keys on it, never on parts | `SubscriptionRow` `app/src/shell/playbook-subscription-row.tsx:53`, first on its card (`playbooks-section.tsx:67` → `research.tsx:112`) | `canManage` (ownership); bots only for now (#4610, `playbook-store.ts:66`); delegation fog — rung 102 or wheels off; a NEW subscription passes what its pair needs — an id that resolves, current research, a print on file for a date-keyed window, a ticker no same-kind pair on the bot trades — the bots app's own roster counted (`src/subscriptions/subscribe-eligibility.ts`, #4469 3a); then, from the account's broker, a price on the feed, the options level, and in session a liquid chain and one contract's cash inside the budget (`src/subscriptions/subscribe-live-needs.ts`); one it already holds is never re-checked; the same checks answer `GET /api/playbook-store/preflight` (`src/server/subscriptions-preflight-route.ts`, #4469 3b part 2) when the owner taps "Check first" in the subscribe form, adding one contract's cash and the idle share for an options pair |
 
 ### 2b. The symbol group — a name
@@ -240,9 +242,23 @@ never the name._
 | | |
 |---|---|
 | **Key** | **account** — owned → all thirteen entities; any account → the open six (tiles · position · decision card · consideration chip · activity · pulse), read-only ◆. Position · order · decision live inside it; date/range is the window it is read over. "All accounts" is the member joint: the `+ total` is member-keyed (`resolveNetWorth`, `app/src/routes/accounts.tsx:82-96`) ◆ |
-| **Entities** | Owned account (the switcher facet only — id · name · kind · `suspended`; the credential, timezone and remove facets stay Settings' `AccountCard`, the irreversible class ◆) · Net worth · Equity curve · Desk tiles + allocation · Position (+ lots, next event) · Option position (+ book greeks) · Needs-a-decision card · Alert · Order (working) · Order event (live) · Activity event + reasoning · Pulse · Consideration chip |
+| **Entities** | Owned account (the switcher facet only — id · name · kind · `suspended`; the credential, timezone and remove facets stay Settings' `AccountCard`, the irreversible class ◆) · Net worth · Equity curve · Desk tiles + allocation · Position (+ lots, next event) · Option position (+ book greeks) · Needs-a-decision card · Alert · Order (working) · Order event (live) · Activity event + reasoning · Pulse · Consideration chip · Book health (findings, per-play numbers — the **Balance** section, #5493 slice 3: the book is the page, a playbook is what a finding drills into) · Closed trades by who started them (the metrics view, moved off R&D → Playbooks, #5451 P3) |
 | **Home** | the Profile page `/accounts` (owned; `app/src/routes/accounts.tsx:107-123`) and the any-account page `/u/$id` (reached from the Leaderboard — #2321, never Profile): one page shape, `sectionsFor(kind)` (`accounts.tsx:78`) plus ownership-gated writes (#3345/#3350) |
 | **Falsifier** | by the crawl re-run after 2d (target 2026-10-10): the returning-trader journey still acts on an expiring option from `/trade?section=orders`' alert strip rather than the Overview's queue, or Eric asks on the live route for alerts back on Trade → Alert returns to the workbench; Pulse's standing facts read to Eric as "a second net-worth card" → they stay a sub-route of the any-account page and only the week joint (Pulse × Activity 13/13) renders on the book |
+
+**Balance — the book read as one system (#5493 slice 3, 2026-10-16).** A section of the Profile
+page, `?section=balance`, straight after Overview: one account's, bot or human, never "All
+accounts" (`sectionsFor`, `profile-sections.ts`). No new route — the history of homes for
+playbooks (#881 → #885 → #3343 → #3623) is the warning against a fifth. **One list, ranked,
+not two tabs** (the open question on #5493's 2026-10-16 comment): the findings first (gate, then
+signal, each with its play as a link to that playbook's card — the book is the page, the playbook
+is what a finding drills into), then the plays most idle first (desktop adds the per-play numbers
+beside each row, never new concepts), then the closed trades — the scoreboard Eric marked on
+R&D → Playbooks ("a high level metrics dashboard… belongs in a metrics view", #5451 P3), moved
+here so there is one metrics home and R&D → Playbooks stays a catalog. The head's health line
+opens it. Wrong if, by 2026-11-16, the closed trades are the first thing a member scrolls past to
+reach their findings — then the metrics earn their own section. Not yet drawn: the Leaderboard's
+and the Profile's own links to the closed trades (#5157, #5168).
 
 **The evidence.** 165 steps in 71 of 86 scenarios put two or more of these on one screen — inside
 weight 343, the densest cluster. Strongest pairs: Equity curve × Net worth 20 steps/15 scenarios;
@@ -764,7 +780,7 @@ scenarios found it joined on the wrong field; "no" means a field the server know
 
 Numbered so the groups above can cite them. Each names the nearest type and endpoint the scenario
 found, so a slice starts from the field, not from the page. The first ten are ordered by how many
-scenarios asked; 33–36 were added by the red passes.
+scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
 
 1. **Absolute playbook window dates** — resolved `windowStart`/`windowEnd` per basket symbol,
    counted in sessions, plus the print's estimate/confirmed status the window waits on; today
@@ -985,6 +1001,16 @@ scenarios asked; 33–36 were added by the red passes.
     account is absent from the ladder, not red, and `readLeague`'s `me` goes undefined so the gap
     sentence vanishes with the row (`league-data.ts:62-63`). A watcher cannot see Sauron "quiet";
     they see no Sauron.
+37. **A market reading per session** (#5496) — `{date, score −100..+100, reading (bull · leaning
+    bull · mixed · leaning bear · bear), votes {trend, drawdown, vixLevel, vixTerm, breadth}}`,
+    market-wide and the same for every member, plus each reading's graded forward band (median,
+    1-in-10 tail, 5%-dip odds) kept apart from it as the forecast. Today per-symbol
+    `sentiment`/`momentum` live only inside the bots process (`src/observatory/morning-brief.ts:9,70`)
+    and the call mix (`app/src/live/call-mix.ts`) is a posture count, not direction; the rules and
+    history exist only as a research instrument (`scripts/research/market-reading.mjs`,
+    `docs/research/market-reading-2026-10.md`). Readers: Profile → Events' range head (a strip of
+    the 5-session mean), the playbook check (signal at −20, gate at −60, narrowing only; #5482,
+    #5483 amendment 3), Moneypenny. Members only; showing it pre-auth is a separate call.
 
 ## 8. The IA decision — written down before any lift (#895)
 
@@ -1143,8 +1169,8 @@ its evidence, and the row points at it. Until then it waits here, with its conte
 | U3 | **A section switch that can't hold its sections at 390** — tabs cut off with no cue, a head taking half the first screen (§5.8, the shell) | trade-ticket, trade-chain, member-pulse, saved-positions (a third viewer section), activity (clipped chips) | The switch and head are one shared shell component; a screen fixing its own copy forks it | none | **filed as #5206** (5 screens) |
 | U4 | **A filing's answer lives away from the conversation that made it** (§5.6) | profile-feedback, moneypenny | Joins Profile → Feedback with the Moneypenny panel; neither screen owns both | none | waiting (2 screens) |
 | U5 | **One play's status, safety stages and stop switch spread over three places** — Thesis, Playbooks, `/settings` (§5.2) | profile-thesis, profile-playbooks | Re-homing controls crosses three routes; §5.2's moves are proposed, not built | none | waiting (2 screens) |
-| U6 | **Desktop adds no room** — the 3D landmark or league rail sits beside content that keeps an 800px column (§5.8) | research, profile-feedback | The rail is the shell's frame, on every route | none | **filed as #5207** (2 screens) |
-| U7 | **R&D as a destination, not a capability** — research, calls and playbooks live on their own screen (§5.4) while the book, the bot's loop and the workbench are where they're used | the round page's own test (Eric, #5350 round 0, 2026-10-14: "long term, i feel like R&D is a feature that belongs folded into other system(s). identifying newsworthy and public datasources to glean information helps recognize patterns and/or opportunity to forecast trades. Strategies codify patterns to enable AI driven automation.") | Folding R&D into other screens re-homes a whole group and its routes; no single screen can do it | none | waiting (1 note; long term) |
+| U6 | **Desktop adds no room** — the 3D landmark or league rail sits beside content that keeps an 800px column (§5.8) | research, profile-feedback, research-playbooks (#5163 r15: "having the confidence and how it trades in the same screen when possible is huge."; its build #5448 grows a third column when the room returns) | The rail is the shell's frame, on every route | none | **filed as #5207** (3 screens) |
+| U7 | **R&D as a destination, not a capability** — research, calls and playbooks live on their own screen (§5.4) while the book, the bot's loop and the workbench are where they're used | the round page's own test (Eric, #5350 round 0, 2026-10-14: "long term, i feel like R&D is a feature that belongs folded into other system(s). identifying newsworthy and public datasources to glean information helps recognize patterns and/or opportunity to forecast trades. Strategies codify patterns to enable AI driven automation."); research-playbooks (#5451 r0 page note, 2026-10-16: "I like the idea of converting R&D onto Playbooks; research/curiosity converted to engagement and action.") | Folding R&D into other screens re-homes a whole group and its routes; no single screen can do it | none | waiting (2 notes; long term) |
 
 Seeded from the commons digest posted on #5143 (2026-10-11, 16 IA moves from 10 screens); later
 rows are added by redesign sessions as they find them.

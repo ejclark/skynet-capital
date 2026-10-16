@@ -32,5 +32,6 @@ export function designDecisions(
     pinsFrom?: (p: string) => unknown;
     /** A picture's height ÷ width, for a question with a `focus`; null when it can't be read. */
     ratioOf?: (p: string) => number | null;
+    sizeOf?: (p: string) => { w: number; h: number } | null;
   },
 ): Omit<Decision, "minutes" | "skip">[];

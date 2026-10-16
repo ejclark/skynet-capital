@@ -206,13 +206,31 @@ describe("research budget", () => {
     expect(weeks.length).toBeGreaterThan(0);
     expect(weeks.flatMap((r) => r.problems)).toEqual([]);
   });
+
+  it("gates the convictions too — a member's view is one call-sheet row per claim (#5482)", () => {
+    const audited = JSON.parse(
+      execFileSync("node", ["scripts/research-lint.mjs", "--json"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    ) as { results: { name: string; problems: string[] }[] };
+    const convictions = audited.results.filter((r) => r.name.startsWith("convictions/"));
+    expect(convictions.map((r) => r.name)).toContain("convictions/ai-dip-2026-10.md");
+    expect(convictions.flatMap((r) => r.problems)).toEqual([]);
+  });
 });
 
 // Honest degradation: a missing input is a named state, never a quiet pass. Each case runs the
 // real gate in a seeded temp dir (its ROOT is the cwd).
 describe("research lint — missing inputs are named", () => {
   const SCRIPT = resolve("scripts/research-lint.mjs");
-  const gate = (seed: { events?: boolean; weeks?: boolean; budget?: string }) => {
+  const gate = (seed: {
+    events?: boolean;
+    weeks?: boolean;
+    convictions?: string;
+    budget?: string;
+  }) => {
     const dir = mkdtempSync(join(tmpdir(), "research-lint-"));
     try {
       if (seed.events) {
@@ -220,6 +238,11 @@ describe("research lint — missing inputs are named", () => {
         writeFileSync(join(dir, "docs", "research", "events", "nvda.md"), header(FULL_TABLE));
       }
       if (seed.weeks) mkdirSync(join(dir, "docs", "research", "weeks"), { recursive: true });
+      if (seed.convictions !== undefined) {
+        mkdirSync(join(dir, "docs", "research", "convictions"), { recursive: true });
+        if (seed.convictions)
+          writeFileSync(join(dir, "docs", "research", "convictions", "view.md"), seed.convictions);
+      }
       if (seed.budget !== undefined) writeFileSync(join(dir, "research-budget.json"), seed.budget);
       return spawnSync("node", [SCRIPT], { cwd: dir, encoding: "utf8" });
     } finally {
@@ -229,9 +252,28 @@ describe("research lint — missing inputs are named", () => {
   const BUDGET = '{ "uncalledLedgers": 0 }\n';
 
   it("passes a seeded checkout with every input present, and prints no note", () => {
-    const res = gate({ events: true, weeks: true, budget: BUDGET });
+    const res = gate({ events: true, weeks: true, convictions: "", budget: BUDGET });
     expect(res.status).toBe(0);
     expect(res.stderr).toBe("");
+  });
+
+  it("counts a conviction with no call sheet as debt, the same as a ledger", () => {
+    const res = gate({
+      events: true,
+      weeks: true,
+      convictions: "# A view\n\n**Kind:** conviction\n**Last assessed:** 2026-10-16\n\nProse.\n",
+      budget: BUDGET,
+    });
+    expect(res.status).toBe(1);
+    expect(res.stdout).toContain("convictions/view.md");
+  });
+
+  it("still gates the ledgers without a convictions dir, and prints a note naming it", () => {
+    const res = gate({ events: true, weeks: true, budget: BUDGET });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toMatch(
+      /^· no research dir at .*convictions — its documents were not checked$/m,
+    );
   });
 
   it("exits 2 UNKNOWN when there is no ledger dir, instead of passing zero documents", () => {

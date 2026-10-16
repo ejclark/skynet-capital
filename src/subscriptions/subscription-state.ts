@@ -2,6 +2,7 @@ import {
   PLAYBOOK_MODES,
   type PlaybookMode,
   type PlaybookSubscription,
+  type PlayTarget,
   type SubscriptionConviction,
 } from "../domain/types.js";
 import { boundedString, isRecord } from "../storage/parse-guards.js";
@@ -39,6 +40,8 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "symbols",
   "compoundAllocation",
   "conviction",
+  "convictionId",
+  "playTarget",
 ]);
 
 /** The fields a subscribe sets; a re-subscribe carries everything else forward from the record it
@@ -95,6 +98,45 @@ function parseConviction(raw: unknown): SubscriptionConviction | undefined {
   return { ...raw, reason, checkOn };
 }
 
+/** A conviction record's id (#5482 slice 2): kebab-case and bounded, or dropped — never the
+ *  subscription, which then reads its own conviction as before (`statedCheck`). */
+export const CONVICTION_ID_MAX = 64;
+export const CONVICTION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function parseConvictionId(raw: unknown): string | undefined {
+  const id = boundedString(raw, CONVICTION_ID_MAX);
+  return id !== undefined && CONVICTION_ID.test(id) ? id : undefined;
+}
+
+const fraction = (n: unknown): n is number => typeof n === "number" && n > 0 && n < 1;
+
+/** A play's target (#5483 slice 3): a weight strictly between 0 and 1, and, when stated, a lean
+ *  range and a band of fractions in order. Shape only: whether it sits inside its playbook's bounds
+ *  is `resolvePlayTarget`'s, which needs the playbook. A malformed target drops the target, never
+ *  the subscription, the same posture as a malformed conviction. A sub-field a newer build added rides
+ *  along unchanged, as a conviction's does. */
+function parsePlayTarget(raw: unknown): PlayTarget | undefined {
+  if (!(isRecord(raw) && fraction(raw.weight))) return undefined;
+  const { weight, lean, band } = raw;
+  let leanOut: PlayTarget["lean"];
+  if (lean !== undefined) {
+    if (!(isRecord(lean) && fraction(lean.min) && fraction(lean.max)) || lean.min > lean.max)
+      return undefined;
+    leanOut = { ...lean, min: lean.min, max: lean.max };
+  }
+  let bandOut: PlayTarget["band"];
+  if (band !== undefined) {
+    if (!(isRecord(band) && fraction(band.signal) && fraction(band.gate))) return undefined;
+    if (band.signal >= band.gate) return undefined;
+    bandOut = { ...band, signal: band.signal, gate: band.gate };
+  }
+  return {
+    ...raw,
+    weight,
+    ...(leanOut ? { lean: leanOut } : {}),
+    ...(bandOut ? { band: bandOut } : {}),
+  };
+}
+
 /** Parse one record, or null when this build cannot read it (`subscriptions-file.ts` keeps it). */
 export function parseSubscription(raw: unknown, accountId: string): PlaybookSubscription | null {
   if (!isRecord(raw)) return null;
@@ -108,6 +150,8 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     symbols,
     compoundAllocation,
     conviction,
+    convictionId,
+    playTarget,
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
@@ -123,6 +167,8 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
   if (typeof createdAt !== "string" || typeof updatedAt !== "string") return null;
   const parsedSymbols = parseSymbols(symbols);
   const parsedConviction = parseConviction(conviction);
+  const parsedConvictionId = parseConvictionId(convictionId);
+  const parsedPlayTarget = parsePlayTarget(playTarget);
   return {
     ...pick(raw, (key) => !KNOWN_FIELDS.has(key)),
     accountId,
@@ -135,6 +181,8 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
     ...(parsedConviction ? { conviction: parsedConviction } : {}),
+    ...(parsedConvictionId ? { convictionId: parsedConvictionId } : {}),
+    ...(parsedPlayTarget ? { playTarget: parsedPlayTarget } : {}),
   };
 }
 

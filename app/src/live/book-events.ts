@@ -34,6 +34,10 @@ import {
  *   print   a held name's `nextPrint`, whenever it lands — a held-tier row when the corpus has no
  *           print for that name on that day. An estimated date says so in words ("estimated
  *           date"); an `unknown` print has no day and gets no row.
+ *
+ * AN ESTIMATE NEVER READS AS CONFIRMED (#5510): a corpus event carries the calendar's `estimated`
+ * mark, and a held print the corpus already put on the day takes `nextPrint`'s estimate too — so
+ * whichever source delivered the day, a cadence estimate is drawn ◇ and named in words.
  *   expiry  an option's own expiration (#5074) — a held-tier row unless a decision is already due
  *           that day on that contract, so the calendar of what you hold never skips the one date
  *           every option carries.
@@ -223,6 +227,13 @@ function backstop(
 /** " (estimated date)" when the day is a cadence estimate — said in words, never styled alone. */
 const estimateNote = (estimated: boolean): string => (estimated ? " (estimated date)" : "");
 
+/** An event marked as an estimate: drawn hollow (◇), and its list line says so in words. */
+const estimate = (event: BookEvent): BookEvent => ({
+  ...event,
+  title: `${event.title}${estimateNote(true)}`,
+  estimated: true,
+});
+
 /**
  * Each held name's next earnings print (`nextPrint`) the corpus did not already put on that day.
  * Runs before the `nextEvent` backstop, so a print both carry lands once, with its estimate flag.
@@ -238,8 +249,17 @@ function prints(
       const print = position.nextPrint;
       if (!print || print.status === "unknown" || !inRange(print.at, range)) continue;
       const symbol = underlyingOf(position.symbol);
-      if (held.some((e) => e.date === print.at && e.touches.some((t) => t.symbol === symbol)))
+      const same = held.findIndex(
+        (e) => e.date === print.at && e.touches.some((t) => t.symbol === symbol),
+      );
+      // The corpus already has the day: keep its row, but never let it claim a date this print
+      // calls an estimate (#5510) — a payload from before the calendar carried the mark.
+      if (same >= 0) {
+        const e = held[same];
+        if (e && print.status === "estimate" && !e.estimated && /earnings/i.test(e.title))
+          held[same] = estimate(e);
         continue;
+      }
       held.push({
         id: `print ${symbol} ${print.at}`,
         title: `${symbol} earnings${estimateNote(print.status === "estimate")}`,
@@ -363,9 +383,10 @@ export function bookEventsIn({
     const touches = touched.filter((t) => event.symbols.includes(t.symbol));
     const call = callOf(event.id);
     const base = { id: event.id, title: event.title, date: event.date, ...(call ? { call } : {}) };
-    if (touches.length > 0) held.push({ ...base, tier: "held", touches });
+    const dated = (e: BookEvent): BookEvent => (event.estimated ? estimate(e) : e);
+    if (touches.length > 0) held.push(dated({ ...base, tier: "held", touches }));
     else if (isHeadlineMacro(event))
-      market.push({ ...base, tier: "market", touches: nextFor(desks, touched, event.date) });
+      market.push(dated({ ...base, tier: "market", touches: nextFor(desks, touched, event.date) }));
   }
   prints(desks, range, touched, held);
   backstop(desks, range, touched, held, market);

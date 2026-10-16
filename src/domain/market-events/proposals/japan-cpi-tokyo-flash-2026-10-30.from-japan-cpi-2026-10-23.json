@@ -1,0 +1,11 @@
+{
+  "id": "japan-cpi-tokyo-flash-2026-10-30",
+  "kind": "macro-print",
+  "title": "Japan Ku-area of Tokyo CPI (October 2026, preliminary) — the flash that lands the morning of the BoJ decision, one week after the national September print",
+  "date": "2026-10-30",
+  "status": "estimate",
+  "source": "EST: stat.go.jp/english/data/cpi/1582.html ('Consumer Price Index — Schedule of Release', page's own 'Last Update : 23 January 2026'), re-fetched direct 2026-10-16 (HTTP 200, 13,839 bytes) and parsed row-by-row against the header 'Japan: Survey month | Date of release || Ku-area of Tokyo (preliminary): Survey month | Date of release || Remarks'; the row reads exactly ['September', 'October 23', 'October', 'October 30', ''] — the Tokyo October-2026 preliminary CPI releases 2026-10-30, empty Remarks cell. Filed estimate: the confirmed-prefix taxonomy has no slot for Japan's Statistics Bureau, this lane may not self-confirm an event it discovered in-sweep, and the page stamp is 8+ months old. The release time is not read from this page and is not asserted here.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the japan-cpi-2026-10-23 pulse (2026-10-16). The 2026-10-09 initial research folded this date into boj-decision-2026-10-30 as 'shares a date'; it is a separate Statistics Bureau release, and --on-date=2026-10-30 showed no Tokyo flash on the calendar. Tracked because it is the first Japanese price print after the national September number (2026-10-23) and lands the same day as the BoJ decision and Outlook Report, so it is the freshest inflation datapoint a hold-or-hike conversation can cite. Tokyo's September flash (core +2.7% vs 2.4% consensus) carried a ~0.54pp base-effect component per japan-cpi-2026-10-23; October's base is the next thing to read. Impact is LOW: symbols is empty and no house playbook is keyed to Japanese CPI."
+}

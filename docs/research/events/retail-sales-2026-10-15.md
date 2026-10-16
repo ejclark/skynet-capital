@@ -385,3 +385,91 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-14
 <!-- probe-ref: {"symbols":{},"vix":15.27,"daysBand":"high:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-16, D+1 — inside the `closeOutWithinDays` window).** Macro-print mode carries no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache bust was run
+regardless and held nothing. "Re-run instrument data" here is the release itself, fetched direct on
+2026-10-16 from `census.gov/retail/marts/www/marts_current.pdf` (HTTP 200, 184,928 bytes, all three
+tables decompressed locally), plus Treasury's daily par-yield CSV direct. Reuters (via investing.com,
+dated 2026-10-15) supplies the street consensus and the control-group cross-check, labelled as press.
+`CENSUS:` primary; the event stays `confirmed`.
+
+### What printed — Census primary
+
+| Line (SA m/m) | Sep 2026 | Aug 2026 (revised) | Street | Read |
+|---|---|---|---|---|
+| **Headline** | **+0.8%** ($745,021M) | +1.3% ($739,322M; was +1.1%) | **+0.3%** (Reuters poll) | beat by **0.5pp**, almost all gasoline |
+| Ex-autos | +0.9% | +1.4% | not sourced | — |
+| Ex-autos-and-gas | +0.2% | +1.3% | not sourced | soft |
+| Ex-gasoline | +0.24% (computed) | +1.0% | — | the headline minus the pump |
+| **Gasoline stations** | **+6.4%** ($68,021M) | +4.0% | — | **FT-1 PASS** |
+| **Control group** (computed) | **+0.14%** ($400,184M vs $399,642M) | +1.2% | Reuters prints +0.1% | flat |
+| Nonstore retailers | +0.3% | +2.0% | — | no Prime effect, as called |
+| Electronics & appliance | +0.6% | +2.1% | — | the only visible iPhone-18 trace |
+| Food services | +1.1% | +1.4% | — | — |
+
+Census's own text: *"Advance estimates of U.S. retail and food services sales for September 2026
+… were $745.0 billion, up 0.8 percent (±0.4 percent) from the previous month, and up 6.3 percent
+(±0.5 percent) from September 2025."* The release says August's change *"was revised from up 1.1
+percent (±0.4 percent) to up 1.3 percent (±0.1 percent)"*. Control group is this doc's own
+construction (headline − motor vehicle & parts − building materials & garden − gasoline − food
+services; Census publishes no such line); Reuters' independent +0.1% agrees to within rounding.
+
+**Level basis changed under us.** Census's 2026-09-28 benchmark revision restated the series, so
+August is now $739.3B where the 09-16 print said $773.9B; every percentage change here is on the new
+basis. The gasoline share of the headline is now **8.65%** (not the 7.84% FT-1 registered on July's
+old basis), so the same percentage move carries more headline weight than the registration assumed.
+Compare percent changes across the two vintages, never levels.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| `FT-retail-sales-2026-10-15-1` (gasoline pass-through) | ≥ +0.5% m/m | **+6.4%** | **PASS** — details in the fragment's Outcome cell |
+| `FT-45` (legacy, Census publishes through a lapse) | — | no lapse | **VOID** on its own terms (CR signed 2026-09-02, PL 119-103); cell filled in `legacy.md` |
+
+### Stance versus the tape
+
+- **Mechanical call: SUPPORTED.** The 09-26 and 10-06 rows sized September gasoline at +0.5–0.6pp
+  of headline lift; it printed **+0.55pp** of +0.77%, about 71% of the number. The street's +0.3% sat
+  below even the pump-only floor, so a beat followed directly.
+- **"Plus a real iPhone-18 demand leg": NOT SHOWN.** Electronics & appliances rose +0.6% after
+  August's +2.1%, nonstore +0.3%, and the control group was flat. The leg may live in
+  places the advance report cannot separate; this doc claimed it at Medium-High confidence as part of
+  the This-month call and the tape does not back it. Graded **not evidenced**, not refuted — one
+  advance print, ±0.4pp.
+- **The ex-gas read was soft.** Ex-gasoline +0.24% and ex-autos-and-gas +0.2% against August's
+  +1.1–1.3%: the consumer cooled outside the pump, which is the reading the 10-12 row inferred from
+  a +0.3% street number set against ~+0.6pp of gasoline.
+- **The corridor call held.** Nothing was sized and nothing needed to be: `symbols: []`, stand aside
+  on every horizon, and the print's morning was not the one that moved the corridor (CPI was).
+
+### Same-day context — rates
+
+Treasury par yields (primary, daily CSV fetched 2026-10-16), 10-14 → 10-15: **10Y 5.19% → 5.10%
+(−9bp)**, 5Y 5.00 → 4.91, 2Y 4.82 → 4.77, 30Y 5.52 → 5.43. Yields fell on a day that stacked a hot
++0.8% headline with PPI and a soft control group; the data cannot separate the retail effect from
+PPI or from the CPI absorption a day earlier, so no reaction-function claim is made from it. The
+leg-6 question (is the reaction one-sided?) gets one more row of evidence: a hot *headline* with a
+flat *control group* did not push the long end up. Equity and VIX reactions are **not sourced**: the
+Yahoo chart API returned an empty body, stooq served a JavaScript challenge, and the Cboe CSV
+redirected (recorded under `blocked` in the probe-ref below); search results for the 10-15 close were
+other years' stories and are not adopted. Fed hike odds for 10-28 were ~34% on 10-14 per
+prediction-market snippets (secondary, unverified), not re-read after the print.
+
+### Honest limits
+
+- One advance print; Census's own table puts its median revision at 0.1pp and the headline's 90%
+  interval at ±0.4pp, so the +0.8% is not distinguishable from +0.4–+1.2%.
+- The street figure (+0.3%) is a Reuters poll quoted in press, not a survey this lane can reproduce;
+  no ex-autos or control-group consensus was found.
+- No post-print equity, VIX or hike-odds reading from a primary. The reaction half of this close-out
+  is rates-only, and the probe-ref's `vix` below carries the 10-14 reading (15.27) forward because no
+  fresher one was reachable.
+- The sensitivity ranking for AAPL/AMZN (`symbols: []`) was not scored against the tape: nothing was
+  held and no price source was reachable.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":15.27,"daysBand":"high:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14"],"screenStreak":0,"blocked":[{"url":"https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX","status":"200 (empty, non-JSON body)","at":"2026-10-16"},{"url":"https://stooq.com/q/d/l/?s=xrt.us","status":"200 (JS challenge, no data)","at":"2026-10-16"},{"url":"https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv","status":"307","at":"2026-10-16"},{"url":"https://www.babypips.com/news/headline-us-ppi-retail-sales-september-2026-gasoline-prices-fed-outlook-2026-10-15","status":"403","at":"2026-10-16"}]} -->

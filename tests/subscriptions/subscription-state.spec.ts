@@ -194,4 +194,73 @@ describe("parseSubscriptionsState", () => {
       expect(isCalendarDay(20270129)).toBe(false);
     });
   });
+
+  describe("convictionId (#5482 slice 2)", () => {
+    it("parses a pointer at a conviction record beside the subscription's own conviction", () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, conviction, convictionId: "ai-dip-2026-10" }],
+      });
+      expect(state?.["acct-1"]?.[0]?.convictionId).toBe("ai-dip-2026-10");
+      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
+    });
+
+    it("drops a malformed pointer, never the subscription", () => {
+      for (const bad of ["", "AI Dip", "a".repeat(65), 7, { id: "ai-dip-2026-10" }]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: bad }] });
+        expect(state?.["acct-1"]).toHaveLength(1);
+        expect(state?.["acct-1"]?.[0]).not.toHaveProperty("convictionId");
+      }
+    });
+
+    it("a re-subscribe carries the pointer forward", () => {
+      const [prior] =
+        parseSubscriptionsState({ "acct-1": [{ ...valid, convictionId: "ai-dip-2026-10" }] })?.[
+          "acct-1"
+        ] ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ convictionId: "ai-dip-2026-10" });
+    });
+  });
+
+  describe("playTarget (#5483 slice 3)", () => {
+    const target = {
+      weight: 0.7,
+      lean: { min: 0.6, max: 0.8 },
+      band: { signal: 0.05, gate: 0.1 },
+    };
+    const parsed = (playTarget: unknown) =>
+      parseSubscriptionsState({ "acct-1": [{ ...valid, playTarget }] })?.["acct-1"];
+
+    it("parses a target beside the rest of the subscription", () => {
+      expect(parsed(target)?.[0]?.playTarget).toEqual(target);
+      expect(parsed({ weight: 0.7 })?.[0]?.playTarget).toEqual({ weight: 0.7 });
+    });
+
+    it("drops a malformed target, never the subscription", () => {
+      const bad: unknown[] = [
+        7,
+        "70%",
+        { weight: 70 },
+        { weight: 1 },
+        { weight: 0.7, lean: { min: 0.8, max: 0.6 } },
+        { weight: 0.7, lean: { min: 0.6 } },
+        { weight: 0.7, band: { signal: 0.1, gate: 0.05 } },
+        { weight: 0.7, band: { signal: 0.05 } },
+      ];
+      for (const playTarget of bad) {
+        expect(parsed(playTarget)).toHaveLength(1);
+        expect(parsed(playTarget)?.[0]).not.toHaveProperty("playTarget");
+      }
+    });
+
+    it("carries a sub-field a newer build added, as a conviction's does", () => {
+      const next = { ...target, band: { ...target.band, hold: 3 }, owner: "eric" };
+      expect(parsed(next)?.[0]?.playTarget).toEqual(next);
+    });
+
+    it("a re-subscribe carries the target forward", () => {
+      const [prior] = parsed(target) ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({ playTarget: target });
+    });
+  });
 });

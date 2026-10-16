@@ -17,8 +17,6 @@
 //   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
 //   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
 //                playbooks open (#4642 slice 10, #4652).
-//   · `initiators` — who started the bots' closed trades: a playbook, the forced pick or a bot's
-//                own rules, the account's split above every bot's (#4450 slice 4).
 //   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
 //                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
 //   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
@@ -26,6 +24,10 @@
 //   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the
 //                CRWV wheel states its reason and check day with "Set a new date", and the card says
 //                what is budgeted inside the allocation.
+//   · `window` — a pre-earnings play as one line (#5432): NVDA's buy, hold and sell counted back from
+//                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
+//   · `one-build` — #5494 step 1: the mission line, the list with a + per ready play and its bots
+//                panel, a ticker's evidence as a call, the folded "not yet" line, the wide layout.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -33,7 +35,8 @@ import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
-// Each card's closed-trade numbers (#3665): S1-NVDA with a record, HC-SAURON without one.
+import { withForecasts } from "../../src/server/pair-forecast.ts";
+// Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
 import { performance } from "./playbook-store-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -72,7 +75,7 @@ const deskFor = (account) => ({
 });
 
 // The subscriber count (#3970): enabled subscriptions across every account, a bare number.
-const COUNTS = { "S1-NVDA": 3, "HC-SAURON": 1 };
+const COUNTS = { "S1-NVDA": 3, SAURON: 1 };
 const withCounts = (view, counts = COUNTS) => ({
   ...view,
   cards: view.cards.map((card) => ({ ...card, subscribers: counts[card.id] ?? 0 })),
@@ -88,9 +91,9 @@ const subscription = (playbookId, over) => ({
   updatedAt: AT,
   ...over,
 });
-// HC-SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
+// SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
 const SAURON_SUBSCRIPTIONS = [
-  subscription("HC-SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
+  subscription("SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
   subscription("S1-NVDA", { mode: "conservative", capitalAllocated: 10_000, enabled: false }),
 ];
 
@@ -103,9 +106,9 @@ const views = {
 };
 
 // The bot's own Heartbeat, with the roll call the live code would read for this roster —
-// `playbookRollCall` over a pass that ran HC-SAURON, never hand-written sentences.
+// `playbookRollCall` over a pass that ran SAURON, never hand-written sentences.
 const NOW = new Date("2026-10-05T15:00:00Z");
-const verdicts = [{ playbookId: "HC-SAURON", mode: "standard", state: "flat" }];
+const verdicts = [{ playbookId: "SAURON", mode: "standard", state: "tactical" }];
 const heartbeat = {
   available: true,
   heartbeat: {
@@ -143,6 +146,7 @@ async function frame({
   scrollTo,
   path,
   act,
+  clockAt,
   extraStubs = {},
   ...shell
 }) {
@@ -161,6 +165,8 @@ async function frame({
     },
   });
   const to = path ?? `/app/research?section=playbooks&account=${encodeURIComponent(account.id)}`;
+  // A dated picture (the window's dates are counted from today) is shot on a fixed day.
+  if (clockAt) await page.clock.setFixedTime(new Date(clockAt));
   await page.goto(`${origin}${to}`);
   await page.getByText(expect).first().waitFor();
   if (act) await act(page);
@@ -220,23 +226,6 @@ const groups = {
       view: views.fresh,
       expect: "Subscribe",
       act: openSubscribe,
-    },
-  ],
-  // Who started the bots' closed trades (#4450 slice 4): the account's split, then every bot's.
-  initiators: [
-    {
-      tag: "phone-initiators",
-      view: views.fresh,
-      expect: "Who started the bots' closed trades",
-      viewport: PHONE,
-      scrollTo: "Who started Sauron's closed trades",
-    },
-    {
-      tag: "desktop-initiators",
-      view: views.fresh,
-      expect: "Who started the bots' closed trades",
-      scrollTo: "Who started Sauron's closed trades",
-      quality: 60,
     },
   ],
   tune: [
@@ -405,7 +394,7 @@ groups["subscribed-only"] = [
 
 // #4469 slice 3b: the Store by strategy. Sauron holds the wheel on CRWV (the owner's conviction) and
 // the run-up on NVDA, so those two strategy cards lead with his pairs; the catalog frame is the same
-// deck with no account. The wheel and run-up rows, then the tactical card's folded "? not studied".
+// deck with no account. The wheel and run-up rows, then Sauron's own rules' folded "? not studied".
 views.byStrategy = withCounts(
   playbookStoreView([
     subscription("CRWV-WHEEL", { mode: "aggressive", capitalAllocated: 75_000 }),
@@ -432,8 +421,8 @@ groups.strategies = [
   }),
   strategyFrame("phone-3-folded-line", {
     view: views.catalog,
-    expect: "Hardcore Sauron's tactics",
-    act: toStrategy("Hardcore Sauron's tactics"),
+    expect: "Sauron's own rules",
+    act: toStrategy("Sauron's own rules"),
   }),
   strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
   strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),
@@ -520,6 +509,122 @@ groups.conviction = [
     path: undefined,
     act: openConviction,
   }),
+];
+
+// #5432: the run-up's NVDA row drawn as one line, its dates counted on the real calendar from the
+// study world's Thursday — Nov 18 est., so buy Oct 21, sell Nov 11.
+const STUDY_DAY = "2026-10-08T19:00:00Z";
+const toNvdaLine = (page) =>
+  page
+    .locator(".pbr-window")
+    .first()
+    .evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 190);
+    });
+groups.window = [
+  {
+    tag: "phone-1-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+  },
+  {
+    tag: "phone-2-nvda-bars",
+    view: views.catalog,
+    expect: "holds NVDA",
+    viewport: PHONE,
+    path: STORE,
+    clockAt: STUDY_DAY,
+    scrollTo: "Average move in each stretch",
+  },
+  {
+    tag: "desktop-nvda-line",
+    view: views.catalog,
+    expect: "holds NVDA",
+    path: STORE,
+    clockAt: STUDY_DAY,
+    act: toNvdaLine,
+    quality: 55,
+  },
+];
+
+// #5494 step 1 — R&D → Playbooks in one build: the mission line, the list of the plays with a + on
+// each ready one (#5435, #5442), a plain line per strategy (#5445), a ticker's evidence as a call
+// (#5444) and the wide layout (#5448). The view carries each row's forecast exactly as the route
+// adds it (`withForecasts` over the real research shelf), on today's clock. Two bots are the
+// viewer's own, so the + panel lists both; the subscribe answer is a fixture (`{ ok: true }`).
+const TODAY = "2026-10-16T15:00:00Z";
+const BANKER = {
+  id: "banker",
+  name: "The Banker",
+  kind: "bot",
+  hostConfigured: true,
+  profile: null,
+};
+const twoBots = { ...settings, accounts: [SAURON, BANKER, JOE] };
+views.oneBuild = {
+  ...views.fresh,
+  strategies: withForecasts(views.fresh.strategies, TODAY),
+};
+const ONE_BUILD_STUBS = {
+  "/api/settings": twoBots,
+  "/api/playbook-store/subscribe": { ok: true },
+};
+const plusOn = (name) => async (page) => {
+  await page.getByRole("button", { name: `Subscribe your bots to ${name}` }).click();
+  await page.getByRole("checkbox", { name: /Sauron/ }).waitFor();
+  await page.locator(".pbs-bot:not([data-held])").first().waitFor();
+};
+const tickSauron = async (page) => {
+  await plusOn("the pre-print run-up")(page);
+  await page.locator(".pbs-bot", { hasText: "Sauron" }).click();
+};
+const subscribeBoth = async (page) => {
+  await plusOn("the pre-print run-up")(page);
+  await page.locator(".pbs-bot", { hasText: "Sauron" }).click();
+  await page.locator(".pbs-bot", { hasText: "The Banker" }).click();
+  await page.getByRole("button", { name: "Subscribe 2 bots" }).click();
+  await page.getByText("Subscribed both bots.").waitFor();
+  await page.locator(".pbs").evaluate(underHeader);
+};
+const toEvidence = (page) => page.locator(".pbe").first().evaluate(underHeader);
+const oneBuild = (tag, over = {}) => ({
+  tag,
+  view: views.oneBuild,
+  expect: "Create scenarios, develop strategies, track results.",
+  path: STORE,
+  clockAt: TODAY,
+  extraStubs: ONE_BUILD_STUBS,
+  ...over,
+});
+groups["one-build"] = [
+  oneBuild("phone-1-list-plus", { viewport: PHONE, act: tickSauron }),
+  oneBuild("phone-2-evidence", { viewport: PHONE, act: toEvidence }),
+  oneBuild("phone-3-subscribed", { viewport: PHONE, act: subscribeBoth }),
+  oneBuild("phone-4-not-yet", {
+    viewport: PHONE,
+    act: async (page) => {
+      await page.locator(".pbl-fold > summary").click();
+      await page.locator(".pbl-fold").evaluate(underHeader);
+    },
+  }),
+  // #5489 slice 2: the dip-to-bounce, dark on MU and NBIS — its row and its evidence.
+  oneBuild("phone-5-dip-bounce", {
+    viewport: PHONE,
+    act: async (page) => {
+      await page.getByRole("button", { name: /^The dip-to-bounce/ }).click();
+      await page.locator(".pbe", { hasText: "MU" }).first().evaluate(underHeader);
+    },
+  }),
+  oneBuild("desktop-1-wide", { quality: 60 }),
+  oneBuild("desktop-2-wheel", {
+    quality: 60,
+    act: (page) => page.getByRole("button", { name: /^The wheel/ }).click(),
+  }),
+  oneBuild("wide-1-three-columns", { viewport: { width: 1800, height: 1000 }, quality: 55 }),
 ];
 
 const only = process.env.FRAMES;

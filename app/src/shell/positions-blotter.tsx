@@ -19,6 +19,7 @@ import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
 import { GuidanceSlot } from "./position-guidance-slot";
+import { PositionPicture } from "./position-picture";
 import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
@@ -162,6 +163,10 @@ export function PositionsBlotter({
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
   const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
+  const bookRows = useMemo(
+    () => new Map((statement.data?.rows ?? []).map((r) => [r.symbol, r] as const)),
+    [statement.data],
+  );
   // Every row's fact badge and this viewer's Not now on it (#5070): the marks filter (`is:review`
   // …) and sort (`sort:look`) the list, and the pager they replace is gone.
   const marks = useRowMarks(deskId, positions, statement.data);
@@ -199,6 +204,14 @@ export function PositionsBlotter({
         canTrade={canTrade}
         {...(call ? { call } : {})}
         decisions={said.get(p.symbol) ?? []}
+        picture={
+          <PositionPicture
+            position={p}
+            positions={positions}
+            book={bookRows.get(p.symbol)}
+            bookRead={statement.isSuccess}
+          />
+        }
         playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
         onAside={() => marks.setAside(p.symbol)}
         onUndo={() => marks.undo(p.symbol)}
