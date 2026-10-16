@@ -572,6 +572,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
       # job end.
@@ -720,6 +726,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       - id: app-token
         uses: ./.github/actions/app-token
@@ -835,6 +847,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       - id: app-token
         uses: ./.github/actions/app-token

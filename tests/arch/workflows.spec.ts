@@ -717,3 +717,33 @@ describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
     expect(body).toContain("::notice::not arming");
   });
 });
+
+// #5221 and three more green PRs sat `blocked` for days behind a ghost Pipeline run sent by
+// `github-actions[bot]` (retro #5589, docs/LESSONS.md). The lane sessions' second push — the
+// screenshots commit — went out on the credential `actions/checkout` persists (the job's
+// GITHUB_TOKEN) instead of the App token; #3334 fixed that in moneypenny-repair.yml only. A build
+// job that hands claude-code-action an App token must not leave a second credential behind.
+describe("moneypenny-events — build lanes push as the App, never the persisted checkout token", () => {
+  const events = readFileSync(".github/workflows/moneypenny-events.yml", "utf8");
+  const jobBody = (name: string): string => {
+    const start = events.indexOf(`\n  ${name}:\n`);
+    if (start === -1) throw new Error(`${name} job not found in moneypenny-events.yml`);
+    const rest = events.slice(start + 1);
+    const next = rest.slice(1).search(/\n {2}[a-z][a-z-]*:\n/);
+    return next === -1 ? rest : rest.slice(0, next + 1);
+  };
+
+  for (const name of ["build-events", "build-feedback", "build-plan"]) {
+    it(`${name}: the checkout step sets persist-credentials: false`, () => {
+      const checkout = jobBody(name).match(
+        /- uses: actions\/checkout@[^\n]*\n\s+with:\n((?:\s{10,}[^\n]*\n)+)/,
+      );
+      expect(checkout).not.toBeNull();
+      expect(checkout?.[1]).toMatch(/^\s+persist-credentials: false\s*$/m);
+    });
+
+    it(`${name}: the session is handed the App token, the credential its pushes use`, () => {
+      expect(jobBody(name)).toContain("github_token: ${{ steps.app-token.outputs.token }}");
+    });
+  }
+});
