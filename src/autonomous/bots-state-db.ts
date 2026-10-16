@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { SentimentTracker } from "../news/sentiment-tracker.js";
 import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond-scout-ledger.js";
 import type { ProbeRetro } from "../playbooks/cond-scout-retro.js";
+import { type AuthoredShadowStore, reviveRun } from "./authored-shadow-runner.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
 import { parseOwned, type ScoutLot } from "./scout-lots.js";
@@ -50,6 +51,10 @@ export interface BotsStateDb {
   saveShadowRetro(retro: ProbeRetro): void;
   /** The newest retros first. */
   listShadowRetros(limit: number): ProbeRetro[];
+  /** The shadow tests of members' draft playbooks (#5457 slice 2), one ledger per play, as stored JSON. */
+  loadAuthoredShadow(): unknown[];
+  saveAuthoredShadow(playId: string, run: unknown): void;
+  deleteAuthoredShadow(playId: string): void;
   close(): void;
 }
 
@@ -112,6 +117,10 @@ export function openBotsStateDb(path: string): BotsStateDb {
       closed_at INTEGER NOT NULL,
       retro_json TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS authored_shadow (
+      play_id TEXT PRIMARY KEY,
+      run_json TEXT NOT NULL
+    );
   `);
   const upsertSubscriptions = db.prepare(
     "INSERT INTO subscriptions_cache (id, snapshot_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
@@ -138,6 +147,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
   );
   const upsertRetro = db.prepare(
     "INSERT INTO cond_scout_retros (probe_id, closed_at, retro_json) VALUES (?, ?, ?) ON CONFLICT(probe_id) DO UPDATE SET retro_json = excluded.retro_json",
+  );
+  const upsertAuthoredShadow = db.prepare(
+    "INSERT INTO authored_shadow (play_id, run_json) VALUES (?, ?) ON CONFLICT(play_id) DO UPDATE SET run_json = excluded.run_json",
   );
   const closeProbe = db.prepare(
     "UPDATE cond_scout_probes SET closed_at = ?, close_json = ? WHERE id = ?",
@@ -187,6 +199,23 @@ export function openBotsStateDb(path: string): BotsStateDb {
           .prepare("SELECT retro_json FROM cond_scout_retros ORDER BY closed_at DESC LIMIT ?")
           .all(limit) as { retro_json: string }[]
       ).map((row) => JSON.parse(row.retro_json));
+    },
+    loadAuthoredShadow(): unknown[] {
+      return (
+        db.prepare("SELECT run_json FROM authored_shadow").all() as { run_json: string }[]
+      ).flatMap((row) => {
+        try {
+          return [JSON.parse(row.run_json)];
+        } catch {
+          return []; // a torn row is a test that starts over, never a failed boot
+        }
+      });
+    },
+    saveAuthoredShadow(playId, run) {
+      upsertAuthoredShadow.run(playId, JSON.stringify(run));
+    },
+    deleteAuthoredShadow(playId) {
+      db.prepare("DELETE FROM authored_shadow WHERE play_id = ?").run(playId);
     },
     loadMomentum(): Record<string, number[]> {
       const out: Record<string, number[]> = {};
@@ -288,6 +317,16 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     snapshotsFor: (probeId) => db.listShadowSnapshots(probeId),
     saveRetro: (retro) => db.saveShadowRetro(retro),
     recentRetros: (limit) => db.listShadowRetros(limit),
+  };
+}
+
+/** The shadow runner's store (#5457 slice 2), bound to a DB — undefined when durability is dark. */
+export function authoredShadowStore(db: BotsStateDb | undefined): AuthoredShadowStore | undefined {
+  if (!db) return undefined;
+  return {
+    loadAll: () => db.loadAuthoredShadow().flatMap((raw) => reviveRun(raw) ?? []),
+    save: (run) => db.saveAuthoredShadow(run.id, run),
+    remove: (id) => db.deleteAuthoredShadow(id),
   };
 }
 

@@ -9,6 +9,7 @@
  */
 
 import { join } from "node:path";
+import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
@@ -31,6 +32,7 @@ import {
 import type { OrderIntent } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
+import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
@@ -99,6 +101,9 @@ export interface InsightsBridgeHandle {
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
   /** COND-SCOUT's latest snapshot (#3651 slice 7a) — memory only, refilled by the next poll. */
   readonly readCondScout: () => CondScoutSnapshot | undefined;
+  /** The bots' latest report on the members' playbooks in a shadow test (#5457 slice 2) — memory
+   *  only, refilled by the next poll, so a redeploy of this app reads "no report yet" for ~30s. */
+  readonly readAuthoredShadow: () => ShadowReport | undefined;
   /** The bots app's env house roster as its most recent poll reported it (#4650) — re-read from
    *  every poll like `botsGate`, so a bots build that stops reporting stops being quoted. */
   readonly readHouseRoster: () => HouseRosterReport | undefined;
@@ -155,6 +160,9 @@ export function startInsightsBridge(
   let botsGate: readonly PersonaGateVerdict[] | undefined;
   let houseRoster: HouseRosterReport | undefined;
   let condScout: CondScoutSnapshot | undefined;
+  let authoredShadow: ShadowReport | undefined;
+  // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
+  const authoredPlays = createAuthoredPlayStore(env, (message) => console.error(message));
   createInsightsListener({
     record: (entry) => insights.record(entry),
     condScout: {
@@ -162,6 +170,12 @@ export function startInsightsBridge(
         condScout = snapshot;
       },
     },
+    authoredShadow: {
+      accept: (report) => {
+        authoredShadow = report;
+      },
+    },
+    authoredShadowOrders: () => buildShadowOrders(authoredPlays.load(), Date.now()),
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
@@ -210,6 +224,7 @@ export function startInsightsBridge(
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
     readCondScout: () => condScout,
+    readAuthoredShadow: () => authoredShadow,
     readHouseRoster: () => houseRoster,
     ...(decisionDb
       ? {

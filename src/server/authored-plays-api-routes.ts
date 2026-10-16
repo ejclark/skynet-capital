@@ -1,5 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AuthoredPlayRecord } from "../playbooks/authored-play-draft.js";
+import type { ShadowReport, ShadowReportEntry } from "../autonomous/authored-shadow-wire.js";
+import { REFUSAL_LABEL } from "../observatory/decision-json-view.js";
+import {
+  type AuthoredPlayRecord,
+  EVENT_FEED_REACHES_BOTS,
+} from "../playbooks/authored-play-draft.js";
 import {
   type AuthoredPlayForm,
   type FormRefusal,
@@ -27,7 +32,14 @@ import {
  *
  *   GET  /api/authored-plays         → { plays: AuthoredPlayView[] } for the signed-in member.
  *   POST /api/authored-plays/save    → { ok: true, play } | { ok: false, refusals } | { ok: false, error }
+ *   POST /api/authored-plays/shadow  → { ok: true, play } | { ok: false, error }   (body: { id, on })
  *   POST /api/authored-plays/delete  → { ok }
+ *
+ * SHADOW (#5457 slice 2). `/shadow` puts one of the member's own drafts into its shadow test or takes it
+ * out; the bots then decide the play each pass against the author's own bot and write only a ledger,
+ * which comes back on each row as `shadow`. No route here subscribes a play, schedules it or hands it
+ * to a roster — a play in its shadow test still never trades. Editing a play ends its test (a new
+ * spec is a new test; the member starts another), and Discard ends it too.
  *
  * A save is the form run through `specFromForm` — the same function the browser runs, so the server
  * is the authority and the screen is only an early read of it. A value outside a strategy's limits
@@ -43,6 +55,17 @@ import {
 const BODY_CAP_BYTES = 8_192;
 const MAX_ID = 100;
 
+/** What a row shows of a play in its shadow test. `report` is absent until the bots have reported on
+ *  THIS test (a report for an earlier start of the same play is not it). */
+interface ShadowView {
+  readonly since: string;
+  readonly report?: ShadowReportEntry;
+  /** The newest guard refusal as a sentence, when the report carries one. */
+  readonly refusalSentence?: string;
+  /** An honest limit on what this test can show, when the play's trigger has one. */
+  readonly caveat?: string;
+}
+
 export interface AuthoredPlayView {
   readonly id: string;
   readonly name: string;
@@ -56,9 +79,32 @@ export interface AuthoredPlayView {
   /** The form this was saved from, so Edit opens on exactly it. */
   readonly form: AuthoredPlayForm;
   readonly updatedAt: string;
+  /** Present while the play is in its shadow test. */
+  readonly shadow?: ShadowView;
 }
 
-export function viewOf(record: AuthoredPlayRecord): AuthoredPlayView {
+const EVENT_CAVEAT =
+  "This play waits for news about the stock, and no news feed reaches the bots yet — so it can only record what it would do once one does.";
+
+function shadowViewOf(record: AuthoredPlayRecord, report: ShadowReport | undefined): ShadowView {
+  const since = record.shadowSince ?? record.updatedAt;
+  const entry = report?.plays.find((p) => p.id === record.id && p.since === since);
+  const refusal = entry?.lastRefusal;
+  return {
+    since,
+    ...(entry ? { report: entry } : {}),
+    ...(refusal
+      ? {
+          refusalSentence: `${refusal.day}: a ${refusal.side} of ${refusal.symbol} was refused — ${REFUSAL_LABEL[refusal.reason]}.`,
+        }
+      : {}),
+    ...(record.spec.trigger.kind === "event-window" && !EVENT_FEED_REACHES_BOTS
+      ? { caveat: EVENT_CAVEAT }
+      : {}),
+  };
+}
+
+export function viewOf(record: AuthoredPlayRecord, report?: ShadowReport): AuthoredPlayView {
   return {
     id: record.id,
     name: record.name,
@@ -69,6 +115,7 @@ export function viewOf(record: AuthoredPlayRecord): AuthoredPlayView {
     thesis: record.spec.thesis,
     form: formFromSpec(record.name, record.spec),
     updatedAt: record.updatedAt,
+    ...(record.status === "shadow" ? { shadow: shadowViewOf(record, report) } : {}),
   };
 }
 
@@ -141,6 +188,40 @@ function save(
   sendJson(res, 200, { ok: true, play: viewOf(saved.record) });
 }
 
+function setShadow(
+  res: ServerResponse,
+  raw: string,
+  config: DashboardServerConfig,
+  session: Session,
+  memberKey: string,
+): void {
+  const body = parseJsonRecord(raw);
+  const id = boundedString(body?.id, MAX_ID);
+  if (!id || typeof body?.on !== "boolean") {
+    sendJson(res, 400, { error: "malformed shadow body" });
+    return;
+  }
+  const store = config.authoredPlays;
+  if (!store) {
+    sendJson(res, 200, { ok: false, error: "Playbook drafts aren't wired in this deployment." });
+    return;
+  }
+  const mine = store.list(memberKey).find((r) => r.id === id);
+  // Starting a test re-asks who may run the play; stopping one needs no such check.
+  const notYours =
+    body.on && mine ? runsOnRefusal(mine.spec.authorAccountId, config, session) : undefined;
+  if (notYours) {
+    sendJson(res, 200, { ok: false, error: notYours.reason });
+    return;
+  }
+  const done = store.setShadow(memberKey, id, body.on);
+  if (!done.ok) {
+    sendJson(res, 200, { ok: false, error: done.reason });
+    return;
+  }
+  sendJson(res, 200, { ok: true, play: viewOf(done.record, config.readAuthoredShadow?.()) });
+}
+
 /** Handle `/api/authored-plays*`. Returns true when answered, false when the route doesn't apply. */
 export async function serveAuthoredPlaysApi(
   req: IncomingMessage,
@@ -153,6 +234,7 @@ export async function serveAuthoredPlaysApi(
   if (
     path !== "/api/authored-plays" &&
     path !== "/api/authored-plays/save" &&
+    path !== "/api/authored-plays/shadow" &&
     path !== "/api/authored-plays/delete"
   ) {
     return false;
@@ -161,13 +243,18 @@ export async function serveAuthoredPlaysApi(
   if (path === "/api/authored-plays") {
     if (!requireGet(req, res)) return true;
     const records = config.authoredPlays?.list(memberKey) ?? [];
-    sendJson(res, 200, { plays: records.map(viewOf) });
+    const report = config.readAuthoredShadow?.();
+    sendJson(res, 200, { plays: records.map((record) => viewOf(record, report)) });
     return true;
   }
   const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
   if (raw === undefined) return true;
   if (path === "/api/authored-plays/save") {
     save(res, raw, config, session, memberKey);
+    return true;
+  }
+  if (path === "/api/authored-plays/shadow") {
+    setShadow(res, raw, config, session, memberKey);
     return true;
   }
   const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);

@@ -28,11 +28,16 @@
 //                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
 //   · `one-build` — #5494 step 1: the mission line, the list with a + per ready play and its bots
 //                panel, a ticker's evidence as a call, the folded "not yet" line, the wide layout.
+//   · `shadow` — #5457 slice 2: a draft in its shadow test — the offer on a draft, a play mid-window
+//                with its would-be buy, a finished round trip, an event play with no news feed — the
+//                report written by the real runner over fixture prices.
 //   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
 //                saved, the form open on a phone and wide, a setting past its limit refused in words.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
+
+import { AuthoredShadowRunner } from "../../src/autonomous/authored-shadow-runner.ts";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
@@ -729,6 +734,88 @@ groups.author = [
   ),
   authorFrame("desktop-1-form", { quality: 60, act: openForm }),
   authorFrame("desktop-2-drafts", { quality: 60 }),
+];
+
+// #5457 slice 2 — a draft in its shadow test. The report on each row is what the REAL runner writes:
+// `AuthoredShadowRunner` over a few passes at fixture prices (NVDA reports Nov 12 on this calendar),
+// then the server's own `viewOf` — so a frame cannot show a count, a trade or a window the bots
+// would not report. Only the quotes and the account's equity are fixtures.
+const SHADOW_SINCE = "2026-10-20T13:00:00.000Z";
+const SHADOW_CALENDAR = [
+  { symbol: "NVDA", date: "2026-11-12", status: "confirmed", source: "IR: shoot fixture" },
+];
+const shadowReportFor = (spec, id, days, lastFor) => {
+  let clock = 0;
+  const runner = new AuthoredShadowRunner({
+    risk: { maxPositionPct: 0.03 },
+    blockedReason: () => null,
+    portfolioOf: () => ({ cash: 250_000, positions: [] }),
+    calendar: SHADOW_CALENDAR,
+    now: () => clock,
+  });
+  runner.setOrders([{ id, since: SHADOW_SINCE, spec }]);
+  for (const [day, last] of days) {
+    clock = Date.parse(`${day}T14:35:00Z`);
+    runner.runPass({
+      asOf: `${day}T14:30:00Z`,
+      quotes: {
+        [spec.symbols[0]]: {
+          symbol: spec.symbols[0],
+          bid: last - 0.05,
+          ask: last + 0.05,
+          last,
+          asOf: `${day}T14:30:00Z`,
+        },
+      },
+      momentum: {},
+      newsSentiment: {},
+    });
+  }
+  return runner.report(lastFor).plays;
+};
+const shadowRecord = (form, at) => {
+  const made = specFromForm(form, "Eric");
+  if (!made.ok) throw new Error(`fixture form refused: ${JSON.stringify(made.refusals)}`);
+  return {
+    id: `U-${made.spec.authorAccountId}-${made.spec.slug}`,
+    name: form.name,
+    status: "shadow",
+    shadowSince: SHADOW_SINCE,
+    spec: made.spec,
+    createdAt: at,
+    updatedAt: SHADOW_SINCE,
+  };
+};
+const nvdaRecord = shadowRecord(DRAFT_FORM, "2026-10-16T15:00:00.000Z");
+const newsRecord = shadowRecord(
+  {
+    ...emptyForm("banker", "event-window"),
+    name: "News pop",
+    symbol: "DJT",
+    thesis: "A named headline moves it for about an hour, then it gives it back.",
+  },
+  "2026-10-16T15:00:00.000Z",
+);
+const shadowFrame = (tag, days, over = {}) => {
+  const plays = [
+    ...shadowReportFor(nvdaRecord.spec, nvdaRecord.id, days, 1),
+    ...shadowReportFor(newsRecord.spec, newsRecord.id, [["2026-10-21", 40]], 1),
+  ];
+  const report = { kind: "authored-shadow.v1", at: 1, plays };
+  return authorFrame(tag, { ...over }, [viewOf(nvdaRecord, report), viewOf(newsRecord, report)]);
+};
+// Window opens Oct 23 (20 days before Nov 12); the first rows are mid-window, the last a round trip.
+const MID_WINDOW = [
+  ["2026-10-22", 180],
+  ["2026-10-23", 181],
+  ["2026-10-26", 184],
+];
+const ROUND_TRIP = [...MID_WINDOW, ["2026-11-09", 192]];
+groups.shadow = [
+  authorFrame("phone-6-shadow-offer", { viewport: PHONE }),
+  shadowFrame("phone-7-shadow-running", MID_WINDOW, { viewport: PHONE }),
+  shadowFrame("phone-8-shadow-round-trip", ROUND_TRIP, { viewport: PHONE }),
+  shadowFrame("desktop-3-shadow-running", MID_WINDOW, { quality: 60 }),
 ];
 
 const only = process.env.FRAMES;

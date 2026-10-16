@@ -51,6 +51,13 @@ describe("streamedSymbols (#4777)", () => {
     }
   });
 
+  it("prices a ticker a draft playbook is in its shadow test on, though no roster trades it (#5457)", () => {
+    expect(streamedSymbols(BOTS_UNIVERSE, [roster("a")], [], ["AMD", "NVDA"])).toEqual([
+      ...BOTS_UNIVERSE,
+      "AMD",
+    ]);
+  });
+
   it("never streams a ticker nobody enabled — not the registry's whole list", () => {
     expect(streamedSymbols(BOTS_UNIVERSE, [roster("a", G1_GOOG)], [])).not.toContain("DJT");
   });
@@ -61,6 +68,26 @@ describe("streamedSymbols (#4777)", () => {
 });
 
 describe("followBotsStream (#4777)", () => {
+  it("re-reads the shadow tests' tickers on a refresh, resubscribing only when they change (#5457)", () => {
+    let wanted: string[] = [];
+    const subscribed: (readonly string[])[] = [];
+    const stream = followBotsStream({
+      stream: { resubscribe: (symbols) => subscribed.push(symbols) },
+      tracker: new MomentumTracker(),
+      universe: BOTS_UNIVERSE,
+      rosters: () => [],
+      wanted: () => wanted,
+    });
+    stream.refresh();
+    stream.refresh();
+    wanted = ["AMD"];
+    stream.refresh();
+    stream.refresh();
+    wanted = [];
+    stream.refresh();
+    expect(subscribed.map((symbols) => symbols.includes("AMD"))).toEqual([false, true, false]);
+  });
+
   it("a G1-GOOG subscription added after boot gets GOOG quotes from the next swap, without a restart", () => {
     const h = harness([roster("sauron")]);
     h.stream.refresh(); // boot

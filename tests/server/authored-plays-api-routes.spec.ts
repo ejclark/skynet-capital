@@ -3,7 +3,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { runnableSpecs } from "../../src/playbooks/authored-play-draft.js";
+import type { ShadowReport } from "../../src/autonomous/authored-shadow-wire.js";
+import { runnableSpecs, shadowOrders } from "../../src/playbooks/authored-play-draft.js";
 import { emptyForm } from "../../src/playbooks/authored-play-form.js";
 import { AuthoredPlayStore } from "../../src/server/authored-play-store.js";
 import { serveAuthoredPlaysApi } from "../../src/server/authored-plays-api-routes.js";
@@ -199,6 +200,114 @@ describe("serveAuthoredPlaysApi", () => {
   it("what it saves is a draft: nothing runnable comes out of the store", async () => {
     await save(FORM);
     expect(runnableSpecs(store.list(ME))).toEqual([]);
+  });
+
+  describe("the shadow test (#5457 slice 2)", () => {
+    const ID = "U-sauron-my-nvda-run-up";
+    const shadow = (id: string, on: unknown, cfg = config(), who: unknown = session) =>
+      call("/api/authored-plays/shadow", post({ id, on }), cfg, who);
+    const reportFor = (since: string): ShadowReport => ({
+      kind: "authored-shadow.v1",
+      at: 1,
+      plays: [
+        {
+          id: ID,
+          since,
+          state: "watching",
+          window: "long",
+          sessions: 3,
+          tradeCount: 1,
+          roundTrips: 0,
+          realized: 0,
+          refused: 1,
+          lastRefusal: { day: "2026-10-20", side: "buy", symbol: "NVDA", reason: "position-cap" },
+          recent: [],
+        },
+      ],
+    });
+
+    it("puts the member's own draft in its test; the record is a shadow play, not a trading one", async () => {
+      await save(FORM);
+      const answer = await shadow(ID, true);
+      expect(answer.body.ok).toBe(true);
+      expect(answer.body.play).toMatchObject({ id: ID, status: "shadow" });
+      expect(answer.body.play.shadow.since).toEqual(expect.any(String));
+      // The bots are handed it to shadow, and no roster is handed anything.
+      expect(shadowOrders(store.load()).map((o) => o.id)).toEqual([ID]);
+      expect(runnableSpecs(store.list(ME))).toEqual([]);
+    });
+
+    it("takes it out again", async () => {
+      await save(FORM);
+      await shadow(ID, true);
+      const answer = await shadow(ID, false);
+      expect(answer.body.play).toMatchObject({ status: "draft" });
+      expect(answer.body.play).not.toHaveProperty("shadow");
+      expect(shadowOrders(store.load())).toEqual([]);
+    });
+
+    it("cannot test another member's draft", async () => {
+      await save(FORM);
+      const theirs = await shadow(ID, true, config(), other);
+      expect(theirs.body.ok).toBe(false);
+      expect(store.list(ME)[0]?.status).toBe("draft");
+    });
+
+    it("re-asks who may run the play when a test starts: a bot no longer owned is refused", async () => {
+      await save(FORM);
+      const answer = await shadow(ID, true, config({ resolveOwnerIds: () => ["human-ada"] }));
+      expect(answer.body).toEqual({
+        ok: false,
+        error: "A playbook can only run on one of your own bots.",
+      });
+      expect(store.list(ME)[0]?.status).toBe("draft");
+    });
+
+    it("a draft that is gone says so", async () => {
+      expect((await shadow("U-sauron-missing", true)).body).toEqual({
+        ok: false,
+        error: "That draft is gone, so it can't be tested.",
+      });
+    });
+
+    it("a malformed body is a 400", async () => {
+      expect((await call("/api/authored-plays/shadow", post({ id: ID }))).status).toBe(400);
+      expect((await call("/api/authored-plays/shadow", post({ id: ID, on: "yes" }))).status).toBe(
+        400,
+      );
+      expect((await call("/api/authored-plays/shadow", post({ on: true }))).status).toBe(400);
+    });
+
+    it("shows the bots' report on the row, a refusal in words, only for THIS test", async () => {
+      await save(FORM);
+      const started = await shadow(ID, true);
+      const since = started.body.play.shadow.since as string;
+      const cfg = config({ readAuthoredShadow: () => reportFor(since) });
+      const row = (await call("/api/authored-plays", get(), cfg)).body.plays[0];
+      expect(row.shadow.report).toMatchObject({ sessions: 3, window: "long", refused: 1 });
+      expect(row.shadow.refusalSentence).toBe(
+        "2026-10-20: a buy of NVDA was refused — the per-position cap left no room.",
+      );
+      // A report for an earlier start of the same play is not this test's.
+      const stale = config({ readAuthoredShadow: () => reportFor("2026-01-01T00:00:00.000Z") });
+      const waiting = (await call("/api/authored-plays", get(), stale)).body.plays[0];
+      expect(waiting.shadow).toEqual({ since });
+    });
+
+    it("an event play's row says no news feed reaches the bots yet", async () => {
+      const made = await save({
+        ...FORM,
+        strategy: "event-window",
+        settings: { holdMinutes: 60 },
+      });
+      const started = await shadow(made.body.play.id, true);
+      expect(started.body.play.shadow.caveat).toContain("no news feed reaches the bots yet");
+    });
+
+    it("a draft has no shadow block", async () => {
+      await save(FORM);
+      expect((await call("/api/authored-plays", get())).body.plays[0]).not.toHaveProperty("shadow");
+    });
   });
 
   it("discards one of the member's own drafts, and cannot reach another member's", async () => {

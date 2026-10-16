@@ -7,6 +7,7 @@
  * Route contract (`src/server/authored-plays-api-routes.ts`):
  *   GET  /api/authored-plays         → { plays: AuthoredPlayView[] }
  *   POST /api/authored-plays/save    → { ok: true, play } | { ok: false, refusals } | { ok: false, error }
+ *   POST /api/authored-plays/shadow  → { ok: true, play } | { ok: false, error }   (#5457 slice 2)
  *   POST /api/authored-plays/delete  → { ok }
  * No account or member param: identity comes from the session alone.
  */
@@ -34,6 +35,14 @@ export const saveDraftRequest = (
   replaceId?: string,
 ): Promise<SaveDraftResult> =>
   postJson("/api/authored-plays/save", { form, ...(replaceId ? { replaceId } : {}) });
+
+export type ShadowToggleResult =
+  | { readonly ok: true; readonly play: AuthoredPlayView }
+  | { readonly ok: false; readonly error: string };
+
+/** Put a draft into its shadow test (`on`), or take it out. The test never places an order. */
+export const setShadowRequest = (id: string, on: boolean): Promise<ShadowToggleResult> =>
+  postJson("/api/authored-plays/shadow", { id, on });
 
 export const discardDraftRequest = (id: string): Promise<{ readonly ok: boolean }> =>
   postJson("/api/authored-plays/delete", { id });

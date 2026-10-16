@@ -1,4 +1,9 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  parseShadowReport,
+  type ShadowOrders,
+  type ShadowReport,
+} from "../autonomous/authored-shadow-wire.js";
 import { CONTROLS_BRIDGE_PATH, type ControlsState } from "../autonomous/bot-controls.js";
 import {
   BOT_CREDENTIALS_ID_PARAM,
@@ -21,6 +26,7 @@ import { handleBridgePost, readBoundedBody, respond } from "./bridge-http.js";
 /** The bots→app decision-replication bridge route (`decision-wire.ts`). */
 const DECISIONS_PATH = "/decisions";
 const COND_SCOUT_PATH = "/cond-scout";
+const AUTHORED_SHADOW_PATH = "/authored-shadow";
 
 /**
  * `/decisions` is a DIFFERENT payload class from `/insights` and needs its own cap — a
@@ -38,6 +44,8 @@ const COND_SCOUT_PATH = "/cond-scout";
 const MAX_DECISIONS_BODY_BYTES = 4 * 1024 * 1024;
 /** 50 retros + 20 open probes serialize to well under this; the cap is the bound, not a target. */
 const MAX_COND_SCOUT_BODY_BYTES = 512 * 1024;
+/** 64 plays, each with five would-be trades, serialize to well under this; the cap is the bound. */
+const MAX_AUTHORED_SHADOW_BODY_BYTES = 256 * 1024;
 
 export interface InsightsListenerConfig {
   readonly record: (entry: InsightRecord) => Promise<void>;
@@ -68,6 +76,15 @@ export interface InsightsListenerConfig {
    */
   /** `POST /cond-scout` — COND-SCOUT's ledger snapshot (#3651). Omit to 404 the route. */
   readonly condScout?: { readonly accept: (snapshot: CondScoutSnapshot) => void };
+  /**
+   * The members' draft playbooks that are in a shadow test (`authored-shadow-wire.ts`, #5457
+   * slice 2), folded into every `GET /controls` response as an additive `authoredShadow` field —
+   * the only channel by which a draft reaches the bots, and it leads to the shadow runner, never a
+   * roster. Omit to leave the field off, the same posture as `subscriptions`.
+   */
+  readonly authoredShadowOrders?: () => ShadowOrders;
+  /** `POST /authored-shadow` — the bots' report on those tests. Omit to 404 the route. */
+  readonly authoredShadow?: { readonly accept: (report: ShadowReport) => void };
   readonly decisions?: {
     readonly recordBatch: (batch: DecisionBatch) => void;
   };
@@ -164,6 +181,11 @@ async function handleInsightPost(
     return;
   }
 
+  if (path === AUTHORED_SHADOW_PATH) {
+    await handleAuthoredShadowPost(req, res, config);
+    return;
+  }
+
   if (path !== "/insights") {
     respond(res, 404, { error: "not found" });
     return;
@@ -248,10 +270,12 @@ function handleControlsGet(
     const state = config.controls() as unknown as Record<string, unknown>;
     const decisionsCursor = config.decisionsCursor?.();
     const subscriptions = config.subscriptions?.();
+    const authoredShadow = config.authoredShadowOrders?.();
     respond(res, 200, {
       ...state,
       ...(decisionsCursor ? { decisionsCursor } : {}),
       ...(subscriptions ? { subscriptions } : {}),
+      ...(authoredShadow ? { authoredShadow } : {}),
     });
   } catch (error) {
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);
@@ -284,6 +308,34 @@ function handleDecisionsPost(
   });
 }
 
+/** A whole-snapshot POST route (`/cond-scout`, `/authored-shadow`): the body is parsed fail-closed,
+ *  handed to the sink, and counted — or the route 404s when nothing is wired to receive it. */
+function snapshotPost<T>(
+  req: IncomingMessage,
+  res: ServerResponse,
+  route: {
+    readonly name: string;
+    readonly maxBytes: number;
+    readonly parse: (value: unknown) => T | undefined;
+    readonly invalid: string;
+    readonly sink: ((snapshot: T) => void) | undefined;
+    readonly count: (snapshot: T) => number;
+  },
+): Promise<void> {
+  const { sink, count, ...rest } = route;
+  return handleBridgePost(req, res, {
+    ...rest,
+    ...(sink
+      ? {
+          accept: (snapshot: T) => {
+            sink(snapshot);
+            return { count: count(snapshot) };
+          },
+        }
+      : {}),
+  });
+}
+
 /** `POST /cond-scout` — COND-SCOUT's ledger snapshot (`cond-scout-wire.ts`, #3651 slice 7a). Same
  *  trust boundary and handling as `/decisions`; the snapshot replaces the last one whole. */
 function handleCondScoutPost(
@@ -291,20 +343,30 @@ function handleCondScoutPost(
   res: ServerResponse,
   config: InsightsListenerConfig,
 ): Promise<void> {
-  const condScout = config.condScout;
-  return handleBridgePost(req, res, {
+  return snapshotPost(req, res, {
     name: "cond-scout",
     maxBytes: MAX_COND_SCOUT_BODY_BYTES,
     parse: parseCondScoutSnapshot,
     invalid: "invalid cond-scout snapshot",
-    ...(condScout
-      ? {
-          accept: (snapshot: CondScoutSnapshot) => {
-            condScout.accept(snapshot);
-            return { count: snapshot.open.length + snapshot.retros.length };
-          },
-        }
-      : {}),
+    sink: config.condScout?.accept,
+    count: (snapshot: CondScoutSnapshot) => snapshot.open.length + snapshot.retros.length,
+  });
+}
+
+/** `POST /authored-shadow` — the bots' report on the shadow tests (`authored-shadow-wire.ts`, #5457
+ *  slice 2). Same trust boundary and handling as `/cond-scout`; the report replaces the last whole. */
+function handleAuthoredShadowPost(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: InsightsListenerConfig,
+): Promise<void> {
+  return snapshotPost(req, res, {
+    name: "authored-shadow",
+    maxBytes: MAX_AUTHORED_SHADOW_BODY_BYTES,
+    parse: parseShadowReport,
+    invalid: "invalid authored-shadow report",
+    sink: config.authoredShadow?.accept,
+    count: (report: ShadowReport) => report.plays.length,
   });
 }
 

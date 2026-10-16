@@ -14,9 +14,10 @@ import { siblingPath } from "../storage/sibling-path.js";
  * thesis and some numbers — no credentials, no personal data), atomic tmp+rename writes, total reads.
  *
  * Keyed by `opaqueMemberId(email)`: the AUTHOR is a member; the account that runs the play is a field
- * of the spec (`authorAccountId`, one of the member's own bots). Nothing here reaches a bot — the only
- * door from a record to a roster is `runnableSpecs` (`authored-play-draft.ts`), which lets nothing
- * through while every record is a draft.
+ * of the spec (`authorAccountId`, one of the member's own bots). The only door from a record to a
+ * roster is `runnableSpecs` (`authored-play-draft.ts`), which lets nothing through while every record
+ * is a draft or in a shadow test; a shadow record reaches the bots through `shadowOrders` instead,
+ * to the shadow runner and nowhere else.
  */
 export type SaveOutcome =
   | { readonly ok: true; readonly record: AuthoredPlayRecord }
@@ -80,6 +81,27 @@ export class AuthoredPlayStore {
     };
     const next = prior ? mine.map((r) => (r === prior ? record : r)) : [...mine, record];
     this.file.write({ ...state, [memberKey]: next });
+    return { ok: true, record };
+  }
+
+  /**
+   * Put one of this member's plays into its shadow test, or take it out again (#5457 slice 2). Turning
+   * it on stamps `shadowSince`, and a new stamp is a new test: the bots start the ledger over.
+   * Already in the state asked for is a no-op that keeps the stamp. Nothing here adds the play to a
+   * roster — a `shadow` record is not in `TRADING_STATUSES`.
+   */
+  setShadow(memberKey: string, id: string, on: boolean, at = new Date()): SaveOutcome {
+    const state = this.load();
+    const mine = state[memberKey] ?? [];
+    const prior = mine.find((r) => r.id === id);
+    if (!prior) return { ok: false, reason: "That draft is gone, so it can't be tested." };
+    if ((prior.status === "shadow") === on) return { ok: true, record: prior };
+    const iso = at.toISOString();
+    const { shadowSince: _ended, ...kept } = prior;
+    const record: AuthoredPlayRecord = on
+      ? { ...kept, status: "shadow", shadowSince: iso, updatedAt: iso }
+      : { ...kept, status: "draft", updatedAt: iso };
+    this.file.write({ ...state, [memberKey]: mine.map((r) => (r === prior ? record : r)) });
     return { ok: true, record };
   }
 
