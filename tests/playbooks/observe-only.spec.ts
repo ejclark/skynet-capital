@@ -2,7 +2,7 @@ import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
 import { PLAYBOOK_MODES } from "../../src/domain/types.js";
 import { readPlaybookWindow } from "../../src/observatory/playbook-window.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { findPair, pairFor, statusLabel } from "../../src/playbooks/pair-table.js";
+import { findPair, pairFor } from "../../src/playbooks/pair-table.js";
 import {
   type EnabledPlaybook,
   exitSafetyIntents,
@@ -138,8 +138,9 @@ describe("the dip-to-bounce pairs, MU and NBIS, are dark", () => {
     const mu = findPair("MU-DIP-BOUNCE");
     const nbis = findPair("NBIS-DIP-BOUNCE");
     expect(pairFor("dip-bounce", "MU")?.id).toBe("MU-DIP-BOUNCE");
-    expect(mu && statusLabel(mu.evidence)).toBe("✓ researched");
-    expect(nbis && statusLabel(nbis.evidence)).toBe("✓ researched, weakened");
+    expect(mu?.evidence).toMatchObject({ status: "researched" });
+    expect(mu?.evidence.qualifier).toBeUndefined();
+    expect(nbis?.evidence).toMatchObject({ status: "researched", qualifier: "weakened" });
     expect([mu?.evidence.confidence, nbis?.evidence.confidence]).toEqual(["low", "low"]);
     // The study's falsifier date — a re-run on fresh bars — is when the verdicts go stale.
     expect([mu?.evidence.shelfOn, nbis?.evidence.shelfOn]).toEqual(["2027-01-15", "2027-01-15"]);
