@@ -372,7 +372,7 @@ describe("the deck, for an owned account", () => {
       delegation: OPEN,
       botsOnly: BOT,
     });
-    await screen.findByText("The b-on");
+    await screen.findAllByText("The b-on");
     const order = [...document.querySelectorAll(".pb-strategy .pb-card-id")].map(
       (el) => el.textContent,
     );

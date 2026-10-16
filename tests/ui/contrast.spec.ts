@@ -32,6 +32,13 @@ const TEXT_PAIRS: readonly [string, string][] = [
   ["--text", "--surface-2"], // raised cards: the guidance strike rows (#3729)
   ["--muted", "--surface-2"],
   ["--accent-contrast", "--accent"], // a pinned day, a pressed lens, any accent-filled control
+  // How sure a call is (#5444): each word is painted in its own colour on the card and its rows.
+  ["--sure-low", "--surface"],
+  ["--sure-mid", "--surface"],
+  ["--sure-high", "--surface"],
+  ["--sure-low", "--surface-2"],
+  ["--sure-mid", "--surface-2"],
+  ["--sure-high", "--surface-2"],
 ];
 const UI_PAIRS: readonly [string, string][] = [
   ["--accent", "--surface"],
