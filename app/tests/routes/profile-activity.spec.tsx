@@ -96,6 +96,11 @@ beforeEach(() => {
   window.location.hash = "";
 });
 
+// Each test mounts a route tree and waits for its data to render: genuine work (0.1-1 s on a quiet
+// machine), so these specs get 15 s rather than the default 5 s (#5498). None waits on the clock.
+rstest.setConfig({ testTimeout: 15_000 });
+configure({ asyncUtilTimeout: 12_000 });
+
 describe("one account's Activity", () => {
   it("offers older orders past the newest 30, the next page following the last row, then says it reached the oldest", async () => {
     const first = firstPage("ord");
