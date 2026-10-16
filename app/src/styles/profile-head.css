@@ -227,6 +227,31 @@
   font-size: 12.5px;
   line-height: 32px;
 }
+/* the row's right slot (#5493 slice 2): the bot's head line, then the book's health line under
+   it, each 16px, so the pair fills the 32px the head line alone had and the row keeps its height.
+   A human account has only the health line; it sits centred in the same slot. Each line keeps its
+   own clip: a line too long for the slot drops its link whole, never the state. */
+.head-status {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  height: 32px;
+  margin-left: auto;
+  min-width: 0;
+}
+.head-status .hb-line,
+.head-status .bh-line {
+  height: 16px;
+  line-height: 16px;
+  margin: 0;
+  max-width: 100%;
+}
+.head-status .bh-line {
+  overflow: clip;
+  font-size: 12.5px;
+}
+
 /* a state longer than the whole slot (a long account name beside it) ellipsizes last */
 .head-account .hb-line-state {
   min-width: 0;
