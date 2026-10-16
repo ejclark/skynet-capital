@@ -200,6 +200,7 @@ async function main(): Promise<void> {
     filingComments,
     subscriptions,
     savedPositions,
+    authoredPlays,
     knownPersonaIds,
     auth,
     password,
@@ -294,6 +295,7 @@ async function main(): Promise<void> {
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
     savedPositions,
+    authoredPlays,
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },

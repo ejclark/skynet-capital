@@ -11,6 +11,7 @@ import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
+import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
@@ -31,6 +32,7 @@ export interface AccessSetup {
   filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
+  authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
@@ -74,6 +76,9 @@ export function setupAccess(
   // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
   // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
   const savedPositions = createSavedPositionsStore(env, (m) => console.error(m));
+  // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
+  // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
+  const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -116,6 +121,7 @@ export function setupAccess(
     filingComments,
     subscriptions,
     savedPositions,
+    authoredPlays,
     knownPersonaIds,
     auth,
     password,
