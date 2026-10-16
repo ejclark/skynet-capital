@@ -18,6 +18,55 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Playbooks that mirror real portfolios, compose, and get played by a team (Eric, 2026-10-16)
+One brain-dump, five threads; each is parked with the objection the code raised, so the plan that
+picks it up starts from the fork, not the wish.
+- **Trading mechanics meet people where they are, and teach them to build with AI.** The member
+  isn't only learning options; they're learning to direct a bot. Read as a product rule for the
+  bot-creation flow (character sheet, above) and the playbook Store: every step explains what the
+  bot will do in plain words and lets the member adjust it by describing intent, not parameters.
+  The same "vocabulary over technique" rule CLAUDE.md applies to Eric, pointed at members.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **A mirror playbook: replicate a real portfolio on a paper account.** The household book is
+  ~$1M, the same size as the paper accounts we open, so a mirror is 1:1 with no scaling. It's the
+  most useful playbook for Eric himself: test a change on the paper copy before the real one.
+  Objections to settle in the plan: (1) **the holdings source.** Manual or CSV entry is in
+  envelope; a live brokerage link is a credential, so it's Eric's step (`envelope.json`).
+  (2) **Visibility.** A mirrored account shows real household holdings to every member inside the
+  invite gate. The shared-universe rule allows that, but it should be his explicit choice per
+  account, not a default. (3) **Season 1 is bots-only for subscriptions** (#4610), so the mirror
+  runs on a bot account. That fits as is.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **Playbooks inside playbooks: a mirror becomes one play in a bigger playbook.** This is the
+  fund-of-funds or **sleeve** pattern: the parent gives each child a share of capital and the
+  child trades only inside it. The strongest objection is in the code:
+  `src/playbooks/with-playbooks.ts` enforces *one position, one decision-maker* per symbol, and two
+  nested children holding the same ticker break that. The sleeve shape keeps the rule: ownership
+  goes to (playbook, sleeve) instead of the account, and the parent's guards cap the sum. The
+  deciding question before slicing: should two sleeves ever hold the same symbol at once? If not,
+  nesting is just roster composition plus a capital split. `playbooks/registry.ts` and
+  `engine/guards.ts` are envelope-protected, so the build boards the platter.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **Eric as game master: recruit Tony or Phil to run bot accounts, up to 6 bots in S1, as teams.**
+  This changes a written frame. Era 1 says the only autonomous bots are Eric-account bots
+  (`docs/LIVING-UNIVERSE.md` → Era 1), and member-run bots were Era 2. The amended shape keeps
+  #4610 intact: invited **co-GMs** operate *house* bot accounts (bots-only subscriptions still
+  hold), on teams of human + bot. What's open: does a co-GM's bot count toward their own
+  leaderboard row or the team's? Is 6 the cap, or 2 per GM? It needs a line in LIVING-UNIVERSE.md
+  before any build, per the write-the-IA-down rule.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+- **A Vision · JARVIS · Ultron theme (and a "vision quest" arc), with the copyright question
+  answered first.** All three are Marvel characters (JARVIS is already a bot alias here). Inside
+  the invite gate, a non-commercial homage among friends is low risk. On anything a non-member can
+  reach (`/login`, public pages, the repo if it goes public), the names and likeness are the
+  exposure. Shapes for Eric: **(a)** Marvel names only behind the gate; **(b)** original names
+  that rhyme with the archetypes (the helpful steward, the synthesis, the rogue optimizer), with
+  the homage left in lore text; **(c)** generic words only ("vision quest" is a common phrase, not
+  a mark). The archetype trio maps well onto bots: assistant, judge, and the cautionary
+  autonomous one that ignores guards, which is the safeguards story told as a character. Not legal
+  advice; if the repo or `/login` ever goes public, it's worth a real check.
+  _(src: Eric · while: brain-dump on trading mechanics)_
+
 - **Align → scope as a general type, beyond redesign.** The redesign loop's front half (his
   unprompted marks first, then ours revealed; the agreed goal · outcomes · problems as the scope;
   the work sized by that scope; a retro routing his notes to process, reader profile and personas)
