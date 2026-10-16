@@ -110,6 +110,7 @@ function ResearchPage(): ReactElement {
           accountId={search.account}
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
           accounts={playbooks.accounts}
+          accountsReady={playbooks.accountsReady}
         />
       ) : null}
     </PageFrame>

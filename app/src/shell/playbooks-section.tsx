@@ -7,6 +7,7 @@ import {
   type StrategyCardView,
 } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { YourPlaybooks } from "./playbook-drafts";
 import { isReady, PlaybookList } from "./playbook-list";
 import type { MetricsScope } from "./playbook-metrics";
 import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
@@ -27,6 +28,10 @@ import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
  * evidence and how it trades sit side by side as well. While the 3D rail takes its space (#5207),
  * the third column simply doesn't fit and how it trades stays under the evidence.
  *
+ * "Your playbooks" sits between the mission line and the catalog (#5457 slice 1): the member's own
+ * drafts and the form to write one (`playbook-drafts.tsx`). It is one more kind of entry in the
+ * catalog, not a screen — a draft is saved and does not trade.
+ *
  * The closed-trades scoreboard that used to sit folded at the foot of this page ("Who started the
  * bots' closed trades") lives on the book's Balance section now (#5493 slice 3, #5451 P3): it is a
  * metrics view, not part of the catalog. The cards keep their own per-playbook numbers.
@@ -45,7 +50,7 @@ export function usePlaybooksSection(active: boolean, accountId: string | undefin
     queryFn: () => fetchPlaybookStore(accountId ?? ""),
     enabled: active,
   });
-  return { accounts: accounts.data?.accounts ?? [], store };
+  return { accounts: accounts.data?.accounts ?? [], accountsReady: accounts.isSuccess, store };
 }
 
 /** Eric's mission line (#5451 round 1: "This is the mission, everything after this serves the
@@ -80,12 +85,15 @@ export function PlaybooksSection({
   accountId,
   accountName,
   accounts = [],
+  accountsReady = true,
 }: {
   readonly store: UseQueryResult<PlaybookStoreView>;
   readonly accountId?: string;
   readonly accountName?: string;
   /** The viewer's own accounts (`/api/settings`); its bots are who the + subscribes. */
   readonly accounts?: readonly OwnedAccount[];
+  /** False while `accounts` is still being read, so "you have no bot" is never said early. */
+  readonly accountsReady?: boolean;
 }): ReactElement {
   const queryClient = useQueryClient();
   const [picked, setPicked] = useState<string | undefined>();
@@ -150,6 +158,7 @@ export function PlaybooksSection({
   return (
     <div className="pb-section">
       {head}
+      <YourPlaybooks accounts={accounts} ready={accountsReady} />
       {manages && human ? (
         // The rule once, at the top, before the cards each draw their disabled control (#4610).
         <p className="note">

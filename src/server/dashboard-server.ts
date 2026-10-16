@@ -5,6 +5,7 @@ import { serveAdminApi } from "./admin-api-routes.js";
 import { serveAlertDeliveryApi } from "./alert-delivery-route.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
+import { serveAuthoredPlaysApi } from "./authored-plays-api-routes.js";
 import {
   type BoardPatchChannel,
   createBoardChannel,
@@ -153,6 +154,18 @@ async function servePlaybookReads(
   return serveConvictionsApi(req, res, path);
 }
 
+/** What a member does to playbooks: subscribe a bot to the house's (#885), or write their own (#5457). */
+async function servePlaybookWrites(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  return serveAuthoredPlaysApi(req, res, path, config, session);
+}
+
 /** The shell's write-API families, one dispatcher — trade (shares, options, the plays catalog),
  *  settings, learn, controls, join. */
 async function serveWriteApis(
@@ -174,7 +187,7 @@ async function serveWriteApis(
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;
   if (await serveSettingsApi(req, res, path, config, session)) return true;
-  if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  if (await servePlaybookWrites(req, res, path, config, session)) return true;
   if (await serveSavedPositionsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveOnboardingApi(req, res, path, config, session)) return true;

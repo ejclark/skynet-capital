@@ -28,13 +28,17 @@
 //                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
 //   · `one-build` — #5494 step 1: the mission line, the list with a + per ready play and its bots
 //                panel, a ticker's evidence as a call, the folded "not yet" line, the wide layout.
+//   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
+//                saved, the form open on a phone and wide, a setting past its limit refused in words.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
 import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
+import { emptyForm, specFromForm } from "../../src/playbooks/authored-play-form.ts";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
+import { viewOf } from "../../src/server/authored-plays-api-routes.ts";
 import { withForecasts } from "../../src/server/pair-forecast.ts";
 // Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
 import { performance } from "./playbook-store-fixture.mjs";
@@ -625,6 +629,106 @@ groups["one-build"] = [
     act: (page) => page.getByRole("button", { name: /^The wheel/ }).click(),
   }),
   oneBuild("wide-1-three-columns", { viewport: { width: 1800, height: 1000 }, quality: 55 }),
+];
+
+// #5457 slice 1 — "Your playbooks" and the authoring form. The draft rows are the server's own
+// `viewOf` over a record `specFromForm` made, and every refusal on a frame is the form's own
+// sentence, so a frame cannot show a number or a reason the save would not send.
+const DRAFT_FORM = {
+  ...emptyForm("sauron"),
+  name: "My NVDA run-up",
+  symbol: "NVDA",
+  thesis: "Long the drift into the print, out before the dead final week.",
+};
+const draftView = (form, at = "2026-10-16T15:00:00.000Z") => {
+  const made = specFromForm(form, "Eric");
+  if (!made.ok) throw new Error(`fixture form refused: ${JSON.stringify(made.refusals)}`);
+  return viewOf({
+    id: `U-${made.spec.authorAccountId}-${made.spec.slug}`,
+    name: form.name,
+    status: "draft",
+    spec: made.spec,
+    createdAt: at,
+    updatedAt: at,
+  });
+};
+const DRAFTS = [
+  draftView(DRAFT_FORM),
+  draftView({
+    ...emptyForm("banker", "event-window"),
+    name: "News pop",
+    symbol: "DJT",
+    thesis: "A named headline moves it for about an hour, then it gives it back.",
+  }),
+];
+views.author = { ...views.fresh, strategies: withForecasts(views.fresh.strategies, TODAY) };
+// A frame waits for the drafts' read before it acts, so the count in the heading is never a race.
+const authorFrame = (tag, { act, ...over } = {}, drafts = DRAFTS) => ({
+  tag,
+  view: views.author,
+  expect: "Create scenarios, develop strategies, track results.",
+  path: STORE,
+  clockAt: TODAY,
+  extraStubs: {
+    "/api/settings": twoBots,
+    "/api/authored-plays": { plays: drafts },
+    "/api/authored-plays/save": { ok: true, play: DRAFTS[0] },
+  },
+  act: async (page) => {
+    if (drafts.length > 0) await page.locator(".pba-row").first().waitFor();
+    if (act) await act(page);
+  },
+  ...over,
+});
+const openForm = async (page) => {
+  await page.getByRole("button", { name: /New playbook/ }).click();
+  await page.getByRole("form", { name: "New playbook" }).waitFor();
+};
+const fillForm = async (page) => {
+  await page.getByLabel("Ticker", { exact: true }).fill("NVDA");
+  await page.getByLabel("Name", { exact: true }).fill("My NVDA run-up");
+  await page
+    .getByLabel("Why it should work")
+    .fill("Long the drift into the print, out before the dead final week.");
+};
+const toForm = (page) => page.locator(".pba-form").evaluate(underHeader);
+groups.author = [
+  authorFrame("phone-1-your-playbooks", { viewport: PHONE }),
+  authorFrame("phone-2-form", {
+    viewport: PHONE,
+    act: async (page) => {
+      await openForm(page);
+      await toForm(page);
+    },
+  }),
+  authorFrame("phone-3-filled", {
+    viewport: PHONE,
+    act: async (page) => {
+      await openForm(page);
+      await fillForm(page);
+      await page.locator(".pba-size").evaluate(underHeader);
+    },
+  }),
+  authorFrame("phone-4-refused", {
+    viewport: PHONE,
+    act: async (page) => {
+      await openForm(page);
+      await fillForm(page);
+      const days = page.getByLabel("Buy this many days before the report");
+      await days.fill("90");
+      await page.getByLabel("Aggressive", { exact: true }).fill("5");
+      await page.getByRole("button", { name: "Save draft" }).click();
+      await page.getByText(/past the 60 this strategy allows/).waitFor();
+      await toForm(page);
+    },
+  }),
+  authorFrame(
+    "phone-5-no-bot",
+    { viewport: PHONE, extraStubs: { "/api/settings": { ...settings, accounts: [JOE] } } },
+    [],
+  ),
+  authorFrame("desktop-1-form", { quality: 60, act: openForm }),
+  authorFrame("desktop-2-drafts", { quality: 60 }),
 ];
 
 const only = process.env.FRAMES;

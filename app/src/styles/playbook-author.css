@@ -1,0 +1,278 @@
+/* R&D → Playbooks: "Your playbooks" and the authoring form (#5457 slice 1, `playbook-drafts.tsx`,
+   `playbook-author.tsx`). Tokens only. Phone first: one column, the controls the width of the page.
+   The section is a size container (playbooks-section), so the wide layout follows the width the
+   shell gives it, never the viewport — and it only adds room: a second column, no new fields.
+   Colour never alone (docs/BRAND.md → Accessibility): the picked strategy is a filled dot and a
+   heavier outline, a refused field is a heavier border AND a ✕ sentence under it. */
+
+.pba {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 18px;
+  min-width: 0;
+}
+
+.pba > .pbl-h {
+  margin-top: 0;
+}
+
+.pba-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.pba-reason {
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+/* the door: a full-width row on a phone, dashed when it is closed (a shape, not a hue) */
+.pba .pba-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.pba .pba-new[disabled] {
+  border-style: dashed;
+}
+
+/* ── a draft ───────────────────────────────────────────────────────────────────────────────── */
+
+.pba-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+}
+
+/* one tap opens the draft: the same shape as a catalog row's open button (`.pbl-open`) */
+.pba-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 8px 12px 12px;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ── the form ──────────────────────────────────────────────────────────────────────────────── */
+
+.pba-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+}
+
+.pba-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pba-form legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pba-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pba-strategies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pba-strategy {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.pba-strategy input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.pba-strategy[data-on] {
+  border: 2px solid var(--text);
+  padding: 9.5px 11.5px;
+}
+
+.pba-strategy:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pba-dot {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.pba-strategy-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pba-strategy-text b {
+  font-size: 14.5px;
+}
+
+.pba-strategy-text span {
+  color: var(--muted);
+}
+
+.pba-form .field {
+  margin: 0;
+}
+
+.pba-form .field textarea {
+  resize: vertical;
+  min-height: 4.5em;
+}
+
+.pba-form input[aria-invalid="true"],
+.pba-form textarea[aria-invalid="true"] {
+  border-width: 2px;
+  border-color: var(--neg);
+}
+
+.pba-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pba-size-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pba-size-row .field label {
+  font-size: var(--text-sm);
+}
+
+.pba-percent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pba-percent input {
+  min-width: 0;
+}
+
+.pba-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pba-actions .btn {
+  width: auto;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.pba-actions .btn-primary {
+  flex: 1;
+}
+
+/* Discard sits last and quiet: a smaller, outlined button; asking turns it into two */
+.pba-discard-ask {
+  align-self: flex-start;
+  width: auto;
+  min-height: 36px;
+}
+
+.pba-discard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pba-discard legend {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+
+.pba-discard .btn {
+  width: auto;
+  min-height: 36px;
+}
+
+.pba-new:focus-visible,
+.pba-form button:focus-visible,
+.pba-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* a wide screen adds room: the strategy and its numbers beside the name, the why and the bot */
+@container pbsec (min-width: 760px) {
+  .pba-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+    padding: 18px 20px 20px;
+    max-width: var(--col-read);
+  }
+
+  .pba .pba-new {
+    width: auto;
+    align-self: flex-start;
+    padding-inline: 20px;
+  }
+
+  .pba-row {
+    max-width: var(--col-read);
+  }
+}
