@@ -118,7 +118,7 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
       });
     });
 
-    it("rides the v2 wire the app now sends, so the bots act on it", () => {
+    it("still rides a v2 snapshot, which the bots keep reading for a rollback", () => {
       carryConvictions(store);
       const snapshot = buildSubscriptionsSnapshot(
         store.load(),

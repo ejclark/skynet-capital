@@ -9,9 +9,9 @@ set -euo pipefail
 # status loop. A script is a one-time build cost, then ~free per run forever; that is the
 # self-healing flywheel (docs/COACHES.md → "Resource cost is a fitness dimension").
 #
-#   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify]
-#       verify locally (fail fast) → incident preflight → push → open a PR over REST (core
-#       bucket). Prints the
+#   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify] [--no-merge]
+#       merge origin/B in if the branch is behind (--no-merge refuses instead) → verify locally
+#       (fail fast) → incident preflight → push → open a PR over REST (core bucket). Prints the
 #       PR number + URL, then STOP. Do NOT arm auto-merge by hand: pipeline.yml's `arm auto-merge`
 #       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
 #       fallback for a PR that job can't reach, and it refuses until integration tests passed.
@@ -239,11 +239,12 @@ cmd_open() {
     echo "$title" | npx commitlint --verbose >&2 || true
     exit 1
   }
-  local base="main" bodyfile="" verify=1 hold=0
+  local base="main" bodyfile="" verify=1 hold=0 catchup=1
   while [ $# -gt 0 ]; do case "$1" in
     --base) base="$2"; shift 2 ;;
     --body-file) bodyfile="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
+    --no-merge) catchup=0; shift ;;
     # hold-for-Eric PRs (carve-outs, a `Needs from you` block, a PR awaiting its review): they END
     # ready for review with auto-merge unarmed — never LEFT as a draft. A lingering draft skips
     # `verify` and reads as "Claude still has work to do" (Eric, 2026-09-04, on #1304). They do
@@ -306,16 +307,37 @@ EOF_SHOTS
     # main had independently grown a file the branch also touched past a line-count cap, and only
     # the merged state broke it. Catch that here, for free, before spending a push or a runner —
     # never after, in a red CI run.
+    #
+    # The remedy is a command, so the script runs it (#5195: 22 refusals in 3 days, each costing two
+    # turns to run the printed merge by hand and re-run ship open). The decision above is kept —
+    # verify still never tests a stale base — only the hand step is gone. A conflict is aborted
+    # back to the untouched branch and the refusal stands; `--no-merge` keeps the refusal outright.
     if [ -n "$merge_base" ] && ! git merge-base --is-ancestor "origin/$base" HEAD 2>/dev/null; then
       local behind; behind="$(git rev-list --count "$merge_base..origin/$base")"
-      echo "ship: this branch is $behind commit(s) behind origin/$base — local verify would test a" >&2
-      echo "  stale merge state that CI won't see. Merge it in first, THEN re-run ship open:" >&2
-      echo "    git merge origin/$base --no-edit" >&2
-      echo "  (--no-edit is load-bearing: commitlint requires Conventional-Commit format and only" >&2
-      echo "   exempts git's own auto-generated 'Merge branch' message — a hand-written one fails" >&2
-      echo "   the commit-msg hook. Never rebase onto \$base here; merge keeps a reviewer's existing" >&2
-      echo "   checkout of this branch valid.)" >&2
-      exit 1
+      if [ "$catchup" = 1 ] && git merge "origin/$base" --no-edit >/tmp/ship-merge.log 2>&1; then
+        echo "ship: merged origin/$base ($behind commits)"
+        merge_base="$(git merge-base "origin/$base" HEAD)"
+      else
+        if [ "$catchup" = 1 ]; then
+          local conflicts; conflicts="$(git diff --name-only --diff-filter=U)"
+          git rev-parse -q --verify MERGE_HEAD >/dev/null && git merge --abort
+          echo "ship: merging origin/$base did not complete cleanly — aborted, the branch is as it was." >&2
+          if [ -n "$conflicts" ]; then
+            echo "  conflicting paths:" >&2
+            sed 's/^/    /' <<<"$conflicts" >&2
+          else
+            tail -5 /tmp/ship-merge.log >&2
+          fi
+        fi
+        echo "ship: this branch is $behind commit(s) behind origin/$base — local verify would test a" >&2
+        echo "  stale merge state that CI won't see. Merge it in first, THEN re-run ship open:" >&2
+        echo "    git merge origin/$base --no-edit" >&2
+        echo "  (--no-edit is load-bearing: commitlint requires Conventional-Commit format and only" >&2
+        echo "   exempts git's own auto-generated 'Merge branch' message — a hand-written one fails" >&2
+        echo "   the commit-msg hook. Never rebase onto \$base here; merge keeps a reviewer's existing" >&2
+        echo "   checkout of this branch valid.)" >&2
+        exit 1
+      fi
     fi
 
     if [ -n "$merge_base" ]; then
