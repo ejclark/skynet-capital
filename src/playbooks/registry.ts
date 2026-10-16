@@ -249,10 +249,6 @@ const ROSTER: readonly Playbook[] = [
  */
 export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
-  "MU-DIP-BOUNCE":
-    "No 5-minute bar feed reaches the bots' pass yet, so it records its verdict but no would-be order.",
-  "NBIS-DIP-BOUNCE":
-    "No 5-minute bar feed reaches the bots' pass yet, so it records its verdict but no would-be order.",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:

@@ -30,19 +30,11 @@
  * so costs are measured rather than assumed (the study's open question 3).
  */
 import { type EarningsPrint, printSpan } from "../domain/earnings-calendar.js";
+import type { IntradayBar } from "../domain/intraday-bar.js";
 import { sessionsBetween } from "../domain/market-calendar.js";
+import type { RecoveryLevel, WouldBeOrder } from "../domain/playbook-observation.js";
 
-/** One 5-minute bar. `minutes` is the bar's start in ET minutes since midnight (570 = 9:30). */
-export interface IntradayBar {
-  /** The ET market day, `YYYY-MM-DD`. */
-  readonly date: string;
-  readonly minutes: number;
-  readonly open: number;
-  readonly high: number;
-  readonly low: number;
-  readonly close: number;
-  readonly volume: number;
-}
+export type { IntradayBar, RecoveryLevel, WouldBeOrder };
 
 export interface DipBounceRule {
   /** Buy this many ranges below session VWAP. */
@@ -83,27 +75,18 @@ export const DIP_BOUNCE_RULE: DipBounceRule = {
   windowSessions: 20,
 };
 
-export type RecoveryLevel = "none" | "signal" | "gate";
-
 export interface Tranche {
   readonly boughtOn: string;
   readonly boughtAt: number;
   readonly entry: number;
   readonly target: number;
+  /** Session VWAP and the range unit on the signal bar — the numbers the buy was priced from. */
+  readonly vwap: number;
+  readonly range: number;
   /** Sessions since the buy (0 = the buy's own session), at the last bar replayed or at the sale. */
   readonly age: number;
   readonly level: RecoveryLevel;
   readonly sold?: { readonly on: string; readonly at: number; readonly price: number };
-}
-
-/** An order the rule would place. Deliberately NOT an `OrderIntent`: it cannot reach a broker. */
-export interface WouldBeOrder {
-  readonly side: "buy" | "sell";
-  readonly shares: number;
-  /** `market` for a buy at the signal bar's close; `resting` for a tranche's sell at its target. */
-  readonly kind: "market" | "resting";
-  readonly price: number;
-  readonly why: string;
 }
 
 /** A buy the rule saw and the late-recovery rule refused. */
@@ -111,6 +94,8 @@ export interface RefusedBuy {
   readonly on: string;
   readonly at: number;
   readonly price: number;
+  readonly vwap: number;
+  readonly range: number;
   readonly why: string;
 }
 
@@ -201,6 +186,8 @@ interface Open {
   readonly day: number;
   readonly entry: number;
   readonly target: number;
+  readonly vwap: number;
+  readonly range: number;
   readonly index: number;
 }
 
@@ -250,14 +237,18 @@ export function replayDipBounce(
       if (signal.buy) {
         lastEntry = b.close;
         const why = refusal(open, b, haltWeek, allocation, rule);
-        if (why) refused.push({ on: b.date, at: b.minutes, price: b.close, why });
+        const range = b.range ?? 0;
+        if (why)
+          refused.push({ on: b.date, at: b.minutes, price: b.close, vwap: b.vwap, range, why });
         else {
           open.push({
             boughtOn: b.date,
             boughtAt: b.minutes,
             day: b.day,
             entry: b.close,
-            target: b.close + rule.m * (b.range ?? 0),
+            target: b.close + rule.m * range,
+            vwap: b.vwap,
+            range,
             index: i,
           });
           lastBuyAt = i;
@@ -300,6 +291,8 @@ function trancheOf(t: Open, age: number, rule: DipBounceRule): Tranche {
     boughtAt: t.boughtAt,
     entry: t.entry,
     target: t.target,
+    vwap: t.vwap,
+    range: t.range,
     age,
     level: levelOfAge(age, rule),
   };

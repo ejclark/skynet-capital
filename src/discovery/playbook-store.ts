@@ -330,9 +330,10 @@ function dipBounceCopy(symbol: string): PlaybookStoreCopy {
       {
         label: "Observe-only",
         text:
-          "Its size is zero in every mode. It goes live only after 30 recorded trading days and a " +
-          "change that lights it; until a 5-minute price feed reaches the bots, it records only " +
-          "that it ran.",
+          "Its size is zero in every mode. Each dip it sees is recorded with the price, the day's " +
+          "average, the buy it would make and the sell it would rest, and what a delayed bounce " +
+          "would do to both. It goes live only after 30 recorded trading days and a change that " +
+          "lights it.",
       },
     ],
   };
