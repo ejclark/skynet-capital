@@ -884,7 +884,9 @@ describe("ship open — a branch behind origin/main is merged up, never rebased"
     dir = mkdtempSync(join(tmpdir(), "ship-behind-"));
     work = join(dir, "work");
     mkdirSync(join(dir, "bin"));
-    writeFileSync(join(dir, "bin", "npx"), "#!/bin/sh\nexit 0\n");
+    // Drain stdin: ship pipes the PR title in under `set -o pipefail`, so a stub that exits without
+    // reading races `echo` into SIGPIPE and reads as a commitlint failure (flaky, and CI-load-sensitive).
+    writeFileSync(join(dir, "bin", "npx"), "#!/bin/sh\ncat >/dev/null\nexit 0\n");
     writeFileSync(join(dir, "bin", "npm"), "#!/bin/sh\necho stub-npm-fails\nexit 1\n");
     chmodSync(join(dir, "bin", "npx"), 0o755);
     chmodSync(join(dir, "bin", "npm"), 0o755);
