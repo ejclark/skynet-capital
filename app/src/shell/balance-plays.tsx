@@ -8,6 +8,7 @@ import {
   idleShareOf,
   type PlayHealth,
   refusedCount,
+  targetLine,
 } from "../live/book-health";
 import type { PlaybookMetricsView } from "../live/playbook-performance";
 import { PlayLink } from "./balance-findings";
@@ -117,6 +118,7 @@ export function BalancePlays({
             </div>
             <div className="bal-play-budget">
               <Budget play={play} />
+              {play.target ? <p className="bal-target num">{targetLine(play.target)}</p> : null}
             </div>
             <dl className="bal-play-nums">
               <Cell label="Open" value={String(play.openPositions)} />

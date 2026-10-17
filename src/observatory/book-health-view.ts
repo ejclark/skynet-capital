@@ -13,6 +13,12 @@ import type {
 } from "../domain/types.js";
 import { committedToPlaybook, openLedger } from "../engine/guard-batch.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import { ceilingOf, readPlay, targetFor } from "../playbooks/play-reading.js";
+import {
+  type BandLevel,
+  HOUSE_PLAY_BOUNDS,
+  type PlayTargetBounds,
+} from "../playbooks/play-target.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { OpenLot } from "../trading/round-trips.js";
@@ -25,6 +31,7 @@ import {
   positionsOf,
   sessionsHeld,
 } from "./book-health-detectors.js";
+import { detectOffTarget } from "./book-health-imbalance.js";
 import { detectLooping } from "./book-health-looping.js";
 
 /**
@@ -70,7 +77,8 @@ export interface BookHealthThresholds {
   readonly stuckGateSessions: number;
   /** IMBALANCED: an enabled play's committed share of its allocation above this… */
   readonly imbalancedHigh: number;
-  /** …or below this. A placeholder until #5483 gives each play a target and a band. */
+  /** …or below this. The placeholder for a play with NO target; a play that has one is read against
+   *  its own band instead (`book-health-imbalance.ts`, #5493 slice 4). */
   readonly imbalancedLow: number;
 }
 
@@ -106,8 +114,37 @@ export interface HealthFinding {
   readonly threshold: number;
   /** LOOPING only: what it keeps hitting. */
   readonly loop?: LoopKind;
+  /** IMBALANCED against a play's target only: where the share sits against it. */
+  readonly band?: ImbalanceBand;
   /** One plain sentence a member reads. */
   readonly words: string;
+}
+
+/** An imbalance finding's measure against its target (#5493 slice 4). `reading` on the finding is
+ *  the play's active share; every figure here is a fraction of the play's budget (0.05 = 5 points). */
+export interface ImbalanceBand {
+  /** The leaned target the share is read against. */
+  readonly target: number;
+  readonly direction: "over" | "under";
+  /** `share - target`, signed. */
+  readonly drift: number;
+  /** The play's band edges: past the first is a signal, past the second a gate. */
+  readonly signal: number;
+  readonly gate: number;
+}
+
+/** A play's active share read against its own target and band (`readPlay`, the very reading the
+ *  observer logs from), present only for an enabled, budgeted play that has a target. Inside its
+ *  band it is here too, so the section can say so; a finding exists only past an edge. */
+export interface PlayTargetHealth {
+  /** Active share of its budget, as the backtest measures it (0–1). */
+  readonly share: number;
+  /** The leaned target (0–1). */
+  readonly target: number;
+  readonly drift: number;
+  readonly level: BandLevel;
+  readonly signal: number;
+  readonly gate: number;
 }
 
 /** What a play declares about how long it means to hold. No house playbook declares either yet
@@ -129,6 +166,8 @@ export interface PlayHealth {
   readonly committed?: number;
   /** Allocation not committed, floored at 0; undefined when either side is. */
   readonly idle?: number;
+  /** Its active share against its target and band; absent for a play with no target (never 0). */
+  readonly target?: PlayTargetHealth;
   readonly openPositions: number;
   /** Sessions the oldest open position has been held. Undefined when nothing is open or when any
    *  open position's opening fills are not on hand — an unknown lot could be the oldest. */
@@ -148,6 +187,9 @@ export interface HealthCounts {
 
 export interface BookHealthInput {
   readonly asOf: string;
+  /** The account the subscriptions belong to, as the store keys them: the first-run play targets
+   *  (`FIRST_RUN_PLAY_TARGETS`) are an account's. Without it only a subscription's own target is read. */
+  readonly accountId?: string;
   readonly portfolio: Portfolio;
   readonly subscriptions: readonly PlaybookSubscription[];
   /** Decision passes, newest first (`DecisionDb.listByPersona`). Absent for a human account. */
@@ -237,6 +279,42 @@ function lastEntry(
   return times.sort().at(-1);
 }
 
+/** Each house playbook's own bounds on a target; a play that declares none takes the house's. */
+function houseBounds(): ReadonlyMap<string, PlayTargetBounds> {
+  return new Map(
+    registeredPlaybooks().flatMap((p) => (p.targetBounds ? [[p.id, p.targetBounds] as const] : [])),
+  );
+}
+
+/**
+ * The play's reading against its target, the observer's own (`readPlay` over `targetFor`): same
+ * target, same ceiling, same book, same band math, so the Balance section and the bot's log read
+ * one level for one book. A refused target, no budget, a paused play or an unknown basket has no
+ * reading, and the section shows nothing for it.
+ */
+function targetHealth(
+  sub: PlaybookSubscription,
+  input: BookHealthInput,
+  reading: BookReading,
+  basket: readonly string[] | undefined,
+  bounds: ReadonlyMap<string, PlayTargetBounds>,
+): PlayTargetHealth | undefined {
+  const ceiling = ceilingOf(sub);
+  if (!(sub.enabled && basket && ceiling !== undefined)) return undefined;
+  const resolved = targetFor(input.accountId, sub, bounds.get(sub.playbookId) ?? HOUSE_PLAY_BOUNDS);
+  if (!resolved?.ok) return undefined;
+  const read = readPlay(resolved.target, reading.portfolio, reading.quotes, basket, ceiling);
+  const { band } = resolved.target;
+  return {
+    share: read.share,
+    target: read.target,
+    drift: read.drift,
+    level: read.level,
+    signal: band.signal,
+    gate: band.gate,
+  };
+}
+
 function playHealth(
   sub: PlaybookSubscription,
   input: BookHealthInput,
@@ -245,6 +323,7 @@ function playHealth(
     readonly baskets: ReadonlyMap<string, readonly string[]>;
     readonly session: readonly DecisionRecord[];
     readonly marks: Record<string, Quote>;
+    readonly bounds: ReadonlyMap<string, PlayTargetBounds>;
     readonly ageOf: (position: Position) => number | undefined;
   },
 ): PlayHealth {
@@ -271,6 +350,7 @@ function playHealth(
   const ages = open.map(context.ageOf);
   const known = ages.length > 0 && ages.every((age) => age !== undefined);
   const entry = lastEntry(sub.playbookId, input.records ?? [], input.openLots);
+  const target = targetHealth(sub, input, reading, basket, context.bounds);
   return {
     playbookId: sub.playbookId,
     mode: sub.mode,
@@ -280,6 +360,7 @@ function playHealth(
     ...(allocation !== undefined && committed !== undefined
       ? { idle: Math.max(0, allocation - committed) }
       : {}),
+    ...(target ? { target } : {}),
     openPositions: open.length,
     ...(known ? { oldestOpenSessions: Math.max(...(ages as number[])) } : {}),
     ...(entry ? { lastEntryAt: entry } : {}),
@@ -329,8 +410,9 @@ export function bookHealthView(input: BookHealthInput): BookHealthView {
     return at === undefined ? undefined : sessionsHeld(at, asOf);
   };
   const marks = shareMarks(portfolio, input);
+  const bounds = houseBounds();
   const plays = input.subscriptions.map((sub) =>
-    playHealth(sub, input, reading, { baskets, session, marks, ageOf }),
+    playHealth(sub, input, reading, { baskets, session, marks, bounds, ageOf }),
   );
   const positionsFor = (id: string): Position[] =>
     positionsOf(id, baskets.get(id) ?? [], portfolio, input.openLots);
@@ -341,6 +423,7 @@ export function bookHealthView(input: BookHealthInput): BookHealthView {
     ...detectConcentrated(reading),
     ...detectStuck(plays, input.holds, positionsFor, ageOf, reading),
     ...detectImbalanced(plays, records, reading),
+    ...detectOffTarget(plays, records, reading),
   ];
   const ordered = [
     ...findings.filter((f) => f.level === "gate"),

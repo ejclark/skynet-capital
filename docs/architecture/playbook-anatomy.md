@@ -297,7 +297,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:24-62`, `src/playbooks/conviction-check.ts:95-125` | grounded |
 | A non-✓ pair with no conviction keeps trading, labelled | `src/playbooks/conviction-check.ts:39-46` | grounded |
 | Compounding is the only automatic budget tilt | `src/domain/types.ts:336-346` | grounded |
-| The play target band as two-level thresholds, observe-only on one bot | `src/playbooks/play-target.ts:49`, `src/playbooks/play-target.ts:86`, `src/playbooks/play-target.ts:188`, `src/playbooks/with-target-observation.ts:82`, `src/playbooks/with-target-observation.ts:187`, `src/scripts/autonomous-live-wiring.ts:389`, `src/domain/types.ts:371` | grounded (observe-only; lean has no source) |
+| The play target band as two-level thresholds, observe-only on one bot, and the same reading served by the book-health view (#5493 slice 4) | `src/playbooks/play-target.ts:49`, `src/playbooks/play-target.ts:86`, `src/playbooks/play-target.ts:188`, `src/playbooks/play-reading.ts:41`, `src/playbooks/play-reading.ts:67`, `src/playbooks/play-reading.ts:99`, `src/playbooks/with-target-observation.ts:138`, `src/observatory/book-health-imbalance.ts:29`, `src/scripts/autonomous-live-wiring.ts:389`, `src/domain/types.ts:371` | grounded (observe-only; lean has no source) |
 | The hand-off, holding place, tilt, phase reading, weighting, and acting on a band | #5483 criteria 1–4, 9, 10 and amendments 1 and 3; #5482 criteria 1–4 and its amendment; this page §4 and §6 | proposed, not in code |
 
 ### Invariants
