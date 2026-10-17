@@ -15,6 +15,7 @@ import { subscriptionRoster } from "../../src/subscriptions/subscription-roster.
  *
  * WHILE a saved play is a draft, the system SHALL NOT hand it to any bot's roster, SHALL NOT let it
  * be subscribed to, and SHALL read a status it doesn't know as unreadable rather than as a draft.
+ * (#5457 slice 3) ONLY a promoted play passes `runnableSpecs`: the one trading status.
  */
 
 const record = (over: Partial<AuthoredPlayRecord> = {}): AuthoredPlayRecord => ({
@@ -36,8 +37,8 @@ const record = (over: Partial<AuthoredPlayRecord> = {}): AuthoredPlayRecord => (
 });
 
 describe("a draft never trades", () => {
-  it("no status may trade yet — the list is empty until a promotion (slice 3) exists", () => {
-    expect(TRADING_STATUSES).toEqual([]);
+  it("one status may trade, and only that one: promoted", () => {
+    expect(TRADING_STATUSES).toEqual(["promoted"]);
   });
 
   it("a draft compiles to nothing: no spec reaches the roster, whatever its author", () => {
@@ -86,9 +87,9 @@ describe("a play in its shadow test never trades either (#5457 slice 2)", () => 
   const shadowed = (over: Partial<AuthoredPlayRecord> = {}) =>
     record({ status: "shadow", shadowSince: "2026-10-17T12:00:00.000Z", ...over });
 
-  it("shadow is not a trading status: promotion (slice 3) is what adds the first", () => {
+  it("shadow is not a trading status: promotion (slice 3) added the first, and it is another", () => {
     expect(TRADING_STATUSES).not.toContain("shadow");
-    expect(TRADING_STATUSES).toEqual([]);
+    expect(TRADING_STATUSES).not.toContain("draft");
   });
 
   it("a play in its test compiles to nothing on any roster, whatever its author", () => {
@@ -143,6 +144,43 @@ describe("a play in its shadow test never trades either (#5457 slice 2)", () => 
   });
 });
 
+describe("a promoted play is the one that trades (#5457 slice 3)", () => {
+  const promoted = (over: Partial<AuthoredPlayRecord> = {}) =>
+    record({ status: "promoted", ...over });
+
+  it("passes runnableSpecs, which a draft and a shadow test do not", () => {
+    const all = [
+      record(),
+      record({ status: "shadow", shadowSince: "2026-10-17T12:00:00.000Z", id: "U-futurist-b" }),
+      promoted({ id: "U-futurist-c" }),
+    ];
+    expect(runnableSpecs(all)).toEqual([record().spec]);
+  });
+
+  it("on its author's account it compiles; on any other account it does not", () => {
+    const specs = runnableSpecs([promoted()]);
+    expect(authoredRoster(specs, "futurist").plays.map((p) => p.id)).toEqual([
+      "U-futurist-earnings-runup",
+    ]);
+    expect(authoredRoster(specs, "dragon").plays).toEqual([]);
+  });
+
+  it("it still needs a subscription: with none, it resolves to nothing to run", () => {
+    const roster = subscriptionRoster([], authoredRoster(runnableSpecs([promoted()]), "futurist"));
+    expect(roster.enabled).toEqual([]);
+  });
+
+  it("is not in the shadow runner's door, and round-trips without a test start", () => {
+    expect(shadowOrders({ m: [promoted()] })).toEqual([]);
+    const state = { "member-a": [promoted()] };
+    expect(parseAuthoredPlaysState(JSON.parse(JSON.stringify(state)))).toEqual(state);
+    const stray = parseAuthoredPlaysState({
+      "member-a": [{ ...promoted(), shadowSince: "2026-10-17T12:00:00.000Z" }],
+    });
+    expect(stray?.["member-a"]?.[0]).not.toHaveProperty("shadowSince");
+  });
+});
+
 describe("reading a saved file", () => {
   it("round-trips a draft", () => {
     const state = { "member-a": [record()] };
@@ -162,7 +200,7 @@ describe("reading a saved file", () => {
   });
 
   it("a status this build doesn't know is unreadable — never downgraded to a draft", () => {
-    const newer = { ...record(), status: "promoted" };
+    const newer = { ...record(), status: "published" };
     expect(parseAuthoredPlaysState({ "member-a": [newer] })).toEqual({});
   });
 

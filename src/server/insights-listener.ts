@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { AuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import {
   parseShadowReport,
   type ShadowOrders,
@@ -83,6 +84,12 @@ export interface InsightsListenerConfig {
    * roster. Omit to leave the field off, the same posture as `subscriptions`.
    */
   readonly authoredShadowOrders?: () => ShadowOrders;
+  /**
+   * The PROMOTED plays' specs (`authored-plays-wire.ts`, #5457 slice 3), folded into every
+   * `GET /controls` response as an additive `authoredPlays` field. Specs only: a bot trades one
+   * only through the member's own subscription to it. Omit to leave the field off.
+   */
+  readonly authoredPlays?: () => AuthoredPlaysWire;
   /** `POST /authored-shadow` — the bots' report on those tests. Omit to 404 the route. */
   readonly authoredShadow?: { readonly accept: (report: ShadowReport) => void };
   readonly decisions?: {
@@ -271,11 +278,13 @@ function handleControlsGet(
     const decisionsCursor = config.decisionsCursor?.();
     const subscriptions = config.subscriptions?.();
     const authoredShadow = config.authoredShadowOrders?.();
+    const authoredPlays = config.authoredPlays?.();
     respond(res, 200, {
       ...state,
       ...(decisionsCursor ? { decisionsCursor } : {}),
       ...(subscriptions ? { subscriptions } : {}),
       ...(authoredShadow ? { authoredShadow } : {}),
+      ...(authoredPlays ? { authoredPlays } : {}),
     });
   } catch (error) {
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);

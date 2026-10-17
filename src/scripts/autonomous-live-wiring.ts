@@ -7,6 +7,7 @@
  */
 
 import type { AlpacaAccount } from "../alpaca/alpaca-trading-client.js";
+import type { AuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import type { ShadowOrders } from "../autonomous/authored-shadow-wire.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import {
@@ -84,6 +85,9 @@ export async function bootMissionControl(
   // Fires on every poll carrying the members' playbooks in a shadow test (authored-shadow-wire.ts) —
   // threaded straight through, same shape as the two above.
   onAuthoredShadow?: (orders: ShadowOrders) => void,
+  // Fires on every poll carrying the members' PROMOTED plays (authored-plays-wire.ts) — specs only,
+  // ahead of the subscriptions hook on the same poll.
+  onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -100,6 +104,7 @@ export async function bootMissionControl(
     onDecisionsCursor,
     onSubscriptions,
     onAuthoredShadow,
+    onAuthoredPlays,
   );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
@@ -267,10 +272,17 @@ export function buildBotRosters(
   bots: readonly Bot[],
   playbookRoster: { readonly enabled: readonly EnabledPlaybook[] },
   env: NodeJS.ProcessEnv,
+  // Each bot's own promoted plays (#5457 slice 3), when the app has reported any.
+  authoredFor?: (accountId: string) => AuthoredRoster,
 ): BotRoster[] {
   const subscriptionsByAccount = createSubscriptionStore(env).load();
   return bots.map((bot) =>
-    resolveBotRoster(bot, playbookRoster.enabled, subscriptionsByAccount[bot.persona.id] ?? []),
+    resolveBotRoster(
+      bot,
+      playbookRoster.enabled,
+      subscriptionsByAccount[bot.persona.id] ?? [],
+      authoredFor?.(bot.persona.id),
+    ),
   );
 }
 

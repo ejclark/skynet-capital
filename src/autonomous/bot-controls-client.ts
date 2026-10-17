@@ -1,5 +1,6 @@
 import { fetchJson } from "../http/fetch-json.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { type AuthoredPlaysWire, parseAuthoredPlaysWire } from "./authored-plays-wire.js";
 import { parseShadowOrders, type ShadowOrders } from "./authored-shadow-wire.js";
 import {
   CONTROLS_BRIDGE_PATH,
@@ -92,6 +93,11 @@ export function resolveBotControls(
    *  its test simply stops appearing. Parsed from the RAW body like the two above. An app that
    *  predates the field never fires this, and the bots keep the tests they have. */
   onAuthoredShadow?: (orders: ShadowOrders) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of PROMOTED plays
+   *  (`authored-plays-wire.ts`, #5457 slice 3) — specs only, whole every time. It fires BEFORE the
+   *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
+   *  the plays. An app that predates the field never fires this. */
+  onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -139,6 +145,13 @@ export function resolveBotControls(
         try {
           const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
           onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
+        }
+        try {
+          const rawPlays = isRecord(response.body) ? response.body.authoredPlays : undefined;
+          const plays = parseAuthoredPlaysWire(rawPlays);
+          if (plays) onAuthoredPlays?.(plays);
         } catch {
           /* never let a downstream hook fail the poll it rides on */
         }
