@@ -409,3 +409,64 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":21.41,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-17
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-17, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from the BLS release
+text (`bls.gov/news.release/ximpim.nr0.htm`, WebFetch, "Friday, October 16, 2026, at 8:30 a.m. (ET)") and a
+BLS public-API re-run (`EIUIREXFUELS`, `EIUIR`, `EIUIQ`, `EIUIR10`) that reconciles to the release on every
+headline; the *tape* from Yahoo daily bars pulled today. Date label: **confirmed** (BLS:), as in the header.
+The close-out spent no trade — the standing call was stand aside and it stays that way.
+
+| Measure (Sep 2026) | Printed | Registered expectation | Result |
+|---|---|---|---|
+| **Nonfuel imports y/y** | **+6.0%** (137.6 vs Sep-2025 base 129.8 = +6.01%) | 5.47% flat · **5.91%** 3-mo pace · 6.33% Aug pace | **inside the range, at the 3-mo pace** |
+| Nonfuel imports m/m | **+0.7%** (+0.73%) | no consensus found, none asserted | above the ~+0.42%/mo trailing pace |
+| All imports y/y / m/m | **+8.1% / +1.1%** (152.2) | Leg 9 kill bar: >6.0% | **kill bar crossed** |
+| Fuel imports y/y / m/m | **+34.5% / +4.8%** (EIUIR10 337.8) | — | Hormuz energy pass-through |
+| Exports y/y / m/m | **+11.6% / +2.2%** (EIUIQ 170.8) | — | — |
+| August nonfuel (revised) | 136.9 → **136.6** (m/m +0.81% → +0.59%; y/y 5.5% → 5.2%) | anchor of FT-…-1 | **registered void clause fired** |
+
+**Stance: scored — stand aside was right, and nothing was ever a trade.** `symbols: []`, `low` tier, no
+macro-keyed house playbook; the call sheet asked for no action and no action was available to take. The
+forecasting content was the number: the working range from the D-16 row held, the print landed at the
+trailing-3-month pace, and the early-crossing call (the record y/y arriving a cycle before the
+base effect alone would deliver it) stands: Aug printed 5.5% as first published, Sep 6.0%.
+
+**Forward tests scored (terminal verdicts, none left `_open_`).**
+
+- **FT-29 → pass** ([legacy](../forward-tests/legacy.md)): ≥4.5% y/y regardless of the m/m path; printed 6.0%.
+  Weakly informative by its own design (the flat path cleared it too) — one observation on an identity.
+- **FT-import-export-prices-2026-10-16-1 → VOID** ([fragment](../forward-tests/import-export-prices-2026-10-16.md)):
+  the registered clause "void if BLS revises the August nonfuel level away from 136.9" fired — the release
+  revised it to 136.6. **Shadow datum, not credited:** +6.01% y/y clears the ≥5.7% pass bar and sits well
+  above the 5.4% kill line, so on the datum it would have passed. The void is the pre-registered rule, so it
+  binds, and it is the conservative direction (no pass claimed). Lesson for registration: a void clause
+  keyed to "a revision before the release" is hard to read, because BLS publishes the prior month's
+  revision *inside* the next release; anchor the clause to the published rate, not the index level.
+
+**Kill switches, final state.**
+
+- **Base-effect read (<4.5%)** — not fired (6.0%).
+- **Acceleration read (m/m ≤ +0.1% in both Aug and Sep)** — not fired; mechanically unreachable once Aug printed +0.8%.
+- **Early-crossing read (Leg 3, Aug y/y <4.6%)** — not fired (Aug 5.5% as published; 5.2% after revision).
+- **Existence branch** — retired 2026-09-02 (PL 119-103, funding through 2026-12-11); the print came on date.
+- **Convergence read (Leg 9, all-imports >6.0%) — FIRED.** All-imports 8.1%, fuel +34.5% y/y: the
+  headline/nonfuel gap widened to **2.1pp** (8.1 vs 6.0) rather than closing. Mechanism was the one named: Hormuz energy.
+- **Duty-exclusive inversion (Leg 5)** — not re-checked at `bls.gov/mxp/notices/` this session; the release text read showed no methodology change.
+- **Tier read (Leg 10, NDX ≥1% attributable)** — **not countable.** NDX closed **29,187.55 vs 29,935.60 (−2.50%)**
+  on the day, VIX 16.46 → **19.99**, 10Y (^TNX) 5.09 → 5.10 — but the day carried monthly opex, industrial
+  production and a Brent print near $110, so no part is attributable to this release. `low` stays `low`; the
+  falsifier for it stays open for the next print on a quieter day.
+
+**What the tape taught (reading habits, not positions).** A hot, in-range nonfuel print with fuel +34.5% y/y was
+absorbed on a day the index fell 2.5% for confounded reasons; the print itself told the tape nothing the
+energy tape had not. Next print (Oct data, the `import-export-prices-2026-11-17` ledger) inherits: all-imports 8.1% y/y,
+nonfuel 6.0%, and one thing to check rather than assume — the BLS API carries **no Oct-2025 observation**
+(2025 jumps M09 → M11), so the y/y base for that print is whatever BLS publishes for it, not the 129.8–130.5
+run this doc tracked.
