@@ -1,7 +1,9 @@
+import { type Standing, standingOf } from "../observatory/book-health-history.js";
 import {
   type BookHealthView,
   bookHealthView,
   type HealthCounts,
+  type HealthFinding,
 } from "../observatory/book-health-view.js";
 import { WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -22,10 +24,39 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 /** The most passes the store hands back in one page (`decision-db.ts`'s `MAX_PAGE`). */
 const PASSES_READ = 100;
 
+/** A finding with how long it has stood and which way it is going (#5493 slice 5); absent when no
+ *  history is wired, so the finding simply says nothing about its age. */
+export type StandingFinding = HealthFinding & { readonly standing?: Standing };
+
 export type DeskHealth =
   | { readonly available: false }
-  | ({ readonly available: true } & BookHealthView)
+  | ({ readonly available: true } & Omit<BookHealthView, "findings"> & {
+        readonly findings: readonly StandingFinding[];
+      })
   | { readonly available: true; readonly counts: HealthCounts };
+
+/** The view for one account, as its owner reads it — what the desk route serves and what the
+ *  hourly sampler records (`book-health-sampler.ts`). Undefined when the broker read failed. */
+export async function deskHealthView(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+  openLots: readonly OpenLot[] | undefined,
+): Promise<BookHealthView | undefined> {
+  if (found.error) return undefined;
+  const bot = found.kind === "bot";
+  const records = bot ? await config.readDecisions?.(found.id, { limit: PASSES_READ }) : undefined;
+  const weekRows = bot ? config.readCheckWeek?.(found.id) : undefined;
+  return bookHealthView({
+    asOf: (config.now?.() ?? new Date()).toISOString(),
+    accountId: found.id,
+    portfolio: { cash: found.cash, positions: found.positions },
+    subscriptions: config.subscriptions?.loadIfReadable()?.[found.id] ?? [],
+    ...(records ? { records } : {}),
+    ...(weekRows ? { week: { rows: weekRows, bucketMs: WEEK_BUCKET_MS } } : {}),
+    ...(openLots ? { openLots } : {}),
+    ownerView: true,
+  });
+}
 
 export async function deskHealthPayload(
   found: ParticipantSnapshot,
@@ -34,18 +65,20 @@ export async function deskHealthPayload(
   openLots: readonly OpenLot[] | undefined,
 ): Promise<DeskHealth> {
   if (found.error) return { available: false };
-  const bot = found.kind === "bot";
-  const records = bot ? await config.readDecisions?.(found.id, { limit: PASSES_READ }) : undefined;
-  const weekRows = bot ? config.readCheckWeek?.(found.id) : undefined;
-  const view = bookHealthView({
-    asOf: (config.now?.() ?? new Date()).toISOString(),
-    accountId: found.id,
-    portfolio: { cash: found.cash, positions: found.positions },
-    subscriptions: config.subscriptions?.loadIfReadable()?.[found.id] ?? [],
-    ...(records ? { records } : {}),
-    ...(weekRows ? { week: { rows: weekRows, bucketMs: WEEK_BUCKET_MS } } : {}),
-    ...(openLots ? { openLots } : {}),
-    ownerView: owner,
-  });
-  return owner ? { available: true, ...view } : { available: true, counts: view.counts };
+  const view = await deskHealthView(found, config, openLots);
+  if (!view) return { available: false };
+  if (!owner) {
+    // Counts only: what the owner's view names (play, symbol) is theirs (#885).
+    return { available: true, counts: view.counts };
+  }
+  const history = config.healthHistory?.samples(found.id);
+  if (!history) return { available: true, ...view };
+  return {
+    available: true,
+    ...view,
+    findings: view.findings.map((finding) => ({
+      ...finding,
+      standing: standingOf(history, finding, view.asOf),
+    })),
+  };
 }
