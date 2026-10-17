@@ -354,3 +354,23 @@
     max-width: var(--col-read);
   }
 }
+
+/* ── promotion: what the shadow test must show (#5457 slice 3) ────────────────────────────── */
+
+.pba-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pba-check {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.pba-check-word {
+  font-weight: 650;
+}

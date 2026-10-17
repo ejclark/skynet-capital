@@ -19,6 +19,11 @@ import { siblingPath } from "../storage/sibling-path.js";
  * is a draft or in a shadow test; a shadow record reaches the bots through `shadowOrders` instead,
  * to the shadow runner and nowhere else.
  */
+/** Why a promoted play can't be edited, re-tested or discarded: it is compiled on its bot, and may be
+ *  holding a position its own exit rules still own. Pause it; it keeps managing its exits. */
+export const PROMOTED_LOCK =
+  "This playbook is promoted, so it can't be changed or discarded. Pause it — its exits keep running.";
+
 export type SaveOutcome =
   | { readonly ok: true; readonly record: AuthoredPlayRecord }
   | { readonly ok: false; readonly reason: string };
@@ -63,6 +68,7 @@ export class AuthoredPlayStore {
     if (replaceId !== undefined && !prior) {
       return { ok: false, reason: "That draft is gone, so it can't be changed." };
     }
+    if (prior?.status === "promoted") return { ok: false, reason: PROMOTED_LOCK };
     const id = authoredPlayId(spec);
     const taken = Object.values(state)
       .flat()
@@ -95,6 +101,7 @@ export class AuthoredPlayStore {
     const mine = state[memberKey] ?? [];
     const prior = mine.find((r) => r.id === id);
     if (!prior) return { ok: false, reason: "That draft is gone, so it can't be tested." };
+    if (prior.status === "promoted") return { ok: false, reason: PROMOTED_LOCK };
     if ((prior.status === "shadow") === on) return { ok: true, record: prior };
     const iso = at.toISOString();
     const { shadowSince: _ended, ...kept } = prior;
@@ -105,10 +112,35 @@ export class AuthoredPlayStore {
     return { ok: true, record };
   }
 
-  /** Discard one of this member's drafts; another member's id is not theirs to remove. */
+  /**
+   * Promote one of this member's plays out of a shadow test (#5457 slice 3): the first status that
+   * may trade. Only a play IN its test can be promoted — the caller has judged the test's report
+   * (`promotionVerdict`) and the subscription; this only moves the status. Already promoted is a
+   * no-op. The compiled play reaches a bot only through `runnableSpecs` and the member's own
+   * subscription.
+   */
+  promote(memberKey: string, id: string, at = new Date()): SaveOutcome {
+    const state = this.load();
+    const mine = state[memberKey] ?? [];
+    const prior = mine.find((r) => r.id === id);
+    if (!prior) return { ok: false, reason: "That playbook is gone, so it can't be promoted." };
+    if (prior.status === "promoted") return { ok: true, record: prior };
+    if (prior.status !== "shadow") {
+      return { ok: false, reason: "Only a playbook that passed its shadow test can be promoted." };
+    }
+    const { shadowSince: _ended, ...kept } = prior;
+    const record: AuthoredPlayRecord = { ...kept, status: "promoted", updatedAt: at.toISOString() };
+    this.file.write({ ...state, [memberKey]: mine.map((r) => (r === prior ? record : r)) });
+    return { ok: true, record };
+  }
+
+  /** Discard one of this member's drafts; another member's id is not theirs to remove. A promoted
+   *  play is kept (`PROMOTED_LOCK`): dropping its spec would orphan an open position's exits. */
   delete(memberKey: string, id: string): AuthoredPlaysState {
     const state = this.load();
-    const remaining = (state[memberKey] ?? []).filter((r) => r.id !== id);
+    const remaining = (state[memberKey] ?? []).filter(
+      (r) => r.id !== id || r.status === "promoted",
+    );
     const next: AuthoredPlaysState =
       remaining.length > 0
         ? { ...state, [memberKey]: remaining }

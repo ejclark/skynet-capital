@@ -9,6 +9,7 @@
  */
 
 import { join } from "node:path";
+import { buildAuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
@@ -176,6 +177,8 @@ export function startInsightsBridge(
       },
     },
     authoredShadowOrders: () => buildShadowOrders(authoredPlays.load(), Date.now()),
+    // The plays a member promoted: specs only, read fresh like the subscriptions they ride beside.
+    authoredPlays: () => buildAuthoredPlaysWire(authoredPlays.load(), Date.now()),
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),

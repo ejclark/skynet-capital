@@ -31,6 +31,8 @@
 //   · `shadow` — #5457 slice 2: a draft in its shadow test — the offer on a draft, a play mid-window
 //                with its would-be buy, a finished round trip, an event play with no news feed — the
 //                report written by the real runner over fixture prices.
+//   · `promote` — #5457 slice 3: a play that has not met the bar (the checks, in words), one that has
+//                (the one button), and a promoted play trading, marked SIM and unvalidated.
 //   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
 //                saved, the form open on a phone and wide, a setting past its limit refused in words.
 // FRAMES=<group> runs one group; unset runs them all.
@@ -816,6 +818,46 @@ groups.shadow = [
   shadowFrame("phone-7-shadow-running", MID_WINDOW, { viewport: PHONE }),
   shadowFrame("phone-8-shadow-round-trip", ROUND_TRIP, { viewport: PHONE }),
   shadowFrame("desktop-3-shadow-running", MID_WINDOW, { quality: 60 }),
+];
+
+// #5457 slice 3 — promoting a play that passed. The checks on each row are the server's own
+// `promotionVerdict` over what the REAL runner reports (`viewOf`); the pass is 11 session days with
+// one closed round trip, the not-yet frame is the same play three days in.
+const PASSED = [
+  ["2026-10-23", 181],
+  ["2026-10-26", 182],
+  ["2026-10-27", 183],
+  ["2026-10-28", 184],
+  ["2026-10-29", 185],
+  ["2026-10-30", 186],
+  ["2026-11-02", 187],
+  ["2026-11-03", 188],
+  ["2026-11-04", 189],
+  ["2026-11-05", 190],
+  ["2026-11-09", 192],
+];
+const toPromote = (page) => page.locator(".pba-promote").evaluate(underHeader);
+const promoteFrame = (tag, days, over = {}, make = (r) => r) => {
+  const report = {
+    kind: "authored-shadow.v1",
+    at: 1,
+    plays: shadowReportFor(nvdaRecord.spec, nvdaRecord.id, days, 1),
+  };
+  return authorFrame(
+    tag,
+    { ...over },
+    [make(nvdaRecord, report)].map((r) => viewOf(r, report, true)),
+  );
+};
+const promotedRecord = (() => {
+  const { shadowSince: _ended, ...kept } = nvdaRecord;
+  return { ...kept, status: "promoted" };
+})();
+groups.promote = [
+  promoteFrame("phone-9-promote-not-yet", MID_WINDOW, { viewport: PHONE }),
+  promoteFrame("phone-10-promote-passed", PASSED, { viewport: PHONE, act: toPromote }),
+  promoteFrame("phone-11-promoted-trading", PASSED, { viewport: PHONE }, () => promotedRecord),
+  promoteFrame("desktop-4-promote-passed", PASSED, { quality: 60, act: toPromote }),
 ];
 
 const only = process.env.FRAMES;

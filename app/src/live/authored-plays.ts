@@ -8,7 +8,8 @@
  *   GET  /api/authored-plays         → { plays: AuthoredPlayView[] }
  *   POST /api/authored-plays/save    → { ok: true, play } | { ok: false, refusals } | { ok: false, error }
  *   POST /api/authored-plays/shadow  → { ok: true, play } | { ok: false, error }   (#5457 slice 2)
- *   POST /api/authored-plays/delete  → { ok }
+ *   POST /api/authored-plays/promote → { ok: true, play } | { ok: false, error }   (#5457 slice 3)
+ *   POST /api/authored-plays/delete  → { ok } | { ok: false, error }
  * No account or member param: identity comes from the session alone.
  */
 import type { AuthoredPlayForm, FormRefusal } from "../../../src/playbooks/authored-play-form";
@@ -44,5 +45,11 @@ export type ShadowToggleResult =
 export const setShadowRequest = (id: string, on: boolean): Promise<ShadowToggleResult> =>
   postJson("/api/authored-plays/shadow", { id, on });
 
-export const discardDraftRequest = (id: string): Promise<{ readonly ok: boolean }> =>
+/** Let the author's bot trade a play that passed its shadow test (`on`), or pause it (exits keep running). */
+export const setPromotedRequest = (id: string, on: boolean): Promise<ShadowToggleResult> =>
+  postJson("/api/authored-plays/promote", { id, on });
+
+export const discardDraftRequest = (
+  id: string,
+): Promise<{ readonly ok: boolean; readonly error?: string }> =>
   postJson("/api/authored-plays/delete", { id });

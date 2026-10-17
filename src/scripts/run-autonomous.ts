@@ -66,6 +66,7 @@ import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { authoredPlaysHolder } from "./autonomous-authored-plays.js";
 import { authoredShadowWiring } from "./autonomous-authored-shadow.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
@@ -149,6 +150,8 @@ async function runLive(): Promise<void> {
   // process's first cycle, not 30s into it.
   // The members' draft playbooks in a shadow test (#5457 slice 2): parked here until the runner exists.
   const authoredShadow = authoredShadowWiring();
+  // The plays a member PROMOTED (#5457 slice 3): specs the roster builds compile for their own author's bot.
+  const promotedPlays = authoredPlaysHolder();
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
   // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
@@ -163,6 +166,7 @@ async function runLive(): Promise<void> {
       else parkedSubscriptions = snapshot;
     },
     (orders) => authoredShadow.accept(orders),
+    (wire) => promotedPlays.accept(wire),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -290,7 +294,7 @@ async function runLive(): Promise<void> {
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   seedDailyLossBaseline(await optionLevels.readAtBoot(bots), safety); // one read: baseline + levels
-  const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
+  const botRosters = buildBotRosters(bots, playbookRoster, process.env, promotedPlays.rosterFor); // issue #885
   // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
   // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
   controls.reportHouseRoster(
@@ -402,7 +406,15 @@ async function runLive(): Promise<void> {
     bots: botRosters.map((botRoster, i) => ({
       personaId: botRoster.bot.persona.id,
       applySubscriptions: (subscriptions) =>
-        swapIn(i, resolveBotRoster(botRoster.bot, playbookRoster.enabled, subscriptions)),
+        swapIn(
+          i,
+          resolveBotRoster(
+            botRoster.bot,
+            playbookRoster.enabled,
+            subscriptions,
+            promotedPlays.rosterFor(botRoster.bot.persona.id),
+          ),
+        ),
     })),
     onApplied: (version, at) => {
       // The scout skips symbols a bot's own playbooks manage. Mutated in place rather than
@@ -422,6 +434,21 @@ async function runLive(): Promise<void> {
         `[playbooks] ${personaId}: subscription swap failed (roster unchanged):`,
         error,
       ),
+  });
+  // A promoted play that arrives (or leaves) without a subscription change still reaches the
+  // rosters in force: each is rebuilt from its own subscriptions plus its author's compiled plays.
+  promotedPlays.onChange(() => {
+    botRosters.forEach((r, i) => {
+      swapIn(
+        i,
+        resolveBotRoster(
+          r.bot,
+          playbookRoster.enabled,
+          r.subscriptions,
+          promotedPlays.rosterFor(r.bot.persona.id),
+        ),
+      );
+    });
   });
   // Whatever the boot fetch already carried — else the last subscriptions kept — applied now that
   // there is a roster to apply it to.

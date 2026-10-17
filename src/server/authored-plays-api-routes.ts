@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { type PromotionVerdict, promotionVerdict } from "../autonomous/authored-promotion.js";
 import type { ShadowReport, ShadowReportEntry } from "../autonomous/authored-shadow-wire.js";
 import { REFUSAL_LABEL } from "../observatory/decision-json-view.js";
 import {
@@ -13,8 +14,10 @@ import {
   settingsLine,
   specFromForm,
 } from "../playbooks/authored-play-form.js";
+import { findPair } from "../playbooks/pair-table.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
+import { PROMOTED_LOCK } from "./authored-play-store.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -25,6 +28,7 @@ import {
   requireGet,
   sendJson,
 } from "./page-shell.js";
+import { delegationRefusal } from "./subscriptions-api-routes.js";
 
 /**
  * THE AUTHORED PLAYS API (#5457 slice 1, #809 slice 3) — a member's own draft playbooks, never
@@ -33,7 +37,19 @@ import {
  *   GET  /api/authored-plays         → { plays: AuthoredPlayView[] } for the signed-in member.
  *   POST /api/authored-plays/save    → { ok: true, play } | { ok: false, refusals } | { ok: false, error }
  *   POST /api/authored-plays/shadow  → { ok: true, play } | { ok: false, error }   (body: { id, on })
- *   POST /api/authored-plays/delete  → { ok }
+ *  POST /api/authored-plays/promote → { ok: true, play } | { ok: false, error }   (body: { id, on })
+ *  POST /api/authored-plays/delete  → { ok } | { ok: false, error }
+ *
+ * PROMOTE (#5457 slice 3). `/promote` with `on: true` takes a play whose shadow test PASSED
+ * (`promotionVerdict`, the report the row already carries) and lets its author's bot run it: the
+ * record gets the first trading status and a subscription is written on the NORMAL path
+ * (`SubscriptionStore.subscribe`, standard size, behind the same ownership, bots-only and
+ * delegation-fog gates as the Store's Subscribe) — there is no new order path, so every guard,
+ * budget and conviction gate still applies on the bot. It runs on the author's own bot only: the
+ * account is the spec's `authorAccountId`, a bot the SESSION owns. `on: false` PAUSES it — the
+ * subscription is switched off, the play stays compiled on the bot and its exits keep running.
+ * Pausing is never gated; resuming (`on: true` again) re-passes the gates. A promoted play can't be
+ * edited, re-tested or discarded (it may hold a position).
  *
  * SHADOW (#5457 slice 2). `/shadow` puts one of the member's own drafts into its shadow test or takes it
  * out; the bots then decide the play each pass against the author's own bot and write only a ledger,
@@ -81,6 +97,10 @@ export interface AuthoredPlayView {
   readonly updatedAt: string;
   /** Present while the play is in its shadow test. */
   readonly shadow?: ShadowView;
+  /** Present while the play is in its shadow test: whether the test passed, and where each check stands. */
+  readonly promotion?: PromotionVerdict;
+  /** Present once promoted: whether its subscription is on (it opens new positions) or paused (exits only). */
+  readonly trading?: { readonly running: boolean };
 }
 
 const EVENT_CAVEAT =
@@ -104,7 +124,13 @@ function shadowViewOf(record: AuthoredPlayRecord, report: ShadowReport | undefin
   };
 }
 
-export function viewOf(record: AuthoredPlayRecord, report?: ShadowReport): AuthoredPlayView {
+export function viewOf(
+  record: AuthoredPlayRecord,
+  report?: ShadowReport,
+  /** Whether the play's subscription on its bot is switched on — read from the subscription store. */
+  running = false,
+): AuthoredPlayView {
+  const shadow = record.status === "shadow" ? shadowViewOf(record, report) : undefined;
   return {
     id: record.id,
     name: record.name,
@@ -115,8 +141,15 @@ export function viewOf(record: AuthoredPlayRecord, report?: ShadowReport): Autho
     thesis: record.spec.thesis,
     form: formFromSpec(record.name, record.spec),
     updatedAt: record.updatedAt,
-    ...(record.status === "shadow" ? { shadow: shadowViewOf(record, report) } : {}),
+    ...(shadow ? { shadow, promotion: promotionVerdict(shadow.report) } : {}),
+    ...(record.status === "promoted" ? { trading: { running } } : {}),
   };
+}
+
+/** Whether this play's subscription is on, for the bot that runs it. */
+function isRunning(record: AuthoredPlayRecord, config: DashboardServerConfig): boolean {
+  const held = config.subscriptions?.load()[record.spec.authorAccountId] ?? [];
+  return held.some((s) => s.playbookId === record.id && s.enabled);
 }
 
 /** The credit line: the member's own name from the session, cut to the model's limit. */
@@ -222,6 +255,113 @@ function setShadow(
   sendJson(res, 200, { ok: true, play: viewOf(done.record, config.readAuthoredShadow?.()) });
 }
 
+/** A symbol another play already trades on this bot, as the sentence that refuses the promotion. */
+function symbolTaken(
+  record: AuthoredPlayRecord,
+  mine: readonly AuthoredPlayRecord[],
+  config: DashboardServerConfig,
+): string | undefined {
+  const symbol = record.spec.symbols[0];
+  const account = record.spec.authorAccountId;
+  const held = config.subscriptions?.load()[account] ?? [];
+  const house = held.find(
+    (s) => s.enabled && symbol && findPair(s.playbookId)?.symbols.includes(symbol),
+  );
+  const own = mine.find(
+    (r) =>
+      r.id !== record.id &&
+      r.status === "promoted" &&
+      r.spec.authorAccountId === account &&
+      r.spec.symbols[0] === symbol,
+  );
+  const by = house?.playbookId ?? own?.name;
+  return by
+    ? `${by} already trades ${symbol} on this bot; a bot runs one playbook per symbol.`
+    : undefined;
+}
+
+/** Promote (or resume), or pause. The one place a member's play gets a subscription. */
+async function setPromoted(
+  res: ServerResponse,
+  raw: string,
+  config: DashboardServerConfig,
+  session: Session,
+  memberKey: string,
+): Promise<void> {
+  const body = parseJsonRecord(raw);
+  const id = boundedString(body?.id, MAX_ID);
+  if (!id || typeof body?.on !== "boolean") {
+    sendJson(res, 400, { error: "malformed promote body" });
+    return;
+  }
+  const store = config.authoredPlays;
+  const subscriptions = config.subscriptions;
+  if (!(store && subscriptions)) {
+    sendJson(res, 200, { ok: false, error: "Playbooks can't be promoted in this deployment." });
+    return;
+  }
+  const records = store.list(memberKey);
+  const mine = records.find((r) => r.id === id);
+  if (!mine) {
+    sendJson(res, 200, { ok: false, error: "That playbook is gone, so it can't be promoted." });
+    return;
+  }
+  const runsOn = mine.spec.authorAccountId;
+  const ownedIds = resolveOwnedIds(session, config);
+  const answer = (play: AuthoredPlayRecord) =>
+    sendJson(res, 200, {
+      ok: true,
+      play: viewOf(play, config.readAuthoredShadow?.(), isRunning(play, config)),
+    });
+  if (!body.on) {
+    // Pausing is never gated: reducing what a bot opens is not delegation.
+    if (mine.status !== "promoted" || !ownedIds.includes(runsOn)) {
+      sendJson(res, 200, { ok: false, error: "Only your own promoted playbook can be paused." });
+      return;
+    }
+    subscriptions.setEnabled(runsOn, id, false);
+    answer(mine);
+    return;
+  }
+  const refusal =
+    (await delegationRefusal(
+      runsOn,
+      ownedIds,
+      "A playbook can only run on one of your own bots.",
+      config,
+      session,
+    )) ?? promoteRefusal(mine, records, config);
+  if (refusal) {
+    sendJson(res, 200, { ok: false, error: refusal });
+    return;
+  }
+  const done = store.promote(memberKey, id);
+  if (!done.ok) {
+    sendJson(res, 200, { ok: false, error: done.reason });
+    return;
+  }
+  const held = subscriptions.load()[runsOn] ?? [];
+  if (held.some((s) => s.playbookId === id)) subscriptions.setEnabled(runsOn, id, true);
+  else subscriptions.subscribe(runsOn, { playbookId: id, mode: "standard", enabled: true });
+  answer(done.record);
+}
+
+/** Everything that must hold before a play may trade, as the sentence that refuses it. */
+function promoteRefusal(
+  record: AuthoredPlayRecord,
+  records: readonly AuthoredPlayRecord[],
+  config: DashboardServerConfig,
+): string | undefined {
+  if (record.status === "promoted") return undefined; // a resume: the test was passed once
+  if (record.status !== "shadow") return "Put the playbook in its shadow test first.";
+  const since = record.shadowSince ?? record.updatedAt;
+  const entry = config
+    .readAuthoredShadow?.()
+    ?.plays.find((p) => p.id === record.id && p.since === since);
+  const verdict = promotionVerdict(entry);
+  return verdict.blocker ?? symbolTaken(record, records, config);
+}
+
 /** Handle `/api/authored-plays*`. Returns true when answered, false when the route doesn't apply. */
 export async function serveAuthoredPlaysApi(
   req: IncomingMessage,
@@ -235,6 +375,7 @@ export async function serveAuthoredPlaysApi(
     path !== "/api/authored-plays" &&
     path !== "/api/authored-plays/save" &&
     path !== "/api/authored-plays/shadow" &&
+    path !== "/api/authored-plays/promote" &&
     path !== "/api/authored-plays/delete"
   ) {
     return false;
@@ -244,7 +385,9 @@ export async function serveAuthoredPlaysApi(
     if (!requireGet(req, res)) return true;
     const records = config.authoredPlays?.list(memberKey) ?? [];
     const report = config.readAuthoredShadow?.();
-    sendJson(res, 200, { plays: records.map((record) => viewOf(record, report)) });
+    sendJson(res, 200, {
+      plays: records.map((record) => viewOf(record, report, isRunning(record, config))),
+    });
     return true;
   }
   const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
@@ -257,9 +400,17 @@ export async function serveAuthoredPlaysApi(
     setShadow(res, raw, config, session, memberKey);
     return true;
   }
+  if (path === "/api/authored-plays/promote") {
+    await setPromoted(res, raw, config, session, memberKey);
+    return true;
+  }
   const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);
   if (!id) {
     sendJson(res, 400, { error: "malformed delete body" });
+    return true;
+  }
+  if (config.authoredPlays?.list(memberKey).some((r) => r.id === id && r.status === "promoted")) {
+    sendJson(res, 200, { ok: false, error: PROMOTED_LOCK });
     return true;
   }
   config.authoredPlays?.delete(memberKey, id);
