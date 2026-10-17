@@ -28,26 +28,19 @@
  * wired.
  */
 
-import { bookNeeds } from "../domain/option-book.js";
-import { positionFor, positionValue } from "../domain/portfolio.js";
 import type {
   MarketContext,
   OrderIntent,
   PlaybookSubscription,
-  PlayTarget,
   Portfolio,
 } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
-import { contractMultiplier, parseOccSymbol } from "../trading/option-symbols.js";
+import { ceilingOf, FIRST_RUN_PLAY_TARGETS, readPlay, targetFor } from "./play-reading.js";
 import {
   type BandLevel,
-  DEFAULT_PLAY_TARGET,
   HOUSE_PLAY_BOUNDS,
-  type PlayBook,
   type PlayReading,
   type ResolvedPlayTarget,
-  readPlayTarget,
-  resolvePlayTarget,
   tripMoves,
 } from "./play-target.js";
 import type { EnabledPlaybook } from "./playbook.js";
@@ -57,12 +50,7 @@ export interface TargetObservationSink {
   log(line: string): void;
 }
 
-/** The plays observed with the default target when their subscription states none: one bot. */
-export const FIRST_RUN_PLAY_TARGETS: readonly {
-  readonly accountId: string;
-  readonly playbookId: string;
-  readonly target: PlayTarget;
-}[] = [{ accountId: "sauron", playbookId: "CRWV-WHEEL", target: DEFAULT_PLAY_TARGET }];
+export { FIRST_RUN_PLAY_TARGETS };
 
 export interface TargetObservationDeps {
   /** The bot these plays belong to (a persona id, as subscriptions are keyed). */
@@ -70,44 +58,8 @@ export interface TargetObservationDeps {
   readonly subscriptions: readonly PlaybookSubscription[];
   readonly enabled: readonly EnabledPlaybook[];
   readonly log: TargetObservationSink;
-  /** Overridable for specs; the live wiring uses the table above. */
+  /** Overridable for specs; the live wiring uses `FIRST_RUN_PLAY_TARGETS` (`play-reading.ts`). */
   readonly firstRun?: typeof FIRST_RUN_PLAY_TARGETS;
-}
-
-/**
- * One play's book, off the portfolio. Long shares and long contracts count as deployed; a sold
- * put's collateral counts as deployed too (it is the play's commitment, #5483 amendment 6), at the
- * cash it sets aside.
- */
-export function playBookOf(
-  portfolio: Portfolio,
-  context: MarketContext,
-  symbols: readonly string[],
-  ceiling: number,
-): PlayBook {
-  let active = 0;
-  let deployedCost = 0;
-  for (const symbol of symbols) {
-    const held = positionFor(portfolio, symbol);
-    if (held && held.quantity > 0) {
-      active += positionValue(held, context.quotes[symbol]?.last);
-      deployedCost += held.quantity * held.avgPrice;
-    }
-  }
-  for (const position of portfolio.positions) {
-    const parts = parseOccSymbol(position.symbol);
-    if (parts && position.quantity > 0 && symbols.includes(parts.underlying)) {
-      active += positionValue(position, undefined);
-      deployedCost += position.quantity * position.avgPrice * contractMultiplier(position.symbol);
-    }
-  }
-  const collateral = bookNeeds(portfolio).cashByUnderlying;
-  for (const symbol of symbols) {
-    const cash = collateral.get(symbol) ?? 0;
-    active += cash;
-    deployedCost += cash;
-  }
-  return { ceiling, active, deployedCost };
 }
 
 const points = (n: number): number => Math.round(n * 1000) / 10;
@@ -158,14 +110,16 @@ function watchedPlays(deps: TargetObservationDeps): Watched[] {
   const watched: Watched[] = [];
   for (const sub of deps.subscriptions) {
     if (!sub.enabled) continue;
-    const own =
-      sub.playTarget ??
-      firstRun.find((f) => f.accountId === deps.accountId && f.playbookId === sub.playbookId)
-        ?.target;
     const entry = deps.enabled.find((e) => e.playbook.id === sub.playbookId);
-    if (!(own && entry)) continue;
+    if (!entry) continue;
+    const resolved = targetFor(
+      deps.accountId,
+      sub,
+      entry.playbook.targetBounds ?? HOUSE_PLAY_BOUNDS,
+      firstRun,
+    );
+    if (!resolved) continue;
     const who = `[play-target] ${deps.accountId} ${sub.playbookId}`;
-    const resolved = resolvePlayTarget(own, entry.playbook.targetBounds ?? HOUSE_PLAY_BOUNDS);
     if (!resolved.ok) {
       deps.log.log(`${who}: target ignored, ${resolved.reason}. ${NOTE}`);
       continue;
@@ -174,10 +128,7 @@ function watchedPlays(deps: TargetObservationDeps): Watched[] {
       who,
       playbookId: sub.playbookId,
       symbols: entry.playbook.symbols,
-      ceiling:
-        sub.capitalAllocated !== undefined && sub.capitalAllocated > 0
-          ? sub.capitalAllocated
-          : undefined,
+      ceiling: ceilingOf(sub),
       target: resolved.target,
     });
   }
@@ -204,10 +155,7 @@ export function withTargetObservation(inner: Persona, deps: TargetObservationDep
         );
         continue;
       }
-      const reading = readPlayTarget(
-        play.target,
-        playBookOf(portfolio, context, play.symbols, play.ceiling),
-      );
+      const reading = readPlay(play.target, portfolio, context.quotes, play.symbols, play.ceiling);
       const before = lastLevel.get(play.playbookId);
       lastLevel.set(play.playbookId, reading.level);
       if (before === undefined) {

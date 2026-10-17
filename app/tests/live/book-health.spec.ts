@@ -12,6 +12,7 @@ import {
   type PlayHealth,
   playsByIdle,
   refusedCount,
+  targetLine,
 } from "../../src/live/book-health";
 
 const counts = (gate: number, signal: number) => ({
@@ -120,6 +121,32 @@ describe("the words a finding wears", () => {
     );
   });
 
+  it("reads an imbalance against a play's target: the share, the target, the points, the level's line", () => {
+    const band = { target: 0.7, direction: "over" as const, drift: 0.052, signal: 0.05, gate: 0.1 };
+    expect(
+      findingReading(
+        found({ detector: "imbalanced", level: "signal", reading: 0.752, threshold: 0.75, band }),
+      ),
+    ).toBe("75.2% · over the 70% target by 5.2 points, signal at 5");
+    expect(
+      findingReading(
+        found({
+          detector: "imbalanced",
+          level: "gate",
+          reading: 0.58,
+          threshold: 0.6,
+          band: { ...band, direction: "under", drift: -0.12 },
+        }),
+      ),
+    ).toBe("58% · under the 70% target by 12 points, gate at 10");
+  });
+
+  it("keeps the placeholder's line for an imbalance with no target behind it", () => {
+    expect(findingReading(found({ detector: "imbalanced", reading: 0.95, threshold: 0.9 }))).toBe(
+      "95% · over the 90% line",
+    );
+  });
+
   it("reads a stuck position as sessions held against the level's line", () => {
     expect(
       findingReading(found({ detector: "stuck", level: "gate", reading: 5, threshold: 5 })),
@@ -185,6 +212,19 @@ describe("a play's numbers", () => {
       ),
     ).toBe(6);
     expect(refusedCount(play({ playbookId: "A" }))).toBe(0);
+  });
+
+  it("says where a play stands against its target, inside its band or past a line, in words", () => {
+    const at = { target: 0.7, signal: 0.05, gate: 0.1 };
+    expect(targetLine({ ...at, share: 0.661, drift: -0.039, level: "inside" })).toBe(
+      "Target 70% · now 66.1% · inside its 5-point band",
+    );
+    expect(targetLine({ ...at, share: 0.752, drift: 0.052, level: "signal" })).toBe(
+      "Target 70% · now 75.2% · 5.2 points over, signal at 5",
+    );
+    expect(targetLine({ ...at, share: 0.58, drift: -0.12, level: "gate" })).toBe(
+      "Target 70% · now 58% · 12 points under, gate at 10",
+    );
   });
 
   it("writes a budget in whole dollars", () => {

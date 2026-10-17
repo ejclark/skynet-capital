@@ -27,15 +27,27 @@ const withHealth = (stub, health) => (path) => ({
   health,
 });
 
+/** The server lists gates before signals (`bookHealthView`'s `ordered`). */
+const gateFirst = (list) => [
+  ...list.filter((f) => f.level === "gate"),
+  ...list.filter((f) => f.level === "signal"),
+];
+
 // Sauron: CRWV over 40% of equity (a gate), the long call refused every cycle for the account's
-// options level (looping), and cash above the idle line — the shapes slice 1's detectors produce.
+// options level (looping), and cash above the idle line — the shapes slice 1's detectors produce —
+// plus slice 4's imbalance against a play's target: the long call has nothing deployed against a 70%
+// target (the stronger level), the wheel 62% against its 70% (8 points under, a signal).
 const sauronHealth = {
   available: true,
-  counts: { gate: 1, signal: 2, byDetector: { concentrated: 1, looping: 1, idle: 1 } },
+  counts: {
+    gate: 2,
+    signal: 3,
+    byDetector: { concentrated: 1, looping: 1, idle: 1, imbalanced: 2 },
+  },
   equity: 98_240,
   uncommittedCash: 60_200,
   idleShare: 0.613,
-  findings: [
+  findings: gateFirst([
     {
       detector: "concentrated",
       level: "gate",
@@ -63,7 +75,27 @@ const sauronHealth = {
       words:
         "61% of this account's equity is cash nothing has claimed: no position holds it and no sold put has it set aside.",
     },
-  ],
+    {
+      detector: "imbalanced",
+      level: "gate",
+      playbookId: "CRWV-LONG-CALL",
+      reading: 0,
+      threshold: 0.6,
+      band: { target: 0.7, direction: "under", drift: -0.7, signal: 0.05, gate: 0.1 },
+      words:
+        "The long call on CRWV has 0% of its $20,000 budget deployed against a 70% target: 70 points under, past its gate at 10. That is the stronger level; nothing is blocked yet.",
+    },
+    {
+      detector: "imbalanced",
+      level: "signal",
+      playbookId: "CRWV-WHEEL",
+      reading: 0.6203,
+      threshold: 0.65,
+      band: { target: 0.7, direction: "under", drift: -0.0797, signal: 0.05, gate: 0.1 },
+      words:
+        "The wheel on CRWV has 62% of its $50,000 budget deployed against a 70% target: 8 points under, past its signal at 5. A heads-up; capital keeps flowing.",
+    },
+  ]),
   plays: [
     {
       playbookId: "CRWV-WHEEL",
@@ -75,6 +107,15 @@ const sauronHealth = {
       openPositions: 2,
       oldestOpenSessions: 3,
       lastEntryAt: "2026-10-14T15:00:00.000Z",
+      // 62% of its budget deployed against the default 70% target: 8 points under, a signal.
+      target: {
+        share: 0.6203,
+        target: 0.7,
+        drift: -0.0797,
+        level: "signal",
+        signal: 0.05,
+        gate: 0.1,
+      },
       refusalsLastSession: {},
     },
     {
@@ -84,6 +125,8 @@ const sauronHealth = {
       allocation: 20_000,
       committed: 0,
       idle: 20_000,
+      // Nothing deployed (every entry refused) against a 70% target: the stronger level.
+      target: { share: 0, target: 0.7, drift: -0.7, level: "gate", signal: 0.05, gate: 0.1 },
       openPositions: 0,
       refusalsLastSession: { "options-level": 6 },
     },
@@ -208,7 +251,7 @@ async function openBalance(account) {
 await page.setViewportSize({ width: 390, height: 844 });
 await openBalance("bot-sauron");
 await shootPage("balance-bot-phone");
-await shootPage("balance-bot-phone-full", { fullPage: true, quality: 55 });
+await shootPage("balance-bot-phone-full", { fullPage: true, quality: 48 });
 // A human account has no bot in scope, so the server serves no split of its own (`mine: null`).
 const perf = stubs["/api/outpost/performance"];
 stubs["/api/outpost/performance"] = {
@@ -221,6 +264,6 @@ await shootPage("balance-human-phone", { fullPage: true, quality: 55 });
 await page.setViewportSize({ width: 1280, height: 900 });
 stubs["/api/outpost/performance"] = perf;
 await openBalance("bot-sauron");
-await shootPage("balance-bot-desktop", { fullPage: true, quality: 62, only: ".bal" });
+await shootPage("balance-bot-desktop", { fullPage: true, quality: 38, only: ".bal" });
 
 await close();

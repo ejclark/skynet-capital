@@ -1,10 +1,9 @@
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
+import { FIRST_RUN_PLAY_TARGETS, playBookOf } from "../../src/playbooks/play-reading.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
 import { CRWV_WHEEL, S1_NVDA } from "../../src/playbooks/registry.js";
 import {
-  FIRST_RUN_PLAY_TARGETS,
-  playBookOf,
   type TargetObservationDeps,
   withTargetObservation,
 } from "../../src/playbooks/with-target-observation.js";
@@ -303,7 +302,7 @@ describe("playBookOf: what the play has deployed", () => {
   });
 
   it("marks shares at the last price and costs them at what was paid", () => {
-    const b = playBookOf(holding(), market(80), symbols, 100_000);
+    const b = playBookOf(holding(), market(80).quotes, symbols, 100_000);
     expect(b).toEqual({ ceiling: 100_000, active: 56_000, deployedCost: 70_000 });
   });
 
@@ -311,7 +310,7 @@ describe("playBookOf: what the play has deployed", () => {
     const portfolio = aPortfolio({
       positions: [aPosition({ symbol: put75, quantity: -2, avgPrice: 2.1 })],
     });
-    const b = playBookOf(portfolio, market(80), symbols, 100_000);
+    const b = playBookOf(portfolio, market(80).quotes, symbols, 100_000);
     expect(b.active).toBe(15_000);
     expect(b.deployedCost).toBe(15_000);
   });
@@ -323,14 +322,14 @@ describe("playBookOf: what the play has deployed", () => {
         aPosition({ symbol: "NVDA", quantity: 50, avgPrice: 100 }),
       ],
     });
-    const b = playBookOf(portfolio, market(80), symbols, 100_000);
+    const b = playBookOf(portfolio, market(80).quotes, symbols, 100_000);
     expect(b.active).toBe(4_500);
     expect(b.deployedCost).toBe(3_600);
   });
 
   it("ignores a short share position: the bots hold long only, so it is not deployment", () => {
     const portfolio = aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: -10 })] });
-    expect(playBookOf(portfolio, market(80), symbols, 100_000)).toMatchObject({
+    expect(playBookOf(portfolio, market(80).quotes, symbols, 100_000)).toMatchObject({
       active: 0,
       deployedCost: 0,
     });

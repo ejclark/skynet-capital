@@ -67,6 +67,7 @@
     "relay": "node scripts/moneypenny/relay.mjs",
     "assignments": "node scripts/moneypenny/assignments.mjs",
     "rank": "node scripts/rank.mjs",
+    "worktree:sweep": "node scripts/worktree-sweep.mjs",
     "work-mode": "node scripts/moneypenny/work-mode.mjs",
     "work-gate": "node scripts/moneypenny/work-gate.mjs",
     "delivery:score": "node scripts/delivery-score.mjs",
