@@ -12,6 +12,8 @@ import {
   type PlayHealth,
   playsByIdle,
   refusedCount,
+  standingFor,
+  standingLine,
   targetLine,
 } from "../../src/live/book-health";
 
@@ -230,5 +232,46 @@ describe("a play's numbers", () => {
   it("writes a budget in whole dollars", () => {
     expect(dollars(45_000)).toBe("$45,000");
     expect(dollars(1_234_567)).toBe("$1,234,567");
+  });
+});
+
+/** #5493 slice 5 — how long a finding has stood and which way it is going: a glyph and words, so
+ *  the direction never rides on hue, and nothing at all when the server keeps no history. */
+describe("standingLine", () => {
+  const HOUR = 60 * 60 * 1000;
+  const standing = (trend: "new" | "worse" | "better" | "steady", ms = 0) => ({
+    since: "2026-10-12T12:00:00.000Z",
+    standingMs: ms,
+    trend,
+  });
+
+  it("says nothing without a standing", () => {
+    expect(standingLine(undefined)).toBeNull();
+  });
+
+  it("gives each direction its own glyph and word", () => {
+    const lines = (["worse", "better", "steady", "new"] as const).map((t) =>
+      standingLine(standing(t, 5 * 24 * HOUR)),
+    );
+    expect(lines.map((l) => `${l?.glyph} ${l?.word}`)).toEqual([
+      "▲ Worse",
+      "▼ Easing",
+      "▬ Steady",
+      "✦ New",
+    ]);
+    expect(new Set(lines.map((l) => l?.glyph)).size).toBe(4);
+  });
+
+  it("says how long it has stood, in the unit a phone has room for", () => {
+    expect(standingFor(10 * 60 * 1000)).toBe("under an hour");
+    expect(standingFor(HOUR)).toBe("1 hour");
+    expect(standingFor(30 * HOUR)).toBe("30 hours");
+    expect(standingFor(48 * HOUR)).toBe("2 days");
+    expect(standingFor(5 * 24 * HOUR + 3 * HOUR)).toBe("5 days");
+  });
+
+  it("words the whole line for a screen reader, and a new finding as first seen", () => {
+    expect(standingLine(standing("worse", 3 * 24 * HOUR))?.label).toBe("Worse, standing 3 days");
+    expect(standingLine(standing("new"))?.label).toBe("New, first seen just now");
   });
 });

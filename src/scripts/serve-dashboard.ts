@@ -38,8 +38,11 @@ import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
+import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
+import { startBookHealthSampler } from "../server/book-health-sampler.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -283,8 +286,10 @@ async function main(): Promise<void> {
     }),
   });
 
-  const server = createDashboardServer({
+  const healthHistory = createBookHealthHistoryStore(process.env, (m) => console.error(m));
+  const dashboardConfig: DashboardServerConfig = {
     hub,
+    healthHistory,
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
@@ -452,6 +457,12 @@ async function main(): Promise<void> {
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
     ...(spotChecks ? { spotChecks } : {}),
+  };
+  const server = createDashboardServer(dashboardConfig);
+  // Book-health history (#5493 slice 5): one sample of every account's findings an hour.
+  startBookHealthSampler({
+    config: dashboardConfig,
+    participants: () => hub.getState().participants,
   });
   // Fly's deploy sends SIGTERM to the old machine: stop accepting, end SSE with a retry hint,
   // exit 0 inside kill_timeout (#4616). The one exit that clears the run marker (#4618).

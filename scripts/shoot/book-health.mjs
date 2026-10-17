@@ -159,6 +159,28 @@ const ericHealth = {
   plays: [],
 };
 
+// Slice 5 — how long each finding has stood and which way it is going, in the served shape
+// (`standing` on each finding: `src/observatory/book-health-history.ts`).
+const DAY = 86_400_000;
+const standing = (trend, days) => ({
+  since: new Date(Date.parse("2026-10-17T12:00:00Z") - days * DAY).toISOString(),
+  standingMs: days * DAY,
+  trend,
+});
+const trends = {
+  concentrated: standing("worse", 3),
+  idle: standing("new", 0),
+  "looping|CRWV-LONG-CALL": standing("steady", 5),
+  "imbalanced|CRWV-LONG-CALL": standing("steady", 6),
+  "imbalanced|CRWV-WHEEL": standing("better", 2),
+};
+for (const health of [sauronHealth, ericHealth]) {
+  health.findings = health.findings.map((f) => ({
+    ...f,
+    standing: trends[`${f.detector}|${f.playbookId}`] ?? trends[f.detector] ?? standing("worse", 4),
+  }));
+}
+
 stubs["/api/desk/bot-sauron"] = withHealth(stubs["/api/desk/bot-sauron"], sauronHealth);
 stubs["/api/desk/human-eric"] = withHealth(stubs["/api/desk/human-eric"], ericHealth);
 

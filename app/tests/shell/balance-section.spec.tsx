@@ -197,6 +197,38 @@ describe("BalanceSection findings", () => {
     expect(rows[1]?.querySelector(".bal-finding-head")?.textContent).toBe("◆ SignalLooping");
   });
 
+  it("shows how long each finding has stood and which way it is going, in a glyph and words", async () => {
+    const stood = (
+      f: HealthFinding,
+      trend: "worse" | "better" | "steady" | "new",
+      days: number,
+    ) => ({
+      ...f,
+      standing: { since: "2026-10-12T12:00:00.000Z", standingMs: days * 86_400_000, trend },
+    });
+    health = owner([
+      stood(CONCENTRATED, "worse", 3),
+      stood(LOOPING, "better", 5),
+      stood(IDLE, "new", 0),
+    ]);
+    mount();
+    await screen.findByText(/CRWV is 46% of this account's equity/);
+    const trends = [...document.querySelectorAll(".bal-trend")];
+    expect(trends.map((t) => t.textContent)).toEqual([
+      "▲ Worse · standing 3 days",
+      "▼ Easing · standing 5 days",
+      "✦ New · first seen just now",
+    ]);
+    expect(trends[0]).toHaveAccessibleName("Worse, standing 3 days");
+  });
+
+  it("draws no trend for a finding the server kept no history of", async () => {
+    health = owner([CONCENTRATED]);
+    mount();
+    await screen.findByText(/CRWV is 46% of this account's equity/);
+    expect(document.querySelector(".bal-trend")).toBeNull();
+  });
+
   it("says the server's sentence and the measure against its line", async () => {
     health = owner([CONCENTRATED, LOOPING, IDLE]);
     mount();
