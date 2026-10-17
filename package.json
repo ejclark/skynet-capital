@@ -75,6 +75,7 @@
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
     "research:lint": "node scripts/research-lint.mjs",
+    "research:claims": "tsx src/scripts/claim-studies.ts",
     "research:scorecard": "node scripts/research-scorecard.mjs",
     "lessons:held": "node scripts/fix-held.mjs",
     "bottleneck:baseline": "node scripts/bottleneck-baseline.mjs",

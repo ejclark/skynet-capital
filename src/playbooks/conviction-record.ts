@@ -3,6 +3,7 @@ import {
   CONVICTION_ID_MAX,
   isCalendarDay,
 } from "../subscriptions/subscription-state.js";
+import type { ClaimStudy } from "./claim-study.js";
 import { findPair, type Pair } from "./pair-table.js";
 
 /**
@@ -46,6 +47,12 @@ export interface ConvictionClaim {
   readonly falsifier: string;
   /** `YYYY-MM-DD`: the day it is scored. Required on a forward test. */
   readonly scoreBy?: string;
+  /**
+   * What the system found when it looked at the claim (#5482 slice 3): a verdict from the matching
+   * research instrument, an offer to register a forward test, or a label that nothing here can
+   * check it. Attached from the studies ledger (`conviction-studies.json`), never typed by hand.
+   */
+  readonly study?: ClaimStudy;
 }
 
 export interface Conviction {

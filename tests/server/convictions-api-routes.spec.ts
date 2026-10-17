@@ -52,6 +52,18 @@ describe("serveConvictionsApi", () => {
     expect(body).toEqual({ label: "SIM", conviction: JSON.parse(JSON.stringify(AI_DIP_2026_10)) });
   });
 
+  it("serves each claim with what the studies found (#5482 slice 3): a verdict, an offer, or untestable at size zero", () => {
+    const { body } = serve("/api/convictions?id=ai-dip-2026-10");
+    const studies = body.conviction.claims.map((c: { study?: { disposition: string } }) => c.study);
+    expect(studies.every((s: unknown) => s !== undefined)).toBe(true);
+    expect(new Set(studies.map((s: { disposition: string }) => s.disposition))).toEqual(
+      new Set(["studied", "offer", "untestable"]),
+    );
+    for (const s of studies.filter((x: { disposition: string }) => x.disposition !== "studied")) {
+      expect(s.size).toBe(0);
+    }
+  });
+
   it("404s an id no record holds", () => {
     const { status, body } = serve("/api/convictions?id=nope");
     expect(status).toBe(404);

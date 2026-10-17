@@ -1,4 +1,13 @@
+import { type StudyLedger, withStudies } from "./claim-studies.js";
 import type { Conviction } from "./conviction-record.js";
+import studyLedger from "./conviction-studies.json";
+
+/**
+ * What the claim-study runner found, by conviction id (#5482 slice 3): written by
+ * `npm run research:claims`, never by hand. It attaches to a claim only while the claim still says
+ * exactly what it said when it was studied.
+ */
+const STUDIES = studyLedger as unknown as StudyLedger;
 
 /**
  * THE SEEDED CONVICTIONS (#5482 slice 2) — the records that exist before members can write their
@@ -14,7 +23,7 @@ import type { Conviction } from "./conviction-record.js";
  * record does not steer it (the doc's "one result counts twice"). Its check date is the one both
  * pair rows already carry, so pointing a subscription at it changes no check day.
  */
-export const AI_DIP_2026_10: Conviction = {
+const AI_DIP_STATED: Conviction = {
   id: "ai-dip-2026-10",
   owner: "Eric",
   statedOn: "2026-10-16",
@@ -122,6 +131,12 @@ export const AI_DIP_2026_10: Conviction = {
     },
   ],
 };
+
+/** The AI-dip view with what the studies found attached to each claim it could be run for. */
+export const AI_DIP_2026_10: Conviction = withStudies(
+  AI_DIP_STATED,
+  STUDIES[AI_DIP_STATED.id] ?? [],
+);
 
 /** Every seeded conviction, in the order they were stated. */
 export const SEEDED_CONVICTIONS: readonly Conviction[] = [AI_DIP_2026_10];
