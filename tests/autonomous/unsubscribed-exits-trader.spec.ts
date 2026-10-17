@@ -36,7 +36,7 @@ const rosterOf = (subscriptions: readonly PlaybookSubscription[]) =>
   tradingRoster(resolveBotRoster(bot, [], subscriptions), QUIET_RISK);
 
 describe("unsubscribing S1-NVDA with a position open", () => {
-  const broker = new InMemoryBroker(1_000_000, [{ symbol: "NVDA", last: 100 }]);
+  const broker = new InMemoryBroker(1_000_000, Object.values(at(ENTRY_DAY).quotes));
   const records: DecisionRecord[] = [];
   let clock = 0; // one day per cycle, so no cooldown spans two
   const first = rosterOf([S1]);
