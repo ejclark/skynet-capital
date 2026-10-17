@@ -42,6 +42,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
@@ -323,6 +324,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Nothing in it reaches a bot; a draft is not on any roster.
    */
   readonly authoredPlays?: AuthoredPlayStore;
+  /**
+   * THE AUTHORED-PLAY MILESTONE LEDGER (#5457 slice 5) — what the authored-plays routes write when a
+   * test starts, passes, a play is promoted or paused. Omit and those events simply aren't posted.
+   * The feed reads it through `readPlayMilestones` (signed-in members only).
+   */
+  readonly playMilestones?: PlayMilestoneLedger;
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;

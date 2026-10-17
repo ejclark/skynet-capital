@@ -21,6 +21,7 @@ import {
   ownerEmailFor,
   resolveOwnedParticipantIds,
 } from "../server/owner-link-store.js";
+import { createPlayMilestoneLedger } from "../server/play-milestone-ledger.js";
 import { createSavedPositionsStore } from "../server/saved-positions-store.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
@@ -33,6 +34,7 @@ export interface AccessSetup {
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
+  playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
@@ -79,6 +81,8 @@ export function setupAccess(
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
+  // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
+  const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -122,6 +126,7 @@ export function setupAccess(
     subscriptions,
     savedPositions,
     authoredPlays,
+    playMilestones,
     knownPersonaIds,
     auth,
     password,

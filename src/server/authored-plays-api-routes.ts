@@ -28,6 +28,7 @@ import {
   requireGet,
   sendJson,
 } from "./page-shell.js";
+import { recordPasses, recordPlayMilestone, shadowStamp } from "./play-milestone-sync.js";
 import { delegationRefusal } from "./subscriptions-api-routes.js";
 
 /**
@@ -51,6 +52,10 @@ import { delegationRefusal } from "./subscriptions-api-routes.js";
  * Pausing is never gated; resuming (`on: true` again) re-passes the gates. A promoted play can't be
  * edited, re-tested or discarded (it may hold a position).
  *
+ * FEED (#5457 slice 5). Starting a test, passing it, promoting and pausing each post ONE row to the
+ * Activity feed's ledger (`play-milestone-sync.ts`), idempotent on a key, so a second tap or a retry
+ * posts nothing. The routes only write that ledger; the feed shows it to signed-in members alone.
+ *
  * SHADOW (#5457 slice 2). `/shadow` puts one of the member's own drafts into its shadow test or takes it
  * out; the bots then decide the play each pass against the author's own bot and write only a ledger,
  * which comes back on each row as `shadow`. No route here subscribes a play, schedules it or hands it
@@ -70,6 +75,8 @@ import { delegationRefusal } from "./subscriptions-api-routes.js";
 
 const BODY_CAP_BYTES = 8_192;
 const MAX_ID = 100;
+
+const now = (config: DashboardServerConfig): Date => config.now?.() ?? new Date();
 
 /** What a row shows of a play in its shadow test. `report` is absent until the bots have reported on
  *  THIS test (a report for an earlier start of the same play is not it). */
@@ -252,6 +259,11 @@ function setShadow(
     sendJson(res, 200, { ok: false, error: done.reason });
     return;
   }
+  if (body.on && mine?.status !== "shadow" && done.record.status === "shadow") {
+    recordPlayMilestone(config.playMilestones, "started", done.record, now(config), {
+      stamp: shadowStamp(done.record),
+    });
+  }
   sendJson(res, 200, { ok: true, play: viewOf(done.record, config.readAuthoredShadow?.()) });
 }
 
@@ -319,7 +331,13 @@ async function setPromoted(
       sendJson(res, 200, { ok: false, error: "Only your own promoted playbook can be paused." });
       return;
     }
+    const wasRunning = isRunning(mine, config);
     subscriptions.setEnabled(runsOn, id, false);
+    // Pausing a play that is already paused is not an event — only the switch-off is.
+    if (wasRunning)
+      recordPlayMilestone(config.playMilestones, "paused", mine, now(config), {
+        stamp: now(config).toISOString(),
+      });
     answer(mine);
     return;
   }
@@ -335,10 +353,21 @@ async function setPromoted(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
+  // The pass is posted before the promotion, so the feed reads in the order it happened.
+  recordPasses(store, config.playMilestones, config.readAuthoredShadow?.());
+  const sessions = config
+    .readAuthoredShadow?.()
+    ?.plays.find((p) => p.id === id && p.since === shadowStamp(mine))?.sessions;
   const done = store.promote(memberKey, id);
   if (!done.ok) {
     sendJson(res, 200, { ok: false, error: done.reason });
     return;
+  }
+  // A first promotion is the event; a resume of a paused play is not (the key holds one per play).
+  if (mine.status === "shadow") {
+    recordPlayMilestone(config.playMilestones, "promoted", done.record, now(config), {
+      ...(sessions !== undefined ? { sessions } : {}),
+    });
   }
   const held = subscriptions.load()[runsOn] ?? [];
   if (held.some((s) => s.playbookId === id)) subscriptions.setEnabled(runsOn, id, true);
@@ -385,6 +414,7 @@ export async function serveAuthoredPlaysApi(
     if (!requireGet(req, res)) return true;
     const records = config.authoredPlays?.list(memberKey) ?? [];
     const report = config.readAuthoredShadow?.();
+    recordPasses(config.authoredPlays, config.playMilestones, report);
     sendJson(res, 200, {
       plays: records.map((record) => viewOf(record, report, isRunning(record, config))),
     });

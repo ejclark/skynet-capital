@@ -1,4 +1,10 @@
-import type { WireDevelopmentItem, WireFeedbackItem, WireMilestoneItem, WireTrade } from "./wire";
+import type {
+  WireDevelopmentItem,
+  WireFeedbackItem,
+  WireMilestoneItem,
+  WirePlayItem,
+  WireTrade,
+} from "./wire";
 
 /**
  * ONE FEED, SEVERAL KINDS (#784 slice 3) — the Activity page's own model, and the reason the page
@@ -20,6 +26,10 @@ import type { WireDevelopmentItem, WireFeedbackItem, WireMilestoneItem, WireTrad
  *
  * AND THE FOURTH (#784 slice 5): a member's earned milestone, `is:milestone`, the same four edits. Its
  * rows name a person, as a trade row does, so a bare search term matches the member's name too.
+ *
+ * AND THE FIFTH (#5457 slice 5, #809 slice 6): a member's authored playbook starting its shadow test,
+ * passing it, trading, or pausing — `is:playbook`, again a chip and a row component. Members only:
+ * the server sends the kind to a signed-in read alone.
  *
  * THE GRAMMAR IS ONE MODEL (the Issues-list template, unchanged since #738): every control on the
  * page writes a token into the same query string the filter box accepts as text. Three groups, and
@@ -70,6 +80,12 @@ export type ActivityFeedItem =
       readonly at: string;
       readonly kind: "milestone";
       readonly earn: WireMilestoneItem;
+    }
+  | {
+      readonly key: string;
+      readonly at: string;
+      readonly kind: "play";
+      readonly play: WirePlayItem;
     };
 
 /** The kinds one list can hold. Named so the qualifier table and the scope checks below can't drift
@@ -92,6 +108,7 @@ export function buildActivityFeed(
   filings: readonly WireFeedbackItem[],
   merges: readonly WireDevelopmentItem[] = [],
   earns: readonly WireMilestoneItem[] = [],
+  plays: readonly WirePlayItem[] = [],
 ): ActivityFeedItem[] {
   const items: ActivityFeedItem[] = [
     ...trades.map(
@@ -129,6 +146,9 @@ export function buildActivityFeed(
         earn,
       }),
     ),
+    ...plays.map(
+      (play): ActivityFeedItem => ({ key: play.key, at: instant(play.at), kind: "play", play }),
+    ),
   ];
   return items.sort((a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key));
 }
@@ -136,7 +156,13 @@ export function buildActivityFeed(
 /** Facets only a trade row can satisfy — see the header for why each one narrows the feed to
  *  trades rather than letting filings ride along beside them. */
 const TRADE_ONLY_QUALIFIERS = ["is:buy", "is:sell", "is:bot", "is:human"] as const;
-const KIND_QUALIFIERS = ["is:trade", "is:feedback", "is:development", "is:milestone"] as const;
+const KIND_QUALIFIERS = [
+  "is:trade",
+  "is:feedback",
+  "is:development",
+  "is:milestone",
+  "is:playbook",
+] as const;
 
 export const ACTIVITY_QUALIFIERS = [
   ...KIND_QUALIFIERS,
@@ -173,6 +199,8 @@ const QUALIFIER_KIND: Record<ActivityQualifier, ActivityKind> = {
   // No facets of its own either. A member's earn is NOT narrowed by `is:human`, which is a trade
   // facet (a desk filter); every milestone row is already a member's (`toMemberMilestones`).
   "is:milestone": "milestone",
+  // No facets of its own: the kind chip is the whole control.
+  "is:playbook": "play",
 };
 
 export interface ActivityFilter {
@@ -238,6 +266,9 @@ function haystack(item: ActivityFeedItem): string {
     return `${item.filing.title} #${item.filing.issueNumber}`.toLowerCase();
   }
   if (item.kind === "milestone") return `${item.earn.title} ${item.earn.who}`.toLowerCase();
+  if (item.kind === "play") {
+    return `${item.play.text} ${item.play.symbol} ${item.play.who}`.toLowerCase();
+  }
   return `${item.merge.title} #${item.merge.pullRequest} ${item.merge.author ?? ""}`.toLowerCase();
 }
 
