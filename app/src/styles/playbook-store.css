@@ -624,3 +624,57 @@
 .pb-conviction-fields textarea {
   resize: vertical;
 }
+
+/* "Steered by" on a pair row, with the view's scorecard (#5482 slice 5). Each outcome is a glyph AND
+   a word; hue never carries it alone (docs/BRAND.md → Accessibility). */
+.pb-steered {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-steered > summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.pb-steered-view {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.pb-steered-count {
+  white-space: nowrap;
+}
+
+.pb-steered-claims {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pb-steered-claim {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  column-gap: 8px;
+}
+
+.pb-steered-claim > .pb-steered-mark {
+  font-weight: 600;
+}
+
+.pb-steered-claim p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pb-steered-claim .pb-steered-says {
+  color: var(--fg);
+}
+
+.pb-steered-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+}

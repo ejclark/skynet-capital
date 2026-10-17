@@ -3,6 +3,7 @@ import {
   CONVICTION_ID_MAX,
   isCalendarDay,
 } from "../subscriptions/subscription-state.js";
+import { type ClaimScore, checkProblems, type FalsifierCheck } from "./claim-score.js";
 import type { ClaimStudy } from "./claim-study.js";
 import { narrowingProblems, type PairNarrowings, type SteerBounds } from "./conviction-steering.js";
 import { findPair, type Pair } from "./pair-table.js";
@@ -56,11 +57,24 @@ export interface ConvictionClaim {
    * check it. Attached from the studies ledger (`conviction-studies.json`), never typed by hand.
    */
   readonly study?: ClaimStudy;
+  /**
+   * How the falsifier is read mechanically, where it can be (#5482 slice 5): the study re-run, or a
+   * band or level on a symbol's closes. A claim without one is scored by recording the reading.
+   */
+  readonly check?: FalsifierCheck;
+  /**
+   * Pass, fail or pending against the claim's own dated falsifier (#5482 slice 5), recorded by
+   * `npm run research:claims` and attached from the scores ledger, never typed by hand. It records
+   * how the claim fared; it sizes nothing and changes no pair's settings.
+   */
+  readonly score?: ClaimScore;
 }
 
 export interface Conviction {
   /** Kebab-case, unique; what a subscription points at. */
   readonly id: string;
+  /** What members call the view ("AI-dip view"), shown beside the pairs it steers. */
+  readonly title?: string;
   /** Whose view it is, as members know them. */
   readonly owner: string;
   /** `YYYY-MM-DD`: the day the view was stated. */
@@ -103,6 +117,9 @@ function claimProblems(claim: ConvictionClaim, n: number, statedOn: string): str
   if (claim.scoreBy !== undefined) {
     if (!isCalendarDay(claim.scoreBy)) problems.push(`${at}: scoreBy is not a calendar day`);
     else if (claim.scoreBy < statedOn) problems.push(`${at}: scored before it was stated`);
+  }
+  if (claim.check) {
+    problems.push(...checkProblems(claim.check, claim.scoreBy).map((p) => `${at}: ${p}`));
   }
   if (claim.bucket === "forward" && claim.scoreBy === undefined) {
     problems.push(`${at}: a forward test needs a scoreBy day`);

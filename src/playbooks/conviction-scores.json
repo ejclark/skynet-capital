@@ -1,0 +1,82 @@
+{
+  "ai-dip-2026-10": [
+    {
+      "statement": "1. CRWV premiums are rich after the drop: puts overprice CRWV's downside.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-20.",
+        "dueOn": "2026-11-20"
+      }
+    },
+    {
+      "statement": "2a. Sell puts before the print: the pre-print premium is worth selling.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-06.",
+        "dueOn": "2026-11-06"
+      }
+    },
+    {
+      "statement": "2b. Buy calls after the print: post-print value after the vol crush, about 6 sessions after.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-25.",
+        "dueOn": "2026-11-25"
+      }
+    },
+    {
+      "statement": "3. Backlog and NVIDIA's stake cushion the downside.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
+    },
+    {
+      "statement": "4. Election-season sentiment against AI spending is a headwind priced as lasting.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-09.",
+        "dueOn": "2026-11-09"
+      }
+    },
+    {
+      "statement": "5. NVDA runs up into its print. Already S1-NVDA's study; adds no size.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-30.",
+        "dueOn": "2026-11-30"
+      }
+    },
+    {
+      "statement": "6. In the long run, AI adopters win. A worldview; it never sizes a trade.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
+    },
+    {
+      "statement": "7. The floor: more pullback first. CRWV's floor is probably $48–$52, likely after the print.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2027-01-20.",
+        "dueOn": "2027-01-20"
+      }
+    },
+    {
+      "statement": "8. How long the drop lasts: back above today's price in 3 to 6 months is the base case.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2027-02-02.",
+        "dueOn": "2027-02-02"
+      }
+    },
+    {
+      "statement": "9. Hold through earnings toward the recovery: CRWV's print moves run larger than priced.",
+      "score": {
+        "outcome": "pending",
+        "basis": "Not due: scored on 2026-11-17.",
+        "dueOn": "2026-11-17"
+      }
+    }
+  ]
+}
