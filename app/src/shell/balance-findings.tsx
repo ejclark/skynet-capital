@@ -7,6 +7,7 @@ import {
   type HealthFinding,
   LEVEL_WORD,
   type PlayHealth,
+  standingLine,
 } from "../live/book-health";
 
 /**
@@ -53,6 +54,24 @@ export function PlayLink({
   );
 }
 
+/** How long the finding has stood and which way it is going — a glyph and words, never hue alone
+ *  (#5493 slice 5). Nothing when the server keeps no history. */
+function FindingTrend({ finding }: { readonly finding: HealthFinding }): ReactElement | null {
+  const line = standingLine(finding.standing);
+  if (!line) return null;
+  return (
+    <span
+      className="bal-trend"
+      data-trend={finding.standing?.trend}
+      role="img"
+      aria-label={line.label}
+    >
+      <span aria-hidden="true">{line.glyph}</span> <b>{line.word}</b>
+      <span> · {line.duration}</span>
+    </span>
+  );
+}
+
 export function BalanceFindings({
   deskId,
   findings,
@@ -87,6 +106,7 @@ export function BalanceFindings({
               <b>{LEVEL_WORD[finding.level]}</b>
             </span>
             <span className="bal-detector">{DETECTOR_NAME[finding.detector]}</span>
+            <FindingTrend finding={finding} />
           </p>
           <p className="bal-finding-words">{finding.words}</p>
           <p className="bal-finding-foot">

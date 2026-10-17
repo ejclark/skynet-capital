@@ -70,6 +70,16 @@ export interface HealthFinding {
   /** IMBALANCED against a play's target only (#5493 slice 4). */
   readonly band?: ImbalanceBand;
   readonly words: string;
+  /** How long it has stood and which way it is going (#5493 slice 5); absent when the server keeps
+   *  no history. */
+  readonly standing?: HealthStanding;
+}
+
+/** Mirrors `Standing` in `src/observatory/book-health-history.ts`. */
+export interface HealthStanding {
+  readonly since: string;
+  readonly standingMs: number;
+  readonly trend: "new" | "worse" | "better" | "steady";
 }
 
 /** Mirrors `PlayHealth` in `src/observatory/book-health-view.ts`: one subscription's numbers. A
@@ -275,4 +285,56 @@ export function refusedCount(play: PlayHealth): number {
 /** "Oct 14" — the day of a play's newest entry, on the reader's own clock. */
 export function entryDay(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+// ── Over time (#5493 slice 5) ──────────────────────────────────────────────────────────────────
+
+/** A finding's direction as a glyph and a word, never hue alone: ▲ up and worse, ▼ down and easing,
+ *  ▬ level, ✦ first seen. None repeats the level glyphs (■ ◆ ●) on the same row. */
+export const TREND_GLYPH: Record<HealthStanding["trend"], string> = {
+  worse: "▲",
+  better: "▼",
+  steady: "▬",
+  new: "✦",
+};
+export const TREND_WORD: Record<HealthStanding["trend"], string> = {
+  worse: "Worse",
+  better: "Easing",
+  steady: "Steady",
+  new: "New",
+};
+
+const HOUR_MS = 60 * 60 * 1000;
+const plural = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? "" : "s"}`;
+
+/** How long, in the unit a phone has room for: under an hour, then hours to two days, then days. */
+export function standingFor(ms: number): string {
+  if (ms < HOUR_MS) return "under an hour";
+  if (ms < 48 * HOUR_MS) return plural(Math.floor(ms / HOUR_MS), "hour");
+  return plural(Math.floor(ms / (24 * HOUR_MS)), "day");
+}
+
+export interface StandingLine {
+  readonly glyph: string;
+  readonly word: string;
+  /** "standing 3 days", or "first seen just now" for a finding with no earlier sample. */
+  readonly duration: string;
+  /** The whole line for a screen reader. */
+  readonly label: string;
+}
+
+/** The small per-finding trend on the Balance section; null when the server kept no history. */
+export function standingLine(standing: HealthStanding | undefined): StandingLine | null {
+  if (!standing) return null;
+  const duration =
+    standing.trend === "new"
+      ? "first seen just now"
+      : `standing ${standingFor(standing.standingMs)}`;
+  const word = TREND_WORD[standing.trend];
+  return {
+    glyph: TREND_GLYPH[standing.trend],
+    word,
+    duration,
+    label: `${word}, ${duration}`,
+  };
 }

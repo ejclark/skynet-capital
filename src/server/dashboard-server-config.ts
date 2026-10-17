@@ -21,6 +21,7 @@ import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
+import type { BookHealthHistoryPort } from "./book-health-history-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
@@ -134,6 +135,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     participantId: string,
     page?: { readonly before?: number; readonly limit?: number },
   ) => Promise<readonly DecisionRecord[]>;
+  /** The book-health history (#5493 slice 5): when wired, the owner's findings carry how long they
+   *  have stood and whether they are easing or worsening. Omit and a finding says nothing of its age. */
+  readonly healthHistory?: BookHealthHistoryPort;
   /** One bot's week of checks, grouped answers and placed trades (#5073 slice 2,
    *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
    *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
