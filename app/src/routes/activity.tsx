@@ -28,6 +28,7 @@ import { type PageSection, resolveSection } from "../shell/sections";
 import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
+import { PlayRow } from "../shell/wire-play-row";
 import { TradeRow } from "../shell/wire-trade-row";
 import { FilterChip, InlineResult } from "../ui";
 
@@ -69,6 +70,7 @@ const KIND_CHIPS = [
   ["is:feedback", "Ideas"],
   ["is:development", "Builds"],
   ["is:milestone", "Milestones"],
+  ["is:playbook", "Playbooks"],
 ] as const;
 const SIDE_CHIPS = [
   ["is:buy", "Buys"],
@@ -99,6 +101,7 @@ function WireControls({
   feedbackEnabled,
   developmentEnabled,
   milestonesEnabled,
+  playsEnabled,
   onChange,
   section,
   onSection,
@@ -112,6 +115,7 @@ function WireControls({
   readonly feedbackEnabled: boolean;
   readonly developmentEnabled: boolean;
   readonly milestonesEnabled: boolean;
+  readonly playsEnabled: boolean;
   readonly onChange: (next: string) => void;
   readonly section: ActivitySection;
   readonly onSection: (next: ActivitySection) => void;
@@ -135,6 +139,7 @@ function WireControls({
     "is:feedback": feedbackEnabled,
     "is:development": developmentEnabled,
     "is:milestone": milestonesEnabled,
+    "is:playbook": playsEnabled,
   };
   const kinds = KIND_CHIPS.filter(([qualifier]) => wired[qualifier]);
   const tradesInScope = kindInScope(filter, "trade");
@@ -274,6 +279,7 @@ function FeedSection({
     wire.feedbackEnabled ? wire.feedback : [],
     wire.developmentEnabled ? (wire.development ?? []) : [],
     wire.milestonesEnabled ? (wire.milestones ?? []) : [],
+    wire.playsEnabled ? (wire.plays ?? []) : [],
   );
   const shown = items.filter((item) => matchesActivity(item, filter));
   return (
@@ -295,6 +301,7 @@ function FeedSection({
               return <DevelopmentRow key={item.key} merge={item.merge} />;
             }
             if (item.kind === "milestone") return <MilestoneRow key={item.key} earn={item.earn} />;
+            if (item.kind === "play") return <PlayRow key={item.key} play={item.play} />;
             return (
               <FilingRow
                 key={item.key}
@@ -433,6 +440,7 @@ function WirePage(): ReactElement {
           feedbackEnabled={feed.feedbackEnabled}
           developmentEnabled={Boolean(feed.developmentEnabled)}
           milestonesEnabled={Boolean(feed.milestonesEnabled)}
+          playsEnabled={Boolean(feed.playsEnabled)}
           onChange={setFilter}
           section={section}
           onSection={setSection}

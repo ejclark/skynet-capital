@@ -47,6 +47,7 @@ import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { recordPasses } from "../server/play-milestone-sync.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
@@ -204,6 +205,7 @@ async function main(): Promise<void> {
     subscriptions,
     savedPositions,
     authoredPlays,
+    playMilestones,
     knownPersonaIds,
     auth,
     password,
@@ -301,6 +303,12 @@ async function main(): Promise<void> {
     subscriptions,
     savedPositions,
     authoredPlays,
+    playMilestones,
+    // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).
+    readPlayMilestones: () => {
+      recordPasses(authoredPlays, playMilestones, insightsBridge.readAuthoredShadow());
+      return playMilestones.list();
+    },
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },

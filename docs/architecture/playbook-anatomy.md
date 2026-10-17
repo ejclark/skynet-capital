@@ -135,6 +135,14 @@ promoted play switches its subscription off (`pausedRoster`: exits only), and th
 `promoted` so the spec stays compiled and its exits never stop
 (`tests/playbooks/authored-promote-live.spec.ts`).
 
+Each of those moments (a test starting, passing, a first promotion, a pause) also posts one row to the
+Activity feed (#5457 slice 5, #809 slice 6): the authored-plays routes write an append-only ledger
+(`src/server/play-milestone-ledger.ts`, idempotent on a key per event), a pass is read off the bots'
+report (`recordPasses`, `play-milestone-sync.ts`), and the row is worded by `play-feed-words.ts` (SIM,
+"unvalidated", never a return or an edge). The ledger touches no order path, and the feed shows it to
+signed-in members only. Subscribing to another member's play is not part of this (it waits on #809's
+review slice).
+
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
 filtered); then every intent passes the guards. The guards refuse opens and never refuse a close.

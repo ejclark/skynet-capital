@@ -11,6 +11,7 @@ import type {
   WireDevelopmentItem,
   WireFeedbackItem,
   WireMilestoneItem,
+  WirePlayItem,
   WireTrade,
 } from "../../src/live/wire";
 
@@ -369,5 +370,52 @@ describe("the milestone kind", () => {
 
   it("pressing Milestones clears a trade facet rather than stranding it in the query", () => {
     expect(toggleActivityQualifier("is:buy NVDA", "is:milestone")).toBe("NVDA is:milestone");
+  });
+});
+
+// The fifth kind (#5457 slice 5): a member's authored playbook, members only.
+const play = (over: Partial<WirePlayItem> = {}): WirePlayItem => ({
+  key: "play:U-sauron-nvda:passed:1",
+  icon: "✅",
+  kindLabel: "Passed",
+  who: "Sauron",
+  whoId: "sauron",
+  text: "got “NVDA run-up, tighter” through its shadow test after 10 shadow sessions",
+  symbol: "NVDA",
+  meta: "NVDA · SIM · unvalidated",
+  cheer: true,
+  at: "2026-10-05T12:00:00.000Z",
+  ...over,
+});
+
+describe("playbooks as the fifth kind", () => {
+  const withPlay = buildActivityFeed(
+    [trade({ key: "t-1", at: "2026-10-01T09:00:00.000Z" })],
+    [],
+    [],
+    [],
+    [play()],
+  );
+  const ids = (items: readonly ActivityFeedItem[]) => items.map((i) => i.key);
+  const only = (query: string) =>
+    ids(withPlay.filter((i) => matchesActivity(i, parseActivityQuery(query))));
+
+  it("interleaves with the other kinds by instant", () => {
+    expect(ids(withPlay)).toEqual(["play:U-sauron-nvda:passed:1", "t-1"]);
+  });
+
+  it("is:playbook keeps the play and drops the trade; is:trade drops the play", () => {
+    expect(only("is:playbook")).toEqual(["play:U-sauron-nvda:passed:1"]);
+    expect(only("is:trade")).toEqual(["t-1"]);
+  });
+
+  it("matches a bare term by the play's words, its ticker or the bot", () => {
+    expect(only("run-up")).toEqual(["play:U-sauron-nvda:passed:1"]);
+    expect(only("nvda")).toContain("play:U-sauron-nvda:passed:1");
+  });
+
+  it("pressing Playbooks clears a trade facet rather than stranding it", () => {
+    expect(toggleActivityQualifier("is:buy NVDA", "is:playbook")).toBe("NVDA is:playbook");
+    expect(kindInScope(parseActivityQuery("is:playbook"), "trade")).toBe(false);
   });
 });

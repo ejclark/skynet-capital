@@ -37,6 +37,7 @@ import type { LadderProgressEntry } from "./ladder-progress-log.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import { nextLinkHeader, resolvePageSize } from "./pagination.js";
+import type { PlayMilestone } from "./play-milestone-ledger.js";
 
 /**
  * What `/wire` needs from the server config — inherited into `DashboardServerConfig` the same way
@@ -105,6 +106,13 @@ export interface WireRouteDeps {
    * falsifier this kind exists not to trip.
    */
   readonly readAllOrderAudit?: () => Promise<readonly OrderAuditRecord[]>;
+  /**
+   * Authored-play milestones (#5457 slice 5, #809 slice 6) — a member's play starting its shadow test,
+   * passing it, being promoted to trade, or paused. MEMBERS ONLY: `content-api-routes.ts` withholds
+   * this dep from a read with no session (the invite gate), so a pre-auth caller gets `playsEnabled:
+   * false` and no rows. Omit and the kind is simply off.
+   */
+  readonly readPlayMilestones?: () => readonly PlayMilestone[];
   /** The exact order-id join into the decision store (PR 6, issue #2287) — omit to render every
    *  row with no reasoning/vitals attached, never a fabricated one. */
   readonly findByOrderId?: (
@@ -146,6 +154,8 @@ interface AssembledWire {
   readonly development?: readonly DevelopmentFeedItem[];
   /** Absent — not empty — when either milestone source is unwired; same reason as `development`. */
   readonly milestones?: readonly MemberMilestone[];
+  /** Absent — not empty — when the play ledger is unwired or the reader is not a member. */
+  readonly plays?: readonly PlayMilestone[];
 }
 
 /**
@@ -290,6 +300,7 @@ async function assembleWire(
     feedback,
     ...(development ? { development } : {}),
     ...(milestones ? { milestones } : {}),
+    ...(config.readPlayMilestones ? { plays: config.readPlayMilestones().slice(-limit) } : {}),
   };
 }
 
@@ -337,6 +348,12 @@ export async function serveWireJson(
         feedbackEnabled,
         assembled.development,
         assembled.milestones,
+        assembled.plays
+          ? {
+              items: assembled.plays,
+              names: new Map(config.hub.getState().participants.map((p) => [p.id, p.displayName])),
+            }
+          : undefined,
       ),
     }),
   );

@@ -106,7 +106,10 @@ export async function serveContentApi(
   if (path === "/api/wire") {
     // Every account's fills, so each bot row's playbook rides only to that account's owner (#885),
     // the rule `/api/desk/:id` already keeps.
-    await serveWireJson(res, url, config, Boolean(config.submitFeedback), (id) =>
+    // The playbook kind is members-only (#5457 slice 5): a read with no session is the pre-auth
+    // side of the invite gate, so that dep is withheld before anything is assembled.
+    const { readPlayMilestones: _members, ...open } = config;
+    await serveWireJson(res, url, session ? config : open, Boolean(config.submitFeedback), (id) =>
       ownsDesk(id, config, session),
     );
     return true;
