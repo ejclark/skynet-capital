@@ -394,6 +394,72 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 });
 
+// #4939 (retro #5589): the arm job's `gh pr merge --auto` answered "clean status", and the direct
+// merge fallback died on `GraphQL: Base branch was modified` because main moved in that second. No
+// retry existed, so a clean PR sat unarmed for 187 hours. The fallback now retries that one message
+// (three tries) and fails as before on anything else. These run the real loop from pipeline.yml
+// against a stub `gh-retry.sh`, so the behaviour is pinned, not just the text.
+describe("arm-auto-merge — the direct-merge fallback survives a base branch that moved", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const armStart = pipeline.indexOf("- name: Arm auto-merge (or merge directly if already green)");
+  const arm = pipeline.slice(armStart, pipeline.indexOf("\n  deploy:", armStart));
+  const loopStart = arm.indexOf("for try in 1 2 3; do");
+  const loop = arm.slice(loopStart, arm.indexOf("\n              done", loopStart) + 19);
+
+  it("wraps the direct squash merge in a three-try loop keyed on the base-moved message", () => {
+    expect(loopStart).toBeGreaterThan(-1);
+    expect(loop).toContain('gh-retry.sh" gh pr merge --squash "$PR"');
+    expect(loop).toContain('grep -qi "base branch was modified"');
+    expect(loop).toContain('[ "$try" -lt 3 ]');
+    // The loop sits on the already-green branch, not around the `--auto` call.
+    expect(loopStart).toBeGreaterThan(arm.indexOf("already green"));
+  });
+
+  // Stub gh-retry.sh: prints the scripted reply for call N (the last reply repeats) and counts calls.
+  const drive = (replies: Array<{ code: number; text: string }>) => {
+    const dir = mkdtempSync(join(tmpdir(), "arm-retry-"));
+    const last = replies[replies.length - 1] ?? { code: 0, text: "" };
+    const branches = replies
+      .map((r, i) => `[ "$n" -eq ${i + 1} ] && { echo ${JSON.stringify(r.text)}; exit ${r.code}; }`)
+      .join("\n");
+    writeFileSync(
+      join(dir, "gh-retry.sh"),
+      `#!/usr/bin/env bash\nn=$(( $(cat "${dir}/n" 2>/dev/null || echo 0) + 1 ))\necho $n > "${dir}/n"\n${branches}\necho ${JSON.stringify(last.text)}; exit ${last.code}\n`,
+      { mode: 0o755 },
+    );
+    const script = `sleep() { :; }\nPR=1\n${loop.replace(/^ {14}/gm, "")}`;
+    let code = 0;
+    try {
+      execFileSync("bash", ["-e", "-c", script], {
+        env: { ...process.env, RUNNER_TEMP: dir },
+        stdio: "pipe",
+      });
+    } catch (error) {
+      code = (error as { status?: number }).status ?? -1;
+    }
+    const calls = Number(readFileSync(join(dir, "n"), "utf8").trim());
+    rmSync(dir, { recursive: true, force: true });
+    return { code, calls };
+  };
+
+  const moved = { code: 1, text: "GraphQL: Base branch was modified" };
+
+  it("merges on the third try after the base moved twice", () => {
+    expect(drive([moved, moved, { code: 0, text: "merged" }])).toEqual({ code: 0, calls: 3 });
+  });
+
+  it("gives up after three tries and fails the step", () => {
+    expect(drive([moved])).toEqual({ code: 1, calls: 3 });
+  });
+
+  it("fails at once, with no retry, on any other error", () => {
+    expect(drive([{ code: 1, text: "GraphQL: Pull request is not mergeable" }])).toEqual({
+      code: 1,
+      calls: 1,
+    });
+  });
+});
+
 // #4211 (slice 6 of #4056): `integration tests` is a required check, and GitHub counts a SKIPPED
 // required check as a pass. A draft skips both suites, so the promotion to ready must run them
 // again — or the stale `skipped` is the last word and the PR merges untested (PR #322's shape).
@@ -715,71 +781,5 @@ describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
     expect(body).toContain("SCAN=$(node scripts/envelope-scan.mjs");
     expect(body).toContain("jq -er");
     expect(body).toContain("::notice::not arming");
-  });
-});
-
-// #4939 (retro #5589): the arm job's `gh pr merge --auto` answered "clean status", and the direct
-// merge fallback died on `GraphQL: Base branch was modified` because main moved in that second. No
-// retry existed, so a clean PR sat unarmed for 187 hours. The fallback now retries that one message
-// (three tries) and fails as before on anything else. These run the real loop from pipeline.yml
-// against a stub `gh-retry.sh`, so the behaviour is pinned, not just the text.
-describe("arm-auto-merge — the direct-merge fallback survives a base branch that moved", () => {
-  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
-  const armStart = pipeline.indexOf("- name: Arm auto-merge (or merge directly if already green)");
-  const arm = pipeline.slice(armStart, pipeline.indexOf("\n  deploy:", armStart));
-  const loopStart = arm.indexOf("for try in 1 2 3; do");
-  const loop = arm.slice(loopStart, arm.indexOf("\n              done", loopStart) + 19);
-
-  it("wraps the direct squash merge in a three-try loop keyed on the base-moved message", () => {
-    expect(loopStart).toBeGreaterThan(-1);
-    expect(loop).toContain('gh-retry.sh" gh pr merge --squash "$PR"');
-    expect(loop).toContain('grep -qi "base branch was modified"');
-    expect(loop).toContain('[ "$try" -lt 3 ]');
-    // The loop sits on the already-green branch, not around the `--auto` call.
-    expect(loopStart).toBeGreaterThan(arm.indexOf("already green"));
-  });
-
-  // Stub gh-retry.sh: prints the scripted reply for call N (the last reply repeats) and counts calls.
-  const drive = (replies: Array<{ code: number; text: string }>) => {
-    const dir = mkdtempSync(join(tmpdir(), "arm-retry-"));
-    const last = replies[replies.length - 1] ?? { code: 0, text: "" };
-    const branches = replies
-      .map((r, i) => `[ "$n" -eq ${i + 1} ] && { echo ${JSON.stringify(r.text)}; exit ${r.code}; }`)
-      .join("\n");
-    writeFileSync(
-      join(dir, "gh-retry.sh"),
-      `#!/usr/bin/env bash\nn=$(( $(cat "${dir}/n" 2>/dev/null || echo 0) + 1 ))\necho $n > "${dir}/n"\n${branches}\necho ${JSON.stringify(last.text)}; exit ${last.code}\n`,
-      { mode: 0o755 },
-    );
-    const script = `sleep() { :; }\nPR=1\n${loop.replace(/^ {14}/gm, "")}`;
-    let code = 0;
-    try {
-      execFileSync("bash", ["-e", "-c", script], {
-        env: { ...process.env, RUNNER_TEMP: dir },
-        stdio: "pipe",
-      });
-    } catch (error) {
-      code = (error as { status?: number }).status ?? -1;
-    }
-    const calls = Number(readFileSync(join(dir, "n"), "utf8").trim());
-    rmSync(dir, { recursive: true, force: true });
-    return { code, calls };
-  };
-
-  const moved = { code: 1, text: "GraphQL: Base branch was modified" };
-
-  it("merges on the third try after the base moved twice", () => {
-    expect(drive([moved, moved, { code: 0, text: "merged" }])).toEqual({ code: 0, calls: 3 });
-  });
-
-  it("gives up after three tries and fails the step", () => {
-    expect(drive([moved])).toEqual({ code: 1, calls: 3 });
-  });
-
-  it("fails at once, with no retry, on any other error", () => {
-    expect(drive([{ code: 1, text: "GraphQL: Pull request is not mergeable" }])).toEqual({
-      code: 1,
-      calls: 1,
-    });
   });
 });
