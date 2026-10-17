@@ -30,6 +30,7 @@ import {
 import type { StrategyAllocation } from "../subscriptions/subscriptions-file.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
+import { type SteeredByView, steeredByView } from "./steered-by-view.js";
 
 interface SubscriptionView {
   readonly mode: PlaybookSubscription["mode"];
@@ -75,6 +76,9 @@ interface PairRowView extends PairRowEntry {
   /** An option pair the bot refuses because another option pair it reads first owns the ticker:
    *  "not trading — the call spread owns NVDA". */
   readonly notTrading?: string;
+  /** A conviction view steers this pair: whose, the check day, and its claims' scorecard
+   *  (#5482 slice 5). The same for every viewer; it is the record's, not the account's. */
+  readonly steeredBy?: SteeredByView;
 }
 
 interface StrategyCardView extends Omit<StrategyCardEntry, "pairs"> {
@@ -151,7 +155,9 @@ function strategyCardsView(
 ): StrategyCardView[] {
   const byPairId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const onBot = subscribedPairs(subscriptions ?? [], findPair, envNamed);
-  const rowView = (row: PairRowEntry): PairRowView => {
+  const rowView = (entry: PairRowEntry): PairRowView => {
+    const steered = steeredByView(entry.id);
+    const row = steered ? { ...entry, steeredBy: steered } : entry;
     const sub = byPairId.get(row.id);
     if (sub)
       return { ...row, subscription: subscriptionView(sub), ...subscribedNotes(row.id, onBot) };

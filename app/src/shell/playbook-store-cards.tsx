@@ -12,6 +12,7 @@ import {
   HousePlaybookMetrics,
   type MetricsScope,
 } from "./playbook-metrics";
+import { SteeredBy } from "./playbook-steered-by";
 import { SubscribeForm } from "./playbook-subscribe-form";
 import { WindowTimeline } from "./playbook-window";
 
@@ -341,6 +342,7 @@ export function PairRow({
           <p className="num pb-card-symbols">{pair.symbols.join(" · ")}</p>
         ) : null}
         <PairWords pair={pair} reportKeyed={reportKeyed} />
+        {pair.steeredBy ? <SteeredBy view={pair.steeredBy} /> : null}
         <CountLine
           {...(card.subscribers !== undefined ? { subscribers: card.subscribers } : {})}
           {...(pair.studyHref ? { studyHref: pair.studyHref } : {})}

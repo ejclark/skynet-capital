@@ -106,6 +106,34 @@ export type PairStatus =
   | "not-studied"
   | "cant-run";
 
+/** A claim's outcome against its own dated falsifier — mirrors `ClaimOutcome` in
+ *  `src/playbooks/claim-score.ts` (#5482 slice 5). */
+export type ClaimOutcome = "pass" | "fail" | "pending" | "untestable";
+
+/** A conviction view that steers a pair, and its claims' scorecard — mirrors `SteeredByView` in
+ *  `src/observatory/steered-by-view.ts`. */
+export interface SteeredByView {
+  readonly convictionId: string;
+  readonly title: string;
+  readonly owner: string;
+  readonly checkOn: string;
+  readonly scorecard: {
+    readonly pass: number;
+    readonly fail: number;
+    readonly pending: number;
+    readonly untestable: number;
+  };
+  readonly claims: readonly {
+    readonly label: string;
+    readonly statement: string;
+    readonly outcome: ClaimOutcome;
+    readonly dueOn?: string;
+    readonly scoredOn?: string;
+    readonly basis: string;
+    readonly backsThisPair: boolean;
+  }[];
+}
+
 /** One pair (a strategy on a ticker) on a strategy card — mirrors `PairRowView` in
  *  `src/observatory/playbook-store-json-view.ts`. `id` is the playbook id every subscription and
  *  write keys on (criterion 8): the client looks it up in `cards`, never builds or splits it. */
@@ -135,6 +163,8 @@ export interface PairRowView {
   readonly handOff?: string;
   /** "not trading — the call spread owns NVDA" — the bots skip this held pair. */
   readonly notTrading?: string;
+  /** The conviction view that steers this pair, with its scorecard (#5482 slice 5). */
+  readonly steeredBy?: SteeredByView;
   /** A ✓ that is not a clean ✓: below the house bar, or another pair's verdict borrowed. */
   readonly qualifier?: "weakened" | "borrowed";
   /** "Buy NVDA's run-up before its earnings report" — the call in plain words, no date (#5444). */

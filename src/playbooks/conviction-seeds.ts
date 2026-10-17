@@ -1,5 +1,7 @@
+import { type ScoreLedger, withScores } from "./claim-score.js";
 import { type StudyLedger, withStudies } from "./claim-studies.js";
 import type { Conviction } from "./conviction-record.js";
+import scoreLedger from "./conviction-scores.json";
 import studyLedger from "./conviction-studies.json";
 
 /**
@@ -8,6 +10,13 @@ import studyLedger from "./conviction-studies.json";
  * exactly what it said when it was studied.
  */
 const STUDIES = studyLedger as unknown as StudyLedger;
+
+/**
+ * How each claim fared against its own dated falsifier, by conviction id (#5482 slice 5): written by
+ * the same `npm run research:claims` pass, never by hand, and attached only while the claim still
+ * says what it said when it was scored.
+ */
+const SCORES = scoreLedger as unknown as ScoreLedger;
 
 /**
  * THE SEEDED CONVICTIONS (#5482 slice 2) — the records that exist before members can write their
@@ -25,6 +34,7 @@ const STUDIES = studyLedger as unknown as StudyLedger;
  */
 const AI_DIP_STATED: Conviction = {
   id: "ai-dip-2026-10",
+  title: "AI-dip view",
   owner: "Eric",
   statedOn: "2026-10-16",
   checkOn: "2027-01-29",
@@ -60,6 +70,8 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "A premium-fit re-run on or after 2026-11-13 shows implied vol at or above the 50th pct and priced assignment odds above the historical.",
       scoreBy: "2026-11-20",
+      // The re-run on data from the due day decides: it backs the claim, cuts against it, or splits.
+      check: { kind: "rerun" },
     },
     {
       tag: "overrated",
@@ -127,6 +139,14 @@ const AI_DIP_STATED: Conviction = {
         "37 past episodes in today's conditions fell a further 17% (median); the low came ~23 sessions in (cycle-phase-crwv-nvda-2026-10.md).",
       falsifier: "CRWV's lowest close 2026-10-16 to 2027-01-19 lands outside $41.0–$60.9.",
       scoreBy: "2027-01-20",
+      check: {
+        kind: "closes-within",
+        symbol: "CRWV",
+        from: "2026-10-16",
+        to: "2027-01-19",
+        low: 41.0,
+        high: 60.9,
+      },
     },
     {
       tag: "overrated",
@@ -137,6 +157,13 @@ const AI_DIP_STATED: Conviction = {
         "Analogs got back to their entry in 14 / 37 / 72 sessions (25th / median / 75th pct); 30% regained the old high within 126.",
       falsifier: "No CRWV close at or above $63.15 by 2027-02-01.",
       scoreBy: "2027-02-02",
+      check: {
+        kind: "closes-reach",
+        symbol: "CRWV",
+        after: "2026-10-16",
+        by: "2027-02-01",
+        level: 63.15,
+      },
     },
     {
       tag: "underrated",
@@ -152,10 +179,10 @@ const AI_DIP_STATED: Conviction = {
   ],
 };
 
-/** The AI-dip view with what the studies found attached to each claim it could be run for. */
-export const AI_DIP_2026_10: Conviction = withStudies(
-  AI_DIP_STATED,
-  STUDIES[AI_DIP_STATED.id] ?? [],
+/** The AI-dip view with what the studies found and how each claim fared attached. */
+export const AI_DIP_2026_10: Conviction = withScores(
+  withStudies(AI_DIP_STATED, STUDIES[AI_DIP_STATED.id] ?? []),
+  SCORES[AI_DIP_STATED.id] ?? [],
 );
 
 /** Every seeded conviction, in the order they were stated. */

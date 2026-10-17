@@ -17,6 +17,10 @@
  * `research-dispatch-budget.json` at `normal` and `work-mode.json`'s number at every other position,
  * and an unreadable dial reads as `conserve` (never unlimited). `--cap` may only lower it.
  *
+ * It then scores each claim against its own dated falsifier (`claim-score.ts`, #5482 slice 5) and
+ * writes pass / fail / pending to `src/playbooks/conviction-scores.json`, so a claim whose day has
+ * come, or whose study was just re-run, is scored in the same pass.
+ *
  * Network: only through the instruments' own cached fetchers (Yahoo bars, SEC EDGAR, the Cboe
  * chain). Paper only, educational; nothing here routes an order or sizes a trade.
  */
@@ -29,6 +33,7 @@ import { promisify } from "node:util";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
 import { premiumFit } from "../../scripts/research/premium-fit.mjs";
+import { claimLabel, type ScoreLedgerEntry } from "../playbooks/claim-score.js";
 import {
   type RunnerDeps,
   type RunnerResult,
@@ -38,10 +43,12 @@ import {
 } from "../playbooks/claim-study-runner.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
+import { scoreConviction } from "./claim-scoring-run.js";
 
 const run = promisify(execFile);
 const ROOT = process.cwd();
 const LEDGER_PATH = join(ROOT, "src", "playbooks", "conviction-studies.json");
+const SCORES_PATH = join(ROOT, "src", "playbooks", "conviction-scores.json");
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 /** The last session the symbol's cached tape holds. */
@@ -92,7 +99,7 @@ const flag = (argv: readonly string[], name: string): string | undefined => {
 
 /** The claim's own label in its call sheet ("2a"), else its position. */
 const labelOf = (conviction: Conviction, position: number): string =>
-  conviction.claims[position - 1]?.statement.match(/^(\d+[a-z]?)\./)?.[1] ?? String(position);
+  claimLabel(conviction.claims[position - 1]?.statement ?? "", position);
 
 function describe(result: RunnerResult, conviction: Conviction): string[] {
   const lines = result.runs.map((r) => {
@@ -125,6 +132,10 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 
   const deps: RunnerDeps = { dataDate, execute };
   let ledger = JSON.parse(readFileSync(LEDGER_PATH, "utf8")) as Record<string, unknown>;
+  let scores = JSON.parse(readFileSync(SCORES_PATH, "utf8")) as Record<
+    string,
+    readonly ScoreLedgerEntry[]
+  >;
   let used = 0;
   for (const conviction of convictions) {
     if (!conviction) continue;
@@ -145,6 +156,12 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       console.log(`  claim ${labelOf(conviction, n)}: ${s.disposition} — ${what}`);
     });
     ledger = { ...ledger, [conviction.id]: result.entries };
+    // Scoring follows the studies: a re-run just written feeds the `rerun` check, and a claim whose
+    // day has come is read against its falsifier. Nothing here sizes a trade or edits a pair.
+    const scoring = await scoreConviction(conviction, result.entries);
+    console.log("  scores:");
+    for (const line of scoring.lines) console.log(line);
+    scores = { ...scores, [conviction.id]: scoring.entries };
   }
   if (!dry) {
     mkdirSync(join(ROOT, "src", "playbooks"), { recursive: true });
@@ -153,6 +170,11 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     );
     writeFileSync(LEDGER_PATH, `${JSON.stringify(sorted, null, 2)}\n`);
     console.log(`wrote ${LEDGER_PATH}`);
+    const sortedScores = Object.fromEntries(
+      Object.entries(scores).sort(([a], [b]) => a.localeCompare(b)),
+    );
+    writeFileSync(SCORES_PATH, `${JSON.stringify(sortedScores, null, 2)}\n`);
+    console.log(`wrote ${SCORES_PATH}`);
   }
   return 0;
 }

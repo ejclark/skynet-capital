@@ -35,6 +35,10 @@
 //                (the one button), and a promoted play trading, marked SIM and unvalidated.
 //   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
 //                saved, the form open on a phone and wide, a setting past its limit refused in words.
+//   · `scorecard` — #5482 slice 5: "steered by: AI-dip view · check … · pass / fail / pending" on the
+//                CRWV pair rows, opened to its claims. The first frame is the record as it stands (the
+//                server's own view: nothing is due yet); the second is a FIXTURE with some claims
+//                decided, to show how a pass and a fail wear a glyph and a word.
 // FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
@@ -519,6 +523,82 @@ groups.conviction = [
     view: views.conviction,
     path: undefined,
     act: openConviction,
+  }),
+];
+
+// #5482 slice 5: the steered pairs' scorecard. The real view carries the record's own scorecard (the
+// server builds it); the fixture frame rewrites three claims as decided to show the other states.
+const scoredFixture = (view) => ({
+  ...view,
+  strategies: view.strategies.map((card) => ({
+    ...card,
+    pairs: card.pairs.map((pair) => {
+      if (!pair.steeredBy) return pair;
+      const decide = {
+        7: {
+          outcome: "pass",
+          scoredOn: "2027-01-21",
+          basis: "CRWV's lowest close was $52.10 on 2026-12-18, inside $41.00 to $60.90.",
+        },
+        8: {
+          outcome: "fail",
+          scoredOn: "2027-02-03",
+          basis: "No CRWV close from 2026-10-16 to 2027-02-01 reached $63.15.",
+        },
+        "2a": { outcome: "pass", scoredOn: "2026-11-07", basis: "Fixture reading." },
+      };
+      const claims = pair.steeredBy.claims.map((c) =>
+        decide[c.label] ? { ...c, ...decide[c.label] } : c,
+      );
+      const count = (o) => claims.filter((c) => c.outcome === o).length;
+      const scorecard = {
+        pass: count("pass"),
+        fail: count("fail"),
+        pending: count("pending"),
+        untestable: count("untestable"),
+      };
+      return { ...pair, steeredBy: { ...pair.steeredBy, claims, scorecard } };
+    }),
+  })),
+});
+const openSteered = async (page) => {
+  const card = inCard(page, "The wheel");
+  for (const d of await card.locator(".pb-steered").all())
+    await d.evaluate((el) => (el.open = true));
+  await card.locator(".pb-pair .pb-steered").first().evaluate(underHeader);
+};
+// The row as a member first meets it: the one line, closed, under the pair's evidence.
+const closedSteered = async (page) => {
+  const row = inCard(page, "The wheel")
+    .locator(".pb-pair")
+    .filter({ hasText: "steered by" })
+    .first();
+  await row.evaluate((el) =>
+    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 110),
+  );
+};
+groups.scorecard = [
+  strategyFrame("phone-1-steered-by-line", {
+    view: views.conviction,
+    path: undefined,
+    act: closedSteered,
+  }),
+  strategyFrame("phone-2-steered-by-claims", {
+    view: views.conviction,
+    path: undefined,
+    act: openSteered,
+  }),
+  strategyFrame("phone-3-fixture-decided", {
+    view: scoredFixture(views.conviction),
+    path: undefined,
+    act: openSteered,
+  }),
+  strategyFrame("desktop-steered-by", {
+    view: views.conviction,
+    path: undefined,
+    viewport: undefined,
+    quality: 55,
+    act: openSteered,
   }),
 ];
 
