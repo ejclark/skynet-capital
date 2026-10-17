@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A one-patch lockfile drift makes a worktree pay the whole ~650MB install again.** Worktree
+  setup (#5548) shares the primary's install only when its lock matches exactly; this cloud
+  session's primary was one patch behind `main` (`@types/node` 26.6.4 vs 26.6.5), so the root
+  install fell back to a real `npm ci`. Two cheap options: have the session-start hook refresh the
+  primary's install against `origin/main`'s lock, or hard-link copy then `npm install` the delta
+  (npm swaps changed packages by replacing files, verified; the hidden lockfile is already a
+  separate copy). _(src: Claude · while: #5548, worktree disk)_
+- **Every agent worktree's lock names the harness process, not the agent** (`pid 96` on all of
+  them), and the harness outlives the agent, so a live lock never clears mid-session. The sweep
+  works round it with `--only <worktree>`; the cleaner fix is for whoever creates the lock to
+  name the agent's own pid, or unlock when the agent returns. _(src: Claude · while: #5548)_
 - **The bots' decision pass is handed no outside events, so an event play never opens.**
   `tradingRoster` composes every roster with an empty event list, so the house `TACO-DJT` and a
   member's event-window play (#5457) have nothing to open on; a shadow test of one records nothing

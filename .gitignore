@@ -1,5 +1,5 @@
-# No trailing slash: athlete worktrees get node_modules as a SYMLINK
-# (scripts/worktree-setup.sh), and `node_modules/` matches only real directories.
+# No trailing slash: a worktree left over from the old symlinking setup (scripts/worktree-setup.sh
+# converts it) has node_modules as a SYMLINK, and `node_modules/` matches only real directories.
 node_modules
 dist/
 coverage/
