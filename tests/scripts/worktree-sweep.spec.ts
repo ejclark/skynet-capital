@@ -177,6 +177,6 @@ describe("parseWorktrees", () => {
       locked: "claude agent agent-1 (pid 96 start 278)",
     });
     expect(wf).toMatchObject({ detached: true, branch: null, locked: "" });
-    expect(gone.prunable).toBe(true);
+    expect(gone?.prunable).toBe(true);
   });
 });
