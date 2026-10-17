@@ -109,6 +109,12 @@ export interface DecisionDb {
    *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
    *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** The names (share symbol, or an option's underlying) one persona has ever PLACED an order on
+   *  under one playbook's id — the house's ownership marker for a position (`intents.playbook_id`,
+   *  stamped on the order at submit). What lets an unsubscribed playbook keep its exits while the
+   *  positions IT opened stay on the book (#5609), without claiming a position the bot's own rules
+   *  hold in the same name. Empty when it has placed nothing. */
+  symbolsPlacedByPlaybook(personaId: string, playbookId: string): ReadonlySet<string>;
   /** How the sold puts one playbook opened under one strategy tag have ended for one persona
    *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
    *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
@@ -412,6 +418,12 @@ export function openDecisionDb(path: string): DecisionDb {
     JOIN intents ON intents.id = retrospectives.entry_intent_id
     JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ?
+  `);
+
+  const selectSymbolsPlacedByPlaybook = db.prepare(`
+    SELECT DISTINCT intents.symbol AS symbol
+    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.action = 'placed'
   `);
 
   const selectPutOutcomes = db.prepare(`
@@ -793,6 +805,11 @@ export function openDecisionDb(path: string): DecisionDb {
         total: number | null;
       };
       return row.total ?? 0;
+    },
+
+    symbolsPlacedByPlaybook(personaId, playbookId): ReadonlySet<string> {
+      const rows = selectSymbolsPlacedByPlaybook.all(playbookId, personaId) as { symbol: string }[];
+      return new Set(rows.map((r) => r.symbol));
     },
 
     putOutcomesForPlaybook(personaId, playbookId, strategy) {

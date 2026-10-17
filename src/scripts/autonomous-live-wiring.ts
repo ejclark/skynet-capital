@@ -44,10 +44,15 @@ import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import { withTargetObservation } from "../playbooks/with-target-observation.js";
+import {
+  windDownSubscriptions,
+  withUnsubscribedExits,
+} from "../playbooks/with-unsubscribed-exits.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import {
@@ -383,7 +388,11 @@ export function tradingRoster(
     runsScout = false,
     ledgerOf,
     intradayBars,
+    placedBy,
   }: {
+    /** The names this bot has placed orders on under a playbook (`decision-db`) — what shows an
+     *  unsubscribed playbook still owns an open position, so its exits keep running (#5609). */
+    readonly placedBy?: (playbookId: string) => ReadonlySet<string>;
     readonly runsScout?: boolean;
     /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
      *  feed is wired, and the playbook then records its verdict and nothing more. */
@@ -405,41 +414,57 @@ export function tradingRoster(
     // looked after even with no option playbook subscribed (`with-option-safety.ts`). The base persona
     // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
     // bot, a bot with no playbook included.
-    persona: withOptionSafety(
-      // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
-      // hygiene around it, so the gate sits between the two.
-      withTargetObservation(
-        withConvictionGate(
-          withPlaybooks(
-            withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-            roster.enabled,
-            UPCOMING_PRINTS,
-            [],
-            console,
-            (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-            intradayBars,
+    persona: withUnsubscribedExits(
+      (enabled) =>
+        withOptionSafety(
+          // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+          // hygiene around it, so the gate sits between the two.
+          withTargetObservation(
+            withConvictionGate(
+              withPlaybooks(
+                withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+                enabled,
+                UPCOMING_PRINTS,
+                [],
+                console,
+                (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                intradayBars,
+              ),
+              {
+                subscriptions: roster.subscriptions,
+                ...(ledgerOf ? { ledgerOf } : {}),
+                log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+              },
+            ),
+            // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+            // intents come back untouched. Hygiene still wraps it all.
+            {
+              accountId: roster.bot.persona.id,
+              subscriptions: roster.subscriptions,
+              enabled: enabled,
+              log: console,
+            },
           ),
-          {
-            subscriptions: roster.subscriptions,
-            ...(ledgerOf ? { ledgerOf } : {}),
-            log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-          },
+          enabled,
+          UPCOMING_PRINTS,
         ),
-        // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
-        // intents come back untouched. Hygiene still wraps it all.
-        {
-          accountId: roster.bot.persona.id,
-          subscriptions: roster.subscriptions,
-          enabled: roster.enabled,
-          log: console,
-        },
-      ),
-      roster.enabled,
-      UPCOMING_PRINTS,
+      {
+        candidates: registeredPlaybooks(),
+        enabled: roster.enabled,
+        ...(placedBy ? { placedBy } : {}),
+        log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+      },
     ),
     risk: {
       ...baseRisk,
-      subscriptions: roster.subscriptions,
+      subscriptions: [
+        ...roster.subscriptions,
+        ...windDownSubscriptions(
+          roster.bot.persona.id,
+          { candidates: registeredPlaybooks(), enabled: roster.enabled },
+          roster.subscriptions,
+        ),
+      ],
       playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
       ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
       subscribedOnly: true,

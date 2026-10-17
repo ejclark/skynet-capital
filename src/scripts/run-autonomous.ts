@@ -320,6 +320,13 @@ async function runLive(): Promise<void> {
       {
         runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
         intradayBars: intradayBars.barsOf,
+        // An unsubscribed playbook keeps its exits while it still owns an open position (#5609).
+        ...(decisionDb
+          ? {
+              placedBy: (playbookId: string) =>
+                decisionDb.symbolsPlacedByPlaybook(r.bot.persona.id, playbookId),
+            }
+          : {}),
         // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
         ...(decisionDb
           ? {

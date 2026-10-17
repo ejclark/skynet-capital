@@ -622,6 +622,36 @@ describe("DecisionDb", () => {
     });
   });
 
+  describe("symbolsPlacedByPlaybook (#5609)", () => {
+    const placed = (raw: OrderIntent, orderId: string) => ({
+      intent: raw,
+      action: "placed" as const,
+      result: {
+        intent: raw,
+        status: "filled" as const,
+        orderId,
+        filledQuantity: raw.quantity,
+        filledPrice: 100,
+      },
+    });
+
+    it("names what one persona placed under one playbook's id, and nothing else", () => {
+      const mine = intent({ side: "buy", quantity: 5, playbookId: "S1-NVDA" });
+      const reflex = intent({ side: "buy", quantity: 5, symbol: "AAPL" });
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [mine, reflex],
+        guardedIntents: [mine, reflex],
+        outcomes: [placed(mine, "o-1"), placed(reflex, "o-2")],
+      });
+      expect([...db.symbolsPlacedByPlaybook("sauron", "S1-NVDA")]).toEqual([mine.symbol]);
+      expect(db.symbolsPlacedByPlaybook("sauron", "G1-GOOG").size).toBe(0);
+      expect(db.symbolsPlacedByPlaybook("beta-scout", "S1-NVDA").size).toBe(0);
+    });
+  });
+
   describe("realizedPlForPlaybook (issue #3527 slice 3)", () => {
     const filledOutcome = (raw: OrderIntent, orderId: string, filledPrice: number) => ({
       intent: raw,
