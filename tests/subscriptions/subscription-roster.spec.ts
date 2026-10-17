@@ -51,7 +51,12 @@ describe("subscriptionRoster", () => {
   });
 
   it("is empty for an empty subscription list", () => {
-    expect(subscriptionRoster([])).toEqual({ enabled: [], rejected: [] });
+    expect(subscriptionRoster([])).toEqual({
+      enabled: [],
+      rejected: [],
+      steered: [],
+      steeringRefused: [],
+    });
   });
 
   // HC-SAURON was dissolved on 2026-10-16 (docs/BOTS-SAURON.md → adaptation ledger). A subscription
@@ -61,6 +66,8 @@ describe("subscriptionRoster", () => {
     expect(subscriptionRoster([stale, sub()])).toEqual({
       enabled: [{ playbook: S1_NVDA, mode: "standard" }],
       rejected: ["HC-SAURON"],
+      steered: [],
+      steeringRefused: [],
     });
     expect(pausedRoster([{ ...stale, enabled: false }])).toEqual([]);
   });

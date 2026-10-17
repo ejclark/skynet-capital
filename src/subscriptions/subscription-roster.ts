@@ -1,7 +1,9 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
+import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook, Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
+import { steeredBy } from "../playbooks/steered-playbook.js";
 
 /**
  * A subscription's authored play, or `undefined` — the mechanical half of the own-account rule
@@ -32,26 +34,45 @@ function authoredPlay(
  * `authoredRoster(specs, accountId)`; the bots forward it through `resolveBotRoster` (#4450 slice
  * 3). Omitted — what every caller supplies today, since nothing persists a spec yet — only house
  * plays resolve.
+ *
+ * A house playbook whose subscription points at a conviction record steering it runs narrowed by
+ * that record (#5482 slice 4, `steeredBy`): `steered` says each fence, once, for the boot log. A
+ * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
+ * new opens on a conviction that did not hold.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
   authored?: AuthoredRoster,
+  convictionOf?: ConvictionLookup,
 ): {
   readonly enabled: readonly EnabledPlaybook[];
   readonly rejected: readonly string[];
+  readonly steered: readonly string[];
+  readonly steeringRefused: readonly string[];
 } {
   const enabled: EnabledPlaybook[] = [];
   const rejected: string[] = [];
+  const steered: string[] = [];
+  const steeringRefused: string[] = [];
   for (const sub of subscriptions) {
     if (!sub.enabled) continue;
-    const playbook = authoredPlay(authored, sub) ?? findPlaybook(sub.playbookId);
-    if (playbook) {
-      enabled.push({ playbook, mode: sub.mode });
-    } else {
+    const own = authoredPlay(authored, sub);
+    const house = own ?? findPlaybook(sub.playbookId);
+    if (!house) {
       rejected.push(sub.playbookId);
+      continue;
     }
+    // A member's own authored play is never steered: a record steers house pairs.
+    const result = own ? { playbook: own, says: [] } : steeredBy(house, sub, convictionOf);
+    if ("refused" in result) {
+      steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
+      enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });
+      continue;
+    }
+    if (result.says.length > 0) steered.push(`${sub.playbookId}: ${result.says.join("; ")}`);
+    enabled.push({ playbook: result.playbook, mode: sub.mode });
   }
-  return { enabled, rejected };
+  return { enabled, rejected, steered, steeringRefused };
 }
 
 /**

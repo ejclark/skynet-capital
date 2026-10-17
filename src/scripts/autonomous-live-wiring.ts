@@ -321,6 +321,14 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id}'s authored play "${bad.slug}" is out of bounds — ${bad.problems.map((p) => `${p.field} ${p.problem}`).join("; ")}`,
     );
   }
+  // A conviction narrows the pairs it steers (#5482 slice 4): the fences say so, and a narrowing
+  // that would widen a bound is refused whole, the pair running exits-only.
+  for (const line of acctRoster.steered) {
+    console.log(`[playbooks] ${bot.persona.id} conviction narrows ${line}`);
+  }
+  for (const line of acctRoster.steeringRefused) {
+    console.error(`[playbooks] ${bot.persona.id} conviction REFUSED, exits only — ${line}`);
+  }
   if (acctRoster.enabled.length > 0) {
     console.log(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,

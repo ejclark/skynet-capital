@@ -13,8 +13,11 @@ import { aSubscription } from "../support/builders.js";
 /** #5482 slice 2 — the store of conviction records, its seed, and which check a subscription is
  *  held to once it may point at one. */
 
+// Without the AI-dip view's narrowings, which name its own two pairs (slice 4 has its own spec).
+const { narrowings: _narrowings, ...AI_DIP_PLAIN } = AI_DIP_2026_10;
+
 const record = (over: Partial<Conviction> = {}): Conviction => ({
-  ...AI_DIP_2026_10,
+  ...AI_DIP_PLAIN,
   id: "other-view",
   steers: ["CRWV-WHEEL"],
   ...over,

@@ -22,6 +22,7 @@ import {
   singleLegTick,
 } from "../options/contract-picker.js";
 import { humanizeOptionSymbol, OPTION_MULTIPLIER } from "../trading/option-symbols.js";
+import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
 import { pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -82,11 +83,10 @@ export const LONG_CALL_MAX_CONTRACTS: Readonly<Record<PlaybookMode, number>> = {
 /** Buys come in thirds: each open asks for a third of the mode's cap (the guard cuts it to what the
  *  budget and cash can pay for), so a budget is put to work in about three orders, ten minutes
  *  apart, rather than one contract at a time. */
-const tranche = (mode: PlaybookMode, held: number): number =>
-  Math.max(
-    1,
-    Math.min(Math.ceil(LONG_CALL_MAX_CONTRACTS[mode] / 3), LONG_CALL_MAX_CONTRACTS[mode] - held),
-  );
+const tranche = (mode: PlaybookMode, held: number, steering?: Steering): number => {
+  const cap = capOf(mode, steering);
+  return Math.max(1, Math.min(Math.ceil(cap / 3), cap - held));
+};
 
 export interface LongCallSetting {
   readonly symbol: string;
@@ -109,14 +109,26 @@ function foreign(portfolio: Portfolio, symbol: string): boolean {
   return optionBook(portfolio, symbol).contracts.some((c) => c.quantity < 0 || c.type === "put");
 }
 
-/** The expiry it would buy today, or none listed in the window. */
-function entryExpiry(listed: readonly string[], asOfIso: string): string | undefined {
-  return eligibleExpirations(listed, marketDayKey(asOfIso), {
-    minDte: MIN_DTE,
-    maxDte: MAX_DTE,
+/** The expiry it would buy today, or none listed in the window. A conviction's fence (#5482 slice 4)
+ *  can only shrink the window, so the latest expiry inside both is the latest inside the fence. */
+function entryExpiry(
+  listed: readonly string[],
+  asOfIso: string,
+  steering?: Steering,
+): string | undefined {
+  const today = marketDayKey(asOfIso);
+  return eligibleExpirations(listed, today, {
+    minDte: Math.max(MIN_DTE, steering?.dte?.min ?? 0),
+    maxDte: Math.min(MAX_DTE, steering?.dte?.max ?? MAX_DTE),
     before: "9999-12-31",
-  }).at(-1);
+  })
+    .filter((e) => expiryInside(steering, e, daysBetween(today, e)))
+    .at(-1);
 }
+
+/** The most contracts it holds: the mode's cap, or a conviction's lower one. */
+const capOf = (mode: PlaybookMode, steering?: Steering): number =>
+  Math.min(LONG_CALL_MAX_CONTRACTS[mode], steering?.contractsMax ?? Infinity);
 
 const contractsOf = (held: readonly HeldContract[]): number =>
   held.reduce((n, c) => n + c.quantity, 0);
@@ -195,20 +207,33 @@ function enterPick(
   context: MarketContext,
   target: number,
   spot: number,
+  steering?: Steering,
 ): Pick | undefined {
-  const expiration = entryExpiry(context.options?.listed[symbol] ?? [], context.asOf);
+  const expiration = entryExpiry(context.options?.listed[symbol] ?? [], context.asOf, steering);
   if (!expiration) return undefined;
   const rows = chainQuotes(context.options, symbol, expiration, "call");
-  return pickByDelta(rows, target, spot, context.asOf, { otm: false, maxDeltaMiss: DELTA_MISS });
+  return pickByDelta(rows, target, spot, context.asOf, {
+    otm: false,
+    maxDeltaMiss: DELTA_MISS,
+    ...(steering?.strikeMax !== undefined ? { maxStrike: steering.strikeMax } : {}),
+  });
 }
 
 /** An add: the SAME contract already held, so the book stays one line and "near what it paid"
  *  compares like with like — and only while it has room before the time exit and its ask is within
  *  10% of the held cost, so it never chases a run. */
-function addPick(held: readonly HeldContract[], context: MarketContext): Pick | undefined {
+function addPick(
+  held: readonly HeldContract[],
+  context: MarketContext,
+  steering?: Steering,
+): Pick | undefined {
   const [line] = held;
   if (!line || held.some((c) => c.occSymbol !== line.occSymbol)) return undefined;
-  if (daysBetween(marketDayKey(context.asOf), line.expiration) < MIN_ADD_DTE) return undefined;
+  const dte = daysBetween(marketDayKey(context.asOf), line.expiration);
+  if (dte < MIN_ADD_DTE) return undefined;
+  // An add is a new buy: a conviction's fence holds it to the same expiry and strike as an entry.
+  if (!expiryInside(steering, line.expiration, dte)) return undefined;
+  if (steering?.strikeMax !== undefined && line.strike > steering.strikeMax) return undefined;
   const quote = context.options?.contracts[line.occSymbol];
   if (quote?.ask === undefined || quote.ask > NO_CHASE * averageCost(held)) return undefined;
   return { quote };
@@ -220,12 +245,15 @@ function openIntent(
   context: MarketContext,
   held: readonly HeldContract[],
   mode: PlaybookMode,
+  steering?: Steering,
 ): OrderIntent[] {
-  if (contractsOf(held) >= LONG_CALL_MAX_CONTRACTS[mode]) return [];
+  if (contractsOf(held) >= capOf(mode, steering)) return [];
   const spot = context.quotes[symbol]?.last;
   if (!(spot !== undefined && spot > 0)) return [];
   const target = LONG_CALL_DELTAS[mode];
-  const pick = held[0] ? addPick(held, context) : enterPick(symbol, context, target, spot);
+  const pick = held[0]
+    ? addPick(held, context, steering)
+    : enterPick(symbol, context, target, spot, steering);
   if (!pick) return [];
   const { bid, ask, quotedAt } = pick.quote;
   const expiration = pick.quote.expiration;
@@ -244,7 +272,7 @@ function openIntent(
     underlying: symbol,
     structure: "long-call",
     legs: [{ occSymbol: pick.quote.occSymbol, side: "buy" }],
-    quantity: tranche(mode, contractsOf(held)),
+    quantity: tranche(mode, contractsOf(held), steering),
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     strategy: longCallTag(symbol),
@@ -271,7 +299,11 @@ function openIntent(
 
 /** The long call on one ticker — `CRWV-LONG-CALL` is one call of this. Its id comes from the pair
  *  table; a ticker with no long-call row throws (criterion 8). `lookup` is a seam for specs. */
-export function longCall(setting: LongCallSetting, lookup: typeof pairFor = pairFor): Playbook {
+export function longCall(
+  setting: LongCallSetting,
+  lookup: typeof pairFor = pairFor,
+  steering?: Steering,
+): Playbook {
   const symbol = setting.symbol.toUpperCase();
   const pair = lookup("long-call", symbol);
   if (!pair)
@@ -280,6 +312,9 @@ export function longCall(setting: LongCallSetting, lookup: typeof pairFor = pair
   if (evidence.status !== "conviction" || !evidence.checkOn || !evidence.study) {
     throw new Error(`long-call × ${symbol} runs only on a dated conviction citing a study`);
   }
+  const quiet = (asOfIso: string, calendar: readonly EarningsPrint[]): boolean =>
+    steering?.quietSessionsAfterPrint !== undefined &&
+    inQuietPeriod(symbol, marketDayKey(asOfIso), steering.quietSessionsAfterPrint, calendar);
   return {
     id: pair.id,
     symbols: [symbol],
@@ -288,22 +323,35 @@ export function longCall(setting: LongCallSetting, lookup: typeof pairFor = pair
     // Unused: sized by the Store allocation, one contract per cycle up to the mode's cap.
     size: { conservative: 0, standard: 0, aggressive: 0 },
     options: { underlyings: [symbol], holdsShortToExpiry: [], requiredLevel: 2 },
+    // A conviction may fence what it buys (#5482 slice 4); a playbook already fenced is not fenced twice.
+    ...(steering
+      ? {}
+      : {
+          steerable: {
+            bounds: { dte: { min: MIN_DTE, max: MAX_DTE }, contracts: LONG_CALL_MAX_CONTRACTS },
+            steer: (fence: Steering) => longCall(setting, lookup, fence),
+          },
+        }),
     desiredState: () => "long",
     optionDemand(
       asOfIso: string,
       portfolio: Portfolio,
       listed: ListedExpirations,
-      _calendar: readonly EarningsPrint[],
+      calendar: readonly EarningsPrint[],
     ): OptionDemand {
       if (foreign(portfolio, symbol)) return NO_OPTION_DEMAND;
       const held = heldCalls(portfolio, symbol);
-      const expiration = held[0]?.expiration ?? entryExpiry(listed[symbol] ?? [], asOfIso);
+      const expiration =
+        held[0]?.expiration ??
+        (quiet(asOfIso, calendar)
+          ? undefined
+          : entryExpiry(listed[symbol] ?? [], asOfIso, steering));
       return {
         chains: expiration ? [{ underlying: symbol, expiration, type: "call" }] : [],
         contracts: held.map((c) => c.occSymbol),
       };
     },
-    decide(context, portfolio, _calendar, mode) {
+    decide(context, portfolio, calendar, mode) {
       if (foreign(portfolio, symbol)) return [];
       const held = heldCalls(portfolio, symbol);
       const closes = closeIntents(symbol, context, held);
@@ -311,7 +359,9 @@ export function longCall(setting: LongCallSetting, lookup: typeof pairFor = pair
       const today = marketDayKey(context.asOf);
       const due = held.some((c) => daysBetween(today, c.expiration) <= EXIT_DTE);
       if (closes.length > 0 || due) return closes;
-      return openIntent(setting, symbol, context, held, mode);
+      // A conviction's quiet period holds back buys and adds only; the closes above already ran.
+      if (quiet(context.asOf, calendar)) return [];
+      return openIntent(setting, symbol, context, held, mode, steering);
     },
   };
 }

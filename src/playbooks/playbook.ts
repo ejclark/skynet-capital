@@ -70,6 +70,7 @@ import type {
   Portfolio,
   Quote,
 } from "../domain/types.js";
+import type { Steerable } from "./conviction-steering.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
 import type { PlayTargetBounds } from "./play-target.js";
 
@@ -208,6 +209,10 @@ export interface Playbook {
    *  set (#5483 criterion 13, `play-target.ts`). A subscription's target may only NARROW these.
    *  Absent means the house bounds, the ranges the rebalancing-band backtest covered. */
   readonly targetBounds?: PlayTargetBounds;
+  /** Optional — present on a playbook a conviction may steer (#5482 slice 4, `conviction-steering.ts`):
+   *  the bounds a narrowing may sit inside, and how to rebuild the playbook inside one. A steered
+   *  playbook carries none, so a narrowing is never narrowed twice. Absent on every other playbook. */
+  readonly steerable?: Steerable<Playbook>;
   /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
    *  "unknown", never as a default. */
   readonly keyedOn?: PlaybookKey;

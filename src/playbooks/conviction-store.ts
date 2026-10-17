@@ -1,7 +1,13 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import { type Conviction, convictionProblems } from "./conviction-record.js";
 import { SEEDED_CONVICTIONS } from "./conviction-seeds.js";
+import type { SteerBounds } from "./conviction-steering.js";
 import { findPair, type Pair } from "./pair-table.js";
+import { findPlaybook } from "./registry.js";
+
+/** The bounds a pair's playbook lets a conviction narrow, or undefined when it cannot be steered. */
+const playbookBounds = (pairId: string): SteerBounds | undefined =>
+  findPlaybook(pairId)?.steerable?.bounds;
 
 /**
  * THE CONVICTION STORE (#5482 slice 2) — every conviction record, by id, and the pairs each one
@@ -9,6 +15,9 @@ import { findPair, type Pair } from "./pair-table.js";
  * with the build, so the app that serves them and the bots that act on them read the same records
  * without a second wire. A file-backed store with a write route arrives with the slice that lets a
  * member state one (slice 6); it implements the same reads.
+ *
+ * A record's narrowings (#5482 slice 4) are judged here against the bounds of the playbook each
+ * names: one that would widen a bound is refused with the whole record, never clamped.
  *
  * A record that breaks a rule (`convictionProblems`) is refused at construction and listed in
  * `refused`, never served, so a bad record can never gate a pair. So is a second record with an id
@@ -23,12 +32,19 @@ export class ConvictionStore {
   private readonly byId: ReadonlyMap<string, Conviction>;
   readonly refused: readonly RefusedConviction[];
 
-  constructor(records: readonly Conviction[], lookup: (id: string) => Pair | undefined = findPair) {
+  constructor(
+    records: readonly Conviction[],
+    lookup: (id: string) => Pair | undefined = findPair,
+    boundsOf: (pairId: string) => SteerBounds | undefined = playbookBounds,
+  ) {
     const byId = new Map<string, Conviction>();
     const refused: RefusedConviction[] = [];
     for (const record of records) {
       const problems = [
-        ...convictionProblems(record, lookup),
+        ...convictionProblems(record, lookup, boundsOf),
+        ...(record.narrowings ?? [])
+          .filter((n) => boundsOf(n.pair) === undefined)
+          .map((n) => `narrows ${n.pair}, whose playbook cannot be steered`),
         ...(byId.has(record.id) ? ["a conviction with this id is already stored"] : []),
       ];
       if (problems.length > 0) refused.push({ id: record.id, problems });

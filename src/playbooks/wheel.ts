@@ -29,6 +29,7 @@ import {
   OPTION_MULTIPLIER,
   occStrikeLabel,
 } from "../trading/option-symbols.js";
+import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
 import { optionOpenIntent } from "./option-intent.js";
 import { type PairEvidence, pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -108,7 +109,17 @@ interface Wheel {
   readonly minDte: number;
   readonly putDelta?: number;
   readonly putContracts?: Readonly<Record<PlaybookMode, number>>;
+  /** A conviction's narrowing of the PUT it opens (#5482 slice 4): expiry, strike, contracts, quiet
+   *  period. Never the covered call on assigned shares, which is how the wheel exits. */
+  readonly steering?: Steering;
 }
+
+/** The puts a wheel asks for per sale when its setting names no count: one, in every mode. */
+const ONE_PUT: Readonly<Record<PlaybookMode, number>> = {
+  conservative: 1,
+  standard: 1,
+  aggressive: 1,
+};
 
 /** The wheel's retire test (criterion 12) on the pair's dated check. */
 const retireTest = (date: string): string =>
@@ -199,16 +210,30 @@ function nextSale(
   listed: readonly string[],
   calendar: readonly EarningsPrint[],
   minDte: number = MIN_DTE,
+  steering?: Steering,
 ): WheelSale | undefined {
   const phase = wheelPhase(optionBook(portfolio, symbol));
   if (phase !== "flat" && phase !== "assigned") return undefined;
-  const blackout = saleWindow(symbol, asOfIso, calendar, minDte);
+  // A conviction fences the PUT, which opens risk. The covered call on assigned shares is how the
+  // wheel gets out, so it is never narrowed away (#5482 criterion 3's exits clause).
+  const fence = phase === "flat" ? steering : undefined;
+  const today = marketDayKey(asOfIso);
+  if (
+    fence?.quietSessionsAfterPrint !== undefined &&
+    inQuietPeriod(symbol, today, fence.quietSessionsAfterPrint, calendar)
+  ) {
+    return undefined;
+  }
+  const lowDte = Math.max(minDte, fence?.dte?.min ?? 0);
+  const blackout = saleWindow(symbol, asOfIso, calendar, lowDte);
   if (!blackout) return undefined;
-  const expiration = eligibleExpirations(listed, marketDayKey(asOfIso), {
-    minDte,
-    maxDte: MAX_DTE,
+  const expiration = eligibleExpirations(listed, today, {
+    minDte: lowDte,
+    maxDte: Math.min(MAX_DTE, fence?.dte?.max ?? MAX_DTE),
     before: blackout.start,
-  }).at(-1);
+  })
+    .filter((e) => expiryInside(fence, e, daysBetween(today, e)))
+    .at(-1);
   if (!expiration) return undefined;
   return { phase, type: phase === "flat" ? "put" : "call", expiration, blackout };
 }
@@ -273,7 +298,15 @@ function wheelIntents(
 ): OrderIntent[] {
   const { symbol } = wheel;
   const listed = context.options?.listed[symbol] ?? [];
-  const sale = nextSale(symbol, context.asOf, portfolio, listed, calendar, wheel.minDte);
+  const sale = nextSale(
+    symbol,
+    context.asOf,
+    portfolio,
+    listed,
+    calendar,
+    wheel.minDte,
+    wheel.steering,
+  );
   const spot = context.quotes[symbol]?.last;
   if (!(sale && spot !== undefined && spot > 0)) return [];
   const { shareCost } = optionBook(portfolio, symbol);
@@ -286,6 +319,9 @@ function wheelIntents(
   // the picker keeps it above spot (out of the money) too.
   const bounds = {
     ...(sale.type === "call" ? { minStrike: Math.max(shareCost ?? 0, spot) } : {}),
+    ...(sale.type === "put" && wheel.steering?.strikeMax !== undefined
+      ? { maxStrike: wheel.steering.strikeMax }
+      : {}),
     maxDeltaMiss: DELTA_MISS,
     maxAbsDelta: MAX_SHORT_DELTA,
   };
@@ -306,7 +342,9 @@ function wheelIntents(
     underlying: symbol,
     structure: sale.type === "put" ? "cash-secured-put" : "covered-call",
     legs: [{ occSymbol: pick.quote.occSymbol, side: "sell" }],
-    ...(sale.type === "put" && wheel.putContracts ? { quantity: wheel.putContracts[mode] } : {}),
+    ...(sale.type === "put" && wheel.putContracts
+      ? { quantity: Math.min(wheel.putContracts[mode], wheel.steering?.contractsMax ?? Infinity) }
+      : {}),
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     assignment: "intended",
@@ -332,7 +370,11 @@ function wheelIntents(
  *  the pair table; a ticker with no wheel row, or a row with no dated verdict, throws (criteria 1
  *  and 8). `lookup` is the table's `pairFor`, a seam so a spec can offer a row the real table does
  *  not carry yet. */
-export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): Playbook {
+export function wheel(
+  setting: WheelSetting,
+  lookup: typeof pairFor = pairFor,
+  steering?: Steering,
+): Playbook {
   // Quotes, positions and chains key on the upper-case ticker; a lower-case one would never trade.
   const symbol = setting.symbol.toUpperCase();
   const pair = lookup("wheel", symbol);
@@ -354,6 +396,7 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     minDte: Math.min(MIN_DTE, Math.max(MIN_DTE_FLOOR, setting.minDte ?? MIN_DTE)),
     ...(setting.putDelta !== undefined ? { putDelta: setting.putDelta } : {}),
     ...(setting.putContracts ? { putContracts: setting.putContracts } : {}),
+    ...(steering ? { steering } : {}),
   };
   return {
     id: pair.id,
@@ -364,6 +407,18 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
     size: { conservative: 0, standard: 0, aggressive: 0 },
     keyedOn: "earnings",
     options: { underlyings: [symbol], holdsShortToExpiry: ["put", "call"], requiredLevel: 1 },
+    // A conviction may fence the put (#5482 slice 4); a playbook already fenced is not fenced twice.
+    ...(steering
+      ? {}
+      : {
+          steerable: {
+            bounds: {
+              dte: { min: spec.minDte, max: MAX_DTE },
+              contracts: setting.putContracts ?? ONE_PUT,
+            },
+            steer: (fence: Steering) => wheel(setting, lookup, fence),
+          },
+        }),
     // The verdict is the sale window alone; what the wheel sells inside it depends on the book.
     desiredState: (asOfIso, calendar) =>
       saleWindow(symbol, asOfIso, calendar, spec.minDte) ? "long" : "no-window",
@@ -380,6 +435,7 @@ export function wheel(setting: WheelSetting, lookup: typeof pairFor = pairFor): 
         listed[symbol] ?? [],
         calendar,
         spec.minDte,
+        spec.steering,
       );
       return sale
         ? {
