@@ -30,6 +30,26 @@ const AI_DIP_STATED: Conviction = {
   checkOn: "2027-01-29",
   source: "docs/research/convictions/ai-dip-2026-10.md",
   steers: ["CRWV-WHEEL", "CRWV-LONG-CALL"],
+  // What the call sheet's "What it steers" table writes, now enforced (#5482 slice 4). Each only
+  // tightens the pair's own bounds; the wheel's 30-day minimum and every exit are untouched.
+  narrowings: [
+    {
+      // Strike at or under the cycle detector's floor band median when it sells (claim 7's study).
+      pair: "CRWV-WHEEL",
+      fromClaims: ["1", "2a", "7"],
+      narrow: [{ kind: "strike-ceiling", ceiling: { floorOfClaim: "7" } }],
+    },
+    {
+      // Expiry on or after 2027-03-18; no buys or adds from CRWV's blackout until 6 sessions after
+      // the print (claims 2b, 8, 9).
+      pair: "CRWV-LONG-CALL",
+      fromClaims: ["2b", "8", "9"],
+      narrow: [
+        { kind: "expiry-from", day: "2027-03-18" },
+        { kind: "quiet", sessionsAfterPrint: 6 },
+      ],
+    },
+  ],
   claims: [
     {
       tag: "overrated",

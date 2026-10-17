@@ -4,6 +4,7 @@ import {
   isCalendarDay,
 } from "../subscriptions/subscription-state.js";
 import type { ClaimStudy } from "./claim-study.js";
+import { narrowingProblems, type PairNarrowings, type SteerBounds } from "./conviction-steering.js";
 import { findPair, type Pair } from "./pair-table.js";
 
 /**
@@ -22,7 +23,9 @@ import { findPair, type Pair } from "./pair-table.js";
  * study steers nothing new.
  *
  * Paper only, members only (#5482 criterion 8): a record is read behind the invite gate and never
- * places an order. It narrows nothing yet either: narrowing a pair's bounds is slice 4.
+ * places an order. It may NARROW a steered pair's bounds (slice 4, `narrowings`, resolved by
+ * `conviction-steering.ts`); a narrowing that would widen one is refused whole, and the playbook
+ * still picks the timing.
  */
 
 /** What the claim says the market gets wrong. */
@@ -67,6 +70,13 @@ export interface Conviction {
   readonly claims: readonly ConvictionClaim[];
   /** The pair ids it steers. Each must be a ◆ conviction pair. */
   readonly steers: readonly string[];
+  /**
+   * What it narrows on the pairs it steers, as data (#5482 slice 4, criterion 3): per pair, a list
+   * of narrowings (days to expiry, expiry floor, strike ceiling, quiet period, contract cap). Only
+   * ever tightens a bound the playbook already has. A pair with no entry is steered for its check
+   * date alone.
+   */
+  readonly narrowings?: readonly PairNarrowings[];
   /** `docs/research/convictions/…` — the call sheet it was written from, when there is one. */
   readonly source?: string;
 }
@@ -119,6 +129,22 @@ function steerProblems(steers: readonly string[], lookup: (id: string) => Pair |
   return problems;
 }
 
+/** The rules one pair's narrowings break: the pair must be steered, narrowed once, and inside the
+ *  playbook's bounds (judged when `boundsOf` knows them; the store always supplies them). */
+function narrowedProblems(
+  conviction: Conviction,
+  entry: PairNarrowings,
+  boundsOf: (pairId: string) => SteerBounds | undefined,
+): readonly string[] {
+  if (!conviction.steers.includes(entry.pair)) {
+    return [`narrows ${entry.pair}, which it does not steer`];
+  }
+  if (conviction.narrowings?.filter((n) => n.pair === entry.pair).length !== 1) {
+    return [`narrows ${entry.pair} in more than one entry`];
+  }
+  return narrowingProblems(entry, conviction.claims, boundsOf(entry.pair));
+}
+
 /**
  * Every rule a record breaks, in words; empty means it may be stored. A conviction needs at least
  * one claim (#5482 criterion 1), each tagged, bucketed, evidenced and falsifiable on a day; it is
@@ -127,6 +153,7 @@ function steerProblems(steers: readonly string[], lookup: (id: string) => Pair |
 export function convictionProblems(
   conviction: Conviction,
   lookup: (id: string) => Pair | undefined = findPair,
+  boundsOf: (pairId: string) => SteerBounds | undefined = () => undefined,
 ): readonly string[] {
   const problems: string[] = [];
   if (!(CONVICTION_ID.test(conviction.id) && conviction.id.length <= CONVICTION_ID_MAX)) {
@@ -144,5 +171,8 @@ export function convictionProblems(
     problems.push(...claimProblems(claim, i + 1, conviction.statedOn));
   });
   problems.push(...steerProblems(conviction.steers, lookup));
+  problems.push(
+    ...(conviction.narrowings?.flatMap((n) => narrowedProblems(conviction, n, boundsOf)) ?? []),
+  );
   return problems;
 }
