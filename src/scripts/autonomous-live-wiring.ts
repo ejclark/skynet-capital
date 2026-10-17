@@ -388,7 +388,11 @@ export function tradingRoster(
     runsScout = false,
     ledgerOf,
     intradayBars,
+    placedBy,
   }: {
+    /** The names this bot has placed orders on under a playbook (`decision-db`) — what shows an
+     *  unsubscribed playbook still owns an open position, so its exits keep running (#5609). */
+    readonly placedBy?: (playbookId: string) => ReadonlySet<string>;
     readonly runsScout?: boolean;
     /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
      *  feed is wired, and the playbook then records its verdict and nothing more. */
@@ -447,6 +451,7 @@ export function tradingRoster(
       {
         candidates: registeredPlaybooks(),
         enabled: roster.enabled,
+        ...(placedBy ? { placedBy } : {}),
         log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
       },
     ),

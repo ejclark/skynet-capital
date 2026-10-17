@@ -17,10 +17,12 @@ import type { EnabledPlaybook, Playbook } from "./playbook.js";
  * positions simply takes it: it runs exit-only until its book is flat, then drops off the roster
  * again on its own.
  *
- * WHO OWNS A POSITION is how the house always attributes one to a playbook: by name. A share
- * position on one of the playbook's `symbols`, or a contract on one of its option `underlyings`,
- * is its book. A name a roster entry already claims stays that entry's (it manages the position),
- * and of two unsubscribed playbooks on one name the first registered holds it.
+ * WHO OWNS A POSITION is the house's own marker: the playbook id stamped on the orders it placed
+ * (`intents.playbook_id`). A name the account still holds (a share symbol, or the underlying of a
+ * contract) on one of the playbook's `symbols` / option `underlyings`, that the playbook placed an
+ * order on, is its book. Names alone would claim the bot's own positions in the same stock, so the
+ * stamp is required. A name a roster entry already claims stays that entry's, and of two
+ * unsubscribed playbooks on one name the first registered holds it.
  *
  * The roster is fixed at swap time but the book is only known in a cycle, so this wraps the
  * persona: each cycle it picks the persona built for the playbooks currently holding something.
@@ -32,6 +34,10 @@ export interface UnsubscribedExitsDeps {
   readonly candidates: readonly Playbook[];
   /** The roster as resolved (running and paused) — what is already managed. */
   readonly enabled: readonly EnabledPlaybook[];
+  /** The names this account has placed orders on under a playbook's id — the ownership marker
+   *  (`decision-db`'s `symbolsPlacedByPlaybook`). Absent when no decision store is wired: nothing can
+   *  then be shown to be a playbook's, so nothing is claimed. */
+  readonly placedBy?: (playbookId: string) => ReadonlySet<string>;
   /** Said once when a playbook starts or finishes winding down. */
   readonly log?: (line: string) => void;
 }
@@ -54,17 +60,23 @@ function heldNames(portfolio: Portfolio): Set<string> {
 /** The unsubscribed playbooks that still hold something, as exit-only roster entries. */
 export function windDownEntries(
   portfolio: Portfolio,
-  { candidates, enabled }: Pick<UnsubscribedExitsDeps, "candidates" | "enabled">,
+  {
+    candidates,
+    enabled,
+    placedBy,
+  }: Pick<UnsubscribedExitsDeps, "candidates" | "enabled" | "placedBy">,
 ): EnabledPlaybook[] {
   const held = heldNames(portfolio);
-  if (held.size === 0) return [];
+  if (held.size === 0 || !placedBy) return [];
   const known = new Set(enabled.map((e) => e.playbook.id));
   const claimed = new Set(enabled.flatMap((e) => namesOf(e.playbook)));
   const out: EnabledPlaybook[] = [];
   for (const playbook of candidates) {
     if (known.has(playbook.id) || playbook.rulesOf) continue;
     const names = namesOf(playbook);
-    if (!names.some((n) => held.has(n)) || names.some((n) => claimed.has(n))) continue;
+    if (names.some((n) => claimed.has(n)) || !names.some((n) => held.has(n))) continue;
+    const placed = placedBy(playbook.id);
+    if (!names.some((n) => held.has(n) && placed.has(n))) continue;
     for (const n of names) claimed.add(n);
     out.push({ playbook, mode: "standard", exitsOnly: true });
   }

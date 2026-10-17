@@ -32,14 +32,27 @@ const EXIT_DAY = "2026-08-20T15:00:00Z"; // past its D-5 exit
 const AFTER = "2026-08-21T15:00:00Z";
 const at = (iso: string) => aContext({ NVDA: { last: 100 } }, iso);
 
-const rosterOf = (subscriptions: readonly PlaybookSubscription[]) =>
-  tradingRoster(resolveBotRoster(bot, [], subscriptions), QUIET_RISK);
+/** The decision store's ownership marker, as a fake: which names each playbook has placed orders on. */
+const placedOn =
+  (marks: Readonly<Record<string, readonly string[]>>) =>
+  (playbookId: string): ReadonlySet<string> =>
+    new Set(marks[playbookId] ?? []);
+
+const rosterOf = (
+  subscriptions: readonly PlaybookSubscription[],
+  marks: Readonly<Record<string, readonly string[]>> = {},
+) =>
+  tradingRoster(resolveBotRoster(bot, [], subscriptions), QUIET_RISK, undefined, {
+    placedBy: placedOn(marks),
+  });
 
 describe("unsubscribing S1-NVDA with a position open", () => {
   const broker = new InMemoryBroker(1_000_000, Object.values(at(ENTRY_DAY).quotes));
   const records: DecisionRecord[] = [];
   let clock = 0; // one day per cycle, so no cooldown spans two
-  const first = rosterOf([S1]);
+  // What the decision store would hold: S1-NVDA placed its buy, so NVDA is on its marker.
+  const marks: Record<string, string[]> = { "S1-NVDA": ["NVDA"] };
+  const first = rosterOf([S1], marks);
   const trader = new AutonomousTrader({
     persona: first.persona,
     broker,
@@ -68,7 +81,7 @@ describe("unsubscribing S1-NVDA with a position open", () => {
   });
 
   it("unsubscribed, still holding: opens nothing new", async () => {
-    trader.swapRoster(rosterOf([]));
+    trader.swapRoster(rosterOf([], marks));
     const { placed, held } = await cycle("2026-08-06T15:00:00Z");
     expect(placed).toEqual([]);
     expect(held).toHaveLength(1);
@@ -88,6 +101,14 @@ describe("unsubscribing S1-NVDA with a position open", () => {
     expect(placed).toEqual([]);
     expect(held).toEqual([]);
     expect(warn).toHaveBeenCalledWith("[playbooks] quiet: S1-NVDA is flat — off the roster");
+  });
+});
+
+describe("an unsubscribed bot holding a name no playbook of its placed", () => {
+  it("leaves the position to the bot's own rules: the playbook claims nothing without its marker", () => {
+    const held = aPortfolio({ positions: [{ symbol: "NVDA", quantity: 12, avgPrice: 100 }] });
+    const { persona } = rosterOf([], { "S1-NVDA": [] });
+    expect(persona.decide(at(EXIT_DAY), held)).toEqual([]);
   });
 });
 
@@ -119,7 +140,10 @@ describe("an unsubscribed CRWV-WHEEL holding assigned shares", () => {
     positions: [{ symbol: "CRWV", quantity: 100, avgPrice: 80 }],
   });
   const liveRisk = { ...QUIET_RISK, optionsLevel: 1 };
-  const trading = () => tradingRoster(resolveBotRoster(bot, [], []), liveRisk);
+  const trading = () =>
+    tradingRoster(resolveBotRoster(bot, [], []), liveRisk, undefined, {
+      placedBy: placedOn({ "CRWV-WHEEL": ["CRWV"] }),
+    });
 
   it("still sells a covered call on the shares, through the real guards", () => {
     const t = trading();
