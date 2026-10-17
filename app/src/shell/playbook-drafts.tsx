@@ -9,6 +9,7 @@ import {
 import type { OwnedAccount } from "../live/settings";
 import { InlineResult } from "../ui";
 import { AuthorPlaybook } from "./playbook-author";
+import { PromoteBlock } from "./playbook-promote";
 import { ShadowBlock } from "./playbook-shadow";
 
 /**
@@ -19,9 +20,11 @@ import { ShadowBlock } from "./playbook-shadow";
  * one more entry in it.
  *
  * One row per draft, one tap to open it: its name, its ticker and numbers on one line, and its
- * standing as a glyph and a word ("◌ Draft · doesn't trade", "◐ Shadow test · doesn't trade") — the
- * only standings a saved play has until promotion exists. Under the row sits its shadow test
- * (`playbook-shadow.tsx`, #5457 slice 2): the button to start one, or how it is going. The row
+ * standing as a glyph and a word ("◌ Draft · doesn't trade", "◐ Shadow test · doesn't trade", and
+ * once promoted "● Trading · SIM · unvalidated" or "‖ Paused"). Under the row sits its shadow test
+ * (`playbook-shadow.tsx`, #5457 slice 2): the button to start one, or how it is going; and under a
+ * test, what it must show before it can trade, with the one button that promotes it once it has
+ * (`playbook-promote.tsx`, slice 3). The row
  * opens the form on what was saved, and Discard lives
  * there, asking once (a phone's first screens stay the catalog's, so a draft costs one row, not two
  * buttons). The "New playbook"
@@ -49,6 +52,9 @@ function DraftRow({
 }): ReactElement {
   const runsOn = bots.find((bot) => bot.id === play.runsOn);
   const testing = play.status === "shadow";
+  const promoted = play.status === "promoted";
+  const running = promoted && play.trading?.running === true;
+  const bot = runsOn ? botName(runsOn) : "its bot";
   return (
     <li className="pba-row">
       <button
@@ -64,8 +70,17 @@ function DraftRow({
           </span>
           <span className="pbl-meta">
             <span className="pbl-status">
-              <span aria-hidden="true">{testing ? "◐" : "◌"}</span>{" "}
-              {testing ? "Shadow test" : "Draft"} · doesn't trade
+              {promoted ? (
+                <>
+                  <span aria-hidden="true">{running ? "●" : "‖"}</span>{" "}
+                  {running ? "Trading" : "Paused"} · SIM · unvalidated
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">{testing ? "◐" : "◌"}</span>{" "}
+                  {testing ? "Shadow test" : "Draft"} · doesn't trade
+                </>
+              )}
             </span>
             <span className="pbl-trades">{runsOn ? `for ${botName(runsOn)}` : "for a bot"}</span>
           </span>
@@ -74,11 +89,8 @@ function DraftRow({
           ›
         </span>
       </button>
-      <ShadowBlock
-        play={play}
-        botName={runsOn ? botName(runsOn) : "its bot"}
-        onChanged={onShadowChanged}
-      />
+      {promoted ? null : <ShadowBlock play={play} botName={bot} onChanged={onShadowChanged} />}
+      <PromoteBlock play={play} botName={bot} onChanged={onShadowChanged} />
     </li>
   );
 }
@@ -99,7 +111,7 @@ export function YourPlaybooks({
     queryFn: fetchAuthoredPlays,
     // A test in progress moves with the bots' passes (reported on their ~30s poll): keep reading.
     refetchInterval: (query) =>
-      query.state.data?.some((play) => play.status === "shadow") ? SHADOW_REFRESH_MS : false,
+      query.state.data?.some((play) => play.status !== "draft") ? SHADOW_REFRESH_MS : false,
   });
   const [writing, setWriting] = useState<{ readonly editing?: AuthoredPlayView } | undefined>();
   const [saved, setSaved] = useState<string | undefined>();

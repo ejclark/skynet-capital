@@ -113,7 +113,7 @@ function isHumanAccount(config: DashboardServerConfig, id: string): boolean {
  * The gates a write that delegates capital passes, in #4610's order: ownership → bot account →
  * the viewer's fog. Answers the sentence to refuse with, or undefined to go ahead.
  */
-async function delegationRefusal(
+export async function delegationRefusal(
   id: string,
   ownedIds: readonly string[],
   notYours: string,

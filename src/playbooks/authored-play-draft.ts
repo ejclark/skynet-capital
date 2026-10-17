@@ -3,27 +3,32 @@
  * that says it does not trade.
  *
  * A record is the model's own `AuthoredPlaySpec` plus the name the member gave it and a STATUS. Two
- * statuses exist and neither trades. A `draft` is a play the member has written down and nothing
+ * statuses never trade. A `draft` is a play the member has written down and nothing
  * more. A `shadow` play is a draft the member has put in its shadow test (slice 2): the bots work
  * out, each pass, what it would have bought and sold and write that on a ledger
- * (`authored-shadow.ts`) — no order is sent for the account. Promotion (slice 3) is the first
- * status that may trade, and it does not exist yet.
+ * (`authored-shadow.ts`) — no order is sent for the account. A `promoted` play (slice 3, a shadow test
+ * that passed `promotionVerdict`, promoted by its author with one tap) is the first and only status
+ * that may trade, and only on its author's own bot through the normal subscription: the app writes the
+ * subscription, the bots compile the play from the `authored-plays.v1` wire, and every guard, budget
+ * and conviction gate applies. Pausing it pauses that subscription — the status stays so the play stays
+ * compiled and its exits never stop.
  *
  * THE RULE, MECHANICAL. `runnableSpecs` is the single door from saved records to the specs
  * `authoredRoster` compiles into a bot's playbooks, and it lets through only a status listed in
- * `TRADING_STATUSES` — which is empty, and `shadow` is NOT in it. Shadowing has its own, separate
+ * `TRADING_STATUSES` — which holds `promoted` alone; `draft` and `shadow` are NOT in it. Shadowing has its own, separate
  * door (`shadowOrders`) that hands a spec to the shadow runner and nowhere else. Nothing in the
- * bots' roster wiring reads this store (`resolveBotRoster` still takes no specs), so there are two
+ * bots' roster wiring reads this store (the bots compile only what `runnableSpecs` put on the wire), so there are two
  * locks on the trading door, and `tests/playbooks/authored-play-draft.spec.ts` holds both.
  */
 import { isRecord } from "../storage/parse-guards.js";
 import type { AuthoredPlaySpec, AuthoredTrigger } from "./authored-play.js";
 
 /** Where a saved play stands. `shadow` is a test, not a rung toward trading by itself (slice 3). */
-export type AuthoredPlayStatus = "draft" | "shadow";
+export type AuthoredPlayStatus = "draft" | "shadow" | "promoted";
 
-/** The statuses whose plays may reach a bot. Empty on purpose: promotion (slice 3) adds the first. */
-export const TRADING_STATUSES: readonly AuthoredPlayStatus[] = [];
+/** The statuses whose plays may reach a bot. `promoted` is the first (slice 3); a draft or a shadow
+ *  test is never in it. */
+export const TRADING_STATUSES: readonly AuthoredPlayStatus[] = ["promoted"];
 
 export interface AuthoredPlayRecord {
   /** The compiled play's id (`authoredPlayId`) — unique per author account and stable until renamed. */
@@ -41,7 +46,7 @@ export interface AuthoredPlayRecord {
   readonly updatedAt: string;
 }
 
-/** The records that may trade — none while no status is in `TRADING_STATUSES`. */
+/** The records that may trade — those whose status is in `TRADING_STATUSES`. */
 export function runnableSpecs(records: readonly AuthoredPlayRecord[]): AuthoredPlaySpec[] {
   return records.filter((r) => TRADING_STATUSES.includes(r.status)).map((r) => r.spec);
 }
@@ -145,7 +150,7 @@ function parseRecord(raw: unknown): AuthoredPlayRecord | undefined {
       spec &&
       isText(raw.id) &&
       isText(raw.name) &&
-      (raw.status === "draft" || raw.status === "shadow") &&
+      (raw.status === "draft" || raw.status === "shadow" || raw.status === "promoted") &&
       isText(raw.createdAt) &&
       isText(raw.updatedAt)
     )

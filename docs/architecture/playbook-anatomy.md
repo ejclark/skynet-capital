@@ -113,14 +113,27 @@ observations in the decision store beside the verdicts (`playbook_observations`,
 broker.
 
 A member's authored draft in its **shadow test** (#5457 slice 2) is not a `Playbook` on any roster, and
-the engine never sees it as one. `runnableSpecs` hands a bot nothing (`TRADING_STATUSES` is empty and
-`shadow` is not in it); `shadowOrders` hands the saved spec to the shadow runner instead
+the engine never sees it as one. `runnableSpecs` hands a bot nothing for it (`shadow` is not in
+`TRADING_STATUSES`); `shadowOrders` hands the saved spec to the shadow runner instead
 (`src/autonomous/authored-shadow-runner.ts`). Each pass the runner compiles it with `authoredRoster`,
 decides it with `playbookIntents` against a book of the author's own account equity less what the test
 holds, judges the result with `applyGuardsWithVerdicts`, and writes each approved decision as a would-be
 fill (ask in, bid out, the whole quote kept) on a ledger in `bots-state.db`, reported to the app on the
 `/controls` poll. The runner holds no broker and its pass returns nothing; the real persona's decisions
 are identical with and without the test (`tests/playbooks/authored-shadow-wiring.spec.ts`).
+
+A play that **passed** its test and was promoted by its author (#5457 slice 3) is the one authored
+status that trades, and it enters through the same door every playbook does. `promotionVerdict`
+(`src/autonomous/authored-promotion.ts`) reads the report: 10 sessions watched, 1 closed would-be
+round trip, 0 guard refusals, no P/L minimum. Promoting writes a standard-size subscription on the
+author's own bot (`SubscriptionStore.subscribe`) and moves the record to `promoted`, the only entry in
+`TRADING_STATUSES`; the record's spec rides `GET /controls` as `authoredPlays` (specs only,
+`src/autonomous/authored-plays-wire.ts`, built from `runnableSpecs`), and each bot compiles the ones it
+authored with `authoredRoster` and hands them to `resolveBotRoster`. No order path is new: the guards,
+the subscription gate, budgets and the position cap are the ones every playbook meets. Pausing a
+promoted play switches its subscription off (`pausedRoster`: exits only), and the record stays
+`promoted` so the spec stays compiled and its exits never stop
+(`tests/playbooks/authored-promote-live.spec.ts`).
 
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
@@ -280,7 +293,8 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |
 | An `observeOnly` playbook places nothing, takes no ticker and records `observing` | `src/playbooks/playbook.ts:243`, `src/playbooks/playbook.ts:353`, `src/playbooks/playbook.ts:481`, `src/playbooks/playbook.ts:528`, `src/playbooks/with-playbooks.ts:93` | grounded |
 | A dark playbook's `observe` returns would-be orders (not intents), read after the intents are fixed and filed in the decision store | `src/playbooks/playbook.ts:252`, `src/playbooks/with-playbooks.ts:162-179`, `src/autonomous/autonomous-trader.ts:220`, `src/autonomous/decision-db.ts` (`playbook_observations`) | grounded |
-| A draft in its shadow test is on no roster; its spec reaches only the shadow runner, which decides it with the engine's own functions and records would-be fills | `src/playbooks/authored-play-draft.ts:26`, `src/playbooks/authored-play-draft.ts:69-77`, `src/autonomous/authored-shadow-runner.ts:149-195` | grounded |
+| A draft in its shadow test is on no roster; its spec reaches only the shadow runner, which decides it with the engine's own functions and records would-be fills | `src/playbooks/authored-play-draft.ts:31`, `src/playbooks/authored-play-draft.ts:74-82`, `src/autonomous/authored-shadow-runner.ts:149-195` | grounded |
+| A promoted play trades only through its author's own bot subscription; the spec rides `authoredPlays` and compiles per account, and a pause keeps it compiled so its exits run | `src/playbooks/authored-play-draft.ts:31`, `src/playbooks/authored-play-draft.ts:50-52`, `src/autonomous/authored-plays-wire.ts:35-41`, `src/scripts/autonomous-authored-plays.ts:26-40`, `src/subscriptions/subscription-roster.ts:13-21` | grounded |
 | Option traits: underlyings, shorts held to expiry, options level | `src/playbooks/playbook.ts:125-133` | grounded |
 | Wrapping order: hygiene around the conviction gate around the playbooks | `src/scripts/autonomous-live-wiring.ts:373-394`, `src/playbooks/with-option-safety.ts:34-42` | grounded |
 | Guards run after: options through `clampOption`, shares through `clampBuy`/`clampSell` | `src/engine/guards.ts:408-419`, `src/engine/option-guards.ts:269-282` | grounded |
