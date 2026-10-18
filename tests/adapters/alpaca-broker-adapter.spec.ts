@@ -256,7 +256,8 @@ describe("AlpacaBrokerAdapter", () => {
       });
     }
 
-    // #4655 EARS 1: a partial fill is a fill of what filled, never of what was asked.
+    // #4655 EARS 1: a partial fill is a fill of what filled, never of what was asked — and while
+    // the broker still holds the rest it is `open`, followed to its end (#4787).
     it("reports a partial fill as filled with the quantity and price the broker confirmed", async () => {
       const adapter = adapterWith(
         {
@@ -285,6 +286,7 @@ describe("AlpacaBrokerAdapter", () => {
         filledQuantity: 40,
         filledPrice: 42.15,
         orderId: "o1",
+        open: true,
       });
     });
 
