@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type DeskActivity, type DeskActivityEvent, fetchDeskActivity } from "../live/desk";
-import { targetedActivityRow } from "./activity-table";
+import { targetedLedgerRow } from "./ledger-table";
 
 /**
  * AN ACCOUNT'S OLDER ORDERS (#4650) — `/api/desk/:id/activity` hands back 30 orders and a cursor;
@@ -12,14 +12,14 @@ import { targetedActivityRow } from "./activity-table";
  * A LINK TO ONE ORDER (`#act-<orderId>` — a Thesis marker, a Heartbeat pass's trade) may point
  * further back than the first page. The walk then loads older pages on its own until the row is
  * there, at most `FIND_PAGES` of them, and the row scrolls itself in when it mounts
- * (`activity-table.tsx`). Past that bound it stops and `missing` says the order is further back:
+ * (`ledger-table.tsx`). Past that bound it stops and `missing` says the order is further back:
  * one link never reads the whole ledger.
  */
 
 /** How many older pages a link to one order loads by itself before leaving it to the button. */
 export const FIND_PAGES = 5;
 
-export interface ActivityPages {
+export interface LedgerPages {
   /** The first page and every older one loaded since, newest first. */
   readonly rows: readonly DeskActivityEvent[];
   /** Absent when nothing older exists. */
@@ -35,7 +35,7 @@ const holds = (row: DeskActivityEvent, anchor: string): boolean =>
   `act-${row.orderId}` === anchor ||
   (row.legs ?? []).some((leg) => `act-${leg.orderId}` === anchor);
 
-export function useActivityPages(
+export function useLedgerPages(
   id: string,
   symbol: string | undefined,
   playbook: string | undefined,
@@ -43,7 +43,7 @@ export function useActivityPages(
   /** `first` is the last filter's page, kept up while the new filter's arrives: nothing older is
    *  asked for under the new filter from the old page's cursor. */
   stale = false,
-): ActivityPages {
+): LedgerPages {
   const [base, setBase] = useState(first);
   const [older, setOlder] = useState<readonly DeskActivityEvent[]>([]);
   const [cursor, setCursor] = useState(first?.nextCursor);
@@ -92,7 +92,7 @@ export function useActivityPages(
   }, [id, symbol, playbook, cursor, first, stale]);
 
   const rows = first ? [...first.activity, ...older] : [];
-  const target = targetedActivityRow();
+  const target = targetedLedgerRow();
   const found = target === undefined || rows.some((row) => holds(row, target));
   const live = first !== undefined && !stale;
   const walking = live && !found && cursor !== undefined && !failed && walked < FIND_PAGES;

@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useRefineSearch } from "../live/refine-search";
-import { AccountActivity, narrowingFromSearch } from "../shell/account-activity";
 import { useOwnsAccount } from "../shell/account-head";
+import { AccountLedger, narrowingFromSearch } from "../shell/account-ledger";
 
 /**
  * THE ANY-ACCOUNT PAGE'S LEDGER (#3807 slice 2d, dead end 5; named Activity until #5281) — the
  * account's orders, the same paged, narrowed list the Profile page's Ledger renders for one account
- * (`shell/account-activity.tsx`: cards on a phone, the table above it), fed by the same
+ * (`shell/account-ledger.tsx`: cards on a phone, the table above it), fed by the same
  * per-account read (`/api/desk/:id/activity`). Each row carries `id="act-<orderId>"`, so the
  * Thesis markers and a bot's "passes that did trade" land on a row that exists. Reads are public
  * inside the invite gate by design; nothing here writes. One exception: a bot's decision names its
@@ -34,7 +34,7 @@ function ActivityPage(): ReactElement {
   const isOwn = useOwnsAccount(id);
   // The frame and head are the layout's (`u.$id.tsx`, #4951) — only the ledger reads here.
   return (
-    <AccountActivity
+    <AccountLedger
       id={id}
       narrowing={search}
       onNarrow={(next) => refine((prev) => ({ ...prev, ...next }))}

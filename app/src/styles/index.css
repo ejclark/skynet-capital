@@ -7,9 +7,9 @@
  * preserved verbatim so no rule changes which declaration wins. Add a new sheet in alphabetical
  * position unless it deliberately needs to override a later one.
  */
-@import "./account-activity.css";
-@import "./activity-cards.css";
-/* right after activity-cards.css, not alphabetical: the deep dive reuses the cards' row classes. */
+@import "./account-ledger.css";
+@import "./ledger-cards.css";
+/* right after ledger-cards.css, not alphabetical: the deep dive reuses the cards' row classes. */
 @import "./order-deep-dive.css";
 /* after the deep dive: the opened order reuses its "Full detail ›" door. */
 @import "./opened-order.css";

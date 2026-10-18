@@ -1,6 +1,6 @@
 // The two option trades a bot made on 2026-10-07 — one cash-secured CRWV put (CRWV-WHEEL) and one
 // NVDA $185/$200 call debit spread (NVDA-CALL-SPREAD) — as ONE decision record, shared by
-// `option-fill.mjs` (the fill, its why, its late settlement) and `activity-filters.mjs` (the
+// `option-fill.mjs` (the fill, its why, its late settlement) and `ledger-filters.mjs` (the
 // account's Activity paged and narrowed, #4650), so both harnesses photograph the same trades. Only
 // the bot's own sentences (reason, expectation, invalidator) are fixture text, written in each
 // playbook's own templates; everything a frame shows about them is computed by the real server code.

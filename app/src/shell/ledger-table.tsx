@@ -36,7 +36,7 @@ import { OpenedOrder, PlaybookLine } from "./opened-order";
  * leg's own fill beneath it (#4650), because the broker reports a spread's fills one per leg.
  * @category trading
  */
-export function ActivityTable({
+export function LedgerTable({
   events,
   showPlaybook = true,
   deskId,
@@ -61,7 +61,7 @@ export function ActivityTable({
   const withPlaybook =
     showPlaybook && events.some((event) => event.reasoning?.playbookId !== undefined);
   const cols: Columns = { why: withWhy, playbook: withPlaybook };
-  useLandOnHash(findActivityRow, rowKey(events));
+  useLandOnHash(findLedgerRow, rowKey(events));
   return (
     <div className="blotter-card">
       <div className="blotter-scroll">
@@ -87,7 +87,7 @@ export function ActivityTable({
                 </th>
               </tr>
               {day.events.map((event) => (
-                <ActivityRow
+                <LedgerRow
                   key={`${event.orderId}-${event.at}`}
                   event={event}
                   cols={cols}
@@ -119,11 +119,11 @@ const span = (cols: Columns): number => 3 + (cols.why ? 1 : 0) + (cols.playbook 
  *  `?section=activity#act-<orderId>`, but the ledger loads after the router has already tried the
  *  hash, so the browser's own jump finds nothing. The table lands on the row once it exists — the
  *  same landing a position gets (`landing.ts`, #5022): centred below the sticky head, marked. */
-export function targetedActivityRow(): string | undefined {
+export function targetedLedgerRow(): string | undefined {
   return typeof window === "undefined" ? undefined : targetedAnchor("act-", window.location.hash);
 }
 
-export const findActivityRow = (hash: string): HTMLElement | undefined => {
+export const findLedgerRow = (hash: string): HTMLElement | undefined => {
   const anchor = targetedAnchor("act-", hash);
   return (anchor && document.getElementById(anchor)) || undefined;
 };
@@ -132,7 +132,7 @@ export const findActivityRow = (hash: string): HTMLElement | undefined => {
 export const rowKey = (events: readonly DeskActivityEvent[]): string =>
   events.flatMap((e) => [e.orderId, ...(e.legs ?? []).map((leg) => leg.orderId)]).join(",");
 
-function ActivityRow({
+function LedgerRow({
   event,
   cols,
   showPlaybook,

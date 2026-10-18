@@ -2,7 +2,7 @@ import { landingBlock, publishClearance, targetedAnchor } from "../../src/shell/
 
 /**
  * The shared landing (#5022). The scroll and the mark are observed through the surfaces that use it
- * (`activity-table.spec.tsx`, `position-anchor.spec.tsx`); this covers the two pieces of it no
+ * (`ledger-table.spec.tsx`, `position-anchor.spec.tsx`); this covers the two pieces of it no
  * surface owns: reading an anchor out of the hash, and the sticky head telling every landing target
  * how far down it reaches — the number behind their `scroll-margin-top` (landing.css).
  */

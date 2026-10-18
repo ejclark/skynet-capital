@@ -310,7 +310,7 @@ export function PositionPage({
   const wait = waitingStrip(position, book);
   const chart = profitChart(position, wait, price?.axis);
   const ways = waysToPlay(position, positions, wait);
-  // The stock's narrowed ledger, the cache Activity's own symbol box fills (`account-activity.tsx`).
+  // The stock's narrowed ledger, the cache Activity's own symbol box fills (`account-ledger.tsx`).
   const activity = useQuery({
     queryKey: ["desk-activity", deskId, { symbol: stock }],
     queryFn: () => fetchDeskActivity(deskId, { symbol: stock }),

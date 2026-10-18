@@ -2,15 +2,15 @@ import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DeskActivityEvent } from "../live/desk";
-import { ActivityCards } from "./activity-cards";
-import { ActivityTable } from "./activity-table";
+import { LedgerCards } from "./ledger-cards";
+import { LedgerTable } from "./ledger-table";
 import { OrderDeepDive } from "./order-deep-dive";
 import { useMediaQuery } from "./use-media";
 import { BENCH_QUERY, PHONE_QUERY, TABLET_QUERY } from "./widths";
 
 /**
  * AN ACCOUNT'S ORDERS, AT EITHER WIDTH (#5101). At or below the phone width the ledger is one card
- * an order under day headers (`activity-cards.tsx`); above it, the desk table (`activity-table.tsx`)
+ * an order under day headers (`ledger-cards.tsx`); above it, the desk table (`ledger-table.tsx`)
  * — the desktop adds room, never new concepts. One of the two is mounted, never both, so each
  * order's `id="act-<orderId>"` exists once and a link to it lands on the layout on screen. Where
  * `matchMedia` is missing the table is the default, as everywhere else (`use-media.ts`).
@@ -21,7 +21,7 @@ import { BENCH_QUERY, PHONE_QUERY, TABLET_QUERY } from "./widths";
  * left it, with focus on its control. A `detail` the loaded rows do not hold opens nothing: the list
  * stays, and the page's own note says the linked order is older than what is loaded.
  */
-export function ActivityLedger({
+export function Ledger({
   events,
   showPlaybook = true,
   deskId,
@@ -46,14 +46,9 @@ export function ActivityLedger({
   const door = onDetail ? { onDetail: (orderId: string) => onDetail(orderId) } : {};
   const back = reopen ? { reopen } : {};
   const list = phone ? (
-    <ActivityCards {...shared} {...door} {...back} />
+    <LedgerCards {...shared} {...door} {...back} />
   ) : (
-    <ActivityTable
-      {...shared}
-      {...door}
-      {...back}
-      {...(opened ? { detail: opened.orderId } : {})}
-    />
+    <LedgerTable {...shared} {...door} {...back} {...(opened ? { detail: opened.orderId } : {})} />
   );
   const dive =
     opened && onDetail ? (

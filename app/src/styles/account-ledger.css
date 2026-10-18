@@ -1,5 +1,5 @@
-/* An account's Activity, narrowed and walked back (#4650; `activity-filter-bar.tsx`,
-   `shell/account-activity.tsx` — on `/u/<id>/activity` and Profile → Activity, #5165). The box
+/* An account's Activity, narrowed and walked back (#4650; `ledger-filter-bar.tsx`,
+   `shell/account-ledger.tsx` — on `/u/<id>/activity` and Profile → Activity, #5165). The box
    and the chips are desk.css's `filter-bar` and FilterChip's `filter-chips` (filter-chip.css); only what this page adds lives here. */
 
 /* The playbook chips sit in a fieldset (a labelled group of buttons): reset the browser's frame so

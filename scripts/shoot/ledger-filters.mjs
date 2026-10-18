@@ -14,7 +14,7 @@
 //
 // The last frame is Profile → Activity at the list's end on a phone (#5165).
 //
-// JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/activity-filters.mjs [outdir]
+// JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/ledger-filters.mjs [outdir]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
 import { filledRecord, HIGH, LOW, PUT } from "./option-fill-fixture.mjs";
