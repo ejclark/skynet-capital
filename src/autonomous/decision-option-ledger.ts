@@ -46,6 +46,9 @@ export interface OptionLedger {
    *  replaces them all instead: a late fill that lands behind trips already written re-pairs them
    *  (#4650), and the old rows must not stay beside the new. The caller holds a transaction. */
   rescore(personaId: string, underlying: string, rebuild?: boolean): void;
+  /** Whether a trip on this underlying already closed after `at` — a decision from `at` landing
+   *  now is behind it, and must rebuild the ledger rather than add to it (#4775). */
+  scoredAfter(personaId: string, underlying: string, at: number): boolean;
   /** Stores the activities not seen before and rescores each underlying they touch. Returns how
    *  many were new. */
   recordLifecycle(personaId: string, activities: readonly NormalizedLifecycleActivity[]): number;
@@ -145,6 +148,11 @@ export function openOptionLedger(
     DELETE FROM retrospectives WHERE persona_id = ? AND entry_intent_id IN (
       SELECT i.id FROM intents i JOIN intent_options o ON o.intent_id = i.id WHERE i.symbol = ?)
   `);
+  const selectScoredAfter = db.prepare(`
+    SELECT 1 FROM retrospectives r
+    JOIN intents i ON i.id = r.entry_intent_id JOIN intent_options o ON o.intent_id = i.id
+    WHERE r.persona_id = ? AND i.symbol = ? AND r.at > ? LIMIT 1
+  `);
   const insertLifecycle = db.prepare(`
     INSERT OR IGNORE INTO option_lifecycle
       (persona_id, activity_id, type, symbol, underlying, quantity, at)
@@ -180,6 +188,8 @@ export function openOptionLedger(
 
   return {
     rescore,
+    scoredAfter: (personaId, underlying, at) =>
+      selectScoredAfter.get(personaId, underlying, at) !== undefined,
     recordLifecycle(personaId, activities) {
       const touched = new Set<string>();
       let added = 0;
