@@ -211,6 +211,14 @@ async function readMarket(
             buySignal: ledger.read.buySignal,
             buyConfidence: ledger.read.buySignal ? (ledger.read.confidence ?? "low") : "none",
             stance: ledger.read.stance ?? "no call on record",
+            ...(ledger.read.provesWrong
+              ? {
+                  provesWrong: {
+                    quote: ledger.read.provesWrong,
+                    ...(ledger.read.assessed ? { asOf: ledger.read.assessed } : {}),
+                  },
+                }
+              : {}),
             source: ledger.source,
           },
         }
