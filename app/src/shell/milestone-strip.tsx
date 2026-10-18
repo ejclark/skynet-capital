@@ -127,19 +127,37 @@ function Rung({
   );
 }
 
+/** The M·02 gate note — the server's own sentence (`src/domain/progression.ts`
+ *  `LADDER_GATE_NOTE`: "the moment you say hello to Moneypenny"). #1672 fixed this card once and
+ *  it regressed to "after your first feedback filing"; the hello is the gate, a filing only also
+ *  satisfies it. */
+export const LADDER_CARD_GATE_NOTE = "unlocks the moment you say hello to Moneypenny";
+
+/** The same note for a session with no account (#3807 slice 3b-4, first-timer j1 s3): the server
+ *  serves no ladder gate without an account, so the card names the step before the gate, then the
+ *  gate in the server's words — one sentence, never a second phrasing of the unlock (#1672). */
+export const LADDER_CARD_NO_ACCOUNT_NOTE = `link an account first, then it ${LADDER_CARD_GATE_NOTE}`;
+
 /** The one line under the rail — what's next, and what opens after it. Server words only. The
- *  trading chapter's ladder list says the same line under its count (#5242). */
+ *  trading chapter's ladder list says the same line under its count (#5242).
+ *
+ *  `linked: false` comes first (#5731): with no account the server serves wheels off, which alone
+ *  would read "nothing is locked" under an M·02 card that says LOCKED. No account is the one lock
+ *  above the gate, so the line names it in the card's own words. */
 export function ladderStatus({
   plays,
   wheels,
   gate,
   nextUp,
+  linked = true,
 }: {
   readonly plays: readonly PlayInfo[];
   readonly wheels: boolean;
   readonly gate?: PlaysIndex["gate"];
   readonly nextUp?: string;
+  readonly linked?: boolean;
 }): ReactElement | string {
+  if (!linked) return `Locked — ${LADDER_CARD_NO_ACCOUNT_NOTE}.`;
   if (gate) return gate.note;
   if (!wheels) return "Training wheels off — the ladder records your fills; nothing is locked.";
   const next = plays.find((p) => p.code === nextUp);

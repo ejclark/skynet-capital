@@ -62,11 +62,21 @@ and the first button, never the rail. They skip anything that names a concept th
 2. `/app/accounts?section=milestones` — the milestones page: M·01 Onboarding first. **WHEN the member opens Profile
    before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
    link into it.** Judge: can this reader tell what to do next in ten seconds?
-3. `/app/accounts?section=milestones` — the M·02 card's gate note. **WHILE the trading ladder is gated, the app shall
+3. `/app/accounts?section=milestones&chapter=trading` — the M·02 card's gate note (the trading
+   chapter, since #5258 folds the cards under the connect guide on the bare milestones visit). **WHILE the trading ladder is gated, the app shall
    name the SAME unlock condition everywhere it is named.** _Fixed — #3807 slice 3b-4: with no
    account the card reads "link an account first, then it unlocks the moment you say hello to
    Moneypenny" — the step before the gate, then the server's words._ Judge: does this reader know
    what unlocks trading, in one sentence?
+
+3b. `/app/accounts?section=milestones&chapter=trading` — the trading chapter under the same LOCKED
+   card. **WHEN a member with no linked account opens the trading chapter, the card and the ladder
+   list shall agree on whether the next rung is locked.** _Fixed — #5731: the list said "Training
+   wheels off — … nothing is locked" under a card reading LOCKED (the server serves wheels off with
+   no account); it now says "Locked — link an account first, then it unlocks the moment you say
+   hello to Moneypenny." and offers Trade on no rung._ Judge: does this reader know whether trading
+   is open, in one sentence?
+
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
    Judge: can this reader tell what to do next in ten seconds?

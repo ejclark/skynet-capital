@@ -40,6 +40,9 @@ export function LadderList({
   readonly deskId: string;
 }): ReactElement {
   const { done, total } = ladderProgress(journey);
+  // No account (#5731): the status line says locked, so no rung may offer Trade — the rungs take
+  // the fail-soft path (the level's own lock, no links), the same as plays not answering.
+  const rungPlays = plays?.linked ? plays : undefined;
   return (
     <section className="ladder-list" aria-label="Trading ladder">
       <div className="ll-head">
@@ -55,11 +58,12 @@ export function LadderList({
             wheels: plays.wheels,
             gate: plays.gate,
             nextUp: plays.nextUp,
+            linked: plays.linked,
           })}
         </p>
       ) : null}
       {journey.courses.map((course) => (
-        <Level key={course.level} course={course} plays={plays} deskId={deskId} />
+        <Level key={course.level} course={course} plays={rungPlays} deskId={deskId} />
       ))}
     </section>
   );
