@@ -98,7 +98,7 @@ type Outcome = DecisionCycleView["outcomes"][number];
 type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
 /** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag and the broker's
- *  words removed — and each refused idea's strategy tag. The tag is a playbook's own slug
+ *  words removed — and each refused idea's strategy tag and play. The tag is a playbook's own slug
  *  (`crwv-wheel-put`), so it names the playbook as plainly as the chip does (#4971). */
 export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
@@ -108,7 +108,7 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
     Outcome,
     "playbook" | "playbookMode" | "strategy" | "brokerReason"
   >[];
-  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy">[];
+  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy" | "playbookId">[];
 })[] {
   return withoutPlaybookNames(
     cycles.map(({ refusedIntents, ...cycle }) => ({
@@ -117,7 +117,9 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
         ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
       ),
       ...(refusedIntents
-        ? { refusedIntents: refusedIntents.map(({ strategy: _s, ...idea }) => idea) }
+        ? {
+            refusedIntents: refusedIntents.map(({ strategy: _s, playbookId: _p, ...idea }) => idea),
+          }
         : {}),
     })),
     cycles,

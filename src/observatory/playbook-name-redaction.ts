@@ -1,4 +1,4 @@
-import { playbookRoster } from "../playbooks/registry.js";
+import { registeredPlaybooks } from "../playbooks/registry.js";
 
 /**
  * A PLAYBOOK'S NAME IN FREE TEXT IS STILL ITS NAME (#4442). The owner gate (#885) strips the keys
@@ -10,8 +10,10 @@ import { playbookRoster } from "../playbooks/registry.js";
  * generic words instead.
  *
  * Redacting here, not at the source, is the issue's narrower fork: the audit log and the owner's
- * own copy keep the words the bot actually wrote. The ids searched are the house roster plus any
- * id the payload itself carried in a stripped key — so a play outside the roster is caught too.
+ * own copy keep the words the bot actually wrote. The ids searched are every registered house play
+ * plus any id the payload itself carried in a stripped key — so a member-authored play
+ * (`U-<account>-<slug>`, never in the registry) is caught too, which is why every view that copies
+ * an intent's reason also carries its `playbookId` for the strip to take.
  */
 
 const GENERIC = "a playbook";
@@ -37,7 +39,7 @@ function escapeRegExp(id: string): string {
 /** A matcher for whole ids only — `S1-NVDA` never eats into `S1-NVDA2` or a bare `NVDA`. Longest
  *  first, so `CRWV-LONG-CALL` wins over any shorter id that prefixes it. */
 function matcherFor(ids: Iterable<string>): RegExp | undefined {
-  const all = [...new Set([...ids, ...playbookRoster().map((p) => p.id)])]
+  const all = [...new Set([...ids, ...registeredPlaybooks().map((p) => p.id)])]
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   if (all.length === 0) return undefined;

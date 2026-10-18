@@ -515,6 +515,40 @@ describe("serveDeskJson", () => {
       });
     });
 
+    it("redacts a member-authored play's id from a refused idea's reason", async () => {
+      const authored = {
+        ...pick,
+        reason: "U-acct-7-earnings-runup window open (standard): ride the run-up",
+        playbookId: "U-acct-7-earnings-runup",
+      };
+      const refused = {
+        ...pass,
+        rawIntents: [authored],
+        guardedIntents: [],
+        outcomes: [],
+        refusals: [{ intent: authored, reason: "position-cap" as const }],
+        playbookVerdicts: [],
+      };
+      const config = configWith({
+        auth: {} as never,
+        resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+        readDecisions: () => Promise.resolve([refused]),
+      });
+      const path = "/api/desk/sauron/decisions";
+      const guest = fakeRes();
+      await serveDeskJson(guest.res, path, `${path}?trades=none`, config, session("guest@x"));
+      expect(guest.out.body).not.toContain("U-acct-7");
+      expect(JSON.parse(guest.out.body ?? "").cycles[0].refusedIntents[0].reason).toBe(
+        "a playbook window open (standard): ride the run-up",
+      );
+      const owner = fakeRes();
+      await serveDeskJson(owner.res, path, path, config, session("owner@x"));
+      expect(JSON.parse(owner.out.body ?? "").cycles[0].refusedIntents[0]).toMatchObject({
+        playbookId: "U-acct-7-earnings-runup",
+        reason: authored.reason,
+      });
+    });
+
     it("keeps the reason's own words for the bot's owner", async () => {
       const activity = JSON.parse(await read("activity", "owner@x"));
       expect(activity.activity[0].reasoning.reason).toBe(pick.reason);
