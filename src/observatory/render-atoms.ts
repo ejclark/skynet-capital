@@ -14,8 +14,12 @@ export function formatCurrency(value: number): string {
   return `${sign}$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;
 }
 
+/** A signed dollar change: "+$500", "−$500" with a real minus (U+2212, #5053), and a plain "$0"
+ *  when the amount rounds to zero — a flat day is neither a gain nor a loss. */
 export function formatSigned(value: number): string {
-  return `${value >= 0 ? "+" : ""}${formatCurrency(value)}`;
+  const whole = Math.round(value);
+  if (whole === 0) return "$0";
+  return `${whole > 0 ? "+" : "−"}$${Math.abs(whole).toLocaleString("en-US")}`;
 }
 
 export function plClass(value: number): "pos" | "neg" | "flat" {
