@@ -17,6 +17,7 @@ import {
 } from "../live/position-picture";
 import {
   busiest,
+  contextFacts,
   contextLine,
   contractsText,
   priceRange,
@@ -344,7 +345,9 @@ export function usePriceContext(position: DeskPosition, spot: number | undefined
       : undefined;
   const now = price?.marks.find((m) => m.kind === "now")?.price;
   const line = contextLine(now, losesBelow(position), range, strikes?.bars ?? []);
-  return { price, strikes, line };
+  const facts =
+    now === undefined ? [] : contextFacts(now, losesBelow(position), range, strikes?.bars ?? []);
+  return { price, strikes, line, facts };
 }
 
 /**

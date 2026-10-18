@@ -1,5 +1,14 @@
-import { asideFor, asideHolds, asideWords, readAside, writeAside } from "../../src/live/mark-aside";
+import type { DeskPosition } from "../../src/live/desk";
+import {
+  asideFor,
+  asideHolds,
+  asideWords,
+  readAside,
+  shareWatch,
+  writeAside,
+} from "../../src/live/mark-aside";
 import type { PositionMark } from "../../src/live/position-mark";
+import type { PriceRange } from "../../src/live/price-context";
 
 /**
  * NOT NOW (#5070; Eric, 468e3897: worth a look first is "a setting, easy to dismiss or bypass").
@@ -74,6 +83,52 @@ describe("asideWords", () => {
     expect(asideWords(asideFor("CRWV", SHARES_REVIEW, THU_3PM)).full).toBe(
       "Back after Friday's close.",
     );
+  });
+});
+
+describe("shareWatch — a share row's Not now names its 20-day edge", () => {
+  const RANGE: PriceRange = { low: 78.9, high: 96.3, average: 87.6, days: 20 };
+  const shares = (quantity: string) =>
+    ({ symbol: "CRWV", isOption: false, quantity }) as DeskPosition;
+
+  it("watches the 20-day low on shares held, and says so in the return condition", () => {
+    const watch = shareWatch(shares("40"), RANGE, 82.6);
+    expect(watch).toEqual({ symbol: "CRWV", price: 78.9, side: "below", name: "its 20-day low" });
+    expect(asideWords(asideFor("CRWV", SHARES_REVIEW, THU_3PM, watch)).full).toBe(
+      "Back after Friday's close, or sooner if CRWV trades below $78.90, its 20-day low.",
+    );
+  });
+
+  it("watches the 20-day high on shares sold short", () => {
+    expect(shareWatch(shares("-40"), RANGE, 82.6)).toMatchObject({ price: 96.3, side: "above" });
+  });
+
+  it("names a shorter history's own count", () => {
+    expect(shareWatch(shares("40"), { ...RANGE, days: 12 }, 82.6)?.name).toBe("its 12-day low");
+  });
+
+  it("brings the mark back once the stock trades through the low", () => {
+    const entry = asideFor("CRWV", SHARES_REVIEW, THU_3PM, shareWatch(shares("40"), RANGE, 82.6));
+    expect(asideHolds(entry, SHARES_REVIEW, THU_3PM, 80)).toBe(true);
+    expect(asideHolds(entry, SHARES_REVIEW, THU_3PM, 78.5)).toBe(false);
+  });
+
+  it("names nothing for an option, without a range, or when the price is already past the edge", () => {
+    expect(shareWatch({ ...shares("-1"), isOption: true }, RANGE, 82.6)).toBeUndefined();
+    expect(shareWatch(shares("40"), undefined, 82.6)).toBeUndefined();
+    expect(shareWatch(shares("40"), RANGE, 78)).toBeUndefined();
+  });
+
+  it("never overrides the price a mark names itself", () => {
+    const own = asideFor("X", PUT_REVIEW, THU_3PM, shareWatch(shares("40"), RANGE, 82.6));
+    expect(own.watch).toEqual(PUT_REVIEW.watch);
+  });
+
+  it("round-trips a named watch through storage", () => {
+    localStorage.clear();
+    const entry = asideFor("CRWV", SHARES_REVIEW, THU_3PM, shareWatch(shares("40"), RANGE, 82.6));
+    writeAside("sauron", [entry]);
+    expect(readAside("sauron")).toEqual([entry]);
   });
 });
 

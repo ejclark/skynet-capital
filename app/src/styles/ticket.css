@@ -481,6 +481,10 @@
   font-size: var(--text-sm);
   color: var(--muted);
 }
+/* The picked strike against the opened row's 20-day range and busiest strike (#5070). */
+.tkt-roll-note {
+  color: var(--text);
+}
 /* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
    ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a
    border weight, never hue alone. */

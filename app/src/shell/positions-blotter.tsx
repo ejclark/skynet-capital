@@ -222,7 +222,7 @@ export function PositionsBlotter({
         playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
         initialOpen={openRow === p.symbol}
         {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
-        onAside={() => marks.setAside(p.symbol)}
+        onAside={(watch) => marks.setAside(p.symbol, watch)}
         onUndo={() => marks.undo(p.symbol)}
       />
     ) : null;
