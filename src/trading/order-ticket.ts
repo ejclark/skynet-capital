@@ -68,6 +68,10 @@ export interface TicketContext {
   readonly marketOpen?: boolean;
   /** The viewer is acting on their own account. Anything else is refused outright. */
   readonly isSelf: boolean;
+  /** The symbol's latest trade price, when the caller fetched one (#5173): it prices a symbol the
+   *  account doesn't hold, so a first buy is costed and checked against cash like any other. A held
+   *  symbol keeps its position's mark. */
+  readonly quotePrice?: number;
 }
 
 export interface TicketPreview {
@@ -81,7 +85,8 @@ export interface TicketPreview {
   readonly timeInForce: TicketTimeInForce;
   /** True when the order may be submitted — no refusals. */
   readonly ok: boolean;
-  /** Last known price per share, from the held position's mark. Undefined when unheld. */
+  /** Last known price per share: the held position's mark, else the latest quote the caller
+   *  passed. Undefined when neither is known. */
   readonly estPrice?: number;
   /** Estimated dollars in (buy) or out (sell). Undefined when no price is known. */
   readonly estNotional?: number;
@@ -247,7 +252,10 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
 
   const orderType = request.orderType ?? "market";
   const held = context.positions.find((p) => p.symbol === symbol);
-  const estPrice = markPrice(held);
+  const quote = context.quotePrice;
+  const estPrice =
+    markPrice(held) ??
+    (quote !== undefined && Number.isFinite(quote) && quote > 0 ? quote : undefined);
   const estNotional =
     estPrice !== undefined && Number.isFinite(quantity) && quantity > 0
       ? estPrice * quantity

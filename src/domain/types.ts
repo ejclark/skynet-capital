@@ -437,4 +437,8 @@ export interface OrderResult {
    *  a leg's fill can find this result's order even when it lands after the result was written.
    *  Absent on a one-leg order. */
   readonly legOrders?: readonly OptionLegOrder[];
+  /** A share order that partly filled while the broker still holds the rest (#4787): the result
+   *  records what filled (#4655), and the order is followed to its end — its settlement carries
+   *  the final quantity. Absent on an order the broker has finished. */
+  readonly open?: true;
 }

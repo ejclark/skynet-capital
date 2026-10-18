@@ -1,0 +1,11 @@
+{
+  "id": "amd-fq3-2026-results-2026-11-03",
+  "kind": "sector",
+  "title": "AMD fiscal Q3 2026 results (after the close; call 5 p.m. ET) — the nearest AI-GPU peer print, 11 trading days before the NVDA print",
+  "date": "2026-11-03",
+  "status": "confirmed",
+  "source": "IR: AMD's own press release 'AMD to Report Fiscal Third Quarter 2026 Financial Results' (ir.amd.com/news-events/press-releases/detail/1300/), released 2026-10-06 4:15 pm EDT and re-fetched direct 2026-10-18 by this event's own initial research (the proposing sibling lane, nvda-2026-11-18-print, read the same page): 'will report fiscal third quarter 2026 financial results on Tuesday, Nov. 3, 2026, after the market close... conference call to discuss these results at 5 p.m. ET / 2 p.m. PT'. Promoted estimate -> confirmed 2026-10-18 on the company's own announcement, two independent direct reads. One aggregator (tradingpedia, 2026-10-05) printed Nov 2 with no source; the IR page wins",
+  "impact": "high",
+  "symbols": ["AMD"],
+  "notes": "Discovered during the nvda-2026-11-18-print pulse (2026-10-18). Not an earnings-calendar entry, so it is a sector-kind event rather than a derived print. Same date as the US midterm elections. AMD was -18.6% over the 8-session chip losing streak ending 2026-10-16, so the print lands into a de-risked tape; its read-through for NVDA is AI-accelerator demand and the neocloud financing question."
+}
