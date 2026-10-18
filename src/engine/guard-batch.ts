@@ -43,7 +43,8 @@ export interface GuardLedger {
   readonly active: boolean;
   /** Every contract held at the start of the cycle. */
   readonly held: readonly CoverLeg[];
-  /** Dollars approved share buys pay out. An option order's premium or debit rides with the order
+  /** Dollars approved share buys pay out — starting from what buys still open at the broker will
+   *  pay (#4735). An option order's premium or debit rides with the order
    *  (`ApprovedOptionOrder.pays`) — counted only in the outcomes where it fills — and collateral is a
    *  need, read from `orders`. */
   spent: number;
@@ -70,19 +71,63 @@ interface ApprovedOptionOrder {
  *  gets near it. */
 const MAX_ENUMERATED_ORDERS = 10;
 
+/** A share buy still open at the broker: shares left to fill and, for a limit order, its limit. */
+export interface OpenBuy {
+  readonly symbol: string;
+  readonly quantity: number;
+  readonly limitPrice?: number;
+}
+
+/**
+ * What the buys still open at the broker will spend (#4735). Alpaca's `cash` holds nothing back for
+ * a queued buy, so without this the guards would size a new buy on cash an open one already needs.
+ * Each is priced at its limit, else the freshest ask the cycle holds, else the holding's own mark
+ * (the broker's market value per share, then its cost) — never $0. One that cannot be priced at all
+ * holds every dollar: what it will spend is unknown, so no buy may count on any of it — the same
+ * call a failed open-order read makes (#4678).
+ */
+export function openBuysSpend(
+  openBuys: readonly OpenBuy[],
+  portfolio: Portfolio,
+  context: MarketContext,
+): number {
+  let spend = 0;
+  for (const buy of openBuys) {
+    if (buy.quantity <= 0) continue;
+    const price = buy.limitPrice ?? askOf(context, buy.symbol) ?? markOf(portfolio, buy.symbol);
+    if (price === undefined) return Math.max(0, portfolio.cash);
+    spend += buy.quantity * price;
+  }
+  return spend;
+}
+
+function askOf(context: MarketContext, symbol: string): number | undefined {
+  const ask = context.quotes[symbol]?.ask;
+  return ask !== undefined && ask > 0 ? ask : undefined;
+}
+
+function markOf(portfolio: Portfolio, symbol: string): number | undefined {
+  const held = portfolio.positions.find((p) => p.symbol === symbol && p.quantity > 0);
+  if (!held) return undefined;
+  const mark = held.marketValue !== undefined ? held.marketValue / held.quantity : held.avgPrice;
+  return mark > 0 ? mark : undefined;
+}
+
 /** `openSells`: shares per symbol that sell orders still open at the broker will take. Counted as
- *  already sold — the shares are promised whether or not anything in this batch sells them. */
+ *  already sold — the shares are promised whether or not anything in this batch sells them.
+ *  `openSpend`: dollars the buys still open will pay (`openBuysSpend`), counted as already spent. */
 export function openLedger(
   intents: readonly OrderIntent[],
   book: CoverNeeds,
   portfolio: Portfolio,
   openSells: ReadonlyMap<string, number> = new Map(),
+  openSpend = 0,
 ): GuardLedger {
   const promisesShares = [...book.sharesByUnderlying.values()].some((n) => n > 0);
   return {
     active: intents.some((i) => i.option !== undefined) || book.cash > 0 || promisesShares,
     held: heldCoverLegs(portfolio),
-    spent: 0,
+    spent: openSpend,
     sold: new Map(openSells),
     orders: [],
     byPlaybook: new Map(),
