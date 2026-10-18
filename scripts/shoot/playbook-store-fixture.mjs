@@ -62,9 +62,10 @@ export const performance = {
     }),
   ],
   accounts: ["sauron"],
-  // Each house playbook's funnel (#4450 slice 5a), folded by the server's own code from FIXTURE store
-  // rows: S1-NVDA checked every session and never asking (no confirmed print in its window), SAURON
-  // asking most days with some orders refused, and every other card checked by no bot.
+  // Each house playbook's funnel (#4450 slices 5a–5b), folded by the server's own code from FIXTURE
+  // store rows: S1-NVDA checked every session, in its run-up window (its declared signal) on the
+  // last three and asking once, SAURON (no research signal) asking most days with some orders
+  // refused, and every other card checked by no bot.
   funnel: houseFunnel(),
   // Who started the bots' closed trades (`byInitiator`) is the Balance section's now (#5493 slice
   // 3): its fixture is `scripts/shoot/book-health.mjs`.
@@ -78,10 +79,20 @@ function houseFunnel() {
     intents.push({ hour, playbookId: "SAURON", guardReason, action, resultStatus, n });
   sessions.forEach((date, i) => {
     const open = Math.floor(sessionBounds(date).openAt / HOUR);
+    const inWindow = i >= sessions.length - 3;
     for (let h = 0; h < 7; h++) {
-      checks.push({ hour: open + h, playbookId: "S1-NVDA", n: 120 });
-      checks.push({ hour: open + h, playbookId: "SAURON", n: 120 });
+      checks.push({ hour: open + h, playbookId: "S1-NVDA", n: 120, signals: inWindow ? 120 : 0 });
+      checks.push({ hour: open + h, playbookId: "SAURON", n: 120, signals: 0 });
     }
+    if (i === sessions.length - 3)
+      intents.push({
+        hour: open + 1,
+        playbookId: "S1-NVDA",
+        guardReason: null,
+        action: "placed",
+        resultStatus: "filled",
+        n: 1,
+      });
     if (i % 3 === 2) return; // a quiet day: SAURON's rules asked for nothing
     fate(open + 1, 1, null, "placed", "filled");
     if (i % 2 === 0) fate(open + 2, 1, "insufficient-cash", null, null);

@@ -942,8 +942,9 @@ groups.promote = [
   promoteFrame("desktop-4-promote-passed", PASSED, { quality: 60, act: toPromote }),
 ];
 
-// #4450 slice 5a: each card's house block ends on its funnel over the last ten sessions — S1-NVDA
-// checked and never asking, SAURON asking with a guard's refusals named, and a card no bot checks.
+// #4450 slices 5a–5b: each card's house block ends on its funnel over the last ten sessions —
+// S1-NVDA with its declared signal counted between checks and orders, SAURON (no research signal)
+// asking with a guard's refusals named, and a card no bot checks.
 const funnelFrame = (tag, scrollTo, over = {}) => ({
   tag,
   view: views.catalog,
@@ -963,7 +964,7 @@ const openSauronFold = (page) =>
     .first()
     .click();
 groups.funnel = [
-  funnelFrame("phone-1-funnel-s1", "→ no orders asked for"),
+  funnelFrame("phone-1-funnel-s1", "signal on 3 of 10 sessions"),
   funnelFrame("phone-2-funnel-sauron", "most refused", { act: openSauronFold }),
   funnelFrame("phone-3-funnel-unchecked", "no bot checked this playbook"),
 ];
