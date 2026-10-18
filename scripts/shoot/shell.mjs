@@ -21,6 +21,7 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
 import { isAppShellPath, serveAppShell } from "../../src/server/app-shell-routes.ts";
+import { sceneBundle } from "../study/scene-bundle.mjs";
 import { outputDir, resolveChromium, shooter, stubBody } from "./lib.mjs";
 
 /**
@@ -52,10 +53,9 @@ export async function openShell({
     const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
     // The landmark portrait (#3725) embeds the real `/tower` scene. Served when the scene bundle is
-    // built (`npm run build:scene`); otherwise the frame 404s and stays the night background.
-    const scene = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" }[
-      path
-    ];
+    // built (a redesign shoot's cache or `npm run build:scene`, scene-bundle.mjs); otherwise the
+    // frame 404s and stays the night background.
+    const scene = { "/tower": "src/three/scene.html", "/three/scene.js": sceneBundle() }[path];
     if (scene && existsSync(scene)) {
       res.writeHead(200, {
         "content-type": path.endsWith(".js")

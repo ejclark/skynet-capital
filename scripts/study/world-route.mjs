@@ -37,9 +37,16 @@ import { gateRequest } from "../../src/server/dashboard-auth-gate.ts";
 import { resolveChromium, shooter } from "../shoot/lib.mjs";
 import { DEFAULT_CLOCK } from "./clock.mjs";
 import { routeRequest, wantsEventStream } from "./routing.mjs";
+import { sceneBundle } from "./scene-bundle.mjs";
 import { SIGNED_OUT_PAGE } from "./signed-out.mjs";
 
-const SCENE = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" };
+/** The `/tower` page and its bundle — the shoot's cached build or a hand-built one (scene-bundle.mjs). */
+const scenePath = (path) =>
+  path === "/tower"
+    ? "src/three/scene.html"
+    : path === "/three/scene.js"
+      ? sceneBundle()
+      : undefined;
 
 /** The session cookie every world context starts with: the member is signed in. Its value is
  *  never verified — the world answers `/api` per viewer itself — only its presence is the gate. */
@@ -78,7 +85,7 @@ function startServer(dist, streams, session) {
     // The landmark portrait embeds the real `/tower` scene, served as shell.mjs serves it — when
     // its bundle is built (`npm run build:scene`); unbuilt, `/three/scene.js` is flagged below.
     // Public, as production's `servePublicRoute` serves it ahead of the gate.
-    const scene = SCENE[path];
+    const scene = scenePath(path);
     if (scene && existsSync(scene)) {
       const type = path.endsWith(".js") ? "application/javascript" : "text/html; charset=utf-8";
       res.writeHead(200, { "content-type": type });
