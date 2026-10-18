@@ -115,6 +115,15 @@ ratchet never fires (a promise with no target is `{ "text": "<the promise>", "ab
   `scripts/crawl/README.md`. The judge line is graded afterwards by a session running
   `docs/grind/journey-judge.instructions.md` over the frames — never by a model call inside the crawl.
 
+## Market scenarios — `scenarios.md` and `tests/scenarios/`
+
+A journey proves a member can reach a screen; a **scenario** proves the app says the right thing
+when a real market situation arrives (a pullback, a winner with no exit plan). Each scenario is a
+section of [`scenarios.md`](scenarios.md) and a spec in `tests/scenarios/`, run by `npm test`
+against the pure decision engines, so no live quote is needed. Known gaps are `it.fails` — the
+same ratchet as `known_gap`. A member adds one by writing the situation in their own words; a
+session turns it into acceptance lines.
+
 ## Which screens the journeys must reach — `triage.json` and `coverage.md`
 
 [`triage.json`](triage.json) holds one verdict per screen (a page, or one `?section=` of it):
