@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+// ARCHIVE AUDIT — the done-check behind "archive this session?", run instead of asserted.
+//
+// Eric, 2026-10-18, answering that question at the end of a 16-session fan-out: "there should be an
+// audit review … to walk through all the steps to give me confidence that when there is a question
+// to ask about archiving, it's a simple yes". CLAUDE.md → "A finished session archives itself" lists
+// the done-check in prose; nothing ran it and nothing showed him the result, so the question arrived
+// as a claim to trust. This script turns each clause into a row with its evidence, and the ask
+// carries the table: all green → the question is a formality; any red → no question, the session
+// stays open (that clause of the rule is unchanged).
+//
+// Why a script and not an agent: every check is a read (a PR's state, a scheduled task's state, a
+// child session's state, a link that exists), not a judgment — the /charter bounded-trigger test.
+//
+// The session gathers what only it can see (its MCP tools: child sessions, scheduled check-ins) and
+// passes a manifest on stdin; the script reads GitHub over REST (never GraphQL — a cloud session is
+// refused it) and git locally. `--explain` takes GitHub's answers from the manifest too, so specs
+// run offline.
+//
+//   echo '{"prs":[5629],"children":[{"id":"session_…","status":"SESSION_STATUS_ARCHIVED"}],
+//          "checkins":[],"followups":[{"what":"#5159 missing predictions","home":"https://…"}]}' \
+//     | node scripts/archive-audit.mjs [--explain] [--json]
+//
+// Exit 0 = archive is a yes; exit 1 = it is not (the rows say why); exit 2 = bad manifest.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const ARCHIVED = "SESSION_STATUS_ARCHIVED";
+
+/**
+ * Pure: the manifest (with each PR's state filled in) → one row per check. A check with nothing to
+ * check passes and says so, so an empty row is never mistaken for a skipped one.
+ */
+export function audit({ prs = [], children = [], checkins = [], followups = [], git = {} }) {
+  const rows = [];
+  const openPrs = prs.filter((p) => p.state !== "merged" && p.state !== "closed");
+  rows.push({
+    check: "Every PR it opened is merged or closed",
+    ok: openPrs.length === 0,
+    detail: prs.length ? prs.map((p) => `#${p.number} ${p.state}`).join(", ") : "opened none",
+  });
+  const live = children.filter((c) => c.status !== ARCHIVED);
+  rows.push({
+    check: "Every session it spawned is archived",
+    ok: live.length === 0,
+    detail: children.length
+      ? live.length
+        ? `still open: ${live.map((c) => c.id).join(", ")}`
+        : `${children.length} of ${children.length} archived`
+      : "spawned none",
+  });
+  const pending = checkins.filter((t) => t.enabled !== false && !t.fired);
+  rows.push({
+    check: "No scheduled check-in or PR watch is pending",
+    ok: pending.length === 0,
+    detail: pending.length ? `pending: ${pending.map((t) => t.id).join(", ")}` : "none pending",
+  });
+  const homeless = followups.filter((f) => !/^https:\/\//.test(String(f.home ?? "")));
+  rows.push({
+    check: "Every follow-up has a home outside the chat",
+    ok: homeless.length === 0,
+    detail: followups.length
+      ? homeless.length
+        ? `no home: ${homeless.map((f) => f.what).join("; ")}`
+        : followups.map((f) => `${f.what} → ${f.home}`).join("; ")
+      : "none left",
+  });
+  const dirty = Boolean(git.uncommitted) || Number(git.unpushed ?? 0) > 0;
+  rows.push({
+    check: "No uncommitted or unpushed work in the checkout",
+    ok: !dirty,
+    detail: dirty
+      ? `${git.uncommitted ? "uncommitted changes" : ""}${git.uncommitted && git.unpushed ? ", " : ""}${git.unpushed ? `${git.unpushed} unpushed commit(s)` : ""}`
+      : "clean",
+  });
+  return { ok: rows.every((r) => r.ok), rows };
+}
+
+/** The table the ask carries, then one verdict line. */
+export function render({ ok, rows }) {
+  const lines = ["| | Check | Evidence |", "|---|---|---|"];
+  for (const r of rows) lines.push(`| ${r.ok ? "✅" : "❌"} | ${r.check} | ${r.detail} |`);
+  const failed = rows.filter((r) => !r.ok).length;
+  lines.push(
+    "",
+    ok
+      ? `ARCHIVE: yes — all ${rows.length} checks pass`
+      : `ARCHIVE: no — ${failed} check(s) fail; keep the session open`,
+  );
+  return lines.join("\n");
+}
+
+const sh = (cmd, args) =>
+  execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+
+/** A PR's state over REST: merged · closed · open. */
+function prState(number) {
+  const pr = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/pulls/${number}`]));
+  return pr.merged_at ? "merged" : pr.state;
+}
+
+function gitState() {
+  const uncommitted = sh("git", ["status", "--porcelain"]).length > 0;
+  let unpushed = 0;
+  try {
+    unpushed = Number(sh("git", ["rev-list", "--count", "@{u}..HEAD"]));
+  } catch {
+    unpushed = Number(sh("git", ["rev-list", "--count", "origin/main..HEAD"]));
+  }
+  return { uncommitted, unpushed };
+}
+
+function main() {
+  const flags = new Set(process.argv.slice(2));
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(0, "utf8") || "{}");
+  } catch (err) {
+    console.error(`archive-audit: the manifest on stdin is not JSON (${err.message})`);
+    process.exit(2);
+  }
+  const offline = flags.has("--explain");
+  const prs = (manifest.prs ?? []).map((p) =>
+    typeof p === "object" ? p : { number: p, state: offline ? "unknown" : prState(p) },
+  );
+  const result = audit({ ...manifest, prs, git: offline ? (manifest.git ?? {}) : gitState() });
+  console.log(flags.has("--json") ? JSON.stringify(result) : render(result));
+  process.exit(result.ok ? 0 : 1);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) main();

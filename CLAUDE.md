@@ -423,7 +423,10 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
   is reversible (Unarchive).
 - **Opened by hand** (any other origin — app, phone, CLI) → ask **"archive this session?"** as a
   yes/no `AskUserQuestion` form (Eric, 2026-09-29: "makes this process easier to navigate"); on yes,
-  archive as the final action.
+  archive as the final action. **The ask carries its proof** (Eric, 2026-10-18: "give me confidence
+  that when there is a question to ask about archiving, it's a simple yes"): run
+  `scripts/archive-audit.mjs` on a manifest of the session's PRs, children, check-ins and follow-up
+  homes, and put its table in the question; ask only on `ARCHIVE: yes`.
 - **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
   signal that it still needs someone.
 - **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the
