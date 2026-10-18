@@ -15,7 +15,11 @@ import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
-import { playbookPerformanceView, selectAccounts } from "./playbook-performance.js";
+import {
+  playbookFunnelJson,
+  playbookPerformanceView,
+  selectAccounts,
+} from "./playbook-performance.js";
 import { corpusFingerprint } from "./research-corpus-memo.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
 import {
@@ -31,13 +35,13 @@ import { serveWireJson } from "./wire-routes.js";
  *  attributed to a playbook, as two separate groupings: the house-wide collective, and the viewer's
  *  own accounts (narrowable by `?accounts=a,b`). No weighting/benchmark layer yet, by design. Split out of
  *  `serveContentApi` to keep that dispatcher's own branching complexity under the fitness gate. */
-function outpostPerformanceView(
+async function outpostPerformanceView(
   config: DashboardServerConfig,
   url: string,
   session: Session | undefined,
 ): Promise<unknown> {
   const requested = new URL(url, "http://localhost").searchParams.get("accounts");
-  return playbookPerformanceView(
+  const view = await playbookPerformanceView(
     config.hub.getState().participants,
     selectAccounts(resolveOwnedIds(session, config), requested),
     {
@@ -47,6 +51,9 @@ function outpostPerformanceView(
       findSpreadLeg: config.findSpreadLeg,
     },
   );
+  // House-wide like `house` (#4450 slice 5a): every bot pooled per playbook, no account named.
+  const funnel = config.readPlaybookFunnel?.();
+  return { ...view, funnel: funnel ? playbookFunnelJson(funnel) : null };
 }
 
 /** The research shelf as data. It keeps history (everyEvent) — a closed-out call is a receipt worth

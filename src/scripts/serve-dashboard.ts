@@ -438,6 +438,9 @@ async function main(): Promise<void> {
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
     ...(insightsBridge.readCheckWeek ? { readCheckWeek: insightsBridge.readCheckWeek } : {}),
+    ...(insightsBridge.readPlaybookFunnel
+      ? { readPlaybookFunnel: insightsBridge.readPlaybookFunnel }
+      : {}),
     // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }

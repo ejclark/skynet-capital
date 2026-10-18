@@ -141,3 +141,64 @@ describe("cycleLabel", () => {
     );
   });
 });
+
+describe("HousePlaybookMetrics' funnel line (#4450 slice 5a)", () => {
+  const counts = { checks: 1240, asked: 4, refused: 3, placed: 1, filled: 1 };
+  const funnelRow = {
+    playbookId: "S1-NVDA",
+    totals: counts,
+    days: [],
+    askedOn: 2,
+    refusals: [
+      { label: "blocked by S2 (flat through the print)", count: 2 },
+      { label: "no live quote for the symbol", count: 1 },
+    ],
+  };
+
+  it("walks checks to fills across every bot, and names the guard that refused most", () => {
+    render(
+      <HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: funnelRow } }} />,
+    );
+    expect(screen.getByText("Last 10 sessions, every bot")).toBeInTheDocument();
+    expect(
+      screen.getByText("1,240 checks → 4 orders asked for → 3 refused → 1 placed → 1 filled"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "asked on 2 of 10 sessions · most refused: blocked by S2 (flat through the print)",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("draws beside the closed-trade numbers, never instead of them", () => {
+    render(
+      <HousePlaybookMetrics
+        scope={{ kind: "read", row, funnel: { sessions: 10, row: funnelRow } }}
+      />,
+    );
+    expect(screen.getByText("Closed trades")).toBeInTheDocument();
+    expect(screen.getByText("Last 10 sessions, every bot")).toBeInTheDocument();
+  });
+
+  it("stops the chain at no orders for a checked playbook that never asked", () => {
+    const quiet = {
+      ...funnelRow,
+      totals: { ...counts, asked: 0, refused: 0, placed: 0, filled: 0 },
+      askedOn: 0,
+      refusals: [],
+    };
+    render(<HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: quiet } }} />);
+    expect(screen.getByText("1,240 checks → no orders asked for")).toBeInTheDocument();
+    expect(screen.getByText("asked on 0 of 10 sessions")).toBeInTheDocument();
+  });
+
+  it("says no bot checked a playbook that isn't on any bot's roster", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10 } }} />);
+    expect(screen.getByText("Last 10 sessions: no bot checked this playbook.")).toBeInTheDocument();
+  });
+
+  it("draws no funnel where the server has none", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read" }} />);
+    expect(screen.queryByText(/Last 10 sessions/)).not.toBeInTheDocument();
+  });
+});

@@ -109,6 +109,19 @@ rstest.mock("../../src/live/playbook-performance", () => ({
         house: split(0, 11, 4),
         mine: split(1, 0, 0),
       },
+      // Each house playbook's funnel (#4450 slice 5a): only S1-NVDA was checked in the window.
+      funnel: {
+        sessions: Array.from({ length: 10 }, (_, i) => `2026-10-${String(5 + i).padStart(2, "0")}`),
+        playbooks: [
+          {
+            playbookId: "S1-NVDA",
+            totals: { checks: 50, asked: 2, refused: 0, placed: 2, filled: 2 },
+            days: [],
+            askedOn: 1,
+            refusals: [],
+          },
+        ],
+      },
     });
   },
 }));
@@ -163,6 +176,18 @@ describe("PlaybooksSection metric blocks", () => {
     expect(cardOf("S1-NVDA").getByText("+$900.00")).toBeInTheDocument();
     expect(screen.queryByText("+$100.00")).not.toBeInTheDocument();
     expect(requested).toEqual([undefined]);
+  });
+
+  it("draws each playbook's own funnel in the house block, and says when no bot checked one", async () => {
+    mount(undefined);
+    await screen.findAllByRole("region", { name: /House — every account/ });
+    const nvda = cardOf("S1-NVDA").getByRole("region", { name: /House — every account/ });
+    expect(
+      within(nvda).getByText("50 checks → 2 orders asked for → 0 refused → 2 placed → 2 filled"),
+    ).toBeInTheDocument();
+    expect(
+      cardOf("SAURON").getByText("Last 10 sessions: no bot checked this playbook."),
+    ).toBeInTheDocument();
   });
 
   it("says in words when no account has traded a playbook", async () => {

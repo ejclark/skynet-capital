@@ -27,12 +27,19 @@ import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import {
+  funnelSessions,
+  funnelWindow,
+  type PlaybookFunnelView,
+  playbookFunnelView,
+} from "../autonomous/playbook-funnel.js";
+import {
   buildSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
 } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
+import { findPair } from "../playbooks/pair-table.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
@@ -97,6 +104,8 @@ export interface InsightsBridgeHandle {
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
   readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
+  /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a) — same store. */
+  readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
@@ -122,6 +131,20 @@ const FUNNEL_TTL_MS = 30_000;
  *  the Playbooks section polls it every 30s. Short enough that the newest check it holds is never
  *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
 const CHECK_WEEK_TTL_MS = 15_000;
+/** The house playbook funnel is re-read at most once a minute: one grouped read over every bot's
+ *  last ten sessions, behind a card nobody can tell is a minute old. */
+const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
+
+/** Each house playbook's funnel, read now. House pairs only (`findPair`): a member's authored
+ *  `U-*` play is theirs, and its activity is not the house's to publish. */
+export function readHouseFunnel(
+  playbookFunnel: (from: number, to: number) => Parameters<typeof playbookFunnelView>[0],
+  now = new Date(),
+): PlaybookFunnelView {
+  const sessions = funnelSessions(now);
+  const { from, to } = funnelWindow(sessions, now);
+  return playbookFunnelView(playbookFunnel(from, to), sessions, (id) => findPair(id) !== undefined);
+}
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v3`, with each
  *  subscription's conviction and its pointer at a conviction record in the version. */
@@ -145,6 +168,12 @@ export function startInsightsBridge(
   const botCredentialsSecret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   const fingerprintSalt = env.SKYNET_STORE_SECRET;
   const decisionDb = seedAppDecisionDb(env);
+  // One key: the window is "the last ten sessions as of now", so the memo only bounds how often.
+  const houseFunnel = decisionDb
+    ? memoPerKey(PLAYBOOK_FUNNEL_TTL_MS, () =>
+        readHouseFunnel((from, to) => decisionDb.playbookFunnel(from, to)),
+      )
+    : undefined;
   // Read fresh on every poll, exactly like `botControls.load()` below — one small synchronous
   // read of the same file the Playbook Store just wrote, so a subscribe reaches the bots process
   // on the next poll with nothing to invalidate (issue #3595). Its own store instance rather than
@@ -257,5 +286,6 @@ export function startInsightsBridge(
             decisionDb.listRetrospectives(personaId, { limit: 100 }),
         }
       : {}),
+    ...(houseFunnel ? { readPlaybookFunnel: () => houseFunnel("house") } : {}),
   };
 }

@@ -9,6 +9,7 @@ import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/o
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
+import { openPlaybookFunnelReads, type PlaybookFunnelRows } from "./decision-db-playbook-funnel.js";
 import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import {
@@ -101,6 +102,9 @@ export interface DecisionDb {
    *  the week strip and each playbook's lane. Bounded by the window, never a page: see
    *  `decision-db-week.ts`. */
   checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
+  /** Every bot's checks and playbook intents in `[from, to)`, grouped by playbook and hour
+   *  (#4450 slice 5a) — each playbook's funnel. See `decision-db-playbook-funnel.ts`. */
+  playbookFunnel(from: number, to: number): PlaybookFunnelRows;
   /** Total realized P/L across every closed retrospective attributed to one playbook, for one
    *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
@@ -293,6 +297,7 @@ export function openDecisionDb(path: string): DecisionDb {
   const observations = openObservationTables(db);
   const results = openIntentResults(db);
   const week = openCheckWeekReads(db);
+  const playbookFunnel = openPlaybookFunnelReads(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -730,6 +735,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
+
+    playbookFunnel: (from, to) => playbookFunnel.read(from, to),
 
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;

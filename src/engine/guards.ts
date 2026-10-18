@@ -13,6 +13,8 @@ import { contractMultiplier } from "../trading/option-symbols.js";
 import {
   claim,
   committedToPlaybook,
+  type OpenBuy,
+  openBuysSpend,
   openLedger,
   soldShares,
   spendableCash,
@@ -418,6 +420,12 @@ function clampOne(
     : clampSell(intent, portfolio, batch);
 }
 
+/** Share orders still open at the broker this cycle — see `applyGuardsWithVerdicts`. */
+export interface OpenAtBroker {
+  readonly sells?: ReadonlyMap<string, number>;
+  readonly buys?: readonly OpenBuy[];
+}
+
 /**
  * Apply all guards to a batch of intents against a single portfolio snapshot, and say why for
  * every one that didn't survive — the data `docs/plans/where-are-we-documenting-*.md`'s "guard
@@ -425,16 +433,17 @@ function clampOne(
  * portfolio for the cycle; the one intra-cycle interaction they track is the batch ledger
  * (`guard-batch.ts`) — so a sold put and a share buy in one cycle cannot spend the same cash twice.
  *
- * `openSells` is what sell orders still open at the broker will take, per symbol (#4678): a new
- * sell is sized against the shares they leave, and refused `nothing-held` when they leave none.
- * Empty for a broker with nothing open, which sizes exactly as before.
+ * `open` is what share orders still open at the broker hold. Its `sells` take shares, per symbol
+ * (#4678): a new sell is sized against the shares they leave, and refused `nothing-held` when they
+ * leave none. Its `buys` will spend cash (#4735, `openBuysSpend`): a new buy is sized against what
+ * they leave. Absent or empty for a broker with nothing open, which sizes exactly as before.
  */
 export function applyGuardsWithVerdicts(
   intents: readonly OrderIntent[],
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig = DEFAULT_RISK_CONFIG,
-  openSells?: ReadonlyMap<string, number>,
+  open: OpenAtBroker = {},
 ): GuardResult {
   const approved: OrderIntent[] = [];
   const refused: GuardRefusal[] = [];
@@ -445,7 +454,9 @@ export function applyGuardsWithVerdicts(
   // as handed in.
   const unsubscribed = (intent: OrderIntent) => refusedAsUnsubscribed(intent, config);
   const sized = intents.filter((intent) => !unsubscribed(intent));
-  const batch: OptionBatch = { ledger: openLedger(sized, book, portfolio, openSells), book };
+  const openSpend = openBuysSpend(open.buys ?? [], portfolio, context);
+  const ledger = openLedger(sized, book, portfolio, open.sells, openSpend);
+  const batch: OptionBatch = { ledger, book };
   for (const intent of intents) {
     // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
     // (a contract only trades as a priced limit through `option`), and a malformed option order is

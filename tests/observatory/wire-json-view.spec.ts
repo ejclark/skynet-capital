@@ -72,7 +72,7 @@ describe("wireJsonView", () => {
       true,
     );
     expect(view.pnl[0]).toMatchObject({ realized: "+$1,998", tone: "pos" });
-    expect(view.pnl[1]).toMatchObject({ realized: "-$250", tone: "neg" });
+    expect(view.pnl[1]).toMatchObject({ realized: "−$250", tone: "neg" });
   });
 
   it("sorts the pulse newest first and carries status labels only when known", () => {

@@ -26,7 +26,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    nothing else, as JSON, in the order the gate would pick (#4393 criterion 10). It filters every
    open `ready` issue through `pullable()` (`scripts/moneypenny/labels.mjs`): open, labelled
    `ready`, `isBuildable` (none of `needs-eric` / `needs-info` / `needs-design` / `hold-merge`),
-   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). That is the same predicate both Moneypenny claim lanes and her retry
+   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). One label
+   reads differently here: `needs-session` — a lane handed the remainder to a live session, which
+   this pass is — so `--queue` and `--check` admit it while the unattended lanes refuse it (#5236). That is the same predicate both Moneypenny claim lanes and her retry
    sweep ask, so this pass and her lanes can never disagree about what is pullable. A Backlog issue
    (no `ready`) is never pulled here, however buildable it looks — getting it `ready` is a triage
    call, not this pass's. An issue with an open PR naming it is already `in-progress` (the PR
