@@ -2,6 +2,7 @@ import { priceOption } from "../../../src/options/pricing";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "./desk";
 import type { OptionPositionRow } from "./options";
+import { money2, type PriceAxis, type PriceRange, rangeWords, strikeMoney } from "./price-context";
 import { held, parseQuantity } from "./quantity";
 
 /**
@@ -50,41 +51,57 @@ export interface PriceMark {
 export interface PriceStrip {
   readonly zones: readonly PriceZone[];
   readonly marks: readonly PriceMark[];
+  /** The dollars the strip spans, so a layer drawn on it (open contracts by strike) lines up. */
+  readonly axis: PriceAxis;
+  /** The 20-day range on the same axis (#5070 slice 2b), once the daily bars have answered. */
+  readonly range?: PriceRange & {
+    readonly from: number;
+    readonly to: number;
+    readonly mid: number;
+  };
   /** The whole strip in one sentence, for a screen reader. */
   readonly said: string;
 }
 
-const money2 = (x: number) =>
-  `$${x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-/** A strike reads as "$80", or "$82.50" when it has cents. */
-const strikeText = (x: number) =>
-  Number.isInteger(x) ? `$${x.toLocaleString("en-US")}` : money2(x);
+const strikeText = strikeMoney;
 
 export const priceText = (kind: PriceMark["kind"], price: number): string =>
   kind === "strike" ? strikeText(price) : money2(price);
 
 /**
  * The price strip. An option's zones run from its strike to its breakeven: a sold put keeps all
- * of the premium above its strike, part of it ${upWins ? "down" : "up"} to the breakeven, and loses below; a bought call
+ * of the premium above its strike, part of it down to the breakeven, and loses below; a bought call
  * loses all it paid below its strike, part of it up to the breakeven, and profits above. Shares
  * have one line, the price they were bought at. The axis spans 10% beyond the outermost of the
- * marks so every one fits. Without a live price ("now"), the zones still draw and "now" is left
- * out — never a made-up price.
+ * marks so every one fits — the 20-day range among them, when `range` is given (slice 2b). Without a
+ * live price ("now"), the zones still draw and "now" is left out — never a made-up price.
  */
 export function priceStrip(
   position: DeskPosition,
   spot: number | undefined,
+  range?: PriceRange,
 ): PriceStrip | undefined {
   const breakeven = signedDollars(position.breakeven);
   if (breakeven === undefined || breakeven <= 0) return undefined;
   const { short } = held(position.quantity);
   const occ = parseOccSymbol(position.symbol);
   const now = spot !== undefined && spot > 0 ? spot : undefined;
-  const anchors = [breakeven, ...(occ ? [occ.strike] : []), ...(now === undefined ? [] : [now])];
+  const anchors = [
+    breakeven,
+    ...(occ ? [occ.strike] : []),
+    ...(now === undefined ? [] : [now]),
+    ...(range ? [range.low, range.high] : []),
+  ];
   const lo = Math.min(...anchors) * 0.9;
   const hi = Math.max(...anchors) * 1.1;
   const at = (x: number) => ((x - lo) / (hi - lo)) * 100;
+  const context = range
+    ? {
+        axis: { lo, hi },
+        range: { ...range, from: at(range.low), to: at(range.high), mid: at(range.average) },
+      }
+    : { axis: { lo, hi } };
+  const rangeSaid = range ? ` ${rangeWords(range)}.` : "";
   const marks: PriceMark[] = [
     ...(now === undefined ? [] : [{ kind: "now" as const, price: now, at: at(now) }]),
     ...(occ ? [{ kind: "strike" as const, price: occ.strike, at: at(occ.strike) }] : []),
@@ -97,7 +114,8 @@ export function priceStrip(
     return {
       zones: shareZones(short, be),
       marks,
-      said: `${short ? "Profits below" : "Profits above"} the breakeven, ${money2(breakeven)}.${nowWords}`,
+      ...context,
+      said: `${short ? "Profits below" : "Profits above"} the breakeven, ${money2(breakeven)}.${nowWords}${rangeSaid}`,
     };
   }
 
@@ -108,7 +126,14 @@ export function priceStrip(
   const said = short
     ? `At expiry: keeps all of the premium ${side} the ${strikeText(occ.strike)} strike, part of it ${upWins ? "down" : "up"} to the breakeven, ${money2(breakeven)}, and loses past it.${nowWords}`
     : `At expiry: profits ${side} the breakeven, ${money2(breakeven)}; loses part of what it paid between there and the ${strikeText(occ.strike)} strike, and all of it past the strike.${nowWords}`;
-  return { zones, marks, said };
+  return { zones, marks, ...context, said: `${said}${rangeSaid}` };
+}
+
+/** Does the position lose as the stock falls? A sold put, a bought call and long shares do. */
+export function losesBelow(position: DeskPosition): boolean {
+  const { short } = held(position.quantity);
+  const occ = parseOccSymbol(position.symbol);
+  return occ ? (occ.type === "put") === short : !short;
 }
 
 /** Shares: a long profits above what it cost; a short, below. */

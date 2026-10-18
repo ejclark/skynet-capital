@@ -121,6 +121,51 @@
 .pp-label--strike {
   color: var(--text);
 }
+/* Price context on the same axis (#5070 slice 2b): the 20-day range as an outlined band with its
+   average as a diamond, then open contracts by strike as bars — the held strike in the text colour,
+   the rest in the muted one: both hold 3:1 on the surface, and they differ by lightness, never hue. */
+.pp-layer-cap {
+  margin: 8px 0 3px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.pp-range {
+  position: relative;
+  height: 12px;
+}
+.pp-range-band {
+  position: absolute;
+  top: 2px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--muted);
+  border-radius: 2px;
+}
+.pp-range-mid {
+  position: absolute;
+  top: 2px;
+  width: 8px;
+  height: 8px;
+  background: var(--text);
+  transform: translateX(-50%) rotate(45deg) scale(0.75);
+}
+.pp-oi {
+  display: block;
+  width: 100%;
+  height: 28px;
+}
+.pp-oi-bar {
+  stroke: var(--muted);
+  vector-effect: non-scaling-stroke;
+}
+.pp-oi-bar--held {
+  stroke: var(--text);
+}
+.pp-context {
+  margin-top: 8px;
+  color: var(--text);
+}
 .pp-key {
   display: flex;
   flex-wrap: wrap;
