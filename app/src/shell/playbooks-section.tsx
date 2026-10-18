@@ -119,8 +119,14 @@ export function PlaybooksSection({
   };
   const metricsFor = (playbookId: string): MetricsScope | undefined =>
     manages && !performance.isPending ? pick(performance.data?.mine, playbookId) : undefined;
-  const houseFor = (playbookId: string): MetricsScope | undefined =>
-    performance.isPending ? undefined : pick(performance.data?.house, playbookId);
+  const funnel = performance.data?.funnel;
+  const houseFor = (playbookId: string): MetricsScope | undefined => {
+    if (performance.isPending) return undefined;
+    const scope = pick(performance.data?.house, playbookId);
+    if (scope.kind !== "read" || !funnel) return scope;
+    const row = funnel.playbooks.find((r) => r.playbookId === playbookId);
+    return { ...scope, funnel: { sessions: funnel.sessions.length, ...(row ? { row } : {}) } };
+  };
 
   const head = (
     <header className="page-header">

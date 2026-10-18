@@ -69,7 +69,7 @@ describe("deskPulseView", () => {
     expect(view.weeks.map((w) => w.label)).toEqual(["Aug 3", "Aug 10", "Aug 17"]);
     expect(view.weeks[0]).toMatchObject({ pl: "+$500", tone: "pos", bar: 1 });
     expect(view.weeks[1]).toMatchObject({ tone: "flat", bar: 0 });
-    expect(view.weeks[2]).toMatchObject({ pl: "-$250", tone: "neg", bar: 0.5 });
+    expect(view.weeks[2]).toMatchObject({ pl: "−$250", tone: "neg", bar: 0.5 });
   });
 
   it("keeps every empty state honest and separate — no blended gate", () => {

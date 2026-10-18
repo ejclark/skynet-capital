@@ -29,7 +29,7 @@ describe("decisionsFor", () => {
       kind: "at-risk",
       title: "Down 55% from what you paid",
       captionShort: "Needs TSLA below $385.90 by Oct 17 to profit.",
-      pl: "-$6,240 · −55.3%",
+      pl: "−$6,240 · −55.3%",
       plTone: "neg",
       // the next headline macro print before expiry rides along as a clock (#3689 follow-up)
       clocks: ["Expires in 24 days", "Jobs report Oct 2", "8 contracts · worth $5,040"],

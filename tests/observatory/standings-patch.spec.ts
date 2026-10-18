@@ -159,7 +159,7 @@ describe("standings metric helpers", () => {
     const p = snap({ equity: 150_000, realizedPl: -250 });
     expect(metricValue(p, "equity")).toBe(150_000);
     expect(metricValue(p, "realized")).toBe(-250);
-    expect(formatMetric(metricValue(p, "realized"), "realized")).toBe("-$250");
+    expect(formatMetric(metricValue(p, "realized"), "realized")).toBe("−$250");
     expect(formatMetric(12.345, "return")).toBe("+12.35%");
     expect(metricLabel("pl")).toBe("Unrealized P/L");
     expect(metricLabel("equity")).toBe("Equity");
@@ -236,7 +236,7 @@ describe("standingsCompareView", () => {
     const b = snap({ id: "h2", realizedPl: -300 });
     const view = standingsCompareView(a, b);
     expect(view.a).toMatchObject({ realized: "+$1,250", realizedTone: "pos" });
-    expect(view.b).toMatchObject({ realized: "-$300", realizedTone: "neg" });
+    expect(view.b).toMatchObject({ realized: "−$300", realizedTone: "neg" });
     expect(view.deltas.find((d) => d.label === "Realized")).toMatchObject({
       lead: "a",
       amount: "+$1,550",

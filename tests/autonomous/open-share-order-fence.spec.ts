@@ -312,6 +312,76 @@ describe("a sell while a sell is still open (#4678)", () => {
   });
 });
 
+// #4735: Alpaca's `cash` holds nothing back for a queued buy, so the guards start the cycle with
+// what the open buys will spend already spent — and a buy of another symbol is sized on what is left.
+describe("a buy while another symbol's buy is still open (#4735)", () => {
+  const cash = (amount: number, ...positions: ReturnType<typeof aPosition>[]) =>
+    aPortfolio({ cash: amount, positions });
+
+  it("is sized against the cash the open buy will spend, priced at the freshest quote", async () => {
+    // 10 NVDA at the 100.05 ask spends 1000.50 of 1500 — 499.50 buys 4 AMD, not the cap's 7.
+    const broker = new ScriptedBroker(cash(1500), [{ symbol: "NVDA", side: "buy", quantity: 10 }]);
+    const { trader, decisions } = traderOn(broker, wants(shares("buy", "AMD", 10)));
+
+    await trader.evaluate(marketOf("NVDA", "AMD"));
+
+    expect(broker.submitted).toEqual(["buy 4 AMD"]);
+    expect(decisions[0]?.guardedIntents).toMatchObject([{ symbol: "AMD", quantity: 4 }]);
+  });
+
+  it("prices an open limit buy at its limit", async () => {
+    // 10 NVDA at a 120 limit holds 1200 — 300 left buys 2 AMD.
+    const broker = new ScriptedBroker(cash(1500), [
+      { symbol: "NVDA", side: "buy", quantity: 10, limitPrice: 120 },
+    ]);
+    const { trader } = traderOn(broker, wants(shares("buy", "AMD", 10)));
+
+    await trader.evaluate(marketOf("NVDA", "AMD"));
+
+    expect(broker.submitted).toEqual(["buy 2 AMD"]);
+  });
+
+  it("prices an open buy with no quote at the position's own mark", async () => {
+    // 5 XYZ at the holding's 200/share mark holds 1000 — 500 left buys 4 AMD.
+    const xyz = aPosition({ symbol: "XYZ", quantity: 10, marketValue: 2000 });
+    const broker = new ScriptedBroker(cash(1500, xyz), [
+      { symbol: "XYZ", side: "buy", quantity: 5 },
+    ]);
+    const { trader } = traderOn(broker, wants(shares("buy", "AMD", 10)));
+
+    await trader.evaluate(marketOf("AMD"));
+
+    expect(broker.submitted).toEqual(["buy 4 AMD"]);
+  });
+
+  it("holds every buy, never prices at $0, when an open buy cannot be priced", async () => {
+    const amd = aPosition({ symbol: "AMD", quantity: 40 });
+    const broker = new ScriptedBroker(cash(1500, amd), [
+      { symbol: "ZZZ", side: "buy", quantity: 5 },
+    ]);
+    const { trader, decisions } = traderOn(
+      broker,
+      wants(shares("buy", "NVDA", 10), shares("sell", "AMD", 40)),
+    );
+
+    await trader.evaluate(marketOf("NVDA", "AMD"));
+
+    expect(broker.submitted).toEqual(["sell 40 AMD"]);
+    expect(decisions[0]?.refusals).toEqual([
+      { intent: shares("buy", "NVDA", 10), reason: "insufficient-cash" },
+    ]);
+  });
+
+  it("sizes exactly as before with no buy open", async () => {
+    const broker = new ScriptedBroker(cash(1500), [{ symbol: "NVDA", side: "sell", quantity: 0 }]);
+    const { trader } = traderOn(broker, wants(shares("buy", "AMD", 10)));
+
+    await trader.evaluate(marketOf("AMD"));
+
+    expect(broker.submitted).toEqual(["buy 7 AMD"]);
+  });
+});
+
 describe("reading the broker's open orders (#4678)", () => {
   it("a failed read holds every buy and no sell", async () => {
     const broker = new ScriptedBroker(

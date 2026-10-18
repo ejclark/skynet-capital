@@ -70,7 +70,7 @@ describe("deskView", () => {
       }),
     );
     expect(view.positions[0]).toMatchObject({
-      totalPl: "-$295",
+      totalPl: "−$295",
       totalTone: "neg",
       returnPct: "-116%",
     });

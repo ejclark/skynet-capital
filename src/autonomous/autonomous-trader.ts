@@ -69,6 +69,8 @@ const NOTHING_WORKING: ReadonlySet<string> = new Set();
 interface OpenShares {
   readonly known: boolean;
   readonly buying: ReadonlySet<string>;
+  /** The open buys themselves, for the cash they will spend (#4735). */
+  readonly buys: readonly OpenShareOrder[];
   readonly selling: ReadonlyMap<string, number>;
   readonly landed: ReadonlySet<string>;
 }
@@ -76,19 +78,22 @@ interface OpenShares {
 const NOTHING_OPEN: OpenShares = {
   known: true,
   buying: new Set(),
+  buys: [],
   selling: new Map(),
   landed: new Set(),
 };
 const OPEN_UNKNOWN: OpenShares = { ...NOTHING_OPEN, known: false };
 
 function openSharesFrom(orders: readonly OpenShareOrder[]): OpenShares {
-  const buying = new Set<string>();
+  const buys = orders.filter((order) => order.side === "buy");
+  const buying = new Set(buys.map((order) => order.symbol));
   const selling = new Map<string, number>();
   for (const order of orders) {
-    if (order.side === "buy") buying.add(order.symbol);
-    else selling.set(order.symbol, (selling.get(order.symbol) ?? 0) + order.quantity);
+    if (order.side === "sell") {
+      selling.set(order.symbol, (selling.get(order.symbol) ?? 0) + order.quantity);
+    }
   }
-  return { ...NOTHING_OPEN, buying, selling };
+  return { ...NOTHING_OPEN, buying, buys, selling };
 }
 
 /** Symbols held in a different quantity in `after` than in `before`, either side missing as 0. */
@@ -122,7 +127,8 @@ interface Handled {
  * SHARE ORDERS STILL OPEN (#4678): the cooldown is a clock, and an order queued for the open
  * outlives it. So once a live cycle has a share intent, it reads the broker's open share orders —
  * once — and a buy waits (`cooldown-skipped`) while a buy of the same symbol is still open, while a
- * new sell is sized by the guards against what the open sells leave. A failed read holds every buy
+ * new sell is sized by the guards against what the open sells leave, and a new buy against the cash
+ * the open buys leave (#4735). A failed read holds every buy
  * and no sell. The portfolio is then read again, so an order that fills mid-cycle shows up in one
  * read or the other, and an order on a symbol whose holding moved waits a cycle. Observe mode
  * places nothing, so it reads nothing.
@@ -224,7 +230,7 @@ export class AutonomousTrader {
       portfolio,
       enriched,
       risk,
-      open.selling,
+      { sells: open.selling, buys: open.buys },
     );
 
     const results: OrderResult[] = [];

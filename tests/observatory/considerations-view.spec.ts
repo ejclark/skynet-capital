@@ -51,7 +51,7 @@ describe("considerationsFor", () => {
       symbol: "AAPL",
       display: "AAPL",
       notional: "$20,000",
-      delta: "-$2,500",
+      delta: "−$2,500",
       deltaTone: "neg",
     });
     expect(chips[0]?.reason).toContain("down 12.5%");

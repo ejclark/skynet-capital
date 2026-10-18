@@ -503,6 +503,33 @@ describe("AlpacaBrokerAdapter", () => {
       ]);
     });
 
+    // #4735: a limit buy's limit is what it will spend per share; a market buy carries none.
+    it("carries an open limit order's limit price", async () => {
+      const adapter = adapterWith({
+        [OPEN_PATH]: {
+          status: 200,
+          body: [
+            {
+              id: "1",
+              symbol: "NVDA",
+              qty: "10",
+              side: "buy",
+              type: "limit",
+              limit_price: "120.5",
+              status: "new",
+              filled_qty: "4",
+            },
+            { id: "2", symbol: "AMD", qty: "5", side: "buy", limit_price: null, status: "new" },
+          ],
+        },
+      });
+
+      expect(await adapter.openShareOrders()).toEqual([
+        { symbol: "NVDA", side: "buy", quantity: 6, limitPrice: 120.5 },
+        { symbol: "AMD", side: "buy", quantity: 5 },
+      ]);
+    });
+
     it("throws when the list cannot be read — never 'nothing open'", async () => {
       const adapter = adapterWith({ [OPEN_PATH]: { status: 503, body: { message: "down" } } });
 
