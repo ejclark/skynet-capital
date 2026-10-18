@@ -113,8 +113,10 @@ export function controlsChanges(
   editor: string,
   at: Date,
 ): SettingsChange[] {
+  // Suspend has no fallback to hand back to: never set IS on, so it compares as false, and resuming
+  // a bot never suspended here records nothing (code review of #4535 slice 3b).
   const stored = (c: BotControls, key: (typeof LOGGED_SETTINGS)[number]): SettingValue =>
-    c[key] ?? null;
+    key === "suspended" ? c.suspended === true : (c[key] ?? null);
   return LOGGED_SETTINGS.filter((key) => stored(prev, key) !== stored(next, key)).map((key) => ({
     at: at.toISOString(),
     setting: key,

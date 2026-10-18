@@ -251,9 +251,21 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       );
       expect(log.list("sauron")[0]).toMatchObject({
         setting: "suspended",
-        before: null,
+        before: false,
         after: true,
       });
+    });
+
+    it("records nothing when a bot never suspended here is resumed", async () => {
+      const { res } = fakeRes();
+      await serveSettingsApi(
+        request("POST", { id: "sauron", action: "resume" }),
+        res,
+        "/api/settings/bot-control",
+        config(),
+        session,
+      );
+      expect(log.list("sauron")).toEqual([]);
     });
 
     it("records Mission Control's per-bot switch", () => {
