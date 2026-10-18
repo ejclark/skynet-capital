@@ -24,7 +24,7 @@ const signal = (asOf: string) =>
 function armed(
   subscriptions: () => readonly PlaybookSubscription[],
   opts: {
-    readonly maxPicks?: number;
+    readonly maxPicks?: number | (() => number);
     readonly restored?: ScoutState;
     readonly realizedPlForPlaybook?: (playbookId: string) => number;
     /** Runs before the broker answers each portfolio read — a Store change landing mid-scan. */
@@ -252,5 +252,35 @@ describe("review of slice 10: the forced daily pick", () => {
     // At an ask of $100.05: $1,000 buys 9 shares; $1,000 + $2,000 realized buys 29.
     expect(await flat.holdings()).toEqual(["MSFT:9"]);
     expect(await grown.holdings()).toEqual(["MSFT:29"]);
+  });
+});
+
+// The owner's forced-pick count (#4535 slice 2b): a function is read afresh at every scan, so a
+// change reaches the next check with no restart — and zero is dark, exits included.
+describe("the forced-pick count, read live", () => {
+  it("armed after a quiet check, it picks on the next one — no restart", async () => {
+    let picks = 0;
+    const { runner, held } = armed(() => [scout()], { maxPicks: () => picks });
+    await runner.runCycle(signal(DAY_1));
+    expect(await held()).toEqual([]);
+    picks = 1;
+    await runner.runCycle(signal(DAY_1_LATER));
+    expect(await held()).toEqual(["MSFT"]);
+  });
+
+  it("takes the new count for the scan: 2 picks two names, where 1 picked one", async () => {
+    const { runner, held } = armed(() => [scout()], { maxPicks: () => 2 });
+    await runner.runCycle(signal(DAY_1));
+    expect(await held()).toEqual(["MSFT", "GOOG"]);
+  });
+
+  it("disarmed by the owner, it picks nothing new but still sells yesterday's pick", async () => {
+    let picks = 1;
+    const { runner, held } = armed(() => [scout()], { maxPicks: () => picks });
+    await runner.runCycle(signal(DAY_1));
+    expect(await held()).toEqual(["MSFT"]);
+    picks = 0;
+    await runner.runCycle(signal(DAY_2));
+    expect(await held()).toEqual([]);
   });
 });

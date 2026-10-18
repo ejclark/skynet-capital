@@ -49,6 +49,26 @@ describe("bot-controls bridge client", () => {
     );
   });
 
+  it("answers the forced-pick count from the latest poll, per bot (#4535 slice 2b)", async () => {
+    let state: ControlsState = { bots: { sauron: { betaPicks: 3 } } };
+    await withBridge(
+      () => state,
+      async (base) => {
+        const client = resolveBotControls({
+          SKYNET_INSIGHTS_BRIDGE_URL: base,
+        } as NodeJS.ProcessEnv);
+        expect(client.betaPicks("sauron")).toBeUndefined(); // nothing fetched yet = env count
+        await client.fetchOnce();
+        expect(client.betaPicks("sauron")).toBe(3);
+        expect(client.betaPicks("banker")).toBeUndefined();
+        state = { bots: { sauron: { betaPicks: 0 } } };
+        await client.fetchOnce();
+        expect(client.betaPicks("sauron")).toBe(0); // read afresh: the owner's change, no restart
+      },
+    );
+    expect(resolveBotControls({} as NodeJS.ProcessEnv).betaPicks("sauron")).toBeUndefined();
+  });
+
   it("keeps the last-known snapshot when the bridge goes away (fail-open)", async () => {
     let base = "";
     await withBridge(

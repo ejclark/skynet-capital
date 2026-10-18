@@ -48,7 +48,9 @@ export interface LiveBot {
  * trading day, so switching the setting off never strands one.
  */
 export interface BetaScoutDeps {
-  readonly maxPicks: number;
+  /** A function is read afresh at every scan, so the owner's setting applies without a restart
+   *  (#4535 slice 2b); a plain number is fixed for the process. */
+  readonly maxPicks: number | (() => number);
   readonly broker: BrokerPort;
   readonly universe: readonly string[];
   readonly managedSymbols: ReadonlySet<string>;
@@ -98,6 +100,11 @@ function readHost(scout: BetaScoutDeps): ScoutHost {
   const on = mine.find((s) => s.enabled);
   if (on) return { state: "on", mode: on.mode, risk };
   return { state: mine.length > 0 ? "paused" : "none", risk };
+}
+
+/** How many forced picks the scout may place now: the owner's current setting, or the fixed count. */
+function pickLimit(scout: BetaScoutDeps): number {
+  return typeof scout.maxPicks === "function" ? scout.maxPicks() : scout.maxPicks;
 }
 
 export interface LiveCycleDeps {
@@ -273,10 +280,11 @@ export class LiveCycleRunner {
     }
     const today = sessionDay ?? context.asOf.slice(0, 10);
     const host = readHost(scout); // the one read of the host's subscriptions for this scan
+    const maxPicks = pickLimit(scout); // and the one read of the owner's count
     if (today !== this.scoutDay) this.rollScoutDay(today);
     const exited = await this.exitDueLots(today, context, scout, host);
-    // Disarmed (`SKYNET_BETA_FORCING` off): its due lots were still offered for sale above.
-    if (scout.maxPicks <= 0) {
+    // Disarmed (zero forced picks, by the owner or the env): its due lots were still offered for sale above.
+    if (maxPicks <= 0) {
       return 0;
     }
     if (firedOrganicallyThisCycle && !this.scoutFiredOrganicallyToday) {
@@ -286,7 +294,7 @@ export class LiveCycleRunner {
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
       return 0;
     }
-    return this.scanScout(context, scout, host, today, exited);
+    return this.scanScout(context, scout, host, maxPicks, today, exited);
   }
 
   /** Today's one scan, once the day's latches allow it: armed AND subscribed (#4642 slice 10). */
@@ -294,6 +302,7 @@ export class LiveCycleRunner {
     context: MarketContext,
     scout: BetaScoutDeps,
     host: ScoutHost,
+    maxPicks: number,
     today: string,
     exited: readonly string[],
   ): Promise<number> {
@@ -310,7 +319,7 @@ export class LiveCycleRunner {
       scout.universe,
       exited.length > 0 ? new Set([...scout.managedSymbols, ...exited]) : scout.managedSymbols,
       false,
-      { maxPicks: scout.maxPicks, ...(host.mode ? { mode: host.mode } : {}) },
+      { maxPicks, ...(host.mode ? { mode: host.mode } : {}) },
     );
     const verdict = applyGuardsWithVerdicts(picks, portfolio, context, host.risk);
     if (host.state === "none") {
