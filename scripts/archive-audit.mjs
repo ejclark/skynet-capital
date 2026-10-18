@@ -108,8 +108,8 @@ export function render({ ok, rows }) {
   return lines.join("\n");
 }
 
-const sh = (cmd, args) =>
-  execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const sh = (cmd, args, cwd = process.cwd()) =>
+  execFileSync(cmd, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 
 /** A PR's state over REST: merged · closed · open. */
 function prState(number) {
@@ -117,16 +117,34 @@ function prState(number) {
   return pr.merged_at ? "merged" : pr.state;
 }
 
-function gitState() {
+/**
+ * The checkout's leftovers. Work counts as unpushed only when it carries content `origin/main`
+ * lacks — the question is "would archiving lose anything?", not "is every commit an ancestor".
+ *
+ * Why content, not ancestry (2026-10-18): a squash merge never makes the branch's own commits
+ * ancestors of main, and GitHub deletes the merged branch, so `--prune` drops its upstream and the
+ * ancestry fallback read every finished session as "4 unpushed commits" — a red row on exactly the
+ * sessions that were done. `git merge-tree --write-tree` (git 2.38+) merges HEAD into main without
+ * touching the checkout: if the result is main's own tree, everything here is already on main.
+ */
+export function gitState(cwd = process.cwd()) {
   // Fetch first: a cached ref can be stale — on 2026-10-18 a deleted, already-merged branch's ref
   // read as "93 unpushed commits" (docs/LESSONS.md, 2026-09-04: fetch before trusting a ref).
-  sh("git", ["fetch", "--quiet", "--prune", "origin"]);
-  const uncommitted = sh("git", ["status", "--porcelain"]).length > 0;
+  sh("git", ["fetch", "--quiet", "--prune", "origin"], cwd);
+  const uncommitted = sh("git", ["status", "--porcelain"], cwd).length > 0;
+  let onMain = false;
+  try {
+    const merged = sh("git", ["merge-tree", "--write-tree", "origin/main", "HEAD"], cwd);
+    onMain = merged.split("\n")[0] === sh("git", ["rev-parse", "origin/main^{tree}"], cwd);
+  } catch {
+    // a conflict (exit 1) or an old git: fall through to counting commits
+  }
+  if (onMain) return { uncommitted, unpushed: 0 };
   let unpushed = 0;
   try {
-    unpushed = Number(sh("git", ["rev-list", "--count", "@{u}..HEAD"]));
+    unpushed = Number(sh("git", ["rev-list", "--count", "@{u}..HEAD"], cwd));
   } catch {
-    unpushed = Number(sh("git", ["rev-list", "--count", "origin/main..HEAD"]));
+    unpushed = Number(sh("git", ["rev-list", "--count", "origin/main..HEAD"], cwd));
   }
   return { uncommitted, unpushed };
 }

@@ -1,4 +1,8 @@
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // "Archive this session?" should be a simple yes because the done-check ran, not because the
 // session says it did (Eric, 2026-10-18). Driven through the real entrypoint with `--explain`, which
@@ -84,5 +88,87 @@ describe("archive-audit — the done-check as a table", () => {
     } catch (error) {
       expect((error as { status?: number }).status).toBe(2);
     }
+  });
+});
+
+// The git row against a real checkout (2026-10-18): a squash merge never makes the branch's commits
+// ancestors of main and GitHub deletes the merged branch, so the old ancestry count read every
+// finished session as unpushed. A throwaway origin + clone replays exactly that, offline.
+describe("archive-audit — the git row judges content, not ancestry", () => {
+  const SCRIPT = resolve("scripts/archive-audit.mjs");
+  // hermetic: under a git hook GIT_DIR outranks cwd, and the fixture would act on this repo
+  const ENV = hermeticGitEnv();
+  const IDENTITY = ["-c", "user.name=t", "-c", "user.email=t@example.com"];
+  let dir = "";
+  let work = "";
+  const git = (...args: string[]) =>
+    execFileSync(
+      "git",
+      [...IDENTITY, "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args],
+      {
+        cwd: work,
+        env: ENV,
+        stdio: "pipe",
+      },
+    );
+  const commit = (file: string, text: string) => {
+    writeFileSync(join(work, file), text);
+    git("add", file);
+    git("commit", "-qm", file);
+  };
+  const audit = (): { out: string; code: number } => {
+    const { git: _git, ...manifest } = CLEAN;
+    try {
+      const out = execFileSync("node", [SCRIPT], {
+        cwd: work,
+        env: ENV,
+        input: JSON.stringify(manifest),
+        encoding: "utf8",
+      });
+      return { out, code: 0 };
+    } catch (error) {
+      const e = error as { stdout?: string; status?: number };
+      return { out: e.stdout ?? "", code: e.status ?? -1 };
+    }
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "archive-audit-"));
+    execFileSync("git", ["init", "-q", "--bare", "-b", "main", join(dir, "origin.git")], {
+      env: ENV,
+    });
+    execFileSync("git", ["clone", "-q", join(dir, "origin.git"), join(dir, "work")], {
+      env: ENV,
+      stdio: "pipe",
+    });
+    work = join(dir, "work");
+    git("checkout", "-qb", "main");
+    commit("base.txt", "base\n");
+    git("push", "-q", "origin", "main");
+    git("checkout", "-qb", "feature");
+    commit("a.txt", "a\n");
+    commit("b.txt", "b\n");
+    git("push", "-q", "-u", "origin", "feature");
+    // the squash merge, then GitHub's branch delete
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--squash", "feature");
+    git("commit", "-qm", "feature (#1)");
+    git("push", "-q", "origin", "main");
+    git("push", "-q", "origin", "--delete", "feature");
+    git("checkout", "-q", "feature");
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("passes a squash-merged branch whose remote was deleted — nothing would be lost", () => {
+    const { out, code } = audit();
+    expect(out).toContain("| ✅ | No uncommitted or unpushed work in the checkout | clean |");
+    expect(code).toBe(0);
+  });
+
+  it("still fails when the branch carries a commit main lacks", () => {
+    commit("c.txt", "c\n");
+    const { out, code } = audit();
+    expect(code).toBe(1);
+    expect(out).toMatch(/❌ \| No uncommitted or unpushed work.*unpushed commit\(s\)/);
   });
 });
