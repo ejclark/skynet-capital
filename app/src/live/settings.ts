@@ -15,6 +15,30 @@ export interface OwnedAccount {
   readonly profile: { readonly displayName: string; readonly timezone?: string } | null;
   /** The own-bot switch's state — present exactly when this is your bot and controls are wired. */
   readonly suspended?: boolean;
+  /** The bot's own settings and their change log (#4535 slice 3b) — same presence as `suspended`. */
+  readonly settings?: BotSettings;
+}
+
+/** Who made a change, as the server tells it — never an email. */
+export type ChangeAuthor = "you" | "another owner";
+
+/** One recorded change to a bot's settings; `null` = not set here, the operations setting stands. */
+export interface BotSettingChange {
+  readonly at: string;
+  readonly setting: string;
+  readonly before: boolean | number | null;
+  readonly after: boolean | number | null;
+  readonly proposedBy: ChangeAuthor;
+  readonly approvedBy: ChangeAuthor;
+}
+
+export interface BotSettings {
+  /** Present exactly when the bot has a hardcore build; `null` = not set here. */
+  readonly hardcore?: boolean | null;
+  /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
+  readonly betaPicks?: number | null;
+  readonly maxBetaPicks: number;
+  readonly changes: readonly BotSettingChange[];
 }
 
 export interface TimezoneChoice {
@@ -77,3 +101,12 @@ export const botControlRequest = (input: {
   readonly action: "suspend" | "resume";
 }): Promise<{ readonly ok: true; readonly suspended: boolean } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-control", input);
+
+/** Change your OWN bot's hardcore build or forced-pick count; `null` hands it back to the
+ *  operations setting. Ownership is the server's check, same tier as the switch above. */
+export const botSettingsRequest = (input: {
+  readonly id: string;
+  readonly hardcore?: boolean | null;
+  readonly betaPicks?: number | null;
+}): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
+  postJson("/api/settings/bot-settings", input);

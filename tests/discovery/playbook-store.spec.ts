@@ -233,10 +233,12 @@ describe("playbookStoreCatalog", () => {
       }
     });
 
-    it("says it needs both the operations setting and the subscription, on one bot", () => {
+    it("says it needs both a forced-pick count and the subscription, on one bot", () => {
       expect(note("Two switches")).toContain(
-        "It buys only while both are on: the forced-pick setting in operations, and this subscription",
+        "It buys only while both are on: a forced-pick count above 0, and this subscription",
       );
+      // #4535 slice 3b: the count is the owner's, on the bot's Settings page.
+      expect(note("Two switches")).toContain("set on the bot's Settings page");
       expect(note("Two switches")).toContain("subscribed on any other bot, it places nothing");
     });
 
@@ -334,9 +336,9 @@ describe("playbookStoreCatalog", () => {
     });
 
     // Finding 1: switching the setting off used to strand its picks; now it stops new ones only.
-    it("says switching the setting off stops new picks only", () => {
+    it("says setting the count to 0 stops new picks only", () => {
       expect(note("Two switches")).toContain(
-        "Switching the setting off stops new picks only — picks it holds are still sold",
+        "Setting it to 0 stops new picks only — picks it holds are still sold",
       );
     });
   });

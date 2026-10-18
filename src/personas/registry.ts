@@ -48,6 +48,12 @@ const HARDCORE_BUILDS: Readonly<Record<string, () => Persona>> = {
   sauron: () => new SauronHardcorePersona(),
 };
 
+/** Does this persona have a hardcore build to switch to? The settings form offers the switch only
+ *  then, and the write refuses it otherwise (#4535 slice 3b). */
+export function hasHardcoreBuild(id: string): boolean {
+  return Object.hasOwn(HARDCORE_BUILDS, id);
+}
+
 /**
  * One persona's build, standard or hardcore — what the live flip swaps in (#4535 slice 2c). A fresh
  * instance each call. `undefined` when the id names no persona, or asks for a hardcore build the
