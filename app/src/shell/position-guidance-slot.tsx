@@ -28,6 +28,8 @@ import type { RowMark } from "./use-row-marks";
  * place), or a playbook that fits the name (#5083). Then the row's acts (#5070 slice 3,
  * `position-act.tsx`): Buy back · Roll · Not now, a ticket in place and one recap modal. The acts
  * and Undo are the owner's (ownership-gated controls); everyone sees the marks.
+ * Last, "Full page ›" (#5070 slice 6, `position-page.tsx`): the opt-in deep dive, whose one way
+ * back returns to this row, still open.
  * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
  * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
@@ -106,6 +108,8 @@ export function GuidanceSlot({
   decisions = [],
   picture,
   playbook,
+  initialOpen = false,
+  onFullPage,
   onAside,
   onUndo,
 }: {
@@ -125,10 +129,14 @@ export function GuidanceSlot({
   readonly canTrade: boolean;
   /** The playbook that opened it, as its tag line — the bot owner's alone (#885). */
   readonly playbook?: ReactNode;
+  /** The row comes back open: "← Positions" from its full page (slice 6, `use-position-page.ts`). */
+  readonly initialOpen?: boolean;
+  /** "Full page ›", the depth ladder's opt-in last step before a commit (slice 6). */
+  readonly onFullPage?: () => void;
   readonly onAside: () => void;
   readonly onUndo: () => void;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const openId = useId();
   const { mark, aside } = row;
   const stock = parseOccSymbol(position.symbol)?.underlying ?? position.symbol;
@@ -205,6 +213,12 @@ export function GuidanceSlot({
             <p className="pos-guide-aside">
               <span className="pos-guide-when">{asideWords(aside).full}</span>
             </p>
+          ) : null}
+          {onFullPage ? (
+            <button type="button" className="pos-guide-link pos-guide-page" onClick={onFullPage}>
+              Full page<span className="visually-hidden"> for {position.display}</span>{" "}
+              <span aria-hidden="true">›</span>
+            </button>
           ) : null}
           <Link
             to="/trade"

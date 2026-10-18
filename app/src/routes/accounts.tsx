@@ -44,6 +44,7 @@ import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
 import { useOrderDetail } from "../shell/use-order-detail";
+import { positionPageFromSearch } from "../shell/use-position-page";
 
 /**
  * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
@@ -254,6 +255,9 @@ function AccountsPage(): ReactElement {
             fill: undefined,
             from: undefined,
             pos: undefined,
+            // A position's page and its open row are one account's.
+            position: undefined,
+            open: undefined,
           }),
           replace: true,
         })
@@ -286,6 +290,9 @@ function AccountsPage(): ReactElement {
             fill: undefined,
             from: undefined,
             pos: undefined,
+            // A position's page and its open row belong to Overview.
+            position: undefined,
+            open: undefined,
             // An order's full detail and the list's narrowing belong to Activity; leaving it
             // closes the detail and drops the filter.
             ...(next === "activity"
@@ -481,6 +488,8 @@ export const Route = createFileRoute("/accounts")({
     ...narrowingFromSearch(search),
     // Activity's open full detail (#5101, `use-order-detail.ts`).
     ...(asId(search.order) ? { order: asId(search.order) } : {}),
+    // Overview's position full page and the row its back opens (#5070 slice 6, `use-position-page.ts`).
+    ...positionPageFromSearch(search),
   }),
   component: AccountsPage,
 });

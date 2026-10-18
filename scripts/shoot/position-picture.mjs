@@ -7,6 +7,8 @@
 // put to Nov 6 (collected $255, buy-back $550, breakeven $77.45, CRWV $82.60, 75% IV). Paper.
 // Slice 3 adds two phone frames: Buy back's ticket in the row (1 of 1 contract, $5.50 limit at the
 // mid of $5.30 / $5.70, good for today) and the recap modal the review opens.
+// Slice 6 adds the opt-in Full page ›: the put's own page at 390 (its top, then its chart) and 1280,
+// leading with the price picture and profit at price, then the ways to play it, fills and dates.
 // Usage: npm run build --prefix app && tsx scripts/shoot/position-picture.mjs [outdir]
 
 import { profileStubs } from "./profile-fixture.mjs";
@@ -118,6 +120,38 @@ const { page, origin, shoot, close } = await openShell({
       },
     },
     "/api/accounts/bot-sauron/equity-curve": curve,
+    // The full page's Fills and Dates (slice 6): the stock's narrowed ledger.
+    "/api/desk/bot-sauron/activity": {
+      available: true,
+      activity: [
+        {
+          orderId: "o-put",
+          symbol: "CRWV261106P00080000",
+          display: "CRWV $80 PUT · 6 NOV 26",
+          side: "sell",
+          quantity: 1,
+          filled: 1,
+          price: "$2.55",
+          status: "filled",
+          at: "2026-10-08T14:31:00.000Z",
+          backfilled: false,
+          origin: "desk",
+        },
+        {
+          orderId: "o-crwv",
+          symbol: "CRWV",
+          display: "CRWV",
+          side: "buy",
+          quantity: 55,
+          filled: 55,
+          price: "$90.10",
+          status: "filled",
+          at: "2026-09-21T14:00:00.000Z",
+          backfilled: false,
+          origin: "desk",
+        },
+      ],
+    },
     "/api/trade/bars": bars,
     "/api/trade/option-positions": {
       available: true,
@@ -254,5 +288,55 @@ await ticket.getByRole("button", { name: "Review buy-back" }).click();
 await page.locator("dialog.pos-recap[open]").waitFor();
 await page.waitForTimeout(200);
 await shoot("position-recap-390");
+
+// --- FULL PAGE › (slice 6): the opt-in deep dive, phone first, then the desk ---
+const openPage = async (scope) => {
+  await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+  const guide = page.locator(`${scope} .pos-guide-call`, { hasText: "CRWV $80 PUT" }).first();
+  await guide.waitFor();
+  await guide.click();
+  await page.locator(`${scope} .pos-guide-page`).first().click();
+  await page.locator(".ppage-chart-art").waitFor();
+  await page.locator(".ppage-fills li").first().waitFor();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+};
+await page.setViewportSize({ width: 390, height: 844 });
+await openPage(".pos-cards");
+const head390 = await page.locator(".cockpit-head, .profile-head").first().boundingBox();
+await page
+  .locator(".ppage")
+  .evaluate(
+    (el, top) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - top),
+    (head390?.y ?? 0) + (head390?.height ?? 0),
+  );
+await page.waitForTimeout(150);
+await shoot("position-page-390");
+// Further down the same page: profit at price, then the ways to play it.
+await page
+  .locator(".ppage-chart")
+  .evaluate(
+    (el, top) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - top - 8),
+    (head390?.y ?? 0) + (head390?.height ?? 0),
+  );
+await page.waitForTimeout(150);
+await shoot("position-page-chart-390");
+// "← Positions" returns to the same row, still open.
+await page.getByRole("button", { name: "Back to Positions" }).click();
+await page.locator(".pos-cards .pp").first().waitFor();
+await page.waitForTimeout(400);
+await shoot("position-page-back-390");
+
+await page.setViewportSize({ width: 1280, height: 900 });
+await openPage(".blotter");
+const head1280 = await page.locator(".cockpit-head, .profile-head").first().boundingBox();
+await page
+  .locator(".ppage")
+  .evaluate(
+    (el, top) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - top),
+    (head1280?.y ?? 0) + (head1280?.height ?? 0),
+  );
+await page.waitForTimeout(150);
+await shoot("position-page-1280");
 
 await close();
