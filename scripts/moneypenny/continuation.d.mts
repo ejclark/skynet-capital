@@ -21,6 +21,8 @@ export interface SubIssue {
   readonly number: number;
   readonly title?: string;
   readonly state?: string;
+  /** Read for its "slice N of M" line (#4530). */
+  readonly body?: string | null;
 }
 
 export interface RunOutcome {
@@ -94,6 +96,8 @@ export function openPrsByIssue(
     head?: { ref?: string };
   }[],
 ): Map<number, number>;
+/** The slice ordinal a pickup line or sub-issue title names, or null (#4530). */
+export function sliceOf(text: string | null | undefined): number | null;
 export function nextSubIssue(
   subIssues?: readonly SubIssue[],
   blockedBy?: Record<number, readonly { state?: string }[]>,
