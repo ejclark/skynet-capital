@@ -115,6 +115,13 @@ ahead of earnings"* — taking profit is not the end of a trade but the funding 
   wait reads as the app having no opinion. Proves it wrong: him accepting an undated "wait" on the
   live route without asking when._
 
+- **Wants the system to decide more of his calls over time** (2026-10-18): *"In theory, If we are
+  fully aligned (ongoing goal that we will never fully reach), you would be equipped to make 100% of
+  decisions/judgement calls on my behalf."* So every question to him carries a predicted answer,
+  scored when he replies (`docs/process/ALIGNMENT.md`). And he dials effort as a count: *"commanding
+  x number of iterations is a normalized way to instruct the degree of effort, account of resources
+  (tokens) to apply towards an experiment, effort, goal."*
+
 ## 5. What frustrates him
 
 The dead ends he met on his own book (numbers from README → "The eight dead ends"; whether one

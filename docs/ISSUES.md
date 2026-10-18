@@ -114,6 +114,10 @@ Rules that make it work, in priority order:
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
    uses (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
+   Below the fold, `### Predicted answers` gives Claude's expected answer to each item and a
+   confidence, written before he answers; the row is scored in
+   [`docs/process/ALIGNMENT.md`](process/ALIGNMENT.md) when he does (Eric, 2026-10-18: alignment
+   is the asymptote, so its distance is measured).
 9. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
    their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the

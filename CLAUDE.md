@@ -62,6 +62,18 @@ automate; an act is automated only behind a mechanical verify; and loops get clo
 get added (`/charter`). The lens and the first census: [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md)
 → *The loop census*.
 
+**Alignment is the asymptote, and it is measured** (Eric, 2026-10-18: "If we are fully aligned
+(ongoing goal that we will never fully reach), you would be equipped to make 100% of
+decisions/judgement calls on my behalf. That is the ideal we should be working towards"). Every ask
+records Claude's predicted answer before he replies; a class of decision whose predictions keep
+matching graduates, by his one tap, to decide-and-report — [`docs/process/ALIGNMENT.md`](docs/process/ALIGNMENT.md).
+The irreversible class still moves only by his hand. **Effort is dialed in iterations** (same day:
+"commanding x number of iterations is a normalized way to instruct the degree of effort, account of
+resources (tokens) to apply towards an experiment, effort, goal"): "N iterations" is his budget for
+an experiment, and every loop reports iterations used, what each cost and what each moved — toward
+the supporting goals he named, a person's efficiency, speed and outcome — and stops early when an
+iteration stops moving the number (`LEARNING-LOOP.md` field 14).
+
 ## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
 - **Anything short of lovable is inadequate.** Hold a high bar; find the version worth showing off, not

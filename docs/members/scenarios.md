@@ -13,7 +13,7 @@ flowchart LR
   S2 -.->|"the run-up<br/>retraces"| G["the gave-back<br/>no twin yet"]
 ```
 
-- **14 acceptance lines, 4 of them known gaps** (`it.fails`), each turning red the day it is fixed.
+- **14 acceptance lines, 3 of them known gaps** (`it.fails`), each turning red the day it is fixed.
 - **The biggest gap is scenario 2's:** a long call a member holds gets no verdict of its own, and
   the house's bot exits the same call on a rule the member never hears.
 - **Two engines disagree on one CRWV holding:** guidance says hold, the card says "cut it" (#4952).

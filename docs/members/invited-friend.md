@@ -129,10 +129,11 @@ _(Added 2026-09-29, #3816 slice 9 — the friend is the only member in these fil
 and is not the owner.)_
 
 1. `/app/accounts?account=day-trader&section=playbooks` — Profile on The Day Trader: the section
-   switch gains Playbooks · Thesis; Playbooks' top strip says whether the loop is alive (offline:
-   no decision trail is wired). **WHEN the invited friend opens Profile on the bot they own, the
-   app shall offer its Playbooks and show whether it is alive.** Judge: can this reader tell
-   whether their bot is running?
+   switch gains Playbooks · Thesis (on a phone the open Playbooks takes the switch's More slot,
+   #5072); Playbooks' top strip says whether the loop is alive (offline: no decision trail is
+   wired). **WHEN the invited friend opens Profile on the bot they own, the app shall offer its
+   Playbooks and show whether it is alive.** Judge: can this reader tell whether their bot is
+   running?
 2. `/app/accounts?account=day-trader&section=thesis` — Thesis on their own bot: its standing call
    and the markers behind it. **WHEN the invited friend opens Thesis on the bot they own, the app
    shall show that bot's standing call.** Judge: can this reader tell what their bot believes

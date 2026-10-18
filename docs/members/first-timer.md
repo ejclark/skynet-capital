@@ -38,9 +38,11 @@ and the first button, never the rail. They skip anything that names a concept th
 
 - **1 (fixed)** — the first sign-in landed on the leaderboard with no onboarding cue. The topbar's
   Profile tab now opens on the connect guide for a member with no account.
-- **2 (fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
+- **2 (half fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
   feedback filing", while the server says "the moment you say hello to Moneypenny"
-  (`src/domain/progression.ts`). Both now use one sentence (j1 s3).
+  (`src/domain/progression.ts`). Both now use one sentence (j1 s3). **One contradiction is still
+  open** (found 2026-10-18): with no account, the trading chapter's ladder list says "nothing is
+  locked" directly under the M·02 card that reads LOCKED (j1 s3, known gap).
 - **3 (fixed)** — `/trade` with no account said "No accounts are linked to your session yet." with
   nothing to click. The words are now the link (j1 s5).
 
@@ -59,9 +61,12 @@ and the first button, never the rail. They skip anything that names a concept th
    signed-in member with no linked account opens the app, the app shall keep a one-tap way into
    onboarding on screen: the Profile tab, landing on the connect guide.** _Fixed — dead end 1
    (#3807 slice 2b)._ Judge: can this reader tell what to do next in ten seconds?
-2. `/app/accounts?section=milestones` — the milestones page: M·01 Onboarding first. **WHEN the member opens Profile
-   before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
-   link into it.** Judge: can this reader tell what to do next in ten seconds?
+2. `/app/accounts` — the Profile page with no account: "No account linked yet" where the switcher
+   sits, Milestones pressed, M·01 Onboarding's connect steps leading the page, and the table of
+   contents folded one tap below them as "Your milestones · 3 chapters" (#5256: the steps lead,
+   the contents wait). **WHEN a member with no linked account opens Profile, the app shall show
+   the Profile page opened on Milestones with the Onboarding chapter open — never a page that
+   links back to itself.** Judge: can this reader tell what to do next in ten seconds?
 3. `/app/accounts?section=milestones&chapter=trading` — the M·02 card's gate note (the trading
    chapter, since #5258 folds the cards under the connect guide on the bare milestones visit). **WHILE the trading ladder is gated, the app shall
    name the SAME unlock condition everywhere it is named.** _Fixed — #3807 slice 3b-4: with no
