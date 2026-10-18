@@ -95,18 +95,25 @@ export function needsYouLines({ needsYou }) {
  * The "Noise absorbed" line for unlearned incidents, from `incident-scan.mjs --count`. Pure.
  * `unlearnedRuns: null` means the scan could not reach GitHub — said as unknown, never as zero.
  */
-export function learningLine({ days = 14, openEntries = [], unlearnedRuns = null }) {
+export function learningLine({
+  days = 14,
+  openEntries = [],
+  unlearnedRuns = null,
+  agedOutRuns = null,
+}) {
   const runs =
     unlearnedRuns === null
       ? `failed runs on main unknown (no GitHub read)`
       : `${unlearnedRuns} failed run(s) on main in ${days}d not yet in LESSONS`;
+  // #5728: what left the window unlearned is named, so a falling count can't pass expiry as learning.
+  const aged = agedOutRuns ? ` · ${agedOutRuns} aged out of the window unlearned` : "";
   const open = openEntries.length
     ? ` · ${openEntries.length} entry(ies) still STATUS: open (${openEntries.map((t) => `"${t.length > 60 ? `${t.slice(0, 59)}…` : t}"`).join(", ")})`
     : "";
-  if (unlearnedRuns === 0 && !openEntries.length) {
+  if (unlearnedRuns === 0 && !agedOutRuns && !openEntries.length) {
     return `- Learning: every failed run on main in ${days}d has a lesson; no open entries.`;
   }
-  return `- Learning: ${runs}${open} — capsule closes draft their own entries (#4212).`;
+  return `- Learning: ${runs}${aged}${open} — capsule closes draft their own entries (#4212).`;
 }
 
 /** The newest committed digest's date, or `null` when none exists yet. Exported because it is the

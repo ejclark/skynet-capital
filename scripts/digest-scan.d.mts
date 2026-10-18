@@ -10,4 +10,5 @@ export function learningLine(count: {
   days?: number;
   openEntries?: string[];
   unlearnedRuns?: number | null;
+  agedOutRuns?: number | null;
 }): string;
