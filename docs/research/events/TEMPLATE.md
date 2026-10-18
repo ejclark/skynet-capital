@@ -67,12 +67,23 @@
      · "Don't" is a first-class call — an honest sheet is often mostly refusals, and in a
        compounding book refusals are P&L. -->
 
+**Call:** <buy|hold|trim|sell|wait> until <YYYY-MM-DD>
+
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Buy signal:** <yes|no> — <the trigger that licenses a new long position, or why none does>
 - <trigger, one short line>
 
-<!-- The Buy signal bullet is the one line position guidance reads (src/server/ledger-stance.ts):
+<!-- The `**Call:**` line is the symbol summary's call word and its until-date (#4807): the house
+     view on OWNING THE SHARES, not a strategy verdict — a playbook may stand aside on a symbol you
+     rate buy. buy · hold · trim · sell · wait, then the day the call stops being yours to trust
+     without a fresh assessment (the summary caps it at the next protected window or this event's
+     own day, whichever comes first). Trim is profit-taking, kept as its own word on purpose.
+     Advisory in `npm run research:lint` — counted for upcoming-event ledgers, never a failure;
+     a ledger without it still rolls up from the Buy signal bullet below. Update it with every
+     assessment, the way `**Last assessed:**` is.
+
+     The Buy signal bullet is the one line position guidance reads (src/server/ledger-stance.ts):
      "yes" lets the trade form grade a cash-secured put as a way in; "no" never does. Required on
      earnings ledgers (research-lint); keep it first, keep it yes/no, keep the why honest. -->
 

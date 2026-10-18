@@ -1,5 +1,6 @@
 import {
   adjacentIdsOf,
+  callLineOf,
   horizonCallsOf,
   horizonRowsOf,
   sourceBlockedOf,
@@ -146,5 +147,39 @@ describe("sourceBlockedOf — #1711's blocked-source mark", () => {
       "## Assessment ledger\n" +
       '<!-- probe-ref: {"blocked":[]} -->\n';
     expect(sourceBlockedOf(md)).toBe(false);
+  });
+});
+
+describe("callLineOf — the ledger's own call word and until-date (#4807)", () => {
+  const withLine = (line: string): string =>
+    `# T\n\n## At a glance\n\n**TL;DR.** Something.\n\n${line}\n\n**Signals & conditions**\n\n- **Buy signal:** no — x\n\n## Initial research\n\nBody.\n`;
+
+  it("reads the verb and the until-date", () => {
+    expect(callLineOf(withLine("**Call:** hold until 2026-11-09"))).toEqual({
+      verb: "hold",
+      until: "2026-11-09",
+    });
+  });
+
+  it("reads each verb, in any case, as a bullet or a bare line", () => {
+    for (const verb of ["buy", "hold", "trim", "sell", "wait"]) {
+      expect(callLineOf(withLine(`- **Call:** ${verb.toUpperCase()} until 2026-11-09`))?.verb).toBe(
+        verb,
+      );
+    }
+  });
+
+  it("keeps the verb when the until-date is absent or not a real day", () => {
+    expect(callLineOf(withLine("**Call:** trim"))).toEqual({ verb: "trim" });
+    expect(callLineOf(withLine("**Call:** sell until 2026-02-31"))).toEqual({ verb: "sell" });
+  });
+
+  it("reads no line for a word it cannot place, and for a ledger without one", () => {
+    expect(callLineOf(withLine("**Call:** accumulate until 2026-11-09"))).toBeNull();
+    expect(callLineOf(withLine("**Call:** holding"))).toBeNull();
+    expect(callLineOf(withLine(""))).toBeNull();
+    expect(
+      callLineOf("# T\n\n## Initial research\n\n**Call:** hold until 2026-11-09\n"),
+    ).toBeNull();
   });
 });

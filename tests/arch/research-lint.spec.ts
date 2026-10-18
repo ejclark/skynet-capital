@@ -12,10 +12,13 @@ import { join, resolve } from "node:path";
 // capture habit — tax the missing decision.
 
 /** Drive the gate the way CI does — as a subprocess over stdin, never as an import. */
-const lintResearchDoc = (md: string): { problems: string[]; notes: string[] } => {
+const lintResearchDoc = (
+  md: string,
+  today = "2026-10-18",
+): { problems: string[]; notes: string[]; callLine?: string } => {
   try {
     return JSON.parse(
-      execFileSync("node", ["scripts/research-lint.mjs", "--stdin"], {
+      execFileSync("node", ["scripts/research-lint.mjs", "--stdin", `--today=${today}`], {
         input: md,
         encoding: "utf8",
       }),
@@ -184,6 +187,41 @@ describe("research lint — the buy line position guidance reads (#3729)", () =>
   it("asks nothing of a ledger the guidance never reads", () => {
     const macro = without(header(FULL_TABLE)).replace("**Kind:** earnings", "**Kind:** macro");
     expect(lintResearchDoc(macro).problems).toEqual([]);
+  });
+});
+
+describe("research lint — the ledger's Call line is advisory, never a gate (#4807)", () => {
+  const upcoming = header(FULL_TABLE).replace("2026-08-26 (confirmed", "2026-11-04 (confirmed");
+  const stated = (line: string) => upcoming.replace("\n**Signals", `\n${line}\n\n**Signals`);
+
+  it("counts an upcoming-event ledger without the line as missing, and fails nothing", () => {
+    const r = lintResearchDoc(upcoming);
+    expect(r.problems).toEqual([]);
+    expect(r.callLine).toBe("missing");
+  });
+
+  it("asks nothing of a ledger whose event has passed", () => {
+    expect(lintResearchDoc(header(FULL_TABLE)).callLine).toBe("n/a");
+    expect(lintResearchDoc(upcoming, "2026-11-05").callLine).toBe("n/a");
+  });
+
+  it("reads a well-formed line as stated, with no note", () => {
+    const r = lintResearchDoc(stated("**Call:** hold until 2026-11-09"));
+    expect(r.callLine).toBe("stated");
+    expect(r.problems).toEqual([]);
+    expect(r.notes.join(" ")).not.toContain("**Call:**");
+  });
+
+  it("notes a malformed line, never fails it", () => {
+    for (const [line, note] of [
+      ["**Call:** accumulate until 2026-11-09", "expected buy"],
+      ["**Call:** hold", "no `until YYYY-MM-DD`"],
+      ["**Call:** hold until 2026-02-31", "not a real day"],
+    ] as const) {
+      const r = lintResearchDoc(stated(line));
+      expect(r.problems).toEqual([]);
+      expect(r.notes.join(" ")).toContain(note);
+    }
   });
 });
 

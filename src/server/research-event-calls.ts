@@ -196,6 +196,39 @@ function todayOf<T>(md: string, read: (table: CallTable, cells: readonly string[
   return row ? read(table, row) : null;
 }
 
+/** The verbs a ledger's `**Call:**` line may state — the symbol summary's call vocabulary (#4807). */
+export const CALL_VERBS = ["buy", "hold", "trim", "sell", "wait"] as const;
+export type CallVerb = (typeof CALL_VERBS)[number];
+
+/** What a ledger says, in one line, about owning the shares: a verb and the day it holds until. */
+export interface CallLine {
+  readonly verb: CallVerb;
+  /** YYYY-MM-DD; absent when the line states a verb alone. */
+  readonly until?: string;
+}
+
+const CALL_LINE = new RegExp(
+  `^\\s*(?:[-*]\\s+)?\\*\\*Call:\\*\\*\\s*(${CALL_VERBS.join("|")})\\b(?:\\s+until\\s+(\\d{4}-\\d{2}-\\d{2}))?`,
+  "im",
+);
+
+/**
+ * The ledger's own call word and until-date (#4807 slice 2): `**Call:** hold until 2026-11-09`, one
+ * line inside the decision header beside the Buy signal bullet. EXTRACTS, never infers — a header
+ * without the line, an unknown verb ("**Call:** accumulate") or an impossible date reads as no line
+ * (a date alone drops, the verb stands), so the symbol summary keeps its conservative roll-up
+ * rather than act on a word it cannot place.
+ */
+export function callLineOf(md: string): CallLine | null {
+  const header = decisionHeaderOf(md);
+  const m = header ? CALL_LINE.exec(header) : null;
+  if (!m) return null;
+  const verb = m[1]?.toLowerCase() as CallVerb;
+  const until = m[2];
+  const real = until && new Date(`${until}T00:00:00Z`).toISOString().slice(0, 10) === until;
+  return real ? { verb, until } : { verb };
+}
+
 /**
  * The `**TL;DR.**` paragraph of the decision header as plain text — emphasis and link markup
  * stripped, whitespace collapsed — or null when the header carries none. The shelf indexes it for
