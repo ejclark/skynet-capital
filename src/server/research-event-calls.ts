@@ -180,11 +180,20 @@ export function horizonRowsOf(md: string): HorizonRows {
  * own ordering (a study's `## The call` table has no horizons at all — its first name wins).
  */
 export function todayCallOf(md: string): EventCall | null {
+  return todayOf(md, rowCall);
+}
+
+/** The same nearest-horizon row, read whole — position guidance quotes its falsifier (#5720). */
+export function todayRowOf(md: string): HorizonRow | null {
+  return todayOf(md, fullRow);
+}
+
+function todayOf<T>(md: string, read: (table: CallTable, cells: readonly string[]) => T | null) {
   const table = callTableOf(md);
   if (!table) return null;
   const row =
     table.rows.find((cells) => HORIZON_LABELS.today.test(plain(cells, 0))) ?? table.rows[0];
-  return row ? rowCall(table, row) : null;
+  return row ? read(table, row) : null;
 }
 
 /**

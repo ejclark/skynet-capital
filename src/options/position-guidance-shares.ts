@@ -1,4 +1,10 @@
-import { type LeverContext, lever, why, windowText } from "./position-guidance-levers.js";
+import {
+  type LeverContext,
+  ledgerFalsifier,
+  lever,
+  why,
+  windowText,
+} from "./position-guidance-levers.js";
 import {
   actionable,
   DECISION_SESSIONS_BEFORE_PRINT,
@@ -52,7 +58,9 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
             why("SHARES", `Plan to be out by ${dayText(decision)}, before the earnings report.`),
           ]
         : [ledgerWhy],
-      provesWrong: "If the research withdraws its buy signal before you buy → come back here.",
+      provesWrong:
+        ledgerFalsifier(input) ??
+        "If the research withdraws its buy signal before you buy → come back here.",
       ...(decision ? { until: { date: decision, why: "be out before the earnings report" } } : {}),
     });
   }
@@ -61,7 +69,9 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
     call: "STAND ASIDE",
     confidence: ledger ? "medium" : "low",
     reasons: [ledgerWhy],
-    provesWrong: `If the research starts supporting a buy${decision ? ` before ${dayText(decision)}` : ""} → come back here.`,
+    provesWrong:
+      ledgerFalsifier(input) ??
+      `If the research starts supporting a buy${decision ? ` before ${dayText(decision)}` : ""} → come back here.`,
   });
 }
 
