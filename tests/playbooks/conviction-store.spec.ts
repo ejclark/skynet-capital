@@ -80,6 +80,10 @@ describe("the seeded AI-dip conviction", () => {
     expect(claims.filter((c) => c.bucket === "untestable").every((c) => !c.scoreBy)).toBe(true);
   });
 
+  it("accepts assignment, as its owner said on 2026-10-18", () => {
+    expect(AI_DIP_2026_10.acceptsAssignment).toBe(true);
+  });
+
   it("names a call sheet that exists and names this record's owner and check date", () => {
     expect(AI_DIP_2026_10.source).toBeDefined();
     const path = AI_DIP_2026_10.source ?? "";

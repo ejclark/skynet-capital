@@ -93,6 +93,13 @@ export interface Conviction {
   readonly narrowings?: readonly PairNarrowings[];
   /** `docs/research/convictions/…` — the call sheet it was written from, when there is one. */
   readonly source?: string;
+  /**
+   * The owner accepts being assigned the shares as an outcome, not a failure (Eric, 2026-10-18:
+   * "Misjudging the timing and Owning stock is fine"). The record's check then judges its pairs on
+   * net P/L alone — assigned shares marked at the last price — and skips a strategy's
+   * assignment-count retire test (the wheel's 1 in 3), which would count that outcome against it.
+   */
+  readonly acceptsAssignment?: boolean;
 }
 
 const DAY_IN_TEXT = /\d{4}-\d{2}-\d{2}/g;

@@ -40,6 +40,9 @@ const AI_DIP_STATED: Conviction = {
   checkOn: "2027-01-29",
   source: "docs/research/convictions/ai-dip-2026-10.md",
   steers: ["CRWV-WHEEL", "CRWV-LONG-CALL"],
+  // Eric, 2026-10-18: assigned shares are fine to own, so the check reads net P/L alone and the
+  // wheel's 1-in-3 assignment test never retires it (`Conviction.acceptsAssignment`).
+  acceptsAssignment: true,
   // What the call sheet's "What it steers" table writes, now enforced (#5482 slice 4). Each only
   // tightens the pair's own bounds; the wheel's 30-day minimum and every exit are untouched.
   narrowings: [

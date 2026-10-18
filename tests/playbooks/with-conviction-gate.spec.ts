@@ -339,6 +339,18 @@ describe("withConvictionGate, a record's check across the pairs it steers", () =
     expect(said).toContain("no new entries on CRWV-WHEEL");
   });
 
+  it("keeps the wheel selling when the record's owner accepts assignment and the pairs are in profit", () => {
+    const accepting: Conviction = { ...view, acceptsAssignment: true };
+    const gated = gate(undefined, undefined, {
+      convictionOf: (id: string) => (id === view.id ? accepting : undefined),
+      ledgerOf: (id: string) =>
+        id === "CRWV-WHEEL"
+          ? ledger({ realizedPl: 900, putsClosed: 4, putsAssigned: 2 })
+          : ledger({ realizedPl: 10 }),
+    });
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual(orders);
+  });
+
   it("counts a paused pair's loss: pausing a loser does not hide it from the view", () => {
     const paused = aSubscription("sauron", "CRWV-LONG-CALL", {
       convictionId: view.id,
