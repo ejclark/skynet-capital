@@ -128,7 +128,7 @@ describe("researchPulse — stale by the calendar or by the tape", () => {
     expect(researchPulse(held, 81, 0.8, "2026-09-24").status).toBe("fresh");
     const p = researchPulse(held, 81, 0.8, "2026-09-25");
     expect(p.status).toBe("stale");
-    expect(p.note).toContain("held until 2026-09-25");
+    expect(p.note).toContain("until-date (2026-09-25) has passed");
   });
 
   it("is stale when spot has moved more than one expected move since the probe", () => {

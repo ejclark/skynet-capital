@@ -185,7 +185,7 @@ export function chainPulse(
 export interface ResearchObservation {
   readonly assessed?: string;
   readonly probePrice?: number;
-  /** The date the ledger's stated call holds until (#4807); past it with no newer assessment, stale. */
+  /** The day the summary says the ledger's call holds until (#4807); past it with no newer assessment, stale. */
   readonly callUntil?: string;
   readonly source: string;
 }
@@ -214,7 +214,7 @@ export function researchPulse(
       "research",
       obs.source,
       "stale",
-      `the call held until ${obs.callUntil} and nothing has been assessed since`,
+      `the call's until-date (${obs.callUntil}) has passed and nothing has been assessed since`,
       obs.assessed,
     );
   }
