@@ -1,3 +1,4 @@
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { positionsFrom } from "../observatory/broker-positions.js";
 import {
@@ -71,11 +72,16 @@ export type SubmitDeskTrade = (
 async function reviewLive(
   client: AlpacaTradingClient,
   request: DeskTradeRequest,
+  quotes?: Pick<AlpacaOptionsClient, "getUnderlyingPrice">,
 ): Promise<TicketPreview> {
-  const [account, positions, open] = await Promise.all([
+  // The latest trade price prices a symbol the account doesn't hold (#5173), exactly as the review
+  // did — without it a first buy bigger than cash passed this re-check. Fail-soft: no price, no
+  // estimate, the same warning the review showed.
+  const [account, positions, open, quotePrice] = await Promise.all([
     client.getAccount(),
     client.getPositions(),
     marketOpen(client),
+    quotes?.getUnderlyingPrice(normalizeSymbol(request.symbol)).catch(() => undefined),
   ]);
   return previewOrder(
     {
@@ -93,6 +99,7 @@ async function reviewLive(
       tradingEnabled: true,
       isSelf: true,
       ...(open !== undefined ? { marketOpen: open } : {}),
+      ...(quotePrice !== undefined ? { quotePrice } : {}),
     },
   );
 }
@@ -103,7 +110,9 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
     if (!("participant" in access)) {
       return access;
     }
-    const reviewed = await readReview(() => reviewLive(access.client, request));
+    const reviewed = await readReview(() =>
+      reviewLive(access.client, request, access.optionsClient),
+    );
     if ("refusals" in reviewed) {
       return { ok: false, refusals: reviewed.refusals };
     }
