@@ -54,6 +54,17 @@ describe("archive-audit — the done-check as a table", () => {
     expect(out).toContain(evidence);
   });
 
+  it("names the safe heal for a healable row, then re-run", () => {
+    const { out } = run({ ...CLEAN, followups: [{ what: "ask Eric", home: "" }] });
+    expect(out).toMatch(/HEAL: Every follow-up has a home.*issue comment.*then re-run/);
+  });
+
+  it("never offers a heal for an open PR — it waits instead", () => {
+    const { out } = run({ ...CLEAN, prs: [{ number: 7, state: "open" }] });
+    expect(out).toContain("WAIT: Every PR it opened is merged or closed");
+    expect(out).not.toContain("HEAL:");
+  });
+
   it("passes a check with nothing to check and says so, rather than skipping the row", () => {
     const { out, code } = run({ git: {} });
     expect(code).toBe(0);

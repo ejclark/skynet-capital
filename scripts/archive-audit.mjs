@@ -9,6 +9,13 @@
 // carries the table: all green → the question is a formality; any red → no question, the session
 // stays open (that clause of the rule is unchanged).
 //
+// Self-healing (Eric, same day: "Self healing and improving needs to be part of the process"): a
+// failing row carries its `heal` — the safe, reversible action the session takes itself before
+// re-running the audit (push stray work, link a follow-up, archive a finished child, cancel a
+// check-in whose job is done). A row with no heal (an open PR, a child still working) is never
+// forced green; it keeps the session open. Every heal is a slip caught late, so the session reports
+// the heals it took, and one already banked in docs/LESSONS.md goes to /retro for a prevention.
+//
 // Why a script and not an agent: every check is a read (a PR's state, a scheduled task's state, a
 // child session's state, a link that exists), not a judgment — the /charter bounded-trigger test.
 //
@@ -37,12 +44,14 @@ export function audit({ prs = [], children = [], checkins = [], followups = [], 
   rows.push({
     check: "Every PR it opened is merged or closed",
     ok: openPrs.length === 0,
+    heal: null, // an open PR is work, not a slip: drive it to merged, then re-run
     detail: prs.length ? prs.map((p) => `#${p.number} ${p.state}`).join(", ") : "opened none",
   });
   const live = children.filter((c) => c.status !== ARCHIVED);
   rows.push({
     check: "Every session it spawned is archived",
     ok: live.length === 0,
+    heal: "archive each child whose PRs are merged or closed and whose leftovers have a home",
     detail: children.length
       ? live.length
         ? `still open: ${live.map((c) => c.id).join(", ")}`
@@ -53,12 +62,14 @@ export function audit({ prs = [], children = [], checkins = [], followups = [], 
   rows.push({
     check: "No scheduled check-in or PR watch is pending",
     ok: pending.length === 0,
+    heal: "delete each check-in whose job is done; keep one that still guards open work",
     detail: pending.length ? `pending: ${pending.map((t) => t.id).join(", ")}` : "none pending",
   });
   const homeless = followups.filter((f) => !/^https:\/\//.test(String(f.home ?? "")));
   rows.push({
     check: "Every follow-up has a home outside the chat",
     ok: homeless.length === 0,
+    heal: "post each as an issue comment (or docs/IDEAS.md line) and put its link in the manifest",
     detail: followups.length
       ? homeless.length
         ? `no home: ${homeless.map((f) => f.what).join("; ")}`
@@ -69,11 +80,12 @@ export function audit({ prs = [], children = [], checkins = [], followups = [], 
   rows.push({
     check: "No uncommitted or unpushed work in the checkout",
     ok: !dirty,
+    heal: "commit and ship it with /ship (or discard it if it was scratch)",
     detail: dirty
       ? `${git.uncommitted ? "uncommitted changes" : ""}${git.uncommitted && git.unpushed ? ", " : ""}${git.unpushed ? `${git.unpushed} unpushed commit(s)` : ""}`
       : "clean",
   });
-  return { ok: rows.every((r) => r.ok), rows };
+  return { ok: rows.every((r) => r.ok), rows, heals: rows.filter((r) => !r.ok && r.heal) };
 }
 
 /** The table the ask carries, then one verdict line. */
@@ -87,6 +99,12 @@ export function render({ ok, rows }) {
       ? `ARCHIVE: yes — all ${rows.length} checks pass`
       : `ARCHIVE: no — ${failed} check(s) fail; keep the session open`,
   );
+  for (const r of rows.filter((x) => !x.ok))
+    lines.push(
+      r.heal
+        ? `HEAL: ${r.check} → ${r.heal}, then re-run`
+        : `WAIT: ${r.check} — not healable; the session stays open`,
+    );
   return lines.join("\n");
 }
 
@@ -100,6 +118,9 @@ function prState(number) {
 }
 
 function gitState() {
+  // Fetch first: a cached ref can be stale — on 2026-10-18 a deleted, already-merged branch's ref
+  // read as "93 unpushed commits" (docs/LESSONS.md, 2026-09-04: fetch before trusting a ref).
+  sh("git", ["fetch", "--quiet", "--prune", "origin"]);
   const uncommitted = sh("git", ["status", "--porcelain"]).length > 0;
   let unpushed = 0;
   try {
