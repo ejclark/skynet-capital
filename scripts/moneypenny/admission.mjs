@@ -86,6 +86,32 @@ export function isFreshPlan(issue) {
 }
 
 /**
+ * DOES THIS STARTED PLAN HOLD ONE OF THE CAP'S SEATS? Only while a lane could pull its next work
+ * (2026-10-18 loop census). The cap's decision is unchanged — "finish one before starting a new
+ * plan", `startedPlanCap` 4 — but it counted every Waiting plan, and 9 of the 10 Waiting that day
+ * had nothing any lane could pull: their open sub-issues were unready sub-plans or unlabelled
+ * stories, or (#3959) every sub-issue was closed. Nothing could finish them, so every fresh plan
+ * was refused, a P1 among them — and #5494 held a seat against its own sub-plan #5482. A plan
+ * nobody can work is waiting on someone to ready its remainder, not on a builder.
+ *
+ * Pullable = the plan carries `ready` itself (its next slice is the plan lane's), or one of its
+ * open sub-issues carries `ready` and is not itself a plan. A row `readOpenPlans` could not enrich
+ * with its sub-issues (`openSubIssues` absent) keeps its seat — the old count, never a looser one.
+ */
+export function holdsCapSeat(plan) {
+  const subs = plan?.openSubIssues;
+  if (!Array.isArray(subs)) return true;
+  if (hasLabel(plan, LABELS.ready.name)) return true;
+  return subs.some((s) => hasLabel(s, LABELS.ready.name) && !hasLabel(s, LABELS.plan.name));
+}
+
+/** The parent issue's number from a REST row's `parent_issue_url`, or null. */
+export function parentNumberOf(issue) {
+  const m = /\/issues\/(\d+)$/.exec(String(issue?.parent_issue_url ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
  * The open plans the board shows in **Waiting** — the same `statusForIssue` the board's columns
  * come from, so the cap and the column a human reads never disagree (the in-flight cap's rule:
  * `normal.inFlightCap` 3 is the board's own WIP limit). A blocked plan reads Blocked, not
@@ -93,7 +119,7 @@ export function isFreshPlan(issue) {
  */
 export function waitingPlans(openPlans = []) {
   return (openPlans ?? []).filter((p) => {
-    if (!p) return false;
+    if (!(p && holdsCapSeat(p))) return false;
     const labels = labelNames(p.labels);
     const column = statusForIssue({
       state: String(p.state ?? "open").toLowerCase(),
@@ -128,7 +154,17 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
     return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
   }
   const planCap = mode?.caps?.startedPlanCap;
-  if (Array.isArray(waiting) && Number.isInteger(planCap) && !fastTrack && isFreshPlan(issue)) {
+  // A fresh plan whose parent holds a seat IS that parent's remaining work — refusing it refuses
+  // the very finishing the cap asks for (#5482 under #5494, 2026-10-18).
+  const parent = parentNumberOf(issue);
+  const finishing = parent !== null && (waiting ?? []).some((w) => w?.number === parent);
+  if (
+    Array.isArray(waiting) &&
+    Number.isInteger(planCap) &&
+    !fastTrack &&
+    !finishing &&
+    isFreshPlan(issue)
+  ) {
     const idle = waiting.filter((i) => i && i.number !== issue?.number);
     if (idle.length >= planCap) {
       return {
@@ -253,6 +289,7 @@ export function readOpenIssues(label, exec = sh) {
       labels: r.labels ?? [],
       createdAt: r.created_at,
       issue_dependencies_summary: r.issue_dependencies_summary, // the pull rule's blocker count
+      parent_issue_url: r.parent_issue_url, // the cap's "finishing a started plan" exemption
       sub_issues_summary: r.sub_issues_summary, // the started-plan cap's "has it started?"
       user: r.user ? { login: r.user.login } : undefined, // the Blocked rule's callout check
     }));
@@ -274,8 +311,32 @@ export function readOpenPlans(readAll = ghRestAll) {
       labels: r.labels ?? [],
       createdAt: r.created_at,
       sub_issues_summary: r.sub_issues_summary,
+      parent_issue_url: r.parent_issue_url,
       user: r.user ? { login: r.user.login } : undefined,
-    }));
+    }))
+    .map((plan) => withOpenSubIssues(plan, readAll));
+}
+
+/**
+ * Attach a started plan's open sub-issues (number + labels) — what `holdsCapSeat` reads. One REST
+ * read per started plan with open sub-issues (about ten), none for the rest; a started plan with
+ * no open sub-issue gets `[]` for free. A failed read leaves the row un-enriched, which keeps its
+ * seat: the cap never loosens on a read it could not make.
+ */
+function withOpenSubIssues(plan, readAll) {
+  const subIssues = subIssueCounts(plan);
+  if (!isStartedPlan({ labels: labelNames(plan.labels), subIssues })) return plan;
+  if (subIssues.total - subIssues.completed <= 0) return { ...plan, openSubIssues: [] };
+  try {
+    const rows = readAll(`issues/${plan.number}/sub_issues`);
+    const open = rows.filter((r) => r && String(r.state ?? "open").toLowerCase() === "open");
+    return {
+      ...plan,
+      openSubIssues: open.map((r) => ({ number: r.number, labels: r.labels ?? [] })),
+    };
+  } catch {
+    return plan;
+  }
 }
 
 /**

@@ -51,6 +51,17 @@ file states intent; Claude derives execution from the frameworks above.
 **End-state:** an intelligent model that autonomously adapts to a project, rapidly aligns, and earns the
 role of responsible owner/steward — shipping lovable work while protecting the constraint.
 
+**The orchestration north star — systems that improve, learn and heal themselves** (Eric,
+2026-10-18: "My intent is to increase agentic orchestration process capable of iteratively driving
+self improvement, self learning, self healing systems... identifies process gaps, friction that
+autonomously resolves/enhances"; and "we should be looking for ways to automate away Manual checks;
+that's the only way to scale"). Every exercise — an audit, a study, a scenario run, a retro — is also
+a probe of the system that ran it, and ends by naming the stage of a loop (sense · decide · act ·
+verify · remember) a person still had to do. A recurring manual check is the first thing to
+automate; an act is automated only behind a mechanical verify; and loops get closed before actors
+get added (`/charter`). The lens and the first census: [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md)
+→ *The loop census*.
+
 ## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
 - **Anything short of lovable is inadequate.** Hold a high bar; find the version worth showing off, not
