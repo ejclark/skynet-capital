@@ -381,10 +381,10 @@ export class LiveCycleRunner {
   }
 
   /** A lot this host may sell today: bought for an earlier session, on this account, with what it
-   *  filled confirmed (never a buy still working). */
+   *  filled confirmed (never a buy still working) and no sale of it still open (#4787). */
   private isDue(lot: ScoutLot, today: string, scout: BetaScoutDeps): boolean {
     return (
-      !lot.workingOrderId &&
+      !(lot.workingOrderId || lot.sellingOrderId) &&
       lot.day < today &&
       (!(lot.host && scout.hostId) || lot.host === scout.hostId)
     );
@@ -404,7 +404,7 @@ export class LiveCycleRunner {
     }
   }
 
-  /** Each working lot turned into what its order filled, or dropped when it filled nothing. */
+  /** Each unfinished lot settled: a buy to what it filled, a sale released for what it sold. */
   private settleWorkingLots(scout: BetaScoutDeps): void {
     const settled = settleLots(this.scoutLots, scout.settlementOf);
     if (!settled.changed) return;
