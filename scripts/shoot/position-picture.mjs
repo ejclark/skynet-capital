@@ -5,6 +5,8 @@
 // frame proves the curation; the 1280 frame is the same opened guidance under its desk row.
 // Sauron's book from the round's frames (2026-10-08): NVDA 130 sh, CRWV 55 sh, one sold CRWV $80
 // put to Nov 6 (collected $255, buy-back $550, breakeven $77.45, CRWV $82.60, 75% IV). Paper.
+// Slice 3 adds two phone frames: Buy back's ticket in the row (1 of 1 contract, $5.50 limit at the
+// mid of $5.30 / $5.70, good for today) and the recap modal the review opens.
 // Usage: npm run build --prefix app && tsx scripts/shoot/position-picture.mjs [outdir]
 
 import { profileStubs } from "./profile-fixture.mjs";
@@ -172,6 +174,7 @@ await page.route("**/api/trade/chain?*", (route) =>
         strike: Number(strike),
         occSymbol: `CRWV261106P${String(Number(strike) * 1000).padStart(8, "0")}`,
         openInterest,
+        ...(strike === "80" ? { bid: 5.3, ask: 5.7 } : {}),
       })),
     },
   }),
@@ -213,5 +216,43 @@ await page
 await page.evaluate(() => window.scrollBy(0, -140));
 await page.waitForTimeout(150);
 await shoot("position-picture-1280");
+
+// --- ACT IN THE ROW (slice 3), phone: the ticket, then the recap the review opens ---
+await page.route("**/api/trade/option/review", (route) => {
+  const draft = route.request().postDataJSON();
+  return route.fulfill({
+    json: {
+      preview: {
+        code: "close",
+        underlying: "CRWV",
+        side: "buy",
+        positionIntent: "buy_to_close",
+        contracts: draft.contracts,
+        orderType: "limit",
+        limitPrice: draft.limitPrice,
+        timeInForce: draft.timeInForce,
+        ok: true,
+        estNotional: draft.limitPrice * 100 * draft.contracts,
+        refusals: [],
+        warnings: [],
+      },
+    },
+  });
+});
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await call.waitFor();
+await call.click();
+await page.locator(".pos-cards .pp").first().waitFor();
+await page.locator(".pos-cards .pos-act-btn", { hasText: "Buy back" }).first().click();
+const ticket = page.locator(".pos-cards .pos-tkt").first();
+await ticket.locator("input[value='5.50']").waitFor();
+await ticket.evaluate((el) => el.scrollIntoView({ block: "center" }));
+await page.waitForTimeout(150);
+await shoot("position-act-390");
+await ticket.getByRole("button", { name: "Review buy-back" }).click();
+await page.locator("dialog.pos-recap[open]").waitFor();
+await page.waitForTimeout(200);
+await shoot("position-recap-390");
 
 await close();
