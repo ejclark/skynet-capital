@@ -150,9 +150,14 @@ export function SauronCard({
   // No WebGL on a phone (#3977) until a real-device recheck: the still Eye in the brand slot is the
   // tower's presence there (`brand-eye.tsx`), and this card is the league under its mist.
   const phone = usePhoneWidth();
+  // On a phone nothing of the tower's sits above the card, so the shade has no art to rise over:
+  // `--bare` drops its pull, or its floor would paint over the controls above it (#4976).
   if (under || phone)
     return (
-      <section className="char-card char-card--under" aria-label="The league">
+      <section
+        className={`char-card char-card--under${under ? "" : " char-card--bare"}`}
+        aria-label="The league"
+      >
         <div className="char-blend">
           <Shade />
           <div className="char-body">
