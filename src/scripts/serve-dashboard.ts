@@ -71,6 +71,13 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
+  // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
+  // week label from the server's own `new Date()`, so every baseline carrying it changed on
+  // Mondays. playwright.config.ts passes its FIXED_CLOCK here. Offline only — a server holding
+  // real accounts never reads a frozen clock, whatever its environment says.
+  const fixedNowMs =
+    dataSource.mode === "offline" ? Date.parse(process.env.SKYNET_FIXED_NOW ?? "") : Number.NaN;
+  const councilClock = Number.isNaN(fixedNowMs) ? {} : { now: () => new Date(fixedNowMs) };
   // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
   // run marker for this one (#4618). The gauge and any incident start once we are listening.
   const telemetry = bootTelemetry(process.env, dataSource.mode);
@@ -380,6 +387,7 @@ async function main(): Promise<void> {
     // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {
+      ...councilClock,
       load: () => council.load(),
       submit: (week, memberId, text, at, playbookId) => {
         council.submit(week, memberId, {
@@ -395,6 +403,7 @@ async function main(): Promise<void> {
     // Replies under each weekly Council line (#5097): the app's own store, reading the Council's
     // lines so a reply only hangs on one that is up — no GitHub, no companion in reach.
     councilReplies: {
+      ...councilClock,
       load: () => councilReplies.load(),
       add: (week, lineId, reply) => {
         councilReplies.add(week, lineId, reply);
