@@ -315,9 +315,7 @@ export function PositionPage({
     queryKey: ["desk-activity", deskId, { symbol: stock }],
     queryFn: () => fetchDeskActivity(deskId, { symbol: stock }),
   });
-  const fills = activity.data?.available
-    ? positionFills(activity.data.activity, position.symbol)
-    : [];
+  const fills = activity.data?.available ? positionFills(activity.data.activity, position) : [];
   const waysTitle = `${ways.length === 3 ? "Three" : ways.length === 2 ? "Two" : "The"} ways to play it`;
   const heads: Record<(typeof SECTIONS)[number], string> = {
     picture: "Picture",

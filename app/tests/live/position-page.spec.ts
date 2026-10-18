@@ -176,9 +176,10 @@ describe("the full page's ways to play it", () => {
 });
 
 describe("the full page's fills", () => {
-  it("keeps this contract's fills and a spread's leg on it, and drops what never filled", () => {
+  it("keeps the fills of the position held now, a spread's leg among them, newest first", () => {
+    const TWO = { ...PUT, quantity: "-2" };
     const events = [
-      fill({ orderId: "o1" }),
+      fill({ orderId: "o1", at: "2026-10-08T14:31:00.000Z" }),
       fill({ orderId: "o2", filled: 0, status: "canceled" }),
       fill({ orderId: "o3", symbol: "CRWV", display: "CRWV", side: "buy", quantity: 55 }),
       fill({
@@ -190,9 +191,37 @@ describe("the full page's fills", () => {
           { ...fill({ orderId: "o4" }), symbol: "CRWV261106P00075000", side: "buy" },
         ],
       }),
-      fill({ orderId: "o5", lifecycle: "OPEXP", filled: 0 }),
     ];
-    expect(positionFills(events, PUT.symbol).map((f) => f.orderId)).toEqual(["o1", "o4", "o5"]);
+    expect(positionFills(events, TWO).map((f) => f.orderId)).toEqual(["o1", "o4"]);
+  });
+
+  it("stops where the holding was last flat: an earlier, closed position is not this one", () => {
+    // Sold one in August, bought it back in September, sold one again in October.
+    const events = [
+      fill({ orderId: "oct-sell", at: "2026-10-08T14:31:00.000Z" }),
+      fill({ orderId: "sep-buyback", side: "buy", at: "2026-09-15T14:00:00.000Z" }),
+      fill({ orderId: "aug-sell", at: "2026-08-20T14:00:00.000Z" }),
+    ];
+    expect(positionFills(events, PUT).map((f) => f.orderId)).toEqual(["oct-sell"]);
+  });
+
+  it("stops at an expiry or assignment, which ended an earlier position", () => {
+    const events = [
+      fill({ orderId: "new-sell" }),
+      fill({ orderId: "expired", lifecycle: "OPEXP", filled: 1, side: "buy" }),
+      fill({ orderId: "old-sell" }),
+    ];
+    const ONE_MORE = { ...PUT, quantity: "-2" };
+    expect(positionFills(events, ONE_MORE).map((f) => f.orderId)).toEqual(["new-sell"]);
+  });
+
+  it("shows what the window holds when it ends before the walk reaches flat", () => {
+    const TEN = { ...NVDA, quantity: "130" };
+    const events = [
+      fill({ orderId: "b1", symbol: "NVDA", side: "buy", quantity: 30, filled: 30 }),
+      fill({ orderId: "b2", symbol: "NVDA", side: "buy", quantity: 50, filled: 50 }),
+    ];
+    expect(positionFills(events, TEN).map((f) => f.orderId)).toEqual(["b1", "b2"]);
   });
 });
 

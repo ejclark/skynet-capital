@@ -170,19 +170,30 @@ export function waysToPlay(
 const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 /**
- * This contract's (or these shares') fills, newest first, out of the stock's narrowed activity:
- * an order on the symbol itself, or the leg of a spread that holds it. Only what filled, or what the
- * broker reported happening to it (an expiry, an assignment) — an order that never filled made no
- * part of this position.
+ * The fills that make up the position held NOW, newest first, out of the stock's narrowed activity:
+ * an order on the symbol itself, or the leg of a spread that holds it. Walking back from today's
+ * holding, each fill is undone (a buy adds what it filled, a sell takes it away) until the holding
+ * was flat: the fill that took it off flat opened this position, and anything older belonged to an
+ * earlier one on the same symbol, already closed. An expiry or assignment report ends a position,
+ * so meeting one on the walk back stops it too. An order that never filled made no part of it. When
+ * the read's window ends before the walk reaches flat, what it holds is what there is to show.
  */
 export function positionFills(
   events: readonly DeskActivityEvent[],
-  symbol: string,
+  position: Pick<DeskPosition, "symbol" | "quantity">,
 ): DeskActivityLine[] {
+  let held = parseQuantity(position.quantity);
+  if (!Number.isFinite(held) || held === 0) return [];
   const out: DeskActivityLine[] = [];
   for (const e of events) {
-    const line = e.symbol === symbol ? e : e.legs?.find((l) => l.symbol === symbol);
-    if (line && (line.filled > 0 || line.lifecycle)) out.push(line);
+    const line =
+      e.symbol === position.symbol ? e : e.legs?.find((l) => l.symbol === position.symbol);
+    if (!line) continue;
+    if (line.lifecycle) break;
+    if (line.filled <= 0) continue;
+    out.push(line);
+    held -= line.side === "buy" ? line.filled : -line.filled;
+    if (Math.abs(held) < 1e-9) break;
   }
   return out;
 }
