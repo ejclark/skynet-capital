@@ -1,7 +1,7 @@
 # CRWV on the premium wheel — the premium is not rich, it is cheap
 
 **Kind:** playbook fit · **Date:** 2026-10-02 · **Symbol:** CRWV · **Impact:** high
-**Last assessed:** 2026-10-18 (call 4 re-run, #4819)
+**Last assessed:** 2026-10-18 (call 4 re-run, #4819; call 1's 10-16 re-run recorded, #5718)
 
 **Question (#4469 slice 1, with [#4460](https://github.com/ejclark/skynet-capital/issues/4460)
 slice 1):** should CRWV go on a premium-selling playbook (the wheel), and if so on what settings?
@@ -37,6 +37,22 @@ which is the fix's own check. **No symbol is named "first" on this gate until it
 print-clean run.** AMZN's 86th-percentile "fits" was the report's premium. Its re-run is on or
 after **2026-11-02**, and if it still reads "fits" then, the contamination was real but not
 decisive.
+
+**Call 1, re-run 2026-10-16 — cheap to fair, still stand aside ([#5482](https://github.com/ejclark/skynet-capital/issues/5482)).**
+Same instrument on the 10-16 14:13 chain, after CRWV's slide into the $60s. The 10-02 run below is
+unchanged; this row supersedes its numbers wherever they are cited.
+
+| | 2026-10-02 | 2026-10-16 |
+|---|---|---|
+| `iv30` | 69.9% | **93.2%** |
+| where it sits in CRWV's forward-30-day realized | 6th percentile | **63rd percentile** |
+| paid over the mean outcome | −24.3 vol points | **−0.6 vol points** |
+| Δ0.20 put, priced vs delivered assignment | 19.4% vs 33.3% | **20.1% vs 24.8%** |
+
+Fair, not rich: one half of call 1's flip is met (≥ 50th percentile), the other is not (priced odds
+still under the historical), and the run is before 11-13, so the stand-aside holds. The 63rd is an
+`iv30` rank, and CRWV reports ~11-09, inside those 30 days — by call 4's fix it carries print premium
+no wheel leg can sell. Source: `src/playbooks/conviction-studies.json`, claim 1.
 
 **Headline.** CRWV looks like a premium-selling name and is not one. It has every surface feature
 the wheel wants — a 70-vol quote, a deep chain, spreads that cost 3–5% of the premium — and fails

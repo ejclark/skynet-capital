@@ -72,10 +72,11 @@ describe("the seeded AI-dip conviction", () => {
     }
   });
 
-  it("carries the call sheet's claims: 14 rows (four added 2026-10-18), 2 forward tests, 6 untestable", () => {
+  it("carries the call sheet's claims: 14 rows (four added 2026-10-18), 3 forward tests, 6 untestable", () => {
     const { claims } = AI_DIP_2026_10;
     expect(claims).toHaveLength(14);
-    expect(claims.filter((c) => c.bucket === "forward")).toHaveLength(2);
+    // Claim 9 moved to forward-only on 2026-10-18 (#5718): its implied move was never measured here.
+    expect(claims.filter((c) => c.bucket === "forward")).toHaveLength(3);
     expect(claims.filter((c) => c.bucket === "untestable")).toHaveLength(6);
     expect(claims.filter((c) => c.bucket === "untestable").every((c) => !c.scoreBy)).toBe(true);
   });

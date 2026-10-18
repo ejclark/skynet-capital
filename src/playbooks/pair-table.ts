@@ -291,8 +291,9 @@ const PAIRS: readonly Pair[] = [
       status: "conviction",
       call: "Runs as its owner's conviction against the study's stand-aside (#4642): cash-secured puts 14 to 45 days out at about 0.15 delta, as many as the budget secures, then covered calls once assigned.",
       confidence: "medium",
-      number: "implied volatility at the 6th percentile of what CRWV went on to move",
-      verdictOn: "2026-10-02",
+      number:
+        "implied volatility at the 63rd percentile of what CRWV went on to move (re-run 2026-10-16; 6th on 10-02)",
+      verdictOn: "2026-10-16",
       checkOn: "2027-01-29",
       study: "docs/research/crwv-premium-fit.md",
       past: {
