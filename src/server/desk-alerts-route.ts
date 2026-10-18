@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { type Alert, alertFingerprint, sortAlerts } from "../alerts/alert.js";
+import { botAlerts } from "../alerts/bot-watch.js";
 import { orderAlerts } from "../alerts/order-watch.js";
 import { positionAlerts } from "../alerts/position-watch.js";
 import { forVisibility } from "../observatory/activity-event.js";
@@ -18,9 +19,11 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  *   POST /api/trade/alerts/dismiss { participantId, fingerprint }
  *                                           → `{ ok:true }` once recorded, else a refusal.
  *
- * Two pure producers, re-derived per read: `position-watch.ts` over the same option-positions
- * view the card shows, and `order-watch.ts` over the account's own activity ledger (slice 2 —
- * fills, cancels, rejections, replaces as rows instead of vanished toasts). No second feed, no
+ * Three pure producers, re-derived per read: `position-watch.ts` over the same option-positions
+ * view the card shows, `order-watch.ts` over the account's own activity ledger (slice 2 —
+ * fills, cancels, rejections, replaces as rows instead of vanished toasts), and, on a bot's own
+ * account, `bot-watch.ts` over the same decision records its heartbeat card reads (a stalled or
+ * breaker-halted loop during market hours, the 2026-10-18 runtime census). No second feed, no
  * state to drift: a
  * dismissal is the ONE durable fact, keyed by `alertFingerprint` (source · priority · symbol ·
  * dedupeKey) so a re-derived alert with a fresh id stays dismissed and an escalated one re-shows.
@@ -38,13 +41,24 @@ const OWNER_TIERS = forVisibility(["public", "owner-only"]);
 export type DeskAlert = Alert & { readonly fingerprint: string };
 
 /** Everything the derivation needs. Narrowed so the delivery sweep (#3407 P4 slice 3) derives a
- *  member's alerts through THIS function rather than a second copy of the same two producers. */
+ *  member's alerts through THIS function rather than a second copy of the same producers. */
 export type DeskAlertsDeps = Pick<
   DashboardServerConfig,
-  "hub" | "optionsClientFor" | "now" | "activityLog" | "alertDismissals"
+  "hub" | "optionsClientFor" | "now" | "activityLog" | "alertDismissals" | "readDecisions"
 >;
 
-/** One member's standing alerts, from both producers, minus what they dismissed — the single
+/** A bot's newest pass is all the watch reads, so one record is asked for. A store that ignores
+ *  the page (the JSONL fallback) hands back more, and the watch takes the newest itself. A failed
+ *  read leaves the bot's alerts out rather than failing the strip's other two producers. */
+async function botRecords(id: string, config: DeskAlertsDeps) {
+  try {
+    return (await config.readDecisions?.(id, { limit: 1 })) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** One member's standing alerts, from every producer, minus what they dismissed — the single
  *  derivation the strip's route and the delivery sweep share. */
 export async function deskAlertsFor(
   id: string,
@@ -61,17 +75,26 @@ export async function deskAlertsFor(
 > {
   const positions = await loadOptionPositions(id, config);
   if (positions.kind === "missing") return { kind: "missing" };
-  // Two producers, one list: the positions' standing conditions and the orders' recent lifecycle
-  // (#3407 P4 slice 2). An account with neither source wired says so in words.
+  // Three producers, one list: the positions' standing conditions, the orders' recent lifecycle
+  // (#3407 P4 slice 2) and, on a bot's own account, its decision loop's health. An account with
+  // no source wired says so in words.
   const log = config.activityLog;
-  if (positions.kind === "unlinked" && !log) return { kind: "unavailable", reason: "unlinked" };
+  const desk = config.hub.getState().participants.find((p) => p.id === id);
+  const bot = desk?.kind === "bot" && config.readDecisions ? desk : undefined;
+  if (positions.kind === "unlinked" && !log && !bot) {
+    return { kind: "unavailable", reason: "unlinked" };
+  }
   const now = config.now?.() ?? new Date();
   const rows = positions.kind === "ok" ? positions.view.rows : [];
   const events = log ? (await log.list(id)).filter(OWNER_TIERS) : [];
+  const bots = bot
+    ? [{ botId: id, name: bot.displayName, records: await botRecords(id, config) }]
+    : [];
   const dismissed = new Set(await config.alertDismissals?.loadDismissed(id));
   const alerts = sortAlerts([
     ...positionAlerts(rows, now.getTime()),
     ...orderAlerts(events, now.getTime()),
+    ...botAlerts(bots, now.getTime()),
   ])
     .map((alert) => ({ ...alert, fingerprint: alertFingerprint(alert) }))
     .filter((alert) => !dismissed.has(alert.fingerprint));
