@@ -108,10 +108,11 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       {
         label: "Two switches",
         text:
-          "It buys only while both are on: the forced-pick setting in operations, and this " +
-          "subscription. Switching the setting off stops new picks only — picks it holds are " +
-          "still sold on the next trading day. It runs on one bot, the first one the bots app " +
-          "runs (Sauron today); subscribed on any other bot, it places nothing.",
+          "It buys only while both are on: a forced-pick count above 0, and this subscription. " +
+          "The count is set on the bot's Settings page, or by operations while it is not set " +
+          "there. Setting it to 0 stops new picks only — picks it holds are still sold on the " +
+          "next trading day. It runs on one bot, the first one the bots app runs (Sauron " +
+          "today); subscribed on any other bot, it places nothing.",
       },
       {
         label: "Not subscribed",

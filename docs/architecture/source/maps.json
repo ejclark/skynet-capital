@@ -128,7 +128,7 @@
         "id": "appvol",
         "label": "Observatory volume",
         "technology": "Fly volume skynet_data mounted at /data; JSON files (src/storage/json-file-store.ts), JSONL per-key stores (src/storage/jsonl-store.ts), AES-256-GCM envelopes keyed by SKYNET_STORE_SECRET (src/storage/secure-envelope.ts), one node:sqlite decisions.db",
-        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger, plus activity/events/ \u2014 the unified ActivityEvent bus, which nests under the same pinned var rather than taking one of its own), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, watchlist/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json (each account's subscriptions, plus each account's allocation per strategy under its reserved `$allocations` key; every rewrite keeps the records and keys that build could not read, #4772), authored-plays.json (a member's draft playbooks from R&D \u2192 Playbooks, a sibling of the subscriptions file with no env var of its own, which of them are in their shadow test, #5457), book-health-history.json (each account's findings sampled hourly, 14 days and capped, a sibling of bot-controls.json with no env var, #5493), history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
+        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger, plus activity/events/ \u2014 the unified ActivityEvent bus, which nests under the same pinned var rather than taking one of its own), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, watchlist/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json (each account's subscriptions, plus each account's allocation per strategy under its reserved `$allocations` key; every rewrite keeps the records and keys that build could not read, #4772), authored-plays.json (a member's draft playbooks from R&D \u2192 Playbooks, a sibling of the subscriptions file with no env var of its own, which of them are in their shadow test, #5457), book-health-history.json (each account's findings sampled hourly, 14 days and capped, a sibling of bot-controls.json with no env var, #5493), settings-changes.json (every change to a bot's own settings \u2014 suspend, hardcore build, forced-pick count \u2014 with who proposed it, who approved it, before and after, 200 per account, a sibling of bot-controls.json with no env var, #4535 slice 3b), history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
         "code_roots": [
           "src/storage",
           "src/participants/participant-store.ts",
@@ -138,6 +138,7 @@
           "src/server/authored-play-store.ts",
           "src/server/council-store.ts",
           "src/server/book-health-history-store.ts",
+          "src/server/settings-change-log.ts",
           "src/server/feedback-log.ts",
           "src/server/companion-message-log.ts",
           "src/server/order-audit-log.ts",
@@ -438,7 +439,7 @@
           {
             "id": "stores",
             "label": "Durable stores",
-            "path": "src/storage/json-file-store.ts, jsonl-store.ts, secure-envelope.ts, parse-guards.ts, in-memory-keyed-store.ts; src/participants/participant-store.ts; src/server/auth/allowlist-store.ts; src/server/bot-controls-store.ts, subscription-store.ts, council-store.ts, owner-link-store.ts, progression-store.ts, feedback-log.ts, companion-message-log.ts, ladder-progress-log.ts, order-audit-log.ts; src/observatory/activity-store.ts, history-store.ts; src/adapters/jsonl-alert-dismissals.ts, jsonl-watchlist-store.ts; src/autonomous/jsonl-insight-store.ts, decision-db.ts (app-side); src/runtime/volume-guard.ts",
+            "path": "src/storage/json-file-store.ts, jsonl-store.ts, secure-envelope.ts, parse-guards.ts, in-memory-keyed-store.ts; src/participants/participant-store.ts; src/server/auth/allowlist-store.ts; src/server/bot-controls-store.ts, settings-change-log.ts, subscription-store.ts, council-store.ts, owner-link-store.ts, progression-store.ts, feedback-log.ts, companion-message-log.ts, ladder-progress-log.ts, order-audit-log.ts; src/observatory/activity-store.ts, history-store.ts; src/adapters/jsonl-alert-dismissals.ts, jsonl-watchlist-store.ts; src/autonomous/jsonl-insight-store.ts, decision-db.ts (app-side); src/runtime/volume-guard.ts",
             "responsibility": "File-backed stores under /data on the skynet_data volume; credentials sealed with AES-256-GCM; every path pinned in fly.toml and gated by tests/arch/volume-persistence.spec.ts."
           }
         ]

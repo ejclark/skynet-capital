@@ -206,6 +206,7 @@ async function main(): Promise<void> {
   const {
     allowlist,
     botControls,
+    settingsChanges,
     council,
     councilReplies,
     filingComments,
@@ -350,6 +351,7 @@ async function main(): Promise<void> {
       ? {
           controls: {
             store: botControls,
+            changes: settingsChanges,
             isOwner: (email: string) => owners.has(email),
             // Roster restricted to KNOWN personas: a self-service /add can mint a kind:"bot"
             // row with any id, and a planted row must never appear on the switchboard as a
