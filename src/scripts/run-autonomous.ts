@@ -72,6 +72,7 @@ import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { BOTS_UNIVERSE as UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { SYMBOL_FACTS } from "../domain/symbol-facts.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
@@ -232,13 +233,14 @@ async function runLive(): Promise<void> {
   const dataCreds = bots[0]?.credentials;
   if (!dataCreds) process.exit(1);
   dataCredsPersonaId = bots[0]?.persona.id;
-  // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
-  // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
-  // and from every eval — see TradeDiscipline in engine/guards.ts for why leaking it into the
-  // eval path would silently re-score readiness.
+  // The live path (and ONLY the live path) runs the S2/E1 trade discipline: no new entries in a
+  // symbol's protected window around its print (the same window its research summary shows,
+  // widened by its facts file), defer non-urgent entries past the open. Deliberately absent from
+  // the offline replay and from every eval — see TradeDiscipline in engine/guards.ts for why
+  // leaking it into the eval path would silently re-score readiness.
   const risk = {
     maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03"),
-    discipline: { calendar: UPCOMING_PRINTS },
+    discipline: { calendar: UPCOMING_PRINTS, facts: SYMBOL_FACTS },
   };
   const playbookRoster = enabledPlaybooks(process.env);
   announceRoster(playbookRoster);

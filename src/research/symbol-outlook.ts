@@ -6,10 +6,10 @@ import {
   printSpan,
   UPCOMING_PRINTS,
 } from "../domain/earnings-calendar.js";
-import { nextSession } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import { allEvents } from "../domain/market-events.js";
 import type { MarketEvent } from "../domain/market-events-types.js";
+import { printProtectedWindow } from "../domain/protected-window.js";
 import { SYMBOL_FACTS, type SymbolFacts } from "../domain/symbol-facts.js";
 import { type LedgerRead, readLedger } from "../server/ledger-stance.js";
 import { todayRowOf } from "../server/research-event-calls.js";
@@ -43,12 +43,11 @@ import {
  * come only from a stated line, never from prose. A stated `buy` still reads `wait` inside a
  * protected window (no new entries); hold, trim and sell stand, because exits always run.
  *
- * PROTECTED is the union of the two house-wide print guards, so nothing reading it is looser than
- * the code that already refuses: S2's entry guard (`engine/guards.ts`, no new buy within
- * `entryFlatDays` of the print's first possible day) and the option print blackout
- * (`optionPrintBlackout`, through the session after its last possible day, where an after-close
- * print's reaction lands). A facts file may widen the tail, never narrow it. Strategy timing — S1's
- * dead zone, a run-up's exit day — is not a window here; it stays the playbook's own setting.
+ * PROTECTED is `printProtectedWindow` (`domain/protected-window.ts`), the one window the entry
+ * guard and the playbooks refuse inside too (slice 5): from `entryFlatDays` before the print's
+ * first possible day through the session after its last, where an after-close print's reaction
+ * lands. A facts file may widen the tail, never narrow it. Strategy timing — S1's dead zone, a
+ * run-up's exit day — is not a window here; it stays the playbook's own setting.
  *
  * Paper only, educational: the call is the house's research call, and it sizes nothing.
  */
@@ -91,9 +90,8 @@ const plain = (s: string): string =>
 
 function printWindow(p: EarningsPrint, facts: SymbolFacts | undefined): OutlookWindow {
   const span = printSpan(p);
-  const after = Math.max(1, facts?.printReaction?.sessionsAfter ?? 1);
-  let end = span.end;
-  for (let i = 0; i < after; i += 1) end = nextSession(end);
+  // The same window the entry guard and the playbooks refuse inside (#4807 slice 5).
+  const { start, end, sessionsAfter: after } = printProtectedWindow(p, facts);
   const when =
     p.status === "estimate"
       ? span.start === span.end
@@ -103,7 +101,7 @@ function printWindow(p: EarningsPrint, facts: SymbolFacts | undefined): OutlookW
   const tail = after === 1 ? "the session after" : `${after} sessions after`;
   const fact = facts?.printReaction ? ` ${facts.printReaction.fact}` : "";
   return {
-    start: shiftDays(span.start, -PRINT_WINDOWS.entryFlatDays),
+    start,
     end,
     state: "protected",
     reason:

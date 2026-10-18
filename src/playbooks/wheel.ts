@@ -6,6 +6,8 @@ import {
 import { daysBetween, sessionsBefore } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import { type OptionBook, optionBook } from "../domain/option-book.js";
+import { protectedWindowOn } from "../domain/protected-window.js";
+import { SYMBOL_FACTS } from "../domain/symbol-facts.js";
 import {
   type ListedExpirations,
   type MarketContext,
@@ -180,8 +182,9 @@ export function wheelPhase(book: OptionBook): WheelPhase {
 }
 
 /** The blackout the next sale must clear — or `undefined` when nothing may be sold: no print on
- *  file, today inside the blackout, or no expiry 30+ days out can end before it. An expiry is
- *  always a session, so the latest one that can is the last session before the blackout. */
+ *  file, today inside the symbol's protected window (the summary's ■ Protected, which spans the
+ *  blackout — #4807 slice 5), or no expiry 30+ days out can end before it. An expiry is always a
+ *  session, so the latest one that can is the last session before the blackout. */
 function saleWindow(
   symbol: string,
   asOfIso: string,
@@ -190,8 +193,8 @@ function saleWindow(
 ): PrintBlackout | undefined {
   const blackout = optionPrintBlackout(symbol, asOfIso, calendar);
   if (!blackout) return undefined;
+  if (protectedWindowOn(symbol, asOfIso, calendar, SYMBOL_FACTS.get(symbol))) return undefined;
   const today = marketDayKey(asOfIso);
-  if (today >= blackout.start) return undefined;
   return daysBetween(today, sessionsBefore(blackout.start, 1)) >= minDte ? blackout : undefined;
 }
 
