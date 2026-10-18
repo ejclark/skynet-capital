@@ -257,3 +257,70 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":20.7,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (written 2026-10-18, D+1 — the gate fell 12:00 a.m. ET Saturday 10-17; zero trading sessions
+have elapsed inside it.)**
+
+**Sourcing.** `macro-print`, `symbols: []`, so `earnings-cycle.mjs` / `intraday-edges.mjs` have no
+target; their caches were busted per the standing rule and the analog honoured instead. Every level
+below is a fresh Yahoo daily-bar pull made this session; every Fed fact is the Board's October calendar
+re-fetched today (HTTP 200). Rate odds are not re-pulled: the Polymarket event endpoint returned
+nothing parseable this session, so the last verified odds stay the 10-16 row's (hold 86.5% / +25bp
+12.5%), dated there.
+
+| Series | Last bar | Close | Prior bar |
+|---|---|---|---|
+| `^VIX` | 2026-10-16 | **19.99** | 16.46 (10-15) |
+| `^GSPC` | 2026-10-16 | 7,659.44 (**−1.09%**) | 7,744.06 |
+| `^TNX` (10Y) | 2026-10-16 | 5.10% | 5.09% |
+
+10-17 is a Saturday and 10-18 a Sunday: **no tape exists inside the gate yet**. The 10-16 row's intraday
+reads (VIX ~20.7, S&P −1.2%) settle at these closes; the size dispute it flagged is reconciled.
+
+**Scored: the date leg — SUPPORTED, now unfireable.** The gate began 10-17 and runs to 10-29 as derived
+from the Fed's own worked example (confirmed 08-31); the Board's October calendar, re-fetched today,
+still lists the Oct 27–28 FOMC and the 2:00 p.m. Oct 28 press conference unmoved. Atlanta Fed's blackout
+table, via search, also reads Oct 17–29. Entry stays `confirmed`.
+
+**Scored: the deadline — SUPPORTED.** The last scheduled Fed voices were Warsh's IMF fireside and Bowman's
+"Supervision and Regulation" remarks, both the night of 10-15; the Board calendar lists nothing from
+10-16 onward but the FOMC itself. Warsh declined to signal ("I don't prejudge meetings"). "Finish
+Fed-dependent work by the 10-16 close" was a scheduling rule and held as written.
+
+**Scored: the kill switches.**
+
+- **Date kill — did not fire.** Unfireable from here.
+- **Channel kill — did not fire, scope two calendar days.** No on-record monetary-policy remark by an
+  FOMC participant on or after 10-17 is listed on the Board calendar or surfaced in search. This is
+  clean-so-far, not a closed verdict: the gate runs 11 more days, regional-president appearances live
+  on district sites rather than the Board calendar, and the Bloomberg-style non-public conduit named
+  in the September sibling's close-out is invisible by construction.
+- **Shape kill — watched, not fired.** The corridor 10-19 → 10-26 holds 26 tracked items on this
+  session's calendar read; none is a top-tier print. Highest-weight: `meta-nm-privacy-penalty-ruling-
+  2026-10-20` (high, `estimate`, META-specific, not macro), four medium (20Y bond 10-21, 5Y TIPS and
+  coupon announcement 10-22, 2Y note 10-26) plus AAPL's iPhone Duo launch 10-23. The unattended-data
+  configuration September's rule was built for is still absent.
+- **Branch kill — fired 2026-09-02** (CR signed), earlier ledger. **Relevance kill — fired 2026-10-09
+  and stayed fired** (Oct hike odds 15.5% → 12.5% by 10-16).
+
+**Scored: "do not inherit September's no-short-vol rule" — UNSCORED, not unscoreable.** The call's
+premise (no scheduled top-tier data inside the gate) holds. Whether the corridor then realizes
+calm cannot be read: the first session inside it is Mon 10-19. What the tape does say is that the
+gate opens from a **stressed** start — VIX 19.99, +3.5pt on the day, an AI-financing/chip rout — not the
+quiet one the call was written against (VIX 14.43 on 08-28). The 10-16 stance update already read
+the rule as "no short vol *because of the gate*", not as a view that vol is cheap; nothing here
+changes that. The window's own tape belongs to [`fomc-2026-10-28.md`](fomc-2026-10-28.md), which owns
+10-27 → 10-29.
+
+**Forward tests: none registered, none scored** — no fragment exists for this event and the initial
+research stated why ("finish by 10-16" is a scheduling rule, not a scoreable market prediction, same as
+the September sibling's first posture). Nothing is moved to the kill list.
+
+**Verdict.** The gate began on time and as modelled; the deadline held; the doc's one operative claim —
+the last legal Fed voice was 10-16 — survived. Nothing in this event licenses a trade, and the date is
+`confirmed`; any trading-adjacent reading of the stressed open is estimate-labeled caution only.
+
+**Last assessed:** 2026-10-18
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

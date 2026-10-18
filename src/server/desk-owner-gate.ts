@@ -1,6 +1,7 @@
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
 import type { CheckWeekView } from "../observatory/check-week-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
+import { withoutPlaybookNames } from "../observatory/playbook-name-redaction.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
 import { withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
@@ -20,6 +21,9 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  *
  * The same strips withhold what the broker said about an order's result (#4650): a broker's message
  * can name the account's specifics, so it is the owner's alone wherever a bot's order is read.
+ *
+ * Each strip also redacts the ids out of the free text that rides beside those keys — a reason
+ * reads "S1-NVDA window open …" as built (#4442, `playbook-name-redaction.ts`).
  *
  * Ownership is the rule every other per-account gate uses (`trade-orders-routes.ts`,
  * `desk-events-route.ts`): with no OAuth configured there is no one to withhold from (the local,
@@ -54,11 +58,14 @@ export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldH
   // The roll call is nothing but playbook names, so a non-owner gets none of it — nor the lots it
   // flags as unmanaged, which say which baskets this bot's playbooks do NOT cover (#4777).
   const { rollCall: _rollCall, unmanaged: _unmanaged, week, ...rest } = heartbeat;
-  return {
-    ...rest,
-    playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
-    ...(week ? { week: withoutWeekPlaybookIds(week) } : {}),
-  };
+  return withoutPlaybookNames(
+    {
+      ...rest,
+      playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
+      ...(week ? { week: withoutWeekPlaybookIds(week) } : {}),
+    },
+    heartbeat,
+  );
 }
 
 /** The week's strip and lanes without a name (#5073 slice 2). A lane stays only when it is one of
@@ -81,14 +88,17 @@ function withoutWeekPlaybookIds(week: CheckWeekView): WithheldWeek {
 export function withoutLadderPlaybookIds(
   ladder: readonly SafeguardLadderEntry[],
 ): readonly Omit<SafeguardLadderEntry, "playbookId">[] {
-  return ladder.map(({ playbookId: _withheld, ...entry }) => entry);
+  return withoutPlaybookNames(
+    ladder.map(({ playbookId: _withheld, ...entry }) => entry),
+    ladder,
+  );
 }
 
 type Outcome = DecisionCycleView["outcomes"][number];
 type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
 /** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag and the broker's
- *  words removed — and each refused idea's strategy tag. The tag is a playbook's own slug
+ *  words removed — and each refused idea's strategy tag and play. The tag is a playbook's own slug
  *  (`crwv-wheel-put`), so it names the playbook as plainly as the chip does (#4971). */
 export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
@@ -98,17 +108,22 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
     Outcome,
     "playbook" | "playbookMode" | "strategy" | "brokerReason"
   >[];
-  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy">[];
+  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy" | "playbookId">[];
 })[] {
-  return cycles.map(({ refusedIntents, ...cycle }) => ({
-    ...cycle,
-    outcomes: cycle.outcomes.map(
-      ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
-    ),
-    ...(refusedIntents
-      ? { refusedIntents: refusedIntents.map(({ strategy: _s, ...idea }) => idea) }
-      : {}),
-  }));
+  return withoutPlaybookNames(
+    cycles.map(({ refusedIntents, ...cycle }) => ({
+      ...cycle,
+      outcomes: cycle.outcomes.map(
+        ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
+      ),
+      ...(refusedIntents
+        ? {
+            refusedIntents: refusedIntents.map(({ strategy: _s, playbookId: _p, ...idea }) => idea),
+          }
+        : {}),
+    })),
+    cycles,
+  );
 }
 
 type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning" | "playbookId"> & {
@@ -127,10 +142,13 @@ export function withoutThesisOwnerFields(
   thesis: ThesisView,
 ): Omit<ThesisView, "markers" | "play"> & { readonly markers: readonly WithheldMarker[] } {
   const { play: _play, ...rest } = thesis;
-  return {
-    ...rest,
-    markers: thesis.markers.map(({ reasoning, playbookId: _p, ...marker }) =>
-      reasoning ? { ...marker, reasoning: withoutOwnerReasoning(reasoning) } : marker,
-    ),
-  };
+  return withoutPlaybookNames(
+    {
+      ...rest,
+      markers: thesis.markers.map(({ reasoning, playbookId: _p, ...marker }) =>
+        reasoning ? { ...marker, reasoning: withoutOwnerReasoning(reasoning) } : marker,
+      ),
+    },
+    thesis,
+  );
 }
