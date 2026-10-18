@@ -34,6 +34,48 @@ describe("previewOrder — a legal buy", () => {
   });
 });
 
+describe("previewOrder — a first buy, priced from the latest quote (#5173)", () => {
+  it("costs a symbol the account doesn't hold off the quote, with the cash left after", () => {
+    const preview = previewOrder(
+      { symbol: "NVDA", quantity: 10, action: "buy" },
+      context({ quotePrice: 232.1 }),
+    );
+    expect(preview.estPrice).toBe(232.1);
+    expect(preview.estNotional).toBeCloseTo(2_321);
+    expect(preview.estCashAfter).toBeCloseTo(7_679);
+    expect(preview.warnings.join(" ")).not.toContain("No recent price");
+    expect(preview.ok).toBe(true);
+  });
+
+  it("refuses a first buy that costs more than the cash, as it does a held one", () => {
+    const preview = previewOrder(
+      { symbol: "NVDA", quantity: 50, action: "buy" },
+      context({ quotePrice: 232.1 }),
+    );
+    expect(preview.ok).toBe(false);
+    expect(preview.refusals.join(" ")).toContain("more than your available cash");
+  });
+
+  it("keeps a held symbol on its own mark, whatever the quote says", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "buy" },
+      context({ quotePrice: 999 }),
+    );
+    expect(preview.estPrice).toBe(120);
+  });
+
+  it("with no usable quote, keeps the no-price warning and leaves the cost unknown", () => {
+    for (const quotePrice of [undefined, 0, Number.NaN]) {
+      const preview = previewOrder(
+        { symbol: "NVDA", quantity: 10, action: "buy" },
+        context(quotePrice === undefined ? {} : { quotePrice }),
+      );
+      expect(preview.estNotional).toBeUndefined();
+      expect(preview.warnings.join(" ")).toContain("No recent price");
+    }
+  });
+});
+
 describe("previewOrder — refusals block the order", () => {
   it("refuses when the viewer is not the account holder", () => {
     const preview = previewOrder(

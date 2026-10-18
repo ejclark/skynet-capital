@@ -42,7 +42,19 @@ function transport(
   };
 }
 
-function makeService(options: { cash?: string; positions?: unknown; authConfigured?: boolean }) {
+/** A data host that answers the latest-trade read with one price. */
+function priced(price: number): AlpacaTradingTransport {
+  const answer = (): Promise<JsonResponse> =>
+    Promise.resolve({ status: 200, body: { trade: { p: price } } });
+  return { get: answer, post: answer, delete: answer };
+}
+
+function makeService(options: {
+  cash?: string;
+  positions?: unknown;
+  authConfigured?: boolean;
+  quote?: number;
+}) {
   const orders: Array<{ path: string; body: unknown }> = [];
   const audited: unknown[] = [];
   const t = transport(
@@ -55,7 +67,8 @@ function makeService(options: { cash?: string; positions?: unknown; authConfigur
   const desk = resolveDeskTrading({
     findParticipant: (id) => (id === "ann" ? ann : undefined),
     clientFactory: () => new AlpacaTradingClient(t),
-    optionsClientFactory: () => new AlpacaOptionsClient(t),
+    optionsClientFactory: () =>
+      new AlpacaOptionsClient(t, options.quote !== undefined ? priced(options.quote) : undefined),
     authConfigured: options.authConfigured ?? true,
     recordAudit: (entry) => Promise.resolve(void audited.push(entry)),
   });
@@ -106,6 +119,30 @@ describe("resolveDeskTrading", () => {
         "Estimated cost is more than your available cash",
       );
     expect(orders).toHaveLength(0);
+  });
+
+  it("re-checks a first buy against cash at the latest quote — the review's gap closed (#5173)", async () => {
+    const { desk, orders } = makeService({ cash: "1000", quote: 232.1 });
+    const result = await desk.submit(
+      { participantId: "ann", symbol: "NVDA", quantity: 10, action: "buy" },
+      "ann",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.refusals.join(" ")).toContain(
+        "Estimated cost is more than your available cash",
+      );
+    expect(orders).toHaveLength(0);
+  });
+
+  it("submits a first buy the quote says the cash covers", async () => {
+    const { desk, orders } = makeService({ cash: "10000", quote: 232.1 });
+    const result = await desk.submit(
+      { participantId: "ann", symbol: "NVDA", quantity: 10, action: "buy" },
+      "ann",
+    );
+    expect(result.ok).toBe(true);
+    expect(orders).toHaveLength(1);
   });
 
   it("submits a market buy, symbol normalized, day time-in-force", async () => {

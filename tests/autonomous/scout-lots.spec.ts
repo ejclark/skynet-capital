@@ -259,6 +259,99 @@ describe("the forced pick's lots", () => {
     });
   });
 
+  // #4787: a share order the broker answered partly filled and still live, or still working, is
+  // followed to its end — the scout sizes and releases its lots only from what actually filled.
+  describe("an order the broker has not finished", () => {
+    it("a buy partly filled and still live settles its lot to the final fill", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      const partlyLive = async (intent: OrderIntent): Promise<OrderResult> => {
+        if (intent.side === "sell") return acct.broker.submit(intent);
+        await acct.broker.submit({ ...intent, quantity: 20 });
+        return { intent, status: "filled", filledQuantity: 20, orderId: "b-1", open: true };
+      };
+      await acct.runner({ answer: partlyLive, settlementOf }).runCycle(signal(DAY_1));
+      expect(acct.state()?.ownedLots).toEqual([
+        expect.objectContaining({ quantity: 20, workingOrderId: "b-1" }),
+      ]);
+
+      // The other 29 fill at the broker; the settle loop records the order's end.
+      await acct.broker.submit({
+        symbol: "MSFT",
+        side: "buy",
+        quantity: 29,
+        type: "market",
+        reason: "fill",
+      });
+      settled.set("b-1", ended("b-1", 49));
+      await acct.otherBuys(100);
+      await acct.runner({ maxPicks: 0, settlementOf }).runCycle(signal(DAY_2));
+      expect(acct.sells).toEqual(["49 MSFT"]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+    });
+
+    it("a sale partly filled and still live keeps its lot until the sale ends — never sold twice", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      await acct.runner({ settlementOf }).runCycle(signal(DAY_1));
+      await acct.otherBuys(100);
+      const partlySold = async (intent: OrderIntent): Promise<OrderResult> => {
+        if (intent.side === "buy") return acct.broker.submit(intent);
+        await acct.broker.submit({ ...intent, quantity: 20 });
+        return { intent, status: "filled", filledQuantity: 20, orderId: "s-1", open: true };
+      };
+      await acct.runner({ maxPicks: 0, answer: partlySold, settlementOf }).runCycle(signal(DAY_2));
+      expect(acct.state()?.ownedLots).toEqual([
+        expect.objectContaining({ quantity: 49, sellingOrderId: "s-1" }),
+      ]);
+
+      // The broker sells the other 29 and ends the order.
+      await acct.broker.submit({
+        symbol: "MSFT",
+        side: "sell",
+        quantity: 29,
+        type: "market",
+        reason: "fill",
+      });
+      settled.set("s-1", ended("s-1", 49));
+      await acct.runner({ maxPicks: 0, settlementOf }).runCycle(signal(DAY_3));
+      expect(acct.sells).toEqual(["49 MSFT"]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+      expect(acct.state()?.ownedLots).toEqual([]);
+    });
+
+    it("a working sale that ends unfilled makes the lot due again, so the shares are still sold", async () => {
+      const acct = account();
+      const settled = new Map<string, OrderSettlement>();
+      const settlementOf = (id: string) => settled.get(id);
+      await acct.runner({ settlementOf }).runCycle(signal(DAY_1));
+      await acct.otherBuys(100);
+      const queued = (intent: OrderIntent): Promise<OrderResult> =>
+        intent.side === "buy"
+          ? acct.broker.submit(intent)
+          : Promise.resolve({ intent, status: "working", orderId: "s-1" });
+      const scout = acct.runner({ maxPicks: 0, answer: queued, settlementOf });
+      await scout.runCycle(signal(DAY_2));
+      await scout.runCycle(signal(DAY_2_LATER));
+      expect(acct.sells).toEqual(["49 MSFT"]); // not re-offered while the sale is open
+
+      settled.set("s-1", ended("s-1", 0));
+      await acct.runner({ maxPicks: 0, settlementOf }).runCycle(signal(DAY_3));
+      expect(acct.sells).toEqual(["49 MSFT", "49 MSFT"]);
+      expect(await acct.held()).toEqual(["100 MSFT"]);
+    });
+
+    it("a sale that partly filled before it ended leaves only the unsold part due", () => {
+      const lots = [{ symbol: "MSFT", quantity: 49, day: "2026-07-24", sellingOrderId: "s-1" }];
+      expect(settleLots(lots, (id) => (id === "s-1" ? ended("s-1", 20) : undefined))).toEqual({
+        lots: [{ symbol: "MSFT", quantity: 29, day: "2026-07-24" }],
+        changed: true,
+      });
+    });
+  });
+
   it("drops a lot the account no longer holds — sold by something else — and sells nothing for it", async () => {
     const acct = account();
     const scout = acct.runner();

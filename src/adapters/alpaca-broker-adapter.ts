@@ -41,12 +41,16 @@ function resultFromLastRead(
 ): OrderResult {
   const filledQuantity = Number(last?.filled_qty ?? 0);
   if (filledQuantity > 0) {
+    // Partly filled with the rest still live (#4787): a fill of what filled, AND an order the
+    // settle loop keeps following, so its final quantity is recorded once the broker ends it.
+    const open = last !== undefined && !isTerminalOrder(last);
     return {
       intent: order,
       status: "filled",
       filledQuantity,
       ...(last?.filled_avg_price ? { filledPrice: Number(last.filled_avg_price) } : {}),
       orderId: placed.id,
+      ...(open ? { open: true as const } : {}),
     };
   }
   const brokerStatus = last?.status ?? placed.status;
@@ -309,7 +313,7 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
         }
       }
       const result = resultFromLastRead(order, placed, await this.pollFill(placed.id));
-      if (result.status === "working") {
+      if (result.status === "working" || result.open) {
         this.pendingShares?.add({ orderId: placed.id, symbol: order.symbol });
       }
       return result;

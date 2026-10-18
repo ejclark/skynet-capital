@@ -92,7 +92,7 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
             <dd className="num">{money(preview.estNotional)}</dd>
           </div>
           <div>
-            <dt>Cash after</dt>
+            <dt>Est. cash after</dt>
             <dd className="num">{money(preview.estCashAfter)}</dd>
           </div>
           {preview.positionAfter !== undefined ? (
@@ -106,6 +106,15 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
       <DisarmNote />
     </div>
   );
+}
+
+/** The review's verdict in words. A buy with no price to cost it never says "all checks passed": the
+ *  cash check could not run (#5173), and the headline must not claim it did. */
+function readyHeadline(preview: TicketPreview): string {
+  if (!preview.ok) return "Refused — the gate explains why";
+  if (preview.action === "buy" && preview.estNotional === undefined)
+    return "Ready to submit — no price yet, so the cost isn't checked against your cash";
+  return "All checks passed — ready to submit";
 }
 
 function GateStatus({
@@ -122,9 +131,7 @@ function GateStatus({
     return (
       <>
         <GateHead tone={state.preview.ok ? "ready" : "refused"}>
-          {state.preview.ok
-            ? "All checks passed — ready to submit"
-            : "Refused — the gate explains why"}
+          {readyHeadline(state.preview)}
         </GateHead>
         <PreviewBody preview={state.preview} />
       </>

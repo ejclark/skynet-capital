@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { ladderRefusal } from "../domain/progression.js";
 import {
+  normalizeSymbol,
   previewOrder,
   type TicketOrderType,
   type TicketTimeInForce,
@@ -132,6 +133,24 @@ async function resolveStockRefusal(
   return playLocked(code, progression) ? ladderRefusal(code, false) : undefined;
 }
 
+/** The latest trade price the review costs a first buy at (#5173) — the same source the quote above
+ *  the form reads (`quote-route.ts`), through the requester's own client. Fail-soft: no client, no
+ *  price or a feed hiccup is no price, and the review says so. */
+async function reviewQuote(
+  config: DashboardServerConfig,
+  requesterId: string | undefined,
+  symbol: string,
+): Promise<number | undefined> {
+  const client =
+    requesterId && config.optionsClientFor ? config.optionsClientFor(requesterId) : undefined;
+  if (!client) return undefined;
+  try {
+    return await client.getUnderlyingPrice(normalizeSymbol(symbol));
+  } catch {
+    return undefined;
+  }
+}
+
 /** Handle `/api/trade/*`. Returns true when the request was answered. */
 export async function serveTradeApi(
   req: IncomingMessage,
@@ -162,11 +181,14 @@ export async function serveTradeApi(
       sendJson(res, 404, { error: "no such desk" });
       return true;
     }
+    const isSelf = requesterId !== undefined && requesterId === body.participantId;
+    const quotePrice = isSelf ? await reviewQuote(config, requesterId, body.symbol) : undefined;
     const preview = previewOrder(body, {
       cash: snapshot.cash,
       positions: snapshot.positions,
       tradingEnabled: Boolean(config.tradingEnabled),
-      isSelf: requesterId !== undefined && requesterId === body.participantId,
+      isSelf,
+      ...(quotePrice !== undefined ? { quotePrice } : {}),
     });
     sendJson(res, 200, {
       preview: refusal

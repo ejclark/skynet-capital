@@ -6,6 +6,8 @@
 
 .networth-roster-scroll {
   overflow-x: auto;
+  /* Holds the roster's screen-reader labels inside this clip (#5108; see `.blotter-scroll`). */
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--elev-base);
