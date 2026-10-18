@@ -150,6 +150,7 @@ export function GuidanceSection({
   return (
     <GuidanceView
       guidance={guidance}
+      outlook={market?.outlook}
       stake={stake}
       stakeKey={fromAccount ? "account" : "saved"}
       held={held}

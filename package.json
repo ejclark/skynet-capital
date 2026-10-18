@@ -97,6 +97,7 @@
     "shoot:moneypenny": "tsx scripts/shoot/moneypenny.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
+    "shoot:guidance-recap": "tsx scripts/shoot/guidance-recap.mjs",
     "shoot:debit-spread": "tsx scripts/shoot/debit-spread.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",
     "shoot:research-week": "tsx scripts/shoot/research-week.mjs",

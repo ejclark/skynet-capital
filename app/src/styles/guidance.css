@@ -214,3 +214,95 @@
   padding-left: var(--space-2);
   font-weight: 600;
 }
+/* The recap card (#4807 slice 3) — `shell/symbol-recap.tsx`. First on the tab, before any lever.
+ * Window states are never hue: each is a glyph + a word (in the markup) AND its own fill here —
+ * open an outline, caution diagonal hatching, protected solid, no view dotted — so the strip reads
+ * in greyscale for a red/green colourblind reader (docs/BRAND.md → Accessibility). */
+.recap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.recap-call {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.recap-word {
+  font-size: 1.5em;
+  letter-spacing: 0.02em;
+}
+/* The one state that must stand out gets weight and a left rule, a shape rather than a tone. */
+.recap[data-stale="true"] {
+  border-left: 3px solid var(--text);
+}
+.recap-stale {
+  font-weight: 700;
+}
+.recap-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.recap-bar {
+  display: flex;
+  height: 22px;
+  gap: 2px;
+}
+.recap-seg {
+  flex-basis: 0;
+  min-width: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  border: 1px solid var(--text);
+  border-radius: 3px;
+}
+.recap-seg[data-state="open"] {
+  background: transparent;
+  color: var(--text);
+}
+.recap-seg[data-state="caution"] {
+  background: repeating-linear-gradient(135deg, var(--text) 0 2px, transparent 2px 6px);
+  color: var(--text);
+}
+.recap-seg[data-state="protected"] {
+  background: var(--text);
+  color: var(--surface);
+}
+.recap-seg[data-state="no-view"] {
+  background: transparent;
+  border-style: dotted;
+  color: var(--muted);
+}
+/* Over the hatching a glyph needs its own ground to stay legible. */
+.recap-seg[data-state="caution"] > span {
+  background: var(--surface);
+  padding: 0 3px;
+}
+.recap-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+}
+.recap .recap-windows {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recap-dates {
+  white-space: nowrap;
+}
+.recap-wrong {
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+}
