@@ -113,7 +113,8 @@ describe("Activity — orders that filled after the wait", () => {
 
   it("before the settle loop reports them: the legs are loose fills and the put has no dollars", async () => {
     const activity = await activityOf(db);
-    expect(activity.map((row) => row.orderId)).toEqual(["leg-high", "leg-low", "opt-1"]);
+    // The legs share a time, so their order is the id tiebreak's (#4802).
+    expect(activity.map((row) => row.orderId)).toEqual(["leg-low", "leg-high", "opt-1"]);
     expect(activity[2]?.reasoning).not.toHaveProperty("cost");
   });
 

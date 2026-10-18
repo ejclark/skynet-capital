@@ -1,7 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { fetchBars } from "../live/bars";
 import type { DeskPosition } from "../live/desk";
-import type { OptionPositionRow } from "../live/options";
+import { fetchChain, type OptionPositionRow } from "../live/options";
 import {
+  losesBelow,
   type PriceMark,
   type PriceStrip,
   priceStrip,
@@ -11,6 +15,16 @@ import {
   type WaitingStrip,
   waitingStrip,
 } from "../live/position-picture";
+import {
+  busiest,
+  contextLine,
+  contractsText,
+  priceRange,
+  rangeWords,
+  type StrikeBar,
+  strikeBars,
+  strikeMoney,
+} from "../live/price-context";
 import { ProjectionContent } from "./position-columns";
 import { isWritten, withMinus } from "./position-row-spec";
 import { MINUS } from "./quote-change";
@@ -19,8 +33,10 @@ import { MINUS } from "./quote-change";
  * THE POSITION'S PICTURE, FIRST IN ITS OPENED GUIDANCE (#5070 slice 2; round 2 of #5037, R2's
  * depth ladder, step 2 "open in place"). Eric's order: the price strip (More 2: "the diagram beats
  * text"), the waiting-earns strip (af4f8295: the $/day decay in the graph), then the three figures
- * (3a77c6db: capital at play, the P/L, the model's expectation). The numbers are
- * `live/position-picture.ts`'s; this file only draws them.
+ * (3a77c6db: capital at play, the P/L, the model's expectation). Slice 2b lays the price context
+ * on the strip's own axis (af4f8295): the 20-day range with its average, and an option's open
+ * contracts by strike, read by one fact line. The numbers are `live/position-picture.ts`'s and
+ * `live/price-context.ts`'s; this file only draws them.
  *
  * Hue never carries a meaning alone: each zone is named in a word in the key under the bar and is
  * its own shape (hatched, striped, solid), every figure keeps its sign, and the projection cell is dashed —
@@ -34,6 +50,14 @@ const whole = new Intl.NumberFormat("en-US", {
 });
 const signed = (x: number) => `${x < 0 ? MINUS : "+"}${whole.format(Math.abs(x))}`;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/** "Nov 6" from "2026-11-06". */
+const expiryShort = (date: string) =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 
 const MARK_WORD: Record<PriceMark["kind"], string> = {
   now: "now",
@@ -54,13 +78,74 @@ function MarkLabel({ mark }: { readonly mark: PriceMark }): ReactElement {
   );
 }
 
-function PriceStripView({ strip }: { readonly strip: PriceStrip }): ReactElement {
+/** An option's open contracts, as the strip's layer: its bars and the words that caption them. */
+interface StrikeLayer {
+  readonly bars: readonly StrikeBar[];
+  /** "Nov 6 puts". */
+  readonly series: string;
+}
+
+/** Open contracts by strike, one bar per strike on the axis; the held strike drawn solid. */
+function StrikeBarsView({ layer }: { readonly layer: StrikeLayer }): ReactElement {
+  const { bars, series } = layer;
+  const top = busiest(bars);
+  if (!top) {
+    return (
+      <p className="pp-layer-cap">
+        Open contracts · {series}: the feed reported none on this range.
+      </p>
+    );
+  }
+  // A bar's stroke is in screen pixels (non-scaling), sized from the tightest strike spacing at
+  // phone width (342px of strip), so a dense chain's bars never overlap and a sparse one's stay bars.
+  const ats = bars.map((b) => b.at).sort((a, b) => a - b);
+  const gap = Math.min(...ats.slice(1).map((at, i) => at - (ats[i] ?? 0)), 100);
+  const stroke = Math.max(1, Math.min(6, gap * 3.42 * 0.6));
+  return (
+    <>
+      <p className="pp-layer-cap">
+        Open contracts · {series} · busiest {strikeMoney(top.strike)} (
+        {contractsText(top.contracts)})
+      </p>
+      <svg className="pp-oi" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        {bars.map((b) => {
+          const h = Math.max(4, (b.contracts / top.contracts) * 96);
+          return (
+            <line
+              key={b.strike}
+              className={b.held ? "pp-oi-bar pp-oi-bar--held" : "pp-oi-bar"}
+              x1={b.at}
+              x2={b.at}
+              y1={100}
+              y2={100 - h}
+              strokeWidth={stroke}
+            />
+          );
+        })}
+      </svg>
+    </>
+  );
+}
+
+function PriceStripView({
+  strip,
+  strikes,
+  line,
+}: {
+  readonly strip: PriceStrip;
+  readonly strikes?: StrikeLayer;
+  readonly line?: string;
+}): ReactElement {
   const now = strip.marks.find((m) => m.kind === "now");
   const below = strip.marks.filter((m) => m.kind !== "now");
+  const top = strikes ? busiest(strikes.bars) : undefined;
+  const said = top
+    ? `${strip.said} Open contracts by strike, ${strikes?.series}: the busiest is ${strikeMoney(top.strike)}, ${contractsText(top.contracts)} open.`
+    : strip.said;
   return (
     <figure className="pp-strip pp-price">
       <figcaption className="pp-title">At expiry</figcaption>
-      <div className="pp-price-art" role="img" aria-label={strip.said}>
+      <div className="pp-price-art" role="img" aria-label={said}>
         <div className="pp-row pp-row--top">{now ? <MarkLabel mark={now} /> : null}</div>
         <div className="pp-bar">
           {strip.zones.map((z, i) => (
@@ -84,6 +169,22 @@ function PriceStripView({ strip }: { readonly strip: PriceStrip }): ReactElement
             <MarkLabel mark={m} />
           </div>
         ))}
+        {strip.range ? (
+          <>
+            <p className="pp-layer-cap">{rangeWords(strip.range)}</p>
+            <div className="pp-range">
+              <span
+                className="pp-range-band"
+                style={{
+                  left: `${strip.range.from}%`,
+                  width: `${strip.range.to - strip.range.from}%`,
+                }}
+              />
+              <span className="pp-range-mid" style={{ left: `${strip.range.mid}%` }} />
+            </div>
+          </>
+        ) : null}
+        {strikes ? <StrikeBarsView layer={strikes} /> : null}
       </div>
       {/* The zones in words, left to right as the bar draws them. */}
       <ul className="pp-key" aria-hidden="true">
@@ -94,6 +195,7 @@ function PriceStripView({ strip }: { readonly strip: PriceStrip }): ReactElement
           </li>
         ))}
       </ul>
+      {line ? <p className="pp-note pp-context">{line}</p> : null}
     </figure>
   );
 }
@@ -211,6 +313,41 @@ function Figures({
 }
 
 /**
+ * Slice 2b's two reads, each the cache another surface already keys this way: the daily bars
+ * Trade's chart reads, and the chain the roll ticket reads for this contract's own expiry. They
+ * run only while the guidance is open — the picture mounts on the tap.
+ */
+function usePriceContext(position: DeskPosition, spot: number | undefined) {
+  const occ = parseOccSymbol(position.symbol);
+  const stock = occ?.underlying ?? position.symbol;
+  const daily = useQuery({
+    queryKey: ["bars", stock],
+    queryFn: () => fetchBars(stock),
+    staleTime: 5 * 60_000,
+  });
+  const chain = useQuery({
+    queryKey: ["chain", stock, occ?.type ?? "call", occ?.expiration ?? ""],
+    queryFn: () => fetchChain(stock, occ?.type ?? "call", occ?.expiration),
+    enabled: occ !== undefined,
+    staleTime: 5 * 60_000,
+  });
+  const range = daily.data && "bars" in daily.data ? priceRange(daily.data.bars) : undefined;
+  const price = priceStrip(position, spot, range);
+  const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
+  // Only the held contract's own expiry: a chain answered for another date says nothing here.
+  const strikes: StrikeLayer | undefined =
+    occ && price && chainData?.expiration === occ.expiration
+      ? {
+          bars: strikeBars(chainData.rows, price.axis, occ.strike),
+          series: `${expiryShort(occ.expiration)} ${occ.type}s`,
+        }
+      : undefined;
+  const now = price?.marks.find((m) => m.kind === "now")?.price;
+  const line = contextLine(now, losesBelow(position), range, strikes?.bars ?? []);
+  return { price, strikes, line };
+}
+
+/**
  * The opened guidance's first block. `book` is the option book's row for this contract, when the
  * feed quoted it: its spot draws "now" on an option's strip and prices the waiting strip. Shares
  * read "now" from the position's own price.
@@ -229,12 +366,18 @@ export function PositionPicture({
   readonly bookRead: boolean;
 }): ReactElement {
   const spot = position.isOption ? book?.spot : signedDollars(position.price);
-  const price = priceStrip(position, spot);
+  const { price, strikes, line } = usePriceContext(position, spot);
   const wait = waitingStrip(position, book);
   const underlying = book?.underlying ?? position.symbol;
   return (
     <section className="pp" aria-label={`The picture of ${position.display}`}>
-      {price ? <PriceStripView strip={price} /> : null}
+      {price ? (
+        <PriceStripView
+          strip={price}
+          {...(strikes ? { strikes } : {})}
+          {...(line ? { line } : {})}
+        />
+      ) : null}
       {wait ? <WaitingStripView strip={wait} underlying={underlying} /> : null}
       {position.isOption &&
       bookRead &&
