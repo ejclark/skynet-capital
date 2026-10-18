@@ -170,10 +170,12 @@ function subscriberLine(count: number): string {
   return `${count} active ${count === 1 ? "subscriber" : "subscribers"}`;
 }
 
-/** The ticker a row is headed by: its one ticker, or what a basket and a no-ticker pick read as. */
-export function pairTitle(symbols: readonly string[]): string {
+/** The ticker a row is headed by: its one ticker, or what a basket and a no-ticker pick read as.
+ *  A playbook that sends no order and claims no names reads the bots' ten (`scansNames`). */
+export function pairTitle(symbols: readonly string[], scansNames = false): string {
   if (symbols.length === 1) return symbols[0] ?? "";
-  return symbols.length === 0 ? "Picked on the day" : `${symbols.length} names`;
+  if (symbols.length === 0) return scansNames ? "The bots' ten names" : "Picked on the day";
+  return `${symbols.length} names`;
 }
 
 /** What the evidence says beyond the status word: how sure, which exit it was measured at, and the
@@ -335,7 +337,9 @@ export function PairRow({
       {/* The evidence, then how it trades: one column on a phone, side by side on a wide card. */}
       <div className="pb-pair-evidence">
         <h3 className="pb-pair-h">
-          <span className="num pb-pair-ticker">{pairTitle(pair.symbols)}</span>{" "}
+          <span className="num pb-pair-ticker">
+            {pairTitle(pair.symbols, card.movesNoCapital === true)}
+          </span>{" "}
           <span className="pb-pair-status">{pair.statusLabel}</span>
         </h3>
         {pair.symbols.length > 1 ? (

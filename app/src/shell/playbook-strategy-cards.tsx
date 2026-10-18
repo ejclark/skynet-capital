@@ -134,7 +134,7 @@ export function StrategyCard({
         // leaving are never gated. Behind the fog an edit may only lower exposure; the server
         // refuses anything that delegates more.
         <div className="pb-yours" key={pair.id}>
-          <p className="pb-yours-h num">{pairTitle(pair.symbols)}</p>
+          <p className="pb-yours-h num">{pairTitle(pair.symbols, card.movesNoCapital === true)}</p>
           <SubscriptionRow
             accountId={accountId}
             card={{ ...card, ...(pair.subscription ? { subscription: pair.subscription } : {}) }}
@@ -145,7 +145,10 @@ export function StrategyCard({
           />
         </div>
       ))}
-      {canManage && !human && (mine.length > 0 || strategy.allocation) ? (
+      {canManage &&
+      !human &&
+      !strategy.movesNoCapital &&
+      (mine.length > 0 || strategy.allocation) ? (
         <AllocationPanel
           accountId={accountId}
           strategy={strategy.strategy}
@@ -156,7 +159,7 @@ export function StrategyCard({
       ) : null}
       <p className="pb-card-description">{strategy.summary}</p>
       <div className="pb-pairs">{open.map(row)}</div>
-      {canManage ? (
+      {canManage && !strategy.movesNoCapital ? (
         <TickerPicker
           accountId={accountId}
           strategy={strategy}
