@@ -23,7 +23,6 @@ import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-e
 import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
-import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { Bot } from "../bots/bot.js";
@@ -34,8 +33,6 @@ import type { IntradayBarsOf } from "../domain/intraday-bar.js";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
-import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
-import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
@@ -60,10 +57,9 @@ import {
   pausedRoster,
   subscriptionRoster,
 } from "../subscriptions/subscription-roster.js";
+import { buildTuning, gateBuild, HARDCORE_COOLDOWN_MS } from "./autonomous-hardcore-live.js";
 import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
-
-const HARDCORE_COOLDOWN_MS = 90_000;
 
 /** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
  *  (mode/hardcore); the dynamic suspend toggles ride the background poll started in runLive.
@@ -515,32 +511,18 @@ export function buildLiveBot(
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
-  const readiness = assessReadiness(bot.persona, {
-    pack: hardcore ? hardcoreScenarioPacks[bot.persona.id] : scenarioPacks[bot.persona.id],
-    safetyScenarios: genericSafetyScenarios,
-  });
   // The owner's per-bot mode override (Mission Control, boot-applied) narrows the env default;
-  // the readiness gate still has the final say below.
+  // the readiness gate still has the final say, and re-runs when the hardcore build flips live.
   const wantedMode = controlsMode(opts.bootControls, bot.persona.id, opts.mode);
   if (wantedMode !== opts.mode) {
     console.log(`[controls] ${bot.persona.name}: mode ${wantedMode} (owner override)`);
   }
-  const effectiveMode = wantedMode === "live" && readiness.ready ? "live" : "observe";
-  if (wantedMode === "live" && !readiness.ready) {
-    console.warn(
-      `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
-    );
-  } else {
-    console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
-  }
-  // The same verdict as the log line above, riding the `/controls` poll this bot's process is
-  // already making — the ops-status panel's credential-free "which personas are gated, and why"
-  // (#666 slice 3).
-  opts.controls.reportPersonaGate({
-    id: bot.persona.id,
-    ready: readiness.ready,
-    reason: readiness.reason,
-  });
+  // The verdict also rides the `/controls` poll this bot's process is already making — the
+  // ops-status panel's credential-free "which personas are gated, and why" (#666 slice 3).
+  const tuning = buildTuning(
+    gateBuild(bot.persona, hardcore, wantedMode, opts.controls.reportPersonaGate),
+    hardcore,
+  );
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
   // client this bot trades with in place, without restarting the process (and therefore
   // without losing any bot's in-memory momentum/sentiment/cooldown state).
@@ -559,10 +541,9 @@ export function buildLiveBot(
       broker,
       ...optionTraderConfig(broker),
       risk: opts.trading.risk,
-      mode: effectiveMode,
-      // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
-      // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
-      ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
+      // The mode the gate allows, and (hardcore) 90s between orders in a symbol instead of 5m.
+      mode: tuning.mode,
+      ...(tuning.cooldownMs !== undefined ? { cooldownMs: tuning.cooldownMs } : {}),
       // Durable cooldowns (slice 4): restored at construction, persisted on every order — dark
       // (both no-ops) unless SKYNET_BOTS_DB_PATH is set.
       ...(opts.botsStateDb

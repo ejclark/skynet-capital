@@ -31,10 +31,17 @@
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
  *                            volume as research data. Unset (default) = dark. Currently: sauron.
- *                            Flip via autonomy-ops only.
+ *                            The owner's per-bot switch in Mission Control wins over this and is
+ *                            read at every `/controls` poll — the build, its cooldown and its
+ *                            readiness gate swap together with no restart (#4535 slice 2c).
  */
 import { existsSync } from "node:fs";
-import { effectiveBetaPicks } from "../autonomous/bot-controls.js";
+import type { TraderTuning } from "../autonomous/autonomous-trader.js";
+import {
+  type ControlsState,
+  effectiveBetaPicks,
+  effectiveMode,
+} from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
   armMomentumPersistence,
@@ -75,6 +82,7 @@ import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
+import { watchHardcore } from "./autonomous-hardcore-live.js";
 import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
 import {
   type BotRoster,
@@ -163,10 +171,13 @@ async function runLive(): Promise<void> {
   let keptSubscriptions = subscriptionsCache(undefined);
   // Set once the scout's host roster exists: refreshes it when the owner changes the forced picks.
   let onScoutPicksPolled: (() => void) | undefined;
+  // Set once the traders exist: swaps a bot's build when the owner flips its hardcore setting.
+  let onHardcorePolled: ((state: ControlsState) => void) | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => {
       void credentials.reconcile(state);
       onScoutPicksPolled?.();
+      onHardcorePolled?.(state);
     },
     undefined,
     (cursor) => replication.onPoll(cursor),
@@ -391,15 +402,39 @@ async function runLive(): Promise<void> {
   authoredShadow.onChange(() => botsStream.refresh());
   botsStream.refresh();
   // ONE swap path (Store change, options-level change), so every later read sees what is traded.
-  const swapIn = (i: number, next: BotRoster) => {
+  const swapIn = (i: number, next: BotRoster, tuning?: TraderTuning) => {
     botRosters[i] = next;
-    traders[i]?.trader.swapRoster(rosterFor(next));
+    traders[i]?.trader.swapRoster({ ...rosterFor(next), ...(tuning ? { tuning } : {}) });
     botsStream.refresh();
   };
   optionLevels.follow(botRosters, swapIn);
   onScoutPicksPolled = watchScoutPicks(scoutPicks, () => {
     const host = botRosters[0];
     if (host) swapIn(0, host);
+  });
+  // The owner's hardcore switch, live (#4535 slice 2c): the persona, its order cooldown and the
+  // mode its readiness gate allows swap together, between cycles — no restart.
+  onHardcorePolled = watchHardcore({
+    ids: botRosters.map((r) => r.bot.persona.id),
+    envIds: hardcoreRoster.envIds,
+    initial: hardcoreRoster.hardcore,
+    wantedMode: (id) => effectiveMode(bootControls, id, mode),
+    report: controls.reportPersonaGate,
+    apply: (id, persona, tuning) => {
+      const i = botRosters.findIndex((r) => r.bot.persona.id === id);
+      const current = botRosters[i];
+      if (!current) return;
+      swapIn(
+        i,
+        resolveBotRoster(
+          { ...current.bot, persona },
+          playbookRoster.enabled,
+          current.subscriptions,
+          promotedPlays.rosterFor(id),
+        ),
+        tuning,
+      );
+    },
   });
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
   // rotation that landed while this process was down is caught here, using the snapshot
@@ -434,7 +469,8 @@ async function runLive(): Promise<void> {
         swapIn(
           i,
           resolveBotRoster(
-            botRoster.bot,
+            // The bot as it is now: a hardcore flip replaces its persona (slice 2c).
+            botRosters[i]?.bot ?? botRoster.bot,
             playbookRoster.enabled,
             subscriptions,
             promotedPlays.rosterFor(botRoster.bot.persona.id),
