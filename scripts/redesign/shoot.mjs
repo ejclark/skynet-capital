@@ -24,6 +24,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { SCENE_CACHE, sceneBuildArgs, sceneBundle } from "../study/scene-bundle.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const REGISTRY = fileURLToPath(new URL("./screens.json", import.meta.url));
@@ -122,8 +123,14 @@ function main() {
     step("the app build", "npm", ["run", "build", "--prefix", "app"]);
   }
   // The landmark portrait in the desk rail is the real 3D scene; unbuilt, the rail is a blank box.
-  if (args.rebuild || !existsSync(join(ROOT, "public", "three", "scene.js"))) {
-    step("the scene build", "npm", ["run", "build:scene"]);
+  // Built into a cache, never `public/three/` — there the local e2e server would serve it too
+  // (#5227, scene-bundle.mjs).
+  if (args.rebuild || !sceneBundle()) {
+    step(
+      "the scene build",
+      join(ROOT, "node_modules", ".bin", "esbuild"),
+      sceneBuildArgs(SCENE_CACHE),
+    );
   }
   const run = mkdtempSync(join(tmpdir(), "redesign-world-"));
   try {
