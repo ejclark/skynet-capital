@@ -23,11 +23,13 @@ import {
 } from "../server/owner-link-store.js";
 import { createPlayMilestoneLedger } from "../server/play-milestone-ledger.js";
 import { createSavedPositionsStore } from "../server/saved-positions-store.js";
+import { createSettingsChangeLog } from "../server/settings-change-log.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
+  settingsChanges: ReturnType<typeof createSettingsChangeLog>;
   council: ReturnType<typeof createCouncilStore>;
   councilReplies: ReturnType<typeof createCouncilRepliesStore>;
   filingComments: ReturnType<typeof createFilingCommentsStore>;
@@ -62,6 +64,9 @@ export function setupAccess(
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(env, (m) => console.error(m));
+  // Every change to a bot's own settings, who made it, before and after (#4535 slice 3b) — a
+  // sibling of bot-controls.json, same posture.
+  const settingsChanges = createSettingsChangeLog(env, (m) => console.error(m));
   // The Sunday Council's weekly thesis lines (issue #2224 shape 1) — a sibling file next to
   // bot-controls.json, no new env var, no fly.toml change (envelope-protected).
   const council = createCouncilStore(env, (m) => console.error(m));
@@ -120,6 +125,7 @@ export function setupAccess(
   return {
     allowlist,
     botControls,
+    settingsChanges,
     council,
     councilReplies,
     filingComments,

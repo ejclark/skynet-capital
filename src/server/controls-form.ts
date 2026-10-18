@@ -2,6 +2,11 @@ import type { ControlsState } from "../autonomous/bot-controls.js";
 import { COMPANION_MODEL, COMPANION_MODELS } from "../companion/companion-model.js";
 import type { FleetControls } from "../observatory/settings-view.js";
 import type { BotControlsStore } from "./bot-controls-store.js";
+import {
+  controlsChanges,
+  recordControlsChange,
+  type SettingsChangeLog,
+} from "./settings-change-log.js";
 
 /**
  * MISSION CONTROL's action authority: the owner's switchboard for the autonomous fleet (Eric,
@@ -20,6 +25,8 @@ export interface ControlsDeps {
   /** The bots currently on the board (id + display name), from the live hub. */
   readonly bots: () => ReadonlyArray<{ readonly id: string; readonly displayName: string }>;
   readonly now?: () => Date;
+  /** Where every change to a bot's own settings is recorded (#4535 slice 3b) — omit and none is. */
+  readonly changes?: SettingsChangeLog;
 }
 
 /** The result of one control-plane action, rendered above whatever surface triggered it. */
@@ -82,7 +89,14 @@ export function applyControlsAction(
       return { ok: false, notice: { kind: "error", message: "Unknown bot." } };
     }
     const suspended = action === "suspend";
+    const prev = deps.store.load().bots[botId] ?? {};
     deps.store.setBot(botId, { suspended }, editor, at);
+    recordControlsChange(
+      deps.changes,
+      botId,
+      controlsChanges(prev, { ...prev, suspended }, editor, at),
+      () => deps.store.setBot(botId, { suspended: prev.suspended === true }, editor, at),
+    );
     return okNote(
       suspended
         ? "Trading suspended — takes effect within ~30 seconds, no restart needed."
