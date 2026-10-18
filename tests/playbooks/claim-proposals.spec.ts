@@ -69,7 +69,7 @@ describe("renderProposals — honest text", () => {
   });
 
   it("states the scorecard and each claim's outcome", () => {
-    expect(text).toContain("**Scorecard:** 1 pass / 1 fail / 6 pending · 2 untestable");
+    expect(text).toContain("**Scorecard:** 1 pass / 1 fail / 6 pending · 6 untestable");
     expect(text).toContain("| 7 | pass | 2027-01-21 |");
     expect(text).toContain("| 8 | fail | 2027-01-21 |");
   });

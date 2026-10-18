@@ -77,6 +77,34 @@
         "basis": "Not due: scored on 2026-11-17.",
         "dueOn": "2026-11-17"
       }
+    },
+    {
+      "statement": "3b. NVIDIA must buy CoreWeave's unsold capacity through 2032.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
+    },
+    {
+      "statement": "10. GPU-backed financing keeps CoreWeave's capacity growing.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
+    },
+    {
+      "statement": "11. Demand stays at whatever capacity exists, for the foreseeable future.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
+    },
+    {
+      "statement": "12. Play the cycle: after a big pullback, forecast the next upswing and take profit into it.",
+      "score": {
+        "outcome": "untestable",
+        "basis": "Nothing here can check it. Size zero."
+      }
     }
   ]
 }

@@ -191,6 +191,38 @@
           "scoreBy": "2026-11-17"
         }
       }
+    },
+    {
+      "statement": "3b. NVIDIA must buy CoreWeave's unsold capacity through 2032.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. A $6.3B order (Sept 2025 SEC filing): NVIDIA buys capacity other customers don't use, through 2032-04-13, if CoreWeave delivers. Volume undisclosed. Size zero."
+      }
+    },
+    {
+      "statement": "10. GPU-backed financing keeps CoreWeave's capacity growing.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. DDTL 4.0 was the first GPU-backed loan rated investment grade (A3, SOFR + 225); a later $2.6B loan priced at SOFR + 550 against shorter customer contracts. Cuts both ways. Size zero."
+      }
+    },
+    {
+      "statement": "11. Demand stays at whatever capacity exists, for the foreseeable future.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. No fundamentals feed reads utilization or guidance. Size zero."
+      }
+    },
+    {
+      "statement": "12. Play the cycle: after a big pullback, forecast the next upswing and take profit into it.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. The cycle-phase study times the way back to entry, not the next peak; 30–35% of analogs regained the old high within 126 sessions. A peak-timing study is proposed. Size zero."
+      }
     }
   ]
 }

@@ -213,8 +213,8 @@ describe("the Store by strategy, joined to the viewer's own account (#4469 slice
         title: "AI-dip view",
         checkOn: "2027-01-29",
       });
-      expect(steered?.scorecard.untestable).toBe(2);
-      expect(steered?.claims).toHaveLength(10);
+      expect(steered?.scorecard.untestable).toBe(6);
+      expect(steered?.claims).toHaveLength(14);
       expect(rows.get("CRWV-WHEEL")?.steeredBy?.convictionId).toBe("ai-dip-2026-10");
       // S1-NVDA is claim 5's study, cited and not steered.
       expect(rows.get("S1-NVDA")).not.toHaveProperty("steeredBy");

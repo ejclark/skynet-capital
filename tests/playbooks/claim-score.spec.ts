@@ -284,13 +284,13 @@ describe("the AI-dip record's checks", () => {
     expect(bad({ ...REACH, symbol: " " })).toContain("claim 1: check names no symbol");
   });
 
-  it("starts with nothing decided: eight claims waiting on their day, two untestable at size zero", () => {
+  it("starts with nothing decided: eight claims waiting on their day, six untestable at size zero", () => {
     const unscored = AI_DIP_2026_10.claims.map(({ score: _score, ...rest }) => rest);
     expect(scorecardOf(unscored)).toEqual({
       pass: 0,
       fail: 0,
       pending: 8,
-      untestable: 2,
+      untestable: 6,
     });
   });
 });
