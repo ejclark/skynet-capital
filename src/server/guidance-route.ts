@@ -3,7 +3,7 @@ import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import { EdgarFilings } from "../adapters/edgar-filings.js";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
-import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { type EarningsPrint, printEventId, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents } from "../domain/market-events.js";
 import {
   atmIv,
@@ -75,9 +75,9 @@ interface MarketRead {
 }
 const inflight = new Map<string, MarketRead>();
 
-function ledgerFor(symbol: string, printDate: string | undefined) {
-  if (!printDate) return undefined;
-  const slug = `events/${symbol.toLowerCase()}-${printDate}-print`;
+function ledgerFor(symbol: string, print: EarningsPrint | undefined) {
+  if (!print) return undefined;
+  const slug = `events/${printEventId(print)}`;
   const path = join(process.cwd(), "docs", "research", `${slug}.md`);
   if (!existsSync(path)) return undefined;
   return {
@@ -158,7 +158,7 @@ async function readMarket(
   const parity = parityImpliedSpot(parityRows("call"), parityRows("put"), spot, days(parityExp));
   const stamps = pages.flatMap((p) => p.rows.flatMap((r) => (r.quotedAt ? [r.quotedAt] : [])));
   const total = pages.reduce((n, p) => n + p.rows.length, 0);
-  const ledger = ledgerFor(symbol, print?.date);
+  const ledger = ledgerFor(symbol, print);
   const evidence = printEvidenceFor(symbol);
   // In session today's bar is a partial day; counting it would understate realized vol and flatter
   // the implied ÷ realized ratio.

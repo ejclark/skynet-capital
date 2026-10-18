@@ -46,7 +46,18 @@ export interface EarningsPrint {
    * 11-10, aggregators say 11-16 → Nov 9–16). A reader that must avoid the print keys on `start`.
    */
   readonly window?: { readonly start: string; readonly end: string };
+  /**
+   * The research id this print was first opened under, kept when IR moves the date off the
+   * estimate it was keyed to (META: estimated 10-28, IR said 10-21). Without it the event id
+   * (`<sym>-<date>-print`) changes with the date and the ledger, its forward tests and the
+   * guidance pane's research stop finding each other. Unset means the default id (`printEventId`).
+   */
+  readonly ledgerId?: string;
 }
+
+/** A print's event id — its ledger's slug under `docs/research/events/`. Stable across a date move. */
+export const printEventId = (p: Pick<EarningsPrint, "symbol" | "date" | "ledgerId">): string =>
+  p.ledgerId ?? `${p.symbol.toLowerCase()}-${p.date}-print`;
 
 /**
  * The three print-proximity windows the house already trades on, gathered here so a READER (a
@@ -111,10 +122,31 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     status: "estimate",
     source: "NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17",
   },
-  { symbol: "MSFT", date: "2026-10-27", status: "estimate", source: "8-K cadence" },
+  {
+    // Confirmed 2026-10-18 from the research lane's first-hand IR reads (#4479 is the automation).
+    symbol: "MSFT",
+    date: "2026-10-28",
+    status: "confirmed",
+    source:
+      "IR: Microsoft press release 2026-10-07 — FY27 Q1 results after the close Wed Oct 28, webcast 2:30pm PT; IR upcoming-events page read direct 2026-10-13",
+    ledgerId: "msft-2026-10-27-print",
+  },
   { symbol: "GOOG", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
-  { symbol: "META", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
-  { symbol: "AMZN", date: "2026-10-29", status: "estimate", source: "8-K cadence" },
+  {
+    symbol: "META",
+    date: "2026-10-21",
+    status: "confirmed",
+    source:
+      'IR: investor.atmeta.com "Meta to Announce Third Quarter 2026 Results" (2026-10-12) — after the close Wed Oct 21, call 1:30pm PT; read first-hand 2026-10-15',
+    ledgerId: "meta-2026-10-28-print",
+  },
+  {
+    symbol: "AMZN",
+    date: "2026-10-29",
+    status: "confirmed",
+    source:
+      'IR: press.aboutamazon.com "Amazon.com to Webcast Third Quarter 2026 Financial Results Conference Call" (2026-10-15) — call Thu Oct 29 2:00pm PT; read first-hand 2026-10-17',
+  },
   { symbol: "AAPL", date: "2026-10-29", status: "estimate", source: "8-K cadence" },
   {
     symbol: "CRWV",

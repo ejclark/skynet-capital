@@ -110,11 +110,12 @@ describe("decisionsFor", () => {
     });
 
     it("is the stock's own print for shares, flagged when the date is an estimate", () => {
-      const [d] = decisionsFor("eric", [held("MSFT", 10, 300, 3900)], []);
+      // the real calendar: GOOG's Oct 28 is still a cadence estimate (MSFT's was confirmed 10-18)
+      const [d] = decisionsFor("eric", [held("GOOG", 10, 300, 3900)], []);
       expect(d?.due).toEqual({
-        at: "2026-10-27",
+        at: "2026-10-28",
         reason: "event",
-        label: "Earnings Oct 27",
+        label: "Earnings Oct 28",
         estimated: true,
       });
     });
