@@ -193,6 +193,27 @@ $over"
 $mm"
   fi
 
+  # 5. A closing keyword closes its issue on merge WHEREVER it sits (#4509): #4496's Follow-ups
+  #    bullet "#4315 — … Closes #3811." described a LATER PR and closed live plan #3811 mid-flight.
+  #    The house format already says where intent lives — `Closes #N` / `Part of #N` in a Summary
+  #    bullet — so a keyword anywhere else, or one contradicting a `Part of`, fails. Fenced blocks
+  #    and inline code are skipped (GitHub links neither), so a body can still quote the syntax.
+  local kw='\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#[0-9]+'
+  local prose; prose="$(awk '
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    /^## Summary/ { sum = 1; next }
+    /^## |^<details>/ { sum = 0 }
+    { gsub(/`[^`]*`/, ""); print (sum ? "S" : "O") NR ": " $0 }' "$f")"
+  local stray; stray="$(grep -iE "^O[0-9]+: .*$kw" <<<"$prose" | head -3 | sed -E 's/^O/line /' || true)"
+  [ -z "$stray" ] || fail "closing keyword outside the Summary — GitHub closes that issue on merge wherever it sits. Move it to a Summary bullet if this PR finishes it; otherwise reword (\"finishes\", \"will close\"):
+$stray"
+  local closed partof both=""
+  closed="$(grep -E '^S' <<<"$prose" | grep -oiE "$kw" | grep -oE '#[0-9]+' | sort -u || true)"
+  partof="$(grep -oiE 'part of:?[[:space:]]+#[0-9]+' <<<"$prose" | grep -oE '#[0-9]+' | sort -u || true)"
+  [ -z "$closed" ] || [ -z "$partof" ] || both="$(comm -12 <(echo "$closed") <(echo "$partof") || true)"
+  [ -z "$both" ] || fail "an issue is both 'Part of' and closed by this PR — the closing keyword wins on merge. Keep one: $(echo $both)"
+
   if [ "$fails" -gt 0 ]; then
     echo "ship checkbody: $fails problem(s) — the PR body is the durable record; see docs/PICTURES.md." >&2
     exit 1
