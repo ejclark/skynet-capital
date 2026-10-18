@@ -6,6 +6,7 @@
 // must not jump). JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:milestones [outdir]
 import { playbooks, plays } from "./milestones-fixture.mjs";
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const step = (id, title, detail, done) => ({ id, title, detail, points: 10, route: "", done });
@@ -160,6 +161,8 @@ const { page, origin, shoot, close } = await openShell({
     },
     "/api/settings": () => ({ accounts: linked ? [eric] : [] }),
     "/api/accounts/networth": networth,
+    // The 1280 rail reads Eric's desk; an unstubbed `{}` desk is the route's error card (#5184).
+    "/api/desk/human-eric": profileStubs([eric])["/api/desk/human-eric"],
     "/api/desk/human-eric/activity": { available: true, activity: [] },
   },
 });
