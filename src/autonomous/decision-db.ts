@@ -389,6 +389,9 @@ export function openDecisionDb(path: string): DecisionDb {
   const deleteShareRetrospectives = db.prepare(
     "DELETE FROM retrospectives WHERE persona_id = ? AND symbol = ?",
   );
+  const selectShareScoredAfter = db.prepare(
+    "SELECT 1 FROM retrospectives WHERE persona_id = ? AND symbol = ? AND at > ? LIMIT 1",
+  );
   const insertRetrospective = db.prepare(`
     INSERT INTO retrospectives (
       at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
@@ -512,7 +515,12 @@ export function openDecisionDb(path: string): DecisionDb {
    * are derived, the next settlement or fill on the tape rebuilds them.
    */
   function rescoreSettled(settled: readonly SettledIntent[]): void {
-    const keys = new Set(settled.map((t) => `${t.option ? "o" : "s"}|${t.personaId}|${t.symbol}`));
+    rebuildTapes(new Set(settled.map((t) => tapeKey(t.option, t.personaId, t.symbol))));
+  }
+
+  /** Each tape rebuilt whole, all or nothing — `rescoreSettled`'s savepoint, shared with a decision
+   *  that lands behind trips already scored (#4775). */
+  function rebuildTapes(keys: ReadonlySet<string>): void {
     if (keys.size === 0) return;
     db.exec("SAVEPOINT rescore_settled");
     try {
@@ -526,6 +534,17 @@ export function openDecisionDb(path: string): DecisionDb {
       db.exec("ROLLBACK TO rescore_settled");
       db.exec("RELEASE rescore_settled");
     }
+  }
+
+  const tapeKey = (option: boolean, personaId: string, symbol: string): string =>
+    `${option ? "o" : "s"}|${personaId}|${symbol}`;
+
+  /** Whether the tape already holds a trip that closed after `at`. */
+  function scoredAfter(key: string, at: number): boolean {
+    const [kind, personaId, symbol] = key.split("|") as [string, string, string];
+    return kind === "o"
+      ? optionLedger.scoredAfter(personaId, symbol, at)
+      : selectShareScoredAfter.get(personaId, symbol, at) !== undefined;
   }
 
   function intentRowsFor(decisionId: number) {
@@ -629,13 +648,30 @@ export function openDecisionDb(path: string): DecisionDb {
    *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
   function triggerRetrospectives(entry: DecisionRecord): void {
     const filled = entry.outcomes.filter((o) => o.result?.status === "filled");
+    // The dashboard's copy receives the newest decisions first, then pages older history (#4775):
+    // a fill landing behind a trip already scored re-pairs that tape, so it is rebuilt, never added
+    // to — adding would count the re-paired close twice. The bots' own store records in order.
+    let behind: Set<string>;
+    try {
+      behind = new Set(
+        filled
+          .map((o) => tapeKey(o.intent.option !== undefined, entry.personaId, o.intent.symbol))
+          .filter((key) => scoredAfter(key, entry.at)),
+      );
+    } catch {
+      behind = new Set();
+    }
+    rebuildTapes(behind);
     // An option fill is scored on its own ledger, per contract, never as a share lot.
-    const ledgers = [
-      ...new Set(filled.filter((o) => !o.intent.option).map((o) => o.intent.symbol)),
-    ].map((symbol) => () => updateRetrospectivesFor(entry.personaId, symbol));
-    const optionLedgers = [
-      ...new Set(filled.filter((o) => o.intent.option).map((o) => o.intent.symbol)),
-    ].map((underlying) => () => optionLedger.rescore(entry.personaId, underlying));
+    const fresh = (option: boolean) => (o: (typeof filled)[number]) =>
+      Boolean(o.intent.option) === option &&
+      !behind.has(tapeKey(option, entry.personaId, o.intent.symbol));
+    const ledgers = [...new Set(filled.filter(fresh(false)).map((o) => o.intent.symbol))].map(
+      (symbol) => () => updateRetrospectivesFor(entry.personaId, symbol),
+    );
+    const optionLedgers = [...new Set(filled.filter(fresh(true)).map((o) => o.intent.symbol))].map(
+      (underlying) => () => optionLedger.rescore(entry.personaId, underlying),
+    );
     for (const update of [...ledgers, ...optionLedgers]) {
       try {
         update();
