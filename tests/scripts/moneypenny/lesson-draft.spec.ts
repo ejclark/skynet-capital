@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { learningLine } from "../../../scripts/digest-scan.mjs";
 import { route } from "../../../scripts/moneypenny/index.mjs";
 import {
+  commentBody,
   type DraftCapsule,
   type DraftFix,
   draftEntry,
@@ -9,6 +11,8 @@ import {
   jobOf,
   learnedIn,
   prBody,
+  retroAsk,
+  retroAskFiled,
   routeLessonDraft,
   runIdsFrom,
   sectionOf,
@@ -237,6 +241,58 @@ describe("lesson draft — landing it", () => {
   });
 });
 
+// #5728: a hand-closed capsule's skeleton comment was read by nobody, so its runs aged out of the
+// incident scan unlearned. WHEN a ci-failure capsule is closed without a merged PR, the drafter
+// SHALL file one feedback issue asking for its /retro, linking the capsule, deduped.
+describe("lesson draft — a hand-closed capsule asks for its retro", () => {
+  const draft = draftEntry({ capsule, runs, fix: null });
+  const ask = retroAsk({ capsule, entry: draft?.entry ?? "", covered: draft?.covered ?? [] });
+  const marker = "<!-- retro-ask:capsule-4658 -->";
+
+  it("files a feedback issue that links the capsule and carries the skeleton to start from", () => {
+    expect(ask.labels).toEqual(["feedback"]);
+    expect(ask.title).toContain("#4658");
+    expect(ask.body).toContain("`/retro` on CI capsule #4658 (`route`)");
+    expect(ask.body).toContain("2 failing run sha(s)");
+    expect(ask.body).toContain("**SHA:** n/a");
+  });
+
+  it("never asks to be built straight away — no ready label, Backlog like any feedback issue", () => {
+    expect(ask.labels).not.toContain("ready");
+  });
+
+  it("passes the capsule lint every Claude-authored issue body must pass", () => {
+    // The CLI, as tests/arch/issue-lint.spec.ts drives it: exit 0 means no problems.
+    const args = ["scripts/issue-lint.mjs", "--stdin", "--json", "--title", ask.title];
+    const out = execFileSync("node", [...args, "--labels", ask.labels.join(",")], {
+      input: ask.body,
+      encoding: "utf8",
+    });
+    expect(JSON.parse(out).problems).toEqual([]);
+  });
+
+  it("is found again through the capsule comment that links it", () => {
+    const linked = commentBody({ entry: "e", reason: "r", retroAsk: 5801, capsule: 4658 });
+    expect(linked).toContain("Asked for its `/retro` in #5801.");
+    const comments = [{ user: { login: "skynet-envoy[bot]" }, body: linked }];
+    expect(retroAskFiled({ capsule: 4658, comments })).toBe(5801);
+  });
+
+  it("is found again through an open issue when the linking comment never landed", () => {
+    const openIssues = [{ number: 5802, body: `${marker}\n**Run…**` }];
+    expect(retroAskFiled({ capsule: 4658, openIssues })).toBe(5802);
+  });
+
+  it("ignores a lookalike comment from outside the repo, and another capsule's ask", () => {
+    const linked = commentBody({ entry: "e", reason: "r", retroAsk: 5801, capsule: 4658 });
+    expect(
+      retroAskFiled({ capsule: 4658, comments: [{ user: { login: "rando" }, body: linked }] }),
+    ).toBeNull();
+    const other = [{ number: 5803, body: "<!-- retro-ask:capsule-4659 -->" }];
+    expect(retroAskFiled({ capsule: 4658, openIssues: other })).toBeNull();
+  });
+});
+
 describe("digest — the learning line sits outside Needs you", () => {
   it("counts unlearned runs and open entries on one Noise-absorbed line", () => {
     const line = learningLine({
@@ -246,6 +302,12 @@ describe("digest — the learning line sits outside Needs you", () => {
     });
     expect(line).toMatch(/^- Learning: 10 failed run\(s\) on main in 14d not yet in LESSONS/);
     expect(line).toContain('1 entry(ies) still STATUS: open ("The arm job refused")');
+  });
+
+  it("names what aged out of the window unlearned, so expiry never reads as learning", () => {
+    const line = learningLine({ days: 14, unlearnedRuns: 0, agedOutRuns: 6 });
+    expect(line).toContain("0 failed run(s) on main in 14d not yet in LESSONS · 6 aged out");
+    expect(line).not.toContain("every failed run");
   });
 
   it("says unknown, never zero, when the scan could not reach GitHub", () => {
