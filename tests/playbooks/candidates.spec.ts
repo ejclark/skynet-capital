@@ -42,10 +42,12 @@ describe("a candidate cannot trade", () => {
 });
 
 describe("the card says the back-test status in words", () => {
-  it("says it never places an order, and that the back-test has not run", () => {
+  it("says it never places an order, and that the back-test is underpowered, not killed", () => {
     const [card] = candidateCatalog();
     expect(card?.line).toContain("never places or suggests an order");
-    expect(card?.line).toContain("Back-test: not run yet.");
+    expect(card?.line).toContain("Back-test: underpowered on 2026-10-18");
+    expect(card?.line).toContain("376 independent days of the 1298 needed");
+    expect(card?.line).toContain("Not a kill");
     expect(card?.line).toContain("Dead if, by 2026-12-31,");
   });
 
@@ -64,7 +66,7 @@ describe("the card says the back-test status in words", () => {
     });
     expect(waiting).toContain("80 independent days of the 122 needed");
     expect(waiting).toContain("Not a kill");
-    expect(candidateLine(withStatus({ kind: "not-run" }))).toContain("Candidate");
+    expect(candidateLine(withStatus({ kind: "not-run" }))).toContain("Back-test: not run yet.");
   });
 });
 
