@@ -76,6 +76,7 @@
     "steer:readback": "node scripts/steer/readback.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "research:claims": "tsx src/scripts/claim-studies.ts",
+    "research:dossier": "tsx src/scripts/symbol-dossier.ts",
     "research:proposals": "tsx src/scripts/claim-proposals.ts",
     "research:scorecard": "node scripts/research-scorecard.mjs",
     "lessons:held": "node scripts/fix-held.mjs",
