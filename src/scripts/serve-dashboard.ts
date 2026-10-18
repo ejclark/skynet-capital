@@ -283,6 +283,14 @@ async function main(): Promise<void> {
   // that reach them when the Alerts strip is not on screen. Off (and said so in words) until the
   // mail credential is set, which is the one step that is Eric's.
   const alertDismissals = createAlertDismissals(process.env);
+  // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
+  // bridge, works regardless of which machine's volume this process runs on) over the JSONL
+  // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
+  // machine — never true in prod, since that dir lives on the bots machine's own volume. Read
+  // here once so the desk and the alert sweep's bot watch read the same store.
+  const readDecisions: DashboardServerConfig["readDecisions"] =
+    insightsBridge.readDecisions ??
+    (auditDir ? (id: string) => new JsonlAuditStore(auditDir).list(id) : undefined);
   const alertDelivery = wireAlertDelivery({
     env: process.env,
     activityEvents: activityEventBus,
@@ -292,6 +300,7 @@ async function main(): Promise<void> {
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
       activityLog: activityEventBus,
       alertDismissals,
+      ...(readDecisions ? { readDecisions } : {}),
     }),
   });
 
@@ -426,15 +435,8 @@ async function main(): Promise<void> {
       readFilings: () => feedbackLog.list(),
     },
     progression: progressionService,
-    // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
-    // bridge, works regardless of which machine's volume this process runs on) over the JSONL
-    // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
-    // machine — never true in prod, since that dir lives on the bots machine's own volume.
-    ...(insightsBridge.readDecisions
-      ? { readDecisions: insightsBridge.readDecisions }
-      : auditDir
-        ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) }
-        : {}),
+    // The replicated decision store, else the JSONL audit trail (`readDecisions` above).
+    ...(readDecisions ? { readDecisions } : {}),
     // The wire route's "why did that trade fire" join (PR 6) — no JSONL fallback: the fuzzy
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.

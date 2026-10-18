@@ -194,10 +194,13 @@ When a `ci-failure` capsule closes as completed, the events router (`issues: clo
 `scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
 closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
 it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
-as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
-`/retro` still deepens an entry when a class recurs; it is no longer the only way one lands. The
-digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
-under Needs you.
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned —
+plus one `feedback` issue asking for its `/retro` (#5728, deduped, Backlog — never `ready`), because
+a comment on a closed issue was read by nobody. `/retro` still deepens an entry when a class recurs;
+it is no longer the only way one lands. The digest carries the residue as one line
+(`digest-scan.mjs --learning`) under Noise absorbed, never under Needs you — including what aged
+out of the scan's window unlearned (`AGED-OUT UNLEARNED`, the band just past it, report-only), so a
+falling count can't pass expiry off as learning.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):
@@ -298,7 +301,9 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   the last run is a week old (`--release` at a model release: every file), and `/grind` over
   [`grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md) reads them
   for files that disagree, stale facts and rules written as history, each finding put to a
-  refuter before it lands. Unscheduled: what triggers it is #5318's open question.
+  refuter before it lands. The push tick's audit files one `needs-session` ticket when it falls
+  due and closes it once a run records the stamp (`scripts/moneypenny/drift-chore.mjs`); the chore
+  edits `.claude/**`, so a live session runs it.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.

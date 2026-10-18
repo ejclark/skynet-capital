@@ -67,6 +67,7 @@ import {
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
+import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import {
   CONTINUED_MODEL,
@@ -1473,8 +1474,16 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "edit-issue-body": (i) => {
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
+    console.log(`· refreshed the body of #${i.issueNumber}`);
+    return `🔁 refreshed #${i.issueNumber} — \`${i.title}\``;
+  },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
+  // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
+  "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
+  "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
 };
 
 /**
@@ -1722,7 +1731,9 @@ function main(argv) {
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
-  const intents = auditMode ? audit(fixtureDeps ?? gatherAuditDeps(Date.now())) : route(ctx, deps);
+  const intents = auditMode
+    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now())), ...capsuleAudit(fixtureDeps)]
+    : route(ctx, deps);
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));

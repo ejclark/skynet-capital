@@ -61,5 +61,20 @@ export function prBody(p: {
   fix: DraftFix | null;
   covered: string[];
 }): string;
-export function commentBody(p: { entry: string; reason: string }): string;
+export function commentBody(p: {
+  entry: string;
+  reason: string;
+  retroAsk?: number | null;
+  capsule?: number | null;
+}): string;
+export function retroAsk(p: { capsule: DraftCapsule; entry: string; covered: string[] }): {
+  title: string;
+  labels: string[];
+  body: string;
+};
+export function retroAskFiled(p: {
+  capsule: number;
+  comments?: Array<{ user?: { login?: string }; body?: string | null }>;
+  openIssues?: Array<{ number: number; body?: string | null }>;
+}): number | null;
 export function draftLesson(intent: DraftIntent): string;

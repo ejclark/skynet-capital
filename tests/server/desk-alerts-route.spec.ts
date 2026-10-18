@@ -223,6 +223,59 @@ describe("GET /api/trade/alerts", () => {
     expect(orders.body.alerts.map((a) => a.dedupeKey)).toEqual(["rejected:o-2", "filled:o-1"]);
   });
 
+  describe("on a bot's own account, its decision loop's health (bot watch)", () => {
+    // 2026-09-01T14:00Z is 10:00 ET on a Tuesday session; the bot's newest pass was at 9:40.
+    const sauron = { id: "bot-sauron", kind: "bot", displayName: "Sauron", cash: 0, positions: [] };
+    const botConfig = (over: Record<string, unknown> = {}) =>
+      config({
+        hub: { getState: () => ({ participants: [desk, sauron] }) },
+        resolveOwnerId: () => "bot-sauron",
+        ...over,
+      });
+
+    it("lists a stalled loop as one critical alert, reading only the newest pass", async () => {
+      const asked: unknown[] = [];
+      const readDecisions = (id: string, page: unknown) => {
+        asked.push([id, page]);
+        return Promise.resolve([{ at: Date.parse("2026-09-01T13:40:00Z"), personaId: id }]);
+      };
+      const { body } = await list(botConfig({ readDecisions }), "bot-sauron");
+      expect(asked).toEqual([["bot-sauron", { limit: 1 }]]);
+      expect(body.available).toBe(true);
+      expect(body.alerts.map((a) => [a.source, a.priority, a.title])).toEqual([
+        ["bot-watch", "critical", "Sauron has not finished a decision cycle in 20 min"],
+      ]);
+    });
+
+    it("lists a breaker halt, and stays available with no options client or ledger", async () => {
+      const readDecisions = () =>
+        Promise.resolve([{ at: Date.parse("2026-09-01T13:59:45Z"), halted: "daily-loss" }]);
+      const { body } = await list(
+        botConfig({ readDecisions, optionsClientFor: () => undefined }),
+        "bot-sauron",
+      );
+      expect(body.available).toBe(true);
+      expect(body.alerts.map((a) => a.dedupeKey)).toEqual([
+        "halted:bot-sauron:daily-loss:2026-09-01",
+      ]);
+    });
+
+    it("never reads decisions for a human account, and a failed read drops only the bot's alerts", async () => {
+      let reads = 0;
+      const counting = () => {
+        reads += 1;
+        return Promise.resolve([]);
+      };
+      const human = await list(config({ readDecisions: counting }));
+      expect(reads).toBe(0);
+      expect(human.body.alerts).toHaveLength(3);
+      const failing = () => Promise.reject(new Error("decision store down"));
+      const { status, body } = await list(botConfig({ readDecisions: failing }), "bot-sauron");
+      expect(status).toBe(200);
+      expect(body).toMatchObject({ available: true, alerts: [] });
+    });
+  });
+
   it("claims only its two paths", async () => {
     const { res } = fakeRes();
     expect(
