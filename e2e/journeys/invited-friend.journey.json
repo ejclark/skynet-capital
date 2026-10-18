@@ -169,11 +169,11 @@
         {
           "id": "s1",
           "goto": "/app/accounts?account=day-trader&section=playbooks",
-          "sees": "Profile on The Day Trader, the bot the friend owns: the switch gains Playbooks · Thesis; Playbooks' top strip says whether the loop is alive (offline: no decision trail is wired)",
+          "sees": "Profile on The Day Trader, the bot the friend owns: the switch gains Playbooks · Thesis (on a phone the open Playbooks takes the switch's More slot, named 'Playbooks, more sections', #5072); Playbooks' top strip says whether the loop is alive (offline: no decision trail is wired)",
           "ears": "WHEN the invited friend opens Profile on the bot they own, the app shall offer its Playbooks and show whether it is alive.",
           "expect": [
             { "url": "/app/accounts?account=day-trader&section=playbooks" },
-            { "role": "button", "name": "Playbooks", "exact": true, "within": "main" }
+            { "role": "button", "name": "Playbooks", "within": "fieldset.cockpit-nav" }
           ],
           "judge": "can this reader tell whether their bot is running?"
         },
