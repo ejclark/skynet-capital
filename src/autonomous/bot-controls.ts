@@ -10,8 +10,11 @@
  *    one poll interval — no restart, no deploy, and the decision audit records the halt honestly.
  *  - **Forced picks** (`betaPicks`, #4535 slice 2b) is DYNAMIC too: the scout reads the host bot's
  *    count at every scan, so a change applies on the next check — no restart.
- *  - **Mode** (observe/live) and **hardcore** swap the persona/trader construction, so they apply
- *    at the next `bots` boot. The page says so on the control; nothing pretends otherwise.
+ *  - **Hardcore** (#4535 slice 2c) is DYNAMIC: the poll swaps the bot's persona, its order cooldown
+ *    and the mode its readiness gate allows in one step, re-running that gate on the build being
+ *    swapped in — no restart.
+ *  - **Mode** (observe/live) swaps the trader construction, so it applies at the next `bots` boot.
+ *    The page says so on the control; nothing pretends otherwise.
  *
  * Env vars remain as break-glass defaults: a control absent from the store falls back to the env
  * (`SKYNET_AUTONOMOUS_MODE`, `SKYNET_HARDCORE_BOTS`, `SKYNET_BETA_FORCING`), so a lost volume or unreachable bridge can
@@ -33,7 +36,8 @@ export interface BotControls {
   readonly suspended?: boolean;
   /** Trading mode override (boot-applied). */
   readonly mode?: "observe" | "live";
-  /** Run the bot's hardcore research build (boot-applied; only bots with a hardcore build). */
+  /** Run the bot's hardcore research build (dynamic — applies on the next poll; only bots with a
+   *  hardcore build). Absent = the env roster (`SKYNET_HARDCORE_BOTS`). */
   readonly hardcore?: boolean;
   /**
    * How many forced picks the beta scout may place per day on this bot (dynamic — applies on the
@@ -141,8 +145,8 @@ export function effectiveMode(
 }
 
 /**
- * Boot-applied hardcore roster: per bot, an explicit store boolean wins; absent falls back to the
- * env set — so the GUI can both arm AND disarm what an env var armed.
+ * The hardcore roster, at boot and at every poll after: per bot, an explicit store boolean wins;
+ * absent falls back to the env set — so the GUI can both arm AND disarm what an env var armed.
  */
 export function effectiveHardcoreIds(
   personaIds: readonly string[],
