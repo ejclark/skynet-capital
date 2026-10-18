@@ -265,6 +265,9 @@ export function buildBook(name) {
     participants,
     activity,
     decisions: bot ? { [input.bot.id]: bot.records } : {},
+    // How often the bot checks, when the world declares it (#5223): the week strip's checks
+    // between the notable passes above (server-config.mjs).
+    cadenceMs: input.bot?.cadenceSeconds ? { [input.bot.id]: input.bot.cadenceSeconds * 1000 } : {},
     subscriptions,
     history,
     lastEquity,
