@@ -419,6 +419,19 @@ If he would rather have the literal Sunday clock the brief named, the same job t
 cannot follow the offset, which is a third reason the tick is the better shape here). It would be
 the only cron in the repo, and it would compose each week from Sunday's ledger set alone.
 
+## Signal runs — the second door (#4808 slice 2)
+
+Calendar events are one source of research; the other is **what a playbook declares it trades on**
+(`src/playbooks/research-signals.ts`). `npm run research:signals` lists the instrument runs owed
+today: every declared signal × the tickers of its playbook's pair, on the signal's own cadence
+(weekly, or after each confirmed report), and nothing no playbook declares. One command on one
+ticker is one run even when two playbooks name it. The count a tick hands out answers to the same
+ceiling as the event lane (`research-dispatch-budget.json` through the work spigot's dial); the rest
+is deferred, not dropped. Last-run records are one file each under `docs/research/signal-runs/`,
+written by `npm run research:signals -- --record "<command>"`. The scheduler runs nothing and spends
+no tokens; wiring a workflow step that runs the owed commands is a protected-path change and boards
+the platter separately.
+
 ## The decision header is gated (`npm run research:lint`)
 
 The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
