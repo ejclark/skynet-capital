@@ -15,14 +15,22 @@ import { PositionsTable } from "./positions-table";
  * moved up into the Overview's portrait frame (#3725), so it is not repeated under the blotter.
  */
 
+/** A row's way to its full page and back (#5070 slice 6, `use-position-page.ts`). */
+export interface FullPageLinks {
+  readonly openRow?: string | undefined;
+  readonly onFullPage?: (symbol: string) => void;
+}
+
 function SingleAccountPositions({
   desk,
   query,
   onFilterChange,
+  fullPage,
 }: {
   readonly desk: DeskSnapshot;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly fullPage?: FullPageLinks | undefined;
 }): ReactElement {
   const { desk: d } = desk;
   const [lens, setLens] = useLens();
@@ -38,6 +46,7 @@ function SingleAccountPositions({
       onLensChange={setLens}
       {...(d.allocation ? { allocation: d.allocation } : {})}
       decisions={d.decisions ?? []}
+      {...fullPage}
     >
       <NewTradeCard deskId={d.id} />
     </PositionsBlotter>
@@ -49,15 +58,24 @@ export function AccountsPositionsSection({
   desks,
   query,
   onFilterChange,
+  fullPage,
 }: {
   readonly desks: readonly DeskSnapshot[];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly fullPage?: FullPageLinks;
 }): ReactElement {
   if (desks.length === 1) {
     const only = desks[0];
     if (!only) return <p className="note">No account selected.</p>;
-    return <SingleAccountPositions desk={only} query={query} onFilterChange={onFilterChange} />;
+    return (
+      <SingleAccountPositions
+        desk={only}
+        query={query}
+        onFilterChange={onFilterChange}
+        fullPage={fullPage}
+      />
+    );
   }
   return (
     <>

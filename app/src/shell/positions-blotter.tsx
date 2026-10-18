@@ -134,6 +134,8 @@ export function PositionsBlotter({
   allocation,
   decisions = NO_DECISIONS,
   canTrade = true,
+  openRow,
+  onFullPage,
   children,
 }: {
   readonly deskId: string;
@@ -148,6 +150,10 @@ export function PositionsBlotter({
   readonly decisions?: readonly Decision[];
   /** Does the viewer own this account (#3807 slice 2d)? Off it, the rows offer no write. */
   readonly canTrade?: boolean;
+  /** The row whose guidance starts open: "← Positions" from its full page (#5070 slice 6). */
+  readonly openRow?: string | undefined;
+  /** A row's "Full page ›" (#5070 slice 6, `use-position-page.ts`); without it, no row offers one. */
+  readonly onFullPage?: (symbol: string) => void;
   /** What sits under the list (the New trade card). It rides in the held region, so the space a
    *  refinement holds (#5021) opens below it, where the page ends, not between it and the rows. */
   readonly children?: ReactNode;
@@ -214,6 +220,8 @@ export function PositionsBlotter({
           />
         }
         playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
+        initialOpen={openRow === p.symbol}
+        {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
         onAside={() => marks.setAside(p.symbol)}
         onUndo={() => marks.undo(p.symbol)}
       />

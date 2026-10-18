@@ -317,7 +317,7 @@ function Figures({
  * Trade's chart reads, and the chain the roll ticket reads for this contract's own expiry. They
  * run only while the guidance is open — the picture mounts on the tap.
  */
-function usePriceContext(position: DeskPosition, spot: number | undefined) {
+export function usePriceContext(position: DeskPosition, spot: number | undefined) {
   const occ = parseOccSymbol(position.symbol);
   const stock = occ?.underlying ?? position.symbol;
   const daily = useQuery({

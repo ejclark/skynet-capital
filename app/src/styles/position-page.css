@@ -1,0 +1,257 @@
+/* A position's full page (#5070 slice 6, `shell/position-page.tsx`): the opt-in deep dive behind
+ * "Full page ›". Mobile first: at 390 one column, the price picture first, then profit at price;
+ * from 860px the two pictures sit side by side and the rest reads under them. Hue never carries a
+ * meaning alone: the chart's four dates are four line shapes (dotted, short dash, long dash,
+ * solid), the strike and breakeven two tick shapes, every one named in the key. */
+
+.ppage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: var(--col-read);
+  min-width: 0;
+}
+.ppage-back {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ppage-head h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.ppage-head h2:focus {
+  outline: none;
+}
+.ppage-plain {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.ppage-mark {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.ppage-read {
+  color: var(--muted);
+}
+
+/* The page's own sections, and nothing else: the only links here. */
+.ppage-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ppage-nav-link {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ppage-sec {
+  scroll-margin-top: 72px;
+}
+.ppage-sec h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.ppage-pictures {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Profit at price: P/L up, price across, $0 dashed, now in the accent with its word. */
+/* Room above the box for "now $82.60", so it never sits on the title. */
+.ppage-chart-art {
+  position: relative;
+  height: 180px;
+  margin: 22px 2px 0 52px;
+}
+.ppage-chart-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ppage-y {
+  position: absolute;
+  left: -52px;
+  width: 48px;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.ppage-zero {
+  stroke: var(--muted);
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.ppage-now {
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.ppage-now-label {
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.ppage-tick {
+  stroke: var(--text);
+  stroke-width: 1;
+  opacity: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.ppage-tick--breakeven {
+  stroke-dasharray: 2 3;
+}
+.ppage-curve {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.ppage-curve--today {
+  stroke-dasharray: 1 3;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.ppage-curve--d14 {
+  stroke-dasharray: 3 3;
+}
+.ppage-curve--d7 {
+  stroke-dasharray: 7 3;
+}
+.ppage-curve--x {
+  stroke-width: 2.5;
+}
+.ppage-x {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 2px 0 52px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.ppage-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.ppage-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ppage-swatch {
+  width: 24px;
+  height: 6px;
+  overflow: visible;
+}
+.ppage-swatch-tick {
+  display: inline-block;
+  width: 0;
+  height: 12px;
+  border-left: 1.5px solid var(--text);
+}
+.ppage-swatch-tick--breakeven {
+  border-left-style: dashed;
+}
+
+/* The ways to play it: the verb, then what it does. */
+.ppage-ways {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.ppage-way {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.ppage-way dt {
+  font-weight: 700;
+}
+.ppage-way dd {
+  margin: 0;
+}
+
+.ppage-money {
+  white-space: nowrap;
+}
+
+.ppage-fills,
+.ppage-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+}
+.ppage-fills li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.ppage-fill-what {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.ppage-fill-when,
+.ppage-date-note {
+  color: var(--muted);
+}
+
+/* Buy back and Roll at the bottom, equal: the call is Keep, so neither leads. */
+.ppage-acts {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.ppage-acts .pos-act-row > .pos-act-btn {
+  flex: 1 1 0;
+}
+
+@media (min-width: 860px) {
+  .ppage-pictures {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+}

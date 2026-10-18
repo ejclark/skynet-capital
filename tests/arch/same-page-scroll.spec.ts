@@ -55,6 +55,9 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/money-strip.tsx": [
     ['chapter: "playbooks" as const', "Overview's door into Milestones, a section switch"],
   ],
+  "app/src/shell/use-position-page.ts": [
+    ["position: symbol", "a position's Full page › is a new view, opened at its top (#5070)"],
+  ],
   "app/src/shell/moneypenny-rail.tsx": [
     ["{ href: path }", "a place Moneypenny names on another page (#5238); same-page keeps it"],
   ],
