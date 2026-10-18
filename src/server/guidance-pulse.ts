@@ -185,6 +185,8 @@ export function chainPulse(
 export interface ResearchObservation {
   readonly assessed?: string;
   readonly probePrice?: number;
+  /** The date the ledger's stated call holds until (#4807); past it with no newer assessment, stale. */
+  readonly callUntil?: string;
   readonly source: string;
 }
 
@@ -207,6 +209,15 @@ export function researchPulse(
       "no dated research ledger for this name",
     );
   const days = Math.max(0, daysBetween(obs.assessed, today));
+  if (obs.callUntil !== undefined && obs.callUntil <= today) {
+    return row(
+      "research",
+      obs.source,
+      "stale",
+      `the call held until ${obs.callUntil} and nothing has been assessed since`,
+      obs.assessed,
+    );
+  }
   if (days > RESEARCH_STALE_DAYS) {
     return row("research", obs.source, "stale", `${days} days since last assessed`, obs.assessed);
   }

@@ -12,6 +12,8 @@
  * dated observation that proves it wrong.
  */
 
+import type { SymbolOutlook } from "../research/symbol-outlook-shape.js";
+
 /** Graded exactly like the research call sheet. Low is a stand-aside, never a small bet. */
 export type Confidence = "high" | "medium" | "low" | "none";
 
@@ -180,6 +182,12 @@ export interface GuidanceInputs {
   readonly printEvidence?: string;
   readonly catalysts: readonly GuidanceCatalyst[];
   readonly ledger?: LedgerStance;
+  /**
+   * The symbol's summary (#4807): the house call on owning the shares, its until-date and the dated
+   * windows ahead — rendered by the Guidance tab's recap card exactly as the server computed it.
+   * Display only: the levers read the ledger and the pulse, never this.
+   */
+  readonly outlook?: SymbolOutlook;
   readonly pulse: readonly PulseItem[];
   /** Risk-free rate for the odds; defaults to 0 like the rest of `src/options/`. */
   readonly rate?: number;

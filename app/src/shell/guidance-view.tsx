@@ -13,9 +13,11 @@ import type {
   PulseItem,
   PulseStatus,
 } from "../../../src/options/position-guidance-types";
+import type { SymbolOutlook } from "../../../src/research/symbol-outlook-shape";
 import { GlanceLine, LeverCard, shortDate } from "./guidance-lever";
 import { GuidanceManage, ManageGlanceLine } from "./guidance-manage";
 import { GuidanceStakeForm } from "./guidance-stake-form";
+import { SymbolRecap } from "./symbol-recap";
 
 /**
  * THE GUIDANCE TAB, RENDERED (#3729 step 3) — the same fixed-order template as
@@ -102,6 +104,7 @@ function HeldLine({
 
 export function GuidanceView({
   guidance,
+  outlook,
   stake,
   stakeKey = "saved",
   held,
@@ -114,6 +117,8 @@ export function GuidanceView({
   onManage = () => undefined,
 }: {
   readonly guidance: PositionGuidance;
+  /** The symbol's summary (#4807): its recap card leads the tab, before the lever calls. */
+  readonly outlook?: SymbolOutlook;
   readonly stake: GuidanceStake;
   /** Where the stake came from — remounts the form when the account's position arrives. */
   readonly stakeKey?: string;
@@ -154,6 +159,7 @@ export function GuidanceView({
           {notice}
         </p>
       ) : null}
+      {outlook ? <SymbolRecap outlook={outlook} /> : null}
       <Freshness pulse={g.pulse} />
       <HeldLine held={held} stake={stake} stakeKey={stakeKey} onStake={onStake} />
       <GuidanceStakeForm key={`${g.symbol}:${stakeKey}`} stake={stake} onChange={onStake} />

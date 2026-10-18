@@ -153,6 +153,18 @@ describe("serveGuidance", () => {
     ]);
   });
 
+  it("carries the symbol's summary for the recap card — a call, an until-date, dated windows (#4807)", async () => {
+    const r = fakeRes();
+    await serveGuidance(r.res, `${URL}&refresh=1`, broker().config, "guidance-o", deps);
+    const { outlook } = r.json().market;
+    expect(outlook).toMatchObject({ symbol: "CRWV", asOf: "2026-09-25" });
+    expect(["buy", "hold", "trim", "sell", "wait"]).toContain(outlook.call);
+    expect(outlook.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(outlook.windows.length).toBeGreaterThan(0);
+    // The summary is display-only: the levers still answer, from the same ledger.
+    expect(inBrowser(r.json().market).calls).toHaveLength(3);
+  });
+
   it("never reads or echoes a stake someone puts in the URL", async () => {
     const r = fakeRes();
     await serveGuidance(

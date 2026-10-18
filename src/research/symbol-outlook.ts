@@ -11,10 +11,16 @@ import { marketDayKey } from "../domain/market-day.js";
 import { allEvents } from "../domain/market-events.js";
 import type { MarketEvent } from "../domain/market-events-types.js";
 import { SYMBOL_FACTS, type SymbolFacts } from "../domain/symbol-facts.js";
-import type { Confidence } from "../options/position-guidance-types.js";
-import { readLedger } from "../server/ledger-stance.js";
+import { type LedgerRead, readLedger } from "../server/ledger-stance.js";
 import { todayRowOf } from "../server/research-event-calls.js";
 import { RESEARCH_DIR, symbolResearch } from "../server/research-service.js";
+import {
+  type OutlookCall,
+  type OutlookWindow,
+  type SymbolOutlook,
+  WINDOW_STATES,
+  type WindowState,
+} from "./symbol-outlook-shape.js";
 
 /**
  * THE SYMBOL SUMMARY (#4807 slice 1) — one symbol's research, led by its recap: today's call, the
@@ -47,58 +53,8 @@ import { RESEARCH_DIR, symbolResearch } from "../server/research-service.js";
  * Paper only, educational: the call is the house's research call, and it sizes nothing.
  */
 
-export type OutlookCall = "buy" | "hold" | "trim" | "sell" | "wait";
-export type WindowState = "open" | "caution" | "protected" | "no-view";
-
-/**
- * Every state is a shape plus a word, never a hue alone (`docs/BRAND.md` → Accessibility). The
- * recap card renders these; the meanings are the plan's (#4807 decision 3).
- */
-export const WINDOW_STATES: Readonly<
-  Record<WindowState, { readonly glyph: string; readonly word: string; readonly meaning: string }>
-> = {
-  open: { glyph: "▲", word: "Open", meaning: "The call applies; new entries are allowed." },
-  caution: { glyph: "◆", word: "Caution", meaning: "An event is near; size down or wait." },
-  protected: { glyph: "■", word: "Protected", meaning: "No new entries. Exits always run." },
-  "no-view": { glyph: "○", word: "No view", meaning: "No current research." },
-};
-
-export interface OutlookWindow {
-  /** First and last day, inclusive (YYYY-MM-DD, ET market days). */
-  readonly start: string;
-  readonly end: string;
-  readonly state: WindowState;
-  readonly reason: string;
-  /** The file the window was derived from. */
-  readonly source?: string;
-}
-
-export interface SymbolOutlook {
-  readonly symbol: string;
-  /** The ET market day the summary was computed for. */
-  readonly asOf: string;
-  readonly call: OutlookCall;
-  readonly confidence: Confidence;
-  readonly why: string;
-  /**
-   * The call holds until this day: the next protected window's start (or, inside one, the day it
-   * ends), or the day after its ledger's event, whichever comes first — a ledger's call is about
-   * its event, and once the event has passed it is a receipt.
-   */
-  readonly until: string;
-  /** The dated observation that proves the call wrong. */
-  readonly falsifier: string;
-  /** Back-to-back from `asOf` to the horizon's end, no gaps, no overlaps. */
-  readonly windows: readonly OutlookWindow[];
-  /** The ledger the call was rolled up from, and its own words for it. Absent under no view. */
-  readonly basis?: {
-    readonly ledger: string;
-    readonly stance?: string;
-    readonly assessed?: string;
-    /** Whether the call word is the ledger's own `**Call:**` line or the Buy-signal roll-up. */
-    readonly callFrom: "ledger" | "buy-signal";
-  };
-}
+export type { OutlookWindow, SymbolOutlook };
+export { WINDOW_STATES };
 
 export interface OutlookInput {
   readonly symbol: string;
@@ -301,4 +257,22 @@ export function symbolOutlook(
       : {}),
     ...(facts ? { facts } : {}),
   });
+}
+
+/**
+ * The ledger the summary's call was rolled up from, read the way position guidance reads one — so
+ * the Guidance tab's levers and its recap card answer from the same file (#4807 slice 3). That is
+ * the symbol's nearest upcoming event, whatever kind: no print on file no longer means no research.
+ */
+export function outlookLedger(
+  outlook: SymbolOutlook,
+  root: string = RESEARCH_DIR(),
+): { readonly read: LedgerRead; readonly source: string } | undefined {
+  if (!outlook.basis) return undefined;
+  const file = join(root, outlook.basis.ledger.replace(/^docs\/research\//, ""));
+  if (!existsSync(file)) return undefined;
+  return {
+    read: readLedger(readFileSync(file, "utf8"), outlook.symbol),
+    source: outlook.basis.ledger,
+  };
 }
