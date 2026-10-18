@@ -295,8 +295,19 @@ export function startedPlanInputs(issue, openPlans = []) {
 /** Every open issue carrying `in-progress` — the list the cap and the fence count. */
 export const readInFlight = (exec = sh) => readOpenIssues(LABELS.inProgress.name, exec);
 
+/** Oldest-first `{ body }` comments over REST — `gh issue view` is GraphQL, refused in a cloud
+ *  session (2026-10-18). `--jq` prints one JSON object per line, across every page. */
 const readComments = (n) =>
-  JSON.parse(sh("gh", ["issue", "view", String(n), "--json", "comments"]) || "{}").comments ?? [];
+  sh("gh", [
+    "api",
+    "--paginate",
+    `repos/{owner}/{repo}/issues/${n}/comments?per_page=100`,
+    "--jq",
+    ".[] | {body, createdAt: .created_at}",
+  ])
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l));
 
 const postComment = (n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]);
 

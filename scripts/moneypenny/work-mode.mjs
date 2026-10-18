@@ -199,26 +199,40 @@ export function resolveWorkMode({ labels = [], comments = [], now = Date.now(), 
   return { ...settle(position, `set to ${position} until ${expiry.until}`), until: expiry.until };
 }
 
+/** `gh api --jq '.[] | …'` prints one JSON object per line, across every page. */
+const jsonLines = (out) =>
+  String(out ?? "")
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l));
+
 /** Real `gh` by default; injectable so specs never hit the network (same shape as the breaker's). */
 function defaultExec(cmd, args, opts) {
   return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...opts });
 }
 
-/** Impure: one `gh issue view` on the tracking issue, then `resolveWorkMode`. Never throws on a
+/** Impure: two REST reads of the tracking issue (its labels, then its comments), then
+ *  `resolveWorkMode`. REST, not `gh issue view`: that is GraphQL, which a Claude Code cloud session
+ *  is refused with a 403 — so every cloud session read the dial as unreadable and fell back to
+ *  conserve whatever the label said (2026-10-18). The comments come back in gh's own
+ *  `{ body, createdAt }` shape, one JSON object per line across every page. Never throws on a
  *  read failure — an unreadable dial is `conserve` plus a warning (criterion 5). A broken CONFIG
  *  does throw, from `loadWorkModeConfig`, per the header. */
 export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), now = Date.now()) {
   let issue;
   try {
-    const out = exec("gh", [
-      "issue",
-      "view",
-      String(config.trackingIssue),
-      "--json",
-      "labels,comments",
-    ]);
-    issue = JSON.parse(out);
+    const path = `repos/{owner}/{repo}/issues/${config.trackingIssue}`;
+    issue = JSON.parse(exec("gh", ["api", path, "--jq", "{labels: [.labels[] | {name}]}"]));
     if (!issue || typeof issue !== "object") throw new Error("not a JSON object");
+    issue.comments = jsonLines(
+      exec("gh", [
+        "api",
+        "--paginate",
+        `${path}/comments?per_page=100`,
+        "--jq",
+        ".[] | {body, createdAt: .created_at}",
+      ]),
+    );
   } catch (err) {
     return {
       position: "conserve",

@@ -255,24 +255,30 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
   });
 });
 
-/** A fake `exec` that returns canned output or throws, recording the args it saw. */
-function fakeExec(result: string | Error) {
+/** A fake `exec` that returns canned output or throws, recording the args it saw. An array is one
+ *  answer per call, in order (the issue read, then the comments read). */
+function fakeExec(result: string | Error | string[]) {
   const calls: string[][] = [];
   const exec = (_cmd: string, args: readonly string[]) => {
     calls.push([...args]);
     if (result instanceof Error) throw result;
-    return result;
+    return Array.isArray(result) ? (result[calls.length - 1] ?? "") : result;
   };
   return { exec, calls };
 }
 
-describe("readWorkMode — one gh call, never a throw on a bad read", () => {
-  it("reads the tracking issue's labels and comments in one call", () => {
-    const { exec, calls } = fakeExec(
-      JSON.stringify({ labels: [label("conserve")], comments: [until("2026-10-06")] }),
-    );
+describe("readWorkMode — REST reads, never a throw on a bad read", () => {
+  it("reads the tracking issue's labels, then its comments, over REST (no GraphQL)", () => {
+    const { exec, calls } = fakeExec([
+      JSON.stringify({ labels: [label("conserve")] }),
+      `${JSON.stringify({ body: "older note" })}\n${JSON.stringify(until("2026-10-06"))}\n`,
+    ]);
     const mode = readWorkMode(exec, CONFIG, NOW);
-    expect(calls).toEqual([["issue", "view", "4153", "--json", "labels,comments"]]);
+    expect(calls.map((a) => a.slice(0, 3))).toEqual([
+      ["api", "repos/{owner}/{repo}/issues/4153", "--jq"],
+      ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/comments?per_page=100"],
+    ]);
+    expect(calls.flat()).not.toContain("view");
     expect(mode.position).toBe("conserve");
     expect(mode.until).toBe("2026-10-06");
   });
