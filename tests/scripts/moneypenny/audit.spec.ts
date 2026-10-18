@@ -1,10 +1,10 @@
 import {
   audit,
   CONFLICT_REPAIR_CAP,
+  owedAnswer,
   readyPlanCandidate,
   staleInProgressFrom,
   untruncated,
-  owedAnswer,
 } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
