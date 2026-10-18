@@ -6,6 +6,7 @@ import {
   declaredIds,
   instrumentScript,
   type PlaybookResearch,
+  passSignalOf,
   researchLine,
   researchOf,
   researchProblems,
@@ -178,5 +179,28 @@ describe("the card says which, in words", () => {
     expect(researchLine(two)).toBe(
       "Research signal: A. It counts when 1; re-run weekly. B. It counts when 2; re-run after each report.",
     );
+  });
+});
+
+describe("which playbooks a check can say raised their signal (#4450 slice 5b)", () => {
+  it("counts the run-up window only: the pass's long verdict is that signal holding", () => {
+    const counted = ids.filter((id) => passSignalOf(id) === "counted").sort();
+    expect(counted).toEqual(["G1-GOOG", "NVDA-CALL-SPREAD", "S1-NVDA"]);
+  });
+
+  it("calls a declared signal no pass computes unmeasured, and no declaration none", () => {
+    expect(passSignalOf("CRWV-WHEEL")).toBe("unmeasured");
+    expect(passSignalOf("MU-DIP-BOUNCE")).toBe("unmeasured");
+    expect(passSignalOf("BETA-SCOUT")).toBe("none");
+    expect(passSignalOf("TACO-DJT")).toBe("none");
+    expect(passSignalOf("U-abc123")).toBe("none");
+  });
+
+  it("never counts a playbook whose verdict is not its own date window", () => {
+    for (const id of ids.filter((i) => passSignalOf(i) === "counted")) {
+      const playbook = registeredPlaybooks().find((p) => p.id === id);
+      expect(playbook?.observeOnly, id).toBeUndefined();
+      expect(playbook?.rulesOf, id).toBeUndefined();
+    }
   });
 });
