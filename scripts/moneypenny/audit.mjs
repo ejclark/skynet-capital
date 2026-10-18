@@ -3,6 +3,7 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
+import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { sh } from "./gh.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
@@ -214,8 +215,11 @@ export function audit(deps = {}) {
   // lanes are actually acting on. Pure decision in `workModeRetitle`, which returns null (the
   // common case) whenever the title is already right. No comment, no label: a title is a display,
   // and the title itself is the memory that stops the next push repeating the edit.
-  const retitle = workModeRetitle(deps.workMode);
-  if (retitle) intents.push(retitle);
+  //
+  // #5729 — the instruction-drift chore's ticket: filed when due, refreshed while open, closed once
+  // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
+  // Each is at most one intent, null when there is nothing to do.
+  intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
   return intents;
 }
 
@@ -444,6 +448,7 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlagged,
     alreadyFlaggedPRs,
     workMode: workModeState(nowMs, json),
+    driftChore: driftChoreFromRepo(issues),
   };
 }
 
