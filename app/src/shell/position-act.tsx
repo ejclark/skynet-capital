@@ -142,14 +142,18 @@ function ticketDraft(deskId: string, position: DeskPosition, order: Order): Tick
   };
 }
 
-/** The server's own words for what it will send: "Buy to close 1 contract · limit $5.50 · Day". */
+/** The server's own words for what it will send: "Buy to close 1 contract · limit $5.50 · good for
+ *  today". */
 function sentWords(preview: TicketPreview | OptionPreview): string {
   const what =
     "positionIntent" in preview
       ? optionCloseWords(preview)
       : `Sell ${plural(preview.quantity, "share")}`;
   const limit = preview.limitPrice !== undefined ? ` · limit ${money(preview.limitPrice)}` : "";
-  return `${what}${limit} · ${tifLabel(preview.timeInForce) ?? preview.timeInForce}`;
+  // The ticket's own word for a day order, so the recap never renames what was picked.
+  const lasts =
+    preview.timeInForce === "day" ? "good for today" : (tifLabel(preview.timeInForce) ?? "");
+  return `${what}${limit} · ${lasts}`;
 }
 
 /**
@@ -286,10 +290,10 @@ function CloseTicket({
   const shownLimit = limitText ?? (seed?.price !== undefined ? seed.price.toFixed(2) : "");
   const count = parseQuantity(countText);
   const limit = typedPrice(shownLimit);
+  // Contracts are whole; shares may be a fraction, so a fractional holding can still sell all.
+  const countable = position.isOption ? Number.isInteger(count) : Number.isFinite(count);
   const figures =
-    Number.isInteger(count) && limit !== undefined
-      ? actFigures(position, positions, count, limit)
-      : undefined;
+    countable && limit !== undefined ? actFigures(position, positions, count, limit) : undefined;
   const busy = state.step === "reviewing" || state.step === "submitting";
   const done = state.step === "done" && state.result.ok;
 
@@ -332,10 +336,10 @@ function CloseTicket({
           <input
             id={countId}
             type="number"
-            inputMode="numeric"
+            inputMode={position.isOption ? "numeric" : "decimal"}
             min={1}
             max={total}
-            step={1}
+            step={position.isOption ? 1 : "any"}
             value={countText}
             disabled={busy || done}
             onChange={(e) => setCountText(e.target.value)}

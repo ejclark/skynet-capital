@@ -755,7 +755,7 @@ describe("act in the row: a prefilled ticket, then the one recap modal (#5070 sl
     const recap = (await waitForRecap(container)) as HTMLElement;
     expect(container.querySelectorAll("dialog")).toHaveLength(1);
     expect(seenText(recap.querySelector(".pos-recap-sent") as HTMLElement)).toBe(
-      "Buy to close 1 contract · limit $5.50 · Day",
+      "Buy to close 1 contract · limit $5.50 · good for today",
     );
     expect(
       [...recap.querySelectorAll(".pos-recap-row")].map((row) => [
