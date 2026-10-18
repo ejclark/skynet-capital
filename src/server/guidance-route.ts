@@ -35,7 +35,6 @@ import {
   spotCheckOf,
   spotPulse,
 } from "./guidance-pulse.js";
-import { readLedger } from "./ledger-stance.js";
 import { sendJson } from "./page-shell.js";
 
 /**
