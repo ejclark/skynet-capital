@@ -366,6 +366,7 @@ export function PairRow({
       <details className="pb-pair-rules" open>
         <summary>How it trades</summary>
         <p className="pb-card-description">{card.description}</p>
+        {pair.researchSignal ? <p className="pb-pair-signal">{pair.researchSignal}</p> : null}
         <PairRule card={card} />
         {/* The study's repo path leaves the member view (#5444): "its study →" carries it. */}
         {card.evidenceHref && card.evidenceHref !== pair.studyHref ? (

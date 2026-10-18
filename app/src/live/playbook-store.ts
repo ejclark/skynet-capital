@@ -174,6 +174,8 @@ export interface PairRowView {
   readonly qualifier?: "weakened" | "borrowed";
   /** "Buy NVDA's run-up before its earnings report" — the call in plain words, no date (#5444). */
   readonly plainCall?: string;
+  /** "Research signal: …" or "No research signal (unvalidated): …" — what it trades on (#4808). */
+  readonly researchSignal?: string;
   /** The study's record in plain words, with the count it rests on when it is one (#5444). */
   readonly past?: PastRecordView;
   /** R&D's call for this ticker's next earnings report — mirrors `PairForecast` (#5444). */

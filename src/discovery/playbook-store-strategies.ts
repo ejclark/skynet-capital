@@ -24,6 +24,7 @@ import {
   type StrategyId,
   statusLabel,
 } from "../playbooks/pair-table.js";
+import { researchLine, researchOf } from "../playbooks/research-signals.js";
 import { researchHref } from "./playbook-probe.js";
 
 export interface PairRowEntry extends PairEvidence {
@@ -41,6 +42,9 @@ export interface PairRowEntry extends PairEvidence {
    *  its earnings report") — the strategy's `act` on the pair's ticker; the app adds the until-date.
    *  Absent on a basket or a pick on the day: no one ticker to say it of (#5444). */
   readonly plainCall?: string;
+  /** What the playbook trades on, as research runs it, or that it has no such signal and why — in
+   *  words (#4808 criterion 1). */
+  readonly researchSignal?: string;
 }
 
 export interface StrategyCardEntry
@@ -62,6 +66,7 @@ function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
   const { act } = STRATEGIES[pair.strategy];
   const [only] = pair.symbols;
   const plainCall = act && only && pair.symbols.length === 1 ? act.replaceAll("<SYM>", only) : "";
+  const research = researchOf(pair.id);
   return {
     ...pair.evidence,
     id: pair.id,
@@ -72,6 +77,7 @@ function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
     stale,
     ...(href ? { studyHref: href } : {}),
     ...(plainCall ? { plainCall } : {}),
+    ...(research ? { researchSignal: researchLine(research) } : {}),
   };
 }
 
