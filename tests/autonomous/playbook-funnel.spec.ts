@@ -119,6 +119,29 @@ describe("DecisionDb.playbookFunnel, folded by session", () => {
     expect(s1?.askedOn).toBe(1);
   });
 
+  it("counts a working order that later settled filled as filled", () => {
+    db.record(
+      pass(MON, {
+        outcomes: [
+          {
+            intent: intent(),
+            action: "placed",
+            result: { status: "working", orderId: "o-late" } as never,
+          },
+        ],
+      }),
+    );
+    db.recordSettlements([
+      {
+        orderId: "o-late",
+        status: "filled",
+        filledQuantity: 10,
+        settledAt: "2026-10-12T13:31:00.000Z",
+      },
+    ]);
+    expect(read().playbooks[0]?.totals).toMatchObject({ placed: 1, filled: 1 });
+  });
+
   it("gives every session a day, zeros included, so asked-on is out of all ten", () => {
     db.record(pass(MON, { verdicts: [verdict("S1-NVDA")] }));
     const s1 = read().playbooks[0];

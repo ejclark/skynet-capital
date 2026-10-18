@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import { SETTLED_JOIN } from "./decision-db-settlements.js";
 
 /**
  * EACH PLAYBOOK'S FUNNEL, AS ROWS (#4450 slice 5a, EARS 5) — every bot's checks and intents in
@@ -15,8 +16,10 @@ import type { GuardRefusalReason } from "../engine/guards.js";
  * - `checks` — passes that consulted the playbook: DISTINCT decisions, because a playbook armed in
  *   two modes writes two verdict rows on one pass and was still asked once.
  * - `intents` — the intents the playbook raised, grouped by the fate fields `computeFunnel`
- *   already reads (`guard_reason`, `action`, `result_status`). An intent with no playbook id (a
- *   bot's own rules) is no playbook's.
+ *   already reads (`guard_reason`, `action`, `result_status`). The status is the settled one
+ *   where a `working` order later ended (`SETTLED_JOIN`), as in a bot's own funnel — so a fill
+ *   that landed a minute after the pass counts as filled. An intent with no playbook id (a bot's
+ *   own rules) is no playbook's.
  */
 
 export interface FunnelCheckRow {
@@ -58,11 +61,11 @@ export function openPlaybookFunnelReads(db: DatabaseSync): PlaybookFunnelReads {
   `);
   const selectIntents = db.prepare(`
     SELECT CAST(d.at AS INTEGER) / ${HOUR_MS} AS hour, i.playbook_id AS playbook_id,
-           i.guard_reason AS guard_reason, i.action AS action, i.result_status AS result_status,
-           COUNT(*) AS n
-    FROM decisions d JOIN intents i ON i.decision_id = d.id
+           i.guard_reason AS guard_reason, i.action AS action,
+           COALESCE(s.status, i.result_status) AS result_status, COUNT(*) AS n
+    FROM decisions d JOIN intents i ON i.decision_id = d.id ${SETTLED_JOIN}
     WHERE d.persona_id IN (${personas}) AND d.at >= ? AND d.at < ? AND i.playbook_id IS NOT NULL
-    GROUP BY hour, i.playbook_id, i.guard_reason, i.action, i.result_status
+    GROUP BY hour, i.playbook_id, i.guard_reason, i.action, COALESCE(s.status, i.result_status)
   `);
   return {
     read(from, to) {
