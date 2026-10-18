@@ -248,7 +248,7 @@ describe("AutonomousTrader", () => {
       expect(records[0]).not.toHaveProperty("playbookVerdicts");
     });
 
-    it("omits the field for a persona with no playbook layer", async () => {
+    it("records an explicit empty list for a pass that ran no playbook (#4773)", async () => {
       const records: DecisionRecord[] = [];
       const trader = new AutonomousTrader({
         persona: new AlwaysBuys(),
@@ -256,7 +256,7 @@ describe("AutonomousTrader", () => {
         onDecision: (r) => records.push(r),
       });
       await trader.evaluate(context(100, 0.05));
-      expect(records[0]).not.toHaveProperty("playbookVerdicts");
+      expect(records[0]?.playbookVerdicts).toEqual([]);
     });
   });
 

@@ -140,6 +140,13 @@ describe("DecisionDb", () => {
       db.record({ ...quiet(3), playbookVerdicts: undefined });
       expect(db.listByPersona("sauron")[0]).not.toHaveProperty("playbookVerdicts");
     });
+
+    it("keeps a pass that ran no playbook as an empty list, across a fresh open (#4773)", () => {
+      db.record({ ...quiet(4), playbookVerdicts: [] });
+      db.close();
+      db = openDecisionDb(dbPath);
+      expect(db.listByPersona("sauron")[0]?.playbookVerdicts).toEqual([]);
+    });
   });
 
   it("captures the market context and structured strategy/forecast fields", () => {

@@ -24,6 +24,7 @@ const baseBrief: MorningBrief = {
     },
   ],
   rejectedPlaybookTokens: [],
+  pausedPlaybookIds: [],
   calendar: [
     {
       id: "nvda-2026-08-26-print",

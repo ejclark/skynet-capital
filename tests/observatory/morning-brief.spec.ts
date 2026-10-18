@@ -55,6 +55,29 @@ describe("buildMorningBrief", () => {
     expect(brief.playbooks[0]?.desiredState).toBe("long");
   });
 
+  it("WHEN every bot holding a subscription has paused it, says it apart — never as enabled (#4773)", async () => {
+    const sub = (enabled: boolean) => ({
+      accountId: "sauron",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      enabled,
+    });
+    const paused = await buildMorningBrief("2026-08-20T13:00:00Z", {
+      personas: [sauron],
+      playbookEnv: { SKYNET_PLAYBOOKS: "S1-NVDA:standard" },
+      subscriptions: { sauron: [sub(false)] },
+    });
+    expect(paused.playbooks).toEqual([]);
+    expect(paused.pausedPlaybookIds).toEqual(["S1-NVDA"]);
+    const on = await buildMorningBrief("2026-08-20T13:00:00Z", {
+      personas: [sauron],
+      playbookEnv: { SKYNET_PLAYBOOKS: "S1-NVDA:standard" },
+      subscriptions: { sauron: [sub(true)] },
+    });
+    expect(on.playbooks.map((p) => p.id)).toEqual(["S1-NVDA"]);
+    expect(on.pausedPlaybookIds).toEqual([]);
+  });
+
   it("surfaces unrecognized SKYNET_PLAYBOOKS tokens rather than silently dropping them", async () => {
     const brief = await buildMorningBrief("2026-08-13T10:00:00Z", {
       personas: [sauron],

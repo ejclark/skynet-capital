@@ -18,6 +18,7 @@ import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { buildMorningBrief } from "../observatory/morning-brief.js";
 import { renderMorningBriefText } from "../observatory/render-morning-brief.js";
 import { createDefaultPersonas } from "../personas/registry.js";
+import { createSubscriptionStore } from "../server/subscription-store.js";
 
 async function main(): Promise<void> {
   const enabled = new Set(enabledBotIds(process.env));
@@ -36,6 +37,8 @@ async function main(): Promise<void> {
     bots,
     brokerFactory: createBotBroker,
     playbookEnv: process.env,
+    // The same file the live runner reads its pauses from (`buildBotRosters`).
+    subscriptions: createSubscriptionStore(process.env).load(),
   });
 
   console.log(renderMorningBriefText(brief));

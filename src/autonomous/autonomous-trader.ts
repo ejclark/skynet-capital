@@ -265,7 +265,9 @@ export class AutonomousTrader {
       // The context the cycle was HANDED — option quotes never reach disk or the wire.
       context,
       ...(refusals.length > 0 ? { refusals } : {}),
-      ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
+      // Always said, even empty (#4773): a pass whose playbooks are all paused ran none, and the
+      // roll call must stop here rather than skip back to a pass from before the pause.
+      playbookVerdicts,
       ...(playbookObservations.length > 0 ? { playbookObservations } : {}),
     });
     return results;
