@@ -14,7 +14,7 @@ import { Route } from "../../src/routes/accounts";
 import {
   LADDER_CARD_GATE_NOTE,
   LADDER_CARD_NO_ACCOUNT_NOTE,
-} from "../../src/shell/milestones-section";
+} from "../../src/shell/milestone-strip";
 
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
