@@ -1,4 +1,7 @@
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { PlaybookFunnelRow, PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
+import type { GuardRefusalReason } from "../engine/guards.js";
+import { REFUSAL_LABEL } from "../observatory/decision-json-view.js";
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { initiatorOf } from "../playbooks/initiator.js";
@@ -184,4 +187,31 @@ export function selectAccounts(owned: readonly string[], requested: string | nul
   if (!requested) return [...owned];
   const picked = new Set(requested.split(",").map((id) => id.trim()));
   return owned.filter((id) => picked.has(id));
+}
+
+/** One playbook's funnel as the cards read it (#4450 slice 5a): the guard refusals in words, the
+ *  most frequent first — the same labels and order as a bot's own Decisions funnel (`funnelView`). */
+export interface PlaybookFunnelJsonRow extends Omit<PlaybookFunnelRow, "refusalsByReason"> {
+  readonly refusals: readonly {
+    readonly reason: GuardRefusalReason;
+    readonly label: string;
+    readonly count: number;
+  }[];
+}
+
+export interface PlaybookFunnelJson {
+  readonly sessions: readonly string[];
+  readonly playbooks: readonly PlaybookFunnelJsonRow[];
+}
+
+export function playbookFunnelJson(view: PlaybookFunnelView): PlaybookFunnelJson {
+  return {
+    sessions: view.sessions,
+    playbooks: view.playbooks.map(({ refusalsByReason, ...row }) => ({
+      ...row,
+      refusals: (Object.entries(refusalsByReason) as [GuardRefusalReason, number][])
+        .map(([reason, count]) => ({ reason, label: REFUSAL_LABEL[reason], count }))
+        .sort((a, b) => b.count - a.count),
+    })),
+  };
 }

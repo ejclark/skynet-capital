@@ -7,6 +7,10 @@
 // drawn beside it, never summed into it. The cycle mix (slice 5) counts option trips only, so
 // S1-NVDA's 7 house contracts split across cycles while SAURON, which trades only shares, says
 // so in words instead of printing three zeros.
+import { funnelSessions, playbookFunnelView } from "../../src/autonomous/playbook-funnel.ts";
+import { sessionBounds } from "../../src/domain/market-session.ts";
+import { playbookFunnelJson } from "../../src/server/playbook-performance.ts";
+
 const HOUR = 3_600_000;
 const row = (playbookId, over) => ({
   playbookId,
@@ -58,6 +62,30 @@ export const performance = {
     }),
   ],
   accounts: ["sauron"],
+  // Each house playbook's funnel (#4450 slice 5a), folded by the server's own code from FIXTURE store
+  // rows: S1-NVDA checked every session and never asking (no confirmed print in its window), SAURON
+  // asking most days with some orders refused, and every other card checked by no bot.
+  funnel: houseFunnel(),
   // Who started the bots' closed trades (`byInitiator`) is the Balance section's now (#5493 slice
   // 3): its fixture is `scripts/shoot/book-health.mjs`.
 };
+
+function houseFunnel() {
+  const sessions = funnelSessions(new Date("2026-10-16T21:00:00Z"));
+  const checks = [];
+  const intents = [];
+  const fate = (hour, n, guardReason, action, resultStatus) =>
+    intents.push({ hour, playbookId: "SAURON", guardReason, action, resultStatus, n });
+  sessions.forEach((date, i) => {
+    const open = Math.floor(sessionBounds(date).openAt / HOUR);
+    for (let h = 0; h < 7; h++) {
+      checks.push({ hour: open + h, playbookId: "S1-NVDA", n: 120 });
+      checks.push({ hour: open + h, playbookId: "SAURON", n: 120 });
+    }
+    if (i % 3 === 2) return; // a quiet day: SAURON's rules asked for nothing
+    fate(open + 1, 1, null, "placed", "filled");
+    if (i % 2 === 0) fate(open + 2, 1, "insufficient-cash", null, null);
+    if (i === 4) fate(open + 3, 1, "position-cap", null, null);
+  });
+  return playbookFunnelJson(playbookFunnelView({ checks, intents }, sessions));
+}
