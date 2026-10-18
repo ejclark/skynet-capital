@@ -55,6 +55,7 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { loopCheck } from "../loop-check.mjs";
 import {
   gateAdmission,
   nextAdmissible,
@@ -1734,6 +1735,18 @@ function main(argv) {
     return;
   }
   execute(intents);
+  if (auditMode && !fixtureDeps) postLoopChecks();
+}
+
+/** The learning-loop registry's due checks, posted on the push tick (scripts/loop-check.mjs). Never
+ *  fails the audit: a check that cannot post is reported and retried on the next push. */
+function postLoopChecks() {
+  try {
+    const n = loopCheck({ post: true });
+    if (n > 0) console.log(`::notice::loop-check — posted ${n} due learning-loop check(s)`);
+  } catch (err) {
+    console.log(`::warning::loop-check failed (non-fatal): ${String(err?.message).slice(0, 200)}`);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

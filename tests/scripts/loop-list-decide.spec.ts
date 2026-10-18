@@ -33,7 +33,14 @@ describe("parseLoopList", () => {
       list(["| Scorecard | right calls? | #4061 | **running** | **2026-10-06** — score it |"]),
     );
     expect(rows).toEqual([
-      { loop: "Scorecard", issue: "#4061", state: "running", nextCheck: "2026-10-06" },
+      {
+        loop: "Scorecard",
+        issue: "#4061",
+        state: "running",
+        nextCheck: "2026-10-06",
+        question: "right calls?",
+        nextCheckText: "2026-10-06 — score it",
+      },
     ]);
   });
 
@@ -121,6 +128,8 @@ describe("doctrine-scan.mjs --due carries overdue loop checks", () => {
         issue: "#4061",
         state: "running",
         nextCheck: "2026-10-06",
+        question: "right calls?",
+        nextCheckText: "2026-10-06",
         due: true,
         reason: "loop-check-overdue",
         nextDueDate: "2026-10-06",
