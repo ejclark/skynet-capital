@@ -40,6 +40,9 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
+   *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
+  betaPicks(botId: string): number | undefined;
   /**
    * Records one persona's boot-time readiness-gate verdict (#666) — merged by id and reported on
    * every subsequent poll, so the ops-status panel can show which personas are live vs pinned to
@@ -65,6 +68,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  betaPicks: () => undefined,
   reportPersonaGate: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
@@ -191,6 +195,7 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
     },
