@@ -399,7 +399,7 @@ describe("serveDeskJson", () => {
       nextCursor: string;
     };
     expect(firstBody.activity.map((r) => r.orderId)).toEqual(["ord-4", "ord-3"]);
-    expect(firstBody.nextCursor).toBe("2026-08-23T00:00:00.000Z");
+    expect(firstBody.nextCursor).toBe("2026-08-23T00:00:00.000Z|ord-3"); // time|id (#4802)
 
     const next = fakeRes();
     await serveDeskJson(

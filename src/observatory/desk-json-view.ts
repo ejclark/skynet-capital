@@ -1,5 +1,5 @@
 import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDescBy } from "../server/pagination.js";
 import {
   contractMultiplier,
   humanizeOptionSymbol,
@@ -333,9 +333,10 @@ export interface DeskOpenedLeg extends DeskActivityLine {
 
 export interface DeskActivityPage {
   readonly activity: DeskActivityEvent[];
-  /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
-   *  Absent means this page wasn't full, so there's nothing further back to fetch. Under a filter it
-   *  is the oldest MATCHING row's, so the next page continues the filtered list. */
+  /** The oldest row on this page as `time|order id` — pass back as `before` for the next page; the
+   *  id keeps a row that shares the boundary's time on the next page (#4802). Absent means this
+   *  page wasn't full, so there's nothing further back to fetch. Under a filter it is the oldest
+   *  MATCHING row's, so the next page continues the filtered list. */
   readonly nextCursor?: string;
   /** Every playbook the whole ledger's rows were placed under (`narrowActivity`) — present only
    *  when the caller handed in `playbookOf`, which it does for the bot's owner alone (#885). */
@@ -368,10 +369,12 @@ export function deskActivityView(
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
   const sorted = collapseActivity(records).sort((a, b) => (a.at < b.at ? 1 : -1));
   const narrowed = narrowActivity(foldSpreadLegs(sorted, opts.spreadOf), opts);
-  const { items, nextCursor } = paginateDesc(narrowed.rows, (item) => item.at, {
-    limit,
-    ...(opts.before !== undefined ? { before: opts.before } : {}),
-  });
+  const { items, nextCursor } = paginateDescBy(
+    narrowed.rows,
+    (item) => item.at,
+    (item) => (item.kind === "spread" ? item.spread.orderId : item.record.orderId),
+    { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
+  );
   const byOrder = new Map(sorted.map((record) => [record.orderId, record]));
   const pairing = (row: DeskActivityLine) =>
     opts.roundTrips ? pairedFields(row, opts.roundTrips, byOrder, origins) : {};
