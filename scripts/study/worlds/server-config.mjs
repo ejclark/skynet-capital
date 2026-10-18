@@ -13,7 +13,11 @@
 // funnel/expectancy, the alert store, and the fund owner's stores (shell-artifacts.mjs says so).
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
 
-import { regularSessionOpen } from "../../../src/domain/market-session.ts";
+import {
+  regularSessionOpen,
+  sessionBounds,
+  sessionWeek,
+} from "../../../src/domain/market-session.ts";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../../../src/observatory/check-week-view.ts";
 import { INSTANT } from "./instant.mjs";
 import { leagueServices } from "./league-services.mjs";
@@ -93,14 +97,46 @@ function pageOf(records, page = {}) {
  * half-hour bucket, the placed trades. Production's bridge reads it whenever the store is open, so
  * a world without it drew the Playbooks section with no lanes.
  */
-function checkWeek(records) {
+/**
+ * The checks a bot that declares its cadence made between its notable passes (#5223): the store holds
+ * only the passes a member would look at (~15), but a running bot checks every ~15s, so read alone
+ * the week strip drew gaps no input declared. Every session of the week, from its open to its close
+ * — never past the bot's newest recorded pass, so the heartbeat (which reads that pass) and the
+ * strip agree, and a bot that stopped still shows the gap after it. Each check says what the
+ * newest notable pass before it said; before the week's first one it says nothing.
+ */
+function cadenceChecks(records, cadenceMs, window) {
+  const newest = Math.max(...records.map((r) => r.at));
+  const said = records
+    .filter((r) => r.playbookVerdicts)
+    .sort((a, b) => a.at - b.at)
+    .map((r) => ({ at: r.at, verdicts: r.playbookVerdicts }));
+  const out = [];
+  for (const date of sessionWeek(AT)) {
+    const { openAt, closeAt } = sessionBounds(date);
+    const end = Math.min(closeAt, newest + 1, window.to);
+    for (let at = Math.max(openAt, window.from); at < end; at += cadenceMs) {
+      const last = said.findLast((p) => p.at <= at);
+      out.push({ at, playbookVerdicts: last?.verdicts ?? [], outcomes: [] });
+    }
+  }
+  return out;
+}
+
+function checkWeek(records, cadenceMs) {
   const window = checkWeekWindow(AT);
   if (!window) return undefined;
   const inWeek = records
     .filter((r) => r.at >= window.from && r.at < window.to)
     .sort((a, b) => a.at - b.at);
+  const notable = new Set(inWeek.map((r) => r.at));
+  const filler =
+    cadenceMs && records.length > 0
+      ? cadenceChecks(records, cadenceMs, window).filter((c) => !notable.has(c.at))
+      : [];
+  const asked = [...inWeek, ...filler].sort((a, b) => a.at - b.at);
   const verdicts = new Map();
-  for (const r of inWeek) {
+  for (const r of asked) {
     const bucket = Math.floor(r.at / WEEK_BUCKET_MS);
     for (const v of r.playbookVerdicts ?? []) {
       const key = `${bucket}|${v.playbookId}|${v.mode}|${v.state}`;
@@ -119,7 +155,7 @@ function checkWeek(records) {
         ...(intent.playbookMode ? { mode: intent.playbookMode } : {}),
       })),
   );
-  return { checks: inWeek.map((r) => r.at), verdicts: [...verdicts.values()], trades };
+  return { checks: asked.map((r) => r.at), verdicts: [...verdicts.values()], trades };
 }
 
 /** The world's server config. `auth` is configured, so every ownership gate is live. */
@@ -143,7 +179,7 @@ export function serverConfig(book) {
     rosterIds: () => new Set(book.participants.map((p) => p.id)),
     readTradeActivity: async (id) => book.activity[id] ?? [],
     readDecisions: async (id, page) => pageOf(book.decisions[id] ?? [], page),
-    readCheckWeek: (id) => checkWeek(book.decisions[id] ?? []),
+    readCheckWeek: (id) => checkWeek(book.decisions[id] ?? [], book.cadenceMs?.[id]),
     findByOrderId: (orderId) => byOrder.get(orderId),
     readHistory: async (id) => book.history[id] ?? [],
     // No account has set a per-playbook allocation yet (#4469): the store's empty state.
