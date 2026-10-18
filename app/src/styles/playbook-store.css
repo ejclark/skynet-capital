@@ -32,6 +32,16 @@
   line-height: 1.5;
 }
 
+/* What the playbook trades on, as research runs it (#4808): a quoted rule, set off by its edge. */
+.pb-pair-signal {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .pb-card-triggers {
   margin: 0;
   display: grid;

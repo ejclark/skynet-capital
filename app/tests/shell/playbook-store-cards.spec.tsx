@@ -504,6 +504,22 @@ describe("a card's labelled rows after the rules", () => {
   });
 });
 
+/** #4808 criterion 1: the card says what the playbook trades on, or that it has nothing, in words. */
+describe("a pair's research signal", () => {
+  it("says the server's line under How it trades, after the description", () => {
+    const said = "No research signal (unvalidated): no back-test stands behind it.";
+    mount(card(["AAPL"]), { pair: { researchSignal: said } });
+    expect(precedes(screen.getByText("What the playbook does."), screen.getByText(said))).toBe(
+      true,
+    );
+  });
+
+  it("draws nothing for a server from before the line", () => {
+    mount(card(["AAPL"]));
+    expect(document.querySelector(".pb-pair-signal")).toBeNull();
+  });
+});
+
 /** #5432: a pre-earnings pair draws its rule as one line counted back from the earnings report, in
  *  place of its Enter / Exit / Hold rows — on the study world's clock, against the real calendar. */
 describe("a pre-earnings pair drawn as one line", () => {
