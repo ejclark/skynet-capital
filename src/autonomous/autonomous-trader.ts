@@ -11,6 +11,13 @@ import { actionFor, DEFAULT_OPTION_COOLDOWN_MS, readCycleOptions } from "./optio
 /** How the trader acts on its decisions. `observe` decides + logs but places NO orders. */
 export type TraderMode = "observe" | "live";
 
+/** The two knobs that belong to a persona's build rather than its roster: the mode its readiness
+ *  gate allows, and the gap between its orders in one symbol (absent = the default 5 minutes). */
+export interface TraderTuning {
+  readonly mode: TraderMode;
+  readonly cooldownMs?: number;
+}
+
 export interface AutonomousTraderConfig {
   readonly persona: Persona;
   readonly broker: BrokerPort;
@@ -150,11 +157,22 @@ export class AutonomousTrader {
    * (which is immutable) because a Playbook Store subscription change has to reach a running bot
    * without a restart (issue #3595) — see `swapRoster`.
    */
-  private current: { readonly persona: Persona; readonly risk: RiskConfig };
+  private current: {
+    readonly persona: Persona;
+    readonly risk: RiskConfig;
+    readonly tuning: TraderTuning;
+  };
 
   constructor(config: AutonomousTraderConfig) {
     this.config = config;
-    this.current = { persona: config.persona, risk: config.risk ?? DEFAULT_RISK_CONFIG };
+    this.current = {
+      persona: config.persona,
+      risk: config.risk ?? DEFAULT_RISK_CONFIG,
+      tuning: {
+        mode: config.mode ?? "live",
+        ...(config.cooldownMs !== undefined ? { cooldownMs: config.cooldownMs } : {}),
+      },
+    };
     if (config.initialCooldowns) {
       for (const [symbol, at] of config.initialCooldowns) {
         this.lastOrderAt.set(symbol, at);
@@ -171,16 +189,28 @@ export class AutonomousTrader {
    * Applied between cycles, never inside one: `evaluate` snapshots both halves together at the top
    * of a cycle, so a swap landing mid-cycle takes effect on the next one instead of pairing one
    * cycle's persona with another's guards.
+   *
+   * `tuning` rides the same swap when a build change needs it (the owner flips a bot's hardcore
+   * build, #4535 slice 2c): the mode the readiness gate allows and the order cooldown belong to the
+   * build, so they change in the same breath as the persona. Left out, the tuning in force stays.
    */
-  swapRoster(next: { readonly persona: Persona; readonly risk: RiskConfig }): void {
-    this.current = { persona: next.persona, risk: next.risk };
+  swapRoster(next: {
+    readonly persona: Persona;
+    readonly risk: RiskConfig;
+    readonly tuning?: TraderTuning;
+  }): void {
+    this.current = {
+      persona: next.persona,
+      risk: next.risk,
+      tuning: next.tuning ?? this.current.tuning,
+    };
   }
 
   async evaluate(context: MarketContext): Promise<OrderResult[]> {
     // One read of the swappable pair, at the top — see `swapRoster`.
-    const { persona, risk } = this.current;
+    const { persona, risk, tuning } = this.current;
     const now = (this.config.now ?? Date.now)();
-    const mode: TraderMode = this.config.mode ?? "live";
+    const mode: TraderMode = tuning.mode;
 
     // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
     // The market context is still captured here — a halt is exactly the kind of cycle the
@@ -238,7 +268,7 @@ export class AutonomousTrader {
     for (const [index, intent] of guardedIntents.entries()) {
       const handled = intent.option
         ? await this.handleOption(intent, index, { persona, mode, now, cooling })
-        : await this.handleShares(intent, { mode, now, open });
+        : await this.handleShares(intent, { mode, now, open, cooldownMs: tuning.cooldownMs });
       outcomes.push(handled.outcome);
       if (handled.result) results.push(handled.result);
     }
@@ -325,10 +355,15 @@ export class AutonomousTrader {
 
   private async handleShares(
     intent: OrderIntent,
-    cycle: { readonly mode: TraderMode; readonly now: number; readonly open: OpenShares },
+    cycle: {
+      readonly mode: TraderMode;
+      readonly now: number;
+      readonly open: OpenShares;
+      readonly cooldownMs: number | undefined;
+    },
   ): Promise<Handled> {
     const { mode, now, open } = cycle;
-    const cooldown = this.config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    const cooldown = cycle.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     const last = this.lastOrderAt.get(intent.symbol);
     if (last !== undefined && now - last < cooldown) {
       return { outcome: { intent, action: "cooldown-skipped" } };
