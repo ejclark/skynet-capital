@@ -511,8 +511,9 @@ function editLabels(number, args) {
  * `statusForIssue`). This is the one exception: a coach-shaped filing (the guided rail path
  * already attaches `curated` + a `skynet-spec` block, per docs/FEEDBACK.md's "the coach is what
  * makes the wide envelope safe") is judged safe enough to self-ready, preserving the old
- * near-zero-friction default for the common case. Everything else — freeform filings, and
- * anything already flagged `needs-eric`/`needs-info` — sits in Backlog for an explicit `ready`
+ * near-zero-friction default for the common case; a `bug` + `fast-track` filing is the second
+ * (below). Everything else — freeform filings, and anything already flagged
+ * `needs-eric`/`needs-info`/`needs-design` — sits in Backlog for an explicit `ready`
  * (Eric's, or a later triage pass), visible on the board rather than building unseen.
  *
  * Pure so the rule is provable without a network call; `curated`/`needs-eric`/`needs-info` are
@@ -520,11 +521,22 @@ function editLabels(number, args) {
  */
 export function triageFeedbackDecision({ labels = [] } = {}) {
   const has = (name) => labels.includes(name);
-  if (has("needs-eric") || has("needs-info")) {
-    return { ready: false, reason: "flagged needs-eric/needs-info — stays in Backlog" };
+  if (has("needs-eric") || has("needs-info") || has("needs-design")) {
+    return {
+      ready: false,
+      reason: "flagged needs-eric/needs-info/needs-design — stays in Backlog",
+    };
   }
   if (has("curated")) {
     return { ready: true, reason: "coach-shaped filing (curated) — self-readying" };
+  }
+  // A BUG FOUND MID-BUILD IS THE NEXT PULL (#5667; CLAUDE.md, Eric 2026-09-30). It is filed `bug` +
+  // `fast-track`, and the feedback lane builds a bug (`inFeedbackLane`, #5332) — but only once it is
+  // `ready`, and nothing applied that: 23 of 23 open bugs sat in Backlog on 2026-10-18. Applying
+  // `fast-track` takes triage permission, the same bar `feedback` meets as authorization. A `plan`
+  // is the plan lane's to flip. The admission gate still decides when it starts.
+  if (has("bug") && has("fast-track") && !has("plan")) {
+    return { ready: true, reason: "bug + fast-track — the next pull, self-readying" };
   }
   return { ready: false, reason: "freeform filing — stays in Backlog for an explicit ready" };
 }
