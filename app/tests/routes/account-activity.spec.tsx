@@ -9,12 +9,12 @@ import {
 import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DeskActivity, DeskActivityEvent, DeskActivityQuery } from "../../src/live/desk";
-import { Route } from "../../src/routes/u.$id.activity";
+import { Route } from "../../src/routes/u.$id.ledger";
 import { SYMBOL_BEAT_MS } from "../../src/shell/account-activity";
 import { FIND_PAGES } from "../../src/shell/use-activity-pages";
 
 /**
- * An account's Activity, paged and narrowed (#4650, plan #4642): the owner watches the trades a bot
+ * An account's Ledger, paged and narrowed (#4650, plan #4642): the owner watches the trades a bot
  * makes through each playbook it runs. The page renders through a real memory-history router, so
  * `Route.useSearch()` and its navigate calls are the real ones; the reads are mocked, and every
  * call is recorded so a spec can say exactly what the page asked the server for.
@@ -61,8 +61,8 @@ const firstPage = (extra: Partial<DeskActivity> = {}): DeskActivity => {
 function mount(path: string) {
   const rootRoute = createRootRoute({ component: () => <Outlet /> });
   const activityRoute = Route.update({
-    id: "/u/$id/activity",
-    path: "/u/$id/activity",
+    id: "/u/$id/ledger",
+    path: "/u/$id/ledger",
     getParentRoute: () => rootRoute,
   } as never);
   const router = createRouter({
@@ -141,7 +141,7 @@ describe("older orders", () => {
       q.before === first.nextCursor
         ? { available: true, activity: [row("old-1", 40), row("old-2", 41)] }
         : first;
-    mount("/u/sauron/activity");
+    mount("/u/sauron/ledger");
     await userEvent.click(await loadOlder());
     await waitFor(() => expect(document.getElementById("act-old-2")).not.toBeNull());
     expect(calls.at(-1)).toEqual({
@@ -171,7 +171,7 @@ describe("older orders", () => {
   it("walks back on its own to an order a link points at, and stops once it is there", async () => {
     window.location.hash = "#act-old-3";
     answer = endlessLedger();
-    mount("/u/sauron/activity");
+    mount("/u/sauron/ledger");
     await waitFor(() => expect(document.getElementById("act-old-3")).not.toBeNull());
     await flush();
     expect(olderReads()).toHaveLength(3);
@@ -180,7 +180,7 @@ describe("older orders", () => {
   it(`walks at most ${FIND_PAGES} pages under the filter that is on, then says the order is further back`, async () => {
     window.location.hash = "#act-never";
     answer = endlessLedger();
-    mount("/u/sauron/activity?symbol=AMD");
+    mount("/u/sauron/ledger?symbol=AMD");
     expect(await screen.findByText(/older than the 35 loaded here/)).toBeInTheDocument();
     expect(olderReads()).toHaveLength(FIND_PAGES);
     expect(olderReads().every((q) => q.symbol === "AMD")).toBe(true);
@@ -193,7 +193,7 @@ describe("narrowing by symbol", () => {
   it("sends what the box says, a beat behind, into the URL and the read — and pages under it", async () => {
     const first = firstPage();
     answer = (q) => (q.before ? { available: true, activity: [row("old-1", 40)] } : first);
-    const router = mount("/u/sauron/activity");
+    const router = mount("/u/sauron/ledger");
     const typed = typeSymbolBox(await screen.findByLabelText("Filter by symbol"), "nvda");
     // A beat behind: one timer is waiting, and neither the URL nor the read has moved yet.
     expect(typed.held).toBe(1);
@@ -210,7 +210,7 @@ describe("narrowing by symbol", () => {
 
   it("names the filter on an empty result and offers to clear it", async () => {
     answer = (q) => (q.symbol ? { available: true, activity: [] } : firstPage());
-    const router = mount("/u/sauron/activity?symbol=ZZZ");
+    const router = mount("/u/sauron/ledger?symbol=ZZZ");
     expect(await screen.findByText(/No orders on ZZZ in this account's ledger\./)).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Clear the filter" }));
     await waitFor(() => expect(router.state.location.search).toEqual({}));
@@ -226,7 +226,7 @@ describe("narrowing by playbook", () => {
         playbooks: ["CRWV-WHEEL", "NVDA-CALL-SPREAD"],
         ...(q.playbook ? { activity: [row("mleg-1", 0)], nextCursor: undefined } : {}),
       });
-    const router = mount("/u/sauron/activity");
+    const router = mount("/u/sauron/ledger");
     await screen.findByRole("group", { name: "Playbook" });
     // Pressed reads as a ✓ as well as the accent — never the hue alone.
     expect(chips()).toEqual([
@@ -249,7 +249,7 @@ describe("narrowing by playbook", () => {
 
   it("draws no chips when the server sends no list — anyone but the bot's owner", async () => {
     answer = () => firstPage();
-    mount("/u/sauron/activity");
+    mount("/u/sauron/ledger");
     await waitFor(() => expect(document.getElementById("act-ord-0")).not.toBeNull());
     expect(screen.queryByRole("group", { name: "Playbook" })).toBeNull();
     expect(screen.getByLabelText("Filter by symbol")).toBeInTheDocument();
@@ -275,7 +275,7 @@ describe("an order's full detail", () => {
 
   it("opens from a link as a panel beside the live list on a desktop, and Close drops it", async () => {
     answer = () => firstPage();
-    const router = mount("/u/sauron/activity?order=ord-3");
+    const router = mount("/u/sauron/ledger?order=ord-3");
     const panel = await screen.findByRole("complementary");
     expect(within(panel).getByRole("heading", { level: 3 })).toHaveTextContent(
       "NVDA rises from $181.40",
@@ -315,7 +315,7 @@ describe("an order's full detail", () => {
 
   it("swaps one panel for another from the live list, and one Close returns to the list", async () => {
     answer = () => reasoned();
-    const router = mount("/u/sauron/activity");
+    const router = mount("/u/sauron/ledger");
     await fullDetail("ord-3");
     await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
     // The list stays live beside the panel: a second order's full detail takes the panel's place.
@@ -331,7 +331,7 @@ describe("an order's full detail", () => {
 
   it("keeps a filter narrowed beside the open panel when Close returns to the list", async () => {
     answer = () => reasoned();
-    const router = mount("/u/sauron/activity");
+    const router = mount("/u/sauron/ledger");
     await fullDetail("ord-3");
     await waitFor(() => expect(router.state.location.search).toEqual({ order: "ord-3" }));
     await typeSymbolBox(screen.getByLabelText("Filter by symbol"), "nvda").release();
@@ -348,7 +348,7 @@ describe("an order's full detail", () => {
     const restore = phone();
     try {
       answer = () => firstPage();
-      const router = mount("/u/sauron/activity");
+      const router = mount("/u/sauron/ledger");
       const card = () => document.getElementById("act-ord-3") as HTMLElement;
       await waitFor(() => expect(card()).not.toBeNull());
       await userEvent.click(within(card()).getAllByRole("button")[0] as HTMLElement);
@@ -358,7 +358,7 @@ describe("an order's full detail", () => {
       // A page in the list's place: the list, its heading and its filter step aside.
       expect(screen.queryByLabelText("Filter by symbol")).toBeNull();
       expect(document.getElementById("act-ord-0")).toBeNull();
-      await userEvent.click(screen.getByRole("button", { name: "‹ Activity" }));
+      await userEvent.click(screen.getByRole("button", { name: "‹ Ledger" }));
       await waitFor(() => expect(router.state.location.search).toEqual({}));
       expect(router.state.location.hash).toBe("act-ord-3");
       await waitFor(() => expect(card()).toHaveAttribute("data-open"));

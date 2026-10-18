@@ -188,7 +188,7 @@ for (const [tag, viewport] of [
   ["desktop", { width: 1280, height: 900 }],
 ]) {
   await page.setViewportSize(viewport);
-  await page.goto(`${origin}/app/u/bot-sauron/activity`);
+  await page.goto(`${origin}/app/u/bot-sauron/ledger`);
   await page.locator("#act-opt-spread-1").waitFor();
   await settle();
   // 1 — the bar over the newest orders: the spread with its legs, the put. The desktop frame is the
@@ -196,7 +196,7 @@ for (const [tag, viewport] of [
   if (tag === "desktop") {
     await shoot(`activity-filters-${tag}`);
     // 1c — the put's full detail as a side panel (#5101): not modal, the table live beside it.
-    await page.goto(`${origin}/app/u/bot-sauron/activity?order=opt-put-1#act-opt-put-1`);
+    await page.goto(`${origin}/app/u/bot-sauron/ledger?order=opt-put-1#act-opt-put-1`);
     await page.locator(".act-deep-panel").waitFor();
     await settle();
     await shoot(`activity-deep-${tag}`);
@@ -219,7 +219,7 @@ for (const [tag, viewport] of [
   await shoot(`activity-deep-${tag}`);
   await page.locator(".act-deep-page").evaluate((el) => el.scrollIntoView({ block: "end" }));
   await shoot(`activity-deep-end-${tag}`);
-  await page.getByRole("button", { name: "‹ Activity" }).click();
+  await page.getByRole("button", { name: "‹ Ledger" }).click();
   await page.locator("#act-opt-put-1[data-open]").waitFor();
   await page.locator("#act-opt-put-1 .act-card-head").click();
 
@@ -232,7 +232,7 @@ for (const [tag, viewport] of [
   await shoot(`activity-playbook-${tag}`);
 
   // 3 — the bottom of the first page: "Load older orders", and the older page it loads.
-  await page.goto(`${origin}/app/u/bot-sauron/activity`);
+  await page.goto(`${origin}/app/u/bot-sauron/ledger`);
   const older = page.getByRole("button", { name: "Load older orders" });
   await older.waitFor();
   await settle();
@@ -243,7 +243,7 @@ for (const [tag, viewport] of [
   await shoot(`activity-load-older-${tag}`);
 
   // 4 — a stock this account never traded: the empty line names the filter and offers the way out.
-  await page.goto(`${origin}/app/u/bot-sauron/activity?symbol=AMD`);
+  await page.goto(`${origin}/app/u/bot-sauron/ledger?symbol=AMD`);
   await page.getByRole("button", { name: "Clear the filter" }).waitFor();
   await settle();
   await toTop(page.locator(".page-header"));
@@ -254,7 +254,7 @@ for (const [tag, viewport] of [
 // way, and once the oldest order is loaded it says so. A build without the walk shoots the list
 // where it simply stopped — the before frame.
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?section=activity`);
+await page.goto(`${origin}/app/accounts?section=ledger`);
 await page.locator("#act-opt-spread-1").waitFor();
 await settle();
 const profileOlder = page.getByRole("button", { name: "Load older orders" });

@@ -57,7 +57,7 @@ import { positionPageFromSearch } from "../shell/use-position-page";
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
  * blotter), **Balance** (#5493 slice 3 — the book as one system: the findings, the playbook
  * behind each, the plays' numbers and the closed trades; one account's, so not "All accounts"),
- * **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * **Ledger** (one account's orders, #5281 — "Activity" until then) and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
  * range is the section's own head and the page's only date control, over one lane per position and
  * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
  * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
@@ -111,7 +111,7 @@ function MergedActivity({
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
   if (activity.isError) return <p className="note">The ledger is unreachable.</p>;
   if (!activity.data.available)
-    return <p className="note">No durable activity ledger is wired in this deployment.</p>;
+    return <p className="note">No durable ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
   const { events, more, page } = activity.data;
@@ -128,7 +128,7 @@ function MergedActivity({
           {more.map((a, i) => (
             <span key={a.id}>
               {i > 0 ? " · " : null}
-              <Link to="/accounts" search={{ account: a.id, section: "activity" }}>
+              <Link to="/accounts" search={{ account: a.id, section: "ledger" }}>
                 {a.name} ›
               </Link>
             </span>
@@ -155,7 +155,7 @@ function ActivitySection({
     return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (rest.length > 0)
     return <MergedActivity accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
-  // One account: the same paged, narrowed list `/u/<id>/activity` shows. Every account here is the
+  // One account: the same paged, narrowed list `/u/<id>/ledger` shows. Every account here is the
   // viewer's own, so a bot's playbook is theirs to see. Keyed by the account, so switching starts
   // the symbol box and the walk back over.
   return (
@@ -247,7 +247,7 @@ function AccountsPage(): ReactElement {
             ...prev,
             account: id === fallbackId ? undefined : id,
             // An order's card belongs to the bot that placed it — never landed on another's. The
-            // Activity filter's playbook is one bot's too, so the narrowing goes with it.
+            // Ledger filter's playbook is one bot's too, so the narrowing goes with it.
             card: undefined,
             symbol: undefined,
             playbook: undefined,
@@ -293,9 +293,9 @@ function AccountsPage(): ReactElement {
             // A position's page and its open row belong to Overview.
             position: undefined,
             open: undefined,
-            // An order's full detail and the list's narrowing belong to Activity; leaving it
+            // An order's full detail and the list's narrowing belong to the Ledger; leaving it
             // closes the detail and drops the filter.
-            ...(next === "activity"
+            ...(next === "ledger"
               ? {}
               : { order: undefined, symbol: undefined, playbook: undefined }),
             ...(crossing ? { q: undefined, events: undefined } : {}),
@@ -338,7 +338,7 @@ function CockpitBody({
   readonly landing: PlaybookLanding | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
-  /** Activity's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/activity`). */
+  /** The Ledger's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/ledger`). */
   readonly narrowing: ActivityNarrowing;
   readonly onNarrow: (next: ActivityNarrowing) => void;
   readonly pinnedDay: string | undefined;
@@ -352,7 +352,7 @@ function CockpitBody({
     // blotter it carries; Playbooks, Thesis and the viewer's sections read their own endpoints.
     enabled:
       deskIds.length > 0 &&
-      (section === "overview" || section === "activity" || section === "events"),
+      (section === "overview" || section === "ledger" || section === "events"),
   });
   const networth = useQuery({
     queryKey: ["accounts-networth"],
@@ -484,9 +484,9 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
-    // Activity's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
+    // The Ledger's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
     ...narrowingFromSearch(search),
-    // Activity's open full detail (#5101, `use-order-detail.ts`).
+    // The Ledger's open full detail (#5101, `use-order-detail.ts`).
     ...(asId(search.order) ? { order: asId(search.order) } : {}),
     // Overview's position full page and the row its back opens (#5070 slice 6, `use-position-page.ts`).
     ...positionPageFromSearch(search),

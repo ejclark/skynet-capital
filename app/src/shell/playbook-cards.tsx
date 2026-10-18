@@ -184,16 +184,16 @@ function weekOf(
   };
 }
 
-/** The account's Activity with the order's row named — the card's one way back to it. */
+/** The account's Ledger with the order's row named — the card's one way back to it. */
 function BackToOrder({ deskId, orderId }: { readonly deskId: string; readonly orderId: string }) {
   return (
     <Link
       className="door-link pbb-back"
       to="/accounts"
-      search={{ account: deskId, section: "activity" }}
+      search={{ account: deskId, section: "ledger" }}
       hash={`act-${orderId}`}
     >
-      ← Back to the order in Activity
+      ← Back to the order in the Ledger
     </Link>
   );
 }

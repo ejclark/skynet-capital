@@ -55,7 +55,7 @@ describe("FormStrip", () => {
     const win = await screen.findByRole("link", {
       name: "Closed 9/22, win: TSLA Oct 17 400 Put, +$696. Open this trade",
     });
-    expect(win).toHaveAttribute("href", "/accounts?account=human-eric&section=activity#act-o3");
+    expect(win).toHaveAttribute("href", "/accounts?account=human-eric&section=ledger#act-o3");
     expect(win).toHaveTextContent("✓");
     expect(screen.getByRole("link", { name: /Closed 9\/17, loss/ })).toHaveTextContent("✕");
     expect(screen.getByText("2 wins in a row")).toBeInTheDocument();

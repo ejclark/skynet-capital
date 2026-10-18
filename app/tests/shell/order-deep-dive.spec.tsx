@@ -175,11 +175,11 @@ describe("OrderDeepDive — what it shows", () => {
 });
 
 describe("OrderDeepDive — the two shapes and their one way back", () => {
-  it("is a page on a phone whose way back is ‹ Activity", () => {
+  it("is a page on a phone whose way back is ‹ Ledger", () => {
     const onClose = rstest.fn();
     render(wrap(<OrderDeepDive event={wheel} variant="page" showPlaybook onClose={onClose} />));
     expect(screen.queryByRole("complementary")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "‹ Activity" }));
+    fireEvent.click(screen.getByRole("button", { name: "‹ Ledger" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -226,7 +226,7 @@ describe("ActivityLedger — the door and the way back to the same row", () => {
         wrap(<ActivityLedger events={[wheel, shares]} detail="put-1" onDetail={noop} />),
       );
       expect(document.querySelector(".act-cards")).toBeNull();
-      expect(screen.getByRole("button", { name: "‹ Activity" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "‹ Ledger" })).toBeInTheDocument();
       rerender(wrap(<ActivityLedger events={[wheel, shares]} onDetail={noop} />));
       const card = document.getElementById("act-put-1") as HTMLElement;
       expect(card).toHaveAttribute("data-open");

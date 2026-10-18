@@ -22,11 +22,11 @@ describe("/accounts validateSearch — section", () => {
       checks: "open",
     });
     expect(validateSearch({ section: "playbooks", checks: "yes" }).checks).toBeUndefined();
-    expect(validateSearch({ section: "activity", checks: "open" }).checks).toBeUndefined();
+    expect(validateSearch({ section: "ledger", checks: "open" }).checks).toBeUndefined();
   });
 
   it("keeps the live sections, and drops anything unknown", () => {
-    for (const section of ["activity", "playbooks", "thesis", "balance"]) {
+    for (const section of ["ledger", "playbooks", "thesis", "balance"]) {
       expect(validateSearch({ section })).toMatchObject({ section });
     }
     expect(validateSearch({ section: "nope" }).section).toBeUndefined();
@@ -127,7 +127,7 @@ describe("the Profile page's section list and its default (the zero-account door
     expect(ids(sectionsFor("human"))).toEqual([
       "overview",
       "balance",
-      "activity",
+      "ledger",
       "events",
       "milestones",
       "feedback",
@@ -135,7 +135,7 @@ describe("the Profile page's section list and its default (the zero-account door
     expect(ids(sectionsFor("bot"))).toEqual([
       "overview",
       "balance",
-      "activity",
+      "ledger",
       "events",
       "playbooks",
       "thesis",
@@ -149,7 +149,7 @@ describe("the Profile page's section list and its default (the zero-account door
   it("leaves Balance out of All accounts — it is one book's, like the head's health line (#5493)", () => {
     expect(ids(sectionsFor(undefined))).toEqual([
       "overview",
-      "activity",
+      "ledger",
       "events",
       "milestones",
       "feedback",
@@ -162,7 +162,7 @@ describe("the Profile page's section list and its default (the zero-account door
 
   it("gives a member with no account no Overview to open", () => {
     expect(ids(sectionsFor(undefined, false))).toEqual([
-      "activity",
+      "ledger",
       "events",
       "milestones",
       "feedback",

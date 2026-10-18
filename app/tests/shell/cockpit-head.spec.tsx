@@ -379,7 +379,7 @@ describe("the vitals line", () => {
     for (const section of [
       "overview",
       "balance",
-      "activity",
+      "ledger",
       "events",
       "playbooks",
       "thesis",
@@ -587,7 +587,7 @@ describe("the section switch", () => {
     await accountButton("Sauron");
     // Balance (#5493 slice 3) takes the second seat, so the book's four stay on the row and a
     // bot's Playbooks moves into More — its head line, one row up, is still a door to it.
-    expect(shown()).toEqual(["Overview", "Balance", "Activity", "Events", "More"]);
+    expect(shown()).toEqual(["Overview", "Balance", "Ledger", "Events", "More"]);
     fireEvent.click(screen.getByRole("button", { name: "More sections" }));
     const more = within(group()).getAllByRole("button").slice(5);
     expect(more.map((b) => b.textContent)).toEqual([
@@ -616,7 +616,7 @@ describe("the section switch", () => {
     expect(shown()).toEqual([
       "Overview",
       "Balance",
-      "Activity",
+      "Ledger",
       "Events",
       "Playbooks",
       "Thesis",

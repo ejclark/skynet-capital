@@ -482,13 +482,13 @@ describe("BotPlaybooksSection — arriving from an order", () => {
     expect(document.querySelectorAll(".wk-strip [data-ringed]")).toHaveLength(0);
   });
 
-  it("carries one way back, to the order's row on this bot's Activity", async () => {
+  it("carries one way back, to the order's row on this bot's Ledger", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
     await screen.findByText("SAURON");
     expect(
-      within(cardOf("SAURON")).getByRole("link", { name: "← Back to the order in Activity" }),
-    ).toHaveAttribute("href", "/accounts?account=sauron&section=activity#act-ord-1");
+      within(cardOf("SAURON")).getByRole("link", { name: "← Back to the order in the Ledger" }),
+    ).toHaveAttribute("href", "/accounts?account=sauron&section=ledger#act-ord-1");
   });
 
   it("rings nothing for an order older than this week, and says why", async () => {
@@ -509,9 +509,9 @@ describe("BotPlaybooksSection — arriving from an order", () => {
       ),
     );
     expect(await screen.findByText(/It is off on this bot now/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "← Back to the order in Activity" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "← Back to the order in the Ledger" })).toHaveAttribute(
       "href",
-      "/accounts?account=sauron&section=activity#act-ord-9",
+      "/accounts?account=sauron&section=ledger#act-ord-9",
     );
     expect(document.querySelectorAll("[data-landed]")).toHaveLength(0);
     rerender(withClient(<BotPlaybooksSection deskId="sauron" landing={{ card: "CRWV-WHEEL" }} />));

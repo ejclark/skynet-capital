@@ -198,7 +198,7 @@ const under = (selector) =>
 
 /** Open the put's order on Activity, then follow its playbook link to the card. */
 async function landFromActivity(opened) {
-  await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+  await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
   await page.locator("#act-put-1").waitFor();
   await page.locator(opened).click();
   await page.getByRole("link", { name: /CRWV-WHEEL · aggressive — open its card/ }).waitFor();

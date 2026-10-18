@@ -251,15 +251,15 @@ describe("the range heads Events, and no other section carries a calendar (#5074
     expect(await screen.findByText(/^Oct 26 – Nov 1 · 1 on what you hold/)).toBeInTheDocument();
   });
 
-  it("shows no calendar on Overview or Activity — their content never moves with a range", async () => {
+  it("shows no calendar on Overview or the Ledger — their content never moves with a range", async () => {
     mountAccounts(`/accounts?account=sauron&${OCTOBER}`);
     await screen.findByTestId("blotter");
     expect(screen.queryByRole("group", { name: /Lens|Range/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^(Next|Previous) / })).not.toBeInTheDocument();
     expect(screen.queryByText("Market calendar")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Activity" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ledger" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Activity" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "Ledger" })).toHaveAttribute(
         "aria-pressed",
         "true",
       ),

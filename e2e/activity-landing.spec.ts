@@ -128,14 +128,14 @@ async function expectLanded(target: Locator): Promise<void> {
 test.describe("landing at 1280px, through the Overview's doors (#5022)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test("a FORM square lands on its Activity row below the sticky head, marked", async ({
+  test("a FORM square lands on its Ledger row below the sticky head, marked", async ({
     page,
   }) => {
     await stage(page);
     await page.goto(OVERVIEW);
     const square = page.locator(".form-sq").first();
     await expect(square).toBeVisible();
-    expect(await square.getAttribute("href")).toContain(`section=activity#${DEEPEST_CLOSE}`);
+    expect(await square.getAttribute("href")).toContain(`section=ledger#${DEEPEST_CLOSE}`);
     await square.click();
     await expectLanded(page.locator(`tr[id="${DEEPEST_CLOSE}"]`));
   });
@@ -161,11 +161,11 @@ test.describe("landing at 1280px, through the Overview's doors (#5022)", () => {
 test.describe("landing at 390px, through the links those doors make (#5022)", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
-  test("a FORM square's link lands on its Activity row below the sticky head, marked", async ({
+  test("a FORM square's link lands on its Ledger row below the sticky head, marked", async ({
     page,
   }) => {
     await stage(page);
-    await page.goto(`${OVERVIEW}&section=activity#${DEEPEST_CLOSE}`);
+    await page.goto(`${OVERVIEW}&section=ledger#${DEEPEST_CLOSE}`);
     // At 390 the ledger is one card an order (#5101), and the card carries the row's anchor.
     const card = page.locator(`[id="${DEEPEST_CLOSE}"]`);
     await expect(card).toHaveClass(/act-card/);
@@ -185,14 +185,14 @@ test.describe("landing at 390px, through the links those doors make (#5022)", ()
     page,
   }) => {
     await stage(page);
-    await page.goto(`${OVERVIEW}&section=activity#${DEEPEST_CLOSE}`);
+    await page.goto(`${OVERVIEW}&section=ledger#${DEEPEST_CLOSE}`);
     const card = page.locator(`[id="${DEEPEST_CLOSE}"]`);
     await expectLanded(card);
     await card.locator(".act-card-head").click();
     await card.getByRole("button", { name: /Full detail/ }).click();
     await expect(page.locator(".act-deep-page")).toBeVisible();
     await expect(page.locator(".act-card")).toHaveCount(0);
-    await page.getByRole("button", { name: "‹ Activity" }).click();
+    await page.getByRole("button", { name: "‹ Ledger" }).click();
     await expect(card).toHaveAttribute("data-open", "");
     await expectLanded(card);
   });
@@ -205,9 +205,7 @@ test.describe("an order's full detail at 1280px (#5101)", () => {
     page,
   }) => {
     await stage(page);
-    await page.goto(
-      `${OVERVIEW}&section=activity&order=${DEEPEST_CLOSE.slice(4)}#${DEEPEST_CLOSE}`,
-    );
+    await page.goto(`${OVERVIEW}&section=ledger&order=${DEEPEST_CLOSE.slice(4)}#${DEEPEST_CLOSE}`);
     const panel = page.getByRole("complementary").filter({ hasText: "Full detail" });
     await expect(panel).toBeVisible();
     const row = page.locator(`tr[id="${DEEPEST_CLOSE}"]`);
@@ -233,7 +231,7 @@ test.describe("an order's full detail at 1280px (#5101)", () => {
       (url) => url.pathname === `/api/desk/${OWNED.id}/activity`,
       (route) => route.fulfill({ json: reasonedLedger() }),
     );
-    await page.goto(`${OVERVIEW}&section=activity`);
+    await page.goto(`${OVERVIEW}&section=ledger`);
     const panel = page.getByRole("complementary").filter({ hasText: "Full detail" });
     const fullDetail = async (id: string) => {
       await page.locator(`tr[id="act-${id}"] .expand-btn`).click();
@@ -301,7 +299,7 @@ for (const width of [1280, 701]) {
       expect(await page.evaluate(strayPoints)).toEqual([]);
     });
 
-    test("a press 18px off a square's centre opens that trade's Activity row", async ({ page }) => {
+    test("a press 18px off a square's centre opens that trade's Ledger row", async ({ page }) => {
       await stage(page);
       await page.goto(OVERVIEW);
       const square = page.locator(".form-sq").first();
