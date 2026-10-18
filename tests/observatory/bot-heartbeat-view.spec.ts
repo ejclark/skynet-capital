@@ -156,6 +156,13 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
     ]);
   });
 
+  it("WHEN the newest pass ran no playbook, stops there — never reaching back past a pause (#4773)", () => {
+    const records = [pass(0, []), pass(15_000, [s1("long")])];
+    const view = botHeartbeatView(records, NOW, true);
+    expect(view.playbooks).toEqual([]);
+    expect(view.rollCall.find((l) => l.playbookId === "S1-NVDA")?.status).not.toBe("armed");
+  });
+
   it("is null, not empty, when no pass on hand carries verdicts", () => {
     expect(botHeartbeatView([pass(0)], NOW, true).playbooks).toBeNull();
   });
