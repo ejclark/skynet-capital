@@ -250,9 +250,7 @@ async function runLive(): Promise<void> {
 
   const pollNews = async () => {
     try {
-      for (const article of await getNews(UNIVERSE)) {
-        sentiment.ingest(article, universeSet);
-      }
+      sentiment.ingestAll(await getNews(UNIVERSE), universeSet);
       persistSentiment(botsStateDb, sentiment);
     } catch (error) {
       console.error("[news] poll failed:", error);

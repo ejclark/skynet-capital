@@ -41,6 +41,17 @@ describe("AlpacaNewsClient.getNews", () => {
     expect(news[0]).toMatchObject({ headline: "NVDA beats estimates", symbols: ["NVDA"] });
   });
 
+  // #4781: the story's own id is how the sentiment tracker tells a re-poll from a new story.
+  it("carries the article's id as a string, and leaves it off when the source sends none", async () => {
+    const transport = new FakeTransport({
+      status: 200,
+      body: { news: [{ id: 41_870_112, headline: "a" }, { headline: "b" }] },
+    });
+    const news = await new AlpacaNewsClient(transport).getNews(["NVDA"]);
+    expect(news[0]?.id).toBe("41870112");
+    expect(news[1]).not.toHaveProperty("id");
+  });
+
   it("throws AlpacaApiError on a non-2xx response", async () => {
     const client = new AlpacaNewsClient(
       new FakeTransport({ status: 403, body: { message: "no" } }),
