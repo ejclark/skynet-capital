@@ -176,6 +176,43 @@ const AI_DIP_STATED: Conviction = {
         "The ~11-09 print and the next 2 all move less than their priced straddle, the first read by 2026-11-17.",
       scoreBy: "2026-11-17",
     },
+    // Re-stated 2026-10-18 (the call sheet's "Re-stated" block): four more claims, all size zero.
+    {
+      tag: "underrated",
+      statement: "3b. NVIDIA must buy CoreWeave's unsold capacity through 2032.",
+      bucket: "untestable",
+      evidence:
+        "A $6.3B order (Sept 2025 SEC filing): NVIDIA buys capacity other customers don't use, through 2032-04-13, if CoreWeave delivers. Volume undisclosed. Size zero.",
+      falsifier:
+        "A filing by 2027-01-29 shows the order reduced, terminated, or CoreWeave missing its delivery terms.",
+    },
+    {
+      tag: "underrated",
+      statement: "10. GPU-backed financing keeps CoreWeave's capacity growing.",
+      bucket: "untestable",
+      evidence:
+        "DDTL 4.0 was the first GPU-backed loan rated investment grade (A3, SOFR + 225); a later $2.6B loan priced at SOFR + 550 against shorter customer contracts. Cuts both ways. Size zero.",
+      falsifier:
+        "A GPU-backed loan CoreWeave announces by 2027-01-29 prices wider than SOFR + 550, or the A3 rating is cut.",
+    },
+    {
+      tag: "underrated",
+      statement: "11. Demand stays at whatever capacity exists, for the foreseeable future.",
+      bucket: "untestable",
+      evidence: "No fundamentals feed reads utilization or guidance. Size zero.",
+      falsifier:
+        "The Q3 print (honest window to 2026-11-16) cuts full-year revenue or capex guidance.",
+    },
+    {
+      tag: "underrated",
+      statement:
+        "12. Play the cycle: after a big pullback, forecast the next upswing and take profit into it.",
+      bucket: "untestable",
+      evidence:
+        "The cycle-phase study times the way back to entry, not the next peak; 30–35% of analogs regained the old high within 126 sessions. A peak-timing study is proposed. Size zero.",
+      falsifier:
+        "A cycle-phase re-run by 2027-01-29 puts fewer than 30% of analogs back at the old high within 126 sessions.",
+    },
   ],
 };
 

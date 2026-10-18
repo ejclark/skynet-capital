@@ -201,7 +201,7 @@ describe("the seeded AI-dip conviction", () => {
   );
   const label = (c: ConvictionClaim) => c.statement.match(/^(\d+[a-z]?)\./)?.[1];
 
-  it("maps 1, 2a, 5, 7 and 8 to instruments; offers 2b, 4 and 9; leaves 3 and 6 untestable", () => {
+  it("maps 1, 2a, 5, 7 and 8 to instruments; offers 2b, 4 and 9; leaves 3, 3b, 6 and 10–12 untestable", () => {
     const byLabel = Object.fromEntries(
       AI_DIP_2026_10.claims.map((c, i) => {
         const p = plans[i];
@@ -219,6 +219,10 @@ describe("the seeded AI-dip conviction", () => {
       "7": "cycle-phase/floor/CRWV",
       "8": "cycle-phase/recovery/CRWV",
       "9": "offer",
+      "3b": "untestable",
+      "10": "untestable",
+      "11": "untestable",
+      "12": "untestable",
     });
   });
 

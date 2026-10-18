@@ -65,9 +65,34 @@ it reads "cut it, or say why you're holding". That is his 2026-10-08 complaint, 
 - _hypothesis — "close to the bottom" wants a staged entry (several puts at falling strikes over
   weeks), not one put. Proves it wrong: him selling a single put at one strike when the ladder
   offers several._
-- **Open fork, not a gap:** should a member's own stated conviction ever license a put the research
-  doesn't? Today the research wins and the rows still show. Deferred until #4952's signals land —
-  they may give the research a buy on a pullback, which erodes the fork.
+- **The fork that was here is settled, for the bots.** "Should a member's conviction license a put
+  the research doesn't?" — yes: the CRWV wheel and long-call bots already run *as* his conviction,
+  against the study's stand-aside (#4642), from the record
+  [`ai-dip-2026-10.md`](../research/convictions/ai-dip-2026-10.md). What's left is the member
+  side (below).
+
+**His thesis, the same day (Eric, 2026-10-18):**
+
+> CRWV backlog, NVDA ownership and access, constant demand, NVDA contractually obligated to buy
+> surplus compute until 2032, nvda ability to finance hardware as a depreciating asset.. demand
+> will remain at whatever peak capacity has available for the foreseeable future. There are
+> predicable cycles.. Significant pullback should be met with looking to forecast when the next
+> peaks/cycles to play the cycle. Misjudging the timing and Owning stock is fine given the 6m to
+> 18 months will continue to experience significant growth with upswings to take profit.
+
+It landed as four claims on the conviction record (3b, 10, 11, 12 — size zero, each with a dated
+falsifier) and one line of risk stance: assignment is accepted, not a failure. It exposes two gaps
+(neither with a twin yet) and one fork:
+
+- **The guidance never reads his conviction** — WHEN the member holds a stated conviction on the
+  symbol, position guidance shall show it beside the research stance, with its check date and the
+  claims it rests on. _Needs: the conviction record as a guidance input (today only `ledger`)._
+- **Play the cycle** — WHEN a pullback reaches the cycle study's floor band, the app shall say when
+  past upswings from there peaked, so a take-profit can be planned before the bounce. _Needs: a
+  peak-timing study (claim 12); the cycle study times the way back, not the next peak — #4952._
+- **His stance vs. the wheel's retire test** — the record now says assignment is fine; the
+  conviction check still retires the CRWV wheel when more than 1 in 3 sold puts finish in the money
+  (`src/playbooks/conviction-check.ts`). A fork for him, not a gap.
 
 ## 2 — NVDA long calls: run-up, pullback, no exit plan
 
