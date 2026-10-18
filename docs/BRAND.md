@@ -85,10 +85,9 @@ means one number. Each is where the CSS already broke most often; JS reads them 
 | **bench** | ≥ 1280px | the narrowest window giving `/trade`'s form and chain ~450px columns each, so its sections dock; below it is ≤ 1279 |
 
 The widening side of an edge is its complement (`min-width: 701px` · `861px`, `max-width:
-1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). One known
-exception: the topbar market clock compacts at ≤ 1280, one pixel off the bench edge — moving it
-to 1279 hides the view links at 1280 with Moneypenny's rail open, because the clock sizes by the
-window while the rail narrows the shell.
+1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). The top bar's view row is
+not a window edge: Moneypenny's rail narrows the bar without narrowing the window, so the bar asks
+its own width (`@container topbar`, `shell.css`, #4046) whether the views still fit beside its marks.
 
 ## Voice & tone
 
