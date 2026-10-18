@@ -21,12 +21,15 @@ const BUDGET_FILE = join(ROOT, "dep-graph-budget.json");
 const DEPCRUISE = join(ROOT, "node_modules", ".bin", "depcruise");
 
 // depcruise exits non-zero when it finds error-severity violations; we own the verdict, so tolerate it.
+// maxBuffer: the JSON report outgrew execFileSync's 1 MB default (1.7 MB by 2026-10-18), which
+// truncated `out` and crashed JSON.parse below — silently, since the CI spec is advisory (#4771).
+// 64 MB matches `sh` in scripts/moneypenny/gh.mjs.
 let out = "";
 try {
   out = execFileSync(
     DEPCRUISE,
     ["src/**/*.ts", "--config", ".dependency-cruiser.cjs", "--output-type", "json"],
-    { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 << 20 },
   );
 } catch (e) {
   out = e.stdout ?? "";
