@@ -9,6 +9,8 @@
 // mid of $5.30 / $5.70, good for today) and the recap modal the review opens.
 // Slice 6 adds the opt-in Full page ›: the put's own page at 390 (its top, then its chart) and 1280,
 // leading with the price picture and profit at price, then the ways to play it, fills and dates.
+// The carried items add two phone frames: the CRWV shares' Not now naming the 20-day low as its
+// early return, and a roll picked to $75 saying where that strike sits against the same facts.
 // Usage: npm run build --prefix app && tsx scripts/shoot/position-picture.mjs [outdir]
 
 import { profileStubs } from "./profile-fixture.mjs";
@@ -288,6 +290,34 @@ await ticket.getByRole("button", { name: "Review buy-back" }).click();
 await page.locator("dialog.pos-recap[open]").waitFor();
 await page.waitForTimeout(200);
 await shoot("position-recap-390");
+
+// --- CARRIED ITEMS, phone: a share row's Not now names its 20-day low, and the roll's strike is
+// said against the picture's facts once a strike is picked ---
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+const shares = page
+  .locator(".pos-cards")
+  .getByRole("button", { name: "Guidance for CRWV", exact: true })
+  .first();
+await shares.waitFor();
+await shares.click();
+const sharesOpen = page
+  .locator(".pos-cards .pos-guide-open", { hasText: "its 20-day low" })
+  .first();
+await sharesOpen.waitFor();
+await sharesOpen.locator(".pos-act").evaluate((el) => el.scrollIntoView({ block: "center" }));
+await page.waitForTimeout(150);
+await shoot("share-not-now-390");
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await call.waitFor();
+await call.click();
+await page.locator(".pos-cards .pp").first().waitFor();
+await page.locator(".pos-cards .pos-act-btn", { hasText: "Roll" }).first().click();
+const roll = page.locator(".pos-cards .pos-tkt").first();
+await roll.getByLabel("Strike").selectOption("75");
+await roll.locator(".tkt-roll-note", { hasText: "$75" }).waitFor();
+await roll.evaluate((el) => el.scrollIntoView({ block: "center" }));
+await page.waitForTimeout(150);
+await shoot("roll-strike-390");
 
 // --- FULL PAGE › (slice 6): the opt-in deep dive, phone first, then the desk ---
 const openPage = async (scope) => {

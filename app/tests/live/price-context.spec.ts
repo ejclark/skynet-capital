@@ -2,10 +2,12 @@ import type { Bar } from "../../src/live/bars";
 import type { ChainRow } from "../../src/live/options";
 import {
   busiest,
+  contextFacts,
   contextLine,
   contractsText,
   priceRange,
   rangeWords,
+  rollStrikeLine,
   strikeBars,
 } from "../../src/live/price-context";
 
@@ -114,5 +116,27 @@ describe("the fact line under the strip", () => {
   it("says nothing without today's price, or when nothing lies on that side", () => {
     expect(contextLine(undefined, true, range, bars)).toBeUndefined();
     expect(contextLine(70, true, range, [])).toBeUndefined();
+  });
+});
+
+describe("rollStrikeLine — the roll's strike against the same facts", () => {
+  const range = { low: 78.9, high: 96.3, average: 87.6, days: 20 };
+  const bars = strikeBars(CHAIN, { lo: 72, hi: 98 }, 80);
+  const facts = contextFacts(82.6, true, range, bars);
+
+  it("says where a lower strike sits: below both", () => {
+    expect(rollStrikeLine(75, facts)).toBe(
+      "The roll's $75 sits below the 20-day low ($78.90) and the busiest strike ($80, 3.2k open).",
+    );
+  });
+
+  it("splits the facts when the strike sits between them", () => {
+    expect(rollStrikeLine(80, facts)).toBe(
+      "The roll's $80 sits above the 20-day low ($78.90), and at the busiest strike ($80, 3.2k open).",
+    );
+  });
+
+  it("says nothing when the line above names nothing", () => {
+    expect(rollStrikeLine(75, [])).toBeUndefined();
   });
 });

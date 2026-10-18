@@ -119,18 +119,54 @@ export function contextLine(
   bars: readonly StrikeBar[],
 ): string | undefined {
   if (now === undefined) return undefined;
+  const facts = contextFacts(now, losesBelow, range, bars);
+  if (facts.length === 0) return undefined;
+  return `${losesBelow ? "Under" : "Over"} today's ${money2(now)}: ${facts.map((f) => f.words).join(" and ")}.`;
+}
+
+/** One fact the line names: its words, and the price it sits at. */
+export interface PriceFact {
+  readonly words: string;
+  readonly price: number;
+}
+
+/** The facts `contextLine` names, in its order: the range's edge, then the busiest strike. */
+export function contextFacts(
+  now: number,
+  losesBelow: boolean,
+  range: PriceRange | undefined,
+  bars: readonly StrikeBar[],
+): PriceFact[] {
   const past = (x: number) => (losesBelow ? x < now : x > now);
-  const facts: string[] = [];
+  const facts: PriceFact[] = [];
   if (range) {
     const edge = losesBelow ? range.low : range.high;
     if (past(edge))
-      facts.push(`the ${range.days}-day ${losesBelow ? "low" : "high"} (${money2(edge)})`);
+      facts.push({
+        words: `the ${range.days}-day ${losesBelow ? "low" : "high"} (${money2(edge)})`,
+        price: edge,
+      });
   }
   const top = busiest(bars.filter((b) => past(b.strike)));
   if (top)
-    facts.push(
-      `the busiest strike (${strikeMoney(top.strike)}, ${contractsText(top.contracts)} open)`,
-    );
+    facts.push({
+      words: `the busiest strike (${strikeMoney(top.strike)}, ${contractsText(top.contracts)} open)`,
+      price: top.strike,
+    });
+  return facts;
+}
+
+/**
+ * The roll's strike against the same facts (#5070, carried from slice 3: "the roll's $75 would
+ * sit below both"), said beside the Strike picker while a roll is open in the row. Facts only —
+ * where the strike sits, never whether that is a good place for it. Undefined when the line above
+ * names nothing.
+ */
+export function rollStrikeLine(strike: number, facts: readonly PriceFact[]): string | undefined {
   if (facts.length === 0) return undefined;
-  return `${losesBelow ? "Under" : "Over"} today's ${money2(now)}: ${facts.join(" and ")}.`;
+  const where = (f: PriceFact) => (strike < f.price ? "below" : strike > f.price ? "above" : "at");
+  const groups = new Map<string, string[]>();
+  for (const f of facts) groups.set(where(f), [...(groups.get(where(f)) ?? []), f.words]);
+  const parts = [...groups].map(([word, names]) => `${word} ${names.join(" and ")}`);
+  return `The roll's ${strikeMoney(strike)} sits ${parts.join(", and ")}.`;
 }

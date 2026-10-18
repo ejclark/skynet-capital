@@ -33,6 +33,8 @@ export interface MarkWatch {
   readonly symbol: string;
   readonly price: number;
   readonly side: "below" | "above";
+  /** What the price is, when the words should say it: "its 20-day low". */
+  readonly name?: string;
 }
 
 /** Glyph plus word: the shape carries the mark, never the hue alone. */

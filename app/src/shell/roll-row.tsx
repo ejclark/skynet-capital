@@ -113,10 +113,14 @@ export function RollRow({
   position,
   onFilled,
   initialTarget,
+  strikeNote,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
   readonly onFilled: () => void;
+  /** Where the picked strike sits against the row's price facts (#5070), when the roll opens
+   *  inside a position's guidance — said under the pickers, beside the choice it describes. */
+  readonly strikeNote?: (strike: number) => string | undefined;
   /** A target the position guidance suggested (#3729) — seeds the pickers; the member still
    *  reviews and confirms, and the strike still snaps to one the target chain lists. */
   readonly initialTarget?: { readonly strike: number; readonly expiration: string };
@@ -144,6 +148,7 @@ export function RollRow({
   const openRow = targetChain?.rows.find((r) => r.strike === targetStrike);
   const closePrice = typedPrice(closeText) ?? closeRow?.[sides.close] ?? closeRow?.premium;
   const openPrice = typedPrice(openText) ?? openRow?.[sides.open] ?? openRow?.premium;
+  const note = strikeNote?.(targetStrike);
   const busy = state.step === "reviewing" || state.step === "submitting";
   const locked = busy || state.step === "done";
   const disarm = () =>
@@ -210,6 +215,7 @@ export function RollRow({
       <span className="tkt-roll-line num">
         {legLine(held, short, targetStrike, targetExpiration, closePrice, openPrice)}
       </span>
+      {note ? <span className="tkt-roll-line tkt-roll-note">{note}</span> : null}
       <RollAction
         state={state}
         timeInForce={timeInForce}

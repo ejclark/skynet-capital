@@ -1,12 +1,16 @@
+import type { DeskPosition } from "./desk";
 import { closeHasPassed, nextSessionAfterToday } from "./market-session";
 import type { MarkKind, MarkWatch, PositionMark } from "./position-mark";
+import type { PriceRange } from "./price-context";
+import { held } from "./quantity";
 
 /**
  * NOT NOW (#5070; Eric, 468e3897: "worth a look first" is a setting, "easy to dismiss or
  * bypass"). Not now steps one row's mark aside until a stated return condition:
  *  - the close of the next trading session (a mark set aside on a Thursday afternoon is back after
  *    Friday's close; weekends and the exchange's holidays skipped by `market-calendar.ts`), or
- *  - sooner, when the stock trades through the price the mark names (a sold option's strike).
+ *  - sooner, when the stock trades through the price the mark names (a sold option's strike), or,
+ *    on a share row, through its 20-day range's edge on the side it loses on (`shareWatch`).
  * Only that mark is set aside: a different mark on the row is a new fact and shows at once.
  *
  * Per viewer and per account, in this browser alone, like the pager's snoozes it replaces: a way
@@ -40,7 +44,8 @@ function isEntry(x: unknown): x is AsideEntry {
     (w === undefined ||
       (typeof w.symbol === "string" &&
         typeof w.price === "number" &&
-        (w.side === "below" || w.side === "above")))
+        (w.side === "below" || w.side === "above") &&
+        (w.name === undefined || typeof w.name === "string")))
   );
 }
 
@@ -62,13 +67,44 @@ export function writeAside(deskId: string, entries: readonly AsideEntry[]): void
   }
 }
 
-/** Set `mark` aside on `symbol` at `now`. */
-export function asideFor(symbol: string, mark: PositionMark, now: Date = new Date()): AsideEntry {
+/** Set `mark` aside on `symbol` at `now`. `watch` names a price when the mark itself names none
+ *  (a share row's, from `shareWatch`); the mark's own always wins. */
+export function asideFor(
+  symbol: string,
+  mark: PositionMark,
+  now: Date = new Date(),
+  watch?: MarkWatch,
+): AsideEntry {
+  const w = mark.watch ?? watch;
   return {
     symbol,
     kind: mark.kind,
     until: nextSessionAfterToday(now),
-    ...(mark.watch ? { watch: mark.watch } : {}),
+    ...(w ? { watch: w } : {}),
+  };
+}
+
+/**
+ * A share row's price to watch while it is set aside (#5070, carried from slice 2b): the 20-day
+ * range's edge on the side the shares lose on — the low for shares held, the high for shares
+ * sold short. Read from the bars the opened row's picture already holds, so it costs no read of
+ * its own. Undefined for an option (its mark names its strike), without a range, or when today's
+ * price already sits past the edge (the mark would come straight back).
+ */
+export function shareWatch(
+  position: DeskPosition,
+  range: PriceRange | undefined,
+  spot: number | undefined,
+): MarkWatch | undefined {
+  if (position.isOption || !range) return undefined;
+  const { short } = held(position.quantity);
+  const price = short ? range.high : range.low;
+  if (spot !== undefined && (short ? spot > price : spot < price)) return undefined;
+  return {
+    symbol: position.symbol,
+    price,
+    side: short ? "above" : "below",
+    name: `its ${range.days}-day ${short ? "high" : "low"}`,
   };
 }
 
@@ -93,7 +129,9 @@ const weekday = (date: string, style: "short" | "long") =>
 /** The return condition, short for the row ("till Fri close") and in full where there is room. */
 export function asideWords(entry: AsideEntry): { readonly short: string; readonly full: string } {
   const w = entry.watch;
-  const sooner = w ? `, or sooner if ${w.symbol} trades ${w.side} $${w.price.toFixed(2)}` : "";
+  const sooner = w
+    ? `, or sooner if ${w.symbol} trades ${w.side} $${w.price.toFixed(2)}${w.name ? `, ${w.name}` : ""}`
+    : "";
   return {
     short: `till ${weekday(entry.until, "short")} close`,
     full: `Back after ${weekday(entry.until, "long")}'s close${sooner}.`,

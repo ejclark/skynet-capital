@@ -5,6 +5,7 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import {
   fetchChain,
+  fetchOptionPositions,
   type OptionDraft,
   type OptionPreview,
   reviewOption,
@@ -22,6 +23,7 @@ import {
   sharesLimitSeed,
   signedMoney,
 } from "../live/position-act";
+import { rollStrikeLine } from "../live/price-context";
 import { held, parseQuantity } from "../live/quantity";
 import { CONFIDENCE_METER, type RowCall } from "../live/row-call";
 import {
@@ -37,6 +39,7 @@ import {
 } from "../live/ticket";
 import { InlineResult } from "../ui";
 import { closeRefusal, optionCloseWords } from "./close-panel";
+import { usePriceContext } from "./position-picture";
 import { plural } from "./position-row-spec";
 import { RollRow } from "./roll-row";
 
@@ -51,7 +54,9 @@ import { RollRow } from "./roll-row";
  *  - Review buy-back asks the server first, then opens the page's one modal, the recap: You pay ·
  *    Locks in · Frees · Risk after · and the guidance read, when this browser has one — then Back or
  *    Place buy-back. A refusal stays in the row; the modal only ever shows an order that can go;
- *  - Roll opens the existing one-ticket roll in place (`roll-row.tsx`), next expiry, same strike.
+ *  - Roll opens the existing one-ticket roll in place (`roll-row.tsx`), next expiry, same strike,
+ *    and says where the picked strike sits against the picture's facts — the 20-day range's edge
+ *    and the busiest strike on the side the position loses on ("The roll's $75 sits below …").
  * The orders are the desk's existing paths (`close-panel.tsx`'s close, the draft route's roll), so
  * every server check still applies. Owner only: the slot draws none of this off your own account.
  * "Proves it wrong" joins the recap with the sold-option manage call (slice 5), which owns it.
@@ -433,6 +438,37 @@ function CloseTicket({
   );
 }
 
+/**
+ * The roll, in the row: the picture's facts come from the caches the picture above it already
+ * filled (the option book's spot, the daily bars, the held expiry's chain), so opening it reads
+ * nothing new.
+ */
+function RollInRow({
+  deskId,
+  position,
+  onFilled,
+}: {
+  readonly deskId: string;
+  readonly position: DeskPosition;
+  readonly onFilled: () => void;
+}): ReactElement {
+  const book = useQuery({
+    queryKey: ["option-positions", deskId],
+    queryFn: () => fetchOptionPositions(deskId),
+    staleTime: 30_000,
+  });
+  const spot = book.data?.rows.find((r) => r.symbol === position.symbol)?.spot;
+  const { facts } = usePriceContext(position, spot);
+  return (
+    <RollRow
+      deskId={deskId}
+      position={position}
+      onFilled={onFilled}
+      strikeNote={(strike) => rollStrikeLine(strike, facts)}
+    />
+  );
+}
+
 export function PositionActs({
   deskId,
   position,
@@ -468,7 +504,7 @@ export function PositionActs({
   if (mode === "roll") {
     return (
       <section className="pos-tkt" aria-label={`Roll ${position.display}`}>
-        <RollRow deskId={deskId} position={position} onFilled={refresh} />
+        <RollInRow deskId={deskId} position={position} onFilled={refresh} />
         <div className="pos-tkt-acts">
           <button type="button" className="btn mc-btn" onClick={() => setMode("row")}>
             Cancel

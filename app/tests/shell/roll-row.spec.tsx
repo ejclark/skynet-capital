@@ -211,6 +211,21 @@ describe("RollRow", () => {
     expect(calls[1]?.leg).toMatchObject({ action: "sell", limitPrice: 12.05 });
   });
 
+  it("says where the picked strike sits when the row hands it the facts, and follows the pick", async () => {
+    mount(
+      <RollRow
+        deskId="human-eric"
+        position={heldShort}
+        onFilled={() => undefined}
+        strikeNote={(strike) => `The roll's $${strike} sits above the 20-day low ($405.00).`}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("Strike")).not.toBeDisabled());
+    expect(screen.getByText("The roll's $420 sits above the 20-day low ($405.00).")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Strike"), { target: { value: "410" } });
+    expect(screen.getByText("The roll's $410 sits above the 20-day low ($405.00).")).toBeTruthy();
+  });
+
   it("renders nothing for a symbol that isn't an option contract", () => {
     const { container } = mount(
       <RollRow
