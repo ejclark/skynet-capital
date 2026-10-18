@@ -1,6 +1,7 @@
-// Visual harness for a position's picture (#5070 slice 2; round 2 of #5037, R2 "tap opens it in
-// place"): the sold CRWV put's guidance opened on the Overview, which now leads with the price
-// strip, the waiting-earns strip and the three figures. PHONE FIRST (docs/PICTURES.md): the 390
+// Visual harness for a position's picture (#5070 slices 2 and 2b; round 2 of #5037, R2 "tap opens
+// it in place"): the sold CRWV put's guidance opened on the Overview, which now leads with the price
+// strip (with the 20-day range and open contracts by strike on its axis), the waiting-earns strip
+// and the three figures. PHONE FIRST (docs/PICTURES.md): the 390
 // frame proves the curation; the 1280 frame is the same opened guidance under its desk row.
 // Sauron's book from the round's frames (2026-10-08): NVDA 130 sh, CRWV 55 sh, one sold CRWV $80
 // put to Nov 6 (collected $255, buy-back $550, breakeven $77.45, CRWV $82.60, 75% IV). Paper.
@@ -147,6 +148,34 @@ const { page, origin, shoot, close } = await openShell({
     },
   },
 });
+
+// Slice 2b's price context, round 2's illustrative numbers: CRWV's 20-day range $78.90–$96.30
+// (average $87.60), and open contracts on the put's own Nov 6 chain. Registered after the shell's
+// catch-all, so these win for CRWV while SPY's hero bars stay flat.
+const crwvBars = Array.from({ length: 20 }, (_, i) => {
+  const c = 87.6 + 6 * Math.sin(i / 3);
+  return { t: days[i], o: c, h: i === 4 ? 96.3 : c + 1.2, l: i === 13 ? 78.9 : c - 1.2, c, v: 1 };
+});
+await page.route("**/api/trade/bars?symbol=CRWV*", (route) =>
+  route.fulfill({ json: { symbol: "CRWV", bars: crwvBars } }),
+);
+const open = { 65: 600, 70: 800, 75: 1900, 80: 3200, 85: 1400, 90: 2600, 95: 1100, 100: 700 };
+await page.route("**/api/trade/chain?*", (route) =>
+  route.fulfill({
+    json: {
+      symbol: "CRWV",
+      optionType: "put",
+      expirations: ["2026-11-06"],
+      expiration: "2026-11-06",
+      spot: 82.6,
+      rows: Object.entries(open).map(([strike, openInterest]) => ({
+        strike: Number(strike),
+        occSymbol: `CRWV261106P${String(Number(strike) * 1000).padStart(8, "0")}`,
+        openInterest,
+      })),
+    },
+  }),
+);
 
 await page.clock.setFixedTime(new Date("2026-10-08T19:00:00Z"));
 

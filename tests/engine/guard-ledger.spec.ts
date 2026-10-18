@@ -472,7 +472,7 @@ describe("the batch ledger — sells still open at the broker", () => {
   const fifty = aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 50 })] });
   const openSells = (quantity: number) => new Map([["CRWV", quantity]]);
   const runOpen = (intents: readonly OrderIntent[], portfolio: Portfolio, open: number) =>
-    applyGuardsWithVerdicts(intents, portfolio, context, CONFIG, openSells(open));
+    applyGuardsWithVerdicts(intents, portfolio, context, CONFIG, { sells: openSells(open) });
 
   it("a new sell is sized against the shares the open sell leaves", () => {
     expect(runOpen([shares("sell", "CRWV", 50)], fifty, 30).approved).toMatchObject([

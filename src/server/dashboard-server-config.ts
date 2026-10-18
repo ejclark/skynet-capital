@@ -6,6 +6,7 @@ import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -143,6 +144,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
    *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
   readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
+  /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a, `playbook-funnel.ts`)
+   *  — R&D → Playbooks' house metrics. Omit and the performance read carries `funnel: null`, so a
+   *  card says nothing rather than ten sessions of zeros nobody recorded. */
+  readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /**
    * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
    * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach

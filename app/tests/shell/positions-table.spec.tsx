@@ -70,7 +70,7 @@ const PUT = position({
   expiresInDays: 29,
   breakeven: "$77.45",
   value: "-$550",
-  dayPl: "-$60",
+  dayPl: "−$60",
   dayTone: "neg",
   totalPl: "-$295",
   totalPlRaw: -295,
@@ -98,7 +98,7 @@ const CRWV = position({
   price: "$82.60",
   breakeven: "$90.10",
   value: "$4,543",
-  dayPl: "-$82",
+  dayPl: "−$82",
   dayTone: "neg",
   totalPl: "-$412",
   returnPct: "-8.32%",
@@ -210,7 +210,7 @@ describe("PositionsTable — the ranked columns (#5071)", () => {
   });
 
   it("says a flat day in words, never +$0", () => {
-    renderTable([position({ dayPl: "+$0", dayTone: "pos" })]);
+    renderTable([position({ dayPl: "$0", dayTone: "pos" })]);
     expect(seen(cell("SPY", "value"))).toBe("$100,495 no change today");
   });
 

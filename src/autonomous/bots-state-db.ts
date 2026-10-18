@@ -28,6 +28,9 @@ export interface BotsStateDb {
   /** Every symbol's persisted sentiment-window scores, keyed by symbol. */
   loadSentiment(): Record<string, number[]>;
   saveSentiment(symbol: string, scores: readonly number[]): void;
+  /** The news articles the sentiment windows already counted, oldest first (#4781). */
+  loadSeenNews(): string[];
+  saveSeenNews(keys: readonly string[]): void;
   /** One persona's persisted per-symbol cooldown clocks. */
   loadCooldowns(personaId: string): Map<string, number>;
   saveCooldown(personaId: string, symbol: string, at: number): void;
@@ -82,6 +85,10 @@ export function openBotsStateDb(path: string): BotsStateDb {
   db.exec(`
     CREATE TABLE IF NOT EXISTS momentum (symbol TEXT PRIMARY KEY, prices_json TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sentiment (symbol TEXT PRIMARY KEY, scores_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS news_seen (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      keys_json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS cooldowns (
       persona_id TEXT NOT NULL,
       symbol TEXT NOT NULL,
@@ -134,6 +141,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
   );
   const upsertSentiment = db.prepare(
     "INSERT INTO sentiment (symbol, scores_json) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET scores_json = excluded.scores_json",
+  );
+  const upsertSeenNews = db.prepare(
+    "INSERT INTO news_seen (id, keys_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET keys_json = excluded.keys_json",
   );
   const upsertCooldown = db.prepare(
     "INSERT INTO cooldowns (persona_id, symbol, at) VALUES (?, ?, ?) ON CONFLICT(persona_id, symbol) DO UPDATE SET at = excluded.at",
@@ -242,6 +252,15 @@ export function openBotsStateDb(path: string): BotsStateDb {
     },
     saveSentiment(symbol, scores) {
       upsertSentiment.run(symbol, JSON.stringify(scores));
+    },
+    loadSeenNews(): string[] {
+      const row = db.prepare("SELECT keys_json FROM news_seen WHERE id = 1").get() as
+        | { keys_json: string }
+        | undefined;
+      return row ? JSON.parse(row.keys_json) : [];
+    },
+    saveSeenNews(keys) {
+      upsertSeenNews.run(JSON.stringify(keys));
     },
     loadCooldowns(personaId): Map<string, number> {
       const out = new Map<string, number>();
@@ -372,7 +391,7 @@ export function restoreBotsState(
   const momentum = db.loadMomentum();
   const sentimentScores = db.loadSentiment();
   tracker.restore(momentum);
-  sentiment.restore(sentimentScores);
+  sentiment.restore(sentimentScores, db.loadSeenNews());
   return {
     momentumSymbols: nonEmpty(momentum),
     sentimentSymbols: nonEmpty(sentimentScores),
@@ -385,6 +404,7 @@ export function persistSentiment(db: BotsStateDb | undefined, sentiment: Sentime
   for (const [symbol, scores] of Object.entries(sentiment.snapshot())) {
     db.saveSentiment(symbol, scores);
   }
+  db.saveSeenNews(sentiment.seenArticles());
 }
 
 // Momentum persists on a fixed interval, not per-tick — price ticks arrive far more often than a

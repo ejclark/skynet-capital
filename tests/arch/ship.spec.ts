@@ -121,6 +121,43 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(code).toBe(0);
   });
 
+  // #4509: #4496's Follow-ups bullet "#4315 — … Closes #3811." described a later PR, and GitHub
+  // closed live plan #3811 on merge — a keyword closes its issue wherever it sits in the body.
+  describe("closing keywords (#4509)", () => {
+    const WAIVED = "## The picture\n\nPicture: waived — x\n\n";
+
+    it("refuses a closing keyword below the fold, naming the line", () => {
+      const { code, stderr } = run([
+        "checkbody",
+        body(
+          `${WAIVED}## Summary\n\n- Part of #3811 · Closes #4312\n\n<details>\n\n### Follow-ups\n\n- #4315 — the Coverage section. Closes #3811.\n</details>\n`,
+        ),
+      ]);
+      expect(code).toBe(1);
+      expect(stderr).toContain("closing keyword outside the Summary");
+      expect(stderr).toContain("line 13: - #4315");
+    });
+
+    it("refuses an issue that is both `Part of` and closed", () => {
+      const { code, stderr } = run([
+        "checkbody",
+        body(`${WAIVED}## Summary\n\n- Part of #3811\n- fixes: #3811\n`),
+      ]);
+      expect(code).toBe(1);
+      expect(stderr).toContain("both 'Part of' and closed");
+    });
+
+    it("passes keywords in Summary bullets, and quoted ones in code anywhere", () => {
+      const { code } = run([
+        "checkbody",
+        body(
+          `${WAIVED}## Summary\n\n- Closes #4509 · Part of #3811\n\n<details>\n\n- write \`Closes #N\` in a Summary bullet\n\n\`\`\`\nResolves #10\n\`\`\`\n</details>\n`,
+        ),
+      ]);
+      expect(code).toBe(0);
+    });
+  });
+
   it("refuses a body with no '## The picture' section", () => {
     const { code, stderr } = run(["checkbody", body("## Summary\n\n- does stuff\n")]);
     expect(code).toBe(1);

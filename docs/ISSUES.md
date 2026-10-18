@@ -470,7 +470,10 @@ gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/pr
 its next slice itself):
 
 - **The next-pickup line is the fallback target.** The lane prefers the plan's next open, unblocked
-  sub-issue; with none, it continues on whatever that line names. A block with no next-pickup line
+  sub-issue; with none, it continues on whatever that line names. Write the slice's number in the
+  line ("slice 4, …") and in each slice's sub-issue ("slice 4 of 6"): the lane then steps past an
+  open sub-issue whose slice the line has moved beyond, and refuses a line whose slice's sub-issue
+  already closed (#4530). A block with no next-pickup line
   and no open slice is read as "this plan is finished" and nothing continues — which is correct on
   the last slice, and a silent stall if the line was simply forgotten. Either bold shape works
   (`**Next pickup: …**` or `**Next pickup:** …`).

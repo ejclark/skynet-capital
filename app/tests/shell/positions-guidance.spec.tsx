@@ -47,9 +47,40 @@ const BOOK: OptionPositions = {
   ],
 } as unknown as OptionPositions;
 
+/** Round 2's illustrative price context for CRWV (#5070 slice 2b): a 20-day range of
+ *  $78.90–$96.30 averaging $87.60, and open contracts on the put's own Nov 6 chain. */
+const CRWV_BARS = Array.from({ length: 20 }, (_, i) => ({
+  t: `2026-09-${String(10 + i).padStart(2, "0")}`,
+  o: 87.6,
+  h: i === 3 ? 96.3 : 90,
+  l: i === 12 ? 78.9 : 84,
+  c: 87.6,
+  v: 1,
+}));
+const OPEN = { 70: 800, 75: 1900, 80: 3200, 85: 1400, 90: 2600, 95: 1100 } as const;
+const CRWV_PUTS = {
+  symbol: "CRWV",
+  optionType: "put",
+  expirations: ["2026-11-06"],
+  expiration: "2026-11-06",
+  spot: 82.6,
+  rows: Object.entries(OPEN).map(([strike, openInterest]) => ({
+    strike: Number(strike),
+    occSymbol: `CRWV261106P000${strike}000`,
+    openInterest,
+  })),
+};
+
 rstest.mock("../../src/live/options", () => ({
   ...actualOptions,
   fetchOptionPositions: () => Promise.resolve(BOOK),
+  fetchChain: () => Promise.resolve(CRWV_PUTS),
+}));
+rstest.mock("../../src/live/bars", () => ({
+  fetchBars: (symbol: string) =>
+    Promise.resolve(
+      symbol === "CRWV" ? { symbol, bars: CRWV_BARS } : { barsNote: "No bars in this test." },
+    ),
 }));
 /** The Overview's `?lens=`: List unless a test sets it. */
 let lensSearch: Record<string, unknown> = {};
@@ -611,6 +642,32 @@ describe("the opened guidance leads with the position's picture (#5070 slice 2)"
       ["Model projects", "—", "a projection, once the model grades one"],
     ]);
     expect(open.querySelector(".pp-fig--model")).toBeTruthy();
+  });
+
+  it("lays the 20-day range and the open contracts by strike on the strip's own axis (slice 2b)", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const art = open.querySelector(".pp-price-art") as HTMLElement;
+    await within(art).findByText("20-day range $78.90–$96.30 · average $87.60");
+    await within(art).findByText(/Open contracts · Nov 6 puts · busiest \$80 \(3\.2k\)/);
+    const bars = [...art.querySelectorAll(".pp-oi-bar")];
+    expect(bars.length).toBeGreaterThanOrEqual(5);
+    expect(art.querySelectorAll(".pp-oi-bar--held")).toHaveLength(1);
+    expect(art.getAttribute("aria-label")).toContain(
+      "20-day range $78.90–$96.30 · average $87.60. Open contracts by strike, Nov 6 puts: the busiest is $80, 3.2k open.",
+    );
+    expect(seenText(open.querySelector(".pp-context") as HTMLElement)).toBe(
+      "Under today's $82.60: the 20-day low ($78.90) and the busiest strike ($80, 3.2k open).",
+    );
+  });
+
+  it("gives shares the range alone, and nothing when the daily bars can't be read", async () => {
+    const open = await openCard(/^Guidance for CRWV$/);
+    const art = open.querySelector(".pp-price-art") as HTMLElement;
+    await within(art).findByText("20-day range $78.90–$96.30 · average $87.60");
+    expect(art.querySelector(".pp-oi")).toBeNull();
+    const nvda = await openCard(/^Guidance for NVDA/);
+    expect(nvda.querySelector(".pp-range")).toBeNull();
+    expect(nvda.querySelector(".pp-context")).toBeNull();
   });
 
   it("gives shares their line and value, with no waiting strip", async () => {

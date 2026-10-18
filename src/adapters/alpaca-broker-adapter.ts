@@ -88,10 +88,12 @@ function openShareOrderFrom(order: AlpacaOrder): OpenShareOrder | undefined {
     return undefined;
   }
   const left = Number(order.qty) - Number(order.filled_qty ?? 0);
+  const limit = Number(order.limit_price ?? Number.NaN);
   return {
     symbol: order.symbol,
     side: order.side,
     quantity: Number.isFinite(left) ? Math.max(0, left) : 0,
+    ...(Number.isFinite(limit) && limit > 0 ? { limitPrice: limit } : {}),
   };
 }
 

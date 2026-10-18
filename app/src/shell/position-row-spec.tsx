@@ -27,10 +27,10 @@ export const withMinus = (figure: string) => figure.replace(/^-/, MINUS);
 export const ROW_KEY = { value: "Value", today: "Today", pl: "P/L", ret: "Return" } as const;
 
 /** Today's change: signed dollars, or nothing when the day is flat or rounds to $0 — never a
- *  made-up "+$0" (#5041). */
+ *  made-up "+$0" (#5041). The server writes the minus and the bare "$0" itself (#5053). */
 export function dayChange(p: DeskPosition): { tone: Tone; text?: string } {
-  if (p.dayTone === "flat" || /^[+-]?\$0$/.test(p.dayPl)) return { tone: "flat" };
-  return { tone: p.dayTone, text: withMinus(p.dayPl) };
+  if (p.dayTone === "flat" || p.dayPl === "$0") return { tone: "flat" };
+  return { tone: p.dayTone, text: p.dayPl };
 }
 
 export const plural = (n: number, one: string) =>

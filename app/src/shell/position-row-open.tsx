@@ -28,7 +28,7 @@ import { withMinus } from "./position-row-spec";
 /** A buy addressed as a `DeskPosition` of its own — the shape `ClosePanel` closes, scoped to just
  *  this buy's quantity (#3186 slice 1: closing one options buy is the common case). */
 function lotAsPosition(position: DeskPosition, lot: PositionLot): DeskPosition {
-  const rawTotalPl = Number(lot.totalPl.replace(/[^0-9.-]/g, "")) || 0;
+  const rawTotalPl = Number(lot.totalPl.replace(/\u2212/g, "-").replace(/[^0-9.-]/g, "")) || 0;
   return {
     ...position,
     quantity: lot.quantity,

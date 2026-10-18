@@ -239,7 +239,7 @@ describe("participant-card", () => {
         snap({ positions: [pos("NVDA", { quantity: 10, avgPrice: 200, marketValue: 1_000 })] }),
       );
       expect(html).toContain("neg");
-      expect(html).toContain("-$1,000");
+      expect(html).toContain("−$1,000");
     });
 
     it("escapes the display name to prevent HTML injection", () => {
