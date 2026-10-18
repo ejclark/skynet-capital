@@ -130,7 +130,7 @@ const TODAY = [
   {
     id: "activity-row",
     label: "activity row expanded, names playbook",
-    route: `${SAURON}&section=activity`,
+    route: `${SAURON}&section=ledger`,
     act: [click("button", `Why ${PUT} was sold`)],
     expect: [text("CRWV-WHEEL · aggressive")],
   },

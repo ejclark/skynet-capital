@@ -23,7 +23,7 @@
     "name": "Profile: Activity",
     "purpose": "One account's orders and fills, newest first (here, your bot Sauron).",
     "where": "Profile tab",
-    "route": "/app/accounts?account=sauron&section=activity",
+    "route": "/app/accounts?account=sauron&section=ledger",
     "world": "profile-today",
     "viewer": "eric"
   },

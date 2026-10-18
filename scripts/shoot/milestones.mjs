@@ -199,7 +199,7 @@ for (const [width, suffix] of [
     );
   };
   console.log(
-    `cockpit head at ${width}: switcher ${await head("/app/accounts?section=activity")}px · ` +
+    `cockpit head at ${width}: switcher ${await head("/app/accounts?section=ledger")}px · ` +
       `milestones ${await head("/app/accounts?section=milestones")}px · ` +
       `feedback ${await head("/app/accounts?section=feedback")}px`,
   );

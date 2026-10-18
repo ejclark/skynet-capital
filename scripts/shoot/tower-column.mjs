@@ -51,7 +51,7 @@ for (const width of [1280, 1600]) {
 }
 
 // Another section: the column stays.
-await page.goto(`${origin}/app/accounts?section=activity`);
+await page.goto(`${origin}/app/accounts?section=ledger`);
 await page.locator(".tower-column").waitFor();
 await ready("activity");
 await shoot("tower-column-activity-1600");

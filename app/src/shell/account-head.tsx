@@ -95,8 +95,8 @@ export function AccountHead({
         <Link to="/u/$id" params={{ id }} activeOptions={{ exact: true }}>
           Overview
         </Link>
-        <Link to="/u/$id/activity" params={{ id }}>
-          Activity
+        <Link to="/u/$id/ledger" params={{ id }}>
+          Ledger
         </Link>
         <Link to="/u/$id/pulse" params={{ id }}>
           Pulse

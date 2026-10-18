@@ -1387,7 +1387,7 @@ await shootCockpit("accounts-positions-phone");
 
 // Activity section — the order timeline below the sticky header. Waits on the Symbol column
 // (always visible) rather than Status, which lives in a `col-detail` cell hidden at phone width.
-await page.goto(`${origin}/app/accounts?section=activity`);
+await page.goto(`${origin}/app/accounts?section=ledger`);
 await page.getByText("AAPL").first().waitFor();
 await shootCockpit("accounts-activity-phone");
 
@@ -1587,7 +1587,7 @@ await underHead(".cycle-placed");
 await shootCockpit("accounts-playbooks-traded-round-phone");
 tradedPassesIncluded = false;
 // The head line on another section — "● Running · 7 playbooks ›", the way in from anywhere.
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator(".hb-line").waitFor();
 await settle();
 await shootCockpit("accounts-head-line-phone");
@@ -1614,7 +1614,7 @@ await shootCockpit("accounts-playbooks-probes-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-phone");
@@ -1628,7 +1628,7 @@ await page.locator(".blotter-scroll").evaluate((el) => {
 });
 await shootCockpit("accounts-activity-round-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");

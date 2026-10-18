@@ -22,11 +22,11 @@ import { withMinus } from "./position-row-spec";
 /**
  * AN ORDER'S FULL DETAIL — THE OPT-IN DEEP DIVE (#5101; #5037 round 2, R2-deep, Eric's pick). The
  * depth ladder on Activity is: glance (the row) → open in place (the card or the row's why) → this,
- * opened only by "Full detail ›" → no commit step, because Activity is history. It comes in two
+ * opened only by "Full detail ›" → no commit step, because the Ledger is history. It comes in two
  * shapes and one content:
  *  - `panel` (desktop, >860px): a side panel beside the list. NOT modal — no backdrop, no focus
  *    trap, the list stays live and scrollable — and Close (or Escape) returns to the same row;
- *  - `page` (a phone or a tablet): the list steps aside for a page whose one way back, "‹ Activity",
+ *  - `page` (a phone or a tablet): the list steps aside for a page whose one way back, "‹ Ledger",
  *    returns to the same row (the ledger lands on it, `landing.ts`).
  * Its links stay inside: "What it weighed" opens in place, and nothing here leaves for another
  * page. The only way out is back to the row.
@@ -83,7 +83,7 @@ export function OrderDeepDive({
       <div className="act-deep-bar">
         {variant === "page" ? (
           <button type="button" className="act-deep-back" onClick={onClose}>
-            ‹ Activity
+            ‹ Ledger
           </button>
         ) : (
           <>

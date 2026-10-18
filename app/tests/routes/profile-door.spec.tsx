@@ -278,8 +278,8 @@ describe("the zero-account door", () => {
     expect(guide.getAttribute("href")).toMatch(/chapter=onboarding/);
   });
 
-  it("gives Activity an honest empty state", async () => {
-    mountAccounts("/accounts?section=activity");
+  it("gives the Ledger an honest empty state", async () => {
+    mountAccounts("/accounts?section=ledger");
     expect(await screen.findByText(/No account linked yet — its orders/)).toBeInTheDocument();
   });
 });

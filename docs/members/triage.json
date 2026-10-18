@@ -10,7 +10,7 @@
     "mustBeSeenBy": "member with one linked account selected (not All accounts; #5493 slice 3)"
   },
   {
-    "screen": "/accounts ?section=activity",
+    "screen": "/accounts ?section=ledger",
     "verdict": "keep",
     "mustBeSeenBy": "member (honest empty state with no account)"
   },
@@ -70,9 +70,14 @@
     "mustBeSeenBy": "anyone signed in; Settings link and writes only for the owner"
   },
   {
-    "screen": "/u/$id/activity",
+    "screen": "/u/$id/ledger",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
+  },
+  {
+    "screen": "/u/$id/activity",
+    "verdict": "redirect-only",
+    "target": "/u/$id/ledger"
   },
   {
     "screen": "/u/$id/playbooks",

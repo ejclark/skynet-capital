@@ -12,7 +12,7 @@ import { TABLET_QUERY } from "./widths";
 
 /**
  * ONE ACCOUNT'S ORDER LEDGER, PAGED AND NARROWED — the list both homes render: the any-account
- * page's Activity (`routes/u.$id.activity.tsx`) and the owner's Profile → Activity with one account
+ * page's Ledger (`routes/u.$id.ledger.tsx`) and the owner's Profile → Ledger with one account
  * picked (`routes/accounts.tsx`, #5165 — it read only the newest 30 and simply stopped). The route
  * owns the URL (`?symbol=` · `?playbook=`); this owns the read, the walk back and the box's typing.
  *
@@ -199,7 +199,7 @@ export function AccountActivity({
       ) : activity.isError ? (
         <p className="note">The ledger is unreachable.</p>
       ) : !activity.data.available ? (
-        <p className="note">No durable activity ledger is wired in this deployment.</p>
+        <p className="note">No durable ledger is wired in this deployment.</p>
       ) : (
         <>
           {paging ? null : (

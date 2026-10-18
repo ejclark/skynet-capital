@@ -13,8 +13,8 @@ import { horizonSearch } from "../../src/live/horizon-params";
 import { Route } from "../../src/routes/accounts";
 
 /**
- * Profile → Activity reaches past the newest 30 (#5165): with one account picked it is the same
- * paged, narrowed list `/u/<id>/activity` shows (that page's own spec covers the walk and the
+ * Profile → Ledger reaches past the newest 30 (#5165): with one account picked it is the same
+ * paged, narrowed list `/u/<id>/ledger` shows (that page's own spec covers the walk and the
  * filters in depth); with "All accounts" it says it holds each account's newest page and opens one
  * account's full list. Rendered through a real memory-history router; the reads are mocked and
  * every activity read is recorded with the account it asked for.
@@ -101,14 +101,14 @@ beforeEach(() => {
 rstest.setConfig({ testTimeout: 15_000 });
 configure({ asyncUtilTimeout: 12_000 });
 
-describe("one account's Activity", () => {
+describe("one account's Ledger", () => {
   it("offers older orders past the newest 30, the next page following the last row, then says it reached the oldest", async () => {
     const first = firstPage("ord");
     answer = (_id, q) =>
       q.before === first.nextCursor
         ? { available: true, activity: [row("old-1", 40), row("old-2", 41)] }
         : first;
-    mount("/accounts?section=activity");
+    mount("/accounts?section=ledger");
     expect(screen.queryByText(/oldest order/)).toBeNull();
     await userEvent.click(await loadOlder());
     await waitFor(() => expect(document.getElementById("act-old-2")).not.toBeNull());
@@ -128,7 +128,7 @@ describe("one account's Activity", () => {
   it("carries the read-only page's symbol box, and an older page keeps the filter", async () => {
     answer = (_id, q) =>
       q.before ? { available: true, activity: [row("old-1", 40)] } : firstPage("ord");
-    mount("/accounts?section=activity&symbol=nvda");
+    mount("/accounts?section=ledger&symbol=nvda");
     await userEvent.click(await loadOlder());
     await waitFor(() => expect(document.getElementById("act-old-1")).not.toBeNull());
     expect(calls.every((c) => c.query.symbol === "NVDA")).toBe(true);
@@ -140,7 +140,7 @@ describe("one account's Activity", () => {
 
   it("says a short ledger is the whole ledger, with no button to press", async () => {
     answer = () => ({ available: true, activity: [row("ord-0", 0)] });
-    mount("/accounts?section=activity");
+    mount("/accounts?section=ledger");
     expect(
       await screen.findByText("That's the oldest order in this account's ledger."),
     ).toBeInTheDocument();
@@ -156,12 +156,12 @@ describe("All accounts", () => {
   it("says it holds each account's newest 30 and links to the full list of each account with more", async () => {
     answer = (id) =>
       id === SAURON.id ? firstPage("s") : { available: true, activity: [row("e-0", 5)] };
-    mount("/accounts?section=activity&account=all");
+    mount("/accounts?section=ledger&account=all");
     const note = await screen.findByText(/These are the newest 30 orders from each account/);
     const link = await screen.findByRole("link", { name: "Sauron ›" });
     expect(note).toContainElement(link);
     expect(link.getAttribute("href")).toMatch(/account=bot-sauron/);
-    expect(link.getAttribute("href")).toMatch(/section=activity/);
+    expect(link.getAttribute("href")).toMatch(/section=ledger/);
     // Eric's ledger was all on its first page: nothing more to open there.
     expect(screen.queryByRole("link", { name: "Eric ›" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Load older orders" })).toBeNull();
@@ -169,7 +169,7 @@ describe("All accounts", () => {
 
   it("says when every account's ledger is already all here", async () => {
     answer = (id) => ({ available: true, activity: [row(`${id}-0`, 0)] });
-    mount("/accounts?section=activity&account=all");
+    mount("/accounts?section=ledger&account=all");
     expect(
       await screen.findByText("That's the oldest order in every account's ledger."),
     ).toBeInTheDocument();

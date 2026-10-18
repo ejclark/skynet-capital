@@ -7,7 +7,9 @@ import type { PageSection } from "./sections";
  * without a DOM (`app/tests/routes/accounts-section.spec.ts`).
  *
  * Three families, in this order on the switch:
- *   - the BOOK's — Overview · Balance · Activity · Events — keyed on the account the switcher picks.
+ *   - the BOOK's — Overview · Balance · Ledger · Events — keyed on the account the switcher picks.
+ *     Ledger is one account's orders (#5281: it was "Activity" until it grew into the ledger the
+ *     code already called it; Activity is the league's feed in the top nav, a different thing);
  *     Balance (#5493 slice 3) is the book read as one system — findings, the plays behind them, the
  *     closed trades — and, like the head's health line it opens from, is ONE account's: "All
  *     accounts" has no single book to judge, so the aggregate switch leaves it out;
@@ -16,14 +18,14 @@ import type { PageSection } from "./sections";
  *   - the VIEWER's — Milestones · Feedback (#3807 slice 2b; #888, Eric 2026-08-29: "a user-level
  *     feature belongs on the page itself, not repeated inside every account row") — the same on
  *     every selection incl. All accounts, so the switcher hides while one is open.
- * A member with no linked account has no book to overview: the switch carries Activity · Events
+ * A member with no linked account has no book to overview: the switch carries Ledger · Events
  * (their honest empty states) and the viewer's two, and opens on Milestones (the zero-account
  * door, below).
  */
 export type AccountsSection =
   | "overview"
   | "balance"
-  | "activity"
+  | "ledger"
   | "events"
   | "playbooks"
   | "thesis"
@@ -32,7 +34,7 @@ export type AccountsSection =
 
 const BOOK: readonly PageSection<AccountsSection>[] = [
   { id: "overview", label: "Overview" },
-  { id: "activity", label: "Activity" },
+  { id: "ledger", label: "Ledger" },
   // #3807 slice 2c — the book's events beside the book (docs/IA.md §8: the wargame's largest
   // joint, 62 of 86 scenarios, earned the co-location), listed in the switch, not URL-only.
   { id: "events", label: "Events" },
@@ -116,12 +118,15 @@ const CHECK_LOG_ALIASES: readonly unknown[] = ["decisions", "heartbeat"];
 
 /** `?section=` (and `?checks=open`, the Playbooks section's check log unfolded). A saved Heartbeat
  *  or Decisions link was asking for the bot's checks, so it lands on Playbooks with that log
- *  already open — never back on Overview, and never on cards with the log it came for folded. */
+ *  already open — never back on Overview, and never on cards with the log it came for folded. A
+ *  saved `?section=activity` link was asking for the account's orders, so it lands on the Ledger
+ *  (#5281), its `#act-<orderId>` hash and narrowing untouched. */
 export function sectionFromSearch(
   raw: unknown,
   checks?: unknown,
 ): { section?: AccountsSection; checks?: "open" } {
   if (CHECK_LOG_ALIASES.includes(raw)) return { section: "playbooks", checks: "open" };
+  if (raw === "activity") return { section: "ledger" };
   if (typeof raw !== "string" || !ALL_SECTIONS.some((s) => s.id === raw)) return {};
   const section = raw as AccountsSection;
   return section === "playbooks" && checks === "open" ? { section, checks } : { section };

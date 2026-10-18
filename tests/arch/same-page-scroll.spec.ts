@@ -22,7 +22,7 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   // Whether some of them should keep the scroll is a design call held by #4943, not #4944.
   "app/src/routes/accounts.tsx": [
     ["account: id === fallbackId", "account switch (held by #4943)"],
-    ['account: a.id, section: "activity"', "All accounts' way into one account's list (#5165)"],
+    ['account: a.id, section: "ledger"', "All accounts' way into one account's list (#5165)"],
     ["section: next === opening ? undefined : next", "section switch (held by #4943)"],
   ],
   "app/src/routes/activity.tsx": [['next === "feed"', "section switch (held by #4943)"]],
