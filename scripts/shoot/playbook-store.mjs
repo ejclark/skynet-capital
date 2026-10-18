@@ -940,6 +940,32 @@ groups.promote = [
   promoteFrame("desktop-4-promote-passed", PASSED, { quality: 60, act: toPromote }),
 ];
 
+// #4450 slice 5a: each card's house block ends on its funnel over the last ten sessions — S1-NVDA
+// checked and never asking, SAURON asking with a guard's refusals named, and a card no bot checks.
+const funnelFrame = (tag, scrollTo, over = {}) => ({
+  tag,
+  view: views.catalog,
+  expect: "Last 10 sessions, every bot",
+  viewport: PHONE,
+  scrollTo,
+  path: STORE,
+  ...over,
+});
+// SAURON's pair row sits folded under its strategy ("1 more"), so its frame opens that fold first.
+const openSauronFold = (page) =>
+  page
+    .locator(".pb-card")
+    .filter({ hasText: SAURON_CARD })
+    .first()
+    .locator("details > summary")
+    .first()
+    .click();
+groups.funnel = [
+  funnelFrame("phone-1-funnel-s1", "→ no orders asked for"),
+  funnelFrame("phone-2-funnel-sauron", "most refused", { act: openSauronFold }),
+  funnelFrame("phone-3-funnel-unchecked", "no bot checked this playbook"),
+];
+
 const only = process.env.FRAMES;
 for (const [group, frames] of Object.entries(groups)) {
   if (only && only !== group) continue;
