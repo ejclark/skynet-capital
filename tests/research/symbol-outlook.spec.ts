@@ -42,7 +42,7 @@ const event = (overrides: Partial<MarketEvent> & { id: string; date: string }): 
   ...overrides,
 });
 
-const ledgerMd = (buySignal: "yes" | "no") => `# ACME earnings print
+const ledgerMd = (buySignal: "yes" | "no", callLine = "") => `# ACME earnings print
 **Last assessed:** 2026-09-30
 
 ## At a glance
@@ -50,7 +50,7 @@ const ledgerMd = (buySignal: "yes" | "no") => `# ACME earnings print
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
 | Today (D-27) | **Stand aside** · S2 | Medium | the **print** is the risk | ACME confirms a date before 2026-10-15 |
-
+${callLine}
 **Signals & conditions**
 
 - **Buy signal:** ${buySignal} — the trigger.
@@ -152,11 +152,60 @@ describe("outlookOf — the pure summary", () => {
       ledger: "docs/research/events/acme-2026-10-28-print.md",
       stance: "Stand aside",
       assessed: "2026-09-30",
+      callFrom: "buy-signal",
     });
   });
 
   it("reads buy only off the ledger's own Buy signal line", () => {
     expect(outlookOf(input({ ledger: { ...LEDGER, md: ledgerMd("yes") } })).call).toBe("buy");
+  });
+
+  it("believes the ledger's own Call line over the Buy-signal roll-up (#4807 slice 2)", () => {
+    const stated = (line: string, buy: "yes" | "no" = "no") => ({
+      ...LEDGER,
+      md: ledgerMd(buy, line),
+    });
+    const hold = outlookOf(input({ ledger: stated("**Call:** hold until 2026-10-20") }));
+    expect(hold.call).toBe("hold");
+    expect(hold.basis?.callFrom).toBe("ledger");
+    expect(hold.basis?.stance).toBe("Stand aside");
+    // A stated verb outranks a Buy signal of yes.
+    expect(
+      outlookOf(input({ ledger: stated("**Call:** trim until 2026-10-20", "yes") })).call,
+    ).toBe("trim");
+    expect(outlookOf(input({ ledger: stated("**Call:** sell until 2026-10-20") })).call).toBe(
+      "sell",
+    );
+  });
+
+  it("holds the earlier of the stated until-date and the computed one", () => {
+    const at = (line: string) =>
+      outlookOf(input({ ledger: { ...LEDGER, md: ledgerMd("no", line) } }));
+    // The print's protected window starts 2026-10-26, so a later stated date is capped there...
+    expect(at("**Call:** hold until 2026-11-09").until).toBe("2026-10-26");
+    // ...and an earlier one wins, with the strip going to no view from it.
+    const early = at("**Call:** hold until 2026-10-12");
+    expect(early.until).toBe("2026-10-12");
+    expect(early.windows.map((w) => w.state)).toEqual(["open", "no-view", "protected", "no-view"]);
+    expect(breaksIn(early.windows, early.asOf)).toEqual([]);
+    // A verb with no date leaves the computed until in charge.
+    expect(at("**Call:** hold").until).toBe("2026-10-26");
+  });
+
+  it("keeps a stated buy from reading buy inside a protected window, and lets exits stand", () => {
+    const now = "2026-10-27T15:00:00Z";
+    const at = (verb: string) =>
+      outlookOf(
+        input({
+          now,
+          ledger: { ...LEDGER, md: ledgerMd("no", `**Call:** ${verb} until 2026-11-20`) },
+        }),
+      );
+    expect(at("buy").call).toBe("wait");
+    expect(at("hold").call).toBe("hold");
+    expect(at("trim").call).toBe("trim");
+    expect(at("sell").call).toBe("sell");
+    expect(at("sell").until).toBe("2026-10-30");
   });
 
   it("protects from the S2 entry guard's first day through the session after the print", () => {
