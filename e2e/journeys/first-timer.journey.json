@@ -44,17 +44,22 @@
         {
           "id": "s3",
           "goto": "/app/accounts?section=milestones&chapter=trading",
-          "sees": "where M·02's card shows now that the landing folds the contents (#5256) — the Trading progression card, tapped: it reads LOCKED with one note, 'link an account first, then it unlocks the moment you say hello to Moneypenny' (#3807 slice 3b-4); the ladder list opened beneath it says 'Training wheels off — the ladder records your fills; nothing is locked.'",
+          "sees": "the M·02 card reads LOCKED with one note: 'link an account first, then it unlocks the moment you say hello to Moneypenny' — the step before the gate, then the server's own words (#3807 slice 3b-4)",
           "ears": "WHILE the trading ladder is gated, the app shall name the SAME unlock condition everywhere it is named (the server's own line: the moment you say hello to Moneypenny).",
+          "expect": [{ "text": "the moment you say hello" }],
+          "judge": "does this reader know what unlocks trading, in one sentence?"
+        },
+        {
+          "id": "s3b",
+          "goto": "/app/accounts?section=milestones&chapter=trading",
+          "sees": "the M·02 card reads LOCKED and the ladder list under it says the same: 'Locked — link an account first, then it unlocks the moment you say hello to Moneypenny.' — never 'nothing is locked', and no rung offers Trade (#5731)",
+          "ears": "WHEN a member with no linked account opens the trading chapter, the card and the ladder list shall agree on whether the next rung is locked.",
           "expect": [
-            { "text": "the moment you say hello" },
+            { "role": "region", "name": "Trading ladder" },
+            { "text": "Locked — link an account first" },
             { "text": "nothing is locked", "absent": true }
           ],
-          "known_gap": "with no account linked the plays index answers wheels-off (src/server/plays-api-routes.ts:46: no linked desk behaves as wheels-off), so the ladder list says 'Training wheels off — the ladder records your fills; nothing is locked.' directly under an M·02 card that reads LOCKED — two contradicting answers to what unlocks trading on one screen",
-          "where": "app/src/shell/milestone-strip.tsx:144",
-          "severity": "medium",
-          "fix": "S",
-          "judge": "does this reader know what unlocks trading, in one sentence?"
+          "judge": "does this reader know whether trading is open, in one sentence?"
         },
         {
           "id": "s4",

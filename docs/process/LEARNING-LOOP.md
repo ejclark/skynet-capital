@@ -113,7 +113,7 @@ for someone to remember, overdue work that goes quiet.
 | Orchestration | This registry: 3 checks overdue, owners of 14 of 16 rows closed, none surfaced in 7 digests | built: `scripts/loop-check.mjs` posts due checks on the push tick (#5724) |
 | Bots | A stalled or halted bot is caught only when someone notices no trades (LESSONS: days, then 45 min) | built: an alert while the market is open (#5734) |
 | Bots | "Daily" loss breaker measured loss since the process started | fixed (#5723) |
-| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real gap pinned, #5731) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
+| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real contradiction found, filed and fixed by the lane in under an hour: #5731 → #5737) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
 | Engineering | 11 of 14 debt budgets over, no trigger for the athletes; 14 unlearned incidents ageing out | filed with the follow-ups |
 
 ## Starting a new loop

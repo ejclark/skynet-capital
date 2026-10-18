@@ -20,7 +20,10 @@
 // WHAT IT WILL NOT DO:
 // - Claim a lesson nobody wrote. A capsule closed with no merged PR (by hand, as a duplicate) has
 //   no root cause on record, so it gets a comment with the skeleton — never a ledger PR, which
-//   would mark its runs learned with nothing learned.
+//   would mark its runs learned with nothing learned. It also gets ONE `feedback` issue asking for
+//   its `/retro` (#5728): a skeleton comment on a closed issue was read by nobody, so the runs sat
+//   unlearned until they aged out of incident-scan's window. The ask lands in Backlog like any
+//   unlabelled-ready `feedback` issue — routing the ask, never writing the ledger, never `ready`.
 // - Re-cover a sha the ledger already names. A fix PR that banked its own entry drafts nothing.
 // - Turn `main` red because a draft could not be written. A failed PR path falls back to the same
 //   entry as a comment on the capsule, and a failed read leaves a comment saying so — something
@@ -50,6 +53,8 @@ const MAX_RUNS = 30;
 const CLOSE_SLACK_MS = 10 * 60_000;
 const ROOT_CAUSE_CHARS = 700;
 const LEDGER = "docs/LESSONS.md";
+/** On the retro-ask issue's body and the capsule comment that links it — the dedupe key. */
+const retroAskMarker = (capsule) => `<!-- retro-ask:capsule-${capsule} -->`;
 
 /**
  * Does the ledger name this sha on a `**SHA:**` or `**COVERS:**` line? The incident scan's own
@@ -251,9 +256,12 @@ export function prBody({ capsule, fix, covered }) {
 }
 
 /** The fallback, and the no-fix path: the entry as a comment the next `/retro` can paste. */
-export function commentBody({ entry, reason }) {
+export function commentBody({ entry, reason, retroAsk = null, capsule = null }) {
   return [
     `**Ledger draft for this capsule** — ${reason}`,
+    ...(retroAsk
+      ? ["", `${retroAskMarker(capsule)}Asked for its \`/retro\` in #${retroAsk}.`]
+      : []),
     "",
     "```markdown",
     entry,
@@ -263,6 +271,62 @@ export function commentBody({ entry, reason }) {
     "",
     "— Moneypenny",
   ].join("\n");
+}
+
+/**
+ * The `feedback` issue a hand-closed capsule files: who must act (a `/retro` session), on what (the
+ * capsule and its unlearned shas), and the finish line (a ledger entry naming them), in the capsule
+ * grammar `issue-lint` checks — the skeleton rides in the fold for the session to start from.
+ */
+export function retroAsk({ capsule, entry, covered }) {
+  const job = jobOf(capsule.title);
+  return {
+    title: `Write the lesson for CI capsule #${capsule.number} — closed by hand, no root cause`,
+    labels: [LABELS.feedback.name],
+    body: [
+      retroAskMarker(capsule.number),
+      `**Run \`/retro\` on CI capsule #${capsule.number} (\`${job}\`): it was closed without a merged PR, so no lesson exists.**`,
+      "",
+      "| | |",
+      "|---|---|",
+      "| **Type** | self-learning · retro |",
+      `| **Surface** | \`${LEDGER}\` |`,
+      "| **Size** | S |",
+      `| **Source** | capsule #${capsule.number} closed ${capsule.closedAt.slice(0, 10)} |`,
+      "",
+      `- ${covered.length} failing run sha(s) on \`main\` stay unlearned until the ledger names them.`,
+      "- Done when one `docs/LESSONS.md` entry covers them on `SHA:` or `COVERS:`.",
+      "",
+      "Picture: waived — a ledger entry, drafted from the capsule's closure.",
+      "",
+      "<details><summary><strong>The skeleton to start from</strong></summary>",
+      "",
+      "Root cause and prevention are blank on purpose: the capsule thread is the evidence.",
+      "",
+      "```markdown",
+      entry,
+      "```",
+      "",
+      "</details>",
+    ].join("\n"),
+  };
+}
+
+/**
+ * The retro ask already filed for this capsule, if any: a trusted bot's comment on the capsule
+ * carrying the marker, or an open issue whose body does. Either suffices, so a close → reopen →
+ * close, or a run that filed the issue but died before commenting, still files only one.
+ *
+ * @returns the issue number, or `null` when none was filed
+ */
+export function retroAskFiled({ capsule, comments = [], openIssues = [] }) {
+  const marker = retroAskMarker(capsule);
+  for (const c of comments) {
+    if (!(TRUSTED_BOTS.has(c?.user?.login) && String(c.body ?? "").includes(marker))) continue;
+    const n = String(c.body).match(/in #(\d+)\./)?.[1];
+    if (n) return Number(n);
+  }
+  return openIssues.find((i) => String(i?.body ?? "").includes(marker))?.number ?? null;
 }
 
 // ── the impure half ───────────────────────────────────────────────────────────
@@ -319,6 +383,7 @@ function gather(number) {
     fix,
     ledger: Buffer.from(ledgerFile.content, "base64").toString("utf8"),
     ledgerSha: ledgerFile.sha,
+    comments,
   };
 }
 
@@ -371,6 +436,36 @@ const firstLine = (err) =>
 const comment = (number, body) => sh("gh", ["issue", "comment", String(number), "--body", body]);
 
 /**
+ * File the capsule's retro ask unless one exists. REST only (`gh issue create` and the open-issue
+ * list over `gh api`, never GraphQL). Returns the issue number, or `null` when filing failed — the
+ * skeleton comment still lands, so a failed ask never silences the capsule.
+ */
+function fileRetroAsk(g, draft) {
+  try {
+    const openIssues = apiAll(
+      `repos/{owner}/{repo}/issues?labels=${LABELS.feedback.name}&state=open&per_page=100`,
+    );
+    const filed = retroAskFiled({ capsule: g.capsule.number, comments: g.comments, openIssues });
+    if (filed) return filed;
+    const ask = retroAsk({ capsule: g.capsule, ...draft });
+    const url = sh("gh", [
+      "issue",
+      "create",
+      "--title",
+      ask.title,
+      "--body",
+      ask.body,
+      "--label",
+      ask.labels.join(","),
+    ]);
+    return Number(url.match(/\/issues\/(\d+)/)?.[1]) || null;
+  } catch (err) {
+    console.log(`::warning::retro ask for #${g.capsule.number} failed (${firstLine(err)})`);
+    return null;
+  }
+}
+
+/**
  * Execute one `draft-lesson` intent. Returns the receipt line; throws only when not even the
  * fallback comment could be written.
  */
@@ -391,14 +486,17 @@ export function draftLesson(intent) {
   const draft = draftEntry(g);
   if (!draft) return `· #${n} closed — every failing run is already in the ledger`;
   if (!g.fix) {
+    const ask = fileRetroAsk(g, draft);
     comment(
       n,
       commentBody({
         entry: draft.entry,
         reason: "no merged PR closed it, so no root cause is on record.",
+        retroAsk: ask,
+        capsule: n,
       }),
     );
-    return `📝 #${n} closed by hand — ledger skeleton commented, no PR`;
+    return `📝 #${n} closed by hand — ledger skeleton commented${ask ? `, retro asked in #${ask}` : ""}, no PR`;
   }
   try {
     const pr = openDraftPr({ ...g, ...draft });
