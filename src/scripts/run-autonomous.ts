@@ -504,9 +504,12 @@ async function runLive(): Promise<void> {
       ),
   });
 
-  // COND-SCOUT (#3651): shadow probes only, dark unless SKYNET_COND_SCOUT_UNIVERSE is set.
+  // COND-SCOUT (#3651): shadow probes only. Its names are the host bot's COND-SCOUT subscription,
+  // read every check (#4535 slice 2a); SKYNET_COND_SCOUT_UNIVERSE serves a host with none.
   const condScoutPass = armCondScout(process.env, {
     streamed: UNIVERSE,
+    hostSubscriptions: () =>
+      botRosters.find((r) => r.bot.persona.id === dataCredsPersonaId)?.subscriptions ?? [],
     credentials: currentCredentials,
     risk,
     blockedReason,

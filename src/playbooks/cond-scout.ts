@@ -20,7 +20,7 @@
  * ABSENCE OVER PLACEHOLDERS. An indicator the history can't support yet stays `undefined`, and a
  * hypothesis that needs it doesn't fire (the `src/indicators/` doctrine, restated in its header).
  */
-import type { MarketContext, OrderForecast } from "../domain/types.js";
+import type { MarketContext, OrderForecast, PlaybookSubscription } from "../domain/types.js";
 import { rsi, sma } from "../indicators/index.js";
 
 export const COND_SCOUT_ID = "COND-SCOUT";
@@ -29,8 +29,9 @@ const DAY_MS = 86_400_000;
 
 /**
  * `SKYNET_COND_SCOUT_UNIVERSE` — a comma list of tickers, dark (empty) by default, the same shape
- * `SKYNET_PLAYBOOKS` uses. Tokens that aren't plausible tickers are dropped rather than guessed at;
- * duplicates collapse.
+ * `SKYNET_PLAYBOOKS` uses, and since #4535 only the fallback for a host bot holding no COND-SCOUT
+ * subscription (`resolveCondScoutUniverse`). Tokens that aren't plausible tickers are dropped
+ * rather than guessed at; duplicates collapse.
  */
 export function parseCondScoutUniverse(raw: string | undefined): readonly string[] {
   const seen = new Set<string>();
@@ -39,6 +40,34 @@ export function parseCondScoutUniverse(raw: string | undefined): readonly string
     if (/^[A-Z][A-Z.]{0,5}$/.test(symbol)) seen.add(symbol);
   }
   return [...seen];
+}
+
+/** Where the scout's names came from this check — said in the log whenever it changes. */
+export type CondScoutSource = "subscription" | "paused" | "env" | "dark";
+
+/**
+ * THE SCOUT'S NAMES ARE ITS BOT'S OWN SETTING (#4535 slice 2a). The host bot's COND-SCOUT
+ * subscription decides whenever the bot holds one: switched on, its `symbols` are the names (empty
+ * means unrestricted, as on every subscription — every name the stream carries); paused, it scans
+ * nothing. The env knob serves only a bot holding no COND-SCOUT subscription at all, so a pause in
+ * the bot's settings is never undone by a server value (Moneypenny's precedence note on #4535,
+ * 2026-10-04). With neither, the scout stays dark. Read on every check, so a change lands without
+ * a restart; the caller keeps the last subscriptions it received when the dashboard is unreachable.
+ */
+export function resolveCondScoutUniverse(
+  hostSubscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled" | "symbols">[],
+  envRaw: string | undefined,
+  streamed: readonly string[],
+): { readonly wanted: readonly string[]; readonly source: CondScoutSource } {
+  const mine = hostSubscriptions.filter((s) => s.playbookId === COND_SCOUT_ID);
+  const on = mine.find((s) => s.enabled);
+  if (on) {
+    const named = parseCondScoutUniverse((on.symbols ?? []).join(","));
+    return { wanted: named.length > 0 ? named : [...streamed], source: "subscription" };
+  }
+  if (mine.length > 0) return { wanted: [], source: "paused" };
+  if (envRaw) return { wanted: parseCondScoutUniverse(envRaw), source: "env" };
+  return { wanted: [], source: "dark" };
 }
 
 /** What the scanner saw for one symbol, each field present only when it was actually computable. */

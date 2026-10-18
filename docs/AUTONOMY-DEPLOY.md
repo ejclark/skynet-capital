@@ -100,7 +100,9 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
   shadow scout (#3651) on those tickers: it scans and opens **shadow probes only** (no orders, no
   broker) that fill the Heartbeat "Shadow probes" card. Tickers off the live price stream are dropped
   at boot; watch the logs for the `[cond-scout] armed` line. Run it with the input empty to unset
-  `SKYNET_COND_SCOUT_UNIVERSE` and take the scout dark.
+  `SKYNET_COND_SCOUT_UNIVERSE` and take the scout dark. Since #4535 slice 2a this secret is only the
+  fallback: once the host bot (the first the bots app runs) holds a COND-SCOUT subscription, its
+  names — or its pause — win, read on every check with no restart.
 
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 
