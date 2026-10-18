@@ -9,6 +9,7 @@ import type {
 } from "../live/playbook-store";
 import { pairTitle } from "./playbook-store-cards";
 import { SubscribeForm } from "./playbook-subscribe-form";
+import { SymbolRecapFor } from "./symbol-recap-for";
 
 /**
  * THE TICKER PICKER (#4469 slice 3b part 2) — a bottom sheet on a strategy card that lists EVERY
@@ -222,6 +223,11 @@ export function TickerPicker({
                     <span className="pb-pair-status">{pickedPair.statusLabel}</span>
                   </h2>
                   <p className="pb-pair-call">{pickedPair.call}</p>
+                  {/* The symbol's own research recap (#4807 slice 4): the house call on owning the
+                      shares, beside the strategy's call above — each labelled for what it is. */}
+                  {pickedPair.symbols.map((sym) => (
+                    <SymbolRecapFor key={sym} symbol={sym} />
+                  ))}
                   <SubscribeForm
                     accountId={accountId}
                     card={pickedCard}

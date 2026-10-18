@@ -106,3 +106,35 @@ describe("serveContentApi — the calendar's slice (#3977 slice 5)", () => {
     expect(calendar.body.length).toBeLessThan(shelf.body.length / 4);
   });
 });
+
+describe("serveContentApi — the symbol summary, light (#4807 slice 4)", () => {
+  const serve = async (url: string) => {
+    const { res, out } = fakeRes();
+    const claimed = await serveContentApi(
+      res,
+      url.split("?")[0] ?? url,
+      url,
+      configWith(),
+      undefined,
+    );
+    return { claimed, status: out.status, body: JSON.parse(out.body ?? "{}") };
+  };
+
+  it("answers one summary per valid name, read from files alone (no broker)", async () => {
+    const { claimed, status, body } = await serve("/api/research/outlook?symbol=crwv,NVDA");
+    expect(claimed).toBe(true);
+    expect(status).toBe(200);
+    expect(Object.keys(body.outlooks)).toEqual(["CRWV", "NVDA"]);
+    expect(body.outlooks.CRWV.windows.length).toBeGreaterThan(0);
+    expect(body.outlooks.CRWV.falsifier).toBeTruthy();
+  });
+
+  it("drops a bad name rather than failing the list, and caps how many it answers for", async () => {
+    const many = Array.from({ length: 30 }, (_, i) => `A${"BCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 25]}`);
+    const { body } = await serve(`/api/research/outlook?symbol=../etc,${many.join(",")}`);
+    expect(Object.keys(body.outlooks).length).toBeLessThanOrEqual(12);
+    expect(body.outlooks["../ETC"]).toBeUndefined();
+    const none = await serve("/api/research/outlook");
+    expect(none.body).toEqual({ outlooks: {} });
+  });
+});
