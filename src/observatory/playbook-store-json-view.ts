@@ -11,6 +11,8 @@ import {
   playbookStoreCatalog,
 } from "../discovery/playbook-store.js";
 import {
+  type CandidateCardEntry,
+  candidateCatalog,
   type PairRowEntry,
   type StrategyCardEntry,
   strategyCatalog,
@@ -92,6 +94,8 @@ export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   /** One card per strategy, a row per pair — what slice 3b moves the Store onto. */
   readonly strategies: readonly StrategyCardView[];
+  /** Ideas still on trial (#4808 slice 3): shown with their back-test status, never subscribable. */
+  readonly candidates: readonly CandidateCardEntry[];
   /** Sum of capitalAllocated across this account's ENABLED subscriptions (Eric, #885: "the
    *  summation of money being managed under playbooks could be an interesting metric"). An
    *  uncapped subscription has no allocation to add, so it contributes nothing. */
@@ -232,6 +236,7 @@ export function playbookStoreView(
   return {
     cards,
     strategies: strategyCardsView(subscriptions, asOfIso, envNamed, allocations),
+    candidates: candidateCatalog(),
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),

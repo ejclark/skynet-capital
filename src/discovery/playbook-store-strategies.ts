@@ -12,6 +12,8 @@
  * viewer's own subscriptions onto the rows. The per-playbook `cards` stay beside this for one
  * release, so the app keeps rendering while slice 3b moves it onto these.
  */
+
+import { CANDIDATES, candidateLine } from "../playbooks/candidates.js";
 import {
   EVIDENCE_STATUS,
   type EvidenceStatus,
@@ -102,4 +104,23 @@ export function strategyCatalog(asOfIso: string): readonly StrategyCardEntry[] {
       pairs: [...pairs].sort((a, b) => rank(a) - rank(b)).map((pair) => rowOf(pair, asOfIso)),
     };
   });
+}
+
+/** A candidate playbook as the Store shows it (#4808 slice 3): never subscribable, its back-test
+ *  status in words (criterion 3). */
+export interface CandidateCardEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly hypothesis: string;
+  /** "Candidate — it never places or suggests an order. Back-test: not run yet. Dead if …". */
+  readonly line: string;
+}
+
+export function candidateCatalog(): readonly CandidateCardEntry[] {
+  return CANDIDATES.map((c) => ({
+    id: c.id,
+    name: c.name,
+    hypothesis: c.hypothesis,
+    line: candidateLine(c),
+  }));
 }
