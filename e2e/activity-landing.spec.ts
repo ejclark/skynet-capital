@@ -128,9 +128,7 @@ async function expectLanded(target: Locator): Promise<void> {
 test.describe("landing at 1280px, through the Overview's doors (#5022)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test("a FORM square lands on its Ledger row below the sticky head, marked", async ({
-    page,
-  }) => {
+  test("a FORM square lands on its Ledger row below the sticky head, marked", async ({ page }) => {
     await stage(page);
     await page.goto(OVERVIEW);
     const square = page.locator(".form-sq").first();
