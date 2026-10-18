@@ -136,6 +136,75 @@ describe("criterion 9 — when a plan continues itself", () => {
     expect(d.target).toBe(4295);
   });
 
+  // #4530: #3939's slice 3 shipped straight against the parent (#4529), the block moved on to
+  // slice 4, and the sweep re-dispatched slice 3's still-open sub-issue #4319.
+  it("steps past an open sub-issue whose slice the block has already moved past", () => {
+    const d = decide({
+      comments: [block("**Next pickup:** slice 4 (board subtraction).")],
+      subIssues: [
+        {
+          number: 4318,
+          state: "closed",
+          title: "Show thrash hits",
+          body: "| **Parent** | #3939, slice 2 of 4 |",
+        },
+        {
+          number: 4319,
+          state: "open",
+          title: "Run the sunset review",
+          body: "| **Parent** | #3939, slice 3 of 4 |",
+        },
+        {
+          number: 4320,
+          state: "open",
+          title: "Let the board automate",
+          body: "| **Parent** | #3939, slice 4 of 4 |",
+        },
+      ],
+      blockedBy: { 4319: [], 4320: [] },
+    });
+
+    expect(d.action).toBe("continue");
+    expect(d.target).toBe(4320);
+  });
+
+  it("falls back to the block's line when every open sub-issue is stale", () => {
+    const d = decide({
+      comments: [block("**Next pickup:** slice 4 (board subtraction).")],
+      subIssues: [{ number: 4319, state: "open", body: "| **Parent** | #3939, slice 3 of 4 |" }],
+      blockedBy: { 4319: [] },
+    });
+
+    expect(d.action).toBe("continue");
+    expect(d.target).toBe(3818);
+    expect(d.pickup).toContain("slice 4");
+  });
+
+  // #4557: every sub-issue of #3651 was closed, and its block still named "slice 8" — merged the
+  // day before as #4533 — so a build session was dispatched on finished work.
+  it("refuses a pickup line whose slice's sub-issue is already closed, and says why", () => {
+    const d = decide({
+      comments: [block("**Next pickup:** slice 8, a set-cond-scout-universe action.")],
+      subIssues: [
+        { number: 4237, state: "closed", title: "Show shadow probes", body: "slice 7 of 8" },
+        { number: 4533, state: "closed", title: "Add an action (COND-SCOUT slice 8)" },
+      ],
+    });
+
+    expect(d.action).toBe("skip");
+    expect(d.reason).toContain("#4533 is already closed");
+  });
+
+  it("still continues a pickup slice that has no sub-issue — built against the parent", () => {
+    const d = decide({
+      comments: [block("**Next pickup:** slice 9, the follow-on.")],
+      subIssues: [{ number: 4533, state: "closed", title: "COND-SCOUT slice 8" }],
+    });
+
+    expect(d.action).toBe("continue");
+    expect(d.target).toBe(3818);
+  });
+
   it("skips a sub-issue whose blockers are still open", () => {
     const sub = nextSubIssue(
       [

@@ -122,6 +122,44 @@ export function nextSubIssue(subIssues = [], blockedBy = {}) {
 }
 
 /**
+ * WHICH SLICE A TEXT NAMES — the ordinal a pickup line ("slice 4, board subtraction") or a slice's
+ * sub-issue ("Parent | #3939, slice 3 of 4", or "… (COND-SCOUT slice 8)" in its title) carries.
+ * Null when it names none, or names several ("slices 4 and 5" never matches `slice\s`), so an
+ * unparseable line falls through to the old behaviour rather than to a guess.
+ */
+export const sliceOf = (text) => {
+  const m = /\bslice\s+(\d+)\b/i.exec(String(text ?? ""));
+  return m ? Number(m[1]) : null;
+};
+
+/** A sub-issue's slice: its title's, else its body's "slice N of M" (a bare mention in the body,
+ *  "unblocks slice 5", is not the sub-issue's own number). */
+const subSliceOf = (sub) =>
+  sliceOf(sub?.title) ?? sliceOf(/\bslice\s+\d+\s+of\s+\d+/i.exec(String(sub?.body ?? ""))?.[0]);
+
+const isOpen = (s) => (s?.state ?? "open") === "open";
+
+/**
+ * STALE EVIDENCE CUTS BOTH WAYS (#4530, #4557). A slice can ship straight against the parent and
+ * leave its own sub-issue open (#3939's slice 3 merged as #4529 while #4319 sat open, and the sweep
+ * re-dispatched #4319); and a block can keep naming a slice whose sub-issue already closed (#3651's
+ * "slice 8" a day after #4533 closed). Sub-issues still win (#4056) — but not one whose slice the
+ * block has already moved past; and with no sub-issue to take, `shipped` is the closed sub-issue
+ * proving the pickup line's slice already landed, so the line is not a target.
+ *
+ * @returns {{ sub: object | null, shipped: object | null }}
+ */
+function sliceToTake({ subIssues = [], blockedBy } = {}, pickup) {
+  const named = sliceOf(pickup);
+  const subs = subIssues ?? [];
+  if (named === null) return { sub: nextSubIssue(subs, blockedBy), shipped: null };
+  const live = subs.filter((s) => !isOpen(s) || (subSliceOf(s) ?? named) >= named);
+  const sub = nextSubIssue(live, blockedBy);
+  if (sub || subs.some((s) => isOpen(s) && subSliceOf(s) === named)) return { sub, shipped: null };
+  return { sub, shipped: subs.find((s) => !isOpen(s) && subSliceOf(s) === named) ?? null };
+}
+
+/**
  * The verdict on the last continuation this lane dispatched, or `null` when the chain may continue.
  * Criterion 10's whole rule: a run that failed, a run that never reported, or a run that left the
  * state block untouched all stop the plan — and nothing retries.
@@ -211,11 +249,17 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
   if (today >= cap) {
     return skip(`${today} of ${cap} continuations already dispatched for #${plan.number} today`);
   }
-  const sub = nextSubIssue(candidate.subIssues, candidate.blockedBy);
   const pickup = nextPickupOf(block.body);
+  const { sub, shipped } = sliceToTake(candidate, pickup);
   if (!(sub || pickup)) {
     return skip(
       `#${plan.number}'s block names no next pickup and no open, unblocked slice remains`,
+    );
+  }
+  if (shipped) {
+    return skip(
+      `#${plan.number}'s block names slice ${sliceOf(pickup)} as the next pickup, but its ` +
+        `sub-issue #${shipped.number} is already closed — the block is stale; edit its next-pickup line`,
     );
   }
   return {
