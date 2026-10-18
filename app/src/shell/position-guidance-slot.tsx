@@ -11,6 +11,7 @@ import { priceRange } from "../live/price-context";
 import { CONFIDENCE_METER, type RowCall } from "../live/row-call";
 import { LessonTerm } from "./glossary-term";
 import { PositionActs } from "./position-act";
+import { SymbolRecapFor } from "./symbol-recap-for";
 import type { RowMark } from "./use-row-marks";
 
 /**
@@ -27,7 +28,9 @@ import type { RowMark } from "./use-row-marks";
  *    for exactly this holding today, the spot says that call and its confidence ("Hold · ▰▰▱
  *    medium", `row-call.ts`); otherwise it says "Guidance", never a made-up call.
  * Opened, it leads with the position's picture (#5070 slice 2, `position-picture.tsx`): the price
- * strip, the waiting-earns strip and the three figures. Then what the decision engine says about
+ * strip, the waiting-earns strip and the three figures. Then the symbol's research recap (#4807
+ * slice 4, `symbol-recap-for.tsx`: the house call, its until-date and the window strip, the same
+ * card the Guidance tab leads with). Then what the decision engine says about
  * this position, when it says anything: its sentence ("Collected $255; buying back costs $550")
  * and the lesson the retired pager carried ("What is a breakeven?", a glossary term opened in
  * place), or a playbook that fits the name (#5083). Then the row's acts (#5070 slice 3,
@@ -206,6 +209,7 @@ export function GuidanceSlot({
       {open ? (
         <div id={openId} className="pos-guide-open">
           {picture}
+          <SymbolRecapFor symbol={stock} />
           {decisions.map((d) => (
             <DecisionSaid key={d.id} decision={d} />
           ))}
