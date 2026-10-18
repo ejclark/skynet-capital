@@ -68,7 +68,14 @@ kill switches, and the first ledger row. Open with an `## At a glance` decision 
 horizon table + signal conditions) — the `/research` page promotes it above the document; it is a
 faithful surfacing of the stance below, never a new claim (see the TEMPLATE). Instruments by kind:
 
-- **earnings / symbol-keyed** — `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
+- **earnings / symbol-keyed** — first read what the house already knows: `npm run research:dossier
+  -- <SYM>` (`npm ci --ignore-scripts` once if `node_modules` is missing; about a minute). It lists
+  the current stance, the bots' live pairs on the name and the conviction claims steering them,
+  every open forward test naming it (the unowned legacy rows included) and its kill-list entries.
+  Never register a forward test it already lists, and when your call bears on a pair or a claim it
+  lists, name it (2026-10-18 audit: the same CRWV test was filed twice, and one finding was
+  "discovered" three times, because nothing joined these). Then
+  `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
   --peers <PEERS>` + `node scripts/research/intraday-edges.mjs <SYM>`, read against the house
   playbooks (S1/S2/E1/S3/S4 + G1) and the kill list in
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
