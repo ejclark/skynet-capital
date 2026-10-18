@@ -5,11 +5,11 @@ import {
   nextPrintRisk,
   PRINT_WINDOWS,
   printSpan,
-  printWithin,
   sessionsUntil,
   UPCOMING_PRINTS,
 } from "../../src/domain/earnings-calendar.js";
 import { sessionsBefore } from "../../src/domain/market-calendar.js";
+import { protectedWindowOn } from "../../src/domain/protected-window.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import { applyGuards } from "../../src/engine/guards.js";
 import { S1_NVDA } from "../../src/playbooks/registry.js";
@@ -72,18 +72,22 @@ describe("earnings calendar", () => {
     });
   });
 
-  describe("printWithin — the S2 question", () => {
+  // The S2 question used to be `printWithin`; since #4807 slice 5 it is the protected window,
+  // which these hold to the same estimate rules (#4646).
+  describe("the protected window — the S2 question", () => {
     it("finds a print inside the window", () => {
-      expect(printWithin("NVDA", "2026-08-25T14:00:00Z", 2, prints)?.date).toBe("2026-08-26");
+      expect(protectedWindowOn("NVDA", "2026-08-25T14:00:00Z", prints)?.print.date).toBe(
+        "2026-08-26",
+      );
     });
 
     it("ignores a print beyond the window", () => {
-      expect(printWithin("NVDA", "2026-08-20T14:00:00Z", 2, prints)).toBeUndefined();
+      expect(protectedWindowOn("NVDA", "2026-08-20T14:00:00Z", prints)).toBeUndefined();
     });
 
     it("counts an estimate — estimates widen safety windows, per the date policy", () => {
-      const hit = printWithin("NVDA", "2026-08-25T14:00:00Z", 2, prints);
-      expect(hit?.status).toBe("estimate");
+      const hit = protectedWindowOn("NVDA", "2026-08-25T14:00:00Z", prints);
+      expect(hit?.print.status).toBe("estimate");
     });
 
     describe("an estimate's window (#4646)", () => {
@@ -95,28 +99,30 @@ describe("earnings calendar", () => {
         window: { start: "2026-11-09", end: "2026-11-16" },
       };
       const crwv: readonly EarningsPrint[] = [estimate];
+      const on = (asOf: string, calendar = crwv) => protectedWindowOn("CRWV", asOf, calendar);
 
       it("counts from the window's start, not the point estimate", () => {
         // 11-07 is 3 days from the 11-10 estimate but 2 from the window's 11-09 start.
-        expect(printWithin("CRWV", "2026-11-07T15:00:00Z", 2, crwv)?.date).toBe("2026-11-10");
+        expect(on("2026-11-07T15:00:00Z")?.print.date).toBe("2026-11-10");
       });
 
       it("stays live after the point estimate, until the window closes", () => {
         // 11-12: past the 11-10 guess, but CRWV may not have reported yet.
-        expect(printWithin("CRWV", "2026-11-12T15:00:00Z", 2, crwv)?.date).toBe("2026-11-10");
+        expect(on("2026-11-12T15:00:00Z")?.print.date).toBe("2026-11-10");
         expect(nextPrintRisk("CRWV", "2026-11-12T15:00:00Z", crwv)?.date).toBe("2026-11-10");
         // The display question is unchanged: no upcoming date to show once the guess has passed.
         expect(nextPrint("CRWV", "2026-11-12T15:00:00Z", crwv)).toBeUndefined();
       });
 
-      it("lets go once the window has passed", () => {
-        expect(printWithin("CRWV", "2026-11-17T15:00:00Z", 2, crwv)).toBeUndefined();
+      it("holds the session after the window, where the reaction lands, then lets go", () => {
+        expect(on("2026-11-17T15:00:00Z")).toBeDefined();
+        expect(on("2026-11-18T15:00:00Z")).toBeUndefined();
       });
 
       it("reads a confirmed print as its one date, window or not", () => {
         const confirmed: EarningsPrint = { ...estimate, status: "confirmed", source: "IR: test" };
         expect(printSpan(confirmed)).toEqual({ start: "2026-11-10", end: "2026-11-10" });
-        expect(printWithin("CRWV", "2026-11-07T15:00:00Z", 2, [confirmed])).toBeUndefined();
+        expect(on("2026-11-07T15:00:00Z", [confirmed])).toBeUndefined();
       });
 
       it("refuses a bot's buy inside the window through the S2 guard", () => {

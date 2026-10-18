@@ -492,6 +492,54 @@ describe("applyGuards", () => {
       expect(approved).toHaveLength(1);
     });
 
+    // #4807 slice 5: S2 refuses inside the symbol's protected window — the one the research summary
+    // draws as ■ Protected — which runs through the session AFTER the print, where an after-close
+    // print's reaction lands. Exits always run.
+    describe("S2 reads the protected window", () => {
+      const guard = (asOf: string, intents = [buy("EEM", 10)], d: typeof discipline = discipline) =>
+        applyGuards(
+          intents,
+          aPortfolio({ cash: 10_000, positions: [aPosition({ symbol: "EEM", quantity: 30 })] }),
+          at(asOf),
+          { maxPositionPct: 1, discipline: d },
+        );
+      const widened = {
+        calendar,
+        facts: new Map([
+          [
+            "EEM",
+            {
+              symbol: "EEM",
+              printReaction: { sessionsAfter: 2, fact: "t", source: "t", falsifier: "t" },
+            },
+          ],
+        ]),
+      };
+
+      it("refuses a buy on the session after the print, and lets it through the session after that", () => {
+        expect(guard("2026-08-27T15:00:00.000Z")).toEqual([]); // D+1, Thu
+        expect(guard("2026-08-28T15:00:00.000Z")).toHaveLength(1); // D+2, Fri
+      });
+
+      it("starts entryFlatDays calendar days before the print", () => {
+        expect(guard("2026-08-24T15:00:00.000Z")).toEqual([]); // D-2
+        expect(guard("2026-08-21T15:00:00.000Z")).toHaveLength(1); // D-5, Fri
+      });
+
+      it("a symbol's facts file widens the tail by the sessions it names", () => {
+        expect(guard("2026-08-28T15:00:00.000Z", undefined, widened)).toEqual([]);
+        expect(guard("2026-08-31T15:00:00.000Z", undefined, widened)).toHaveLength(1); // Mon
+      });
+
+      it("lets an exit run on every protected day", () => {
+        for (const day of ["24", "25", "26", "27"]) {
+          expect(guard(`2026-08-${day}T15:00:00.000Z`, [sell("EEM", 30)])).toMatchObject([
+            { side: "sell", quantity: 30 },
+          ]);
+        }
+      });
+    });
+
     it("E1 drops a non-urgent buy before 10:00 ET", () => {
       const context = at("2026-08-14T13:35:00.000Z"); // 09:35 ET (EDT)
       const approved = applyGuards([buy("EEM", 10)], aPortfolio({ cash: 10_000 }), context, {
