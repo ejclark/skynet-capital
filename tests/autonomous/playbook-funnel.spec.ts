@@ -12,9 +12,9 @@ import type { OrderIntent, PlaybookVerdict } from "../../src/domain/types.js";
 import { readHouseFunnel } from "../../src/scripts/dashboard-insights-bridge.js";
 
 /**
- * Each playbook's funnel over its last ten sessions (#4450 slice 5a, EARS 5): checks → asked →
- * refused → placed → filled, per playbook and per session, read from the decision store and
- * pooled across every bot.
+ * Each playbook's funnel over its last ten sessions (#4450 slices 5a–5b, EARS 5): checks →
+ * signals → asked → refused → placed → filled, per playbook and per session, read from the decision
+ * store and pooled across every bot. A signal is a declared one (#4808, `research-signals.ts`).
  */
 
 const MON = Date.parse("2026-10-12T13:30:00Z"); // Mon 9:30 AM New York
@@ -32,8 +32,11 @@ const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
   ...over,
 });
 
-const verdict = (playbookId: string, mode = "standard"): PlaybookVerdict =>
-  ({ playbookId, mode, state: "no-window" }) as PlaybookVerdict;
+const verdict = (
+  playbookId: string,
+  mode = "standard",
+  state: PlaybookVerdict["state"] = "no-window",
+): PlaybookVerdict => ({ playbookId, mode, state }) as PlaybookVerdict;
 
 function pass(
   at: number,
@@ -114,7 +117,14 @@ describe("DecisionDb.playbookFunnel, folded by session", () => {
       }),
     );
     const s1 = read().playbooks[0];
-    expect(s1?.totals).toEqual({ checks: 1, asked: 3, refused: 1, placed: 2, filled: 1 });
+    expect(s1?.totals).toEqual({
+      checks: 1,
+      signals: 0,
+      asked: 3,
+      refused: 1,
+      placed: 2,
+      filled: 1,
+    });
     expect(s1?.refusalsByReason).toEqual({ "s2-print": 1 });
     expect(s1?.askedOn).toBe(1);
   });
@@ -182,6 +192,66 @@ describe("DecisionDb.playbookFunnel, folded by session", () => {
       }),
     );
     expect(read().playbooks.map((p) => p.playbookId)).toEqual(["S1-NVDA", "G1-GOOG"]);
+  });
+
+  describe("the signals stage (slice 5b)", () => {
+    const row = (id: string) => read().playbooks.find((p) => p.playbookId === id);
+
+    it("counts a pass whose run-up playbook answered long as one signal, in any number of modes", () => {
+      db.record(
+        pass(MON, {
+          verdicts: [
+            verdict("S1-NVDA", "standard", "long"),
+            verdict("S1-NVDA", "aggressive", "long"),
+          ],
+        }),
+      );
+      db.record(pass(MON + DAY, { verdicts: [verdict("S1-NVDA", "standard", "long")] }));
+      db.record(pass(MON + DAY + 15_000, { verdicts: [verdict("S1-NVDA", "standard", "flat")] }));
+      const s1 = row("S1-NVDA");
+      expect(s1?.passSignal).toBe("counted");
+      expect(s1?.totals).toMatchObject({ checks: 3, signals: 2 });
+      expect(s1?.days.find((d) => d.date === "2026-10-13")).toMatchObject({
+        checks: 2,
+        signals: 1,
+      });
+      expect(s1?.signalledOn).toBe(2);
+    });
+
+    it("gives a quiet session of a counted playbook 0 signals, not null", () => {
+      db.record(pass(MON, { verdicts: [verdict("S1-NVDA")] }));
+      const s1 = row("S1-NVDA");
+      expect(s1?.totals.signals).toBe(0);
+      expect(s1?.days.every((d) => d.signals === 0)).toBe(true);
+      expect(s1?.signalledOn).toBe(0);
+    });
+
+    it("leaves the stage unmeasured for a playbook whose signal only research runs compute", () => {
+      // The wheel's `long` is its sale window, not the premium its declaration names.
+      db.record(pass(MON, { verdicts: [verdict("CRWV-WHEEL", "standard", "long")] }));
+      const wheel = row("CRWV-WHEEL");
+      expect(wheel?.passSignal).toBe("unmeasured");
+      expect(wheel?.totals.signals).toBeNull();
+      expect(wheel?.days.every((d) => d.signals === null)).toBe(true);
+      expect(wheel?.signalledOn).toBeNull();
+    });
+
+    it("leaves it null for a playbook that declares no research signal", () => {
+      db.record(pass(MON, { verdicts: [verdict("CRWV-LONG-CALL", "standard", "long")] }));
+      expect(row("CRWV-LONG-CALL")).toMatchObject({
+        passSignal: "none",
+        signalledOn: null,
+        totals: { signals: null },
+      });
+    });
+
+    it("counts the sessions on which any playbook raised a signal, for slice 6's question", () => {
+      db.record(pass(MON, { verdicts: [verdict("S1-NVDA", "standard", "long")] }));
+      db.record(pass(MON + DAY, { verdicts: [verdict("G1-GOOG", "standard", "long")] }));
+      db.record(pass(MON + DAY, { verdicts: [verdict("S1-NVDA", "standard", "long")] }));
+      db.record(pass(MON + 2 * DAY, { verdicts: [verdict("CRWV-WHEEL", "standard", "long")] }));
+      expect(read().signalledSessions).toBe(2);
+    });
   });
 
   it("publishes house playbooks only, never a member's authored play", () => {

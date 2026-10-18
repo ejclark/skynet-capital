@@ -34,6 +34,11 @@ export interface ResearchSignal {
    *  (the sweep's first missing research step, #4808 decision 3). */
   readonly threshold: string;
   readonly cadence: SignalCadence;
+  /** The bots' pass computes this signal itself: the playbook's `long` verdict IS the signal
+   *  holding (the run-up's date window into a report). Absent: only a research run measures it, so
+   *  no pass can say it was raised — the playbook funnel (#4450 slice 5b) shows that stage as not
+   *  measured, never as zero. */
+  readonly raisedOnPass?: true;
 }
 
 export type PlaybookResearch =
@@ -64,6 +69,8 @@ const runUp = (measures: string): ResearchSignal => ({
   instrument: RUN_UP,
   threshold: RUN_UP_BAR,
   cadence: "after-each-print",
+  // S1, G1 and the call spread answer `long` exactly inside the run-up's window on a confirmed date.
+  raisedOnPass: true,
 });
 
 const dipBounce: ResearchSignal = {
@@ -137,6 +144,20 @@ const HOUSE_RESEARCH: Readonly<Record<string, PlaybookResearch>> = {
 /** A playbook's declaration, or undefined for an id that has none (a member's authored play). */
 export function researchOf(playbookId: string): PlaybookResearch | undefined {
   return HOUSE_RESEARCH[playbookId];
+}
+
+/**
+ * Whether a pass can say this playbook raised its signal (#4450 slice 5b): `counted` when a
+ * declared signal is one the pass computes (`raisedOnPass`), `unmeasured` when it declares signals
+ * only research runs measure (the wheel's premium, the dip-to-bounce screen), `none` when it
+ * declares no research signal or nothing at all (a member's authored play).
+ */
+export type PassSignal = "counted" | "unmeasured" | "none";
+
+export function passSignalOf(playbookId: string): PassSignal {
+  const research = researchOf(playbookId);
+  if (research?.kind !== "signals") return "none";
+  return research.signals.some((s) => s.raisedOnPass) ? "counted" : "unmeasured";
 }
 
 /** Every declared id — the spec holds this equal to the registry. */

@@ -1,21 +1,24 @@
 import { isSession, sessionsBefore } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import { type PassSignal, passSignalOf } from "../playbooks/research-signals.js";
 import type { PlaybookFunnelRows } from "./decision-db-playbook-funnel.js";
 import { computeFunnel } from "./decision-funnel.js";
 
 /**
- * EACH PLAYBOOK'S FUNNEL OVER ITS LAST SESSIONS (#4450 slice 5a, EARS 5): checks → asked to trade
- * → refused by a guard → placed → filled, per playbook and per session. The plan's brief was that
+ * EACH PLAYBOOK'S FUNNEL OVER ITS LAST SESSIONS (#4450 slices 5a–5b, EARS 5): checks → signals
+ * raised → asked to trade → refused by a guard → placed → filled, per playbook and per session. The plan's brief was that
  * nearly every bot trade looked forced. The initiator split (slice 4) says how many trades a
  * playbook started; this says where a playbook's trades stop on the way: never asked, refused,
  * or placed and unfilled.
  *
- * NO "SIGNALS" STAGE YET, ON PURPOSE. The plan's funnel is checks → signals → … and a signal is
- * what #4808 has each playbook declare (an instrument and a threshold). Counting anything else as a
- * signal here would give the word a second meaning before #4808 lands; the stage slots in between
- * checks and asked when it does (slice 5b). "Asked to trade" is the nearest fact the store holds
- * today: the playbook raised an order intent.
+ * A SIGNAL IS A DECLARED ONE (#4808 slice 1, `research-signals.ts`), so the word keeps one meaning.
+ * A pass raised one when the playbook's verdict was `long` AND its declared signal is one the pass
+ * computes (`raisedOnPass` — the run-up window S1, G1 and the call spread read). Every other
+ * playbook gets `null` for the stage, never 0: the wheel and the dip-to-bounce pairs declare signals
+ * only a research run measures (`unmeasured`), and a playbook declaring no research signal raises
+ * none by definition (`none`). A zero there would read as "looked and found nothing". The stage is
+ * a count beside the others, not a strict filter: an exit order can be asked for with no signal.
  *
  * Sessions are New York trading days (`market-calendar.ts`). A check or intent on a weekend or a
  * holiday is outside every session and isn't counted; one after the close counts on that day.
@@ -30,6 +33,8 @@ export const FUNNEL_SESSIONS = 10;
 export interface PlaybookFunnelCounts {
   /** Passes that consulted the playbook. */
   readonly checks: number;
+  /** Passes on which it raised its declared signal; null when no pass can measure that. */
+  readonly signals: number | null;
   /** Order intents the playbook raised. */
   readonly asked: number;
   /** Intents a risk guard refused outright. */
@@ -51,6 +56,10 @@ export interface PlaybookFunnelRow {
   readonly totals: PlaybookFunnelCounts;
   /** One per session, oldest first — the same dates as the view's `sessions`. */
   readonly days: readonly PlaybookFunnelDay[];
+  /** Whether a pass can count its signal — why `signals` is a number or null. */
+  readonly passSignal: PassSignal;
+  /** Sessions on which it raised its signal at least once; null with `signals`. */
+  readonly signalledOn: number | null;
   /** Sessions on which it asked to trade at least once. */
   readonly askedOn: number;
   /** Refused intents by which guard fired; only reasons that occurred. */
@@ -61,6 +70,10 @@ export interface PlaybookFunnelView {
   /** The window, oldest first. */
   readonly sessions: readonly string[];
   readonly playbooks: readonly PlaybookFunnelRow[];
+  /** Sessions on which any reported playbook raised a signal — slice 6's deciding question ("over
+   *  10 trading days, on how many did no playbook raise a signal?") is `sessions` minus this. Only
+   *  `counted` playbooks can add to it. */
+  readonly signalledSessions: number;
 }
 
 /** The newest `count` sessions up to and including `now`'s New York date, oldest first. */
@@ -86,11 +99,9 @@ export function funnelWindow(
 }
 
 const HOUR_MS = 3_600_000;
-const ZERO: PlaybookFunnelCounts = { checks: 0, asked: 0, refused: 0, placed: 0, filled: 0 };
-
 type Fate = PlaybookFunnelRows["intents"][number];
 
-function counts(checks: number, fates: readonly Fate[]) {
+function counts(checks: number, signals: number | null, fates: readonly Fate[]) {
   const funnel = computeFunnel(
     checks,
     0,
@@ -99,6 +110,7 @@ function counts(checks: number, fates: readonly Fate[]) {
   return {
     counts: {
       checks,
+      signals,
       asked: funnel.rawIntents,
       refused: funnel.rawIntents - funnel.survivedGuards,
       placed: funnel.placed,
@@ -125,18 +137,24 @@ export function playbookFunnelView(
     }
     return dayOf.get(hour);
   };
-  // playbook → date → its checks and intent fates that day.
-  const byPlaybook = new Map<string, Map<string, { checks: number; fates: Fate[] }>>();
+  // playbook → date → its checks, signals and intent fates that day.
+  const byPlaybook = new Map<
+    string,
+    Map<string, { checks: number; signals: number; fates: Fate[] }>
+  >();
   const cell = (playbookId: string, date: string) => {
     const days = byPlaybook.get(playbookId) ?? new Map();
     byPlaybook.set(playbookId, days);
-    const day = days.get(date) ?? { checks: 0, fates: [] };
+    const day = days.get(date) ?? { checks: 0, signals: 0, fates: [] };
     days.set(date, day);
     return day;
   };
   for (const row of rows.checks) {
     const date = sessionOf(row.hour);
-    if (date && keep(row.playbookId)) cell(row.playbookId, date).checks += row.n;
+    if (!(date && keep(row.playbookId))) continue;
+    const day = cell(row.playbookId, date);
+    day.checks += row.n;
+    day.signals += row.signals;
   }
   for (const row of rows.intents) {
     const date = sessionOf(row.hour);
@@ -144,19 +162,24 @@ export function playbookFunnelView(
   }
 
   const playbooks = [...byPlaybook].map(([playbookId, cells]): PlaybookFunnelRow => {
+    const passSignal = passSignalOf(playbookId);
+    const signalsOf = (n: number) => (passSignal === "counted" ? n : null);
     const days = sessions.map((date): PlaybookFunnelDay => {
-      const day = cells.get(date);
-      return { date, ...(day ? counts(day.checks, day.fates).counts : ZERO) };
+      const day = cells.get(date) ?? { checks: 0, signals: 0, fates: [] };
+      return { date, ...counts(day.checks, signalsOf(day.signals), day.fates).counts };
     });
     const all = [...cells.values()];
     const whole = counts(
       all.reduce((sum, day) => sum + day.checks, 0),
+      signalsOf(all.reduce((sum, day) => sum + day.signals, 0)),
       all.flatMap((day) => day.fates),
     );
     return {
       playbookId,
       totals: whole.counts,
       days,
+      passSignal,
+      signalledOn: signalsOf(days.filter((day) => (day.signals ?? 0) > 0).length),
       askedOn: days.filter((day) => day.asked > 0).length,
       refusalsByReason: whole.refusalsByReason,
     };
@@ -167,5 +190,8 @@ export function playbookFunnelView(
       b.totals.checks - a.totals.checks ||
       a.playbookId.localeCompare(b.playbookId),
   );
-  return { sessions, playbooks };
+  const signalledSessions = sessions.filter((_, i) =>
+    playbooks.some((p) => (p.days[i]?.signals ?? 0) > 0),
+  ).length;
+  return { sessions, playbooks, signalledSessions };
 }
