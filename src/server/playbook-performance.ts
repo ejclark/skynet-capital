@@ -202,11 +202,14 @@ export interface PlaybookFunnelJsonRow extends Omit<PlaybookFunnelRow, "refusals
 export interface PlaybookFunnelJson {
   readonly sessions: readonly string[];
   readonly playbooks: readonly PlaybookFunnelJsonRow[];
+  /** Sessions on which any house playbook raised its declared signal (slice 5b). */
+  readonly signalledSessions: number;
 }
 
 export function playbookFunnelJson(view: PlaybookFunnelView): PlaybookFunnelJson {
   return {
     sessions: view.sessions,
+    signalledSessions: view.signalledSessions,
     playbooks: view.playbooks.map(({ refusalsByReason, ...row }) => ({
       ...row,
       refusals: (Object.entries(refusalsByReason) as [GuardRefusalReason, number][])

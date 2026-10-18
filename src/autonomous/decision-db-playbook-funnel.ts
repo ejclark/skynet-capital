@@ -14,7 +14,9 @@ import { SETTLED_JOIN } from "./decision-db-settlements.js";
  * kept (`decisions` has no index on `at` alone).
  *
  * - `checks` — passes that consulted the playbook: DISTINCT decisions, because a playbook armed in
- *   two modes writes two verdict rows on one pass and was still asked once.
+ *   two modes writes two verdict rows on one pass and was still asked once. `signals` is the subset
+ *   whose verdict was `long` in any mode — the playbook's own condition held (slice 5b; whether
+ *   that is a declared signal is `research-signals.ts`'s call, made in the fold).
  * - `intents` — the intents the playbook raised, grouped by the fate fields `computeFunnel`
  *   already reads (`guard_reason`, `action`, `result_status`). The status is the settled one
  *   where a `working` order later ended (`SETTLED_JOIN`), as in a bot's own funnel — so a fill
@@ -27,6 +29,8 @@ export interface FunnelCheckRow {
   readonly hour: number;
   readonly playbookId: string;
   readonly n: number;
+  /** Of those passes, the ones whose verdict was `long`. */
+  readonly signals: number;
 }
 
 export interface FunnelIntentGroupRow {
@@ -54,7 +58,8 @@ export function openPlaybookFunnelReads(db: DatabaseSync): PlaybookFunnelReads {
   const personas = "SELECT DISTINCT persona_id FROM decisions";
   const selectChecks = db.prepare(`
     SELECT CAST(d.at AS INTEGER) / ${HOUR_MS} AS hour, v.playbook_id AS playbook_id,
-           COUNT(DISTINCT v.decision_id) AS n
+           COUNT(DISTINCT v.decision_id) AS n,
+           COUNT(DISTINCT CASE WHEN v.state = 'long' THEN v.decision_id END) AS signals
     FROM decisions d JOIN playbook_verdicts v ON v.decision_id = d.id
     WHERE d.persona_id IN (${personas}) AND d.at >= ? AND d.at < ?
     GROUP BY hour, v.playbook_id
@@ -70,8 +75,13 @@ export function openPlaybookFunnelReads(db: DatabaseSync): PlaybookFunnelReads {
   return {
     read(from, to) {
       const checks = (
-        selectChecks.all(from, to) as { hour: number; playbook_id: string; n: number }[]
-      ).map((r) => ({ hour: r.hour, playbookId: r.playbook_id, n: r.n }));
+        selectChecks.all(from, to) as {
+          hour: number;
+          playbook_id: string;
+          n: number;
+          signals: number;
+        }[]
+      ).map((r) => ({ hour: r.hour, playbookId: r.playbook_id, n: r.n, signals: r.signals }));
       const intents = (
         selectIntents.all(from, to) as {
           hour: number;
