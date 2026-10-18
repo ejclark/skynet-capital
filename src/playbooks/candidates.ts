@@ -96,7 +96,10 @@ export const CANDIDATES: readonly CandidatePlaybook[] = [
       by: "2026-12-31",
       text: "no pre-registered cell beats its price-only control, run across about 500 liquid stocks from the OCC's whole-market file with dates clustered",
     },
-    status: { kind: "not-run" },
+    // The one pre-registered run, 2026-10-18 (`docs/research/optvol-bollinger-backtest-2026-10.md`):
+    // the dates are three times noisier than the 4% assumed in step 2, so the days it needs at the
+    // observed spread outnumber the 502 sessions the OCC still serves. A wait, not a kill.
+    status: { kind: "underpowered", on: "2026-10-18", clusters: 376, needed: 1298 },
   },
 ];
 
