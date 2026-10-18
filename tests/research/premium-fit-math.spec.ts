@@ -7,12 +7,14 @@ import {
   logReturns,
   percentileRank,
   printCadence,
+  printFreeForwardVols,
   printMoves,
   quantile,
   shareBelow,
   straddlesPrint,
   trailingVol,
   volPersistence,
+  wheelImplied,
 } from "../../scripts/research/premium-fit-math.mjs";
 
 /**
@@ -253,5 +255,58 @@ describe("straddlesPrint", () => {
   it("is false for a print already behind us, and true for one on expiry day", () => {
     expect(straddlesPrint("2026-10-02", "2026-11-06", ["2026-08-11"])).toBe(false);
     expect(straddlesPrint("2026-10-02", "2026-11-09", ["2026-11-09"])).toBe(true);
+  });
+});
+
+// #4819: the wheel never sells across a print, so the premium it is paid carries no earnings — the
+// fit verdict must compare that premium with months that carried none either.
+describe("printFreeForwardVols", () => {
+  const closes = [100, 101, 99, 102, 100, 110, 95, 97, 96, 98];
+
+  it("is every forward window when there is no print", () => {
+    const bars = barsOf(closes);
+    expect(printFreeForwardVols(bars, 2, [])).toEqual(forwardVols(logReturns(bars), 2));
+  });
+
+  it("drops each window that holds a print's filing session or the one after", () => {
+    // Print on 01-06 (bar 5): its reaction may land on bar 5 or bar 6, i.e. returns 4 and 5. Of the
+    // eight 2-return windows, the three touching either (starting at 3, 4, 5) go.
+    const bars = barsOf(closes);
+    const all = forwardVols(logReturns(bars), 2);
+    expect(printFreeForwardVols(bars, 2, ["2026-01-06"])).toEqual(
+      [0, 1, 2, 6, 7].map((i) => all[i]),
+    );
+  });
+});
+
+describe("wheelImplied", () => {
+  const expiries = [
+    { expiry: "2026-10-10", dte: 3, atmIv: 0.3, clean: true, inBand: false },
+    { expiry: "2026-10-17", dte: 10, atmIv: 0.33, clean: true, inBand: false },
+    { expiry: "2026-10-24", dte: 17, atmIv: 0.35, clean: true, inBand: false },
+    { expiry: "2026-10-30", dte: 23, atmIv: 0.6, clean: false, inBand: true },
+    { expiry: "2026-11-06", dte: 30, atmIv: 0.38, clean: true, inBand: true },
+    { expiry: "2026-11-13", dte: 37, atmIv: 0.41, clean: true, inBand: true },
+    { expiry: "2026-12-18", dte: 72, atmIv: 0.5, clean: true, inBand: false },
+  ];
+  const at = (knownPrints: string[], list = expiries) =>
+    wheelImplied({ iv30: 0.55, today: "2026-10-07", knownPrints, expiries: list });
+
+  it("is the 30-day implied when no print falls in the next 30 days", () => {
+    expect(at(["2026-11-20"])).toEqual({ iv: 0.55, source: "iv30", printInside: false });
+  });
+
+  it("is the richest print-clean in-band expiry when a print falls in the next 30 days", () => {
+    expect(at(["2026-10-29"])).toEqual({
+      iv: 0.41,
+      source: "expiry",
+      expiry: "2026-11-13",
+      printInside: true,
+    });
+  });
+
+  it("is none — never the 30-day implied, nor a shorter clean expiry — when none in the band is clean", () => {
+    const noneInBand = expiries.map((e) => (e.inBand ? { ...e, clean: false } : e));
+    expect(at(["2026-10-29"], noneInBand)).toEqual({ iv: null, source: "none", printInside: true });
   });
 });

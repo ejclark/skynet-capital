@@ -1,7 +1,7 @@
 # CRWV on the premium wheel — the premium is not rich, it is cheap
 
 **Kind:** playbook fit · **Date:** 2026-10-02 · **Symbol:** CRWV · **Impact:** high
-**Last assessed:** 2026-10-02
+**Last assessed:** 2026-10-18 (call 4 re-run, #4819)
 
 **Question (#4469 slice 1, with [#4460](https://github.com/ejclark/skynet-capital/issues/4460)
 slice 1):** should CRWV go on a premium-selling playbook (the wheel), and if so on what settings?
@@ -17,6 +17,26 @@ Reproduce: `node scripts/research/premium-fit.mjs CRWV --refresh`
 | 3 | **Never sell a leg across a CRWV print — and the window is the session *after* the filing date.** | high | The filing session is a decoy: the six prints moved **+6.6 / +6.4 / +1.5 / −0.4 / −6.6 / +2.4%** on the filing date and **−2.5 / −20.8 / −16.3 / −18.5 / −11.4 / +19.3%** on the session after. | Three consecutive prints whose filing-session move exceeds the next session's. The next is projected **2026-11-09**. |
 | 4 | **Adopt the instrument as the gate every symbol passes through**, on this comparator: trailing **252 sessions**, not full history. | medium | Against full history the same test called implied cheap on NVDA (17th pct) *and* AAPL (30th) — old crisis eras doing the work. Regime-matched, the cross-section separates: mega-caps rich (AMZN 81st, AAPL 67th), high-beta AI names cheap (CRWV 6th, NVDA 7th, AVGO 12th). | A symbol whose regime-matched verdict is contradicted by a recorded IV-rank reading once `SKYNET_IV_HISTORY_DIR` has a year of CRWV samples (earliest ~2027-09). |
 | 5 | **Do not act on the mirror trade** (implied this cheap argues for *owning* gamma, not selling it). Register it, size zero. | low | The claim needs implied-vs-*subsequently*-realized measured pairwise through time. One snapshot cannot do it, and this study will not pretend otherwise. | A year of recorded `iv30` samples, at which point the pairwise test is runnable and either survives or does not. |
+
+**Call 4, re-run 2026-10-18 — earnings premium taken out ([#4819](https://github.com/ejclark/skynet-capital/issues/4819)).**
+The cross-section above ranked Cboe's 30-day implied, which prices any report due inside 30 days —
+premium the wheel can never sell, since no leg crosses a print. The gate now ranks the richest
+print-clean expiry in the 21–45 day band against forward months that held no report, and uses
+`iv30` only when no report falls inside 30 days. Same chain snapshot, before → after:
+
+| | CRWV | NVDA | AVGO | AMD | MRVL | META | MSFT | GOOG | AAPL | AMZN |
+|---|---|---|---|---|---|---|---|---|---|---|
+| next report | 11-09 | 11-25 | 12-02 | 11-03 | 11-26 | 10-28 | 10-28 | 10-21 | 10-29 | 10-29 |
+| before (`iv30`) | fits 69th | stand aside 43rd | stand aside 31st | stand aside 47th | stand aside 39th | stand aside 48th | thin 59th | fits 81st | thin 71st | fits 86th |
+| after (print-clean) | **stand aside** | stand aside 43rd | stand aside 31st | stand aside | stand aside 39th | stand aside | **stand aside** | **stand aside** | **stand aside** | **stand aside** |
+
+Every "fits" and "thin" with a report inside 30 days flips to **stand aside**. The ranks did not
+fall. There was no rank left to read: every expiry in the band ends after the report, so no leg the
+wheel could sell exists until the report has passed. Names with no report inside are unchanged,
+which is the fix's own check. **No symbol is named "first" on this gate until it reads "fits" on a
+print-clean run.** AMZN's 86th-percentile "fits" was the report's premium. Its re-run is on or
+after **2026-11-02**, and if it still reads "fits" then, the contamination was real but not
+decisive.
 
 **Headline.** CRWV looks like a premium-selling name and is not one. It has every surface feature
 the wheel wants — a 70-vol quote, a deep chain, spreads that cost 3–5% of the premium — and fails

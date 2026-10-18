@@ -183,6 +183,7 @@ undocumented and gets one.
 | **A button under the message that names a place** | Under each of her messages that names a place, one button goes there; thumb-sized, but one more control per place in a long thread. | — | #5156 rounds 1–2 (More both times) | seeded |
 | **A suggestion chip that goes to a place** | The first suggestion chip under the thread navigates instead of sending a message. | — | #5156 round 1 | declined here (Not) |
 | **A card for a canned action** | A card (the step · one line on why · its button) only for a canned action such as the onboarding step; one card per cohesive path, and while onboarding the card stays on onboarding. Two cards for unrelated tasks in one thread is the failure. | — | #5156 round 2 — Eric: "I like the cards for canned action. I don't like having two cards for unrelated tasks. When onboarding, the focus should remain on onboarding." | seeded — two cards per thread declined here |
+| **The card asks for what it lacks** | When a call can't be given because one input is missing, the row says which ("Needs your goal ↓") and asks that one input in place, directly under it; everything else it holds stays folded to one line with Edit. Never a how-to sentence, never the whole form for one answer. | — (drawn on a scratch branch, `app/src/shell/saved-position-card.tsx`) | #5181 round 1, question 3 | seeded — awaiting his pick |
 
 ## The ledger — trading surfaces
 
