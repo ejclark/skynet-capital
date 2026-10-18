@@ -37,6 +37,12 @@
 .char-card--under .char-blend {
   overflow: clip visible;
 }
+/* On a phone (`char-card--bare`, sauron-card.tsx) no art sits above the card: the pull would lay the
+ * shade's opaque floor over the bottom of the control above it (#4976), so the mist stands in the
+ * card's own flow and the league rises out of it. */
+.char-card--bare .char-blend {
+  margin-top: 0;
+}
 .char-card--under .char-body {
   border-radius: 0 0 14px 14px;
 }
