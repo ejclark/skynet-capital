@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import type {
   DelegationGateView,
   PairRowView,
@@ -74,6 +76,13 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+/** The picker's chosen-ticker view mounts the symbol's recap (#4807 slice 4), which reads a query. */
+const WithClient = ({ children }: { readonly children: ReactNode }) => (
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    {children}
+  </QueryClientProvider>
+);
+
 const ASIDE = pair("TSLA-WHEEL", "TSLA", {
   status: "stand-aside",
   statusLabel: "✗ stand aside",
@@ -83,13 +92,15 @@ const ASIDE = pair("TSLA-WHEEL", "TSLA", {
 function pickAside() {
   const strategy = wheel([ASIDE]);
   render(
-    <TickerPicker
-      accountId="sauron"
-      strategy={strategy}
-      cardsById={new Map([["TSLA-WHEEL", cardOf("TSLA-WHEEL", "TSLA")]])}
-      delegation={OPEN}
-      onChanged={rstest.fn()}
-    />,
+    <WithClient>
+      <TickerPicker
+        accountId="sauron"
+        strategy={strategy}
+        cardsById={new Map([["TSLA-WHEEL", cardOf("TSLA-WHEEL", "TSLA")]])}
+        delegation={OPEN}
+        onChanged={rstest.fn()}
+      />
+    </WithClient>,
   );
   fireEvent.click(screen.getByRole("button", { name: /Pick a ticker/ }));
   fireEvent.click(screen.getByRole("button", { name: /TSLA/ }));
@@ -140,13 +151,15 @@ describe("subscribing to a pair the study does not back", () => {
   it("asks nothing extra of a pair the study backs", () => {
     const strategy = wheel([pair("CRWV-WHEEL", "CRWV", { status: "conviction" })]);
     render(
-      <TickerPicker
-        accountId="sauron"
-        strategy={strategy}
-        cardsById={new Map([["CRWV-WHEEL", cardOf("CRWV-WHEEL", "CRWV")]])}
-        delegation={OPEN}
-        onChanged={rstest.fn()}
-      />,
+      <WithClient>
+        <TickerPicker
+          accountId="sauron"
+          strategy={strategy}
+          cardsById={new Map([["CRWV-WHEEL", cardOf("CRWV-WHEEL", "CRWV")]])}
+          delegation={OPEN}
+          onChanged={rstest.fn()}
+        />
+      </WithClient>,
     );
     fireEvent.click(screen.getByRole("button", { name: /Pick a ticker/ }));
     fireEvent.click(screen.getByRole("button", { name: /CRWV/ }));
