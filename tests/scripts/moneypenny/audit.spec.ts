@@ -4,6 +4,7 @@ import {
   readyPlanCandidate,
   staleInProgressFrom,
   untruncated,
+  owedAnswer,
 } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
@@ -307,5 +308,30 @@ describe("untruncated() — a list read at its --limit fails loudly instead of a
 
   it("treats a missing list as empty, not as a crash", () => {
     expect(untruncated(undefined, 100, "gh issue list")).toEqual([]);
+  });
+});
+
+// #5667: the "no answer yet — re-apply `feedback`" ping went to issues that were never `ready`,
+// where re-labelling does nothing: Backlog waits on an explicit ready, not on a retry.
+describe("owedAnswer — which feedback issues the stall audit pings", () => {
+  const issue = (labels: string[], extra: Record<string, unknown> = {}) => ({
+    labels: labels.map((name) => ({ name })),
+    ...extra,
+  });
+
+  it("pings a ready feedback issue with no PR and no terminal label", () => {
+    expect(owedAnswer(issue(["feedback", "ready"]))).toBe(true);
+  });
+
+  it("never pings an issue that was never ready", () => {
+    expect(owedAnswer(issue(["feedback", "bug", "fast-track"]))).toBe(false);
+  });
+
+  it("stays quiet once a PR, a closing, or a terminal label answered it", () => {
+    expect(
+      owedAnswer(issue(["feedback", "ready"], { closedByPullRequests: [{ number: 1 }] })),
+    ).toBe(false);
+    expect(owedAnswer(issue(["feedback", "ready"], { state: "CLOSED" }))).toBe(false);
+    expect(owedAnswer(issue(["feedback", "ready", "next-slice"]))).toBe(false);
   });
 });

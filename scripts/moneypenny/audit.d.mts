@@ -8,6 +8,7 @@ export interface AuditIssue {
   state?: string;
   closedByPullRequests?: unknown[];
   linkedPullRequests?: unknown[];
+  labels?: readonly ({ name?: string } | string)[];
 }
 export interface AuditComment {
   body?: unknown;
@@ -92,6 +93,8 @@ export const CONFLICT_MARKER: RegExp;
 
 /** Did this issue get an ANSWER — closed, or linked to a PR? */
 export function answered(issue?: AuditIssue): boolean;
+/** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
+export function owedAnswer(issue?: AuditIssue): boolean;
 /** The pure stall/silent-feedback/plan-stall audit: dependencies in, flag intents out. */
 export function audit(deps?: AuditDeps): AuditIntent[];
 /** The pure per-issue plan-stall decision — is this a live candidate, and if so how old? */

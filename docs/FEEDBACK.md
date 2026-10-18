@@ -84,15 +84,17 @@ created that gets prioritized into the backlog").** A freshly `feedback`-labelle
 builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 `triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
 — the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
-self-readies and keeps the old near-zero-friction path for the common case. Everything else,
-including anything already `needs-eric`/`needs-info`, sits in **Backlog** on the Orchestration
+self-readies and keeps the old near-zero-friction path for the common case. So does a `bug` +
+`fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
+says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
+including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
 until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
 fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
-[`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the self-ready above is the one case where a
+[`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in
 `.github/prompts/feedback-build.md`; what the lane may not touch lives in
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
