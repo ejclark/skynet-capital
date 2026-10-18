@@ -22,8 +22,41 @@
  */
 import type { MarketContext, OrderForecast, PlaybookSubscription } from "../domain/types.js";
 import { rsi, sma } from "../indicators/index.js";
+import type { Playbook } from "./playbook.js";
 
 export const COND_SCOUT_ID = "COND-SCOUT";
+
+/**
+ * The shadow scout as a registry playbook (#4535 slice 3a) — what makes it subscribable in the
+ * Store, so an owner switches it on and picks its names there instead of through an ops run. Like
+ * `BETA_SCOUT` it places nothing through a bot's playbook roster (`decide` returns nothing): its
+ * readings and simulated probes come from the scout runner, which reads the host bot's subscription
+ * each check (`resolveCondScoutUniverse`).
+ *
+ * - **No capital, ever.** It sends no order to a broker, so the Store asks for no budget and shows
+ *   none as at risk (`movesNoCapital` on its strategy, `pair-table.ts`). Its names are the
+ *   subscription's symbol chips, drawn from the ten the bots stream; none picked means all ten.
+ * - **No names of its own** (`symbols: []`): it must never take a name from a bot's own rules or
+ *   from another playbook, so it claims nothing anywhere a basket is read.
+ * - **No window** (`keyedOn: "event"`): it scans on every check. Mode changes nothing about it.
+ */
+export const COND_SCOUT: Playbook = {
+  id: COND_SCOUT_ID,
+  symbols: [],
+  thesis:
+    "reads each streamed name's conditions, names the condition, and records one falsifiable " +
+    "hypothesis per name as a simulated probe — it places no orders",
+  whenOff:
+    "Not running here: it scans only on the first bot the bots app runs, and only while that bot " +
+    "is subscribed to it with the subscription on.",
+  evidence:
+    "Eric's theory that a profitable trade exists for every market condition (#3651): a probe " +
+    "that gathers evidence for or against it, kept apart from every playbook's record.",
+  size: { conservative: 0, standard: 0, aggressive: 0 },
+  keyedOn: "event",
+  desiredState: () => "no-window",
+  decide: () => [],
+};
 
 const DAY_MS = 86_400_000;
 

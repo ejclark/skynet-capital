@@ -29,7 +29,16 @@ function subscriptionFacts(
   sub: SubscriptionView,
   basket: readonly string[],
   human: boolean,
+  movesNoCapital = false,
 ): string[] {
+  // A playbook that sends no order has no mode that matters and no money to show: it says what it
+  // does, then which names it reads.
+  if (movesNoCapital) {
+    return [
+      "places no orders",
+      sub.symbols?.length ? `names: ${sub.symbols.join(", ")}` : `all ${basket.length} names`,
+    ];
+  }
   const symbols = sub.symbols?.length
     ? [`new entries: ${sub.symbols.join(", ")}`]
     : basket.length > 1
@@ -117,7 +126,12 @@ export function SubscriptionRow({
         <b className="pb-status-state">
           <span aria-hidden="true">{state.glyph}</span> {state.word}
         </b>
-        {subscriptionFacts(sub, card.symbols, human).map((fact) => (
+        {subscriptionFacts(
+          sub,
+          card.pickFrom ?? card.symbols,
+          human,
+          card.movesNoCapital === true,
+        ).map((fact) => (
           <span key={fact}> · {fact}</span>
         ))}
       </p>

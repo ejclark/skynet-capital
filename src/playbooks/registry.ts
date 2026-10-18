@@ -12,6 +12,7 @@ import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING } from "../news/taco-signal.js";
 import { BETA_SCOUT } from "./beta-scout.js";
 import { callSpread } from "./call-spread.js";
+import { COND_SCOUT } from "./cond-scout.js";
 import { dipBounce } from "./dip-bounce-play.js";
 import { longCall } from "./long-call.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
@@ -229,7 +230,7 @@ export const NBIS_DIP_BOUNCE: Playbook = dipBounce({
  *  `beta-scout.ts`); re-exported here because the Store catalog and the roll call read the house
  *  roster off what this module exports. None of the option plays, nor these, is on any default
  *  roster: an owner subscribes their own bot to one in the Store. */
-export { BETA_SCOUT, SAURON };
+export { BETA_SCOUT, COND_SCOUT, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,
@@ -240,6 +241,7 @@ const ROSTER: readonly Playbook[] = [
   NVDA_CALL_SPREAD,
   SAURON,
   BETA_SCOUT,
+  COND_SCOUT,
   MU_DIP_BOUNCE,
   NBIS_DIP_BOUNCE,
 ];

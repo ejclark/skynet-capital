@@ -35,6 +35,8 @@
 //                (the one button), and a promoted play trading, marked SIM and unvalidated.
 //   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
 //                saved, the form open on a phone and wide, a setting past its limit refused in words.
+//   · `shadow-scout` — #4535 slice 3a: the shadow scout's card, the subscribe form with no budget,
+//                mode or compounding, and its subscribed row ("places no orders"), a FIXTURE.
 //   · `scorecard` — #5482 slice 5: "steered by: AI-dip view · check … · pass / fail / pending" on the
 //                CRWV pair rows, opened to its claims. The first frame is the record as it stands (the
 //                server's own view: nothing is due yet); the second is a FIXTURE with some claims
@@ -964,6 +966,38 @@ groups.funnel = [
   funnelFrame("phone-1-funnel-s1", "→ no orders asked for"),
   funnelFrame("phone-2-funnel-sauron", "most refused", { act: openSauronFold }),
   funnelFrame("phone-3-funnel-unchecked", "no bot checked this playbook"),
+];
+
+// #4535 slice 3a: the shadow scout is subscribable in the Store, and places no orders. Its card from
+// the real catalog, its form open (names to scan, no budget), and a subscribed row (a fixture:
+// nothing is seeded) that says "places no orders" where other rows say a mode and a dollar figure.
+views.scoutOn = withCounts(
+  playbookStoreView([subscription("COND-SCOUT", { symbols: ["NVDA", "CRWV", "AAPL"] })]),
+  { ...COUNTS, "COND-SCOUT": 1 },
+);
+const SCOUT_STRATEGY = "The shadow scout";
+const toScoutStrategy = (page) =>
+  page.locator(".pb-strategy").filter({ hasText: SCOUT_STRATEGY }).first().evaluate(underHeader);
+const scoutFrame = (tag, over = {}) => ({
+  tag,
+  view: views.fresh,
+  expect: SCOUT_STRATEGY,
+  viewport: PHONE,
+  act: toScoutStrategy,
+  ...over,
+});
+groups["shadow-scout"] = [
+  scoutFrame("phone-1-scout-card"),
+  scoutFrame("phone-2-scout-form", {
+    act: async (page) => {
+      // A pair the study has not covered sits in the card's fold, so open that first.
+      const card = page.locator(".pb-strategy").filter({ hasText: SCOUT_STRATEGY }).first();
+      await card.locator("details > summary").first().click();
+      await openSubscribe(card);
+      await toScoutStrategy(page);
+    },
+  }),
+  scoutFrame("phone-3-scout-subscribed-fixture", { view: views.scoutOn }),
 ];
 
 const only = process.env.FRAMES;

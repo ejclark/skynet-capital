@@ -8,6 +8,7 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import {
   allocationChangeRefusal,
   allocationRefusal,
@@ -139,7 +140,8 @@ function basketRefusal(
   playbookId: string,
   symbols: readonly string[] | undefined,
 ): string | undefined {
-  const basket = playbookStoreCatalog().find((entry) => entry.id === playbookId)?.symbols;
+  const entry = playbookStoreCatalog().find((card) => card.id === playbookId);
+  const basket = entry?.pickFrom ?? entry?.symbols;
   const outside = basket ? (symbols ?? []).filter((s) => !basket.includes(s)) : [];
   return outside.length > 0
     ? `${outside.join(", ")} ${outside.length === 1 ? "isn't" : "aren't"} in ${playbookId}'s basket — a symbol filter can only narrow it.`
@@ -218,6 +220,13 @@ async function serveStoreIndex(
 
 type Store = NonNullable<DashboardServerConfig["subscriptions"]>;
 
+/** A strategy whose playbooks send no order has no money to allocate (#4535 slice 3a). */
+function noAllocationRefusal(strategy: keyof typeof STRATEGIES): string | undefined {
+  return STRATEGIES[strategy].movesNoCapital
+    ? `${STRATEGIES[strategy].name} places no orders, so there is no capital to allocate to it.`
+    : undefined;
+}
+
 /** Subscribe — an `await` inside the router's busiest branch, so its own function. */
 async function handleSubscribe(
   res: ServerResponse,
@@ -227,11 +236,17 @@ async function handleSubscribe(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<void> {
-  const body = parseSubscribeBody(raw);
-  if (!body) {
+  const parsed = parseSubscribeBody(raw);
+  // A playbook that sends no order takes no budget and no compounding, whatever a client sends
+  // (the shadow scout, #4535 slice 3a); every other playbook needs its budget.
+  const noCapital = parsed !== undefined && movesNoCapital(parsed.playbookId);
+  if (!parsed || (!noCapital && parsed.capitalAllocated === undefined)) {
     sendJson(res, 400, { error: "malformed subscribe body" });
     return;
   }
+  const body: NonNullable<typeof parsed> = noCapital
+    ? { ...parsed, capitalAllocated: undefined, compoundAllocation: undefined }
+    : parsed;
   const envNamed = envNamedFor(config.readHouseRoster?.(), body.id);
   const held = store.load()[body.id] ?? [];
   const delegation = await delegationRefusal(
@@ -259,11 +274,12 @@ async function handleSubscribe(
       allocations: store.loadAllocations()[body.id],
     }) ??
     // The live reads cost broker calls, so they run last and only for a subscription the account
-    // does not already hold — a replacing re-subscribe is never re-judged.
-    (held.some((sub) => sub.playbookId === body.playbookId)
+    // does not already hold — a replacing re-subscribe is never re-judged. A playbook that sends
+    // no order has nothing to read a price or a chain for.
+    (noCapital || held.some((sub) => sub.playbookId === body.playbookId)
       ? undefined
       : await liveNeedsRefusal(
-          { ...needs, mode: body.mode, capitalAllocated: body.capitalAllocated },
+          { ...needs, mode: body.mode, capitalAllocated: body.capitalAllocated ?? 0 },
           subscribeLiveReads(config, body.id),
         ));
   if (refusal) {
@@ -273,7 +289,7 @@ async function handleSubscribe(
   store.subscribe(body.id, {
     playbookId: body.playbookId,
     mode: body.mode,
-    capitalAllocated: body.capitalAllocated,
+    ...(body.capitalAllocated !== undefined ? { capitalAllocated: body.capitalAllocated } : {}),
     enabled: true,
     ...(body.symbols ? { symbols: body.symbols } : {}),
     ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
@@ -324,7 +340,11 @@ async function handleConfigure(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  const saved = store.configure(body.id, body.playbookId, body.tuning);
+  // A playbook that sends no order keeps no budget and no compounding, whatever an edit sends.
+  const tuning = movesNoCapital(body.playbookId)
+    ? { mode: body.tuning.mode, ...(body.tuning.symbols ? { symbols: body.tuning.symbols } : {}) }
+    : body.tuning;
+  const saved = store.configure(body.id, body.playbookId, tuning);
   sendJson(
     res,
     200,
@@ -393,6 +413,7 @@ async function handleAllocation(
       session,
       false,
     )) ??
+    noAllocationRefusal(body.strategy) ??
     allocationChangeRefusal(store.load()[body.id] ?? [], body.strategy, body.capitalAllocated);
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });

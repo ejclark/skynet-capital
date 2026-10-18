@@ -1,7 +1,7 @@
 import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import { COND_SCOUT, G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 import {
   mergeRosters,
   pausedPlaybookIds,
@@ -25,6 +25,18 @@ describe("subscriptionRoster", () => {
     const { enabled, rejected } = subscriptionRoster([sub()]);
     expect(enabled).toEqual([{ playbook: S1_NVDA, mode: "standard" }]);
     expect(rejected).toEqual([]);
+  });
+
+  // #4535 slice 3a: the shadow scout is a registered playbook, so an owner's subscription to it is
+  // no longer refused as an unknown id, and it claims no name from the bot's own rules.
+  it("resolves a shadow scout subscription without refusing it, and it claims no name", () => {
+    const { enabled, rejected } = subscriptionRoster([
+      sub({ playbookId: "COND-SCOUT", capitalAllocated: undefined, symbols: ["AAPL"] }),
+    ]);
+    expect(rejected).toEqual([]);
+    expect(enabled).toEqual([{ playbook: COND_SCOUT, mode: "standard" }]);
+    expect(COND_SCOUT.symbols).toEqual([]);
+    expect(COND_SCOUT.decide?.(undefined as never, undefined as never, [], "standard")).toEqual([]);
   });
 
   it("resolves multiple subscriptions, preserving each one's own mode", () => {
