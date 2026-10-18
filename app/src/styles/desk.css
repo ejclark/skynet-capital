@@ -126,6 +126,10 @@
 }
 .blotter-scroll {
   overflow-x: auto;
+  /* The containing block for the table's screen-reader labels (#5108): `.visually-hidden` is
+     absolute with no offsets, so it sits at its static spot in the wide table — and with no
+     positioned box here it escaped this clip and scrolled the whole page sideways on a phone. */
+  position: relative;
   /* A size container so a phone-width "why" panel can be exactly as wide as the visible table
      (`100cqw`, below) rather than the whole sideways-scrolling one, and so the positions table can
      pick its columns by its own width (`positions-columns.css`, #5071). Safe: a block's width
