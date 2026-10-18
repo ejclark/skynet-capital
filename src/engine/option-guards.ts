@@ -1,5 +1,4 @@
 import { type EarningsPrint, optionPrintBlackout } from "../domain/earnings-calendar.js";
-import { marketDayKey } from "../domain/market-day.js";
 import {
   type CoverNeeds,
   limitInsideBand,
@@ -175,11 +174,13 @@ function clampClose(
 }
 
 /** Rule 6: the open must close before the earliest live print blackout begins — except a bought
- *  call, which may hold through a print but never opens inside one. The rule guards against a gap
- *  the account cannot cover: a sold option's loss on a print gap has no floor, a bought call's is
- *  the premium, which rule 8 has already reserved inside the playbook's budget. Whether holding a
- *  print is WISE is the playbook's evidence to state (CRWV-LONG-CALL's pair row, #5482), not a
- *  cover question this guard can answer. */
+ *  call, which may hold through a print. The rule guards against a gap the account cannot cover: a
+ *  sold option's loss on a print gap has no floor, a bought call's is the premium, which rule 8 has
+ *  already reserved inside the playbook's budget. Whether holding a print is WISE is the playbook's
+ *  evidence to state (CRWV-LONG-CALL's pair row, #5482), not a cover question this guard can answer.
+ *  An open on a day INSIDE the blackout never reaches here: S2 (`guards.ts`) refuses every open in
+ *  the symbol's protected window first, which spans the whole blackout (#4807 slice 5) — this rule
+ *  is only about the expiry. */
 function printProblem(
   option: OptionOrderIntent,
   underlying: string,
@@ -188,8 +189,6 @@ function printProblem(
 ): OptionRefusalReason | undefined {
   const blackout = calendar ? optionPrintBlackout(underlying, asOfIso, calendar) : undefined;
   if (!blackout) return "option-print-unknown";
-  const today = marketDayKey(asOfIso);
-  if (today >= blackout.start && today <= blackout.end) return "option-spans-print";
   if (option.structure === "long-call") return undefined;
   const spans = option.legs.some((leg) => {
     const expiration = parseOccSymbol(leg.occSymbol)?.expiration;

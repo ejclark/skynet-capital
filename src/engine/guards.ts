@@ -1,7 +1,9 @@
-import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
+import { type EarningsPrint, etTimeOf } from "../domain/earnings-calendar.js";
 import { bookNeeds, opensRisk } from "../domain/option-book.js";
 import { isBareContractOrder, optionOrderProblems } from "../domain/option-order.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
+import { protectedWindowOn } from "../domain/protected-window.js";
+import type { SymbolFacts } from "../domain/symbol-facts.js";
 import type {
   MarketContext,
   OrderIntent,
@@ -48,8 +50,11 @@ import { refusedAsUnsubscribed } from "./subscribed-only.js";
 interface TradeDiscipline {
   /** The forward print calendar (S2). Estimates count — they widen the flat window. */
   readonly calendar: readonly EarningsPrint[];
-  /** S2: refuse buys when a print is within this many calendar days (default 2 = flat by D-1). */
-  readonly printFlatDays?: number;
+  /**
+   * Per-symbol facts (`SYMBOL_FACTS`), handed in so this file stays pure. A fact may widen a
+   * symbol's protected window past the session after its print; absent = the house default.
+   */
+  readonly facts?: ReadonlyMap<string, SymbolFacts>;
   /**
    * E1: drop non-`urgent` buys before this ET wall-clock time ("HH:MM", default "10:00").
    * Dropping IS deferring here: the live loop re-evaluates on every market event, so a
@@ -125,7 +130,8 @@ export type GuardRefusalReason =
   /** The graduated risk ladder's BLOCK rung (opens only — see `applyGuards`'s own comment on why
    *  gating opens alone is sufficient). */
   | "ladder-block"
-  /** S2: a print falls inside the flat window and the intent didn't claim `allowThroughPrint`. */
+  /** S2: the symbol is inside its protected window (`domain/protected-window.ts`) and the intent
+   *  didn't claim `allowThroughPrint`. */
   | "s2-print"
   /** E1: before the configured open-deferral time and the intent didn't claim `urgent`. */
   | "e1-open"
@@ -214,7 +220,10 @@ type DisciplineOutcome =
   | { readonly ok: false; readonly reason: "s2-print" | "e1-open" };
 
 /**
- * S2 (never hold the print) + E1 (don't trade the open), entry side. The S2 exit side
+ * S2 (never hold the print) + E1 (don't trade the open), entry side. S2 refuses an open while the
+ * symbol is inside its protected window — the same window the symbol summary draws as ■ Protected
+ * (#4807 slice 5), so the card's "no new entries" is what this guard does: from
+ * `PRINT_WINDOWS.entryFlatDays` before the print through the session after it. The S2 exit side
  * (flattening an EXISTING position before a print) is an action, not a clamp — it belongs to the
  * playbook engine, which owns exits.
  */
@@ -223,13 +232,13 @@ function clampDiscipline(
   context: MarketContext,
   discipline: TradeDiscipline,
 ): DisciplineOutcome {
-  const print = printWithin(
+  const window = protectedWindowOn(
     intent.symbol,
     context.asOf,
-    discipline.printFlatDays ?? 2,
     discipline.calendar,
+    discipline.facts?.get(intent.symbol),
   );
-  if (print && !intent.allowThroughPrint) {
+  if (window && !intent.allowThroughPrint) {
     return { ok: false, reason: "s2-print" }; // don't open what you'd be forced to flatten before the print.
   }
   const openUntil = discipline.deferOpenUntilEt ?? "10:00";
