@@ -74,6 +74,9 @@ a {
   border-bottom: 1px solid var(--border);
   background: var(--glass);
   backdrop-filter: blur(12px);
+  /* Its own width, not the window's, decides the views' row (#4046 item 4): Moneypenny's rail
+     narrows the bar without narrowing the window. */
+  container: topbar / inline-size;
 }
 .brand {
   display: flex;
@@ -135,6 +138,28 @@ a {
   overflow-x: auto;
   scrollbar-width: none;
   margin-left: 8px;
+}
+/* A bar too narrow for its marks and every view on one row — Moneypenny's rail open below about
+   1300 — gives the views their own row, as a phone does, rather than scrolling them (the page's own
+   view among them) out of sight. Measured inside the bar's padding: one row needs ~776px with the
+   market closed. At 1280 with the rail open the bar has 785, too close to hold when the status line
+   widens, so the edge sits at 800; the narrowest desk with no rail (861) still has 806. */
+@container topbar (max-width: 800px) {
+  .topnav {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+    min-height: 38px;
+  }
+}
+/* …and on the desk, where the bar has no padding of its own, keeps the first row its usual height
+   once the views leave it (a phone's bar pads its rows itself, below). */
+@media (min-width: 861px) {
+  @container topbar (max-width: 800px) {
+    .brand {
+      min-height: 46px;
+    }
+  }
 }
 .topnav-link {
   display: flex;
