@@ -29,6 +29,8 @@ export interface Book {
   participants: BookParticipant[];
   activity: Record<string, { orderId: string; symbol: string; at: string }[]>;
   decisions: Record<string, BookDecision[]>;
+  /** Each bot's declared check cadence in ms (`bot.cadenceSeconds`), for the week strip. */
+  cadenceMs: Record<string, number>;
   history: Record<string, { at: string; equity: number }[]>;
   /** Yesterday's closing equity per participant, derived (yesterdayEquity). */
   lastEquity: Record<string, number>;
