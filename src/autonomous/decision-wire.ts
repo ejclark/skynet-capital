@@ -148,9 +148,8 @@ export function parseDecisionRecord(value: unknown): DecisionRecord | undefined 
     ...(typeof value.halted === "string" ? { halted: value.halted } : {}),
     ...(context ? { context } : {}),
     ...(refusals ? { refusals: refusals as DecisionRecord["refusals"] } : {}),
-    ...(verdicts?.length
-      ? { playbookVerdicts: verdicts as DecisionRecord["playbookVerdicts"] }
-      : {}),
+    // Kept when empty (#4773): "this pass ran no playbook" is a fact, not a missing field.
+    ...(verdicts ? { playbookVerdicts: verdicts as DecisionRecord["playbookVerdicts"] } : {}),
   };
 }
 

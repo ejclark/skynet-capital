@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import {
   authoredShadowStore,
   openBotsStateDb,
+  persistSentiment,
   restoreBotsState,
 } from "../../src/autonomous/bots-state-db.js";
 import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
@@ -48,6 +49,19 @@ describe("BotsStateDb", () => {
 
     const second = openBotsStateDb(dbPath);
     expect(second.loadSentiment()).toEqual({ NVDA: [0.5, -0.2] });
+    second.close();
+  });
+
+  // #4781: the articles already counted survive a restart, so a re-poll never counts them twice.
+  it("round-trips the news articles already counted", () => {
+    const first = openBotsStateDb(dbPath);
+    expect(first.loadSeenNews()).toEqual([]);
+    first.saveSeenNews(["a1", "a2"]);
+    first.saveSeenNews(["a2", "a3"]);
+    first.close();
+
+    const second = openBotsStateDb(dbPath);
+    expect(second.loadSeenNews()).toEqual(["a2", "a3"]);
     second.close();
   });
 
@@ -250,6 +264,30 @@ describe("restoreBotsState", () => {
     expect(restored).toEqual({ momentumSymbols: 2, sentimentSymbols: 1, cooldowns: 3 });
     expect(tracker.snapshot()).toEqual({ NVDA: [100, 105, 110], AVGO: [200, 201] });
     expect(sentiment.snapshot()).toEqual({ NVDA: [0.4] });
+    db.close();
+  });
+
+  // #4781: a restart that forgot which stories it counted would count the newest 20 again.
+  it("persists and restores the news articles already counted", () => {
+    const nvda = new Set(["NVDA"]);
+    const story = {
+      id: "n1",
+      headline: "NVDA surges",
+      summary: "",
+      symbols: ["NVDA"],
+      createdAt: "t",
+    };
+    const live = new SentimentTracker();
+    live.ingest(story, nvda);
+    const first = openBotsStateDb(dbPath);
+    persistSentiment(first, live);
+    first.close();
+
+    const db = openBotsStateDb(dbPath);
+    const sentiment = new SentimentTracker();
+    restoreBotsState(db, new MomentumTracker(), sentiment);
+    sentiment.ingest(story, nvda);
+    expect(sentiment.snapshot()).toEqual({ NVDA: [1] });
     db.close();
   });
 

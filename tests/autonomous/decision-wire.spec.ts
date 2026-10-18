@@ -86,11 +86,13 @@ describe("parseDecisionRecord", () => {
       expect(parsed?.playbookVerdicts).toEqual([verdict]);
     });
 
-    it("omits the field when absent or empty", () => {
+    it("omits the field when absent", () => {
       expect(parseDecisionRecord(validRecord())).not.toHaveProperty("playbookVerdicts");
-      expect(parseDecisionRecord({ ...validRecord(), playbookVerdicts: [] })).not.toHaveProperty(
-        "playbookVerdicts",
-      );
+    });
+
+    it("keeps an explicit empty list — a pass that ran no playbook (#4773)", () => {
+      const parsed = parseDecisionRecord({ ...validRecord(), playbookVerdicts: [] });
+      expect(parsed?.playbookVerdicts).toEqual([]);
     });
 
     it("fails the whole record closed on one malformed verdict", () => {

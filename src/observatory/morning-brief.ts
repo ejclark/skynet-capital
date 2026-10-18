@@ -18,7 +18,7 @@ import { assessReadiness } from "../autonomous/readiness.js";
 import type { Bot } from "../bots/bot.js";
 import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { eventsWithin, MARKET_EVENTS, type MarketEvent } from "../domain/market-events.js";
-import type { Portfolio } from "../domain/types.js";
+import type { PlaybookSubscription, Portfolio } from "../domain/types.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
 import type { Persona } from "../personas/persona.js";
@@ -77,6 +77,9 @@ export interface MorningBrief {
   /** SKYNET_PLAYBOOKS tokens that didn't parse — a misconfigured roster should show up here,
    *  not fail silently (same discipline `enabledPlaybooks` already logs at boot). */
   readonly rejectedPlaybookTokens: readonly string[];
+  /** SKYNET_PLAYBOOKS ids every bot holding a subscription has paused (#4773): they open nothing
+   *  anywhere, so they are said apart from `playbooks` rather than listed as enabled. */
+  readonly pausedPlaybookIds: readonly string[];
   readonly calendar: readonly CalendarBriefEntry[];
   readonly positions: readonly PositionBriefEntry[];
   readonly liveSignal: LiveSignalStatus;
@@ -92,6 +95,11 @@ export interface MorningBriefDeps {
   readonly brokerFactory?: (bot: Bot) => BrokerPort;
   /** SKYNET_PLAYBOOKS + friends. */
   readonly playbookEnv: Readonly<Record<string, string | undefined>>;
+  /** Each account's Store subscriptions, keyed by persona id. Omit — the store unread — and the
+   *  roster is reported from SKYNET_PLAYBOOKS alone, as before #4773. */
+  readonly subscriptions?: Readonly<
+    Record<string, readonly Pick<PlaybookSubscription, "playbookId" | "enabled">[]>
+  >;
   readonly calendar?: readonly EarningsPrint[];
   /** Non-earnings events (CPI/FOMC/sector) — default MARKET_EVENTS; injectable for tests, same
    *  pattern as `calendar`. */
@@ -156,6 +164,23 @@ async function positionEntry(
   }
 }
 
+/** The ids at least one of these bots holds a subscription to, and every such subscription paused —
+ *  the same subscription a live roster reads (`resolveBotRoster`), so the brief never calls a
+ *  playbook enabled that no bot will open with. Not subscribed at all is left as it was. */
+function pausedEverywhere(
+  ids: readonly string[],
+  botIds: readonly string[],
+  subscriptions: MorningBriefDeps["subscriptions"],
+): string[] {
+  if (!subscriptions) return [];
+  return ids.filter((id) => {
+    const held = botIds.flatMap((bot) =>
+      (subscriptions[bot] ?? []).filter((s) => s.playbookId === id),
+    );
+    return held.length > 0 && held.every((s) => !s.enabled);
+  });
+}
+
 /**
  * Assemble the brief. Positions are read in parallel and degrade to an error row per-bot
  * (never throw) — one broken account must not blank the rest of the morning's plan.
@@ -168,15 +193,22 @@ export async function buildMorningBrief(
   const events = deps.events ?? MARKET_EVENTS;
   const windowDays = deps.calendarWindowDays ?? DEFAULT_CALENDAR_WINDOW_DAYS;
   const roster = enabledPlaybooks(deps.playbookEnv);
+  const paused = pausedEverywhere(
+    roster.enabled.map((e) => e.playbook.id),
+    deps.personas.map((p) => p.id),
+    deps.subscriptions,
+  );
 
-  const playbooks: PlaybookBriefEntry[] = roster.enabled.map(({ playbook, mode }) => ({
-    id: playbook.id,
-    symbol: playbook.symbols.join("/"),
-    thesis: playbook.thesis,
-    evidence: playbook.evidence,
-    mode,
-    desiredState: playbook.desiredState(asOfIso, calendar),
-  }));
+  const playbooks: PlaybookBriefEntry[] = roster.enabled
+    .filter(({ playbook }) => !paused.includes(playbook.id))
+    .map(({ playbook, mode }) => ({
+      id: playbook.id,
+      symbol: playbook.symbols.join("/"),
+      thesis: playbook.thesis,
+      evidence: playbook.evidence,
+      mode,
+      desiredState: playbook.desiredState(asOfIso, calendar),
+    }));
 
   // Positions need a brokerFactory to actually read anything — bots without one degrade to an
   // explicit error row rather than a silent omission (the honesty rule this whole brief follows).
@@ -197,6 +229,7 @@ export async function buildMorningBrief(
     personas: deps.personas.map(personaEntry),
     playbooks,
     rejectedPlaybookTokens: roster.rejected,
+    pausedPlaybookIds: paused,
     calendar: calendarEntries(asOfIso, calendar, events, windowDays),
     positions,
     liveSignal: {
