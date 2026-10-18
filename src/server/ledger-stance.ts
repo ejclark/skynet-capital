@@ -1,6 +1,6 @@
 import { dayText } from "../options/position-guidance-rules.js";
 import type { Confidence } from "../options/position-guidance-types.js";
-import { todayRowOf } from "./research-event-calls.js";
+import { type CallLine, callLineOf, todayRowOf } from "./research-event-calls.js";
 
 /**
  * WHAT A RESEARCH LEDGER CURRENTLY SAYS, as the position guidance needs it (#3729): when it was last
@@ -27,6 +27,8 @@ export interface LedgerRead {
   /** The Today row's "Proves it wrong" cell — the ledger's words, only its markup stripped (#5720). */
   readonly provesWrong?: string;
   readonly buySignal: boolean;
+  /** The ledger's own `**Call:**` line — verb and until-date — when it states one (#4807). */
+  readonly callLine?: CallLine;
 }
 
 const md = (m: string, d: string): string => dayText(`2000-${m}-${d}`);
@@ -102,12 +104,14 @@ export function readLedger(md: string, symbol: string): LedgerRead {
   const probePrice = probePriceOf(md, symbol.toUpperCase());
   const confidence = confidenceOf(today?.confidence);
   const provesWrong = quoted(today?.provesWrong);
+  const callLine = callLineOf(md);
   return {
     ...(assessed ? { assessed } : {}),
     ...(probePrice !== undefined ? { probePrice } : {}),
     ...(today ? { stance: plain(today.call) } : {}),
     ...(confidence ? { confidence } : {}),
     ...(provesWrong ? { provesWrong } : {}),
+    ...(callLine ? { callLine } : {}),
     buySignal: buySignalOf(md),
   };
 }

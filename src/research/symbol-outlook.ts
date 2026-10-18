@@ -28,11 +28,14 @@ import { RESEARCH_DIR, symbolResearch } from "../server/research-service.js";
  * those inputs and `now`; `symbolOutlook` only gathers them from disk.
  *
  * THE CALL is the house view on owning the shares over the dated window, not a strategy verdict:
- * a playbook may still stand aside on a symbol the house rates buy. Until ledgers write a call
- * verb of their own (slice 2), it is rolled up conservatively — `buy` only on the ledger's own
+ * a playbook may still stand aside on a symbol the house rates buy. A ledger that states its own
+ * `**Call:** hold until 2026-11-09` line (slice 2, `callLineOf`) is believed: its verb is the call,
+ * and its until-date holds unless the computed one (the next protected window, the event's own
+ * day) comes first. A ledger without the line is rolled up conservatively — `buy` only on its
  * `Buy signal: yes` line (the same line position guidance trusts, `ledger-stance.ts`), `wait`
  * otherwise; 701 of 713 ledgers' Today calls read "Stand aside" on 2026-10-18. Hold, trim and sell
- * are in the type for slice 2 and are never inferred from prose.
+ * come only from a stated line, never from prose. A stated `buy` still reads `wait` inside a
+ * protected window (no new entries); hold, trim and sell stand, because exits always run.
  *
  * PROTECTED is the union of the two house-wide print guards, so nothing reading it is looser than
  * the code that already refuses: S2's entry guard (`engine/guards.ts`, no new buy within
@@ -92,6 +95,8 @@ export interface SymbolOutlook {
     readonly ledger: string;
     readonly stance?: string;
     readonly assessed?: string;
+    /** Whether the call word is the ledger's own `**Call:**` line or the Buy-signal roll-up. */
+    readonly callFrom: "ledger" | "buy-signal";
   };
 }
 
@@ -204,12 +209,15 @@ export function outlookOf(input: OutlookInput): SymbolOutlook {
   const ledger = input.ledger;
   const guarded = dated.filter((w) => w.state === "protected");
   const protectedNow = guarded.find((w) => w.start <= asOf && asOf <= w.end);
+  const read = ledger ? readLedger(ledger.md, symbol) : undefined;
+  const stated = read?.callLine;
   const until = protectedNow
     ? shiftDays(protectedNow.end, 1)
-    : [...guarded.map((w) => w.start), ...(ledger ? [shiftDays(ledger.eventDate, 1)] : [])].reduce(
-        (a, b) => (b < a ? b : a),
-        last,
-      );
+    : [
+        ...guarded.map((w) => w.start),
+        ...(ledger ? [shiftDays(ledger.eventDate, 1)] : []),
+        ...(stated?.until ? [stated.until] : []),
+      ].reduce((a, b) => (b < a ? b : a), last);
   const windows = strip(asOf, last, dated, (day) =>
     !ledger
       ? {
@@ -229,7 +237,7 @@ export function outlookOf(input: OutlookInput): SymbolOutlook {
   );
   const shared = { symbol, asOf, until, windows };
 
-  if (!ledger) {
+  if (!(ledger && read)) {
     const next = input.events.find((e) => e.symbols.includes(symbol));
     return {
       ...shared,
@@ -242,9 +250,9 @@ export function outlookOf(input: OutlookInput): SymbolOutlook {
     };
   }
 
-  const read = readLedger(ledger.md, symbol);
   const row = todayRowOf(ledger.md);
-  const call: OutlookCall = read.buySignal && !protectedNow ? "buy" : "wait";
+  const verb: OutlookCall = stated?.verb ?? (read.buySignal ? "buy" : "wait");
+  const call: OutlookCall = verb === "buy" && protectedNow ? "wait" : verb;
   const ledgerWhy = row?.why ? plain(row.why) : (read.stance ?? "");
   const why = protectedNow
     ? `Protected until ${protectedNow.end}: no new entries, exits run. ${ledgerWhy}`.trim()
@@ -257,6 +265,7 @@ export function outlookOf(input: OutlookInput): SymbolOutlook {
     falsifier: read.provesWrong ?? `${ledger.path} states no falsifier beside its Today call.`,
     basis: {
       ledger: ledger.path,
+      callFrom: stated ? "ledger" : "buy-signal",
       ...(read.stance ? { stance: read.stance } : {}),
       ...(read.assessed ? { assessed: read.assessed } : {}),
     },
