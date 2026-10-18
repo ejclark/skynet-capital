@@ -5,6 +5,7 @@ import { guardDeltaFor } from "./guard-delta.js";
 import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
 import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
+import { withoutPlaybookNames } from "./playbook-name-redaction.js";
 import { type WireTradeVitals, wireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
@@ -92,7 +93,8 @@ export function withoutOwnerReasoning(
   reasoning: WireTradeReasoning,
 ): Omit<WireTradeReasoning, "playbookId" | "playbookMode" | "strategy" | "brokerReason"> {
   const { playbookId: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...rest } = reasoning;
-  return rest;
+  // The reason's own words name the play as built ("S1-NVDA window open …", #4442).
+  return withoutPlaybookNames(rest, reasoning);
 }
 
 /** The exact-order-id reasoning join, standalone — shared by `attachWireReasoning` (per wire row)

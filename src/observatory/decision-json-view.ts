@@ -115,6 +115,9 @@ interface RefusedIntentView {
   readonly side: string;
   readonly quantity: number;
   readonly strategy?: string;
+  /** The play that proposed it — the owner's alone (#885); a non-owner's copy loses it, and the
+   *  gate redacts it out of `reason` (#4442). */
+  readonly playbookId?: string;
   readonly reason: string;
   readonly expectation?: string;
   readonly guardReason?: string;
@@ -256,6 +259,7 @@ function refusedIntentsFor(
       side: r.intent.side,
       quantity: r.intent.quantity,
       ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+      ...(r.intent.playbookId ? { playbookId: r.intent.playbookId } : {}),
       reason: r.intent.reason,
       ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
       ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
