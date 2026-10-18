@@ -177,7 +177,7 @@ describe("narrowing a bot's Activity on the server", () => {
   it("continues a filtered list from the cursor the filtered page handed back", async () => {
     const first = (await read("?symbol=NVDA&per_page=2")).page;
     expect(ids(first)).toEqual(["mleg-1", "shr-1"]);
-    expect(first.nextCursor).toBe("2026-10-26T15:00:00.000Z");
+    expect(first.nextCursor).toBe("2026-10-26T15:00:00.000Z|shr-1"); // time|id (#4802)
     const cursor = encodeURIComponent(first.nextCursor ?? "");
     const next = (await read(`?symbol=NVDA&per_page=2&before=${cursor}`)).page;
     expect(ids(next)).toEqual(["hand-1"]);
