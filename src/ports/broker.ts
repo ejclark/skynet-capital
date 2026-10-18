@@ -7,6 +7,9 @@ export interface OpenShareOrder {
   /** Shares still to fill: the order's size less what has already filled. 0 when the broker's
    *  numbers cannot be read (an order sized in dollars carries no share count). */
   readonly quantity: number;
+  /** The most a buy will pay per share — a limit order's limit; absent on a market order, which
+   *  carries no price until it fills (#4735). */
+  readonly limitPrice?: number;
 }
 
 /**
