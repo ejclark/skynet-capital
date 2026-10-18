@@ -51,6 +51,7 @@ export function admitBuild(opts: {
   mode: AdmissionMode;
   /** The board's Waiting column (`waitingPlans`); the started-plan cap is skipped without it. */
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** A `plan` issue with no closed sub-issue and no `next-slice` — the only kind the plan cap refuses. */
 export function isFreshPlan(issue: AdmissionIssue | undefined): boolean;
@@ -64,7 +65,10 @@ export function startedPlanInputs(
   openPlans?: readonly AdmissionIssue[],
 ): { issue: AdmissionIssue; waiting: AdmissionIssue[] };
 /** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
-export function pullQueue<T extends AdmissionIssue>(readyIssues: readonly T[]): T[];
+export function pullQueue<T extends AdmissionIssue>(
+  readyIssues: readonly T[],
+  opts?: { interactive?: boolean },
+): T[];
 /** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
 export function nextAdmissible<T extends AdmissionIssue>(
   readyIssues: readonly T[],
@@ -96,6 +100,7 @@ export function checkAdmission(opts: {
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** One issue over REST; throws on a PR number or an unreadable row. */
 export function readIssue(

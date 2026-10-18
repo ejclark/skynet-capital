@@ -164,9 +164,9 @@ const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
  * bugs found mid-build are the next pull) — then oldest by `createdAt`, then lowest number.
  * Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live tick.
  */
-export function pullQueue(readyIssues = []) {
+export function pullQueue(readyIssues = [], opts) {
   return (readyIssues ?? [])
-    .filter((i) => i && pullable(i))
+    .filter((i) => i && pullable(i, opts))
     .map((i) => ({ i, r: rankOf(i) }))
     .sort(
       (a, b) =>
@@ -199,8 +199,8 @@ export function nextAdmissible(readyIssues = [], inFlight = [], mode, waiting) {
  *
  * @returns {{ admit: boolean, reason: string, queuedBehind?: number }}
  */
-export function checkAdmission({ issue, inFlight = [], mode, waiting }) {
-  const notPullable = notPullableReason(issue);
+export function checkAdmission({ issue, inFlight = [], mode, waiting, interactive = false }) {
+  const notPullable = notPullableReason(issue, { interactive });
   if (notPullable) return { admit: false, reason: `not pullable: ${notPullable}` };
   return admitBuild({ issue, inFlight, mode, waiting });
 }
@@ -445,7 +445,12 @@ export function runCli(argv = [], io = {}) {
       printErr(`the open \`ready\` issues could not be read: ${err?.message ?? err}`);
       return 3;
     }
-    const rows = pullQueue(ready).map((i) => ({ number: i.number, title: i.title ?? "" }));
+    // `--queue` and `--check` are /work-issues' reads — a live session, so `needs-session` is
+    // its to build (#5236). `--next` mirrors the unattended sweep and keeps refusing it.
+    const rows = pullQueue(ready, { interactive: true }).map((i) => ({
+      number: i.number,
+      title: i.title ?? "",
+    }));
     print(JSON.stringify(rows));
     return 0;
   }
@@ -488,7 +493,7 @@ export function runCli(argv = [], io = {}) {
   } catch (err) {
     return refuse(`#${n} could not be read`, err);
   }
-  const verdict = checkAdmission({ issue, inFlight, mode });
+  const verdict = checkAdmission({ issue, inFlight, mode, interactive: true });
   if (!(verdict.admit && isFreshPlan(issue))) return out({ number: n, ...verdict });
   let gated;
   try {
@@ -496,7 +501,7 @@ export function runCli(argv = [], io = {}) {
   } catch (err) {
     return refuse("the open plans could not be read", err);
   }
-  return out({ number: n, ...checkAdmission({ inFlight, mode, ...gated }) });
+  return out({ number: n, ...checkAdmission({ inFlight, mode, interactive: true, ...gated }) });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`)

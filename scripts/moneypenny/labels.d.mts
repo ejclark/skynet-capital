@@ -15,7 +15,14 @@ export interface PullableIssue {
   /** GitHub's dependency summary; `blocked_by` counts OPEN blockers. Absent reads as unblocked. */
   issue_dependencies_summary?: { blocked_by?: number };
 }
+/** `interactive: true` only from a live session's pull — it may take a `needs-session` issue (#5236). */
+export interface PullOptions {
+  interactive?: boolean;
+}
 /** Why an automated puller may not start this issue (first failing rule), or null (#4393). */
-export function notPullableReason(issue: PullableIssue | null | undefined): string | null;
+export function notPullableReason(
+  issue: PullableIssue | null | undefined,
+  opts?: PullOptions,
+): string | null;
 /** The board's Ready column: open, `ready`, buildable, not `in-progress`, no open blocker (#4393). */
-export function pullable(issue: PullableIssue | null | undefined): boolean;
+export function pullable(issue: PullableIssue | null | undefined, opts?: PullOptions): boolean;
