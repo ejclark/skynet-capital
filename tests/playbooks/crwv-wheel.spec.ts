@@ -250,15 +250,15 @@ describe("CRWV-WHEEL — selling a cash-secured put", () => {
     expect(put?.reason).toContain("$8,000 stays set aside");
     // The data first, in plain words, then the owner's bet as what the market has wrong (#5326).
     expect(put?.reason).toContain(
-      "options price its next month to swing at a 69.9%-a-year pace, but in the past year its " +
-        "typical month swung at 88.7%",
+      "options price its next month to swing at a 93.2%-a-year pace, about what its months have " +
+        "gone on to swing",
     );
     expect(put?.reason).toContain(
-      "Puts priced at a 19% chance of being assigned would have been assigned 33% of the time",
+      "Puts priced at a 20% chance of being assigned would have been assigned 25% of the time",
     );
     expect(put?.reason).toContain(
-      "the market under-estimates how far CRWV moves, and says stand aside. Its owner runs this " +
-        "against the study, betting the market has CRWV about right",
+      "the premium is fair, not rich: the study finds no edge in selling it and says stand aside. " +
+        "Its owner runs this against the study, betting the market overprices CRWV's downside",
     );
     expect(put?.reason).not.toContain("underpays its moves");
     expect(put?.forecast).toEqual({

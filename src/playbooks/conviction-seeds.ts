@@ -157,7 +157,7 @@ const AI_DIP_STATED: Conviction = {
         "8. How long the drop lasts: back above today's price in 3 to 6 months is the base case.",
       bucket: "tested",
       evidence:
-        "Analogs got back to their entry in 14 / 37 / 72 sessions (25th / median / 75th pct); 30% regained the old high within 126.",
+        "Analogs got back to their entry in 14 / 37 / 72 sessions (25th / median / 75th pct); 30% regained the old high within 126. The level is the study's entry, $63.15 (the 11:27 ET read on 10-16), not that day's $61.39 close.",
       falsifier: "No CRWV close at or above $63.15 by 2027-02-01.",
       scoreBy: "2027-02-02",
       check: {
@@ -172,9 +172,10 @@ const AI_DIP_STATED: Conviction = {
       tag: "underrated",
       statement:
         "9. Hold through earnings toward the recovery: CRWV's print moves run larger than priced.",
-      bucket: "tested",
+      // Forward only (#5718): the implied-vs-realized figure is one news estimate, never measured here.
+      bucket: "forward",
       evidence:
-        "Options priced CRWV's Q2 move at ~15.5% against ~18.6% realized; the session after fell in 5 of 6 prints (events/crwv-2026-11-10-print.md).",
+        "Unmeasured here: Q2's ~15.5% implied vs ~18.6% realized is one news estimate (TipRanks, legacy FT-15), and no instrument reads what options priced before a print. The session after fell in 5 of 6 prints (crwv-premium-fit.md call 3).",
       falsifier:
         "The ~11-09 print and the next 2 all move less than their priced straddle, the first read by 2026-11-17.",
       scoreBy: "2026-11-17",

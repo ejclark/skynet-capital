@@ -141,9 +141,10 @@ export const NVDA_CALL_SPREAD: Playbook = callSpread({
 
 /**
  * CRWV-WHEEL (#4642 slice 5) — the wheel on CRWV, RUN AGAINST OUR OWN STUDY, ON PURPOSE.
- * `docs/research/crwv-premium-fit.md` found the market under-estimates how far CRWV moves (implied
- * 69.9% vs a median 88.7% realized; Δ0.20 puts priced 19.4% to assign against 33.3% delivered) and
- * called "stand aside". The play exists because its owner holds the opposite conviction, so it
+ * `docs/research/crwv-premium-fit.md` found CRWV's premium cheap on 2026-10-02 (implied at the 6th
+ * percentile of what CRWV went on to move) and fair on its 10-16 re-run (63rd; Δ0.20 puts priced
+ * 20.1% to assign against 24.8% delivered), and calls "stand aside" on both. The play exists because
+ * its owner holds the opposite conviction, so it
  * carries the study's numbers and a dated falsifier on every order rather than pretending to an
  * edge. Its pair row is a ◆ conviction checked on 2027-01-29, and that row, not this file, is where
  * the order copy's citation and retire date come from (#4469 slice 2c); every put's Why states the
@@ -157,16 +158,18 @@ export const CRWV_WHEEL_SETTING: WheelSetting = {
     "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
     "— run on its owner's conviction, against our own study of CRWV's premium.",
   findings:
-    "AGAINST this play: implied 69.9% vs a median 88.7% realized (6th percentile); Δ0.20 puts " +
-    "priced 19.4% to assign vs 33.3% delivered.",
+    "AGAINST this play (re-run 2026-10-16): implied 93.2%, at the 63rd percentile of CRWV's " +
+    "next-30-day moves and 0.6 points under their mean; Δ0.20 puts priced 20.1% to assign vs 24.8% " +
+    "delivered.",
   dataShows:
-    "Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the " +
-    "past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned " +
-    "would have been assigned 33% of the time in CRWV's own price history.",
+    "Our study of CRWV, re-run 2026-10-16: options price its next month to swing at a 93.2%-a-year " +
+    "pace, about what its months have gone on to swing (0.6 points under the past year's average). " +
+    "Puts priced at a 20% chance of being assigned would have been assigned 25% of the time in " +
+    "CRWV's own price history.",
   bet:
-    "So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its " +
-    "owner runs this against the study, betting the market has CRWV about right: that its swings " +
-    "calm to the pace options price.",
+    "So the premium is fair, not rich: the study finds no edge in selling it and says stand aside. " +
+    "Its owner runs this against the study, betting the market overprices CRWV's downside after the " +
+    "drop, and accepts the shares if a put is assigned.",
 };
 
 export const CRWV_WHEEL: Playbook = wheel({
