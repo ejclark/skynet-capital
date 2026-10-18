@@ -228,6 +228,7 @@ and [`g20-miami-2026-12-14`](g20-miami-2026-12-14.md) apply.
 | 2026-10-05 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (+0.4pt since last), band unchanged (low:0+), 38 adjacent event(s) tracked, new in corridor since last pulse: `bobl-5y-auction-2026-10-13`, `bund-30y-auction-2026-10-14`, `consumer-credit-2026-10-07`, `ecb-account-2026-10-08`, `eia-weekly-petroleum-status-2026-10-15`, `empire-state-mfg-2026-10-15` +22 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-12 |
 | 2026-10-12 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.5pt since last), band unchanged (low:0+), 40 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13`, `warsh-imf-fireside-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-19 |
 | 2026-10-13 | D+1 | **Close-out dispatched; `## Outcome` deliberately NOT written — the event's own tape leg has not happened (it is 10-13 02:33 UTC, before the 10-13 US session).** **WEO/GFSR date now PUBLISHED, and the Tuesday-pattern inference held:** imf.org/en/meetings/2026/annual/schedule (readable direct) — WEO briefing **10/13 09:00 ICT** (22:00 ET Mon), GFSR **10:15 ICT** (23:15 ET Mon; Ch.1 "Beneath the Resilience: Rising Risks, Unresolved Vulnerabilities", Ch.2 hedge funds 10-06, Ch.3 tokenization 10-08), Fiscal Monitor 10/14 09:00 ICT, plenary 10/16 09:00, Warsh–Georgieva fireside 10/16 10:30–11:00 ICT (= `warsh-imf-fireside-2026-10-15`, already tracked), IMFC press 10/17 12:30 ICT. **Chore closed without a proposal:** both launches land before the US open on D+1, so a calendar file would buy a session after the fact; no report text or headline figures were readable at assessment (WEO/GFSR pages still 'forthcoming'; search hits were stale Jan/Jul vintages, not used). Day 1 tape: SPX **7,807.24** (−0.06%), VIX **15.21** (+0.37) — no event on 10-12. Registered **FT-…-1** (10-13 session, score by 10-14) and **FT-…-2** (10-13..16 name drawdowns, score by 10-18); the close-out holds to 10-18 and writes `## Outcome` then, with the reports and the IMFC read in hand. No new event proposed. | — (stance holds; no kill switch fired) | 2026-10-18 (close-out, held for FT-2) |
+| 2026-10-18 | D+6 | **Close-out.** `## Outcome` written; FT-1 **pass**, FT-2 **VOID — confounded**. Instrument caches busted (no symbol instrument keys a `symbols: []` event); scored from Yahoo daily bars re-pulled 2026-10-18. **Report day was quiet:** 10-13 SPX 7,805.45 (−0.02%), VIX 15.27 — the GFSR (Ch.1 names an AI-driven correction first of three near-term catalysts; 14 AI deals, ~$300B equity + ~$650B debt) did not move the index. **The week then fell without citing it:** SPX 7,807.24 → 7,659.44 (−1.89%), VIX 15.21 → 19.99; 7 of 10 names closed >2% down at least once (14 name-days), attributed in readable wraps to hot CPI (10-14) and AI-financing/CoreWeave-debt fears, hedge-fund selling and oil (10-16), none to the IMF. Bessent skipped Bangkok (written statement only). WEO/GFSR date chore closed in the 10-13 row. **Adjacency:** CPI 10-14 and opex 10-16 swamp attribution, as filed. No new event proposed. | — (stance holds; no kill switch fired — see Outcome for the first-half trip) | — (closed; reopens only for a registered forward test) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -248,3 +249,81 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-13
 <!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out written 2026-10-18, D+6 — the stance survived on attribution, and the pattern the initial
+research leaned on did not repeat.** Both flagships launched before the US open on 10-13 and the index
+shrugged, as in both prior samples. What changed is the next three sessions: the AI-correction risk the
+GFSR named first went on to *happen* (Nasdaq ≈ −4.5% on the week), but every readable wrap puts the cause
+somewhere else. The call stays "never trade it, never attribute to it" — now with one honest caveat
+below.
+
+**Sourcing note.** A `geopolitical` event with `symbols: []` has no target for `earnings-cycle.mjs` or
+`intraday-edges.mjs`; their caches were busted anyway (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and the scoring below uses Yahoo daily closes for `^GSPC`, `^VIX`
+and the ten earnings-calendar names, re-pulled 2026-10-18, not remembered tape.
+
+**1. The tape, by session** (close, change vs prior close):
+
+| Session | SPX | VIX | What the wraps say |
+|---|---|---|---|
+| Mon 10-12 | 7,807.24 (−0.06%) | 15.21 | Nothing; Bangkok day 1, no US event |
+| Tue 10-13 | 7,805.45 (−0.02%) | 15.27 | **WEO + GFSR already out (22:00–23:15 ET Mon).** No index reaction |
+| Wed 10-14 | 7,718.94 (−1.11%) | 16.87 | Hot September CPI (3.7% y/y; core 0.3% m/m vs 0.2% expected), rate-hike bets, AI-infrastructure selloff |
+| Thu 10-15 | 7,744.06 (+0.33%) | 16.46 | PPI / retail sales day; no IMF headline found |
+| Fri 10-16 | 7,659.44 (−1.09%) | 19.99 | AI-financing and CoreWeave-debt fears, hedge funds selling AI at the second-fastest pace in a year (Goldman), oil, opex |
+
+Week 10-12 → 10-16: SPX **−1.89%**, VIX **+4.78**. Seven of the ten names closed >2% down on at least
+one of 10-13..16 (14 name-days): NVDA 1, MRVL 2, AVGO 2, GOOG 1, META 2, CRWV 3 (−15.5% on 10-14), MU 3.
+MSFT (worst −1.93%), AMZN (−1.87%) and AAPL (none) did not. MU and CRWV were already sliding before the
+report (MU −4.8% on 10-08 and −3.9% on 10-12).
+
+**2. Forward tests.**
+
+- **FT-1 — pass.** 10-13 close 7,805.45 ≥ 7,729.17 and VIX 15.27 < 18.21; the reports had no same-session
+  price channel.
+- **FT-2 — VOID, confounded.** Its own rule: a >2% drop with no IMF attribution is confounded, not a
+  pass (the pass condition was *zero* such days, and there were 14). Wraps read: Eurasia Business News
+  (10-17), Motley Fool (10-16) and Startup Fortune name CPI, rate-hike odds, AI financing, hedge-fund
+  selling and oil — none cites the GFSR or WEO as a cause. Startup Fortune's one IMF mention ("With the
+  BIS and IMF flagging systemic risk, Wall Street is asking whether the AI capex supercycle reflects real
+  demand or an elaborate financial loop") is context, not a driver.
+
+**3. Kill switches, checked.**
+
+- *"The flagship reports have no price channel"* — **first half tripped, second half not.** The GFSR
+  Ch.1 did name AI debt specifically (14 disclosed AI deals: ~$300B equity, ~$650B debt, ~$1.4T of
+  revenue commitments; a drop in AI investment cutting global GDP 1.1% by 2028) and a tracked name did
+  draw down >2% the next session — but no readable wrap cites the report as the cause, so the switch does
+  not fire. **The caveat the initial research did not have:** this is no longer "message and tape moved
+  in opposite directions". The message and the week's direction *agreed*, with a one-to-three session
+  lag and a different named cause. Two clean misses plus one confounded agreement is a base rate of three,
+  not a refutation; the correct reading is still "information about consensus, not a signal", but the
+  claim should not be restated as a perfect record.
+- *"No tracked symbol carries exposure"* — held: none of the ten printed in 10/12–18.
+- *"The week is a read, not a venue"* — held: no dated deliverable on the margins touching the
+  2026-11-10 expiries was found.
+- *"The WEO/GFSR date is unpublished"* — resolved 10-13 (WEO 10/13 09:00 ICT, GFSR 10:15 ICT); the chore
+  closed without a proposal because both fell before the next US open.
+- *"The dates are primary-verified"* — held; the schedule on imf.org matched.
+- *"Quota realignment is dead until 2028"* — no contrary statement found.
+
+**4. The read, answered.** Bessent did not attend Bangkok; his written statement to the Development
+Committee and IMFC (per Nation Thailand and Kuwait Times summaries, not read direct) urged the Fund to
+scrutinize "non-market policies and practices and exchange rates" and called the planned end of World
+Bank lending to China "an important milestone". That is the April-2025 posture continued in writing, not
+an escalation at the plenary. The Warsh–Georgieva fireside (10-16 ICT) ran; its content was not retrieved
+and its ledger is [`warsh-imf-fireside-2026-10-15`](warsh-imf-fireside-2026-10-15.md).
+
+**Honest limits.**
+- **CNN (HTTP 451), TheStreet (403) and the Bloomberg/Reuters wires were not read in full.** FT-2's
+  "no attribution" rests on three readable wraps and search-result summaries of the others; a wire that
+  did cite the GFSR would change the verdict to a kill. The void is the honest cell, not a pass.
+- **Attribution inside a week with CPI, PPI, retail sales and opex is not separable** — which is exactly
+  what the initial research filed, and the reason FT-2 reads void instead of pass.
+- **The Bessent and Warsh items are secondary** (search summaries); the IMFC communiqué was not found.
+- **No position was taken or available:** the event stayed `estimate`, `symbols: []`, `low`.
+
+**Last assessed:** 2026-10-18
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
