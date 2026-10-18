@@ -432,6 +432,20 @@ written by `npm run research:signals -- --record "<command>"`. The scheduler run
 no tokens; wiring a workflow step that runs the owed commands is a protected-path change and boards
 the platter separately.
 
+## Candidate playbooks — the third door (#4808 slice 3)
+
+A new signal idea enters as a **candidate** (`src/playbooks/candidates.ts`), never as a playbook: it
+has no window, no sizing and no order path, so nothing can trade or suggest it, and its Store card
+says its back-test status in words. Before its first run it declares the five research steps the
+2026-10-07 sweep's eight refutations each lacked: a fixed threshold · a power estimate · a control ·
+a confound filter clean of reports on both sides · date-clustered, factor-netted grouping sized to
+the latest era. The verdict (`scripts/research/backtest-verdict-math.mjs`) judges power first, from
+the cluster count alone, so a thin sample is `underpowered` — it goes to `next-slice` and never to
+the kill list; a killed candidate is dated and its id must be on the kill list in
+`docs/research/multi-symbol-sweep.md` before `npm test` passes. Candidate 1 (options volume at the
+Bollinger edge) has its two inputs as instruments: `option-volume.mjs` (OCC's free daily volume) and
+`bollinger-touch.mjs` (the price-only control). Its ~500-stock run waits on the OCC archive (#4832).
+
 ## The decision header is gated (`npm run research:lint`)
 
 The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.

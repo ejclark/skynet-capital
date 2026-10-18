@@ -277,6 +277,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | `runsOnConviction`: a conviction may run it where the study says stand aside | `src/playbooks/pair-table.ts:52-55` | grounded (the wheel and the long call) |
 | A pair row: status glyph + word, call, confidence, measured exit, shelf or check date, study | `src/playbooks/pair-table.ts:144-178` | grounded |
 | Every house playbook declares its research signals or says it has none; a spec fails `npm test` otherwise | `src/playbooks/research-signals.ts:77-135`, `src/playbooks/research-signals.ts:173-193` | grounded |
+| A new idea is a candidate, not a playbook: no window, no sizing, no order path, five research steps declared before its first run | `src/playbooks/candidates.ts:74-101`, `src/playbooks/candidates.ts:123-145` | grounded |
 | An id is looked up, never built; `findPair` / `pairFor` | `src/playbooks/pair-table.ts:13-16`, `src/playbooks/pair-table.ts:300-309` | grounded |
 | A ✓ past its shelf date takes no new entries; a conviction is never stale | `src/playbooks/pair-table.ts:316-322` | grounded |
 | A template refuses a ticker with no row or no dated verdict | `src/playbooks/wheel.ts:309-323`, `src/playbooks/call-spread.ts:433-439` | grounded |
