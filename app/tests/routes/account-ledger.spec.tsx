@@ -10,8 +10,8 @@ import { act, configure, fireEvent, render, screen, waitFor, within } from "@tes
 import userEvent from "@testing-library/user-event";
 import type { DeskActivity, DeskActivityEvent, DeskActivityQuery } from "../../src/live/desk";
 import { Route } from "../../src/routes/u.$id.ledger";
-import { SYMBOL_BEAT_MS } from "../../src/shell/account-activity";
-import { FIND_PAGES } from "../../src/shell/use-activity-pages";
+import { SYMBOL_BEAT_MS } from "../../src/shell/account-ledger";
+import { FIND_PAGES } from "../../src/shell/use-ledger-pages";
 
 /**
  * An account's Ledger, paged and narrowed (#4650, plan #4642): the owner watches the trades a bot

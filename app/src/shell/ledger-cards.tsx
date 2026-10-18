@@ -3,8 +3,8 @@ import { useId, useState } from "react";
 import type { DeskActivityEvent } from "../live/desk";
 import { type EntryLeg, type LedgerEntry, ledgerEntry, legTail } from "../live/ledger-entry";
 import { byDay, dayHeader, instrumentWords, orderTime, signedDollars } from "../live/order-facts";
-import { findActivityRow, rowKey } from "./activity-table";
 import { useLandOnHash } from "./landing";
+import { findLedgerRow, rowKey } from "./ledger-table";
 import { OpenedOrder, PlaybookLine } from "./opened-order";
 
 /**
@@ -23,11 +23,11 @@ import { OpenedOrder, PlaybookLine } from "./opened-order";
  * Every figure keeps its sign, so neither the gain nor the cash direction rides on hue (a standing
  * reader is red/green colourblind). The card carries `id="act-<orderId>"`, the anchor a Thesis
  * marker or a FORM square links, and lands the way the table's rows do (`landing.ts`): only one of
- * the two layouts is ever mounted (`activity-ledger.tsx`), so the id is never doubled. An order a
+ * the two layouts is ever mounted (`ledger.tsx`), so the id is never doubled. An order a
  * close closed is drawn inside the close's card too, but carries no anchor there — its own card,
  * on its own day, keeps it.
  */
-export function ActivityCards({
+export function LedgerCards({
   events,
   showPlaybook = true,
   deskId,
@@ -42,7 +42,7 @@ export function ActivityCards({
   /** The order whose full detail was just closed: its card comes back opened, the row it left. */
   readonly reopen?: string;
 }): ReactElement {
-  useLandOnHash(findActivityRow, rowKey(events));
+  useLandOnHash(findLedgerRow, rowKey(events));
   return (
     <div className="act-cards">
       {byDay(events).map((day) => (
@@ -53,7 +53,7 @@ export function ActivityCards({
           <ol className="act-day-list">
             {day.events.map((event) => (
               <li key={`${event.orderId}-${event.at}`}>
-                <ActivityCard
+                <LedgerCard
                   event={event}
                   showPlaybook={showPlaybook}
                   startOpen={reopen === event.orderId}
@@ -69,7 +69,7 @@ export function ActivityCards({
   );
 }
 
-function ActivityCard({
+function LedgerCard({
   event,
   showPlaybook,
   startOpen,

@@ -3,9 +3,9 @@ import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDeskActivity } from "../live/desk";
 import { InlineResult } from "../ui";
-import { ActivityFilterBar } from "./activity-filter-bar";
-import { ActivityLedger } from "./activity-ledger";
-import { type ActivityPages, useActivityPages } from "./use-activity-pages";
+import { Ledger } from "./ledger";
+import { LedgerFilterBar } from "./ledger-filter-bar";
+import { type LedgerPages, useLedgerPages } from "./use-ledger-pages";
 import { useMediaQuery } from "./use-media";
 import { useOrderDetail } from "./use-order-detail";
 import { TABLET_QUERY } from "./widths";
@@ -17,7 +17,7 @@ import { TABLET_QUERY } from "./widths";
  * owns the URL (`?symbol=` · `?playbook=`); this owns the read, the walk back and the box's typing.
  *
  * OLDER ORDERS AND NARROWING (#4650, plan #4642): the ledger arrives 30 orders at a time and "Load
- * older orders" walks back (`use-activity-pages.ts`, which also walks to a linked order on its
+ * older orders" walks back (`use-ledger-pages.ts`, which also walks to a linked order on its
  * own). A symbol box and the owner's playbook chips narrow it. The server narrows before it cuts a
  * page, so a filtered first page is 30 matching orders and "load older" continues the filtered
  * list. Once the walk reaches the end, the list says so (#5165) — a list that just stops reads the
@@ -25,7 +25,7 @@ import { TABLET_QUERY } from "./widths";
  * screen only gives them room.
  */
 
-export interface ActivityNarrowing {
+export interface LedgerNarrowing {
   readonly symbol?: string | undefined;
   readonly playbook?: string | undefined;
 }
@@ -51,13 +51,13 @@ export function narrowingFromSearch(search: Record<string, unknown>): {
 }
 
 /** What is narrowed, in words — so an empty result names the filter that emptied it. */
-function narrowedTo({ symbol, playbook }: ActivityNarrowing): string {
+function narrowedTo({ symbol, playbook }: LedgerNarrowing): string {
   return [symbol ? `on ${symbol}` : "", playbook ? `from the ${playbook} playbook` : ""]
     .filter(Boolean)
     .join(" ");
 }
 
-function Ledger({
+function PagedLedger({
   pages,
   narrowing,
   refreshing,
@@ -68,8 +68,8 @@ function Ledger({
   onDetail,
   paging,
 }: {
-  readonly pages: ActivityPages;
-  readonly narrowing: ActivityNarrowing;
+  readonly pages: LedgerPages;
+  readonly narrowing: LedgerNarrowing;
   /** A new filter's first page is on its way; the rows on screen are the last filter's. */
   readonly refreshing: boolean;
   readonly showPlaybook: boolean;
@@ -105,7 +105,7 @@ function Ledger({
         </p>
       ) : null}
       <div className={refreshing ? "ledger-refreshing" : undefined} aria-busy={refreshing}>
-        <ActivityLedger
+        <Ledger
           events={pages.rows}
           showPlaybook={showPlaybook}
           deskId={deskId}
@@ -135,7 +135,7 @@ function Ledger({
   );
 }
 
-export function AccountActivity({
+export function AccountLedger({
   id,
   narrowing,
   onNarrow,
@@ -144,9 +144,9 @@ export function AccountActivity({
 }: {
   readonly id: string;
   /** The narrowing the URL holds. */
-  readonly narrowing: ActivityNarrowing;
+  readonly narrowing: LedgerNarrowing;
   /** Writes a new narrowing to the URL (replaced, keeping the page's place — the route's job). */
-  readonly onNarrow: (next: ActivityNarrowing) => void;
+  readonly onNarrow: (next: LedgerNarrowing) => void;
   /** A bot's playbook is its owner's to see (#885) — the server withholds it from anyone else. */
   readonly showPlaybook: boolean;
   /** The route's own heading, stepped aside with the list when an order's detail is a page. */
@@ -162,7 +162,7 @@ export function AccountActivity({
     // A new filter keeps the last rows up while its own arrive — never another account's rows.
     placeholderData: (previous, query) => (query?.queryKey[1] === id ? previous : undefined),
   });
-  const pages = useActivityPages(id, symbol, playbook, activity.data, activity.isPlaceholderData);
+  const pages = useLedgerPages(id, symbol, playbook, activity.data, activity.isPlaceholderData);
 
   // The box is immediate locally; the URL (and so the read) follows a beat behind, replaced, never
   // pushed, and the page keeps its place (#4944) — the league Activity page's discipline.
@@ -203,7 +203,7 @@ export function AccountActivity({
       ) : (
         <>
           {paging ? null : (
-            <ActivityFilterBar
+            <LedgerFilterBar
               symbol={symbolText}
               onSymbol={typeSymbol}
               playbooks={activity.data.playbooks}
@@ -211,7 +211,7 @@ export function AccountActivity({
               onPlaybook={(next) => onNarrow({ playbook: next })}
             />
           )}
-          <Ledger
+          <PagedLedger
             pages={pages}
             narrowing={narrowing}
             refreshing={activity.isPlaceholderData}

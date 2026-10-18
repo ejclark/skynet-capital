@@ -80,7 +80,7 @@ export const nyDate = (iso) => dayIn(iso, "America/New_York");
 /** An instant's calendar day on the world's clock — the day the member's page shows. */
 export const clockDate = (iso, clock = DEFAULT_CLOCK) => dayIn(iso, clock.timeZone);
 
-/** An order's date and time as the activity ledger stamps it (activity-table.tsx → rowStamp: the
+/** An order's date and time as the activity ledger stamps it (ledger-table.tsx → rowStamp: the
  *  browser's own language and zone, which is the world's clock): "Oct 5, 10:20 AM" in Chicago. */
 export function rowStamp(iso, clock = DEFAULT_CLOCK) {
   return new Date(iso).toLocaleString(clock.locale, {
@@ -355,7 +355,7 @@ function activityFacts(base, rows, max, { clock, trades }) {
     const side = String(r.side ?? "").toUpperCase();
     const pb = r.reasoning?.playbookId;
     const pbText = pb && r.reasoning.playbookMode ? `${pb} · ${r.reasoning.playbookMode}` : pb;
-    // The ledger's Qty cell: "filled/ordered" for a partial fill (activity-table.tsx), else the count.
+    // The ledger's Qty cell: "filled/ordered" for a partial fill (ledger-table.tsx), else the count.
     const qty =
       r.filled > 0 && r.filled !== r.quantity ? `${r.filled}/${r.quantity}` : `${r.quantity}`;
     // A lifecycle row stamps its day in its own words; the row is pinned by the symbol alone then.

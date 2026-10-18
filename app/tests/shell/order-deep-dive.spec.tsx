@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
-import { ActivityLedger } from "../../src/shell/activity-ledger";
+import { Ledger } from "../../src/shell/ledger";
 import { OrderDeepDive } from "../../src/shell/order-deep-dive";
 
 /** #5101 (R2-deep, Eric's pick on #5037 q5): "Full detail ›" opens an order's deep dive — a
@@ -200,12 +200,12 @@ describe("OrderDeepDive — the two shapes and their one way back", () => {
   });
 });
 
-describe("ActivityLedger — the door and the way back to the same row", () => {
+describe("Ledger — the door and the way back to the same row", () => {
   it("offers Full detail in an opened card, and opens it for that order", () => {
     const restore = phone();
     try {
       const onDetail = rstest.fn();
-      render(wrap(<ActivityLedger events={[wheel, shares]} onDetail={onDetail} />));
+      render(wrap(<Ledger events={[wheel, shares]} onDetail={onDetail} />));
       expect(screen.queryByRole("button", { name: /Full detail/ })).toBeNull();
       fireEvent.click(
         within(document.getElementById("act-put-1") as HTMLElement).getAllByRole(
@@ -223,11 +223,11 @@ describe("ActivityLedger — the door and the way back to the same row", () => {
     const restore = phone();
     try {
       const { rerender } = render(
-        wrap(<ActivityLedger events={[wheel, shares]} detail="put-1" onDetail={noop} />),
+        wrap(<Ledger events={[wheel, shares]} detail="put-1" onDetail={noop} />),
       );
       expect(document.querySelector(".act-cards")).toBeNull();
       expect(screen.getByRole("button", { name: "‹ Ledger" })).toBeInTheDocument();
-      rerender(wrap(<ActivityLedger events={[wheel, shares]} onDetail={noop} />));
+      rerender(wrap(<Ledger events={[wheel, shares]} onDetail={noop} />));
       const card = document.getElementById("act-put-1") as HTMLElement;
       expect(card).toHaveAttribute("data-open");
       expect(document.activeElement).toBe(card.querySelector(".act-card-head"));
@@ -237,7 +237,7 @@ describe("ActivityLedger — the door and the way back to the same row", () => {
   });
 
   it("on a desktop, keeps the table live beside a panel and marks the row it belongs to", () => {
-    render(wrap(<ActivityLedger events={[wheel, shares]} detail="put-1" onDetail={noop} />));
+    render(wrap(<Ledger events={[wheel, shares]} detail="put-1" onDetail={noop} />));
     expect(document.querySelector("table.blotter")).not.toBeNull();
     expect(screen.getByRole("complementary")).toBeInTheDocument();
     expect(document.getElementById("act-put-1")).toHaveAttribute("data-detail");
@@ -245,9 +245,9 @@ describe("ActivityLedger — the door and the way back to the same row", () => {
   });
 
   it("opens nothing for an order the loaded rows do not hold, or with no door wired", async () => {
-    render(wrap(<ActivityLedger events={[wheel]} detail="gone-9" onDetail={noop} />));
+    render(wrap(<Ledger events={[wheel]} detail="gone-9" onDetail={noop} />));
     expect(screen.queryByRole("complementary")).toBeNull();
-    render(wrap(<ActivityLedger events={[wheel]} detail="put-1" />));
+    render(wrap(<Ledger events={[wheel]} detail="put-1" />));
     await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
   });
 });

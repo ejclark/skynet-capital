@@ -1,5 +1,5 @@
 /* The phone's Ledger, one card an entry under day headers (#5101; the receipt, #5317 —
-   `activity-cards.tsx`). A card is its legs: each leg is what happened with its signed cash on the
+   `ledger-cards.tsx`). A card is its legs: each leg is what happened with its signed cash on the
    right, then its contract or price on a quieter line; an order the close closed is muted; a round
    trip ends on a dashed rule and its total. Every card spans the same width, so the right-hand
    figures share one edge down the list, in tabular digits. */

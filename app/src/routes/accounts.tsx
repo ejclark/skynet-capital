@@ -14,14 +14,9 @@ import { fetchNetWorth } from "../live/networth";
 import { landingFromSearch, landingOf, type PlaybookLanding } from "../live/playbook-landing";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
-import {
-  AccountActivity,
-  type ActivityNarrowing,
-  narrowingFromSearch,
-} from "../shell/account-activity";
+import { AccountLedger, type LedgerNarrowing, narrowingFromSearch } from "../shell/account-ledger";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
-import { ActivityLedger } from "../shell/activity-ledger";
 import { BalanceSection } from "../shell/balance-section";
 import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
@@ -29,6 +24,7 @@ import { useDefaultAccount } from "../shell/default-account";
 import { EventsSection } from "../shell/events-section";
 import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
+import { Ledger } from "../shell/ledger";
 import type { MilestoneChapter } from "../shell/milestone-card";
 import { MilestonesSection } from "../shell/milestones-section";
 import { parseLens } from "../shell/positions-lens";
@@ -87,11 +83,7 @@ function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
 /** "All accounts" — every account's newest page merged, newest first. There is no single cursor
  *  across several ledgers, so this view never walks back: it says plainly that it holds each
  *  account's newest orders and opens one account's full list for the rest (#5165). */
-function MergedActivity({
-  accounts,
-}: {
-  readonly accounts: readonly OwnedAccount[];
-}): ReactElement {
+function MergedLedger({ accounts }: { readonly accounts: readonly OwnedAccount[] }): ReactElement {
   const ids = accounts.map((a) => a.id);
   const activity = useQuery({
     queryKey: ["accounts-activity", ids.join(",")],
@@ -118,7 +110,7 @@ function MergedActivity({
   // Several merged → a row carries no account of its own, so its round link is honestly left off.
   return (
     <>
-      <ActivityLedger events={events} detail={detail} onDetail={setDetail} />
+      <Ledger events={events} detail={detail} onDetail={setDetail} />
       {more.length === 0 ? (
         <p className="note activity-end">That's the oldest order in every account's ledger.</p>
       ) : (
@@ -139,7 +131,7 @@ function MergedActivity({
   );
 }
 
-function ActivitySection({
+function LedgerSection({
   accounts,
   deskIds,
   narrowing,
@@ -147,19 +139,19 @@ function ActivitySection({
 }: {
   readonly accounts: readonly OwnedAccount[];
   readonly deskIds: readonly string[];
-  readonly narrowing: ActivityNarrowing;
-  readonly onNarrow: (next: ActivityNarrowing) => void;
+  readonly narrowing: LedgerNarrowing;
+  readonly onNarrow: (next: LedgerNarrowing) => void;
 }): ReactElement {
   const [only, ...rest] = deskIds;
   if (only === undefined)
     return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (rest.length > 0)
-    return <MergedActivity accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
+    return <MergedLedger accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
   // One account: the same paged, narrowed list `/u/<id>/ledger` shows. Every account here is the
   // viewer's own, so a bot's playbook is theirs to see. Keyed by the account, so switching starts
   // the symbol box and the walk back over.
   return (
-    <AccountActivity key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
+    <AccountLedger key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
   );
 }
 
@@ -339,8 +331,8 @@ function CockpitBody({
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
   /** The Ledger's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/ledger`). */
-  readonly narrowing: ActivityNarrowing;
-  readonly onNarrow: (next: ActivityNarrowing) => void;
+  readonly narrowing: LedgerNarrowing;
+  readonly onNarrow: (next: LedgerNarrowing) => void;
   readonly pinnedDay: string | undefined;
   readonly onPickDay: (day: string | undefined) => void;
   readonly onJoined: () => void;
@@ -422,7 +414,7 @@ function CockpitBody({
     );
   }
   return (
-    <ActivitySection
+    <LedgerSection
       accounts={accounts}
       deskIds={deskIds}
       narrowing={narrowing}
@@ -484,7 +476,7 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
-    // The Ledger's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
+    // The Ledger's narrowing, one account at a time (#5165, `shell/account-ledger.tsx`).
     ...narrowingFromSearch(search),
     // The Ledger's open full detail (#5101, `use-order-detail.ts`).
     ...(asId(search.order) ? { order: asId(search.order) } : {}),

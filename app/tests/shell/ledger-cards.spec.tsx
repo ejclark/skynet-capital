@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render as mount, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
-import { ActivityCards } from "../../src/shell/activity-cards";
-import { ActivityLedger } from "../../src/shell/activity-ledger";
+import { Ledger } from "../../src/shell/ledger";
+import { LedgerCards } from "../../src/shell/ledger-cards";
 
 /** #5101 (round 2 of #5037, activity slice 1): on a phone the ledger is one card an order under a
  *  day header, and a tap opens the card in place, under its own row. #5317 (#5160 rounds 9–15):
@@ -91,9 +91,9 @@ const card = (orderId: string): HTMLElement => {
   return el;
 };
 
-describe("ActivityCards — one card an order, under its day", () => {
+describe("LedgerCards — one card an order, under its day", () => {
   it("heads each market day once, newest first, the date off the row", () => {
-    render(<ActivityCards events={[wheel, event(), close]} />);
+    render(<LedgerCards events={[wheel, event(), close]} />);
     expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
       expect.stringMatching(/^TUE · OCT 6/),
       expect.stringMatching(/^MON · OCT 5/),
@@ -102,7 +102,7 @@ describe("ActivityCards — one card an order, under its day", () => {
   });
 
   it("says what happened and its signed cash, then the contract, then the playbook and open", () => {
-    render(<ActivityCards events={[wheel]} />);
+    render(<LedgerCards events={[wheel]} />);
     const put = card("put-1");
     expect(put.querySelector(".act-what")).toHaveTextContent("SOLD 1 contract CRWV");
     expect(put.querySelector(".act-cash")).toHaveTextContent(/^\+\$255$/);
@@ -125,7 +125,7 @@ describe("ActivityCards — one card an order, under its day", () => {
       price: "$742.00",
       at: "2026-09-22T14:00:00Z",
     });
-    render(<ActivityCards events={[{ ...close, opened: [{ ...bought, matched: 15 }] }]} />);
+    render(<LedgerCards events={[{ ...close, opened: [{ ...bought, matched: 15 }] }]} />);
     const meta = card("close-1");
     const legs = [...meta.querySelectorAll(".act-leg-row")];
     expect(legs.map((leg) => leg.querySelector(".act-what")?.textContent)).toEqual([
@@ -149,7 +149,7 @@ describe("ActivityCards — one card an order, under its day", () => {
 
   it("names a dead order's status on its second line, with no cash it never moved", () => {
     render(
-      <ActivityCards
+      <LedgerCards
         events={[event({ orderId: "dead", filled: 0, price: "—", status: "canceled" })]}
       />,
     );
@@ -160,13 +160,13 @@ describe("ActivityCards — one card an order, under its day", () => {
   });
 
   it("says a buy later sold is closed on the sale's day, never open", () => {
-    render(<ActivityCards events={[event({ closedOn: "2026-10-09T15:00:00Z" })]} />);
+    render(<LedgerCards events={[event({ closedOn: "2026-10-09T15:00:00Z" })]} />);
     expect(card("ord-1").querySelector(".act-outcome")).toHaveTextContent("closed Oct 9");
   });
 
   // #885: "at this time, we do not show what playbooks others are using".
   it("keeps the playbook off a card the viewer does not own, its standing intact", () => {
-    render(<ActivityCards events={[wheel]} showPlaybook={false} />);
+    render(<LedgerCards events={[wheel]} showPlaybook={false} />);
     expect(screen.queryByText(/CRWV-WHEEL/)).not.toBeInTheDocument();
     expect(card("put-1").querySelector(".act-foot")).toBeNull();
     expect(card("put-1").querySelector(".act-outcome")).toHaveTextContent("open");
@@ -175,7 +175,7 @@ describe("ActivityCards — one card an order, under its day", () => {
   });
 
   it("opens in place under its own row: the time, the price a share, then the decision", () => {
-    render(<ActivityCards events={[wheel]} />);
+    render(<LedgerCards events={[wheel]} />);
     const head = within(card("put-1")).getByRole("button");
     expect(head).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/Our study of CRWV/)).not.toBeInTheDocument();
@@ -200,7 +200,7 @@ describe("ActivityCards — one card an order, under its day", () => {
       lifecycle: "OPEXP" as const,
       reasoning: undefined,
     };
-    render(<ActivityCards events={[expired]} />);
+    render(<LedgerCards events={[expired]} />);
     const report = card("lifecycle:a");
     expect(report.querySelector(".act-what")).toHaveTextContent("EXPIRED 1 contract CRWV");
     expect(report.querySelector(".act-sub")).toHaveTextContent(/^\$80 PUT · Nov 6$/);
@@ -213,7 +213,7 @@ describe("ActivityCards — one card an order, under its day", () => {
  *  top, the bar named Loss · Premium under it, the outcome at expiry split by the strike's line —
  *  then Placed by, then Why. The order in words, its cost and what proves it wrong stay in Full
  *  detail. */
-describe("ActivityCards — an opened order leads with its price line", () => {
+describe("LedgerCards — an opened order leads with its price line", () => {
   const sold = {
     ...wheel,
     reasoning: {
@@ -235,7 +235,7 @@ describe("ActivityCards — an opened order leads with its price line", () => {
   };
 
   it("puts Breakeven · Strike · now above the bar, each price under its name", async () => {
-    render(<ActivityCards events={[sold]} />);
+    render(<LedgerCards events={[sold]} />);
     const body = open();
     await within(body).findByText("$82.60");
     const pivots = [...body.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
@@ -243,7 +243,7 @@ describe("ActivityCards — an opened order leads with its price line", () => {
   });
 
   it("names the hatch Loss and the solid Premium under the bar, and leaves OTM to the outcome", () => {
-    render(<ActivityCards events={[sold]} />);
+    render(<LedgerCards events={[sold]} />);
     const body = open();
     const names = [...body.querySelectorAll(".pv-zname")].map((n) => n.textContent);
     expect(names).toEqual(["Loss", "Premium"]);
@@ -253,7 +253,7 @@ describe("ActivityCards — an opened order leads with its price line", () => {
   });
 
   it("splits the outcome at expiry by the strike's line: ITM left, OTM right", () => {
-    render(<ActivityCards events={[sold]} />);
+    render(<LedgerCards events={[sold]} />);
     const body = open();
     expect(body.querySelector(".pv-at")).toHaveTextContent("At Nov 6");
     const divider = body.querySelector<HTMLElement>(".pv-divides");
@@ -275,7 +275,7 @@ describe("ActivityCards — an opened order leads with its price line", () => {
   });
 
   it("follows the picture with Placed by, then Why — and nothing Full detail keeps", () => {
-    render(<ActivityCards events={[sold]} deskId="sauron" onDetail={() => undefined} />);
+    render(<LedgerCards events={[sold]} deskId="sauron" onDetail={() => undefined} />);
     const body = open();
     const labels = [...body.querySelectorAll(".oo-table dt")].map((dt) => dt.textContent);
     expect(labels).toEqual(["Placed by", "Why"]);
@@ -296,7 +296,7 @@ describe("ActivityCards — an opened order leads with its price line", () => {
   it("says when there is no quote for now, and still draws the line", async () => {
     quote = { quoteNote: "no quote" };
     try {
-      render(<ActivityCards events={[sold]} />);
+      render(<LedgerCards events={[sold]} />);
       const body = open();
       expect(await within(body).findByText("now: no quote right now")).toBeInTheDocument();
       const pivots = [...body.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
@@ -322,9 +322,9 @@ function phone(): () => void {
   return () => Reflect.deleteProperty(window, "matchMedia");
 }
 
-describe("ActivityLedger — cards on a phone, the table above it, never both", () => {
+describe("Ledger — cards on a phone, the table above it, never both", () => {
   it("draws the desk table where the phone query does not match", () => {
-    const { container } = render(<ActivityLedger events={[wheel]} />);
+    const { container } = render(<Ledger events={[wheel]} />);
     expect(container.querySelector("table.blotter")).not.toBeNull();
     expect(container.querySelector(".act-cards")).toBeNull();
   });
@@ -332,7 +332,7 @@ describe("ActivityLedger — cards on a phone, the table above it, never both", 
   it("draws the cards at phone width, each order's anchor once", () => {
     const restore = phone();
     try {
-      const { container } = render(<ActivityLedger events={[wheel, event()]} />);
+      const { container } = render(<Ledger events={[wheel, event()]} />);
       expect(container.querySelector("table")).toBeNull();
       expect(container.querySelectorAll('[id="act-put-1"]')).toHaveLength(1);
       expect(container.querySelector("#act-put-1")).toHaveClass("act-card");

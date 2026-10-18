@@ -10,7 +10,7 @@
   "componentSrcMap": {
     "AccountLinksCard": "src/shell/admin-cards.tsx",
     "AccountSwitcher": "src/shell/account-switcher.tsx",
-    "ActivityTable": "src/shell/activity-table.tsx",
+    "LedgerTable": "src/shell/ledger-table.tsx",
     "BlotterRow": "src/shell/blotter-row.tsx",
     "BotSwitch": "src/shell/bot-switch.tsx",
     "ChainStraddle": "src/shell/chain-straddle.tsx",

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/experimental-ct-react";
-import { ActivityTable } from "../../app/src/shell/activity-table";
+import { LedgerTable } from "../../app/src/shell/ledger-table";
 
 // Proof-of-concept for the CT harness (#3325 widened plan, slice 3): a pure props-in/JSX-out
 // component, mounted with fixed mock data — no server, no offlineDataSource tick, no live
@@ -38,7 +38,7 @@ const EVENTS = [
 ];
 
 test("renders a fixed activity ledger deterministically", async ({ mount }) => {
-  const component = await mount(<ActivityTable events={EVENTS} />);
+  const component = await mount(<LedgerTable events={EVENTS} />);
   await expect(component).toBeVisible();
-  await expect(component).toHaveScreenshot("activity-table.png");
+  await expect(component).toHaveScreenshot("ledger-table.png");
 });

@@ -5,7 +5,7 @@
 > extract a new primitive only by the rule in `app/src/ui/README.md`.
 
 Coverage: every module in `app/src/ui` (4) and every `app/src/shell` module
-imported by 5+ production files (12). Fields: job from the JSDoc's first
+imported by 5+ production files (14). Fields: job from the JSDoc's first
 sentence, props read from the source (best-effort), first real call site, `@whenNot` tag.
 
 ## Primitives (`app/src/ui`)
@@ -16,8 +16,8 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - job: Says in one sentence how an action came out — saved, refused, failed — with a ✓ or ✕ before it.
 - exports: `ResultTone`, `InlineResult`
 - props: `{ tone: ResultTone; children: ReactNode; as?: "p" | "span"; live?: boolean; className?: string }`
-- importers: 20
-- usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:322`
+- importers: 26
+- usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:329`
 - when not to use: the state is the whole section's — a page or panel that could not load, an empty list, a loading line — that is a section state, not one action's result; and a number with a sign (P/L, a change) is a tone on the number (`tone-neg`), not a sentence.
 
 ### KindChip
@@ -30,24 +30,24 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - usage: `<KindChip kind={label === "Humans" ? "human" : "bot"} plural />` — `app/src/routes/leaderboard.tsx:72`
 - when not to use: the label is not an account's kind — a strategy, playbook or persona name wants its own chip style (#5365), and SIM / LIVE is `EnvPill`. Plain menu text ("Bot · SIM") is not a chip either.
 
-### FilterChip
-
-- file: `app/src/ui/filter-chip.tsx`
-- job: Turns one item of a set on or off — a filter, a study, a symbol — drawn the same way on every screen.
-- props: `{ pressed: boolean; onPress: () => void; children: ReactNode; className?: string }`
-- importers: 8
-- usage: `<FilterChip` — `app/src/routes/activity.tsx:123`
-- when not to use: the control picks which view the page shows rather than narrowing a set — a section, a lens, a range, a segmented choice — that is `SectionSwitch` or `Toggle` (`shell/`); and a label nobody presses (an account's kind, a status) is a read-only chip such as `KindChip`. A filter group whose picks exclude each other (Buy vs Sell, one playbook or All) is still filter chips.
-
 ### EnvPill
 
 - file: `app/src/ui/env-pill.tsx`
 - job: Labels the trading mode (SIM, LIVE) in one neutral pill, so a mode never borrows a kind chip's colour.
 - exports: `PAPER_WORD`, `EnvMode`, `EnvPill`
 - props: `{ mode?: EnvMode }`
-- importers: 7
-- usage: `<EnvPill />` — `app/src/shell/account-head.tsx:54`
+- importers: 8
+- usage: `<EnvPill />` — `app/src/shell/account-head.tsx:60`
 - when not to use: the label says who an account is (BOT / HUMAN) — that is `KindChip`; and a sentence that names the paper account in prose ("SIM account — simulated fill") stays text.
+
+### FilterChip
+
+- file: `app/src/ui/filter-chip.tsx`
+- job: Turns one item of a set on or off — a filter, a study, a symbol — drawn the same way on every screen.
+- props: `{ pressed: boolean; onPress: () => void; children: ReactNode; className?: string }`
+- importers: 8
+- usage: `<FilterChip` — `app/src/routes/activity.tsx:127`
+- when not to use: the control picks which view the page shows rather than narrowing a set — a section, a lens, a range, a segmented choice — that is `SectionSwitch` or `Toggle` (`shell/`); and a label nobody presses (an account's kind, a status) is a read-only chip such as `KindChip`. A filter group whose picks exclude each other (Buy vs Sell, one playbook or All) is still filter chips.
 
 ## Shared shell modules (5+ importers)
 
@@ -58,7 +58,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `useMediaQuery`, `usePhoneWidth`
 - signature: `(query: string)`
 - importers: 11
-- usage: `const stacked = useMediaQuery(TABLET_QUERY);` — `app/src/shell/account-activity.tsx:188`
+- usage: `const stacked = useMediaQuery(TABLET_QUERY);` — `app/src/shell/account-ledger.tsx:190`
 - when not to use:
 
 ### GlossaryTerm
@@ -78,7 +78,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - category: navigation
 - props: `{ controls?: ReactNode; tower?: ReactNode; towerless?: boolean; children: ReactNode }`
 - importers: 9
-- usage: `<PageFrame>` — `app/src/routes/accounts.tsx:194`
+- usage: `<PageFrame>` — `app/src/routes/accounts.tsx:190`
 - when not to use:
 
 ### PageSection
@@ -88,7 +88,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `PageSection`, `resolveSection`
 - kind: `interface`
 - importers: 9
-- usage: `readonly sections: readonly PageSection<AccountsSection>[];` — `app/src/routes/accounts.tsx:424`
+- usage: `readonly sections: readonly PageSection<AccountsSection>[];` — `app/src/routes/accounts.tsx:435`
 - when not to use:
 
 ### HoldingDecay
@@ -118,7 +118,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `WIDTHS`, `PHONE_QUERY`, `TABLET_QUERY`, `BENCH_QUERY`
 - kind: `value`
 - importers: 7
-- usage: `const phone = useMediaQuery(PHONE_QUERY);` — `app/src/shell/activity-ledger.tsx:39`
+- usage: `const phone = useMediaQuery(PHONE_QUERY);` — `app/src/shell/head-vitals.tsx:134`
 - when not to use:
 
 ### useLandOnHash
@@ -128,7 +128,17 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `LANDED_MS`, `targetedAnchor`, `landingBlock`, `land`, `useLandOnHash`, `publishClearance`
 - signature: `(find: (hash: string) => HTMLElement | undefined, renderKey: string)`
 - importers: 7
-- usage: `useLandOnHash(findActivityRow, rowKey(events));` — `app/src/shell/activity-cards.tsx:45`
+- usage: `useLandOnHash(findLedgerRow, rowKey(events));` — `app/src/shell/ledger-cards.tsx:45`
+- when not to use:
+
+### withMinus
+
+- file: `app/src/shell/position-row-spec.tsx`
+- job: The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash.
+- exports: `withMinus`, `ROW_KEY`, `dayChange`, `plural`, `isWritten`, `PositionHead`, `PositionSize`, `GreeksLine`, `Bracketed`
+- signature: `(figure: string)`
+- importers: 7
+- usage: `{withMinus(event.realizedPl)}` — `app/src/shell/order-deep-dive.tsx:121`
 - when not to use:
 
 ### ConnectLink
@@ -139,7 +149,27 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - exports: `scrollToChapter`, `ConnectLink`
 - props: `{ children?: ReactNode }`
 - importers: 5
-- usage: `No account linked yet — <ConnectLink />.` — `app/src/shell/cockpit-head.tsx:122`
+- usage: `No account linked yet — <ConnectLink />.` — `app/src/shell/cockpit-head.tsx:159`
+- when not to use:
+
+### MINUS
+
+- file: `app/src/shell/quote-change.tsx`
+- job: The real minus sign (U+2212) — a hyphen reads as a dash, not a negative, at a glance.
+- exports: `GLYPH`, `MINUS`, `signedMoney`, `signedPct`, `QuoteChange`, `LiveStamp`
+- kind: `value`
+- importers: 5
+- usage: `? `${delta < 0 ? MINUS : "+"}${dollars.format(Math.abs(delta))}`` — `app/src/shell/holding-decay.ts:80`
+- when not to use:
+
+### positionAnchor
+
+- file: `app/src/shell/position-anchor.ts`
+- job: LANDING ON A POSITION.
+- exports: `positionAnchor`, `targetedPosition`, `visiblePositionTarget`, `useLandOnPosition`
+- signature: `(symbol: string)`
+- importers: 5
+- usage: `<tr id={positionAnchor(position.symbol)} className={open ? "row-opened" : undefined}>` — `app/src/shell/blotter-row.tsx:53`
 - when not to use:
 
 ### readChartPalette
@@ -159,15 +189,5 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - category: navigation
 - props: `{ label?: string; sections: PageSection<Id>[]; current: Id; onSelect: (section: Id) => void; variant?: "rail" | "horizontal"; fold?: number; divideBefore?: Id }`
 - importers: 5
-- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:144`
-- when not to use:
-
-### withMinus
-
-- file: `app/src/shell/position-row-spec.tsx`
-- job: The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash.
-- exports: `withMinus`, `ROW_KEY`, `dayChange`, `plural`, `isWritten`, `PositionHead`, `PositionSize`, `GreeksLine`, `Bracketed`
-- signature: `(figure: string)`
-- importers: 5
-- usage: `{withMinus(event.realizedPl)}` — `app/src/shell/order-deep-dive.tsx:121`
+- usage: `<SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />` — `app/src/routes/activity.tsx:149`
 - when not to use:

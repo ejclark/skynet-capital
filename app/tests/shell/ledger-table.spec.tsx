@@ -3,8 +3,8 @@ import { act, fireEvent, render as mount, screen } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react";
 import type { DeskActivityEvent } from "../../src/live/desk";
 import { orderStamp, orderTime } from "../../src/live/order-facts";
-import { ActivityTable } from "../../src/shell/activity-table";
 import { LANDED_MS } from "../../src/shell/landing";
+import { LedgerTable } from "../../src/shell/ledger-table";
 
 /** The Decisions tab folded into its trades (#3687 slice 4): a bot row opens to the decision that
  *  placed it; a row with no decision (a human's, or one the trail never resolved) has no toggle.
@@ -79,9 +79,9 @@ const scouted = event({
   },
 });
 
-describe("ActivityTable — each bot trade opens to its decision", () => {
+describe("LedgerTable — each bot trade opens to its decision", () => {
   it("opens the decision beneath its row: why, who decided, and the playbook", () => {
-    render(<ActivityTable events={[scouted]} />);
+    render(<LedgerTable events={[scouted]} />);
     expect(screen.queryByText(/BETA-PHASE FORCED PICK/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText(/BETA-PHASE FORCED PICK/)).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe("ActivityTable — each bot trade opens to its decision", () => {
 
   // #885: "at this time, we do not show what playbooks others are using" — a non-owner's page.
   it("keeps the playbook row off a page the viewer does not own, the rest of the why intact", () => {
-    render(<ActivityTable events={[scouted]} showPlaybook={false} />);
+    render(<LedgerTable events={[scouted]} showPlaybook={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText(/BETA-PHASE FORCED PICK/)).toBeInTheDocument();
     expect(screen.getByText("beta-scout")).toBeInTheDocument();
@@ -100,12 +100,12 @@ describe("ActivityTable — each bot trade opens to its decision", () => {
   });
 
   it("gives a row with no resolved decision no toggle, in a table that has one", () => {
-    render(<ActivityTable events={[scouted, event({ orderId: "ord-2" })]} />);
+    render(<LedgerTable events={[scouted, event({ orderId: "ord-2" })]} />);
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("adds no why column at all when no row carries a decision — a human account", () => {
-    const { container } = render(<ActivityTable events={[event()]} />);
+    const { container } = render(<LedgerTable events={[event()]} />);
     expect(container.querySelector(".why-col")).toBeNull();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe("ActivityTable — each bot trade opens to its decision", () => {
 /** #3961 — a fill is one decision out of a round that usually weighed several. The why names how
  *  many ideas the round raised and how many cleared the guards, and links to the whole pass on
  *  Heartbeat rather than copying the trail into this row (`docs/IA.md` §8.1). */
-describe("ActivityTable — the round behind a fill", () => {
+describe("LedgerTable — the round behind a fill", () => {
   const rounded = event({
     reasoning: {
       reason: "panic fade",
@@ -126,7 +126,7 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 
   it("names the round's funnel and links to the whole pass, anchored at that round", () => {
-    render(<ActivityTable events={[rounded]} deskId="sauron" />);
+    render(<LedgerTable events={[rounded]} deskId="sauron" />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText(/3 ideas → 2 past the guards/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "the whole pass" })).toHaveAttribute(
@@ -136,7 +136,7 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 
   it("keeps the count but drops the link when the table merges several accounts' rows", () => {
-    render(<ActivityTable events={[rounded]} />);
+    render(<LedgerTable events={[rounded]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText(/3 ideas → 2 past the guards/)).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe("ActivityTable — the round behind a fill", () => {
 
   it("says one idea in the singular, the house's honest-copy habit", () => {
     render(
-      <ActivityTable
+      <LedgerTable
         events={[
           event({
             reasoning: { reason: "panic fade", personaId: "sauron", rawCount: 1, guardedCount: 1 },
@@ -158,7 +158,7 @@ describe("ActivityTable — the round behind a fill", () => {
   });
 
   it("draws no round row at all for a decision that carries neither counts nor an address", () => {
-    render(<ActivityTable events={[scouted]} deskId="sauron" />);
+    render(<LedgerTable events={[scouted]} deskId="sauron" />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.queryByText("The round")).not.toBeInTheDocument();
     // Its playbook is still a way in to its card (#5073); the round has no address to link.
@@ -169,7 +169,7 @@ describe("ActivityTable — the round behind a fill", () => {
 /** #4642 criterion 8 gave a bot's option fill its order in words, its cost and what proves it wrong
  *  here; #5262 (#5160 round 16) moved all three to Full detail. The row opens to the phone card's
  *  view instead: the price line on the left, Placed by and Why on the right. */
-describe("ActivityTable — a bot's option fill", () => {
+describe("LedgerTable — a bot's option fill", () => {
   const sold = event({
     symbol: "CRWV261106P00085000",
     display: "CRWV $85 PUT · 6 NOV 26",
@@ -189,7 +189,7 @@ describe("ActivityTable — a bot's option fill", () => {
   });
 
   it("opens to the price line beside Placed by and Why, leaving the rest to Full detail", async () => {
-    const { container } = render(<ActivityTable events={[sold]} />);
+    const { container } = render(<LedgerTable events={[sold]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
     const opened = container.querySelector(".row-why .oo");
     expect(opened).toHaveClass("oo-wide");
@@ -206,7 +206,7 @@ describe("ActivityTable — a bot's option fill", () => {
   });
 
   it("draws none of the three on a share fill", () => {
-    render(<ActivityTable events={[scouted]} />);
+    render(<LedgerTable events={[scouted]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.queryByText("Order")).not.toBeInTheDocument();
     expect(screen.queryByText("Cost")).not.toBeInTheDocument();
@@ -229,16 +229,14 @@ describe("ActivityTable — a bot's option fill", () => {
   });
 
   it("says what the broker said about an order that never traded to its owner", () => {
-    render(<ActivityTable events={[canceled]} />);
+    render(<LedgerTable events={[canceled]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
     expect(screen.getByText("Broker said")).toBeInTheDocument();
     expect(screen.getByText("limit $2.10 not reached in 15s; canceled")).toBeInTheDocument();
   });
 
   it("draws no broker line on a page the viewer does not own, or when the broker said nothing", () => {
-    render(
-      <ActivityTable events={[canceled, { ...sold, orderId: "ord-9" }]} showPlaybook={false} />,
-    );
+    render(<LedgerTable events={[canceled, { ...sold, orderId: "ord-9" }]} showPlaybook={false} />);
     for (const why of screen.getAllByRole("button")) fireEvent.click(why);
     expect(screen.getAllByText(/sell a put a month out, below support/)).toHaveLength(2);
     expect(screen.queryByText("Broker said")).not.toBeInTheDocument();
@@ -246,7 +244,7 @@ describe("ActivityTable — a bot's option fill", () => {
   });
 
   it("draws no broker line for a decision that carries no words", () => {
-    render(<ActivityTable events={[sold]} />);
+    render(<LedgerTable events={[sold]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why CRWV $85 PUT · 6 NOV 26 was sold" }));
     expect(screen.queryByText("Broker said")).not.toBeInTheDocument();
   });
@@ -255,7 +253,7 @@ describe("ActivityTable — a bot's option fill", () => {
 /** #4650 — a bot's spread is one broker order whose fills arrive one per leg. Activity shows the
  *  spread once, its net once, and each leg beneath it: the contract, its side in words, and what it
  *  alone paid or received — visible without opening anything. */
-describe("ActivityTable — a bot's spread and its legs", () => {
+describe("LedgerTable — a bot's spread and its legs", () => {
   const spread = event({
     orderId: "mleg-1",
     symbol: "",
@@ -307,7 +305,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
   });
 
   it("shows each leg beneath the spread's row, its side in words and its own dollars", () => {
-    const { container } = render(<ActivityTable events={[spread, event({ orderId: "ord-2" })]} />);
+    const { container } = render(<LedgerTable events={[spread, event({ orderId: "ord-2" })]} />);
     const rows = [...container.querySelectorAll("tbody tr[id]")].map((tr) => tr.id);
     expect(rows).toEqual(["act-mleg-1", "act-leg-low", "act-leg-high", "act-ord-2"]);
     const low = container.querySelector("#act-leg-low");
@@ -320,7 +318,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
   });
 
   it("says the spread's net once, on its own row, whether or not its decision is open", () => {
-    const { container } = render(<ActivityTable events={[spread]} />);
+    const { container } = render(<LedgerTable events={[spread]} />);
     const nets = () => container.textContent?.match(/\$335/g) ?? [];
     expect(container.querySelector("#act-mleg-1 td.num")).toHaveTextContent("−$335");
     expect(nets()).toHaveLength(1);
@@ -343,7 +341,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
       legs: low ? [low] : [],
       missingLegs: [{ display: "NVDA $200 CALL · 13 NOV 26", side: "sell" as const }],
     };
-    const { container } = render(<ActivityTable events={[partial]} />);
+    const { container } = render(<LedgerTable events={[partial]} />);
     const missing = container.querySelector(".row-leg-missing");
     expect(missing).toHaveTextContent("SELL");
     expect(missing).toHaveTextContent("NVDA $200 CALL · 13 NOV 26");
@@ -352,7 +350,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
   });
 
   it("draws no leg rows for any other row", () => {
-    const { container } = render(<ActivityTable events={[scouted]} />);
+    const { container } = render(<LedgerTable events={[scouted]} />);
     expect(container.querySelector(".row-leg")).toBeNull();
     expect(container.querySelector(".row-leg-missing")).toBeNull();
   });
@@ -360,7 +358,7 @@ describe("ActivityTable — a bot's spread and its legs", () => {
 
 // #4046 item 1: a Thesis marker links `?section=activity#act-<orderId>`, but the ledger arrives
 // after the router has tried the hash — the row has to bring itself into view once it exists.
-describe("ActivityTable — the row a link points at", () => {
+describe("LedgerTable — the row a link points at", () => {
   const scroll = rstest.fn();
   beforeEach(() => {
     scroll.mockReset();
@@ -373,14 +371,14 @@ describe("ActivityTable — the row a link points at", () => {
 
   it("scrolls the targeted row into view when it renders", () => {
     window.location.hash = "#act-ord-2";
-    render(<ActivityTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />);
+    render(<LedgerTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />);
     expect(scroll).toHaveBeenCalledTimes(1);
     expect(scroll.mock.contexts[0]).toHaveAttribute("id", "act-ord-2");
   });
 
   it("leaves the page where it is with no row in the hash", () => {
     window.location.hash = "#cycle-1";
-    render(<ActivityTable events={[event()]} />);
+    render(<LedgerTable events={[event()]} />);
     expect(scroll).not.toHaveBeenCalled();
   });
 
@@ -390,7 +388,7 @@ describe("ActivityTable — the row a link points at", () => {
     rstest.useFakeTimers();
     window.location.hash = "#act-ord-2";
     const { container } = render(
-      <ActivityTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />,
+      <LedgerTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />,
     );
     const row = container.querySelector("#act-ord-2");
     expect(row).toHaveAttribute("data-landed");
@@ -404,7 +402,7 @@ describe("ActivityTable — the row a link points at", () => {
   it("lands on a spread's leg, which a Thesis marker for that fill links", () => {
     const leg = { ...event({ orderId: "leg-1", display: "NVDA $185 CALL · 13 NOV 26" }) };
     window.location.hash = "#act-leg-1";
-    const { container } = render(<ActivityTable events={[event({ legs: [leg] })]} />);
+    const { container } = render(<LedgerTable events={[event({ legs: [leg] })]} />);
     expect(scroll.mock.contexts[0]).toHaveAttribute("id", "act-leg-1");
     expect(container.querySelector("#act-leg-1")).toHaveAttribute("data-landed");
   });
@@ -413,24 +411,24 @@ describe("ActivityTable — the row a link points at", () => {
     rstest.useFakeTimers();
     window.location.hash = "#act-ord-9";
     const first = [event()];
-    const { rerender, container } = render(<ActivityTable events={first} />);
+    const { rerender, container } = render(<LedgerTable events={first} />);
     expect(scroll).not.toHaveBeenCalled();
     const older = [...first, event({ orderId: "ord-9", symbol: "XLE" })];
-    rerender(<ActivityTable events={older} />);
+    rerender(<LedgerTable events={older} />);
     const row = container.querySelector("#act-ord-9");
     expect(row).toHaveAttribute("data-landed");
     act(() => {
       rstest.advanceTimersByTime(LANDED_MS);
     });
     // A refetch handing back the same rows is not a new link: nothing is marked again.
-    rerender(<ActivityTable events={[...older]} />);
+    rerender(<LedgerTable events={[...older]} />);
     expect(row).not.toHaveAttribute("data-landed");
   });
 });
 
 /** #4650: an expiry or an assignment is not an order. Swept into Activity on its own, a $0 "SELL"
  *  under the put's real sale read as a second sale on a phone, stamped at a time it never had. */
-describe("ActivityTable — what the broker reported instead of an order", () => {
+describe("LedgerTable — what the broker reported instead of an order", () => {
   const PUT = "CRWV $85 PUT · 13 NOV 26";
   const OCC = "CRWV261113P00085000";
   const sold = event({
@@ -458,7 +456,7 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
 
   it("names the event where a side would be — EXPIRED, ASSIGNED — never a second SOLD", () => {
     render(
-      <ActivityTable
+      <LedgerTable
         events={[report("OPEXP", "lifecycle:a"), report("OPASN", "lifecycle:b"), sold]}
       />,
     );
@@ -472,7 +470,7 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
   });
 
   it("files a report under its own day, never the synthetic end-of-day instant's", () => {
-    render(<ActivityTable events={[report("OPEXP", "lifecycle:a"), sold]} />);
+    render(<LedgerTable events={[report("OPEXP", "lifecycle:a"), sold]} />);
     const days = [...document.querySelectorAll(".act-day-row th")].map((th) => th.textContent);
     expect(days).toEqual([
       expect.stringMatching(/^FRI · NOV 13/),
@@ -488,10 +486,10 @@ describe("ActivityTable — what the broker reported instead of an order", () =>
 /** #5164: the table once printed "Oct 6, 09:31 AM" — the browser's zone, unnamed — for a fill the
  *  phone card read "10:31 AM ET". One order, one time, at every width; since #5317 the day is the
  *  divider's and the time waits on the row, one hover away. */
-describe("ActivityTable — one fill, one time", () => {
+describe("LedgerTable — one fill, one time", () => {
   it("keeps an order's day and time in New York time, naming the zone, as the card does", () => {
     const fill = event({ orderId: "crwv-put", at: "2026-10-06T14:31:00Z" });
-    render(<ActivityTable events={[fill]} />);
+    render(<LedgerTable events={[fill]} />);
     const stamp = document
       .getElementById("act-crwv-put")
       ?.querySelector(".act-what-cell")
@@ -504,7 +502,7 @@ describe("ActivityTable — one fill, one time", () => {
 
 /** #5073 slice 4a (#5037 round 2, R2-act): on one bot's ledger the playbook that placed an order is
  *  a way in — it lands on that playbook's card on Playbooks, the order's mark ringed. */
-describe("ActivityTable — the playbook, as a way in to its card", () => {
+describe("LedgerTable — the playbook, as a way in to its card", () => {
   const placed = event({
     orderId: "ord-1",
     reasoning: {
@@ -517,7 +515,7 @@ describe("ActivityTable — the playbook, as a way in to its card", () => {
   });
 
   it("links the playbook to its card, naming the mode, the check and the order", () => {
-    render(<ActivityTable events={[placed]} deskId="sauron" />);
+    render(<LedgerTable events={[placed]} deskId="sauron" />);
     // The Playbook column names it bare; the opened order adds the mode it ran in.
     const [inList] = screen.getAllByRole("link", {
       name: "SAURON · aggressive — open its card on Playbooks",
@@ -536,14 +534,14 @@ describe("ActivityTable — the playbook, as a way in to its card", () => {
   });
 
   it("keeps the playbook as plain words on a ledger that merges several accounts", () => {
-    render(<ActivityTable events={[placed]} />);
+    render(<LedgerTable events={[placed]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText("SAURON · aggressive")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("never names the playbook, linked or not, on a page the viewer does not own (#885)", () => {
-    render(<ActivityTable events={[placed]} deskId="sauron" showPlaybook={false} />);
+    render(<LedgerTable events={[placed]} deskId="sauron" showPlaybook={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.queryByText(/SAURON/)).not.toBeInTheDocument();
   });
@@ -552,7 +550,7 @@ describe("ActivityTable — the playbook, as a way in to its card", () => {
 /** #5317 (#5160 rounds 9–15, the receipt): no date column — a day divider per market day with the
  *  entries under it — and an entry is its legs. A close lists itself, then the buy it closed
  *  (quieter), then a total under a dashed rule; a single order is one row with where it stands. */
-describe("ActivityTable — the Ledger as a receipt", () => {
+describe("LedgerTable — the Ledger as a receipt", () => {
   const bought = event({
     orderId: "buy-1",
     symbol: "META",
@@ -581,19 +579,19 @@ describe("ActivityTable — the Ledger as a receipt", () => {
     [...(row?.querySelectorAll("td") ?? [])].map((td) => td.textContent?.trim());
 
   it("heads the columns What happened · Cash · Outcome, with no date column", () => {
-    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const { container } = render(<LedgerTable events={[sold, bought]} />);
     const heads = [...container.querySelectorAll("thead th")].map((th) => th.textContent);
     expect(heads).toEqual(["What happened", "Cash", "Outcome"]);
   });
 
   it("adds a Playbook column only when a row carries one the viewer may see", () => {
-    const { container } = render(<ActivityTable events={[scouted]} deskId="beta-scout" />);
+    const { container } = render(<LedgerTable events={[scouted]} deskId="beta-scout" />);
     const heads = [...container.querySelectorAll("thead th")].map((th) => th.textContent);
     expect(heads).toEqual(["Why", "What happened", "Playbook", "Cash", "Outcome"]);
   });
 
   it("starts each market day with a divider, newest first", () => {
-    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const { container } = render(<LedgerTable events={[sold, bought]} />);
     const days = [...container.querySelectorAll(".act-day-row th")].map((th) => th.textContent);
     expect(days).toEqual([
       expect.stringMatching(/^THU · OCT 1/),
@@ -602,7 +600,7 @@ describe("ActivityTable — the Ledger as a receipt", () => {
   });
 
   it("lists a round trip as the sale, then the buy it closed, then the total and its result", () => {
-    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const { container } = render(<LedgerTable events={[sold, bought]} />);
     const sale = container.querySelector("#act-sell-1");
     expect(cells(sale)).toEqual(["SOLD 15 shares META at $761.00", "+$11,415", ""]);
     const buy = sale?.nextElementSibling;
@@ -615,7 +613,7 @@ describe("ActivityTable — the Ledger as a receipt", () => {
   });
 
   it("keeps the buy on its own day too, as closed on the sale's date — its anchor there only", () => {
-    const { container } = render(<ActivityTable events={[sold, bought]} />);
+    const { container } = render(<LedgerTable events={[sold, bought]} />);
     expect(cells(container.querySelector("#act-buy-1"))).toEqual([
       "BOUGHT 15 shares META at $742.00",
       "−$11,130",
@@ -625,7 +623,7 @@ describe("ActivityTable — the Ledger as a receipt", () => {
   });
 
   it("says a single order with nothing closing it is open, in one row", () => {
-    const { container } = render(<ActivityTable events={[event({ orderId: "solo" })]} />);
+    const { container } = render(<LedgerTable events={[event({ orderId: "solo" })]} />);
     const row = container.querySelector("#act-solo");
     expect(cells(row)).toEqual(["BOUGHT 9 shares MSFT at $428.10", "−$3,853", "open"]);
     expect(row?.nextElementSibling).toBeNull();
@@ -633,7 +631,7 @@ describe("ActivityTable — the Ledger as a receipt", () => {
 
   it("names a dead order's status where open would be, and no cash it never moved", () => {
     const dead = event({ orderId: "dead", filled: 0, price: "—", status: "canceled" });
-    const { container } = render(<ActivityTable events={[dead]} />);
+    const { container } = render(<LedgerTable events={[dead]} />);
     expect(cells(container.querySelector("#act-dead"))).toEqual([
       "BUY 9 shares MSFT",
       "",
@@ -658,7 +656,7 @@ describe("ActivityTable — the Ledger as a receipt", () => {
       matched: 10,
     };
     const both = { ...sold, opened: [later, early] };
-    const { container } = render(<ActivityTable events={[both]} />);
+    const { container } = render(<LedgerTable events={[both]} />);
     const legs = [...container.querySelectorAll(".act-opened")].map((tr) => cells(tr)[0]);
     expect(legs).toEqual([
       "BOUGHT 10 of 15 shares META at $742.00",

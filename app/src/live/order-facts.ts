@@ -8,7 +8,7 @@ import type { DeskActivityEvent, DeskActivityLeg } from "./desk";
 
 /**
  * WHAT ONE ORDER SAYS, READ OFF ITS ROW (#5101, round 2 of #5037, the activity question). The phone
- * card (`activity-cards.tsx`) draws an order in two lines — what happened, then the bet it made —
+ * card (`ledger-cards.tsx`) draws an order in two lines — what happened, then the bet it made —
  * and every word on them comes from here, computed in the browser from fields the row already
  * carries: the side, the size, the fill price, the contract. Nothing here is a forecast: an order is
  * a past decision, so it says what was bet and what moved, never what a model expects next.

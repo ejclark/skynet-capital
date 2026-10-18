@@ -12,7 +12,7 @@ import { FilterChip } from "../ui";
  * The chips are `FilterChip`, whose ✓ slot began here: a pressed chip says so by a shape, never the
  * hue alone (a standing reader is red/green colourblind; docs/BRAND.md → Accessibility).
  */
-export function ActivityFilterBar({
+export function LedgerFilterBar({
   symbol,
   onSymbol,
   playbooks,

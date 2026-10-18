@@ -1,4 +1,4 @@
-/* A bot's spread on Activity (#4650; activity-table.tsx `LegRow`): each leg beneath its spread's
+/* A bot's spread on Activity (#4650; ledger-table.tsx `LegRow`): each leg beneath its spread's
    row, always visible. One unbroken left rule ties the legs to the row above — a shape, never a
    hue — and each leg's side rides as the word BUY or SELL in the house pill. The line is capped to
    the visible table (the why panel's own `100cqw` cap, desk.css) so the contract and its dollars
