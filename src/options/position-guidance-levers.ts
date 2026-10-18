@@ -52,6 +52,16 @@ export function lever(call: Omit<LeverCall, "atOpen">): LeverCall {
   return { ...call, reasons: call.reasons.slice(0, 3), atOpen: false };
 }
 
+/**
+ * The research ledger's OWN "proves it wrong" line, quoted with its date (#5720) — what would change
+ * its call, in its words. Undefined when the ledger states none, and the lever keeps its own line.
+ */
+export function ledgerFalsifier(input: GuidanceInputs): string | undefined {
+  const p = input.ledger?.provesWrong;
+  if (!p) return undefined;
+  return `The research${p.asOf ? `, as of ${dayText(p.asOf)}` : ""}: "${p.quote}" → come back here.`;
+}
+
 const DROP_TEXT: Readonly<Record<LadderDrop, string>> = {
   quote:
     "prices too thin to sell at (bid under $0.10, a wide gap between bid and ask, or no volatility read)",
@@ -294,9 +304,11 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
         "LEDGER",
         "Selling a put means agreeing to buy the stock — and the research doesn't support buying it right now.",
       );
-  const falsifier = ledger?.buySignal
-    ? `If the research withdraws its buy signal${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`
-    : `If the research starts supporting a buy${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`;
+  const falsifier =
+    ledgerFalsifier(ctx.input) ??
+    (ledger?.buySignal
+      ? `If the research withdraws its buy signal${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`
+      : `If the research starts supporting a buy${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`);
   const best = headlineRow(ladder.rows);
   const held = stake.shares ?? 0;
   const concentration =

@@ -144,6 +144,11 @@ export interface LedgerStance {
   readonly buyConfidence: Confidence;
   /** The ledger's one-line stance, quoted — "Stand aside · S2 · E1 — no buy signal exists". */
   readonly stance: string;
+  /**
+   * What the ledger says would change its Today call — its words, and the date it was last
+   * assessed (#5720). The server reads it; absent when the ledger states none.
+   */
+  readonly provesWrong?: { readonly quote: string; readonly asOf?: string };
   readonly source: string;
 }
 
