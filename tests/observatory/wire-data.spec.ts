@@ -179,7 +179,7 @@ describe("buildWireTradeRows — pagination (PR 5, issue #2287)", () => {
       "2026-08-24T00:00:00.000Z",
       "2026-08-23T00:00:00.000Z",
     ]);
-    expect(first.nextCursor).toBe("2026-08-23T00:00:00.000Z");
+    expect(first.nextCursor).toBe(`2026-08-23T00:00:00.000Z|${first.rows[1]?.orderId}`); // #4802
 
     const next = buildWireTradeRowsPage(records, [snapshot()], {
       limit: 2,

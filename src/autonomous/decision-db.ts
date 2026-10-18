@@ -257,6 +257,13 @@ export function openDecisionDb(path: string): DecisionDb {
       PRIMARY KEY (decision_id, playbook_id, mode)
     );
 
+    -- A pass that ran no playbook at all (#4773) — every one it held paused, say. It has no
+    -- playbook_verdicts row to say so, and without this the roll call would skip back to the last
+    -- pass that ran one and call a paused playbook armed. Its own table, for the reason above.
+    CREATE TABLE IF NOT EXISTS verdictless_passes (
+      decision_id INTEGER PRIMARY KEY REFERENCES decisions(id)
+    );
+
     -- The replay tape (shared across every bot — market state has no persona). One row per
     -- (at, symbol); "INSERT OR IGNORE" below means the first cycle to observe an instant owns it.
     CREATE TABLE IF NOT EXISTS market_signals (
@@ -320,6 +327,10 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectIntentsFor = db.prepare(
     "SELECT * FROM intents WHERE decision_id = ? ORDER BY id ASC",
   );
+  const insertVerdictless = db.prepare(
+    "INSERT OR IGNORE INTO verdictless_passes (decision_id) VALUES (?)",
+  );
+  const isVerdictless = db.prepare("SELECT 1 FROM verdictless_passes WHERE decision_id = ?");
   const insertVerdict = db.prepare(
     "INSERT OR IGNORE INTO playbook_verdicts (decision_id, playbook_id, mode, state) VALUES (?, ?, ?, ?)",
   );
@@ -544,14 +555,17 @@ export function openDecisionDb(path: string): DecisionDb {
     });
   }
 
-  function verdictsFor(decisionId: number): PlaybookVerdict[] {
-    return (
+  /** A pass's verdicts: empty when it ran no playbook, undefined when it said nothing (#4773). */
+  function verdictsFor(decisionId: number): PlaybookVerdict[] | undefined {
+    const rows = (
       selectVerdictsFor.all(decisionId) as { playbook_id: string; mode: string; state: string }[]
     ).map((r) => ({
       playbookId: r.playbook_id,
       mode: r.mode as PlaybookVerdict["mode"],
       state: r.state as PlaybookVerdict["state"],
     }));
+    if (rows.length > 0) return rows;
+    return isVerdictless.get(decisionId) ? [] : undefined;
   }
 
   /** One `intents` row per raw intent, each matched to its fate first (`fateOf`), plus an option
@@ -582,6 +596,7 @@ export function openDecisionDb(path: string): DecisionDb {
     for (const v of entry.playbookVerdicts ?? []) {
       insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
     }
+    if (entry.playbookVerdicts?.length === 0) insertVerdictless.run(decisionId);
     // Also before the early return, and merged by key, so a re-say moves an outcome on.
     if (entry.playbookObservations?.length)
       observations.write(entry.at, entry.playbookObservations);

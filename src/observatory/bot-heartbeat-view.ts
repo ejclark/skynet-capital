@@ -287,7 +287,9 @@ export function latestVerdictPass(newestFirst: readonly DecisionRecord[]): {
    *  newest verdict-carrying pass is, and a safety readout with no date reads as current. */
   readonly at: number;
 } | null {
-  const index = newestFirst.findIndex((r) => r.playbookVerdicts && r.playbookVerdicts.length > 0);
+  // The newest pass that SAID, even "none" (#4773): skipping an empty one would reach back past a
+  // pause and call the paused playbook armed.
+  const index = newestFirst.findIndex((r) => r.playbookVerdicts !== undefined);
   const pass = newestFirst[index];
   return pass?.playbookVerdicts ? { index, verdicts: pass.playbookVerdicts, at: pass.at } : null;
 }

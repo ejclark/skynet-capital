@@ -65,6 +65,44 @@ export function paginateDesc<T, K extends string | number>(
   };
 }
 
+/** Joins a cursor's time to its row's id: `2026-10-16T20:00:00.000Z|<order id>`. */
+const CURSOR_SEPARATOR = "|";
+
+/**
+ * `paginateDesc` for rows whose time can repeat (#4802): two puts expiring the same day, a folded
+ * spread's legs. A strictly-older filter on time alone drops every row that shares the boundary's
+ * time but fell past the page — no page ever shows it. So the order is made total (time desc, then
+ * `id` desc, sorted here so no caller can get it wrong) and the cursor names both: `time|id`, and
+ * the next page keeps the rows that sort after that pair. Still one `before` param and the same
+ * `Link: rel="next"`. A bare-time cursor from before this change still works, as strictly older.
+ */
+export function paginateDescBy<T>(
+  rows: readonly T[],
+  timeOf: (row: T) => string,
+  idOf: (row: T) => string,
+  opts: { readonly limit: number; readonly before?: string },
+): Page<T, string> {
+  const desc = (a: string, b: string) => (a < b ? 1 : a > b ? -1 : 0);
+  const sorted = [...rows].sort((a, b) => desc(timeOf(a), timeOf(b)) || desc(idOf(a), idOf(b)));
+  const cut = opts.before?.indexOf(CURSOR_SEPARATOR) ?? -1;
+  const beforeTime = cut >= 0 ? opts.before?.slice(0, cut) : opts.before;
+  const beforeId = cut >= 0 ? opts.before?.slice(cut + 1) : undefined;
+  const after = (row: T): boolean => {
+    if (beforeTime === undefined) return true;
+    const time = timeOf(row);
+    if (time !== beforeTime) return time < beforeTime;
+    return beforeId !== undefined && idOf(row) < beforeId;
+  };
+  const items = sorted.filter(after).slice(0, opts.limit);
+  const last = items.at(-1);
+  return {
+    items,
+    ...(items.length === opts.limit && last !== undefined
+      ? { nextCursor: `${timeOf(last)}${CURSOR_SEPARATOR}${idOf(last)}` }
+      : {}),
+  };
+}
+
 /**
  * `Link: <url>; rel="next"` — GitHub's own pagination convention, borrowed verbatim since Eric's
  * call was to follow GitHub's defaults/limits rather than invent a bespoke cursor format. No prior
