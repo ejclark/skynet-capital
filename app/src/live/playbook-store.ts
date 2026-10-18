@@ -34,6 +34,11 @@ export interface PlaybookStoreCardView {
   readonly symbol: string;
   /** The whole basket; `symbol` is its first entry. */
   readonly symbols: readonly string[];
+  /** The names the symbol chips choose among when the playbook claims no basket (`symbols` is
+   *  empty): the shadow scout's ten (#4535 slice 3a). */
+  readonly pickFrom?: readonly string[];
+  /** It sends no order to a broker: no budget, mode or compounding to set, and none shown. */
+  readonly movesNoCapital?: true;
   /** The registry's citation, and its research-doc route when it names one (#3623). */
   readonly evidence: string;
   readonly evidenceHref?: string;
@@ -204,6 +209,8 @@ export interface StrategyCardView {
   readonly summary: string;
   /** The name in plain words, under it on the list and the card (#5445). */
   readonly line?: string;
+  /** It sends no order to a broker, so the card takes no allocation (#4535 slice 3a). */
+  readonly movesNoCapital?: true;
   readonly pairs: readonly PairRowView[];
   /** The account's allocation for this strategy, once its owner sets one (#4469 slice 3c). */
   readonly allocation?: StrategyAllocationView;
@@ -246,7 +253,8 @@ export const subscribeRequest = (input: {
   readonly id: string;
   readonly playbookId: string;
   readonly mode: PlaybookMode;
-  readonly capitalAllocated: number;
+  /** Absent only for a playbook that moves no capital (`PlaybookStoreCardView.movesNoCapital`). */
+  readonly capitalAllocated?: number;
   readonly symbols?: readonly string[];
   readonly compoundAllocation?: boolean;
   /** Required by a pair the study does not back (`PairRowView.needsConviction`). */

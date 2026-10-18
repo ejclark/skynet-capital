@@ -8,7 +8,9 @@
  * rather than one sentence. Keyed by playbook id so a house playbook missing an entry here still
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
+import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import type { PlaybookMode } from "../domain/types.js";
+import { movesNoCapital } from "../playbooks/pair-table.js";
 import { type Playbook, type PrintStretches, readsLiveSignals } from "../playbooks/playbook.js";
 import {
   evidenceHref,
@@ -51,6 +53,13 @@ export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   /** The whole basket (#3564). `symbol` stays as its first entry for existing readers; the card
    *  shows every name, so SAURON's ten-name basket never reads as one ticker. */
   readonly symbols: readonly string[];
+  /** The names a subscriber's chips choose among, for a playbook that claims no basket of its own
+   *  (`symbols` is empty so it takes no name from a bot's rules or another playbook). Absent
+   *  everywhere else: the chips are drawn from `symbols`. */
+  readonly pickFrom?: readonly string[];
+  /** It sends no order to a broker (#4535 slice 3a): the form asks for no budget, mode or
+   *  compounding, and the card says so in words. */
+  readonly movesNoCapital?: true;
   /** The citation the playbook carries — verbatim from the registry — and, when it names a
    *  research doc we serve, that doc's route. Ported from the retired Plays cards (#3623). */
   readonly evidence: string;
@@ -110,6 +119,47 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
           "With the setting on and no subscription, it buys nothing: once a day its picks are " +
           "recorded as refused, not from a subscribed playbook, so you can see what it would " +
           "have bought. Picks it already holds are still sold on the next trading day.",
+      },
+    ],
+  },
+  // The shadow scout (#4535 slice 3a). Every fact below is the scout runner's
+  // (`src/autonomous/cond-scout-runner.ts`, `src/playbooks/cond-scout.ts`).
+  "COND-SCOUT": {
+    description:
+      "The shadow scout: on every check it reads each name's price and news conditions, names the " +
+      "condition, and records one hypothesis per name as a simulated probe. It places no orders " +
+      "and no money is at risk — the probes are kept apart from every playbook's record, to test " +
+      "whether a profitable trade exists for every market condition.",
+    enter:
+      "Nothing is bought. At each check it reads each name's RSI, its 20-day average and its " +
+      "momentum. It records a probe for a name whose RSI is 30 or lower with news that is not " +
+      "negative (a rebound within 5 days), or that sits at least 1% above its 20-day average " +
+      "with rising momentum and news that is not negative (a continuation within 14 days) — the " +
+      "two strongest at most, one open probe per name, simulated at the far side of the quote. " +
+      "A name in a downtrend is read but gets no probe: there is no way to bet down.",
+    exitTakeProfit:
+      "Nothing to sell: a probe is closed at the end of its horizon and scored against what the " +
+      "price did.",
+    exitCutLosses:
+      "Nothing to sell: a probe is closed early and marked wrong if the price a seller could get " +
+      "falls 5% below where it opened.",
+    hold:
+      "A name the history cannot yet support stays unread rather than guessed. Paused, it opens " +
+      "no new probes.",
+    notes: [
+      {
+        label: "Which names",
+        text:
+          "The symbol chips are the names it scans, from the ten the bots stream. None picked " +
+          "means all ten. A change lands on its next check, with no restart.",
+      },
+      {
+        label: "Where it runs",
+        text:
+          "It scans on one bot, the first one the bots app runs (Sauron today); subscribed on " +
+          "any other bot, it does nothing. Its probes appear on the Heartbeat's shadow probes " +
+          "card. Without a subscription on that bot, the server's own list of names serves, " +
+          "and with neither it stays dark.",
       },
     ],
   },
@@ -339,6 +389,9 @@ function dipBounceCopy(symbol: string): PlaybookStoreCopy {
   };
 }
 
+/** The names a playbook with no basket of its own lets its subscriber pick from. */
+const PICK_FROM: Readonly<Record<string, readonly string[]>> = { "COND-SCOUT": BOTS_UNIVERSE };
+
 function entryOf(playbook: Playbook): PlaybookStoreEntry {
   const copy = COPY[playbook.id] ?? {
     description: playbook.thesis,
@@ -361,6 +414,8 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     id: playbook.id,
     symbol: playbook.symbols[0] ?? "",
     symbols: playbook.symbols,
+    ...(PICK_FROM[playbook.id] ? { pickFrom: PICK_FROM[playbook.id] } : {}),
+    ...(movesNoCapital(playbook.id) ? { movesNoCapital: true as const } : {}),
     evidence: playbook.evidence,
     ...(href ? { evidenceHref: href } : {}),
     ...(probe ? { window: spanOf(probe), size: playbook.size } : {}),

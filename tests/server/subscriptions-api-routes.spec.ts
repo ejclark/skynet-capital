@@ -237,6 +237,78 @@ describe("serveSubscriptionsApi", () => {
     expect(answered(out)).toEqual({ ok: true });
   });
 
+  describe("the shadow scout places no orders (#4535 slice 3a)", () => {
+    const scout = { id: "acct-mine", playbookId: "COND-SCOUT", mode: "standard" } as const;
+
+    it("subscribe: takes it with no budget, and stores none whatever a client sends", async () => {
+      for (const extra of [{}, { capitalAllocated: 9_000, compoundAllocation: true }]) {
+        const calls: unknown[] = [];
+        const { res, out } = fakeRes();
+        await serveSubscriptionsApi(
+          post({ ...scout, symbols: ["AAPL", "NVDA"], ...extra }),
+          res,
+          "/api/playbook-store/subscribe",
+          configWith({ subscriptions: storeWith(calls) }),
+          session,
+        );
+        expect(answered(out)).toEqual({ ok: true });
+        expect(calls).toEqual([
+          {
+            op: "subscribe",
+            id: "acct-mine",
+            sub: {
+              playbookId: "COND-SCOUT",
+              mode: "standard",
+              enabled: true,
+              symbols: ["AAPL", "NVDA"],
+            },
+          },
+        ]);
+      }
+    });
+
+    it("subscribe: still needs a budget for a playbook that does place orders", async () => {
+      const calls: unknown[] = [];
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        post({ id: "acct-mine", playbookId: "S1-NVDA", mode: "standard" }),
+        res,
+        "/api/playbook-store/subscribe",
+        configWith({ subscriptions: storeWith(calls) }),
+        session,
+      );
+      expect(out.status).toBe(400);
+      expect(calls).toEqual([]);
+    });
+
+    it("subscribe: refuses another member's account like any other playbook", async () => {
+      const calls: unknown[] = [];
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        post({ ...scout, id: "someone-elses" }),
+        res,
+        "/api/playbook-store/subscribe",
+        configWith({ subscriptions: storeWith(calls) }),
+        session,
+      );
+      expect(calls).toEqual([]);
+      expect(answered(out)).toMatchObject({ ok: false });
+    });
+
+    it("allocation: refuses to give its strategy any capital", async () => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        post({ id: "acct-mine", strategy: "shadow-scan", capitalAllocated: 5_000 }),
+        res,
+        "/api/playbook-store/allocation",
+        configWith({ subscriptions: storeWith() }),
+        session,
+      );
+      expect(answered(out)).toMatchObject({ ok: false });
+      expect(String(answered(out).error)).toContain("places no orders");
+    });
+  });
+
   it("subscribe: carries a well-formed symbol-targeting filter (#885) through to the store", async () => {
     const calls: unknown[] = [];
     const { res, out } = fakeRes();

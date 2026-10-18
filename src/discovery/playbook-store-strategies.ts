@@ -44,7 +44,7 @@ export interface PairRowEntry extends PairEvidence {
 }
 
 export interface StrategyCardEntry
-  extends Pick<Strategy, "name" | "instrument" | "summary" | "line"> {
+  extends Pick<Strategy, "name" | "instrument" | "summary" | "line" | "movesNoCapital"> {
   readonly strategy: StrategyId;
   readonly screen?: string;
   readonly noScreen?: string;
@@ -83,13 +83,14 @@ export function strategyCatalog(asOfIso: string): readonly StrategyCardEntry[] {
     byStrategy.set(pair.strategy, [...(byStrategy.get(pair.strategy) ?? []), pair]);
   }
   return [...byStrategy].map(([id, pairs]) => {
-    const { name, instrument, summary, line, screen, noScreen } = STRATEGIES[id];
+    const { name, instrument, summary, line, screen, noScreen, movesNoCapital } = STRATEGIES[id];
     return {
       strategy: id,
       name,
       instrument,
       summary,
       line,
+      ...(movesNoCapital ? { movesNoCapital } : {}),
       ...(screen ? { screen } : {}),
       ...(noScreen ? { noScreen } : {}),
       pairs: [...pairs].sort((a, b) => rank(a) - rank(b)).map((pair) => rowOf(pair, asOfIso)),

@@ -4,6 +4,7 @@ import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
 import { LiveCycleRunner } from "../../src/autonomous/live-cycle.js";
 import { SafetyController } from "../../src/autonomous/safety.js";
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
+import { BOTS_UNIVERSE } from "../../src/domain/bots-universe.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
@@ -18,6 +19,7 @@ describe("playbookStoreCatalog", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
       "BETA-SCOUT",
+      "COND-SCOUT",
       "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
@@ -28,8 +30,8 @@ describe("playbookStoreCatalog", () => {
       "SAURON",
       "TACO-DJT",
     ]);
-    // The forced daily pick names no ticker: it picks among the bots' ten names on the day.
-    for (const entry of entries.filter((e) => e.id !== "BETA-SCOUT")) {
+    // The forced daily pick and the shadow scout name no ticker: they read the bots' ten names.
+    for (const entry of entries.filter((e) => e.id !== "BETA-SCOUT" && e.id !== "COND-SCOUT")) {
       expect(entry.symbol.length).toBeGreaterThan(0);
     }
   });
@@ -160,6 +162,37 @@ describe("playbookStoreCatalog", () => {
     expect(hold).toContain(
       "While it is subscribed (on or paused), S1-NVDA stops trading NVDA shares",
     );
+  });
+
+  describe("COND-SCOUT — the shadow scout, subscribable (#4535 slice 3a)", () => {
+    const card = () => {
+      const entry = byId("COND-SCOUT");
+      if (!entry) throw new Error("COND-SCOUT is not in the catalog");
+      return entry;
+    };
+
+    it("claims no name of its own, and lets its owner pick among the bots' ten", () => {
+      expect(card().symbols).toEqual([]);
+      expect(card().pickFrom).toEqual(BOTS_UNIVERSE);
+      expect(card().window).toBeUndefined();
+      expect(card().size).toBeUndefined();
+    });
+
+    it("says plainly it places no orders and puts no money at risk", () => {
+      expect(card().movesNoCapital).toBe(true);
+      expect(card().description).toContain("places no orders and no money is at risk");
+    });
+
+    it("quotes the thresholds the scanner actually uses", () => {
+      expect(card().enter).toContain("RSI is 30 or lower");
+      expect(card().enter).toContain("at least 1% above its 20-day average");
+      expect(card().exitCutLosses).toContain("falls 5% below");
+    });
+
+    it("is the one playbook that moves no capital", () => {
+      const quiet = playbookStoreCatalog().filter((e) => e.movesNoCapital);
+      expect(quiet.map((e) => e.id)).toEqual(["COND-SCOUT"]);
+    });
   });
 
   describe("BETA-SCOUT — the forced daily pick, subscribable (#4642 slice 10)", () => {

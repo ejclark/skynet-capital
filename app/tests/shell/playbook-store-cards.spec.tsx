@@ -112,7 +112,10 @@ function mount(
   render(
     <StrategyCard
       accountId="sauron"
-      strategy={strategyOf([pairOf(c, over.pair)])}
+      strategy={{
+        ...strategyOf([pairOf(c, over.pair)]),
+        ...(c.movesNoCapital ? { movesNoCapital: true as const } : {}),
+      }}
       cardsById={new Map([[c.id, c]])}
       canManage
       delegation={over.delegation ?? OPEN}
@@ -174,6 +177,79 @@ describe("subscribing a bot", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Subscribe" }));
     expect(await screen.findByText("Not today.")).toBeInTheDocument();
+  });
+});
+
+/** #4535 slice 3a: the shadow scout places no orders, so its form asks for no budget, mode or
+ *  compounding, its chips are the names it scans, and its row says it places no orders. */
+describe("the shadow scout card", () => {
+  const scout = (subscription?: SubscriptionView): PlaybookStoreCardView => ({
+    ...card([], subscription),
+    id: "COND-SCOUT",
+    pickFrom: BASKET,
+    movesNoCapital: true,
+  });
+
+  it("asks for no budget, mode or compounding, and posts the picked names with no capital", async () => {
+    const onChanged = mount(scout());
+    expect(screen.queryByLabelText("Capital to delegate ($)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mode")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Compound gains\/losses/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check first" })).not.toBeInTheDocument();
+    expect(screen.getByText("Names to scan")).toBeInTheDocument();
+    expect(screen.getByText(/None picked: it scans all 3\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "CRWV" }));
+    fireEvent.click(screen.getByRole("button", { name: "AAPL" }));
+    expect(screen.getByText(/Scans only AAPL, CRWV\./)).toBeInTheDocument();
+    expect(screen.getByText(/It places no orders, so no money is at risk\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Subscribe" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(posts).toEqual([
+      {
+        url: "/api/playbook-store/subscribe",
+        body: {
+          id: "sauron",
+          playbookId: "COND-SCOUT",
+          mode: "standard",
+          symbols: ["AAPL", "CRWV"],
+        },
+      },
+    ]);
+  });
+
+  it("is headed by the names it reads, offers no ticker picker, and takes no allocation", () => {
+    mount(scout());
+    expect(screen.getByText("The bots' ten names")).toBeInTheDocument();
+    expect(screen.queryByText("Picked on the day")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Pick a ticker/ })).not.toBeInTheDocument();
+  });
+
+  it("says it places no orders on a subscribed row, in place of a mode and a dollar figure", () => {
+    mount(scout({ mode: "standard", enabled: true, symbols: ["NVDA"] }));
+    expect(screen.getByText("On").closest("p")).toHaveTextContent(
+      "● On · places no orders · names: NVDA",
+    );
+  });
+
+  it("names how many it scans when unfiltered, and Edit posts configure with no capital", async () => {
+    mount(scout({ mode: "standard", enabled: false }));
+    expect(screen.getByText("Paused").closest("p")).toHaveTextContent(
+      "‖ Paused · places no orders · all 3 names",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.queryByLabelText("Capital to delegate ($)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "NVDA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toEqual({
+      url: "/api/playbook-store/configure",
+      body: expect.objectContaining({
+        playbookId: "COND-SCOUT",
+        capitalAllocated: null,
+        compoundAllocation: false,
+        symbols: ["NVDA"],
+      }),
+    });
   });
 });
 

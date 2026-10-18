@@ -31,6 +31,7 @@ export type StrategyId =
   | "event"
   | "persona-rules"
   | "forced-pick"
+  | "shadow-scan"
   | "dip-bounce";
 
 export interface Strategy {
@@ -63,6 +64,10 @@ export interface Strategy {
    *  study says stand aside (criterion 2; #4642 settled the wheel on CRWV this way). A strategy
    *  without this flag acts on its study, so a stand-aside is a refusal there. */
   readonly runsOnConviction?: true;
+  /** It sends no order to a broker, so subscribing asks for no budget and shows no money at risk
+   *  (#4535 slice 3a). The Store hides the capital and compounding fields on its card and says so
+   *  in words; the server stores no budget for it whatever a client sends. */
+  readonly movesNoCapital?: true;
 }
 
 /** Each strategy declares its screen (slice 1: one run costs 0.74 s and zero tokens). */
@@ -139,6 +144,16 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
       "A few small picks on a quiet session, sold the next trading day, to test the order path.",
     instrument: "shares",
     noScreen: "It tests the order path on a quiet day; no ticker is chosen for fit.",
+  },
+  "shadow-scan": {
+    id: "shadow-scan",
+    name: "the shadow scout",
+    line: "Reads market conditions, places no orders",
+    summary:
+      "Reads each name's conditions on every check and records one hypothesis per name as a simulated probe; it places no orders.",
+    instrument: "shares",
+    movesNoCapital: true,
+    noScreen: "It scans the bots' ten names; no ticker is chosen for fit.",
   },
   "dip-bounce": {
     id: "dip-bounce",
@@ -363,6 +378,18 @@ const PAIRS: readonly Pair[] = [
     },
   },
   {
+    // The condition scanner (#4535 slice 3a): subscribable so an owner arms it and picks its names
+    // in the Store; it records simulated probes only and moves no capital. No study stands behind
+    // it yet — it exists to gather the evidence for one (#3651).
+    id: "COND-SCOUT",
+    strategy: "shadow-scan",
+    symbols: [],
+    evidence: {
+      status: "not-studied",
+      call: "Read each name's conditions on every check and record one hypothesis per name as a simulated probe. It places no orders; the probes are the evidence a later study scores.",
+    },
+  },
+  {
     // #5489 slice 2: both dip-to-bounce pairs run observe-only (`observeOnly`); the re-run on fresh
     // bars on or after 2027-01-15 is the study's falsifier, so it is the shelf date too.
     id: "MU-DIP-BOUNCE",
@@ -411,6 +438,13 @@ export function pairTable(): readonly Pair[] {
 /** The pair an id names — the only way from an id to its strategy and ticker. */
 export function findPair(id: string): Pair | undefined {
   return PAIRS.find((pair) => pair.id === id);
+}
+
+/** Whether a playbook sends no order to a broker (#4535 slice 3a), so subscribing to it carries no
+ *  budget. An id the table does not know moves capital, the safe default. */
+export function movesNoCapital(playbookId: string, lookup = findPair): boolean {
+  const pair = lookup(playbookId);
+  return pair !== undefined && STRATEGIES[pair.strategy].movesNoCapital === true;
 }
 
 /** The pair for a strategy on a ticker — the only way to an id from its parts. Undefined means no

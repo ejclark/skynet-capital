@@ -59,19 +59,42 @@ export function preflightLine(answer: PreflightAnswer): { glyph: string; text: s
     : { glyph: "✓", text: "Clear: the feed has a price and the account can take it." };
 }
 
+/** What the chips mean right now, in words. A playbook that sends no order scans names; every
+ *  other one opens positions in them. */
+function symbolsHint(
+  basket: readonly string[],
+  picked: readonly string[],
+  scanOnly: boolean,
+): string {
+  const none = picked.length === 0;
+  if (scanOnly) {
+    const aim = none
+      ? `None picked: it scans all ${basket.length}.`
+      : `Scans only ${picked.join(", ")}.`;
+    return `${aim} It places no orders, so no money is at risk. A change lands on its next check.`;
+  }
+  const aim = none
+    ? `None picked: it may open positions in all ${basket.length}.`
+    : `Opens new positions only in ${picked.join(", ")}.`;
+  return `${aim} Exits still manage anything it already holds.`;
+}
+
 /** Toggle chips for the symbols filter. None picked = the whole basket, said in words. */
 function SymbolAim({
   basket,
   picked,
+  scanOnly = false,
   onToggle,
 }: {
   readonly basket: readonly string[];
   readonly picked: readonly string[];
+  /** A playbook that sends no order reads names; it has no entries or exits to speak of. */
+  readonly scanOnly?: boolean;
   readonly onToggle: (symbol: string) => void;
 }): ReactElement {
   return (
     <fieldset className="pb-symbols">
-      <legend>Symbols — new entries only</legend>
+      <legend>{scanOnly ? "Names to scan" : "Symbols — new entries only"}</legend>
       <div className="pb-symbols-chips">
         {basket.map((symbol) => (
           <FilterChip
@@ -84,12 +107,7 @@ function SymbolAim({
           </FilterChip>
         ))}
       </div>
-      <p className="pb-symbols-hint">
-        {picked.length === 0
-          ? `None picked: it may open positions in all ${basket.length}.`
-          : `Opens new positions only in ${picked.join(", ")}.`}{" "}
-        Exits still manage anything it already holds.
-      </p>
+      <p className="pb-symbols-hint">{symbolsHint(basket, picked, scanOnly)}</p>
     </fieldset>
   );
 }
@@ -139,18 +157,22 @@ export function SubscribeForm({
   const uncappedId = useId();
   const compoundId = useId();
   const capitalAllocated = Number(capital);
+  // A playbook that sends no order has no budget, mode or compounding to ask for (#4535 slice 3a).
+  const noCapital = card.movesNoCapital === true;
+  const basket = card.pickFrom ?? card.symbols;
   // An edit never asks: the owner's conviction is stated and re-dated on the row (`ConvictionPanel`).
   const asksConviction = needsConviction && !editing;
   const conviction = asksConviction ? convictionOf(reason, checkOn) : undefined;
   const valid =
-    (uncapped ||
+    (noCapital ||
+      uncapped ||
       (capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0)) &&
     (!asksConviction || conviction !== undefined);
   // Basket order, whatever order they were tapped in.
-  const symbols = card.symbols.filter((s) => picked.includes(s));
+  const symbols = basket.filter((s) => picked.includes(s));
   // A saved filter naming symbols the basket no longer holds (an API subscribe, a retired ticker)
   // cannot be drawn as chips. Say so rather than let a save quietly widen it to the whole basket.
-  const stale = (editing?.symbols ?? []).filter((s) => !card.symbols.includes(s));
+  const stale = (editing?.symbols ?? []).filter((s) => !basket.includes(s));
   const toggle = (symbol: string) =>
     setPicked((now) => (now.includes(symbol) ? now.filter((s) => s !== symbol) : [...now, symbol]));
 
@@ -160,7 +182,7 @@ export function SubscribeForm({
           id: accountId,
           playbookId: card.id,
           mode,
-          capitalAllocated: uncapped ? null : capitalAllocated,
+          capitalAllocated: noCapital || uncapped ? null : capitalAllocated,
           symbols,
           compoundAllocation,
         })
@@ -168,7 +190,7 @@ export function SubscribeForm({
           id: accountId,
           playbookId: card.id,
           mode,
-          capitalAllocated,
+          ...(noCapital ? {} : { capitalAllocated }),
           ...(symbols.length > 0 ? { symbols } : {}),
           ...(compoundAllocation ? { compoundAllocation: true } : {}),
           ...(conviction ? { conviction } : {}),
@@ -226,15 +248,26 @@ export function SubscribeForm({
           />
         </>
       ) : null}
-      <div className="field">
-        <label htmlFor={modeId}>Mode</label>
-        <select id={modeId} value={mode} onChange={(e) => setMode(e.target.value as PlaybookMode)}>
-          <option value="conservative">Conservative</option>
-          <option value="standard">Standard</option>
-          <option value="aggressive">Aggressive</option>
-        </select>
-      </div>
-      {offerUncapped ? (
+      {noCapital ? (
+        <p className="pb-form-note">
+          It places no orders, so there is no budget, mode or compounding to set. It reads the names
+          below and records simulated probes.
+        </p>
+      ) : (
+        <div className="field">
+          <label htmlFor={modeId}>Mode</label>
+          <select
+            id={modeId}
+            value={mode}
+            onChange={(e) => setMode(e.target.value as PlaybookMode)}
+          >
+            <option value="conservative">Conservative</option>
+            <option value="standard">Standard</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
+      )}
+      {offerUncapped && !noCapital ? (
         <div className="field field-checkbox">
           <input
             id={uncappedId}
@@ -247,7 +280,7 @@ export function SubscribeForm({
           </label>
         </div>
       ) : null}
-      {uncapped ? null : (
+      {uncapped || noCapital ? null : (
         <div className="field">
           <label htmlFor={capitalId}>Capital to delegate ($)</label>
           <input
@@ -261,27 +294,29 @@ export function SubscribeForm({
           />
         </div>
       )}
-      {card.symbols.length > 1 ? (
-        <SymbolAim basket={card.symbols} picked={symbols} onToggle={toggle} />
+      {basket.length > 1 ? (
+        <SymbolAim basket={basket} picked={symbols} scanOnly={noCapital} onToggle={toggle} />
       ) : null}
-      <div className="field field-checkbox">
-        <input
-          id={compoundId}
-          type="checkbox"
-          checked={compoundAllocation}
-          onChange={(e) => setCompoundAllocation(e.target.checked)}
-        />
-        <label htmlFor={compoundId}>
-          Compound gains/losses into allocation — a profitable run grows this budget, a losing one
-          shrinks it. Off by default.
-        </label>
-      </div>
+      {noCapital ? null : (
+        <div className="field field-checkbox">
+          <input
+            id={compoundId}
+            type="checkbox"
+            checked={compoundAllocation}
+            onChange={(e) => setCompoundAllocation(e.target.checked)}
+          />
+          <label htmlFor={compoundId}>
+            Compound gains/losses into allocation — a profitable run grows this budget, a losing one
+            shrinks it. Off by default.
+          </label>
+        </div>
+      )}
       {stale.length > 0 ? (
         <p className="pb-form-note">
           Its saved filter names {stale.join(", ")}, which {stale.length === 1 ? "isn't" : "aren't"}{" "}
           in this playbook's symbols.{" "}
           {symbols.length === 0
-            ? `Saving with nothing picked lets new entries open in all ${card.symbols.length}.`
+            ? `Saving with nothing picked lets new entries open in all ${basket.length}.`
             : "Saving keeps only the symbols picked above."}
         </p>
       ) : null}
@@ -301,7 +336,7 @@ export function SubscribeForm({
         >
           {label}
         </button>
-        {editing ? null : (
+        {editing || noCapital ? null : (
           <button
             type="button"
             className="btn mc-btn"
