@@ -409,8 +409,11 @@ jobs:
       # everything else sits in Backlog on the Orchestration board for an explicit `ready`
       # (`triageFeedbackDecision`'s header has the full rule). Never claims a lease — that's still
       # only `claimFeedback`'s job, below, once `ready` actually lands.
+      #
+      # `fast-track` too (#5667): a mid-build bug is filed `bug` + `fast-track`, often without
+      # `feedback`, and never reached triage — 23 of 23 open bugs sat without `ready` on 2026-10-18.
       - name: Triage a freshly-filed feedback issue
-        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && contains(fromJSON('["feedback","fast-track"]'), github.event.label.name)
         # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
         # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
         env:
