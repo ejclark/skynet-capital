@@ -66,6 +66,8 @@ export interface ConvictionGateDeps {
 interface RecordGroup {
   readonly checkOn: string;
   readonly subs: PlaybookSubscription[];
+  /** The record's owner accepts assignment, so only net P/L is read (`Conviction.acceptsAssignment`). */
+  readonly acceptsAssignment: boolean;
 }
 
 interface Checks {
@@ -82,13 +84,17 @@ function checksOf(deps: ConvictionGateDeps, log: (line: string) => void): Checks
   const own: Checks["own"][number][] = [];
   const records = new Map<string, RecordGroup>();
   for (const sub of deps.subscriptions) {
-    const check = statedCheck(sub, deps.convictionOf ?? lookupConviction);
+    const lookup = deps.convictionOf ?? lookupConviction;
+    const check = statedCheck(sub, lookup);
     if (sub.enabled && check.note) log(`${check.note} — checking its own conviction instead`);
     if (!check.checkOn) continue;
     if (check.from === "record" && check.convictionId !== undefined) {
       const group = records.get(check.convictionId);
       if (group) group.subs.push(sub);
-      else records.set(check.convictionId, { checkOn: check.checkOn, subs: [sub] });
+      else {
+        const acceptsAssignment = lookup(check.convictionId)?.acceptsAssignment === true;
+        records.set(check.convictionId, { checkOn: check.checkOn, subs: [sub], acceptsAssignment });
+      }
     } else if (sub.enabled) {
       own.push({ sub, checkOn: check.checkOn });
     }
@@ -211,7 +217,9 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
       return undefined;
     }
     if (steered.readings.length === 0) return undefined;
-    const verdict = checkRecord(group.checkOn, steered.readings);
+    const verdict = checkRecord(group.checkOn, steered.readings, {
+      acceptsAssignment: group.acceptsAssignment,
+    });
     latchedRecords.set(key, verdict);
     log(recordLine(id, group.checkOn, verdict, steered.readings.length));
     return verdict;

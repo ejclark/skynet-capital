@@ -82,7 +82,7 @@ it reads "cut it, or say why you're holding". That is his 2026-10-08 complaint, 
 
 It landed as four claims on the conviction record (3b, 10, 11, 12 — size zero, each with a dated
 falsifier) and one line of risk stance: assignment is accepted, not a failure. It exposes two gaps
-(neither with a twin yet) and one fork:
+(neither with a twin yet) and one fork, since settled:
 
 - **The guidance never reads his conviction** — WHEN the member holds a stated conviction on the
   symbol, position guidance shall show it beside the research stance, with its check date and the
@@ -90,9 +90,10 @@ falsifier) and one line of risk stance: assignment is accepted, not a failure. I
 - **Play the cycle** — WHEN a pullback reaches the cycle study's floor band, the app shall say when
   past upswings from there peaked, so a take-profit can be planned before the bounce. _Needs: a
   peak-timing study (claim 12); the cycle study times the way back, not the next peak — #4952._
-- **His stance vs. the wheel's retire test** — the record now says assignment is fine; the
-  conviction check still retires the CRWV wheel when more than 1 in 3 sold puts finish in the money
-  (`src/playbooks/conviction-check.ts`). A fork for him, not a gap.
+- **His stance vs. the wheel's retire test — settled 2026-10-18.** The record says assignment is
+  fine, and the conviction check used to retire the CRWV wheel when more than 1 in 3 sold puts
+  were assigned. His call: stop it only if it is losing money overall. Done as `acceptsAssignment`
+  on the record (`src/playbooks/conviction-check.ts`).
 
 ## 2 — NVDA long calls: run-up, pullback, no exit plan
 

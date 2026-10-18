@@ -185,6 +185,29 @@ describe("checkRecord — a conviction record's check over every pair it steers 
     expect(verdict.reason).toContain("2 of 5 sold puts finished in the money");
   });
 
+  it("judges an owner who accepts assignment on net P/L alone (Eric, 2026-10-18)", () => {
+    const assigned = [
+      reading(WHEEL, 900, { putsClosed: 5, putsAssigned: 2 }),
+      reading(LONG_CALL, 10),
+    ];
+    expect(checkRecord("2027-01-29", assigned, { acceptsAssignment: true })).toEqual({
+      pass: true,
+      netPl: 910,
+      stopped: [],
+      reason: "",
+    });
+    // the money still stops it: a loss together fails the view whatever the owner accepts
+    const losing = checkRecord(
+      "2027-01-29",
+      [reading(WHEEL, -400, { putsClosed: 5, putsAssigned: 2 })],
+      {
+        acceptsAssignment: true,
+      },
+    );
+    expect(losing.pass).toBe(false);
+    expect(losing.stopped).toEqual(["CRWV-WHEEL"]);
+  });
+
   it("reads one pair exactly as a single pair's check does", () => {
     for (const net of [-120, 0, 230]) {
       const single = checkConviction(WHEEL, "2027-01-29", ledger({ realizedPl: net }), net);

@@ -148,10 +148,15 @@ export interface RecordVerdict {
  * sum of their net P/L below $0 fails the view and stops new entries on EVERY pair it steers, so
  * a gain on one pair holds a loss on another, and a loss on all of them stops all of them. A
  * strategy's own retire test (the wheel's 1 in 3 puts in the money) is a fact about that strategy,
- * not about the view: it stops its own pair even when the view held. Exits never stop — the gate
+ * not about the view: it stops its own pair even when the view held — unless the record's owner
+ * accepts assignment, when the money is the only test. Exits never stop — the gate
  * only drops opens (`with-conviction-gate.ts`).
  */
-export function checkRecord(checkOn: string, readings: readonly SteeredReading[]): RecordVerdict {
+export function checkRecord(
+  checkOn: string,
+  readings: readonly SteeredReading[],
+  { acceptsAssignment = false }: { readonly acceptsAssignment?: boolean } = {},
+): RecordVerdict {
   const netPl = Math.round(readings.reduce((sum, r) => sum + r.net, 0) * 100) / 100;
   if (netPl < 0) {
     const names = readings.map((r) => pairName(r.pair)).join(" + ");
@@ -162,8 +167,9 @@ export function checkRecord(checkOn: string, readings: readonly SteeredReading[]
       reason: `${names}: net P/L is ${dollars(netPl)} together at the ${checkOn} check`,
     };
   }
+  // An owner who accepts assignment is judged on the money alone (`Conviction.acceptsAssignment`).
   const retired = readings.flatMap((r) => {
-    const why = retireFailure(r.pair, checkOn, r.ledger);
+    const why = acceptsAssignment ? undefined : retireFailure(r.pair, checkOn, r.ledger);
     return why ? [{ id: r.pair.id, why }] : [];
   });
   return {
