@@ -72,6 +72,8 @@ export class SafetyController {
   private readonly now: () => number;
   private tripped: HaltReason | null = null;
   private baselineEquity: number | null = null;
+  /** The market day the baseline belongs to; null until the first `rollDay`. */
+  private baselineDay: string | null = null;
   private consecutiveErrors = 0;
   private readonly orderTimes: number[] = [];
   private readonly ladder: RiskLadder;
@@ -105,8 +107,33 @@ export class SafetyController {
     this.consecutiveErrors = 0;
     this.orderTimes.length = 0;
     this.baselineEquity = null;
+    this.baselineDay = null;
     this.reading = null;
     this.lastTier = null;
+  }
+
+  /**
+   * Start the daily-loss breaker's day. Called every cycle with the cycle's market day; a no-op
+   * until the day changes. Before this existed the baseline was set once per PROCESS, so "daily"
+   * loss meant loss since the last restart: on a week with no bot deploy it measured against a
+   * number days old (2026-10-18 loop census).
+   *
+   * At a new day the baseline is cleared, and the next `recordEquity` re-anchors it — the same
+   * fallback boot uses when no day-open seed is available. Known gap, smaller than the one it
+   * closes: that first reading is the open's mark, so an overnight gap is not counted against the
+   * new day (a re-seed from Alpaca's `last_equity` would count it; that read lives in the wiring).
+   *
+   * What it never does: re-arm. A tripped breaker stays tripped across the day boundary until the
+   * explicit `reset()` — "a breaker never silently re-arms" holds. And the first call only records
+   * the day, so a boot-time `seedBaseline` for today is kept.
+   */
+  rollDay(day: string): void {
+    if (this.baselineDay === day) return;
+    const first = this.baselineDay === null;
+    this.baselineDay = day;
+    if (first || this.tripped) return;
+    this.baselineEquity = null;
+    this.reading = null;
   }
 
   /**

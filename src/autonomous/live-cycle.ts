@@ -1,3 +1,4 @@
+import { marketDayKey } from "../domain/market-day.js";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
@@ -202,6 +203,7 @@ export class LiveCycleRunner {
   async runCycle(context: MarketContext): Promise<void> {
     const { safety, traders } = this.deps;
     safety.checkContext(context); // data-gap breaker — a blind bot must not trade
+    safety.rollDay(marketDayKey(context.asOf)); // "daily" loss is per market day, not per process
 
     // Daily-loss breaker feed: mark the fleet to this cycle's quotes BEFORE evaluating, so a
     // breach halts this very cycle. A failed read is skipped — the breaker judges real equity
