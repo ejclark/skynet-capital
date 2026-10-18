@@ -293,7 +293,8 @@ export function decisionFrom(
   halted: string | null,
   contextJson: string | null,
   intentRows: readonly StoredIntentRow[],
-  playbookVerdicts: readonly PlaybookVerdict[] = [],
+  /** Absent when the pass said nothing about playbooks; empty when it ran none (#4773). */
+  playbookVerdicts?: readonly PlaybookVerdict[],
 ): DecisionRecord {
   const rawIntents: OrderIntent[] = [];
   const guardedIntents: OrderIntent[] = [];
@@ -320,6 +321,6 @@ export function decisionFrom(
     ...(halted ? { halted } : {}),
     ...(contextJson ? { context: JSON.parse(contextJson) as MarketContext } : {}),
     ...(refusals.length > 0 ? { refusals } : {}),
-    ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
+    ...(playbookVerdicts ? { playbookVerdicts } : {}),
   };
 }
