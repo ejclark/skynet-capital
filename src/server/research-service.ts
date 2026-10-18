@@ -64,6 +64,8 @@ export interface SymbolResearch {
   readonly ledgers: readonly ResearchDoc[];
   /** Studies whose text mentions the symbol (word-boundary match). */
   readonly studies: readonly ResearchDoc[];
+  /** The nearest upcoming event's ledger — the one the symbol's current stance is read from. */
+  readonly nearest: ResearchDoc | null;
   /** Verbatim "Stance & kill switches" excerpt from the nearest upcoming ledger, rendered. */
   readonly stance: { readonly html: string; readonly from: ResearchDoc } | null;
 }
@@ -506,10 +508,10 @@ const tickerIndex = (root: string): readonly { slug: string; tokens: ReadonlySet
   );
 
 /**
- * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
- * no new facts, no summarization, just the join the app never surfaced.
- * No caller since the symbol page was retired (#3816 slice 8); kept for #3962, which wires this
- * full-text search into the R&D symbol filter.
+ * Everything symbol-keyed the repo already holds, assembled — no new facts, no summarization, just
+ * the join. Written for the symbol page retired in #3816 slice 8; read now by the symbol dossier
+ * (`symbol-dossier.ts`) and the symbol summary (`src/research/symbol-outlook.ts`, #4807), which
+ * both take the current stance from `nearest`, so "which ledger speaks for the symbol" is one rule.
  */
 export function symbolResearch(
   symbol: string,
@@ -538,5 +540,5 @@ export function symbolResearch(
       stance = { html: rewriteDocLinks(marked.parse(section) as string), from: nearestDoc };
     }
   }
-  return { symbol: sym, events, ledgers, studies, stance };
+  return { symbol: sym, events, ledgers, studies, nearest: nearestDoc ?? null, stance };
 }

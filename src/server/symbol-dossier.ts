@@ -157,8 +157,7 @@ export function symbolDossier(
   if (!(events.length || pairs.length || ledgers.length || studies.length || killed.length)) {
     return undefined;
   }
-  const nearest = events.find((e) => ledgers.some((d) => d.slug === `events/${e.id}`));
-  const glance = nearest ? glanceOf(`events/${nearest.id}`, root) : undefined;
+  const glance = research?.nearest ? glanceOf(research.nearest.slug, root) : undefined;
   return {
     symbol: sym,
     asOf: today,
