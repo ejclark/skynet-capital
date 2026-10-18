@@ -13,7 +13,7 @@ const IMPORT = /^\s*import\s[^;]*?from\s+["'](\.[^"']+)["']/gm;
 function unresolvedImports(file: string): string[] {
   const source = readFileSync(file, "utf8");
   return [...source.matchAll(IMPORT)]
-    .map((m) => m[1])
+    .map((m) => m[1] ?? "")
     .filter((spec) => !EXTENSIONS.some((ext) => existsSync(resolve(dirname(file), spec + ext))));
 }
 
