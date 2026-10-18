@@ -299,6 +299,9 @@ const short = (p: DeskPosition) => held(p.quantity).short;
 
 /** The first of the three figures: what the position ties up, said for its kind. */
 export interface StakeFigure {
+  /** What the figure is a reserve of — what closing the position frees (#5070 slice 3): the
+   *  cash a sold put sets aside, the shares that cover a sold call; nothing for the rest. */
+  readonly kind: "cash" | "shares" | "spread" | "uncovered" | "paid" | "value";
   readonly label: string;
   readonly figure: string;
   /** What the figure is, in words, under it. */
@@ -335,10 +338,20 @@ export function stakeFigure(position: DeskPosition, book: readonly DeskPosition[
   const occ = parseOccSymbol(position.symbol);
   const { count, short: sold } = held(position.quantity);
   if (!occ) {
-    return { label: "Value", figure: position.value, note: "what the shares are worth now" };
+    return {
+      kind: "value",
+      label: "Value",
+      figure: position.value,
+      note: "what the shares are worth now",
+    };
   }
   if (!sold) {
-    return { label: "Paid", figure: position.costBasis, note: "the most it can lose" };
+    return {
+      kind: "paid",
+      label: "Paid",
+      figure: position.costBasis,
+      note: "the most it can lose",
+    };
   }
   const shares = count * 100;
   const covered = occ.type === "call" && sharesHeld(book, occ.underlying) >= shares;
@@ -346,6 +359,7 @@ export function stakeFigure(position: DeskPosition, book: readonly DeskPosition[
   if (partner) {
     const strike = parseOccSymbol(partner.symbol)?.strike;
     return {
+      kind: "spread",
       label: "Set aside",
       figure: "—",
       note: `part of a spread with your bought ${strike === undefined ? "" : `${strikeText(strike)} `}${occ.type}`,
@@ -353,6 +367,7 @@ export function stakeFigure(position: DeskPosition, book: readonly DeskPosition[
   }
   if (occ.type === "put") {
     return {
+      kind: "cash",
       label: "Cash set aside",
       figure: `$${(occ.strike * shares).toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
       note: `buys ${shares.toLocaleString("en-US")} ${occ.underlying} at ${strikeText(occ.strike)} if assigned`,
@@ -360,11 +375,13 @@ export function stakeFigure(position: DeskPosition, book: readonly DeskPosition[
   }
   return covered
     ? {
+        kind: "shares",
         label: "Shares that cover it",
         figure: `${shares.toLocaleString("en-US")} ${occ.underlying}`,
         note: `sold at ${strikeText(occ.strike)} if assigned`,
       }
     : {
+        kind: "uncovered",
         label: "Set aside",
         figure: "—",
         note: `no ${occ.underlying} shares on this account cover it`,

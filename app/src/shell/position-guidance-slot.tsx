@@ -6,6 +6,7 @@ import { asideFor, asideWords } from "../live/mark-aside";
 import { MARK_GLYPH, MARK_WORD, type PositionMark } from "../live/position-mark";
 import { CONFIDENCE_METER, type RowCall } from "../live/row-call";
 import { LessonTerm } from "./glossary-term";
+import { PositionActs } from "./position-act";
 import type { RowMark } from "./use-row-marks";
 
 /**
@@ -24,7 +25,9 @@ import type { RowMark } from "./use-row-marks";
  * strip, the waiting-earns strip and the three figures. Then what the decision engine says about
  * this position, when it says anything: its sentence ("Collected $255; buying back costs $550")
  * and the lesson the retired pager carried ("What is a breakeven?", a glossary term opened in
- * place), or a playbook that fits the name (#5083). Not now and Undo are the owner's (ownership-gated controls); everyone sees the marks.
+ * place), or a playbook that fits the name (#5083). Then the row's acts (#5070 slice 3,
+ * `position-act.tsx`): Buy back · Roll · Not now, a ticket in place and one recap modal. The acts
+ * and Undo are the owner's (ownership-gated controls); everyone sees the marks.
  * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
  * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
@@ -95,6 +98,7 @@ function DecisionSaid({ decision }: { readonly decision: Decision }): ReactEleme
 
 export function GuidanceSlot({
   position,
+  positions = [],
   row,
   deskId,
   canTrade,
@@ -106,6 +110,8 @@ export function GuidanceSlot({
   onUndo,
 }: {
   readonly position: DeskPosition;
+  /** The account's positions: what a close frees depends on what else is held (slice 3). */
+  readonly positions?: readonly DeskPosition[];
   readonly row: RowMark;
   readonly deskId: string;
   /** The row's call from today's guidance read of this holding, when this browser has one. */
@@ -114,7 +120,8 @@ export function GuidanceSlot({
   readonly decisions?: readonly Decision[];
   /** The position's picture, first in the opened guidance (`PositionPicture`). */
   readonly picture?: ReactNode;
-  /** Does the viewer own this account? Off it, Not now and Undo are not drawn. */
+  /** Does the viewer own this account? Off it, the row's acts (Buy back · Roll · Not now) and
+   *  Undo are not drawn. */
   readonly canTrade: boolean;
   /** The playbook that opened it, as its tag line — the bot owner's alone (#885). */
   readonly playbook?: ReactNode;
@@ -175,23 +182,26 @@ export function GuidanceSlot({
               {call.word}, {call.confidence} confidence — from your guidance read at {call.readAt}.
             </p>
           ) : null}
-          {settable ? (
-            <p className="pos-guide-aside">
-              <button
-                type="button"
-                className="pos-guide-btn"
-                onClick={() => {
-                  onAside();
-                  setOpen(false);
-                }}
-              >
-                Not now
-              </button>
-              <span className="pos-guide-when">
-                {asideWords(asideFor(position.symbol, mark)).full}
-              </span>
-            </p>
-          ) : aside ? (
+          {canTrade ? (
+            <PositionActs
+              deskId={deskId}
+              position={position}
+              positions={positions}
+              {...(call ? { call } : {})}
+              {...(settable
+                ? {
+                    aside: {
+                      when: asideWords(asideFor(position.symbol, mark)).full,
+                      onAside: () => {
+                        onAside();
+                        setOpen(false);
+                      },
+                    },
+                  }
+                : {})}
+            />
+          ) : null}
+          {aside ? (
             <p className="pos-guide-aside">
               <span className="pos-guide-when">{asideWords(aside).full}</span>
             </p>

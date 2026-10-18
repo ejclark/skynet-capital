@@ -214,6 +214,7 @@ describe("the waiting-earns strip", () => {
 describe("the first figure: what the position ties up", () => {
   it("says a sold put's cash set aside, strike × 100", () => {
     expect(stakeFigure(PUT, [PUT])).toEqual({
+      kind: "cash",
       label: "Cash set aside",
       figure: "$8,000",
       note: "buys 100 CRWV at $80 if assigned",
@@ -238,6 +239,7 @@ describe("the first figure: what the position ties up", () => {
   it("claims no cash or shares for a sold leg of a spread, and names its partner", () => {
     const longPut = pos({ symbol: "CRWV261106P00075000", isOption: true, quantity: "1" });
     expect(stakeFigure(PUT, [PUT, longPut])).toEqual({
+      kind: "spread",
       label: "Set aside",
       figure: "—",
       note: "part of a spread with your bought $75 put",

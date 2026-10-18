@@ -199,6 +199,7 @@ export function PositionsBlotter({
     return row ? (
       <GuidanceSlot
         position={p}
+        positions={positions}
         row={row}
         deskId={deskId}
         canTrade={canTrade}
