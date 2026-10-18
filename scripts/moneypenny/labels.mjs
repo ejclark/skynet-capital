@@ -288,9 +288,16 @@ export const parkedReason = (number, labels = []) =>
  * Pure: accepts a REST row, an event payload's issue, or `gh issue view` JSON (state `OPEN`).
  * A missing `state` counts as open — the same reading the claim lanes already gave it.
  *
+ * `needs-session` (#5236) refuses only the AUTOMATED pullers: it marks a remainder a lane handed to
+ * an interactive session, so an unattended build re-pulling it ships nothing (#5214 was claimed
+ * twice after the hand-off). It is not a parking label — `/work-issues` IS the interactive session,
+ * so its CLI passes `{ interactive: true }` and still sees the issue, and `ready` + `needs-session`
+ * stays a legal pair rather than one `feedback-guard.mjs` would have to report.
+ *
+ * @param {{ interactive?: boolean }} [opts] `interactive: true` only from a live session's pull
  * @returns {string | null} why the issue may not be pulled, or null when it may
  */
-export function notPullableReason(issue) {
+export function notPullableReason(issue, { interactive = false } = {}) {
   if (!issue) return "no issue to pull";
   const n = issue.number;
   if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
@@ -301,6 +308,9 @@ export function notPullableReason(issue) {
   if (!isBuildable(issue.labels)) return parkedReason(n, issue.labels);
   if (names.includes(LABELS.inProgress.name)) {
     return `#${n} is already \`in-progress\` — another session or lane is building it`;
+  }
+  if (!interactive && names.includes(LABELS.needsSession.name)) {
+    return `#${n} carries \`needs-session\` — its remainder waits on an interactive session (/work-issues), not a lane`;
   }
   const blockers = openBlockers(issue);
   if (blockers > 0) {
@@ -321,7 +331,7 @@ export function notPullableReason(issue) {
 const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocked_by) || 0;
 
 /** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
-export const pullable = (issue) => notPullableReason(issue) === null;
+export const pullable = (issue, opts) => notPullableReason(issue, opts) === null;
 
 /**
  * WHICH ISSUES THE FEEDBACK LANE BUILDS (#5332): `feedback`, and a `bug` that is not a `plan`.
