@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { FIXED_CLOCK } from "./e2e/determinism";
 import { SHARED_CONFIG } from "./e2e/playwright.shared";
 
 // Visual/behavioral regression suite — a real Chromium clicking through the app, distinct from
@@ -26,5 +27,8 @@ export default defineConfig({
     url: "http://localhost:8787",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    // The browser clock is pinned per page (`freezePage`); this pins the server's for the reads
+    // that compute a date themselves, such as the Council's week label (#4683).
+    env: { SKYNET_FIXED_NOW: FIXED_CLOCK.toISOString() },
   },
 });
