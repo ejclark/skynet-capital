@@ -53,8 +53,9 @@ check with nothing found, apply with nothing left to land. Both are good results
 1. Land every `done` branch as one wave PR (`docs: retire instruction drift — <date>`, via
    `/ship`) — merge them one at a time onto `docs/instruction-drift-<at7>-wave` off `origin/main`;
    a conflict there is two items fixing one passage, so keep the first. The body names the issue
-   the run serves (`Part of #5318` until a trigger files one per run), or
-   `scripts/pr-provenance-scan.mjs` counts the wave as a PR with no issue.
+   the run serves, `Closes #<n>` for the `[instruction-drift]` ticket the push tick filed
+   (`scripts/moneypenny/drift-chore.mjs`), or `scripts/pr-provenance-scan.mjs` counts the wave as
+   a PR with no issue.
 2. Board a branch that touches `CLAUDE.md` on the platter (`scripts/ship.sh platter board
    <branch>`) instead — its how-we-work text is Eric's to edit (its own closing line).
 3. Run each `protectedItems` entry outside grind, whose step 0 blocks it: the three roles as three

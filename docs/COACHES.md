@@ -298,7 +298,9 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   the last run is a week old (`--release` at a model release: every file), and `/grind` over
   [`grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md) reads them
   for files that disagree, stale facts and rules written as history, each finding put to a
-  refuter before it lands. Unscheduled: what triggers it is #5318's open question.
+  refuter before it lands. The push tick's audit files one `needs-session` ticket when it falls
+  due and closes it once a run records the stamp (`scripts/moneypenny/drift-chore.mjs`); the chore
+  edits `.claude/**`, so a live session runs it.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.

@@ -1473,6 +1473,11 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "edit-issue-body": (i) => {
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
+    console.log(`· refreshed the body of #${i.issueNumber}`);
+    return `🔁 refreshed #${i.issueNumber} — \`${i.title}\``;
+  },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
 };

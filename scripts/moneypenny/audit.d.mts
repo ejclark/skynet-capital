@@ -52,6 +52,8 @@ export interface AuditDeps {
   /** The work spigot's dial and the title it currently shows (#3960 criterion 4) — null when it
    *  could not be read, which skips the title sync without touching the other checks. */
   workMode?: WorkModeState | null;
+  /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
+  driftChore?: AuditIntent | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
