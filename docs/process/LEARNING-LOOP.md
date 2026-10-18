@@ -12,12 +12,13 @@ Five moves, repeating: **thin slice → pressure test → find the weakness → 
 enhance the process → back-test.** A loop is "done" for now when the back-test closes clean; it
 reopens the next time the domain needs re-validating, at whatever cadence that domain calls for.
 
-## The anatomy — thirteen fields, nine custom, four fixed
+## The anatomy — fourteen fields
 
 The first nine are **custom-catered per instance** — they are the actual subject matter, different
-every time. The last four are **fixed mechanism** — every instance reuses the same artifacts for
+every time. The next four are **fixed mechanism** — every instance reuses the same artifacts for
 capture and scheduling, which is what makes this a *loop* (compounding across instances) rather than
-an ad hoc one-off process reinvented each time.
+an ad hoc one-off process reinvented each time. The fourteenth (2026-10-18) is both: the iteration
+budget is custom, and the per-iteration record is fixed, so effort compares across loops.
 
 | # | Field | What it answers | Custom or fixed |
 |---|---|---|---|
@@ -34,6 +35,7 @@ an ad hoc one-off process reinvented each time.
 | 11 | **Next check** | A date the next result will be visible, kept in the list below, where the daily digest flags it once it arrives. | Fixed (location), custom (date) |
 | 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
 | 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
+| 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row on the owning issue: its cost (tokens · dollars · wall time) and how far it moved the aim's number. Stop early, and say so, when an iteration moves the number less than the loop states as worth an iteration; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
 
 **Why 11–13 are fixed, not a choice per loop:** a check with no date is never made; a lesson with
 nowhere durable to live gets re-learned; a procedure re-typed from memory each cycle drifts and
@@ -98,7 +100,8 @@ remember) · `missing`.
 
 **Every exercise ends with one census line.** An audit, a study, a scenario run, a retro: name the
 stage of which loop a person still had to do, and route the cheapest one — a build, an issue, or a
-row here. That is how usability work also improves the process that ran it.
+row here — and say how many iterations it took and what each cost (field 14). That is how usability
+work also improves the process that ran it, and how its effort becomes comparable across loops.
 
 **The first census (2026-10-18)** — four read-only auditors, one per family. The shared finding:
 the fixes and gates exist; **the trigger is missing**. Advisory output nobody reads, checks that wait
@@ -108,9 +111,9 @@ for someone to remember, overdue work that goes quiet.
 |---|---|---|
 | Orchestration | Plan cap: 9 of 10 "Waiting" plans had nothing pullable, so every fresh plan (a P1 among them) was refused | built: a started plan holds a seat only while a lane could pull its next work |
 | Orchestration | This registry: 3 checks overdue, owners of 14 of 16 rows closed, none surfaced in 7 digests | built: `scripts/loop-check.mjs` posts due checks on the push tick (#5724) |
-| Bots | A stalled or halted bot is caught only when someone notices no trades (LESSONS: days, then 45 min) | in flight: an alert while the market is open |
+| Bots | A stalled or halted bot is caught only when someone notices no trades (LESSONS: days, then 45 min) | built: an alert while the market is open (#5734) |
 | Bots | "Daily" loss breaker measured loss since the process started | fixed (#5723) |
-| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | in flight: the journeys fixed and loop freshness in the daily config audit; the CI job is a protected-path ask |
+| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real contradiction found, filed and fixed by the lane in under an hour: #5731 → #5737) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
 | Engineering | 11 of 14 debt budgets over, no trigger for the athletes; 14 unlearned incidents ageing out | filed with the follow-ups |
 
 ## Starting a new loop

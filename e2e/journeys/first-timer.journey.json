@@ -30,11 +30,12 @@
         {
           "id": "s2",
           "goto": "/app/accounts",
-          "sees": "the Profile page with no account: 'No account linked yet' where the switcher sits, Milestones pressed, M·01 Onboarding open first, and the table of contents folded one tap below it ('Your milestones', #5258)",
+          "sees": "the Profile page with no account: 'No account linked yet' where the switcher sits, Milestones pressed, M·01 Onboarding's connect steps leading the page, and the table of contents folded one tap below them as 'Your milestones · 3 chapters' (#5256: the steps lead, the contents wait)",
           "ears": "WHEN a member with no linked account opens Profile, the app shall show the Profile page opened on Milestones with the Onboarding chapter open — never a page that links back to itself.",
           "expect": [
             { "text": "No account linked yet", "within": "main" },
-            { "text": "Your milestones" },
+            { "role": "region", "name": "Chapter: Onboarding", "within": "main" },
+            { "text": "Your milestones", "exact": true, "within": "main" },
             { "role": "heading", "name": "Welcome to the league" },
             { "text": "Connect your Alpaca paper account" }
           ],
