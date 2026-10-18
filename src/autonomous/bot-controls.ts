@@ -8,11 +8,13 @@
  *  - **Suspend** (per-bot and global) is DYNAMIC: the runner polls the bridge and composes the
  *    flag into the same `blockedReason` seam the kill switch uses, so a toggle stops a bot within
  *    one poll interval — no restart, no deploy, and the decision audit records the halt honestly.
+ *  - **Forced picks** (`betaPicks`, #4535 slice 2b) is DYNAMIC too: the scout reads the host bot's
+ *    count at every scan, so a change applies on the next check — no restart.
  *  - **Mode** (observe/live) and **hardcore** swap the persona/trader construction, so they apply
  *    at the next `bots` boot. The page says so on the control; nothing pretends otherwise.
  *
  * Env vars remain as break-glass defaults: a control absent from the store falls back to the env
- * (`SKYNET_AUTONOMOUS_MODE`, `SKYNET_HARDCORE_BOTS`), so a lost volume or unreachable bridge can
+ * (`SKYNET_AUTONOMOUS_MODE`, `SKYNET_HARDCORE_BOTS`, `SKYNET_BETA_FORCING`), so a lost volume or unreachable bridge can
  * never do worse than pre-GUI behavior.
  *
  * ONE NON-FLEET FIELD RIDES ALONG: `companionModel` (#1672 slice 4) — Moneypenny's rail isn't a
@@ -33,6 +35,12 @@ export interface BotControls {
   readonly mode?: "observe" | "live";
   /** Run the bot's hardcore research build (boot-applied; only bots with a hardcore build). */
   readonly hardcore?: boolean;
+  /**
+   * How many forced picks the beta scout may place per day on this bot (dynamic — applies on the
+   * next scan). Only the scout's host bot reads it. Absent = the env count (`SKYNET_BETA_FORCING`);
+   * 0 disarms what the env armed. Whether the bot opens any is still its BETA-SCOUT subscription's.
+   */
+  readonly betaPicks?: number;
   /** A fingerprint of the bot's CURRENT stored Alpaca credentials — never the credential itself.
    *  The bots process compares this against its own boot-time credential's fingerprint and, on a
    *  mismatch, pulls the real pair from the separate `/bot-credentials` endpoint. */
@@ -57,6 +65,10 @@ export const EMPTY_CONTROLS: ControlsState = { bots: {} };
 /** The internal bridge path the `bots` process polls (same listener as the insight relay). */
 export const CONTROLS_BRIDGE_PATH = "/controls";
 
+/** Ceiling on `betaPicks`: the scout's "2-3 small picks" has no use for more than a handful, so a
+ *  larger stored number is a typo or a hostile body and is read as unset (the env count stands). */
+export const MAX_BETA_PICKS = 10;
+
 /** Bounded — a fingerprint is 16 hex chars; generous headroom for a future longer digest. */
 const MAX_CREDENTIALS_VERSION_LENGTH = 64;
 
@@ -69,10 +81,18 @@ function parseBot(raw: unknown): BotControls | null {
     raw.credentialsVersion.length <= MAX_CREDENTIALS_VERSION_LENGTH
       ? raw.credentialsVersion
       : undefined;
+  const betaPicks =
+    typeof raw.betaPicks === "number" &&
+    Number.isInteger(raw.betaPicks) &&
+    raw.betaPicks >= 0 &&
+    raw.betaPicks <= MAX_BETA_PICKS
+      ? raw.betaPicks
+      : undefined;
   return {
     ...(typeof raw.suspended === "boolean" ? { suspended: raw.suspended } : {}),
     ...(mode ? { mode } : {}),
     ...(typeof raw.hardcore === "boolean" ? { hardcore: raw.hardcore } : {}),
+    ...(betaPicks !== undefined ? { betaPicks } : {}),
     ...(credentialsVersion ? { credentialsVersion } : {}),
   };
 }
@@ -135,6 +155,15 @@ export function effectiveHardcoreIds(
     if (override ?? envIds.has(id)) out.add(id);
   }
   return out;
+}
+
+/**
+ * The beta scout's forced-pick count: the owner's stored number for the host bot when there is one
+ * (0 disarms what the env armed), else the env count — so an unreachable bridge or a lost volume can
+ * never do worse than pre-GUI behavior (#4535 slice 2b).
+ */
+export function effectiveBetaPicks(stored: number | undefined, envPicks: number): number {
+  return stored ?? envPicks;
 }
 
 /**

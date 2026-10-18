@@ -17,7 +17,9 @@
  *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only. Since
  *                            #4642 slice 10 it opens nothing on its own: a bot opens a position only
  *                            through a playbook it is subscribed to in the Store (exits always run).
- *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
+ *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. The
+ *                            owner's stored count for the first bot (Mission Control `betaPicks`,
+ *                            read every scan, #4535 slice 2b) wins over this one. When
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
  *                            see src/playbooks/beta-scout.ts — and only while the first bot is
@@ -32,6 +34,7 @@
  *                            Flip via autonomy-ops only.
  */
 import { existsSync } from "node:fs";
+import { effectiveBetaPicks } from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
   armMomentumPersistence,
@@ -97,6 +100,7 @@ import {
   announceScout,
   armScoutStaging,
   scoutSkipSymbols,
+  watchScoutPicks,
 } from "./autonomous-scout-staging.js";
 import { resumeWorkingOrders, settlementBook } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
@@ -157,8 +161,13 @@ async function runLive(): Promise<void> {
   // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
   // dashboard trades the last subscriptions received rather than none (#4642 slice 10 review).
   let keptSubscriptions = subscriptionsCache(undefined);
+  // Set once the scout's host roster exists: refreshes it when the owner changes the forced picks.
+  let onScoutPicksPolled: (() => void) | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
-    (state) => void credentials.reconcile(state),
+    (state) => {
+      void credentials.reconcile(state);
+      onScoutPicksPolled?.();
+    },
     undefined,
     (cursor) => replication.onPoll(cursor),
     (snapshot) => {
@@ -301,9 +310,17 @@ async function runLive(): Promise<void> {
       playbookRoster.enabled,
     ),
   );
-  // The forced daily pick's arming (ops, Eric's) — read here because the bot it runs on, the first,
-  // carries it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
+  // The forced daily pick's env arming — read here because the bot it runs on, the first, carries
+  // it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
   const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // ...and its count is the owner's setting for that bot when there is one (Mission Control, read
+  // every scan — #4535 slice 2b), else the env count; 0 from either side is dark.
+  const scoutHostId = botRosters[0]?.bot.persona.id;
+  const scoutPicks = () =>
+    effectiveBetaPicks(
+      scoutHostId ? controls.betaPicks(scoutHostId) : undefined,
+      betaForcing.maxPicks,
+    );
   // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
   // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
   const intradayBars = intradayBarsFeed(currentCredentials);
@@ -316,7 +333,7 @@ async function runLive(): Promise<void> {
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
       {
-        runsScout: betaForcing.maxPicks > 0 && r.bot.persona.id === botRosters[0]?.bot.persona.id,
+        runsScout: scoutPicks() > 0 && r.bot.persona.id === scoutHostId,
         intradayBars: intradayBars.barsOf,
         // An unsubscribed playbook keeps its exits while it still owns an open position (#5609).
         ...(decisionDb
@@ -380,6 +397,10 @@ async function runLive(): Promise<void> {
     botsStream.refresh();
   };
   optionLevels.follow(botRosters, swapIn);
+  onScoutPicksPolled = watchScoutPicks(scoutPicks, () => {
+    const host = botRosters[0];
+    if (host) swapIn(0, host);
+  });
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
   // rotation that landed while this process was down is caught here, using the snapshot
   // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
@@ -400,9 +421,8 @@ async function runLive(): Promise<void> {
   // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off), which stops new picks only:
   // the picks it holds are still sold on the next trading day. Armed, it still opens only while its
   // host bot is subscribed to BETA-SCOUT (#4642 slice 10).
-  const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
-  announceScout(betaForcing, traders[0]?.personaName);
+  announceScout({ ...betaForcing, maxPicks: scoutPicks() }, traders[0]?.personaName);
   const managedSymbols = scoutSkipSymbols(botRosters[0]); // traders[0]'s account
 
   // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
@@ -467,7 +487,7 @@ async function runLive(): Promise<void> {
     safety,
     blockedReason,
     ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
-    scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
+    scout: buildScoutDeps(scoutPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,
       risk,

@@ -95,6 +95,30 @@ export function announceScout(
   );
 }
 
+/**
+ * The poll-time half of the owner's live forced-pick count (#4535 slice 2b): call the returned
+ * function after every `/controls` poll. The scout itself reads the count at each scan, so this only
+ * has to refresh what the count also shows — the host's roster, where the scout rides along for the
+ * roll call only while it is armed — and say so in the log. Quiet while the count holds still; a
+ * failed `apply` is not recorded as seen, so the next poll tries again.
+ */
+export function watchScoutPicks(
+  read: () => number,
+  apply: () => void,
+  log: (line: string) => void = console.log,
+): () => void {
+  let seen = read();
+  return () => {
+    const now = read();
+    if (now === seen) return;
+    apply();
+    log(
+      `[beta-scout] forced picks per day ${seen} → ${now} (the owner's setting; applied with no restart)`,
+    );
+    seen = now;
+  };
+}
+
 /** The names the beta scout leaves to a bot's playbooks: `managedSymbols`, the very set
  *  `withPlaybooks` takes from the bot's persona. A bot subscribed to its OWN rules (Sauron to
  *  SAURON) therefore keeps the scout on the same names as before it subscribed — those orders are
