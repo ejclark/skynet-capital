@@ -83,8 +83,6 @@ rule:**
 ## Open questions (for a Graphify-scoped session)
 
 - Confirm `graph.json`'s real schema and bind the roles above to concrete fields.
-- Does the mapper expose per-node centrality scores (to rank anchor candidates) and community
-  membership directly, or must BCP derive them?
 - Should BCP emit a machine-readable `brand.json` (tokens + anchor→node bindings + scope rules) so
   *Enforce* can be partly automated (lint deliverables against the brand per scope)?
 - Where should this spec live long-term — here, in Graphify, or a shared meta-repo?
