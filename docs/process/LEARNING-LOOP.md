@@ -135,9 +135,10 @@ for someone to remember, overdue work that goes quiet.
 
 ## Loops running now
 
-One row per loop. The daily digest (`node scripts/doctrine-scan.mjs --due`, run by the
-secretary-digest Routine) lists any row whose **Next check** date has arrived while its **State**
-is still live, under Needs-you. Settle a check by doing it, then moving the date forward — or by
+One row per loop. `node scripts/doctrine-scan.mjs --due` lists any row whose **Next check** date
+has arrived while its **State** is still live (`source: "loop-list"`). The secretary-digest
+Routine's stored prompt does not run that scan (checked 2026-10-19), so the push-tick check below is
+what actually surfaces a due row. Settle a check by doing it, then moving the date forward — or by
 ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that isn't a date is never
 flagged, so point it at the loop's own scanner when one already exists rather than double-flag, or
 name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an

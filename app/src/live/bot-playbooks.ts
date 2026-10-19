@@ -6,8 +6,9 @@
  * turns them into one card each, with one state word, and the counted line that heads them.
  *
  * ONE STATE WORD PER CARD, the first that applies: can't fire → paused → off → starts next pass →
- * the verdict. Off playbooks are not cards: they are named once in the section's footer, so a
- * house playbook nobody switched on is still said out loud without padding the list.
+ * waiting on a confirmed date (a window due today, held by an estimated print, #4479) → the
+ * verdict. Off playbooks are not cards: they are named once in the section's footer, so a house
+ * playbook nobody switched on is still said out loud without padding the list.
  *
  * Every state is a glyph and a word, never hue alone (`docs/BRAND.md` → Accessibility), and every
  * glyph on the counted line is its own.
@@ -25,7 +26,13 @@ import {
 /** A card's one state: the roll call's when it wins, else the playbook's verdict. "armed" is a
  *  roll-call line that is on with no verdict beside it — the server never sends one, but a card
  *  must still say something true if it ever does. */
-export type CardState = "blocked" | "paused" | "starting" | "armed" | PlaybookVerdictState;
+export type CardState =
+  | "blocked"
+  | "paused"
+  | "starting"
+  | "armed"
+  | "unconfirmed"
+  | PlaybookVerdictState;
 
 export interface PlaybookCard {
   /** Stable across refetches: the playbook's id, or the verdict's slot when the id is withheld. */
@@ -65,6 +72,7 @@ const ORDER: readonly CardState[] = [
   "observing",
   "starting",
   "armed",
+  "unconfirmed",
   "paused",
   "blocked",
 ];
@@ -122,6 +130,14 @@ export const CARD_WORDS: Record<
     counted: (n) => `${n === 1 ? "starts" : "start"} next pass`,
   },
   armed: { glyph: "◉", word: ROLL_CALL_WORDS.armed.word, tag: "on", counted: () => "on" },
+  // Its window is due and only the company's date is missing (#4479). A question mark, because
+  // the one thing it lacks is an answer; it borrows no circle the waiting and on states use.
+  unconfirmed: {
+    glyph: "?",
+    word: "Waiting on a confirmed date",
+    tag: "date unconfirmed",
+    counted: () => "waiting on a confirmed date",
+  },
   paused: {
     glyph: ROLL_CALL_WORDS.paused.glyph,
     word: "Paused",
@@ -137,11 +153,16 @@ export const CARD_WORDS: Record<
 };
 
 function cardFromLine(line: RollCallLine, verdict: PlaybookHeartbeat | undefined): PlaybookCard {
-  // can't fire → paused → starts next pass win over the verdict; an armed line takes the verdict.
+  // can't fire → paused → starts next pass win over the verdict; an armed line takes the verdict,
+  // unless the verdict is "no window" and the roll call names the estimate holding one that is due.
+  // A verdict that holds or trades wins: the bots app's calendar may be newer than this one's.
+  const held = (line.unconfirmed?.length ?? 0) > 0 && (!verdict || verdict.state === "no-window");
   const state: CardState =
     line.status === "blocked" || line.status === "paused" || line.status === "starting"
       ? line.status
-      : (verdict?.state ?? "armed");
+      : held
+        ? "unconfirmed"
+        : (verdict?.state ?? "armed");
   const mode = line.mode ?? verdict?.mode;
   return {
     key: line.playbookId,

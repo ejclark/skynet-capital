@@ -385,9 +385,18 @@ research; non-negotiable"*).
 
       - run: npm ci
 
+      # The App token, never GITHUB_TOKEN: a PR opened with GITHUB_TOKEN emits no
+      # `pull_request` event, so `verify` never runs (this file's header, PR #371).
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # No `gh pr merge` here: pipeline.yml's `arm auto-merge` job is the only arming path (#4094).
       - name: Compose the open week's study, and open a PR if it moved
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           npm run research:week
@@ -408,11 +417,11 @@ research; non-negotiable"*).
           git checkout -b "$BRANCH"
           git add docs/research/weeks
           git commit -m "docs(research): recompose the open week's study from the ledgers in range"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
             --title "docs(research): recompose the open week's study from the ledgers in range" \
             --body "Composed by \`npm run research:week\` on the merge tick. Every cell is a ledger's own \`This week\` row, quoted — this study makes no call of its own. Contract: docs/process/EVENT-RESEARCH.md → *The weekly study genre*."
-          gh pr merge --squash --auto "$BRANCH"
 ```
 
 If he would rather have the literal Sunday clock the brief named, the same job takes

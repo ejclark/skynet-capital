@@ -137,6 +137,55 @@ describe("botPlaybooks — the roll call and the verdict table become one card e
     ]);
   });
 
+  /** #4479 slice 2 (EARS 4): a window due today and held only by an estimated print date is not
+   *  "waiting for its window" — it is waiting on the company's date, and the card says so. */
+  it("calls a playbook held by an estimate waiting on a confirmed date, not on its window", () => {
+    const held: RollCallLine = {
+      playbookId: "S1-NVDA",
+      status: "armed",
+      mode: "standard",
+      reason:
+        "On, but NVDA's 2026-11-18 print is still an estimate — its window would be open now if that date were confirmed, and only a confirmed date opens a position.",
+      unconfirmed: [{ symbol: "NVDA", date: "2026-11-18" }],
+    };
+    const lines = rollCall.map((l) => (l.playbookId === "S1-NVDA" ? held : l));
+    const { cards, counts } = botPlaybooks({ ...sauron, rollCall: lines });
+    const s1 = cards.find((c) => c.playbookId === "S1-NVDA");
+    expect(s1?.state).toBe("unconfirmed");
+    expect(CARD_WORDS.unconfirmed.word).toBe("Waiting on a confirmed date");
+    expect(s1 && cardFact(s1)).toEqual({
+      short: `NVDA's ${entryDateText("2026-11-18")} print is still an estimate`,
+      more: "Its window would be open now if that date were confirmed, and only a confirmed date opens a position.",
+    });
+    expect(
+      counts.map(({ state, count }) => `${count} ${CARD_WORDS[state].counted(count)}`),
+    ).toEqual([
+      "1 trading on live signals",
+      "3 waiting for a window",
+      "1 waiting on a confirmed date",
+      "1 can't fire",
+    ]);
+  });
+
+  it("lets a verdict that holds its window win over a stale estimate on the roll call", () => {
+    // The bots app's own calendar may be newer than this process's: a pass that says "long" is
+    // the bot's word that the date is confirmed where it trades.
+    const lines: RollCallLine[] = [
+      {
+        playbookId: "S1-NVDA",
+        status: "armed",
+        reason: "On, but NVDA's 2026-11-18 print is still an estimate.",
+        unconfirmed: [{ symbol: "NVDA", date: "2026-11-18" }],
+      },
+    ];
+    const { cards } = botPlaybooks({
+      ...sauron,
+      playbooks: [verdict("S1-NVDA", "long")],
+      rollCall: lines,
+    });
+    expect(cards[0]?.state).toBe("long");
+  });
+
   it("gives every state a glyph of its own — the line never leans on hue", () => {
     const glyphs = Object.values(CARD_WORDS).map((w) => w.glyph);
     expect(new Set(glyphs).size).toBe(glyphs.length);

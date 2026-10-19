@@ -3,7 +3,7 @@ name: redesign
 description: >-
   Run one screen's redesign from Eric's notes to a filed build, in four stages: align (his marks on
   clean frames first, then the problems Claude found, all pinned on one frame), scope (goal,
-  outcomes, ranked problems, agreed with "that's the list"), work the problem (design rounds sized
+  outcomes, ranked problems, agreed in his words, never a set phrase), work the problem (design rounds sized
   by the scope: 1 shape to confirm, 2–3 for a fork, up to 5 to explore), and learn forward (a retro
   before archiving that routes his notes to the loop, his reader profile and the personas). Upstream
   problems go to the ledger in docs/IA.md §10. Use when Eric names a screen to redesign ("redesign

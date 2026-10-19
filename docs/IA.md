@@ -1050,9 +1050,6 @@ scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
 ```mermaid
 ---
 title: Seven groups, their homes, and the joints between them
-config:
-  look: handDrawn
-  handDrawnSeed: 7
 ---
 flowchart TD
     accTitle: The wargamed grouping and its homes
@@ -1076,10 +1073,11 @@ flowchart TD
     LEAGUE ==>|"week · playbook"| RD
 ```
 
-_Caption — the decision, not yet built: seven groups, the page each one calls home, and the
-ten joints (thick edges, labelled with the key they share) that render on each other's pages
-as a row, a line or a link; drawn from §5 and §6, sketch texture because nothing here is
-shipped._
+_Caption — the decision, built by slices 2a–2d (#3807): seven groups, the page each one calls
+home, and the ten joints (thick edges, labelled with the key they share) that render on each
+other's pages as a row, a line or a link; drawn from §5 and §6, classic look because every home
+here is shipped — the joints' open defects are §6's right-hand column, and the tower's form
+(3a/3b) is not drawn here._
 
 **The grouping, in one paragraph.** A signed-in member's information falls into seven groups,
 each with one key and one home. **The book** (key: account — everything an account holds, is

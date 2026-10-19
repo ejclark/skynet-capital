@@ -101,10 +101,13 @@ session applies it to its own filing. The triage rules for *that* build session 
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
-Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
-brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
-and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
-P/L, leaderboards, or bot cards — is ordinary buildable work.
+Protected: workflow files and the lanes' own prompts, the envelope and its gate, auth and the invite
+gate, credentials (the env files and the two narrow gates that turn a broker credential into a usable
+client), the model dials that set the real per-token bill, spend caps and the spend breaker, hosting
+and deploy config, and new **runtime** dependencies. Everything else is ordinary buildable work —
+including the brokerage clients, order placement/sizing, the risk guards and playbook definitions,
+opened on purpose in #928 (`envelope.json` → `$openOnPurpose`), and anything that merely *renders*
+trades, P/L, leaderboards, or bot cards.
 
 Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
 

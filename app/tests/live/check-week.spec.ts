@@ -7,7 +7,7 @@ import {
   tradesFor,
   weekVerdict,
 } from "../../src/live/check-week";
-import type { CheckWeek, PlaybookHeartbeat } from "../../src/live/heartbeat";
+import type { CheckWeek, PlaybookHeartbeat, WeekLane } from "../../src/live/heartbeat";
 
 /** #5073 slice 2 — the pure half of drawing a bot's week: whose lane is whose, where an instant
  *  sits, and the words in place of the shapes. */
@@ -103,13 +103,31 @@ describe("weekVerdict", () => {
 describe("laneSummary", () => {
   it("says the answer given most of the half hours asked, and the trades placed", () => {
     const lane = week.lanes[2];
-    expect(laneSummary(lane, [], false)).toBe(
+    expect(laneSummary(lane, [], "long")).toBe(
       "This week: wants to hold in 2 of 3 half hours asked.",
     );
-    expect(laneSummary(undefined, week.trades.slice(0, 1), false)).toBe(
+    expect(laneSummary(undefined, week.trades.slice(0, 1), "armed")).toBe(
       "This week: no check asked it. 1 trade placed.",
     );
-    expect(laneSummary(lane, [], true)).toBe("This week: can't fire.");
+    expect(laneSummary(lane, [], "blocked")).toBe("This week: can't fire.");
+  });
+
+  /** #4479: a card held by an estimated print never has its lane read as "waiting for its window"
+   *  — that is the timing blame the card's own word exists to remove. */
+  it("says a card held by an estimate waits on a confirmed date, not for its window", () => {
+    const quiet: WeekLane = {
+      playbookId: "S1-NVDA",
+      mode: "standard",
+      states: [["no-window", "no-window"]],
+    };
+    const said = laneSummary(quiet, [], "unconfirmed");
+    expect(said).toBe(
+      "This week: waiting on a confirmed date — no window open in 2 of 2 half hours asked.",
+    );
+    expect(said).not.toContain("waiting for its window");
+    expect(laneSummary(quiet, [], "no-window")).toBe(
+      "This week: waiting for its window in 2 of 2 half hours asked.",
+    );
   });
 });
 
