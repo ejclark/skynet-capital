@@ -69,8 +69,8 @@ Renown is scored on things a beginner can do on day one and a veteran can never 
 - **Called it** — a thesis committed *before* the week, scored after. Direction calls need zero
   options vocabulary.
 - **Learning** — courses and degrees. `src/domain/curriculum.ts` already emits points and `RANKS`
-  (Observer → Apprentice → Wheeler → Options Trader → Strategist); this is that ladder, promoted from
-  a client-side badge into the league's scoreboard.
+  (Observer → Apprentice → Trader → Wheeler → Strategist); this is that ladder, promoted from a
+  profile badge into the league's scoreboard.
 - **Building** — a persona you authored that beats its benchmark, or that other members adopt.
 - **Contributing** — a side quest or idea that lands (already a 🗺️ in the feedback funnel).
 
@@ -119,12 +119,13 @@ earned development accrues.
 | **Friday** | **The Recap.** Auto-generated per member: what your bot did and why, what it cost or earned, one lesson, renown awarded **with the reason named**. | Closes every loop. Wins get the fanfare; losses get an honest post-mortem and no punishing spectacle. |
 | **Quarter** | **The Season.** Renown standings reset; **the city persists**. | New race every quarter so nobody runs away with it in week two — but you keep your empire, which is the emotional contract that makes building worth it. |
 
-Season awards build on the capital trophies, all of which are built today in
+Season awards build on the capital trophies, all of which are built today. In
 [`history-metrics.ts`](../src/observatory/history-metrics.ts): **first to double**
-(`firstAccountToDouble`), **first to +50%** (`firstAccountToFiftyPercent`), **biggest single-day
-gain** (`biggestSingleDayGain`, ranked in dollars and reported in both $ and %) and **longest green
-streak** (`longestGreenStreak` / `greenStreakBoard`). A *trading day* there is a day the board
-actually sampled, so a weekend never breaks a streak and a gain trophy is null — never a
+(`firstAccountToDouble`) and **first to +50%** (`firstAccountToFiftyPercent`). In
+[`day-trophies.ts`](../src/observatory/day-trophies.ts): **biggest single-day gain**
+(`biggestSingleDayGain`, ranked in dollars and reported in both $ and %) and **longest green
+streak** (`longestDayStreak` / `dayStreakBoard`, direction `"green"`). A *trading day* there is a
+day the board actually sampled, so a weekend never breaks a streak and a gain trophy is null — never a
 least-bad loss — until a real up day exists. On top of those sit the
 process-side awards this design adds: best risk-adjusted quarter, most disciplined exit record,
 best called-it rate, most improved.
@@ -190,15 +191,16 @@ can differ per surface.
 
 1. **The history / persistence layer — recording, now being consumed.** Renown, discipline scoring,
    ceremonies, seasons and called-it all need durable *events*, not snapshots. The prod sampler is
-   **already on** (`SKYNET_HISTORY_DIR=/data/history` on the mounted volume, `fly.toml`), so history
-   has been accruing since that deploy — this was long described here as an un-done Eric op, which it
-   is not. What remains is consumption, tracked in [`plans/history-layer.md`](plans/history-layer.md):
+   **on** (`SKYNET_HISTORY_DIR=/data/history` on the mounted volume, `fly.toml`), so history is
+   accruing. What remains is consumption, tracked in [`plans/history-layer.md`](plans/history-layer.md):
    realized-P/L continuity across deploys ✅, a restart-safe ceremony data path ✅, then windowed reads
    and the board metrics. Per-fill *events* (win rate, "which plays worked") remain S7+.
 2. **A `renown` module** — pure, tested, one source of truth, over history + curriculum + trades.
-3. **Thesis capture** — a very small write surface for the Council (one line per member per week).
-4. **Server-side academy progression** — already in `IDEAS.md`; required before a degree can gate
-   anything real.
+3. **Thesis capture** — built: the Council's write surface, one line per member per week
+   (`/api/council`, `src/server/council-store.ts`).
+4. **Server-side academy progression** — built: `src/server/progression-service.ts` re-derives a
+   learner's rungs, points and rank from fills, and training wheels lock the desk to the unlocked
+   ladder (`playLocked`).
 5. **Season boundaries** — a start/end record so standings can reset while the city persists.
 
 Ordering note: 1 is the constraint; 2–5 are cheap once it exists. The board work in
