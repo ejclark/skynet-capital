@@ -131,9 +131,11 @@ engagement. It reflects portfolios, bots, news, economy, and politics as a place
 like the news. Everything below (the anchors, the palette, the motifs) serves this: they are how the
 living universe looks and feels. When a choice is unclear, ask what it does for the living world.
 
-## Identity anchors (Graphify god-nodes → where cohesion lives most vividly)
+## Identity anchors (where cohesion lives most vividly)
 
-Elements with rich backstory that *license overly-refined detail*. Depth compounds here.
+Elements with rich backstory that *license overly-refined detail*. Depth compounds here. Graphify's
+god-nodes are only candidates; these are the experience hubs judgment selected
+([`BCP-GRAPHIFY.md`](BCP-GRAPHIFY.md) → *Mapping rules*, rule 1).
 
 1. **The Eye of Sauron & its tower (Barad-dûr).** The order-imposer's watcher crowning a left-side
    empire tower; a lidded fiery Eye (layered iris, cat-slit pupil, flame corona, clawed prongs) that
