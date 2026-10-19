@@ -14,7 +14,10 @@ anything that looks clickable and are the first to notice a button that does not
 
 - Fixture: **anonymous** — the crawl walks this member on the OPEN boot (no auth env), where
   every viewer is signed in to nothing and owns nothing. That is also the honest state of any
-  member on someone else's desk: the server never checks ownership on reads.
+  member on someone else's desk for writes. Reads differ in one way: a signed-in non-owner's desk
+  reads arrive without the account's playbook names and broker messages (`ownsDesk`,
+  `src/server/desk-owner-gate.ts`), which the OPEN boot, with no one to withhold from, serves to
+  every viewer.
 - Rungs: none that matter here. Device: either.
 
 ## 3. What they are trying to do
