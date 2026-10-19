@@ -63,6 +63,17 @@ export interface BotControlsClient {
 
 const POLL_MS = 30_000;
 
+/**
+ * The per-request abort budget: `BRIDGE_REQUEST_TIMEOUT_MS` unless the env names a positive
+ * whole number of ms. The override exists for the specs (#5826) — a real-socket round trip on a
+ * machine busy with a parallel suite can outlast 2 s, and a spec that is not about the timeout
+ * should not fail on it. Prod sets nothing and keeps the shared budget.
+ */
+function requestTimeoutMs(env: NodeJS.ProcessEnv): number {
+  const raw = Number(env.SKYNET_BRIDGE_REQUEST_TIMEOUT_MS);
+  return Number.isInteger(raw) && raw > 0 ? raw : BRIDGE_REQUEST_TIMEOUT_MS;
+}
+
 const DISABLED_CLIENT: BotControlsClient = {
   fetchOnce: async () => null,
   start: () => undefined,
@@ -109,6 +120,7 @@ export function resolveBotControls(
   // This process's own word about which commit it is running, stamped onto every poll so the
   // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
   const selfReport = controlsPollHeaders(env.GIT_SHA);
+  const timeoutMs = requestTimeoutMs(env);
   // Filled in by `reportPersonaGate` as `buildLiveBot` wires each bot; read fresh on every poll
   // (not captured once like `selfReport`) since it only settles after boot has built the roster.
   const gateVerdicts = new Map<string, PersonaGateVerdict>();
@@ -120,7 +132,7 @@ export function resolveBotControls(
   const fetchOnce = async (): Promise<ControlsState | null> => {
     try {
       const controller = new AbortController();
-      const abort = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const abort = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "GET",
