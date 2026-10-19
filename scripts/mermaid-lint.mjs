@@ -14,7 +14,10 @@
 // Mermaid 11.17.2 on 2026-09-25, read from its production bundle; upstream is 12.0.0. `mermaid` is
 // pinned to that exact version in package.json so a diagram that parses here parses there — a
 // newer parser would pass 12.x-only types (usecase-beta, agentflow-beta) that GitHub shows as an
-// error. When GitHub bumps, bump the pin and GITHUB_MERMAID_VERSION together; a mermaid block
+// error. tests/arch/mermaid-lint.spec.ts fails when the pin or the installed copy drifts from
+// GITHUB_MERMAID_VERSION (a dependabot bump did exactly that, #4769 → #5837), and NEEDS_12 is
+// checked before the parse, so it holds even then. When GitHub bumps, bump the pin and
+// GITHUB_MERMAID_VERSION together; a mermaid block
 // containing just the word `info` prints the deployed version in any GitHub comment.
 //
 // WHAT IS GATED vs NOTED (docs/COACHES.md: a blocking gate protects a constraint — here Eric's
@@ -187,15 +190,21 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
   for (const { line, source } of blocks) {
     const at = where ? `${where}:${line}` : `line ${line}`;
     const head = headerWord(source);
+    // Checked before the parse, never only when it fails: the installed parser drifted to 12.x once
+    // (#4769), and a 12.x parser accepts these types — so a guard that waited for the parse error
+    // passed a bare `usecase-beta` that github.com shows as an error (#5837).
+    if (NEEDS_12.has(head)) {
+      problems.push(
+        `${at}: \`${head}\` needs Mermaid 12 — github.com renders ${GITHUB_MERMAID_VERSION}, which shows it as an error`,
+      );
+      diagrams.push({ line, type: head, ok: false });
+      continue;
+    }
     let result;
     try {
       result = await mermaid.parse(source);
     } catch (error) {
-      if (NEEDS_12.has(head)) {
-        problems.push(
-          `${at}: \`${head}\` needs Mermaid 12 — github.com renders ${GITHUB_MERMAID_VERSION}, which shows it as an error`,
-        );
-      } else if (DECLINED.has(head)) {
+      if (DECLINED.has(head)) {
         problems.push(`${at}: ${DECLINED.get(head)}`);
       } else {
         problems.push(
