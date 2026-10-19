@@ -258,8 +258,8 @@ flowchart TD
 ```
 ````
 _The record after landing, generated from the log and posted as a comment, in whichever ending is
-true: the squash above (#3754), or `held ==>|Create a merge commit| main["main: one merge
-commit, any one item reverts alone"]` when the merge-commit button lands it. A gitGraph was tried for this
+true: the squash above (today, #3754), or `held ==>|Create a merge commit| main["main: one merge
+commit, any one item reverts alone"]` once the setting is fixed. A gitGraph was tried for this
 story and retired: its commit connectors are a fixed 8 px, it takes no classDef, and plain-word
 branch names overlap its labels; it stays in the table for branch topology only._
 
