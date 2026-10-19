@@ -88,6 +88,26 @@ describe("bot-controls bridge client", () => {
     expect(resolveBotControls({} as NodeJS.ProcessEnv).betaPicks("sauron")).toBeUndefined();
   });
 
+  it("answers the after-close staging flag from the latest poll, per bot (#4535 slice 4b)", async () => {
+    let state: ControlsState = { bots: { sauron: { betaStage: true } } };
+    await withBridge(
+      () => state,
+      async (base) => {
+        const client = bridgeClient({
+          SKYNET_INSIGHTS_BRIDGE_URL: base,
+        } as NodeJS.ProcessEnv);
+        expect(client.betaStage("sauron")).toBeUndefined(); // nothing fetched yet = env's +stage
+        await client.fetchOnce();
+        expect(client.betaStage("sauron")).toBe(true);
+        expect(client.betaStage("banker")).toBeUndefined();
+        state = { bots: { sauron: { betaStage: false } } };
+        await client.fetchOnce();
+        expect(client.betaStage("sauron")).toBe(false); // read afresh: no restart
+      },
+    );
+    expect(resolveBotControls({} as NodeJS.ProcessEnv).betaStage("sauron")).toBeUndefined();
+  });
+
   it("keeps the last-known snapshot when the bridge goes away (fail-open)", async () => {
     let base = "";
     await withBridge(

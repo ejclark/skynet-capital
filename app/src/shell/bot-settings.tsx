@@ -9,13 +9,14 @@ import {
 import { InlineResult } from "../ui";
 
 /**
- * A BOT'S OWN SETTINGS (#4535 slice 3b) — the hardcore build and the forced daily pick's count,
- * under the own-bot switch on the account card. Until now each was an ops workflow run that
+ * A BOT'S OWN SETTINGS (#4535 slice 3b) — the hardcore build and the forced daily pick's count (and,
+ * since slice 4b, whether it stages after the close), under the own-bot switch on the account card. Until now each was an ops workflow run that
  * restarted the bots; the bots app now reads both at every check-in (slices 2b/2c), so the owner
  * changes them here and nothing restarts.
  *
  * Each control is drawn only where it does something: the build only on a bot that has a hardcore
- * build, the count only on the one bot the forced pick runs on (the server decides both). "The
+ * build, the count and the staging switch only on the one bot the forced pick runs on (the server
+ * decides both). "The
  * operations setting" is the honest third choice: the app cannot see the bots app's own value, so
  * it never claims one, and choosing it hands the setting back.
  *
@@ -34,6 +35,7 @@ const SETTING_NAMES: Readonly<Record<string, string>> = {
   suspended: "Trading",
   hardcore: "Build",
   betaPicks: "Forced picks per day",
+  betaStage: "After-close staging",
 };
 
 const SUBSCRIPTION = "subscription:";
@@ -58,6 +60,7 @@ function valueWords(setting: string, value: BotSettingChange["before"]): string 
   if (value === null) return OPS;
   if (setting === "hardcore") return value === true ? "hardcore" : "standard";
   if (setting === "betaPicks") return value === 0 ? "0 (off)" : String(value);
+  if (setting === "betaStage") return value === true ? "on" : "off";
   return String(value);
 }
 
@@ -117,12 +120,17 @@ export function BotSettingsPanel({
   const [error, setError] = useState<string | undefined>();
   const buildId = useId();
   const picksId = useId();
+  const stageId = useId();
   const settings: BotSettings | undefined = account.settings;
   if (!settings) return null;
   const hasBuild = settings.hardcore !== undefined;
   const hasPicks = settings.betaPicks !== undefined;
 
-  const save = async (change: { hardcore?: boolean | null; betaPicks?: number | null }) => {
+  const save = async (change: {
+    hardcore?: boolean | null;
+    betaPicks?: number | null;
+    betaStage?: boolean | null;
+  }) => {
     setBusy(true);
     setError(undefined);
     try {
@@ -183,6 +191,28 @@ export function BotSettingsPanel({
             On a day no bot has traded by its first check, the forced daily pick buys up to this
             many small picks on this bot — only while it is also subscribed to BETA-SCOUT in the
             Playbook Store. 0 stops new picks; picks it holds are still sold the next trading day.
+          </p>
+        </div>
+      ) : null}
+      {settings.betaStage !== undefined ? (
+        <div className="bot-settings-field">
+          <label htmlFor={stageId}>After-close staging</label>
+          <select
+            id={stageId}
+            value={choiceOf(settings.betaStage)}
+            disabled={busy}
+            onChange={(e) =>
+              void save({ betaStage: e.target.value === "" ? null : e.target.value === "true" })
+            }
+          >
+            <option value="">{`Use ${OPS}`}</option>
+            <option value="false">Off — market hours only</option>
+            <option value="true">On — stage after the close</option>
+          </select>
+          <p className="mc-note">
+            On, the forced daily pick may choose its picks after the close and send them as day
+            orders Alpaca holds until the next trading day, so they fill at the open. It stages
+            nothing while forced picks are 0.
           </p>
         </div>
       ) : null}
