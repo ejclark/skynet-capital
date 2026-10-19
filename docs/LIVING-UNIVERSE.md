@@ -130,8 +130,10 @@ celebrate what goes right loudly; render what goes wrong honestly but without pu
 > **Load-bearing dependency:** these are **transition** events — "*took* profit," "*deployed* capital,"
 > "*grew and reinvested*" — which by definition cannot be read from a single snapshot. They need the
 > **history / persistence layer** (realized-P/L on sells + equity samples over time). That backend is the
-> constraint that unlocks this entire ceremony vocabulary; until it exists, the city can show *state*
-> (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
+> constraint that unlocks this entire ceremony vocabulary. It records in production
+> (`src/observatory/history-store.ts`, `SKYNET_HISTORY_DIR` in `fly.toml`); reading it back is tracked in
+> [`plans/history-layer.md`](plans/history-layer.md), and until the city reads it, the city can show
+> *state* (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
 
 ### Landmarks that level up — power ∝ standing
 
@@ -194,13 +196,14 @@ about anyone's take.
 The same grammar renders at different zoom levels — and, like real geography, **the units of measure
 change with scale.** You measure a city by buildings and districts; you measure a nation by territory,
 output, and development. Metrics that dominate at one scale fall away at another. This maps directly onto
-the four observatory routes that already exist (Iteration 12), so the sim-city layer is a visual skin
-over data each view already computes — a per-view rendering spec, not new plumbing.
+the four observatory views that already exist (Iteration 12), on two routes: `/u/:id`, and `/leaderboard`,
+which carries the comparison, the ranked board and the bots-vs-humans match. So the sim-city layer is a
+visual skin over data each view already computes — a per-view rendering spec, not new plumbing.
 
 | View | Scale | You see | Units that apply |
 | --- | --- | --- | --- |
 | **Individual** (`/u/:id`) | a **city** — your empire | buildings = positions, districts = sectors, construction = pending bets, health = P/L | tower height, district density, lit windows, site footprint |
-| **Comparison** (`/?a=&b=`, inline on Standings) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
+| **Comparison** (`/leaderboard?a=&b=`, inline on the Leaderboard) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
 | **Leaderboard** | a **region / map of cities** | many empires ranked — prominence and size = standing; a skyline of skylines | rank, relative scale, growth trajectory |
 | **Bots vs Humans** | **country vs country** | each cohort aggregated into a nation; individual buildings fall away, territory and output emerge | landmass & GDP (aggregate equity), population & density (participation, breadth), infrastructure maturity (share in profit), specialization (sector concentration), growth rate (construction share), dispersion (inequality) |
 
@@ -240,7 +243,8 @@ keep the two scales apart in writing — rename back if that reads worse out lou
     sharper bar than either currently states.
   - **AI position/opportunity guidance toward maximizing profit**, and **hypothetical-scenario
     guidance** ("what if I did X"). Both new — nearest existing thread is CLAUDE.md's "position
-    guidance" / the trade form's Guidance tab, which today is UI copy, not an advisory system.
+    guidance" / the trade form's Guidance tab, a deterministic, rule-cited engine
+    (`src/options/position-guidance.ts`, #3729), not an AI advisor.
   - **Only bot accounts subscribe to playbooks — decided** (Eric, 2026-10-04, #4610): *"For
     season 1, I'm only allowing bots to subscribe to playbooks. In season 2, playbook
     subscriptions will be enabled for all accounts. The intent is to have season one be 'bots vs
