@@ -38,11 +38,11 @@ and the first button, never the rail. They skip anything that names a concept th
 
 - **1 (fixed)** — the first sign-in landed on the leaderboard with no onboarding cue. The topbar's
   Profile tab now opens on the connect guide for a member with no account.
-- **2 (half fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
+- **2 (fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
   feedback filing", while the server says "the moment you say hello to Moneypenny"
-  (`src/domain/progression.ts`). Both now use one sentence (j1 s3). **One contradiction is still
-  open** (found 2026-10-18): with no account, the trading chapter's ladder list says "nothing is
-  locked" directly under the M·02 card that reads LOCKED (j1 s3, known gap).
+  (`src/domain/progression.ts`). Both now use one sentence (j1 s3). With no account, the trading
+  chapter's ladder list says the M·02 card's own "Locked" sentence, never "nothing is locked"
+  (j1 s3b).
 - **3 (fixed)** — `/trade` with no account said "No accounts are linked to your session yet." with
   nothing to click. The words are now the link (j1 s5).
 

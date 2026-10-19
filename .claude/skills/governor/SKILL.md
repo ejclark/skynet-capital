@@ -120,8 +120,9 @@ copy tweak is not the irreversible class.
 Auto-merge adds tempo, not trust: every auto-merged PR still passes typecheck · lint · full tests ·
 integration tests · commitlint (the ratchet scans report, advisory), and post-merge the pipeline
 smoke-tests prod and rolls back on failure.
-Native auto-merge (not an in-CI REST merge) is deliberate: a GITHUB_TOKEN merge would not trigger the
-`push`→`main` deploy job, so the merge must be a first-class GitHub merge.
+Native auto-merge armed with the App's token (a direct squash with that same token when GitHub reports
+the PR already green) is deliberate: a GITHUB_TOKEN merge would not trigger the `push`→`main` deploy
+job, so the merge must be a first-class GitHub merge.
 
 ## Boundaries
 
