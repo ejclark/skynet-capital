@@ -10,7 +10,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/fix-doc-rot.instructions.md`
-rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below checks out its own branch (`wt-start.sh` refuses the primary checkout), and without a
+rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation — and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below checks out its own branch (`wt-start.sh` refuses the primary checkout), and without a
 fresh worktree per item concurrent items share one working directory and stomp on each other's
 checkout; `outcomeCheck` so a `done` is verified against origin rather than trusted.
 
@@ -86,6 +86,6 @@ list.
 - Fix every reference listed for your doc, and only those.
 - A misclassified rename-vs-deletion is reversible (git revert) and low-stakes, but "I'm not sure"
   is still worth a `blocked` report over a wrong guess.
-- If a finding names a doc outside the scan's normal surface (check `scripts/doc-rot-scan.mjs`'s
-  own scope if unsure), report `blocked` and say so — the surface may have changed since this file
-  was written.
+- If a finding names a doc outside the scan's normal surface (check `isInstructionFile` in
+  `scripts/instructions/scope.mjs` if unsure), report `blocked` and say so — the surface may have
+  changed since this file was written.
