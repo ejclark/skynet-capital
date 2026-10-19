@@ -59,6 +59,50 @@
   line-height: 1.4;
 }
 
+/* ── under a row: hand it to your bots, or take it back (#5482 slice 6c, `conviction-steer.tsx`) ──
+   The same quiet block as a draft's shadow test (`.pba-shadow`): a top rule, a line, one button. The
+   ask is a borderless fieldset like Discard's; its first button is the primary one. */
+
+.cvf-steer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.cvf-steer > .btn {
+  width: auto;
+  min-height: 44px;
+}
+
+.cvf-steer-line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cvf-steer-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cvf-steer-ask legend {
+  margin-bottom: 4px;
+  font-weight: 650;
+}
+
+.cvf-steer-ask .pba-hint {
+  margin: 0;
+}
+
 /* ── a claim: its own bordered block, numbered ─────────────────────────────────────────────── */
 
 .cvf-claims {

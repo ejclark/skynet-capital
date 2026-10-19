@@ -14,6 +14,10 @@ import { YourConvictions } from "../../src/shell/your-convictions";
  * after, labelled SIM, and only then offer Save; an edit SHALL put the card away. WHEN the server
  * refuses, each problem SHALL sit under the claim or pair it names. A saved view SHALL read as a
  * draft that steers nothing.
+ *
+ * Slice 6c: WHEN a member taps "Hand to my bots", the row SHALL ask once, naming the pairs and any it
+ * takes over, and only "Hand over" SHALL send it. A steering view SHALL say so in a glyph and words,
+ * name the pairs the server read, and take back in one tap. A refusal SHALL show the server's words.
  */
 
 const WHEEL: SteerablePairView = {
@@ -240,7 +244,9 @@ describe("YourConvictions", () => {
     reply = { ...(reply as object), saved: true };
     fireEvent.click(await screen.findByRole("button", { name: "Save draft" }));
     expect(
-      await screen.findByText("Saved CRWV floor as a draft. It steers nothing yet."),
+      await screen.findByText(
+        "Saved CRWV floor as a draft. It steers nothing until you hand it to your bots.",
+      ),
     ).toBeTruthy();
     expect(posts.map((p) => p.url)).toEqual(["/api/convictions/draft", "/api/convictions/save"]);
   });
@@ -252,5 +258,79 @@ describe("YourConvictions", () => {
     expect(within(row).getByText("1 claim · steers the wheel on CRWV")).toBeTruthy();
     expect(within(row).getByText(/Draft · steers nothing yet/)).toBeTruthy();
     expect(within(row).getByText("2027-02-26")).toBeTruthy();
+  });
+
+  it("hands a draft to the bots only after one ask that names the pairs and what it takes over", async () => {
+    const takesOver = [{ pair: "CRWV-WHEEL", name: "the wheel on CRWV", from: "AI-dip view" }];
+    mine = { label: "SIM", note: "", convictions: [{ ...SAVED, takesOver }], steerable: [WHEEL] };
+    reply = { ok: true, steering: [{ pair: "CRWV-WHEEL", name: "the wheel on CRWV" }], note: "" };
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: "Hand to my bots" }));
+    const ask = screen.getByRole("group", { name: "Hand CRWV floor to your bots?" });
+    expect(within(ask).getByText(/They run the wheel on CRWV inside its settings/)).toBeTruthy();
+    expect(
+      within(ask).getByText("On the wheel on CRWV it takes over from AI-dip view."),
+    ).toBeTruthy();
+    expect(posts).toEqual([]);
+    fireEvent.click(within(ask).getByRole("button", { name: "Hand over" }));
+    expect(
+      await screen.findByText(
+        "Handed CRWV floor to your bots. They steer by it from their next check-in.",
+      ),
+    ).toBeTruthy();
+    expect(posts).toEqual([
+      { url: "/api/convictions/hand-over", body: { id: "crwv-floor-2026-10" } },
+    ]);
+  });
+
+  it("shows the server's refusal under the ask", async () => {
+    mine = { label: "SIM", note: "", convictions: [SAVED], steerable: [WHEEL] };
+    reply = { ok: false, problems: ["none of your bots runs the wheel on CRWV any more"] };
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: "Hand to my bots" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hand over" }));
+    expect(
+      await screen.findByText("none of your bots runs the wheel on CRWV any more"),
+    ).toBeTruthy();
+  });
+
+  it("lists a steering view in words and takes it back in one tap", async () => {
+    const steering = {
+      ...SAVED,
+      status: "steering",
+      accounts: ["sauron"],
+      steering: [{ pair: "CRWV-WHEEL", name: "the wheel on CRWV" }],
+    };
+    mine = { label: "SIM", note: "", convictions: [steering], steerable: [WHEEL] };
+    reply = { ok: true, note: "" };
+    mount();
+    const row = await screen.findByRole("button", { name: "Change CRWV floor" });
+    expect(within(row).getByText(/Steering your bots · 1 pair/)).toBeTruthy();
+    expect(screen.getByText("Your bots run the wheel on CRWV inside its settings.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Take back" }));
+    expect(
+      await screen.findByText(
+        "Took CRWV floor back. Its pairs run as they did before you handed it over.",
+      ),
+    ).toBeTruthy();
+    expect(posts).toEqual([
+      { url: "/api/convictions/take-back", body: { id: "crwv-floor-2026-10" } },
+    ]);
+  });
+
+  it("says plainly when a handed-over view can't steer now, and why", async () => {
+    const refused = {
+      ...SAVED,
+      status: "steering",
+      accounts: ["sauron"],
+      steering: [],
+      refused: ["narrows CRWV-WHEEL past its playbook's room"],
+    };
+    mine = { label: "SIM", note: "", convictions: [refused], steerable: [WHEEL] };
+    mount();
+    const row = await screen.findByRole("button", { name: "Change CRWV floor" });
+    expect(within(row).getByText(/Handed over · can't steer now/)).toBeTruthy();
+    expect(screen.getByText(/Your bots can't steer by it now/)).toBeTruthy();
+    expect(screen.getByText("narrows CRWV-WHEEL past its playbook's room")).toBeTruthy();
   });
 });

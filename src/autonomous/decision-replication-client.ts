@@ -129,10 +129,15 @@ const NOOP_CLIENT: DecisionReplicationClient = {
 export function resolveDecisionReplication(
   env: NodeJS.ProcessEnv,
   getDecisionDb: () => DecisionDb | undefined,
+  /** The per-POST budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs a real listener on the same event loop as a loaded full suite passes a generous one, so
+   *  a starved loop is not mistaken for an unreachable bridge (#4978, #5823). */
+  options: { readonly timeoutMs?: number } = {},
 ): DecisionReplicationClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
 
   // This poll's settlements, sent once on its first batch — whichever persona's that is.
   let unsentSettlements: readonly OrderSettlement[] = [];
@@ -150,7 +155,7 @@ export function resolveDecisionReplication(
     if (!backlog) unsentSettlements = [];
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "POST",

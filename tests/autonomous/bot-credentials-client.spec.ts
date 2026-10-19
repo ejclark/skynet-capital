@@ -3,6 +3,7 @@ import type { AlpacaCredentials } from "../../src/alpaca/credentials.js";
 import type { ControlsState } from "../../src/autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../../src/autonomous/bot-credentials-client.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 const SECRET = "test-bot-credentials-secret";
 
@@ -49,6 +50,7 @@ describe("resolveBotCredentialsClient", () => {
             SKYNET_INSIGHTS_BRIDGE_URL: base,
             SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
           } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
 
         await client.reconcile(state({ sauron: { credentialsVersion: "v1" } }));
@@ -66,10 +68,14 @@ describe("resolveBotCredentialsClient", () => {
         return { apiKey: "K", apiSecret: "S" };
       },
       async (base) => {
-        const client = resolveBotCredentialsClient(() => true, {
-          SKYNET_INSIGHTS_BRIDGE_URL: base,
-          SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
-        } as NodeJS.ProcessEnv);
+        const client = resolveBotCredentialsClient(
+          () => true,
+          {
+            SKYNET_INSIGHTS_BRIDGE_URL: base,
+            SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+          } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
         const s = state({ sauron: { credentialsVersion: "v1" } });
         await client.reconcile(s);
         await client.reconcile(s);
@@ -87,10 +93,14 @@ describe("resolveBotCredentialsClient", () => {
       },
       async (base) => {
         let ready = false;
-        const client = resolveBotCredentialsClient(() => ready, {
-          SKYNET_INSIGHTS_BRIDGE_URL: base,
-          SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
-        } as NodeJS.ProcessEnv);
+        const client = resolveBotCredentialsClient(
+          () => ready,
+          {
+            SKYNET_INSIGHTS_BRIDGE_URL: base,
+            SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+          } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
         const s = state({ sauron: { credentialsVersion: "v1" } });
 
         await client.reconcile(s); // onRotated returns false — not yet synced
@@ -114,10 +124,14 @@ describe("resolveBotCredentialsClient", () => {
         return { apiKey: "K", apiSecret: "S" };
       },
       async (base) => {
-        const client = resolveBotCredentialsClient(() => true, {
-          SKYNET_INSIGHTS_BRIDGE_URL: base,
-          SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
-        } as NodeJS.ProcessEnv);
+        const client = resolveBotCredentialsClient(
+          () => true,
+          {
+            SKYNET_INSIGHTS_BRIDGE_URL: base,
+            SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+          } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
         await client.reconcile(state({ sauron: {} }));
         expect(calls).toBe(0);
       },
@@ -145,6 +159,7 @@ describe("resolveBotCredentialsClient", () => {
             SKYNET_INSIGHTS_BRIDGE_URL: base,
             SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
           } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         const primed: [string, AlpacaCredentials][] = [];
         const boot = state({ sauron: { credentialsVersion: "v1" } });
@@ -170,10 +185,14 @@ describe("resolveBotCredentialsClient", () => {
     await withListener(
       () => undefined, // 404: no such bot
       async (base) => {
-        const client = resolveBotCredentialsClient(() => true, {
-          SKYNET_INSIGHTS_BRIDGE_URL: base,
-          SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
-        } as NodeJS.ProcessEnv);
+        const client = resolveBotCredentialsClient(
+          () => true,
+          {
+            SKYNET_INSIGHTS_BRIDGE_URL: base,
+            SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+          } as NodeJS.ProcessEnv,
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
         const primed: string[] = [];
         await client.prime(state({ sauron: { credentialsVersion: "v1" } }), (id) =>
           primed.push(id),

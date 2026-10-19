@@ -92,8 +92,12 @@ describe("the shadow test, end to end", () => {
           },
           calendar: CALENDAR,
         });
-        const send = resolveSnapshotReplication(env, "/authored-shadow", "authored-shadow", () =>
-          publish?.(),
+        const send = resolveSnapshotReplication(
+          env,
+          "/authored-shadow",
+          "authored-shadow",
+          () => publish?.(),
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         wiring.observe(["futurist"], [{ cash: 100_000, positions: [] }]);
 

@@ -26,8 +26,8 @@ import { findPair, type Pair, pairName } from "./pair-table.js";
  * THE CARD (criterion 9: "what changes on which pair, with a before → after for each setting").
  * Before is the playbook's own setting; after is the narrowed one, resolved by the same
  * narrow-only rule the bots build with (`resolveSteering`). A setting the view leaves alone is not
- * listed. It says plainly that the playbook keeps the timing, that exits never stop, and, until the
- * slice that hands members' views to the bots ships, that a saved draft steers nothing.
+ * listed. It says plainly that the playbook keeps the timing and that exits never stop; the routes
+ * say beside it that a saved draft steers nothing until its owner hands it over (slice 6c).
  *
  * Paper only, SIM. Nothing here places, sizes or times an order.
  */

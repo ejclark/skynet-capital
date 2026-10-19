@@ -33,7 +33,7 @@ import { YourConvictions } from "./your-convictions";
  * drafts and the form to write one (`playbook-drafts.tsx`). It is one more kind of entry in the
  * catalog, not a screen — a draft is saved and does not trade. "Your convictions" follows it
  * (#5482 slice 6b, `your-convictions.tsx`): the member's stated views of the market, beside the
- * pairs they steer, each a draft that steers nothing yet.
+ * pairs they steer, each a draft until its owner hands it to their bots (slice 6c).
  *
  * The closed-trades scoreboard that used to sit folded at the foot of this page ("Who started the
  * bots' closed trades") lives on the book's Balance section now (#5493 slice 3, #5451 P3): it is a

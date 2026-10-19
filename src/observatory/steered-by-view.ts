@@ -1,3 +1,4 @@
+import type { PlaybookSubscription } from "../domain/types.js";
 import {
   type ClaimOutcome,
   claimLabel,
@@ -5,7 +6,12 @@ import {
   type Scorecard,
   scorecardOf,
 } from "../playbooks/claim-score.js";
-import { CONVICTIONS, type ConvictionStore } from "../playbooks/conviction-store.js";
+import type { Conviction } from "../playbooks/conviction-record.js";
+import {
+  CONVICTIONS,
+  type ConvictionLookup,
+  type ConvictionStore,
+} from "../playbooks/conviction-store.js";
 
 /**
  * "STEERED BY" ON A PAIR ROW, WITH THE VIEW'S SCORECARD (#5482 slice 5, criterion 7). A pair a
@@ -13,6 +19,11 @@ import { CONVICTIONS, type ConvictionStore } from "../playbooks/conviction-store
  * fared against their own falsifiers: "AI-dip view · check 2027-01-29 · 3 pass / 1 fail / 3
  * pending". The counts are the whole view's, because one belief steers several pairs; each claim
  * says whether this pair's fence rests on it.
+ *
+ * WHOSE VIEW, ON WHOSE ROW (#5482 slice 6c). A row shows the seeded view that steers its pair, as
+ * before. On the viewed account's own row, its subscription's pointer decides instead
+ * (`withOwnSteering`): a member who handed their own view to that bot sees their view there, because
+ * that is the view narrowing it. Another member's view never shows on a row it does not steer.
  *
  * Members only: it rides on the Playbook Store payload behind the auth gate (criterion 8). It is
  * a read of the record; it sizes nothing and changes no pair's settings. Paper only, SIM.
@@ -51,7 +62,34 @@ export function steeredByView(
   store: ConvictionStore = CONVICTIONS,
 ): SteeredByView | undefined {
   const conviction = store.steering(pairId)[0];
-  if (!conviction) return undefined;
+  return conviction ? steeredByRecord(conviction, pairId) : undefined;
+}
+
+/** Each row the viewed account subscribes to with a pointer, showing the view the pointer names when
+ *  `lookup` holds it for that account and it steers the pair; every other row as it was. */
+export function withOwnSteering<
+  Row extends { readonly id: string; readonly steeredBy?: SteeredByView },
+  Card extends { readonly pairs: readonly Row[] },
+>(
+  strategies: readonly Card[],
+  subscriptions: readonly PlaybookSubscription[],
+  lookup: ConvictionLookup,
+): Card[] {
+  const pointers = new Map(subscriptions.map((s) => [s.playbookId, s.convictionId]));
+  return strategies.map((card) => ({
+    ...card,
+    pairs: card.pairs.map((row) => {
+      const id = pointers.get(row.id);
+      const record = id === undefined ? undefined : lookup(id);
+      return record?.steers.includes(row.id)
+        ? { ...row, steeredBy: steeredByRecord(record, row.id) }
+        : row;
+    }),
+  }));
+}
+
+/** One record, as the row of one pair it steers shows it. */
+export function steeredByRecord(conviction: Conviction, pairId: string): SteeredByView {
   const backing = new Set(
     (conviction.narrowings ?? []).filter((n) => n.pair === pairId).flatMap((n) => n.fromClaims),
   );

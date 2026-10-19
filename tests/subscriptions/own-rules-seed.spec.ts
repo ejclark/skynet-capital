@@ -441,7 +441,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
       store.replace(LIVE_STATE);
       expect(seed(controlsPollReport({}), AT)).toEqual([
         "[subscriptions] carried the ◆ row's conviction onto each subscription stating none (checked on its row's date): sauron/CRWV-WHEEL",
-        "[subscriptions] pointed each subscription whose conviction a record states at that record (its inline conviction kept): sauron/CRWV-WHEEL",
+        "[subscriptions] pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept): sauron/CRWV-WHEEL",
       ]);
       expect(store.load()).toEqual(POLLED);
       expect(seed(controlsPollReport({}), LATER)).toEqual([]);

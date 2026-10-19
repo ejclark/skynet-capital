@@ -173,3 +173,76 @@ describe("pointAtRecords — the migration", () => {
     ]);
   });
 });
+
+describe("a member's view handed over (#5482 slice 6c) — the owner's act is the match", () => {
+  const ada = view({
+    id: "crwv-floor-2026-10",
+    owner: "Ada",
+    checkOn: "2027-02-26",
+    steers: ["CRWV-WHEEL"],
+  });
+  const members = (held: Record<string, Conviction[]>, ids: string[] = [ada.id]) => ({
+    heldBy: (accountId: string) => held[accountId] ?? [],
+    ids: new Set(ids),
+  });
+
+  it("points every subscription on a named account to a pair it steers, whatever day it states", () => {
+    const input = {
+      sauron: [sub("CRWV-WHEEL"), sub("CRWV-LONG-CALL", { conviction: stated })],
+      banker: [sub("CRWV-WHEEL")],
+    };
+    const { state, pointed } = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
+    expect(pointed).toEqual(["sauron/CRWV-WHEEL", "sauron/CRWV-LONG-CALL"]);
+    expect(state.sauron?.map((s) => s.convictionId)).toEqual([ada.id, "ai-dip-test"]);
+    // Another member's bot is never steered by Ada's view.
+    expect(state.banker?.[0]?.convictionId).toBeUndefined();
+  });
+
+  it("takes over from a seeded record's pointer, and hands it back once taken back", () => {
+    const seeded = {
+      sauron: [sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" })],
+    };
+    const over = pointAtRecords(seeded, AT, records, members({ sauron: [ada] }));
+    expect(over.state.sauron?.[0]?.convictionId).toBe(ada.id);
+    // Taken back: still a member's id, held by no account — dropped, and the seeded match runs again.
+    const back = pointAtRecords(over.state, AT, records, members({}));
+    expect(back.pointed).toEqual(["sauron/CRWV-WHEEL"]);
+    expect(back.state.sauron?.[0]?.convictionId).toBe("ai-dip-test");
+  });
+
+  it("drops a pointer at a member's view that no longer steers the pair, leaving none when nothing matches", () => {
+    const input = { sauron: [sub("CRWV-LONG-CALL", { convictionId: ada.id })] };
+    const { state } = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
+    expect(state.sauron?.[0]?.convictionId).toBeUndefined();
+  });
+
+  it("is idempotent, and leaves a pointer it cannot place (an id no member holds) to the seeded rule", () => {
+    const input = {
+      sauron: [
+        sub("CRWV-WHEEL", { convictionId: ada.id }),
+        sub("S1-NVDA", { convictionId: "gone" }),
+      ],
+    };
+    const run = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
+    expect(run.pointed).toEqual([]);
+    expect(run.state).toBe(input);
+  });
+
+  it("never decides between two of a member's views on one pair: it keeps the one already pointed", () => {
+    const twin = { ...ada, id: "crwv-twin-2026-10" };
+    const pointedAtTwin = { sauron: [sub("CRWV-WHEEL", { convictionId: twin.id })] };
+    const both = members({ sauron: [ada, twin] }, [ada.id, twin.id]);
+    expect(pointAtRecords(pointedAtTwin, AT, records, both).state).toBe(pointedAtTwin);
+  });
+
+  it("survives a restated conviction: the pointer stays on the view while it is handed over", () => {
+    const here = { held: [ada], ids: new Set([ada.id]) };
+    const next = restated(
+      sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-06-30" }, convictionId: ada.id }),
+      records,
+      here,
+    );
+    expect(next.convictionId).toBe(ada.id);
+    expect(pointAtRecord(sub("CRWV-WHEEL"), records, here).convictionId).toBe(ada.id);
+  });
+});
