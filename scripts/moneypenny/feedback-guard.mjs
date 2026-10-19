@@ -107,7 +107,7 @@ This is a mechanical guard (#1028), not a verdict on the ask itself — the sess
 
 ${runLine}
 
-Re-applying the \`feedback\` label will not retry the build while the lease is still held (\`claim/feedback-${issueNumber}\`, up to a 2h TTL) — someone with lease-release access can run \`node scripts/moneypenny/index.mjs --release feedback-${issueNumber}\` and re-apply the label once the cause is understood.
+Re-applying the \`ready\` label (the one that starts the build since #3912, not \`feedback\`) will not retry the build while the lease is still held (\`claim/feedback-${issueNumber}\`, up to a 2h TTL) — someone with lease-release access can run \`node scripts/moneypenny/index.mjs --release feedback-${issueNumber}\` and then remove and re-add \`ready\` once the cause is understood.
 
 ${FOOTER}`;
 }
