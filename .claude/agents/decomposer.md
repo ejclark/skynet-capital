@@ -17,9 +17,10 @@ or redesign — you extract a cohesive seam into its own module and lock the win
 
 ## Loop (one pass = one PR)
 
-1. **Branch off latest main** before editing: `git fetch origin main && git checkout -B refactor/decompose-<slug> origin/main`.
-   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
-   which every tool exits 127. Idempotent; a no-op outside a worktree.
+1. **Branch off latest main** before editing: `bash scripts/wt-start.sh refactor/decompose-<slug>` — fetch, branch off origin/main
+   (resuming the branch if it exists), `bash scripts/worktree-setup.sh` (it provisions `node_modules`,
+   without which every tool exits 127) and one status line, in one call (docs/DELEGATION.md, rail 2). After it: one plain command per call, no chains
+   around git; where plain `git` is refused, call `/usr/bin/git`.
 2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. It's the
    largest file over the 300 **code**-line cap (comments and blanks are free) that isn't already
    grandfathered — don't choose your own.

@@ -50,7 +50,8 @@ earned after the policy proves out over reps.
    - **COLLISION:** if the target file is modified by ANY open PR (`gh`/MCP: list open PR files), skip
      this coach this cycle — structural work never races feature work on the same file.
 4. **DISPATCH.** Launch the athlete: cheap model tier (sonnet), isolated worktree, its standard contract
-   (branch off origin/main, `bash scripts/worktree-setup.sh`, gate-confirm target, drill, verify by exit
+   (first call `bash scripts/wt-start.sh <branch>` — branch off origin/main plus `worktree-setup.sh`, docs/DELEGATION.md
+   rail 2 — then gate-confirm target, drill, verify by exit
    status, ratchet, push, report — no PR-opening; athletes carry no GitHub tooling).
 5. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay

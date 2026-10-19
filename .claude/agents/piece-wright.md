@@ -16,9 +16,10 @@ screenshot against its vision passage. You do not choose the piece; the sheet's 
 
 ## Loop (one pass = one piece)
 
-1. **Branch off latest main** before editing: `git fetch origin main && git checkout -B
-   art/<piece-slug> origin/main`, then `bash scripts/worktree-setup.sh` (idempotent; provisions
-   `node_modules` in a worktree).
+1. **Branch off latest main** before editing: `bash scripts/wt-start.sh art/<piece-slug>` —
+   fetch, branch off origin/main, `bash scripts/worktree-setup.sh` (provisions `node_modules`) and one
+   status line, in one call (docs/DELEGATION.md, rail 2). After it: one plain command per call, no chains
+   around git; where plain `git` is refused, call `/usr/bin/git`.
 2. **Read the contract:** the piece's build-sheet entry — silhouette contract, dials, the `/vision`
    passage, the translation table, the bar. Then the kit you build from: `src/three/kit/profile.ts`
    (shape as pure data), `greebles.ts` (molecules), `materials.ts` (atoms), `rng.ts` (seeded — all
