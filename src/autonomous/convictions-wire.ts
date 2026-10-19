@@ -27,9 +27,14 @@ import { boundedString, isRecord } from "../storage/parse-guards.js";
  */
 
 export const CONVICTIONS_WIRE_KIND = "convictions.v1";
-/** A member holds at most 12 views (`MAX_CONVICTIONS_PER_MEMBER`) among a handful of members. */
-export const MAX_WIRED_CONVICTIONS = 64;
-/** The bots one member owns; generous headroom, like the subscriptions wire's account bound. */
+/**
+ * Room for every member at their 12-view cap (`MAX_CONVICTIONS_PER_MEMBER`) in a club of about
+ * twenty. A set past it is refused whole, and the bots say so on every poll (`bot-controls-client.ts`)
+ * rather than quietly keep steering by the last set they read.
+ */
+export const MAX_WIRED_CONVICTIONS = 256;
+/** The bots one member owns; generous headroom. The member store reads a record past it as
+ *  unreadable (`member-conviction-store.ts`), so the app never sends one. */
 export const MAX_STEERED_ACCOUNTS = 16;
 const MAX_ACCOUNT_ID = 64;
 

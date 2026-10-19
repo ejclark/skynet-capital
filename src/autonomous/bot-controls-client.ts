@@ -65,16 +65,20 @@ export interface BotControlsClient {
 const POLL_MS = 30_000;
 
 /** Parse one field of a poll body and hand it to its hook when it parsed. A hook that throws never
- *  fails the poll it rides on, nor the hooks after it. */
+ *  fails the poll it rides on, nor the hooks after it. `unreadable` hears a field that was sent but
+ *  did not parse, where keeping the last value quietly would hide that it is going stale. */
 function relay<T>(
   body: unknown,
   field: string,
   parse: (raw: unknown) => T | undefined,
   hook: ((value: T) => void) | undefined,
+  unreadable?: () => void,
 ): void {
   try {
-    const value = parse(isRecord(body) ? body[field] : undefined);
+    const raw = isRecord(body) ? body[field] : undefined;
+    const value = parse(raw);
     if (value !== undefined) hook?.(value);
+    else if (raw !== undefined) unreadable?.();
   } catch {
     /* never let a downstream hook fail the poll it rides on */
   }
@@ -172,7 +176,11 @@ export function resolveBotControls(
         // bearing: convictions and plays land before the subscriptions whose rosters resolve them.
         const body = response.body;
         relay(body, "decisionsCursor", parseDecisionsCursor, onDecisionsCursor);
-        relay(body, "convictions", parseConvictionsWire, onConvictions);
+        relay(body, "convictions", parseConvictionsWire, onConvictions, () =>
+          process.emitWarning(
+            "[playbooks] the dashboard's members' convictions did not read whole — the bots keep steering by the last set they read",
+          ),
+        );
         relay(body, "authoredPlays", parseAuthoredPlaysWire, onAuthoredPlays);
         relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions);
         relay(body, "authoredShadow", parseShadowOrders, onAuthoredShadow);

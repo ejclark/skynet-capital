@@ -143,4 +143,37 @@ describe("members' convictions over the bridge", () => {
       },
     );
   });
+
+  it("says so when the dashboard sends a set the bots cannot read whole, and keeps the last one", async () => {
+    await withApp(
+      {
+        record: () => Promise.resolve(),
+        controls: () => CONTROLS,
+        convictions: () =>
+          ({ ...buildConvictionsWire([], Date.now()), records: "garbled" }) as never,
+      },
+      async (base) => {
+        const warned: string[] = [];
+        const emit = process.emitWarning;
+        process.emitWarning = ((line: string) => warned.push(line)) as typeof process.emitWarning;
+        try {
+          let fired = 0;
+          const client = resolveBotControls(
+            { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            () => fired++,
+          );
+          await client.fetchOnce();
+          expect(fired).toBe(0);
+          expect(warned).toEqual([expect.stringMatching(/did not read whole/)]);
+        } finally {
+          process.emitWarning = emit;
+        }
+      },
+    );
+  });
 });
