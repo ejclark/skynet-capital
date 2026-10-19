@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { BookDesk } from "../../src/live/book-events";
 import type { PositionEvent } from "../../src/live/desk";
 import { horizonSearch } from "../../src/live/horizon-params";
@@ -107,5 +107,53 @@ describe("HeldEventsLine — the next date on what you hold, never a range's out
   it("says so when the book holds nothing", async () => {
     mount("/accounts", [{ desk: { id: "human-eric", positions: [] } }]);
     expect(await line()).toMatch(/^No open positions — nothing dated\./);
+  });
+});
+
+/** A held name whose next print is dated, and nothing due: the line names the print itself. */
+const printed = (status: "confirmed" | "estimate"): BookDesk => ({
+  desk: {
+    id: "human-eric",
+    positions: [
+      {
+        symbol: "CRWV",
+        quantity: "55",
+        isOption: false,
+        nextPrint: { status, at: "2026-11-10", label: "Earnings Nov 10" },
+      },
+    ],
+  },
+});
+
+/** The drawn date glyph on the line: its kind and the outline it draws. */
+async function drawnGlyph(): Promise<{ kind: string; outline: string; corners: number }> {
+  const text = await screen.findByText("Next date on what you hold");
+  const svg = text.nextElementSibling?.querySelector("svg.lane-glyph");
+  const outline = svg?.querySelector("polygon")?.getAttribute("points") ?? "";
+  const kind = /lane-glyph--(\w+)/.exec(svg?.getAttribute("class") ?? "")?.[1] ?? "";
+  return { kind, outline, corners: outline.trim().split(/\s+/).length };
+}
+
+describe("HeldEventsLine — its date glyph is never a row mark's shape (#5093)", () => {
+  // The rows under this line wear ◆ Review and ◇ Not now: a diamond, four corners. The date
+  // language draws a hexagon instead — ⬢ confirmed, ⬡ estimated — one kind, filled and hollow.
+  // The row marks themselves are pinned where they live: `live/position-mark.spec.ts` (◆ ▲ ○) and
+  // `positions-guidance.spec.tsx` (◇ Not now).
+  it("draws a confirmed print as a six-cornered shape, not the Review diamond", async () => {
+    mount("/accounts", [printed("confirmed")]);
+    const glyph = await drawnGlyph();
+    expect(glyph.kind).toBe("confirmed");
+    expect(glyph.corners).toBe(6);
+  });
+
+  it("draws an estimated print as the same outline, hollow — not the Not now diamond", async () => {
+    mount("/accounts", [printed("confirmed")]);
+    const confirmed = await drawnGlyph();
+    cleanup();
+    mount("/accounts", [printed("estimate")]);
+    const estimated = await drawnGlyph();
+    expect(estimated.kind).toBe("estimated");
+    expect(estimated.corners).toBe(6);
+    expect(estimated.outline).toBe(confirmed.outline);
   });
 });

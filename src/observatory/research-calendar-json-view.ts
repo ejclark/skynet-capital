@@ -36,7 +36,7 @@ export interface CalendarEventView {
   readonly researched: boolean;
   /** Present (and true) only when the event's ledger states a call. */
   readonly called?: true;
-  /** Present (and true) only when the date is an estimate — Events draws it ◇, not ◆ (#5510). */
+  /** Present (and true) only when the date is an estimate — Events draws it hollow ⬡, not ⬢ (#5510, #5093). */
   readonly estimated?: true;
 }
 
