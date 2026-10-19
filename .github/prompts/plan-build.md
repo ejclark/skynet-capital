@@ -47,8 +47,9 @@ newest trusted comment is a human's, newer than the state block's last edit.
 ## Two hard stops, and no others
 
 1. **`node scripts/envelope-scan.mjs --check <paths>` says a file you need is protected.** Run it
-   before editing anything you're unsure about; `--list` prints the whole table with reasons. This
-   also runs as a red CI check on your branch.
+   before editing anything you're unsure about; `--list` prints the whole table with reasons. It
+   does not run as a red CI check on a `plan/` branch (not an envelope lane — step 5), so this
+   check by hand is the gate.
 2. **The change would make the app imply something false** about markets, P/L, or a `SIM`/`LIVE`
    label. No file list catches this one; it is yours to judge, and it outranks the plan's own text.
 
