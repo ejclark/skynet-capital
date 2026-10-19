@@ -127,6 +127,58 @@ describe("decisionsFor", () => {
     });
   });
 
+  describe("a long call hears the house's long-call bot's exit rules (#5709)", () => {
+    it("raises a TIME STOP card between the bands once 45 days or fewer are left", () => {
+      // 4 NVDA Nov 6 $190 calls (44 days left), paid $12.00, now $13.20 (+10%)
+      const [d] = decisionsFor("eric", [held("NVDA261106C00190000", 4, 1200, 4 * 1320)], []);
+      expect(d).toMatchObject({
+        kind: "time-stop",
+        title: "44 days left: the house sells its own calls at 45 days",
+        caption: expect.stringContaining("is up 10% from what it cost, with 44 days left."),
+        learn: { term: "timeDecay" },
+        primary: { href: expect.stringContaining("manage=NVDA261106C00190000") },
+      });
+      expect(d?.why).toMatch(/^✦ .*say why you're holding\.$/);
+    });
+
+    it("stays quiet on the same call with more than 45 days left", () => {
+      // Dec 18: 86 days left, +10%
+      expect(decisionsFor("eric", [held("NVDA261218C00190000", 4, 1200, 4 * 1320)], [])).toEqual(
+        [],
+      );
+    });
+
+    it("keeps a loss's card AT RISK, and names the time stop in its caption", () => {
+      // 30 days left, −30%: still a loss card first (AT RISK means a loss; a time stop may not be)
+      const [d] = decisionsFor("eric", [held("NVDA261023C00190000", 1, 1000, 700)], []);
+      expect(d?.kind).toBe("at-risk");
+      expect(d?.caption).toMatch(/long-call bot sells its calls once 45 days are left\.$/);
+    });
+
+    it("names the take-profit rule on a lock-in card once the call is worth double its cost", () => {
+      // 2 NVDA Dec 18 $130 calls, paid $5.00, now $12.00 (2.4×, +140%)
+      const [d] = decisionsFor("eric", [held("NVDA261218C00130000", 2, 500, 2 * 1200)], []);
+      expect(d).toMatchObject({
+        kind: "lock-in",
+        title: "Up 140%: worth 2.4× what you paid",
+        caption: expect.stringContaining(
+          "once they're worth 2× what they cost, and this one is there.",
+        ),
+        learn: { term: "lockedIn" },
+      });
+      expect(d?.why).toMatch(/banks it and frees the cash for the next trade/);
+    });
+
+    it("keeps the plain lock-in copy below double, and never applies the rules to puts or sold calls", () => {
+      const [up60] = decisionsFor("eric", [held("NVDA261218C00130000", 1, 500, 800)], []);
+      expect(up60?.title).toBe("Up 60%: consider locking some of it in");
+      // a long put at 44 days, +10%: the bot's rules are for calls
+      expect(decisionsFor("eric", [held("NVDA261106P00190000", 1, 1200, 1320)], [])).toEqual([]);
+      // a sold call at 44 days, a little in profit: the seller's copy, no time stop
+      expect(decisionsFor("eric", [held("NVDA261106C00190000", -1, 1200, -1100)], [])).toEqual([]);
+    });
+  });
+
   it("leaves a position between the lines alone", () => {
     expect(decisionsFor("eric", [held("AAPL", 100, 190, 18_500)], [])).toEqual([]);
   });

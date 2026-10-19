@@ -1,5 +1,6 @@
 import { decisionsFor } from "../../src/observatory/decisions-view.js";
 import { positionGuidance } from "../../src/options/position-guidance.js";
+import { EXIT_DTE } from "../../src/playbooks/long-call.js";
 import { inputs } from "../options/position-guidance-fixture.js";
 import { held } from "./scenario-world.js";
 
@@ -12,9 +13,6 @@ import { held } from "./scenario-world.js";
  *
  * `it.fails` is a known gap — it turns red the day the gap closes (docs/members/README.md ratchet).
  */
-
-/** The house's own long-call playbook sells at 45 days left (src/playbooks/long-call.ts EXIT_DTE). */
-const HOUSE_TIME_STOP_DAYS = 45;
 
 describe("scenario 2 — NVDA long calls, run-up then pullback, no exit plan", () => {
   it("s1 — WHEN a long call is up past the lock-in bar on the run-up, the app shall raise a lock-in decision with its expiry and next print as clocks", () => {
@@ -69,10 +67,9 @@ describe("scenario 2 — NVDA long calls, run-up then pullback, no exit plan", (
     expect(own?.until?.date).toBeDefined();
   });
 
-  // KNOWN GAP — #5709 slice 1. The house's bot sells a long call at 45 days left "before time decay speeds up";
-  // a member holding the same call hears nothing until it is ±10–50% (decisions-view.ts classify),
-  // and about time only inside 21 days. Same trade, two rules.
-  it.fails(`s5 — WHEN a member's long call reaches ${HOUSE_TIME_STOP_DAYS} days left, the app shall raise a decision naming the time stop, whatever its return`, () => {
+  // Closed by #5709 slice 1: the house's bot sells a long call at EXIT_DTE days left "before time
+  // decay speeds up", and a member holding the same call now hears that rule on a TIME STOP card.
+  it(`s5 — WHEN a member's long call reaches ${EXIT_DTE} days left, the app shall raise a decision naming the time stop, whatever its return`, () => {
     // 4 NVDA Nov 27 $190 calls (40 days left), paid $12.00, now $11.40 (−5%)
     const [d] = decisionsFor("eric", [held("NVDA261127C00190000", 4, 1200, 4 * 1140)], []);
     expect(d).toBeDefined();
