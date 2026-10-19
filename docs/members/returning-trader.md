@@ -20,7 +20,7 @@ the path from "my position" to "the order is in" to be four taps and a review.
 
 ## 3. What they are trying to do
 
-1. See the position (Cockpit → Positions).
+1. See the position (Cockpit → Overview).
 2. Read its guidance: is a covered call reasonable now, at which strike, until when.
 3. Draft the order on Trade, prefilled from the guidance.
 4. See the fill on Activity.
@@ -58,13 +58,14 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ### j1 — sell a covered call on a position I hold
 
-1. `/app/accounts` — the cockpit: the account switcher, Overview · Activity. **WHEN a member with
-   one linked account opens Profile, the app shall open that account's cockpit on Overview.**
+1. `/app/accounts` — the cockpit: the account's name (its menu holds the switcher), Overview ·
+   Balance · Ledger · Events. **WHEN a member with one linked account opens Profile, the app
+   shall open that account's cockpit on Overview.**
    Judge: can this reader tell what to do next in ten seconds?
-2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, Guidance on
-   the row (desktop). **WHEN the member opens Overview, the app shall show the held positions
-   with a way into each one's guidance, even when net worth cannot be read.** On a phone the
-   blotter is one card per position and EEM's card is the way in — it opens the position on
+2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, its guidance
+   line under the row (desktop). **WHEN the member opens Overview, the app shall show the held
+   positions with a way into each one's guidance, even when net worth cannot be read.** On a phone
+   the blotter is one card per position and EEM's card is the way in — it opens the position on
    Trade, where Guidance is a tab (`s2-phone`). Judge: can this reader tell which position to
    act on?
 3. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
@@ -91,9 +92,9 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    reader tell what to do next in ten seconds?
 2. `/app/activity` — the feed. **WHEN the member opens Activity, the app shall show the feed with
    the newest event first.** Judge: can the reader find today's fill?
-3. `/app/accounts?section=activity` — Profile → Activity: the orders on their own account, newest
+3. `/app/accounts?section=ledger` — Profile → Ledger: the orders on their own account, newest
    first, the EEM buy among them — the fill on their own book, not only in the league's feed.
-   **WHEN the member opens their Profile's Activity, the app shall list their own account's
+   **WHEN the member opens their Profile's Ledger, the app shall list their own account's
    orders, newest first.** Judge: can the reader find their own fill?
 
 ### j3 — my own desk, and back
@@ -114,7 +115,8 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    opens the Profile's Playbooks chapter, the app shall relate it to the Playbook Store (one
    playbook system, not two).** _known gap — dead end 7._ Judge: does the reader know which
    Playbooks this is?
-2. `/app/research?section=playbooks` — the store, "Subscribe as" in the rail. **WHEN the member
+2. `/app/research?section=playbooks` — the store; a + on each ready row opens the
+   viewer's own bots to subscribe as (`app/src/shell/playbooks-section.tsx`). **WHEN the member
    opens R&D → Playbooks, the app shall show the store with a subscribe-as account picker.** Judge:
    does the reader know which Playbooks this is?
 
@@ -123,7 +125,7 @@ Journey map: [`maps.md`](maps.md#returning-trader). Findings: [`friction-ledger.
 ## 7. Feature seeds
 
 - **One "back" that remembers** — Trade's back link returns to the page the member arrived from
-  (cockpit or desk), never a fixed route. _(src: returning-trader · while: j1 s4)_
+  (cockpit or desk), never a fixed route. _(src: returning-trader · while: j1 s5)_
 - **The symbol input travels with the pane** — Chain, Chart and Guidance each carry the symbol
   field when they have no symbol, instead of pointing at the Ticket. _(src: returning-trader ·
   while: j2 s1)_
