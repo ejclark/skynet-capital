@@ -230,7 +230,7 @@ can sit in Backlog for weeks. The word was said in dozens of plan issues before 
 writing it down once is that the label, the comment and the code now agree.
 
 **Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
-Five conditions, asked in this order so the refusal names the first one that fails
+Four conditions, asked in this order so the refusal names the first one that fails
 (`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
 retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
 disagree about what may be built:
@@ -241,8 +241,6 @@ disagree about what may be built:
    (`PARKING_LABELS`). `ready` + parked is illegal, reported, and never auto-fixed: some flips are
    Eric's own. `ready` + `next-slice` is legal and means "in progress, a remainder pending".
 4. **not `in-progress`** — another lane or session already holds it.
-5. **not blocked** — no open issue holds a native blocked-by link on it (`openBlockers`, read from
-   the row's `issue_dependencies_summary.blocked_by`); it starts when they close.
 
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
 filing at capture (`FEEDBACK.md` → *What the lane will build*) — and otherwise **never applies
