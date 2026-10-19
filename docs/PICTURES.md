@@ -444,7 +444,7 @@ flowchart TD
   shared harness in `scripts/shoot/lib.mjs` + `shell.mjs`. The harness carries the JPEG quality
   ceiling, so fix size problems there, not by hand-recompressing.
 - **A new `/app/*` surface needs a script, not a waiver.** Copy an existing one
-  (`scripts/shoot/feedback.mjs`, ~85 lines), swap the stubs and the frames, add its `shoot:<name>`
+  (`scripts/shoot/feedback.mjs`, ~115 lines), swap the stubs and the frames, add its `shoot:<name>`
   npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
   surface they changed — that is the cost this harness was built to remove (#1327).
 - **Before/after pairs of diagrams: `npm run shoot:mermaid-pairs -- <pairs.json> <outdir>`.** Use
