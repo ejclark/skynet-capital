@@ -1,6 +1,7 @@
 import { isSession, sessionsBefore } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import { findPair } from "../playbooks/pair-table.js";
 import { type PassSignal, passSignalOf } from "../playbooks/research-signals.js";
 import type { PlaybookFunnelRows } from "./decision-db-playbook-funnel.js";
 import { computeFunnel } from "./decision-funnel.js";
@@ -194,4 +195,16 @@ export function playbookFunnelView(
     playbooks.some((p) => (p.days[i]?.signals ?? 0) > 0),
   ).length;
   return { sessions, playbooks, signalledSessions };
+}
+
+/** Each house playbook's funnel, read now — the Research card's view, and what the forced pick
+ *  reads before it fires (`scout-stand-down.ts`). House pairs only (`findPair`): a member's authored
+ *  `U-*` play is theirs, and its activity is not the house's to publish. */
+export function readHouseFunnel(
+  playbookFunnel: (from: number, to: number) => PlaybookFunnelRows,
+  now = new Date(),
+): PlaybookFunnelView {
+  const sessions = funnelSessions(now);
+  const { from, to } = funnelWindow(sessions, now);
+  return playbookFunnelView(playbookFunnel(from, to), sessions, (id) => findPair(id) !== undefined);
 }

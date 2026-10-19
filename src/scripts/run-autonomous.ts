@@ -58,6 +58,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { scoutSignalsFrom } from "../autonomous/scout-stand-down.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
 import {
@@ -535,10 +536,13 @@ async function runLive(): Promise<void> {
       settlementOf: settlements.settlementOf,
       // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
       // under its own persona id, never the host's.
+      // It reads the house funnel too: a session where a playbook raised its signal gets no
+      // forced pick, once a playbook has placed an order (#4450 slice 6a).
       ...(decisionDb
         ? {
             realizedPlForPlaybook: (playbookId: string) =>
               decisionDb.realizedPlForPlaybook(BETA_SCOUT_PERSONA_ID, playbookId),
+            signalledOn: scoutSignalsFrom((from, to) => decisionDb.playbookFunnel(from, to)),
           }
         : {}),
     }),

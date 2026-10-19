@@ -7,9 +7,9 @@ import {
   funnelSessions,
   funnelWindow,
   playbookFunnelView,
+  readHouseFunnel,
 } from "../../src/autonomous/playbook-funnel.js";
 import type { OrderIntent, PlaybookVerdict } from "../../src/domain/types.js";
-import { readHouseFunnel } from "../../src/scripts/dashboard-insights-bridge.js";
 
 /**
  * Each playbook's funnel over its last ten sessions (#4450 slices 5a–5b, EARS 5): checks →

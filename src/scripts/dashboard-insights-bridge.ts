@@ -26,12 +26,7 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
-import {
-  funnelSessions,
-  funnelWindow,
-  type PlaybookFunnelView,
-  playbookFunnelView,
-} from "../autonomous/playbook-funnel.js";
+import { type PlaybookFunnelView, readHouseFunnel } from "../autonomous/playbook-funnel.js";
 import {
   buildSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
@@ -39,7 +34,6 @@ import {
 import type { OrderIntent } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
-import { findPair } from "../playbooks/pair-table.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
@@ -134,17 +128,6 @@ const CHECK_WEEK_TTL_MS = 15_000;
 /** The house playbook funnel is re-read at most once a minute: one grouped read over every bot's
  *  last ten sessions, behind a card nobody can tell is a minute old. */
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
-
-/** Each house playbook's funnel, read now. House pairs only (`findPair`): a member's authored
- *  `U-*` play is theirs, and its activity is not the house's to publish. */
-export function readHouseFunnel(
-  playbookFunnel: (from: number, to: number) => Parameters<typeof playbookFunnelView>[0],
-  now = new Date(),
-): PlaybookFunnelView {
-  const sessions = funnelSessions(now);
-  const { from, to } = funnelWindow(sessions, now);
-  return playbookFunnelView(playbookFunnel(from, to), sessions, (id) => findPair(id) !== undefined);
-}
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v3`, with each
  *  subscription's conviction and its pointer at a conviction record in the version. */

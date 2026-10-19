@@ -74,6 +74,11 @@ export interface BetaScoutDeps {
    *  before a lot from a working buy is sold, which is never on the ordered quantity alone. Absent =
    *  no source: such a lot waits, never sold on a guess. */
   readonly settlementOf?: (orderId: string) => OrderSettlement | undefined;
+  /** The playbooks that raised their signal on a session (#4450 slice 6a, EARS 6), once a playbook
+   *  has shown it trades (`scout-stand-down.ts`). Any = the forced pick opens nothing that session;
+   *  its exits still run. `staged` = a pick for the next open, read against the session before.
+   *  Absent = it never stands down. */
+  readonly signalledOn?: (session: string, staged: boolean) => readonly string[];
 }
 
 /**
@@ -174,6 +179,11 @@ export class LiveCycleRunner {
    *  before 10:00…) was last recorded — once a day. Unlike the unsubscribed latch it never stops the
    *  scan: a refusal can lift later the same day. */
   private refusalNotedDay = "";
+  /** The session an in-hours scan stood down for a playbook's signal (#4450 6a): latched, since a
+   *  signal raised stays raised. A staged scan never latches it — it reads the session before. */
+  private stoodDownDay = "";
+  /** The session a stand-down was last said — once a day, staged or in hours. */
+  private standDownNotedDay = "";
 
   constructor(deps: LiveCycleDeps) {
     this.deps = deps;
@@ -294,7 +304,7 @@ export class LiveCycleRunner {
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
       return 0;
     }
-    return this.scanScout(context, scout, host, maxPicks, today, exited);
+    return this.scanScout(context, scout, host, maxPicks, today, exited, sessionDay !== undefined);
   }
 
   /** Today's one scan, once the day's latches allow it: armed AND subscribed (#4642 slice 10). */
@@ -305,6 +315,7 @@ export class LiveCycleRunner {
     maxPicks: number,
     today: string,
     exited: readonly string[],
+    staged: boolean,
   ): Promise<number> {
     // Paused, it opens nothing new — the day's exits already ran. Unsubscribed, the scan runs once to record what it would have bought, refused by name.
     if (host.state === "paused" || (host.state === "none" && this.unsubscribedNotedDay === today)) {
@@ -312,6 +323,7 @@ export class LiveCycleRunner {
     }
     // Halted: leave the day as it is — no scan, no latch — and look again once the halt lifts.
     if (this.haltedToday(today)) return 0;
+    if (this.standsDown(scout, today, staged)) return 0;
     const portfolio = await scout.broker.getPortfolio();
     const picks = betaScoutIntents(
       context,
@@ -360,6 +372,21 @@ export class LiveCycleRunner {
       this.persistScoutState();
     });
     return guarded.length;
+  }
+
+  /** Whether a playbook's signal stands today's forced pick down (#4450 6a); said once a day. */
+  private standsDown(scout: BetaScoutDeps, today: string, staged: boolean): boolean {
+    if (this.stoodDownDay === today) return true;
+    const signalled = scout.signalledOn?.(today, staged) ?? [];
+    if (signalled.length === 0) return false;
+    if (!staged) this.stoodDownDay = today;
+    if (this.standDownNotedDay !== today) {
+      this.standDownNotedDay = today;
+      this.deps.onScoutWarn?.(
+        `[beta-scout] standing down for ${today}: ${signalled.join(", ")} raised its signal${staged ? " last session" : ""}, and the forced pick fires only on a session with none`,
+      );
+    }
+    return true;
   }
 
   /** Whether the kill switch or a breaker holds the scout now; said once a day, never per cycle. */
