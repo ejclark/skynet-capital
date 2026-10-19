@@ -1,6 +1,6 @@
 # The coaching staff — detect-and-correct loops against slop
 
-> Anything below that touches GitHub issue/PR orchestration now operates under **Moneypenny's**
+> Anything below that touches GitHub issue/PR orchestration operates under **Moneypenny's**
 > mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md). The dispatch policy and roles below are
 > unchanged; she is the address Eric directs orchestration asks to, and she routes to these
 > mechanisms rather than replacing them.
@@ -142,17 +142,17 @@ collisions this fix did not cause and wasn't scoped to repair. `forward-test-id-
 at that measured `7`, not a fabricated `0` — the honest number, ratcheted down as those rows get
 renumbered, exactly as `clone-budget.json` starts non-zero rather than claiming clean.
 
-**Second instance — the code-map freshness check (2026-09-30, #4074).** The last blocking piece of
-the doc-rot coach, "structural graph freshness", failed any PR once `main` ran 50 commits past the
-`docs/STRUCTURE-graph.md` snapshot — an ambient property of `main`, not of the diff, and `main` now
-moves ~50 commits a day, so 3 of one session's 5 PRs carried an unrelated ~1,000-line refresh
-(#3830, #3984, #4070). Its "correctness, not hygiene" claim didn't survive a read: blast-radius
-queries (`graphify affected`) read the live, git-ignored `graphify-out/`, never the committed
-snapshot, so a stale map is navigation debt. Demoted to advisory (still printed on every `npm test`).
-The same read found the measurement broken: `graph:refresh` stamps the PR branch's sha, which
-squash-merge drops, so on `main` the check read UNKNOWN; it now measures from the commit that landed
-the snapshot. Falsifier: the map ≥ 500 commits behind and unrefreshed by 2026-10-31 → give the
-refresh an owner (a scheduled refresh is envelope-class, Eric's call), not a red.
+**Second instance — the code-map freshness check (2026-09-30, #4074).** The doc-rot coach's
+"structural graph freshness" check is advisory (still printed on every `npm test`): it measures an
+ambient property of `main` — whether `main` has run 50 commits past the `docs/STRUCTURE-graph.md`
+snapshot — not the diff, and `main` moves ~50 commits a day, so blocking on it put an unrelated
+~1,000-line refresh on 3 of one session's 5 PRs (#3830, #3984, #4070). A stale map is navigation
+debt, not a correctness fault: blast-radius queries (`graphify affected`) read the live,
+git-ignored `graphify-out/`, never the committed snapshot. The check measures from the commit that
+landed the snapshot, because `graph:refresh` stamps the PR branch's sha, which squash-merge drops,
+and a check keyed on that sha reads UNKNOWN on `main`. Falsifier: the map ≥ 500 commits behind and
+unrefreshed by 2026-10-31 → give the refresh an owner (a scheduled refresh is envelope-class,
+Eric's call), not a red.
 
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
@@ -196,8 +196,7 @@ closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as
 it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
 as a comment instead, never a ledger PR that would mark its runs learned with nothing learned —
 plus one `feedback` issue asking for its `/retro` (#5728, deduped, Backlog — never `ready`), because
-a comment on a closed issue was read by nobody. `/retro` still deepens an entry when a class recurs;
-it is no longer the only way one lands. The digest carries the residue as one line
+a comment on a closed issue was read by nobody. `/retro` deepens an entry when a class recurs. The digest carries the residue as one line
 (`digest-scan.mjs --learning`) under Noise absorbed, never under Needs you — including what aged
 out of the scan's window unlearned (`AGED-OUT UNLEARNED`, the band just past it, report-only), so a
 falling count can't pass expiry off as learning.
@@ -258,7 +257,7 @@ the #3754 platter promise showed what a prose-only status costs.
 |---|---|---|---|---|
 | **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
 | **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its five sections — ⑤, product/UX loop freshness, is lane work and lands in Noise absorbed, `tests/arch/config-audit-loop-freshness.spec.ts`) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
-| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. Since #1713 it is the codebase's only size cap and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off, having charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
+| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. It is the codebase's only size cap (#1713) and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off: it charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
 | **CSS literals** (type, spacing, radius and letter-spacing written as raw px/rem/em in `app/src/styles` instead of the `theme.css` ladders; `var()` fallbacks that name no token or disagree with it — the token layer covers ~99% of colour and almost nothing else) | `scripts/css-literal-scan.mjs` + `css-literal-budget.json` + `tests/arch/css-literal.spec.ts` (advisory budget check; the fixture specs are blocking; `npm run css-literal:scan`, `--json`, `--candidate` names the file with the most literals that already equal a token). Baseline 2026-10-14: raw font-size 637 (318 equal a `--text-*`), spacing 1,570 (676 equal a `--space-*`), radius 260 and letter-spacing 128 (no token yet, so no equals count), 3 dangling `var()`, 2 mismatched fallbacks | swap the literal for its ladder token (the equals count first: no taste call), fix the fallback, then `--update`; a family's first token seeds its equals key with `--update` | none yet (recruit on recurrence #3) | ✅ live |
@@ -275,7 +274,7 @@ the #3754 platter promise showed what a prose-only status costs.
 | **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that `docs/ENGINEERING.md` → *WHY earns its place* rules out; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Mermaid skill drift** (the /mermaid skill telling sessions less than github.com draws: cards still calling GitHub's version unknown or deferring features at or below the pin, syntax-table encodings the card's "Emphasis without hue" section never names with no recorded decision, registered diagram types with no card) | `scripts/mermaid-skill-scan.mjs` + `mermaid-skill-budget.json` + `.claude/skills/mermaid/encodings-ledger.json` + `tests/arch/mermaid-skill.spec.ts` (lexicon-based for encodings — a row named without any encoding term is honestly out of reach; widen the lexicon on a miss) | reword to the pin / name it in the emphasis section or record a ledger decision / write the card, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
-| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `moneypenny.mjs`'s (formerly postmaster.mjs) push-driven audit (#909) — `gh pr list`'s `mergeable` field, one-ping-per-PR via `conflict-flagged` | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Moneypenny detects + dispatches; her repair lane's `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
+| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `scripts/moneypenny/audit.mjs`'s push-driven audit (#909) — `gh pr list`'s `mergeable` field, one ping per (PR, head sha) via `conflict-flagged` and its marker comment, up to `CONFLICT_REPAIR_CAP` (3) repairs, then `needs-eric` (#1403) | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Moneypenny detects + dispatches; her repair lane's `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
