@@ -213,15 +213,16 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Aligned intent is the authorization — a merge commit on a bot-owned branch is in-envelope**
   (Eric, 2026-09-06, after four separate "go" asks in one thread to push relocation merge
   commits to `research/*` branches: "You know my intention to act, because we are aligned... what
-  mechanisms are blocking you from acting without my blessing?"). What stops a session there is the
-  harness's own rule, not this repo's: pushing a *merge commit* (never a rebase, amend or force) to a
+  mechanisms are blocking you from acting without my blessing?"). The blocker was a session-harness
+  rule, not this repo's: pushing a *merge commit* (never a rebase, amend or force) to a
   lane-owned branch to resolve a conflict is exactly what the repair lane already does unattended,
   so a session doing the same after a green verify needs no per-batch blessing. The class that
   still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. A prose restatement drifts — a copy that drops `and hard to
-  reverse` makes "outward-facing" fire on copy changes. Cite the file; don't re-copy the list. **Read the words narrowly:** *outward-facing* = reachable by a non-member
+  reverse` makes "outward-facing" fire on copy changes. Cite the file; don't re-copy the list.
+  **Read the words narrowly:** *outward-facing* = reachable by a non-member
   or changing an external contract; *spend* = provisioning a credential or raising a cap, never
   picking a model tier on a lane already paid for.
 - **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
@@ -566,10 +567,9 @@ common routes:
   normal, expected verdict, not a shortfall.
 - **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
   from `docs/BRAND.md` tokens).
-- **A finished Claude Design session** → one of the two paths in
-  [`docs/HANDOFFS.md`](docs/HANDOFFS.md): mark the canvas's artboards `build` and fire the design
-  lane, or attach the export zip to a session, which files the spec into a `plan` issue and builds
-  slice 1 there; the remainder reaches the plan lane by the same ready comment a plan uses.
+- **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
+  ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
+  go signal, exactly as `ready` is for a plan.
 - **Drawing or reviewing any diagram** (a PR picture, an issue, a plan's lifecycle, an architecture
   page, a reply) → **`/mermaid`** — the type by story, the delta grammar, GitHub's actual renderer
   facts and one reference card per type, loaded only then (Eric, 2026-09-25: expert on demand, no
@@ -649,8 +649,8 @@ is expected and fine; the docs are the memory.
   per container (its diagram, canonical flow, code roots), each element refuted against the code it
   cites; read a container's page before touching it, and update it in the same PR.
 - **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
-  repo — `graphify explain/query/path/affected` to navigate; after code changes run `npm run
-  graph:refresh` (free, no API) to regenerate it. Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
+  repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify
+  extract . --code-only` (free). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
 - Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated
   worktrees, verify-before-merge). In burn-down mode, opening small green PRs and letting
   `pipeline.yml` arm their squash auto-merge is the expected loop.
