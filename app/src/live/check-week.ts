@@ -6,7 +6,7 @@
  * in place of the shapes.
  */
 
-import type { PlaybookCard } from "./bot-playbooks";
+import type { CardState, PlaybookCard } from "./bot-playbooks";
 import {
   type CheckWeek,
   type PlaybookHeartbeat,
@@ -117,17 +117,19 @@ export function tradeText(trade: WeekTrade): string {
 }
 
 /** A lane in words, for a reader who cannot see its shapes: the answer it gave most of the half
- *  hours it was asked, and how many trades it placed. */
+ *  hours it was asked, and how many trades it placed. The card's state wins where it is the truer
+ *  word: a can't-fire card says so, and one held by an estimated print (#4479) says it waits on a
+ *  confirmed date, never that it waits for its window. */
 export function laneSummary(
   lane: WeekLane | undefined,
   trades: readonly WeekTrade[],
-  blocked: boolean,
+  state: CardState,
 ): string {
   const placed =
     trades.length === 0
       ? ""
       : ` ${trades.length} ${trades.length === 1 ? "trade" : "trades"} placed.`;
-  if (blocked) return `This week: can't fire.${placed}`;
+  if (state === "blocked") return `This week: can't fire.${placed}`;
   const counts = new Map<PlaybookVerdictState, number>();
   let asked = 0;
   for (const row of lane?.states ?? []) {
@@ -139,5 +141,8 @@ export function laneSummary(
   }
   if (asked === 0) return `This week: no check asked it.${placed}`;
   const [top, n] = [...counts.entries()].reduce((a, b) => (b[1] > a[1] ? b : a));
+  if (state === "unconfirmed" && top === "no-window") {
+    return `This week: waiting on a confirmed date — no window open in ${n} of ${asked} half hours asked.${placed}`;
+  }
   return `This week: ${VERDICT_WORDS[top]} in ${n} of ${asked} half hours asked.${placed}`;
 }
