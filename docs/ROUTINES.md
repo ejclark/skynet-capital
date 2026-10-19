@@ -31,6 +31,9 @@ Automation runs on two substrates:
   (docs/DELEGATION.md, trust ladder).
 - **Ceiling is notification + PR.** No scheduled session trades, touches credentials, edits its own
   or any other schedule, or escalates its findings past a notification and an ordinary reviewable PR.
+  One exception, armed by Eric's merge of #5007 and argued in its row: the bots deploy catch-up may
+  dispatch `pipeline.yml`'s `force_bots_deploy`, which redeploys only what `main` already holds,
+  through the pipeline's one audited deploy path.
 - **No-op must be free.** Every schedule's first act is a cheap scan whose empty result ends the
   run immediately — the scan is the contract, the schedule is just the clock.
 
