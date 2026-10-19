@@ -1,6 +1,6 @@
 {
   "$comment": "The commit the last instruction-drift run read through (docs/grind/instruction-drift.instructions.md). Written only by `node scripts/instruction-drift-scan.mjs --record`; the next run reads the instruction files changed since `commit`.",
-  "commit": "05c7b94491aa3f5d9212d8f46eaf3f6fad6784f0",
-  "date": "2026-10-05",
-  "run": "full"
+  "commit": "0b81a4ba6f57ffa43334bddd823d169ceb6163d9",
+  "date": "2026-10-15",
+  "run": "incremental"
 }
