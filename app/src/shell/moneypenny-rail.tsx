@@ -2,7 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
+import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
 import { linkPieces } from "../live/moneypenny-links";
 import { chipsFor } from "../live/moneypenny-script";
 import { usePhoneWidth } from "./use-media";
@@ -21,9 +23,11 @@ import { usePhoneWidth } from "./use-media";
  * companion is told the UI carries is rendered here, under the composer.
  *
  * Rendering only. What she says and when anything files is `live/moneypenny.ts`; this component
- * has two side effects of its own: after a filing it invalidates the queries that carry the
- * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), and
- * the copy control writes the formatted thread to the clipboard.
+ * has three side effects of its own: after a filing it invalidates the queries that carry the
+ * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), after a
+ * view is saved from her card it invalidates the member's convictions list (#5482 criterion 9),
+ * and the copy control writes the formatted thread to the clipboard. A parked view swaps the
+ * chips for its card's three exits (`moneypenny-conviction.ts`).
  * @category feedback
  */
 
@@ -86,6 +90,8 @@ export function MoneypennyRail(): ReactElement | null {
   const streaming = useMoneypenny((s) => s.streaming);
   const flow = useMoneypenny((s) => s.flow);
   const draft = useMoneypenny((s) => s.draft);
+  const conviction = useMoneypenny((s) => s.conviction);
+  const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
   const disclosure = useMoneypenny((s) => s.disclosure);
@@ -99,7 +105,7 @@ export function MoneypennyRail(): ReactElement | null {
   const atEnd = useRef(true);
   const queryClient = useQueryClient();
   const busy = typing || streaming;
-  const chipsShown = !busy && (flow === "idle" || draft !== undefined);
+  const chipsShown = !busy && (flow === "idle" || draft !== undefined || conviction !== undefined);
 
   // Follow the thread: every append scrolls the list to its end.
   // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
@@ -128,6 +134,12 @@ export function MoneypennyRail(): ReactElement | null {
       void queryClient.invalidateQueries({ queryKey: [key] });
   }, [filedSeq, queryClient]);
 
+  // A view saved from her card shows on R&D → Playbooks without a reload.
+  useEffect(() => {
+    if (convictionSeq === 0) return;
+    void queryClient.invalidateQueries({ queryKey: myConvictionsKey });
+  }, [convictionSeq, queryClient]);
+
   // Escape closes the rail — the one dismissal that works everywhere, mobile included.
   useEffect(() => {
     if (!open) return;
@@ -153,13 +165,15 @@ export function MoneypennyRail(): ReactElement | null {
       submit();
     }
   };
-  const chips = chipsShown
-    ? chipsFor({
-        draft: draft !== undefined,
-        connected: connected === true,
-        firstTradeDone: firstTradeDone === true,
-      })
-    : [];
+  const chips = !chipsShown
+    ? []
+    : conviction
+      ? CONVICTION_CHIPS
+      : chipsFor({
+          draft: draft !== undefined,
+          connected: connected === true,
+          firstTradeDone: firstTradeDone === true,
+        });
   // Best-effort: a clipboard failure (no permission, no secure context) costs nothing but the
   // "Copied" confirmation — the member's thread was never at risk of being lost by trying.
   const copyThread = () => {
