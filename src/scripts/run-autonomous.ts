@@ -78,6 +78,7 @@ import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SYMBOL_FACTS } from "../domain/symbol-facts.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
+import { parseCondScoutUniverse } from "../playbooks/cond-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { authoredPlaysHolder } from "./autonomous-authored-plays.js";
@@ -329,17 +330,24 @@ async function runLive(): Promise<void> {
     promotedPlays.rosterFor,
     memberConvictions.lookupFor,
   ); // issue #885
-  // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
-  // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
+  // The forced daily pick's env arming — read here because the bot it runs on, the first, carries
+  // it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // Tell the dashboard the env house roster (#4535 slice 1b) and the env's other behaviour settings
+  // (slice 4c), so it can copy each into the bots' own stored settings once — behaviour-preserving,
+  // ahead of the bots no longer reading the env. Rides the next `/controls` poll.
   controls.reportHouseRoster(
     houseRosterReport(
       bots.map((bot) => bot.persona.id),
       playbookRoster.enabled,
+      {
+        hardcore: [...hardcoreRoster.envIds],
+        betaPicks: betaForcing.maxPicks,
+        betaStage: betaForcing.stageAfterClose,
+        condScoutUniverse: parseCondScoutUniverse(process.env.SKYNET_COND_SCOUT_UNIVERSE),
+      },
     ),
   );
-  // The forced daily pick's env arming — read here because the bot it runs on, the first, carries
-  // it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
-  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
   // ...and its count is the owner's setting for that bot when there is one (Mission Control, read
   // every scan — #4535 slice 2b), else the env count; 0 from either side is dark.
   const scoutHostId = botRosters[0]?.bot.persona.id;

@@ -18,7 +18,8 @@ import { siblingPath } from "../storage/sibling-path.js";
  * there `null` means not subscribed.
  *
  * Who is the signed-in email, the same tier as the controls file's own `updatedBy`. It is never sent
- * to the browser: the settings API answers "you" or "another owner" (`settings-api-routes.ts`).
+ * to the browser: the settings API answers "you" or "another owner" (`settings-api-routes.ts`) — or,
+ * for a one-time copy of the bots app's own setting (`env-settings-seed.ts`), says so.
  *
  * Plain JSON beside bot-controls.json (no new env var, no `fly.toml` change — envelope-protected),
  * the `council-store.ts` posture. Newest last; each account keeps its latest `MAX_CHANGES_PER_ACCOUNT`.
@@ -92,6 +93,12 @@ export class SettingsChangeLog {
       label: "settings-changes",
       ...(onReadError ? { onReadError } : {}),
     });
+  }
+
+  /** False when the file is there but did not read whole: an unattended writer (the env-settings
+   *  seed) skips its write then, since `record` would write the part it read over the rest. */
+  readable(): boolean {
+    return this.file.loadIfReadable() !== undefined;
   }
 
   /** One account's changes, newest first, at most `limit`. */
