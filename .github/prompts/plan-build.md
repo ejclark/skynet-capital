@@ -70,8 +70,13 @@ above the Claude Code attribution footer, and write anything you post in the hou
 
 There is no `needs-info` exit here the way the feedback lane has one: a plan issue's audience is
 Eric (or the settled-fork process that produced it), not an external member, so an unresolved
-question with no reasonable default routes straight to `needs-eric` — the same rule the feedback lane
-uses for its own out-of-envelope asks, applied to the one audience a plan issue actually has.
+question with no reasonable default routes to `needs-eric` — the same rule the feedback lane
+uses for its own out-of-envelope asks, applied to the one audience a plan issue actually has. It gets
+there only after the two checks `CLAUDE.md` names for a fork thin on data (Eric, 2026-09-07), both
+written into the comment: *erosion* — if a later slice of this plan could reveal or reshape the
+answer, name that slice and end `Sliced` with `next-slice` instead — and *the deciding question* —
+name the one question that would settle it and go get the answer (the code, `docs/IDEAS.md`, the
+backlog) first. Mechanics: `docs/grind/interrogate.instructions.md` → step 8.
 
 `needs-eric` is reserved for a decision only Eric can make: a protected path named by
 `envelope-scan`, provisioning a credential, raising a spend cap, or a genuinely unresolved question
