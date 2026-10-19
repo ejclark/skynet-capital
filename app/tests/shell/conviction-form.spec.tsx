@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { MemberConvictionView, SteerablePairView } from "../../src/live/member-convictions";
 import { draftOf, emptyFields, fieldsFrom, placeProblems } from "../../src/shell/conviction-fields";
 import { ConvictionForm } from "../../src/shell/conviction-form";
@@ -93,9 +93,9 @@ const type = (label: string | RegExp, value: string, scope: HTMLElement = docume
   fireEvent.change(within(scope).getByLabelText(label), { target: { value } });
 
 function mountForm(over: { editing?: MemberConvictionView } = {}) {
-  const onSaved = rstest.fn();
-  render(<ConvictionForm steerable={[WHEEL]} {...over} onSaved={onSaved} onCancel={rstest.fn()} />);
-  return { onSaved };
+  render(
+    <ConvictionForm steerable={[WHEEL]} {...over} onSaved={rstest.fn()} onCancel={rstest.fn()} />,
+  );
 }
 
 function fillOneClaim() {
@@ -122,7 +122,7 @@ describe("ConvictionForm", () => {
   });
 
   it("previews the view as before → after with SIM, and only then offers Save", async () => {
-    const { onSaved } = mountForm();
+    mountForm();
     fillOneClaim();
     // The only pair the member runs is ticked already; narrow its contracts.
     type("Contracts, at most", "1");
@@ -153,11 +153,7 @@ describe("ConvictionForm", () => {
         ],
       },
     });
-
-    reply = { ...(reply as object), saved: true };
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("CRWV floor"));
-    expect(posts[1]?.url).toBe("/api/convictions/save");
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
   });
 
   it("puts the card away on any edit, so the view saved is the one just read", async () => {
@@ -234,6 +230,19 @@ describe("YourConvictions", () => {
     const door = await screen.findByRole("button", { name: "State a conviction" });
     expect(door).toHaveProperty("disabled", true);
     expect(screen.getByText(/none of yours runs one yet/)).toBeTruthy();
+  });
+
+  it("saves the previewed view and says it steers nothing yet", async () => {
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: "State a conviction" }));
+    fillOneClaim();
+    fireEvent.click(screen.getByRole("button", { name: "Preview what it changes" }));
+    reply = { ...(reply as object), saved: true };
+    fireEvent.click(await screen.findByRole("button", { name: "Save draft" }));
+    expect(
+      await screen.findByText("Saved CRWV floor as a draft. It steers nothing yet."),
+    ).toBeTruthy();
+    expect(posts.map((p) => p.url)).toEqual(["/api/convictions/draft", "/api/convictions/save"]);
   });
 
   it("lists a saved view as a draft that steers nothing yet", async () => {
