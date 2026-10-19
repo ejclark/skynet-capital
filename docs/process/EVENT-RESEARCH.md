@@ -1,6 +1,6 @@
 # Event research — the assessment discipline behind the market-event calendar
 
-The foresight loop: an event lands in the calendar (`src/domain/market-events.ts`, or a print in
+The foresight loop: an event lands in the calendar (`src/domain/market-events/<id>.json`, or a print in
 `src/domain/earnings-calendar.ts`) → initial research asks *what is likely to happen and how will
 the market react* → periodic reassessments hunt new information and adjust the stance — at a
 frequency that ramps with impact × time-to-event (`assessment-cadence.json`) — until the
@@ -47,9 +47,10 @@ fragment stay on disk as the record. Mark, don't delete — the shape every cale
 - **You cannot retire someone else's file.** Found a duplicate you don't own? Note it in your ledger
   and say so on the survivor's issue — the owner's next pulse writes the field. That is one more
   pulse, not thirty.
-- **The old `(DUPLICATE of …)` title annotation is replaced by the field.** It retired nothing, and
-  it blinded the detector: annotating one pair dropped its title-overlap score from 0.857 to 0.400.
-- **`--validate` now warns on same-date title overlap ≥ 45%** (advisory, never red — ISM and S&P
+- **The field, never a `(DUPLICATE of …)` title annotation.** An annotation retires nothing, and
+  the detector strips it before scoring (unstripped, annotating one pair dropped its title-overlap
+  score from 0.857 to 0.400).
+- **`--validate` warns on same-date title overlap ≥ 42%** (advisory, never red — ISM and S&P
   Global publish near-identical titles on the same day and are genuinely different publishers). A
   warning is a prompt to read two titles, not a verdict; `supersededBy` is the part that binds.
 - **Both of those run after the duplicate exists. `--on-date` runs before it does** (#3361) — see
@@ -165,15 +166,15 @@ before its stated window closes is falsification, so a session dispatched before
 forward tests are scoreable can only re-read state and leave. Measured on `gastech-2026-09-14`:
 **three dispatches in 38 minutes**, no new information available to any of them, because each
 research PR's own merge re-triggered the push-driven sweep and the `research/<event-id>` branch key
-only dedupes while that PR is still *open*. `scripts/event-scan.mjs` now reads the event's own
+only dedupes while that PR is still *open*. `scripts/event-scan.mjs` reads the event's own
 fragment (`scripts/forward-test-pending.mjs` — pure text, no network, no `npm ci`) and **holds the
 close-out until the latest unscored score-by**, reporting `close-out-held-for-forward-test` with
 that date on the human report. The wait is **clamped to `closeOutWithinDays`**: a test scoring after
 the ceiling is a *structural* conflict, not a timing one — the event would age out of its close-out
 window entirely — so the scanner dispatches immediately and names the test in `--due`'s
-`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose,
-exactly as before. An unreadable row, a missing fragment, or an already-scored row all behave
-exactly as they did: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
+`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose.
+An unreadable row, a missing fragment, or an already-scored row holds nothing — the close-out
+dispatches: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
 outcome record permanently while a wrong dispatch only costs a session. Legacy `FT-N` rows in
 `docs/research/forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace
 to match on.
@@ -191,9 +192,9 @@ falsification pressure, and it is the reason #2884 is not a registration gate.
 
 **Closing is not resolving.** The close-out above writes `## Outcome` and the scanner goes quiet —
 but a forward test is deliberately allowed to key on data that does not exist yet, and about a
-quarter of honest registrations score *past* `closeOutWithinDays`. Those rows used to have no
-second net at all (`scripts/forward-test-id-scan.mjs` reads ids, never the `Score by` column), so
-they sat `_open_` forever while being cited in stance notes as predictions that would settle.
+quarter of honest registrations score *past* `closeOutWithinDays`. Without this mode those rows
+have no second net (`scripts/forward-test-id-scan.mjs` reads ids, never the `Score by` column), so
+they sit `_open_` forever while being cited in stance notes as predictions that would settle.
 Measured 2026-09-20: **21 events · 31 rows** permanently orphaned that way, 6 of them already
 decided by the tape and unrecorded, and the number only ever went up. The separation is the one
 every forecasting platform already makes — Good Judgment Open resolves on when events occurred,
@@ -231,10 +232,10 @@ pressure, not a bug. If a row genuinely needs a later date than it was registere
 `scripts/event-scan.mjs` decides **when** a pulse is due; `scripts/event-material-scan.mjs`
 decides **whether it needs a Claude session at all**, for `interval-elapsed` pulses only (a
 `never-assessed` initial research and an `event-passed-unscored` close-out are never screened —
-both always dispatch, same as before this existed). It runs between the two in
-`.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and commits
-it directly, without spending a session; anything else falls through to the full pulse-check
-protocol above, unchanged.
+both always dispatch). It runs between the two in
+`.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and lands
+it via a PR, never a direct push to `main`, without spending a session; anything else falls through
+to the full pulse-check protocol above.
 
 **The reference block.** Every ledger's header carries a machine-readable line right after
 `**Last assessed:**`:
@@ -368,14 +369,14 @@ research; non-negotiable"*).
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here
 
       - name: Restore npm cache
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -417,7 +418,8 @@ research; non-negotiable"*).
 If he would rather have the literal Sunday clock the brief named, the same job takes
 `on: schedule: - cron: "0 16 * * 0"` (12:00 ET during EDT; 17:00 UTC once EST starts — a fixed cron
 cannot follow the offset, which is a third reason the tick is the better shape here). It would be
-the only cron in the repo, and it would compose each week from Sunday's ledger set alone.
+the repo's second cron, beside `bots-catchup.yml`'s deploy catch-up, and it would compose each week
+from Sunday's ledger set alone.
 
 ## Signal runs — the second door (#4808 slice 2)
 
@@ -503,7 +505,7 @@ rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges
   is falsification and never happens (the forward-tests rule, verbatim).
 - **Estimates only widen caution.** A cadence estimate may pull an assessment earlier or extend a
   flat window; it never licenses an entry.
-- **Source prefixes are the audit trail** — see the header of `market-events.ts`. `--validate`
+- **Source prefixes are the audit trail** — see the header of `market-events-data.ts`. `--validate`
   enforces them in CI.
 - **Blocked sources are recorded, never substituted silently.** When a fetch of a cited source
   fails — egress block, 403, 5xx — the ledger's `probe-ref.blocked` array gets a
