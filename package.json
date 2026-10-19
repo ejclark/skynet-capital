@@ -97,6 +97,7 @@
     "shoot:filing-comments": "tsx scripts/shoot/filing-comments.mjs",
     "shoot:onboarding": "tsx scripts/shoot/onboarding.mjs",
     "shoot:moneypenny": "tsx scripts/shoot/moneypenny.mjs",
+    "shoot:moneypenny-conviction": "tsx scripts/shoot/moneypenny-conviction.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
     "shoot:guidance-recap": "tsx scripts/shoot/guidance-recap.mjs",

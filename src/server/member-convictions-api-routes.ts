@@ -5,7 +5,7 @@ import {
   type DraftOutcome,
   draftConviction,
 } from "../playbooks/conviction-draft.js";
-import { parseConvictionDraft } from "../playbooks/conviction-parse.js";
+import { type ConvictionDraftInput, parseConvictionDraft } from "../playbooks/conviction-parse.js";
 import type { SteerBounds } from "../playbooks/conviction-steering.js";
 import { CONVICTIONS, playbookBounds } from "../playbooks/conviction-store.js";
 import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js";
@@ -125,7 +125,10 @@ export interface SteerablePairView {
 }
 
 /** The ◆ pairs this session's bots subscribe to whose playbook a conviction can narrow, by id. */
-function steerablePairs(config: DashboardServerConfig, session: Session): SteerablePairView[] {
+export function steerablePairs(
+  config: DashboardServerConfig,
+  session: Session,
+): SteerablePairView[] {
   return [...subscribedPairs(config, session)].sort().flatMap((id) => {
     const pair = findPair(id);
     const bounds = playbookBounds(id);
@@ -143,7 +146,17 @@ function judge(
   replaceId: string | undefined,
 ): DraftOutcome | undefined {
   const input = parseConvictionDraft(body.draft);
-  if (!input) return undefined;
+  return input ? judgeDraft(input, config, session, replaceId) : undefined;
+}
+
+/** Judge a parsed draft for this member — the one judgement `/draft`, `/save` and Moneypenny's chat
+ *  (`companion-convictions-port.ts`) share. */
+export function judgeDraft(
+  input: ConvictionDraftInput,
+  config: DashboardServerConfig,
+  session: Session,
+  replaceId?: string,
+): DraftOutcome {
   const store = config.memberConvictions;
   const memberKey = opaqueMemberId(session.email);
   const mine = store?.list(memberKey).some((r) => r.conviction.id === replaceId) ?? false;
