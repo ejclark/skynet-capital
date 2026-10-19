@@ -22,12 +22,14 @@ export interface OwnedAccount {
 /** Who made a change, as the server tells it — never an email. */
 export type ChangeAuthor = "you" | "another owner";
 
-/** One recorded change to a bot's settings; `null` = not set here, the operations setting stands. */
+/** One recorded change to a bot's settings; `null` = not set here, the operations setting stands —
+ *  or, on a Store line (`subscription:<playbookId>`), not subscribed. A subscription is a one-line
+ *  summary string the server wrote (#4535 slice 3c). */
 export interface BotSettingChange {
   readonly at: string;
   readonly setting: string;
-  readonly before: boolean | number | null;
-  readonly after: boolean | number | null;
+  readonly before: boolean | number | string | null;
+  readonly after: boolean | number | string | null;
   readonly proposedBy: ChangeAuthor;
   readonly approvedBy: ChangeAuthor;
 }

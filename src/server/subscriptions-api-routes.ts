@@ -25,6 +25,7 @@ import { opaqueMemberId } from "./feedback-issue.js";
 import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
 import { withForecasts } from "./pair-forecast.js";
 import { subscribeLiveReads } from "./subscribe-live-reads.js";
+import { recordAllocationWrite, recordSubscriptionWrite } from "./subscription-changes.js";
 import {
   parseAllocationBody,
   parseConfigureBody,
@@ -80,6 +81,9 @@ import { servePreflight } from "./subscriptions-preflight-route.js";
  * allocation caps what may be delegated and delegates nothing, so it passes ownership and bots-only,
  * never the fog. A conviction's new date can resume a pair a failed check stopped — more delegation
  * — so it passes all three gates, like Edit.
+ *
+ * EVERY WRITE IS LOGGED (#4535 slice 3c, `subscription-changes.ts`): who, before and after, in the
+ * same settings change log a bot's Settings card lists — both or neither.
  */
 
 const BODY_CAP_BYTES = 4_096;
@@ -169,6 +173,8 @@ function subscriberCounts(
   }
   return counts;
 }
+
+const editorOf = (session: Session | undefined): string => session?.email ?? "unknown";
 
 const asOfIso = (config: DashboardServerConfig): string =>
   (config.now?.() ?? new Date()).toISOString();
@@ -286,15 +292,17 @@ async function handleSubscribe(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  store.subscribe(body.id, {
-    playbookId: body.playbookId,
-    mode: body.mode,
-    ...(body.capitalAllocated !== undefined ? { capitalAllocated: body.capitalAllocated } : {}),
-    enabled: true,
-    ...(body.symbols ? { symbols: body.symbols } : {}),
-    ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
-    ...(body.conviction ? { conviction: body.conviction } : {}),
-  });
+  recordSubscriptionWrite(config, store, body, editorOf(session), () =>
+    store.subscribe(body.id, {
+      playbookId: body.playbookId,
+      mode: body.mode,
+      ...(body.capitalAllocated !== undefined ? { capitalAllocated: body.capitalAllocated } : {}),
+      enabled: true,
+      ...(body.symbols ? { symbols: body.symbols } : {}),
+      ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
+      ...(body.conviction ? { conviction: body.conviction } : {}),
+    }),
+  );
   sendJson(res, 200, { ok: true });
 }
 
@@ -344,7 +352,9 @@ async function handleConfigure(
   const tuning = movesNoCapital(body.playbookId)
     ? { mode: body.tuning.mode, ...(body.tuning.symbols ? { symbols: body.tuning.symbols } : {}) }
     : body.tuning;
-  const saved = store.configure(body.id, body.playbookId, tuning);
+  const saved = recordSubscriptionWrite(config, store, body, editorOf(session), () =>
+    store.configure(body.id, body.playbookId, tuning),
+  );
   sendJson(
     res,
     200,
@@ -380,7 +390,9 @@ async function handleConviction(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  const saved = store.setConviction(body.id, body.playbookId, body.conviction);
+  const saved = recordSubscriptionWrite(config, store, body, editorOf(session), () =>
+    store.setConviction(body.id, body.playbookId, body.conviction),
+  );
   sendJson(
     res,
     200,
@@ -419,7 +431,7 @@ async function handleAllocation(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  store.setAllocation(body.id, body.strategy, body.capitalAllocated);
+  recordAllocationWrite(config, store, body, body.capitalAllocated, editorOf(session));
   sendJson(res, 200, { ok: true });
 }
 
@@ -486,7 +498,9 @@ export async function serveSubscriptionsApi(
       sendJson(res, 200, { ok: false, error: "You can only unsubscribe your own account." });
       return true;
     }
-    store.unsubscribe(body.id, body.playbookId);
+    recordSubscriptionWrite(config, store, body, editorOf(session), () =>
+      store.unsubscribe(body.id, body.playbookId),
+    );
     sendJson(res, 200, { ok: true });
     return true;
   }
@@ -500,7 +514,9 @@ export async function serveSubscriptionsApi(
     sendJson(res, 200, { ok: false, error: "You can only control your own subscriptions." });
     return true;
   }
-  store.setEnabled(body.id, body.playbookId, body.enabled);
+  recordSubscriptionWrite(config, store, body, editorOf(session), () =>
+    store.setEnabled(body.id, body.playbookId, body.enabled),
+  );
   sendJson(res, 200, { ok: true });
   return true;
 }

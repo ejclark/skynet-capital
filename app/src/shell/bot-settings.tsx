@@ -21,7 +21,9 @@ import { InlineResult } from "../ui";
  *
  * Under them, the change log: every change to this bot's settings, suspend included, with who
  * proposed it, who approved it, before and after (the plan's criterion 4). Ownership is the only
- * gate, so one person does both and the line says so once.
+ * gate, so one person does both and the line says so once. The Playbook Store's writes land here
+ * too (slice 3c): a subscription line reads as the server's one-line summary, an allocation as
+ * dollars.
  * @category desk
  */
 
@@ -34,8 +36,24 @@ const SETTING_NAMES: Readonly<Record<string, string>> = {
   betaPicks: "Forced picks per day",
 };
 
+const SUBSCRIPTION = "subscription:";
+const ALLOCATION = "allocation:";
+
+/** A change line's name: the controls settings by name, a Store line by its playbook or strategy. */
+function settingName(setting: string): string {
+  if (setting.startsWith(SUBSCRIPTION)) return setting.slice(SUBSCRIPTION.length);
+  if (setting.startsWith(ALLOCATION)) {
+    return `Allocation to ${setting.slice(ALLOCATION.length).replaceAll("-", " ")}`;
+  }
+  return SETTING_NAMES[setting] ?? setting;
+}
+
 /** A stored value in words; `null` = nothing stored, so the operations setting stands. */
 function valueWords(setting: string, value: BotSettingChange["before"]): string {
+  if (setting.startsWith(SUBSCRIPTION)) return value === null ? "not subscribed" : String(value);
+  if (setting.startsWith(ALLOCATION)) {
+    return typeof value === "number" ? `$${value.toLocaleString("en-US")}` : "none";
+  }
   if (setting === "suspended") return value === true ? "suspended" : "on";
   if (value === null) return OPS;
   if (setting === "hardcore") return value === true ? "hardcore" : "standard";
@@ -67,7 +85,7 @@ function ChangeLog({ changes }: { readonly changes: readonly BotSettingChange[] 
         <ul className="bot-settings-changes">
           {changes.map((c) => (
             <li key={`${c.at}-${c.setting}`}>
-              <b>{SETTING_NAMES[c.setting] ?? c.setting}</b> {valueWords(c.setting, c.before)} →{" "}
+              <b>{settingName(c.setting)}</b> {valueWords(c.setting, c.before)} →{" "}
               {valueWords(c.setting, c.after)}
               <span className="mc-note">
                 {" "}
