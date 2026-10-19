@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: add new issues to the board without gh's owner lookup
+- **SHA:** 8046b4e   **DATE:** 2026-10-19   **STATUS:** closed
+- **COVERS:** 3c7fd3e
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [39184644834](https://github.com/ejclark/skynet-capital/actions/runs/39184644834) at 2026-10-19T01:16:57Z. Repair capsule #5792 filed 2026-10-19T01:17:34Z, closed 15m later by #5799.
+- **ROOT CAUSE:** Every `gh project <cmd> --owner` call first runs gh's owner lookup. That lookup turns any unexpected error into `unknown owner type`, which hides the real cause from the retry. #4933 moved the per-run reads off it, but kept `item-add` on the theory that it rarely runs. In fact every new issue's first sync runs it. Run 39184644834 (for #5791) failed exactly there, and the script's own probe showed the token was fine.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-owner-lookup.spec.ts` (#5799).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### A green, armed PR sat blocked for 5 days behind a check suite that never ran a job
 - **SHA:** n/a   **DATE:** 2026-10-16   **STATUS:** closed
 - **RECURS:** The arm job refused the one pull-request action ship.sh fires on purpose, so a finished PR sat green for 29 hours
