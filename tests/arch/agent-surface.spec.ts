@@ -108,6 +108,30 @@ describe("agent-surface eye — fixtures", () => {
     expect(out).toContain('"SessionStart" sits at the top level, outside "hooks"');
   });
 
+  it("notes history in a rule file without failing, and reads only rule files", () => {
+    const { status, out } = scanFixture((root) => {
+      skill(root, "ship", "ship");
+      writeFileSync(
+        join(root, ".claude", "skills", "ship", "SKILL.md"),
+        "---\nname: ship\ndescription: Ship it. Use when opening a PR.\n---\n\n# ship\n\nNever arm by hand (#1234: arming by hand let three PRs merge early).\nThe plan is #5143.\n",
+      );
+      mkdirSync(join(root, ".github", "prompts"), { recursive: true });
+      writeFileSync(
+        join(root, ".github", "prompts", "lane.md"),
+        "The job's checkout no longer persists that credential.\n",
+      );
+      mkdirSync(join(root, "docs"), { recursive: true });
+      writeFileSync(join(root, "docs", "LESSONS.md"), "#999 merged and broke the board.\n");
+    });
+    expect(status).toBe(0);
+    expect(out).toContain(
+      ".claude/skills/ship/SKILL.md:8 — history in a rule: #1234 told as a story",
+    );
+    expect(out).toContain('.github/prompts/lane.md:1 — history in a rule: "no longer"');
+    expect(out).not.toContain("#5143");
+    expect(out).not.toContain("LESSONS.md");
+  });
+
   it("degrades honestly: no vendored hooks doc means UNKNOWN, exit 2, never a pass", () => {
     const root = mkdtempSync(join(tmpdir(), "agent-surface-nodoc-"));
     try {
