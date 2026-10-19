@@ -97,24 +97,32 @@ export function withoutLadderPlaybookIds(
 type Outcome = DecisionCycleView["outcomes"][number];
 type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
-/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag and the broker's
- *  words removed — and each refused idea's strategy tag and play. The tag is a playbook's own slug
- *  (`crwv-wheel-put`), so it names the playbook as plainly as the chip does (#4971). */
+/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag, the broker's words
+ *  and its forecast's retire rule removed — and each refused idea's strategy tag and play. The tag
+ *  is a playbook's own slug (`crwv-wheel-put`), so it names the playbook as plainly as the chip
+ *  does (#4971); the retire rule's test window names the play's parameters (#5828). */
 export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
   "outcomes" | "refusedIntents"
 > & {
-  readonly outcomes: readonly Omit<
+  readonly outcomes: readonly (Omit<
     Outcome,
-    "playbook" | "playbookMode" | "strategy" | "brokerReason"
-  >[];
+    "playbook" | "playbookMode" | "strategy" | "brokerReason" | "forecast"
+  > & { readonly forecast?: Omit<NonNullable<Outcome["forecast"]>, "retireRule"> })[];
   readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy" | "playbookId">[];
 })[] {
   return withoutPlaybookNames(
     cycles.map(({ refusedIntents, ...cycle }) => ({
       ...cycle,
       outcomes: cycle.outcomes.map(
-        ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
+        ({
+          playbook: _p,
+          playbookMode: _m,
+          strategy: _s,
+          brokerReason: _b,
+          forecast,
+          ...outcome
+        }) => (forecast ? { ...outcome, forecast: withoutRetireRule(forecast) } : outcome),
       ),
       ...(refusedIntents
         ? {
@@ -124,6 +132,13 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
     })),
     cycles,
   );
+}
+
+function withoutRetireRule<F extends { readonly retireRule?: string }>(
+  forecast: F,
+): Omit<F, "retireRule"> {
+  const { retireRule: _r, ...rest } = forecast;
+  return rest;
 }
 
 type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning" | "playbookId"> & {

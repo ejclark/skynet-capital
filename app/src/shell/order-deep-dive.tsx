@@ -204,6 +204,11 @@ function PlaybookBlock({ why }: { readonly why: ActivityReasoning }): ReactEleme
           <span className="dd-sub">Proves it wrong</span> {why.invalidator}
         </p>
       ) : null}
+      {why.retireRule ? (
+        <p>
+          <span className="dd-sub">Retires it</span> {why.retireRule}
+        </p>
+      ) : null}
     </section>
   );
 }

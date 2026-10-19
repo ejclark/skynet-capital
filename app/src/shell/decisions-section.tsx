@@ -102,6 +102,8 @@ export function OutcomeLine({
               — proves it wrong: {outcome.forecast.invalidator}
             </span>
           ) : null}
+          {/* the server sends the retire rule to the bot's owner only (#5828) */}
+          {outcome.forecast?.retireRule ? <span> {outcome.forecast.retireRule}</span> : null}
         </p>
       ) : null}
       {outcome.guardDelta ? <p className="cycle-guard-delta">{outcome.guardDelta}</p> : null}

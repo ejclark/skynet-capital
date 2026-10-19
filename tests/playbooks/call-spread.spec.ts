@@ -217,8 +217,9 @@ describe("NVDA-CALL-SPREAD — opening the spread", () => {
       },
       forecast: {
         direction: "up",
-        invalidator:
-          "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost",
+        invalidator: "this spread exits below its cost",
+        retireRule:
+          "The playbook retires if NVDA's D-20→D-5 return is ≤ 0 on 2 of the next 3 prints.",
       },
     });
   });
@@ -239,6 +240,9 @@ describe("NVDA-CALL-SPREAD — opening the spread", () => {
     const said = [open?.reason, open?.expectation, open?.forecast?.invalidator].join(" ");
     expect(said.length).toBeGreaterThan(0);
     for (const { id } of registeredPlaybooks()) expect(said).not.toContain(id);
+    // The play's multi-print retire test is the owner's field, never the order's falsifier (#5828).
+    expect(open?.forecast?.invalidator).not.toMatch(/retires if|prints/);
+    expect(open?.forecast?.retireRule).toMatch(/^The playbook retires if /);
   });
 
   it("moves the short strike and the price with the mode", () => {

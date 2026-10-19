@@ -17,6 +17,14 @@ import { registeredPlaybooks } from "../playbooks/registry.js";
  */
 
 const GENERIC = "a playbook";
+
+/** The call spread's old invalidator led with its playbook's own retire test (#5828): "NVDA's
+ *  D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost". New orders
+ *  carry that test in `forecast.retireRule`, which the strips drop; a decision stored before the
+ *  move keeps its words, so a non-owner's copy loses the clause here and reads as the order's own
+ *  falsifier. */
+const LEGACY_SPREAD_RETIRE_TEST =
+  /[A-Z][A-Z0-9.]*'s D-\d+→D-\d+ return ≤ 0 on \d+ of the next \d+ prints, or /g;
 const NAME_KEYS = new Set(["playbookId", "playbook"]);
 
 /** Every playbook id this payload names in a key, before the keys are stripped. */
@@ -46,8 +54,11 @@ function matcherFor(ids: Iterable<string>): RegExp | undefined {
   return new RegExp(`(?<![A-Za-z0-9-])(?:${all.map(escapeRegExp).join("|")})(?![A-Za-z0-9-])`, "g");
 }
 
-function redact<T>(value: T, matcher: RegExp): T {
-  if (typeof value === "string") return value.replace(matcher, GENERIC) as T;
+function redact<T>(value: T, matcher: RegExp | undefined): T {
+  if (typeof value === "string") {
+    const scrubbed = value.replace(LEGACY_SPREAD_RETIRE_TEST, "");
+    return (matcher ? scrubbed.replace(matcher, GENERIC) : scrubbed) as T;
+  }
   if (Array.isArray(value)) return value.map((item) => redact(item, matcher)) as T;
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -58,8 +69,8 @@ function redact<T>(value: T, matcher: RegExp): T {
 }
 
 /** `stripped` (a non-owner's copy, keys already gone) with every playbook id in its strings —
- *  the roster's and any `original` named in a key — replaced by generic words. */
+ *  the roster's and any `original` named in a key — replaced by generic words, and a stored
+ *  spread's retire test cut from its invalidator. */
 export function withoutPlaybookNames<T>(stripped: T, original: unknown = stripped): T {
-  const matcher = matcherFor(playbookIdsIn(original));
-  return matcher ? redact(stripped, matcher) : stripped;
+  return redact(stripped, matcherFor(playbookIdsIn(original)));
 }

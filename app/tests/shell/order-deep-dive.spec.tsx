@@ -113,6 +113,23 @@ describe("OrderDeepDive — what it shows", () => {
     expect(screen.getByText(/the play retires if/)).toBeInTheDocument();
   });
 
+  it("names the order's falsifier and, beside it, what retires the playbook (#5828)", () => {
+    const spread: DeskActivityEvent = {
+      ...wheel,
+      reasoning: {
+        ...wheel.reasoning,
+        reason: "Buying one NVDA call spread — the options form of the pre-earnings run-up.",
+        invalidator: "this spread exits below its cost",
+        retireRule:
+          "The playbook retires if NVDA's D-20→D-5 return is ≤ 0 on 2 of the next 3 prints.",
+      },
+    } as DeskActivityEvent;
+    render(wrap(<OrderDeepDive event={spread} variant="page" showPlaybook onClose={noop} />));
+    expect(screen.getByText(/this spread exits below its cost/)).toBeInTheDocument();
+    expect(screen.getByText("Retires it")).toBeInTheDocument();
+    expect(screen.getByText(/2 of the next 3 prints/)).toBeInTheDocument();
+  });
+
   // #885 and #5043: a non-owner gets the contract's arithmetic and the reason — no playbook, no
   // plan for what comes next, no retire rule.
   it("shows a non-owner every public fact and none of the playbook's", () => {

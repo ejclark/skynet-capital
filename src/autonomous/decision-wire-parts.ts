@@ -48,9 +48,11 @@ function parseForecast(value: unknown): OrderForecast | undefined {
     value.direction === "up" || value.direction === "down" ? value.direction : undefined;
   const invalidator = boundedString(value.invalidator);
   if (!(direction && invalidator)) return undefined;
+  const retireRule = boundedString(value.retireRule);
   return {
     direction,
     invalidator,
+    ...(retireRule ? { retireRule } : {}),
     ...(typeof value.magnitudePct === "number" ? { magnitudePct: value.magnitudePct } : {}),
     ...(typeof value.horizonMs === "number" ? { horizonMs: value.horizonMs } : {}),
   };

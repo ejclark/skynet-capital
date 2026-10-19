@@ -26,6 +26,14 @@ describe("withoutPlaybookNames", () => {
     });
   });
 
+  it("cuts a stored spread's retire test, leaving the order's own falsifier (#5828)", () => {
+    const invalidator =
+      "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost";
+    expect(withoutPlaybookNames({ forecast: { invalidator } })).toEqual({
+      forecast: { invalidator: "this spread exits below its cost" },
+    });
+  });
+
   it("leaves numbers, booleans and nulls as they were", () => {
     const value = { qty: 3, urgent: true, note: null, at: ["2026-10-18"] };
     expect(withoutPlaybookNames(value)).toEqual(value);

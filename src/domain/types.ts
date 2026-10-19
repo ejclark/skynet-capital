@@ -298,6 +298,10 @@ export interface OrderForecast {
    *  full-exit trade with no remaining position is a falsifiable prediction about what happens
    *  next. */
   readonly invalidator: string;
+  /** What would retire the PLAYBOOK, as opposed to this order — a whole sentence ("The playbook
+   *  retires if …"). Its test window names the play's own parameters by inference, so it is the
+   *  owner's alone: every non-owner strip drops it (#885, #5828). Omitted when the play states none. */
+  readonly retireRule?: string;
 }
 
 /**
