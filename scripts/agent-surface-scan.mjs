@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Agent-surface scan — the eye for the files that route plain intent to machinery: .claude/skills,
-// .claude/agents and the hooks in .claude/settings.json.
+// .claude/agents and the hooks in .claude/settings.json. It also notes history in a rule file
+// (scripts/instructions/history.mjs; the rule is docs/ENGINEERING.md → *Instruction files*).
 //
 //   node scripts/agent-surface-scan.mjs              # check the repo (exit 1 on an error, 2 unknown)
 //   node scripts/agent-surface-scan.mjs --root <dir> # check another tree (specs)
@@ -23,8 +24,9 @@
 // Exit codes: 0 clean · 1 at least one error · 2 UNKNOWN — an input the check needs is missing
 // (no vendored hooks doc, unreadable settings.json), so the verdict is not an answer.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { historyNotes, isRuleFile } from "./instructions/history.mjs";
 
 const argOf = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -286,13 +288,42 @@ function scanHooks(root) {
   return { findings: out, unknown: false, count };
 }
 
+/** Every file under `dir`, as repo-relative POSIX paths. */
+function walk(root, dir) {
+  const abs = join(root, dir);
+  if (!existsSync(abs)) return [];
+  return readdirSync(abs, { recursive: true })
+    .map((p) => join(dir, String(p)))
+    .filter((p) => statSync(join(root, p)).isFile())
+    .map((p) => p.split(sep).join("/"));
+}
+
+/** History in the rule files — always a note: the rule is a writing habit, never a broken construct. */
+function scanHistory(root) {
+  const files = [".claude/skills", ".claude/agents", ".github/prompts", "docs/grind"]
+    .flatMap((dir) => walk(root, dir))
+    .filter(isRuleFile)
+    .sort();
+  const out = [];
+  for (const file of files)
+    for (const n of historyNotes(readFileSync(join(root, file), "utf8")))
+      out.push(finding("note", `${file}:${n.line}`, `history in a rule: ${n.detail}`));
+  return { findings: out, count: files.length };
+}
+
 export function scanAgentSurface(root = process.cwd()) {
   const skills = scanSkills(root);
   const agents = scanAgents(root);
   const hooks = scanHooks(root);
-  const findings = [...skills.findings, ...agents.findings, ...hooks.findings];
+  const history = scanHistory(root);
+  const findings = [...skills.findings, ...agents.findings, ...hooks.findings, ...history.findings];
   return {
-    counts: { skills: skills.count, agents: agents.count, hooks: hooks.count },
+    counts: {
+      skills: skills.count,
+      agents: agents.count,
+      hooks: hooks.count,
+      ruleFiles: history.count,
+    },
     errors: findings.filter((f) => f.level === "error"),
     notes: findings.filter((f) => f.level === "note"),
     unknown: hooks.unknown,
@@ -306,7 +337,7 @@ function main() {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
     console.log(
-      `🧭 Agent-surface scan — ${result.counts.skills} skills · ${result.counts.agents} agents · ${result.counts.hooks} hook handlers`,
+      `🧭 Agent-surface scan — ${result.counts.skills} skills · ${result.counts.agents} agents · ${result.counts.hooks} hook handlers · ${result.counts.ruleFiles} rule files read for history`,
     );
     for (const f of result.errors) console.log(`  ✗ ${f.where} — ${f.detail}`);
     for (const f of result.notes) console.log(`  · ${f.where} — ${f.detail}`);

@@ -46,20 +46,39 @@ function matcherFor(ids: Iterable<string>): RegExp | undefined {
   return new RegExp(`(?<![A-Za-z0-9-])(?:${all.map(escapeRegExp).join("|")})(?![A-Za-z0-9-])`, "g");
 }
 
-function redact<T>(value: T, matcher: RegExp): T {
-  if (typeof value === "string") return value.replace(matcher, GENERIC) as T;
+/**
+ * A WHEEL ORDER STORED BEFORE #5043 STILL SAYS WHICH PLAY IT IS. Its invalidator ended with the
+ * playbook's own retire rule ("… — the wheel buys 100 shares at $80; the play retires if its net
+ * P/L is below 0 on …"), and those rows ride Activity, the pass log, Thesis and the Wire until they
+ * age out. New orders carry the rule in `forecast.retireRule`, which every strip drops; for the old
+ * ones the same read-time walk cuts the suffix and says "the bot" — the stored row keeps its words,
+ * as the owner's copy does.
+ */
+const LEGACY_RETIRE_RULE = /;\s*the play retires if\b[\s\S]*$/i;
+const LEGACY_WHEEL = /\bthe wheel buys\b/g;
+
+/** An invalidator as a non-owner reads it: the order's own falsifier, never the playbook's. */
+export function withoutLegacyRetireRule(invalidator: string): string {
+  return invalidator.replace(LEGACY_RETIRE_RULE, "").replace(LEGACY_WHEEL, "the bot buys");
+}
+
+function redact<T>(value: T, matcher: RegExp | undefined, key?: string): T {
+  if (typeof value === "string") {
+    const named = matcher ? value.replace(matcher, GENERIC) : value;
+    return (key === "invalidator" ? withoutLegacyRetireRule(named) : named) as T;
+  }
   if (Array.isArray(value)) return value.map((item) => redact(item, matcher)) as T;
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, v]) => [key, redact(v, matcher)]),
+      Object.entries(value).map(([k, v]) => [k, redact(v, matcher, k)]),
     ) as T;
   }
   return value;
 }
 
 /** `stripped` (a non-owner's copy, keys already gone) with every playbook id in its strings —
- *  the roster's and any `original` named in a key — replaced by generic words. */
+ *  the roster's and any `original` named in a key — replaced by generic words, and every
+ *  invalidator cut back to the order's own falsifier (`withoutLegacyRetireRule`). */
 export function withoutPlaybookNames<T>(stripped: T, original: unknown = stripped): T {
-  const matcher = matcherFor(playbookIdsIn(original));
-  return matcher ? redact(stripped, matcher) : stripped;
+  return redact(stripped, matcherFor(playbookIdsIn(original)));
 }

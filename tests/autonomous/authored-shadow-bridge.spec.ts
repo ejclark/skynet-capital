@@ -79,6 +79,7 @@ describe("the shadow test, end to end", () => {
           undefined,
           (orders) => wiring.accept(orders),
           undefined,
+          undefined,
           LOADED_SUITE_BRIDGE_BUDGET,
         );
         let publish: (() => ShadowReport) | undefined;
@@ -154,6 +155,7 @@ describe("the shadow test, end to end", () => {
           undefined,
           undefined,
           (orders) => got.push(orders),
+          undefined,
           undefined,
           LOADED_SUITE_BRIDGE_BUDGET,
         );

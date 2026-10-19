@@ -59,6 +59,9 @@ export interface WireTradeReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words (`OrderForecast.invalidator`). */
   readonly invalidator?: string;
+  /** What would retire the playbook itself (`OrderForecast.retireRule`) — its own falsifier, not
+   *  this order's, so the owner's alone like the playbook it names (#5043). */
+  readonly retireRule?: string;
   /** What the broker said about an order that never traded, as the decision stored it — "limit
    *  $2.10 not reached in 15s; canceled", a rejection's cause (`brokerWordsFor`). The owner's alone
    *  (`withoutOwnerReasoning`). */
@@ -87,12 +90,23 @@ export interface WireReasoningDeps {
 /** A fill's attached decision as a viewer who does not own the account reads it: without its
  *  `playbookId`/`playbookMode` (#885: "we do not show what playbooks others are using"), without
  *  the intent's `strategy` tag — a playbook's own slug (`crwv-wheel-put`), so it names the playbook
- *  by inference (#4971) — and without what the broker said about the order, which can name the
- *  account's specifics. The why, the persona and the order's own words all stay. */
+ *  by inference (#4971) — without the playbook's retire rule, its own falsifier (#5043), and
+ *  without what the broker said about the order, which can name the account's specifics. The why,
+ *  the persona and the order's own words — its own falsifier among them — all stay. */
 export function withoutOwnerReasoning(
   reasoning: WireTradeReasoning,
-): Omit<WireTradeReasoning, "playbookId" | "playbookMode" | "strategy" | "brokerReason"> {
-  const { playbookId: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...rest } = reasoning;
+): Omit<
+  WireTradeReasoning,
+  "playbookId" | "playbookMode" | "strategy" | "brokerReason" | "retireRule"
+> {
+  const {
+    playbookId: _p,
+    playbookMode: _m,
+    strategy: _s,
+    brokerReason: _b,
+    retireRule: _r,
+    ...rest
+  } = reasoning;
   // The reason's own words name the play as built ("S1-NVDA window open …", #4442).
   return withoutPlaybookNames(rest, reasoning);
 }
@@ -116,6 +130,7 @@ export function reasoningForOrder(
   const cost = optionFillCost(intent, result);
   const brokerReason = brokerWordsFor(result);
   const invalidator = intent.forecast?.invalidator;
+  const retireRule = intent.forecast?.retireRule;
   // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
   // the two must match character for character or the link from a fill lands on no row.
   const cycleAt = Number.isFinite(record.at) ? new Date(record.at).toISOString() : undefined;
@@ -133,6 +148,7 @@ export function reasoningForOrder(
     ...(contract ? { contract } : {}),
     ...(cost ? { cost: optionFillCostWords(cost) } : {}),
     ...(invalidator ? { invalidator } : {}),
+    ...(retireRule ? { retireRule } : {}),
     ...(brokerReason ? { brokerReason } : {}),
   };
 }

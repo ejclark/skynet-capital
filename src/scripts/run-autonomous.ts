@@ -83,6 +83,7 @@ import { authoredShadowWiring } from "./autonomous-authored-shadow.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
+import { convictionsHolder } from "./autonomous-convictions.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import { watchHardcore } from "./autonomous-hardcore-live.js";
 import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
@@ -166,6 +167,8 @@ async function runLive(): Promise<void> {
   const authoredShadow = authoredShadowWiring();
   // The plays a member PROMOTED (#5457 slice 3): specs the roster builds compile for their own author's bot.
   const promotedPlays = authoredPlaysHolder();
+  // The views members handed to their bots (#5482 slice 6c): records each bot's pointers resolve to.
+  const memberConvictions = convictionsHolder();
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
   // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
@@ -189,6 +192,7 @@ async function runLive(): Promise<void> {
     },
     (orders) => authoredShadow.accept(orders),
     (wire) => promotedPlays.accept(wire),
+    (wire) => memberConvictions.accept(wire),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -315,7 +319,13 @@ async function runLive(): Promise<void> {
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   seedDailyLossBaseline(await optionLevels.readAtBoot(bots), safety); // one read: baseline + levels
-  const botRosters = buildBotRosters(bots, playbookRoster, process.env, promotedPlays.rosterFor); // issue #885
+  const botRosters = buildBotRosters(
+    bots,
+    playbookRoster,
+    process.env,
+    promotedPlays.rosterFor,
+    memberConvictions.lookupFor,
+  ); // issue #885
   // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
   // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
   controls.reportHouseRoster(
@@ -434,6 +444,7 @@ async function runLive(): Promise<void> {
           playbookRoster.enabled,
           current.subscriptions,
           promotedPlays.rosterFor(id),
+          memberConvictions.lookupFor(id),
         ),
         tuning,
       );
@@ -477,6 +488,7 @@ async function runLive(): Promise<void> {
             playbookRoster.enabled,
             subscriptions,
             promotedPlays.rosterFor(botRoster.bot.persona.id),
+            memberConvictions.lookupFor(botRoster.bot.persona.id),
           ),
         ),
     })),
@@ -499,9 +511,10 @@ async function runLive(): Promise<void> {
         error,
       ),
   });
-  // A promoted play that arrives (or leaves) without a subscription change still reaches the
-  // rosters in force: each is rebuilt from its own subscriptions plus its author's compiled plays.
-  promotedPlays.onChange(() => {
+  // A promoted play or a member's view that arrives (or leaves) without a subscription change still
+  // reaches the rosters in force: each is rebuilt from its own subscriptions, its author's compiled
+  // plays and the conviction records its pointers resolve to.
+  const rebuildRosters = () => {
     botRosters.forEach((r, i) => {
       swapIn(
         i,
@@ -510,10 +523,13 @@ async function runLive(): Promise<void> {
           playbookRoster.enabled,
           r.subscriptions,
           promotedPlays.rosterFor(r.bot.persona.id),
+          memberConvictions.lookupFor(r.bot.persona.id),
         ),
       );
     });
-  });
+  };
+  promotedPlays.onChange(rebuildRosters);
+  memberConvictions.onChange(rebuildRosters);
   // Whatever the boot fetch already carried — else the last subscriptions kept — applied now that
   // there is a roster to apply it to.
   applyBootSubscriptions(subscriptionSync, keptSubscriptions, parkedSubscriptions);

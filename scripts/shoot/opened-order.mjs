@@ -41,7 +41,8 @@ const activity = {
         guardedCount: 1,
         contract: "Sell 1 CRWV $80 put, Nov 6",
         cost: "$255.00 received — 1 contract × 100 × $2.55",
-        invalidator: "the play retires if its net P/L is below 0 on 2027-01-29",
+        invalidator: "CRWV settles below $80 on 2026-11-06 — the bot buys 100 shares at $80",
+        retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
       },
     },
     {

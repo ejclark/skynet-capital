@@ -10,13 +10,14 @@ import { anOptionIntent } from "../support/builders.js";
  * and on Activity (the fill row's attached decision).
  */
 
-const INVALIDATOR =
-  "CRWV settles below $85 on 2026-11-06 — the wheel buys 100 shares at $85; the play retires if its net P/L is below 0 on 2027-01-29";
+// The order's own falsifier; the playbook's retire rule rides `forecast.retireRule` (#5043).
+const INVALIDATOR = "CRWV settles below $85 on 2026-11-06 — the bot buys 100 shares at $85";
+const RETIRE = "The playbook retires if its net P/L is below 0 on 2027-01-29.";
 
 const sold: OrderIntent = {
   ...anOptionIntent(),
   expectation: "CRWV holds above $85 through expiry and the put expires worthless",
-  forecast: { direction: "up", invalidator: INVALIDATOR },
+  forecast: { direction: "up", invalidator: INVALIDATOR, retireRule: RETIRE },
 };
 
 const record = (intent: OrderIntent = sold): DecisionRecord => ({
@@ -48,7 +49,7 @@ describe("a bot's filled option order, in words and dollars", () => {
       contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
       playbook: "CRWV-WHEEL",
       fill: "$205.00 received — 1 contract × 100 shares × $2.05",
-      forecast: { invalidator: INVALIDATOR },
+      forecast: { invalidator: INVALIDATOR, retireRule: RETIRE },
     });
   });
 
@@ -62,6 +63,7 @@ describe("a bot's filled option order, in words and dollars", () => {
       contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
       cost: "$205.00 received — 1 contract × 100 shares × $2.05",
       invalidator: INVALIDATOR,
+      retireRule: RETIRE,
     });
   });
 
