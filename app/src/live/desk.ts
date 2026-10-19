@@ -410,6 +410,9 @@ export interface ActivityReasoning {
   readonly brokerReason?: string;
 }
 
+/** The wire still says `activity` while members say Ledger (#5281 slice 3, kept on purpose): this
+ *  is the server's `ActivityEvent` record, the same shape the league's Activity feed is built
+ *  from, and the path is a contract the study scripts, stability budgets and stubs all read. */
 export interface DeskActivity {
   readonly available: boolean;
   readonly activity: readonly DeskActivityEvent[];
