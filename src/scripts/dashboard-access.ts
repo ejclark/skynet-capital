@@ -16,6 +16,7 @@ import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
+import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import {
   createOwnerLinkStore,
   ownerEmailFor,
@@ -36,6 +37,7 @@ export interface AccessSetup {
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
+  memberConvictions: ReturnType<typeof createMemberConvictionStore>;
   playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
@@ -86,6 +88,8 @@ export function setupAccess(
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
+  // Members' convictions (#5482 slice 6a) — drafts that steer nothing yet, a sibling file too.
+  const memberConvictions = createMemberConvictionStore(env, (m) => console.error(m));
   // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
   const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
@@ -132,6 +136,7 @@ export function setupAccess(
     subscriptions,
     savedPositions,
     authoredPlays,
+    memberConvictions,
     playMilestones,
     knownPersonaIds,
     auth,
