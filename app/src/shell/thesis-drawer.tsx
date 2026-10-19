@@ -202,8 +202,8 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
 }
 
 /** Where a marker's order row lives (#3807 slice 2d, dead end 5): the `#act-<orderId>` anchors exist
- *  only on an Activity table, so a marker links to the Activity of the page it is on — the
- *  any-account page's own (`/u/:id/activity`), or the Profile page's for that account. */
+ *  only on a Ledger table, so a marker links to the Ledger of the page it is on — the
+ *  any-account page's own (`/u/:id/ledger`), or the Profile page's for that account. */
 type ActivityHome = "page" | "profile";
 
 /** A fill without a resolved decision renders exactly as before: a plain link, no fake affordance.
@@ -223,13 +223,13 @@ function MarkerRow({
     <li className={`thesis-marker thesis-marker-${marker.kind}`}>
       <div className="thesis-marker-row">
         {activity === "page" ? (
-          <Link to="/u/$id/activity" params={{ id: deskId }} hash={marker.activityAnchor}>
+          <Link to="/u/$id/ledger" params={{ id: deskId }} hash={marker.activityAnchor}>
             {marker.n}. {marker.label}
           </Link>
         ) : (
           <Link
             to="/accounts"
-            search={{ account: deskId, section: "activity" }}
+            search={{ account: deskId, section: "ledger" }}
             hash={marker.activityAnchor}
           >
             {marker.n}. {marker.label}

@@ -277,14 +277,14 @@ describe("ThesisDrawer", () => {
     render(withClient(<ThesisDrawer id="bot-sauron" />));
     await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Why?" })).not.toBeInTheDocument();
-    // On the Profile page the order's row lives on that account's Activity section (dead end 5).
+    // On the Profile page the order's row lives on that account's Ledger section (dead end 5).
     expect(screen.getByRole("link", { name: "1. Buy 20 NVDA" })).toHaveAttribute(
       "href",
-      "/accounts?account=bot-sauron&section=activity#act-ord-1",
+      "/accounts?account=bot-sauron&section=ledger#act-ord-1",
     );
   });
 
-  it("links a marker to the any-account page's own Activity when rendered there", async () => {
+  it("links a marker to the any-account page's own Ledger when rendered there", async () => {
     nextThesis = {
       available: true,
       kind: "bot",
@@ -309,7 +309,7 @@ describe("ThesisDrawer", () => {
     await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
     expect(screen.getByRole("link", { name: "1. Buy 20 NVDA" })).toHaveAttribute(
       "href",
-      "/u/bot-sauron/activity#act-ord-1",
+      "/u/bot-sauron/ledger#act-ord-1",
     );
   });
 

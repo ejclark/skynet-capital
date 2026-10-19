@@ -206,6 +206,7 @@ export function LaneKey(): ReactElement {
     ["long", "Wants to hold"],
     ["flat", "Wants out"],
     ["no-window", "Waiting for its window"],
+    ["observing", "Observing, places nothing"],
     ["blocked", "Can't fire"],
   ];
   return (

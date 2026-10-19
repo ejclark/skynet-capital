@@ -16,6 +16,7 @@ import {
   OPENING_LINE,
   REVEAL_SHOW,
 } from "./marks.mjs";
+import { optionNoteHtml, perOption, QUESTION_NOTE_LABEL } from "./option-notes.mjs";
 import { OUTCOME_CLIENT, outcomesControl } from "./outcomes.mjs";
 import { PAGE_NOTE_CLIENT } from "./page-notes.mjs";
 import { hasPins, PIN_CLIENT, pinnedShot } from "./pins.mjs";
@@ -107,7 +108,7 @@ function pinRowHtml(d, o) {
   return (
     `<article class="opt pinrow" id="d-${e(d.key)}-${e(o.key)}"><div class="side"><h4 class="oname">` +
     `<span class="okey">Pin ${e(o.pin)}</span>${e(o.name)}${tag}</h4>${delta}${servesHtml(o.serves)}` +
-    `${buttons([VERBS.problems[0]], { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+    `${buttons([VERBS.problems[0]], { sec: "decisions", key: d.key, opt: o.key })}${perOption(d) ? optionNoteHtml(d, o) : ""}</div></article>`
   );
 }
 
@@ -133,7 +134,8 @@ function optionHtml(d, o, img, markable) {
   const said = d.problems ? "The problem:" : "Changes:";
   const tag = o.recommended ? ' <span class="tag">recommended</span>' : "";
   const at = { key: d.key, option: o.key, markable };
-  // A compared question (compare.mjs): the phone frame sits in Flip · Swipe · Divider with Today's.
+  // A compared question (compare.mjs): the phone frame sits in Flip · Side by side · Divider with
+  // Today's.
   const wrap = d.compare
     ? (p, h) => (p.size === "phone" ? compareHtml({ d, o, pic: p, shot: h, img }) : h)
     : undefined;
@@ -144,7 +146,7 @@ function optionHtml(d, o, img, markable) {
   const delta = o.delta ? `<p class="delta"><b>${said}</b> ${e(o.delta)}</p>` : "";
   return (
     `<article class="opt" id="d-${e(d.key)}-${e(o.key)}">${pics}<div class="side"><h4 class="oname"><span class="okey">Option ${e(o.key)}</span>${e(o.name)}${tag}</h4>` +
-    `${delta}${servesHtml(o.serves)}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key })}</div></article>`
+    `${delta}${servesHtml(o.serves)}${d.irreversible ? "" : buttons(verbs, { sec: "decisions", key: d.key, opt: o.key }) + (perOption(d) ? optionNoteHtml(d, o) : "")}</div></article>`
   );
 }
 
@@ -194,6 +196,14 @@ function openingHtml(d, img, call) {
  *  there even with no scope, so he can say what the screen should reach. */
 const scopeBlock = (d, markable) => scopeHtml(d.scope, markable ? outcomesControl(d) : "");
 
+/** The question's own note, at its end: "on the whole question" when each option has its own. */
+const questionNote = (d) =>
+  note({
+    sec: "decisions",
+    key: d.key,
+    label: `${perOption(d) ? QUESTION_NOTE_LABEL : "Your note, in your words (optional)"} — it is quoted on the issue word for word`,
+  });
+
 function decisionHtml(d, i, total, img, markable) {
   const rec = d.recommendation;
   const recLine = rec
@@ -218,11 +228,7 @@ function decisionHtml(d, i, total, img, markable) {
     `<h3>${e(d.title)}</h3>${scopeBlock(d, markable)}${d.ask ? `<p class="ask">${e(d.ask)}</p>` : ""}${opening ? "" : recLine}${changes}${dflt}` +
     `<p class="skip"><b>If you skip:</b> ${e(skip)}</p></div>` +
     `${opening ? openingHtml(d, img, recLine + ev) : optionsHtml(d, img, markable)}${controls(d)}${opening ? "" : ev}` +
-    note({
-      sec: "decisions",
-      key: d.key,
-      label: "Your note, in your words (optional) — it is quoted on the issue word for word",
-    }) +
+    questionNote(d) +
     `</section>`
   );
 }

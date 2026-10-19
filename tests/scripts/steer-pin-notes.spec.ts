@@ -2,7 +2,7 @@ import { describe, expect, it } from "@rstest/core";
 import { isAnswered } from "../../scripts/steer/model.mjs";
 import { MAX_PIN_NOTE } from "../../scripts/steer/pins.mjs";
 import { readback } from "../../scripts/steer/readback.mjs";
-import { type Docs, open, REC, ROUND, settle } from "./steer-pins-harness";
+import { type Docs, open as openPage, REC, ROUND, settle } from "./steer-pins-harness";
 
 // Eric, in a redesign session on 2026-10-11: "i wish the thumbs up/down/mixed signal form/process
 // also allowed for commentary to expand on context". Each pin's popover carries an optional note
@@ -10,6 +10,16 @@ import { type Docs, open, REC, ROUND, settle } from "./steer-pins-harness";
 // the decision's own record as `pinNotes: { "<option>:<phone|desk>:<n>": "<text>" }`, merged one
 // key at a time like the reactions (an emptied note is null), and the read-back quotes it word for
 // word under that pin. #5243: a tap held while the store connects merges into the stored record.
+
+// Each test builds a whole page in a JSDOM window and drives it: genuine CPU work (0.2-1 s on a quiet
+// machine), so this spec gets 15 s rather than the default 5 s (#5498). Nothing here waits on a
+// real timer: the page runs on a frozen clock (`frozen` in `open`) and `settle` yields, not sleeps.
+rstest.setConfig({ testTimeout: 15_000 });
+
+/** A note saves 900 ms after the last keystroke (#5498): the page runs on a frozen clock, so a spec
+ *  says when that time has passed (`v.tick`) instead of sleeping on a machine that may be busy. */
+const open = (docs: Docs | null, opts: Parameters<typeof openPage>[1] = {}) =>
+  openPage(docs, { frozen: true, ...opts });
 
 type View = Awaited<ReturnType<typeof open>>;
 const field = (v: View) => v.doc.querySelector<HTMLTextAreaElement>(".pinpop .pnt");
@@ -101,7 +111,7 @@ describe("a note saves in the decision's record, one key at a time", () => {
     const v = await open(docs);
     await note(v, "B:phone:2", "keep this one");
     expect(docs[REC]?.pinNotes).toBeUndefined();
-    await new Promise((r) => setTimeout(r, 1000));
+    await v.tick(900);
     expect(docs[REC]?.pinNotes).toEqual({ "B:phone:2": "keep this one" });
     expect(v.pop()?.hidden).toBe(false);
   });
@@ -265,7 +275,7 @@ describe("a tap held while the store connects merges into the stored record (#52
     await note(v, "B:phone:1", "shorter");
     await release();
     expect(docs[REC]?.pinNotes).toEqual({ "B:phone:1": "too tall" });
-    await new Promise((r) => setTimeout(r, 1000));
+    await v.tick(900);
     expect(docs[REC]).toMatchObject({ pick: "B", pinNotes: { "B:phone:1": "shorter" } });
   });
 

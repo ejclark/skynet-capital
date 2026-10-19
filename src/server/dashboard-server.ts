@@ -5,6 +5,7 @@ import { serveAdminApi } from "./admin-api-routes.js";
 import { serveAlertDeliveryApi } from "./alert-delivery-route.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
+import { serveAuthoredPlaysApi } from "./authored-plays-api-routes.js";
 import {
   type BoardPatchChannel,
   createBoardChannel,
@@ -15,6 +16,7 @@ import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
+import { serveConvictionsApi } from "./convictions-api-routes.js";
 import { serveCouncilApi } from "./council-api-routes.js";
 import { serveCouncilRepliesApi } from "./council-replies-api-routes.js";
 import { gateRequest } from "./dashboard-auth-gate.js";
@@ -29,6 +31,7 @@ import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
+import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -139,6 +142,33 @@ function serveStreamApis(
   return serveQuoteStream(req, res, path, config, session);
 }
 
+/** The playbook reads: the human catalog (`/api/playbooks`) and the conviction records that steer
+ *  pairs (`/api/convictions`, #5482 slice 2). Grouped so the dispatcher below carries one branch. */
+async function servePlaybookReads(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (await servePlaybooksApi(req, res, path, config, session)) return true;
+  return serveConvictionsApi(req, res, path);
+}
+
+/** What a member does to playbooks: subscribe a bot to the house's (#885), write their own (#5457),
+ *  or state a conviction that would steer them (#5482 slice 6a). */
+async function servePlaybookWrites(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
+  return serveAuthoredPlaysApi(req, res, path, config, session);
+}
+
 /** The shell's write-API families, one dispatcher — trade (shares, options, the plays catalog),
  *  settings, learn, controls, join. */
 async function serveWriteApis(
@@ -160,11 +190,11 @@ async function serveWriteApis(
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;
   if (await serveSettingsApi(req, res, path, config, session)) return true;
-  if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  if (await servePlaybookWrites(req, res, path, config, session)) return true;
   if (await serveSavedPositionsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
-  if (await servePlaybooksApi(req, res, path, config, session)) return true;
+  if (await servePlaybookReads(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveCouncilApi(req, res, path, config.council, session)) return true;
   if (await serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;

@@ -59,6 +59,30 @@ describe("triageFeedbackDecision — the backlog gate for freshly-filed feedback
   it("defaults to Backlog with no labels at all", () => {
     expect(triageFeedbackDecision()).toMatchObject({ ready: false });
   });
+
+  // #5667: CLAUDE.md files a mid-build bug `bug` + `fast-track` and says it is "pulled next", but
+  // 23 of 23 open bugs sat without `ready` on 2026-10-18 — no lane could pull one.
+  it("self-readies a bug + fast-track filing, with or without `feedback`", () => {
+    expect(triageFeedbackDecision({ labels: ["bug", "fast-track"] })).toEqual({
+      ready: true,
+      reason: "bug + fast-track — the next pull, self-readying",
+    });
+    expect(triageFeedbackDecision({ labels: ["feedback", "bug", "fast-track"] })).toMatchObject({
+      ready: true,
+    });
+  });
+
+  it("leaves a bug in Backlog without fast-track, as a plan, or while parked", () => {
+    expect(triageFeedbackDecision({ labels: ["bug"] })).toMatchObject({ ready: false });
+    expect(triageFeedbackDecision({ labels: ["bug", "fast-track", "plan"] })).toMatchObject({
+      ready: false,
+    });
+    for (const parked of ["needs-eric", "needs-info", "needs-design"]) {
+      expect(triageFeedbackDecision({ labels: ["bug", "fast-track", parked] })).toMatchObject({
+        ready: false,
+      });
+    }
+  });
 });
 
 describe("moneypenny routing", () => {

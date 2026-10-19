@@ -4,6 +4,7 @@ import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
 import { LiveCycleRunner } from "../../src/autonomous/live-cycle.js";
 import { SafetyController } from "../../src/autonomous/safety.js";
 import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
+import { BOTS_UNIVERSE } from "../../src/domain/bots-universe.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
@@ -18,16 +19,19 @@ describe("playbookStoreCatalog", () => {
     const entries = playbookStoreCatalog();
     expect(entries.map((e) => e.id).sort()).toEqual([
       "BETA-SCOUT",
+      "COND-SCOUT",
+      "CRWV-LONG-CALL",
       "CRWV-WHEEL",
       "G1-GOOG",
-      "HC-SAURON",
+      "MU-DIP-BOUNCE",
+      "NBIS-DIP-BOUNCE",
       "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "SAURON",
       "TACO-DJT",
     ]);
-    // The forced daily pick names no ticker: it picks among the bots' ten names on the day.
-    for (const entry of entries.filter((e) => e.id !== "BETA-SCOUT")) {
+    // The forced daily pick and the shadow scout name no ticker: they read the bots' ten names.
+    for (const entry of entries.filter((e) => e.id !== "BETA-SCOUT" && e.id !== "COND-SCOUT")) {
       expect(entry.symbol.length).toBeGreaterThan(0);
     }
   });
@@ -63,6 +67,25 @@ describe("playbookStoreCatalog", () => {
     expect(s1?.evidenceHref).toMatch(/^\/research\//);
   });
 
+  // #5432: the Store draws each stretch's move as a bar — the study's numbers, carried as a cited
+  // field beside `evidence`, never literals in the component.
+  it("carries S1's measured stretches, cited to the study's F2 table, beside its window", () => {
+    const s1 = byId("S1-NVDA");
+    expect(s1?.stretches?.source).toBe("docs/research/nvda-earnings-cycle.md F2");
+    expect(s1?.stretches?.reports).toBe(14);
+    expect(s1?.stretches?.stretches).toEqual([
+      { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+      { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+      { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+    ]);
+    const study = readFileSync("docs/research/nvda-earnings-cycle.md", "utf8");
+    expect(study).toContain("| D-20 → D-10 | **+6.30%** | 93% |");
+    expect(study).toContain("| D-10 → D-5 | +3.61% | 79% |");
+    expect(study).toContain("| **D-5 → D** | **-0.77%** | **50%** |");
+    // A pair whose study measured no stretches sends none: the line draws, the bars do not.
+    expect(byId("G1-GOOG")?.stretches).toBeUndefined();
+  });
+
   it("names S1's and G1's windows in trading sessions, the unit their code counts in (#4776)", () => {
     const s1 = byId("S1-NVDA");
     expect(s1?.enter).toContain(
@@ -81,13 +104,13 @@ describe("playbookStoreCatalog", () => {
     }
   });
 
-  it("shows a tactical playbook's whole basket and no invented window", () => {
-    const hc = byId("HC-SAURON");
-    expect(hc?.symbols.length).toBeGreaterThan(1);
-    expect(hc?.symbol).toBe(hc?.symbols[0]);
-    expect(hc?.window).toBeUndefined();
-    expect(hc?.size).toBeUndefined();
-    expect(hc?.traits).toEqual([]);
+  it("shows a basket playbook's whole basket and no invented window", () => {
+    const basket = byId("SAURON");
+    expect(basket?.symbols.length).toBeGreaterThan(1);
+    expect(basket?.symbol).toBe(basket?.symbols[0]);
+    expect(basket?.window).toBeUndefined();
+    expect(basket?.size).toBeUndefined();
+    expect(basket?.traits).toEqual([]);
   });
 
   it("shows an option playbook's rules as copy, never a probed window or a percent size", () => {
@@ -141,6 +164,37 @@ describe("playbookStoreCatalog", () => {
     );
   });
 
+  describe("COND-SCOUT — the shadow scout, subscribable (#4535 slice 3a)", () => {
+    const card = () => {
+      const entry = byId("COND-SCOUT");
+      if (!entry) throw new Error("COND-SCOUT is not in the catalog");
+      return entry;
+    };
+
+    it("claims no name of its own, and lets its owner pick among the bots' ten", () => {
+      expect(card().symbols).toEqual([]);
+      expect(card().pickFrom).toEqual(BOTS_UNIVERSE);
+      expect(card().window).toBeUndefined();
+      expect(card().size).toBeUndefined();
+    });
+
+    it("says plainly it places no orders and puts no money at risk", () => {
+      expect(card().movesNoCapital).toBe(true);
+      expect(card().description).toContain("places no orders and no money is at risk");
+    });
+
+    it("quotes the thresholds the scanner actually uses", () => {
+      expect(card().enter).toContain("RSI is 30 or lower");
+      expect(card().enter).toContain("at least 1% above its 20-day average");
+      expect(card().exitCutLosses).toContain("falls 5% below");
+    });
+
+    it("is the one playbook that moves no capital", () => {
+      const quiet = playbookStoreCatalog().filter((e) => e.movesNoCapital);
+      expect(quiet.map((e) => e.id)).toEqual(["COND-SCOUT"]);
+    });
+  });
+
   describe("BETA-SCOUT — the forced daily pick, subscribable (#4642 slice 10)", () => {
     const card = () => {
       const entry = byId("BETA-SCOUT");
@@ -179,10 +233,12 @@ describe("playbookStoreCatalog", () => {
       }
     });
 
-    it("says it needs both the operations setting and the subscription, on one bot", () => {
+    it("says it needs both a forced-pick count and the subscription, on one bot", () => {
       expect(note("Two switches")).toContain(
-        "It buys only while both are on: the forced-pick setting in operations, and this subscription",
+        "It buys only while both are on: a forced-pick count above 0, and this subscription",
       );
+      // #4535 slice 3b: the count is the owner's, on the bot's Settings page.
+      expect(note("Two switches")).toContain("set on the bot's Settings page");
       expect(note("Two switches")).toContain("subscribed on any other bot, it places nothing");
     });
 
@@ -280,9 +336,9 @@ describe("playbookStoreCatalog", () => {
     });
 
     // Finding 1: switching the setting off used to strand its picks; now it stops new ones only.
-    it("says switching the setting off stops new picks only", () => {
+    it("says setting the count to 0 stops new picks only", () => {
       expect(note("Two switches")).toContain(
-        "Switching the setting off stops new picks only — picks it holds are still sold",
+        "Setting it to 0 stops new picks only — picks it holds are still sold",
       );
     });
   });
@@ -364,7 +420,8 @@ describe("playbookStoreCatalog", () => {
       expect(card().exitTakeProfit).toContain("It sells any holding in his names this way");
     });
 
-    // A member cannot see which build runs, and HC-SAURON's card carries no numbers to point at.
+    // A member cannot see which build runs, and no other card describes the hardcore build
+    // (HC-SAURON, its tactical translation, was dissolved on 2026-10-16).
     it("describes his research settings in its own words rather than pointing at another card", () => {
       expect(copy()).not.toContain("HC-SAURON");
       expect(note("Research settings")).toContain("This card cannot show which his account runs");

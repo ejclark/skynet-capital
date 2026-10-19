@@ -31,7 +31,7 @@ function Square({
   return (
     <Link
       to="/accounts"
-      search={{ account: accountId, section: "activity" }}
+      search={{ account: accountId, section: "ledger" }}
       hash={`act-${close.orderId}`}
       className={`form-sq form-sq--${close.result}`}
       aria-label={`Closed ${close.day}, ${WORD[close.result].toLowerCase()}: ${close.display}, ${close.pl}. Open this trade`}

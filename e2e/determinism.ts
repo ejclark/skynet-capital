@@ -63,8 +63,11 @@ const SEEDED_RANDOM = `
  * holiday bakes the closed state in; so would an overnight hour (and a dimmed city). If this ever
  * moves, keep it a weekday session hour and check the calendar — `isMarketClosed(date)` must be
  * false. Friday also keeps the research fixture's ledgers (e2e/fixtures/research) in the same week.
+ * The SERVER reads it too: playwright.config.ts hands it to the offline dashboard as
+ * `SKYNET_FIXED_NOW`, which pins the Council's week label (2026-W38) — before that, the label
+ * followed the real clock and every baseline carrying it changed on Mondays (#4683).
  */
-const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
+export const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
 
 /**
  * The board's live channel (`/events?by=…`, app/src/live/channel.ts) is the third irreproducible

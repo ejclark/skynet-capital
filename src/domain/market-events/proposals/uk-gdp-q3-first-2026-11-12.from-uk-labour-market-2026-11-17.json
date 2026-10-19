@@ -1,0 +1,11 @@
+{
+  "id": "uk-gdp-q3-first-2026-11-12",
+  "kind": "macro-print",
+  "title": "UK GDP first quarterly estimate, July to September 2026 (ONS, 07:00 London / 02:00 ET) — the Bank's forecast quarter, measured one working week before the labour print that shares its window",
+  "date": "2026-11-12",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/gdpfirstquarterlyestimateukjulytoseptember2026, fetched direct 2026-10-18 (HTTP 200) — the ONS release-calendar entry reads 'GDP first quarterly estimate, UK: July to September 2026', 'Release date: 12 November 2026 7:00am', 'First quarterly estimate of gross domestic product (GDP)', marked 'This release is not yet published.' Primary-sourced from the publisher's own release calendar; filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the uk-labour-market-2026-11-17 pulse check, 2026-10-18",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-11-17 LANE, 2026-10-18. Why it earns a slot: Jul-Sep 2026 is the same three months as the Jul-Sep AWE/LFS window of uk-labour-market-2026-11-17, and 2026 Q3 is the quarter the July 2026 Monetary Policy Report forecasts, so this is the output-side read of the Bank's forecast quarter five days (three working days) before the wage-side read. It also lands 6 days after the 2026-11-05 BoE decision and November Report. `--on-date=2026-11-12` listed five entries (existing-home-sales, jgb-5y-auction, mts-october, treasury-30y-bond, treasury-coupon-announcement) and no UK GDP; the only UK GDP files on the calendar are 2026-12-11 and 2027-01-15 monthly and 2027-02-12 quarterly proposals. symbols: [], no house playbook is rates- or sterling-keyed; tiered LOW like every UK ONS print here. The release's own page names 7:00am London; the US-session overlap and any price reaction are not yet researched. Estimate widens caution only; nothing date-keyed may act on this."
+}

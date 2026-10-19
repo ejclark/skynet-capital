@@ -289,6 +289,7 @@ position; the read-only stance holds.
 | 2026-10-03 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (-1.0pt since last), band unchanged (medium:0+), 27 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-05 |
 | 2026-10-05 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (+0.0pt since last), band unchanged (medium:0+), 27 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-07 |
 | 2026-10-07 | D-0 | **Dispatched via the staleness ceiling** (`staleness-ceiling`, the 2026-10-03/10-05 screens were the 1st/2nd; live probe re-run today: nothing else tripped). Written pre-release (03:27 UTC), so the minutes' text is unread. **Date re-verified**: federalreserve.gov's October calendar, re-fetched today, still lists "FOMC Minutes / Meeting of September 15-16" at 2:00 p.m. Oct 7; no Board speeches listed around it (Bowman 10-06 10:45 a.m. only). Adjacency sweep: **peers** — none (`symbols: []`). **Macro** — jobs 10-02 printed **+29k** vs ~84-90k consensus, unemployment **4.2%**, July/Aug revised **-60k** (BLS `empsit_10022026`); press-relayed Kalshi **~85% hold** for 10-28; ISM Services 10-05 **54.9**, Prices **74.0** (series high; per its own close-out). The minutes record the 09-16 meeting, held before this print, so it adds no content to them. **Volatility** — VIX **15.01** (10-06 close) vs **15.31**, -0.30pt. **Tape** — S&P **7,818.93**, 10Y **5.27%** (Treasury par, 10-06). **Geopolitical/policy** — nothing new on this event. **Event tape** — 27 adjacent / 2 strong, identical to 10-05; the 13:00 ET 10Y reopening stays `estimate`; **no new dated adjacency to propose**. FT-31 (legacy.md) still open, scores 10-08. | — (stance holds: read-only, no size; no kill switch tripped; FT-31 reads on the text) | 2026-10-08 (close-out, D+1) |
+| 2026-10-09 | D+2 | **Close-out** (`event-passed-unscored`). Minutes text read direct from the Fed primary; **FT-31 scored pass** (legacy.md) — the AI-inflation thread appears a third time and escalates to a policy argument. S&P **7,801.77** (-0.22%) on 10-07 after 7,818.93; VIX **15.08**; 10Y yield **5.28%** (^TNX, +1bp). Adjacency: nothing new to propose; no new dated adjacency. | — (stance closed; see Outcome) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -297,6 +298,31 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-10-09, D+2 — inside `closeOutWithinDays`).** Macro-print, `symbols: []`: no
+`earnings-cycle` / `intraday-edges` run (cache busted anyway). "Re-run data" = the minutes document itself fetched
+direct from federalreserve.gov (`fomcminutes20260916.htm`, last updated 2026-10-07) and Yahoo daily bars via
+`scripts/research/market-data.mjs`.
+
+**Verdict: the stand-aside was right, and the one registered read came in.** The release was a non-event for
+price, and the thread this ledger told readers to look for (AI-inflation language) was there, stronger.
+
+- **FT-31 PASS.** Ten sentences tie AI to inflation; the new one is a couple of participants arguing a higher
+  policy rate would stop AI-related demand from broadening into persistent inflation. Quotes are in the scored
+  row in `forward-tests/legacy.md`.
+- **Base-rate kill switch (a minutes release as the named driver of a >1% S&P session): not tripped.** S&P 500
+  7,818.93 → **7,801.77 (-0.22%)** on 10-07, VIX 15.01 → 15.08, 10Y 5.27 → 5.28. The 13:00 ET 10Y reopening
+  still contaminates the window, so this is a third "minutes lost the day" observation with the same caveat;
+  the clean test remains `fomc-minutes-2026-11-18`.
+- **Date, content-premise and relevance kills: not tripped.** Released 10-07, 14:00 ET; 12–0 vote already public.
+- **Dissent-proximity thread: nothing to read** — unanimous vote, as the 09-29 amendment said.
+- **Format kill: not tripped.** Same-method word counts of the page text: Sep 6,460 vs July 7,020 vs June 6,527.
+- **Six-meeting schedule: absent.** The September minutes do not mention it, unlike July's. Still open; the next
+  venue is the Oct 27–28 minutes (`fomc-minutes-2026-11-18`).
+
+The 11-18 event's own forward tests are not scored here.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":2} -->
@@ -315,3 +341,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->

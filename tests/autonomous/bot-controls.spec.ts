@@ -1,7 +1,9 @@
 import {
   EMPTY_CONTROLS,
+  effectiveBetaPicks,
   effectiveHardcoreIds,
   effectiveMode,
+  MAX_BETA_PICKS,
   parseControlsState,
   stampCredentialVersions,
   suspendedReason,
@@ -106,6 +108,29 @@ describe("effective overrides — store wins, env is the fallback", () => {
     expect(effectiveHardcoreIds(ids, new Set(), { bots: { banker: { hardcore: true } } })).toEqual(
       new Set(["banker"]),
     );
+  });
+});
+
+describe("betaPicks — the owner's forced-pick count for the scout's host (#4535 slice 2b)", () => {
+  it("parses a whole number from 0 up to the ceiling", () => {
+    for (const picks of [0, 1, 3, MAX_BETA_PICKS]) {
+      expect(parseControlsState({ bots: { sauron: { betaPicks: picks } } })?.bots.sauron).toEqual({
+        betaPicks: picks,
+      });
+    }
+  });
+
+  it("reads anything else as unset, so the env count stands", () => {
+    for (const bad of [-1, 1.5, MAX_BETA_PICKS + 1, "3", null, Number.NaN, true]) {
+      expect(parseControlsState({ bots: { sauron: { betaPicks: bad } } })?.bots.sauron).toEqual({});
+    }
+  });
+
+  it("the store's number wins in both directions — 0 disarms what the env armed", () => {
+    expect(effectiveBetaPicks(undefined, 2)).toBe(2);
+    expect(effectiveBetaPicks(undefined, 0)).toBe(0);
+    expect(effectiveBetaPicks(3, 0)).toBe(3);
+    expect(effectiveBetaPicks(0, 2)).toBe(0);
   });
 });
 

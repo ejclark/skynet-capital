@@ -298,3 +298,12 @@
   font-weight: 600;
   line-height: 1.4;
 }
+
+/* "Full page ›" (#5070 slice 6): a link in look, a button in kind — it pushes the page in place. */
+.pos-guide-page {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}

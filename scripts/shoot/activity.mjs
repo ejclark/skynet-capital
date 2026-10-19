@@ -4,6 +4,7 @@
 // the ranking is on screen without a tap and that a filing and a fill read as sibling rows, and the
 // desktop frame proves the same choice adds room instead of a new concept. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:activity [outdir]
+import { playRowWords } from "../../src/observatory/play-feed-words.ts";
 import { openShell } from "./shell.mjs";
 
 const NAMES = [
@@ -50,7 +51,64 @@ const trades = Array.from({ length: 34 }, (_, i) => {
   };
 });
 
+// The fifth kind (#5457 slice 5, members only): authored playbooks, worded by the SAME function the
+// server uses, so the frame can't drift from the product. Dated into the run like the other kinds.
+const playRow = (who, whoId, kind, name, symbol, at, sessions) => {
+  const words = playRowWords({
+    key: `${whoId}:${kind}`,
+    kind,
+    at,
+    accountId: whoId,
+    playName: name,
+    symbol,
+    ...(sessions !== undefined ? { sessions } : {}),
+  });
+  return {
+    key: `play:${whoId}:${kind}`,
+    icon: words.icon,
+    kindLabel: words.kindLabel,
+    who,
+    whoId,
+    text: words.text,
+    symbol,
+    meta: words.meta,
+    cheer: words.cheer,
+    at,
+  };
+};
+const plays = [
+  playRow(
+    "Vol Harvester",
+    "vol-harvester",
+    "promoted",
+    "NVDA run-up, tighter",
+    "NVDA",
+    "2026-10-01T19:55:00.000Z",
+    10,
+  ),
+  playRow(
+    "Vol Harvester",
+    "vol-harvester",
+    "passed",
+    "NVDA run-up, tighter",
+    "NVDA",
+    "2026-10-01T19:40:00.000Z",
+    10,
+  ),
+  playRow(
+    "News Fader",
+    "news-fader",
+    "paused",
+    "TSLA fade the pop",
+    "TSLA",
+    "2026-10-01T18:50:00.000Z",
+  ),
+  playRow("Sauron", "sauron", "started", "AMD into the print", "AMD", "2026-10-01T17:30:00.000Z"),
+];
+
 const wire = {
+  playsEnabled: true,
+  plays,
   trades,
   pnl: [
     { who: "Sauron", whoId: "sauron", kind: "bot", realized: "+$1,248.30", tone: "pos" },
@@ -182,6 +240,14 @@ await page.goto(`${origin}/app/activity`);
 await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-phone");
 
+// 1c. The fifth kind (#5457 slice 5): a member's authored playbooks — started, passed, trading,
+//     paused — labelled SIM · unvalidated. A pass and a first promotion are cheered; a pause is plain.
+await page.getByRole("button", { name: "Playbooks", exact: true }).click();
+await page.getByText(/started trading/).waitFor();
+await shoot("activity-playbooks-phone");
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
+
 // 2. The kind facet: one chip narrows the same list instead of paging to another widget.
 await page.getByRole("button", { name: "Ideas", exact: true }).click();
 await page.getByRole("link", { name: /activity route still says/ }).waitFor();
@@ -230,5 +296,8 @@ await page.goto(`${origin}/app/activity`);
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-desktop");
+await page.getByRole("button", { name: "Playbooks", exact: true }).click();
+await page.getByText(/started trading/).waitFor();
+await shoot("activity-playbooks-desktop");
 
 await close();

@@ -17,7 +17,11 @@
 //   node scripts/incident-scan.mjs --candidate # the oldest unlearned incident as JSON
 //   node scripts/incident-scan.mjs --days 14   # lookback window (default 14)
 //   node scripts/incident-scan.mjs --json      # every real failed run + `learned`, for fix-held.mjs
-//   node scripts/incident-scan.mjs --count     # {openEntries, unlearnedRuns} for the digest line
+//   node scripts/incident-scan.mjs --count     # {openEntries, unlearnedRuns, agedOutRuns} for the digest
+//
+// AGED OUT (#5728): the report and `--count` also read the band just past the window and name what
+// left it unlearned (`AGED-OUT UNLEARNED`), so expiry never passes for learning. Report-only — the
+// budget counts the window alone. The why and the cost: incident-runs.mjs → *the aged-out band*.
 //
 // `--count` is the one mode that does not stop at a malformed ledger (#4212): an entry left
 // `STATUS: open` used to blind the remote half entirely, so the digest could report "the open
@@ -31,7 +35,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { PER_PAGE, readAllPages } from "./incident-runs.mjs";
+import { agedOutCandidates, PER_PAGE, readAllPages, windowRanges } from "./incident-runs.mjs";
 import { learnedIn } from "./moneypenny/lesson-draft.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
@@ -76,13 +80,18 @@ async function hasZeroJobs(runId) {
   return (body.total_count ?? 1) === 0;
 }
 
-/** Failed workflow runs on `main` within the lookback window — every page, not just the first. */
-async function failedMainRuns() {
-  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+const ranges = windowRanges(days);
+
+/**
+ * Failed workflow runs on `main` created in `created` (a GitHub qualifier — the window by default,
+ * `ranges.agedOut` for the band past it) — every page, not just the first.
+ */
+async function failedMainRuns(created = ranges.window) {
   const fetchPage = async (page) => {
     const url =
       `https://api.github.com/repos/${repoSlug()}/actions/runs` +
-      `?branch=main&status=failure&per_page=${PER_PAGE}&page=${page}&created=%3E%3D${since}`;
+      `?branch=main&status=failure&per_page=${PER_PAGE}&page=${page}` +
+      `&created=${encodeURIComponent(created)}`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -97,7 +106,7 @@ async function failedMainRuns() {
   // stderr, so `--json` (read by fix-held.mjs) stays parseable.
   if (truncated) {
     console.error(
-      `incident-scan: read ${runs.length} of ${total} failed runs — the window is truncated; ` +
+      `incident-scan: read ${runs.length} of ${total} failed runs created ${created} — truncated; ` +
         `narrow it with --days to see the oldest.`,
     );
   }
@@ -172,17 +181,38 @@ async function scanRuns() {
   };
 }
 
+/**
+ * Unlearned incidents in the band just past the window — real runs only, one per sha, none the
+ * window already reports. `null` when the band could not be read: unknown, never zero.
+ */
+async function scanAgedOut(realRuns) {
+  try {
+    const candidates = agedOutCandidates(await failedMainRuns(ranges.agedOut), {
+      windowShas: new Set(realRuns.map((r) => r.sha)),
+      isLearned,
+    });
+    const zeroJob = await Promise.all(candidates.map((r) => hasZeroJobs(r.id)));
+    return candidates.filter((_, i) => !zeroJob[i]);
+  } catch (err) {
+    console.error(`incident-scan: could not read the aged-out band (${err.message}) — unknown.`);
+    return null;
+  }
+}
+
 /** `--count`: both halves of "unlearned", whatever the ledger's state. */
 async function count() {
   let unlearnedRuns = null;
+  let agedOutRuns = null;
   if (token) {
     try {
-      unlearnedRuns = (await scanRuns()).unlearned.length;
+      const scan = await scanRuns();
+      unlearnedRuns = scan.unlearned.length;
+      agedOutRuns = (await scanAgedOut(scan.realRuns))?.length ?? null;
     } catch (err) {
       console.error(`incident-scan: could not reach GitHub (${err.message}) — runs unknown.`);
     }
   }
-  console.log(JSON.stringify({ days, openEntries: openEntries(), unlearnedRuns }));
+  console.log(JSON.stringify({ days, openEntries: openEntries(), unlearnedRuns, agedOutRuns }));
   return 0;
 }
 
@@ -234,6 +264,17 @@ async function main() {
     );
   }
   for (const r of unlearned) console.log(`  UNLEARNED  ${r.sha}  ${r.date}  ${r.name}  ${r.title}`);
+
+  const agedOut = await scanAgedOut(realRuns);
+  if (agedOut?.length) {
+    console.log(
+      `incident-scan: ${agedOut.length} incident(s) aged out of the ${days}d window unlearned ` +
+        `(created ${ranges.agedOut}) — not in the budget; /retro them before they leave the report too.`,
+    );
+    for (const r of agedOut) {
+      console.log(`  AGED-OUT UNLEARNED  ${r.sha}  ${r.date}  ${r.name}  ${r.title}`);
+    }
+  }
 
   if (flag("--update")) {
     const next = Math.min(budget.unlearnedIncidents, unlearned.length);

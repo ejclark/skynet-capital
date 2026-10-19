@@ -14,7 +14,7 @@ import { byDay, dayHeader } from "../live/order-facts";
  * — "Load older trades" appends to the same sorted list, so a page that starts mid-day continues that
  * day under its existing divider, and a day the filter emptied has no divider at all.
  *
- * Days are grouping, not events: each divider is a heading, as `activity-cards.tsx`'s are, so a
+ * Days are grouping, not events: each divider is a heading, as `ledger-cards.tsx`'s are, so a
  * screen reader's list count stays the events. The line is decoration; the words carry the day.
  */
 export function ActivityDays({

@@ -399,7 +399,7 @@ describe("serveDeskJson", () => {
       nextCursor: string;
     };
     expect(firstBody.activity.map((r) => r.orderId)).toEqual(["ord-4", "ord-3"]);
-    expect(firstBody.nextCursor).toBe("2026-08-23T00:00:00.000Z");
+    expect(firstBody.nextCursor).toBe("2026-08-23T00:00:00.000Z|ord-3"); // time|id (#4802)
 
     const next = fakeRes();
     await serveDeskJson(
@@ -438,12 +438,13 @@ describe("serveDeskJson", () => {
   // #885 (Eric, 2026-08-29): "at this time, we do not show what playbooks others are using". The
   // `/u/:id` pages read these three payloads for ANY member, so the server withholds the key.
   describe("playbook names are the bot owner's alone (#885)", () => {
+    // Built the way `playbookIntents` builds a real playbook intent's reason (#4442).
     const pick = {
       symbol: "NVDA",
       side: "buy" as const,
       quantity: 1,
       type: "market" as const,
-      reason: "fade",
+      reason: "S1-NVDA window open (standard): fade",
       playbookId: "S1-NVDA",
       playbookMode: "standard" as const,
     };
@@ -497,11 +498,8 @@ describe("serveDeskJson", () => {
         expect.objectContaining({ mode: "standard", stages: expect.any(Array) }),
       ]);
       expect(thesis.ladder[0].playbookId).toBeUndefined();
-      // WHAT THIS PROVES, AND WHAT IT DOES NOT: the FIELDS carrying a play's name are stripped.
-      // It passes partly because `pick.reason` is hand-written here; a real playbook intent's
-      // reason is built as `"S1-NVDA window open (standard): …"` (`playbookIntents`), and that
-      // free text flows into `call.why` and every `reasoning.reason` unredacted — #4442, older than
-      // this block. Do not read a green here as covering it.
+      // The fields carrying a play's name are stripped, and so is the name inside the reason's
+      // free text — `call.why` and every `reasoning.reason` (#4442).
       for (const sub of ["heartbeat", "decisions", "activity", "thesis"]) {
         const body = await read(sub, "guest@x");
         expect(body).not.toContain("S1-NVDA");
@@ -511,7 +509,49 @@ describe("serveDeskJson", () => {
       const decisions = JSON.parse(await read("decisions", "guest@x"));
       expect(decisions.cycles[0].outcomes[0]).toMatchObject({ symbol: "NVDA", action: "placed" });
       const activity = JSON.parse(await read("activity", "guest@x"));
-      expect(activity.activity[0].reasoning).toMatchObject({ reason: "fade", personaId: "sauron" });
+      expect(activity.activity[0].reasoning).toMatchObject({
+        reason: "a playbook window open (standard): fade",
+        personaId: "sauron",
+      });
+    });
+
+    it("redacts a member-authored play's id from a refused idea's reason", async () => {
+      const authored = {
+        ...pick,
+        reason: "U-acct-7-earnings-runup window open (standard): ride the run-up",
+        playbookId: "U-acct-7-earnings-runup",
+      };
+      const refused = {
+        ...pass,
+        rawIntents: [authored],
+        guardedIntents: [],
+        outcomes: [],
+        refusals: [{ intent: authored, reason: "position-cap" as const }],
+        playbookVerdicts: [],
+      };
+      const config = configWith({
+        auth: {} as never,
+        resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+        readDecisions: () => Promise.resolve([refused]),
+      });
+      const path = "/api/desk/sauron/decisions";
+      const guest = fakeRes();
+      await serveDeskJson(guest.res, path, `${path}?trades=none`, config, session("guest@x"));
+      expect(guest.out.body).not.toContain("U-acct-7");
+      expect(JSON.parse(guest.out.body ?? "").cycles[0].refusedIntents[0].reason).toBe(
+        "a playbook window open (standard): ride the run-up",
+      );
+      const owner = fakeRes();
+      await serveDeskJson(owner.res, path, path, config, session("owner@x"));
+      expect(JSON.parse(owner.out.body ?? "").cycles[0].refusedIntents[0]).toMatchObject({
+        playbookId: "U-acct-7-earnings-runup",
+        reason: authored.reason,
+      });
+    });
+
+    it("keeps the reason's own words for the bot's owner", async () => {
+      const activity = JSON.parse(await read("activity", "owner@x"));
+      expect(activity.activity[0].reasoning.reason).toBe(pick.reason);
     });
 
     it("keeps them for the bot's owner", async () => {

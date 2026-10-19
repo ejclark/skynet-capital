@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import type { PlaybookMetricsView } from "../../src/live/playbook-performance";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
@@ -77,7 +77,7 @@ const strategyOf = (c: ReturnType<typeof card>) => ({
     },
   ],
 });
-const fixtureCards = [card("S1-NVDA", 3), card("HC-SAURON", 0), card("E1-AMD", 1), card("G1-NONE")];
+const fixtureCards = [card("S1-NVDA", 3), card("SAURON", 0), card("E1-AMD", 1), card("G1-NONE")];
 
 const requested: (string | undefined)[] = [];
 
@@ -109,6 +109,19 @@ rstest.mock("../../src/live/playbook-performance", () => ({
         house: split(0, 11, 4),
         mine: split(1, 0, 0),
       },
+      // Each house playbook's funnel (#4450 slice 5a): only S1-NVDA was checked in the window.
+      funnel: {
+        sessions: Array.from({ length: 10 }, (_, i) => `2026-10-${String(5 + i).padStart(2, "0")}`),
+        playbooks: [
+          {
+            playbookId: "S1-NVDA",
+            totals: { checks: 50, asked: 2, refused: 0, placed: 2, filled: 2 },
+            days: [],
+            askedOn: 1,
+            refusals: [],
+          },
+        ],
+      },
     });
   },
 }));
@@ -127,8 +140,12 @@ function mount(accountId?: string) {
   );
 }
 
+/** A strategy's card, not its row in the list above the cards (the list names it too, #5435). */
 const cardOf = (id: string) => {
-  const section = screen.getByText(`The ${id.toLowerCase()}`).closest(".pb-card");
+  const section = screen
+    .getAllByText(`The ${id.toLowerCase()}`)
+    .map((el) => el.closest(".pb-card"))
+    .find((el) => el !== null);
   if (!(section instanceof HTMLElement)) throw new Error(`no card ${id}`);
   return within(section);
 };
@@ -161,34 +178,50 @@ describe("PlaybooksSection metric blocks", () => {
     expect(requested).toEqual([undefined]);
   });
 
+  it("draws each playbook's own funnel in the house block, and says when no bot checked one", async () => {
+    mount(undefined);
+    await screen.findAllByRole("region", { name: /House — every account/ });
+    const nvda = cardOf("S1-NVDA").getByRole("region", { name: /House — every account/ });
+    expect(
+      within(nvda).getByText("50 checks → 2 orders asked for → 0 refused → 2 placed → 2 filled"),
+    ).toBeInTheDocument();
+    expect(
+      cardOf("SAURON").getByText("Last 10 sessions: no bot checked this playbook."),
+    ).toBeInTheDocument();
+  });
+
   it("says in words when no account has traded a playbook", async () => {
     mount(undefined);
     await screen.findAllByRole("region", { name: /House — every account/ });
     expect(
-      cardOf("HC-SAURON").getByText(/No account has closed a trade on this playbook yet/),
+      cardOf("SAURON").getByText(/No account has closed a trade on this playbook yet/),
     ).toBeInTheDocument();
   });
 });
 
 /**
- * Who started the bots' closed trades (#4450 slice 4, EARS 4) — one split for every bot, drawn
- * above the deck even in catalog-only mode, and the selected account's own beside it only when
- * the viewer manages that account. Never inside a playbook card.
+ * Who started the bots' closed trades (#4450 slice 4) moved to the book's Balance section (#5493
+ * slice 3, #5451 P3: "This is a high level metrics dashboard. It doesn't belong in the playbook
+ * list view"). One home: the catalog draws no scoreboard, folded or not, in catalog-only mode or
+ * with an account — while the cards keep their own per-playbook numbers.
  */
-describe("PlaybooksSection initiator split", () => {
-  it("shows every bot's split in catalog-only mode, and no account's", async () => {
-    mount(undefined);
-    const house = await screen.findByRole("region", { name: /every bot/ });
-    expect(within(house).getByText("11 closed trades")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /Uncle Joe's closed trades/ })).toBeNull();
-    expect(cardOf("S1-NVDA").queryByText(/forced daily pick/)).toBeNull();
+describe("PlaybooksSection no longer draws the closed-trades scoreboard", () => {
+  it("draws no initiator split and no fold for it, with or without an account", async () => {
+    for (const account of [undefined, "human-joe"]) {
+      mount(account);
+      // The server still serves the split (`byInitiator` in the mock); this screen ignores it.
+      await screen.findAllByRole("region", { name: /House — every account/ });
+      expect(screen.queryByText(/Who started/)).toBeNull();
+      expect(screen.queryByText(/forced daily pick/)).toBeNull();
+      expect(document.querySelector(".pb-initiators, .pb-initiators-fold")).toBeNull();
+      cleanup();
+    }
   });
 
-  it("adds the managed account's own split, kept apart from every bot's", async () => {
+  it("still reads the performance numbers the cards draw", async () => {
     mount("human-joe");
-    const mine = await screen.findByRole("region", { name: /Uncle Joe's closed trades/ });
-    expect(within(mine).getByText("1 closed trade")).toBeInTheDocument();
-    expect(within(mine).queryByText("11 closed trades")).toBeNull();
+    await screen.findAllByRole("region", { name: /House — every account/ });
+    expect(cardOf("S1-NVDA").getByText("+$900.00")).toBeInTheDocument();
   });
 });
 
@@ -202,7 +235,7 @@ describe("PlaybooksSection subscriber count", () => {
     expect(await screen.findByText("3 active subscribers")).toBeInTheDocument();
     expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
     expect(cardOf("E1-AMD").getByText("1 active subscriber")).toBeInTheDocument();
-    expect(cardOf("HC-SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
+    expect(cardOf("SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
   });
 
   it("shows the same count when an account is selected", async () => {

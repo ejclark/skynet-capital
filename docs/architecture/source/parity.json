@@ -135,7 +135,7 @@
     },
     {
       "community": "19 earnings-calendar.ts (34, 0.10)",
-      "hubs": ["EarningsPrint", "PRINT_WINDOWS", "nextPrint()", "printWithin()"],
+      "hubs": ["EarningsPrint", "PRINT_WINDOWS", "nextPrint()", "printSpan()"],
       "mapped_to_container": "shared — runtime:bots (guards: S2/E1 print discipline) + runtime:api (content/research)"
     },
     {

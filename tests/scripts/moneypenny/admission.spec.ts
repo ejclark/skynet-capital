@@ -1,6 +1,7 @@
 import {
   admitBuild,
   gateAdmission,
+  holdsCapSeat,
   isDuplicateQueueNote,
   isFreshPlan,
   nextAdmissible,
@@ -490,14 +491,93 @@ describe("the started-plan cap (#4393 criterion 6)", () => {
     const asked: string[] = [];
     const rows = readOpenPlans((path) => {
       asked.push(path);
+      if (path.endsWith("/sub_issues")) return [];
       return [
         { number: 1, labels: [{ name: "plan" }], sub_issues_summary: { total: 2, completed: 1 } },
         { number: 2, pull_request: {} },
       ];
     });
-    expect(asked).toEqual(["issues?state=open&labels=plan"]);
+    expect(asked[0]).toBe("issues?state=open&labels=plan");
     expect(rows.map((r) => r.number)).toEqual([1]);
     expect(rows[0]?.sub_issues_summary).toEqual({ total: 2, completed: 1 });
+  });
+
+  describe("a seat is held only while a lane could pull the plan's next work (2026-10-18)", () => {
+    const started = (
+      n: number,
+      labels: string[],
+      openSubIssues?: { number: number; labels: { name: string }[] }[],
+    ) => ({
+      ...issue(n, `s${n}`, ["plan", ...labels]),
+      sub_issues_summary: { total: 3, completed: 1 },
+      ...(openSubIssues ? { openSubIssues } : {}),
+    });
+    const sub = (n: number, labels: string[]) => ({
+      number: n,
+      labels: labels.map((name) => ({ name })),
+    });
+
+    it("frees the seat of a plan whose open sub-issues are unready sub-plans or unlabelled stories", () => {
+      const stuck = started(1, [], [sub(10, ["enhancement", "plan"]), sub(11, ["enhancement"])]);
+      expect(holdsCapSeat(stuck)).toBe(false);
+      expect(waitingPlans([stuck])).toEqual([]);
+    });
+
+    it("keeps the seat while the plan itself is ready, or a non-plan sub-issue is", () => {
+      expect(holdsCapSeat(started(2, ["ready", "next-slice"], []))).toBe(true);
+      expect(holdsCapSeat(started(3, [], [sub(12, ["enhancement", "ready"])]))).toBe(true);
+    });
+
+    it("does not count a ready sub-PLAN as the parent's pullable work — the child is admitted on its own", () => {
+      expect(holdsCapSeat(started(4, [], [sub(13, ["plan", "ready"])]))).toBe(false);
+    });
+
+    it("keeps the old count for a row it could not enrich — the cap never loosens on a missed read", () => {
+      expect(holdsCapSeat(started(5, []))).toBe(true);
+    });
+
+    it("admits a fresh plan at the cap when its parent holds a seat: it IS that parent's remaining work", () => {
+      const seats = [started(20, ["ready"], []), started(21, ["ready"], [])];
+      const child = {
+        ...issue(60, "child", ["plan", "ready"]),
+        parent_issue_url: "https://api.github.com/repos/o/r/issues/20",
+      };
+      const stranger = issue(61, "other", ["plan", "ready"]);
+      expect(admitBuild({ issue: child, mode: planMode, waiting: seats }).admit).toBe(true);
+      expect(admitBuild({ issue: stranger, mode: planMode, waiting: seats }).admit).toBe(false);
+    });
+
+    it("readOpenPlans reads open sub-issues only for started plans with some open, and survives a failed read", () => {
+      const asked: string[] = [];
+      const rows = readOpenPlans((path) => {
+        asked.push(path);
+        if (path === "issues/1/sub_issues")
+          return [
+            { number: 9, state: "open", labels: [{ name: "plan" }] },
+            { number: 8, state: "closed", labels: [] },
+          ];
+        if (path === "issues/3/sub_issues") throw new Error("boom");
+        return [
+          { number: 1, labels: [{ name: "plan" }], sub_issues_summary: { total: 2, completed: 1 } },
+          {
+            number: 2,
+            labels: [{ name: "plan" }, { name: "next-slice" }],
+            sub_issues_summary: { total: 1, completed: 1 },
+          },
+          { number: 3, labels: [{ name: "plan" }], sub_issues_summary: { total: 2, completed: 1 } },
+          { number: 4, labels: [{ name: "plan" }], sub_issues_summary: { total: 0, completed: 0 } },
+        ];
+      });
+      expect(asked).toEqual([
+        "issues?state=open&labels=plan",
+        "issues/1/sub_issues",
+        "issues/3/sub_issues",
+      ]);
+      expect(rows[0]?.openSubIssues).toEqual([{ number: 9, labels: [{ name: "plan" }] }]);
+      expect(rows[1]?.openSubIssues).toEqual([]);
+      expect(rows[2]?.openSubIssues).toBeUndefined(); // the failed read keeps the old count
+      expect(rows[3]?.openSubIssues).toBeUndefined(); // a fresh plan holds no seat anyway
+    });
   });
 
   describe("through gateAdmission", () => {

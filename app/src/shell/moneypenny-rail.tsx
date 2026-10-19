@@ -40,7 +40,7 @@ function PlaceLink({ path, text }: { readonly path: string; readonly text: strin
     if (phone) closeRail();
     if (!router) return;
     e.preventDefault();
-    // "Return %" while the board is already showing re-ranks it in place — the member keeps
+    // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
     // their spot; any other page opens at its top, as a new view should.
     const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
     void (samePage

@@ -19,6 +19,7 @@ import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
 import { GuidanceSlot } from "./position-guidance-slot";
+import { PositionPicture } from "./position-picture";
 import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
@@ -133,6 +134,8 @@ export function PositionsBlotter({
   allocation,
   decisions = NO_DECISIONS,
   canTrade = true,
+  openRow,
+  onFullPage,
   children,
 }: {
   readonly deskId: string;
@@ -147,6 +150,10 @@ export function PositionsBlotter({
   readonly decisions?: readonly Decision[];
   /** Does the viewer own this account (#3807 slice 2d)? Off it, the rows offer no write. */
   readonly canTrade?: boolean;
+  /** The row whose guidance starts open: "← Positions" from its full page (#5070 slice 6). */
+  readonly openRow?: string | undefined;
+  /** A row's "Full page ›" (#5070 slice 6, `use-position-page.ts`); without it, no row offers one. */
+  readonly onFullPage?: (symbol: string) => void;
   /** What sits under the list (the New trade card). It rides in the held region, so the space a
    *  refinement holds (#5021) opens below it, where the page ends, not between it and the rows. */
   readonly children?: ReactNode;
@@ -162,6 +169,10 @@ export function PositionsBlotter({
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
   const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
+  const bookRows = useMemo(
+    () => new Map((statement.data?.rows ?? []).map((r) => [r.symbol, r] as const)),
+    [statement.data],
+  );
   // Every row's fact badge and this viewer's Not now on it (#5070): the marks filter (`is:review`
   // …) and sort (`sort:look`) the list, and the pager they replace is gone.
   const marks = useRowMarks(deskId, positions, statement.data);
@@ -194,13 +205,24 @@ export function PositionsBlotter({
     return row ? (
       <GuidanceSlot
         position={p}
+        positions={positions}
         row={row}
         deskId={deskId}
         canTrade={canTrade}
         {...(call ? { call } : {})}
         decisions={said.get(p.symbol) ?? []}
+        picture={
+          <PositionPicture
+            position={p}
+            positions={positions}
+            book={bookRows.get(p.symbol)}
+            bookRead={statement.isSuccess}
+          />
+        }
         playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
-        onAside={() => marks.setAside(p.symbol)}
+        initialOpen={openRow === p.symbol}
+        {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
+        onAside={(watch) => marks.setAside(p.symbol, watch)}
         onUndo={() => marks.undo(p.symbol)}
       />
     ) : null;

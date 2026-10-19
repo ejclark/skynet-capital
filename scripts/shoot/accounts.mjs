@@ -1081,10 +1081,11 @@ const sauronProbes = {
 // A bot that sat out the whole last session (#4949) — the closed-market stale the server returns
 // once the newest pass predates that session's open. Its own frames, then back to the live loop.
 let sauronSatOut = false;
-// Sauron's playbooks as #5037's round 2 drew them (#5073): seven on, BETA-SCOUT off. The roll call
-// is the server's own `playbookRollCall` output for these verdicts on 2026-10-09 — every reason and
-// date verbatim — so the frame shows the real copy, including HC-SAURON's contradiction (can't fire
-// on the roll call, trading on live signals in its verdict) that one card per playbook resolves.
+// Sauron's playbooks as #5037's round 2 drew them (#5073), less HC-SAURON (dissolved 2026-10-16):
+// six on, BETA-SCOUT off. The roll call is the server's own `playbookRollCall` output for these
+// verdicts on 2026-10-09 — every reason and date verbatim — so the frame shows the real copy,
+// including TACO-DJT's contradiction (can't fire on the roll call, a verdict on the verdict table)
+// that one card per playbook resolves.
 const sauronVerdict = (playbookId, mode, state, since, sinceIsLowerBound = false) => ({
   playbookId,
   mode,
@@ -1111,12 +1112,6 @@ const sauronRollCall = [
     playbookId: "TACO-DJT",
     status: "blocked",
     reason: "No news feed is wired to it yet, so its trigger never arrives.",
-  },
-  {
-    playbookId: "HC-SAURON",
-    status: "blocked",
-    mode: "standard",
-    reason: "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
   },
   {
     playbookId: "CRWV-WHEEL",
@@ -1163,7 +1158,7 @@ const sauronHeartbeat = () => {
         sauronVerdict("S1-NVDA", "standard", "no-window", "2026-09-22T13:30:00Z", true),
         sauronVerdict("NVDA-CALL-SPREAD", "aggressive", "no-window", "2026-10-05T13:30:00Z"),
         sauronVerdict("G1-GOOG", "standard", "no-window", "2026-09-29T13:30:00Z"),
-        sauronVerdict("HC-SAURON", "standard", "tactical", today),
+        sauronVerdict("TACO-DJT", "standard", "no-window", today),
       ],
       rollCall: sauronRollCall,
     },
@@ -1392,7 +1387,7 @@ await shootCockpit("accounts-positions-phone");
 
 // Activity section — the order timeline below the sticky header. Waits on the Symbol column
 // (always visible) rather than Status, which lives in a `col-detail` cell hidden at phone width.
-await page.goto(`${origin}/app/accounts?section=activity`);
+await page.goto(`${origin}/app/accounts?section=ledger`);
 await page.getByText("AAPL").first().waitFor();
 await shootCockpit("accounts-activity-phone");
 
@@ -1592,7 +1587,7 @@ await underHead(".cycle-placed");
 await shootCockpit("accounts-playbooks-traded-round-phone");
 tradedPassesIncluded = false;
 // The head line on another section — "● Running · 7 playbooks ›", the way in from anywhere.
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator(".hb-line").waitFor();
 await settle();
 await shootCockpit("accounts-head-line-phone");
@@ -1619,7 +1614,7 @@ await shootCockpit("accounts-playbooks-probes-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-phone");
@@ -1633,7 +1628,7 @@ await page.locator(".blotter-scroll").evaluate((el) => {
 });
 await shootCockpit("accounts-activity-round-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");

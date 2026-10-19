@@ -12,6 +12,8 @@
  * viewer's own subscriptions onto the rows. The per-playbook `cards` stay beside this for one
  * release, so the app keeps rendering while slice 3b moves it onto these.
  */
+
+import { CANDIDATES, candidateLine } from "../playbooks/candidates.js";
 import {
   EVIDENCE_STATUS,
   type EvidenceStatus,
@@ -24,6 +26,7 @@ import {
   type StrategyId,
   statusLabel,
 } from "../playbooks/pair-table.js";
+import { researchLine, researchOf } from "../playbooks/research-signals.js";
 import { researchHref } from "./playbook-probe.js";
 
 export interface PairRowEntry extends PairEvidence {
@@ -37,9 +40,17 @@ export interface PairRowEntry extends PairEvidence {
   readonly stale: boolean;
   /** `study` as its route on the research shelf — this pair's own study, one verdict per pair. */
   readonly studyHref?: string;
+  /** What the strategy does on this one ticker, in the member's words ("Buy NVDA's run-up before
+   *  its earnings report") — the strategy's `act` on the pair's ticker; the app adds the until-date.
+   *  Absent on a basket or a pick on the day: no one ticker to say it of (#5444). */
+  readonly plainCall?: string;
+  /** What the playbook trades on, as research runs it, or that it has no such signal and why — in
+   *  words (#4808 criterion 1). */
+  readonly researchSignal?: string;
 }
 
-export interface StrategyCardEntry extends Pick<Strategy, "name" | "instrument" | "summary"> {
+export interface StrategyCardEntry
+  extends Pick<Strategy, "name" | "instrument" | "summary" | "line" | "movesNoCapital"> {
   readonly strategy: StrategyId;
   readonly screen?: string;
   readonly noScreen?: string;
@@ -54,6 +65,10 @@ const rank = (pair: Pair): number => EVIDENCE_ORDER.indexOf(pair.evidence.status
 function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
   const stale = isStale(pair.evidence, asOfIso);
   const href = pair.evidence.study ? researchHref(pair.evidence.study) : undefined;
+  const { act } = STRATEGIES[pair.strategy];
+  const [only] = pair.symbols;
+  const plainCall = act && only && pair.symbols.length === 1 ? act.replaceAll("<SYM>", only) : "";
+  const research = researchOf(pair.id);
   return {
     ...pair.evidence,
     id: pair.id,
@@ -63,6 +78,8 @@ function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
       : statusLabel(pair.evidence),
     stale,
     ...(href ? { studyHref: href } : {}),
+    ...(plainCall ? { plainCall } : {}),
+    ...(research ? { researchSignal: researchLine(research) } : {}),
   };
 }
 
@@ -74,15 +91,36 @@ export function strategyCatalog(asOfIso: string): readonly StrategyCardEntry[] {
     byStrategy.set(pair.strategy, [...(byStrategy.get(pair.strategy) ?? []), pair]);
   }
   return [...byStrategy].map(([id, pairs]) => {
-    const { name, instrument, summary, screen, noScreen } = STRATEGIES[id];
+    const { name, instrument, summary, line, screen, noScreen, movesNoCapital } = STRATEGIES[id];
     return {
       strategy: id,
       name,
       instrument,
       summary,
+      line,
+      ...(movesNoCapital ? { movesNoCapital } : {}),
       ...(screen ? { screen } : {}),
       ...(noScreen ? { noScreen } : {}),
       pairs: [...pairs].sort((a, b) => rank(a) - rank(b)).map((pair) => rowOf(pair, asOfIso)),
     };
   });
+}
+
+/** A candidate playbook as the Store shows it (#4808 slice 3): never subscribable, its back-test
+ *  status in words (criterion 3). */
+export interface CandidateCardEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly hypothesis: string;
+  /** "Candidate — it never places or suggests an order. Back-test: not run yet. Dead if …". */
+  readonly line: string;
+}
+
+export function candidateCatalog(): readonly CandidateCardEntry[] {
+  return CANDIDATES.map((c) => ({
+    id: c.id,
+    name: c.name,
+    hypothesis: c.hypothesis,
+    line: candidateLine(c),
+  }));
 }

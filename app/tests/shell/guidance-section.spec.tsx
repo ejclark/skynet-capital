@@ -57,6 +57,41 @@ describe("guidance tab — at a glance", () => {
   });
 });
 
+describe("guidance tab — the recap card (#4807)", () => {
+  const OUTLOOK = {
+    symbol: "CRWV",
+    asOf: "2026-10-16",
+    call: "wait",
+    confidence: "none",
+    why: "No current research covers CRWV, so the house has no call on it.",
+    until: "2027-01-14",
+    falsifier: "A ledger states a call.",
+    windows: [
+      { start: "2026-10-16", end: "2027-01-14", state: "no-view", reason: "No current research." },
+    ],
+  };
+
+  it("comes first — before the freshness strip and every lever line", async () => {
+    serve({ ...MARKET, outlook: OUTLOOK } as GuidanceMarket);
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    mount();
+    const card = await screen.findByRole("region", { name: "CRWV research recap" });
+    const glance = screen.getByRole("list", { name: "At a glance" });
+    expect(card.compareDocumentPosition(glance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const pulse = document.querySelector(".guidance-pulse");
+    expect(
+      card.compareDocumentPosition(pulse as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("is simply absent from a read that carries no summary", async () => {
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    mount();
+    await screen.findByRole("list", { name: "At a glance" });
+    expect(screen.queryByRole("region", { name: "CRWV research recap" })).toBeNull();
+  });
+});
+
 describe("guidance tab — Use this", () => {
   it("offers it under the actionable covered call, and hands the chosen row back", async () => {
     localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));

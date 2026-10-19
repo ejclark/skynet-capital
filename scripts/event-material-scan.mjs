@@ -90,7 +90,8 @@ function loadEvents() {
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",
   );
   const derived = prints.map((p) => ({
-    id: `${p.symbol.toLowerCase()}-${p.date}-print`,
+    // `ledgerId` keeps a moved print on the ledger it was opened under (printEventId, earnings-calendar.ts).
+    id: p.ledgerId ?? `${p.symbol.toLowerCase()}-${p.date}-print`,
     kind: "earnings",
     date: p.date,
     impact: "critical",

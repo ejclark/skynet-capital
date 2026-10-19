@@ -2,6 +2,7 @@ import type { PlaybookSubscription, Portfolio } from "../../src/domain/types.js"
 import {
   CONVICTION_NOT_STATED,
   checkConviction,
+  checkRecord,
   isConvictionNotStated,
   netPl,
   type PairLedger,
@@ -132,9 +133,87 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { conviction }))).toBe(false);
   });
 
+  it("counts a pointer at a record that steers the pair as stated (#5482 slice 2), and no other", () => {
+    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "ai-dip-2026-10" }))).toBe(
+      false,
+    );
+    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "no-such-view" }))).toBe(true);
+  });
+
   it("is quiet for a house ✓ pair, a paused subscription, and an id that is no pair", () => {
     expect(isConvictionNotStated(sub("S1-NVDA"))).toBe(false);
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { enabled: false }))).toBe(false);
     expect(isConvictionNotStated(sub("U-my-own-play"))).toBe(false);
+  });
+});
+
+describe("checkRecord — a conviction record's check over every pair it steers (#5482 criterion 5)", () => {
+  const LONG_CALL = findPair("CRWV-LONG-CALL");
+  if (!LONG_CALL) throw new Error("CRWV-LONG-CALL is not in the pair table");
+  const reading = (pair: typeof WHEEL, net: number, over: Partial<PairLedger> = {}) => ({
+    pair,
+    ledger: ledger({ realizedPl: net, ...over }),
+    net,
+  });
+
+  it("passes when the pairs together are at $0 or more, whatever one of them did alone", () => {
+    const verdict = checkRecord("2027-01-29", [reading(WHEEL, -80), reading(LONG_CALL, 80)]);
+    expect(verdict).toEqual({ pass: true, netPl: 0, stopped: [], reason: "" });
+  });
+
+  it("fails below $0 together and stops every pair it steers, in words", () => {
+    const verdict = checkRecord("2027-01-29", [reading(WHEEL, 100), reading(LONG_CALL, -300)]);
+    expect(verdict.pass).toBe(false);
+    expect(verdict.netPl).toBe(-200);
+    expect(verdict.stopped).toEqual(["CRWV-WHEEL", "CRWV-LONG-CALL"]);
+    expect(verdict.reason).toBe(
+      "the wheel on CRWV + the long call on CRWV: net P/L is -$200.00 together at the 2027-01-29 check",
+    );
+  });
+
+  it("sums to the cent", () => {
+    expect(checkRecord("d", [reading(WHEEL, 0.1), reading(LONG_CALL, 0.2)]).netPl).toBe(0.3);
+  });
+
+  it("stops the wheel on its retire test alone while the view holds", () => {
+    const verdict = checkRecord("2027-01-29", [
+      reading(WHEEL, 900, { putsClosed: 5, putsAssigned: 2 }),
+      reading(LONG_CALL, 10),
+    ]);
+    expect(verdict.pass).toBe(true);
+    expect(verdict.stopped).toEqual(["CRWV-WHEEL"]);
+    expect(verdict.reason).toContain("2 of 5 sold puts finished in the money");
+  });
+
+  it("judges an owner who accepts assignment on net P/L alone (Eric, 2026-10-18)", () => {
+    const assigned = [
+      reading(WHEEL, 900, { putsClosed: 5, putsAssigned: 2 }),
+      reading(LONG_CALL, 10),
+    ];
+    expect(checkRecord("2027-01-29", assigned, { acceptsAssignment: true })).toEqual({
+      pass: true,
+      netPl: 910,
+      stopped: [],
+      reason: "",
+    });
+    // the money still stops it: a loss together fails the view whatever the owner accepts
+    const losing = checkRecord(
+      "2027-01-29",
+      [reading(WHEEL, -400, { putsClosed: 5, putsAssigned: 2 })],
+      {
+        acceptsAssignment: true,
+      },
+    );
+    expect(losing.pass).toBe(false);
+    expect(losing.stopped).toEqual(["CRWV-WHEEL"]);
+  });
+
+  it("reads one pair exactly as a single pair's check does", () => {
+    for (const net of [-120, 0, 230]) {
+      const single = checkConviction(WHEEL, "2027-01-29", ledger({ realizedPl: net }), net);
+      const record = checkRecord("2027-01-29", [reading(WHEEL, net)]);
+      expect(record.pass).toBe(single.pass);
+      expect(record.stopped.length > 0).toBe(!single.pass);
+    }
   });
 });

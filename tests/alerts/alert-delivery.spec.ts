@@ -82,6 +82,9 @@ describe("deliveryMessage", () => {
       "your own orders",
     );
     expect(deliveryMessage(alert(), "ann@x.com").text).toContain("your own option positions");
+    expect(deliveryMessage(alert({ source: "bot-watch" }), "ann@x.com").text).toContain(
+      "your own bot's decision loop",
+    );
   });
 
   it("leaves the symbol out of the subject when the alert is not about one", () => {

@@ -12,12 +12,13 @@ Five moves, repeating: **thin slice → pressure test → find the weakness → 
 enhance the process → back-test.** A loop is "done" for now when the back-test closes clean; it
 reopens the next time the domain needs re-validating, at whatever cadence that domain calls for.
 
-## The anatomy — thirteen fields, nine custom, four fixed
+## The anatomy — fourteen fields
 
 The first nine are **custom-catered per instance** — they are the actual subject matter, different
-every time. The last four are **fixed mechanism** — every instance reuses the same artifacts for
+every time. The next four are **fixed mechanism** — every instance reuses the same artifacts for
 capture and scheduling, which is what makes this a *loop* (compounding across instances) rather than
-an ad hoc one-off process reinvented each time.
+an ad hoc one-off process reinvented each time. The fourteenth (2026-10-18) is both: the iteration
+budget is custom, and the per-iteration record is fixed, so effort compares across loops.
 
 | # | Field | What it answers | Custom or fixed |
 |---|---|---|---|
@@ -34,6 +35,7 @@ an ad hoc one-off process reinvented each time.
 | 11 | **Next check** | A date the next result will be visible, kept in the list below, where the daily digest flags it once it arrives. | Fixed (location), custom (date) |
 | 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
 | 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
+| 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row on the owning issue: its cost (tokens · dollars · wall time) and how far it moved the aim's number. Stop early, and say so, when an iteration moves the number less than the loop states as worth an iteration; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
 
 **Why 11–13 are fixed, not a choice per loop:** a check with no date is never made; a lesson with
 nowhere durable to live gets re-learned; a procedure re-typed from memory each cycle drifts and
@@ -71,6 +73,49 @@ from, not designed in the abstract first. Field by field:
 | Next check | none — ended; no prospective results exist yet to check |
 | State | `pivoted` (#3300, 2026-09-18) — was `blocked-on-fix`, which went stale when the loop quietly stopped. That staleness is why fields 4, 9 and 11 exist |
 
+## The loop census — does the system improve itself?
+
+Eric, 2026-10-18: *"My intent is to increase agentic orchestration process capable of iteratively
+driving self improvement, self learning, self healing systems."* And the same day: *"we should be
+looking for ways to automate away Manual checks; that's the only way to scale."* A learning loop
+above is one experiment; a **loop census** audits every loop the system runs — gates, lanes, bots,
+studies, this registry — for the stage a person still has to do.
+
+**Five stages, four grades.** Every loop has **sense** (a signal is noticed) → **decide** (it is
+judged) → **act** (something changes) → **verify** (the change is confirmed) → **remember** (it is
+banked so the next cycle starts ahead). Grade each stage `auto` (runs on a schedule or event, no
+session) · `session` (an agent session runs it, started automatically) · `human` (someone must
+remember) · `missing`.
+
+**Two rules decide what to build.**
+
+1. **A recurring manual check is the first thing to automate.** Rank by how often the human stage
+   recurs × what it costs when it is late. Automate the *check*, keep the *decision* where it
+   belongs: a taste call or the irreversible class stays Eric's, but its check still runs itself
+   and arrives pre-verified (`CLAUDE.md` → *When Eric's action IS needed*).
+2. **Automate an act only behind a mechanical verify** — a spec, a gate, a script's number, a filed
+   falsifier. An automated check with no oracle is false assurance (`docs/members/study/README.md`:
+   the crawl passed every screen the owner then found broken). Where verify is judgment, the act
+   stays a session and the census says so.
+
+**Every exercise ends with one census line.** An audit, a study, a scenario run, a retro: name the
+stage of which loop a person still had to do, and route the cheapest one — a build, an issue, or a
+row here — and say how many iterations it took and what each cost (field 14). That is how usability
+work also improves the process that ran it, and how its effort becomes comparable across loops.
+
+**The first census (2026-10-18)** — four read-only auditors, one per family. The shared finding:
+the fixes and gates exist; **the trigger is missing**. Advisory output nobody reads, checks that wait
+for someone to remember, overdue work that goes quiet.
+
+| Family | Worst open stage, measured | What happened |
+|---|---|---|
+| Orchestration | Plan cap: 9 of 10 "Waiting" plans had nothing pullable, so every fresh plan (a P1 among them) was refused | built: a started plan holds a seat only while a lane could pull its next work |
+| Orchestration | This registry: 3 checks overdue, owners of 14 of 16 rows closed, none surfaced in 7 digests | built: `scripts/loop-check.mjs` posts due checks on the push tick (#5724) |
+| Bots | A stalled or halted bot is caught only when someone notices no trades (LESSONS: days, then 45 min) | built: an alert while the market is open (#5734) |
+| Bots | "Daily" loss breaker measured loss since the process started | fixed (#5723) |
+| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real contradiction found, filed and fixed by the lane in under an hour: #5731 → #5737) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
+| Engineering | 11 of 14 debt budgets over, no trigger for the athletes; 14 unlearned incidents ageing out | filed with the follow-ups |
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
@@ -98,6 +143,12 @@ flagged, so point it at the loop's own scanner when one already exists rather th
 name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an
 ended State (same rule as `docs/READERS.md`). Keep the column names: `scripts/loop-list-decide.mjs`
 finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
+
+**The checks run themselves** (2026-10-18). On every push to main, `scripts/loop-check.mjs --post`
+(called from `scripts/moneypenny/index.mjs --audit`) posts one comment per running row whose Next
+check has arrived, once per date: the row's question, the falsifier it is judged against, and — when
+the question names `npm run <x>` — that command's output. Settling stays the owner's: move the date
+or end the loop. **Check results post to:** #5724
 
 | Loop | The question | Owning issue | State | Next check |
 |---|---|---|---|---|

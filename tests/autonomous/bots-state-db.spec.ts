@@ -2,9 +2,16 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { openBotsStateDb, restoreBotsState } from "../../src/autonomous/bots-state-db.js";
+import {
+  authoredShadowStore,
+  openBotsStateDb,
+  persistSentiment,
+  restoreBotsState,
+} from "../../src/autonomous/bots-state-db.js";
 import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
 import { SentimentTracker } from "../../src/news/sentiment-tracker.js";
+import { type ShadowRun, startRun } from "../../src/playbooks/authored-shadow.js";
+import { anOrder } from "../support/authored-shadow.js";
 
 describe("BotsStateDb", () => {
   let dir: string;
@@ -42,6 +49,19 @@ describe("BotsStateDb", () => {
 
     const second = openBotsStateDb(dbPath);
     expect(second.loadSentiment()).toEqual({ NVDA: [0.5, -0.2] });
+    second.close();
+  });
+
+  // #4781: the articles already counted survive a restart, so a re-poll never counts them twice.
+  it("round-trips the news articles already counted", () => {
+    const first = openBotsStateDb(dbPath);
+    expect(first.loadSeenNews()).toEqual([]);
+    first.saveSeenNews(["a1", "a2"]);
+    first.saveSeenNews(["a2", "a3"]);
+    first.close();
+
+    const second = openBotsStateDb(dbPath);
+    expect(second.loadSeenNews()).toEqual(["a2", "a3"]);
     second.close();
   });
 
@@ -247,6 +267,30 @@ describe("restoreBotsState", () => {
     db.close();
   });
 
+  // #4781: a restart that forgot which stories it counted would count the newest 20 again.
+  it("persists and restores the news articles already counted", () => {
+    const nvda = new Set(["NVDA"]);
+    const story = {
+      id: "n1",
+      headline: "NVDA surges",
+      summary: "",
+      symbols: ["NVDA"],
+      createdAt: "t",
+    };
+    const live = new SentimentTracker();
+    live.ingest(story, nvda);
+    const first = openBotsStateDb(dbPath);
+    persistSentiment(first, live);
+    first.close();
+
+    const db = openBotsStateDb(dbPath);
+    const sentiment = new SentimentTracker();
+    restoreBotsState(db, new MomentumTracker(), sentiment);
+    sentiment.ingest(story, nvda);
+    expect(sentiment.snapshot()).toEqual({ NVDA: [1] });
+    db.close();
+  });
+
   it("counts cooldowns only for the personas actually on the roster", () => {
     const seed = openBotsStateDb(dbPath);
     seed.saveCooldown("sauron", "NVDA", 1);
@@ -278,5 +322,72 @@ describe("restoreBotsState", () => {
     const restored = restoreBotsState(undefined, tracker, new SentimentTracker(), [bot("sauron")]);
     expect(restored).toBeNull();
     expect(tracker.snapshot()).toEqual({});
+  });
+});
+
+describe("the shadow tests of members' draft playbooks (#5457 slice 2)", () => {
+  let dir: string;
+  let dbPath: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "bots-state-shadow-"));
+    dbPath = join(dir, "bots.db");
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const run = (over: Partial<ShadowRun> = {}): ShadowRun => ({
+    ...startRun(anOrder()),
+    sessions: ["2026-10-20"],
+    tradeCount: 1,
+    trades: [
+      {
+        at: 5,
+        side: "buy",
+        symbol: "AMD",
+        quantity: 19,
+        price: 100.05,
+        quote: { bid: 99.95, ask: 100.05, last: 100, asOf: "t" },
+      },
+    ],
+    holding: { quantity: 19, avgPrice: 100.05, openedAt: 5 },
+    ...over,
+  });
+
+  it("round-trips a ledger across a fresh open of the same file (a restart)", () => {
+    const first = openBotsStateDb(dbPath);
+    authoredShadowStore(first)?.save(run());
+    first.close();
+
+    const second = openBotsStateDb(dbPath);
+    expect(authoredShadowStore(second)?.loadAll()).toEqual([run()]);
+    second.close();
+  });
+
+  it("upserts one ledger per play, and removes it when the test ends", () => {
+    const db = openBotsStateDb(dbPath);
+    const store = authoredShadowStore(db);
+    store?.save(run());
+    store?.save(run({ sessions: ["2026-10-20", "2026-10-21"] }));
+    expect(store?.loadAll()).toHaveLength(1);
+    store?.remove("U-futurist-amd-run-up");
+    expect(store?.loadAll()).toEqual([]);
+    db.close();
+  });
+
+  it("skips a row it cannot read instead of failing the boot", () => {
+    const db = openBotsStateDb(dbPath);
+    db.saveAuthoredShadow("torn", { id: "torn" }); // no spec: unreadable
+    db.saveAuthoredShadow("U-futurist-amd-run-up", run());
+    expect(
+      authoredShadowStore(db)
+        ?.loadAll()
+        .map((r) => r.id),
+    ).toEqual(["U-futurist-amd-run-up"]);
+    db.close();
+  });
+
+  it("is dark with no database: nothing to bind", () => {
+    expect(authoredShadowStore(undefined)).toBeUndefined();
   });
 });

@@ -57,22 +57,22 @@
         {
           "id": "s6",
           "goto": "/app/u/sauron",
-          "sees": "the page's head: Overview · Activity · Pulse · Playbooks · Thesis — the switch, not '← Leaderboard'",
-          "ears": "WHEN a viewer is on an account's page, the app shall offer that account's activity beside its playbooks.",
+          "sees": "the page's head: Overview · Ledger · Pulse · Playbooks · Thesis — the switch, not '← Leaderboard'",
+          "ears": "WHEN a viewer is on an account's page, the app shall offer that account's ledger beside its playbooks.",
           "expect": [
-            { "role": "link", "name": "Activity", "within": "nav.acct-switch" },
+            { "role": "link", "name": "Ledger", "within": "nav.acct-switch" },
             { "role": "link", "name": "← Leaderboard", "absent": true }
           ],
           "judge": "can this reader find what the bot actually did?"
         },
         {
           "id": "s7",
-          "goto": "/app/u/sauron/activity",
-          "sees": "Sauron's Activity: every order it placed, newest first — what, at what price, and why",
-          "ears": "WHEN a viewer opens a bot's Activity, the app shall list every order it placed, newest first.",
+          "goto": "/app/u/sauron/ledger",
+          "sees": "Sauron's Ledger: every order it placed, newest first — what, at what price, and why",
+          "ears": "WHEN a viewer opens a bot's Ledger, the app shall list every order it placed, newest first.",
           "expect": [
-            { "url": "/app/u/sauron/activity" },
-            { "role": "heading", "name": "Activity", "exact": true }
+            { "url": "/app/u/sauron/ledger" },
+            { "role": "heading", "name": "Ledger", "exact": true }
           ],
           "judge": "can this reader find what the bot actually did?"
         },

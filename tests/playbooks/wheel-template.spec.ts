@@ -13,7 +13,7 @@ import type {
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { type Pair, pairFor, pairTable } from "../../src/playbooks/pair-table.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
-import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
+import { CRWV_WHEEL, CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
 import { wheel } from "../../src/playbooks/wheel.js";
 import { buildOccSymbol, humanizeOptionSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
@@ -32,16 +32,18 @@ const CRWV_SETTING = {
     "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
     "— run on its owner's conviction, against our own study of CRWV's premium.",
   findings:
-    "AGAINST this play: implied 69.9% vs a median 88.7% realized (6th percentile); Δ0.20 puts " +
-    "priced 19.4% to assign vs 33.3% delivered.",
+    "AGAINST this play (re-run 2026-10-16): implied 93.2%, at the 63rd percentile of CRWV's " +
+    "next-30-day moves and 0.6 points under their mean; Δ0.20 puts priced 20.1% to assign vs 24.8% " +
+    "delivered.",
   dataShows:
-    "Our study of CRWV: options price its next month to swing at a 69.9%-a-year pace, but in the " +
-    "past year its typical month swung at 88.7%. Puts priced at a 19% chance of being assigned " +
-    "would have been assigned 33% of the time in CRWV's own price history.",
+    "Our study of CRWV, re-run 2026-10-16: options price its next month to swing at a 93.2%-a-year " +
+    "pace, about what its months have gone on to swing (0.6 points under the past year's average). " +
+    "Puts priced at a 20% chance of being assigned would have been assigned 25% of the time in " +
+    "CRWV's own price history.",
   bet:
-    "So the study finds the market under-estimates how far CRWV moves, and says stand aside. Its " +
-    "owner runs this against the study, betting the market has CRWV about right: that its swings " +
-    "calm to the pace options price.",
+    "So the premium is fair, not rich: the study finds no edge in selling it and says stand aside. " +
+    "Its owner runs this against the study, betting the market overprices CRWV's downside after the " +
+    "drop, and accepts the shares if a put is assigned.",
 } as const;
 
 // A row the real table does not have yet: a ✓ wheel on AMZN (the screen's only fit, unstudied).
@@ -99,15 +101,18 @@ function market(symbol: string, spot = 92): MarketContext {
 }
 const flat = (): Portfolio => aPortfolio({ cash: 100_000, positions: [] });
 
+// Template parity is measured on CRWV's classic setting (month out, the mode's delta, one contract);
+// its 2026-10-16 conviction settings are pinned in crwv-wheel.spec.ts.
+const CLASSIC = wheel(CRWV_WHEEL_SETTING);
+
 describe("CRWV-WHEEL — still the playbook it was", () => {
   it("equals main's playbook field by field (criterion 7)", () => {
-    expect(CRWV_WHEEL).toMatchObject({
+    expect(CLASSIC).toMatchObject({
       id: "CRWV-WHEEL",
       symbols: ["CRWV"],
       thesis: CRWV_SETTING.thesis,
       evidence:
-        "docs/research/crwv-premium-fit.md — AGAINST this play: implied 69.9% vs a median 88.7% " +
-        "realized (6th percentile); Δ0.20 puts priced 19.4% to assign vs 33.3% delivered. Retires if " +
+        `docs/research/crwv-premium-fit.md — ${CRWV_SETTING.findings} Retires if ` +
         "net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money.",
       size: { conservative: 0, standard: 0, aggressive: 0 },
       keyedOn: "earnings",
@@ -119,7 +124,7 @@ describe("CRWV-WHEEL — still the playbook it was", () => {
 
   it("sells the same put under the same id, reason and quantity as main", () => {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -236,7 +241,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
   /** The template's own put, placed, filled at its limit, and expired worthless. */
   function sellAndExpire(): OrderIntent {
     const [put] = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),
@@ -289,7 +294,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
     // One $80 put holds $8,000; $7,800 allocated is short until the $230 premium compounds in.
     const subscription = (compoundAllocation: boolean): PlaybookSubscription => ({
       accountId: "sauron",
-      playbookId: CRWV_WHEEL.id,
+      playbookId: CLASSIC.id,
       mode: "standard",
       capitalAllocated: 7_800,
       enabled: true,
@@ -298,7 +303,7 @@ describe("CRWV-WHEEL — its record reads unchanged on a fixture database", () =
       updatedAt: "2026-10-01T00:00:00.000Z",
     });
     const next = playbookIntents(
-      [{ playbook: CRWV_WHEEL, mode: "standard" }],
+      [{ playbook: CLASSIC, mode: "standard" }],
       market("CRWV"),
       flat(),
       calendarFor("CRWV"),

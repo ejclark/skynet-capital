@@ -81,6 +81,13 @@ export function deliveryFingerprint(alert: Alert): string {
   return alertFingerprint(alert);
 }
 
+/** What a producer watches, in the "alert from your own …" line. Position watch is the fallback,
+ *  the first producer, so an unlisted source reads as it always did. */
+const SOURCE_WORDS: Readonly<Record<string, string>> = {
+  "order-watch": "orders",
+  "bot-watch": "bot's decision loop",
+};
+
 const SUBJECT_PREFIX: Record<AlertPriority, string> = {
   critical: "Act now",
   warning: "Worth a look",
@@ -101,7 +108,7 @@ export function deliveryMessage(alert: Alert, to: string): DeliveryMessage {
     alert.title,
     ...(alert.body ? ["", alert.body] : []),
     "",
-    `Why you got this: ${SUBJECT_PREFIX[alert.priority]} alert from your own ${alert.source === "order-watch" ? "orders" : "option positions"} on Skynet Capital (paper trading, educational — no real money moves).`,
+    `Why you got this: ${SUBJECT_PREFIX[alert.priority]} alert from your own ${SOURCE_WORDS[alert.source] ?? "option positions"} on Skynet Capital (paper trading, educational — no real money moves).`,
     "Turn delivery off any time on the Alerts panel of your Trade page.",
   ];
   return {

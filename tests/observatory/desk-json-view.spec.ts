@@ -70,7 +70,7 @@ describe("deskView", () => {
       }),
     );
     expect(view.positions[0]).toMatchObject({
-      totalPl: "-$295",
+      totalPl: "−$295",
       totalTone: "neg",
       returnPct: "-116%",
     });
@@ -336,7 +336,7 @@ describe("deskActivityView", () => {
     it("pages with an exclusive before cursor, newest first", () => {
       const first = deskActivityPage(lines, undefined, { limit: 2 });
       expect(first.activity.map((e) => e.orderId)).toEqual(["ord-4", "ord-3"]);
-      expect(first.nextCursor).toBe("2026-08-28T14:03:00Z");
+      expect(first.nextCursor).toBe("2026-08-28T14:03:00Z|ord-3"); // time|id (#4802)
 
       const next = deskActivityPage(lines, undefined, { limit: 2, before: first.nextCursor });
       expect(next.activity.map((e) => e.orderId)).toEqual(["ord-2", "ord-1"]);

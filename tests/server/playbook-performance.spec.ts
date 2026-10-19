@@ -2,6 +2,7 @@ import type { DecisionRecord, IntentOutcome } from "../../src/autonomous/decisio
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import {
+  playbookFunnelJson,
   playbookPerformance,
   playbookPerformanceView,
   selectAccounts,
@@ -368,5 +369,33 @@ describe("playbookPerformance — every trip tagged, however old (found 2026-09-
   it("attributes all 50 trips, not just those inside the newest 30 decisions", async () => {
     const [row] = await playbookPerformance([participant({ id: "sauron" })], deps);
     expect(row).toMatchObject({ playbookId: "S1-NVDA", trades: TRIPS });
+  });
+});
+
+describe("playbookFunnelJson (#4450 slices 5a–5b)", () => {
+  const counts = { checks: 40, signals: 6, asked: 4, refused: 3, placed: 1, filled: 1 };
+  it("names each guard refusal in words, the most frequent first", () => {
+    const json = playbookFunnelJson({
+      sessions: ["2026-10-16"],
+      signalledSessions: 1,
+      playbooks: [
+        {
+          playbookId: "S1-NVDA",
+          totals: counts,
+          days: [{ date: "2026-10-16", ...counts }],
+          passSignal: "counted",
+          signalledOn: 1,
+          askedOn: 1,
+          refusalsByReason: { "no-quote": 1, "s2-print": 2 },
+        },
+      ],
+    });
+    expect(json.signalledSessions).toBe(1);
+    expect(json.playbooks[0]).toMatchObject({ passSignal: "counted", signalledOn: 1 });
+    expect(json.playbooks[0]?.refusals).toEqual([
+      { reason: "s2-print", label: "blocked by S2 (flat through the print)", count: 2 },
+      { reason: "no-quote", label: "no live quote for the symbol", count: 1 },
+    ]);
+    expect(json.playbooks[0]).not.toHaveProperty("refusalsByReason");
   });
 });

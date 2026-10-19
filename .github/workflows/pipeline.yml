@@ -420,10 +420,25 @@ jobs:
         run: |
           PR="${{ github.event.pull_request.number }}"
           if ! OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --auto --squash "$PR" 2>&1); then
-            if echo "$OUT" | grep -qi "clean status"; then
+            # GitHub refuses --auto on a PR that is already mergeable, answering "clean status" or
+            # "unstable status". Unstable = every REQUIRED check passed and some non-required one has
+            # not (the queued `claude`/`fly-io` suites), and this job only runs after verify +
+            # integration tests passed, so a direct squash lands nothing arming would not. Matching
+            # "clean" alone failed the job and stranded green PRs unarmed (#4750: 8 of 10 stuck
+            # research PRs on 2026-10-18 carried the "unstable status" line).
+            if echo "$OUT" | grep -qiE "(clean|unstable) status"; then
               echo "$OUT"
               echo "already green — merging directly instead of arming"
-              "$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR"
+              # main can move between the clean-status read and this merge ("GraphQL: Base branch was
+              # modified", #4939: the arm job died there and left a clean PR unarmed for 187 hours).
+              # Retry only that message, three tries; every other failure still fails the step.
+              for try in 1 2 3; do
+                if MERGE_OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR" 2>&1); then echo "$MERGE_OUT"; break; fi
+                echo "$MERGE_OUT" >&2
+                { echo "$MERGE_OUT" | grep -qi "base branch was modified" && [ "$try" -lt 3 ]; } || exit 1
+                echo "base branch moved (try $try/3) — retrying the merge"
+                sleep 5
+              done
             else
               echo "$OUT" >&2
               exit 1

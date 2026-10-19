@@ -22,11 +22,11 @@ describe("/accounts validateSearch — section", () => {
       checks: "open",
     });
     expect(validateSearch({ section: "playbooks", checks: "yes" }).checks).toBeUndefined();
-    expect(validateSearch({ section: "activity", checks: "open" }).checks).toBeUndefined();
+    expect(validateSearch({ section: "ledger", checks: "open" }).checks).toBeUndefined();
   });
 
   it("keeps the live sections, and drops anything unknown", () => {
-    for (const section of ["activity", "playbooks", "thesis"]) {
+    for (const section of ["ledger", "playbooks", "thesis", "balance"]) {
       expect(validateSearch({ section })).toMatchObject({ section });
     }
     expect(validateSearch({ section: "nope" }).section).toBeUndefined();
@@ -126,15 +126,16 @@ describe("the Profile page's section list and its default (the zero-account door
   it("puts the viewer's two after the book's own, on every account", () => {
     expect(ids(sectionsFor("human"))).toEqual([
       "overview",
-      "activity",
+      "balance",
+      "ledger",
       "events",
       "milestones",
       "feedback",
     ]);
-    expect(ids(sectionsFor(undefined))).toEqual(ids(sectionsFor("human")));
     expect(ids(sectionsFor("bot"))).toEqual([
       "overview",
-      "activity",
+      "balance",
+      "ledger",
       "events",
       "playbooks",
       "thesis",
@@ -145,9 +146,23 @@ describe("the Profile page's section list and its default (the zero-account door
     expect(isViewerSection("overview")).toBe(false);
   });
 
+  it("leaves Balance out of All accounts — it is one book's, like the head's health line (#5493)", () => {
+    expect(ids(sectionsFor(undefined))).toEqual([
+      "overview",
+      "ledger",
+      "events",
+      "milestones",
+      "feedback",
+    ]);
+  });
+
+  it("gives a member with nothing linked no Balance either — there is no book to read", () => {
+    expect(ids(sectionsFor(undefined, false))).not.toContain("balance");
+  });
+
   it("gives a member with no account no Overview to open", () => {
     expect(ids(sectionsFor(undefined, false))).toEqual([
-      "activity",
+      "ledger",
       "events",
       "milestones",
       "feedback",

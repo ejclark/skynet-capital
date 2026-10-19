@@ -94,7 +94,7 @@ const under = (selector) =>
     if (el) window.scrollBy(0, el.getBoundingClientRect().top - sticky - 8);
   }, selector);
 
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator("#act-put-1").waitFor();
 await page.locator("#act-put-1 .act-card-head").click();
 await page.locator("#act-put-1 .pv-pivot", { hasText: "now" }).waitFor();
@@ -102,7 +102,7 @@ await under("#act-put-1");
 await shoot("opened-order-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator("#act-put-1").waitFor();
 await page.locator("#act-put-1 .expand-btn").click();
 await page.locator(".row-why .pv-pivot", { hasText: "now" }).waitFor();

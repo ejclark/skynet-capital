@@ -50,6 +50,9 @@ export function parseLoopList(md) {
       issue: bare(at("owning issue")),
       state: bare(at("state")).toLowerCase(),
       nextCheck: leadingDate(at("next check")),
+      // loop-check.mjs reads these two: the command a question names, and the falsifier text
+      question: bare(at("the question")),
+      nextCheckText: bare(at("next check")),
     };
   });
 }

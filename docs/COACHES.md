@@ -181,15 +181,26 @@ job name with a matrix leg's values stripped (#3913): keying on the leg made one
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
 
+**The failure that is green has its own eye** (2026-10-16, docs/LESSONS.md "A green, armed PR sat
+blocked for 5 days…"). Every net above fires on red; a PR that is green and not merging raises
+nothing, and two fortnight-apart incidents (29 hours, then 135) were found by luck.
+`scripts/stuck-pr-scan.mjs` (`npm run pr:stuck`) names every open PR green longer than a healthy merge
+takes (3 h) that is armed-and-`blocked`, never armed, or headless behind a check suite that ran no job
+— with the ghost suite named and the one-line clear. It rides `scripts/ship.sh` beside
+`incident-scan.mjs` and gives the digest a `--stuck` line; REST core only, advisory.
+
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
 `scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
 closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
 it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
-as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
-`/retro` still deepens an entry when a class recurs; it is no longer the only way one lands. The
-digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
-under Needs you.
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned —
+plus one `feedback` issue asking for its `/retro` (#5728, deduped, Backlog — never `ready`), because
+a comment on a closed issue was read by nobody. `/retro` still deepens an entry when a class recurs;
+it is no longer the only way one lands. The digest carries the residue as one line
+(`digest-scan.mjs --learning`) under Noise absorbed, never under Needs you — including what aged
+out of the scan's window unlearned (`AGED-OUT UNLEARNED`, the band just past it, report-only), so a
+falling count can't pass expiry off as learning.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):
@@ -246,7 +257,7 @@ the #3754 platter promise showed what a prose-only status costs.
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
 | **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
-| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its four sections) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
+| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its five sections — ⑤, product/UX loop freshness, is lane work and lands in Noise absorbed, `tests/arch/config-audit-loop-freshness.spec.ts`) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
 | **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. Since #1713 it is the codebase's only size cap and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off, having charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
@@ -290,13 +301,17 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   the last run is a week old (`--release` at a model release: every file), and `/grind` over
   [`grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md) reads them
   for files that disagree, stale facts and rules written as history, each finding put to a
-  refuter before it lands. Unscheduled: what triggers it is #5318's open question.
+  refuter before it lands. The push tick's audit files one `needs-session` ticket when it falls
+  due and closes it once a run records the stamp (`scripts/moneypenny/drift-chore.mjs`); the chore
+  edits `.claude/**`, so a live session runs it.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
 - **Config audit digest** — rides the secretary digest Routine (docs/ROUTINES.md): the digest's
   session runs `node scripts/config-audit.mjs` and folds any non-empty section into the digest's
-  Needs-you tier. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
+  Needs-you tier — except ⑤, product/UX loop freshness (the 2026-10-18 loop census: the crawl,
+  its judge pass, coverage, the scenario headline), which is lane work and lands in Noise
+  absorbed. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
   most interesting check (recurring-intent clustering) reads `data/duel-log.jsonl`, which is
   `.gitignore`d machine-local session history a GHA runner's fresh checkout can never see — a
   workflow would silently run three of four checks forever. (Honest limit: a fresh Routine session

@@ -36,7 +36,7 @@ const position = (symbol: string, display: string, extra: Partial<DeskPosition> 
     totalPl: "-$292",
     returnPct: "−111.0%",
     totalTone: "neg",
-    dayPl: "+$0",
+    dayPl: "$0",
     dayPct: "+0.00%",
     dayTone: "flat",
     plainName: "",
@@ -90,7 +90,7 @@ const CRWV = position("CRWV", "CRWV", {
   price: "$82.60",
   breakeven: "$90.10",
   value: "$4,543",
-  dayPl: "-$82",
+  dayPl: "−$82",
   dayTone: "neg",
   totalPl: "-$412",
   returnPct: "-8.32%",
@@ -102,7 +102,7 @@ const CRWV_PUT = position(SOLD_PUT, "CRWV $80 PUT · 6 NOV 26", {
   expiresInDays: 29,
   breakeven: "$77.45",
   value: "-$550",
-  dayPl: "-$60",
+  dayPl: "−$60",
   dayTone: "neg",
   totalPl: "-$295",
   returnPct: "-116%",
@@ -276,7 +276,7 @@ describe("PositionCards — the right-hand figures (#5059)", () => {
   });
 
   it("reads a move that rounds to $0 as flat, not +$0", () => {
-    renderBook([position("SPY", "SPY", { quantity: "1", dayPl: "+$0", dayTone: "pos" })]);
+    renderBook([position("SPY", "SPY", { quantity: "1", dayPl: "$0", dayTone: "pos" })]);
     const spy = seen(card("SPY"));
     expect(spy).toContain("(—)");
     expect(spy).not.toMatch(/\+\$0\b/);

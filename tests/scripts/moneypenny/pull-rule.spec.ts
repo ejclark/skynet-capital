@@ -51,6 +51,19 @@ describe("pullable — the board's Ready column, as one predicate", () => {
     expect(notPullableReason(issue(5, ["ready", "in-progress"]))).toContain("in-progress");
   });
 
+  // #5236: #5214 was claimed twice by the retry sweep after a lane handed it to a live session.
+  it("refuses needs-session to an automated puller, naming it, but not to /work-issues", () => {
+    const handedOff = issue(8, ["ready", "feedback", "needs-session"]);
+    expect(notPullableReason(handedOff)).toContain("needs-session");
+    expect(pullable(handedOff)).toBe(false);
+    expect(pullable(handedOff, { interactive: true })).toBe(true);
+    expect(pullQueue([handedOff])).toEqual([]);
+    expect(nextAdmissible([handedOff], [], mode("normal"))).toBeNull();
+    const intent = feedbackReadyIntent({ payload: { issue: handedOff } });
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("needs-session");
+  });
+
   it("keeps ready + next-slice pullable (a remainder pending is legal, labels.mjs)", () => {
     expect(pullable(issue(6, ["ready", "plan", "next-slice"]))).toBe(true);
   });
@@ -258,6 +271,21 @@ describe("runCli — the admission CLI /work-issues asks", () => {
     const none = setup({ readReady: () => [issue(6, ["plan"])] });
     expect(runCli(["--next"], none.io)).toBe(3);
     expect(none.json().reason).toContain("nothing admissible (0 pullable");
+  });
+
+  // #5236: /work-issues is the interactive session a `needs-session` remainder waits on, so its
+  // two reads admit it while `--next` (the sweep's pick) still refuses it.
+  it("--queue and --check admit a needs-session issue; --next does not", () => {
+    const handedOff = issue(7, ["ready", "feedback", "needs-session"]);
+    const s = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
+    expect(runCli(["--queue"], s.io)).toBe(0);
+    expect(s.json()).toEqual([{ number: 7, title: "" }]);
+    const c = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
+    expect(runCli(["--check", "7"], c.io)).toBe(0);
+    expect(c.json()).toMatchObject({ number: 7, admit: true });
+    const n = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
+    expect(runCli(["--next"], n.io)).toBe(3);
+    expect(n.json().reason).toContain("0 pullable");
   });
 
   it("--queue: prints the Ready column only, exit 0", () => {

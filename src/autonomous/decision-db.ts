@@ -2,11 +2,14 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { LIFECYCLE_STATUS, type NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
+import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
+import { openPlaybookFunnelReads, type PlaybookFunnelRows } from "./decision-db-playbook-funnel.js";
 import { openIntentResults } from "./decision-db-results.js";
 import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import {
@@ -99,6 +102,9 @@ export interface DecisionDb {
    *  the week strip and each playbook's lane. Bounded by the window, never a page: see
    *  `decision-db-week.ts`. */
   checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
+  /** Every bot's checks and playbook intents in `[from, to)`, grouped by playbook and hour
+   *  (#4450 slice 5a) — each playbook's funnel. See `decision-db-playbook-funnel.ts`. */
+  playbookFunnel(from: number, to: number): PlaybookFunnelRows;
   /** Total realized P/L across every closed retrospective attributed to one playbook, for one
    *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
    *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
@@ -107,6 +113,12 @@ export interface DecisionDb {
    *  never `null` — an empty sum is an honest zero, not an absence. Option round trips count
    *  (`decision-option-ledger.ts`), so an option play compounds on what it actually made. */
   realizedPlForPlaybook(personaId: string, playbookId: string): number;
+  /** The names (share symbol, or an option's underlying) one persona has ever PLACED an order on
+   *  under one playbook's id — the house's ownership marker for a position (`intents.playbook_id`,
+   *  stamped on the order at submit). What lets an unsubscribed playbook keep its exits while the
+   *  positions IT opened stay on the book (#5609), without claiming a position the bot's own rules
+   *  hold in the same name. Empty when it has placed nothing. */
+  symbolsPlacedByPlaybook(personaId: string, playbookId: string): ReadonlySet<string>;
   /** How the sold puts one playbook opened under one strategy tag have ended for one persona
    *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
    *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
@@ -143,6 +155,14 @@ export interface DecisionDb {
   /** One persona's live orders still `working` with no settlement, decided at or after `sinceAt` —
    *  what a restart hands back to the settle loop. */
   unsettledOrders(personaId: string, sinceAt: number): UnsettledOrder[];
+  /** What one dark playbook would have done (#5489): its dip signals and daily level readings,
+   *  oldest session first, from `fromSession` (`YYYY-MM-DD`) on. Written by `record()` from a
+   *  decision's `playbookObservations`, merged on re-say; this is how thirty observed days are
+   *  scored. Local to the store that recorded them — they do not ride the replication wire. */
+  playbookObservations(
+    playbookId: string,
+    opts?: { readonly fromSession?: string },
+  ): PlaybookObservation[];
   close(): void;
 }
 
@@ -237,6 +257,13 @@ export function openDecisionDb(path: string): DecisionDb {
       PRIMARY KEY (decision_id, playbook_id, mode)
     );
 
+    -- A pass that ran no playbook at all (#4773) — every one it held paused, say. It has no
+    -- playbook_verdicts row to say so, and without this the roll call would skip back to the last
+    -- pass that ran one and call a paused playbook armed. Its own table, for the reason above.
+    CREATE TABLE IF NOT EXISTS verdictless_passes (
+      decision_id INTEGER PRIMARY KEY REFERENCES decisions(id)
+    );
+
     -- The replay tape (shared across every bot — market state has no persona). One row per
     -- (at, symbol); "INSERT OR IGNORE" below means the first cycle to observe an instant owns it.
     CREATE TABLE IF NOT EXISTS market_signals (
@@ -274,8 +301,10 @@ export function openDecisionDb(path: string): DecisionDb {
   // Before any read below is prepared: they join it (`SETTLED_JOIN`).
   db.exec(SETTLEMENTS_SQL);
   const optionTables = openOptionTables(db);
+  const observations = openObservationTables(db);
   const results = openIntentResults(db);
   const week = openCheckWeekReads(db);
+  const playbookFunnel = openPlaybookFunnelReads(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -298,6 +327,10 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectIntentsFor = db.prepare(
     "SELECT * FROM intents WHERE decision_id = ? ORDER BY id ASC",
   );
+  const insertVerdictless = db.prepare(
+    "INSERT OR IGNORE INTO verdictless_passes (decision_id) VALUES (?)",
+  );
+  const isVerdictless = db.prepare("SELECT 1 FROM verdictless_passes WHERE decision_id = ?");
   const insertVerdict = db.prepare(
     "INSERT OR IGNORE INTO playbook_verdicts (decision_id, playbook_id, mode, state) VALUES (?, ?, ?, ?)",
   );
@@ -367,6 +400,9 @@ export function openDecisionDb(path: string): DecisionDb {
   const deleteShareRetrospectives = db.prepare(
     "DELETE FROM retrospectives WHERE persona_id = ? AND symbol = ?",
   );
+  const selectShareScoredAfter = db.prepare(
+    "SELECT 1 FROM retrospectives WHERE persona_id = ? AND symbol = ? AND at > ? LIMIT 1",
+  );
   const insertRetrospective = db.prepare(`
     INSERT INTO retrospectives (
       at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
@@ -401,6 +437,12 @@ export function openDecisionDb(path: string): DecisionDb {
     JOIN intents ON intents.id = retrospectives.entry_intent_id
     JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ?
+  `);
+
+  const selectSymbolsPlacedByPlaybook = db.prepare(`
+    SELECT DISTINCT intents.symbol AS symbol
+    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.action = 'placed'
   `);
 
   const selectPutOutcomes = db.prepare(`
@@ -484,7 +526,12 @@ export function openDecisionDb(path: string): DecisionDb {
    * are derived, the next settlement or fill on the tape rebuilds them.
    */
   function rescoreSettled(settled: readonly SettledIntent[]): void {
-    const keys = new Set(settled.map((t) => `${t.option ? "o" : "s"}|${t.personaId}|${t.symbol}`));
+    rebuildTapes(new Set(settled.map((t) => tapeKey(t.option, t.personaId, t.symbol))));
+  }
+
+  /** Each tape rebuilt whole, all or nothing — `rescoreSettled`'s savepoint, shared with a decision
+   *  that lands behind trips already scored (#4775). */
+  function rebuildTapes(keys: ReadonlySet<string>): void {
     if (keys.size === 0) return;
     db.exec("SAVEPOINT rescore_settled");
     try {
@@ -498,6 +545,17 @@ export function openDecisionDb(path: string): DecisionDb {
       db.exec("ROLLBACK TO rescore_settled");
       db.exec("RELEASE rescore_settled");
     }
+  }
+
+  const tapeKey = (option: boolean, personaId: string, symbol: string): string =>
+    `${option ? "o" : "s"}|${personaId}|${symbol}`;
+
+  /** Whether the tape already holds a trip that closed after `at`. */
+  function scoredAfter(key: string, at: number): boolean {
+    const [kind, personaId, symbol] = key.split("|") as [string, string, string];
+    return kind === "o"
+      ? optionLedger.scoredAfter(personaId, symbol, at)
+      : selectShareScoredAfter.get(personaId, symbol, at) !== undefined;
   }
 
   function intentRowsFor(decisionId: number) {
@@ -516,14 +574,17 @@ export function openDecisionDb(path: string): DecisionDb {
     });
   }
 
-  function verdictsFor(decisionId: number): PlaybookVerdict[] {
-    return (
+  /** A pass's verdicts: empty when it ran no playbook, undefined when it said nothing (#4773). */
+  function verdictsFor(decisionId: number): PlaybookVerdict[] | undefined {
+    const rows = (
       selectVerdictsFor.all(decisionId) as { playbook_id: string; mode: string; state: string }[]
     ).map((r) => ({
       playbookId: r.playbook_id,
       mode: r.mode as PlaybookVerdict["mode"],
       state: r.state as PlaybookVerdict["state"],
     }));
+    if (rows.length > 0) return rows;
+    return isVerdictless.get(decisionId) ? [] : undefined;
   }
 
   /** One `intents` row per raw intent, each matched to its fate first (`fateOf`), plus an option
@@ -554,6 +615,10 @@ export function openDecisionDb(path: string): DecisionDb {
     for (const v of entry.playbookVerdicts ?? []) {
       insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
     }
+    if (entry.playbookVerdicts?.length === 0) insertVerdictless.run(decisionId);
+    // Also before the early return, and merged by key, so a re-say moves an outcome on.
+    if (entry.playbookObservations?.length)
+      observations.write(entry.at, entry.playbookObservations);
     if (hasIntents.get(decisionId)) return;
 
     insertIntents(decisionId, entry);
@@ -598,13 +663,30 @@ export function openDecisionDb(path: string): DecisionDb {
    *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
   function triggerRetrospectives(entry: DecisionRecord): void {
     const filled = entry.outcomes.filter((o) => o.result?.status === "filled");
+    // The dashboard's copy receives the newest decisions first, then pages older history (#4775):
+    // a fill landing behind a trip already scored re-pairs that tape, so it is rebuilt, never added
+    // to — adding would count the re-paired close twice. The bots' own store records in order.
+    let behind: Set<string>;
+    try {
+      behind = new Set(
+        filled
+          .map((o) => tapeKey(o.intent.option !== undefined, entry.personaId, o.intent.symbol))
+          .filter((key) => scoredAfter(key, entry.at)),
+      );
+    } catch {
+      behind = new Set();
+    }
+    rebuildTapes(behind);
     // An option fill is scored on its own ledger, per contract, never as a share lot.
-    const ledgers = [
-      ...new Set(filled.filter((o) => !o.intent.option).map((o) => o.intent.symbol)),
-    ].map((symbol) => () => updateRetrospectivesFor(entry.personaId, symbol));
-    const optionLedgers = [
-      ...new Set(filled.filter((o) => o.intent.option).map((o) => o.intent.symbol)),
-    ].map((underlying) => () => optionLedger.rescore(entry.personaId, underlying));
+    const fresh = (option: boolean) => (o: (typeof filled)[number]) =>
+      Boolean(o.intent.option) === option &&
+      !behind.has(tapeKey(option, entry.personaId, o.intent.symbol));
+    const ledgers = [...new Set(filled.filter(fresh(false)).map((o) => o.intent.symbol))].map(
+      (symbol) => () => updateRetrospectivesFor(entry.personaId, symbol),
+    );
+    const optionLedgers = [...new Set(filled.filter(fresh(true)).map((o) => o.intent.symbol))].map(
+      (underlying) => () => optionLedger.rescore(entry.personaId, underlying),
+    );
     for (const update of [...ledgers, ...optionLedgers]) {
       try {
         update();
@@ -705,6 +787,8 @@ export function openDecisionDb(path: string): DecisionDb {
 
     checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
 
+    playbookFunnel: (from, to) => playbookFunnel.read(from, to),
+
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
@@ -781,6 +865,11 @@ export function openDecisionDb(path: string): DecisionDb {
       return row.total ?? 0;
     },
 
+    symbolsPlacedByPlaybook(personaId, playbookId): ReadonlySet<string> {
+      const rows = selectSymbolsPlacedByPlaybook.all(playbookId, personaId) as { symbol: string }[];
+      return new Set(rows.map((r) => r.symbol));
+    },
+
     putOutcomesForPlaybook(personaId, playbookId, strategy) {
       const assigned = LIFECYCLE_STATUS.OPASN;
       const row = selectPutOutcomes.get(
@@ -827,6 +916,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 
     close() {
       db.close();

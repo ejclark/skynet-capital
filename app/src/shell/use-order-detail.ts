@@ -3,10 +3,10 @@ import { useCallback, useRef } from "react";
 
 /**
  * WHICH ORDER'S FULL DETAIL IS OPEN — `?order=<orderId>#act-<orderId>` (#5101). The URL holds it, so
- * a decision is linkable (F-6b1caebc9e) and the browser's back does what "‹ Activity" does.
+ * a decision is linkable (F-6b1caebc9e) and the browser's back does what "‹ Ledger" does.
  *
  * Opening first REPLACES the list's own entry with `#act-<orderId>`, then PUSHES the detail. So the
- * one way back — "‹ Activity", Close, or the browser's back, which here are the same step back in
+ * one way back — "‹ Ledger", Close, or the browser's back, which here are the same step back in
  * history — returns to the list at `#act-<orderId>`, and the ledger lands on that row
  * (`landing.ts`). A detail that arrived by link, with nothing pushed in this visit, closes by
  * replacing its URL with the list's, never by leaving the site.

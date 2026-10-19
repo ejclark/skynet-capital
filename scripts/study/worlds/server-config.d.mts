@@ -21,6 +21,10 @@ export interface WorldConfig {
         getPortfolioHistory(period: string): Promise<PortfolioHistory>;
       }
     | undefined;
+  /** The bot's week of checks (`CheckWeekRows`), its declared cadence filling between passes. */
+  readCheckWeek(
+    id: string,
+  ): import("../../../src/autonomous/decision-db-week.js").CheckWeekRows | undefined;
   [seam: string]: unknown;
 }
 

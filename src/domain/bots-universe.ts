@@ -8,8 +8,8 @@
  * `tradingRoster` hands it a view cut to this list (`personas/universe-view.ts`). Adding a claim to
  * the Prospector without adding it here is still a silent no-op.
  *
- * The playbooks that run a persona's own rules as a fixed basket (`HC-SAURON`, `SAURON`) read this
- * same list, so their basket is exactly what the persona sees — never the wider stream.
+ * The playbook that runs a persona's own rules as a fixed basket (`SAURON`) reads this same list,
+ * so its basket is exactly what the persona sees — never the wider stream.
  */
 export const BOTS_UNIVERSE: readonly string[] = [
   "AAPL",

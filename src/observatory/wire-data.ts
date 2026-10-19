@@ -1,4 +1,4 @@
-import { paginateDesc } from "../server/pagination.js";
+import { paginateDescBy } from "../server/pagination.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { ActivityEvent } from "./activity-event.js";
 import type { OptionFillCost } from "./option-fill-cost.js";
@@ -101,8 +101,9 @@ function matchesUnderlying(recordSymbol: string, underlying: string): boolean {
 
 export interface WireTradeRowsPage {
   readonly rows: WireTradeRow[];
-  /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
-   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+  /** The oldest row on this page as `time|order id` — pass back as `before` for the next page; the
+   *  id keeps a row that shares the boundary's time on the next page (#4802). Absent means this
+   *  page wasn't full, so there's nothing further back to fetch. */
   readonly nextCursor?: string;
 }
 
@@ -131,10 +132,12 @@ export function buildWireTradeRows(
     ? collapsed.filter((r) => matchesUnderlying(r.symbol, underlyingFilter))
     : collapsed;
   const folded = foldWireSpreads(scoped, opts.spreadOf);
-  const { items, nextCursor } = paginateDesc(folded, (r) => r.at, {
-    limit: opts.limit,
-    ...(opts.before !== undefined ? { before: opts.before } : {}),
-  });
+  const { items, nextCursor } = paginateDescBy(
+    folded,
+    (r) => r.at,
+    (r) => r.orderId,
+    { limit: opts.limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
+  );
   const rows = items.map((r) => {
     const participant = byId.get(r.participantId);
     return {

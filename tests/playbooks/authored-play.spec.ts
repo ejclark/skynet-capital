@@ -12,7 +12,7 @@ import {
   validateAuthoredPlay,
 } from "../../src/playbooks/authored-play.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, HC_SAURON, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import { G1_GOOG, S1_NVDA, SAURON, TACO_DJT } from "../../src/playbooks/registry.js";
 import { aContext, aPortfolio } from "../support/builders.js";
 
 /**
@@ -141,7 +141,7 @@ describe("validateAuthoredPlay", () => {
 describe("the authored size ceiling is the house roster's own", () => {
   it("is at least every house play's largest per-mode exposure", () => {
     const houseMax = Math.max(
-      ...[S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON].flatMap((play) =>
+      ...[S1_NVDA, G1_GOOG, TACO_DJT, SAURON].flatMap((play) =>
         PLAYBOOK_MODES.map((mode) => play.size[mode]),
       ),
     );

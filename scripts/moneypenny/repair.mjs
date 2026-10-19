@@ -42,7 +42,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
-import { LABELS } from "./index.mjs";
+import { LABELS } from "./labels.mjs";
 import { jobLog } from "./repair-logs.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */

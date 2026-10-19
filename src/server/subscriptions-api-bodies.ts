@@ -16,7 +16,9 @@ interface SubscribeBody {
   readonly id: string;
   readonly playbookId: string;
   readonly mode: PlaybookMode;
-  readonly capitalAllocated: number;
+  /** Absent only for a playbook that moves no capital (`movesNoCapital`); the route refuses an
+   *  absent budget on every other. */
+  readonly capitalAllocated?: number;
   /** Symbol-targeting filter (#885) — optional, absent/empty means unrestricted. */
   readonly symbols?: readonly string[];
   /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue #3527
@@ -98,15 +100,19 @@ export function parseSubscribeBody(raw: string): SubscribeBody | undefined {
   const id = boundedString(body.id, 100);
   const playbookId = boundedString(body.playbookId, 60);
   const mode = parseMode(body.mode);
+  // Absent is a real answer for a playbook that moves no capital; a present value that is not a
+  // budget (`null` included — no uncapped subscribe) is malformed. Whether a budget was required is
+  // the route's call.
+  const unbudgeted = body.capitalAllocated === undefined;
   const capitalAllocated = isCapital(body.capitalAllocated) ? body.capitalAllocated : undefined;
   const symbols = parseSymbols(body.symbols);
   const compoundAllocation = body.compoundAllocation === true;
-  return id && playbookId && mode && capitalAllocated !== undefined
+  return id && playbookId && mode && (unbudgeted || capitalAllocated !== undefined)
     ? {
         id,
         playbookId,
         mode,
-        capitalAllocated,
+        ...(capitalAllocated !== undefined ? { capitalAllocated } : {}),
         ...(symbols ? { symbols } : {}),
         ...(compoundAllocation ? { compoundAllocation: true } : {}),
         ...(conviction ? { conviction } : {}),

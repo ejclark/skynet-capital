@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { SymbolOutlook } from "../../../src/research/symbol-outlook-shape";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
@@ -69,6 +71,17 @@ const ROWS = [
   }),
 ];
 
+const OUTLOOK = (symbol: string): SymbolOutlook => ({
+  symbol,
+  asOf: "2026-10-18",
+  call: "hold",
+  confidence: "medium",
+  why: "Nothing changes before the print.",
+  until: "2026-11-07",
+  falsifier: "A close under $70 before the print.",
+  windows: [{ start: "2026-10-18", end: "2027-01-16", state: "open", reason: "The call applies." }],
+});
+
 const seen: { url: string; body?: Record<string, unknown> }[] = [];
 let preflight: PreflightAnswer = { ok: true };
 let filing: { ok: boolean; error?: string } = { ok: true };
@@ -85,6 +98,10 @@ beforeEach(() => {
     });
     const json = (body: unknown) =>
       Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    if (path.startsWith("/api/research/outlook")) {
+      const symbol = new URL(path, "http://x").searchParams.get("symbol") ?? "";
+      return json({ outlooks: { [symbol]: OUTLOOK(symbol) } });
+    }
     return json(path.startsWith("/api/playbook-store/preflight") ? preflight : filing);
   }) as typeof fetch;
 });
@@ -99,14 +116,18 @@ function mount(
   const cards = strategy.pairs.map((p) => cardOf(p.id, p.symbols[0] ?? ""));
   const onChanged = rstest.fn();
   render(
-    <TickerPicker
-      accountId="sauron"
-      strategy={strategy}
-      cardsById={new Map(cards.map((c) => [c.id, c]))}
-      delegation={gates.delegation ?? OPEN}
-      {...(gates.botsOnly ? { botsOnly: gates.botsOnly } : {})}
-      onChanged={onChanged}
-    />,
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <TickerPicker
+        accountId="sauron"
+        strategy={strategy}
+        cardsById={new Map(cards.map((c) => [c.id, c]))}
+        delegation={gates.delegation ?? OPEN}
+        {...(gates.botsOnly ? { botsOnly: gates.botsOnly } : {})}
+        onChanged={onChanged}
+      />
+    </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: /Pick a ticker/ }));
   return { onChanged };
@@ -148,6 +169,14 @@ describe("the ticker picker", () => {
     expect(screen.getByLabelText("Capital to delegate ($)")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /All tickers/ }));
     expect(screen.getByRole("list")).toBeInTheDocument();
+  });
+
+  it("leads a chosen ticker's form with the symbol's research recap (#4807 slice 4)", async () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: /CRWV/ }));
+    const card = await screen.findByRole("region", { name: "CRWV research recap" });
+    expect(card.textContent).toMatch(/HOLD/);
+    expect(card.textContent).toMatch(/holds until Nov 7/);
   });
 
   it("checks first: asks what Subscribe would say and states one contract's cash and the idle share", async () => {

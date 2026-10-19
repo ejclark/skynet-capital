@@ -14,7 +14,7 @@ import { Route } from "../../src/routes/accounts";
 import {
   LADDER_CARD_GATE_NOTE,
   LADDER_CARD_NO_ACCOUNT_NOTE,
-} from "../../src/shell/milestones-section";
+} from "../../src/shell/milestone-strip";
 
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
@@ -278,8 +278,8 @@ describe("the zero-account door", () => {
     expect(guide.getAttribute("href")).toMatch(/chapter=onboarding/);
   });
 
-  it("gives Activity an honest empty state", async () => {
-    mountAccounts("/accounts?section=activity");
+  it("gives the Ledger an honest empty state", async () => {
+    mountAccounts("/accounts?section=ledger");
     expect(await screen.findByText(/No account linked yet — its orders/)).toBeInTheDocument();
   });
 });

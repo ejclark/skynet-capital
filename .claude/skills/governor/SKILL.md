@@ -63,6 +63,8 @@ earned after the policy proves out over reps.
    constraints. Exception: isolate a rep in its own PR when it is
    unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
+   Once the cycle PR has merged, sweep the athletes' worktrees: `npm run worktree:sweep -- --apply
+   --only <athlete worktree>` for each (docs/DELEGATION.md, rail 2) — the dry run first if unsure.
 6. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
    dispatches, cost more than expected, or surface a pattern worth a new athlete? Log it to
    `docs/IDEAS.md` (`(src: Claude · while: governor cycle <n>)`); nothing to note → say nothing — this

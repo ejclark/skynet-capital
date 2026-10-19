@@ -14,6 +14,7 @@ import {
 } from "../live/settings";
 import { AccountSwitcher } from "../shell/account-switcher";
 import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
+import { BotSettingsPanel } from "../shell/bot-settings";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl, MissionControlLink } from "../shell/mission-control";
@@ -295,12 +296,14 @@ function AccountCard({
             one self-service fix, below.
           </p>
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
+          <BotSettingsPanel account={account} onChanged={onChanged} />
           <RotateSection account={account} />
         </>
       ) : (
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
+          <BotSettingsPanel account={account} onChanged={onChanged} />
           {account.kind === "bot" ? <MissionControlLink /> : null}
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />

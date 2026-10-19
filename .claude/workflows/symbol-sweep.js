@@ -181,6 +181,8 @@ const researchPrompt = (t) => `You are a quantitative research agent for the sky
 
 Your task: run the repo's two existing research instruments on ${t.sym} and extract what they actually show, with the same adversarial honesty the instruments were built for.
 
+STEP 0 — read what the house already knows about ${t.sym} BEFORE anything else: run \`npm run research:dossier -- ${t.sym}\` (run \`npm ci --ignore-scripts\` first if node_modules is missing). It lists the current stance, the bots' live pairs on the name, the conviction claims steering them, open forward tests, and the kill list. Never re-propose a killed hypothesis without new prints; never propose a test the dossier already lists as open; when a finding contradicts a number the dossier cites, say which and cite both files.
+
 STEP 1 — read the framework. Read the header comments of both scripts FIRST; they define the controls discipline (drift, beta, regime, small-n) your interpretation must follow:
 - scripts/research/earnings-cycle.mjs (the four ways the analysis lies + the control for each)
 - scripts/research/intraday-edges.mjs (volatility is not edge; the three-question scoring; break-even slippage)
@@ -188,7 +190,7 @@ STEP 1 — read the framework. Read the header comments of both scripts FIRST; t
 STEP 2 — run the instruments (results are cached under node_modules/.cache so re-runs are free):
 - node scripts/research/earnings-cycle.mjs ${t.sym} --bench QQQ --peers ${t.peers}
 - node scripts/research/intraday-edges.mjs ${t.sym}
-${t.sym === 'CRWV' ? '- CRWV IPO-ed 2025-03-28 and has only ~4 prints. Also run with --since 2025. Expect thin, wide-variance numbers and report them as such — an n=4 "pattern" is an anecdote, not a finding. If a section errors on missing data, say so honestly rather than working around it.' : ''}
+${t.sym === 'CRWV' ? '- CRWV IPO-ed 2025-03-28, so its print count is small (count it from the instrument output, never from this prompt). Also run with --since 2025. Expect thin, wide-variance numbers and report them as such — a handful of prints is an anecdote, not a finding. If a section errors on missing data, say so honestly rather than working around it.' : ''}
 Capture FULL output of both (pipe through cat, do not truncate). Re-run with different --since only if you have a specific regime question.
 
 STEP 3 — judge the existing playbook set against ${t.sym}. The house playbooks (from docs/plans/trade-playbooks.md, derived from NVDA):
@@ -241,12 +243,12 @@ const pairs = await pipeline(
 )
 
 const complete = pairs.filter(Boolean)
-log(`${complete.length}/8 tickers completed research + red team`)
+log(`${complete.length}/${TICKERS.length} tickers completed research + red team`)
 
 phase('Synthesize')
 const synthesis = await agent(`You are the synthesis agent for a multi-symbol trading-strategy sweep in the skynet-capital repo (PAPER-trading educational app). Working directory: /home/user/skynet-capital. Today is ${TODAY}.
 
-Eight tickers (MRVL, CRWV, AMZN, MSFT, GOOG, META, AVGO, AAPL) were each studied with the repo's earnings-cycle and intraday-edges instruments, then independently red-teamed. The full pairs (research + red-team verdicts) are below. Context: the house playbook set (docs/plans/trade-playbooks.md) was derived from NVDA — S1 positioning bid (D-20 to D-5), S2 never hold the print, E1 defer entries past 10:00 ET, S3 fade the reaction open (blocked: shorting), S4 overnight-only (blocked: MOC/MOO). Read that file for exact definitions.
+${TICKERS.length} tickers (${TICKERS.map((t) => t.sym).join(', ')}) were each studied with the repo's earnings-cycle and intraday-edges instruments, then independently red-teamed. The full pairs (research + red-team verdicts) are below. Context: the house playbook set (docs/plans/trade-playbooks.md) was derived from NVDA — S1 positioning bid (D-20 to D-5), S2 never hold the print, E1 defer entries past 10:00 ET, S3 fade the reaction open (blocked: shorting), S4 overnight-only (blocked: MOC/MOO). Read that file for exact definitions.
 
 ${JSON.stringify(complete, null, 2)}
 

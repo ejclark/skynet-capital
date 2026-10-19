@@ -1,4 +1,4 @@
-/* The Ledger on a desk (#5317; `activity-table.tsx`): a day divider per market day, the entries
+/* The Ledger on a desk (#5317; `ledger-table.tsx`): a day divider per market day, the entries
    indented under it, no date column (Eric, #5160 round 15: "indenting feels better"). A round
    trip's legs sit with no rule between them, the orders it closed muted, and its total under a
    dashed rule — the grouping is drawn in shapes, never a tone alone. */

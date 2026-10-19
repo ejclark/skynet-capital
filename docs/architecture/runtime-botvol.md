@@ -2,7 +2,7 @@
 
 **Technology:** Fly volume skynet_bots_data at /data; node:sqlite DatabaseSync (bots-state.db current-state tables + a sibling append-only decision journal via decisionDbPathFrom), JSONL audit, health.json
 
-**Responsibility:** What must survive a bots redeploy: momentum and sentiment windows, per-persona cooldown clocks, the beta scout's day state, the decision journal (one row per raw intent, retrospectives, funnel), the JSONL audit backstop under SKYNET_AUDIT_DIR, and the process's own health stamp (running GIT_SHA, bridge verdict, last controls poll).
+**Responsibility:** What must survive a bots redeploy: momentum and sentiment windows, per-persona cooldown clocks, the beta scout's day state, the shadow-test ledgers of members' draft playbooks (authored_shadow, #5457), the decision journal (one row per raw intent, retrospectives, funnel), the JSONL audit backstop under SKYNET_AUDIT_DIR, and the process's own health stamp (running GIT_SHA, bridge verdict, last controls poll).
 
 **Code roots:** `src/autonomous/bots-state-db.ts` · `src/autonomous/decision-db.ts` · `src/autonomous/decision-db-rows.ts` · `src/autonomous/decision-db-migration.ts` · `src/autonomous/jsonl-audit-store.ts` · `src/autonomous/bots-health-file.ts`
 

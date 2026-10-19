@@ -1,0 +1,9 @@
+{
+  "symbol": "CRWV",
+  "printReaction": {
+    "sessionsAfter": 1,
+    "fact": "CRWV's print reaction lands on the session after the filing date, not on the filing session itself.",
+    "source": "docs/research/crwv-premium-fit.md → call 3",
+    "falsifier": "Three consecutive prints whose filing-session move exceeds the next session's."
+  }
+}

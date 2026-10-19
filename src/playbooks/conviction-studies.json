@@ -1,0 +1,228 @@
+{
+  "ai-dip-2026-10": [
+    {
+      "statement": "1. CRWV premiums are rich after the drop: puts overprice CRWV's downside.",
+      "study": {
+        "disposition": "studied",
+        "instrument": "premium-fit",
+        "measures": "whether the option premium is rich: 30-day implied volatility against what the name then realized over 30 days",
+        "symbol": "CRWV",
+        "dataDate": "2026-10-16",
+        "dataAsOf": "2026-10-16 14:13:57",
+        "verdict": {
+          "reading": "against",
+          "call": "Stand aside, the premium is fair, not rich: implied 93% sits at the 63rd pct of CRWV's own next-30-day outcomes, -0.6 vol pts over the mean.",
+          "confidence": "low",
+          "why": "premium-fit: today's 30-day implied against what the name then realized over 30 days, one year of its own tape.",
+          "numbers": {
+            "iv30": 0.93233,
+            "percentRank": 0.6336206896551724,
+            "volPointsOverMean": -0.5549603436760253,
+            "instrumentVerdict": "stand aside",
+            "d20PricedAssignment": 0.2012,
+            "d20HistoricalAssignment": 0.24789915966386555
+          },
+          "falsifier": "A premium-fit re-run on or after 2026-11-13 shows implied vol at or above the 50th pct and priced assignment odds above the historical.",
+          "scoreBy": "2026-11-20"
+        }
+      }
+    },
+    {
+      "statement": "2a. Sell puts before the print: the pre-print premium is worth selling.",
+      "study": {
+        "disposition": "studied",
+        "instrument": "cycle-phase",
+        "measures": "whether a put sold now for the last expiry before the print is paid more than the odds it finished under its strike in the same weather",
+        "symbol": "CRWV",
+        "dataDate": "2026-10-16",
+        "dataAsOf": "2026-10-16 14:13:57",
+        "verdict": {
+          "reading": "mixed",
+          "call": "Fair, not rich: the $55.00 put expiring 2026-11-06 is priced at 20% odds of assignment; like-weather episodes finished under that strike 12% to 21% (raw and vol-scaled).",
+          "confidence": "low",
+          "why": "cycle-phase on 2026-10-16: the close at the last expiry before the print, 22 independent clusters (pooled history, exact); priced odds are the put's delta.",
+          "numbers": {
+            "strike": 55,
+            "pricedAssignment": 0.2,
+            "historicalAssignmentRaw": 0.11627906976744186,
+            "historicalAssignmentScaled": 0.20930232558139536,
+            "independentUnits": 22,
+            "expiry": "2026-11-06"
+          },
+          "falsifier": "The $54 11-06 put and the next 2 pre-print Δ0.20 puts all expire worthless, the first on 2026-11-06.",
+          "scoreBy": "2026-11-06"
+        }
+      }
+    },
+    {
+      "statement": "2b. Buy calls after the print: post-print value after the vol crush, about 6 sessions after.",
+      "study": {
+        "disposition": "offer",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts; it can be scored on 2026-11-25, so the event lane may register a forward test. Size zero until it is scored.",
+        "forwardTest": {
+          "hypothesis": "2b. Buy calls after the print: post-print value after the vol crush, about 6 sessions after.",
+          "falsifier": "CRWV's close from the day after the ~11-09 print to 5 sessions later is positive.",
+          "scoreBy": "2026-11-25"
+        }
+      }
+    },
+    {
+      "statement": "3. Backlog and NVIDIA's stake cushion the downside.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. No fundamentals feed in the repo. The only sourced figure: backlog $104B, excluding $25B+ of fresh Q3 commitments (CoreWeave IR, 08-11). Size zero."
+      }
+    },
+    {
+      "statement": "4. Election-season sentiment against AI spending is a headwind priced as lasting.",
+      "study": {
+        "disposition": "offer",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts; it can be scored on 2026-11-09, so the event lane may register a forward test. Size zero until it is scored.",
+        "forwardTest": {
+          "hypothesis": "4. Election-season sentiment against AI spending is a headwind priced as lasting.",
+          "falsifier": "The AI-infrastructure basket beats QQQ from close 11-03 to close 11-06 by more than its own 3-session 75th pct.",
+          "scoreBy": "2026-11-09"
+        }
+      }
+    },
+    {
+      "statement": "5. NVDA runs up into its print. Already S1-NVDA's study; adds no size.",
+      "study": {
+        "disposition": "studied",
+        "instrument": "earnings-cycle",
+        "measures": "the 20-session run-up before each print, net of what the stock does in windows that touch no print",
+        "symbol": "NVDA",
+        "dataDate": "2026-10-16",
+        "verdict": {
+          "reading": "supports",
+          "call": "Runs up into its print: NVDA's close rose from D-20 to print day before 15 of its last 15 prints (2023-2026), +4.9% over a print-free stretch of the same length.",
+          "confidence": "medium",
+          "why": "earnings-cycle: 2023-2026 era, SEC 8-K Item 2.02 dates, excess over windows that touch no print.",
+          "numbers": {
+            "prints": 15,
+            "sharePositive": 1,
+            "meanReturn": 0.0916,
+            "excessOverBaseline": 0.049
+          },
+          "falsifier": "Close D-20 to print-day close is negative this print (FT-nvda-2026-11-18-print-3).",
+          "scoreBy": "2026-11-30"
+        }
+      }
+    },
+    {
+      "statement": "6. In the long run, AI adopters win. A worldview; it never sizes a trade.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. Its horizon is years; this conviction's is 3 to 6 months. No study spans it."
+      }
+    },
+    {
+      "statement": "7. The floor: more pullback first. CRWV's floor is probably $48–$52, likely after the print.",
+      "study": {
+        "disposition": "studied",
+        "instrument": "cycle-phase",
+        "measures": "how much further a name fell after past sessions in today's weather, and when the low came",
+        "symbol": "CRWV",
+        "dataDate": "2026-10-16",
+        "dataAsOf": "2026-10-16 14:13:57",
+        "verdict": {
+          "reading": "supports",
+          "call": "More pullback first: the median like-weather episode fell a further 17% (about $53.67), 28% vol-scaled (about $46.77); the low came about 23 sessions in.",
+          "confidence": "low",
+          "why": "cycle-phase on 2026-10-16: 22 independent clusters (pooled history, exact); closes, not intraday lows.",
+          "numbers": {
+            "closeAtStudy": 64.72000122070312,
+            "furtherP25": -0.30055462723387927,
+            "furtherP50": -0.17073165225311726,
+            "furtherP75": -0.0757697076631828,
+            "floorAtMedian": 53.670248478468714,
+            "floorAtMedianScaled": 46.766168733197134,
+            "sessionsToLow": 23,
+            "independentUnits": 22,
+            "sample": "pooled",
+            "level": "exact"
+          },
+          "falsifier": "CRWV's lowest close 2026-10-16 to 2027-01-19 lands outside $41.0–$60.9.",
+          "scoreBy": "2027-01-20"
+        }
+      }
+    },
+    {
+      "statement": "8. How long the drop lasts: back above today's price in 3 to 6 months is the base case.",
+      "study": {
+        "disposition": "studied",
+        "instrument": "cycle-phase",
+        "measures": "how many sessions until a close back above the entry price, after past sessions in today's weather",
+        "symbol": "CRWV",
+        "dataDate": "2026-10-16",
+        "dataAsOf": "2026-10-16 14:13:57",
+        "verdict": {
+          "reading": "supports",
+          "call": "Back to entry is the base case: 67% of like-weather episodes closed back above $64.72 within 63 sessions (median 43), and 35% regained the old high within 126.",
+          "confidence": "low",
+          "why": "cycle-phase on 2026-10-16: 22 independent clusters (pooled history, exact); a recovery past 126 sessions counts as not recovered.",
+          "numbers": {
+            "closeAtStudy": 64.72000122070312,
+            "backToEntryWithin63": 0.6744186046511628,
+            "medianSessionsBackToEntry": 43,
+            "oldHighWithin126": 0.3488372093023256,
+            "independentUnits": 22,
+            "sample": "pooled",
+            "level": "exact"
+          },
+          "falsifier": "No CRWV close at or above $63.15 by 2027-02-01.",
+          "scoreBy": "2027-02-02"
+        }
+      }
+    },
+    {
+      "statement": "9. Hold through earnings toward the recovery: CRWV's print moves run larger than priced.",
+      "study": {
+        "disposition": "offer",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts; it can be scored on 2026-11-17, so the event lane may register a forward test. Size zero until it is scored.",
+        "forwardTest": {
+          "hypothesis": "9. Hold through earnings toward the recovery: CRWV's print moves run larger than priced.",
+          "falsifier": "The ~11-09 print and the next 2 all move less than their priced straddle, the first read by 2026-11-17.",
+          "scoreBy": "2026-11-17"
+        }
+      }
+    },
+    {
+      "statement": "3b. NVIDIA must buy CoreWeave's unsold capacity through 2032.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. A $6.3B order (Sept 2025 SEC filing): NVIDIA buys capacity other customers don't use, through 2032-04-13, if CoreWeave delivers. Volume undisclosed. Size zero."
+      }
+    },
+    {
+      "statement": "10. GPU-backed financing keeps CoreWeave's capacity growing.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. DDTL 4.0 was the first GPU-backed loan rated investment grade (A3, SOFR + 225); a later $2.6B loan priced at SOFR + 550 against shorter customer contracts. Cuts both ways. Size zero."
+      }
+    },
+    {
+      "statement": "11. Demand stays at whatever capacity exists, for the foreseeable future.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. No fundamentals feed reads utilization or guidance. Size zero."
+      }
+    },
+    {
+      "statement": "12. Play the cycle: after a big pullback, forecast the next upswing and take profit into it.",
+      "study": {
+        "disposition": "untestable",
+        "size": 0,
+        "reason": "no research instrument measures what this claim asserts, and the record marks it untestable here. Size zero. The cycle-phase study times the way back to entry, not the next peak; 30–35% of analogs regained the old high within 126 sessions. A peak-timing study is proposed. Size zero."
+      }
+    }
+  ]
+}

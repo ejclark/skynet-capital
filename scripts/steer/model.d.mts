@@ -46,10 +46,13 @@ export interface Decision {
   problems?: boolean;
   /** A problems question that opens on clean frames, Claude's problems folded away (marks.mjs). */
   opening?: boolean;
-  /** Each option's phone picture offers Flip · Swipe · Divider against Today's (compare.mjs). */
+  /** Each option's phone picture offers Flip · Side by side · Divider against Today's
+   *  (compare.mjs). */
   compare?: boolean;
   /** Each holder's phone and desktop pictures share one slot with a width switch (widths.mjs). */
   widths?: boolean;
+  /** Each option gets its own note box under its buttons (option-notes.mjs, #5429). */
+  notesPer?: "option";
   scope?: Scope;
   issue: number;
   isPr: boolean;
@@ -111,6 +114,8 @@ export interface Saved {
   >;
   /** Outcomes he added to the scope (outcomes.mjs), by `o<unique>`; a removed one is null. */
   outcomesAdded?: Record<string, { text: string; at: string } | null>;
+  /** His note under an option, by option key (option-notes.mjs); an emptied one is null. */
+  optionNotes?: Record<string, string | null>;
   /** When he pressed "Show what Claude found" on an opening question. */
   revealAt?: string | null;
   at?: string;

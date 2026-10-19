@@ -11,6 +11,7 @@
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
+//   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
@@ -28,6 +29,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { stuckLine } from "./stuck-pr-decide.mjs";
 
 const ROOT = process.cwd();
 const DIGEST_DIR = join(ROOT, "docs", "digests");
@@ -93,18 +95,25 @@ export function needsYouLines({ needsYou }) {
  * The "Noise absorbed" line for unlearned incidents, from `incident-scan.mjs --count`. Pure.
  * `unlearnedRuns: null` means the scan could not reach GitHub — said as unknown, never as zero.
  */
-export function learningLine({ days = 14, openEntries = [], unlearnedRuns = null }) {
+export function learningLine({
+  days = 14,
+  openEntries = [],
+  unlearnedRuns = null,
+  agedOutRuns = null,
+}) {
   const runs =
     unlearnedRuns === null
       ? `failed runs on main unknown (no GitHub read)`
       : `${unlearnedRuns} failed run(s) on main in ${days}d not yet in LESSONS`;
+  // #5728: what left the window unlearned is named, so a falling count can't pass expiry as learning.
+  const aged = agedOutRuns ? ` · ${agedOutRuns} aged out of the window unlearned` : "";
   const open = openEntries.length
     ? ` · ${openEntries.length} entry(ies) still STATUS: open (${openEntries.map((t) => `"${t.length > 60 ? `${t.slice(0, 59)}…` : t}"`).join(", ")})`
     : "";
-  if (unlearnedRuns === 0 && !openEntries.length) {
+  if (unlearnedRuns === 0 && !agedOutRuns && !openEntries.length) {
     return `- Learning: every failed run on main in ${days}d has a lesson; no open entries.`;
   }
-  return `- Learning: ${runs}${open} — capsule closes draft their own entries (#4212).`;
+  return `- Learning: ${runs}${aged}${open} — capsule closes draft their own entries (#4212).`;
 }
 
 /** The newest committed digest's date, or `null` when none exists yet. Exported because it is the
@@ -182,6 +191,14 @@ async function main() {
       encoding: "utf8",
     });
     console.log(learningLine(JSON.parse(out)));
+    return;
+  }
+  if (has("stuck")) {
+    const out = execFileSync("node", [join(ROOT, "scripts/stuck-pr-scan.mjs"), "--count"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    console.log(stuckLine(JSON.parse(out).stuck));
     return;
   }
   if (has("needs-you")) {

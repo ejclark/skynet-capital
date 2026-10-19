@@ -8,40 +8,62 @@
 // before — one test screen at a time until the redesign process settles (#5380), so this adds no
 // line to docs/process/REDESIGN.md's *Process changes*.
 //
-// THE MODES, one switch above each option's phone picture — "Compare: ⇄ Flip · ↔ Swipe · ◧ Divider",
+// THE MODES, one switch above each option's phone picture — "Compare: ⇄ Flip · ◫ Side by side ·
+// ◧ Divider",
 // a glyph and a word each (he is red/green colourblind), Flip pressed by default, nothing moving on
 // its own (docs/READERS.md: easily distracted):
 //   - FLIP: a "□ Today / ◆ Option A" toggle swaps the picture in the same spot. The option's pins
 //     and marks belong to its own frame, so they go with it while Today shows.
-//   - SWIPE: Today then the option in a sideways strip, the next one peeking at the edge, a dot per
-//     picture (● here, ○ not) — each picture keeps its shape-and-word label.
-//   - DIVIDER: Today left of a line, the option right of it, dragged by a handle under the picture
-//     ("◀ Drag ▶", thumb-sized). Offered only when both pictures share their pixel size, since a
+//   - SIDE BY SIDE (#5430, GitHub image diff's "2-up"): Today and the option at half width each,
+//     both whole — scaled, never cropped — each under its shape-and-word label. At desktop width it
+//     takes the card's whole width, each picture up to its real phone width; with areas, the
+//     outlines and numbers stay and the callout words go (a half-width picture can't spare their
+//     gutter: it left each picture 0px wide, 2026-10-15). A tap on either
+//     opens that picture full size in Flip, Side by side one tap back. It replaced a sideways strip
+//     that showed one picture at a time (Eric: it "entirely destroy the value potential of the
+//     view"); a viewer whose kept mode is that strip's `swipe` opens here. Half-width text is small
+//     at phone width — that is what the tap is for, so nothing else shrinks to make up for it. The
+//     tap lands on a button laid over each half, so in this mode it never places a mark: marks and
+//     pins still show on the option's half, and take a tap once it is open in Flip.
+//   - DIVIDER: Today left of a line, the option right of it, dragged by a round grip that rides on
+//     the line and stays in view as the picture scrolls (Eric, 2026-10-15: a handle under a tall
+//     picture was "often out of view of the actual change"); the "◀ Drag ▶" track under the
+//     picture stays for the keyboard. Offered only when both pictures share their pixel size, since a
 //     wipe across two layouts lines nothing up; otherwise the button reads "Divider: layouts
 //     differ", disabled, never hidden.
 // The mode is remembered per viewer (localStorage, compare-client.js) and set on every compared
 // option at once, so his last angle opens next time.
 //
-// NOT WITH `focus` OR `areas`: both reshape the option's frame (a crop, outlines in margins), so
-// Today would no longer sit in the same spot. design.mjs and the manifest lint refuse the pair.
+// NOT WITH `focus`: a crop reshapes the option's frame, so Today would no longer sit in the same
+// spot. design.mjs and the manifest lint refuse the pair. WITH `areas` it composes (#5163, the test
+// screen: its handover asked for both on one question): Today's picture is drawn in the same
+// numbered outlines and margins as the option's, so the two still line up in every mode.
 //
 // Pure: the words, the manifest check, and the HTML. The page script is compare-client.js.
+import { arealFrame } from "./areas.mjs";
 import { e } from "./html.mjs";
 
-export const COMPARE_MODES = ["flip", "swipe", "divider"];
-/** The page's words. Each glyph rides beside its word, never alone; ↔ carries U+FE0E so it draws
- *  as text, not an emoji. */
+export const COMPARE_MODES = ["flip", "side", "divider"];
+/** The page's words. Each glyph rides beside its word, never alone. */
 export const COMPARE_WORDS = {
   lead: "Compare:",
-  modes: { flip: "Flip", swipe: "Swipe", divider: "Divider" },
-  glyphs: { flip: "⇄", swipe: "↔︎", divider: "◧" },
+  modes: { flip: "Flip", side: "Side by side", divider: "Divider" },
+  glyphs: { flip: "⇄", side: "◫", divider: "◧" },
   differ: "Divider: layouts differ",
   today: "□ Today",
   option: "◆",
   drag: "◀ Drag ▶",
+  grip: "◀▶",
+  hint: "Tap a picture to open it full size",
+  open: (name) => `Open ${name} full size`,
 };
-/** What the page script needs: the modes, and where a viewer's last one is kept. */
-export const COMPARE_CLIENT = { modes: COMPARE_MODES, store: "steer-compare-mode" };
+/** What the page script needs: the modes, where a viewer's last one is kept, and what a kept mode
+ *  that no longer exists opens as (`swipe`, the strip Side by side replaced, #5430). */
+export const COMPARE_CLIENT = {
+  modes: COMPARE_MODES,
+  store: "steer-compare-mode",
+  was: { swipe: "side" },
+};
 
 /** What is wrong with a question's `compare`; [] when it is fine or absent. */
 export function compareProblems(q, where) {
@@ -49,8 +71,8 @@ export function compareProblems(q, where) {
   if (q.compare !== true) return [`${where}: "compare" is true or false`];
   const out = [];
   if (!q.today?.phone) out.push(`${where}: "compare" needs Today's phone picture to compare with`);
-  if (q.focus !== undefined || q.areas !== undefined)
-    out.push(`${where}: compare with today, or narrow the round by "focus" or "areas" — not both`);
+  if (q.focus !== undefined)
+    out.push(`${where}: compare with today, or narrow the round by "focus" — not both`);
   return out;
 }
 
@@ -78,6 +100,17 @@ function modesHtml(name, divider) {
   return `<div class="cmp-modes" role="group" aria-label="${e(`Compare ${name} with Today`)}"><span class="cmp-lead">${W.lead}</span>${b}</div>`;
 }
 
+/** Today's side of the comparison: the bare picture, or — when the option's frame carries areas —
+ *  the picture inside the same outlines and margins (Today's own areas, resolved on its frame by
+ *  design.mjs), so both sides keep one geometry and the divider still lines up. */
+function todayCell(d, pic, img) {
+  if (!pic.areas?.length) return `<div class="cmp-pic">${img}</div>`;
+  const areas = (d.today?.pictures ?? []).find((p) => p.size === "phone")?.areas ?? [];
+  if (!areas.length) return `<div class="cmp-pic">${img}</div>`;
+  const f = arealFrame(`<div class="frame">${img}</div>`, areas);
+  return `<div class="shot phone${f.cls}"${f.attrs}>${f.inner}</div>`;
+}
+
 /**
  * One option's phone picture, compared with Today's. `shot` is the option's frame as render.mjs
  * draws it (pins, marks and all); `img(picture)` returns a picture's published path. With no
@@ -91,10 +124,10 @@ export function compareHtml({ d, o, pic, shot, img }) {
   const name = `Option ${o.key}`;
   const mine = `${W.option} ${name}`;
   const divider = sameSize(today, pic);
-  const cell = (which, tag, inner) =>
-    `<figure class="cmp-cell" data-cell="${which}"><figcaption class="cmp-tag">${e(tag)}</figcaption>${inner}</figure>`;
-  const dot = (which, label, on) =>
-    `<button type="button" class="cmp-dot" data-go="${which}" aria-label="${e(`Show ${label}`)}" aria-current="${on}"></button>`;
+  const todayImg = `<img src="${e(src)}" alt="Today at phone width" loading="lazy">`;
+  const cell = (which, tag, label, inner) =>
+    `<figure class="cmp-cell" data-cell="${which}"><figcaption class="cmp-tag">${e(tag)}</figcaption>${inner}` +
+    `<button type="button" class="cmp-open" data-open="${which}" aria-label="${e(W.open(label))}" hidden></button></figure>`;
   return (
     `<div class="cmp" data-mode="flip" data-side="option"${divider ? "" : " data-nodivider"} style="--split:50">` +
     modesHtml(name, divider) +
@@ -102,14 +135,10 @@ export function compareHtml({ d, o, pic, shot, img }) {
     button('data-side="today"', e(W.today), false) +
     button('data-side="option"', e(mine), true) +
     `</div><div class="cmp-stage">` +
-    cell(
-      "today",
-      W.today,
-      `<div class="cmp-pic"><img src="${e(src)}" alt="Today at phone width" loading="lazy"></div>`,
-    ) +
-    cell("option", mine, shot) +
-    `<div class="cmp-line" aria-hidden="true"></div></div>` +
-    `<div class="cmp-dots" hidden>${dot("today", "Today", true)}${dot("option", name, false)}</div>` +
+    cell("today", W.today, "Today", todayCell(d, pic, todayImg)) +
+    cell("option", mine, name, shot) +
+    `<div class="cmp-line" aria-hidden="true"><span class="cmp-grip">${W.grip}</span></div></div>` +
+    `<p class="cmp-hint" hidden>${e(W.hint)}</p>` +
     `<label class="cmp-track" hidden><span class="cmp-end">${e(W.today)}</span>` +
     `<span class="cmp-knob" aria-hidden="true">${W.drag}</span><span class="cmp-end">${e(mine)}</span>` +
     `<input type="range" class="cmp-split" min="0" max="100" value="50" data-name="${e(name)}" ` +

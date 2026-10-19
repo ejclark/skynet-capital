@@ -30,8 +30,13 @@ into separate lint, typecheck and per-suite calls (#5191).
    they complete and notify. **An agent that finds shared state broken** — the primary checkout's
    install, `main`'s build, a lockfile — **stops and reports it as an incident, never repairs around
    it silently**: the one that did on 2026-10-09 left everyone else broken for most of an hour
-   (`docs/LESSONS.md`). A worktree's `node_modules` is a clone of the primary's, never a link
-   (`scripts/worktree-setup.sh`). **An isolated agent's first call is `bash scripts/wt-start.sh
+   (`docs/LESSONS.md`). A worktree's `node_modules` is its own directory of the primary's files,
+   never a link (`scripts/worktree-setup.sh`): a reflink where the filesystem has one, else
+   hard links (~0 extra bytes — a worktree is ~150MB, not ~1.2GB, #5548), and only when the
+   lockfile matches what the primary has installed. A mismatch runs a real `npm ci` in the
+   worktree. `npm ci` and `npm install` unlink and replace files, so they cannot reach the
+   primary's; **don't run `npm rebuild` in a worktree** — a package's lifecycle script writes
+   in place, through the shared inode. **An isolated agent's first call is `bash scripts/wt-start.sh
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
    work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
    is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
@@ -44,6 +49,19 @@ into separate lint, typecheck and per-suite calls (#5191).
    label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245).
+   **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
+   and they were only ever removed by hand). **After an agent's PR merges, the session that
+   dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,
+   keep or remove, and why) **then `npm run worktree:sweep -- --apply`.** It removes a worktree
+   only when its HEAD is in `origin/main` or a remote branch, it has no uncommitted or untracked
+   files, it has sat untouched for an hour, and its lock names no live process; it never removes
+   the primary or the worktree it runs in, and removing one deletes the directory only — the
+   branch and its commits stay. A squash merge leaves no ancestor of `main` and usually deletes
+   the remote branch, so pass `--gh` to also accept "a PR merged at exactly this head". Every
+   agent worktree is locked to the harness process that spawned it, which outlives the agent, so
+   a live session sweeping its own finished agents names them: `--only <dir-or-branch>`
+   (repeatable) sweeps just those and waives their locks, nothing else. A spawned agent that ends its own
+   session (`archive_session`) leaves its worktree to this sweep; it never removes one itself.
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.

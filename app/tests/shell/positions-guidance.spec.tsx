@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { stakeFingerprint } from "../../../src/options/position-guidance";
 import type {
@@ -12,7 +12,7 @@ import type {
 import { heldStake, writeSnapshot } from "../../src/live/guidance";
 import type { NetWorthStatsView } from "../../src/live/networth";
 import * as actualOptions from "../../src/live/options" with { rstest: "importActual" };
-import type { OptionPositions } from "../../src/live/options";
+import type { OptionDraft, OptionPositions, OptionPreview } from "../../src/live/options";
 import { useSavedViews } from "../../src/shell/saved-views";
 
 /**
@@ -41,14 +41,74 @@ const BOOK: OptionPositions = {
       daysToExpiry: 29,
       contracts: -1,
       spot: 82.6,
+      impliedVol: 0.75,
       positionGreeks: { delta: 39.8, theta: 11.46 },
     },
   ],
 } as unknown as OptionPositions;
 
+/** Round 2's illustrative price context for CRWV (#5070 slice 2b): a 20-day range of
+ *  $78.90–$96.30 averaging $87.60, and open contracts on the put's own Nov 6 chain. */
+const CRWV_BARS = Array.from({ length: 20 }, (_, i) => ({
+  t: `2026-09-${String(10 + i).padStart(2, "0")}`,
+  o: 87.6,
+  h: i === 3 ? 96.3 : 90,
+  l: i === 12 ? 78.9 : 84,
+  c: 87.6,
+  v: 1,
+}));
+const OPEN = { 70: 800, 75: 1900, 80: 3200, 85: 1400, 90: 2600, 95: 1100 } as const;
+const CRWV_PUTS = {
+  symbol: "CRWV",
+  optionType: "put",
+  expirations: ["2026-11-06"],
+  expiration: "2026-11-06",
+  spot: 82.6,
+  rows: Object.entries(OPEN).map(([strike, openInterest]) => ({
+    strike: Number(strike),
+    occSymbol: `CRWV261106P000${strike}000`,
+    openInterest,
+    // The held $80's quote, round 2's ticket: "$5.50 limit (mid of $5.30 / $5.70)" (slice 3).
+    ...(strike === "80" ? { bid: 5.3, ask: 5.7 } : {}),
+  })),
+};
+
+/** The orders the row's acts send (#5070 slice 3), and whether the server refuses the next review. */
+const optionCalls: Array<{ step: "review" | "submit"; draft: OptionDraft }> = [];
+let refuseReview: string | undefined;
+const closePreview = (draft: OptionDraft): OptionPreview => ({
+  code: "close",
+  underlying: "CRWV",
+  side: "buy",
+  positionIntent: "buy_to_close",
+  contracts: draft.kind === "close" ? (draft.contracts ?? 1) : draft.contracts,
+  orderType: "limit",
+  ...(draft.limitPrice !== undefined ? { limitPrice: draft.limitPrice } : {}),
+  timeInForce: draft.timeInForce ?? "day",
+  ok: refuseReview === undefined,
+  estNotional: 550,
+  refusals: refuseReview === undefined ? [] : [refuseReview],
+  warnings: [],
+});
+
 rstest.mock("../../src/live/options", () => ({
   ...actualOptions,
   fetchOptionPositions: () => Promise.resolve(BOOK),
+  fetchChain: () => Promise.resolve(CRWV_PUTS),
+  reviewOption: (draft: OptionDraft) => {
+    optionCalls.push({ step: "review", draft });
+    return Promise.resolve({ preview: closePreview(draft) });
+  },
+  submitOption: (draft: OptionDraft) => {
+    optionCalls.push({ step: "submit", draft });
+    return Promise.resolve({ ok: true, orderId: "opt-1", status: "accepted", symbol: "CRWV" });
+  },
+}));
+rstest.mock("../../src/live/bars", () => ({
+  fetchBars: (symbol: string) =>
+    Promise.resolve(
+      symbol === "CRWV" ? { symbol, bars: CRWV_BARS } : { barsNote: "No bars in this test." },
+    ),
 }));
 /** The Overview's `?lens=`: List unless a test sets it. */
 let lensSearch: Record<string, unknown> = {};
@@ -133,6 +193,7 @@ const PUT = pos({
   totalPlRaw: -295,
   returnPct: "-116%",
   totalTone: "neg",
+  costBasis: "-$255",
   expiresInDays: 29,
 });
 const SAURON = [NVDA, CRWV, PUT];
@@ -222,6 +283,8 @@ const order = (container: Element) =>
 
 // The profile world's instant: Thursday 2026-10-08, 3:00 PM ET.
 beforeEach(() => {
+  optionCalls.length = 0;
+  refuseReview = undefined;
   rstest.useFakeTimers({ toFake: ["Date"] });
   rstest.setSystemTime(new Date("2026-10-08T19:00:00Z"));
   localStorage.clear();
@@ -559,3 +622,222 @@ describe("the row's guidance opens in place, and Not now steps its mark aside", 
     expect(lines(container)).toContain("◆ Review · $2.60 above strike");
   });
 });
+
+describe("the opened guidance leads with the position's picture (#5070 slice 2)", () => {
+  const openCard = async (name: RegExp) => {
+    const { container } = blotter("");
+    await screen.findAllByText("$2.60 above strike");
+    const cards = container.querySelector(".pos-cards") as HTMLElement;
+    fireEvent.click(within(cards).getByRole("button", { name }));
+    return cards.querySelector(".pos-guide-open") as HTMLElement;
+  };
+
+  it("draws the sold put's price strip first, its zones named in words and said whole", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const picture = within(open).getByRole("region", { name: /picture of CRWV \$80 PUT/ });
+    expect(open.firstElementChild).toBe(picture);
+    expect(
+      within(picture).getByRole("img", { name: /keeps all of the premium above the \$80 strike/ }),
+    ).toBeTruthy();
+    const art = picture.querySelector(".pp-price") as HTMLElement;
+    expect(seenText(art)).toContain("now $82.60");
+    expect(seenText(art)).toContain("strike $80");
+    expect(seenText(art)).toContain("breakeven $77.45");
+    expect([...picture.querySelectorAll(".pp-key li")].map(seenText)).toEqual([
+      "loses",
+      "keeps part",
+      "keeps all",
+    ]);
+  });
+
+  it("draws what waiting earns if CRWV holds, from today's P/L to the premium kept", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const wait = seenText(open.querySelector(".pp-wait") as HTMLElement);
+    expect(wait).toContain("Waiting earns · if CRWV holds $82.60");
+    expect(wait).toContain("−$295 today");
+    expect(wait).toContain("+$255 at expiry");
+    expect(wait).toMatch(/\+\$12\/day now → \$17\/day 14 days left → \$23\/day 7 days left/);
+    expect(wait).toContain("The P/L crosses $0 about Oct 29.");
+    expect(wait).toContain("Assumes today's 75% volatility holds; not a forecast.");
+  });
+
+  it("then the three figures: cash set aside, the P/L on the premium, and a dashed projection", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const figs = [...open.querySelectorAll(".pp-fig")].map((fig) =>
+      [...fig.querySelectorAll("dt, dd > :not(.visually-hidden)")].map(seenText).filter(Boolean),
+    );
+    expect(figs).toEqual([
+      ["Cash set aside", "$8,000", "buys 100 CRWV at $80 if assigned"],
+      ["P/L", "−$295", "−116% of $255"],
+      ["Model projects", "—", "a projection, once the model grades one"],
+    ]);
+    expect(open.querySelector(".pp-fig--model")).toBeTruthy();
+  });
+
+  it("lays the 20-day range and the open contracts by strike on the strip's own axis (slice 2b)", async () => {
+    const open = await openCard(/^Guidance for CRWV \$80 PUT/);
+    const art = open.querySelector(".pp-price-art") as HTMLElement;
+    await within(art).findByText("20-day range $78.90–$96.30 · average $87.60");
+    await within(art).findByText(/Open contracts · Nov 6 puts · busiest \$80 \(3\.2k\)/);
+    const bars = [...art.querySelectorAll(".pp-oi-bar")];
+    expect(bars.length).toBeGreaterThanOrEqual(5);
+    expect(art.querySelectorAll(".pp-oi-bar--held")).toHaveLength(1);
+    expect(art.getAttribute("aria-label")).toContain(
+      "20-day range $78.90–$96.30 · average $87.60. Open contracts by strike, Nov 6 puts: the busiest is $80, 3.2k open.",
+    );
+    expect(seenText(open.querySelector(".pp-context") as HTMLElement)).toBe(
+      "Under today's $82.60: the 20-day low ($78.90) and the busiest strike ($80, 3.2k open).",
+    );
+  });
+
+  it("gives shares the range alone, and nothing when the daily bars can't be read", async () => {
+    const open = await openCard(/^Guidance for CRWV$/);
+    const art = open.querySelector(".pp-price-art") as HTMLElement;
+    await within(art).findByText("20-day range $78.90–$96.30 · average $87.60");
+    expect(art.querySelector(".pp-oi")).toBeNull();
+    const nvda = await openCard(/^Guidance for NVDA/);
+    expect(nvda.querySelector(".pp-range")).toBeNull();
+    expect(nvda.querySelector(".pp-context")).toBeNull();
+  });
+
+  it("gives shares their line and value, with no waiting strip", async () => {
+    const open = await openCard(/^Guidance for NVDA/);
+    expect(seenText(open.querySelector(".pp-price") as HTMLElement)).toContain("breakeven $223.98");
+    expect(open.querySelector(".pp-wait")).toBeNull();
+    const first = open.querySelector(".pp-fig") as HTMLElement;
+    expect(seenText(first.querySelector("dt") as HTMLElement)).toBe("Value");
+    expect(seenText(first.querySelector("dd b") as HTMLElement)).toBe("$30,173");
+  });
+});
+
+describe("act in the row: a prefilled ticket, then the one recap modal (#5070 slice 3)", () => {
+  const openPut = async (extra: Record<string, unknown> = {}) => {
+    const { container } = blotter("", extra);
+    await screen.findAllByText("$2.60 above strike");
+    const cards = container.querySelector(".pos-cards") as HTMLElement;
+    fireEvent.click(within(cards).getByRole("button", { name: /^Guidance for CRWV \$80 PUT/ }));
+    return { container, open: cards.querySelector(".pos-guide-open") as HTMLElement };
+  };
+
+  it("offers Buy back · Roll · Not now in the opened row, Not now's return condition beside them", async () => {
+    const { open } = await openPut();
+    const acts = open.querySelector(".pos-act-row") as HTMLElement;
+    expect(
+      within(acts)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Buy back", "Roll", "Not now"]);
+  });
+
+  it("turns the row into a ticket: every contract, a limit at the mid, good for today, and what it does", async () => {
+    const { open } = await openPut();
+    fireEvent.click(within(open).getByRole("button", { name: "Buy back" }));
+    const ticket = within(open).getByRole("region", { name: /^Buy back CRWV \$80 PUT/ });
+    expect(within(ticket).getByLabelText("Buy back")).toHaveValue(1);
+    expect(seenText(ticket)).toContain("of 1 contract");
+    expect(await within(ticket).findByDisplayValue("5.50")).toBeTruthy();
+    expect(seenText(ticket)).toContain("mid of $5.30 / $5.70");
+    expect(within(ticket).getByRole("button", { name: "Today" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(seenText(ticket.querySelector(".pos-tkt-line") as HTMLElement)).toBe(
+      "Cash out $550 · locks in −$295 · frees $8,000",
+    );
+    expect(open.querySelector(".pos-act-row")).toBeNull();
+  });
+
+  it("reviews with the server, recaps in the page's one modal, and places exactly what it showed", async () => {
+    const { container, open } = await openPut();
+    fireEvent.click(within(open).getByRole("button", { name: "Buy back" }));
+    await within(open).findByDisplayValue("5.50");
+    fireEvent.click(within(open).getByRole("button", { name: "Review buy-back" }));
+    const recap = (await waitForRecap(container)) as HTMLElement;
+    expect(container.querySelectorAll("dialog")).toHaveLength(1);
+    expect(seenText(recap.querySelector(".pos-recap-sent") as HTMLElement)).toBe(
+      "Buy to close 1 contract · limit $5.50 · good for today",
+    );
+    expect(
+      [...recap.querySelectorAll(".pos-recap-row")].map((row) => [
+        seenText(row.querySelector("dt") as HTMLElement),
+        seenText(row.querySelector("dd") as HTMLElement),
+      ]),
+    ).toEqual([
+      ["You pay", "$550"],
+      ["Locks in", "−$295"],
+      ["Frees", "$8,000"],
+      ["Risk after", "None from this position: it closes, so it can't be assigned."],
+    ]);
+    fireEvent.click(within(recap).getByRole("button", { name: "Place buy-back" }));
+    expect(await within(open).findByText("Order opt-1 accepted.")).toBeTruthy();
+    expect(optionCalls.map((c) => c.step)).toEqual(["review", "submit"]);
+    expect(optionCalls[1]?.draft).toEqual({
+      kind: "close",
+      participantId: "sauron",
+      occSymbol: PUT.symbol,
+      contracts: 1,
+      orderType: "limit",
+      limitPrice: 5.5,
+      timeInForce: "day",
+    });
+    expect(container.querySelector(".pos-recap")).toBeNull();
+  });
+
+  it("goes Back from the recap to the ticket with nothing sent", async () => {
+    const { container, open } = await openPut();
+    fireEvent.click(within(open).getByRole("button", { name: "Buy back" }));
+    await within(open).findByDisplayValue("5.50");
+    fireEvent.click(within(open).getByRole("button", { name: "Review buy-back" }));
+    const recap = (await waitForRecap(container)) as HTMLElement;
+    fireEvent.click(within(recap).getByRole("button", { name: "Back" }));
+    expect(container.querySelector(".pos-recap")).toBeNull();
+    expect(within(open).getByRole("button", { name: "Review buy-back" })).toBeTruthy();
+    expect(optionCalls.map((c) => c.step)).toEqual(["review"]);
+  });
+
+  it("keeps a refusal in the row, in the server's words, and opens no modal", async () => {
+    refuseReview = "The market is closed; a day order waits for the open.";
+    const { container, open } = await openPut();
+    fireEvent.click(within(open).getByRole("button", { name: "Buy back" }));
+    await within(open).findByDisplayValue("5.50");
+    fireEvent.click(within(open).getByRole("button", { name: "Review buy-back" }));
+    expect(await within(open).findByText(refuseReview)).toBeTruthy();
+    expect(container.querySelector(".pos-recap")).toBeNull();
+  });
+
+  it("opens the roll ticket in place, and Cancel brings the acts back", async () => {
+    const { open } = await openPut();
+    fireEvent.click(within(open).getByRole("button", { name: "Roll" }));
+    const roll = within(open).getByRole("region", { name: /^Roll CRWV \$80 PUT/ });
+    expect(within(roll).getByLabelText("Roll to")).toBeTruthy();
+    fireEvent.click(within(roll).getByRole("button", { name: "Cancel" }));
+    expect(within(open).getByRole("button", { name: "Buy back" })).toBeTruthy();
+  });
+
+  it("says Sell on shares, with no Roll", async () => {
+    const { container } = blotter("");
+    await screen.findAllByText("$2.60 above strike");
+    const cards = container.querySelector(".pos-cards") as HTMLElement;
+    fireEvent.click(within(cards).getByRole("button", { name: /^Guidance for NVDA/ }));
+    const acts = cards.querySelector(".pos-act-row") as HTMLElement;
+    expect(
+      within(acts)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Sell"]);
+  });
+
+  it("draws no acts on another member's account", async () => {
+    const { open } = await openPut({ canTrade: false });
+    expect(open.querySelector(".pos-act")).toBeNull();
+    expect(within(open).queryByRole("button", { name: "Buy back" })).not.toBeInTheDocument();
+  });
+});
+
+/** The recap, once the review has answered and the dialog has opened. */
+const waitForRecap = (container: Element) =>
+  waitFor(() => {
+    const recap = container.querySelector("dialog.pos-recap[open]");
+    if (!recap) throw new Error("no recap yet");
+    return recap;
+  });

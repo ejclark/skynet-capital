@@ -56,6 +56,13 @@
   --ramp-hi: #1a723f;
   --ramp-lo: #489e69;
 
+  /* how sure a call is, low → medium → high (#5444; Eric, #5163 round 11: "I wish there was more
+     color"): blue → teal → amber, never red or green, every one a text colour that holds AA on the
+     card grounds, and always beside its word (tests/ui/contrast.spec.ts). */
+  --sure-low: #79b8ff;
+  --sure-mid: #35d0ba;
+  --sure-high: #e3b341;
+
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 
@@ -139,6 +146,9 @@
        --ramp-lo deepened too (#1049), same reasoning as the dark column's tail. */
     --ramp-hi: #0b4621;
     --ramp-lo: #41815a;
+    --sure-low: #0b5cad;
+    --sure-mid: #0a7a6b;
+    --sure-high: #8a5300;
     --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
     --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
     --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);
@@ -167,6 +177,9 @@
      together; nothing computes one from the other. */
   --ramp-hi: #0b4621;
   --ramp-lo: #41815a;
+  --sure-low: #0b5cad;
+  --sure-mid: #0a7a6b;
+  --sure-high: #8a5300;
   --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
   --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
   --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);

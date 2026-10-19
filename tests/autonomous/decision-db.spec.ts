@@ -105,7 +105,7 @@ describe("DecisionDb", () => {
       playbookVerdicts: [
         { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
         { playbookId: "S1-NVDA", mode: "aggressive", state: "no-window" },
-        { playbookId: "HC-SAURON", mode: "standard", state: "tactical" },
+        { playbookId: "SAURON", mode: "standard", state: "tactical" },
       ],
     });
 
@@ -139,6 +139,13 @@ describe("DecisionDb", () => {
     it("leaves the field absent on a pass that recorded none", () => {
       db.record({ ...quiet(3), playbookVerdicts: undefined });
       expect(db.listByPersona("sauron")[0]).not.toHaveProperty("playbookVerdicts");
+    });
+
+    it("keeps a pass that ran no playbook as an empty list, across a fresh open (#4773)", () => {
+      db.record({ ...quiet(4), playbookVerdicts: [] });
+      db.close();
+      db = openDecisionDb(dbPath);
+      expect(db.listByPersona("sauron")[0]?.playbookVerdicts).toEqual([]);
     });
   });
 
@@ -619,6 +626,36 @@ describe("DecisionDb", () => {
       });
       expect(db.listRetrospectives("sauron")).toHaveLength(1);
       expect(db.listRetrospectives("beta-scout")).toEqual([]);
+    });
+  });
+
+  describe("symbolsPlacedByPlaybook (#5609)", () => {
+    const placed = (raw: OrderIntent, orderId: string) => ({
+      intent: raw,
+      action: "placed" as const,
+      result: {
+        intent: raw,
+        status: "filled" as const,
+        orderId,
+        filledQuantity: raw.quantity,
+        filledPrice: 100,
+      },
+    });
+
+    it("names what one persona placed under one playbook's id, and nothing else", () => {
+      const mine = intent({ side: "buy", quantity: 5, playbookId: "S1-NVDA" });
+      const reflex = intent({ side: "buy", quantity: 5, symbol: "AAPL" });
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [mine, reflex],
+        guardedIntents: [mine, reflex],
+        outcomes: [placed(mine, "o-1"), placed(reflex, "o-2")],
+      });
+      expect([...db.symbolsPlacedByPlaybook("sauron", "S1-NVDA")]).toEqual([mine.symbol]);
+      expect(db.symbolsPlacedByPlaybook("sauron", "G1-GOOG").size).toBe(0);
+      expect(db.symbolsPlacedByPlaybook("beta-scout", "S1-NVDA").size).toBe(0);
     });
   });
 

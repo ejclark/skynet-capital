@@ -3,6 +3,7 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
+import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { sh } from "./gh.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
@@ -30,6 +31,24 @@ export function answered(issue = {}) {
   if (issue.state && String(issue.state).toUpperCase() === "CLOSED") return true;
   const linked = issue.closedByPullRequests ?? issue.linkedPullRequests ?? [];
   return Array.isArray(linked) && linked.length > 0;
+}
+
+/**
+ * Is this a feedback issue owed an answer it has not had? `feedback`, never `ready`-less (a Backlog
+ * issue waits on an explicit `ready`, so "no answer yet — re-apply `feedback`" was wrong advice to
+ * every bug filed without one: #5667, 23 of 23 open bugs on 2026-10-18), no linked PR, and none of
+ * the labels that already speak for it. `ready` is never removed by a lane, so its absence means
+ * "never readied". Pure — `gatherAuditDeps` applies it to the open-issue read.
+ */
+export function owedAnswer(issue = {}) {
+  const names = (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+  const spoke = [LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name];
+  return (
+    names.includes("feedback") &&
+    names.includes(LABELS.ready.name) &&
+    !answered(issue) &&
+    !names.some((n) => spoke.includes(n))
+  );
 }
 
 /**
@@ -196,8 +215,11 @@ export function audit(deps = {}) {
   // lanes are actually acting on. Pure decision in `workModeRetitle`, which returns null (the
   // common case) whenever the title is already right. No comment, no label: a title is a display,
   // and the title itself is the memory that stops the next push repeating the edit.
-  const retitle = workModeRetitle(deps.workMode);
-  if (retitle) intents.push(retitle);
+  //
+  // #5729 — the instruction-drift chore's ticket: filed when due, refreshed while open, closed once
+  // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
+  // Each is at most one intent, null when there is nothing to do.
+  intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
   return intents;
 }
 
@@ -352,19 +374,11 @@ export function gatherAuditDeps(nowMs) {
   // one comment and was invisible to this audit forever. Comments measure chatter; what a member
   // actually needs is an answer. So the signal is now the absence of one — no PR linked, and none
   // of the terminal labels — however much the lane said along the way.
-  const spoke = new Set([LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name]);
-  const silentFeedback = issues
-    .filter(
-      (i) =>
-        (i.labels ?? []).some((l) => l.name === "feedback") &&
-        !answered(i) &&
-        !(i.labels ?? []).some((l) => spoke.has(l.name)),
-    )
-    .map((i) => ({
-      title: i.title,
-      number: i.number,
-      hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
-    }));
+  const silentFeedback = issues.filter(owedAnswer).map((i) => ({
+    title: i.title,
+    number: i.number,
+    hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
+  }));
 
   // #3960: every open issue still marked in-flight, and how long it has been quiet. #4547 gave this
   // its own label-filtered read because `issues` was then the newest 100 of ~140 open — on
@@ -434,6 +448,7 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlagged,
     alreadyFlaggedPRs,
     workMode: workModeState(nowMs, json),
+    driftChore: driftChoreFromRepo(issues),
   };
 }
 

@@ -10,7 +10,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DeskPulse } from "../../src/live/pulse";
 import { Route as LayoutRoute } from "../../src/routes/u.$id";
-import { Route as ActivityRoute } from "../../src/routes/u.$id.activity";
+import { Route as LedgerRoute } from "../../src/routes/u.$id.ledger";
 import { Route as PulseRoute } from "../../src/routes/u.$id.pulse";
 
 /**
@@ -52,11 +52,11 @@ function mount(path: string) {
     path: "/u/$id",
     getParentRoute: () => rootRoute,
   } as never);
-  const child = (route: typeof ActivityRoute | typeof PulseRoute, path: string) =>
+  const child = (route: typeof LedgerRoute | typeof PulseRoute, path: string) =>
     route.update({ id: path, path, getParentRoute: () => layout } as never);
   const router = createRouter({
     routeTree: rootRoute.addChildren([
-      layout.addChildren([child(ActivityRoute, "/activity"), child(PulseRoute, "/pulse")]),
+      layout.addChildren([child(LedgerRoute, "/ledger"), child(PulseRoute, "/pulse")]),
     ]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -80,7 +80,7 @@ describe("the account head while a section reads", () => {
   });
 
   it("keeps the very same head in place when a tap moves to a section that has to read", async () => {
-    mount("/u/sauron/activity");
+    mount("/u/sauron/ledger");
     expect(await screen.findByText("No recorded orders in the ledger's window.")).toBeVisible();
     const head = sections();
 
