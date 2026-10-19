@@ -1,4 +1,5 @@
 import {
+  activitiesFromMessage,
   activityFromMessage,
   fillEventFromMessage,
 } from "../../src/alpaca/trade-updates-stream-events.js";
@@ -119,5 +120,95 @@ describe("activityFromMessage", () => {
       ),
     ).toBeNull();
     expect(activityFromMessage({ stream: "authorization", data: {} }, "sauron")).toBeNull();
+  });
+});
+
+describe("activitiesFromMessage", () => {
+  // The broker's own example of a spread fill: one update, a parent with no symbol, two legs.
+  const spreadFill = {
+    stream: "trade_updates",
+    data: {
+      event: "fill",
+      timestamp: "2026-10-05T14:02:00.000Z",
+      price: "1.62",
+      qty: "1",
+      order: {
+        id: "parent-1",
+        symbol: "",
+        side: "buy",
+        qty: "1",
+        status: "filled",
+        filled_qty: "1",
+        filled_avg_price: "1.62",
+        order_class: "mleg",
+        legs: [
+          {
+            id: "leg-put",
+            symbol: "AAPL250321P00200000",
+            side: "buy",
+            qty: "1",
+            status: "filled",
+            filled_qty: "1",
+            filled_avg_price: "1.6",
+          },
+          {
+            id: "leg-call",
+            symbol: "AAPL250321C00380000",
+            side: "sell",
+            qty: "1",
+            status: "filled",
+            filled_qty: "1",
+            filled_avg_price: "0.02",
+          },
+        ],
+      },
+    },
+  };
+
+  it("journals a spread as one line per leg, each tagged with its parent", () => {
+    const lines = activitiesFromMessage(spreadFill, "sauron");
+    expect(lines).toEqual([
+      expect.objectContaining({
+        orderId: "leg-put",
+        symbol: "AAPL250321P00200000",
+        side: "buy",
+        filledQuantity: 1,
+        price: 1.6,
+        parentOrderId: "parent-1",
+        at: "2026-10-05T14:02:00.000Z",
+        source: "stream",
+      }),
+      expect.objectContaining({
+        orderId: "leg-call",
+        side: "sell",
+        price: 0.02,
+        parentOrderId: "parent-1",
+      }),
+    ]);
+    // The single-line mapper still drops the symbol-less parent — no line names no contract.
+    expect(activityFromMessage(spreadFill, "sauron")).toBeNull();
+  });
+
+  it("passes a plain order through as its one line, untagged", () => {
+    const plain = {
+      stream: "trade_updates",
+      data: {
+        event: "fill",
+        timestamp: "2026-10-05T14:02:00.000Z",
+        order: {
+          id: "o-1",
+          symbol: "SPY",
+          side: "buy",
+          qty: "10",
+          status: "filled",
+          filled_qty: "10",
+          filled_avg_price: "500",
+        },
+      },
+    };
+    const lines = activitiesFromMessage(plain, "sauron");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ orderId: "o-1", symbol: "SPY", price: 500 });
+    expect(lines[0]?.parentOrderId).toBeUndefined();
   });
 });

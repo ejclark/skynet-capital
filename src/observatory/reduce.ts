@@ -1,3 +1,4 @@
+import { contractMultiplier } from "../trading/option-symbols.js";
 import { findAccountCollisions } from "./account-collisions.js";
 import type { DashboardData } from "./dashboard-data.js";
 import type { ObservatoryEvent } from "./events.js";
@@ -98,16 +99,25 @@ function applyPrice(
     return participant;
   }
   const positions = participant.positions.map((pos) =>
-    pos.symbol === symbol ? { ...pos, marketValue: pos.quantity * price } : pos,
+    pos.symbol === symbol
+      ? { ...pos, marketValue: pos.quantity * price * contractMultiplier(symbol) }
+      : pos,
   );
   return reprice({ ...participant, positions });
 }
 
+/**
+ * Fold one stream fill into a book. The broker's fill `price` is PER SHARE, while a position's
+ * `avgPrice` is per UNIT held (per contract for an option — `broker-positions.ts` scales it on
+ * every broker read). So every dollar figure here goes through `unitPrice`, the same x100 rule
+ * #4643 applied to the bots: left raw, an option fill moved cash by 1/100 of its notional and
+ * re-marked the whole position at 1/100 of its value until the next broker sync (#4563).
+ */
 function applyFill(
   participant: ParticipantSnapshot,
   fill: { symbol: string; side: "buy" | "sell"; quantity: number; price: number },
 ): ParticipantSnapshot {
-  const notional = fill.quantity * fill.price;
+  const notional = fill.quantity * unitPrice(fill);
   const cash = fill.side === "buy" ? participant.cash - notional : participant.cash + notional;
   if (fill.side === "buy") {
     return reprice({ ...participant, cash, positions: applyBuy(participant.positions, fill) });
@@ -118,10 +128,16 @@ function applyFill(
   return reprice({ ...participant, cash, positions, realizedPl });
 }
 
+/** Dollars one unit of the fill cost: the per-share price times the contract multiplier. */
+function unitPrice(fill: { symbol: string; price: number }): number {
+  return fill.price * contractMultiplier(fill.symbol);
+}
+
 function applyBuy(
   positions: readonly PositionView[],
   fill: { symbol: string; quantity: number; price: number },
 ): PositionView[] {
+  const price = unitPrice(fill);
   const existing = positions.find((pos) => pos.symbol === fill.symbol);
   if (!existing) {
     return [
@@ -129,16 +145,16 @@ function applyBuy(
       {
         symbol: fill.symbol,
         quantity: fill.quantity,
-        avgPrice: fill.price,
-        marketValue: fill.quantity * fill.price,
+        avgPrice: price,
+        marketValue: fill.quantity * price,
       },
     ];
   }
   const quantity = existing.quantity + fill.quantity;
-  const avgPrice = (existing.quantity * existing.avgPrice + fill.quantity * fill.price) / quantity;
+  const avgPrice = (existing.quantity * existing.avgPrice + fill.quantity * price) / quantity;
   return positions.map((pos) =>
     pos.symbol === fill.symbol
-      ? { ...pos, quantity, avgPrice, marketValue: quantity * fill.price }
+      ? { ...pos, quantity, avgPrice, marketValue: quantity * price }
       : pos,
   );
 }
@@ -151,9 +167,11 @@ function applySell(
   if (!existing) {
     return { positions: [...positions], realized: 0 };
   }
-  // Realized on the quantity actually closed (never more than is held): (sale − cost) × qty sold.
+  // Realized on the quantity actually closed (never more than is held): (sale − cost) × qty sold,
+  // both per unit — a per-share sale price against a per-contract cost booked a phantom loss.
+  const price = unitPrice(fill);
   const soldQty = Math.min(fill.quantity, existing.quantity);
-  const realized = (fill.price - existing.avgPrice) * soldQty;
+  const realized = (price - existing.avgPrice) * soldQty;
   const remaining = existing.quantity - fill.quantity;
   if (remaining <= 0) {
     return { positions: positions.filter((pos) => pos.symbol !== fill.symbol), realized };
@@ -161,7 +179,7 @@ function applySell(
   return {
     positions: positions.map((pos) =>
       pos.symbol === fill.symbol
-        ? { ...pos, quantity: remaining, marketValue: remaining * fill.price }
+        ? { ...pos, quantity: remaining, marketValue: remaining * price }
         : pos,
     ),
     realized,
