@@ -484,9 +484,9 @@ though the PR body itself can't carry it.
 
 GitHub renders `> [!NOTE]` `> [!TIP]` `> [!IMPORTANT]` `> [!WARNING]` `> [!CAUTION]` as colored
 callouts. They break when indented or nested inside `<details>` — always top-level. Budget: **one
-per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (workflow files,
-credentials, spend, outward-facing). On a carve-out PR the WARNING comes **before** any
-accomplishment framing — blast radius first is the honest inversion of fanfare-first.
+per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (the list is
+`envelope.json` — `node scripts/envelope-scan.mjs --check <paths>` answers it). On a carve-out PR
+the WARNING comes **before** any accomplishment framing — blast radius first is the honest inversion of fanfare-first.
 
 ## The honesty rules — what no gate can replace
 
