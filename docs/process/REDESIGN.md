@@ -348,8 +348,8 @@ npm run steer:build -- <dir>/tp.json
 
 **g · Simulated members, only where they can be trusted.** A picked shape is tried by simulated
 members only on a screen with a study world (`scripts/study/tasks/<screen>.json`; today only the
-profile) and only after a control round passes (`docs/members/study/README.md` → *The
-control rounds*; #5099's fixed-build re-run did not). Anywhere else, say "no member test: <which condition failed>" on the issue in one
+profile) and only after #5099's control re-run passes (`docs/members/study/README.md` → *The
+control rounds*). Anywhere else, say "no member test: <which condition failed>" on the issue in one
 line and go on. Never hold a build for a test that cannot run.
 
 **h · Bank what the round taught.**
