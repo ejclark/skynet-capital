@@ -112,7 +112,6 @@ for, and seeing one would read as "I am in the wrong place".
    frozen fixture has no closes). **WHEN the invited friend opens Activity, the app shall show
    realized P&L for every member's accounts, the friend's and the owner's alike, without paging
    away from the feed.** Judge: can this reader tell where they stand on what has been closed?
-   _(Added 2026-09-29, #3816 slice 9; the section became a strip in #784 slice 3.)_
 
 ### j3 — another member's bot, read only
 
