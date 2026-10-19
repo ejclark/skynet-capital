@@ -1,5 +1,10 @@
 import { spanText } from "./position-guidance-rules.js";
-import type { GuidanceInputs, GuidanceStake, OpenCall } from "./position-guidance-types.js";
+import type {
+  GuidanceInputs,
+  GuidanceStake,
+  HeldLongOption,
+  OpenCall,
+} from "./position-guidance-types.js";
 
 /**
  * INPUT HYGIENE for the position guidance (#3729) — the two ways a well-formed request still produces a
@@ -42,6 +47,28 @@ function cleanOpenCalls(calls: readonly OpenCall[]): OpenCall[] {
     }));
 }
 
+/** A long option the rules can reason about honestly: a real strike, expiry, size and cost paid. */
+function cleanHeldOption(c: HeldLongOption): HeldLongOption | undefined {
+  if (
+    !(
+      positive(c.strike) &&
+      positive(c.contracts) &&
+      positive(c.costPerContract) &&
+      ISO_DAY.test(c.expiration)
+    )
+  )
+    return undefined;
+  return {
+    type: c.type,
+    strike: c.strike,
+    expiration: c.expiration,
+    contracts: Math.floor(c.contracts),
+    costPerContract: c.costPerContract,
+    ...(positive(c.bid) ? { bid: c.bid } : {}),
+    ...(positive(c.ask) ? { ask: c.ask } : {}),
+  };
+}
+
 function cleanStake(stake: GuidanceStake): GuidanceStake {
   return {
     ...(stake.goal ? { goal: stake.goal } : {}),
@@ -52,7 +79,18 @@ function cleanStake(stake: GuidanceStake): GuidanceStake {
     ...(positive(stake.portfolioValue) ? { portfolioValue: stake.portfolioValue } : {}),
     ...(positive(stake.callsSold) ? { callsSold: Math.floor(stake.callsSold) } : {}),
     ...(positive(stake.premiumsCollected) ? { premiumsCollected: stake.premiumsCollected } : {}),
+    ...cleanHeldOptions(stake),
     ...(stake.openCalls?.length ? { openCalls: cleanOpenCalls(stake.openCalls) } : {}),
+  };
+}
+
+/** The long options on a stake, cleaned: the typed-in one and the account's calls. */
+function cleanHeldOptions(stake: GuidanceStake): Pick<GuidanceStake, "longOption" | "heldCalls"> {
+  const longOption = stake.longOption ? cleanHeldOption(stake.longOption) : undefined;
+  const heldCalls = (stake.heldCalls ?? []).flatMap((c) => cleanHeldOption(c) ?? []);
+  return {
+    ...(longOption ? { longOption } : {}),
+    ...(heldCalls.length ? { heldCalls } : {}),
   };
 }
 

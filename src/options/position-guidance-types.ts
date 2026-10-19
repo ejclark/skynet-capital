@@ -70,6 +70,10 @@ export interface GuidanceStake {
    *  against these shares. Forward guidance only (#3968): this shapes what's shown, not a new
    *  buy-back/roll verdict the way `openCalls` gets from "Calls you've sold". */
   readonly longOption?: HeldLongOption;
+  /** Long calls the member's own account holds on this stock — what "Calls you hold" judges
+   *  (#5709). Like `openCalls`: read in the browser from the linked account, never parsed from
+   *  typed-in or stored input, so a what-if stake can't forge a position. */
+  readonly heldCalls?: readonly HeldLongOption[];
 }
 
 /** One covered call the member has already sold and still holds open. */
@@ -219,7 +223,9 @@ export type RuleId =
   | "COVERAGE"
   | "SIZE"
   | "PULSE"
-  | "MANAGE";
+  | "MANAGE"
+  | "EXIT-PROFIT"
+  | "EXIT-TIME";
 
 export interface GuidanceReason {
   readonly rule: RuleId;
@@ -316,6 +322,8 @@ export interface PositionGuidance {
   readonly assumptions: readonly string[];
   /** One call per covered call already open — empty when none is. */
   readonly manage: readonly ManageCall[];
+  /** One call per long call the member holds (#5709) — empty when none, and for a held put. */
+  readonly longCalls: readonly LongCallCall[];
   readonly disclosure: string;
 }
 
@@ -353,4 +361,26 @@ export interface ManageCall {
   readonly kept?: number;
   /** ROLL only: the call to sell in its place, and the net per share (+ credit, − cost). */
   readonly rollTo?: { readonly strike: number; readonly expiration: string; readonly net: number };
+}
+
+/** What the house's long-call exit rules say about a call the member bought. */
+export type LongCallVerdict = "TAKE PROFIT" | "TIME STOP" | "HOLD" | "NO ANSWER";
+
+export interface LongCallCall {
+  readonly strike: number;
+  readonly expiration: string;
+  readonly contracts: number;
+  /** Calendar days from today's ET date to expiry. */
+  readonly dte: number;
+  readonly call: LongCallVerdict;
+  readonly confidence: Confidence;
+  /** At most three, most important first. */
+  readonly reasons: readonly GuidanceReason[];
+  readonly provesWrong: string;
+  /** The day the next rule falls due, and which. */
+  readonly until?: { readonly date: string; readonly why: string };
+  /** Market closed: a plan for the next open, never an instruction for now. */
+  readonly atOpen: boolean;
+  /** The bid as a multiple of what was paid (2 = double), when both are known. */
+  readonly multiple?: number;
 }

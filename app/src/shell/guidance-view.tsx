@@ -15,6 +15,7 @@ import type {
 } from "../../../src/options/position-guidance-types";
 import type { SymbolOutlook } from "../../../src/research/symbol-outlook-shape";
 import { GlanceLine, LeverCard, shortDate } from "./guidance-lever";
+import { GuidanceLongCalls, LongCallGlanceLine } from "./guidance-long-call";
 import { GuidanceManage, ManageGlanceLine } from "./guidance-manage";
 import { GuidanceStakeForm } from "./guidance-stake-form";
 import { SymbolRecap } from "./symbol-recap";
@@ -164,12 +165,15 @@ export function GuidanceView({
       <HeldLine held={held} stake={stake} stakeKey={stakeKey} onStake={onStake} />
       <GuidanceStakeForm key={`${g.symbol}:${stakeKey}`} stake={stake} onChange={onStake} />
       <ul className="guidance-glance" aria-label="At a glance">
-        {/* Shares, then the calls already sold, then the new-trade levers — the section order. */}
+        {/* Shares, then the calls already sold and the calls held, then the new-trade levers — the section order. */}
         {g.calls.slice(0, 1).map((c) => (
           <GlanceLine key={c.lever} call={c} rows={rowsFor(c.lever)} />
         ))}
         {g.manage.map((m) => (
           <ManageGlanceLine key={m.occ} m={m} />
+        ))}
+        {g.longCalls.map((m) => (
+          <LongCallGlanceLine key={`${m.expiration}-${m.strike}`} m={m} />
         ))}
         {g.calls.slice(1).map((c) => (
           <GlanceLine key={c.lever} call={c} rows={rowsFor(c.lever)} />
@@ -189,6 +193,7 @@ export function GuidanceView({
         <LeverCard key={c.lever} call={c} rows={rowsFor(c.lever)} symbol={g.symbol} onUse={onUse} />
       ))}
       <GuidanceManage manage={g.manage} onManage={onManage} />
+      <GuidanceLongCalls longCalls={g.longCalls} />
       {g.calls.slice(1).map((c) => (
         <LeverCard key={c.lever} call={c} rows={rowsFor(c.lever)} symbol={g.symbol} onUse={onUse} />
       ))}
