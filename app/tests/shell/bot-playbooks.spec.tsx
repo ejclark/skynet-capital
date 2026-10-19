@@ -425,6 +425,29 @@ describe("BotPlaybooksSection — the week on one clock", () => {
     expect(card.querySelector(".wk-trades")?.textContent).toMatch(/^▲ Buy NVDA placed /);
   });
 
+  /** #4479: a card held by an estimated print says it waits on a confirmed date; its lane, and
+   *  the key to it, must not say "waiting for its window" one tap deeper. */
+  it("keeps a card held by an estimate waiting on a confirmed date in its lane and key", async () => {
+    const rollCall = (sauron.rollCall ?? []).map((line) =>
+      line.playbookId === "S1-NVDA"
+        ? { ...line, unconfirmed: [{ symbol: "NVDA", date: "2026-11-18" }] }
+        : line,
+    );
+    next = { available: true, heartbeat: { ...sauron, rollCall, week } };
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
+    await screen.findByText("S1-NVDA");
+    const card = cardOf("S1-NVDA");
+    expect(within(card).getByText("Waiting on a confirmed date")).toBeInTheDocument();
+    const lane = within(card).getByRole("img");
+    expect(lane.getAttribute("aria-label")).toBe(
+      "This week: waiting on a confirmed date — no window open in 64 of 64 half hours asked.",
+    );
+    fireEvent.click(within(card).getByText("S1-NVDA"));
+    const key = card.querySelector(".wk-key");
+    expect(key?.textContent).toContain("No window open");
+    expect(key?.textContent).not.toContain("Waiting for its window");
+  });
+
   it("matches a nameless card to its lane by slot, and keeps trades to the strip", async () => {
     const { rollCall: _withheld, ...rest } = sauron;
     const anonymous = (sauron.playbooks ?? []).map(({ playbookId: _id, ...v }) => v);
