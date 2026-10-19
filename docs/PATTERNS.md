@@ -68,8 +68,8 @@ A bench is a composition of sections, not a fourth word: below its width it *is*
 falsifier is written on the frame — if the docked bench reads as a mess on the live route it folds at
 every width. A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
 became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip as a fourth
-navigation band was rejected: at phone width the topbar and the rail already each wrap into a
-horizontal row, and a third band before content is what the mobile-first rule forbids.
+navigation band was rejected: at phone width the topbar and the page's head (it holds the
+rail's jobs since #3810) are already each a horizontal row, and a third band before content is what the mobile-first rule forbids.
 
 ## The vocabulary — four words for fire
 
