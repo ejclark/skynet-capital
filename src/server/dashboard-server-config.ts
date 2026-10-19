@@ -12,6 +12,7 @@ import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
@@ -69,6 +70,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * not on a reconnect, not on a replay. Omit (offline/tests) and the board simply carries no cues.
    */
   readonly ceremonies?: CeremonyChannel;
+  /**
+   * The capital-flow ledger (#4563): a recorded paper-balance top-up or reset marks its standings
+   * row and its equity curve, and a new one asks open boards to re-read. Omit (tests) and no row
+   * or curve carries a mark.
+   */
+  readonly capitalFlows?: CapitalFlowReader;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.

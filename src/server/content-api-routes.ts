@@ -198,7 +198,11 @@ function serveBoardJson(
       seq: channel.head,
       generatedAt: state.generatedAt,
       metric,
-      view: standingsBoardView(state, metric),
+      view: standingsBoardView(
+        state,
+        metric,
+        config.capitalFlows?.flowsFor.bind(config.capitalFlows),
+      ),
       ...(a && b ? { compare: standingsCompareView(a, b) } : {}),
     }),
   );
