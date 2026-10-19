@@ -17,9 +17,10 @@ coverage. You ADD spec files; you never modify src/** or existing tests. The pro
 
 ## Loop (one pass = one dispatch)
 
-1. **Branch off latest main:** `git fetch origin main && git checkout -B test/backfill-<slug> origin/main`.
-   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
-   which every tool exits 127. Idempotent; a no-op outside a worktree.
+1. **Branch off latest main:** `bash scripts/wt-start.sh test/backfill-<slug>` — fetch, branch off
+   `origin/main`, `node_modules` (without which every tool exits 127) and one status line, in one call.
+   After it, one plain command per call — never a `&&` chain around git; `/usr/bin/git` where plain
+   `git` is refused (`docs/DELEGATION.md` rail 2).
 2. **Take the gate's target:** `node scripts/spec-gap-scan.mjs --candidate`. Never hand-pick.
 3. **Follow the `backfill` skill exactly** (`.claude/skills/backfill/SKILL.md`) from its step 2
    onward — check its trading/risk carve-out first (it binds you too), read the module in full, write
@@ -30,6 +31,6 @@ coverage. You ADD spec files; you never modify src/** or existing tests. The pro
 ## Hard rules
 
 - Never hand-pick a target; never modify src to make a test pass; never weaken an existing spec.
-- A tool exiting 127 means step 1's `worktree-setup.sh` was skipped or failed — run it and read what it
+- A tool exiting 127 means step 1's `wt-start.sh` was skipped or failed — run it and read what it
   says. Never hand-roll a node_modules workaround; if the script cannot provision, report and stop.
 - Report honestly; a red rep reports and stops, it does not improvise.
