@@ -14,6 +14,7 @@ import {
   controlsPollHeaders,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
+import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
 import { parseDecisionsCursor } from "./decision-wire.js";
 import { controlsPollRosterHeaders, type HouseRosterReport } from "./house-roster-wire.js";
 import {
@@ -63,6 +64,22 @@ export interface BotControlsClient {
 
 const POLL_MS = 30_000;
 
+/** Parse one field of a poll body and hand it to its hook when it parsed. A hook that throws never
+ *  fails the poll it rides on, nor the hooks after it. */
+function relay<T>(
+  body: unknown,
+  field: string,
+  parse: (raw: unknown) => T | undefined,
+  hook: ((value: T) => void) | undefined,
+): void {
+  try {
+    const value = parse(isRecord(body) ? body[field] : undefined);
+    if (value !== undefined) hook?.(value);
+  } catch {
+    /* never let a downstream hook fail the poll it rides on */
+  }
+}
+
 const DISABLED_CLIENT: BotControlsClient = {
   fetchOnce: async () => null,
   start: () => undefined,
@@ -102,6 +119,11 @@ export function resolveBotControls(
    *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
    *  the plays. An app that predates the field never fires this. */
   onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of the members'
+   *  handed-over convictions (`convictions-wire.ts`, #5482 slice 6c) — records only, whole every
+   *  time. It fires BEFORE the subscriptions hook on the same poll, so a roster the subscription
+   *  swap builds already resolves a pointer at one. An app that predates the field never fires it. */
+  onConvictions?: (wire: ConvictionsWire) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -146,33 +168,14 @@ export function resolveBotControls(
             /* never let a downstream hook fail the poll it rides on */
           }
         }
-        try {
-          const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
-          onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const rawPlays = isRecord(response.body) ? response.body.authoredPlays : undefined;
-          const plays = parseAuthoredPlaysWire(rawPlays);
-          if (plays) onAuthoredPlays?.(plays);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
-          const snapshot = parseSubscriptionsSnapshot(rawSubs);
-          if (snapshot) onSubscriptions?.(snapshot);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const raw = isRecord(response.body) ? response.body.authoredShadow : undefined;
-          const orders = parseShadowOrders(raw);
-          if (orders) onAuthoredShadow?.(orders);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
+        // Each additive field, parsed from the RAW body and relayed to its hook. The order is load-
+        // bearing: convictions and plays land before the subscriptions whose rosters resolve them.
+        const body = response.body;
+        relay(body, "decisionsCursor", parseDecisionsCursor, onDecisionsCursor);
+        relay(body, "convictions", parseConvictionsWire, onConvictions);
+        relay(body, "authoredPlays", parseAuthoredPlaysWire, onAuthoredPlays);
+        relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions);
+        relay(body, "authoredShadow", parseShadowOrders, onAuthoredShadow);
         return parsed;
       } finally {
         clearTimeout(abort);

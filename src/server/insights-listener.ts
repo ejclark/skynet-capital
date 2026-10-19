@@ -13,6 +13,7 @@ import {
 } from "../autonomous/bot-credentials-wire.js";
 import { type CondScoutSnapshot, parseCondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import { type ControlsPollReport, controlsPollReport } from "../autonomous/controls-poll-wire.js";
+import type { ConvictionsWire } from "../autonomous/convictions-wire.js";
 import { type DecisionBatch, parseDecisionBatch } from "../autonomous/decision-wire.js";
 import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
@@ -90,6 +91,12 @@ export interface InsightsListenerConfig {
    * only through the member's own subscription to it. Omit to leave the field off.
    */
   readonly authoredPlays?: () => AuthoredPlaysWire;
+  /**
+   * The members' handed-over convictions (`convictions-wire.ts`, #5482 slice 6c), folded into every
+   * `GET /controls` response as an additive `convictions` field. Records only: a bot is steered by
+   * one only through its own subscription's pointer. Omit to leave the field off.
+   */
+  readonly convictions?: () => ConvictionsWire;
   /** `POST /authored-shadow` — the bots' report on those tests. Omit to 404 the route. */
   readonly authoredShadow?: { readonly accept: (report: ShadowReport) => void };
   readonly decisions?: {
@@ -279,12 +286,14 @@ function handleControlsGet(
     const subscriptions = config.subscriptions?.();
     const authoredShadow = config.authoredShadowOrders?.();
     const authoredPlays = config.authoredPlays?.();
+    const convictions = config.convictions?.();
     respond(res, 200, {
       ...state,
       ...(decisionsCursor ? { decisionsCursor } : {}),
       ...(subscriptions ? { subscriptions } : {}),
       ...(authoredShadow ? { authoredShadow } : {}),
       ...(authoredPlays ? { authoredPlays } : {}),
+      ...(convictions ? { convictions } : {}),
     });
   } catch (error) {
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);

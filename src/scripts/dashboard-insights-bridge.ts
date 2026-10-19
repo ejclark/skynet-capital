@@ -14,6 +14,7 @@ import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-sha
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
+import { buildConvictionsWire } from "../autonomous/convictions-wire.js";
 import {
   type DecisionDb,
   type DecisionFunnel,
@@ -38,6 +39,7 @@ import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
+import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
 import { createSubscriptionStore, type SubscriptionStore } from "../server/subscription-store.js";
 import { memoPerKey } from "../storage/ttl-memo.js";
@@ -176,6 +178,7 @@ export function startInsightsBridge(
   let authoredShadow: ShadowReport | undefined;
   // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
   const authoredPlays = createAuthoredPlayStore(env, (message) => console.error(message));
+  const memberConvictions = createMemberConvictionStore(env, (message) => console.error(message));
   createInsightsListener({
     record: (entry) => insights.record(entry),
     condScout: {
@@ -191,6 +194,8 @@ export function startInsightsBridge(
     authoredShadowOrders: () => buildShadowOrders(authoredPlays.load(), Date.now()),
     // The plays a member promoted: specs only, read fresh like the subscriptions they ride beside.
     authoredPlays: () => buildAuthoredPlaysWire(authoredPlays.load(), Date.now()),
+    // The views members handed to their bots (#5482 slice 6c), read fresh beside the plays.
+    convictions: () => buildConvictionsWire(memberConvictions.handedOver(), Date.now()),
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
