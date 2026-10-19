@@ -3,7 +3,6 @@ import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symb
 import type { DeskPosition, Tone } from "../live/desk";
 import { held } from "../live/quantity";
 import type { GreeksParts } from "./holding-decay";
-import { MINUS } from "./quote-change";
 
 /**
  * ERIC'S ROW SPEC, the pieces both layouts draw (#5059 on the phone, #5071 on the desk table):
@@ -12,9 +11,6 @@ import { MINUS } from "./quote-change";
  * and θ · Δ cells (`blotter-row.tsx`) render these same components, so the two never word a
  * position differently.
  */
-
-/** The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash. */
-export const withMinus = (figure: string) => figure.replace(/^-/, MINUS);
 
 /**
  * The column key, one word a figure (#5076, Eric on #5061: "the title headings mirrored the 2

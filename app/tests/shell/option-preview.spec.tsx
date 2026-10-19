@@ -67,7 +67,13 @@ describe("OptionPreviewBody — odds and greeks", () => {
     expect(percent(0.004)).toBe("0.4%");
     expect(percent(0)).toBe("0%");
     expect(signedMoney(18.4)).toBe("+$18.40");
-    expect(signedMoney(-5)).toBe("-$5.00");
+    // A loss carries the real minus (U+2212), never a hyphen (#5204).
+    expect(signedMoney(-5)).toBe("\u2212$5.00");
+    expect(signedMoney(0)).toBe("$0.00");
+    // A sub-cent move prints unsigned, like a percent that rounds to zero (#5204).
+    expect(signedMoney(-0.004)).toBe("$0.00");
+    expect(signedMoney(0.004)).toBe("$0.00");
+    expect(signedMoney(-1e-17)).toBe("$0.00");
   });
 });
 

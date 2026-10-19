@@ -8,6 +8,7 @@ import {
   type EquityCurveRange,
   fetchEquityCurve,
 } from "../live/equity-curve";
+import { percentTone, signedPercent } from "../ui";
 import { readChartPalette } from "./chart-mount";
 import { alignOverlay, type OverlaySeries } from "./hero-chart-data";
 import { type HighLine, mountHeroChart } from "./hero-chart-mount";
@@ -25,11 +26,14 @@ import { type HighLine, mountHeroChart } from "./hero-chart-mount";
 
 const BENCHMARK_SYMBOL = "SPY";
 
-const pct = (value: number): string => `${value >= 0 ? "+" : ""}${(value * 100).toFixed(1)}%`;
-const tone = (value: number): "pos" | "neg" | "flat" =>
-  value > 0 ? "pos" : value < 0 ? "neg" : "flat";
+/** The legend's change since the range began, a fraction written as a signed percent (#5204), and
+ *  toned from that same printed figure, so a move that reads "0.0%" is never coloured a loss. */
+const LEGEND_DIGITS = 1;
+const pct = (value: number): string => signedPercent(value * 100, LEGEND_DIGITS);
+const tone = (value: number): "pos" | "neg" | "flat" => percentTone(value * 100, LEGEND_DIGITS);
 
-function HeroChartLegend({
+/** Exported for its spec only — the chart mount itself can't run under happy-dom. */
+export function HeroChartLegend({
   overlay,
   high,
 }: {

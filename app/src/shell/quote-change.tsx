@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { QuoteTone } from "../live/quote";
 import { money } from "../live/ticket";
+import { MINUS } from "../ui";
 
 /**
  * HOW A DAY'S MOVE IS DRAWN — one module, every surface that draws one (`quote-header.tsx` and the
@@ -16,9 +17,6 @@ import { money } from "../live/ticket";
 /** Exported for the phone position card's day change (#5041), which draws the same move. */
 export const GLYPH: Record<QuoteTone, string> = { pos: "▲", neg: "▼", flat: "·" };
 const DIRECTION_WORD: Record<QuoteTone, string> = { pos: "up", neg: "down", flat: "flat" };
-/** The real minus sign (U+2212) — a hyphen reads as a dash, not a negative, at a glance. */
-export const MINUS = "−";
-
 export function signedMoney(change: number, tone: QuoteTone): string {
   if (tone === "pos") return `+${money(Math.abs(change))}`;
   if (tone === "neg") return `${MINUS}${money(Math.abs(change))}`;

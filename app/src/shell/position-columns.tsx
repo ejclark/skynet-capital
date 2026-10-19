@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { DeskPosition, PositionEvent } from "../live/desk";
 import { held } from "../live/quantity";
+import { withMinus } from "../ui";
 import { GlossaryTerm } from "./glossary-term";
 import { greeksParts, type HoldingDecay } from "./holding-decay";
 import {
@@ -10,7 +11,6 @@ import {
   PositionHead,
   PositionSize,
   ROW_KEY,
-  withMinus,
 } from "./position-row-spec";
 
 /**

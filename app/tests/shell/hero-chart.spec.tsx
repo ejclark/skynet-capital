@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { BarsAnswer } from "../../src/live/bars";
 import type { EquityCurve, EquityCurveRange } from "../../src/live/equity-curve";
-import { HeroChart } from "../../src/shell/hero-chart";
+import { HeroChart, HeroChartLegend } from "../../src/shell/hero-chart";
+import type { OverlaySeries } from "../../src/shell/hero-chart-data";
 
 /**
  * `HeroChart`'s degrade branches and range-selector wiring (#3186 slice 2) — same doctrine as
@@ -95,5 +96,34 @@ describe("HeroChart", () => {
     for (const r of ["7D", "1M", "3M", "1Y", "YTD", "ALL"]) {
       expect(screen.getByRole("button", { name: r })).toBeInTheDocument();
     }
+  });
+});
+
+/**
+ * The legend's "You" and "S&P 500" figures (#5204): WHEN a change is shown, THE number SHALL carry a
+ * real minus for a loss, and WHEN it rounds to zero it SHALL print unsigned AND be toned flat — a
+ * red "0.0%" would let the hue claim a loss the words don't (a standing reader is red/green
+ * colourblind).
+ */
+describe("HeroChartLegend", () => {
+  const overlay = (portfolio: number, benchmark: number): OverlaySeries =>
+    ({
+      portfolio: [{ time: "2026-10-16", value: portfolio }],
+      benchmark: [{ time: "2026-10-16", value: benchmark }],
+    }) as OverlaySeries;
+
+  it("writes a loss with a real minus, toned as a loss", () => {
+    render(<HeroChartLegend overlay={overlay(-0.012, 0.035)} />);
+    const you = screen.getByText("\u22121.2%");
+    expect(you).toHaveClass("tone-neg");
+    expect(screen.getByText("+3.5%")).toBeInTheDocument();
+  });
+
+  it("writes a move that rounds to zero as an unsigned, flat 0.0% either way", () => {
+    const { unmount } = render(<HeroChartLegend overlay={overlay(-0.0004, 0)} />);
+    expect(screen.getAllByText("0.0%")[0]).toHaveClass("tone-flat");
+    unmount();
+    render(<HeroChartLegend overlay={overlay(0.0004, 0)} />);
+    expect(screen.getAllByText("0.0%")[0]).toHaveClass("tone-flat");
   });
 });

@@ -41,7 +41,9 @@ describe("InitiatorSplit", () => {
   it("spells the sign out and keeps the forced pick's numbers on its own row", () => {
     render(<InitiatorSplit heading="Who started the bots' closed trades" split={split()} />);
     expect(cell("The forced daily pick").getByText("12 closed trades")).toBeInTheDocument();
-    expect(cell("The forced daily pick").getByText(/net -\$84\.50 · 42% won/)).toBeInTheDocument();
+    expect(
+      cell("The forced daily pick").getByText(/net \u2212\$84\.50 · 42% won/),
+    ).toBeInTheDocument();
     expect(cell("A bot's own rules").getByText("1 closed trade")).toBeInTheDocument();
   });
 

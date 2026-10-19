@@ -10,6 +10,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { ThesisEquityPoint, ThesisMarker } from "../live/desk";
+import { axisDollars } from "../ui";
 import type { ChartPalette } from "./chart-mount";
 
 /**
@@ -25,6 +26,8 @@ import type { ChartPalette } from "./chart-mount";
 
 export interface MountedThesisChart {
   readonly dispose: () => void;
+  /** What the price axis and the last-value label print for an equity value — "$1,007,500". */
+  readonly formatPrice: (value: number) => string;
 }
 
 const toLineData = (points: readonly ThesisEquityPoint[]): LineData[] =>
@@ -61,6 +64,9 @@ export function mountThesisChart(
     lineWidth: 2,
     lastValueVisible: true,
     priceLineVisible: false,
+    // The library's default axis is a bare "1007500.00" (#5204): dollars get their $ and commas.
+    // Whole dollars keep the label as narrow as the bare figure was at phone width.
+    priceFormat: { type: "custom", formatter: axisDollars, minMove: 1 },
   });
   series.setData(toLineData(equity));
 
@@ -91,6 +97,7 @@ export function mountThesisChart(
   observer?.observe(container);
 
   return {
+    formatPrice: (value) => series.priceFormatter().format(value),
     dispose: () => {
       observer?.disconnect();
       chart.remove();
