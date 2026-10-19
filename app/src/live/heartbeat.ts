@@ -81,6 +81,9 @@ export interface RollCallLine {
   /** `YYYY-MM-DD` its own rule would next open a position. Absent for a playbook with no datable
    *  window, one already inside its window, and anything not on. */
   readonly nextEntry?: string;
+  /** Estimated print dates its window would be open on today if they were confirmed (#4479).
+   *  Present only on an armed line held by an estimate. */
+  readonly unconfirmed?: readonly { readonly symbol: string; readonly date: string }[];
 }
 
 /** "Oct 28" — the day a playbook's own rule would next open a position. Date-only in, so it is

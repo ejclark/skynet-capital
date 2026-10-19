@@ -225,6 +225,30 @@ describe("playbookRollCall — every house playbook is accounted for, never sile
     expect(line?.nextEntry).toBeUndefined();
   });
 
+  /** #4479 slice 2: the window read's estimate hold rides the line, so the card can say the
+   *  playbook is waiting on a confirmed date rather than waiting for its window. */
+  it("carries the estimate holding an armed playbook's window onto its line", () => {
+    const held: Playbook = {
+      ...play("S1-NVDA"),
+      keyedOn: "earnings",
+      // Long whenever any NVDA print is confirmed; the only one here is an estimate.
+      desiredState: (_asOf, calendar) =>
+        calendar.some((p) => p.symbol === "NVDA" && p.status === "confirmed")
+          ? "long"
+          : "no-window",
+    };
+    const calendar = [
+      { symbol: "NVDA", date: "2026-09-30", status: "estimate" as const, source: "cadence" },
+    ];
+    const line = playbookRollCall([s1("no-window")], NOW, [held], {}, calendar)[0];
+    expect(line).toMatchObject({
+      playbookId: "S1-NVDA",
+      status: "armed",
+      unconfirmed: [{ symbol: "NVDA", date: "2026-09-30" }],
+    });
+    expect(line?.nextEntry).toBeUndefined();
+  });
+
   it("lists the whole house roster off when no pass has recorded verdicts", () => {
     const view = botHeartbeatView([pass(20_000)], NOW, true);
     expect(view.rollCall.length).toBeGreaterThan(0);

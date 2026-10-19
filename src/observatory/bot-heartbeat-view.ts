@@ -16,7 +16,7 @@ import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-elig
 import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { type CheckWeekView, checkWeekView } from "./check-week-view.js";
-import { readPlaybookWindow } from "./playbook-window.js";
+import { readPlaybookWindow, type UnconfirmedPrint } from "./playbook-window.js";
 
 /**
  * BOT HEARTBEAT (#3687 slice 2) — is this bot's decision loop alive, and what is each of its
@@ -168,6 +168,9 @@ export interface RollCallLine {
   /** `YYYY-MM-DD` the playbook's own rule would next open a position. Absent for a playbook with
    *  no datable window, one already inside its window, and anything not armed. */
   readonly nextEntry?: string;
+  /** The estimated print dates its window would be open on today if they were confirmed (#4479
+   *  slice 2, `playbook-window.ts`). Present only on an armed line held by an estimate. */
+  readonly unconfirmed?: readonly UnconfirmedPrint[];
 }
 
 const OFF_REASON = "Not switched on for this bot — no recorded pass ran it.";
@@ -269,6 +272,7 @@ export function playbookRollCall(
       ...mode,
       reason: read.reason,
       ...(read.nextEntry ? { nextEntry: read.nextEntry } : {}),
+      ...(read.unconfirmed ? { unconfirmed: read.unconfirmed } : {}),
     };
   });
 }
