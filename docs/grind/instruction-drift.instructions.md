@@ -189,8 +189,8 @@ You are the adversary: your job is to kill findings, not to improve them.
 1. `bash scripts/wt-start.sh <item.branch>-refute` for the fetch and `node_modules`, then
    `git fetch origin +refs/heads/<item.branch>:refs/remotes/origin/<item.branch>`, then
    `git checkout --detach origin/<item.branch>`. You work detached on the check's commit because
-   the check's worktree still holds the local `<item.branch>`, and wt-start only branches from
-   `origin/main`.
+   the check's worktree still holds the local `<item.branch>`, and git will not check out a branch
+   another worktree holds.
 2. `git show HEAD`: the findings are in the body, the rewrites in the diff.
 3. Try to kill each finding with these tests, in order; the first that holds kills it:
    - **keep:** a keep-list item covers it (name the number);
