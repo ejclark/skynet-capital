@@ -47,8 +47,8 @@ Playwright screenshots (`e2e/**`) are the suite's visual sense. Three rules, in 
 was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
 
 **The CI check is named "integration tests", not "e2e"** (#3333, 2026-09-19 — "e2e" reads as
-testing a live/deployed system, and misled a reader). The directory, npm scripts (`test:e2e*`),
-and internal job id still say `e2e` — only the CI display name changed. `playwright.config.ts`'s
+testing a live/deployed system, and misled a reader). The directory, npm scripts (`test:e2e*`)
+and internal job id say `e2e`; `integration tests` is the CI display name alone. `playwright.config.ts`'s
 `webServer` builds the checked-out commit fresh and boots it as a throwaway local server against
 static `fixtures/offline/**` data, on both its CI triggers (pull request and push to `main`). It
 is always testing a candidate build, never the running Fly.dev deployment — `scripts/smoke.sh` in
@@ -259,7 +259,7 @@ picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scr
    trailing). Omitted entirely on the ordinary PR; present ⇒ open ready for review with
    auto-merge unarmed (`ship open --hold`) — never a draft, which skips `verify` and reads as
    unfinished work (Eric, 2026-09-04, #1304)
-   (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 6, Eric 2026-08-30).
+   (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 7, Eric 2026-08-30).
 4. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
    walkthrough, trade-offs (link an ADR for hard-to-reverse calls), verification, risk/rollback,
    follow-ups. The weeds are one click away; the top stays a ten-second read.
@@ -369,7 +369,7 @@ rule file (what it fires on: `scripts/instructions/history.mjs`). The instructio
 model's read of every changed instruction file for files that disagree, stale facts and rules
 written as history; its check C has a before/after for rule 2.
 
-## House gotchas (recurring traps, moved from CLAUDE.md 2026-08-28)
+## House gotchas (recurring traps)
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
@@ -395,7 +395,7 @@ written as history; its check C has a before/after for rule 2.
   (`LayoutOptions.colorParsers`, `typings.d.ts`) — verified end to end (candles + a volume overlay +
   a second pane all construct, `chart.remove()` tears down clean). Prefer not mounting the chart in
   specs at all where possible — spec the pure data-mapping layer (bars → series data) instead; use
-  the `colorParsers` shim only for a deliberate mount smoke-test. (#2017 Phase 1 chart-section spike,
-  2026-09-08 — also corrects that plan's own assumption: the package's licence is **Apache-2.0**, not
-  MIT, which carries an attribution clause the library satisfies by default via `attributionLogo:
-  true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to remove it.)
+  the `colorParsers` shim only for a deliberate mount smoke-test. The package's licence is
+  **Apache-2.0**, not MIT, which carries an attribution clause the library satisfies by default via
+  `attributionLogo: true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to
+  remove it. (#2017 Phase 1 chart-section spike, 2026-09-08.)

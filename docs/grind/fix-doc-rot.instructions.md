@@ -20,9 +20,10 @@ doc**, not per finding. One item carries every flagged reference in that file
 same file never need reconciling across PRs. Items never touch `doc-rot-budget.json`: parallel PRs
 would race it, so the calling session runs `node scripts/doc-rot-scan.mjs --update` once, after the
 wave lands, to ratchet the budget down to what is left.
-Fan as wide as the doc list goes: doc-rot has no Coach and touches no `src/**` seam, so the
-one-open-structural-PR-per-Coach WIP limit (`docs/COACHES.md`) does not apply — the per-doc
-grouping above is the only fence this chore needs.
+Fan as wide as the doc list goes, within the width the work spigot allows (`grindWidth` in
+`work-mode.json`; `grind.js` refuses a wider run with the number to re-batch in): doc-rot has no
+Coach and touches no `src/**` seam, so the one-open-structural-PR-per-Coach WIP limit
+(`docs/COACHES.md`) does not apply — the per-doc grouping above is the only fence of this chore's own.
 
 ## Goal
 
@@ -30,9 +31,11 @@ Take every finding `scripts/doc-rot-scan.mjs` reports for one instruction file �
 `npm run <script>` it cites that no longer exists (`dead-ref`, `dead-script`), a `path:N` line cite
 past the end of its file (`dead-line`), or a model ID no code runs (`stale-model`) — and fix the
 file so it matches reality, without guessing at intent beyond what the surrounding prose already
-says. The scan reads every tracked instruction file (`CLAUDE.md`, `README.md`, `.claude/**`, the
-`.github` prompts and templates, `docs/**`) except the records its `LEDGERS` constant names. That
-constant is the one definition of "a record of its moment"; this chore keeps no second list.
+says. The scan reads every tracked instruction file (`CLAUDE.md`, `README.md`, `.claude/**/*.md`,
+the `.github` prompts and templates, `docs/**/*.md`) except the records the `LEDGERS` constant in
+`scripts/instructions/scope.mjs` names — the one scope the scan shares with the instruction-drift
+chore. That constant is the one definition of "a record of its moment"; this chore keeps no second
+list.
 
 ## Steps
 

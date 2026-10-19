@@ -88,8 +88,8 @@ node scripts/redesign/commons.mjs digest           # the curator's view: shared 
   move **across** screens is never drawn alone: `add --kind ia-move --to <screen/section> --why
   <the goal and what it would sit beside>`, shown on your page as a pinned candidate, **and** add
   it to the upstream ledger, `docs/IA.md` §10 (a new row, or your screen on the row with the same
-  root), in the same docs PR as your pattern rows (step h). The commons is /tmp and dies with the
-  scratchpad; the ledger is where a later overhaul finds the context. The curator turns them into
+  root), in the same docs PR as your pattern rows (step h). The commons lives in /tmp and is lost
+  when /tmp is cleaned; the ledger is where a later overhaul finds the context. The curator turns them into
   one app-wide IA round, and the IA call is written before anything is built.
 - **A `process:` note from Eric** is a commons line too, a `process` one: see
   [*Refining the loop*](#refining-the-loop) for what to do with it.
