@@ -90,7 +90,8 @@ flowchart TD
 _Caption — every trigger funnels through one of Moneypenny's four lanes; the Orchestration board
 (Status × Horizon, #3818 slice B) is the shared state all four read and write. The dotted paths are
 the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
-escalates to repair, and repair's own unresolved recurrences are the live gap #3926 names._
+escalates to repair, and a repair capsule with no PR 24 hours after filing gets `stall-flagged` and
+a comment asking for a fix PR or `needs-eric` (`scripts/moneypenny/capsule-stall.mjs`)._
 
 ### Where an open ask lives — the board's Blocked column
 

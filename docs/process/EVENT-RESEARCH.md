@@ -446,7 +446,10 @@ the cluster count alone, so a thin sample is `underpowered` — it goes to `next
 the kill list; a killed candidate is dated and its id must be on the kill list in
 `docs/research/multi-symbol-sweep.md` before `npm test` passes. Candidate 1 (options volume at the
 Bollinger edge) has its two inputs as instruments: `option-volume.mjs` (OCC's free daily volume) and
-`bollinger-touch.mjs` (the price-only control). Its ~500-stock run waits on the OCC archive (#4832).
+`bollinger-touch.mjs` (the price-only control). Its ~500-stock run came back `underpowered` on
+2026-10-18 (376 independent days of 1,298 needed;
+[`optvol-bollinger-backtest-2026-10.md`](../research/optvol-bollinger-backtest-2026-10.md)), so a
+powered re-run waits on the OCC archive (#4832).
 
 ## The decision header is gated (`npm run research:lint`)
 

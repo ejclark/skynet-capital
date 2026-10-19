@@ -4,8 +4,8 @@
 > of the app's shared UI parts: read it before building one, reuse an entry when it fits, and
 > extract a new primitive only by the rule in `app/src/ui/README.md`.
 
-Coverage: every module in `app/src/ui` (4) and every `app/src/shell` module
-imported by 5+ production files (14). Fields: job from the JSDoc's first
+Coverage: every module in `app/src/ui` (5) and every `app/src/shell` module
+imported by 5+ production files (13). Fields: job from the JSDoc's first
 sentence, props read from the source (best-effort), first real call site, `@whenNot` tag.
 
 ## Primitives (`app/src/ui`)
@@ -16,9 +16,19 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - job: Says in one sentence how an action came out — saved, refused, failed — with a ✓ or ✕ before it.
 - exports: `ResultTone`, `InlineResult`
 - props: `{ tone: ResultTone; children: ReactNode; as?: "p" | "span"; live?: boolean; className?: string }`
-- importers: 26
+- importers: 29
 - usage: `<InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>` — `app/src/routes/activity.tsx:329`
 - when not to use: the state is the whole section's — a page or panel that could not load, an empty list, a loading line — that is a section state, not one action's result; and a number with a sign (P/L, a change) is a tone on the number (`tone-neg`), not a sentence.
+
+### withMinus
+
+- file: `app/src/ui/numbers.ts`
+- job: Rewrites a server figure's leading hyphen as a real minus: "-$412" → "−$412".
+- exports: `MINUS`, `withMinus`, `signOf`, `signedPercent`, `percentTone`, `axisDollars`
+- signature: `(figure: string)`
+- importers: 15
+- usage: `text: withMinus(event.realizedPl),` — `app/src/live/ledger-entry.ts:159`
+- when not to use: the figure is a number you still hold — sign it with `signOf` as you format it rather than formatting with a hyphen and patching the string.
 
 ### KindChip
 
@@ -36,7 +46,7 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - job: Labels the trading mode (SIM, LIVE) in one neutral pill, so a mode never borrows a kind chip's colour.
 - exports: `PAPER_WORD`, `EnvMode`, `EnvPill`
 - props: `{ mode?: EnvMode }`
-- importers: 8
+- importers: 9
 - usage: `<EnvPill />` — `app/src/shell/account-head.tsx:60`
 - when not to use: the label says who an account is (BOT / HUMAN) — that is `KindChip`; and a sentence that names the paper account in prose ("SIM account — simulated fill") stays text.
 
@@ -131,16 +141,6 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - usage: `useLandOnHash(findLedgerRow, rowKey(events));` — `app/src/shell/ledger-cards.tsx:45`
 - when not to use:
 
-### withMinus
-
-- file: `app/src/shell/position-row-spec.tsx`
-- job: The server formats a loss with a hyphen ("-$412"); at a glance that reads as a dash.
-- exports: `withMinus`, `ROW_KEY`, `dayChange`, `plural`, `isWritten`, `PositionHead`, `PositionSize`, `GreeksLine`, `Bracketed`
-- signature: `(figure: string)`
-- importers: 7
-- usage: `{withMinus(event.realizedPl)}` — `app/src/shell/order-deep-dive.tsx:121`
-- when not to use:
-
 ### ConnectLink
 
 - file: `app/src/shell/connect-link.tsx`
@@ -152,14 +152,14 @@ sentence, props read from the source (best-effort), first real call site, `@when
 - usage: `No account linked yet — <ConnectLink />.` — `app/src/shell/cockpit-head.tsx:159`
 - when not to use:
 
-### MINUS
+### isWritten
 
-- file: `app/src/shell/quote-change.tsx`
-- job: The real minus sign (U+2212) — a hyphen reads as a dash, not a negative, at a glance.
-- exports: `GLYPH`, `MINUS`, `signedMoney`, `signedPct`, `QuoteChange`, `LiveStamp`
-- kind: `value`
+- file: `app/src/shell/position-row-spec.tsx`
+- job: An option sold to open: its value is what it costs to close, its return is on the premium.
+- exports: `ROW_KEY`, `dayChange`, `plural`, `isWritten`, `PositionHead`, `PositionSize`, `GreeksLine`, `Bracketed`
+- signature: `(p: DeskPosition)`
 - importers: 5
-- usage: `? `${delta < 0 ? MINUS : "+"}${dollars.format(Math.abs(delta))}`` — `app/src/shell/holding-decay.ts:80`
+- usage: `, return {isWritten(p) ? "on premium " : ""}` — `app/src/shell/position-cards.tsx:120`
 - when not to use:
 
 ### positionAnchor

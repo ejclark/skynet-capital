@@ -112,8 +112,8 @@ Rules that make it work, in priority order:
    (`scripts/moneypenny/decision-callout.mjs`, #3913). Eric's own issues are exempt.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
-   after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
-   uses (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
+   after an em dash — same anatomy as the procedure steps in CLAUDE.md's *When Eric's action IS
+   needed* (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
    Below the fold, `### Predicted answers` gives Claude's expected answer to each item and a
    confidence, written before he answers; the row is scored in
    [`docs/process/ALIGNMENT.md`](process/ALIGNMENT.md) when he does (Eric, 2026-10-18: alignment
@@ -234,7 +234,7 @@ can sit in Backlog for weeks. The word was said in dozens of plan issues before 
 writing it down once is that the label, the comment and the code now agree.
 
 **Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
-Four conditions, asked in this order so the refusal names the first one that fails
+Six conditions, asked in this order so the refusal names the first one that fails
 (`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
 retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
 disagree about what may be built:
@@ -245,6 +245,9 @@ disagree about what may be built:
    (`PARKING_LABELS`). `ready` + parked is illegal, reported, and never auto-fixed: some flips are
    Eric's own. `ready` + `next-slice` is legal and means "in progress, a remainder pending".
 4. **not `in-progress`** — another lane or session already holds it.
+5. **not `needs-session`**, for the automated pullers only — its remainder waits on an interactive
+   session, so `/work-issues` (which passes `interactive: true`) still sees it.
+6. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
 
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
 filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
@@ -258,7 +261,7 @@ four checks, the verifier's line) and then the label, so the label stays an auth
 paper trail rather than a formality — what it never becomes is a way to keep a loop fed. Falsifier:
 if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
 reverted build, narrow this back to his flip. A `plan` issue has a second, equivalent door: a ready-shaped comment from
-an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
+an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
 so a lane quoting the word in prose can never flip itself. When admission queues a comment-flip (cap,

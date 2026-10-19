@@ -5,3 +5,4 @@ export { EnvPill, PAPER_WORD } from "./env-pill";
 export { FilterChip } from "./filter-chip";
 export { InlineResult } from "./inline-result";
 export { KindChip } from "./kind-chip";
+export { axisDollars, MINUS, percentTone, signedPercent, signOf, withMinus } from "./numbers";

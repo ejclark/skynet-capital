@@ -1,4 +1,5 @@
 import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
+import { withMinus } from "../ui/numbers";
 import type { DeskActivityEvent, DeskActivityLine, Tone } from "./desk";
 import {
   cashMoved,
@@ -65,7 +66,6 @@ export interface LedgerEntry {
   readonly outcome?: { readonly text: string; readonly tone?: Tone };
 }
 
-const MINUS = "−";
 const DAY_MS = 86_400_000;
 
 /** "15 shares", "1 contract", "3 of 10 shares" while part of it filled, "1 spread". */
@@ -156,7 +156,7 @@ function pastExpiry(event: DeskActivityEvent, now: Date): boolean {
 function realized(event: DeskActivityEvent): LedgerEntry["outcome"] {
   if (!event.realizedPl) return undefined;
   return {
-    text: event.realizedPl.replace(/^-/, MINUS),
+    text: withMinus(event.realizedPl),
     ...(event.realizedTone ? { tone: event.realizedTone } : {}),
   };
 }

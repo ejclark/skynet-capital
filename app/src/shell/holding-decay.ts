@@ -1,5 +1,5 @@
 import type { OptionPositions } from "../live/options";
-import { MINUS } from "./quote-change";
+import { MINUS } from "../ui";
 
 /**
  * One held contract's time decay (#3689 slice 6), from the option book's per-holding theta: the

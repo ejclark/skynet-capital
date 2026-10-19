@@ -313,7 +313,7 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   absorbed. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
   most interesting check (recurring-intent clustering) reads `data/duel-log.jsonl`, which is
   `.gitignore`d machine-local session history a GHA runner's fresh checkout can never see — a
-  workflow would silently run three of four checks forever. (Honest limit: a fresh Routine session
+  workflow would silently run four of five checks forever. (Honest limit: a fresh Routine session
   without that history degrades the same way — the script returns the other checks and claims
   nothing false — so the clustering check only bites in sessions on a long-lived checkout.) Still
   evidence-triggered and human-gated: the script writes nothing, opens nothing, and the digest

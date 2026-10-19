@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
+import { withMinus } from "../ui";
 import { greeksParts, type HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
 import {
@@ -13,7 +14,6 @@ import {
   PositionHead,
   PositionSize,
   ROW_KEY,
-  withMinus,
 } from "./position-row-spec";
 
 /** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
