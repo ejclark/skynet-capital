@@ -33,7 +33,7 @@ done; 4 is withdrawn as written — see its row).
 
 ```mermaid
 flowchart LR
-    subgraph FIXED["Fixed context — every session, ~12.7k tokens"]
+    subgraph FIXED["Fixed context — every session, ~12.7k tokens (2026-08-28 audit)"]
         A["CLAUDE.md 26.3KB<br/>~6,580 tok = 52%"]
         B["Orient output style<br/>~2,260 tok"]
         C["Agent + skill roster<br/>descriptions ~3,700 tok"]
@@ -109,6 +109,9 @@ usage-patterns report). Slice 6 below builds the miner.
 Measured 2026-08-28 (bytes/4): CLAUDE.md 26,323B ≈ 6,580 tok (52%) · orient.md 9,027B ≈ 2,260 ·
 13 agent descriptions ≈ 1,970 · 12 skill descriptions ≈ 1,740 · symbol-sweep workflow meta ≈ 140.
 Hooks are exemplary — `duel-log.mjs` is async with no stdout, ~0 context/turn.
+CLAUDE.md measured 60,045B ≈ 15,000 tok on 2026-10-19. Size alone does not reopen lever 3: rising
+burn is what routes to these levers ([`docs/COMPUTE.md`](../COMPUTE.md), Eric 2026-08-28), and
+conservation is his explicit signal (Eric, 2026-09-04), so the re-audit below re-measures it.
 
 Compression map for CLAUDE.md (~26KB → ~14–16KB, every item keeps an on-demand home):
 
