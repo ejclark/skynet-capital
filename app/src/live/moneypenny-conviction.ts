@@ -119,8 +119,8 @@ export function createConvictionLane(deps: ConvictionLaneDeps) {
         ]);
         return;
       }
-      deps.saved();
       if (answer === "keep") {
+        deps.saved();
         await deps.say([`Moneypenny · saved. ${saved.note} it's on ${PLAYBOOKS}.`]);
         return;
       }

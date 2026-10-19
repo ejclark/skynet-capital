@@ -60,52 +60,46 @@ describe("MoneypennyRail — a drafted view", () => {
     handOver?: unknown;
   }
 
+  const SAVED = {
+    ok: true,
+    conviction: DRAFTED.conviction,
+    card: DRAFTED.card,
+    saved: true,
+    note: "A draft: only you see it, and it steers nothing until you hand it to your bots.",
+  };
+  const HANDED = {
+    ok: true,
+    steering: [{ pair: "CRWV-WHEEL", name: "the wheel on CRWV" }],
+    note: "Take it back any time.",
+  };
+
+  /** Her first turn drafts the view; any later turn just answers. */
+  const turn = (n: number) =>
+    new Response(
+      [
+        ...(n === 1
+          ? [
+              `event: conviction\ndata: ${JSON.stringify(DRAFTED)}\n\n`,
+              'event: delta\ndata: {"text":"here it is — tap to hand it over."}\n\n',
+            ]
+          : ['event: delta\ndata: {"text":"it narrows contracts to one."}\n\n']),
+        "event: done\ndata: {}\n\n",
+      ].join(""),
+      { status: 200, headers: { "content-type": "text/event-stream" } },
+    );
+
   function stub(answers: Stub = {}): { url: string; body: unknown }[] {
     const sent: { url: string; body: unknown }[] = [];
     let turns = 0;
+    const routes: Record<string, () => Response> = {
+      "/api/companion": () => json({ enabled: true, disclosure: "" }),
+      "/api/companion/chat": () => turn(++turns),
+      "/api/convictions/save": () => json(answers.save ?? SAVED),
+      "/api/convictions/hand-over": () => json(answers.handOver ?? HANDED),
+    };
     globalThis.fetch = ((url: string, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-      sent.push({ url, body });
-      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
-      if (url === "/api/companion/chat") {
-        turns += 1;
-        const frames =
-          turns === 1
-            ? [
-                `event: conviction\ndata: ${JSON.stringify(DRAFTED)}\n\n`,
-                'event: delta\ndata: {"text":"here it is — tap to hand it over."}\n\n',
-              ]
-            : ['event: delta\ndata: {"text":"it narrows contracts to one."}\n\n'];
-        return Promise.resolve(
-          new Response([...frames, "event: done\ndata: {}\n\n"].join(""), {
-            status: 200,
-            headers: { "content-type": "text/event-stream" },
-          }),
-        );
-      }
-      if (url === "/api/convictions/save")
-        return Promise.resolve(
-          json(
-            answers.save ?? {
-              ok: true,
-              conviction: DRAFTED.conviction,
-              card: DRAFTED.card,
-              saved: true,
-              note: "A draft: only you see it, and it steers nothing until you hand it to your bots.",
-            },
-          ),
-        );
-      if (url === "/api/convictions/hand-over")
-        return Promise.resolve(
-          json(
-            answers.handOver ?? {
-              ok: true,
-              steering: [{ pair: "CRWV-WHEEL", name: "the wheel on CRWV" }],
-              note: "Take it back any time.",
-            },
-          ),
-        );
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      sent.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      return Promise.resolve(routes[url]?.() ?? new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
     return sent;
   }
@@ -140,6 +134,8 @@ describe("MoneypennyRail — a drafted view", () => {
     const sent = stub();
     await draftShown();
     fireEvent.click(screen.getByRole("button", { name: "Hand it to my bots" }));
+    // the rail is busy while the posts run, so no other turn can start beside them
+    expect(useMoneypenny.getState().streaming).toBe(true);
     expect(
       await screen.findByText(/handed to your bots: the wheel on CRWV\. Take it back any time\./),
     ).toBeInTheDocument();
@@ -149,7 +145,8 @@ describe("MoneypennyRail — a drafted view", () => {
       { url: "/api/convictions/hand-over", body: { id: "crwv-floor-2026-10" } },
     ]);
     expect(useMoneypenny.getState().conviction).toBeUndefined();
-    expect(useMoneypenny.getState().convictionSeq).toBeGreaterThan(0);
+    expect(useMoneypenny.getState().streaming).toBe(false);
+    expect(useMoneypenny.getState().convictionSeq).toBe(1);
   });
 
   it("a question about the card is a normal message: nothing is saved, the card stays parked", async () => {

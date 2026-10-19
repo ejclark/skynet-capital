@@ -253,8 +253,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
     const { conviction, draft } = get();
     const answer = conviction ? answerFor(note) : undefined;
     if (conviction && answer) {
-      set({ conviction: undefined });
-      await views.act(answer, conviction);
+      // Busy while the save and hand-over run, so the composer and chips wait and her answer
+      // never lands inside another turn.
+      set({ conviction: undefined, streaming: true });
+      try {
+        await views.act(answer, conviction);
+      } finally {
+        set({ streaming: false });
+      }
       return true;
     }
     if (draft && SEND_AS_IS.test(note)) {
