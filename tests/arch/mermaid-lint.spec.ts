@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { GITHUB_MERMAID_VERSION } from "../../scripts/mermaid-lint.mjs";
 
 // The one parser for every mermaid block this repo publishes — pinned to the Mermaid version
 // github.com renders, so "parses here" means "draws there". It replaced the type-only allowlist in
@@ -93,6 +94,28 @@ describe("mermaid lint — every block parses under GitHub's Mermaid", () => {
     expect(code).toBe(1);
     expect(problems.join(" ")).toContain("needs Mermaid 12");
     expect(problems.join(" ")).toContain("11.17.2");
+  });
+
+  it("fails a bare 12.x-only type even when the installed parser would accept it (#5837)", () => {
+    // A 12.x parser parses a header-only `usecase-beta`; the guard must not wait for a parse error.
+    const { code, problems, diagrams } = lint(fence("usecase-beta"));
+    expect(code).toBe(1);
+    expect(problems.join(" ")).toContain("needs Mermaid 12");
+    expect(diagrams[0]?.ok).toBe(false);
+  });
+
+  it("parses with the exact Mermaid github.com renders — the pin and the claim cannot drift", () => {
+    // Dependabot moved the pin to 12.1.0 (#4769) while the lint still claimed 11.17.2 (#5837):
+    // "parses here" then meant nothing about GitHub. Bump both together, from GitHub's bundle.
+    const pinned = JSON.parse(readFileSync("package.json", "utf8")).devDependencies?.mermaid;
+    const installed = JSON.parse(readFileSync("node_modules/mermaid/package.json", "utf8")).version;
+    const claim = `GITHUB_MERMAID_VERSION ${GITHUB_MERMAID_VERSION}`;
+    expect(`${claim} · package.json pin ${pinned}`).toBe(
+      `${claim} · package.json pin ${GITHUB_MERMAID_VERSION}`,
+    );
+    expect(`${claim} · installed ${installed}`).toBe(
+      `${claim} · installed ${GITHUB_MERMAID_VERSION}`,
+    );
   });
 
   it("fails a fixed theme — GitHub owns light and dark; a pinned theme freezes one", () => {
