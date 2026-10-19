@@ -76,8 +76,9 @@ export interface BetaScoutDeps {
   readonly settlementOf?: (orderId: string) => OrderSettlement | undefined;
   /** The playbooks that raised their signal on a session (#4450 slice 6a, EARS 6), once a playbook
    *  has shown it trades (`scout-stand-down.ts`). Any = the forced pick opens nothing that session;
-   *  its exits still run. Absent = it never stands down. */
-  readonly signalledOn?: (session: string) => readonly string[];
+   *  its exits still run. `staged` = a pick for the next open, read against the session before.
+   *  Absent = it never stands down. */
+  readonly signalledOn?: (session: string, staged: boolean) => readonly string[];
 }
 
 /**
@@ -376,7 +377,7 @@ export class LiveCycleRunner {
   /** Whether a playbook's signal stands today's forced pick down (#4450 6a); said once a day. */
   private standsDown(scout: BetaScoutDeps, today: string, staged: boolean): boolean {
     if (this.stoodDownDay === today) return true;
-    const signalled = scout.signalledOn?.(today) ?? [];
+    const signalled = scout.signalledOn?.(today, staged) ?? [];
     if (signalled.length === 0) return false;
     if (!staged) this.stoodDownDay = today;
     if (this.standDownNotedDay !== today) {

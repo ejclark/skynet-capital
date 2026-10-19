@@ -63,11 +63,11 @@ function placed(at: number, playbookId: string, personaId = "bot-1"): DecisionRe
 describe("which playbooks stand the forced pick down", () => {
   let dir: string;
   let db: DecisionDb;
-  const signalledOn = (session: string, now = IN_HOURS) =>
+  const signalledOn = (session: string, now = IN_HOURS, staged = false) =>
     scoutSignalsFrom(
       (from, to) => db.playbookFunnel(from, to),
       () => now,
-    )(session);
+    )(session, staged);
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "scout-stand-down-"));
     db = openDecisionDb(join(dir, "decisions.db"));
@@ -108,7 +108,10 @@ describe("which playbooks stand the forced pick down", () => {
     db.record(placed(MON, "S1-NVDA"));
     db.record(checked(FRI, verdict("S1-NVDA", "long")));
     const fridayEvening = new Date("2026-10-16T22:00:00Z");
-    expect(signalledOn("2026-10-19", fridayEvening)).toEqual(["S1-NVDA"]);
+    expect(signalledOn("2026-10-19", fridayEvening, true)).toEqual(["S1-NVDA"]);
+    // Past New York's midnight the window already holds Monday, with no pass in it yet.
+    const mondayPreMarket = new Date("2026-10-19T04:05:00Z");
+    expect(signalledOn("2026-10-19", mondayPreMarket, true)).toEqual(["S1-NVDA"]);
   });
 });
 

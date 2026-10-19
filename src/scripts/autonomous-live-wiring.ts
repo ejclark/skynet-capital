@@ -247,7 +247,7 @@ export function buildScoutDeps(
     realizedPlForPlaybook?: (playbookId: string) => number;
     hostId?: string;
     settlementOf?: (orderId: string) => OrderSettlement | undefined;
-    signalledOn?: (session: string) => readonly string[];
+    signalledOn?: (session: string, staged: boolean) => readonly string[];
   },
 ): BetaScoutDeps | undefined {
   if (!scoutBroker) {

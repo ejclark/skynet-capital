@@ -35,15 +35,20 @@ export function playbookHasTraded(view: PlaybookFunnelView): boolean {
 
 /**
  * The playbooks whose signal stands the forced pick down on `session` (`YYYY-MM-DD`), empty when it
- * may fire. A session after the window — a pick staged after the close for the next open — is read
- * against the newest session in it: a run-up window spans sessions, so the one just closed is the
- * best word on the next before any pass has run. The in-hours cycle that day reads its own.
+ * may fire. A pick `staged` after the close for the next open is read against the newest session
+ * before it — once New York passes midnight the window already holds the staged session, with no
+ * pass in it yet. A run-up window spans sessions, so the one just closed is the best word on the
+ * next before any pass has run; the in-hours cycle that day reads its own.
  */
-export function scoutStandDown(view: PlaybookFunnelView, session: string): readonly string[] {
+export function scoutStandDown(
+  view: PlaybookFunnelView,
+  session: string,
+  staged = false,
+): readonly string[] {
   if (!playbookHasTraded(view)) return [];
-  const at = view.sessions.includes(session)
-    ? view.sessions.indexOf(session)
-    : view.sessions.length - 1;
+  const at = staged
+    ? view.sessions.findLastIndex((day) => day < session)
+    : view.sessions.indexOf(session);
   return view.playbooks
     .filter((row) => (row.days[at]?.signals ?? 0) > 0)
     .map((row) => row.playbookId);
@@ -55,6 +60,7 @@ export function scoutStandDown(view: PlaybookFunnelView, session: string): reado
 export function scoutSignalsFrom(
   playbookFunnel: (from: number, to: number) => PlaybookFunnelRows,
   now: () => Date = () => new Date(),
-): (session: string) => readonly string[] {
-  return (session) => scoutStandDown(readHouseFunnel(playbookFunnel, now()), session);
+): (session: string, staged: boolean) => readonly string[] {
+  return (session, staged) =>
+    scoutStandDown(readHouseFunnel(playbookFunnel, now()), session, staged);
 }
