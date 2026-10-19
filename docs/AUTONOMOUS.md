@@ -11,8 +11,12 @@ set -a && source .env && set +a
 npm run run:autonomous
 ```
 
-Defaults are deliberately conservative for shakeout: **Day Trader only**, **3% per-position
-cap**, a **5-minute per-symbol order cooldown**, and trading **only while the market is open**.
+Defaults are deliberately conservative for shakeout: **observe mode** (decides and records,
+places nothing), **Day Trader only**, **3% per-position cap**, a **5-minute per-symbol order
+cooldown**, and trading **only while the market is open**. `SKYNET_AUTONOMOUS_MODE=live` places
+paper orders only for a persona that passes its readiness gate, and opens a position only through
+a playbook its account is subscribed to — the full guard list is
+[`architecture/runtime-bots.md`](architecture/runtime-bots.md) → *Risk guards and safety*.
 
 Knobs:
 
@@ -31,8 +35,8 @@ by name, e.g.:
 SKYNET_AUTONOMOUS_BOTS=day-trader,rumor-trader,news-fader npm run run:autonomous
 ```
 
-Run it alongside `npm run serve:dashboard` (same machine or the deployed server) and watch the
-orders land on the dashboard live.
+Run it alongside `npm run serve:dashboard` (same machine or the deployed server) and watch a
+live persona's orders land on the dashboard live.
 
 ## How it works
 
