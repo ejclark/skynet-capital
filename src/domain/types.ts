@@ -298,6 +298,11 @@ export interface OrderForecast {
    *  full-exit trade with no remaining position is a falsifiable prediction about what happens
    *  next. */
   readonly invalidator: string;
+  /** What would retire the PLAYBOOK that placed this order — its own dated falsifier, not this
+   *  order's ("The playbook retires if its net P/L is below 0 on 2027-01-29 …"). Its owner's alone
+   *  (#885, #5043): every non-owner strip removes it beside the strategy tag, while `invalidator`
+   *  stays everyone's, so `invalidator` must never carry it. Absent on a play that states none. */
+  readonly retireRule?: string;
 }
 
 /**

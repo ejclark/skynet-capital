@@ -1,6 +1,6 @@
 import { decisionsFor } from "../../src/observatory/decisions-view.js";
 import { positionGuidance } from "../../src/options/position-guidance.js";
-import { EXIT_DTE } from "../../src/playbooks/long-call.js";
+import { EXIT_DTE } from "../../src/playbooks/long-call-rules.js";
 import { inputs } from "../options/position-guidance-fixture.js";
 import { held } from "./scenario-world.js";
 
@@ -41,10 +41,9 @@ describe("scenario 2 — NVDA long calls, run-up then pullback, no exit plan", (
     expect(why).toMatch(/not covered by your cash/);
   });
 
-  // KNOWN GAP — #5709 slice 2. `stake.longOption` is "forward guidance only" (src/options/position-guidance-types.ts):
-  // a held long call shapes the page but gets no verdict of its own. `manage` covers sold calls only.
-  // The fix may give long options their own list; rename the read here when it does.
-  it.fails("s4 — WHEN the member holds a long call, position guidance shall carry a call on that contract — take, trim, roll or hold — with the day it is next due", () => {
+  // Closed by #5709 slice 2: a held long call gets its own list in the guidance (`longCalls`), read
+  // from the house long-call bot's exit rules (`long-call-rules.ts`) — `manage` stays sold calls only.
+  it("s4 — WHEN the member holds a long call, position guidance shall carry a call on that contract — take, trim, roll or hold — with the day it is next due", () => {
     const g = positionGuidance(
       inputs({
         stake: {
@@ -61,7 +60,7 @@ describe("scenario 2 — NVDA long calls, run-up then pullback, no exit plan", (
         },
       }),
     );
-    const own = g.manage.find((m) => m.strike === 90 && m.expiration === "2026-11-20");
+    const own = g.longCalls.find((m) => m.strike === 90 && m.expiration === "2026-11-20");
     expect(own).toBeDefined();
     expect(own?.call).not.toBe("NO ANSWER");
     expect(own?.until?.date).toBeDefined();

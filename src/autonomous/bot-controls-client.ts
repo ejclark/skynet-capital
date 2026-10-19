@@ -14,6 +14,7 @@ import {
   controlsPollHeaders,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
+import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
 import { parseDecisionsCursor } from "./decision-wire.js";
 import { controlsPollRosterHeaders, type HouseRosterReport } from "./house-roster-wire.js";
 import {
@@ -63,6 +64,26 @@ export interface BotControlsClient {
 
 const POLL_MS = 30_000;
 
+/** Parse one field of a poll body and hand it to its hook when it parsed. A hook that throws never
+ *  fails the poll it rides on, nor the hooks after it. `unreadable` hears a field that was sent but
+ *  did not parse, where keeping the last value quietly would hide that it is going stale. */
+function relay<T>(
+  body: unknown,
+  field: string,
+  parse: (raw: unknown) => T | undefined,
+  hook: ((value: T) => void) | undefined,
+  unreadable?: () => void,
+): void {
+  try {
+    const raw = isRecord(body) ? body[field] : undefined;
+    const value = parse(raw);
+    if (value !== undefined) hook?.(value);
+    else if (raw !== undefined) unreadable?.();
+  } catch {
+    /* never let a downstream hook fail the poll it rides on */
+  }
+}
+
 const DISABLED_CLIENT: BotControlsClient = {
   fetchOnce: async () => null,
   start: () => undefined,
@@ -102,10 +123,20 @@ export function resolveBotControls(
    *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
    *  the plays. An app that predates the field never fires this. */
   onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of the members'
+   *  handed-over convictions (`convictions-wire.ts`, #5482 slice 6c) — records only, whole every
+   *  time. It fires BEFORE the subscriptions hook on the same poll, so a roster the subscription
+   *  swap builds already resolves a pointer at one. An app that predates the field never fires it. */
+  onConvictions?: (wire: ConvictionsWire) => void,
+  /** The per-fetch budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs the bridge on the same event loop as a loaded full suite passes a generous one, so a
+   *  starved loop is not mistaken for an unreachable bridge (#4978). */
+  options: { readonly timeoutMs?: number } = {},
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
   // This process's own word about which commit it is running, stamped onto every poll so the
   // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
   const selfReport = controlsPollHeaders(env.GIT_SHA);
@@ -120,7 +151,7 @@ export function resolveBotControls(
   const fetchOnce = async (): Promise<ControlsState | null> => {
     try {
       const controller = new AbortController();
-      const abort = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const abort = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "GET",
@@ -146,33 +177,18 @@ export function resolveBotControls(
             /* never let a downstream hook fail the poll it rides on */
           }
         }
-        try {
-          const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
-          onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const rawPlays = isRecord(response.body) ? response.body.authoredPlays : undefined;
-          const plays = parseAuthoredPlaysWire(rawPlays);
-          if (plays) onAuthoredPlays?.(plays);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
-          const snapshot = parseSubscriptionsSnapshot(rawSubs);
-          if (snapshot) onSubscriptions?.(snapshot);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const raw = isRecord(response.body) ? response.body.authoredShadow : undefined;
-          const orders = parseShadowOrders(raw);
-          if (orders) onAuthoredShadow?.(orders);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
+        // Each additive field, parsed from the RAW body and relayed to its hook. The order is load-
+        // bearing: convictions and plays land before the subscriptions whose rosters resolve them.
+        const body = response.body;
+        relay(body, "decisionsCursor", parseDecisionsCursor, onDecisionsCursor);
+        relay(body, "convictions", parseConvictionsWire, onConvictions, () =>
+          process.emitWarning(
+            "[playbooks] the dashboard's members' convictions did not read whole — the bots keep steering by the last set they read",
+          ),
+        );
+        relay(body, "authoredPlays", parseAuthoredPlaysWire, onAuthoredPlays);
+        relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions);
+        relay(body, "authoredShadow", parseShadowOrders, onAuthoredShadow);
         return parsed;
       } finally {
         clearTimeout(abort);

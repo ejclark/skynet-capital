@@ -1,3 +1,4 @@
+import { parseSteeredAccounts, type WiredConviction } from "../autonomous/convictions-wire.js";
 import { parseStoredConviction } from "../playbooks/conviction-parse.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
@@ -15,18 +16,21 @@ import { siblingPath } from "../storage/sibling-path.js";
  * records, so a file it could not read in full — torn, or holding a record a newer build wrote — is
  * left alone and the write refused, never rewritten without what it could not read.
  *
- * EVERY RECORD HERE IS A DRAFT, and a draft steers nothing. Nothing in the bots' wiring reads this
- * file, no subscription points at a record in it, and `GET /api/convictions` (the records the bots
- * act on) does not list it. Handing a member's view to the bots is its own slice, with its own
- * status; until then the status is written down so a later build can tell a draft from what it
- * hands over, and a status this build does not know is unreadable rather than read as a draft.
+ * A DRAFT STEERS NOTHING. A record reaches the bots only with the `steering` status and the
+ * accounts it may steer (slice 6c): `handedOver` lists those, and the controls poll carries them
+ * (`convictions-wire.ts`). This build READS the status and writes none, the expand step: the
+ * hand-over step that writes it ships after the bots and this reader are live, so a rollback onto
+ * this build still reads a handed-over record rather than refusing every write to the file. A
+ * status this build does not know is unreadable rather than read as a draft.
  */
 
-export type MemberConvictionStatus = "draft";
+export type MemberConvictionStatus = "draft" | "steering";
 
 export interface MemberConvictionRecord {
   readonly status: MemberConvictionStatus;
   readonly conviction: Conviction;
+  /** The bot accounts a `steering` record may steer: its owner's, when they handed it over. */
+  readonly accounts?: readonly string[];
   /** ISO-8601. */
   readonly createdAt: string;
   /** ISO-8601. */
@@ -43,10 +47,14 @@ const isStamp = (v: unknown): v is string =>
   typeof v === "string" && v.length > 0 && v.length <= 40;
 
 function parseRecord(raw: unknown): MemberConvictionRecord | undefined {
-  if (!isRecord(raw) || raw.status !== "draft") return undefined;
+  if (!isRecord(raw) || (raw.status !== "draft" && raw.status !== "steering")) return undefined;
   const conviction = parseStoredConviction(raw.conviction);
   if (!(conviction && isStamp(raw.createdAt) && isStamp(raw.updatedAt))) return undefined;
-  return { status: "draft", conviction, createdAt: raw.createdAt, updatedAt: raw.updatedAt };
+  const stamps = { createdAt: raw.createdAt, updatedAt: raw.updatedAt };
+  if (raw.status === "draft") return { status: "draft", conviction, ...stamps };
+  // A view handed over without the accounts it may steer could be pointed at from any bot.
+  const accounts = parseSteeredAccounts(raw.accounts);
+  return accounts ? { status: "steering", conviction, accounts, ...stamps } : undefined;
 }
 
 /** Total: a torn file is `undefined` (the store falls back to empty); a record this build cannot
@@ -98,6 +106,17 @@ export class MemberConvictionStore {
   ids(): ReadonlySet<string> {
     return new Set(
       Object.values(this.load()).flatMap((records) => records.map((r) => r.conviction.id)),
+    );
+  }
+
+  /** Every view handed to the bots, with the accounts each may steer — what the poll carries. */
+  handedOver(): readonly WiredConviction[] {
+    return Object.values(this.load()).flatMap((records) =>
+      records.flatMap((r) =>
+        r.status === "steering" && r.accounts
+          ? [{ conviction: r.conviction, accounts: r.accounts }]
+          : [],
+      ),
     );
   }
 

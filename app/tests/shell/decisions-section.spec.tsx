@@ -106,6 +106,46 @@ describe("CycleRow", () => {
     expect(screen.queryByText(/S2-NVDA/)).not.toBeInTheDocument();
   });
 
+  // #5043: the playbook's retire rule rides its own field, beside the order's own falsifier, and
+  // only on the owner's view (the server withholds it from anyone else as well).
+  describe("a playbook's retire rule", () => {
+    const wheelCycle = cycle({
+      outcomes: [
+        {
+          symbol: "CRWV",
+          side: "sell",
+          quantity: 1,
+          action: "placed",
+          reason: "a cash-secured put",
+          expectation: "CRWV stays above $80 to 2026-11-06",
+          forecast: {
+            direction: "up",
+            invalidator: "CRWV settles below $80 on 2026-11-06",
+            retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+          },
+        },
+      ],
+    });
+
+    it("follows the order's own falsifier on the owner's view", () => {
+      render(<CycleRow cycle={wheelCycle} />);
+      open();
+      expect(screen.getByText(/proves it wrong: CRWV settles below \$80/)).toBeInTheDocument();
+      // The order's falsifier ends before the playbook's sentence starts — never a run-on.
+      expect(screen.getByText(/proves it wrong/).closest("p")).toHaveTextContent(
+        "Expected: CRWV stays above $80 to 2026-11-06 — proves it wrong: CRWV settles below $80 " +
+          "on 2026-11-06. The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      );
+    });
+
+    it("is never drawn on a bot the viewer does not own", () => {
+      render(<CycleRow showPlaybooks={false} cycle={wheelCycle} />);
+      open();
+      expect(screen.getByText(/proves it wrong: CRWV settles below \$80/)).toBeInTheDocument();
+      expect(screen.queryByText(/retires/)).not.toBeInTheDocument();
+    });
+  });
+
   it("renders guardDelta as its own line when the outcome was clamped", () => {
     render(
       <CycleRow

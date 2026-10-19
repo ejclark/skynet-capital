@@ -17,6 +17,7 @@ import { bridgeReplication } from "../../src/scripts/autonomous-bridge-replicati
 import { AuthoredPlayStore } from "../../src/server/authored-play-store.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 import { aSpec, at, CALENDAR } from "../support/authored-shadow.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { aContext } from "../support/builders.js";
 
 /**
@@ -71,8 +72,15 @@ describe("the shadow test, end to end", () => {
         const env = { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv;
         const db = openBotsStateDb(dbPath);
         const wiring = authoredShadowWiring(quiet);
-        const client = resolveBotControls(env, undefined, undefined, undefined, (orders) =>
-          wiring.accept(orders),
+        const client = resolveBotControls(
+          env,
+          undefined,
+          undefined,
+          undefined,
+          (orders) => wiring.accept(orders),
+          undefined,
+          undefined,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         let publish: (() => ShadowReport) | undefined;
         const pass = wiring.arm({
@@ -147,6 +155,9 @@ describe("the shadow test, end to end", () => {
           undefined,
           undefined,
           (orders) => got.push(orders),
+          undefined,
+          undefined,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.fetchOnce();
         expect(got).toEqual([]);

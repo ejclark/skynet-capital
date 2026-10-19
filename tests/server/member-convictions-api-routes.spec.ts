@@ -156,6 +156,32 @@ describe("serveMemberConvictionsApi", () => {
     expect(CONVICTIONS.get("crwv-floor-2026-10")).toBeUndefined();
   });
 
+  it("offers only the ◆ pairs the member's own bots subscribe to, with their playbook's room", async () => {
+    const cfg = config({
+      subscriptions: {
+        load: () => ({
+          sauron: [
+            { playbookId: "CRWV-WHEEL", mode: "standard", enabled: true },
+            { playbookId: "S1-NVDA", mode: "standard", enabled: true },
+          ],
+          "grace-bot": [{ playbookId: "CRWV-LONG-CALL", mode: "standard", enabled: true }],
+        }),
+      },
+    });
+    const ofAda = (await call("/api/convictions/mine", get(), ada, cfg)).body.steerable;
+    // S1-NVDA runs on its study (✓), so a view cites it and never steers it.
+    expect(ofAda).toEqual([
+      {
+        pair: "CRWV-WHEEL",
+        name: expect.stringContaining("CRWV"),
+        strategy: "wheel",
+        bounds: { dte: expect.any(Object), contracts: expect.any(Object) },
+      },
+    ]);
+    const ofGrace = (await call("/api/convictions/mine", get(), grace, cfg)).body.steerable;
+    expect(ofGrace.map((p: { pair: string }) => p.pair)).toEqual(["CRWV-LONG-CALL"]);
+  });
+
   it("takes the owner from the session, never the body", async () => {
     const answer = await call(
       "/api/convictions/draft",
@@ -265,7 +291,7 @@ describe("MemberConvictionStore", () => {
   it("refuses a write over a file it cannot read whole, and leaves the file as it was", async () => {
     const path = join(dir, "c.json");
     const onDisk = JSON.stringify({
-      grace: [{ status: "steering", conviction: record("g"), createdAt: "x", updatedAt: "x" }],
+      grace: [{ status: "retired", conviction: record("g"), createdAt: "x", updatedAt: "x" }],
     });
     await writeFile(path, onDisk);
     const store = new MemberConvictionStore(path);
@@ -280,12 +306,60 @@ describe("MemberConvictionStore", () => {
       path,
       JSON.stringify({
         ada: [
-          { status: "steering", conviction: record("a"), createdAt: "x", updatedAt: "x" },
+          { status: "retired", conviction: record("a"), createdAt: "x", updatedAt: "x" },
           { status: "draft", conviction: record("b"), createdAt: "x", updatedAt: "x" },
         ],
       }),
     );
     const store = new MemberConvictionStore(path);
     expect(store.list("ada").map((r) => r.conviction.id)).toEqual(["b"]);
+  });
+
+  // #5482 slice 6c, the expand step: this build reads a handed-over view before any build writes one.
+  describe("a view handed to the bots", () => {
+    const steering = (id: string, accounts?: unknown) => ({
+      status: "steering",
+      conviction: record(id),
+      ...(accounts === undefined ? {} : { accounts }),
+      createdAt: "x",
+      updatedAt: "x",
+    });
+
+    it("is read with the accounts it may steer, and only it is handed over", async () => {
+      const path = join(dir, "c.json");
+      await writeFile(
+        path,
+        JSON.stringify({
+          ada: [steering("a", ["futurist"]), { ...steering("b"), status: "draft" }],
+        }),
+      );
+      const store = new MemberConvictionStore(path);
+      expect(store.list("ada").map((r) => [r.conviction.id, r.status])).toEqual([
+        ["a", "steering"],
+        ["b", "draft"],
+      ]);
+      expect(store.handedOver()).toEqual([{ conviction: record("a"), accounts: ["futurist"] }]);
+    });
+
+    it("is unreadable without the accounts it may steer, so nothing reaches the bots", async () => {
+      const path = join(dir, "c.json");
+      await writeFile(
+        path,
+        JSON.stringify({ ada: [steering("a"), steering("b", []), steering("c", [7])] }),
+      );
+      const store = new MemberConvictionStore(path);
+      expect(store.list("ada")).toEqual([]);
+      expect(store.handedOver()).toEqual([]);
+      // Unreadable is never rewritten: a draft saved now is refused rather than drop all three.
+      expect(store.save("ada", record("d"), NOW)).toEqual({ ok: false, reason: UNREADABLE_FILE });
+    });
+
+    it("survives a draft saved beside it, so a rollback onto this build loses nothing", async () => {
+      const path = join(dir, "c.json");
+      await writeFile(path, JSON.stringify({ grace: [steering("g", ["dragon"])] }));
+      const store = new MemberConvictionStore(path);
+      expect(store.save("ada", record("a"), NOW).ok).toBe(true);
+      expect(store.handedOver()).toEqual([{ conviction: record("g"), accounts: ["dragon"] }]);
+    });
   });
 });

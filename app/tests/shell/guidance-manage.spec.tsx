@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ManageCall } from "../../../src/options/position-guidance-types";
 import type { DeskSnapshot } from "../../src/live/desk";
-import { heldStake, openCallsOf } from "../../src/live/guidance";
+import { heldStake, longCallsOf, openCallsOf } from "../../src/live/guidance";
 import { focusFrom, manageSearch } from "../../src/live/manage-handoff";
 import type { OptionPositions } from "../../src/live/options";
 import { GuidanceManage } from "../../src/shell/guidance-manage";
@@ -134,5 +134,43 @@ describe("the hand-off — stable across re-renders (#3749 UI review)", () => {
   it("returns the same focus object for the same URL, so the row doesn't re-scroll", () => {
     expect(focusFrom(OCC, "2026-10-30:100")).toBe(focusFrom(OCC, "2026-10-30:100"));
     expect(focusFrom(OCC, "2026-10-30:100")).not.toBe(focusFrom(OCC, "2026-11-06:100"));
+  });
+});
+
+describe("longCallsOf — the account's long calls (#5709)", () => {
+  const LONG = "NVDA261120C00190000";
+  const desk = {
+    generatedAt: "",
+    desk: {
+      positions: [
+        { symbol: LONG, isOption: true, quantity: "4", costPerShare: "$1,200.00" },
+        { symbol: "NVDA261120C00200000", isOption: true, quantity: "-1", costPerShare: "$300.00" },
+        { symbol: "NVDA261120P00180000", isOption: true, quantity: "2", costPerShare: "$500.00" },
+        { symbol: "AMD261120C00180000", isOption: true, quantity: "3", costPerShare: "$900.00" },
+      ],
+    },
+  } as unknown as DeskSnapshot;
+  const quotes = {
+    available: true,
+    rows: [{ symbol: LONG, bid: 11.4, ask: 11.8 }],
+  } as unknown as OptionPositions;
+
+  it("takes bought calls on this stock only, paid per share, joined to the card's quotes", () => {
+    expect(longCallsOf(desk, "NVDA", quotes)).toEqual([
+      {
+        type: "call",
+        strike: 190,
+        expiration: "2026-11-20",
+        contracts: 4,
+        costPerContract: 12,
+        bid: 11.4,
+        ask: 11.8,
+      },
+    ]);
+  });
+
+  it("needs no shares — a member holding only calls still gets them", () => {
+    expect(heldStake(desk, "NVDA", quotes)).toBeUndefined();
+    expect(longCallsOf(desk, "NVDA")[0]).not.toHaveProperty("bid");
   });
 });

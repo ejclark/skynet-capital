@@ -3,6 +3,7 @@ import type {
   GuidanceMarket,
   GuidanceSnapshot,
   GuidanceStake,
+  HeldLongOption,
   OpenCall,
 } from "../../../src/options/position-guidance-types";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
@@ -174,6 +175,41 @@ export function openCallsOf(
         expiration: parts.expiration,
         contracts,
         premium,
+        ...(q?.bid !== undefined ? { bid: q.bid } : {}),
+        ...(q?.ask !== undefined ? { ask: q.ask } : {}),
+      },
+    ];
+  });
+}
+
+/**
+ * The long calls the account holds on `symbol`, for "Calls you hold" (#5709): positive-quantity
+ * call positions, joined by OCC symbol to the Option positions card's quotes (bid/ask per share).
+ * What was paid is the position's average price, which the broker reports PER CONTRACT — so ÷ 100
+ * for per share, as `openCallsOf` does. Needs no shares: a member holding only calls (the NVDA
+ * scenario) is exactly who this is for. A contract with no quote still appears; the engine then
+ * says it has no price to sell at.
+ */
+export function longCallsOf(
+  desk: DeskSnapshot | undefined,
+  symbol: string,
+  quotes?: OptionPositions,
+): HeldLongOption[] {
+  const rows = new Map((quotes?.available ? quotes.rows : []).map((r) => [r.symbol, r]));
+  return (desk?.desk.positions ?? []).flatMap((p) => {
+    const parts = p.isOption ? parseOccSymbol(p.symbol) : undefined;
+    const contracts = Math.floor(parseQuantity(p.quantity));
+    if (!(parts?.underlying === symbol && parts.type === "call" && contracts > 0)) return [];
+    const paid = num(p.costPerShare) / 100;
+    if (!(paid > 0)) return [];
+    const q = rows.get(p.symbol);
+    return [
+      {
+        type: "call" as const,
+        strike: parts.strike,
+        expiration: parts.expiration,
+        contracts,
+        costPerContract: paid,
         ...(q?.bid !== undefined ? { bid: q.bid } : {}),
         ...(q?.ask !== undefined ? { ask: q.ask } : {}),
       },

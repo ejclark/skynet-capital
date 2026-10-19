@@ -11,6 +11,7 @@ import { YourPlaybooks } from "./playbook-drafts";
 import { isReady, PlaybookList } from "./playbook-list";
 import type { MetricsScope } from "./playbook-metrics";
 import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
+import { YourConvictions } from "./your-convictions";
 
 /**
  * R&D → PLAYBOOKS (#3623) — the one home for house playbooks, and the one build that folded five
@@ -30,7 +31,9 @@ import { StrategyCard, strategyAnchor } from "./playbook-strategy-cards";
  *
  * "Your playbooks" sits between the mission line and the catalog (#5457 slice 1): the member's own
  * drafts and the form to write one (`playbook-drafts.tsx`). It is one more kind of entry in the
- * catalog, not a screen — a draft is saved and does not trade.
+ * catalog, not a screen — a draft is saved and does not trade. "Your convictions" follows it
+ * (#5482 slice 6b, `your-convictions.tsx`): the member's stated views of the market, beside the
+ * pairs they steer, each a draft that steers nothing yet.
  *
  * The closed-trades scoreboard that used to sit folded at the foot of this page ("Who started the
  * bots' closed trades") lives on the book's Balance section now (#5493 slice 3, #5451 P3): it is a
@@ -165,6 +168,7 @@ export function PlaybooksSection({
     <div className="pb-section">
       {head}
       <YourPlaybooks accounts={accounts} ready={accountsReady} />
+      <YourConvictions />
       {manages && human ? (
         // The rule once, at the top, before the cards each draw their disabled control (#4610).
         <p className="note">

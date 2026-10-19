@@ -23,6 +23,7 @@ import {
 } from "../options/contract-picker.js";
 import { humanizeOptionSymbol, OPTION_MULTIPLIER } from "../trading/option-symbols.js";
 import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
+import { EXIT_DTE, longCallExit, TAKE_PROFIT } from "./long-call-rules.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
 import { pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -52,16 +53,14 @@ import type { Playbook } from "./playbook.js";
  * STATE COMES FROM THE POSITIONS ALONE, as the wheel's does: a restart reads correctly.
  */
 
+/** The exit rules (`EXIT_DTE`, `TAKE_PROFIT`) live in `long-call-rules.ts`, shared with the member's side; re-exported here. */
+export { EXIT_DTE, TAKE_PROFIT };
+
 /** The window it buys in, in calendar days to expiry: the latest listed expiry inside it. */
 const MIN_DTE = 120;
 const MAX_DTE = 200;
-/** Sell everything once this few days remain. Exported: a member's own long call hears the same
- *  rule on its "Needs a decision" card (`src/observatory/decisions-view.ts`, #5709) — one source. */
-export const EXIT_DTE = 45;
 /** Add to a held expiry only while at least this many days remain — never just before the exit. */
 const MIN_ADD_DTE = 90;
-/** Sell everything once the bid is this multiple of the average cost. Exported for the same card. */
-export const TAKE_PROFIT = 2;
 /** Add only while the ask is at most this multiple of the held contracts' average cost. */
 const NO_CHASE = 1.1;
 /** How far the picked strike's delta may sit from the target. */
@@ -146,11 +145,11 @@ function exitCause(
   bid: number | undefined,
   today: string,
 ): "profit" | "time" | undefined {
-  if (daysBetween(today, contract.expiration) <= EXIT_DTE) return "time";
-  if (bid !== undefined && contract.avgPrice > 0 && bid >= TAKE_PROFIT * contract.avgPrice) {
-    return "profit";
-  }
-  return undefined;
+  return longCallExit({
+    dte: daysBetween(today, contract.expiration),
+    paid: contract.avgPrice,
+    ...(bid !== undefined ? { bid } : {}),
+  });
 }
 
 function closeIntents(symbol: string, context: MarketContext, held: readonly HeldContract[]) {

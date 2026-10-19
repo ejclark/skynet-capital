@@ -30,4 +30,27 @@ describe("withoutPlaybookNames", () => {
     const value = { qty: 3, urgent: true, note: null, at: ["2026-10-18"] };
     expect(withoutPlaybookNames(value)).toEqual(value);
   });
+
+  it("cuts a stored wheel order's retire rule out of an invalidator, and only an invalidator (#5043)", () => {
+    const call =
+      "CRWV settles below the shares' $82.10 on 2026-11-20 — the call expires and the shares are " +
+      "underwater; the play retires if its net P/L is below 0 on 2027-01-29";
+    const put =
+      "CRWV settles below $80 on 2026-11-06 — the wheel buys 100 shares at $80; the play retires if its net P/L is below 0";
+    expect(
+      withoutPlaybookNames({
+        forecast: { invalidator: call },
+        reasoning: { invalidator: put, reason: "the play retires if the reason says so" },
+      }),
+    ).toEqual({
+      forecast: {
+        invalidator:
+          "CRWV settles below the shares' $82.10 on 2026-11-20 — the call expires and the shares are underwater",
+      },
+      reasoning: {
+        invalidator: "CRWV settles below $80 on 2026-11-06 — the bot buys 100 shares at $80",
+        reason: "the play retires if the reason says so",
+      },
+    });
+  });
 });

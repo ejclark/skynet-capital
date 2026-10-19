@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Does a bot's order expectation name its playbook when it states the mechanic?** The wheel's
+  public expectation still says "the bot buys 100 shares at $80 and sells covered calls on them
+  next" — the wheel's mechanic, read by every member. #4975 kept a bot's reason and expectation
+  public; #5043 moved only the name and the retire rule. If a mechanic counts as the playbook
+  (#885), the expectation needs the same split; if not, nothing more is owed. The deciding question:
+  can a member who reads two such lines say which house play placed them? _(src: Claude · while:
+  #5043, the issue's open design question, left open when it closed)_
 - **A one-patch lockfile drift makes a worktree pay the whole ~650MB install again.** Worktree
   setup (#5548) shares the primary's install only when its lock matches exactly; this cloud
   session's primary was one patch behind `main` (`@types/node` 26.6.4 vs 26.6.5), so the root

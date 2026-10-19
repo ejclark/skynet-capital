@@ -89,7 +89,8 @@ self-readies and keeps the old near-zero-friction path for the common case. So d
 says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
 including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
-until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
+until something applies `ready`: Eric's own call, or a triage pass's clear-path flip
+([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
 fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
