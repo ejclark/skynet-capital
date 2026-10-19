@@ -97,7 +97,7 @@ export const eventBeforeExpiry = (p: Pick<DeskPosition, "nextEvent">): boolean =
  *  `src/observatory/decisions-view.ts`. Every string is server-written; `stakeRaw` only sorts. */
 export interface Decision {
   readonly id: string;
-  readonly kind: "at-risk" | "lock-in" | "idea";
+  readonly kind: "at-risk" | "lock-in" | "time-stop" | "idea";
   readonly symbol: string;
   readonly display: string;
   readonly plainName: string;

@@ -55,12 +55,13 @@ import type { Playbook } from "./playbook.js";
 /** The window it buys in, in calendar days to expiry: the latest listed expiry inside it. */
 const MIN_DTE = 120;
 const MAX_DTE = 200;
-/** Sell everything once this few days remain. */
-const EXIT_DTE = 45;
+/** Sell everything once this few days remain. Exported: a member's own long call hears the same
+ *  rule on its "Needs a decision" card (`src/observatory/decisions-view.ts`, #5709) — one source. */
+export const EXIT_DTE = 45;
 /** Add to a held expiry only while at least this many days remain — never just before the exit. */
 const MIN_ADD_DTE = 90;
-/** Sell everything once the bid is this multiple of the average cost. */
-const TAKE_PROFIT = 2;
+/** Sell everything once the bid is this multiple of the average cost. Exported for the same card. */
+export const TAKE_PROFIT = 2;
 /** Add only while the ask is at most this multiple of the held contracts' average cost. */
 const NO_CHASE = 1.1;
 /** How far the picked strike's delta may sit from the target. */
