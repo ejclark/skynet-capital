@@ -61,7 +61,7 @@ decides whether everything else bills at ≤10% or at 100%.
 
 The cache is a strict prefix match, keyed per model **and** per effort level; a hit bills at
 2.5–10% of the input rate across the current tiers (lowest on the top tiers — per-model rates live
-in the claude-api skill's `shared/models.md`, not here)
+in the claude-api skill's shared/models.md, not here)
 ([prompt-caching](../vendor/claude-code/prompt-caching.md)).
 
 - **Set model and effort at the top of a session; change them only at task boundaries.** `/model`,
@@ -202,6 +202,6 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 
 _Provenance: Eric's ask + gist pointer (allisoneer's `fetch_claude_docs.py`), 2026-08-28. Method:
 four-agent fan-out (two doc miners over the 138-page mirror, two repo auditors), synthesized against
-`shared/cost-optimization.md` (the claude-api skill's measured lever framework). Full agent reports
+shared/cost-optimization.md (the claude-api skill's measured lever framework). Full agent reports
 in the session transcript; numbers above are point-in-time — re-audit after the October calendar
 turns over._
