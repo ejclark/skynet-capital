@@ -1,6 +1,7 @@
 ---
 name: fix-doc-rot
 description: fix one doc's dead references flagged by scripts/doc-rot-scan.mjs
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -10,7 +11,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/fix-doc-rot.instructions.md`
-rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below checks out its own branch (`wt-start.sh` refuses the primary checkout), and without a
+rather than transcribing these values by hand. `model: opus` and `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md`'s floor table puts judgment at `opus`/`high` (`grind.js` would otherwise run it at `sonnet`). `isolation: worktree` because step 1 below checks out its own branch (`wt-start.sh` refuses the primary checkout), and without a
 fresh worktree per item concurrent items share one working directory and stomp on each other's
 checkout; `outcomeCheck` so a `done` is verified against origin rather than trusted.
 
