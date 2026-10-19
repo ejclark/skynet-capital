@@ -49,6 +49,22 @@ describe("parseOrderIntent", () => {
     });
   });
 
+  it("keeps a playbook's retire rule in its own forecast field (#5043)", () => {
+    const forecast = {
+      direction: "up",
+      invalidator: "CRWV settles below $80 on 2026-11-06",
+      retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+    };
+    const parsed = parseOrderIntent({
+      symbol: "CRWV",
+      side: "buy",
+      quantity: 1,
+      reason: "a cash-secured put",
+      forecast,
+    });
+    expect(parsed?.forecast).toEqual(forecast);
+  });
+
   it.each([
     { symbol: "NVDA", side: "up", quantity: 1, reason: "x" }, // bad side
     { symbol: "NVDA", side: "buy", quantity: "10", reason: "x" }, // quantity not a number

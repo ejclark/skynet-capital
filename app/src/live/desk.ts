@@ -405,6 +405,9 @@ export interface ActivityReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words. */
   readonly invalidator?: string;
+  /** What would retire the playbook itself — its own falsifier, not this order's (#5043). The
+   *  owner's alone, withheld by the server from anyone else. */
+  readonly retireRule?: string;
   /** What the broker said about an order that never traded — the owner's alone, withheld by the
    *  server from anyone else. Absent on a fill, when it said nothing, or on an older record. */
   readonly brokerReason?: string;
@@ -454,6 +457,9 @@ export interface DecisionForecast {
   readonly magnitudePct?: number;
   readonly horizonMs?: number;
   readonly invalidator: string;
+  /** The playbook's own retire rule (#5043) — the owner's alone, withheld by the server from
+   *  anyone else. */
+  readonly retireRule?: string;
 }
 
 export interface DecisionOutcome {

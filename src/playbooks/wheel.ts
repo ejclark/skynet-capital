@@ -106,7 +106,8 @@ interface Wheel {
   readonly symbol: string;
   /** What the data shows, then — on a conviction — the owner's bet against it. */
   readonly basis: string;
-  /** The falsifier, stated on every order so the record can grade the play by it. */
+  /** The play's falsifier, stated on every order so the record can grade the play by it — in its
+   *  own field (`forecast.retireRule`), the owner's alone (#5043), never in the invalidator. */
   readonly retireRule: string;
   readonly minDte: number;
   readonly putDelta?: number;
@@ -272,7 +273,8 @@ function saleText(
         `it, the bot buys 100 shares a contract at ${k} and sells covered calls on them next.`,
       forecast: {
         direction: "up",
-        invalidator: `${symbol} settles below ${k} on ${sale.expiration} — the wheel buys 100 shares at ${k}; ${retireRule}`,
+        invalidator: `${symbol} settles below ${k} on ${sale.expiration} — the bot buys 100 shares at ${k}`,
+        retireRule,
       },
     };
   }
@@ -286,7 +288,8 @@ function saleText(
       `shares stay for the next call. Above it, they are called away at ${k}.`,
     forecast: {
       direction: "up",
-      invalidator: `${symbol} settles below the shares' ${cost} on ${sale.expiration} — the call expires and the shares are underwater; ${retireRule}`,
+      invalidator: `${symbol} settles below the shares' ${cost} on ${sale.expiration} — the call expires and the shares are underwater`,
+      retireRule,
     },
   };
 }
@@ -395,7 +398,7 @@ export function wheel(
   const spec: Wheel = {
     symbol,
     basis: verdict.against ? `${setting.dataShows} ${setting.bet}` : setting.dataShows,
-    retireRule: `the play retires if its ${retireTest(verdict.date)}`,
+    retireRule: `The playbook retires if its ${retireTest(verdict.date)}.`,
     minDte: Math.min(MIN_DTE, Math.max(MIN_DTE_FLOOR, setting.minDte ?? MIN_DTE)),
     ...(setting.putDelta !== undefined ? { putDelta: setting.putDelta } : {}),
     ...(setting.putContracts ? { putContracts: setting.putContracts } : {}),

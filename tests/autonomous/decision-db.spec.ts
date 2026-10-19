@@ -153,7 +153,11 @@ describe("DecisionDb", () => {
     const raw = intent({
       strategy: "sauron-panic-claim",
       expectation: "Expect a bounce.",
-      forecast: { direction: "up", invalidator: "sentiment deteriorates further" },
+      forecast: {
+        direction: "up",
+        invalidator: "sentiment deteriorates further",
+        retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      },
     });
     db.record({
       at: 1,
@@ -174,7 +178,12 @@ describe("DecisionDb", () => {
     expect(row?.context).toMatchObject({ asOf: "2026-09-09T10:00:00Z" });
     expect(row?.outcomes[0]?.intent).toMatchObject({
       strategy: "sauron-panic-claim",
-      forecast: { direction: "up", invalidator: "sentiment deteriorates further" },
+      // The retire rule rides the forecast's stored JSON, so it needs no column of its own (#5043).
+      forecast: {
+        direction: "up",
+        invalidator: "sentiment deteriorates further",
+        retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      },
     });
   });
 

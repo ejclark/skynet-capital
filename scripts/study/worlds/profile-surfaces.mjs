@@ -188,7 +188,14 @@ const FRIEND = [
     act: [click("button", `Why ${PUT} was sold`)],
     // The owner's copy names it as "CRWV-WHEEL · aggressive" under Playbook; the gate strips it.
     // Any rendering of the id counts (getByText: case-insensitive substring) — a strategy tag too.
-    expect: [text("Decided by"), text("CRWV-WHEEL", { absent: true })],
+    // The playbook's retire rule is its falsifier, so it is the owner's too (#5043) — and "the
+    // wheel" with "CRWV" names CRWV-WHEEL as plainly as the id, so it counts as a rendering too.
+    expect: [
+      text("Decided by"),
+      text("CRWV-WHEEL", { absent: true }),
+      text("the wheel", { absent: true }),
+      text("retires if", { absent: true }),
+    ],
   },
 ].map((s) => ({ viewer: "jordan", ...s }));
 
