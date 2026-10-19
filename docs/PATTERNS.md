@@ -5,10 +5,10 @@ have discovered several useful patterns already… there are good patterns to be
 plant seeds to let them marinade… this builds intuition for when to apply patterns once you're
 aware of said pattern."*
 
-This page is where the seeds sit. Vocabulary used to be produced per teardown (`/teardown`), per
-pattern doc ([`FOG-OF-WAR.md`](FOG-OF-WAR.md) keeps its own instance ledger) and per call sheet, and
-never collected — so a pattern named in June was unknown to the session designing in September.
-One ledger, one row per named pattern, so awareness precedes need.
+This page is where the seeds sit. Vocabulary is produced per teardown (`/teardown`), per pattern
+doc ([`FOG-OF-WAR.md`](FOG-OF-WAR.md) keeps its own instance ledger) and per call sheet; left
+uncollected, a pattern named in June is unknown to the session designing in September. One
+ledger, one row per named pattern, so awareness precedes need.
 
 Sibling docs: [`BRAND.md`](BRAND.md) (identity every pattern is checked against),
 [`FOG-OF-WAR.md`](FOG-OF-WAR.md) (one pattern's full decision tree), [`PICTURES.md`](PICTURES.md)
@@ -49,8 +49,8 @@ study it comes from. Red and tiger passes run against each shape before Eric see
 HTML is committed (`docs/design/lofi/`) and the artifact is published from it — a lo-fi carries no
 account data, so the teardown ban on frames does not apply. Lo-fi settles template and flow; hi-fi
 (`/design`, the synced components) settles placement and polish. A pick is written into the owning
-plan issue's decision log the moment it happens — Eric's reactions do not arrive on artifacts (0
-comment threads on the precedent), the issue is the instrument.
+plan issue's decision log the moment it happens — the issue is the record; what Eric answers on a
+round page is read back into it ([`process/REDESIGN.md`](process/REDESIGN.md)).
 
 ## The vocabulary — three words for "where does this information go"
 
@@ -60,9 +60,9 @@ description, when asking for a change.
 | Word | It means | The mechanism | Live instance |
 |---|---|---|---|
 | **kind** | a filter over one list | a query qualifier and a rail chip, one model; never a tab | `is:trade` / `is:feedback` / `is:buy` / `is:bot` on Activity (`app/src/live/activity-feed.ts`, #784 slice 3); `lens:` / `sym:` on Research |
-| **section** | a different *shape* of data on the same page | the rail's section switch (`app/src/shell/section-switch.tsx`), exactly one current, URL-stateful via `?section=`; pages on a phone | Settings; Activity's The Council beside its feed (Booked P&L was a section until #784 slice 3 — see *Summary strip, not a section*) |
-| **sub-view** | a full view of its own | a nested route plus its sub-nav: a link row at the top of its parent's stage, the second line of its own page's head (#3807 slice 2d), or — when the page is the member's own — that page's section switch (amended #3807 slice 2b, `app/src/shell/frame.tsx`) | the any-account page's Ledger / Pulse / Playbooks / Thesis (`app/src/shell/account-head.tsx`, the page's own head, #3807 slice 2d; `/u/:id/playbooks` is now a redirect to R&D → Playbooks, #3623); the Profile family's Milestones and Feedback, folded into `/accounts`' switch (#3807 slice 2b) |
-| **bench** | several sections that are *one instrument's tools* and feed each other | docked together at the bench width, folded to exclusive sections below it; the section switch renders only when folded (`app/src/shell/frame.tsx`) | the Workbench on `/app/trade` — chart · chain · ticket · orders (#3407, Eric's pick 2026-09-22; slices 2–4 land it) |
+| **section** | a different *shape* of data on the same page | the page's section switch (`app/src/shell/section-switch.tsx`, in its controls row or head), exactly one current, URL-stateful via `?section=`; pages on a phone | Settings; Activity's The Council beside its feed (Booked P&L was a section until #784 slice 3 — see *Summary strip, not a section*) |
+| **sub-view** | a full view of its own | a nested route plus its sub-nav: a link row at the top of its parent's stage, the second line of its own page's head (#3807 slice 2d), or — when the page is the member's own — that page's section switch (amended #3807 slice 2b, `app/src/shell/frame.tsx`) | the any-account page's Ledger / Pulse / Playbooks / Thesis (`app/src/shell/account-head.tsx`, the page's own head, #3807 slice 2d; Heartbeat folded into Playbooks, #5073); the Profile family's Milestones and Feedback, folded into `/accounts`' switch (#3807 slice 2b) |
+| **bench** | several sections that are *one instrument's tools* and feed each other | docked together at the bench width, folded to exclusive sections below it; the section switch renders only when folded (`app/src/shell/frame.tsx`) | the Workbench on `/app/trade` — chart · chain · ticket · orders (#3407, Eric's pick 2026-09-22; built in slices 2–4) |
 
 A bench is a composition of sections, not a fourth word: below its width it *is* sections, and the
 falsifier is written on the frame — if the docked bench reads as a mess on the live route it folds at
@@ -88,7 +88,7 @@ for the Eye **and its beam** — "no new colour, only more of the Eye's own" (`f
 word used anywhere else needs one of exactly two things, and *scorch* is the first word to need it:
 a **visible tie to the beam** (the warm colour on the surface reads as the Eye's light actually
 landing there, which the tower already aims at a calendar day — `REGARD_TARGETS` in
-`tower-bus.ts` is `.eh-day`), or a **BRAND amendment**, which is Eric's. A warm cell that merely
+`tower-bus.ts` names `.eh-day`), or a **BRAND amendment**, which is Eric's. A warm cell that merely
 *asserts* a tie without one being visible is the drift the reservation exists to stop. The
 accessibility rule binds either way: colour never carries the signal alone, so a scorched day rides
 with the mark grammar #4364 already shipped (a glyph, a row, a legend entry), never a tint alone.

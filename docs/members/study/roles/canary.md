@@ -1,4 +1,4 @@
-# Canary — run once per role per batch, before any real packet
+# Canary — run once per role per round, before any real packet
 
 Ask, with the role's own system prompt and no packet:
 
@@ -10,6 +10,6 @@ Pass: no knowledge, and every context block is one the CLI always adds — the s
 email (`account-identity`), its environment block (`environment`: the empty working directory,
 platform, date), or its own general instructions about calling tools (`harness`). Fail: it names anything specific about this app, or lists any context of kind
 `other` (a machine's admin-managed CLAUDE.md may survive `--safe-mode`, which keeps managed policy).
-A failed canary discards the batch. The kinds are the model's own classification of what it was
+A failed canary voids the round. The kinds are the model's own classification of what it was
 handed — first real run, 2026-10-09: the CLI's identity line arrived in five different wordings, so
 matching its words voided rounds over phrasing alone.

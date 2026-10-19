@@ -15,7 +15,8 @@ where the expectation did not hold) · confusion points with the member's own wo
 Each finding is one problem the member hit, with:
 
 - `what` — the problem, in plain words, at a specific place in the app
-- `evidence` — the frame numbers and the member's quote
+- `frames` — the frame labels it rests on (F1, F2, …), at least one
+- `quote` — the member's own words, if any; empty for `instrument-only`
 - `voice` — `member-voiced` (the member noticed or said it) or `instrument-only` (only the
   measurements show it)
 - `level` — `structural` (where something lives, what a page is for, how pages connect, what is
@@ -24,5 +25,5 @@ Each finding is one problem the member hit, with:
   (works around it) · Low (minor friction)
 - `frequency` — how many of this member's sessions hit it, out of how many
 
-Merge duplicates. Do not invent problems the sessions do not show; say "no finding" when a task went
-smoothly.
+Merge duplicates. Do not invent problems the sessions do not show: a task that went smoothly adds no
+finding, and `findings` is empty when every task did.

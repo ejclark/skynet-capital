@@ -23,7 +23,7 @@ H7 flexibility and efficiency · H8 aesthetic and minimalist design · H9 help u
 errors · H10 help and documentation.
 Severity: 0 not a problem · 1 cosmetic · 2 minor · 3 major · 4 prevents the task.
 
-Two checks run on every page, whatever else it shows (Eric, 2026-10-14, on round pages: "the
+Three checks run on every page, whatever else it shows (Eric, 2026-10-14, on round pages: "the
 interactable elements to provide context to changes and/or to leave feedback cover content I need to
 evaluate"; and "between mobile and desktop… doubles the work to leave feedback"): **does any control,
 label or bar cover content the person came to read?** (H8, severity 3 when it hides a number or a
