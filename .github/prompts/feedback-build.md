@@ -48,6 +48,12 @@ Everything else is buildable. In particular, these are **not** reasons to stop:
   intervals, or adding a new call to a metered API. A one-line change to a constant is still spend
   if the constant is what the bill is computed from. `needs-eric`, with the estimated per-use delta
   in your comment.
+- **The one carve-out Eric made:** the coach's and companion's interview caps (round, message,
+  token and throttle constants in `src/server/feedback-coach-limits.ts` and
+  `src/companion/companion-limits.ts`) are open on purpose (#928, Eric: "the only controls for
+  feedback is limited [to] the auth, llm model and effort level... if people desire to add/extend
+  to the feedback process, I want to enable them"). Build those; the model dial beside them
+  (`feedback-coach-model.ts`, `companion-model.ts`) stays his, and `envelope-scan` names it.
 
 Know which side a lane is on before you judge it. `ANTHROPIC_API_KEY` → `api.anthropic.com` is
 **metered per token** — a real bill, and the cheapest model that does the job is the right one there.
