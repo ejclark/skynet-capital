@@ -83,9 +83,53 @@ function memoryStore(docs: Docs, writes: string[], gate: Promise<void>) {
     }),
   };
 }
+/** Let every promise chain the page started run to its end (a store read, then the write that
+ *  follows it). It yields to the event loop ten times rather than sleeping 50 ms of wall clock, so
+ *  how long it takes is CPU work and never a timer a busy machine can overrun (#5498). */
 export const settle = async () => {
-  for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 5));
+  for (let i = 0; i < 10; i++) await new Promise((r) => setImmediate(r));
 };
+
+/** The page's clock, in the spec's hands (#5498). A debounce the page waits out in real time — a
+ *  note saves 900 ms after the last keystroke — made a spec sleep 1000 ms and hope the save had
+ *  landed: a 100 ms margin a saturated machine overruns. `open(…, { frozen: true })` swaps the
+ *  page's `setTimeout` for this one, and `v.tick(ms)` moves time and runs what comes due, in order, then
+ *  settles the promises those callbacks started. Nothing fires until a spec ticks. */
+export function pageClock() {
+  let now = 0;
+  let next = 1;
+  const due = new Map<number, { at: number; run: () => void }>();
+  return {
+    install(w: Win) {
+      w.setTimeout = ((fn: TimerHandler, ms = 0, ...args: unknown[]) => {
+        const id = next++;
+        due.set(id, {
+          at: now + Number(ms),
+          run: () => (fn as (...a: unknown[]) => void)(...args),
+        });
+        return id;
+      }) as typeof w.setTimeout;
+      w.clearTimeout = ((id?: number) => {
+        if (id !== undefined) due.delete(id);
+      }) as typeof w.clearTimeout;
+    },
+    async tick(ms: number) {
+      const to = now + ms;
+      for (;;) {
+        const soonest = [...due.entries()]
+          .filter(([, t]) => t.at <= to)
+          .sort((a, b) => a[1].at - b[1].at)[0];
+        if (!soonest) break;
+        due.delete(soonest[0]);
+        now = Math.max(now, soonest[1].at);
+        soonest[1].run();
+        await settle();
+      }
+      now = to;
+      await settle();
+    },
+  };
+}
 
 export async function open(
   docs: Docs | null,
@@ -96,8 +140,11 @@ export async function open(
     gate = Promise.resolve(),
     /** The store itself arrives only when this settles (`use("db")` pending), as #5247 specs it. */
     late = Promise.resolve(),
+    /** The page's timers wait for `v.tick(ms)` instead of real time (see `pageClock`). */
+    frozen = false,
   } = {},
 ) {
+  const clock = frozen ? pageClock() : undefined;
   const { window } = new JSDOM(html, {
     runScripts: "dangerously",
     beforeParse(w) {
@@ -108,6 +155,7 @@ export async function open(
               ? late.then(() => memoryStore(docs, writes, gate))
               : Promise.resolve(null),
         };
+      clock?.install(w);
       before(w);
     },
   });
@@ -128,5 +176,9 @@ export async function open(
   const key = (k: string) =>
     doc.dispatchEvent(new window.KeyboardEvent("keydown", { key: k, bubbles: true }));
   const line = () => doc.getElementById("save-state")?.textContent ?? "";
-  return { window, doc, pin, pop, choices, click, choose, key, line };
+  const tick = (ms: number) =>
+    clock
+      ? clock.tick(ms)
+      : Promise.reject(new Error("open with { frozen: true } to tick the page's clock"));
+  return { window, doc, pin, pop, choices, click, choose, key, line, tick };
 }

@@ -540,6 +540,44 @@ details.ev summary {
   width: 100%;
 }
 
+/* A note under an option (option-notes.mjs): one quiet line under its buttons until tapped. The
+   fold's state is the ▸/▾ shape, never a colour. */
+details.onote {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.onote summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+details.onote summary::-webkit-details-marker {
+  display: none;
+}
+details.onote summary::before {
+  content: "▸\00a0";
+}
+details.onote[open] summary::before {
+  content: "▾\00a0";
+}
+details.onote summary:hover {
+  color: var(--text);
+}
+.onote-t {
+  font: 14px / 1.45 var(--sans);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  max-width: 80ch;
+  box-sizing: border-box;
+}
+
 /* Reaction buttons — a pressed state is a glyph plus a border or strike, never a colour alone. */
 .btns {
   display: flex;
@@ -899,8 +937,9 @@ details.ev summary {
 
 /* Comparing an option with Today (compare.mjs + compare-client.js, #5411). One switch above the
    option's phone frame — a glyph and a word per mode, the pressed one a heavy border and a ✓, never
-   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SWIPE lays them in a
-   sideways strip, the next one peeking; DIVIDER stacks them and clips the option from the left to
+   a colour alone. FLIP stacks both pictures in one grid cell and shows one; SIDE BY SIDE (#5430)
+   sets them in two columns, both whole, a clear button over each half that opens it in Flip (so a
+   tap there never places a mark); DIVIDER stacks them and clips the option from the left to
    --split (%), Today showing through, a line in the text colour ringed in the ground colour where
    they meet, dragged by a thumb-sized handle under the picture. */
 .cmp {
@@ -950,6 +989,7 @@ details.ev summary {
 }
 .cmp-cell {
   grid-area: 1 / 1;
+  position: relative;
   margin: 0;
   min-width: 0;
   background: var(--surface);
@@ -971,7 +1011,11 @@ details.ev summary {
   width: 100%;
   height: auto;
 }
-.cmp .cmp-cell > .shot {
+.cmp .cmp-cell > .shot,
+.cmp .cmp-cell > .shot.phone.areas {
+  /* the cell is a column, so .shot.phone's 390px flex-basis would set its height: at half width
+     (Side by side) the picture is shorter than that and the frame ran on empty below it */
+  flex: none;
   width: 100%;
   box-sizing: border-box;
 }
@@ -986,36 +1030,44 @@ details.ev summary {
 .cmp[data-mode="flip"][data-side="today"] .cmp-cell[data-cell="option"] {
   visibility: hidden;
 }
-.cmp[data-mode="swipe"] .cmp-stage {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
+.cmp[data-mode="side"] .cmp-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
 }
-.cmp[data-mode="swipe"] .cmp-cell {
-  flex: 0 0 86%;
-  scroll-snap-align: start;
+.cmp[data-mode="side"] .cmp-cell[data-cell="option"] {
+  grid-area: 1 / 2;
 }
-.cmp-dots {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
+/* Side by side with areas (#5163): it is the before | after shot, so both pictures get the room.
+   The callout words and their lines need a gutter or a band a half-width picture can't spare (at
+   desktop width the 172px gutter left each picture 0px, 2026-10-15), so they go; the outlines and
+   numbers stay, the same on both halves. */
+.cmp[data-mode="side"] .shot.areas :is(.agut, .aband, .arail, .aline) {
+  display: none;
 }
-.cmp-dot {
-  min-width: 36px;
-  min-height: 36px;
+.cmp[data-mode="side"] .shot.areas .arow {
+  padding: 0 0 0 28px;
+}
+.cmp-open {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   border: 0;
+  border-radius: 8px;
   background: transparent;
-  color: var(--text);
-  font-size: 16px;
-  cursor: pointer;
+  cursor: zoom-in;
 }
-.cmp-dot::before {
-  content: "○";
+.cmp-open:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
 }
-.cmp-dot[aria-current="true"]::before {
-  content: "●";
+.cmp-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 .cmp[data-mode="divider"] .cmp-cell[data-cell="option"] {
   clip-path: inset(0 0 0 calc(var(--split) * 1%));
@@ -1034,6 +1086,31 @@ details.ev summary {
   background: var(--text);
   box-shadow: 0 0 0 2px var(--bg);
   pointer-events: none;
+}
+/* The divider's grip sits on the line itself and stays in view as the picture scrolls past it
+   (sticky inside the line's full-height box), so the handle is always beside the part he is
+   looking at; a drag on it moves the line (compare-client.js). The track under the picture stays
+   for the keyboard. Eric, 2026-10-15: the handle was "often out of view of the actual change". */
+.cmp-grip {
+  display: none;
+}
+.cmp[data-mode="divider"] .cmp-grip {
+  display: block;
+  position: sticky;
+  top: calc(50vh - 22px);
+  width: 44px;
+  height: 44px;
+  margin: 12px 0 12px -21px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font: 700 15px / 40px var(--sans);
+  text-align: center;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 7;
 }
 .cmp-track {
   position: relative;
@@ -1533,8 +1610,26 @@ body.noting * {
     grid-row: 2;
   }
   .opt:has(> .pics > .shot.phone.areas),
-  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas) {
+  .opt:has(> .pics > .wsw[data-width="phone"] .shot.phone.areas),
+  .opt:has(> .pics > .cmp .shot.phone.areas) {
     grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
+  }
+  .opt > .pics > .cmp:has(.shot.phone.areas) {
+    flex-basis: calc(390px + 28px + 172px);
+  }
+  /* Side by side is the before | after shot: it takes the card's whole width under the option's
+     words, each picture up to its real phone width beside the other. */
+  .opt > .pics > .cmp[data-mode="side"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+  }
+  .opt:has(> .pics > .cmp[data-mode="side"]) > .side {
+    grid-column: 1 / -1;
+  }
+  .cmp[data-mode="side"] .cmp-stage {
+    grid-template-columns: repeat(2, minmax(0, calc(390px + 28px)));
+    column-gap: 24px;
   }
   /* no phone frame: the words lead, the desktop frame spans below them */
   .opt:not(:has(.shot.phone)) > .side {

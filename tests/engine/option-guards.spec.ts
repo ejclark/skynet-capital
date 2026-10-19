@@ -166,12 +166,16 @@ describe("option guards — every refusal names itself", () => {
     );
   });
 
-  it("option-spans-print: on the session after the window, where S2 has already let the print go", () => {
+  it("s2-print: on the session after the window — the protected window covers it, so S2 refuses first", () => {
+    // Before #4807 slice 5, S2 let the print go after its last possible day and rule 6 caught this
+    // open; now S2 reads the protected window, which runs through the session after.
     const at = "2026-11-17T16:00:00Z"; // 11:00 ET
     const dec = "CRWV261218P00085000";
     const late = anOptionIntent({ option: { legs: [{ occSymbol: dec, side: "sell", ratio: 1 }] } });
-    expect(verdict(late, { context: market([anOptionQuote(dec, { at })], at) })).toBe(
-      "option-spans-print",
+    expect(verdict(late, { context: market([anOptionQuote(dec, { at })], at) })).toBe("s2-print");
+    const after = "2026-11-18T16:00:00Z";
+    expect(verdict(late, { context: market([anOptionQuote(dec, { at: after })], after) })).not.toBe(
+      "s2-print",
     );
   });
 

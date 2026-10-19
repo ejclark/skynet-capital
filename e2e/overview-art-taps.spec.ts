@@ -4,14 +4,16 @@ import { expect, test } from "@playwright/test";
 // (`.char-blend`, sauron-card.css) is pulled 90px up over whatever sits above it: there, the bottom
 // of the decision card or the positions book. The shade is decoration; a tap on it must land on the
 // control underneath. Before the fix the shade's box took the tap (Playwright: "div.char-blend …
-// intercepts pointer events"), so "Review on Trade ↗" did nothing on a phone.
+// intercepts pointer events"), so "Review on Trade ↗" did nothing on a phone. #4976: even with the
+// tap through, the shade's opaque floor still covered the control's bottom edge, so on a phone the
+// shade no longer rises over anything (`char-card--bare`).
 //
 // Measured on the any-account page, which the offline server renders with no sign-in and which
 // lays out the same `.overview-grid` → `.overview-card` stack as a bot's Profile page.
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
-test("the character card's shade lets taps through to the controls under it (#4970)", async ({
+test("the character card's shade never covers the controls above it on a phone (#4970, #4976)", async ({
   page,
 }) => {
   await page.goto("/app/u/sauron");
@@ -30,37 +32,33 @@ test("the character card's shade lets taps through to the controls under it (#49
         if (hit && blend?.contains(hit)) taken.push(`${fx},${fy} → ${hit.className}`);
       }
     }
-    // Every control above the card that the shade overlaps must take its own tap at its centre.
-    const controls = [
+    // No control above the card may sit under the shade at all (#4976): on a phone the shade has no
+    // art to rise over, and its floor is opaque, so even a grazed bottom edge reads as cut off.
+    // `elementFromPoint` skips the shade (it lets go of the pointer), so this is measured, not hit.
+    const under = [
       ...document.querySelectorAll<HTMLElement>(
         ".overview-grid :is(a, button, input, select, [role=button])",
       ),
-    ].filter((c) => !c.closest(".overview-card"));
-    const overlapped = controls.filter((c) => {
-      const b = c.getBoundingClientRect();
-      return b.width > 0 && b.bottom > r.top && b.top < r.bottom;
-    });
-    const stolen = overlapped
+    ]
+      .filter((c) => !c.closest(".overview-card"))
       .filter((c) => {
         const b = c.getBoundingClientRect();
-        const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-        return !(hit && (hit === c || c.contains(hit)));
+        return b.width > 0 && b.bottom > r.top && b.top < r.bottom;
       })
       .map((c) => c.textContent?.trim() || c.tagName);
-    // Not vacuous only if some control's centre — the point the tap check uses — sits on the shade;
-    // an edge that merely grazes it would pass the centre check even before the fix.
-    const centred = overlapped.filter((c) => {
-      const b = c.getBoundingClientRect();
-      const cy = b.top + b.height / 2;
-      return cy > r.top && cy < r.bottom;
-    }).length;
-    return { taken, centred, stolen };
+    // Not vacuous: some control sits just above the card, so a pull would have reached it.
+    const above = [...document.querySelectorAll<HTMLElement>(".overview-grid :is(a, button)")]
+      .filter((c) => !c.closest(".overview-card"))
+      .some((c) => {
+        const b = c.getBoundingClientRect();
+        return b.bottom <= r.top && b.bottom > r.top - 90;
+      });
+    return { taken, under, above };
   });
 
   expect(seen.taken, "points over the shade that the art layer took").toEqual([]);
-  // Not vacuous: on this page the pull really does lay the shade over a control's centre above the card.
-  expect(seen.centred, "controls whose centre sits under the shade").toBeGreaterThan(0);
-  expect(seen.stolen, "controls under the shade whose tap something else took").toEqual([]);
+  expect(seen.above, "a control within the shade's old 90px pull above the card").toBe(true);
+  expect(seen.under, "controls above the card that the shade paints over").toEqual([]);
 
   // The league under the shade stays tappable: only the decoration lets go of the pointer.
   const toggle = page.locator(".overview-card .league-toggle button").first();

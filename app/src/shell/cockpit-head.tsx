@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   type AccountNetWorthView,
   type AccountsNetWorthView,
@@ -10,6 +10,7 @@ import type { OwnedAccount } from "../live/settings";
 import { EnvPill, KindChip } from "../ui";
 import { AccountMenu } from "./account-menu";
 import { ALL_ACCOUNTS } from "./account-switcher";
+import { BookHealthLine } from "./book-health-line";
 import { ConnectLink } from "./connect-link";
 import { HeadVitals } from "./head-vitals";
 import { PlaybooksHeadLine } from "./heartbeat";
@@ -28,7 +29,11 @@ import type { PageSection } from "./sections";
  *      (`account-menu.tsx`: switch, the default star, + Add an account, its settings, its league
  *      page — moved off the head on Eric's "secondary/auxiliary… should be relocated"), its kind and
  *      SIM, and on a bot its head line at the row's right edge — "● Running · 7 playbooks ›"
- *      (`PlaybooksHeadLine`, #5073: a plain link into the Playbooks section, never a popover).
+ *      (`PlaybooksHeadLine`, #5073: a plain link into the Playbooks section, never a popover),
+ *      and under it, on any one account, the book's health — "■ 1 gate · ◆ 2 signals ›" or
+ *      "● Balanced" (`BookHealthLine`, #5493 slice 2). The two stack in the row's right slot, so
+ *      the row keeps its height; the counts open the Balance section (slice 3), on a bot and a
+ *      human account alike.
  *   2. THE VITALS — net worth, today, and how much is cash (`head-vitals.tsx`): the dimensions
  *      that cut across every section, said once (Eric's Level 2 note: "the most relevant dimensions
  *      that overlap/intersect across various views… minimal content"). On a phone the cash is a
@@ -80,6 +85,38 @@ const VIEWER: Record<"milestones" | "feedback", { readonly who: string; readonly
     line: "What you've sent Moneypenny — no account's numbers here.",
   },
 };
+
+/** The account row's right slot: a bot's head line opening Playbooks, then the book's health
+ *  under it opening Balance (#5493 slices 2–3) — the findings behind the counts, on a human
+ *  account too, where there is no head line above it. */
+function HeadStatus({
+  account,
+  section,
+  onSelectSection,
+}: {
+  readonly account: OwnedAccount;
+  readonly section: AccountsSection;
+  readonly onSelectSection: (section: AccountsSection) => void;
+}): ReactElement {
+  const door = (to: AccountsSection) => (label: ReactNode) => (
+    <button
+      type="button"
+      className="hb-line-link"
+      aria-current={section === to ? "true" : undefined}
+      onClick={() => onSelectSection(to)}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="head-status">
+      {account.kind === "bot" ? (
+        <PlaybooksHeadLine deskId={account.id} renderLink={door("playbooks")} />
+      ) : null}
+      <BookHealthLine deskId={account.id} renderLink={door("balance")} />
+    </div>
+  );
+}
 
 export function CockpitHead({
   accounts,
@@ -137,20 +174,8 @@ export function CockpitHead({
             />
             {picked ? <KindChip kind={picked.kind} /> : null}
             <EnvPill />
-            {picked?.kind === "bot" ? (
-              <PlaybooksHeadLine
-                deskId={picked.id}
-                renderLink={(label) => (
-                  <button
-                    type="button"
-                    className="hb-line-link"
-                    aria-current={section === "playbooks" ? "true" : undefined}
-                    onClick={() => onSelectSection("playbooks")}
-                  >
-                    {label}
-                  </button>
-                )}
-              />
+            {picked ? (
+              <HeadStatus account={picked} section={section} onSelectSection={onSelectSection} />
             ) : null}
           </>
         )}

@@ -110,13 +110,13 @@ const under = (selector) =>
     if (el) window.scrollBy(0, el.getBoundingClientRect().top - sticky - 8);
   }, selector);
 
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator("#act-meta-sell").waitFor();
 await under("#ledger-day-2026-10-01");
 await shoot("ledger-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.locator("#act-meta-sell").waitFor();
 await shoot("ledger-desktop");
 

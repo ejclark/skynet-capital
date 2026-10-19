@@ -64,6 +64,8 @@ export interface SymbolResearch {
   readonly ledgers: readonly ResearchDoc[];
   /** Studies whose text mentions the symbol (word-boundary match). */
   readonly studies: readonly ResearchDoc[];
+  /** The nearest upcoming event's ledger — the one the symbol's current stance is read from. */
+  readonly nearest: ResearchDoc | null;
   /** Verbatim "Stance & kill switches" excerpt from the nearest upcoming ledger, rendered. */
   readonly stance: { readonly html: string; readonly from: ResearchDoc } | null;
 }
@@ -155,14 +157,19 @@ export function ledgerShelf(root: string = RESEARCH_DIR()): {
  * Everything on the shelf. `root` is injectable for specs; defaults to the real docs tree.
  * `weeks/` (the weekly study genre, #1716) shelves WITH the studies rather than beside them: a
  * week's call sheet is a cross-name study that happens to be keyed by date, and its `# ` title
- * already names the week, so it sorts and reads as one of them.
+ * already names the week, so it sorts and reads as one of them. `convictions/` (#5482) shelves
+ * there too: a member's view is a call sheet with one row per claim, read like any study.
  */
 export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
   return memoByCorpus(
     "listResearch",
     root,
     () => ({
-      studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
+      studies: [
+        ...docsIn(root, ""),
+        ...docsIn(join(root, "weeks"), "weeks/"),
+        ...docsIn(join(root, "convictions"), "convictions/"),
+      ],
       ledgers: ledgerShelf(root).docs,
     }),
     { detached: true },
@@ -208,7 +215,10 @@ function rewriteDocLinks(html: string): string {
     if (/^[a-z]+:\/\//.test(target)) return whole; // absolute URLs pass through
     const flat = target.replace(/^(\.\.\/)+/, "").replace(/^\.\//, "");
     const slug =
-      flat.startsWith("events/") || flat.startsWith("weeks/") || !flat.includes("/")
+      flat.startsWith("events/") ||
+      flat.startsWith("weeks/") ||
+      flat.startsWith("convictions/") ||
+      !flat.includes("/")
         ? flat.replace(/\.md$/, "")
         : null;
     return slug ? `href="/research/${slug}${hash ?? ""}"` : whole;
@@ -492,15 +502,16 @@ const tickerIndex = (root: string): readonly { slug: string; tokens: ReadonlySet
     [
       ...shelvedFiles(root, ""),
       ...shelvedFiles(join(root, "weeks"), "weeks/"),
+      ...shelvedFiles(join(root, "convictions"), "convictions/"),
       ...shelvedFiles(join(root, "events"), "events/"),
     ].map(({ slug, file }) => ({ slug, tokens: tickerTokens(readFileSync(file, "utf8")) })),
   );
 
 /**
- * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
- * no new facts, no summarization, just the join the app never surfaced.
- * No caller since the symbol page was retired (#3816 slice 8); kept for #3962, which wires this
- * full-text search into the R&D symbol filter.
+ * Everything symbol-keyed the repo already holds, assembled — no new facts, no summarization, just
+ * the join. Written for the symbol page retired in #3816 slice 8; read now by the symbol dossier
+ * (`symbol-dossier.ts`) and the symbol summary (`src/research/symbol-outlook.ts`, #4807), which
+ * both take the current stance from `nearest`, so "which ledger speaks for the symbol" is one rule.
  */
 export function symbolResearch(
   symbol: string,
@@ -529,5 +540,5 @@ export function symbolResearch(
       stance = { html: rewriteDocLinks(marked.parse(section) as string), from: nearestDoc };
     }
   }
-  return { symbol: sym, events, ledgers, studies, stance };
+  return { symbol: sym, events, ledgers, studies, nearest: nearestDoc ?? null, stance };
 }

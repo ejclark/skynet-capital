@@ -685,3 +685,35 @@ describe("the put Wait says how rich premium and no buy signal fit together", ()
     expect(text).toContain("that alone isn't a reason to take on more of a stock");
   });
 });
+
+describe("the research ledger's own falsifier (#5720)", () => {
+  const quote = "A CoreWeave-specific 8-K or IR date confirmation changes the picture";
+  const withFalsifier = (provesWrong?: { quote: string; asOf?: string }) => {
+    const base = inputs().ledger;
+    if (!base) throw new Error("fixture has no ledger");
+    return positionGuidance(
+      inputs({
+        stake: { cash: 40_000, goal: "income", happyToOwnAt: 75 },
+        ledger: { ...base, ...(provesWrong ? { provesWrong } : {}) },
+      }),
+    );
+  };
+
+  it("WHEN the ledger states one, the shares and put levers quote it, dated and attributed", () => {
+    const { shares, csp } = byLever(withFalsifier({ quote, asOf: "2026-10-18" }));
+    const line = `The research, as of Oct 18: "${quote}" → come back here.`;
+    expect(shares?.provesWrong).toBe(line);
+    expect(csp?.provesWrong).toBe(line);
+  });
+
+  it("IF the ledger states none, THEN both levers keep their own line", () => {
+    const { shares, csp } = byLever(withFalsifier());
+    expect(shares?.provesWrong).toContain("If the research starts supporting a buy");
+    expect(csp?.provesWrong).toContain("If the research starts supporting a buy");
+  });
+
+  it("leaves the covered-call lever's falsifier alone — the ledger's call is not about premium", () => {
+    const b = withFalsifier({ quote, asOf: "2026-10-18" });
+    expect(byLever(b).cc?.provesWrong).not.toContain(quote);
+  });
+});

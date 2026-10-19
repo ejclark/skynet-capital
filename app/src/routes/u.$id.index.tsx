@@ -7,7 +7,9 @@ import { initialPositionsQuery } from "../live/look-sort";
 import { useRefineSearch } from "../live/refine-search";
 import { AccountLeague, useOwnsAccount } from "../shell/account-head";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
+import { PositionPage, PositionPageGone } from "../shell/position-page";
 import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
+import { positionPageFromSearch, usePositionPage } from "../shell/use-position-page";
 import { useTowerColumn } from "../shell/use-tower-column";
 
 /**
@@ -25,6 +27,8 @@ import { useTowerColumn } from "../shell/use-tower-column";
  * reads it in DOM order: tiles → book → card, so what this account holds comes before the art.
  * From the bench width the card gives up its art to the page frame's tower column (#3977) and its
  * league stands under the tower there (`SauronCard` `under`), so the page draws one tower.
+ * A position's "Full page ›" (#5070 slice 6) takes the whole Overview's place, `?position=`, and
+ * its "← Positions" returns to the row, still open (`use-position-page.ts`).
  * Ownership decides the writes (dead end 4): off an account the viewer owns, the rows offer no
  * Close and the New trade card gives way to one plain sentence above the blotter.
  */
@@ -40,6 +44,8 @@ function DeskPage(): ReactElement {
   });
   const canTrade = useOwnsAccount(id);
   const towerColumn = useTowerColumn();
+  // A position's full page (#5070 slice 6): `?position=` puts it in the Overview's place.
+  const fullPage = usePositionPage();
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
   // a beat behind (replace, no history spam, no jump to the top: #4944) — so a refresh or a shared
   // link keeps the filter.
@@ -59,6 +65,20 @@ function DeskPage(): ReactElement {
   if (desk.isError)
     return <p className="note">This account is unreachable — {String(desk.error)}</p>;
   const { desk: d, generatedAt, landmark } = desk.data;
+  if (fullPage.page !== undefined && !d.error) {
+    const held = d.positions.find((p) => p.symbol === fullPage.page);
+    return held ? (
+      <PositionPage
+        deskId={d.id}
+        position={held}
+        positions={d.positions}
+        canTrade={canTrade}
+        onBack={fullPage.closePage}
+      />
+    ) : (
+      <PositionPageGone symbol={fullPage.page} onBack={fullPage.closePage} />
+    );
+  }
 
   return (
     <>
@@ -80,6 +100,8 @@ function DeskPage(): ReactElement {
               onFilterChange={setFilter}
               canTrade={canTrade}
               decisions={d.decisions ?? []}
+              openRow={fullPage.open}
+              onFullPage={fullPage.openPage}
             >
               {canTrade ? <NewTradeCard deskId={d.id} /> : null}
             </PositionsBlotter>
@@ -101,6 +123,8 @@ export const Route = createFileRoute("/u/$id/")({
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
       ? { q: search.q }
       : {}),
+    // A position's full page and the row its back returns to, open (#5070 slice 6).
+    ...positionPageFromSearch(search),
   }),
   component: DeskPage,
 });

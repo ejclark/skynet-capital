@@ -8,6 +8,7 @@ export interface AuditIssue {
   state?: string;
   closedByPullRequests?: unknown[];
   linkedPullRequests?: unknown[];
+  labels?: readonly ({ name?: string } | string)[];
 }
 export interface AuditComment {
   body?: unknown;
@@ -51,6 +52,8 @@ export interface AuditDeps {
   /** The work spigot's dial and the title it currently shows (#3960 criterion 4) — null when it
    *  could not be read, which skips the title sync without touching the other checks. */
   workMode?: WorkModeState | null;
+  /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
+  driftChore?: AuditIntent | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
@@ -92,6 +95,8 @@ export const CONFLICT_MARKER: RegExp;
 
 /** Did this issue get an ANSWER — closed, or linked to a PR? */
 export function answered(issue?: AuditIssue): boolean;
+/** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
+export function owedAnswer(issue?: AuditIssue): boolean;
 /** The pure stall/silent-feedback/plan-stall audit: dependencies in, flag intents out. */
 export function audit(deps?: AuditDeps): AuditIntent[];
 /** The pure per-issue plan-stall decision — is this a live candidate, and if so how old? */

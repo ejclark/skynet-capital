@@ -16,6 +16,10 @@ import { isOccSymbol } from "../trading/option-symbols.js";
  * the extra quotes never widen a base persona's universe — `personas/universe-view.ts` cuts its
  * view back to the ten names; only the playbook that asked for a ticker sees it.
  *
+ * A ticker a member's draft playbook is in its shadow test on (#5457 slice 2) is priced too, though
+ * no roster trades it: the test decides it against a live quote, and without one it would record
+ * nothing and say nothing.
+ *
  * A held ticker stays streamed after its playbook leaves, so the lot keeps a LIVE price for equity
  * and the daily-loss breaker; a ticker that leaves the stream leaves the momentum tracker too
  * (`MomentumTracker.track`), so a frozen price is never restamped as fresh.
@@ -32,8 +36,10 @@ export function streamedSymbols(
   universe: readonly string[],
   rosters: readonly Pick<StreamRoster, "enabled">[],
   held: Iterable<string>,
+  /** Tickers priced for a reason other than a roster or a holding — a shadow test's. */
+  wanted: Iterable<string> = [],
 ): string[] {
-  const extra = new Set<string>(held);
+  const extra = new Set<string>([...held, ...wanted]);
   for (const roster of rosters) {
     for (const { playbook } of roster.enabled) {
       for (const symbol of playbook.symbols) extra.add(symbol);
@@ -65,6 +71,8 @@ export function followBotsStream(deps: {
   readonly tracker: { track(symbols: readonly string[]): void };
   readonly universe: readonly string[];
   readonly rosters: () => readonly StreamRoster[];
+  /** Extra tickers to price, read on every refresh (the shadow tests', #5457). */
+  readonly wanted?: () => Iterable<string>;
   readonly log?: (line: string) => void;
 }): BotsStream {
   const log = deps.log ?? (() => undefined);
@@ -73,7 +81,7 @@ export function followBotsStream(deps: {
   let unmanagedSeen = "";
 
   const refresh = () => {
-    const next = streamedSymbols(deps.universe, deps.rosters(), held);
+    const next = streamedSymbols(deps.universe, deps.rosters(), held, deps.wanted?.() ?? []);
     const before = current;
     if (before && before.length === next.length && before.every((s, i) => s === next[i])) return;
     current = next;

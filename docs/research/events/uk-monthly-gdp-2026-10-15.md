@@ -223,3 +223,77 @@ this doc goes quiet.
 
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["imf-world-bank-annual-meetings-2026-10-12","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","bobl-5y-auction-2026-10-13","existing-home-sales-2026-10-13","opec-momr-2026-10-13","sp-global-investment-manager-index-2026-10-13","beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","iea-omr-2026-10-14","jgb-5y-auction-2026-10-14","ssa-cola-2027-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","opex-2026-10-16","tic-monthly-2026-10-16","treasury-primary-dealer-agenda-2026-10-16","fomc-blackout-start-2026-10-17","nahb-hmi-2026-10-19","housing-starts-2026-10-20","jgb-20y-auction-2026-10-20","meta-nm-privacy-penalty-ruling-2026-10-20","pending-home-sales-2026-10-20","uk-labour-market-2026-10-20"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-16, D+1 — inside the `closeOutWithinDays` window).** Macro-print mode, `symbols: []`:
+the `earnings-cycle` / `intraday-edges` caches were busted per the contract and held nothing. "Re-run
+instrument data" here is the release itself, fetched direct this session from the ONS bulletin pages
+(`gdpmonthlyestimateuk/august2026`, `indexofproduction/august2026`, `indexofservices/august2026`, all HTTP
+200, each reading "Release date: 15 October 2026", "Next release: 12 November 2026"), plus Yahoo 5-minute
+bars (extended hours) for NVDA/AVGO/MRVL/CRWV and daily `^VIX`. The date was on time, as the ledger's
+rows said; the entry stays `estimate` in the calendar file (nothing to trade, so a flip buys nothing).
+
+### What printed — ONS primary
+
+| Line | August 2026 | Before | Read |
+|---|---|---|---|
+| **Monthly GDP** | **+0.1% m/m** | July **+0.4%** (unrevised), June +0.4% (was +0.3%) | inside the **+0.1% to +0.4%** base case, at its floor |
+| GDP, 3m on 3m | **+0.7%** | 3m to July +0.5% (was +0.4%) | eighth straight 3m/3m rise; stronger than the +0.4% trend the ledger extended |
+| **Services** | **0.0% m/m**, **+0.9%** 3m/3m | July +0.5% m/m; 3m to July +0.7% (was +0.6%) | stalled on the month; 3m lead intact (prof/sci/tech +2.8%, info/comms +2.8%, admin/support +3.0%) |
+| **Production** | **+0.8% m/m**, **−0.2%** 3m/3m | July +0.3%; 3m to July −0.7% (was −0.5%) | the month's whole upside (manufacturing +1.2%, pharma +5.1%) |
+| **Construction** | **−0.2% m/m**, **−1.0%** 3m/3m | 3m to July −0.2% (was −0.5%) | still falling |
+
+ONS's own words: *"Monthly GDP grew by 0.1% in August 2026, following an unrevised growth of 0.4% in July
+2026 … The growth in August was driven by a 0.8% growth in production, with services showing no growth,
+and construction falling by 0.2%."* The release says it is consistent with the 2026-09-30 quarterly national
+accounts and Blue Book 2026.
+
+**Against the stance.** The headline held; the shape was half right. The *three-month* picture is the
+ledger's picture, only stronger (services-led, production and construction negative). The *month* was
+not: August was carried by production while services printed flat, so "services-led on the month" was wrong
+and the "services keeps carrying the headline" trigger in Signals & conditions did not fire either way
+(services did not turn negative, production did not turn sharply positive on the 3m view). Revisions also
+moved the baseline the ledger quoted: July's 3m/3m construction −0.5% is now −0.2%, production −0.5% is
+now −0.7%. A pre-print reading, found after the fact (**NEWS:**, 2026-10-08): a Deutsche Bank nowcast of
+**0.0% m/m** for August, which the print beat by 0.1pp — the ledger had recorded no consensus, and this
+single nowcast is not a polled one.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| `FT-uk-monthly-gdp-2026-10-15-1` (services-led expansion continues, not a contraction) | ≥ **0.0%** m/m | **+0.1%** | **pass** — one observation, not a promotion: it cleared by 0.1pp and the month's composition differed from the registration's |
+
+### The channel kill-switch, adjudicated
+
+The stance named a kill: a tracked name moving **>1%** in **02:00–09:30 ET** on 2026-10-15 *attributable to
+the ONS release*. Not triggered on attribution, with a limit stated up front: **no price series exists
+for the 02:00 ET slot itself** (Yahoo's extended session opens 04:00 ET), so the instant of the print is
+unobserved and the "no price channel" premise is un-falsified rather than proven.
+
+| Name | 04:00 → 08:25 ET | 08:25 → 09:25 ET (US retail sales + PPI, 08:30) | 04:00 → 09:25 ET |
+|---|---|---|---|
+| NVDA | +0.25% | −1.17% | −0.92% |
+| AVGO | +0.35% | −0.93% | −0.59% |
+| MRVL | −0.88% | −1.85% | **−2.71%** |
+| CRWV | **+4.16%** | −4.97% | −1.02% |
+
+The two >1% windows (MRVL, CRWV) put their moves after 08:25, inside the US 08:30 data — Census retail sales
+printed **+0.8%** against a **+0.3%** street ([`retail-sales-2026-10-15`](retail-sales-2026-10-15.md)'s
+outcome) — which is the attribution the ledger said to check first. CRWV's **+4.16%** before 08:25 has no
+cause found here; a 0.1% UK print is not a credible one, but 5-minute bars cannot exclude it. VIX went
+**15.27** (10-13) → **16.87** (10-14) → **16.46** (10-15), Yahoo `^VIX`, a risk-off day that explains more of
+the tape than a UK activity print.
+
+**Search-result hygiene, recorded.** A first web search for the print returned a synthesized answer that
+mixed 2025 articles into the 2026 figures (it quoted a 0.2% consensus and a +0.3% 3m figure); those did
+not survive the ONS primary (+0.7% 3m) and are discarded. Every number above is from the ONS pages or the
+Yahoo bars; the one unreferenced-to-primary item is the Deutsche Bank nowcast, labelled **NEWS:**.
+
+**Honest limits.** No polled consensus found; no first-party event study of UK monthly-GDP release days was
+run (the initial research deferred it, and one 0.1pp beat on a `symbols: []` entry does not make a case for
+one). The tier stays `low`.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"low:0+","adjacentIds":["imf-world-bank-annual-meetings-2026-10-12","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","bobl-5y-auction-2026-10-13","existing-home-sales-2026-10-13","opec-momr-2026-10-13","sp-global-investment-manager-index-2026-10-13","beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","iea-omr-2026-10-14","jgb-5y-auction-2026-10-14","ssa-cola-2027-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","opex-2026-10-16","tic-monthly-2026-10-16","treasury-primary-dealer-agenda-2026-10-16","fomc-blackout-start-2026-10-17","nahb-hmi-2026-10-19","housing-starts-2026-10-20","jgb-20y-auction-2026-10-20","meta-nm-privacy-penalty-ruling-2026-10-20","pending-home-sales-2026-10-20","uk-labour-market-2026-10-20"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->

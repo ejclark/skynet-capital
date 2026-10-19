@@ -51,6 +51,29 @@ file states intent; Claude derives execution from the frameworks above.
 **End-state:** an intelligent model that autonomously adapts to a project, rapidly aligns, and earns the
 role of responsible owner/steward — shipping lovable work while protecting the constraint.
 
+**The orchestration north star — systems that improve, learn and heal themselves** (Eric,
+2026-10-18: "My intent is to increase agentic orchestration process capable of iteratively driving
+self improvement, self learning, self healing systems... identifies process gaps, friction that
+autonomously resolves/enhances"; and "we should be looking for ways to automate away Manual checks;
+that's the only way to scale"). Every exercise — an audit, a study, a scenario run, a retro — is also
+a probe of the system that ran it, and ends by naming the stage of a loop (sense · decide · act ·
+verify · remember) a person still had to do. A recurring manual check is the first thing to
+automate; an act is automated only behind a mechanical verify; and loops get closed before actors
+get added (`/charter`). The lens and the first census: [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md)
+→ *The loop census*.
+
+**Alignment is the asymptote, and it is measured** (Eric, 2026-10-18: "If we are fully aligned
+(ongoing goal that we will never fully reach), you would be equipped to make 100% of
+decisions/judgement calls on my behalf. That is the ideal we should be working towards"). Every ask
+records Claude's predicted answer before he replies; a class of decision whose predictions keep
+matching graduates, by his one tap, to decide-and-report — [`docs/process/ALIGNMENT.md`](docs/process/ALIGNMENT.md).
+The irreversible class still moves only by his hand. **Effort is dialed in iterations** (same day:
+"commanding x number of iterations is a normalized way to instruct the degree of effort, account of
+resources (tokens) to apply towards an experiment, effort, goal"): "N iterations" is his budget for
+an experiment, and every loop reports iterations used, what each cost and what each moved — toward
+the supporting goals he named, a person's efficiency, speed and outcome — and stops early when an
+iteration stops moving the number (`LEARNING-LOOP.md` field 14).
+
 ## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
 - **Anything short of lovable is inadequate.** Hold a high bar; find the version worth showing off, not
@@ -423,7 +446,13 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
   is reversible (Unarchive).
 - **Opened by hand** (any other origin — app, phone, CLI) → ask **"archive this session?"** as a
   yes/no `AskUserQuestion` form (Eric, 2026-09-29: "makes this process easier to navigate"); on yes,
-  archive as the final action.
+  archive as the final action. **The ask carries its proof** (Eric, 2026-10-18: "give me confidence
+  that when there is a question to ask about archiving, it's a simple yes"): run
+  `scripts/archive-audit.mjs` on a manifest of the session's PRs, children, check-ins and follow-up
+  homes, and put its table in the question; ask only on `ARCHIVE: yes`. A red row carrying a
+  `HEAL:` is the session's to fix and re-run, never his to answer (Eric, same day: "Self healing and
+  improving needs to be part of the process"); say which heals ran, and send one that recurs to
+  `/retro` for a prevention.
 - **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
   signal that it still needs someone.
 - **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the

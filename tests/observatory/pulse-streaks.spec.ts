@@ -80,7 +80,7 @@ describe("pulseStreaks — trading-day runs", () => {
   it("tones an open losing run negative and reports its loss as a negative total", () => {
     const running = row([close(10, 100), close(11, 90)], "Running red");
     expect(running).toMatchObject({ value: "1 trading day", tone: "neg" });
-    expect(running?.note).toBe("2026-08-11 → 2026-08-11 · -$10 · -10.00%");
+    expect(running?.note).toBe("2026-08-11 → 2026-08-11 · −$10 · -10.00%");
   });
 
   it("says it needs history rather than showing a zero-day run", () => {

@@ -14,7 +14,12 @@
  * action — estimate events still get researched — but every trading-adjacent statement written
  * about an event must carry its confirmed/estimate label honestly.
  */
-import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "./earnings-calendar.js";
+import {
+  daysUntil,
+  type EarningsPrint,
+  printEventId,
+  UPCOMING_PRINTS,
+} from "./earnings-calendar.js";
 import { type ImpactTier, MARKET_EVENTS, type MarketEvent } from "./market-events-data.js";
 
 // Re-exported so every consumer keeps importing the shape AND the table from this module — the
@@ -36,7 +41,7 @@ export function earningsAsEvents(
   impactOf: (symbol: string) => ImpactTier = () => EARNINGS_IMPACT,
 ): MarketEvent[] {
   return prints.map((p) => ({
-    id: `${p.symbol.toLowerCase()}-${p.date}-print`,
+    id: printEventId(p),
     kind: "earnings",
     title: `${p.symbol} earnings print`,
     date: p.date,

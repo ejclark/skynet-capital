@@ -148,6 +148,7 @@ Registered: `FT-warsh-imf-fireside-2026-10-15-1` in
 | 2026-10-11 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.6pt since last), band unchanged (medium:0+), 37 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-13 |
 | 2026-10-13 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 15.2 (+0.4pt since last), band unchanged (medium:0+), 37 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-15 |
 | 2026-10-15 | D-0 | **Full session (pre-print, read 03:55 UTC = 23:55 ET 10-14; PPI/retail sales not yet out).** **Slot:** Fed Oct page re-fetched direct (HTTP 200, 106,758 bytes): the 11:30 p.m. row stands, typo fixed to "Chairman"; no Warsh slot elsewhere; kill 1 unfired. **Macro:** core CPI +0.3% m/m (not the >=0.4%/<=0.1% line, so kill 2 unfired on CPI; retail sales pending); headline +0.6% / 3.7% y/y was hot, S&P ~-1.2%. **Odds (sibling ledgers):** Oct hike 24-29% on venues (Kalshi/Polymarket), ~54% on CME via press; Dec hike ~78%. Dovish-hedge tail now less likely than the hawkish one. **Tape (Yahoo 10-14):** ^TNX 5.190, ^FVX 4.992, SPY 769.60, VIX 16.87 (15.41 on 10-09). FT-1 baseline is the 10-15 close, still unwritten. **Peers/geo:** none new; Waller/Bowman both still say further hikes likely. Corridor +`eurostat-hicp-final-2026-10-16` (low, recorded only). No proposals; nothing beyond horizon. | — (stance holds; stand aside, read the text) | 2026-10-17 (close-out) |
+| 2026-10-19 | D+4 | **Close-out.** Scored from Yahoo daily closes pulled 2026-10-19 (cache busted; no instrument runs, `symbols: []`). FT-1 **pass**: ^TNX +0.9bp, ^FVX 0.0bp on 10-16. Kills 1 and 3 unfired; kill 4 stands at 0 of 1. See `## Outcome`. Adjacency: nothing to propose. | — (closed; stance held) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -171,3 +172,48 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-10-15
 <!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-19, D+4).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` (`symbols: []`
+by design), so the tape is scored from Yahoo daily closes pulled today after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), and the words from wraps
+dated 2026-10-16 (Euronews, 11:27 CEST; a Yahoo Finance markets wrap). CNBC's own page returned HTTP 403,
+so it is recorded in `probe-ref.blocked` and cited by headline only, never as read text. The chat ran
+~00:00–00:30 ET 10-16 (10:30 a.m. Bangkok), as scheduled (`confirmed`, FED).
+
+**What was said: no rate signal.** "I don't prejudge meetings"; "I don't believe in saying now what I
+might do at the meetings that we have in the balance of this year"; on guidance, "It's a new chapter at
+the Fed, and we're not in that business anymore." Conditions had "broadly conformed" to Fed expectations
+since September. He called AI "probably the most consequential change" of his lifetime and an inflation
+"shock," and described "synchronous tightening … no free riders" worldwide. That matches the stance
+(phrasing, not odds), with no new conditional language to price.
+
+| Measure (Yahoo daily) | 10-14 | 10-15 | 10-16 | 10-15 → 10-16 |
+|---|---|---|---|---|
+| ^TNX (10Y) | 5.190 | 5.089 | 5.098 | **+0.9bp** |
+| ^FVX (5Y) | 4.992 | 4.899 | 4.899 | **0.0bp** |
+| TLT | 78.89 | 79.97 | 80.05 | +0.1% |
+| SPY | 769.60 | 771.79 | 763.25 | −1.11% |
+| ^VIX | 16.87 | 16.46 | 19.99 | +3.53pt |
+
+**Scored.** `FT-warsh-imf-fireside-2026-10-15-1` = **pass** (both under 8bp). The 10Y and 5Y fell ~10bp on
+**10-15**, the PPI/retail-sales day before the chat, so the baseline already held that move; the test
+window is the 10-16 session only. Odds per the Yahoo wrap: October hike 28% → 17%, December ~89%
+(Euronews: October ~30% at publication, December ~90%). The October move is 11 points with no explicit
+hold/hike statement, so kill 3 (≥15 points) did not fire; kill 1 (slot pulled) did not fire; kill 4 stands
+at 0 of 1 off-meeting appearances moving ≥8bp.
+
+**What this does not show.** SPY fell 1.11% and the Nasdaq ~2.1%, VIX closed at its highest since 07-29,
+and the week was the worst since June, led by chips (CRWV −12%, MU −5.6%, INTC −5.8%). The Yahoo wrap
+names AI weakness and the hot inflation run, not Warsh. Cash equities were open into an opex Friday with
+import/export prices and industrial production the same day, so attribution stays confounded by design
+(Leg 5). The pass is on rates only. n=1 for a moderated-Q&A format: it supports no "Warsh Q&A" playbook
+either way.
+
+**Loop census.** Sense, decide and remember ran from scripts and the fragment. The step a person-shaped
+session still did by hand was sensing: pulling the five closes and reading wraps for attribution. One
+command that prints a forward test's tape table from its two tickers and dates would automate the first.
+
+**Last assessed:** 2026-10-19
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.cnbc.com/2026/10/16/feds-warsh-says-ai-development-path-will-be-very-bumpy-.html","status":403,"at":"2026-10-19"}]} -->

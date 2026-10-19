@@ -8,8 +8,9 @@ const STANDARD_RULES = new SauronPersona();
 
 /**
  * SAURON (#4642 slice 9a, design on #4651) — Sauron's own persona rules as a subscribable playbook,
- * exact by construction rather than translated (#3208's settled shape; `HC-SAURON` is the lossy
- * tactical translation and stays as it is).
+ * exact by construction rather than translated (#3208's settled shape). It is the one playbook that
+ * runs his rules: HC-SAURON, the lossy tactical translation of the hardcore build, was dissolved on
+ * 2026-10-16 (docs/BOTS-SAURON.md → adaptation ledger).
  *
  * ON SAURON'S OWN ACCOUNT (`rulesOf` matches the bot's base persona) `decide` below is never
  * called: `withPlaybooks` runs the bot's own persona exactly as it does today — whichever build is

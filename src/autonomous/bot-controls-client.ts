@@ -1,5 +1,7 @@
 import { fetchJson } from "../http/fetch-json.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { type AuthoredPlaysWire, parseAuthoredPlaysWire } from "./authored-plays-wire.js";
+import { parseShadowOrders, type ShadowOrders } from "./authored-shadow-wire.js";
 import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
@@ -38,6 +40,9 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
+   *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
+  betaPicks(botId: string): number | undefined;
   /**
    * Records one persona's boot-time readiness-gate verdict (#666) — merged by id and reported on
    * every subsequent poll, so the ops-status panel can show which personas are live vs pinned to
@@ -63,6 +68,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  betaPicks: () => undefined,
   reportPersonaGate: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
@@ -86,6 +92,16 @@ export function resolveBotControls(
    *  `parseSubscriptionsSnapshot`, simply never fires this — which leaves the fleet on the last
    *  roster it received, never on a partial one. */
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of shadow tests
+   *  (`authored-shadow-wire.ts`, #5457 slice 2) — the whole set every time, so a play taken out of
+   *  its test simply stops appearing. Parsed from the RAW body like the two above. An app that
+   *  predates the field never fires this, and the bots keep the tests they have. */
+  onAuthoredShadow?: (orders: ShadowOrders) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of PROMOTED plays
+   *  (`authored-plays-wire.ts`, #5457 slice 3) — specs only, whole every time. It fires BEFORE the
+   *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
+   *  the plays. An app that predates the field never fires this. */
+  onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -137,9 +153,23 @@ export function resolveBotControls(
           /* never let a downstream hook fail the poll it rides on */
         }
         try {
+          const rawPlays = isRecord(response.body) ? response.body.authoredPlays : undefined;
+          const plays = parseAuthoredPlaysWire(rawPlays);
+          if (plays) onAuthoredPlays?.(plays);
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
+        }
+        try {
           const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
           const snapshot = parseSubscriptionsSnapshot(rawSubs);
           if (snapshot) onSubscriptions?.(snapshot);
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
+        }
+        try {
+          const raw = isRecord(response.body) ? response.body.authoredShadow : undefined;
+          const orders = parseShadowOrders(raw);
+          if (orders) onAuthoredShadow?.(orders);
         } catch {
           /* never let a downstream hook fail the poll it rides on */
         }
@@ -165,6 +195,7 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
     },

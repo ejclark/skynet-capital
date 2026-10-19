@@ -114,6 +114,10 @@ Rules that make it work, in priority order:
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
    uses (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
+   Below the fold, `### Predicted answers` gives Claude's expected answer to each item and a
+   confidence, written before he answers; the row is scored in
+   [`docs/process/ALIGNMENT.md`](process/ALIGNMENT.md) when he does (Eric, 2026-10-18: alignment
+   is the asymptote, so its distance is measured).
 9. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
    their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the
@@ -243,9 +247,17 @@ disagree about what may be built:
 4. **not `in-progress`** — another lane or session already holds it.
 
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
-filing at capture (`FEEDBACK.md` → *What the lane will build*) — and otherwise **never applies
-`ready` to make something pullable**, which is the one rule that keeps the label an authorization
-rather than a formality. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
+`ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:
+"if there's a clear path forward and moving forward boils down to … me rubber stamping.. fuck the
+red tape"). *Clear* means all four, written down: acceptance criteria present; size S or M, or the
+next slice a plan's state block already names; no open fork only he can settle and nothing in
+`envelope.json`'s protected class; not blocked by an open issue. And it is *earned*, never asserted:
+an independent verifier tried to refute the call and could not. The flip is a footed comment (the
+four checks, the verifier's line) and then the label, so the label stays an authorization with a
+paper trail rather than a formality — what it never becomes is a way to keep a loop fed. Falsifier:
+if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
+reverted build, narrow this back to his flip. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
@@ -470,7 +482,10 @@ gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/pr
 its next slice itself):
 
 - **The next-pickup line is the fallback target.** The lane prefers the plan's next open, unblocked
-  sub-issue; with none, it continues on whatever that line names. A block with no next-pickup line
+  sub-issue; with none, it continues on whatever that line names. Write the slice's number in the
+  line ("slice 4, …") and in each slice's sub-issue ("slice 4 of 6"): the lane then steps past an
+  open sub-issue whose slice the line has moved beyond, and refuses a line whose slice's sub-issue
+  already closed (#4530). A block with no next-pickup line
   and no open slice is read as "this plan is finished" and nothing continues — which is correct on
   the last slice, and a silent stall if the line was simply forgotten. Either bold shape works
   (`**Next pickup: …**` or `**Next pickup:** …`).

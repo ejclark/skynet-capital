@@ -443,3 +443,96 @@ from re-run instrument data (cache busted first), never from memory.
 
 **Last assessed:** 2026-10-15
 <!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/cpi.nr0.htm","status":403,"at":"2026-10-15"}]} -->
+
+## Outcome
+
+**Assessed 2026-10-16 (D+1, inside the close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was run and had
+nothing to clear (recorded, not skipped silently). Every number below is a fresh pull this session,
+never carried from a prior row: treasurydirect `xml/A_20261015_1.xml` and `_3.xml`, `TA_WS/securities/upcoming`
+(HTTP 200), fiscaldata `auctions_query` (`announcemt_date:eq:2026-10-15`, 5 rows), Treasury's daily par and
+real yield-curve XML, and Yahoo daily closes for `^VIX`/`^TNX`/`^TYX`/`^FVX`.
+
+### The announcement, re-pulled from the primary
+
+| Security | CUSIP | Reopening? | Offering | Auction | Issue/settle |
+|---|---|---|---|---|---|
+| 20-Year BOND (`19-Year 10-Month`) | **912810UX4** | Yes | **$13.000B** | 2026-10-21 | 2026-10-23 |
+| 5-Year TIPS (`NOTE`, `InflationIndexSecurity` Y, series AE-2031) | **91282CRR4** | **No — new issue** | **$26.000B** | 2026-10-22 | 2026-10-30 |
+| 13-Week BILL (reopening) | 912797TM9 | Yes | $95.000B | 2026-10-19 | 2026-10-22 |
+| 26-Week BILL | 912797WV5 | No | $82.000B | 2026-10-19 | 2026-10-22 |
+| 6-Week BILL (reopening) | 912797VA2 | Yes | $95.000B | 2026-10-20 | 2026-10-22 |
+
+All five rows carry `announcemt_date` 2026-10-15, and `updatedTimestamp` 11:02:07-11:02:19 ET. That stamp
+closes the limit this entry's calendar file disclosed — the ~11:00 ET slot was convention — with a reading: the
+announcement went out at 11:02 ET. The composition (two coupon-type securities, 20Y reopening plus 5Y TIPS new
+issue) is exactly what the Tentative Auction Schedule (re-fetched, HTTP 200, 17,195 bytes, unrevised since
+2026-09-05) named. Treasury's feed labels the TIPS row `Note`; the XML's `InflationIndexSecurity` Y, `RefCPIDatedDate`
+334.39761 and `IndexRatioOnIssueDate` 1.00154 are what mark it TIPS (fiscaldata's `type` field reads `TIPS`),
+so it is the registered security and not a nominal 5-Year note.
+
+### Forward test scored
+
+- **`FT-treasury-coupon-announcement-2026-10-15-1`** — **PASS.** Predicted the 5-Year TIPS new issue at
+  **$26B**; printed **$26.000B**, a new issue, on the scheduled date. This was the one leg where the written
+  word (`sb0590`'s *"the October 5-year TIPS new issue auction size at $26 billion"*) disagreed with a live
+  five-year ratchet ($17B/$17B/$19B/$21B/$22B/$24B/$26B, 2019-2025), and **the guidance bound**: the run
+  ended at $26B. `sb0590`'s TIPS FINANCING sentence is now **3-of-3 honoured** (Aug 30Y $8B printed 08-20;
+  Sep 10Y $19B announced 09-10 and sold at size 09-17; Oct 5Y $26B announced here). The new issue is also the
+  third 5Y TIPS new issue at $26B in a row (2025-10 `91282CPH8`, 2026-04 `91282CQP9`, now `91282CRR4`), as this
+  doc's leg 5 said it would be. One observation about an issuance convention, never a price template or a
+  rate view; a pass here is evidence that "maintain TIPS auction sizes at current levels" binds against a
+  run-rate, and it says nothing about what the **2026-11-04** refunding will do to the grid.
+- **`FT-treasury-coupon-announcement-2026-09-10-1`** is **not scored here** — it belongs to the
+  `treasury-coupon-announcement-2026-09-10` fragment and its owner. For the record only: the 20Y reopening
+  announcement printed **$13B** on **912810UX4**, as that test predicts, so the 20Y grid's **39th** on-grid
+  auction is the 10-21 sale, not yet held.
+
+### Kill switches, adjudicated against the close-out data
+
+- **"The 5-Year TIPS new issue printing off $26B"** — does **not** fire (printed $26.000B).
+- **"The 20-Year reopening printing off $13B"** — does **not** fire (printed $13.000B).
+- **"Any of 3Y/10Y/30Y off-grid at 10-01"** — did not fire; adjudicated by the 10-01 close-out.
+- **"The 10-21 or 10-22 auction clearing at a size other than the announced one"** — **open**: both auctions
+  are in the future (10-21 / 10-22). This is a post-close observation, not a reason to hold the close-out, and
+  no registered test depends on it.
+- **"Treasury dropping or qualifying *for at least the next several quarters*"** — still pending; it is
+  `FT-39`'s question at **11-04**, not this event's.
+- **"An off-cycle coupon issuance action"** — does **not** fire. Treasury press releases **sb0654-sb0661** read
+  by title, fetched direct (sb0662 returned no response, not confirmed unpublished): sanctions, an appointment,
+  a Korea readout, enforcement actions, a rule, Bessent's IMF/World Bank statement and the two "Operation
+  Economic Outcast" releases — zero coupon-size, CMB or refunding language (the only `coupon`/`refunding`
+  hits are the site navigation menu). The 10-15 bill sizes ($95B / $82B / $95B) are the bill lever `sb0590`
+  reserves and do not fire it.
+
+### Tape, for the record (no attribution claimed)
+
+Treasury par, primary: 10-14 → **10-15** — 2Y 4.82 → **4.77** · 5Y 5.00 → **4.91** · 10Y 5.19 → **5.10** ·
+20Y 5.57 → **5.48** · 30Y 5.52 → **5.43**. Real curve: 5Y real 2.64 → **2.58**, so the curve-derived
+5-year breakeven is **2.33** (4.91 - 2.58) against 2.36 a day earlier. Yahoo `^TNX` 5.190 → **5.089**,
+`^TYX` 5.525 → **5.429**, `^FVX` 4.992 → **4.899**. VIX **16.87 → 16.46**. The whole curve rallied ~9-10bp
+on the day — but the announcement was a restatement of two numbers already in writing since 2026-08-05, it
+landed at 11:02 ET inside a session that also held **PPI 08:30, advance retail sales 08:30, a 13:40 10-20Y
+buyback, the G20 FMCBG in Bangkok** and the morning after a hot core CPI, and the 10-15 PPI/retail-sales
+prints were **not re-sourced** this session (bls.gov returned 403 to this runner on 2026-10-15, recorded in
+that day's `probe-ref.blocked`; it was not retried). No tape move is attributed to this announcement, as leg 12 of the initial research
+committed to before the fact.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — nothing was keyed to a scheduled,
+pre-published announcement, and nothing is retrofitted now.** What the event resolved: the second security
+nobody had noticed (the 5-Year TIPS new issue) was found at D-40, registered as the one leg where the guidance
+and the base rate pointed in opposite directions, and the guidance won on first contact with the primary. The
+durable outputs stand as written at initial research: the two-security composition, the leg asymmetry, the
+tenor-specific TIPS reopening constant (-$2B at 5Y and 10Y, -$1B at 30Y — the 2026-06 5Y reopening of
+`91282CQP9` printed $24B against its $26B new issue, on rule again), and the buyback-schedule staleness
+correction. The calendar file keeps `status: estimate`: this lane records the observed announcement here, from
+Treasury's own documents, and does not rewrite a calendar entry's date status on a close-out. The open thread
+this hands forward is **11-04** (the quarterly refunding, where `FT-39` lives and where the grid itself can
+change), then the first announcement in this cycle whose size no current Treasury primary publishes, **11-12**
+— nothing is left open here. The scanner goes quiet on this event.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"medium:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

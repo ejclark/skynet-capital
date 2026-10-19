@@ -40,12 +40,14 @@ import {
   mean,
   percentileRank,
   printCadence,
+  printFreeForwardVols,
   printMoves,
   quantile,
   shareBelow,
   straddlesPrint,
   trailingVol,
   volPersistence,
+  wheelImplied,
 } from "./premium-fit-math.mjs";
 
 /** Trading days in the 30 calendar days `iv30` quotes, to the nearest whole session. */
@@ -123,8 +125,16 @@ export async function premiumFit(
   // mega-cap's grade would be set by a 35-year correlation while the distribution beside it in
   // the report covers one year — two windows, one sentence, and no reader could tell.
   const persistence = volPersistence(lookback, CALM_SESSIONS, HORIZON_SESSIONS);
-  const fit = judgeFit(chain.iv30, realized.forward, persistence);
   const expiries = rankExpiries(chain, today, knownPrints);
+  // EARNINGS PREMIUM IS NOT THE WHEEL'S PREMIUM (#4819). With a report inside the next 30 days,
+  // `iv30` prices that report's move — and the wheel may not sell across it — so the fit test
+  // ranks the implied of the leg it would actually sell against months that held no report either.
+  // With none inside, both sides are exactly what they were.
+  const implied = wheelImplied({ iv30: chain.iv30, today, knownPrints, expiries });
+  const comparator = implied.printInside
+    ? printFreeForwardVols(history.slice(-(LOOKBACK_SESSIONS + 1)), HORIZON_SESSIONS, prints)
+    : realized.forward;
+  const fit = judgeFit(implied.iv, comparator, persistence);
   // The richest implied the wheel can sell without crossing a print — not merely the nearest one
   // in the band. The term structure usually slopes up into an event, so "first in band" would
   // systematically hand the seller the cheapest leg available to it.
@@ -139,6 +149,7 @@ export async function premiumFit(
     today,
     spot: chain.spot,
     iv30: chain.iv30,
+    implied,
     realized,
     persistence,
     fit,
@@ -163,6 +174,23 @@ export async function premiumFit(
  * realized distribution, and what does that gap pay?
  */
 function judgeFit(iv30, forward, persistence) {
+  // No implied the wheel could sell (a report inside 30 days, no clean expiry in the band): there is
+  // no premium to judge, so nothing fits — never a fall back to the report-laden `iv30` (#4819).
+  if (iv30 == null || forward.length === 0) {
+    return {
+      verdict: "stand aside",
+      confidence: "low",
+      rank: null,
+      gap: null,
+      windows: forward.length,
+      independentWindows: forward.length / HORIZON_SESSIONS,
+      meanForward: forward.length ? mean(forward) : null,
+      p10: forward.length ? quantile(forward, 0.1) : null,
+      p50: forward.length ? quantile(forward, 0.5) : null,
+      p90: forward.length ? quantile(forward, 0.9) : null,
+      exceeded: null,
+    };
+  }
   const rank = percentileRank(forward, iv30);
   const gap = iv30 - mean(forward);
   // A seller is paid the gap and wears the right tail. "Rich" needs both: implied above the
@@ -186,6 +214,7 @@ function judgeFit(iv30, forward, persistence) {
     confidence,
     rank,
     gap,
+    windows: forward.length,
     independentWindows: independent,
     meanForward: mean(forward),
     p10: quantile(forward, 0.1),
@@ -258,7 +287,10 @@ function proposeSettings(fit, target, ladder, cadence) {
   if (fit.verdict === "stand aside")
     return {
       ok: false,
-      reason: `the fit test says stand aside (implied at the ${(fit.rank * 100).toFixed(0)}th percentile of realized)`,
+      reason:
+        fit.rank == null
+          ? "a report sits inside 30 days and no expiry in the band ends before it — re-run after the report"
+          : `the fit test says stand aside (implied at the ${(fit.rank * 100).toFixed(0)}th percentile of realized)`,
     };
   if (!target) return { ok: false, reason: "no print-clean expiry inside the 21–45 day band" };
   const passing = ladder.filter((r) => r.passes);
@@ -294,14 +326,20 @@ function report(f) {
   p("REALIZED VOLATILITY");
   for (const [w, v] of Object.entries(f.realized.trailing)) p(`  trailing ${w}d   ${pct(v)}`);
   p(
-    `  forward ${HORIZON_SESSIONS}-session distribution, last ${f.realized.lookbackSessions} sessions:`,
+    `  forward ${HORIZON_SESSIONS}-session distribution, last ${f.realized.lookbackSessions} sessions${f.implied.printInside ? ", report months left out" : ""}:`,
   );
   p(
-    `    p10 ${pct(f.fit.p10)} · median ${pct(f.fit.p50)} · mean ${pct(f.fit.meanForward)} · p90 ${pct(f.fit.p90)}  (n=${f.realized.forward.length} overlapping ≈ ${f.fit.independentWindows.toFixed(0)} independent)`,
+    `    p10 ${pct(f.fit.p10)} · median ${pct(f.fit.p50)} · mean ${pct(f.fit.meanForward)} · p90 ${pct(f.fit.p90)}  (n=${f.fit.windows} overlapping ≈ ${f.fit.independentWindows.toFixed(0)} independent)`,
   );
   p();
   p("THE FIT TEST — implied against what follows");
-  p(`  iv30 (implied, next 30d)      ${pct(f.iv30)}`);
+  p(
+    `  iv30 (implied, next 30d)      ${pct(f.iv30)}${f.implied.printInside ? "  — a report sits inside; not used" : ""}`,
+  );
+  if (f.implied.printInside)
+    p(
+      `  implied judged                ${f.implied.source === "expiry" ? `${pct(f.implied.iv)}  (ATM ${f.implied.expiry}, richest print-clean expiry in band)` : "none — no print-clean expiry in band; re-run after the report"}`,
+    );
   p(`  sits above                    ${pct(f.fit.rank)} of this symbol's forward 30d outcomes`);
   p(`  paid over the mean outcome    ${pct(f.fit.gap)} of vol`);
   p(

@@ -27,6 +27,7 @@ import { Route as UIdRouteImport } from './routes/u.$id'
 import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdActivityRouteImport } from './routes/u.$id.activity'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
+import { Route as UIdLedgerRouteImport } from './routes/u.$id.ledger'
 import { Route as UIdPlaybooksRouteImport } from './routes/u.$id.playbooks'
 import { Route as UIdPulseRouteImport } from './routes/u.$id.pulse'
 import { Route as UIdThesisRouteImport } from './routes/u.$id.thesis'
@@ -121,6 +122,11 @@ const UIdDecisionsRoute = UIdDecisionsRouteImport.update({
   path: '/decisions',
   getParentRoute: () => UIdRoute,
 } as any)
+const UIdLedgerRoute = UIdLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => UIdRoute,
+} as any)
 const UIdPlaybooksRoute = UIdPlaybooksRouteImport.update({
   id: '/playbooks',
   path: '/playbooks',
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/activity': typeof UIdActivityRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/ledger': typeof UIdLedgerRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id/thesis': typeof UIdThesisRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/learn/trading': typeof LearnTradingRoute
   '/u/$id/activity': typeof UIdActivityRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/ledger': typeof UIdLedgerRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id/thesis': typeof UIdThesisRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/activity': typeof UIdActivityRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/ledger': typeof UIdLedgerRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id/thesis': typeof UIdThesisRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/u/$id'
     | '/u/$id/activity'
     | '/u/$id/decisions'
+    | '/u/$id/ledger'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
     | '/u/$id/thesis'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/learn/trading'
     | '/u/$id/activity'
     | '/u/$id/decisions'
+    | '/u/$id/ledger'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
     | '/u/$id/thesis'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/u/$id'
     | '/u/$id/activity'
     | '/u/$id/decisions'
+    | '/u/$id/ledger'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
     | '/u/$id/thesis'
@@ -423,6 +435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UIdDecisionsRouteImport
       parentRoute: typeof UIdRoute
     }
+    '/u/$id/ledger': {
+      id: '/u/$id/ledger'
+      path: '/ledger'
+      fullPath: '/u/$id/ledger'
+      preLoaderRoute: typeof UIdLedgerRouteImport
+      parentRoute: typeof UIdRoute
+    }
     '/u/$id/playbooks': {
       id: '/u/$id/playbooks'
       path: '/playbooks'
@@ -450,6 +469,7 @@ declare module '@tanstack/react-router' {
 interface UIdRouteChildren {
   UIdActivityRoute: typeof UIdActivityRoute
   UIdDecisionsRoute: typeof UIdDecisionsRoute
+  UIdLedgerRoute: typeof UIdLedgerRoute
   UIdPlaybooksRoute: typeof UIdPlaybooksRoute
   UIdPulseRoute: typeof UIdPulseRoute
   UIdThesisRoute: typeof UIdThesisRoute
@@ -459,6 +479,7 @@ interface UIdRouteChildren {
 const UIdRouteChildren: UIdRouteChildren = {
   UIdActivityRoute: UIdActivityRoute,
   UIdDecisionsRoute: UIdDecisionsRoute,
+  UIdLedgerRoute: UIdLedgerRoute,
   UIdPlaybooksRoute: UIdPlaybooksRoute,
   UIdPulseRoute: UIdPulseRoute,
   UIdThesisRoute: UIdThesisRoute,

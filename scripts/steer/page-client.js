@@ -41,6 +41,8 @@
 // stored one. An OUTCOME HE ADDS (outcomes.mjs, outcomes-client.js) is one key of `outcomesAdded`,
 // merged the same way; a removed one is null. A NOTE ABOUT THE PAGE (page-notes-client.js) is one
 // key of `pageNotes` on the round's own document, merged with `update` like the page's other meta.
+// A NOTE UNDER AN OPTION (option-notes.mjs, #5429) is one key of `optionNotes`, by option key,
+// typed and merged exactly as a pin note is; an emptied one is null.
 //
 // A TAP WHILE THE STORE CONNECTS (#5243) is held as the fields it changed, and once the store
 // answers those fields go onto the record it holds — never a blank copy plus the tap, which would
@@ -68,7 +70,7 @@
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
   /** A decision record's fields keyed by pin (or mark) id, each merged one key at a time. */
-  const MAPS = ["pins", "pinNotes", "marks", "outcomesAdded"];
+  const MAPS = ["pins", "pinNotes", "marks", "outcomesAdded", "optionNotes"];
   /** A decision record's own fields merged alone, never with the whole record: `revealAt`. */
   const MERGED = ["revealAt"];
   /** Pin ids this view has reacted to or written on, by field and decision key: only these may
@@ -155,6 +157,7 @@
     pinNotes: {},
     marks: {},
     outcomesAdded: {},
+    optionNotes: {},
     revealAt: null,
   });
   const rec = (sec, key) => {
@@ -167,7 +170,8 @@
     Boolean(
       pinsUi?.said(key, r).length ||
         marksUi?.said(key, r).length ||
-        outcomesUi?.said(key, r).length,
+        outcomesUi?.said(key, r).length ||
+        optionNotesSaid(key, r).length,
     );
   const answered = (r, key) =>
     Boolean(
@@ -179,6 +183,13 @@
           reacted(r, key)),
     );
   const count = () => TP.decisions.filter((d) => answered(state.decisions[d.key], d.key)).length;
+  /** His notes under the options this page shows a box for (option-notes.mjs): `[opt, text]`. A
+   *  note on an option the page no longer shows is not an answer. */
+  const optionNotesSaid = (key, r) =>
+    [...document.querySelectorAll("[data-onote]")]
+      .filter((t) => t.dataset.key === key)
+      .map((t) => [t.dataset.opt, noteValue(r?.optionNotes?.[t.dataset.opt])])
+      .filter(([, v]) => v);
   /** A stored `pins` or `pinNotes` that isn't a plain object (a hand-edited record) reads as none. */
   const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
   /** A note as it is written: the text, or null for an empty one. */
@@ -186,7 +197,7 @@
   /** One pin key's stored value: a reaction as it is, a note as noteValue, a mark as its spot
    *  (marks-client.js); a cleared one is null. */
   const keyValue = (field, v) => {
-    if (field === "pinNotes") return noteValue(v);
+    if (field === "pinNotes" || field === "optionNotes") return noteValue(v);
     if (field === "marks") return v && typeof v === "object" ? v : null;
     // An added outcome (outcomes-client.js) is its words and when; a blank one is none.
     if (field === "outcomesAdded") return typeof v?.text === "string" && v.text.trim() ? v : null;
@@ -210,6 +221,16 @@
     const reveal = row.parentElement.querySelector(".reveal");
     if (reveal) reveal.hidden = !r.verdict;
   }
+  /** Each option's note box: its saved words, opened when it holds any so a note is never folded
+   *  out of sight; never closed here, so one he opened stays open. */
+  function paintOptionNotes() {
+    for (const t of document.querySelectorAll("[data-onote]")) {
+      const v = state.decisions[t.dataset.key]?.optionNotes?.[t.dataset.opt] || "";
+      if (document.activeElement !== t) t.value = v;
+      if (v.trim()) t.closest("details").open = true;
+      t.disabled = locked();
+    }
+  }
   function paint() {
     for (const row of document.querySelectorAll(".react")) paintRow(row);
     for (const t of document.querySelectorAll("[data-note]")) {
@@ -217,6 +238,7 @@
       if (document.activeElement !== t) t.value = r?.note || "";
       t.disabled = locked();
     }
+    paintOptionNotes();
     marksUi?.paint();
     pinsUi?.paint();
     focusUi?.paint(); // after the marks: a mark painted back outside a focused crop is hidden
@@ -674,6 +696,13 @@
   }
   document.addEventListener("input", (ev) => {
     const t = ev.target;
+    if (t.dataset?.onote !== undefined && !locked()) {
+      const { key, opt } = t.dataset;
+      const r = rec("decisions", key);
+      r.optionNotes = { ...r.optionNotes, [opt]: t.value };
+      mine(key, [`optionNotes.${opt}`]);
+      return typed("decisions", key, `optionNotes.${opt}`, t.value);
+    }
     if (t.dataset?.note === undefined || locked()) return;
     const { sec, key } = t.dataset;
     rec(sec, key).note = t.value;
@@ -696,6 +725,7 @@
       bits.push(["mark", id, at, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
     }
     for (const [, t] of outcomesUi?.said(d.key, r) ?? []) bits.push(`outcome “${line(t)}”`);
+    bits.push(...optionNotesSaid(d.key, r).map(([o, t]) => `note on ${o} “${line(t)}”`));
     const note = line(r.note);
     return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
   }
@@ -742,7 +772,7 @@
 
   // A round's focus (focus-client.js): each focused picture's crop and its whole-screen button.
   const focusUi = globalThis.steerFocus?.({ focus: TP.focus });
-  // Comparing an option with Today (compare-client.js): Flip · Swipe · Divider, kept per viewer.
+  // Comparing an option with Today (compare-client.js): Flip · Side by side · Divider, kept per viewer.
   globalThis.steerCompare?.({ compare: TP.compare });
   // One picture, two widths (widths-client.js): each slot's Phone · Desktop switch.
   globalThis.steerWidths?.();
@@ -819,6 +849,7 @@
     // Records saved before marks and the reveal existed read as none of either.
     marks: liveOf("marks", v.marks),
     outcomesAdded: liveOf("outcomesAdded", v.outcomesAdded),
+    optionNotes: liveOf("optionNotes", v.optionNotes),
     revealAt: typeof v.revealAt === "string" ? v.revealAt : null,
   });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */

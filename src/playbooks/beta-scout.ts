@@ -16,8 +16,8 @@
  *
  * SUBSCRIBABLE (#4642 slice 10). The scout is a registry playbook (`BETA_SCOUT` below), so it opens
  * only where it is subscribed: the live cycle (`live-cycle.ts`) runs it on its one host bot while
- * `SKYNET_BETA_FORCING` is armed (ops, Eric's) AND that bot is subscribed to it with the
- * subscription on — armed and subscribed, both. Paused, it picks nothing new; unsubscribed, its
+ * its forced-pick count is above zero (the owner's stored count, else `SKYNET_BETA_FORCING`) AND
+ * that bot is subscribed to it with the subscription on — armed and subscribed, both. Paused, it picks nothing new; unsubscribed, its
  * picks are refused `unsubscribed` and recorded once a day. Either way its exits still run.
  */
 import { heldQuantity } from "../domain/portfolio.js";

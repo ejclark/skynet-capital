@@ -7,9 +7,12 @@ import {
 import type { Playbook } from "../../src/playbooks/playbook.js";
 import {
   BETA_SCOUT,
+  COND_SCOUT,
+  CRWV_LONG_CALL,
   CRWV_WHEEL,
   G1_GOOG,
-  HC_SAURON,
+  MU_DIP_BOUNCE,
+  NBIS_DIP_BOUNCE,
   NVDA_CALL_SPREAD,
   S1_NVDA,
   SAURON,
@@ -34,9 +37,12 @@ describe("housePlaybooks", () => {
     expect(housePlaybooks().map((p) => p.id)).toEqual(
       [
         BETA_SCOUT.id,
+        COND_SCOUT.id,
+        CRWV_LONG_CALL.id,
         CRWV_WHEEL.id,
         G1_GOOG.id,
-        HC_SAURON.id,
+        MU_DIP_BOUNCE.id,
+        NBIS_DIP_BOUNCE.id,
         NVDA_CALL_SPREAD.id,
         S1_NVDA.id,
         SAURON.id,

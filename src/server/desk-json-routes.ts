@@ -30,6 +30,7 @@ import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
+import { deskHealthPayload } from "./book-health-payload.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisionsPage } from "./decision-account-view.js";
 import {
@@ -409,6 +410,8 @@ export async function serveDeskJson(
   const durable = await config.readTradeActivity?.(id);
   const tags = durable ? ownerPositionTags(found, durable, config, owner) : undefined;
   const ledger = durable ? deskLedger(found, durable, tags) : undefined;
+  // The book's health (#5493 slice 1): every finding for the owner, counts for anyone else.
+  const health = await deskHealthPayload(found, config, owner, ledger?.open);
   // The considerations rail (#3186 slice 3) folds house playbooks matching a held symbol into the
   // desk payload — `playbookStoreCatalog()` is a cheap, synchronous, in-memory walk of the playbook
   // registry (same cost `/api/playbook-store` pays per request), so no caching is added here.
@@ -425,6 +428,7 @@ export async function serveDeskJson(
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
         : {}),
+      health,
     }),
   );
 }

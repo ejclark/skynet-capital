@@ -33,6 +33,7 @@ import {
 import { FilterChip } from "../ui";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
+import { SymbolRecapFor } from "./symbol-recap-for";
 
 /**
  * RESEARCH'S "BOARD" SECTION (#738 phase 6c originally; split out of `research.tsx` into its own
@@ -381,6 +382,9 @@ export function ResearchFilters({
   );
 }
 
+/** How many scoped symbols lead with a recap — a watchlist of twenty is a list, not twenty cards. */
+const RECAPS_SHOWN = 3;
+
 /** R&D's grid, from the calendar's slice (#3977 slice 5) — or, on a server from before it, the
  *  shelf. The day lens never lacks a row (`callForLens` falls back to the headline), so the calls
  *  held behind its fog are exactly the called events in range: the slice marks them `called`, the
@@ -595,6 +599,11 @@ export function useBoardView({
           </p>
         </header>
         <ResearchFilters data={data} query={query} onChange={setFilter} />
+        {/* The by-symbol view (#4807 slice 4): naming a symbol in the filter — a chip, or sym: —
+            leads with its recap before the calls and documents it scopes. */}
+        {filter.symbols.slice(0, RECAPS_SHOWN).map((sym) => (
+          <SymbolRecapFor key={sym} symbol={sym} />
+        ))}
         <CallBoard
           data={data}
           filter={filter}

@@ -15,6 +15,10 @@ export interface AdmissionIssue {
   issue_dependencies_summary?: { blocked_by?: number };
   /** GitHub's sub-issue counts; the started-plan cap reads `completed` (#4393 criterion 6). */
   sub_issues_summary?: { total?: number; completed?: number };
+  /** The parent issue's API URL — the cap's "finishing a started plan" exemption reads it. */
+  parent_issue_url?: string;
+  /** A started plan's open sub-issues, attached by `readOpenPlans` — what `holdsCapSeat` reads. */
+  openSubIssues?: ReadonlyArray<{ number: number; labels?: readonly Label[] }>;
   user?: { login?: string };
 }
 
@@ -51,11 +55,16 @@ export function admitBuild(opts: {
   mode: AdmissionMode;
   /** The board's Waiting column (`waitingPlans`); the started-plan cap is skipped without it. */
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** A `plan` issue with no closed sub-issue and no `next-slice` — the only kind the plan cap refuses. */
 export function isFreshPlan(issue: AdmissionIssue | undefined): boolean;
 /** The open plans the board shows in Waiting (same `statusForIssue` as the column). */
 export function waitingPlans<T extends AdmissionIssue>(openPlans?: readonly T[]): T[];
+/** A started plan holds a cap seat only while a lane could pull its next work (2026-10-18). */
+export function holdsCapSeat(plan: AdmissionIssue | undefined): boolean;
+/** The parent issue's number from `parent_issue_url`, or null. */
+export function parentNumberOf(issue: AdmissionIssue | undefined): number | null;
 /** Every open `plan` issue over REST, paginated. */
 export function readOpenPlans(readAll?: (path: string) => unknown[]): AdmissionIssue[];
 /** The Waiting list, and the issue with its sub-issue counts filled from the plan list. */
@@ -64,7 +73,10 @@ export function startedPlanInputs(
   openPlans?: readonly AdmissionIssue[],
 ): { issue: AdmissionIssue; waiting: AdmissionIssue[] };
 /** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
-export function pullQueue<T extends AdmissionIssue>(readyIssues: readonly T[]): T[];
+export function pullQueue<T extends AdmissionIssue>(
+  readyIssues: readonly T[],
+  opts?: { interactive?: boolean },
+): T[];
 /** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
 export function nextAdmissible<T extends AdmissionIssue>(
   readyIssues: readonly T[],
@@ -96,6 +108,7 @@ export function checkAdmission(opts: {
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** One issue over REST; throws on a PR number or an unreadable row. */
 export function readIssue(

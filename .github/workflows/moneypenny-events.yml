@@ -409,8 +409,11 @@ jobs:
       # everything else sits in Backlog on the Orchestration board for an explicit `ready`
       # (`triageFeedbackDecision`'s header has the full rule). Never claims a lease — that's still
       # only `claimFeedback`'s job, below, once `ready` actually lands.
+      #
+      # `fast-track` too (#5667): a mid-build bug is filed `bug` + `fast-track`, often without
+      # `feedback`, and never reached triage — 23 of 23 open bugs sat without `ready` on 2026-10-18.
       - name: Triage a freshly-filed feedback issue
-        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && contains(fromJSON('["feedback","fast-track"]'), github.event.label.name)
         # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
         # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
         env:
@@ -572,6 +575,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
       # job end.
@@ -720,6 +729,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       - id: app-token
         uses: ./.github/actions/app-token
@@ -807,6 +822,18 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
+      # THE NIGHT CHAIN'S BACKSTOP (#5056 slice 2). Every ending takes `in-progress` off — the
+      # session's own last write promises it, and a cancelled job or a session that stopped short
+      # (#4612 on the night of 2026-10-04) leaves it on, holding a slot until the 6h stale sweep runs
+      # on the next merge. `always()` so a cancel or timeout is covered too; the App token so the
+      # removal's `unlabeled` event wakes the build queue (scripts/moneypenny/wake.mjs). The lease is
+      # left alone. A no-op when the label is already off.
+      - if: always() && needs.route.outputs.feedback_issue != ''
+        name: End the build — take in-progress off
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --end-build feedback-${{ needs.route.outputs.feedback_issue }}
+
   # ═══ THE PLAN LANE (#823) ═══
   # Eric (or another authorized identity — see the `route` job's `plan` step) commented a ready-flip
   # on a `plan`-labeled issue. Structurally identical to `build-feedback` above — same claim lease,
@@ -823,6 +850,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # A persisted checkout leaves this job's GITHUB_TOKEN in the repo's git config; the lane's
+          # second push (the screenshots commit) then goes out as `github-actions[bot]` and its ghost
+          # Pipeline run holds the PR `blocked` (#5221, retro #5589; #3334's mechanism, fixed so far
+          # only in moneypenny-repair.yml). Nothing here needs the ambient credential after checkout:
+          # claude-code-action puts the App token in the remote URL (`github_token` below).
+          persist-credentials: false
 
       - id: app-token
         uses: ./.github/actions/app-token
@@ -861,6 +894,12 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
+      # The night chain's backstop — see the same step on `build-feedback` above (#5056 slice 2).
+      - if: always() && needs.route.outputs.plan_issue != ''
+        name: End the build — take in-progress off
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --end-build plan-${{ needs.route.outputs.plan_issue }}
 
   sync-project:
     name: sync project status

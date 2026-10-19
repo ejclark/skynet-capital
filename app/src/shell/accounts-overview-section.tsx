@@ -9,7 +9,9 @@ import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
 import { NewHighCeremony } from "./new-high-ceremony";
+import { PositionPage, PositionPageGone } from "./position-page";
 import { SauronCard } from "./sauron-card";
+import { usePositionPage } from "./use-position-page";
 import { useTowerColumn } from "./use-tower-column";
 
 /**
@@ -80,6 +82,10 @@ export function OverviewSection({
   const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
   const landmark = allAccounts || singleDesk?.error ? undefined : desks?.[0]?.landmark;
   const towerColumn = useTowerColumn();
+  // A position's full page (#5070 slice 6): `?position=` takes the Overview's place, one account's.
+  const fullPage = usePositionPage();
+  const page = positionPageOf(singleDesk, fullPage);
+  if (page) return page;
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
@@ -127,9 +133,34 @@ export function OverviewSection({
       ) : desksError || !desks ? (
         <p className="note">Positions are unreachable right now.</p>
       ) : (
-        <AccountsPositionsSection desks={desks} query={query} onFilterChange={onFilterChange} />
+        <AccountsPositionsSection
+          desks={desks}
+          query={query}
+          onFilterChange={onFilterChange}
+          fullPage={{ openRow: fullPage.open, onFullPage: fullPage.openPage }}
+        />
       )}
     </div>
+  );
+}
+
+/** The full page `?position=` asks for on one account's Overview, if it asks for one. */
+function positionPageOf(
+  desk: DeskSnapshot["desk"] | undefined,
+  fullPage: ReturnType<typeof usePositionPage>,
+): ReactElement | undefined {
+  if (fullPage.page === undefined || !desk || desk.error) return undefined;
+  const held = desk.positions.find((p) => p.symbol === fullPage.page);
+  return held ? (
+    <PositionPage
+      deskId={desk.id}
+      position={held}
+      positions={desk.positions}
+      canTrade
+      onBack={fullPage.closePage}
+    />
+  ) : (
+    <PositionPageGone symbol={fullPage.page} onBack={fullPage.closePage} />
   );
 }
 

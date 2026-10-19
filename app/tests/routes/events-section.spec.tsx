@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { configure, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as actualDesk from "../../src/live/desk" with { rstest: "importActual" };
 import type { Decision, DeskPosition, PositionEvent } from "../../src/live/desk";
@@ -187,6 +187,11 @@ beforeEach(() => {
   extra = {};
 });
 
+// Each test mounts a route tree and waits for its data to render: genuine work (0.1-1 s on a quiet
+// machine), so these specs get 15 s rather than the default 5 s (#5498). None waits on the clock.
+rstest.setConfig({ testTimeout: 15_000 });
+configure({ asyncUtilTimeout: 12_000 });
+
 describe("the range heads Events, and no other section carries a calendar (#5074)", () => {
   it("is the section's own head: arrows, the range in words, three counted options, no Day", async () => {
     mountAccounts(`/accounts?section=events&account=sauron&${OCTOBER}`);
@@ -246,15 +251,15 @@ describe("the range heads Events, and no other section carries a calendar (#5074
     expect(await screen.findByText(/^Oct 26 – Nov 1 · 1 on what you hold/)).toBeInTheDocument();
   });
 
-  it("shows no calendar on Overview or Activity — their content never moves with a range", async () => {
+  it("shows no calendar on Overview or the Ledger — their content never moves with a range", async () => {
     mountAccounts(`/accounts?account=sauron&${OCTOBER}`);
     await screen.findByTestId("blotter");
     expect(screen.queryByRole("group", { name: /Lens|Range/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^(Next|Previous) / })).not.toBeInTheDocument();
     expect(screen.queryByText("Market calendar")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Activity" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ledger" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Activity" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "Ledger" })).toHaveAttribute(
         "aria-pressed",
         "true",
       ),

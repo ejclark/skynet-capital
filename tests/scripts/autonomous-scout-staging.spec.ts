@@ -4,6 +4,7 @@ import {
   announceScout,
   sessionDayOf,
   stageOnce,
+  watchScoutPicks,
 } from "../../src/scripts/autonomous-scout-staging.js";
 import { aContext } from "../support/builders.js";
 
@@ -113,5 +114,51 @@ describe("after-close scout staging", () => {
       'error [playbooks] REFUSED token "S1-NVDA:aggressive (repeated)" in SKYNET_PLAYBOOKS — unknown, malformed or repeated',
       "log [playbooks] armed: S1-NVDA:standard",
     ]);
+  });
+});
+
+// The scout reads its count at every scan; the poll-time watch only refreshes what the count also
+// shows (the host's roster, with the scout on it while armed) and says so (#4535 slice 2b).
+describe("watching the owner's forced-pick count", () => {
+  it("applies and logs once per change, and stays quiet while the count holds still", () => {
+    let picks = 0;
+    const applied: number[] = [];
+    const logged: string[] = [];
+    const poll = watchScoutPicks(
+      () => picks,
+      () => applied.push(picks),
+      (line) => logged.push(line),
+    );
+    poll();
+    expect(applied).toEqual([]);
+    picks = 3;
+    poll();
+    poll();
+    expect(applied).toEqual([3]);
+    expect(logged).toEqual([
+      "[beta-scout] forced picks per day 0 → 3 (the owner's setting; applied with no restart)",
+    ]);
+    picks = 0;
+    poll();
+    expect(applied).toEqual([3, 0]);
+  });
+
+  it("tries again next poll when applying a change failed", () => {
+    let picks = 0;
+    let fail = true;
+    const logged: string[] = [];
+    const poll = watchScoutPicks(
+      () => picks,
+      () => {
+        if (fail) throw new Error("swap failed");
+      },
+      (line) => logged.push(line),
+    );
+    picks = 2;
+    expect(poll).toThrow("swap failed");
+    expect(logged).toEqual([]);
+    fail = false;
+    poll();
+    expect(logged).toHaveLength(1);
   });
 });

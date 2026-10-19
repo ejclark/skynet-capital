@@ -52,7 +52,7 @@ function setup(over: { blocked?: string; clock?: { t: number }; store?: CondScou
   const clock = over.clock ?? { t: T0 };
   let closesCalls = 0;
   const runner = new CondScoutRunner({
-    universe: ["AMD"],
+    universe: () => ["AMD"],
     closesFor: () => {
       closesCalls++;
       return Promise.resolve({ AMD: SLIDE });
@@ -83,7 +83,7 @@ describe("CondScoutRunner", () => {
   it("opens at the quantity the guards approved, not the one it asked for", async () => {
     const decisions: DecisionRecord[] = [];
     const runner = new CondScoutRunner({
-      universe: ["AMD"],
+      universe: () => ["AMD"],
       closesFor: () => Promise.resolve({ AMD: SLIDE }),
       risk: { maxPositionPct: 0.02 }, // 2% of $50k shadow capital = $1,000, under the $5k probe
       blockedReason: () => null,
@@ -136,7 +136,7 @@ describe("CondScoutRunner", () => {
     const twoNames = (capital: number) => {
       const decisions: DecisionRecord[] = [];
       const runner = new CondScoutRunner({
-        universe: ["AMD", "MU"],
+        universe: () => ["AMD", "MU"],
         closesFor: () => Promise.resolve({ AMD: SLIDE, MU: SLIDE }),
         risk: { maxPositionPct: 1 },
         blockedReason: () => null,
@@ -247,7 +247,7 @@ describe("CondScoutRunner", () => {
       const retros: unknown[] = [];
       const clock = { t: T0 };
       const runner = new CondScoutRunner({
-        universe: ["AMD"],
+        universe: () => ["AMD"],
         closesFor: () => Promise.resolve({ AMD: SLIDE }),
         risk: { maxPositionPct: 0.2 },
         blockedReason: () => null,
@@ -268,7 +268,7 @@ describe("CondScoutRunner", () => {
       const clock = { t: T0 };
       const barCalls: string[] = [];
       const deps = (t: number) => ({
-        universe: ["AMD"],
+        universe: () => ["AMD"],
         closesFor: () => Promise.resolve({ AMD: SLIDE }),
         risk: { maxPositionPct: 0.2 },
         blockedReason: () => "halted", // no new probes: this test is about the backfill only
@@ -309,7 +309,7 @@ describe("CondScoutRunner", () => {
       await first.runner.runPass(at(70, "2026-10-02T14:00:00Z"));
 
       const runner = new CondScoutRunner({
-        universe: ["AMD"],
+        universe: () => ["AMD"],
         closesFor: () => Promise.resolve({ AMD: SLIDE }),
         risk: { maxPositionPct: 0.2 },
         blockedReason: () => "halted",
@@ -350,5 +350,56 @@ describe("CondScoutRunner", () => {
       expect(after.open).toEqual([]);
       expect(after.retros.map((r) => r.symbol)).toEqual(["AMD"]);
     });
+  });
+});
+
+describe("CondScoutRunner — names read on every pass (#4535 slice 2a)", () => {
+  it("opens nothing and reads no bars while its names are empty, and opens once they arrive", async () => {
+    const names: { list: string[] } = { list: [] };
+    const reads: string[][] = [];
+    const decisions: DecisionRecord[] = [];
+    const runner = new CondScoutRunner({
+      universe: () => names.list,
+      closesFor: (symbols) => {
+        reads.push([...symbols]);
+        return Promise.resolve({ AMD: SLIDE });
+      },
+      risk: { maxPositionPct: 0.2 },
+      blockedReason: () => null,
+      now: () => T0,
+      onDecision: (r) => decisions.push(r),
+    });
+    await runner.runPass(at(80));
+    expect(reads).toEqual([]);
+    expect(decisions).toEqual([]);
+    names.list = ["AMD"]; // the owner's change, no restart
+    await runner.runPass(at(80));
+    expect(runner.openProbes().map((p) => p.symbol)).toEqual(["AMD"]);
+    expect(reads).toEqual([["AMD"]]);
+  });
+
+  it("reads only a newly added name's bars, and keeps closing a probe whose name was removed", async () => {
+    const names: { list: string[] } = { list: ["AMD"] };
+    const reads: string[][] = [];
+    const clock = { t: T0 };
+    const runner = new CondScoutRunner({
+      universe: () => names.list,
+      closesFor: (symbols) => {
+        reads.push([...symbols]);
+        return Promise.resolve({ AMD: SLIDE, MU: SLIDE });
+      },
+      risk: { maxPositionPct: 0.2 },
+      blockedReason: () => null,
+      now: () => clock.t,
+    });
+    await runner.runPass(at(80));
+    names.list = ["AMD", "MU"];
+    clock.t = T0 + 3_600_000; // an hour on: AMD's snapshot is due
+    await runner.runPass(at(80));
+    expect(reads).toEqual([["AMD"], ["MU"]]);
+    names.list = [];
+    clock.t = T0 + DAY;
+    await runner.runPass(at(70, "2026-10-01T14:00:00Z")); // AMD under its stop
+    expect(runner.openProbes()).toEqual([]);
   });
 });

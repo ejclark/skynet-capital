@@ -8,6 +8,10 @@ export interface LoopRow {
   issue: string;
   state: string;
   nextCheck: string | null;
+  /** The row's question cell — loop-check.mjs reads the `npm run <x>` it names. */
+  question?: string;
+  /** The whole Next check cell: the date and the falsifier it is judged against. */
+  nextCheckText?: string;
 }
 
 export function parseLoopList(md: string): LoopRow[] | null;

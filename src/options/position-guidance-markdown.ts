@@ -110,6 +110,34 @@ function manage(b: PositionGuidance): string[] {
   ];
 }
 
+const LONG_WORDS: Readonly<Record<string, string>> = {
+  "TAKE PROFIT": "Take profit",
+  "TIME STOP": "Time stop",
+  HOLD: "Hold",
+  "NO ANSWER": "No answer",
+};
+
+/** Long calls the member bought — rendered only when they hold one (#5709). */
+function longCalls(b: PositionGuidance): string[] {
+  if (b.longCalls.length === 0) return [];
+  const rows = b.longCalls.map((m) => {
+    const what = `${usd(m.strike)} call, ${dayText(m.expiration)} (${m.contracts})`;
+    const worth = m.multiple === undefined ? "—" : `${m.multiple.toFixed(1)}× paid`;
+    const call = `**${LONG_WORDS[m.call] ?? m.call}**${m.atOpen ? " _(plan for the open)_" : ""}`;
+    const reasons = m.reasons.map((r) => tableCell(r.text)).join("<br>");
+    const back = m.provesWrong ? `<br>_Come back if: ${tableCell(m.provesWrong)}_` : "";
+    return `| ${what} | ${worth} | ${call} | ${DOTS[m.confidence]} ${m.confidence} | ${reasons}${back} |`;
+  });
+  return [
+    "### 3c · Calls you hold",
+    "",
+    "| Contract | Bid vs paid | Call | Confidence | Why |",
+    "|---|---|---|---|---|",
+    ...rows,
+    "",
+  ];
+}
+
 function waiting(b: PositionGuidance): string[] {
   return [
     "### 4 · Until / waiting on",
@@ -203,6 +231,7 @@ export function guidanceToMarkdown(
     ...stake(guidance),
     ...calls(guidance),
     ...manage(guidance),
+    ...longCalls(guidance),
     ...waiting(guidance),
     ...strip(guidance),
     ...ladder(guidance),

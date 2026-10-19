@@ -200,4 +200,39 @@ describe("the Store by strategy, joined to the viewer's own account (#4469 slice
       expect(row).not.toHaveProperty("subscribeRefusal");
     }
   });
+  it("marks the pairs a conviction steers with its scorecard, for every viewer, and no others (#5482 slice 5)", () => {
+    for (const viewer of [undefined, [sub({ playbookId: "CRWV-WHEEL" })]]) {
+      const rows = new Map(
+        playbookStoreView(viewer, false, [], false, TODAY).strategies.flatMap((card) =>
+          card.pairs.map((row) => [row.id, row] as const),
+        ),
+      );
+      const steered = rows.get("CRWV-LONG-CALL")?.steeredBy;
+      expect(steered).toMatchObject({
+        convictionId: "ai-dip-2026-10",
+        title: "AI-dip view",
+        checkOn: "2027-01-29",
+      });
+      expect(steered?.scorecard.untestable).toBe(6);
+      expect(steered?.claims).toHaveLength(14);
+      expect(rows.get("CRWV-WHEEL")?.steeredBy?.convictionId).toBe("ai-dip-2026-10");
+      // S1-NVDA is claim 5's study, cited and not steered.
+      expect(rows.get("S1-NVDA")).not.toHaveProperty("steeredBy");
+    }
+  });
+
+  it("says which claims each steered pair's fence rests on", () => {
+    const rows = new Map(
+      playbookStoreView(undefined, false, [], false, TODAY).strategies.flatMap((card) =>
+        card.pairs.map((row) => [row.id, row] as const),
+      ),
+    );
+    const backing = (id: string) =>
+      rows
+        .get(id)
+        ?.steeredBy?.claims.filter((c) => c.backsThisPair)
+        .map((c) => c.label);
+    expect(backing("CRWV-WHEEL")).toEqual(["1", "2a", "7"]);
+    expect(backing("CRWV-LONG-CALL")).toEqual(["2b", "8", "9"]);
+  });
 });

@@ -38,12 +38,16 @@ import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
+import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
+import { startBookHealthSampler } from "../server/book-health-sampler.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { recordPasses } from "../server/play-milestone-sync.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
@@ -67,6 +71,13 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
+  // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
+  // week label from the server's own `new Date()`, so every baseline carrying it changed on
+  // Mondays. playwright.config.ts passes its FIXED_CLOCK here. Offline only — a server holding
+  // real accounts never reads a frozen clock, whatever its environment says.
+  const fixedNowMs =
+    dataSource.mode === "offline" ? Date.parse(process.env.SKYNET_FIXED_NOW ?? "") : Number.NaN;
+  const councilClock = Number.isNaN(fixedNowMs) ? {} : { now: () => new Date(fixedNowMs) };
   // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
   // run marker for this one (#4618). The gauge and any incident start once we are listening.
   const telemetry = bootTelemetry(process.env, dataSource.mode);
@@ -195,11 +206,15 @@ async function main(): Promise<void> {
   const {
     allowlist,
     botControls,
+    settingsChanges,
     council,
     councilReplies,
     filingComments,
     subscriptions,
     savedPositions,
+    authoredPlays,
+    memberConvictions,
+    playMilestones,
     knownPersonaIds,
     auth,
     password,
@@ -270,6 +285,14 @@ async function main(): Promise<void> {
   // that reach them when the Alerts strip is not on screen. Off (and said so in words) until the
   // mail credential is set, which is the one step that is Eric's.
   const alertDismissals = createAlertDismissals(process.env);
+  // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
+  // bridge, works regardless of which machine's volume this process runs on) over the JSONL
+  // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
+  // machine — never true in prod, since that dir lives on the bots machine's own volume. Read
+  // here once so the desk and the alert sweep's bot watch read the same store.
+  const readDecisions: DashboardServerConfig["readDecisions"] =
+    insightsBridge.readDecisions ??
+    (auditDir ? (id: string) => new JsonlAuditStore(auditDir).list(id) : undefined);
   const alertDelivery = wireAlertDelivery({
     env: process.env,
     activityEvents: activityEventBus,
@@ -279,11 +302,14 @@ async function main(): Promise<void> {
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
       activityLog: activityEventBus,
       alertDismissals,
+      ...(readDecisions ? { readDecisions } : {}),
     }),
   });
 
-  const server = createDashboardServer({
+  const healthHistory = createBookHealthHistoryStore(process.env, (m) => console.error(m));
+  const dashboardConfig: DashboardServerConfig = {
     hub,
+    healthHistory,
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
@@ -294,6 +320,14 @@ async function main(): Promise<void> {
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
     savedPositions,
+    authoredPlays,
+    memberConvictions,
+    playMilestones,
+    // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).
+    readPlayMilestones: () => {
+      recordPasses(authoredPlays, playMilestones, insightsBridge.readAuthoredShadow());
+      return playMilestones.list();
+    },
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
@@ -319,6 +353,7 @@ async function main(): Promise<void> {
       ? {
           controls: {
             store: botControls,
+            changes: settingsChanges,
             isOwner: (email: string) => owners.has(email),
             // Roster restricted to KNOWN personas: a self-service /add can mint a kind:"bot"
             // row with any id, and a planted row must never appear on the switchboard as a
@@ -365,6 +400,7 @@ async function main(): Promise<void> {
     // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {
+      ...councilClock,
       load: () => council.load(),
       submit: (week, memberId, text, at, playbookId) => {
         council.submit(week, memberId, {
@@ -380,6 +416,7 @@ async function main(): Promise<void> {
     // Replies under each weekly Council line (#5097): the app's own store, reading the Council's
     // lines so a reply only hangs on one that is up — no GitHub, no companion in reach.
     councilReplies: {
+      ...councilClock,
       load: () => councilReplies.load(),
       add: (week, lineId, reply) => {
         councilReplies.add(week, lineId, reply);
@@ -402,15 +439,8 @@ async function main(): Promise<void> {
       readFilings: () => feedbackLog.list(),
     },
     progression: progressionService,
-    // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
-    // bridge, works regardless of which machine's volume this process runs on) over the JSONL
-    // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
-    // machine — never true in prod, since that dir lives on the bots machine's own volume.
-    ...(insightsBridge.readDecisions
-      ? { readDecisions: insightsBridge.readDecisions }
-      : auditDir
-        ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) }
-        : {}),
+    // The replicated decision store, else the JSONL audit trail (`readDecisions` above).
+    ...(readDecisions ? { readDecisions } : {}),
     // The wire route's "why did that trade fire" join (PR 6) — no JSONL fallback: the fuzzy
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
@@ -423,11 +453,15 @@ async function main(): Promise<void> {
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
     ...(insightsBridge.readCheckWeek ? { readCheckWeek: insightsBridge.readCheckWeek } : {}),
+    ...(insightsBridge.readPlaybookFunnel
+      ? { readPlaybookFunnel: insightsBridge.readPlaybookFunnel }
+      : {}),
     // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
     readCondScout: insightsBridge.readCondScout,
+    readAuthoredShadow: insightsBridge.readAuthoredShadow,
     readHouseRoster: insightsBridge.readHouseRoster,
     signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
@@ -449,6 +483,12 @@ async function main(): Promise<void> {
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
     ...(spotChecks ? { spotChecks } : {}),
+  };
+  const server = createDashboardServer(dashboardConfig);
+  // Book-health history (#5493 slice 5): one sample of every account's findings an hour.
+  startBookHealthSampler({
+    config: dashboardConfig,
+    participants: () => hub.getState().participants,
   });
   // Fly's deploy sends SIGTERM to the old machine: stop accepting, end SSE with a retry hint,
   // exit 0 inside kill_timeout (#4616). The one exit that clears the run marker (#4618).

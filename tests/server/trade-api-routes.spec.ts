@@ -99,6 +99,41 @@ describe("serveTradeApi", () => {
     expect(preview.warnings.join(" ")).toContain("closes the position");
   });
 
+  it("prices a first buy from the requester's own quote, and checks it against cash (#5173)", async () => {
+    const asked: string[] = [];
+    const quoting = (price: number) =>
+      configWith({
+        optionsClientFor: () => ({
+          getUnderlyingPrice: (symbol: string) => {
+            asked.push(symbol);
+            return Promise.resolve(price);
+          },
+        }),
+      } as never);
+    const buy = { participantId: "human-eric", symbol: "nvda", quantity: 10, action: "buy" };
+    const covered = fakeRes();
+    await serveTradeApi(post(buy), covered.res, "/api/trade/review", quoting(232.1), session);
+    const ok = JSON.parse(covered.out.body ?? "{}").preview;
+    expect(asked).toEqual(["NVDA"]);
+    expect(ok).toMatchObject({ ok: true, estPrice: 232.1 });
+    expect(ok.estCashAfter).toBeCloseTo(7_679);
+
+    const short = fakeRes();
+    await serveTradeApi(post(buy), short.res, "/api/trade/review", quoting(2_000), session);
+    const refused = JSON.parse(short.out.body ?? "{}").preview;
+    expect(refused.ok).toBe(false);
+    expect(refused.refusals.join(" ")).toContain("more than your available cash");
+  });
+
+  it("reviews a first buy unpriced, with the warning, when no quote can be read", async () => {
+    const { res, out } = fakeRes();
+    const buy = { participantId: "human-eric", symbol: "NVDA", quantity: 10, action: "buy" };
+    await serveTradeApi(post(buy), res, "/api/trade/review", configWith(), session);
+    const preview = JSON.parse(out.body ?? "{}").preview;
+    expect(preview.estNotional).toBeUndefined();
+    expect(preview.warnings.join(" ")).toContain("No recent price");
+  });
+
   it("reviews a stranger's desk honestly — refused, with the reason rendered", async () => {
     const { res, out } = fakeRes();
     const config = configWith({ resolveOwnerId: () => undefined } as never);

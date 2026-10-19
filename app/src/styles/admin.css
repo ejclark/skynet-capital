@@ -197,3 +197,62 @@
   font-size: 13px;
   font-family: var(--sans);
 }
+
+/* A bot's own settings (#4535 slice 3b) — under the switch, same card grammar; the change log's
+   arrow and words carry the change, never hue. */
+.bot-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.bot-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bot-settings-field label,
+.bot-settings-sub {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* The house field look (`gate.css` .field select): without it the UA draws a grey box on the dark card. */
+.bot-settings-field select {
+  align-self: flex-start;
+  min-width: 220px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--sans);
+}
+.bot-settings-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.bot-settings-changes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .bot-settings-field select {
+    min-height: 44px;
+  }
+}

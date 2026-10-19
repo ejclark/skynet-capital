@@ -73,8 +73,8 @@ describe("the any-account head's settings ownership", () => {
       expect(railSource).not.toContain('className="rail-label"');
     });
 
-    it("gives the page an Activity section and its own sticky head (#3807 slice 2d)", () => {
-      expect(railSource).toContain('<Link to="/u/$id/activity" params={{ id }}>');
+    it("gives the page a Ledger section and its own sticky head (#3807 slice 2d)", () => {
+      expect(railSource).toContain('<Link to="/u/$id/ledger" params={{ id }}>');
       expect(railSource).toContain('className="cockpit-head acct-head"');
       expect(railSource).toContain("<h1>{name}</h1>");
     });

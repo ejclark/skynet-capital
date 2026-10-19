@@ -534,10 +534,12 @@ describe("serveWireJson", () => {
       expect(trades[0].key.includes("2026-08-24T00:00:00.000Z")).toBe(true);
       expect(trades[1].key.includes("2026-08-23T00:00:00.000Z")).toBe(true);
       expect(out.headers.link).toBe(
-        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z>; rel="next"',
+        // time|order id (#4802)
+        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z%7Cord-3>; rel="next"',
       );
     });
 
+    // A bare-time cursor (from before #4802) still pages, as strictly older.
     it("follows the Link header's own before cursor to the next page", async () => {
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),

@@ -50,12 +50,17 @@ describe("formatSigned", () => {
     expect(formatSigned(500)).toBe("+$500");
   });
 
-  it("prefixes a negative value with the currency's own minus (no double sign)", () => {
-    expect(formatSigned(-500)).toBe("-$500");
+  it("prefixes a negative value with a real minus sign (U+2212)", () => {
+    expect(formatSigned(-500)).toBe("−$500");
   });
 
-  it("prefixes zero with a plus sign (treated as non-negative)", () => {
-    expect(formatSigned(0)).toBe("+$0");
+  it("writes zero as a bare $0 — neither gain nor loss", () => {
+    expect(formatSigned(0)).toBe("$0");
+  });
+
+  it("never writes +$0 or −$0 for an amount that rounds to zero", () => {
+    expect(formatSigned(0.4)).toBe("$0");
+    expect(formatSigned(-0.4)).toBe("$0");
   });
 });
 

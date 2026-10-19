@@ -11,26 +11,34 @@ import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
+import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
+import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import {
   createOwnerLinkStore,
   ownerEmailFor,
   resolveOwnedParticipantIds,
 } from "../server/owner-link-store.js";
+import { createPlayMilestoneLedger } from "../server/play-milestone-ledger.js";
 import { createSavedPositionsStore } from "../server/saved-positions-store.js";
+import { createSettingsChangeLog } from "../server/settings-change-log.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
+  settingsChanges: ReturnType<typeof createSettingsChangeLog>;
   council: ReturnType<typeof createCouncilStore>;
   councilReplies: ReturnType<typeof createCouncilRepliesStore>;
   filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
+  authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
+  memberConvictions: ReturnType<typeof createMemberConvictionStore>;
+  playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
@@ -58,6 +66,9 @@ export function setupAccess(
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(env, (m) => console.error(m));
+  // Every change to a bot's own settings, who made it, before and after (#4535 slice 3b) — a
+  // sibling of bot-controls.json, same posture.
+  const settingsChanges = createSettingsChangeLog(env, (m) => console.error(m));
   // The Sunday Council's weekly thesis lines (issue #2224 shape 1) — a sibling file next to
   // bot-controls.json, no new env var, no fly.toml change (envelope-protected).
   const council = createCouncilStore(env, (m) => console.error(m));
@@ -74,6 +85,13 @@ export function setupAccess(
   // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
   // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
   const savedPositions = createSavedPositionsStore(env, (m) => console.error(m));
+  // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
+  // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
+  const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
+  // Members' convictions (#5482 slice 6a) — drafts that steer nothing yet, a sibling file too.
+  const memberConvictions = createMemberConvictionStore(env, (m) => console.error(m));
+  // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
+  const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -111,11 +129,15 @@ export function setupAccess(
   return {
     allowlist,
     botControls,
+    settingsChanges,
     council,
     councilReplies,
     filingComments,
     subscriptions,
     savedPositions,
+    authoredPlays,
+    memberConvictions,
+    playMilestones,
     knownPersonaIds,
     auth,
     password,

@@ -96,7 +96,10 @@ export function isBreakerTripped({
 }) {
   let out;
   try {
-    out = ghRead(exec, ["issue", "view", String(trackingIssue), "--json", "labels"], sleep);
+    // REST, not `gh issue view` (GraphQL): a Claude Code cloud session gets a 403 on GraphQL, so
+    // the breaker read as tripped in every cloud session (2026-10-18). Same `{ labels }` shape.
+    const path = `repos/{owner}/{repo}/issues/${trackingIssue}`;
+    out = ghRead(exec, ["api", path, "--jq", "{labels: [.labels[] | {name}]}"], sleep);
   } catch (err) {
     throw new Error(
       `moneypenny: could not check circuit breaker state on issue #${trackingIssue} (${err.message}). ` +
@@ -108,7 +111,7 @@ export function isBreakerTripped({
     labels = JSON.parse(out).labels;
   } catch {
     throw new Error(
-      `moneypenny: 'gh issue view ${trackingIssue}' returned unparseable output. Refusing to ` +
+      `moneypenny: the read of issue #${trackingIssue} returned unparseable output. Refusing to ` +
         "dispatch while the breaker's own state is unreadable — see issue #2946.",
     );
   }

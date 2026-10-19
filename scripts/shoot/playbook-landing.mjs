@@ -42,7 +42,7 @@ const lanes = [
   { playbookId: "S1-NVDA", mode: "standard", states: lane(() => "no-window") },
   { playbookId: "NVDA-CALL-SPREAD", mode: "aggressive", states: lane(() => "no-window") },
   { playbookId: "G1-GOOG", mode: "standard", states: lane(() => "no-window") },
-  { playbookId: "HC-SAURON", mode: "standard", states: lane(() => "tactical") },
+  { playbookId: "TACO-DJT", mode: "standard", states: lane(() => "no-window") },
 ].map((l) => ({ ...l, slot: slot(l.playbookId) }));
 
 const NVDA_CHECK = "2026-10-05T15:20:00.000Z";
@@ -198,7 +198,7 @@ const under = (selector) =>
 
 /** Open the put's order on Activity, then follow its playbook link to the card. */
 async function landFromActivity(opened) {
-  await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+  await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
   await page.locator("#act-put-1").waitFor();
   await page.locator(opened).click();
   await page.getByRole("link", { name: /CRWV-WHEEL · aggressive — open its card/ }).waitFor();

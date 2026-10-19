@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "@rstest/core";
+import { afterAll, beforeAll, describe, expect, it } from "@rstest/core";
 import { guardNetwork } from "../../scripts/study/no-network.mjs";
 import { serverRead } from "../../scripts/study/server-reads.mjs";
 import { buildBook } from "../../scripts/study/worlds/book.mjs";
@@ -15,6 +15,8 @@ import {
 } from "../../scripts/study/worlds/instant.mjs";
 import { marketClient } from "../../scripts/study/worlds/market.mjs";
 import { serverConfig, sessionFor } from "../../scripts/study/worlds/server-config.mjs";
+import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
+import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { createBoardChannel } from "../../src/server/board-patch-routes.js";
 
 /**
@@ -85,9 +87,12 @@ describe("buildBook", () => {
   it("records each pass's verdicts as the playbooks gave them at that pass, never typed", () => {
     const wheel = (book: ReturnType<typeof buildBook>) =>
       book.decisions.sauron?.[0]?.playbookVerdicts?.find((v) => v.playbookId === "CRWV-WHEEL");
-    // Thursday sits outside the wheel's sale window; the stopped bot's Tuesday pass sat inside it.
-    expect(wheel(today)?.state).toBe("no-window");
-    expect(wheel(buildBook("profile-bad-day"))?.state).toBe("long");
+    // Each pass's verdict is the live playbook's own answer at that pass's time.
+    for (const book of [today, buildBook("profile-bad-day")]) {
+      const pass = book.decisions.sauron?.[0];
+      const asOf = new Date(pass?.at ?? 0).toISOString();
+      expect(wheel(book)?.state).toBe(CRWV_WHEEL.desiredState(asOf, UPCOMING_PRINTS));
+    }
   });
 });
 
@@ -274,14 +279,22 @@ describe("profile-today's reads, as production answers them", () => {
 
 describe("a composed world", () => {
   type Manifest = { payloads: { world: string; viewer: string; key: string; sha256: string }[] };
+  // Each run directory holds a whole composed world (~56MB), so every one this block makes is
+  // removed in afterAll — pass or fail — or a busy box fills its disk (#5583). The compose script
+  // only writes inside the directory it is handed, so the spec, which makes it, owns its cleanup.
+  const made: string[] = [];
   const compose = (...names: string[]) => {
     const dir = mkdtempSync(join(tmpdir(), "study-compose-"));
+    made.push(dir);
     const out = spawnSync("npx", ["tsx", "scripts/study/worlds/compose.mjs", dir, ...names], {
       encoding: "utf8",
     });
     if (out.status !== 0) throw new Error(`compose exited ${out.status}: ${out.stderr}`);
     return dir;
   };
+  afterAll(() => {
+    for (const dir of made) rmSync(dir, { recursive: true, force: true });
+  });
   const hashes = (dir: string, world: string) => {
     const m = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
     return Object.fromEntries(

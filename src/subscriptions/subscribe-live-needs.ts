@@ -42,7 +42,7 @@ import type { OptionMarketPort } from "../ports/option-market.js";
  * still refuse an unfit open on the cycle that makes it. A refusal here is the early, readable
  * version of that, not a second rule.
  *
- * Baskets (HC-SAURON, SAURON) have no single ticker to read and are not judged.
+ * Baskets (SAURON) have no single ticker to read and are not judged.
  */
 
 /** What the live reads give; each absent read skips its check. */

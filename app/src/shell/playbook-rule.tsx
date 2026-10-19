@@ -1,13 +1,7 @@
 import type { ReactElement } from "react";
 import { occStrikeLabel, parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
-import {
-  dayText,
-  dollarsOf,
-  type WheelPhase,
-  type WindowPlan,
-  wheelStep,
-} from "../live/playbook-rule";
+import { dollarsOf, type WheelPhase, wheelStep } from "../live/playbook-rule";
 
 /**
  * THE RULE AS A PICTURE (#5073 slice 3; #5037 round 2's PATTERNS row "The rule as a picture": an
@@ -19,8 +13,8 @@ import {
  *    on is ringed and labelled in words. Under it, the price strip: the stock now against the sold
  *    contract's strike and breakeven, the zones said in words (Eric's integration note on #5073:
  *    "the wheel drawn as a loop with the price strip").
- *  - A PRE-PRINT WINDOW, on the calendar: the days it holds as a solid band, the days it stands
- *    out as hatching, the print as ◆ and today as ●.
+ *  - A PRE-EARNINGS WINDOW, as one line counted back from the report — its own module,
+ *    `playbook-window.tsx` (#5432), shared with R&D → Playbooks.
  *
  * Every state is a shape and a word, never hue alone (docs/BRAND.md → Accessibility). Numbers sit
  * on the picture, never in a list beside it (Eric, same note).
@@ -137,7 +131,7 @@ export function WheelLoop({
         <text className="pbr-edge-label" x={170} y={158} textAnchor="middle">
           called away: back to 1
         </text>
-        {stop(1, "Sell a put", "about a month out")}
+        {stop(1, "Sell a put", "2 to 6 weeks out")}
         {stop(2, `Own 100 ${symbol}`, "if assigned")}
         {stop(3, "Sell a call", "on those shares")}
       </svg>
@@ -319,135 +313,5 @@ export function PriceStrip({
         </text>
       )}
     </svg>
-  );
-}
-
-/* ── a pre-print window ────────────────────────────────────────────────────────────────────── */
-
-const DAY_MS = 86_400_000;
-const daysFrom = (a: string, b: string) =>
-  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
-
-function windowSentence(plan: WindowPlan, span: string): string {
-  const { symbol, print } = plan;
-  const est = print.confirmed ? "" : " (est.)";
-  const wait = print.confirmed
-    ? ""
-    : " It opens only once that date is confirmed; until then it waits.";
-  if (plan.phase === "before")
-    return `Holds ${symbol} ${span}. ${symbol} prints ${dayText(print.date)}${est}, so its window would open ${dayText(plan.opens)}.${wait}`;
-  if (plan.phase === "inside")
-    return `Inside its window: it wants to hold ${symbol} through ${dayText(plan.lastLong)}${plan.outBy ? ` and be out by ${dayText(plan.outBy)}` : ", to the close of print day"}.`;
-  return `Out of ${symbol} until the print on ${dayText(print.date)}${est}; the next window follows the next print.`;
-}
-
-/** How many days before the window opens the axis starts: enough lead-in to see today coming,
- *  never so much that the window shrinks too narrow to label. Further off, today sits at the edge
- *  behind a break. */
-const LEAD_DAYS = 10;
-
-const shiftDay = (date: string, days: number) =>
-  new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
-
-export function WindowTimeline({
-  plan,
-  span,
-}: {
-  readonly plan: WindowPlan;
-  /** The Store's own window sentence ("20 to 6 sessions before the print"). */
-  readonly span: string;
-}): ReactElement {
-  const lead = shiftDay(plan.opens, -LEAD_DAYS);
-  const start = plan.today < plan.opens ? (plan.today > lead ? plan.today : lead) : plan.opens;
-  const total = Math.max(daysFrom(start, plan.print.date) + 4, 1);
-  const L = 14;
-  const R = 326;
-  const x = (date: string) => L + ((daysFrom(start, date) + 2) / total) * (R - L);
-  // Today before the axis begins is drawn at its edge, after a break: off the scale, said in words.
-  const offScale = plan.today < start;
-  const todayX = offScale ? L : plan.today > plan.print.date ? R : x(plan.today);
-  const y = 40;
-  const bandEnd = plan.outBy ?? plan.print.date;
-  const est = plan.print.confirmed ? "" : " est.";
-  // Rows: today above the axis, "holds" on the band, the window's two edges on the first row under
-  // it and the print alone on the second, so no two labels share a row they could collide on.
-  return (
-    <figure className="pbr pbr-window">
-      <svg
-        viewBox="0 0 340 92"
-        role="img"
-        aria-label={`${plan.symbol}'s window: holds from ${dayText(plan.opens)} through ${dayText(plan.lastLong)}, the print ${dayText(plan.print.date)}${plan.print.confirmed ? "" : ", estimated"}; today is ${dayText(plan.today)}.`}
-      >
-        <defs>
-          <pattern
-            id="pbr-hatch-w"
-            width="5"
-            height="5"
-            patternUnits="userSpaceOnUse"
-            patternTransform="rotate(-45)"
-          >
-            <line x1="0" y1="0" x2="0" y2="5" className="pbr-hatch-line" />
-          </pattern>
-        </defs>
-        <line className="pbr-axis" x1={offScale ? L + 14 : L} x2={R} y1={y} y2={y} />
-        {offScale ? (
-          <text className="pbr-zone" x={L + 7} y={y + 4} textAnchor="middle">
-            ≈
-          </text>
-        ) : null}
-        <rect
-          className="pbr-keep"
-          x={x(plan.opens)}
-          y={y - 6}
-          width={Math.max(x(bandEnd) - x(plan.opens), 2)}
-          height={12}
-        />
-        {plan.outBy ? (
-          <rect
-            className="pbr-lose"
-            x={x(plan.outBy)}
-            y={y - 6}
-            width={Math.max(x(plan.print.date) - x(plan.outBy), 2)}
-            height={12}
-            fill="url(#pbr-hatch-w)"
-          />
-        ) : null}
-        <text
-          className="pbr-zone"
-          x={(x(plan.opens) + x(bandEnd)) / 2}
-          y={y - 11}
-          textAnchor="middle"
-        >
-          holds {plan.symbol}
-        </text>
-        <text className="pbr-fig" x={x(plan.opens)} y={y + 22} textAnchor="start">
-          opens {dayText(plan.opens)}
-        </text>
-        {plan.outBy ? (
-          <text className="pbr-fig pbr-fig-muted" x={x(plan.outBy)} y={y + 22} textAnchor="end">
-            out {dayText(plan.outBy)}
-          </text>
-        ) : null}
-        <text className="pbr-print" x={x(plan.print.date)} y={y + 5} textAnchor="middle">
-          ◆
-        </text>
-        <text className="pbr-fig" x={x(plan.print.date) + 6} y={y + 38} textAnchor="end">
-          ◆ print {dayText(plan.print.date)}
-          {est}
-        </text>
-        <g className="pbr-now">
-          <line className="pbr-now-line" x1={todayX} x2={todayX} y1={y - 22} y2={y + 6} />
-          <text
-            className="pbr-now-fig"
-            x={todayX}
-            y={y - 26}
-            textAnchor={todayX < 60 ? "start" : todayX > 280 ? "end" : "middle"}
-          >
-            ● today{offScale ? `, ${dayText(plan.today)}` : ""}
-          </text>
-        </g>
-      </svg>
-      <figcaption className="pbr-caption">{windowSentence(plan, span)}</figcaption>
-    </figure>
   );
 }

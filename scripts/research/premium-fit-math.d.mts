@@ -47,3 +47,24 @@ export function straddlesPrint(
   expiry: string,
   printDates: readonly string[],
 ): boolean;
+export function printFreeForwardVols(
+  bars: readonly Bar[],
+  horizon: number,
+  printDates: readonly string[],
+): number[];
+export function wheelImplied(input: {
+  iv30: number;
+  today: string;
+  knownPrints: readonly string[];
+  expiries: readonly {
+    expiry: string;
+    atmIv: number | null;
+    clean: boolean;
+    inBand: boolean;
+  }[];
+}): {
+  iv: number | null;
+  source: "iv30" | "expiry" | "none";
+  expiry?: string;
+  printInside: boolean;
+};

@@ -32,6 +32,16 @@
   line-height: 1.5;
 }
 
+/* What the playbook trades on, as research runs it (#4808): a quoted rule, set off by its edge. */
+.pb-pair-signal {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .pb-card-triggers {
   margin: 0;
   display: grid;
@@ -263,28 +273,6 @@
   color: var(--muted);
 }
 
-/* "Subscribe as" in the Playbooks section's own head (#3807 slice 2a — it left the rail with the
-   rail): a labelled row of chips under the heading, wrapping at a phone's width. */
-.pb-subscribe {
-  border: 0;
-  margin: 0 0 12px;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-.pb-subscribe .rail-label {
-  margin: 0 8px 0 0;
-  padding: 0;
-  float: left;
-}
-.pb-subscribe .railctl {
-  width: auto;
-  white-space: nowrap;
-}
-
 /* The selected account's own numbers on this playbook (#3665 slice 3). Its own bordered block, so
    the house-wide block slice 4 adds beside it can never read as the same figure. Two fixed columns
    at every width, the facts grid's comparison rule. */
@@ -340,8 +328,9 @@
   grid-column: 1 / -1;
 }
 
-/* Who started the bots' closed trades (#4450 slice 4): above the deck, one cell per initiator —
-   stacked at phone width, three across once there is room. Rows differ by their words, never hue. */
+/* Who started the bots' closed trades (#4450 slice 4): one cell per initiator — stacked at phone
+   width, three across once there is room. Rows differ by their words, never hue. It lives on the
+   book's Balance section now (#5493 slice 3); `balance.css` sets its margin there. */
 .pb-initiators {
   margin: 0 0 12px;
 }
@@ -644,4 +633,58 @@
 
 .pb-conviction-fields textarea {
   resize: vertical;
+}
+
+/* "Steered by" on a pair row, with the view's scorecard (#5482 slice 5). Each outcome is a glyph AND
+   a word; hue never carries it alone (docs/BRAND.md → Accessibility). */
+.pb-steered {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-steered > summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.pb-steered-view {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.pb-steered-count {
+  white-space: nowrap;
+}
+
+.pb-steered-claims {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pb-steered-claim {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  column-gap: 8px;
+}
+
+.pb-steered-claim > .pb-steered-mark {
+  font-weight: 600;
+}
+
+.pb-steered-claim p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pb-steered-claim .pb-steered-says {
+  color: var(--fg);
+}
+
+.pb-steered-note {
+  margin: 6px 0 0;
+  color: var(--muted);
 }

@@ -302,3 +302,61 @@ export function printMoves(bars, printDates) {
  */
 export const straddlesPrint = (today, expiry, printDates) =>
   printDates.some((p) => p > today && p <= expiry);
+
+/**
+ * `forwardVols` without the months that held a print (#4819). The wheel never sells a leg across a
+ * report, so the premium it is paid carries no earnings move; comparing that premium with a
+ * distribution that includes report months would call it cheap or rich against months it can never
+ * be in. A window is dropped when it holds the print's filing session or the session after — EDGAR
+ * gives no time of day, so the reaction may land on either (`printMoves`).
+ *
+ * @param {{date: string, close: number}[]} bars
+ * @param {number} horizon in trading days
+ * @param {string[]} printDates ISO, any order
+ * @returns {number[]}
+ */
+export function printFreeForwardVols(bars, horizon, printDates) {
+  const returns = logReturns(bars);
+  // Return r runs from bar r to bar r+1, so a reaction on session s lives in return s−1.
+  const touched = new Set();
+  for (const print of printDates) {
+    const at = bars.findIndex((b) => b.date >= print);
+    if (at < 0) continue;
+    for (const session of [at, at + 1]) if (session >= 1) touched.add(session - 1);
+  }
+  const out = [];
+  for (let i = 0; i + horizon <= returns.length; i++) {
+    let clean = true;
+    for (let r = i; r < i + horizon && clean; r++) clean = !touched.has(r);
+    if (clean) out.push(annualizedVol(returns.slice(i, i + horizon)));
+  }
+  return out;
+}
+
+/** Calendar days `iv30` quotes — a print inside them is priced into it. */
+const IV30_DAYS = 30;
+/**
+ * Which implied the fit verdict should rank (#4819). Cboe's `iv30` is a constant 30-day maturity,
+ * so a report due inside it is priced in — premium the wheel cannot sell, since no leg may cross a
+ * print. With no print in the next 30 days, `iv30` is already clean and is used as is. With one
+ * inside, the honest number is the ATM implied of the richest print-clean expiry in the wheel's
+ * band — the leg it would actually sell.
+ *
+ * With a print inside and no clean expiry in the band, it is `null` — never a fall back to the
+ * report-laden `iv30`, and never a shorter clean expiry: on 2026-10-18 META's 8-day clean expiry
+ * read 56.7% against a 44.4% `iv30` and would have called it rich at the 100th percentile. That
+ * case is common (a report inside 30 days usually puts every band expiry after it), and "stand
+ * aside" is then also the true call: the wheel cannot open a band leg until the report has passed.
+ *
+ * @param {{ iv30: number, today: string, knownPrints: string[],
+ *           expiries: {expiry: string, atmIv: number|null, clean: boolean, inBand: boolean}[] }} input
+ * @returns {{ iv: number|null, source: "iv30"|"expiry"|"none", expiry?: string, printInside: boolean }}
+ */
+export function wheelImplied({ iv30, today, knownPrints, expiries }) {
+  const printInside = straddlesPrint(today, addDays(today, IV30_DAYS), knownPrints);
+  if (!printInside) return { iv: iv30, source: "iv30", printInside };
+  const sellable = expiries.filter((e) => e.clean && e.inBand && e.atmIv != null);
+  if (sellable.length === 0) return { iv: null, source: "none", printInside };
+  const richest = sellable.reduce((a, b) => (b.atmIv > a.atmIv ? b : a));
+  return { iv: richest.atmIv, source: "expiry", expiry: richest.expiry, printInside };
+}

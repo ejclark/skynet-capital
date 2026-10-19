@@ -1,10 +1,12 @@
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
+import type { PlayMilestone } from "../server/play-milestone-ledger.js";
 import { humanizeOptionSymbol } from "../trading/option-symbols.js";
 import { formatPrice } from "./desk-data.js";
 import type { DevelopmentFeedItem } from "./development-event-feed.js";
 import type { FeedbackFeedItem } from "./feedback-event-feed.js";
 import { FEEDBACK_KIND_ICON, FEEDBACK_KIND_WORD } from "./feedback-view.js";
 import type { MemberMilestone } from "./milestone-event-feed.js";
+import { playRowWords } from "./play-feed-words.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
 import { spreadNetWords } from "./spread-activity.js";
 import type { WireTradeVitals } from "./vitals.js";
@@ -112,6 +114,23 @@ interface WireMilestoneView {
   readonly at: string;
 }
 
+/** One authored-play milestone as the feed renders it (#5457 slice 5) — the fifth kind. The wording
+ *  (and its honesty rules) is `play-feed-words.ts`. */
+interface WirePlayView {
+  readonly key: string;
+  readonly icon: string;
+  readonly kindLabel: string;
+  /** The bot that runs the play. */
+  readonly who: string;
+  readonly whoId: string;
+  /** The sentence after the name. */
+  readonly text: string;
+  readonly symbol: string;
+  readonly meta: string;
+  readonly cheer: boolean;
+  readonly at: string;
+}
+
 export interface WireView {
   readonly trades: readonly WireTradeView[];
   readonly pnl: readonly WirePnlView[];
@@ -125,6 +144,10 @@ export interface WireView {
    *  let an empty list imply nobody has earned anything. */
   readonly milestonesEnabled: boolean;
   readonly milestones: readonly WireMilestoneView[];
+  /** False for anyone not signed in, and where no ledger is wired — members see the fifth kind, a
+   *  pre-auth read never does (the invite gate), and the page says why rather than imply none. */
+  readonly playsEnabled: boolean;
+  readonly plays: readonly WirePlayView[];
 }
 
 /** A filing whose payload named a kind this app doesn't file — the row still belongs on the
@@ -160,6 +183,10 @@ export function wireJsonView(
   /** The fourth kind (#784 slice 5) — absent, not empty, when a milestone source is unwired, for the
    *  reason `development` is. */
   milestones?: readonly MemberMilestone[],
+  /** The fifth kind (#5457 slice 5) — members only, so the caller passes it solely to a signed-in
+   *  read; absent, not empty, otherwise. The names map a bot's account to the participant the row is
+   *  about; a row whose bot is not on the roster is dropped rather than shown nameless. */
+  plays?: { readonly items: readonly PlayMilestone[]; readonly names: ReadonlyMap<string, string> },
 ): WireView {
   return {
     trades: trades.map((row, index) => ({
@@ -236,5 +263,27 @@ export function wireJsonView(
         meta: item.points !== undefined ? `+${item.points} pts` : "",
         at: item.at,
       })),
+    playsEnabled: plays !== undefined,
+    plays: [...(plays?.items ?? [])]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .flatMap((item) => {
+        const who = plays?.names.get(item.accountId);
+        if (!who) return [];
+        const words = playRowWords(item);
+        return [
+          {
+            key: `play:${item.key}`,
+            icon: words.icon,
+            kindLabel: words.kindLabel,
+            who,
+            whoId: item.accountId,
+            text: words.text,
+            symbol: item.symbol,
+            meta: words.meta,
+            cheer: words.cheer,
+            at: item.at,
+          },
+        ];
+      }),
   };
 }

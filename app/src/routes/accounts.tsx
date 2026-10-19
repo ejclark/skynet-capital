@@ -14,20 +14,17 @@ import { fetchNetWorth } from "../live/networth";
 import { landingFromSearch, landingOf, type PlaybookLanding } from "../live/playbook-landing";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
-import {
-  AccountActivity,
-  type ActivityNarrowing,
-  narrowingFromSearch,
-} from "../shell/account-activity";
+import { AccountLedger, type LedgerNarrowing, narrowingFromSearch } from "../shell/account-ledger";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
-import { ActivityLedger } from "../shell/activity-ledger";
+import { BalanceSection } from "../shell/balance-section";
 import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
 import { EventsSection } from "../shell/events-section";
 import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
+import { Ledger } from "../shell/ledger";
 import type { MilestoneChapter } from "../shell/milestone-card";
 import { MilestonesSection } from "../shell/milestones-section";
 import { parseLens } from "../shell/positions-lens";
@@ -43,6 +40,7 @@ import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
 import { useOrderDetail } from "../shell/use-order-detail";
+import { positionPageFromSearch } from "../shell/use-position-page";
 
 /**
  * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
@@ -53,7 +51,9 @@ import { useOrderDetail } from "../shell/use-order-detail";
  * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter), **Activity** and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
+ * blotter), **Balance** (#5493 slice 3 — the book as one system: the findings, the playbook
+ * behind each, the plays' numbers and the closed trades; one account's, so not "All accounts"),
+ * **Ledger** (one account's orders, #5281 — "Activity" until then) and **Events** (#3807 slice 2c — the calendar of what you hold, #5074: its
  * range is the section's own head and the page's only date control, over one lane per position and
  * the list of dates; a picked day is `?events=`) apply to every account; **Playbooks** (the bot's
  * checks over one card per playbook — Heartbeat merged into it, #5073; `?checks=open` unfolds the
@@ -83,11 +83,7 @@ function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
 /** "All accounts" — every account's newest page merged, newest first. There is no single cursor
  *  across several ledgers, so this view never walks back: it says plainly that it holds each
  *  account's newest orders and opens one account's full list for the rest (#5165). */
-function MergedActivity({
-  accounts,
-}: {
-  readonly accounts: readonly OwnedAccount[];
-}): ReactElement {
+function MergedLedger({ accounts }: { readonly accounts: readonly OwnedAccount[] }): ReactElement {
   const ids = accounts.map((a) => a.id);
   const activity = useQuery({
     queryKey: ["accounts-activity", ids.join(",")],
@@ -107,14 +103,14 @@ function MergedActivity({
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
   if (activity.isError) return <p className="note">The ledger is unreachable.</p>;
   if (!activity.data.available)
-    return <p className="note">No durable activity ledger is wired in this deployment.</p>;
+    return <p className="note">No durable ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
   const { events, more, page } = activity.data;
   // Several merged → a row carries no account of its own, so its round link is honestly left off.
   return (
     <>
-      <ActivityLedger events={events} detail={detail} onDetail={setDetail} />
+      <Ledger events={events} detail={detail} onDetail={setDetail} />
       {more.length === 0 ? (
         <p className="note activity-end">That's the oldest order in every account's ledger.</p>
       ) : (
@@ -124,7 +120,7 @@ function MergedActivity({
           {more.map((a, i) => (
             <span key={a.id}>
               {i > 0 ? " · " : null}
-              <Link to="/accounts" search={{ account: a.id, section: "activity" }}>
+              <Link to="/accounts" search={{ account: a.id, section: "ledger" }}>
                 {a.name} ›
               </Link>
             </span>
@@ -135,7 +131,7 @@ function MergedActivity({
   );
 }
 
-function ActivitySection({
+function LedgerSection({
   accounts,
   deskIds,
   narrowing,
@@ -143,19 +139,19 @@ function ActivitySection({
 }: {
   readonly accounts: readonly OwnedAccount[];
   readonly deskIds: readonly string[];
-  readonly narrowing: ActivityNarrowing;
-  readonly onNarrow: (next: ActivityNarrowing) => void;
+  readonly narrowing: LedgerNarrowing;
+  readonly onNarrow: (next: LedgerNarrowing) => void;
 }): ReactElement {
   const [only, ...rest] = deskIds;
   if (only === undefined)
     return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (rest.length > 0)
-    return <MergedActivity accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
-  // One account: the same paged, narrowed list `/u/<id>/activity` shows. Every account here is the
+    return <MergedLedger accounts={accounts.filter((a) => deskIds.includes(a.id))} />;
+  // One account: the same paged, narrowed list `/u/<id>/ledger` shows. Every account here is the
   // viewer's own, so a bot's playbook is theirs to see. Keyed by the account, so switching starts
   // the symbol box and the walk back over.
   return (
-    <AccountActivity key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
+    <AccountLedger key={only} id={only} narrowing={narrowing} onNarrow={onNarrow} showPlaybook />
   );
 }
 
@@ -243,7 +239,7 @@ function AccountsPage(): ReactElement {
             ...prev,
             account: id === fallbackId ? undefined : id,
             // An order's card belongs to the bot that placed it — never landed on another's. The
-            // Activity filter's playbook is one bot's too, so the narrowing goes with it.
+            // Ledger filter's playbook is one bot's too, so the narrowing goes with it.
             card: undefined,
             symbol: undefined,
             playbook: undefined,
@@ -251,6 +247,9 @@ function AccountsPage(): ReactElement {
             fill: undefined,
             from: undefined,
             pos: undefined,
+            // A position's page and its open row are one account's.
+            position: undefined,
+            open: undefined,
           }),
           replace: true,
         })
@@ -283,9 +282,12 @@ function AccountsPage(): ReactElement {
             fill: undefined,
             from: undefined,
             pos: undefined,
-            // An order's full detail and the list's narrowing belong to Activity; leaving it
+            // A position's page and its open row belong to Overview.
+            position: undefined,
+            open: undefined,
+            // An order's full detail and the list's narrowing belong to the Ledger; leaving it
             // closes the detail and drops the filter.
-            ...(next === "activity"
+            ...(next === "ledger"
               ? {}
               : { order: undefined, symbol: undefined, playbook: undefined }),
             ...(crossing ? { q: undefined, events: undefined } : {}),
@@ -328,9 +330,9 @@ function CockpitBody({
   readonly landing: PlaybookLanding | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
-  /** Activity's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/activity`). */
-  readonly narrowing: ActivityNarrowing;
-  readonly onNarrow: (next: ActivityNarrowing) => void;
+  /** The Ledger's `?symbol=` · `?playbook=` (#5165 — one account's list, as `/u/<id>/ledger`). */
+  readonly narrowing: LedgerNarrowing;
+  readonly onNarrow: (next: LedgerNarrowing) => void;
   readonly pinnedDay: string | undefined;
   readonly onPickDay: (day: string | undefined) => void;
   readonly onJoined: () => void;
@@ -342,7 +344,7 @@ function CockpitBody({
     // blotter it carries; Playbooks, Thesis and the viewer's sections read their own endpoints.
     enabled:
       deskIds.length > 0 &&
-      (section === "overview" || section === "activity" || section === "events"),
+      (section === "overview" || section === "ledger" || section === "events"),
   });
   const networth = useQuery({
     queryKey: ["accounts-networth"],
@@ -371,6 +373,15 @@ function CockpitBody({
       />
     );
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
+  if (section === "balance")
+    return (
+      <BalanceSection
+        // Keyed by the account, so switching accounts never shows the last one's book.
+        key={accountId}
+        deskId={accountId}
+        accountName={accounts.find((a) => a.id === accountId)?.name}
+      />
+    );
   if (section === "events")
     return (
       <EventsSection
@@ -403,7 +414,7 @@ function CockpitBody({
     );
   }
   return (
-    <ActivitySection
+    <LedgerSection
       accounts={accounts}
       deskIds={deskIds}
       narrowing={narrowing}
@@ -465,10 +476,12 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
-    // Activity's narrowing, one account at a time (#5165, `shell/account-activity.tsx`).
+    // The Ledger's narrowing, one account at a time (#5165, `shell/account-ledger.tsx`).
     ...narrowingFromSearch(search),
-    // Activity's open full detail (#5101, `use-order-detail.ts`).
+    // The Ledger's open full detail (#5101, `use-order-detail.ts`).
     ...(asId(search.order) ? { order: asId(search.order) } : {}),
+    // Overview's position full page and the row its back opens (#5070 slice 6, `use-position-page.ts`).
+    ...positionPageFromSearch(search),
   }),
   component: AccountsPage,
 });

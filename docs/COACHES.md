@@ -113,14 +113,15 @@ was enforced twice, once post-merge by the athlete and once mid-flow on the auth
 tells of a gate that has outlived its convention: **carve-outs accumulate** (five per-file
 `noExcessiveLinesPerFile` overrides, three inline complexity ignores), it **fires unevenly**
 (the 2,779-line `authenticator.ts` never tripped it), and it **teaches evasion** (#1361 moved
-rationale into docstrings to dodge it). So the line cap is off and `arch-scan` is the **single**
-size cap, counted in code lines, still advisory (#1722, issue #1713), and
-`noExcessiveCognitiveComplexity` is a **warning** — visible in every lint run, never red.
-commitlint's `body-max-line-length` stays on (Eric's call, the same morning): the
-conventional-commit rules are a contract the release tooling and every reader of `git log`
-depend on, not a taste gate, and a 101-char body line is the author's to wrap. The lesson for the
+rationale into docstrings to dodge it). Two PRs the same morning, converging from two threads:
+#1722 (issue #1713) turned the line cap off and made `arch-scan` the **single** size cap, counted
+in code lines, still advisory; this note's PR takes `noExcessiveCognitiveComplexity` to a
+**warning** — visible in every lint run, never red. (The same PR also switched off commitlint's
+`body-max-line-length`; Eric reversed that within the hour — the conventional-commit rules are
+a contract the release tooling and every reader of `git log` depend on, not a taste gate, and
+a 101-char body line is the author's to wrap. Restored in the follow-up PR. The lesson for the
 classification below: "debt-class" is a property of what the gate *measures* — file size and
-complexity are shape, a commit's format is an interface. The classification rule for the next
+complexity are shape, a commit's format is an interface.) The classification rule for the next
 one: a blocking gate must
 protect a *constraint* (correctness, security, the envelope, Eric's attention — the fridge rule's
 format checks stay) or a *contract another lane depends on* (the placement gates of #1449/#1717).
@@ -129,11 +130,11 @@ mid-flow. Demoting a gate is not lowering the bar; the athlete still chips the d
 critical path.
 
 **Worked example, both kinds at once (2026-09-04):** the event-research lane's forward-test ids
-(one fragment per event under `docs/research/forward-tests/`, #1449) were a shared,
-globally-incrementing bare number computed by
+(then one shared `docs/research/forward-tests.md`; since #1449 one fragment per event under
+`docs/research/forward-tests/`) were a shared, globally-incrementing bare number computed by
 reading the file's live tip — a real race across concurrent sessions, caught once already (two PRs
 both registering `FT-25`, resolved by hand). The fix is forward-additive on the id *scheme*
-(`.github/prompts/event-research.md` namespaces new ids to the session's own assigned event,
+(`.github/prompts/event-research.md` now namespaces new ids to the session's own assigned event,
 `FT-<event-id>-<n>`, which can't collide because it never reads a file every sibling is also
 reading) but retroactive-judging on the *mechanical check behind it*: `forward-test-id-scan.mjs`
 found the already-known `FT-25` collision fixed, and also found **seven** more pre-existing id
@@ -180,15 +181,25 @@ job name with a matrix leg's values stripped (#3913): keying on the leg made one
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
 
+**The failure that is green has its own eye** (2026-10-16, docs/LESSONS.md "A green, armed PR sat
+blocked for 5 days…"). Every net above fires on red; a PR that is green and not merging raises
+nothing, and two fortnight-apart incidents (29 hours, then 135) were found by luck.
+`scripts/stuck-pr-scan.mjs` (`npm run pr:stuck`) names every open PR green longer than a healthy merge
+takes (3 h) that is armed-and-`blocked`, never armed, or headless behind a check suite that ran no job
+— with the ghost suite named and the one-line clear. It rides `scripts/ship.sh` beside
+`incident-scan.mjs` and gives the digest a `--stuck` line; REST core only, advisory.
+
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
 `scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
 closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
 it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
-as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
-`/retro` deepens an entry when a class recurs. The
-digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
-under Needs you.
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned —
+plus one `feedback` issue asking for its `/retro` (#5728, deduped, Backlog — never `ready`), because
+a comment on a closed issue was read by nobody. `/retro` deepens an entry when a class recurs. The digest carries the residue as one line
+(`digest-scan.mjs --learning`) under Noise absorbed, never under Needs you — including what aged
+out of the scan's window unlearned (`AGED-OUT UNLEARNED`, the band just past it, report-only), so a
+falling count can't pass expiry off as learning.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):
@@ -245,7 +256,7 @@ the #3754 platter promise showed what a prose-only status costs.
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
 | **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
-| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its four sections) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
+| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its five sections — ⑤, product/UX loop freshness, is lane work and lands in Noise absorbed, `tests/arch/config-audit-loop-freshness.spec.ts`) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
 | **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. It is the codebase's only size cap (#1713) and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off: it charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
@@ -289,13 +300,17 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   the last run is a week old (`--release` at a model release: every file), and `/grind` over
   [`grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md) reads them
   for files that disagree, stale facts and rules written as history, each finding put to a
-  refuter before it lands. Unscheduled: what triggers it is #5318's open question.
+  refuter before it lands. The push tick's audit files one `needs-session` ticket when it falls
+  due and closes it once a run records the stamp (`scripts/moneypenny/drift-chore.mjs`); the chore
+  edits `.claude/**`, so a live session runs it.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
 - **Config audit digest** — rides the secretary digest Routine (docs/ROUTINES.md): the digest's
   session runs `node scripts/config-audit.mjs` and folds any non-empty section into the digest's
-  Needs-you tier. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
+  Needs-you tier — except ⑤, product/UX loop freshness (the 2026-10-18 loop census: the crawl,
+  its judge pass, coverage, the scenario headline), which is lane work and lands in Noise
+  absorbed. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
   most interesting check (recurring-intent clustering) reads `data/duel-log.jsonl`, which is
   `.gitignore`d machine-local session history a GHA runner's fresh checkout can never see — a
   workflow would silently run three of four checks forever. (Honest limit: a fresh Routine session
@@ -303,9 +318,9 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   nothing false — so the clustering check only bites in sessions on a long-lived checkout.) Still
   evidence-triggered and human-gated: the script writes nothing, opens nothing, and the digest
   cannot escalate a finding past its notification — Eric decides what (if anything) to act on,
-  same as running it by hand. Its clock is the digest's, never a Routine of its own: a
-  fresh-session Routine fires into checkout-less sessions and never runs the script
-  (docs/ROUTINES.md, Retired).
+  same as running it by hand. It held its own daily Routine until 2026-08-19; that trigger fired
+  into checkout-less sessions and never once ran the script (docs/ROUTINES.md, Retired), so the
+  clock was folded into the digest's.
 - **Doctrine digest** (issue #2287, PR 8) — rides the secretary digest Routine, same shape as the
   config-audit ride-along above: the digest's session runs `node scripts/doctrine-scan.mjs --due`
   and folds any due dossier into the Needs-you tier. Not a code-quality gate (the defensive roster

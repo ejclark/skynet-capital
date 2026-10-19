@@ -1,6 +1,6 @@
 import { dayText } from "../options/position-guidance-rules.js";
 import type { Confidence } from "../options/position-guidance-types.js";
-import { todayCallOf } from "./research-event-calls.js";
+import { type CallLine, callLineOf, todayRowOf } from "./research-event-calls.js";
 
 /**
  * WHAT A RESEARCH LEDGER CURRENTLY SAYS, as the position guidance needs it (#3729): when it was last
@@ -24,7 +24,11 @@ export interface LedgerRead {
   /** The nearest-horizon call, markup stripped. */
   readonly stance?: string;
   readonly confidence?: Confidence;
+  /** The Today row's "Proves it wrong" cell — the ledger's words, only its markup stripped (#5720). */
+  readonly provesWrong?: string;
   readonly buySignal: boolean;
+  /** The ledger's own `**Call:**` line — verb and until-date — when it states one (#4807). */
+  readonly callLine?: CallLine;
 }
 
 const md = (m: string, d: string): string => dayText(`2000-${m}-${d}`);
@@ -41,6 +45,19 @@ const plain = (s: string): string =>
     .replace(/\b\d{4}-(0[1-9]|1[0-2])-([0-3]\d)\b/g, (_, m, d) => md(m, d))
     .replace(/\b(0[1-9]|1[0-2])-([0-3]\d)\b/g, (_, m, d) => md(m, d))
     .trim();
+
+/**
+ * A falsifier is QUOTED, never paraphrased (#5720): unlike `plain`, the playbook codes and the
+ * ledger's own date spellings stay — only emphasis, code and link markup go. A cell with no words
+ * ("—", empty) is no falsifier, so the guidance keeps its own line.
+ */
+function quoted(cell: string | undefined): string | undefined {
+  const text = cell
+    ?.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*|__|`/g, "")
+    .trim();
+  return text && /[a-z]/i.test(text) ? text : undefined;
+}
 
 function confidenceOf(cell: string | undefined): Confidence | undefined {
   const word = cell?.toLowerCase().match(/high|medium|low|none/)?.[0];
@@ -82,15 +99,19 @@ function buySignalOf(md: string): boolean {
 }
 
 export function readLedger(md: string, symbol: string): LedgerRead {
-  const today = todayCallOf(md);
+  const today = todayRowOf(md);
   const assessed = assessedOf(md);
   const probePrice = probePriceOf(md, symbol.toUpperCase());
   const confidence = confidenceOf(today?.confidence);
+  const provesWrong = quoted(today?.provesWrong);
+  const callLine = callLineOf(md);
   return {
     ...(assessed ? { assessed } : {}),
     ...(probePrice !== undefined ? { probePrice } : {}),
     ...(today ? { stance: plain(today.call) } : {}),
     ...(confidence ? { confidence } : {}),
+    ...(provesWrong ? { provesWrong } : {}),
+    ...(callLine ? { callLine } : {}),
     buySignal: buySignalOf(md),
   };
 }

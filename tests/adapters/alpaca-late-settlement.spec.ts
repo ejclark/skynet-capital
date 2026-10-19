@@ -258,6 +258,38 @@ describe("AlpacaBrokerAdapter.settleShares — a share order queued for the open
     expect(blip.pendingShares.list()).toHaveLength(1);
   });
 
+  // #4787: a partial fill is recorded as a fill of what filled (#4655) — and, while the broker
+  // still holds the rest, followed to its end like a working order.
+  it("follows a partly filled order still live at the broker, and reports its final fill", async () => {
+    const { adapter, settled, pendingShares } = adapterOver([
+      order({ status: "partially_filled", filled_qty: "4", filled_avg_price: "100" }),
+      order({ status: "filled", filled_qty: "10", filled_avg_price: "100.10" }),
+    ]);
+    expect(await adapter.submit(buy)).toEqual({
+      intent: buy,
+      status: "filled",
+      filledQuantity: 4,
+      filledPrice: 100,
+      orderId: "sh-1",
+      open: true,
+    });
+    expect(pendingShares.list()).toEqual([{ orderId: "sh-1", symbol: "NVDA" }]);
+
+    await adapter.settleShares();
+    expect(settled).toEqual([
+      { orderId: "sh-1", status: "filled", filledQuantity: 10, filledPrice: 100.1, settledAt: AT },
+    ]);
+    expect(pendingShares.list()).toEqual([]);
+  });
+
+  it("tracks nothing for a partly filled order the broker already ended", async () => {
+    const { adapter, pendingShares } = adapterOver([
+      order({ status: "canceled", filled_qty: "4", filled_avg_price: "100" }),
+    ]);
+    expect(await adapter.submit(buy)).not.toHaveProperty("open");
+    expect(pendingShares.list()).toEqual([]);
+  });
+
   it("tracks nothing for an order that filled inside the submit's own poll", async () => {
     const { adapter, pendingShares } = adapterOver([
       order({ status: "filled", filled_qty: "10", filled_avg_price: "100" }),

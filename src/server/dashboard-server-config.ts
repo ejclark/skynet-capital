@@ -1,10 +1,12 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -19,6 +21,8 @@ import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
+import type { AuthoredPlayStore } from "./authored-play-store.js";
+import type { BookHealthHistoryPort } from "./book-health-history-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
@@ -29,6 +33,7 @@ import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { InviteDeps } from "./invite-form.js";
+import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
@@ -39,6 +44,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
@@ -132,10 +138,17 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     participantId: string,
     page?: { readonly before?: number; readonly limit?: number },
   ) => Promise<readonly DecisionRecord[]>;
+  /** The book-health history (#5493 slice 5): when wired, the owner's findings carry how long they
+   *  have stood and whether they are easing or worsening. Omit and a finding says nothing of its age. */
+  readonly healthHistory?: BookHealthHistoryPort;
   /** One bot's week of checks, grouped answers and placed trades (#5073 slice 2,
    *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
    *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
   readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
+  /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a, `playbook-funnel.ts`)
+   *  — R&D → Playbooks' house metrics. Omit and the performance read carries `funnel: null`, so a
+   *  card says nothing rather than ten sessions of zeros nobody recorded. */
+  readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /**
    * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
    * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach
@@ -170,6 +183,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * feeds `/api/desk/:id/probes`. Omit and that panel reports itself unavailable.
    */
   readonly readCondScout?: () => CondScoutSnapshot | undefined;
+  /**
+   * The bots' latest report on the members' playbooks in a shadow test (#5457 slice 2), replicated
+   * whole on every bots poll — memory only. Feeds each draft row's status line and would-be trades
+   * on `/api/authored-plays`. Omit and a row reads "no report yet".
+   */
+  readonly readAuthoredShadow?: () => ShadowReport | undefined;
   /**
    * The bots app's own playbook setting (`SKYNET_PLAYBOOKS`) and the bots it runs on, as its latest
    * `/controls` poll reported it (#4650) — memory only. Lets the roll call say a playbook it names
@@ -305,6 +324,24 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section still renders, with saves/loads answering "not wired in this deployment."
    */
   readonly savedPositions?: SavedPositionsStore;
+  /**
+   * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
+   * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
+   * Nothing in it reaches a bot; a draft is not on any roster.
+   */
+  readonly authoredPlays?: AuthoredPlayStore;
+  /**
+   * MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states and keeps as drafts. Omit to
+   * disable (offline mode): the list answers empty and a save answers "not wired in this
+   * deployment." A draft steers nothing: no bot and no subscription reads this store.
+   */
+  readonly memberConvictions?: MemberConvictionStore;
+  /**
+   * THE AUTHORED-PLAY MILESTONE LEDGER (#5457 slice 5) — what the authored-plays routes write when a
+   * test starts, passes, a play is promoted or paused. Omit and those events simply aren't posted.
+   * The feed reads it through `readPlayMilestones` (signed-in members only).
+   */
+  readonly playMilestones?: PlayMilestoneLedger;
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;

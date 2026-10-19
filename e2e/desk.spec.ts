@@ -10,7 +10,7 @@ test.describe("the any-account page", () => {
     await page.goto("/app/u/day-trader");
     await expect(page.getByRole("heading", { level: 1, name: /The Day Trader/ })).toBeVisible();
     const sections = page.getByRole("navigation", { name: "Sections" });
-    for (const name of ["Overview", "Activity", "Pulse", "Playbooks", "Thesis"]) {
+    for (const name of ["Overview", "Ledger", "Pulse", "Playbooks", "Thesis"]) {
       await expect(sections.getByRole("link", { name })).toBeVisible();
     }
     await expect(sections.getByRole("link", { name: "Settings" })).toHaveCount(0);
@@ -44,9 +44,16 @@ test.describe("the any-account page", () => {
     await expect(page.getByRole("heading", { name: "Playbooks", exact: true })).toBeVisible();
   });
 
-  test("renders an account's activity", async ({ page }) => {
-    await page.goto("/app/u/sauron/activity");
-    await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
+  test("renders an account's ledger", async ({ page }) => {
+    await page.goto("/app/u/sauron/ledger");
+    await expect(page.getByRole("heading", { name: "Ledger", exact: true })).toBeVisible();
+  });
+
+  // #5281: the tab was Activity until it grew into the ledger; a saved link still lands, its row kept.
+  test("redirects a saved activity link to the Ledger", async ({ page }) => {
+    await page.goto("/app/u/sauron/activity#act-ord-1");
+    await expect(page).toHaveURL(/\/app\/u\/sauron\/ledger#act-ord-1$/);
+    await expect(page.getByRole("heading", { name: "Ledger", exact: true })).toBeVisible();
   });
 
   test("renders an account's pulse", async ({ page }) => {

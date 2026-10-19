@@ -79,7 +79,9 @@ export type DailyBars = (
 const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 export interface CondScoutDeps {
-  readonly universe: readonly string[];
+  /** The names to scan, asked on every pass: the host bot's own settings can change them between
+   *  checks with no restart (#4535 slice 2a). Empty = open nothing; open probes still close. */
+  readonly universe: () => readonly string[];
   /** Daily closes per symbol, oldest first, ending at the last completed session. */
   readonly closesFor: (
     symbols: readonly string[],
@@ -124,6 +126,9 @@ export class CondScoutRunner {
   private closedDay = "";
   private readonly closedToday = new Set<string>();
   private closesDay = "";
+  /** Symbols whose daily closes were already read this session — a name added mid-session is
+   *  read on its own, never the whole set again. */
+  private readonly closesRead = new Set<string>();
   private closes: Readonly<Record<string, readonly number[]>> = {};
   /** Last snapshot per probe id. Not persisted: a restart takes one extra snapshot, never misses. */
   private readonly lastSnapshotAt = new Map<string, number>();
@@ -238,11 +243,13 @@ export class CondScoutRunner {
   }
 
   private async openNew(context: MarketContext, sessionDay: string, at: number): Promise<void> {
+    const universe = this.deps.universe();
+    if (universe.length === 0) return; // dark or paused: no scan, no bars read, the day not spent
     await this.ensureCloses(sessionDay);
     const config = this.deps.config ?? {};
     const hypotheses = scanConditions(
       context,
-      this.deps.universe,
+      universe,
       this.closes,
       new Set([...this.open.keys(), ...this.closedToday]),
       config,
@@ -335,11 +342,23 @@ export class CondScoutRunner {
     this.backfilledDay = sessionDay;
   }
 
-  /** Daily closes change once a session: fetched on the first pass that needs them, reused after. */
+  /**
+   * Daily closes change once a session: fetched on the first pass that needs them, reused after.
+   * The set is the scan's names plus every open probe's, so a probe whose name has left the
+   * settings still gets an honest reading on its snapshots until it closes.
+   */
   private async ensureCloses(sessionDay: string): Promise<void> {
-    if (this.closesDay === sessionDay) return;
-    this.closes = await this.deps.closesFor(this.deps.universe);
-    this.closesDay = sessionDay;
+    if (this.closesDay !== sessionDay) {
+      this.closes = {};
+      this.closesRead.clear();
+      this.closesDay = sessionDay;
+    }
+    const wanted = new Set([...this.deps.universe(), ...this.open.keys()]);
+    const missing = [...wanted].filter((symbol) => !this.closesRead.has(symbol));
+    if (missing.length === 0) return;
+    const read = await this.deps.closesFor(missing);
+    for (const symbol of missing) this.closesRead.add(symbol);
+    this.closes = { ...this.closes, ...read };
   }
 
   /** Every open probe whose last snapshot is an hour old gets another: quote, conditions, mark. */

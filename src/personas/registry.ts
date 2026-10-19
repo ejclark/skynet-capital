@@ -48,10 +48,29 @@ const HARDCORE_BUILDS: Readonly<Record<string, () => Persona>> = {
   sauron: () => new SauronHardcorePersona(),
 };
 
+/** Does this persona have a hardcore build to switch to? The settings form offers the switch only
+ *  then, and the write refuses it otherwise (#4535 slice 3b). */
+export function hasHardcoreBuild(id: string): boolean {
+  return Object.hasOwn(HARDCORE_BUILDS, id);
+}
+
+/**
+ * One persona's build, standard or hardcore — what the live flip swaps in (#4535 slice 2c). A fresh
+ * instance each call. `undefined` when the id names no persona, or asks for a hardcore build the
+ * persona has none of (the caller refuses that loudly, never guesses).
+ */
+export function personaBuild(id: string, hardcore: boolean): Persona | undefined {
+  if (hardcore) return HARDCORE_BUILDS[id]?.();
+  return createDefaultPersonas().find((p) => p.id === id);
+}
+
 export interface HardcoreRoster {
   readonly personas: Persona[];
   /** Ids actually swapped to their hardcore build (the runner tunes cooldown + pack by these). */
   readonly hardcore: ReadonlySet<string>;
+  /** The ids the env alone names that have a hardcore build — the fallback a bot with no stored
+   *  setting keeps, so the live flip (`watchHardcore`) can fall back to it exactly as boot did. */
+  readonly envIds: ReadonlySet<string>;
   /** Ids named in the env that have no hardcore build — refused loudly, never guessed. */
   readonly rejected: readonly string[];
 }
@@ -90,6 +109,7 @@ export function applyHardcore(
       return build ? build() : p;
     }),
     hardcore,
+    envIds,
     rejected,
   };
 }

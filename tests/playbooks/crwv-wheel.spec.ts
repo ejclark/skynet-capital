@@ -14,11 +14,15 @@ import {
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import type { Persona } from "../../src/personas/persona.js";
 import { type EnabledPlaybook, playbookIntents } from "../../src/playbooks/playbook.js";
-import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
-import { WHEEL_DELTAS, wheelPhase } from "../../src/playbooks/wheel.js";
+import { CRWV_WHEEL, CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
+import { WHEEL_DELTAS, wheel, wheelPhase } from "../../src/playbooks/wheel.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
+
+// The wheel's mechanics are measured on CRWV's classic setting — month out, the mode's delta, one
+// contract — and CRWV's 2026-10-16 conviction settings on the live CRWV_WHEEL at the end.
+const CLASSIC = wheel(CRWV_WHEEL_SETTING);
 
 // The CRWV wheel on the real 2026 exchange calendar. Print rows pinned as filed on 2026-10-05:
 // CRWV's November estimate (window Nov 9–16, so the blackout runs Nov 9–17 — the session after
@@ -118,7 +122,7 @@ const decide = (
   portfolio: Portfolio = book(),
   mode: PlaybookMode = "standard",
   calendar: readonly EarningsPrint[] = CALENDAR,
-): readonly OrderIntent[] => CRWV_WHEEL.decide?.(context, portfolio, calendar, mode) ?? [];
+): readonly OrderIntent[] => CLASSIC.decide?.(context, portfolio, calendar, mode) ?? [];
 const soldLeg = (intents: readonly OrderIntent[]) => intents[0]?.option?.legs[0]?.occSymbol;
 
 describe("CRWV-WHEEL — where the wheel is, from positions alone", () => {
@@ -153,7 +157,7 @@ describe("CRWV-WHEEL — where the wheel is, from positions alone", () => {
 });
 
 describe("CRWV-WHEEL — the sale window around CRWV's print", () => {
-  const state = (asOf: string, calendar = CALENDAR) => CRWV_WHEEL.desiredState(asOf, calendar);
+  const state = (asOf: string, calendar = CALENDAR) => CLASSIC.desiredState(asOf, calendar);
   const at = (day: string) => `${day}T15:00:00Z`;
 
   it("sells through 2026-10-07, the last day a 30-day expiry (Nov 6) clears the Nov 9 blackout", () => {
@@ -184,7 +188,7 @@ describe("CRWV-WHEEL — the sale window around CRWV's print", () => {
 
 describe("CRWV-WHEEL — what it asks the market for", () => {
   const demand = (portfolio: Portfolio, asOf = NOV_18, listed: readonly string[] = LISTED) =>
-    CRWV_WHEEL.optionDemand?.(asOf, portfolio, { CRWV: listed }, CALENDAR, "standard");
+    CLASSIC.optionDemand?.(asOf, portfolio, { CRWV: listed }, CALENDAR, "standard");
 
   it("asks for the put chain on the latest 30–45-day expiry before the blackout when flat", () => {
     expect(demand(book())).toEqual({
@@ -246,15 +250,15 @@ describe("CRWV-WHEEL — selling a cash-secured put", () => {
     expect(put?.reason).toContain("$8,000 stays set aside");
     // The data first, in plain words, then the owner's bet as what the market has wrong (#5326).
     expect(put?.reason).toContain(
-      "options price its next month to swing at a 69.9%-a-year pace, but in the past year its " +
-        "typical month swung at 88.7%",
+      "options price its next month to swing at a 93.2%-a-year pace, about what its months have " +
+        "gone on to swing",
     );
     expect(put?.reason).toContain(
-      "Puts priced at a 19% chance of being assigned would have been assigned 33% of the time",
+      "Puts priced at a 20% chance of being assigned would have been assigned 25% of the time",
     );
     expect(put?.reason).toContain(
-      "the market under-estimates how far CRWV moves, and says stand aside. Its owner runs this " +
-        "against the study, betting the market has CRWV about right",
+      "the premium is fair, not rich: the study finds no edge in selling it and says stand aside. " +
+        "Its owner runs this against the study, betting the market overprices CRWV's downside",
     );
     expect(put?.reason).not.toContain("underpays its moves");
     expect(put?.forecast).toEqual({
@@ -403,7 +407,7 @@ describe("CRWV-WHEEL — registration", () => {
  *  keeps — without it, shares it was assigned would have no exit at all. */
 describe("CRWV-WHEEL — paused", () => {
   const paused: readonly EnabledPlaybook[] = [
-    { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+    { playbook: CLASSIC, mode: "standard", exitsOnly: true },
   ];
 
   it("still sells a covered call on the 100 shares it was assigned — their way out", () => {
@@ -476,5 +480,72 @@ describe("CRWV-WHEEL — paused", () => {
       expect(trade(true, book()).raw).toHaveLength(1);
       expect(trade(false, book()).raw).toEqual([]);
     });
+  });
+});
+
+/** CRWV's 2026-10-16 conviction settings on the live CRWV_WHEEL (Eric: "cash secured puts are a
+ *  safer bet to be aggressive on"): from 14 days out, at the 0.15-delta floor, sized by budget. */
+describe("CRWV-WHEEL — its 2026-10-16 settings", () => {
+  const OCT_16 = "2026-10-16T15:00:00Z";
+  const NOV_6 = "2026-11-06";
+  const LISTED_OCT = ["2026-10-23", "2026-10-30", NOV_6, "2026-11-13", "2026-11-20", "2026-12-18"];
+  const PUTS_NOV6: readonly Row[] = [
+    [48, -0.1, 0.6, 0.7],
+    [52, -0.15, 1.0, 1.1],
+    [55, -0.2, 1.7, 1.8],
+    [57, -0.25, 2.2, 2.35],
+  ];
+  const october = withOptionQuotes(
+    aContext({ CRWV: { last: 62 } }, OCT_16),
+    chain("put", PUTS_NOV6, OCT_16, NOV_6),
+    { CRWV: LISTED_OCT },
+  );
+  const live = (mode: PlaybookMode, portfolio: Portfolio = book()) =>
+    CRWV_WHEEL.decide?.(october, portfolio, CALENDAR, mode) ?? [];
+
+  it("sells on 2026-10-16, where the month-out wheel is dark: the Nov 6 expiry, before the print", () => {
+    expect(CRWV_WHEEL.desiredState(OCT_16, CALENDAR)).toBe("long");
+    expect(CLASSIC.desiredState(OCT_16, CALENDAR)).toBe("no-window");
+    expect(live("standard")[0]?.option?.legs[0]?.occSymbol).toBe(occ("put", 52, NOV_6));
+  });
+
+  it("aims at 0.15 delta in every mode, never the aggressive 0.25", () => {
+    for (const mode of ["conservative", "standard", "aggressive"] as const) {
+      expect(live(mode)[0]?.option?.legs[0]?.occSymbol).toBe(occ("put", 52, NOV_6));
+    }
+  });
+
+  it("asks for 3 / 6 / 10 contracts by mode", () => {
+    expect(live("conservative")[0]?.quantity).toBe(3);
+    expect(live("standard")[0]?.quantity).toBe(6);
+    expect(live("aggressive")[0]?.quantity).toBe(10);
+  });
+
+  it("never sells an expiry inside the print's blackout", () => {
+    const legs = live("aggressive").flatMap((i) => i.option?.legs ?? []);
+    expect(legs.every((l) => l.occSymbol.includes("261106"))).toBe(true);
+  });
+
+  it("goes through the guards cut to what the budget secures", () => {
+    const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
+    const bot: Bot = { persona: quiet, credentials: { apiKey: "k", apiSecret: "s" } };
+    const sub = (capitalAllocated: number): PlaybookSubscription => ({
+      accountId: "sauron",
+      playbookId: "CRWV-WHEEL",
+      mode: "aggressive",
+      capitalAllocated,
+      enabled: true,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      updatedAt: "2026-10-01T00:00:00.000Z",
+    });
+    const risk = { ...DEFAULT_RISK_CONFIG, discipline: { calendar: CALENDAR }, optionsLevel: 1 };
+    const approved = (capital: number) => {
+      const trading = tradingRoster(resolveBotRoster(bot, [], [sub(capital)]), risk);
+      const raw = trading.persona.decide(october, book());
+      return applyGuardsWithVerdicts(raw, book(), october, trading.risk).approved;
+    };
+    // About $5,100 secures one $52 put: $75,000 covers the full 10, $20,000 covers 3.
+    expect(approved(75_000)).toEqual([expect.objectContaining({ quantity: 10 })]);
+    expect(approved(20_000)).toEqual([expect.objectContaining({ quantity: 3 })]);
   });
 });

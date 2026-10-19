@@ -40,7 +40,7 @@ const card = (
   symbols: readonly string[],
   subscription?: SubscriptionView,
 ): PlaybookStoreCardView => ({
-  id: symbols.length > 1 ? "HC-SAURON" : "S1-NVDA",
+  id: symbols.length > 1 ? "SAURON" : "S1-NVDA",
   symbol: symbols[0] ?? "",
   symbols,
   evidence: "fixture evidence",
@@ -112,7 +112,10 @@ function mount(
   render(
     <StrategyCard
       accountId="sauron"
-      strategy={strategyOf([pairOf(c, over.pair)])}
+      strategy={{
+        ...strategyOf([pairOf(c, over.pair)]),
+        ...(c.movesNoCapital ? { movesNoCapital: true as const } : {}),
+      }}
       cardsById={new Map([[c.id, c]])}
       canManage
       delegation={over.delegation ?? OPEN}
@@ -151,7 +154,7 @@ describe("subscribing a bot", () => {
         url: "/api/playbook-store/subscribe",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "standard",
           capitalAllocated: 5000,
           symbols: ["NVDA", "CRWV"],
@@ -174,6 +177,79 @@ describe("subscribing a bot", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Subscribe" }));
     expect(await screen.findByText("Not today.")).toBeInTheDocument();
+  });
+});
+
+/** #4535 slice 3a: the shadow scout places no orders, so its form asks for no budget, mode or
+ *  compounding, its chips are the names it scans, and its row says it places no orders. */
+describe("the shadow scout card", () => {
+  const scout = (subscription?: SubscriptionView): PlaybookStoreCardView => ({
+    ...card([], subscription),
+    id: "COND-SCOUT",
+    pickFrom: BASKET,
+    movesNoCapital: true,
+  });
+
+  it("asks for no budget, mode or compounding, and posts the picked names with no capital", async () => {
+    const onChanged = mount(scout());
+    expect(screen.queryByLabelText("Capital to delegate ($)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mode")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Compound gains\/losses/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check first" })).not.toBeInTheDocument();
+    expect(screen.getByText("Names to scan")).toBeInTheDocument();
+    expect(screen.getByText(/None picked: it scans all 3\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "CRWV" }));
+    fireEvent.click(screen.getByRole("button", { name: "AAPL" }));
+    expect(screen.getByText(/Scans only AAPL, CRWV\./)).toBeInTheDocument();
+    expect(screen.getByText(/It places no orders, so no money is at risk\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Subscribe" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(posts).toEqual([
+      {
+        url: "/api/playbook-store/subscribe",
+        body: {
+          id: "sauron",
+          playbookId: "COND-SCOUT",
+          mode: "standard",
+          symbols: ["AAPL", "CRWV"],
+        },
+      },
+    ]);
+  });
+
+  it("is headed by the names it reads, offers no ticker picker, and takes no allocation", () => {
+    mount(scout());
+    expect(screen.getByText("The bots' ten names")).toBeInTheDocument();
+    expect(screen.queryByText("Picked on the day")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Pick a ticker/ })).not.toBeInTheDocument();
+  });
+
+  it("says it places no orders on a subscribed row, in place of a mode and a dollar figure", () => {
+    mount(scout({ mode: "standard", enabled: true, symbols: ["NVDA"] }));
+    expect(screen.getByText("On").closest("p")).toHaveTextContent(
+      "● On · places no orders · names: NVDA",
+    );
+  });
+
+  it("names how many it scans when unfiltered, and Edit posts configure with no capital", async () => {
+    mount(scout({ mode: "standard", enabled: false }));
+    expect(screen.getByText("Paused").closest("p")).toHaveTextContent(
+      "‖ Paused · places no orders · all 3 names",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.queryByLabelText("Capital to delegate ($)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "NVDA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toEqual({
+      url: "/api/playbook-store/configure",
+      body: expect.objectContaining({
+        playbookId: "COND-SCOUT",
+        capitalAllocated: null,
+        compoundAllocation: false,
+        symbols: ["NVDA"],
+      }),
+    });
   });
 });
 
@@ -269,7 +345,7 @@ describe("a subscribed card", () => {
         url: "/api/playbook-store/configure",
         body: {
           id: "sauron",
-          playbookId: "HC-SAURON",
+          playbookId: "SAURON",
           mode: "aggressive",
           capitalAllocated: 8000,
           symbols: ["NVDA"],
@@ -372,7 +448,7 @@ describe("the deck, for an owned account", () => {
       delegation: OPEN,
       botsOnly: BOT,
     });
-    await screen.findByText("The b-on");
+    await screen.findAllByText("The b-on");
     const order = [...document.querySelectorAll(".pb-strategy .pb-card-id")].map(
       (el) => el.textContent,
     );
@@ -425,5 +501,75 @@ describe("a card's labelled rows after the rules", () => {
   it("draws only the four rule rows on a card with no notes", () => {
     mount(card(["AAPL"]));
     expect(rowNames()).toEqual(["Enter", "Exit — take profit", "Exit — cut losses", "Hold"]);
+  });
+});
+
+/** #4808 criterion 1: the card says what the playbook trades on, or that it has nothing, in words. */
+describe("a pair's research signal", () => {
+  it("says the server's line under How it trades, after the description", () => {
+    const said = "No research signal (unvalidated): no back-test stands behind it.";
+    mount(card(["AAPL"]), { pair: { researchSignal: said } });
+    expect(precedes(screen.getByText("What the playbook does."), screen.getByText(said))).toBe(
+      true,
+    );
+  });
+
+  it("draws nothing for a server from before the line", () => {
+    mount(card(["AAPL"]));
+    expect(document.querySelector(".pb-pair-signal")).toBeNull();
+  });
+});
+
+/** #5432: a pre-earnings pair draws its rule as one line counted back from the earnings report, in
+ *  place of its Enter / Exit / Hold rows — on the study world's clock, against the real calendar. */
+describe("a pre-earnings pair drawn as one line", () => {
+  beforeEach(() => {
+    rstest.useFakeTimers({ toFake: ["Date"] });
+    rstest.setSystemTime(new Date("2026-10-08T19:00:00Z"));
+  });
+  afterEach(() => {
+    rstest.useRealTimers();
+  });
+  const s1: PlaybookStoreCardView = {
+    ...card(["NVDA"]),
+    window: "20 to 6 sessions before the print",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    stretches: {
+      source: "docs/research/nvda-earnings-cycle.md F2",
+      era: "2023–26",
+      reports: 14,
+      stretches: [
+        { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+        { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+        { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+      ],
+    },
+  };
+
+  it("shows the line, the rows and the bars, and no Enter / Exit / Hold paragraphs", () => {
+    mount(s1);
+    expect(screen.getByRole("img", { name: /^NVDA's window: holds from Oct 21/ })).toBeVisible();
+    expect(screen.getByText("① Buy · Oct 21 · 20 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("② Sell · Nov 11 · 5 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("Average move in each stretch")).toBeInTheDocument();
+    expect(document.querySelector(".pb-card-triggers")).toBeNull();
+    expect(screen.queryByText("enter rule")).toBeNull();
+    // The window is drawn, so it is not said again as a sentence; target exposure stays as it was.
+    expect(screen.queryByText("20 to 6 sessions before the print")).toBeNull();
+    expect(screen.getByText("Target exposure")).toBeInTheDocument();
+  });
+
+  it("keeps a pair's own labelled notes under the line", () => {
+    mount({ ...s1, notes: [{ label: "Pause", text: "pause rule" }] });
+    expect(
+      [...document.querySelectorAll(".pb-card-triggers dt")].map((dt) => dt.textContent),
+    ).toEqual(["Pause"]);
+  });
+
+  it("falls back to the rows when the ticker has no report on file to count back from", () => {
+    mount({ ...s1, id: "S1-NVDA", symbol: "ZZZZ", symbols: ["ZZZZ"] });
+    expect(screen.queryByRole("img", { name: /window/ })).toBeNull();
+    expect(screen.getByText("enter rule")).toBeInTheDocument();
+    expect(screen.getByText("20 to 6 sessions before the print")).toBeInTheDocument();
   });
 });

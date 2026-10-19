@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Journey, JourneyMilestone } from "../../src/live/learn";
 import type { PlayInfo, PlaysIndex } from "../../src/live/options";
 import { LadderList } from "../../src/shell/ladder-list";
+import { LADDER_CARD_NO_ACCOUNT_NOTE } from "../../src/shell/milestone-strip";
 
 /**
  * The trading chapter's ladder, drawn once (#5242; Eric's pick on #5176 round 2). WHEN a level is
@@ -170,6 +171,24 @@ describe("LadderList", () => {
       expect(a.getAttribute("href")).toMatch(/^\/trade\?/);
     }
     expect(container.querySelector("[aria-current]")).toBeNull();
+  });
+
+  // #5731: with no account the server serves wheels off and nothing locked, while the M·02 card
+  // above the chapter reads LOCKED. The list must say the card's sentence, never "nothing is locked".
+  it("agrees with the M·02 card when no account is linked: locked, and no rung offers Trade", () => {
+    const unlinked: PlaysIndex = {
+      linked: false,
+      wheels: false,
+      plays: plays.plays.map((p) => ({ ...p, locked: false, earned: false })),
+    };
+    const { container } = render(
+      <LadderList journey={{ ...journey, linked: false }} plays={unlinked} deskId="" />,
+    );
+    expect(
+      screen.getByText(`Locked — ${LADDER_CARD_NO_ACCOUNT_NOTE}.`, { selector: ".ll-status" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/nothing is locked/)).not.toBeInTheDocument();
+    expect(container.querySelector("a")).toBeNull();
   });
 
   it("offers Trade on no rung when the desk's plays have not answered", () => {

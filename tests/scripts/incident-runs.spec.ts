@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { readAllPages } from "../../scripts/incident-runs.mjs";
+import { agedOutCandidates, readAllPages, windowRanges } from "../../scripts/incident-runs.mjs";
 
 // #4242: the incident scan read one 50-run page and called it the 14-day window — 499 failed runs
 // existed, and a 76-run outage never showed up. These pin the paging that replaced it.
@@ -46,5 +46,34 @@ describe("readAllPages", () => {
   it("treats an empty window as complete", async () => {
     const out = await readAllPages(() => ({}));
     expect(out).toEqual({ runs: [], total: 0, truncated: false });
+  });
+});
+
+// #5728: the count fell 18 → 14 overnight with no lesson written — four incidents simply turned
+// 15 days old. WHEN an unlearned incident leaves the window, the scan SHALL report it as aged-out.
+describe("the aged-out band", () => {
+  const now = Date.parse("2026-10-18T12:00:00Z");
+
+  it("reads the window's own length again, just before it, with no day in both or neither", () => {
+    expect(windowRanges(14, now)).toEqual({
+      since: "2026-10-04",
+      window: ">=2026-10-04",
+      agedOut: "2026-09-20..2026-10-03",
+    });
+  });
+
+  const run = (sha: string, id: number) => ({ sha, id });
+
+  it("names each unlearned sha once, newest run first", () => {
+    const out = agedOutCandidates([run("aaaaaaa", 3), run("aaaaaaa", 2), run("bbbbbbb", 1)]);
+    expect(out).toEqual([run("aaaaaaa", 3), run("bbbbbbb", 1)]);
+  });
+
+  it("leaves out a sha the window already reports and one the ledger names", () => {
+    const out = agedOutCandidates([run("aaaaaaa", 3), run("bbbbbbb", 2), run("ccccccc", 1)], {
+      windowShas: new Set(["aaaaaaa"]),
+      isLearned: (sha) => sha === "bbbbbbb",
+    });
+    expect(out).toEqual([run("ccccccc", 1)]);
   });
 });

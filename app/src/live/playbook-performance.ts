@@ -50,6 +50,45 @@ export interface InitiatorSplitView {
   readonly untraced: number;
 }
 
+/** One stage count per step of a playbook's funnel (#4450 slices 5a–5b) — mirrors
+ *  `PlaybookFunnelCounts` in `src/autonomous/playbook-funnel.ts`. The signal fields are optional
+ *  only so a server from before slice 5b still parses; absent reads as not measured. */
+export interface PlaybookFunnelCountsView {
+  readonly checks: number;
+  /** Passes that raised its declared signal; null when no pass can measure it. */
+  readonly signals?: number | null;
+  readonly asked: number;
+  readonly refused: number;
+  readonly placed: number;
+  readonly filled: number;
+}
+
+/** One house playbook's funnel over the window — mirrors `PlaybookFunnelJsonRow` in
+ *  `src/server/playbook-performance.ts`. */
+export interface PlaybookFunnelRowView {
+  readonly playbookId: string;
+  readonly totals: PlaybookFunnelCountsView;
+  readonly days: readonly (PlaybookFunnelCountsView & { readonly date: string })[];
+  /** `counted`: a pass measures its signal · `unmeasured`: only research does · `none`: it declares
+   *  no research signal. */
+  readonly passSignal?: "counted" | "unmeasured" | "none";
+  /** Sessions on which it raised its signal at least once; null with `signals`. */
+  readonly signalledOn?: number | null;
+  /** Sessions on which it asked to trade at least once. */
+  readonly askedOn: number;
+  /** Guard refusals in words, the most frequent first. */
+  readonly refusals: readonly { readonly label: string; readonly count: number }[];
+}
+
+export interface PlaybookFunnelJsonView {
+  /** The window's sessions, oldest first. */
+  readonly sessions: readonly string[];
+  /** Only house playbooks a bot checked or asked for in the window. */
+  readonly playbooks: readonly PlaybookFunnelRowView[];
+  /** Sessions on which any house playbook raised its declared signal. */
+  readonly signalledSessions?: number;
+}
+
 export interface PlaybookPerformanceView {
   readonly house: readonly PlaybookMetricsView[];
   /** Null when none of the requested accounts is readable — an absence, not zero trades. */
@@ -61,6 +100,9 @@ export interface PlaybookPerformanceView {
     readonly house: InitiatorSplitView;
     readonly mine: InitiatorSplitView | null;
   } | null;
+  /** Every bot pooled per house playbook, last ten sessions (#4450 slice 5a). Null where the
+   *  server has no decision store wired — then no card draws a funnel. */
+  readonly funnel?: PlaybookFunnelJsonView | null;
 }
 
 /** With no account (catalog-only), `mine` covers every owned account — callers render only `house`. */

@@ -1,0 +1,167 @@
+/* Act in the row (#5070 slice 3, `shell/position-act.tsx`): Buy back · Roll · Not now in a
+ * position's opened guidance, the ticket they open in place, and the page's one modal — the recap.
+ * Mobile first: the ticket's fields wrap at 390, and the recap is a sheet on the bottom edge as the
+ * calendar sheet is (`calendar-head.css`); a wide screen centres it as a card. */
+
+.pos-act {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pos-act-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* The acts are solid; Not now keeps its dashed edge — a step aside, not an order. */
+.pos-act-btn {
+  min-height: 44px;
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+.pos-act-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The ticket, in place of the act row. */
+.pos-tkt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.pos-tkt-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+}
+.pos-tkt-fields .field {
+  margin: 0;
+}
+.pos-tkt-count input {
+  width: 64px;
+}
+.pos-tkt-limit input {
+  width: 92px;
+}
+.pos-tkt-of,
+.pos-tkt-src {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pos-tkt-tif button {
+  min-height: 36px;
+}
+.pos-tkt-line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pos-tkt-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pos-tkt-acts .btn {
+  width: auto;
+  min-height: 44px;
+}
+.pos-tkt-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* The recap: a native modal. No padding on the dialog's own box, so a tap that lands on it (not a
+   child) is the backdrop — Back. */
+.pos-recap {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: auto;
+}
+.pos-recap::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.pos-recap-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 14px;
+}
+.pos-recap-h {
+  margin: 0;
+  font-size: 16px;
+}
+.pos-recap-sent {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pos-recap-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+.pos-recap-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.pos-recap-row dt {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.pos-recap-row dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pos-recap-row dd.pos-recap-words {
+  font-weight: 500;
+}
+.pos-recap-warn {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.pos-recap-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.pos-recap-acts .btn {
+  width: auto;
+  min-height: 44px;
+}
+
+@media (min-width: 700px) {
+  .pos-recap {
+    inset: 0;
+    width: min(440px, calc(100% - 32px));
+    max-height: 80dvh;
+    margin: auto;
+    border-bottom: 1px solid var(--border);
+    border-radius: 14px;
+  }
+}

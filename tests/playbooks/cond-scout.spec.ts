@@ -3,6 +3,7 @@ import {
   classifyCondition,
   parseCondScoutUniverse,
   readConditions,
+  resolveCondScoutUniverse,
   scanConditions,
 } from "../../src/playbooks/cond-scout.js";
 import { aContext } from "../support/builders.js";
@@ -133,5 +134,51 @@ describe("scanConditions", () => {
 
   it("reserves its own playbook id, distinct from the beta scout's", () => {
     expect(COND_SCOUT_ID).toBe("COND-SCOUT");
+  });
+});
+
+describe("resolveCondScoutUniverse — the scout's names are its host bot's own setting (#4535)", () => {
+  const streamed = ["NVDA", "AMD", "MU"];
+  const sub = (enabled: boolean, symbols?: string[]) => ({
+    playbookId: COND_SCOUT_ID,
+    enabled,
+    ...(symbols ? { symbols } : {}),
+  });
+
+  it("scans the names an on subscription lists, normalized", () => {
+    expect(resolveCondScoutUniverse([sub(true, ["nvda", " amd"])], undefined, streamed)).toEqual({
+      wanted: ["NVDA", "AMD"],
+      source: "subscription",
+    });
+  });
+
+  it("reads an on subscription with no names as every name the stream carries", () => {
+    expect(resolveCondScoutUniverse([sub(true)], undefined, streamed)).toEqual({
+      wanted: streamed,
+      source: "subscription",
+    });
+  });
+
+  it("lets the bot's setting win over the env knob, a pause included", () => {
+    expect(resolveCondScoutUniverse([sub(true, ["MU"])], "NVDA", streamed).wanted).toEqual(["MU"]);
+    expect(resolveCondScoutUniverse([sub(false, ["MU"])], "NVDA", streamed)).toEqual({
+      wanted: [],
+      source: "paused",
+    });
+  });
+
+  it("falls back to the env knob only for a bot holding no COND-SCOUT subscription", () => {
+    const other = { playbookId: "S1-NVDA", enabled: true };
+    expect(resolveCondScoutUniverse([other], "nvda,amd", streamed)).toEqual({
+      wanted: ["NVDA", "AMD"],
+      source: "env",
+    });
+  });
+
+  it("stays dark with neither", () => {
+    expect(resolveCondScoutUniverse([], undefined, streamed)).toEqual({
+      wanted: [],
+      source: "dark",
+    });
   });
 });

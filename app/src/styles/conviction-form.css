@@ -1,0 +1,305 @@
+/* R&D → Playbooks: "Your convictions" and the conviction form (#5482 slice 6b,
+   `your-convictions.tsx`, `conviction-form.tsx`, `conviction-claim.tsx`). Builds on the authoring
+   form's sheet (`playbook-author.css`: `.pba`, `.pba-row`, `.pba-hint`, `.pba-actions`). Tokens only.
+   Phone first: one column, the controls the width of the page; the section is the playbooks size
+   container, so a wide screen only adds a second column of fields inside a claim and a pair.
+   Colour never alone (docs/BRAND.md → Accessibility): a picked chip is a filled glyph and a heavier
+   outline; a claim with a problem gets a heavier border AND ✕ sentences; the change on the card is
+   bold and follows an arrow, not a hue. */
+
+.cvf {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+}
+
+.cvf fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cvf legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cvf .field {
+  margin: 0;
+}
+
+.cvf .field textarea {
+  resize: vertical;
+  min-height: 3.2em;
+}
+
+.cvf input[aria-invalid="true"] {
+  border-width: 2px;
+  border-color: var(--neg);
+}
+
+.cvf-problems {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.cvf-problems p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── a claim: its own bordered block, numbered ─────────────────────────────────────────────── */
+
+.cvf-claims {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cvf .cvf-claim {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.cvf .cvf-claim > legend {
+  padding: 0 4px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cvf .cvf-claim[aria-invalid="true"] {
+  border: 2px solid var(--neg);
+  padding: 9px 11px 11px;
+}
+
+/* wrong if … by <day>: the sentence and its day on one line once there is room */
+.cvf-wrong {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+/* ── chips: the tag, the bucket, the pairs it steers ────────────────────────────────────────── */
+
+.cvf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cvf-chips legend {
+  flex-basis: 100%;
+}
+
+.cvf-chip {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.cvf-chip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.cvf-chip[data-on] {
+  border: 2px solid var(--text);
+  padding: 8.5px 11.5px;
+  font-weight: 650;
+}
+
+.cvf-chip:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.cvf-chip:has(input:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.cvf-chip-line {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cvf-steers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* a long label wraps beside its box glyph, never under it */
+.cvf-steer,
+.cvf-assign {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+/* ── a steered pair's settings ──────────────────────────────────────────────────────────────── */
+
+.cvf .cvf-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.cvf-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 10px;
+}
+
+.cvf-pair-grid label {
+  font-size: var(--text-sm);
+}
+
+.cvf .cvf-add,
+.cvf .cvf-remove {
+  align-self: flex-start;
+  width: auto;
+  min-height: 40px;
+}
+
+/* ── the card: what it changes, before → after ─────────────────────────────────────────────── */
+
+.cvf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--text);
+  border-radius: 10px;
+}
+
+.cvf-card-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.cvf-card-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cvf-card p {
+  margin: 0;
+}
+
+.cvf-card-name {
+  font-weight: 650;
+}
+
+.cvf-changes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* phone: the setting on its own line, then before → after beneath it */
+.cvf-change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.cvf-change + .cvf-change {
+  border-top: 1px solid var(--border);
+}
+
+.cvf-change-what {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cvf-change-before {
+  color: var(--muted);
+}
+
+.cvf-card-line {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cvf button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* a wide screen adds room: two columns of fields inside a claim and a pair, never new fields */
+@container pbsec (min-width: 760px) {
+  .cvf {
+    padding: 18px 20px 20px;
+    max-width: var(--col-read);
+  }
+
+  .cvf-wrong {
+    grid-template-columns: minmax(0, 1fr) 11em;
+  }
+
+  .cvf-pair-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* one line per setting: what · before → after, the arrow beside the words it joins */
+  .cvf-change {
+    grid-template-columns: 11em minmax(0, max-content) auto minmax(0, 1fr);
+  }
+
+  .cvf-change-what {
+    grid-column: auto;
+  }
+
+  .cvf-section .pba-row {
+    max-width: var(--col-read);
+  }
+}

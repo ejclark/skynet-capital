@@ -16,7 +16,8 @@ import {
 } from "../live/playbook-rule";
 import { fetchPlaybookStore } from "../live/playbook-store";
 import { decayBySymbol, deltaBySymbol } from "./holding-decay";
-import { WheelLoop, WindowTimeline } from "./playbook-rule";
+import { WheelLoop } from "./playbook-rule";
+import { WindowTimeline } from "./playbook-window";
 import { PositionCards } from "./position-cards";
 
 /**
@@ -138,7 +139,8 @@ function RuleBody({
     template === "window" && symbol && span
       ? windowPlan(symbol, span, new Date().toISOString())
       : undefined;
-  if (plan && span) return <WindowTimeline plan={plan} span={span} />;
+  const stretches = found.card?.stretches;
+  if (plan) return <WindowTimeline plan={plan} {...(stretches ? { stretches } : {})} />;
   return <p>{found.strategy.summary}</p>;
 }
 

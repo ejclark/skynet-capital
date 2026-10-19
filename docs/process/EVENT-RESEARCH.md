@@ -68,7 +68,14 @@ kill switches, and the first ledger row. Open with an `## At a glance` decision 
 horizon table + signal conditions) — the `/research` page promotes it above the document; it is a
 faithful surfacing of the stance below, never a new claim (see the TEMPLATE). Instruments by kind:
 
-- **earnings / symbol-keyed** — `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
+- **earnings / symbol-keyed** — first read what the house already knows: `npm run research:dossier
+  -- <SYM>` (`npm ci --ignore-scripts` once if `node_modules` is missing; about a minute). It lists
+  the current stance, the bots' live pairs on the name and the conviction claims steering them,
+  every open forward test naming it (the unowned legacy rows included) and its kill-list entries.
+  Never register a forward test it already lists, and when your call bears on a pair or a claim it
+  lists, name it (2026-10-18 audit: the same CRWV test was filed twice, and one finding was
+  "discovered" three times, because nothing joined these). Then
+  `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
   --peers <PEERS>` + `node scripts/research/intraday-edges.mjs <SYM>`, read against the house
   playbooks (S1/S2/E1/S3/S4 + G1) and the kill list in
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
@@ -412,6 +419,33 @@ If he would rather have the literal Sunday clock the brief named, the same job t
 cannot follow the offset, which is a third reason the tick is the better shape here). It would be
 the only cron in the repo, and it would compose each week from Sunday's ledger set alone.
 
+## Signal runs — the second door (#4808 slice 2)
+
+Calendar events are one source of research; the other is **what a playbook declares it trades on**
+(`src/playbooks/research-signals.ts`). `npm run research:signals` lists the instrument runs owed
+today: every declared signal × the tickers of its playbook's pair, on the signal's own cadence
+(weekly, or after each confirmed report), and nothing no playbook declares. One command on one
+ticker is one run even when two playbooks name it. The count a tick hands out answers to the same
+ceiling as the event lane (`research-dispatch-budget.json` through the work spigot's dial); the rest
+is deferred, not dropped. Last-run records are one file each under `docs/research/signal-runs/`,
+written by `npm run research:signals -- --record "<command>"`. The scheduler runs nothing and spends
+no tokens; wiring a workflow step that runs the owed commands is a protected-path change and boards
+the platter separately.
+
+## Candidate playbooks — the third door (#4808 slice 3)
+
+A new signal idea enters as a **candidate** (`src/playbooks/candidates.ts`), never as a playbook: it
+has no window, no sizing and no order path, so nothing can trade or suggest it, and its Store card
+says its back-test status in words. Before its first run it declares the five research steps the
+2026-10-07 sweep's eight refutations each lacked: a fixed threshold · a power estimate · a control ·
+a confound filter clean of reports on both sides · date-clustered, factor-netted grouping sized to
+the latest era. The verdict (`scripts/research/backtest-verdict-math.mjs`) judges power first, from
+the cluster count alone, so a thin sample is `underpowered` — it goes to `next-slice` and never to
+the kill list; a killed candidate is dated and its id must be on the kill list in
+`docs/research/multi-symbol-sweep.md` before `npm test` passes. Candidate 1 (options volume at the
+Bollinger edge) has its two inputs as instruments: `option-volume.mjs` (OCC's free daily volume) and
+`bollinger-touch.mjs` (the price-only control). Its ~500-stock run waits on the OCC archive (#4832).
+
 ## The decision header is gated (`npm run research:lint`)
 
 The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
@@ -433,7 +467,7 @@ What it checks, and what it deliberately does not:
 | an `## At a glance` (or study `## The call`) section exists | a signal bullet past 160 chars |
 | a **TL;DR.** paragraph and a **Signals & conditions** list | a falsifier naming no date or number |
 | a table with `Call` · `Confidence` · `Proves it wrong` columns | an assessment row past ~1,200 chars |
-| all four horizons present, each with a graded, non-empty call | |
+| all four horizons present, each with a graded, non-empty call | a `**Call:** <buy\|hold\|trim\|sell\|wait> until <date>` line missing on an upcoming event's ledger, or malformed (#4807) |
 | an earnings ledger's `**Buy signal:**` bullet, yes or no — the line position guidance reads | |
 
 Structure fails; prose length only informs. That split is on purpose — `docs/IDEAS.md` banks the

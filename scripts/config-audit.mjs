@@ -2,7 +2,9 @@
 // Config audit — a read-only "eye" for CONFIG/CAPABILITY drift, the dimension incident-scan.mjs is
 // blind to (it only sees a red `main`). This one watches whether the .claude/ ecosystem stays
 // coherent: capabilities nothing routes to, owner-claims that contradict CLAUDE.md, and recurring
-// corrections that should be templatized.
+// corrections that should be templatized. Check ⑤ watches the product/UX loops the same way: how
+// stale the member-journey crawl and its counts are (scripts/crawl/loop-freshness.mjs) — lane work
+// the digest files under Noise absorbed, never Needs you.
 //
 // It is the missing consumer the duel-log hook (scripts/duel-log.mjs) promised — "a mining pass
 // later distills this." Design invariants, by construction:
@@ -19,6 +21,7 @@
 // (docs/TECHNIQUES.md / the plan).
 //
 //   node scripts/config-audit.mjs        # print the proposal report; modify nothing; exit 0
+//   node scripts/config-audit.mjs --today=YYYY-MM-DD   # pin check ⑤'s clock (tests)
 //
 // Exit codes: 0 report printed · 2 a check could not run (its section says UNKNOWN and why) — e.g.
 // `git grep` failed, so check ① cannot tell a referenced capability from an orphaned one. The rest
@@ -28,8 +31,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { recurringIntents } from "./config-audit-intent-clusters.mjs";
+import { loopFreshness } from "./crawl/loop-freshness.mjs";
 
 const ROOT = process.cwd();
+const TODAY =
+  process.argv.find((a) => a.startsWith("--today="))?.slice(8) ??
+  new Date().toISOString().slice(0, 10);
 const AGENTS_DIR = join(ROOT, ".claude/agents");
 const SKILLS_DIR = join(ROOT, ".claude/skills");
 const CLAUDE_MD = join(ROOT, "CLAUDE.md");
@@ -210,6 +217,20 @@ function computeFloorFindings(caps) {
   return findings;
 }
 
+// ---- check 5: product/UX loop freshness (scripts/crawl/loop-freshness.mjs) ------------------------
+
+/** Lane work, never a decision: the digest folds ⑤ into Noise absorbed, not Needs you (the
+ *  2026-10-18 loop census — each line names the command a lane runs to clear it). */
+function printLoopFreshness() {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(TODAY)) throw new Error(`--today must be YYYY-MM-DD: ${TODAY}`);
+  const freshness = loopFreshness({ root: ROOT, today: TODAY });
+  unknownChecks += freshness.unknown;
+  console.log(
+    "\n⑤ Product/UX loop freshness (lane work — fold into Noise absorbed, never Needs you; each line names the command that clears it):",
+  );
+  console.log(freshness.lines.length ? freshness.lines.join("\n") : "  • none");
+}
+
 // ---- report ---------------------------------------------------------------------------------------
 
 function main() {
@@ -261,6 +282,8 @@ function main() {
   console.log(
     floorFindings.length ? floorFindings.join("\n") : "  • none — every agent meets its floor",
   );
+
+  printLoopFreshness();
 
   console.log(
     `\n${line}\nEvidence-triggered · human-gated · wrote nothing. Approve any proposal by acting on it yourself.\n${line}\n`,

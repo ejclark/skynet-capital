@@ -19,8 +19,8 @@ import {
  *  - a close is a round trip: the close first, then each order it closed, muted and newest first
  *    (round 14: "the latest event (sold) should be listed first"), then a total — what it was, how
  *    long it was held, and the realized result the server's round-trip matcher computed.
- * Both layouts draw from this: the phone's cards (`activity-cards.tsx`) and the desk's table
- * (`activity-table.tsx`). Sizes say their unit ("15 shares", "1 contract"), and every figure keeps
+ * Both layouts draw from this: the phone's cards (`ledger-cards.tsx`) and the desk's table
+ * (`ledger-table.tsx`). Sizes say their unit ("15 shares", "1 contract"), and every figure keeps
  * its sign — no paid / received / booked words (round 15).
  */
 

@@ -8,7 +8,7 @@ import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
 import { BOTS_UNIVERSE } from "../../src/domain/bots-universe.js";
 import type { Portfolio } from "../../src/domain/types.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, HC_SAURON, registeredPlaybooks } from "../../src/playbooks/registry.js";
+import { G1_GOOG, registeredPlaybooks, SAURON } from "../../src/playbooks/registry.js";
 import { aPortfolio } from "../support/builders.js";
 
 const roster = (id: string, ...playbooks: EnabledPlaybook["playbook"][]): StreamRoster => ({
@@ -40,11 +40,7 @@ describe("streamedSymbols (#4777)", () => {
 
   it("adds an enabled playbook's ticker and a held ticker, never repeating one of the ten", () => {
     expect(
-      streamedSymbols(
-        BOTS_UNIVERSE,
-        [roster("a", G1_GOOG), roster("b", HC_SAURON)],
-        ["ZS", "NVDA"],
-      ),
+      streamedSymbols(BOTS_UNIVERSE, [roster("a", G1_GOOG), roster("b", SAURON)], ["ZS", "NVDA"]),
     ).toEqual([...BOTS_UNIVERSE, "GOOG", "ZS"]);
   });
 
@@ -53,6 +49,13 @@ describe("streamedSymbols (#4777)", () => {
       const carried = streamedSymbols(BOTS_UNIVERSE, [roster("a", playbook)], []);
       for (const symbol of playbook.symbols) expect(carried).toContain(symbol);
     }
+  });
+
+  it("prices a ticker a draft playbook is in its shadow test on, though no roster trades it (#5457)", () => {
+    expect(streamedSymbols(BOTS_UNIVERSE, [roster("a")], [], ["AMD", "NVDA"])).toEqual([
+      ...BOTS_UNIVERSE,
+      "AMD",
+    ]);
   });
 
   it("never streams a ticker nobody enabled — not the registry's whole list", () => {
@@ -65,6 +68,26 @@ describe("streamedSymbols (#4777)", () => {
 });
 
 describe("followBotsStream (#4777)", () => {
+  it("re-reads the shadow tests' tickers on a refresh, resubscribing only when they change (#5457)", () => {
+    let wanted: string[] = [];
+    const subscribed: (readonly string[])[] = [];
+    const stream = followBotsStream({
+      stream: { resubscribe: (symbols) => subscribed.push(symbols) },
+      tracker: new MomentumTracker(),
+      universe: BOTS_UNIVERSE,
+      rosters: () => [],
+      wanted: () => wanted,
+    });
+    stream.refresh();
+    stream.refresh();
+    wanted = ["AMD"];
+    stream.refresh();
+    stream.refresh();
+    wanted = [];
+    stream.refresh();
+    expect(subscribed.map((symbols) => symbols.includes("AMD"))).toEqual([false, true, false]);
+  });
+
   it("a G1-GOOG subscription added after boot gets GOOG quotes from the next swap, without a restart", () => {
     const h = harness([roster("sauron")]);
     h.stream.refresh(); // boot

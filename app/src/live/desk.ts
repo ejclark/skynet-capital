@@ -5,6 +5,7 @@
  * value arrives server-formatted; the one raw numeric (`totalPlRaw`) exists for FILTERING only.
  */
 
+import type { DeskHealth } from "./book-health";
 import type { MarkKind } from "./position-mark";
 
 export type Tone = "pos" | "neg" | "flat";
@@ -96,7 +97,7 @@ export const eventBeforeExpiry = (p: Pick<DeskPosition, "nextEvent">): boolean =
  *  `src/observatory/decisions-view.ts`. Every string is server-written; `stakeRaw` only sorts. */
 export interface Decision {
   readonly id: string;
-  readonly kind: "at-risk" | "lock-in" | "idea";
+  readonly kind: "at-risk" | "lock-in" | "time-stop" | "idea";
   readonly symbol: string;
   readonly display: string;
   readonly plainName: string;
@@ -203,6 +204,8 @@ export interface DeskSnapshot {
   readonly desk: Desk;
   /** Present only for desks the world projection gives a landmark (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
+  /** The book read as one system (#5493): optional so an older server or fixture still renders. */
+  readonly health?: DeskHealth;
 }
 
 export async function fetchDesk(id: string): Promise<DeskSnapshot> {
@@ -407,6 +410,9 @@ export interface ActivityReasoning {
   readonly brokerReason?: string;
 }
 
+/** The wire still says `activity` while members say Ledger (#5281 slice 3, kept on purpose): this
+ *  is the server's `ActivityEvent` record, the same shape the league's Activity feed is built
+ *  from, and the path is a contract the study scripts, stability budgets and stubs all read. */
 export interface DeskActivity {
   readonly available: boolean;
   readonly activity: readonly DeskActivityEvent[];

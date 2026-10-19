@@ -120,11 +120,13 @@ describe("narrowing Activity by stock", () => {
         ...(before !== undefined ? { before } : {}),
       });
       seen.push(...page.activity.map((row) => row.orderId));
-      // A page short of matches only at the end, and its cursor the oldest MATCHING row's moment —
-      // never an unmatched row's, which is what filtering after the cut would hand back.
+      // A page short of matches only at the end, and its cursor the oldest MATCHING row's moment
+      // and id (#4802) — never an unmatched row's, which is what filtering after the cut would
+      // hand back.
       if (page.nextCursor !== undefined) {
+        const last = page.activity.at(-1);
         expect(page.activity).toHaveLength(6);
-        expect(page.nextCursor).toBe(page.activity.at(-1)?.at);
+        expect(page.nextCursor).toBe(`${last?.at}|${last?.orderId}`);
       }
       before = page.nextCursor;
       if (before === undefined) break;

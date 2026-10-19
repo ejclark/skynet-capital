@@ -3,7 +3,14 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { Decision, DeskPosition } from "../live/desk";
 import { type AsideEntry, asideFor, asideHolds, readAside, writeAside } from "../live/mark-aside";
 import type { OptionPositions } from "../live/options";
-import { type MarkKind, markOf, type PositionMark, pastLine } from "../live/position-mark";
+import {
+  type MarkKind,
+  type MarkWatch,
+  markOf,
+  type PositionMark,
+  pastLine,
+} from "../live/position-mark";
+import { signedDollars } from "../live/position-picture";
 
 /** One row's mark, and the Not now holding it aside, if one does. */
 export interface RowMark {
@@ -92,7 +99,7 @@ export function useRowMarks(
   book: OptionPositions | undefined,
 ): {
   readonly rows: ReadonlyMap<string, RowMark>;
-  readonly setAside: (symbol: string) => void;
+  readonly setAside: (symbol: string, watch?: MarkWatch) => void;
   readonly undo: (symbol: string) => void;
 } {
   const [entries, setEntries] = useState<readonly AsideEntry[]>(() => readAside(deskId));
@@ -113,9 +120,13 @@ export function useRowMarks(
     const mark = markOf(p, spot);
     const past = pastLine(p, mark, spot);
     const entry = entries.find((e) => e.symbol === p.symbol);
+    // A share row's Not now watches its own price (`shareWatch`); an option's, its stock's.
+    const watched = p.isOption ? spot : signedDollars(p.price);
     rows.set(
       p.symbol,
-      entry && asideHolds(entry, mark, now, spot) ? { mark, aside: entry, past } : { mark, past },
+      entry && asideHolds(entry, mark, now, watched)
+        ? { mark, aside: entry, past }
+        : { mark, past },
     );
   }
 
@@ -131,10 +142,13 @@ export function useRowMarks(
     });
   return {
     rows,
-    setAside: (symbol) => {
+    setAside: (symbol, watch) => {
       const row = rows.get(symbol);
       if (!row) return;
-      keep([...live().filter((e) => e.symbol !== symbol), asideFor(symbol, row.mark, new Date())]);
+      keep([
+        ...live().filter((e) => e.symbol !== symbol),
+        asideFor(symbol, row.mark, new Date(), watch),
+      ]);
     },
     undo: (symbol) => keep(live().filter((e) => e.symbol !== symbol)),
   };

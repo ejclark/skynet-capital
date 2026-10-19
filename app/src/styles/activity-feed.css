@@ -44,7 +44,8 @@
    only in what it says. */
 .wire-filing,
 .wire-merge,
-.wire-earn {
+.wire-earn,
+.wire-play {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -77,8 +78,16 @@
    league rewards. A left accent rule only: decoration, never the signal (the row's word says
    "Earned"), so it needs the non-text 3:1 step `--accent` already holds on `--surface`, and the text
    beside it stays on the AA-checked text tokens. */
-.wire-earn {
+.wire-earn,
+.wire-play-cheer {
   border-left: 3px solid var(--accent);
+}
+/* An authored playbook's milestone (#5457 slice 5): a pass and a first promotion are cheered with the
+   same accent rule; a start and a pause are plain. The sentence wraps inside the row at 390px, and the
+   SIM · unvalidated label sits at the meta weight — a word, so it never rides on hue. */
+.wire-play-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .wire-earn-title {
   font-weight: 600;

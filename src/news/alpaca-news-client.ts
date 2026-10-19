@@ -3,6 +3,8 @@ import type { AlpacaTradingTransport } from "../alpaca/trading-transport.js";
 
 /** A news article, trimmed to what the sentiment pipeline needs. */
 export interface NewsArticle {
+  /** The source's own id for the story — how a re-poll is told from a new one (#4781). */
+  readonly id?: string;
   readonly headline: string;
   readonly summary: string;
   readonly symbols: readonly string[];
@@ -10,6 +12,7 @@ export interface NewsArticle {
 }
 
 interface RawArticle {
+  readonly id?: number | string;
   readonly headline?: string;
   readonly summary?: string;
   readonly symbols?: string[];
@@ -36,6 +39,7 @@ export class AlpacaNewsClient {
     }
     const body = response.body as { news?: RawArticle[] };
     return (body.news ?? []).map((article) => ({
+      ...(article.id !== undefined && article.id !== null ? { id: String(article.id) } : {}),
       headline: article.headline ?? "",
       summary: article.summary ?? "",
       symbols: article.symbols ?? [],

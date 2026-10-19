@@ -10,6 +10,7 @@ import { LadderChapter } from "./ladder-chapter";
 import { LadderGateCard } from "./ladder-gate";
 import { LevelUpCeremony } from "./level-up-ceremony";
 import { type ChapterState, MilestoneCard, type MilestoneChapter } from "./milestone-card";
+import { LADDER_CARD_GATE_NOTE, LADDER_CARD_NO_ACCOUNT_NOTE } from "./milestone-strip";
 import { OnboardingChapter } from "./onboarding-chapter";
 import { PlaybooksChapter } from "./playbooks-chapter";
 import { ProfileMeta } from "./profile-meta";
@@ -38,17 +39,6 @@ function ladderState(gated: boolean, done: number, total: number): ChapterState 
   if (gated) return "locked";
   return total > 0 && done === total ? "complete" : "progress";
 }
-
-/** The M·02 gate note — the server's own sentence (`src/domain/progression.ts`
- *  `LADDER_GATE_NOTE`: "the moment you say hello to Moneypenny"). #1672 fixed this card once and
- *  it regressed to "after your first feedback filing"; the hello is the gate, a filing only also
- *  satisfies it. */
-export const LADDER_CARD_GATE_NOTE = "unlocks the moment you say hello to Moneypenny";
-
-/** The same note for a session with no account (#3807 slice 3b-4, first-timer j1 s3): the server
- *  serves no ladder gate without an account, so the card names the step before the gate, then the
- *  gate in the server's words — one sentence, never a second phrasing of the unlock (#1672). */
-export const LADDER_CARD_NO_ACCOUNT_NOTE = `link an account first, then it ${LADDER_CARD_GATE_NOTE}`;
 
 /** M·02's note: the server's gate when it serves one; the account step when nothing is linked. */
 function ladderGateNote(data: Journey): string | undefined {

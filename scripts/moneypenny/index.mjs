@@ -55,6 +55,7 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { loopCheck } from "../loop-check.mjs";
 import {
   gateAdmission,
   nextAdmissible,
@@ -66,6 +67,7 @@ import {
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
+import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import {
   CONTINUED_MODEL,
@@ -511,8 +513,9 @@ function editLabels(number, args) {
  * `statusForIssue`). This is the one exception: a coach-shaped filing (the guided rail path
  * already attaches `curated` + a `skynet-spec` block, per docs/FEEDBACK.md's "the coach is what
  * makes the wide envelope safe") is judged safe enough to self-ready, preserving the old
- * near-zero-friction default for the common case. Everything else — freeform filings, and
- * anything already flagged `needs-eric`/`needs-info` — sits in Backlog for an explicit `ready`
+ * near-zero-friction default for the common case; a `bug` + `fast-track` filing is the second
+ * (below). Everything else — freeform filings, and anything already flagged
+ * `needs-eric`/`needs-info`/`needs-design` — sits in Backlog for an explicit `ready`
  * (Eric's, or a later triage pass), visible on the board rather than building unseen.
  *
  * Pure so the rule is provable without a network call; `curated`/`needs-eric`/`needs-info` are
@@ -520,11 +523,22 @@ function editLabels(number, args) {
  */
 export function triageFeedbackDecision({ labels = [] } = {}) {
   const has = (name) => labels.includes(name);
-  if (has("needs-eric") || has("needs-info")) {
-    return { ready: false, reason: "flagged needs-eric/needs-info — stays in Backlog" };
+  if (has("needs-eric") || has("needs-info") || has("needs-design")) {
+    return {
+      ready: false,
+      reason: "flagged needs-eric/needs-info/needs-design — stays in Backlog",
+    };
   }
   if (has("curated")) {
     return { ready: true, reason: "coach-shaped filing (curated) — self-readying" };
+  }
+  // A BUG FOUND MID-BUILD IS THE NEXT PULL (#5667; CLAUDE.md, Eric 2026-09-30). It is filed `bug` +
+  // `fast-track`, and the feedback lane builds a bug (`inFeedbackLane`, #5332) — but only once it is
+  // `ready`, and nothing applied that: 23 of 23 open bugs sat in Backlog on 2026-10-18. Applying
+  // `fast-track` takes triage permission, the same bar `feedback` meets as authorization. A `plan`
+  // is the plan lane's to flip. The admission gate still decides when it starts.
+  if (has("bug") && has("fast-track") && !has("plan")) {
+    return { ready: true, reason: "bug + fast-track — the next pull, self-readying" };
   }
   return { ready: false, reason: "freeform filing — stays in Backlog for an explicit ready" };
 }
@@ -1460,8 +1474,16 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "edit-issue-body": (i) => {
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
+    console.log(`· refreshed the body of #${i.issueNumber}`);
+    return `🔁 refreshed #${i.issueNumber} — \`${i.title}\``;
+  },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
+  // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
+  "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
+  "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
 };
 
 /**
@@ -1709,13 +1731,27 @@ function main(argv) {
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
-  const intents = auditMode ? audit(fixtureDeps ?? gatherAuditDeps(Date.now())) : route(ctx, deps);
+  const intents = auditMode
+    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now())), ...capsuleAudit(fixtureDeps)]
+    : route(ctx, deps);
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));
     return;
   }
   execute(intents);
+  if (auditMode && !fixtureDeps) postLoopChecks();
+}
+
+/** The learning-loop registry's due checks, posted on the push tick (scripts/loop-check.mjs). Never
+ *  fails the audit: a check that cannot post is reported and retried on the next push. */
+function postLoopChecks() {
+  try {
+    const n = loopCheck({ post: true });
+    if (n > 0) console.log(`::notice::loop-check — posted ${n} due learning-loop check(s)`);
+  } catch (err) {
+    console.log(`::warning::loop-check failed (non-fatal): ${String(err?.message).slice(0, 200)}`);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

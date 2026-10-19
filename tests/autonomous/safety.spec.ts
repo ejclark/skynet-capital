@@ -132,6 +132,49 @@ describe("SafetyController", () => {
   });
 });
 
+describe("SafetyController.rollDay — the daily-loss breaker is per market day, not per process", () => {
+  it("measures a new day against that day's first reading, not the process's first", () => {
+    const s = new SafetyController({ maxDailyLossPct: 0.05 });
+    s.rollDay("2026-10-19");
+    s.recordEquity(1_000_000);
+    s.recordEquity(960_000); // -4% on Monday — fine
+    s.rollDay("2026-10-20");
+    s.recordEquity(950_000); // Tuesday's baseline
+    s.recordEquity(920_000); // -3.2% on Tuesday, -8% since Monday — still fine: it is Tuesday's loss
+    expect(s.blockedReason()).toBeNull();
+    s.recordEquity(900_000); // -5.3% on Tuesday — trip
+    expect(s.blockedReason()).toBe("daily-loss");
+  });
+
+  it("never re-arms: a breaker tripped yesterday stays tripped today, until reset", () => {
+    const s = new SafetyController({ maxDailyLossPct: 0.05 });
+    s.rollDay("2026-10-19");
+    s.recordEquity(1_000_000);
+    s.recordEquity(940_000);
+    expect(s.blockedReason()).toBe("daily-loss");
+    s.rollDay("2026-10-20");
+    s.recordEquity(940_000);
+    expect(s.blockedReason()).toBe("daily-loss");
+  });
+
+  it("keeps a boot-time day-open seed on the day it was seeded", () => {
+    const s = new SafetyController({ maxDailyLossPct: 0.05 });
+    s.seedBaseline(1_000_000);
+    s.rollDay("2026-10-19"); // first call only records the day
+    s.recordEquity(940_000);
+    expect(s.blockedReason()).toBe("daily-loss");
+  });
+
+  it("is a no-op within the same day", () => {
+    const s = new SafetyController({ maxDailyLossPct: 0.05 });
+    s.rollDay("2026-10-19");
+    s.recordEquity(1_000_000);
+    s.rollDay("2026-10-19");
+    s.recordEquity(940_000);
+    expect(s.blockedReason()).toBe("daily-loss");
+  });
+});
+
 /**
  * The graduated ladder, read off the SAME equity feed as the daily-loss breaker. Baseline is
  * $100k and every equity below is a whole dollar, so each drawdown is bit-exact against its

@@ -141,3 +141,122 @@ describe("cycleLabel", () => {
     );
   });
 });
+
+describe("HousePlaybookMetrics' funnel line (#4450 slices 5a–5b)", () => {
+  const counts = { checks: 1240, asked: 4, refused: 3, placed: 1, filled: 1 };
+  const funnelRow = {
+    playbookId: "S1-NVDA",
+    totals: counts,
+    days: [],
+    askedOn: 2,
+    refusals: [
+      { label: "blocked by S2 (flat through the print)", count: 2 },
+      { label: "no live quote for the symbol", count: 1 },
+    ],
+  };
+
+  it("walks checks to fills across every bot, and names the guard that refused most", () => {
+    render(
+      <HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: funnelRow } }} />,
+    );
+    expect(screen.getByText("Last 10 sessions, every bot")).toBeInTheDocument();
+    expect(
+      screen.getByText("1,240 checks → 4 orders asked for → 3 refused → 1 placed → 1 filled"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "asked on 2 of 10 sessions · most refused: blocked by S2 (flat through the print)",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("draws beside the closed-trade numbers, never instead of them", () => {
+    render(
+      <HousePlaybookMetrics
+        scope={{ kind: "read", row, funnel: { sessions: 10, row: funnelRow } }}
+      />,
+    );
+    expect(screen.getByText("Closed trades")).toBeInTheDocument();
+    expect(screen.getByText("Last 10 sessions, every bot")).toBeInTheDocument();
+  });
+
+  it("stops the chain at no orders for a checked playbook that never asked", () => {
+    const quiet = {
+      ...funnelRow,
+      totals: { ...counts, asked: 0, refused: 0, placed: 0, filled: 0 },
+      askedOn: 0,
+      refusals: [],
+    };
+    render(<HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: quiet } }} />);
+    expect(screen.getByText("1,240 checks → no orders asked for")).toBeInTheDocument();
+    expect(screen.getByText("asked on 0 of 10 sessions")).toBeInTheDocument();
+  });
+
+  it("puts the signals stage between checks and orders where a check measures the signal (slice 5b)", () => {
+    const counted = {
+      ...funnelRow,
+      totals: { ...counts, signals: 18 },
+      passSignal: "counted" as const,
+      signalledOn: 3,
+    };
+    render(
+      <HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: counted } }} />,
+    );
+    expect(
+      screen.getByText(
+        "1,240 checks → 18 signals → 4 orders asked for → 3 refused → 1 placed → 1 filled",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "signal on 3 of 10 sessions · asked on 2 of 10 sessions · most refused: blocked by S2 (flat through the print)",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says no signals in words when a counted playbook raised none", () => {
+    const quiet = {
+      ...funnelRow,
+      totals: { ...counts, signals: 0, asked: 0, refused: 0, placed: 0, filled: 0 },
+      passSignal: "counted" as const,
+      signalledOn: 0,
+      askedOn: 0,
+      refusals: [],
+    };
+    render(<HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: quiet } }} />);
+    expect(screen.getByText("1,240 checks → no signals → no orders asked for")).toBeInTheDocument();
+    expect(
+      screen.getByText("signal on 0 of 10 sessions · asked on 0 of 10 sessions"),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["unmeasured" as const, "its signal is measured by research runs, not by a check"],
+    ["none" as const, "declares no research signal"],
+  ])("skips the stage and says why for a %s playbook, never 0 signals", (passSignal, note) => {
+    const skipped = {
+      ...funnelRow,
+      totals: { ...counts, signals: null },
+      passSignal,
+      signalledOn: null,
+    };
+    render(
+      <HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10, row: skipped } }} />,
+    );
+    expect(
+      screen.getByText("1,240 checks → 4 orders asked for → 3 refused → 1 placed → 1 filled"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^${note} · asked on 2 of 10`))).toBeInTheDocument();
+    expect(screen.queryByText(/signal on/)).not.toBeInTheDocument();
+  });
+
+  it("says no bot checked a playbook that isn't on any bot's roster", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read", funnel: { sessions: 10 } }} />);
+    expect(screen.getByText("Last 10 sessions: no bot checked this playbook.")).toBeInTheDocument();
+  });
+
+  it("draws no funnel where the server has none", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read" }} />);
+    expect(screen.queryByText(/Last 10 sessions/)).not.toBeInTheDocument();
+  });
+});

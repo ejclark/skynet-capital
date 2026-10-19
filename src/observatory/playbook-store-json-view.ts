@@ -11,6 +11,8 @@ import {
   playbookStoreCatalog,
 } from "../discovery/playbook-store.js";
 import {
+  type CandidateCardEntry,
+  candidateCatalog,
   type PairRowEntry,
   type StrategyCardEntry,
   strategyCatalog,
@@ -30,6 +32,7 @@ import {
 import type { StrategyAllocation } from "../subscriptions/subscriptions-file.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
+import { type SteeredByView, steeredByView } from "./steered-by-view.js";
 
 interface SubscriptionView {
   readonly mode: PlaybookSubscription["mode"];
@@ -75,6 +78,9 @@ interface PairRowView extends PairRowEntry {
   /** An option pair the bot refuses because another option pair it reads first owns the ticker:
    *  "not trading — the call spread owns NVDA". */
   readonly notTrading?: string;
+  /** A conviction view steers this pair: whose, the check day, and its claims' scorecard
+   *  (#5482 slice 5). The same for every viewer; it is the record's, not the account's. */
+  readonly steeredBy?: SteeredByView;
 }
 
 interface StrategyCardView extends Omit<StrategyCardEntry, "pairs"> {
@@ -88,6 +94,8 @@ export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   /** One card per strategy, a row per pair — what slice 3b moves the Store onto. */
   readonly strategies: readonly StrategyCardView[];
+  /** Ideas still on trial (#4808 slice 3): shown with their back-test status, never subscribable. */
+  readonly candidates: readonly CandidateCardEntry[];
   /** Sum of capitalAllocated across this account's ENABLED subscriptions (Eric, #885: "the
    *  summation of money being managed under playbooks could be an interesting metric"). An
    *  uncapped subscription has no allocation to add, so it contributes nothing. */
@@ -151,7 +159,9 @@ function strategyCardsView(
 ): StrategyCardView[] {
   const byPairId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const onBot = subscribedPairs(subscriptions ?? [], findPair, envNamed);
-  const rowView = (row: PairRowEntry): PairRowView => {
+  const rowView = (entry: PairRowEntry): PairRowView => {
+    const steered = steeredByView(entry.id);
+    const row = steered ? { ...entry, steeredBy: steered } : entry;
     const sub = byPairId.get(row.id);
     if (sub)
       return { ...row, subscription: subscriptionView(sub), ...subscribedNotes(row.id, onBot) };
@@ -226,6 +236,7 @@ export function playbookStoreView(
   return {
     cards,
     strategies: strategyCardsView(subscriptions, asOfIso, envNamed, allocations),
+    candidates: candidateCatalog(),
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),
