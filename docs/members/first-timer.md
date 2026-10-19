@@ -68,7 +68,7 @@ and the first button, never the rail. They skip anything that names a concept th
    the Profile page opened on Milestones with the Onboarding chapter open — never a page that
    links back to itself.** Judge: can this reader tell what to do next in ten seconds?
 3. `/app/accounts?section=milestones&chapter=trading` — the M·02 card's gate note (the trading
-   chapter: the bare milestones visit folds the cards under the connect guide, #5258). **WHILE the trading ladder is gated, the app shall
+   chapter, since #5258 folds the cards under the connect guide on the bare milestones visit). **WHILE the trading ladder is gated, the app shall
    name the SAME unlock condition everywhere it is named.** _Fixed — #3807 slice 3b-4: with no
    account the card reads "link an account first, then it unlocks the moment you say hello to
    Moneypenny" — the step before the gate, then the server's words._ Judge: does this reader know
