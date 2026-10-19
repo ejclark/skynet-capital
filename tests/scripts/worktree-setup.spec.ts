@@ -125,6 +125,17 @@ describe("worktree-setup — share the install only when it is the right one", (
     const r = spawnSync("bash", [SETUP], { cwd, env: env(), encoding: "utf8" });
     return { status: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
   };
+  // The primary's file, shared by the means the script reports: a hard link is the same inode; an
+  // APFS or btrfs reflink is its own inode with the same bytes (copy-on-write), so the inode test
+  // only holds where `cp -al` was the means — never on macOS, where `cp -c` comes first.
+  const expectShared = (out: string, wt: string, dir: string) => {
+    const how = out.match(new RegExp(`: ${dir} from .* \\(([\\w-]+); lockfile matches`))?.[1];
+    expect(["hard-link", "reflink"], out).toContain(how);
+    const mine = join(wt, dir, "foo/index.js");
+    const theirs = join(primary, dir, "foo/index.js");
+    if (how === "hard-link") expect(statSync(mine).ino).toBe(statSync(theirs).ino);
+    else expect(readFileSync(mine, "utf8")).toBe(readFileSync(theirs, "utf8"));
+  };
   const npmCalls = () =>
     existsSync(npmLog) ? readFileSync(npmLog, "utf8").trim().split("\n").filter(Boolean) : [];
 
@@ -163,17 +174,14 @@ ln -sf ../foo/bin.js "$dir/.bin/biome"; ln -sf ../foo/bin.js "$dir/.bin/rstest"
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-  it("hard-links the primary's install when the lockfile matches, and runs no npm", () => {
+  it("shares the primary's install (hard-link or reflink) when the lockfile matches, and runs no npm", () => {
     const wt = worktree();
     const r = setup(wt);
     expect(r.status, r.out).toBe(0);
     expect(r.out).toMatch(/node_modules from .* \((hard-link|reflink); lockfile matches/);
     expect(npmCalls()).toEqual([]);
-    const shared = join(wt, "node_modules/foo/index.js");
-    expect(statSync(shared).ino).toBe(statSync(join(primary, "node_modules/foo/index.js")).ino);
-    expect(statSync(join(wt, "app/node_modules/foo/index.js")).ino).toBe(
-      statSync(join(primary, "app/node_modules/foo/index.js")).ino,
-    );
+    expectShared(r.out, wt, "node_modules");
+    expectShared(r.out, wt, "app/node_modules");
     // Real directories, not links to the primary's.
     expect(lstatSync(join(wt, "node_modules")).isSymbolicLink()).toBe(false);
     // The shims resolve inside the worktree's own tree.
@@ -218,9 +226,7 @@ ln -sf ../foo/bin.js "$dir/.bin/biome"; ln -sf ../foo/bin.js "$dir/.bin/rstest"
     expect(npmCalls().at(-1)).toBe("CI=1 ci --no-audit --no-fund");
     expect(existsSync(join(wt, "node_modules/foo/PRIMARY"))).toBe(false);
     expect(readFileSync(join(primary, "package-lock.json"), "utf8")).toBe(lockOf("1.0.0"));
-    expect(statSync(join(wt, "app/node_modules/foo/index.js")).ino).toBe(
-      statSync(join(primary, "app/node_modules/foo/index.js")).ino,
-    );
+    expectShared(r.out, wt, "app/node_modules");
   });
 
   it("converts an old symlinked node_modules to its own install without touching the target", () => {
