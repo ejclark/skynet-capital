@@ -1,135 +1,107 @@
 # APEC Finance Ministers' Meeting (first ever in Hong Kong) — apec-fmm-hong-kong-2026-10-20
 
-**Kind:** geopolitical · **Date:** 2026-10-20 (estimate, NEWS: HKSAR government announcement 2025-12-12 names October 2026; the Oct 20–21 days come from SCMP, read via search summary) · **Impact:** low
+**Kind:** geopolitical · **Date:** 2026-10-20 (estimate, NEWS: SCMP via search summary and The Standard 2026-10-11 name Oct 20–21; no APEC or HKSAR primary names the days) · **Impact:** low
 **Last assessed:** 2026-10-19
-<!-- probe-ref: {"symbols": {}, "vix": 19.99, "daysBand": "low:0+", "adjacentIds": ["aapl-iphone-duo-launch-2026-10-23", "ecb-quiet-period-start-2026-10-21", "eia-weekly-petroleum-status-2026-10-15", "empire-state-mfg-2026-10-15", "eurostat-hicp-final-2026-10-16", "fomc-blackout-start-2026-10-17", "g20-fmcbg-bangkok-2026-10-15", "housing-starts-2026-10-20", "import-export-prices-2026-10-16", "industrial-production-2026-10-16", "japan-cpi-2026-10-23", "jgb-20y-auction-2026-10-20", "jgb-liquidity-enhancement-5-11y-2026-10-22", "meta-2026-10-28-print", "meta-nm-privacy-penalty-ruling-2026-10-20", "msft-def14a-2026-10-22", "mtis-2026-10-15", "nahb-hmi-2026-10-19", "norway-gpfg-ethics-committee-2026-10-15", "opex-2026-10-16", "pending-home-sales-2026-10-20", "philly-fed-mfg-2026-10-15", "ppi-2026-10-15", "retail-sales-2026-10-15", "saudi-east-west-pipeline-repair-window-close-2026-10-15", "tic-monthly-2026-10-16", "treasury-20y-bond-2026-10-21", "treasury-5y-tips-2026-10-22", "treasury-buyback-10y20y-2026-10-15", "treasury-buyback-tips-1y10y-2026-10-21", "treasury-coupon-announcement-2026-10-15", "treasury-coupon-announcement-2026-10-22", "treasury-primary-dealer-agenda-2026-10-16", "uk-ashe-earnings-2026-10-22", "uk-consumer-confidence-2026-10-23", "uk-cpi-2026-10-21", "uk-labour-market-2026-10-20", "uk-monthly-gdp-2026-10-15", "uk-ppi-2026-10-21", "uk-public-sector-finances-2026-10-21", "uk-retail-sales-2026-10-23", "umich-sentiment-final-2026-10-23", "vix-expiration-2026-10-21", "warsh-imf-fireside-2026-10-15"], "adjacentStrongIds": ["retail-sales-2026-10-15", "meta-2026-10-28-print"], "screenStreak": 0, "blocked": [{"url": "https://scmp.com/news/china/diplomacy/article/3370295/bessent-may-skip-apec-hong-kong-focus-trumps-shenzhen-visit-sources-say", "status": "403", "at": "2026-10-19"}, {"url": "https://www.legco.gov.hk/yr2026/english/panels/fa/papers/fa20260202cb1-56-5-e.pdf", "status": "CERT_UNVERIFIED", "at": "2026-10-19"}]} -->
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://scmp.com/news/china/diplomacy/article/3370295/bessent-may-skip-apec-hong-kong-focus-trumps-shenzhen-visit-sources-say","status":"403","at":"2026-10-19"},{"url":"https://scmp.com/news/hong-kong/hong-kong-economy/article/3370640/china-finance-minister-deliver-opening-speech-apec-meeting-hong-kong","status":"403","at":"2026-10-19"}]} -->
 
 ## At a glance
 
-**TL;DR.** Read it, never trade it. This is a two-day, ~500-guest technocrats' meeting (Oct 20–21,
-Hong Kong Convention and Exhibition Centre — **estimate**: the days are SCMP-sourced, not
-APEC- or HKSAR-primary) whose communiqué-style output has no demonstrated price effect on anything
-this research tracks. The only market-relevant question is US representation, and it is largely
-answered already: SCMP reports Treasury Secretary Bessent **may skip** it, with Under Secretary Erin
-Browne the leading candidate to lead the US delegation, saving his China channel for a Shenzhen round
-with Vice Premier He Lifeng ahead of Trump's November visit. That is a repeat of the **10/15 G20
-finance ministerial in Bangkok**, which Bessent also skipped (Browne and Deputy Secretary Brooke led;
-SPX +0.33%, VIX 16.87→16.46 — the move belonged to CPI and yields, not the venue). A Bessent no-show
-is therefore the base case, not news, and reads as logistics, not a signal. The tape that matters on
-10/20 is elsewhere: VIX 19.99 (a +21% jump on 10/16), a hot Oct-14 CPI, and a compound day carrying
-housing starts, pending home sales, the 20y JGB auction and the Meta New Mexico ruling. Estimate
-widens caution only.
+**TL;DR.** This is a ceremonial two-day ministers' meeting, and the only thing worth knowing about it is
+who the US sends. SCMP reports **Treasury Secretary Bessent may skip it** and send Treasury's under
+secretary for international affairs (Erin Browne, "leading candidate") instead, because Bessent is
+preparing talks with Vice Premier He Lifeng in Shenzhen ahead of Trump's November visit. A Bessent
+no-show would read as the US saving its China channel for the **2026-11-18/19 Shenzhen leaders' meeting
+(estimate)**, not as a snub that moves markets: APEC finance ministers' joint statements are non-binding,
+this is the first one ever held in Hong Kong, and no tracked symbol is keyed to it. The honest call is
+stand aside: nothing here is a setup, and the day's real catalysts (housing starts, Pending Home Sales, the
+Meta New Mexico ruling) are on the calendar beside it. Date is **estimate** — days rest on press reports,
+not a primary; estimate widens caution only.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-1) | Stand aside | High | Nothing here is a setup; the meeting has no product a price keys to, and the one open question (who represents the US) was already priced by the Bangkok precedent. | A White House/Treasury statement before 2026-10-21 that Bessent attends and meets He Lifeng on the margins in Hong Kong — a bilateral channel this venue does not currently have |
-| This week | Do not attribute 10/20–10/21 tape to this meeting | High | The same two sessions carry housing starts, pending home sales, JGB 20y, the Meta ruling, a 20y Treasury auction and VIX expiry; none is separable from a Hong Kong chair's statement. | A chair's statement or US readout containing a concrete US–China tariff or export-control provision before 2026-10-23 |
-| This month | Watch the Bessent–He Lifeng Shenzhen round, not this | Medium | That round is the real channel for extending the 2027-01-10 truce; Hong Kong is where it is being prepared around, not where it happens. | The Shenzhen round not being reported by 2026-11-10 (round slips or Trump's visit is in doubt) |
-| This quarter | No exposure keyed to this event | High | Low impact, no symbols; its only downstream value is as a data point on how Washington routes its China channel before 11/18–19. | A Hong Kong joint statement that APEC leaders then fail to endorse in Shenzhen on 2026-11-19 |
+| Today (D-1) | Stand aside | High | No symbol, no print, no instrument: a ministerial with a lower-level US delegation is not a trade. | A Treasury or White House notice before 2026-10-20 that Bessent attends and meets Lan Fo'an or Paul Chan with a trade deliverable — this stops being a venue-only event |
+| This week | Watch US representation, take no position | Medium | Who leads the US delegation is the single readable signal of how the US is sequencing China contact before Shenzhen. | A joint statement or readout of 10/21 carrying a concrete US–China tariff or export-control provision, which would give a finance ministerial tradeable content for the first time |
+| This month | Stand aside | Medium | The decisive China-contact venues are Bessent–He Lifeng in Shenzhen (undated) and Trump's visit 11/18–19 (estimate), not Hong Kong. | A dated Bessent–He Lifeng meeting inside October that produces a truce or tariff announcement, which would make the Hong Kong absence the substitute channel rather than noise |
+| This quarter | Treat as ceremony; trade the Shenzhen leaders' event, if at all, on its own ledger | Medium | The truce is reported extended to 2027-01-10 and the 11/18 leaders' meeting is the next US–China venue. | 2026-11-18: Trump not attending Shenzhen, which would reprice the whole sequence this meeting is a footnote to |
 
 **Call:** wait until 2026-10-21
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Buy signal:** no — nothing is keyed to this event; no symbols, no date-keyed action on an `estimate`.
-- **Never** — trade "the APEC finance meeting"; no documented price effect exists at this tier.
-- **Never** — read a Bessent no-show as escalation; Bangkok on 10/15 set the precedent.
-- **Upgrade flag** — Bessent appearing in Hong Kong, or a US–China finance-principal bilateral on its margins (not tripped as of 2026-10-19).
-- **Watch (dated)** — this meeting **10/20–21 (est)** · Bessent–He Lifeng round in Shenzhen **(undated; before Trump's visit)** · FOMC **10/28** · truce expiry **2027-01-10** · APEC leaders Shenzhen **11/18–19 (est)**.
-- **Attribution caution (mechanical)** — 10/20 carries housing starts and pending home sales (confirmed), the 20y JGB auction and the Meta ruling; 10/21 the 20y Treasury auction and VIX expiration.
+- **Buy signal:** no — no tracked symbol is keyed to this event and a ministerial attendance story is not a long-entry trigger. Estimate widens caution only.
+- **Watch (dated)** — US delegation head named on **2026-10-20** (estimate) · meeting day 2 and any chair's summary **2026-10-21** (estimate) · Shenzhen leaders' meeting **2026-11-18** (estimate, sibling ledger).
+- **Attendance flag** — Bessent appearing in Hong Kong after all. Not tripped as of 2026-10-19; SCMP says he "may skip" and no Treasury notice was found.
+- **Same-day noise** — housing starts and Pending Home Sales (both confirmed) and the Meta New Mexico ruling (estimate) land the same day; none can be attributed to this meeting.
 
 ## Initial research
 
 **The question, plainly:** the calendar carries the first-ever APEC Finance Ministers' Meeting in Hong
-Kong on 2026-10-20 (day 1 of 2), proposed by a sibling lane on 10/19. Are the dates real, who
-attends for the US, does anything in a finance-ministers' meeting move markets, and does any tracked
-name carry exposure?
+Kong on 2026-10-20 (day 1 of 2), proposed by the Shenzhen leaders' ledger's 10-19 sweep with the days
+unverified. Is the date real, who attends, and does a finance ministerial move anything this research
+tracks?
 
-**One-line verdict:** dates plausible but not primary-sourced; the only live content is US
-representation, which is likely a deputy-led delegation exactly as in Bangkok five days ago; no
-tracked symbol is exposed — stand aside.
+**One-line verdict:** the dates are corroborated by press but not by a primary, the one live question is
+US attendance, and the meeting does not move any tracked name, so it is a stand-aside, low-impact entry
+that mainly informs how to read the 11/18 leaders' meeting.
 
-**Method:** sourced web research only (geopolitical kind, no symbols keyed — no price/options
-instruments run). Fetched direct: news.gov.hk and thestandard.com.hk (HKSAR 2025-12-12 announcement,
-month only), info.gov.hk 2026-01-23 (steering committee of 20 bureaux; "October 2026" only),
-apec.org's annual-ministerial index (does **not** list 2026). Read via search summary only: SCMP's
-Oct-2026 reports (Bessent may skip; John Lee on a "high-quality experience"; Paul Chan's four
-priorities; China's finance minister to deliver the opening speech) — the Bessent page returned
-**403** to the fetcher, and the LegCo paper failed certificate verification (both recorded in the
-probe-ref). VIX 19.99 (10/16 close) from Yahoo's chart feed, fetched 2026-10-19.
+**Method:** sourced web research only — no instruments (geopolitical kind, no symbols keyed). Fetched
+direct 2026-10-19: apec.org's annual-ministerial index (lists nothing for 2026, newest entry Gyeongju
+2025-11-01), info.gov.hk's 2026-01-23 release ("held in Hong Kong in October 2026"), The Standard's
+2026-10-11 piece (Paul Chan: meeting "next week", four priorities, 21 economies) and The Star's 2026-10-12
+piece (port opens one week before the meeting). SCMP's two articles (the Bessent report and the opening
+speech) returned 403 to the fetcher and were read only through search summaries — recorded in `blocked`.
 
 ### Conviction legs, tested
 
-1. **The Oct 20–21 days are real but not primary-sourced.** MIXED. The HKSAR announcement
-   (2025-12-12) and the steering-committee release (2026-01-23) say only "October 2026". Three
-   independent SCMP pieces in October 2026 give **20 and 21 October**, the Convention and Exhibition
-   Centre in Wan Chai, ~500 guests including ministers and senior officials of 21 economies, with
-   China's finance minister Lan Fo'an chairing and Vice-Minister Liao Min delivering remarks. That is
-   one outlet three times, read through summaries; the entry stays `estimate`. Hosted by China's
-   Ministry of Finance and organized by the HKSAR Government; the first time Hong Kong stages it.
+1. **The Oct 20–21 days are real but unconfirmed by a primary.** MIXED. Multiple secondaries agree on
+   Oct 20–21, and The Standard's 2026-10-11 "next week" is consistent with it, but the Hong Kong
+   government's own January release gives only "October 2026" and apec.org lists nothing for 2026. One
+   search summary also gives the venue as the Hong Kong Convention and Exhibition Centre with about 500
+   guests; that is a single-source detail.
+2. **Bessent probably does not go.** SUPPORTED, as reporting rather than fact. SCMP (October 2026, read
+   via search summary) says he "may skip" and that Treasury's under secretary for international affairs,
+   Erin Browne, is the "leading candidate" to lead the US delegation on Oct 20–21. It fits a pattern:
+   Bessent also skipped this month's IMF/World Bank meetings to prioritize China talks (Teleborsa,
+   2026-10-09, headline only). The stated reason is He Lifeng talks in Shenzhen to secure a longer
+   extension of the truce due to expire **2027-01-10**.
+3. **The agenda is not market-moving.** SUPPORTED. The Standard lists livelihood-oriented fiscal policy,
+   digital-infrastructure finance, inclusive finance for SMEs and youth exchanges in finance — Hong
+   Kong's showcase themes, with China's finance minister Lan Fo'an chairing. No tariff, rate or
+   export-control item is billed.
+4. **No tracked name is exposed.** SUPPORTED. The event carries no symbols; `adjacentIds` below is the
+   same-week corridor, none of it caused by this meeting.
 
-2. **US representation will probably be a deputy, not the Secretary.** SUPPORTED (as reporting, not
-   fact). SCMP's sources say Bessent may skip Hong Kong to focus on a Shenzhen round with Vice
-   Premier He Lifeng before Trump's November visit, where the sides want a **longer extension of the
-   truce now due 2027-01-10** (the Busan arrangement was extended from 2026-11-10 to 01-10 on
-   Bessent's announcement after meeting He). Under Secretary for International Affairs Erin Browne is
-   "the leading candidate" to lead the US delegation. Teleborsa (2026-10-09) separately reports
-   Bessent missing the IMF/World Bank meetings with China talks as the priority. Not confirmed by a
-   Treasury primary.
+### What plays the conditions support
 
-3. **The skip is a repeat, and the repeat had no price effect.** SUPPORTED.
-   [`g20-fmcbg-bangkok-2026-10-15`](g20-fmcbg-bangkok-2026-10-15.md)'s close-out records Bessent
-   skipping the 10/15 G20 finance ministerial ("domestic commitments"), with Brooke and Browne
-   leading, and the tape that day (SPX +0.33%, VIX 16.87→16.46) attributed to CPI/yields. Two skips
-   in five days is a routing pattern: Treasury is keeping the secretary for the bilateral channel.
+None. There is nothing to enter, and a lower-level US delegation is not evidence of a policy change.
+The useful output is an input to the sibling ledger: if the US delegation is led below Cabinet level, that
+fits the sequencing in which Shenzhen is the venue, and the 11/18 stand-aside there is unchanged.
 
-4. **A finance-ministers' communiqué has no demonstrated effect on tracked names.** SUPPORTED. APEC
-   FMM output is consensus, non-binding policy language (this year's four stated priorities: fiscal
-   policy supporting livelihoods, digital-infrastructure financing, inclusive finance, young
-   financial talent per Paul Chan via SCMP). Nothing in AI-semis or hyperscalers trades on it.
+### Honest limits
 
-5. **The window is crowded, which is the real hazard.** SUPPORTED. 10/20: housing starts, pending
-   home sales, 20y JGB auction, Meta New Mexico ruling (high, estimate); 10/21: 20y Treasury auction,
-   VIX expiration, UK CPI. VIX is 19.99 after +21% on 10/16, so any 10/20 move has several owners.
-
-**What the conditions support:** nothing directional. The honest use of this event is as a dated
-data point on how Washington routes its China channel before 11/18–19.
-
-**Honest limits.**
-- The **20–21** days rest on SCMP via search summaries; no APEC or HKSAR primary naming days was
-  read, and apec.org does not list 2026 yet. If a primary shows different days, this is where it breaks.
-- The Bessent-may-skip report is anonymous-source journalism (SCMP, 403 to the fetcher); no Treasury
-  or White House primary. The delegation lead (Browne) is a "leading candidate", not an announcement.
-- No instruments were run (no symbols keyed). VIX 19.99 is context, not an instrument pass.
-- A US delegation list is normally published only at or after the meeting; scoring may wait on the
-  host's chair's statement.
+Days are press-sourced. Delegation lists are not published until the meeting; "leading candidate" is
+SCMP's phrase. I could not read either SCMP article directly, so the Bessent claim is a secondary's
+report of unnamed sources. VIX 19.99 is the 2026-10-16 close as recorded in the Shenzhen leaders' ledger
+today; I did not independently re-pull it. Adjacent dated items beyond the research horizon (the
+2027-01-10 truce expiry) are named here, not proposed.
 
 ## Stance & kill switches
 
-**Stance (date: estimate; US attendance reported, unconfirmed).** No position keyed to this event.
-Treat it as a low-impact venue whose one question — who speaks for the US — is the Bangkok pattern
-repeating. Do not trade it and do not attribute the 10/20–21 tape to it. Estimate status widens
-caution only.
+**Stance (estimate-labelled): stand aside; low impact; watch US delegation only.** Kill switches:
 
-**Kill switches.**
+- *"Bessent skips"* dies if Treasury or the HKSAR lists him as attending on 2026-10-20/21 (FT-1).
+- *"The meeting is not market-moving"* dies if a joint statement or readout carries a concrete US–China
+  tariff or export-control provision by 2026-10-23.
+- *"The days are Oct 20–21"* dies if an APEC or HKSAR primary names other days.
 
-- *"The US sends a deputy"* dies if Bessent is reported in Hong Kong by 2026-10-21, or a US–China
-  finance bilateral is announced on its margins — which gives the venue a channel and raises its impact.
-- *"The output has no price effect"* dies if the chair's statement or a US readout carries a concrete
-  tariff or export-control provision before 2026-10-23.
-- *"The dates are Oct 20–21"* dies if an APEC or HKSAR primary names different days.
-- *"Bessent's China channel runs through Shenzhen"* dies if no Bessent–He Lifeng in-person round is
-  reported by 2026-11-10.
-
-**Forward tests.** Two registered in
-[`forward-tests/apec-fmm-hong-kong-2026-10-20.md`](../forward-tests/apec-fmm-hong-kong-2026-10-20.md)
-(US delegation not led by the Secretary; Bessent–He Lifeng in-person round reported before 11/10).
+**Forward test.** FT-apec-fmm-hong-kong-2026-10-20-1 in
+[`forward-tests/apec-fmm-hong-kong-2026-10-20.md`](../forward-tests/apec-fmm-hong-kong-2026-10-20.md).
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
-| 2026-10-19 | D-1 | Initial research banked (above). **Date:** Oct 20–21 from three SCMP pieces (search summaries), HKSAR primaries say "October 2026" only; apec.org silent on 2026. **US side:** SCMP — Bessent may skip, Erin Browne leading candidate to head the delegation; he prioritises a Shenzhen round with He Lifeng ahead of Trump's November visit; same skip as the 10/15 Bangkok G20 FMCBG (no price effect: SPX +0.33%, VIX 16.46 that day). *Truce:* extended to 2027-01-10 (Bessent, after meeting He), a longer extension is the Shenzhen round's aim. *Macro/vol:* VIX 19.99 (10/16, +21%); hot Oct-14 CPI; 10/20 is a compound day (housing starts, pending home sales, JGB 20y, Meta NM ruling). *Geopolitical:* nothing new touching tracked symbols. *Peer prints:* n/a (no symbols). *Beyond the horizon:* nothing proposed — the dated neighbors (Shenzhen leaders 11/18–19, truce 2027-01-10) are already tracked. | Initial stance set: stand aside | 2026-10-21 (D+1 close-out) |
+| 2026-10-19 | D-1 | Initial research banked (above). **Date:** Oct 20–21 via SCMP (search summary) and The Standard 2026-10-11 ("next week"); no APEC/HKSAR primary. **Geopolitical:** SCMP — Bessent may skip, Browne leading candidate to head US delegation; Bessent–He Lifeng Shenzhen talks pending; truce due 2027-01-10 (beyond horizon, named not proposed). **Macro/vol:** VIX 19.99 (2026-10-16 close per sibling ledger, not re-pulled). 43 tracked events within 5 days; none caused by this meeting. No peer prints apply (no symbols). | — (stance set: stand aside) | 2026-10-26 (low, 0+d band: every 7d) — likely moot, event passes first |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -140,9 +112,7 @@ every row; a dated adjacent event found **inside the research horizon**
 only critical/high) gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). One past the horizon is named
-in the row instead (#2946). Close-out fills `## Outcome` below from re-run instrument data (cache
-busted first), never from memory. After that the assessment is closed; the doc reopens only to score
-a registered forward test whose `Score by` has arrived (`forward-test-due`).
-
-**Last assessed:** 2026-10-19
-<!-- probe-ref: {"symbols": {}, "vix": 19.99, "daysBand": "low:0+", "adjacentIds": ["aapl-iphone-duo-launch-2026-10-23", "ecb-quiet-period-start-2026-10-21", "eia-weekly-petroleum-status-2026-10-15", "empire-state-mfg-2026-10-15", "eurostat-hicp-final-2026-10-16", "fomc-blackout-start-2026-10-17", "g20-fmcbg-bangkok-2026-10-15", "housing-starts-2026-10-20", "import-export-prices-2026-10-16", "industrial-production-2026-10-16", "japan-cpi-2026-10-23", "jgb-20y-auction-2026-10-20", "jgb-liquidity-enhancement-5-11y-2026-10-22", "meta-2026-10-28-print", "meta-nm-privacy-penalty-ruling-2026-10-20", "msft-def14a-2026-10-22", "mtis-2026-10-15", "nahb-hmi-2026-10-19", "norway-gpfg-ethics-committee-2026-10-15", "opex-2026-10-16", "pending-home-sales-2026-10-20", "philly-fed-mfg-2026-10-15", "ppi-2026-10-15", "retail-sales-2026-10-15", "saudi-east-west-pipeline-repair-window-close-2026-10-15", "tic-monthly-2026-10-16", "treasury-20y-bond-2026-10-21", "treasury-5y-tips-2026-10-22", "treasury-buyback-10y20y-2026-10-15", "treasury-buyback-tips-1y10y-2026-10-21", "treasury-coupon-announcement-2026-10-15", "treasury-coupon-announcement-2026-10-22", "treasury-primary-dealer-agenda-2026-10-16", "uk-ashe-earnings-2026-10-22", "uk-consumer-confidence-2026-10-23", "uk-cpi-2026-10-21", "uk-labour-market-2026-10-20", "uk-monthly-gdp-2026-10-15", "uk-ppi-2026-10-21", "uk-public-sector-finances-2026-10-21", "uk-retail-sales-2026-10-23", "umich-sentiment-final-2026-10-23", "vix-expiration-2026-10-21", "warsh-imf-fireside-2026-10-15"], "adjacentStrongIds": ["retail-sales-2026-10-15", "meta-2026-10-28-print"], "screenStreak": 0, "blocked": [{"url": "https://scmp.com/news/china/diplomacy/article/3370295/bessent-may-skip-apec-hong-kong-focus-trumps-shenzhen-visit-sources-say", "status": "403", "at": "2026-10-19"}, {"url": "https://www.legco.gov.hk/yr2026/english/panels/fa/papers/fa20260202cb1-56-5-e.pdf", "status": "CERT_UNVERIFIED", "at": "2026-10-19"}]} -->
+in the row instead (#2946): it can never become due, so a calendar file for it is clutter, while
+prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
+first), never from memory. After that the assessment is closed; the doc reopens only to score a
+registered forward test whose `Score by` has arrived (`forward-test-due`).
