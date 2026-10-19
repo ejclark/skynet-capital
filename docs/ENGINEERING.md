@@ -300,11 +300,11 @@ next version from the Conventional-Commit history, create the **git tag + GitHub
 `package.json` **in the runner's workspace** — which is the same workspace `flyctl deploy` then ships,
 so the deployed app reports the correct version (`src/server/auth/app-version.ts`).
 
-**It deliberately does NOT push the version bump back to `main`.** `.releaserc.json` leaves out the
-`@semantic-release/git` plugin because branch protection correctly rejects a direct push (`GH006:
-Changes must be made through a pull request. Required status check "verify" is expected.`), and a
-release that attempts one silently fails **every deploy**. The version of record is the **git tag**,
-not the committed `package.json`, so the repo's `package.json` version will lag; that is expected.
+**It deliberately does NOT push the version bump back to `main`.** The `@semantic-release/git` plugin
+was removed because branch protection correctly rejects a direct push (`GH006: Changes must be made
+through a pull request. Required status check "verify" is expected.`) — which silently broke **every
+deploy** for several merges until it was caught. The version of record is the **git tag**, not the
+committed `package.json`, so the repo's `package.json` version will lag; that is expected.
 
 To restore the committed bump, the release identity needs a branch-protection bypass on `main` (an
 Eric-only governance change) — then `@semantic-release/git` can be added back.
