@@ -169,9 +169,10 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j1 — the Monday read
 
-1. `/app/accounts` — the cockpit opens on his account: the switcher, Overview · Activity. **WHEN
-   the owner opens Profile, the app shall open his own account's cockpit on Overview.** Judge: can
-   this reader tell what to do next in ten seconds?
+1. `/app/accounts` — the cockpit opens on his account: the account's name (its menu holds the
+   switcher), Overview · Balance · Ledger · Events. **WHEN the owner opens Profile, the app shall
+   open his own account's cockpit on Overview.** Judge: can this reader tell what to do next in
+   ten seconds?
 2. `/app/accounts` — his standing (Net worth · Eric, the value) and the money strip; the return
    windows read "—" on desktop (the offline fixture keeps no history) and the phone shows the
    value's one line. **WHEN the owner opens the cockpit, the app shall show the book's standing
@@ -247,7 +248,8 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j5 — the phone check (every step at 390×844, touch)
 
-1. `/app/accounts` — the switcher, sections as a row. **WHEN the owner opens the cockpit on a
+1. `/app/accounts` — the account's name (its menu holds the switcher), sections as a row that
+   fits, More ▾ for the rest. **WHEN the owner opens the cockpit on a
    phone, the app shall show the account and the section switch above the fold.** Judge: can this
    reader tell what to do next in ten seconds?
 2. `/app/trade?…&section=guidance` — the Guidance pane alone, the pane switch across the top.
@@ -299,7 +301,7 @@ One line each; routed to `docs/IDEAS.md` or a `feedback` issue by the plan's sli
   narrows guidance's entries and "until" lines to that range; a burning day is one that touches a
   ticker held. _(src: Eric · while: j1 s2)_
 - **"Since you last looked" at book level** — the guidance tab's own diff line
-  (`app/src/shell/guidance-view.tsx:173`) for the whole book, first thing on a Monday. _(src: Eric
+  (`app/src/shell/guidance-view.tsx:183`) for the whole book, first thing on a Monday. _(src: Eric
   · while: j1 s1)_
 - **A phone cockpit that is one decision** — above the fold on 390: standing, the one thing that
   needs him, one button. _(src: Eric · while: j5 s1)_
