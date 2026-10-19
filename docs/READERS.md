@@ -137,4 +137,6 @@ surfaces. Diagrams in-app must render there (the `/research` page renders no Mer
 
 Reads the raw markdown, so folds cost it nothing. Needs: the one-line ask, EARS lines it can turn
 into specs, the diagram as a contract (a `stateDiagram-v2` whose transitions are the EARS lines; a
-C4 page naming the container it may touch), and the falsifier that tells it when it is wrong.
+C4 page naming the container it may touch), and the falsifier that tells it when it is wrong. It
+also reads every instruction file as current orders: write those by
+[`ENGINEERING.md` → *Instruction files*](ENGINEERING.md).
