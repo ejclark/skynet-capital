@@ -61,15 +61,15 @@ description, when asking for a change.
 |---|---|---|---|
 | **kind** | a filter over one list | a query qualifier and a rail chip, one model; never a tab | `is:trade` / `is:feedback` / `is:buy` / `is:bot` on Activity (`app/src/live/activity-feed.ts`, #784 slice 3); `lens:` / `sym:` on Research |
 | **section** | a different *shape* of data on the same page | the page's section switch (`app/src/shell/section-switch.tsx`, in its controls row or head), exactly one current, URL-stateful via `?section=`; pages on a phone | Settings; Activity's The Council beside its feed (Booked P&L was a section until #784 slice 3 — see *Summary strip, not a section*) |
-| **sub-view** | a full view of its own | a nested route plus its sub-nav: a link row at the top of its parent's stage, the second line of its own page's head (#3807 slice 2d), or — when the page is the member's own — that page's section switch (amended #3807 slice 2b, `app/src/shell/frame.tsx`) | the any-account page's Activity / Pulse / Playbooks / Thesis (`app/src/shell/account-head.tsx`, the page's own head, #3807 slice 2d; Heartbeat folded into Playbooks, #5073); the Profile family's Milestones and Feedback, folded into `/accounts`' switch (#3807 slice 2b) |
+| **sub-view** | a full view of its own | a nested route plus its sub-nav: a link row at the top of its parent's stage, the second line of its own page's head (#3807 slice 2d), or — when the page is the member's own — that page's section switch (amended #3807 slice 2b, `app/src/shell/frame.tsx`) | the any-account page's Ledger / Pulse / Playbooks / Thesis (`app/src/shell/account-head.tsx`, the page's own head, #3807 slice 2d; Heartbeat folded into Playbooks, #5073); the Profile family's Milestones and Feedback, folded into `/accounts`' switch (#3807 slice 2b) |
 | **bench** | several sections that are *one instrument's tools* and feed each other | docked together at the bench width, folded to exclusive sections below it; the section switch renders only when folded (`app/src/shell/frame.tsx`) | the Workbench on `/app/trade` — chart · chain · ticket · orders (#3407, Eric's pick 2026-09-22; built in slices 2–4) |
 
 A bench is a composition of sections, not a fourth word: below its width it *is* sections, and the
 falsifier is written on the frame — if the docked bench reads as a mess on the live route it folds at
 every width. A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
 became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip as a fourth
-navigation band is not one of the words: at phone width the topbar and the controls row each wrap
-into a horizontal row, and a third band before content is what the mobile-first rule forbids.
+navigation band was rejected: at phone width the topbar and the rail already each wrap into a
+horizontal row, and a third band before content is what the mobile-first rule forbids.
 
 ## The vocabulary — four words for fire
 
