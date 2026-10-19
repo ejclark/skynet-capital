@@ -139,7 +139,7 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
 - **8 (fixed)** — a docked Trade had no entry to the Chain, and a greyed control's reason was a
   tooltip he cannot hover on a phone.
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
-  per position. The calendar's head sits in the cockpit (j1 s3). Even so, the split of his
+  per position. The calendar of what he holds is a cockpit section (Events, j1 s3b). Even so, the split of his
   money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
   (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
   reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
@@ -177,17 +177,17 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    value's one line. **WHEN the owner opens the cockpit, the app shall show the book's standing
    and what needs a decision above the fold, even when one feed cannot be read.** Judge: can this
    reader tell what to do next in ten seconds?
-3. `/app/accounts` — the market calendar's head under the section switch (the week's range, the
-   arrows, the lens row) and, under the net-worth card, the events on what he holds: this week
-   nothing dated on EEM, the market-wide print beside it. **WHEN the owner reads the book on a
-   Monday, the app shall show the week's events that touch the tickers held, on the same page.**
-   _Fixed by #3807 slice 2·1 — the head and the held-events line; the grid is phase 3's popover.
-   The check is the calendar's own "Week" lens button, exactly — the blotter's "Expiring within
-   3 weeks" view tab is not a calendar._ Judge: does this reader know what is happening this
+3. `/app/accounts` — no calendar in the head on the Overview (#5074: the range heads Events
+   alone); under the net-worth card one line names the next date on what he holds, or says
+   nothing on EEM is dated, with Events one link away. **WHEN the owner reads the book on a
+   Monday, the app shall name the next date that touches the tickers held on the same page, with
+   the range's events one tap away.** Judge: does this reader know what is happening this
    week to what they hold? He taps **Events** in the section switch.
 
-3b. `/app/accounts?section=events` — one tap from the Overview: the month grid beside the agenda
-   (beneath it on the phone); the held line says nothing is dated on EEM this week, the
+3b. `/app/accounts?section=events` — one tap from the Overview: the range as its head (arrows,
+   the range in words, Week · Month · Quarter each counting the dates on what he holds) over one
+   lane per position and a market-wide lane, the list of dates beside the lanes at desktop and
+   beneath them on the phone; the lanes say nothing on EEM is dated, the
    market-wide prints are listed by day, and each row carries one link — to the EEM row when the
    print is EEM's next event, else to that day on R&D. **WHEN the owner opens Events on his book,
    the app shall list the range's events on what he holds and the market-wide prints by day, each
@@ -253,9 +253,10 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 2. `/app/trade?…&section=guidance` — the Guidance pane alone, the pane switch across the top.
    **WHEN the guidance renders on a phone, the app shall show the pane alone with the pane switch
    visible.** Judge: can this reader tell whether to act, without scrolling?
-3. `/app/research` — the calendar in the phone strip, the fog notice beside the day lens. **WHEN
-   R&D renders on a phone, the app shall keep the range control and its fog notice visible without
-   hover.** Judge: can this reader change the week from here?
+3. `/app/research` — the calendar's chip naming the range; one tap opens the head and the month
+   grid in a sheet, the fog notice beside the day lens. **WHEN R&D renders on a phone, the app
+   shall keep the range control one tap away and its fog notice visible without hover.** Judge:
+   can this reader change the week from here?
 
 ### j6 — the owner's settings
 

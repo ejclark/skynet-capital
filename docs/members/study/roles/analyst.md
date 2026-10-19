@@ -7,8 +7,7 @@ took, the outcome, and their ease score. Turn this into findings.
 ## What to record per task (ux-research observer notes)
 
 Outcome (success / partial / failure / gave up) · path taken · wrong turns and surprises (a turn
-where the expectation did not hold) · confusion points with the member's own words · assists needed
-(none — note where one would have been).
+where the expectation did not hold) · confusion points with the member's own words.
 
 ## Findings
 

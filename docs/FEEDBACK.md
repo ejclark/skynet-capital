@@ -63,8 +63,9 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
-5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the queue ·
-   Needs your input · Needs Eric's call · First slice shipped · Shipped) once
+5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the build queue ·
+   Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
+   built) once
    `SKYNET_FEEDBACK_GITHUB_TOKEN` is set — `resolveFeedbackStatus` in `src/server/feedback-status.ts`
    reads it straight off the issue's current state and triage label, so there's nothing local to
    keep in sync across a deploy.
@@ -79,12 +80,12 @@ in code — only as a host secret, exactly like the Alpaca keys.
 ## What the lane will build
 
 **The backlog gate (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
-created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue no longer
-builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
+created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue does not
+build immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 `triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
-— the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
-self-readies and keeps the old near-zero-friction path for the common case. So does a `bug` +
-`fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
+— the guided rail path already attaches `curated` + a `skynet-spec` block, per *The coach is what
+makes the wide envelope safe* below — self-readies and keeps the near-zero-friction path for the
+common case. So does a `bug` + `fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
 says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
 including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
@@ -122,9 +123,9 @@ one queue — and the third would be buried under the first two.
 
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
-`needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
-until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
-comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
+Without a trigger, `needs-info` would be a one-way door: the lane would ask a question, and the
+answer would sit on the thread until someone noticed it and hand-cleared the label. **The reply
+itself is the trigger** — a comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
 the plan lane's ready-flip uses) claims the lease, clears `needs-info`, and starts a build session
 with that comment as its input. Its first visible act is a comment saying what it understood and
 what happens next, so the thread still reads as a complete record.
