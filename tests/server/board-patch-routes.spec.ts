@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { CapitalFlow } from "../../src/observatory/capital-flow.js";
 import { CeremonyChannel } from "../../src/observatory/ceremony-channel.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
@@ -135,6 +136,29 @@ describe("driveBoardChannel", () => {
       kind: "cue",
       cue: { id: transition.id, type: "graduated", detail: { level: 200 } },
     });
+  });
+
+  it("asks every open board to re-read when a capital flow is recorded (#4563)", () => {
+    const hub = new ObservatoryHub(data(snap()));
+    const channel = createBoardChannel();
+    let heard: ((flow: CapitalFlow) => void) | undefined;
+    const flows = {
+      subscribe: (listener: (flow: CapitalFlow) => void) => {
+        heard = listener;
+        return () => {
+          heard = undefined;
+        };
+      },
+    };
+    const off = driveBoardChannel(hub, channel, undefined, flows);
+    heard?.({ participantId: "human-eric" } as CapitalFlow);
+    expect(channel.head).toBe(1);
+    const replay = channel.since(0);
+    expect(replay.ok && replay.patches[0]?.ops).toEqual([
+      { kind: "reframe", reason: "a capital flow was recorded" },
+    ]);
+    off();
+    expect(heard).toBeUndefined();
   });
 
   it("stops folding once unsubscribed", () => {

@@ -2,6 +2,7 @@ import {
   type ChartOptions,
   ColorType,
   createChart,
+  createSeriesMarkers,
   type DeepPartial,
   type IChartApi,
   type LineData,
@@ -98,6 +99,21 @@ export function mountHeroChart(
     priceLineVisible: false,
   });
   portfolioSeries.setData(toPercentPoints(series.portfolio));
+
+  // A recorded capital flow (#4563): a square in the chart's own text ink above the day it landed —
+  // a neutral mark, never a gain or loss colour; the line under the chart names the amount.
+  if (series.flows && series.flows.length > 0) {
+    createSeriesMarkers(
+      portfolioSeries,
+      series.flows.map((flow) => ({
+        time: flow.time,
+        position: "aboveBar" as const,
+        shape: "square" as const,
+        color: palette.text,
+        text: flow.direction === "added" ? "Capital added" : "Capital removed",
+      })),
+    );
+  }
 
   // The high: dashed "charged" warm-white at half strength. Emphasis, never P/L direction; the
   // dash, not the hue, is what separates it from the lines. It sits on the portfolio's scale.

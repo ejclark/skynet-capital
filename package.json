@@ -91,6 +91,7 @@
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot/tower.mjs",
     "shoot:standings": "tsx scripts/shoot/standings.mjs",
+    "shoot:capital-flow": "tsx scripts/shoot/capital-flow.mjs",
     "shoot:ladder-gate": "tsx scripts/shoot/ladder-gate.mjs",
     "shoot:milestones": "tsx scripts/shoot/milestones.mjs",
     "shoot:filing-comments": "tsx scripts/shoot/filing-comments.mjs",

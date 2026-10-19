@@ -31,8 +31,8 @@ export interface FeedbackRouteDeps {
    *  (undefined) means unwired, same as the other feedback deps; the list still renders, just
    *  without status badges. */
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
-  /** Posts a follow-up comment on an issue the signed-in member already filed, and re-triggers a
-   *  build (feedback-followup.ts). Requires `readFeedback` too — ownership is checked against the
+  /** Posts a follow-up comment on an issue the signed-in member already filed, and restarts its
+   *  build when it is already `ready` (feedback-followup.ts). Requires `readFeedback` too — ownership is checked against the
    *  member's own logged filings, never trusted from the form. */
   readonly submitFollowup?: SubmitFollowup;
 }
