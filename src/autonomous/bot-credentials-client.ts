@@ -44,7 +44,11 @@ export type OnCredentialsRotated = (personaId: string, credentials: AlpacaCreden
 export function resolveBotCredentialsClient(
   onRotated: OnCredentialsRotated,
   env: NodeJS.ProcessEnv = process.env,
+  /** Per-pull fetch budget. Prod never passes one and keeps `BRIDGE_REQUEST_TIMEOUT_MS`; a spec
+   *  running against a real listener in a loaded worker passes `LOADED_SUITE_BRIDGE_BUDGET` (#5823). */
+  options: { readonly timeoutMs?: number } = {},
 ): BotCredentialsClient {
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   const secret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   if (!(url && secret)) {
@@ -59,7 +63,7 @@ export function resolveBotCredentialsClient(
   const fetchOne = async (personaId: string): Promise<AlpacaCredentials | undefined> => {
     try {
       const controller = new AbortController();
-      const abort = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const abort = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const target = new URL(endpoint);
         target.searchParams.set(BOT_CREDENTIALS_ID_PARAM, personaId);

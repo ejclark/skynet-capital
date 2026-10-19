@@ -22,6 +22,7 @@ import type { OptionLegFill, OrderIntent, OrderResult } from "../../src/domain/t
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 import { isRecord } from "../../src/storage/parse-guards.js";
 import type { NormalizedLifecycleActivity } from "../../src/trading/option-lifecycle.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /**
@@ -265,6 +266,7 @@ describe("an expiry reaching the dashboard's copy", () => {
       const client = resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
         () => bots,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.replicate({});
       expect(scored(app)).toMatchObject({ trips: [], closed: 0, wheel: 0 });
@@ -304,12 +306,12 @@ describe("an expiry reaching the dashboard's copy", () => {
     let bridge = await listening(app);
     try {
       const env = { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url };
-      await resolveDecisionReplication(env, () => bots).replicate({});
+      await resolveDecisionReplication(env, () => bots, LOADED_SUITE_BRIDGE_BUDGET).replicate({});
       const once = scored(app);
       expect(once.closed).toBe(1);
 
       // A restarted bots process starts its cursor over and sends every report again.
-      await resolveDecisionReplication(env, () => bots).replicate({});
+      await resolveDecisionReplication(env, () => bots, LOADED_SUITE_BRIDGE_BUDGET).replicate({});
       // The same report twice in one batch.
       storeDecisionBatch(app, {
         personaId: "sauron",
@@ -327,6 +329,7 @@ describe("an expiry reaching the dashboard's copy", () => {
       await resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
         () => bots,
+        LOADED_SUITE_BRIDGE_BUDGET,
       ).replicate({});
       expect(scored(app)).toEqual(once);
       expect(storedReports(app)).toEqual(["sauron/exp-1", "beta-scout/exp-9"]);
@@ -352,6 +355,7 @@ describe("an expiry reaching the dashboard's copy", () => {
       const client = resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
         () => bots,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       for (let poll = 0; poll < 3; poll++) await client.replicate({});
       expect(storedReports(app)).toEqual(storedReports(bots));
@@ -398,6 +402,7 @@ describe("an expiry reaching the dashboard's copy", () => {
       const client = resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
         () => bots,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.replicate({});
       await client.replicate({});

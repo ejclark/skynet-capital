@@ -16,6 +16,8 @@ export type CondScoutReplication = SnapshotReplication;
 export function resolveCondScoutReplication(
   env: NodeJS.ProcessEnv,
   getSnapshot: () => CondScoutSnapshot | undefined,
+  /** Passed through to the shared send; prod never passes one (see `resolveSnapshotReplication`). */
+  options: { readonly timeoutMs?: number } = {},
 ): CondScoutReplication {
-  return resolveSnapshotReplication(env, "/cond-scout", "cond-scout", getSnapshot);
+  return resolveSnapshotReplication(env, "/cond-scout", "cond-scout", getSnapshot, options);
 }
