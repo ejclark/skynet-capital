@@ -8,11 +8,12 @@ import { requireGet, sendJson } from "./page-shell.js";
  *   GET /api/convictions          → every stored conviction, with the pairs each one steers.
  *   GET /api/convictions?id=<id>  → one conviction, or 404.
  *
- * Read-only, and only the records the bots act on: a member's own views are drafts that steer
- * nothing yet, kept and served apart (`member-convictions-api-routes.ts`, slice 6a). It sits behind
- * the auth gate with every `/api/*` read, so only invited members see a member's view (criterion
- * 8: the shared universe is members-only), and every answer is labelled SIM — a conviction steers
- * paper trading and nothing else. No UI reads it yet.
+ * Read-only, and only the records the bots act on: the seeded ones, and each member's view they
+ * handed to their bots (slice 6c, `heldConvictions`). A draft steers nothing and is served apart,
+ * to its owner alone (`member-convictions-api-routes.ts`). It sits behind the auth gate with every
+ * `/api/*` read, so only invited members see a member's view (criterion 8: the shared universe is
+ * members-only), and every answer is labelled SIM — a conviction steers paper trading and nothing
+ * else. No UI reads it yet.
  */
 export function serveConvictionsApi(
   req: IncomingMessage,
