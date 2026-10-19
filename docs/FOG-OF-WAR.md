@@ -9,7 +9,7 @@ as one of the two reveal treatments he liked in the 2026-09-05 progressive-revea
 the zero-DTE rung. This doc turns those two calls into criteria a session can apply without asking.
 
 Provenance: the trade ladder (`src/domain/progression.ts`, #469), the locked-rung rule
-(#1461: *visible, disabled, explained*), the proposed 400/500 rungs (#1671), the research day
+(#1461: *visible, disabled, explained*), the 400/500 rungs (#1671), the research day
 lens (#1704). The portable version is the last section.
 
 ## The decision tree
@@ -46,7 +46,7 @@ common and nobody had written down.
    loses them nothing they could act on safely. If the hidden content is what a novice needs to be
    safe, it is a *default*, not a fog candidate.
 5. **The gate names a rung that exists in the catalog.** A fog is honest only when its unlock is
-   earnable. Where the rung is not built yet (501 before #1671 lands), the fog says so in words —
+   earnable. Where the rung is not built yet, the fog says so in words —
    "a rung nobody can fill yet stays locked, honestly" (#1671) — and never implies progress is
    possible when it is not.
 6. **Reveal is progressive and adjacent.** The item that sharpens is the one *one step ahead* of the
@@ -70,7 +70,7 @@ common and nobody had written down.
 |---|---|---|---|
 | `/trade` option ticket | option opens beyond the earned rung | the previous rung's fill | shipped (#469, #1461) |
 | R&D → Playbooks store (`/research?section=playbooks`) | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
-| `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker since #3407 P3, #3422) |
+| `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker — #3407 P3, #3422) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | shipped (#1671 slice 2 — the zero-DTE gate at option review/submit) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4); rung 501 exists since #1671 slice 1, so the fog names an earnable rung |
 | R&D → Playbooks, the + on a play (was "Subscribe as" until #5442) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
