@@ -1110,11 +1110,11 @@ crest", "the workbench" never reach copy or an unglossed question to Eric.
 
 ### 8.1 The doctrine edits — `app/src/shell/frame.tsx`
 
-`tests/ui/page-sections.spec.ts` string-matches the frame's doctrine, so an edit to it lands
-with the spec updated in the same PR — never routed around. Each row quotes the line slice 2a
-amended (#3807), states the amendment, and writes the observation that reverses it.
+`tests/ui/page-sections.spec.ts:49-62` string-matches the lines below, so every edit lands in
+slice 2a with the spec updated in the same PR — never routed around. Each row quotes the line
+it amends, states the amendment, and writes the observation that reverses it.
 
-| The line before 2a (`frame.tsx`) | The amendment | Falsifier (the dated observation) |
+| The line today (`frame.tsx`) | The amendment | Falsifier (the dated observation) |
 |---|---|---|
 | *"the TOPBAR is the app-level navigation dimension; the left rail is a second, per-view dimension — each route hands in its own sub-navigation or controls."* (header, `:4-6`) | **Two dimensions, topbar · stage.** The rail's two jobs are re-homed, never deleted: a group's sub-nav becomes its home page's section switch (the Profile page's Overview · Activity · Heartbeat · Thesis · Milestones · Feedback; the any-account page's Overview · Activity · Pulse · Heartbeat · Thesis); a view's controls sit at the top of its own stage (Activity's kinds, R&D's calendar head, Trade's folded switch). | Eric reading a control at the top of its stage as "plucked from the tiles it controls" (his own 2026-08-28 parked note, #738) → that control returns beside its tile, still on the stage; a Profile link that survives only in the rail (`/feedback`, `/learn` post-onboarding) found dead by the crawl after 2a → the plain link row stays until 2b lands |
 | *"the layout is three ordered dimensions — the TOPBAR is the first (app-level navigation), the LEFT RAIL the second (a view's sub-nav OR its controls — a control here drives the content beside it), and the VIEW CONTENT the third. Higher dimensions steer lower ones, never the reverse"* (`:8-12`) | **Two ordered dimensions.** The topbar is first; the page's own head is second — its identity (the standing on the Profile page), its section switch, and, only where a date key drives content, the calendar head; the content is third. Higher still steers lower: content never reconfigures the head, and the head never adds app-level destinations. | Eric reads the head (or the panel's band) as "a second topbar" on the live route by 2026-10-10 (the panel's falsifier) → the calendar head leaves the head for the stage's first row and the section switch alone stays. **Fired on the Profile page, 2026-10-10** (#5037 round 2, built by #5074): Eric read the row as chrome that drove nothing on most sections ("controls that do nothing is an oxy moron"), so its head carries no calendar on any section and the range heads the Events card, the one section it changes; R&D and Trade keep theirs leading their stage |
