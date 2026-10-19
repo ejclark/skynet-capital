@@ -156,6 +156,32 @@ describe("serveMemberConvictionsApi", () => {
     expect(CONVICTIONS.get("crwv-floor-2026-10")).toBeUndefined();
   });
 
+  it("offers only the ◆ pairs the member's own bots subscribe to, with their playbook's room", async () => {
+    const cfg = config({
+      subscriptions: {
+        load: () => ({
+          sauron: [
+            { playbookId: "CRWV-WHEEL", mode: "standard", enabled: true },
+            { playbookId: "S1-NVDA", mode: "standard", enabled: true },
+          ],
+          "grace-bot": [{ playbookId: "CRWV-LONG-CALL", mode: "standard", enabled: true }],
+        }),
+      },
+    });
+    const ofAda = (await call("/api/convictions/mine", get(), ada, cfg)).body.steerable;
+    // S1-NVDA runs on its study (✓), so a view cites it and never steers it.
+    expect(ofAda).toEqual([
+      {
+        pair: "CRWV-WHEEL",
+        name: expect.stringContaining("CRWV"),
+        strategy: "wheel",
+        bounds: { dte: expect.any(Object), contracts: expect.any(Object) },
+      },
+    ]);
+    const ofGrace = (await call("/api/convictions/mine", get(), grace, cfg)).body.steerable;
+    expect(ofGrace.map((p: { pair: string }) => p.pair)).toEqual(["CRWV-LONG-CALL"]);
+  });
+
   it("takes the owner from the session, never the body", async () => {
     const answer = await call(
       "/api/convictions/draft",

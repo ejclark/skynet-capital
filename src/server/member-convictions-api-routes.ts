@@ -6,7 +6,9 @@ import {
   draftConviction,
 } from "../playbooks/conviction-draft.js";
 import { parseConvictionDraft } from "../playbooks/conviction-parse.js";
-import { CONVICTIONS } from "../playbooks/conviction-store.js";
+import type { SteerBounds } from "../playbooks/conviction-steering.js";
+import { CONVICTIONS, playbookBounds } from "../playbooks/conviction-store.js";
+import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js";
 import type { Session } from "./auth/session.js";
 import { creditFor } from "./authored-plays-api-routes.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
@@ -26,7 +28,7 @@ import {
  * would change, and keeping it as a draft. A member's own, never another's: keyed by
  * `opaqueMemberId(session.email)`, the owner is the session's name, never a body field.
  *
- *   GET  /api/convictions/mine    → { label, note, convictions: MemberConvictionView[] }
+ *   GET  /api/convictions/mine    → { label, note, convictions: MemberConvictionView[], steerable }
  *   POST /api/convictions/draft   → { ok: true, conviction, card, note } | { ok: false, problems }
  *   POST /api/convictions/save    → the same, and the record is kept     (body: { draft, replaceId? })
  *   POST /api/convictions/delete  → { ok: true }                          (body: { id })
@@ -39,6 +41,10 @@ import {
  * A saved view is a DRAFT and steers nothing (`member-conviction-store.ts`): every answer says so
  * in `note`, so no screen can show a member's view as steering a bot before one does. Every answer
  * is labelled SIM, and like every `/api/*` route it sits behind the invite gate (criterion 8).
+ *
+ * `steerable` (slice 6b) is what the form offers: the ◆ pairs a bot this member owns subscribes to,
+ * each with its playbook's bounds, so the screen can say how much room a setting has before a
+ * preview is asked for. It is a hint only; `/draft` and `/save` judge the same rule again.
  *
  * Same auth invariant as `authored-plays-api-routes.ts`: `!session` means the route doesn't exist
  * (`false`), before anything else runs.
@@ -68,6 +74,26 @@ function subscribedPairs(config: DashboardServerConfig, session: Session): Reado
   return new Set(
     resolveOwnedIds(session, config).flatMap((id) => (held[id] ?? []).map((s) => s.playbookId)),
   );
+}
+
+/** A pair a member's view may steer, named as members know it, with the room its playbook allows. */
+export interface SteerablePairView {
+  readonly pair: string;
+  /** "the wheel on CRWV". */
+  readonly name: string;
+  readonly strategy: StrategyId;
+  readonly bounds: SteerBounds;
+}
+
+/** The ◆ pairs this session's bots subscribe to whose playbook a conviction can narrow, by id. */
+function steerablePairs(config: DashboardServerConfig, session: Session): SteerablePairView[] {
+  return [...subscribedPairs(config, session)].sort().flatMap((id) => {
+    const pair = findPair(id);
+    const bounds = playbookBounds(id);
+    return pair?.evidence.status === "conviction" && bounds
+      ? [{ pair: id, name: pairName(pair), strategy: pair.strategy, bounds }]
+      : [];
+  });
 }
 
 /** Judge a draft body for this member. `replaceId` frees that one id of theirs for the edit. */
@@ -161,7 +187,8 @@ export async function serveMemberConvictionsApi(
       ...record,
       card: convictionCard(record.conviction),
     }));
-    sendJson(res, 200, { label: "SIM", note: DRAFT_NOTE, convictions });
+    const steerable = steerablePairs(config, session);
+    sendJson(res, 200, { label: "SIM", note: DRAFT_NOTE, convictions, steerable });
     return true;
   }
   await draftOrSave(req, res, path, config, session);
