@@ -317,7 +317,7 @@ describe("SettingsChangeLog", () => {
     expect(new SettingsChangeLog(path).list("sauron")).toEqual([]);
     await writeFile(
       path,
-      JSON.stringify({ accounts: { sauron: [line(1), { ...line(2), before: "x" }] } }),
+      JSON.stringify({ accounts: { sauron: [line(1), { ...line(2), before: "x".repeat(201) }] } }),
     );
     expect(new SettingsChangeLog(path).list("sauron")).toEqual([line(1)]);
   });
