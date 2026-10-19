@@ -1,7 +1,12 @@
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
-import { pointAtRecord, restated } from "../subscriptions/conviction-pointer.js";
+import {
+  heldHere,
+  type MemberPointers,
+  pointAtRecord,
+  restated,
+} from "../subscriptions/conviction-pointer.js";
 import {
   carriedOnResubscribe,
   EMPTY_SUBSCRIPTIONS,
@@ -36,14 +41,25 @@ export type SubscriptionTuning = Pick<
  * tmp+rename writes, total reads (a missing or malformed file is just `EMPTY_SUBSCRIPTIONS`,
  * reported once). Every write keeps what this build could not read (#4772,
  * `subscriptions-file.ts`).
+ *
+ * `members` (#5482 slice 6c) is the read of members' handed-over views, so a write that recomputes
+ * a pointer keeps one at a view its owner handed over (`conviction-pointer.ts`). Without it a
+ * restated conviction would drop that pointer, and the pair would run unnarrowed until the next
+ * poll put it back. Read fresh on each write; absent, only seeded records match, as before.
  */
 export class SubscriptionStore {
   private readonly file: JsonFileStore<SubscriptionsState>;
   /** The same file, read for its `$allocations` key; a write lays that key over the file on disk
    *  and leaves every account's records as they are (`withAllocations`). */
   private readonly allocations: JsonFileStore<AllocationsState>;
+  private readonly members: (() => MemberPointers) | undefined;
 
-  constructor(path: string, onReadError?: (message: string) => void) {
+  constructor(
+    path: string,
+    onReadError?: (message: string) => void,
+    members?: () => MemberPointers,
+  ) {
+    this.members = members;
     const report = onReadError ?? (() => undefined);
     this.file = new JsonFileStore({
       path,
@@ -74,6 +90,10 @@ export class SubscriptionStore {
 
   load(): SubscriptionsState {
     return this.file.load();
+  }
+
+  private heldBy(accountId: string) {
+    return heldHere(this.members?.(), accountId);
   }
 
   /** Each account's allocation per strategy (#4469 slice 3c). */
@@ -124,7 +144,11 @@ export class SubscriptionStore {
     const existing = state[accountId] ?? [];
     const prior = existing.find((s) => s.playbookId === playbookId);
     if (!prior) return undefined;
-    const next = restated({ ...prior, conviction, updatedAt: at.toISOString() });
+    const next = restated(
+      { ...prior, conviction, updatedAt: at.toISOString() },
+      undefined,
+      this.heldBy(accountId),
+    );
     const nextState: SubscriptionsState = {
       ...state,
       [accountId]: existing.map((s) => (s === prior ? next : s)),
@@ -163,8 +187,11 @@ export class SubscriptionStore {
     };
     // A conviction stated here replaces the carried one, so a carried pointer is recomputed from it;
     // a pointer the caller names is its own call.
+    const here = this.heldBy(accountId);
     const next =
-      sub.conviction && sub.convictionId === undefined ? restated(written) : pointAtRecord(written);
+      sub.conviction && sub.convictionId === undefined
+        ? restated(written, undefined, here)
+        : pointAtRecord(written, undefined, here);
     const nextState: SubscriptionsState = {
       ...state,
       [accountId]: [...existing.filter((s) => s.playbookId !== sub.playbookId), next],
@@ -248,7 +275,9 @@ export class SubscriptionStore {
     };
     const nextState: SubscriptionsState = {
       ...state,
-      [accountId]: existing.map((s) => (s === prior ? pointAtRecord(next) : s)),
+      [accountId]: existing.map((s) =>
+        s === prior ? pointAtRecord(next, undefined, this.heldBy(accountId)) : s,
+      ),
     };
     this.file.write(nextState);
     return nextState;
@@ -259,8 +288,9 @@ export class SubscriptionStore {
 export function createSubscriptionStore(
   env: NodeJS.ProcessEnv,
   onReadError?: (message: string) => void,
+  members?: () => MemberPointers,
 ): SubscriptionStore {
-  return new SubscriptionStore(subscriptionsFilePath(env), onReadError);
+  return new SubscriptionStore(subscriptionsFilePath(env), onReadError, members);
 }
 
 /** Where the subscription store lives — shared with the seed-marker file beside it. */

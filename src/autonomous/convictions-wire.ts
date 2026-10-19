@@ -16,8 +16,8 @@ import { boundedString, isRecord } from "../storage/parse-guards.js";
  * member's bot, even if a pointer said so. The own-account rule is a comparison, not a convention.
  *
  * EXPAND FIRST, the order `subscriptions.v3` took: the bots read this field before the app writes
- * any pointer at a member's record. The app sends the set from this step on, and it is empty until
- * the hand-over step gives a record the `steering` status (`member-conviction-store.ts`). A bots
+ * any pointer at a member's record. The app sends the set from that step on; a record joins it when
+ * its owner hands it over (`conviction-hand-over.ts` writes the `steering` status). A bots
  * build that predates the field ignores it; an app that predates it omits it, and the bots read
  * that as "not reported" and keep what they had.
  *

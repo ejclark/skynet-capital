@@ -7,15 +7,22 @@
 // a sentence the server would not send (the `heartbeat-roll-call.mjs` rule).
 //
 // Frames: the door and a saved draft · the form open · filled · the preview card (before → after,
-// SIM) · a refusal placed under its pair · the door closed with no ◆ pair · the form wide.
+// SIM) · a refusal placed under its pair · the door closed with no ◆ pair · the form wide · the
+// hand-over ask, naming what it takes over from the seeded view (slice 6c) · a view steering.
+// `ONLY=phone-7,phone-8` shoots just the frames whose tag starts with one of those.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/convictions.mjs [outdir]
 
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
 import { convictionCard, draftConviction } from "../../src/playbooks/conviction-draft.ts";
-import { playbookBounds } from "../../src/playbooks/conviction-store.ts";
+import { CONVICTIONS, playbookBounds } from "../../src/playbooks/conviction-store.ts";
 import { findPair, pairName } from "../../src/playbooks/pair-table.ts";
-import { DRAFT_NOTE } from "../../src/server/member-convictions-api-routes.ts";
+import { pointedPairs, takesOver } from "../../src/server/conviction-hand-over.ts";
+import {
+  DRAFT_NOTE,
+  MINE_NOTE,
+  STEERING_NOTE,
+} from "../../src/server/member-convictions-api-routes.ts";
 import { performance } from "./playbook-store-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -89,10 +96,24 @@ const SAVED_VIEW = {
 };
 const mine = (convictions, steerable = STEERABLE) => ({
   label: "SIM",
-  note: DRAFT_NOTE,
+  note: MINE_NOTE,
   convictions,
   steerable,
 });
+
+// Slice 6c: Sauron's wheel points at the seeded AI-dip view, so handing this one over takes over
+// from it; once handed over, the wheel points here. Both read by the server's own functions.
+const id = drafted.conviction.id;
+const subsBefore = {
+  sauron: [{ playbookId: "CRWV-WHEEL", convictionId: "ai-dip-2026-10" }],
+};
+const subsAfter = { sauron: [{ playbookId: "CRWV-WHEEL", convictionId: id }] };
+const ASKING_VIEW = {
+  ...SAVED_VIEW,
+  takesOver: takesOver(drafted.conviction, ["sauron"], subsBefore, CONVICTIONS),
+};
+const steering = pointedPairs(id, ["sauron"], subsAfter);
+const STEERING_VIEW = { ...SAVED_VIEW, status: "steering", accounts: ["sauron"], steering };
 
 const PHONE = { width: 390, height: 844 };
 const underHeader = (el) =>
@@ -110,6 +131,7 @@ async function frame({ tag, listed = [SAVED_VIEW], steerable, draft = preview, a
       "/api/convictions/mine": mine(listed, steerable),
       "/api/convictions/draft": draft,
       "/api/convictions/save": { ...preview, saved: true },
+      "/api/convictions/hand-over": { ok: true, label: "SIM", steering, note: STEERING_NOTE },
     },
   });
   await page.clock.setFixedTime(new Date(`${TODAY}T15:00:00Z`));
@@ -195,6 +217,19 @@ const frames = [
       await to(".cvf-steers")(page);
     },
   },
+  {
+    tag: "phone-7-hand-over-ask",
+    viewport: PHONE,
+    listed: [ASKING_VIEW],
+    act: async (page) => {
+      await page.getByRole("button", { name: "Hand to my bots" }).click();
+      await to(".cvf-section")(page);
+    },
+  },
+  { tag: "phone-8-steering", viewport: PHONE, listed: [STEERING_VIEW] },
 ];
 
-for (const spec of frames) await frame(spec);
+const only = process.env.ONLY?.split(",").filter(Boolean);
+for (const spec of frames) {
+  if (!only || only.some((prefix) => spec.tag.startsWith(prefix))) await frame(spec);
+}

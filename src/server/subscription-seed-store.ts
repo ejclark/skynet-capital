@@ -3,7 +3,7 @@ import type { ControlsPollReport } from "../autonomous/controls-poll-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
-import { pointAtRecords } from "../subscriptions/conviction-pointer.js";
+import { type MemberPointers, pointAtRecords } from "../subscriptions/conviction-pointer.js";
 import { carryRowConvictions } from "../subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
@@ -15,6 +15,7 @@ import {
   seedOwnRules,
 } from "../subscriptions/subscription-seed.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { createMemberConvictionStore } from "./member-conviction-store.js";
 import {
   createSubscriptionStore,
   type SubscriptionStore,
@@ -163,15 +164,17 @@ export function carryConvictions(
  * on every subscription whose conviction the record states (it steers the pair, same check day) and
  * that has none. Same care as the carry beside it: an unmarked invariant, never over a file it
  * could not read whole, and no write when nothing needed a pointer — so a second poll, or a second
- * deploy, is one small read.
+ * deploy, is one small read. With `members` (#5482 slice 6c) it applies members' handed-over views
+ * too, so a hand-over or take-back whose own pointer write failed is finished by the next poll.
  */
 export function pointConvictions(
   subscriptions: SubscriptionStore,
   at = new Date(),
+  members?: MemberPointers,
 ): readonly string[] {
   const state = subscriptions.loadIfReadable();
   if (!state) return [];
-  const { state: next, pointed } = pointAtRecords(state, at);
+  const { state: next, pointed } = pointAtRecords(state, at, undefined, members);
   if (pointed.length === 0) return [];
   subscriptions.replace(next);
   return pointed;
@@ -189,7 +192,10 @@ export function pollSeedsFromEnv(
   env: NodeJS.ProcessEnv,
   onReadError?: (message: string) => void,
 ): (report: ControlsPollReport, at?: Date) => readonly string[] {
-  const subscriptions = createSubscriptionStore(env, onReadError);
+  const memberConvictions = createMemberConvictionStore(env, onReadError);
+  const subscriptions = createSubscriptionStore(env, onReadError, () =>
+    memberConvictions.pointers(),
+  );
   const path = subscriptionsFilePath(env);
   const roster = createSubscriptionSeeder(subscriptions, seedMarkersPathFrom(path), onReadError);
   const ownRules = createOwnRulesSeeder(
@@ -218,8 +224,8 @@ export function pollSeedsFromEnv(
       ),
       // After the carry, so a conviction it just wrote is pointed at its record on the same poll.
       ...lines(
-        pointConvictions(subscriptions, at),
-        "pointed each subscription whose conviction a record states at that record (its inline conviction kept)",
+        pointConvictions(subscriptions, at, memberConvictions.pointers()),
+        "pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept)",
       ),
     ];
   };

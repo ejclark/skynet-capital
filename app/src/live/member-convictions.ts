@@ -8,12 +8,16 @@
  *   POST /api/convictions/draft   → { ok: true, conviction, card, note } | { ok: false, problems }
  *   POST /api/convictions/save    → the same, and the record is kept   (body: { draft, replaceId? })
  *   POST /api/convictions/delete  → { ok } | { ok: false, error }        (body: { id })
+ *   POST /api/convictions/hand-over → { ok, steering, note } | { ok: false, problems } (body: { id })
+ *   POST /api/convictions/take-back → { ok, note } | { ok: false, problems }          (body: { id })
  * No member param: identity comes from the session alone. `/draft` writes nothing; it is the
- * preview, and `/save` judges the same draft again before it keeps it.
+ * preview, and `/save` judges the same draft again before it keeps it. `/hand-over` (slice 6c) is
+ * the member's one tap that lets their bots steer by a saved view; which bots is the server's call.
  */
 import type { DraftCard } from "../../../src/playbooks/conviction-draft";
 import type { ConvictionDraftInput } from "../../../src/playbooks/conviction-parse";
 import type { Conviction } from "../../../src/playbooks/conviction-record";
+import type { NamedPair } from "../../../src/server/conviction-hand-over";
 import type {
   MemberConvictionView,
   SteerablePairView,
@@ -47,6 +51,8 @@ export type DraftAnswer =
       readonly conviction: Conviction;
       readonly card: DraftCard;
       readonly saved: boolean;
+      /** The edit replaced a view that was steering, so it is a draft again. */
+      readonly tookBack?: boolean;
       readonly note: string;
     }
   | { readonly ok: false; readonly problems?: readonly string[]; readonly error?: string };
@@ -62,7 +68,8 @@ export const previewConvictionRequest = (
   replaceId?: string,
 ): Promise<DraftAnswer> => postJson("/api/convictions/draft", body(draft, replaceId));
 
-/** Keep the view as a draft (one that steers nothing yet), or replace the member's own `replaceId`. */
+/** Keep the view as a draft (one that steers nothing until handed over), or replace the member's own
+ *  `replaceId` — which takes a steering view back (`tookBack`). */
 export const saveConvictionRequest = (
   draft: ConvictionDraftInput,
   replaceId?: string,
@@ -72,3 +79,15 @@ export const deleteConvictionRequest = (
   id: string,
 ): Promise<{ readonly ok: boolean; readonly error?: string }> =>
   postJson("/api/convictions/delete", { id });
+
+export type SteerAnswer =
+  | { readonly ok: true; readonly steering?: readonly NamedPair[]; readonly note: string }
+  | { readonly ok: false; readonly problems?: readonly string[]; readonly error?: string };
+
+/** Let the member's bots steer by a saved view: the pairs it steers, inside its settings. */
+export const handOverConvictionRequest = (id: string): Promise<SteerAnswer> =>
+  postJson("/api/convictions/hand-over", { id });
+
+/** Take a view back from the member's bots: a draft again, each pair as it ran before. */
+export const takeBackConvictionRequest = (id: string): Promise<SteerAnswer> =>
+  postJson("/api/convictions/take-back", { id });

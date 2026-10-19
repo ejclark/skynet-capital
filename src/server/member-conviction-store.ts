@@ -4,6 +4,7 @@ import type { Conviction } from "../playbooks/conviction-record.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
+import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
 
 /**
  * THE DURABLE STATE BEHIND MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states on
@@ -18,10 +19,12 @@ import { siblingPath } from "../storage/sibling-path.js";
  *
  * A DRAFT STEERS NOTHING. A record reaches the bots only with the `steering` status and the
  * accounts it may steer (slice 6c): `handedOver` lists those, and the controls poll carries them
- * (`convictions-wire.ts`). This build READS the status and writes none, the expand step: the
- * hand-over step that writes it ships after the bots and this reader are live, so a rollback onto
- * this build still reads a handed-over record rather than refusing every write to the file. A
- * status this build does not know is unreadable rather than read as a draft.
+ * (`convictions-wire.ts`). `handOver` writes that status, with the accounts the route resolved from
+ * the session (never from a body); `takeBack` returns it to a draft, and so does an edit (`save`
+ * always keeps a draft) — a view changed after its owner handed it over is a view they have not
+ * handed over. Which subscriptions point at a held view is the pointer rule's call
+ * (`conviction-pointer.ts`, fed by `pointers`). A status this build does not know is unreadable
+ * rather than read as a draft.
  */
 
 export type MemberConvictionStatus = "draft" | "steering";
@@ -74,8 +77,20 @@ export function parseMemberConvictionsState(raw: unknown): MemberConvictionsStat
 }
 
 export type ConvictionSaveOutcome =
+  | {
+      readonly ok: true;
+      readonly record: MemberConvictionRecord;
+      /** The edit replaced a view that was steering, so it no longer is. */
+      readonly tookBack: boolean;
+    }
+  | { readonly ok: false; readonly reason: string };
+
+export type ConvictionStatusOutcome =
   | { readonly ok: true; readonly record: MemberConvictionRecord }
   | { readonly ok: false; readonly reason: string };
+
+/** Why a status change was refused when the member holds no record by that id. */
+export const GONE = "That view is gone. Refresh to see the views you hold.";
 
 /** Why a write was refused when the file on disk could not be read whole. */
 export const UNREADABLE_FILE =
@@ -111,19 +126,78 @@ export class MemberConvictionStore {
 
   /** Every view handed to the bots, with the accounts each may steer — what the poll carries. */
   handedOver(): readonly WiredConviction[] {
-    return Object.values(this.load()).flatMap((records) =>
-      records.flatMap((r) =>
-        r.status === "steering" && r.accounts
-          ? [{ conviction: r.conviction, accounts: r.accounts }]
-          : [],
-      ),
+    return handedOverIn(this.load());
+  }
+
+  /** The pointer rule's read (`conviction-pointer.ts`): the views held per account, and every id.
+   *  One read of the file, so both halves describe the same moment. */
+  pointers(): MemberPointers {
+    const state = this.load();
+    const wired = handedOverIn(state);
+    return {
+      heldBy: (accountId) =>
+        wired.filter((w) => w.accounts.includes(accountId)).map((w) => w.conviction),
+      ids: new Set(Object.values(state).flatMap((records) => records.map((r) => r.conviction.id))),
+    };
+  }
+
+  /** Hand one of this member's views to their bots: the `steering` status, with the accounts it may
+   *  steer (the route resolves them from the session). Handing over a steering view again replaces
+   *  its accounts. */
+  handOver(
+    memberKey: string,
+    id: string,
+    accounts: readonly string[],
+    at: Date,
+  ): ConvictionStatusOutcome {
+    if (!parseSteeredAccounts(accounts)) {
+      return { ok: false, reason: "No bot of yours can take this view." };
+    }
+    return this.restatus(memberKey, id, (r) => ({
+      status: "steering",
+      conviction: r.conviction,
+      accounts,
+      createdAt: r.createdAt,
+      updatedAt: at.toISOString(),
+    }));
+  }
+
+  /** Take one of this member's views back from their bots: a draft again. A draft is unchanged. */
+  takeBack(memberKey: string, id: string, at: Date): ConvictionStatusOutcome {
+    return this.restatus(memberKey, id, (r) =>
+      r.status === "draft"
+        ? r
+        : {
+            status: "draft",
+            conviction: r.conviction,
+            createdAt: r.createdAt,
+            updatedAt: at.toISOString(),
+          },
     );
+  }
+
+  private restatus(
+    memberKey: string,
+    id: string,
+    next: (record: MemberConvictionRecord) => MemberConvictionRecord,
+  ): ConvictionStatusOutcome {
+    const state = this.file.loadIfReadable();
+    if (!state) return { ok: false, reason: UNREADABLE_FILE };
+    const mine = state[memberKey] ?? [];
+    const prior = mine.find((r) => r.conviction.id === id);
+    if (!prior) return { ok: false, reason: GONE };
+    const record = next(prior);
+    if (record !== prior) {
+      this.file.write({ ...state, [memberKey]: mine.map((r) => (r === prior ? record : r)) });
+    }
+    return { ok: true, record };
   }
 
   /**
    * Save a draft. `replaceId` is Edit: it swaps that one record of this member for the new
-   * conviction (the id may change with the title) and is refused when the record is gone. A new
-   * record past the member's cap is refused with the reason, never dropping an older one.
+   * conviction (the id may change with the title) and is refused when the record is gone. The edit
+   * is always a draft, so a steering view edited is taken back (`tookBack`). A new record past the
+   * member's cap is refused with the reason, never dropping an older one.
    */
   save(
     memberKey: string,
@@ -159,7 +233,7 @@ export class MemberConvictionStore {
     };
     const next = replaced ? mine.map((r) => (r === replaced ? record : r)) : [...mine, record];
     this.file.write({ ...state, [memberKey]: next });
-    return { ok: true, record };
+    return { ok: true, record, tookBack: replaced?.status === "steering" };
   }
 
   /** Remove one of this member's records; a missing id is a no-op. */
@@ -174,6 +248,16 @@ export class MemberConvictionStore {
     this.file.write({ ...state, [memberKey]: mine.filter((r) => r.conviction.id !== id) });
     return { ok: true };
   }
+}
+
+function handedOverIn(state: MemberConvictionsState): readonly WiredConviction[] {
+  return Object.values(state).flatMap((records) =>
+    records.flatMap((r) =>
+      r.status === "steering" && r.accounts
+        ? [{ conviction: r.conviction, accounts: r.accounts }]
+        : [],
+    ),
+  );
 }
 
 /** The file beside the subscriptions file (`SKYNET_SUBSCRIPTIONS_FILE`, pinned on the volume in

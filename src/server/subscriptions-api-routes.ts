@@ -8,6 +8,8 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import { withOwnSteering } from "../observatory/steered-by-view.js";
+import { CONVICTIONS, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import {
   allocationChangeRefusal,
@@ -174,6 +176,14 @@ function subscriberCounts(
   return counts;
 }
 
+/** The records a pointer on this account resolves to: the seeded ones, then the member views handed
+ *  to it — the bots' own rule (`autonomous-convictions.ts`), so a row never shows a view that does
+ *  not steer that bot. */
+function ownLookup(config: DashboardServerConfig, accountId: string): ConvictionLookup {
+  const held = config.memberConvictions?.pointers().heldBy(accountId) ?? [];
+  return (id) => CONVICTIONS.get(id) ?? held.find((c) => c.id === id);
+}
+
 const editorOf = (session: Session | undefined): string => session?.email ?? "unknown";
 
 const asOfIso = (config: DashboardServerConfig): string =>
@@ -202,8 +212,14 @@ async function serveStoreIndex(
     // The viewed account's own allocations, only for a viewer who owns it — as its subscriptions.
     subscriptions && id ? config.subscriptions?.loadAllocations()[id] : undefined,
   );
-  // Each single-ticker row carries R&D's call for its next earnings report (#5444).
-  const view = { ...bare, strategies: withForecasts(bare.strategies, asOfIso(config)) };
+  // Each single-ticker row carries R&D's call for its next earnings report (#5444), and an owned
+  // account's rows the view its own pointer names — a member's handed-over one (#5482 slice 6c).
+  const forecast = withForecasts(bare.strategies, asOfIso(config));
+  const strategies =
+    subscriptions && id
+      ? withOwnSteering(forecast, subscriptions, ownLookup(config, id))
+      : forecast;
+  const view = { ...bare, strategies };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state
     ? subscriberCounts(state, (accountId) => isHumanAccount(config, accountId))
