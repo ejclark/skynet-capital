@@ -4,6 +4,7 @@ import {
   occStrikeLabel,
   parseOccSymbol,
 } from "../../../src/trading/option-symbols";
+import { MINUS } from "../ui/numbers";
 import type { DeskActivityEvent, DeskActivityLeg } from "./desk";
 
 /**
@@ -18,7 +19,6 @@ import type { DeskActivityEvent, DeskActivityLeg } from "./desk";
  * cash. Absence is named by the card, never papered over here.
  */
 
-const MINUS = "−";
 const ET = "America/New_York";
 
 /** What the order did, as a past-tense word once it filled — "SOLD", "BOUGHT" — and as the

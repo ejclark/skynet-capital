@@ -69,6 +69,13 @@ describe("AccountPlaybookMetrics", () => {
     expect(screen.getByText("$12,000.00")).toBeInTheDocument();
   });
 
+  it("writes a losing playbook's P/L and return with a real minus, never a hyphen (#5204)", () => {
+    const losing = { ...row, netRealized: -420, returnPct: -3.5 };
+    render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "read", row: losing }} />);
+    expect(screen.getByText("\u2212$420.00")).toBeInTheDocument();
+    expect(screen.getByText("\u22123.5% of capital committed")).toBeInTheDocument();
+  });
+
   it("prints an unmeasurable win rate and return as a dash, not zero", () => {
     const scratched = { ...row, wins: 0, losses: 0, winRate: null, returnPct: null };
     render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "read", row: scratched }} />);

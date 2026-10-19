@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionLot } from "../live/desk";
+import { withMinus } from "../ui";
 import { ClosePanel, closeRefusal } from "./close-panel";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
@@ -13,7 +14,6 @@ import {
   GreeksContent,
   ProjectionContent,
 } from "./position-columns";
-import { withMinus } from "./position-row-spec";
 
 /**
  * A DESK ROW, OPENED (#5071): what the ranked columns leave out, under the row's guidance line —
