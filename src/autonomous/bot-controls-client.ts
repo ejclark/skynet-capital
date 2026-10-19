@@ -102,10 +102,15 @@ export function resolveBotControls(
    *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
    *  the plays. An app that predates the field never fires this. */
   onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  /** The per-fetch budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs the bridge on the same event loop as a loaded full suite passes a generous one, so a
+   *  starved loop is not mistaken for an unreachable bridge (#4978). */
+  options: { readonly timeoutMs?: number } = {},
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
   // This process's own word about which commit it is running, stamped onto every poll so the
   // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
   const selfReport = controlsPollHeaders(env.GIT_SHA);
@@ -120,7 +125,7 @@ export function resolveBotControls(
   const fetchOnce = async (): Promise<ControlsState | null> => {
     try {
       const controller = new AbortController();
-      const abort = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const abort = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "GET",
