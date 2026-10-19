@@ -1,7 +1,7 @@
 ---
 name: instruction-drift
 description: read one changed instruction file (or one skill's files) for the drift a scanner cannot see — two files ruling differently, a stale fact, a rule written as history — and land only the rewrites a refuter could not kill
-model: fable
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -41,8 +41,9 @@ instruction file becomes an item.
 }
 ```
 
-Tiers, per `docs/COMPUTE.md`: **check** is judgment across files (floor `opus`/`high`, rounded up
-to `fable` like this directory's other judgment chores); **refute** is adversarial (floor
+Tiers, per `docs/COMPUTE.md`: **check** is judgment across files (floor `opus`/`high`, and run at that
+floor: Eric, 2026-10-14, after a 58-agent Fable fan-out of this chore burned his weekly quota —
+Opus is the floor for this judgment work, not a step to round up from); **refute** is adversarial (floor
 `xhigh`); **apply** reverts what died and runs the gates, the mechanical-with-verification row
 (`sonnet`/`high`). `isolation: worktree` because every role commits to the item's branch.
 
