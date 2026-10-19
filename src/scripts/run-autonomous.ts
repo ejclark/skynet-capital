@@ -436,7 +436,8 @@ async function runLive(): Promise<void> {
     const host = botRosters[0];
     if (host) swapIn(0, host);
   });
-  const scoutStagingPolled = watchScoutStaging(scoutStages);
+  // No broker on the host = no staging poll below, so a flip there is not announced as armed.
+  const scoutStagingPolled = traders[0]?.broker ? watchScoutStaging(scoutStages) : () => undefined;
   onScoutPicksPolled = () => {
     scoutPicksPolled();
     scoutStagingPolled();
