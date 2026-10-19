@@ -208,11 +208,9 @@ prose ("the target below") rather than trying to template inside the instruction
   label. The fan-out half of "interrogate before you comply" (CLAUDE.md); the Orient output
   style's step 2 is the in-session listener that routes here when an objection survives.
 
-Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
-see the PR that added them) against every gate this repo currently runs; several plausible-looking
-batch chores (fanning `/decompose` or `/dedupe`, renumbering forward-test IDs) were deliberately
-**not** codified here because they need cross-item context a fan-out can't safely give them — see
-each file's own header for why, when a reason applies.
+Plausible-looking batch chores that need cross-item context a fan-out can't safely give them
+(renumbering forward-test IDs, for example) are deliberately **not** codified here — see each
+file's own header for why, when a reason applies.
 
 ## Calling convention: the chore declares its tier, you generate the call
 
@@ -298,8 +296,12 @@ field, `{prev}` the whole JSON), so the chain ends with:
 ```
 
 A `done` with no branch on origin makes that command fail, which reports `blocked` — fail-closed.
-A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
-chore above reports its branch and expects this trailing step; the four calling conventions say so.
+A missing `branch` field ends `blocked` too: grind refuses to run the check at all (the
+empty-argument hole, above). Every checked-in chore above that pushes a branch reports it and
+expects this trailing step — the chore files as their `outcomeCheck`, `/bury` and `/backfill` as
+`verifyBranch: true` in their calling conventions. `interrogate`, `research-bottleneck` and
+`split-into-sub-issues` push no branch and declare a `curl` check on the issue instead; read-only
+`haiku-eval-replay` declares none.
 
 ### What a run reports back — print the ledger, don't rewrite it
 
