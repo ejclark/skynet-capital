@@ -58,8 +58,9 @@ Fills (every account's trade_updates) ────┼─▶ ObservatoryHub.apply
 
 ## The account page — one account, a section per route
 
-`/u` (bare) redirects to Settings → Account (`src/server/legacy-redirects.ts`), which lists every
-account the signed-in email owns (`Participant.ownerEmail`); each card opens that account's page.
+`/u` (bare) is the **Portfolio index** — the member's home, listing every account their signed-in
+email owns (`Participant.ownerEmail`) with a combined-equity hero above the per-account split. The
+drawer's "Portfolio" link (formerly "You") lands here; each row opens that account's desk.
 
 `/u/:id` is the page for **any** account, bot or human — reached from the Leaderboard and Activity,
 and never folded into the Profile page (Eric, #2321: "Profile verbiage is user-centric. Leaderboards
@@ -77,10 +78,11 @@ nested route per section:
 | Thesis | `/u/:id/thesis` | what is its standing call, and is it working? | bots |
 | Settings | `/settings` | (the viewer's own account settings) | only your own account |
 
-The Playbooks section reads what the Profile page's Playbooks reads, at an address named for it
-(#5073); a saved `/u/:id/decisions` link redirects there with the check log open. The Playbook Store
-itself lives on R&D → Playbooks. Old `?tab=` links redirect to their section
-(`src/server/legacy-redirects.ts`); member-facing copy never says "desk" (#3345).
+Decisions folded into Heartbeat (#3687) and Heartbeat into Playbooks (#5073), so the section reads
+what the Profile page's Playbooks reads, at an address named for it; a saved `/u/:id/decisions` link
+redirects there with the check log open. The Playbook Store itself lives on R&D → Playbooks.
+Old `?tab=` links redirect to their section (`src/server/legacy-redirects.ts`); the word "desk" is
+retired from member-facing copy (#3345).
 
 ### Acting on a position (your own accounts only)
 
