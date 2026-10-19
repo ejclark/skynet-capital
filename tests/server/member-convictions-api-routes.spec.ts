@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +10,7 @@ import {
   MAX_CONVICTIONS_PER_MEMBER,
   MemberConvictionStore,
   memberConvictionsFilePath,
+  UNREADABLE_FILE,
 } from "../../src/server/member-conviction-store.js";
 import {
   DRAFT_NOTE,
@@ -259,6 +260,18 @@ describe("MemberConvictionStore", () => {
       ok: false,
       reason: "That view is gone, so it can't be edited.",
     });
+  });
+
+  it("refuses a write over a file it cannot read whole, and leaves the file as it was", async () => {
+    const path = join(dir, "c.json");
+    const onDisk = JSON.stringify({
+      grace: [{ status: "steering", conviction: record("g"), createdAt: "x", updatedAt: "x" }],
+    });
+    await writeFile(path, onDisk);
+    const store = new MemberConvictionStore(path);
+    expect(store.save("ada", record("a"), NOW)).toEqual({ ok: false, reason: UNREADABLE_FILE });
+    expect(store.delete("grace", "g")).toEqual({ ok: false, reason: UNREADABLE_FILE });
+    expect(await readFile(path, "utf8")).toBe(onDisk);
   });
 
   it("drops a record whose status this build does not know, never reading it as a draft", async () => {

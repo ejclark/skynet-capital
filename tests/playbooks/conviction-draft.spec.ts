@@ -92,6 +92,36 @@ describe("draftConviction", () => {
     expect(outcome.conviction.claims[0]?.statement).toBe("1. CRWV's backlog outlasts the selloff.");
   });
 
+  it("numbers claims by their place, so two can never share a number, and a full-length one reads back", () => {
+    const long = "x".repeat(600);
+    const outcome = draftConviction(
+      {
+        ...DRAFT,
+        claims: [
+          { ...CLAIM, statement: "2. First." },
+          { ...CLAIM, statement: "Second." },
+          { ...CLAIM, statement: long },
+        ] as never,
+      },
+      ctx(),
+    );
+    if (!outcome.ok) throw new Error(outcome.problems.join("; "));
+    expect(outcome.conviction.claims.map((c) => c.statement.slice(0, 9))).toEqual([
+      "1. First.",
+      "2. Second",
+      "3. xxxxxx",
+    ]);
+    expect(parseStoredConviction(JSON.parse(JSON.stringify(outcome.conviction)))).toEqual(
+      outcome.conviction,
+    );
+  });
+
+  it("refuses a claim that is only a number", () => {
+    expect(
+      draftConviction({ ...DRAFT, claims: [{ ...CLAIM, statement: "3. " }] as never }, ctx()),
+    ).toEqual({ ok: false, problems: ["claim 1: statement is empty"] });
+  });
+
   it("shows each steered pair's before → after, only for what it changes, labelled SIM", () => {
     const outcome = draftConviction(DRAFT, ctx());
     if (!outcome.ok) throw new Error(outcome.problems.join("; "));

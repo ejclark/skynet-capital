@@ -109,8 +109,8 @@ async function draftOrSave(
       sendJson(res, 400, { error: "malformed delete body" });
       return;
     }
-    config.memberConvictions?.delete(opaqueMemberId(session.email), id);
-    sendJson(res, 200, { ok: true });
+    const done = config.memberConvictions?.delete(opaqueMemberId(session.email), id);
+    sendJson(res, 200, done && !done.ok ? { ok: false, error: done.reason } : { ok: true });
     return;
   }
   const replaceId =

@@ -25,6 +25,9 @@ export const MAX_CLAIMS = 12;
 export const MAX_STEERS = 6;
 const MAX_NARROWINGS = 5;
 const MAX_TEXT = 600;
+/** Room for the number a record puts before each claim ("12. "): a stored statement may be this much
+ *  longer than a member may type, so a draft at the limit still reads back whole. */
+const CLAIM_LABEL_ROOM = 4;
 const MAX_LABEL = 8;
 const MAX_ID = 64;
 
@@ -44,10 +47,11 @@ function listOf<T>(raw: unknown, max: number, parse: (item: unknown) => T | unde
   return out;
 }
 
-/** One claim as a member states it: tag, sentence, bucket, evidence, falsifier, and its score day. */
-export function parseClaim(raw: unknown): ConvictionClaim | undefined {
+/** One claim as a member states it: tag, sentence, bucket, evidence, falsifier, and its score day.
+ *  `statementMax` is wider for a stored claim, which carries its number. */
+export function parseClaim(raw: unknown, statementMax = MAX_TEXT): ConvictionClaim | undefined {
   if (!isRecord(raw)) return undefined;
-  const statement = text(raw.statement);
+  const statement = text(raw.statement, statementMax);
   const evidence = text(raw.evidence);
   const falsifier = text(raw.falsifier);
   const tag = CLAIM_TAGS.find((t) => t === raw.tag);
@@ -123,11 +127,14 @@ export interface ConvictionDraftInput {
   readonly acceptsAssignment?: boolean;
 }
 
-export function parseConvictionDraft(raw: unknown): ConvictionDraftInput | undefined {
+export function parseConvictionDraft(
+  raw: unknown,
+  statementMax = MAX_TEXT,
+): ConvictionDraftInput | undefined {
   if (!isRecord(raw)) return undefined;
   const title = text(raw.title, 80);
   const checkOn = day(raw.checkOn);
-  const claims = listOf(raw.claims, MAX_CLAIMS, parseClaim);
+  const claims = listOf(raw.claims, MAX_CLAIMS, (c) => parseClaim(c, statementMax));
   const steers = listOf(raw.steers, MAX_STEERS, (s) => text(s, MAX_ID));
   const narrowings =
     raw.narrowings === undefined
@@ -151,7 +158,7 @@ export function parseConvictionDraft(raw: unknown): ConvictionDraftInput | undef
 /** A whole record as the member store keeps it: the draft plus id, owner and the day it was stated. */
 export function parseStoredConviction(raw: unknown): Conviction | undefined {
   if (!isRecord(raw)) return undefined;
-  const draft = parseConvictionDraft(raw);
+  const draft = parseConvictionDraft(raw, MAX_TEXT + CLAIM_LABEL_ROOM);
   const id = text(raw.id, MAX_ID);
   const owner = text(raw.owner, 80);
   const statedOn = day(raw.statedOn);

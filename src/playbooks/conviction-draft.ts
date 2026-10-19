@@ -11,8 +11,9 @@ import { findPair, type Pair, pairName } from "./pair-table.js";
  * a view differently.
  *
  * WHAT IT SETS, NOT THE MEMBER: the id (from the title and the month), the owner (the session's
- * name) and the day stated (today, in market time). Each claim is numbered in order, so a narrowing
- * can cite it by number the way the seeded record's do.
+ * name) and the day stated (today, in market time). Each claim is numbered by its place in the list
+ * (1, 2, 3 …; a number the member typed is replaced, so two claims can never share one), and a
+ * narrowing cites it by that number the way the seeded record's do.
  *
  * THE RULES, ONE SET. A draft is judged exactly as the store judges a seeded record — the store is
  * built over it and its refusals are the answer — plus three a member's view adds:
@@ -71,8 +72,8 @@ export interface DraftContext {
   readonly boundsOf?: (pairId: string) => SteerBounds | undefined;
 }
 
-/** A sentence already numbered the way a record cites it ("7. ", "2a. "). */
-const NUMBERED = /^\d+[a-z]?\.\s/;
+/** A number already typed before a sentence ("7. ", "2a. "), replaced by the claim's place. */
+const NUMBERED = /^\d+[a-z]?\.\s+/;
 
 /** Kebab-case from a title, at most 56 characters so the month still fits in an id. */
 export function convictionSlug(title: string): string {
@@ -184,16 +185,17 @@ export function draftConviction(input: ConvictionDraftInput, ctx: DraftContext):
   const boundsOf = ctx.boundsOf ?? playbookBounds;
   const slug = convictionSlug(input.title);
   if (slug.length === 0) return { ok: false, problems: ["the title needs a letter or a digit"] };
+  const sentences = input.claims.map((claim) => claim.statement.replace(NUMBERED, "").trim());
+  const empty = sentences.flatMap((s, i) =>
+    s.length === 0 ? [`claim ${i + 1}: statement is empty`] : [],
+  );
+  if (empty.length > 0) return { ok: false, problems: empty };
   const conviction: Conviction = {
     id: `${slug}-${ctx.statedOn.slice(0, 7)}`,
     owner: ctx.owner,
     statedOn: ctx.statedOn,
     ...input,
-    claims: input.claims.map((claim, i) =>
-      NUMBERED.test(claim.statement)
-        ? claim
-        : { ...claim, statement: `${i + 1}. ${claim.statement}` },
-    ),
+    claims: input.claims.map((claim, i) => ({ ...claim, statement: `${i + 1}. ${sentences[i]}` })),
   };
   // The store's own judgement, so a member's view and a seeded one break the same rules in the
   // same words; `takenIds` covers the id clash the store would only see among its own records.

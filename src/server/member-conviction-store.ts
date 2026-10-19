@@ -11,6 +11,10 @@ import { siblingPath } from "../storage/sibling-path.js";
  * credentials, no personal data), atomic tmp+rename writes, total reads, keyed by
  * `opaqueMemberId(email)`.
  *
+ * EVERY WRITE READS THE FILE WHOLE FIRST (`loadIfReadable`): each one rewrites every member's
+ * records, so a file it could not read in full — torn, or holding a record a newer build wrote — is
+ * left alone and the write refused, never rewritten without what it could not read.
+ *
  * EVERY RECORD HERE IS A DRAFT, and a draft steers nothing. Nothing in the bots' wiring reads this
  * file, no subscription points at a record in it, and `GET /api/convictions` (the records the bots
  * act on) does not list it. Handing a member's view to the bots is its own slice, with its own
@@ -65,6 +69,10 @@ export type ConvictionSaveOutcome =
   | { readonly ok: true; readonly record: MemberConvictionRecord }
   | { readonly ok: false; readonly reason: string };
 
+/** Why a write was refused when the file on disk could not be read whole. */
+export const UNREADABLE_FILE =
+  "Saved views couldn't be read in full just now, so nothing was changed. Try again shortly.";
+
 export class MemberConvictionStore {
   private readonly file: JsonFileStore<MemberConvictionsState>;
 
@@ -104,7 +112,8 @@ export class MemberConvictionStore {
     at: Date,
     replaceId?: string,
   ): ConvictionSaveOutcome {
-    const state = this.load();
+    const state = this.file.loadIfReadable();
+    if (!state) return { ok: false, reason: UNREADABLE_FILE };
     const mine = state[memberKey] ?? [];
     const stamp = at.toISOString();
     const replaced = replaceId ? mine.find((r) => r.conviction.id === replaceId) : undefined;
@@ -135,11 +144,16 @@ export class MemberConvictionStore {
   }
 
   /** Remove one of this member's records; a missing id is a no-op. */
-  delete(memberKey: string, id: string): void {
-    const state = this.load();
+  delete(
+    memberKey: string,
+    id: string,
+  ): { readonly ok: true } | { readonly ok: false; readonly reason: string } {
+    const state = this.file.loadIfReadable();
+    if (!state) return { ok: false, reason: UNREADABLE_FILE };
     const mine = state[memberKey] ?? [];
-    if (!mine.some((r) => r.conviction.id === id)) return;
+    if (!mine.some((r) => r.conviction.id === id)) return { ok: true };
     this.file.write({ ...state, [memberKey]: mine.filter((r) => r.conviction.id !== id) });
+    return { ok: true };
   }
 }
 
