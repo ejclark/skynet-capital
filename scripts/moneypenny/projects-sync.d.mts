@@ -51,6 +51,12 @@ export function readProjectShapeFromGh(deps?: { gh?: (argv: string[]) => string 
   fields: { id: string; name: string; type?: string; options?: { id: string; name: string }[] }[];
 };
 
+/** Add one issue to the board by id — `addProjectV2ItemById`, no gh owner lookup (#5792). */
+export function addIssueToBoardFromGh(
+  target: { projectId: string; issue: SyncIssueRef & { node_id?: string } },
+  deps?: { gh?: (argv: string[]) => string },
+): BoardItem;
+
 export function readIssue(
   issueNumber: string,
   deps?: { read?: (path: string) => unknown; sleep?: (ms: number) => void },
