@@ -21,7 +21,7 @@ import { TickerPicker } from "./playbook-ticker-picker";
  * Phone order, curated at 390px first (the plan's constraint; a desktop gives the rows room, never
  * another concept): the owner's own pairs lead — state · ticker · mode · capital, with Pause, Edit
  * and Unsubscribe — then the strategy in one line, then its tickers by evidence, then each row's
- * rules. ✓ researched, ◆ conviction and subscribed rows stay open; everything else (~ ✗ ? –) folds
+ * rules. ✓ researched, ◆ conviction and subscribed rows stay open; everything else (~ ✗ ? ⊘) folds
  * into one counted line, because a ticker we cannot back is a row to find, not one to scroll past.
  *
  * An owner who manages the account also gets "Pick a ticker": a bottom sheet over EVERY ticker the
@@ -47,7 +47,7 @@ const staysOpen = (pair: PairRowView): boolean =>
  *  without its qualifier or staleness, for a count or a list row. */
 export const bareStatus = (label: string): string => label.replace(/,.*| ·.*/, "");
 
-/** "3 more: ? 2 not studied · – 1 can't run" — the folded rows counted by the word each one wears,
+/** "3 more: ? 2 not studied · ⊘ 1 can't run" — the folded rows counted by the word each one wears,
  *  so a fold never hides how many rows it holds or why they are there. */
 function foldedLine(pairs: readonly PairRowView[]): string {
   const counts = new Map<string, number>();

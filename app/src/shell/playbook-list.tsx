@@ -38,7 +38,7 @@ export function tradesLine(strategy: StrategyCardView): string {
 }
 
 /** The status a strategy's row wears: its best ready pair's glyph and word ("✓ researched"), or,
- *  for a strategy that can't run yet, its first pair's ("– can't run"). Qualifiers stay on the card. */
+ *  for a strategy that can't run yet, its first pair's ("⊘ can't run"). Qualifiers stay on the card. */
 export function statusWord(strategy: StrategyCardView): string {
   const ready = strategy.pairs.filter(readyPair);
   const best = ready.find((pair) => pair.status === "researched" && !pair.qualifier) ?? ready[0];
