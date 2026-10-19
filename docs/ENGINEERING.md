@@ -126,8 +126,9 @@ gap itself — that's a review habit, not a mechanical gate.
 suite runs whether or not anyone remembers:
 - **Pre-commit** (husky) auto-formats staged files; **pre-push** runs the full `npm run verify`
   (typecheck + lint + tests) and blocks a red push.
-- **CI** re-runs verify plus every ratchet gate (arch, dupe, clone, dead, dep-graph, spec-gap,
-  incidents, doc-rot) on each PR; auto-merge only fires on green.
+- **CI** re-runs verify on each PR; auto-merge only fires on green. The ratchet gates (arch, dupe,
+  clone, dead, dep-graph, spec-gap, incidents, doc-rot) run inside its test suite as advisory
+  reports that never turn it red (`tests/support/advisory-scan.ts`).
 - Shared test data lives in `tests/support/builders.ts` — specs state only the fields they care
   about. No copy-pasted fixtures.
 
@@ -300,10 +301,10 @@ next version from the Conventional-Commit history, create the **git tag + GitHub
 `package.json` **in the runner's workspace** — which is the same workspace `flyctl deploy` then ships,
 so the deployed app reports the correct version (`src/server/auth/app-version.ts`).
 
-**It deliberately does NOT push the version bump back to `main`.** The `@semantic-release/git` plugin
-was removed because branch protection correctly rejects a direct push (`GH006: Changes must be made
-through a pull request. Required status check "verify" is expected.`) — which silently broke **every
-deploy** for several merges until it was caught. The version of record is the **git tag**, not the
+**It deliberately does NOT push the version bump back to `main`**, so `.releaserc.json` leaves out the
+`@semantic-release/git` plugin: branch protection correctly rejects a direct push (`GH006: Changes must
+be made through a pull request. Required status check "verify" is expected.`), and a release step that
+pushes to `main` fails **every deploy**. The version of record is the **git tag**, not the
 committed `package.json`, so the repo's `package.json` version will lag; that is expected.
 
 To restore the committed bump, the release identity needs a branch-protection bypass on `main` (an
