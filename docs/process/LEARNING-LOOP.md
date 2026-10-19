@@ -142,7 +142,7 @@ ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that i
 flagged, so point it at the loop's own scanner when one already exists rather than double-flag, or
 name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an
 ended State (same rule as `docs/READERS.md`). Keep the column names: `scripts/loop-list-decide.mjs`
-finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
+finds columns by header.
 
 **The checks run themselves** (2026-10-18). On every push to main, `scripts/loop-check.mjs --post`
 (called from `scripts/moneypenny/index.mjs --audit`) posts one comment per running row whose Next
