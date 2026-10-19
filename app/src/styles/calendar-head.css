@@ -101,12 +101,6 @@
   color: var(--text);
   font-weight: 600;
 }
-.held-glyph {
-  font-style: normal;
-  font-size: 9px;
-  vertical-align: 1px;
-  margin-right: 1px;
-}
 .held-event {
   color: var(--text);
 }

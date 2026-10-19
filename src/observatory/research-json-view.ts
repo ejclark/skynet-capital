@@ -54,7 +54,7 @@ interface EventView {
   /** Whether a ledger exists for this event — a dot the calendar can trust. */
   readonly researched: boolean;
   /** Present (and true) only when the date is a cadence estimate, not a confirmed day (#5510) —
-   *  so a calendar draws it hollow (◇) instead of claiming a confirmed date. */
+   *  so a calendar draws it hollow (⬡) instead of claiming a confirmed date. */
   readonly estimated?: true;
 }
 

@@ -24,6 +24,8 @@ export interface SymbolEvent {
   readonly noun: string;
   /** `YYYY-MM-DD`. */
   readonly date: string;
+  /** True when the date is a cadence estimate, not a confirmed day (#5510) — the line draws ⬡. */
+  readonly estimated?: boolean;
 }
 
 export interface SymbolEvents {
@@ -59,7 +61,12 @@ export function symbolEventsIn(
   for (const event of events) {
     if (!inRange(event.date, range)) continue;
     if (symbol !== "" && event.symbols.includes(symbol)) {
-      on.push({ id: event.id, noun: stockNoun(event), date: event.date });
+      on.push({
+        id: event.id,
+        noun: stockNoun(event),
+        date: event.date,
+        ...(event.estimated ? { estimated: true } : {}),
+      });
     } else if (isHeadlineMacro(event)) {
       const noun = MACRO_NOUN.find(([prefix]) => event.id.startsWith(prefix))?.[1] ?? event.title;
       market.push({ id: event.id, noun, date: event.date });
