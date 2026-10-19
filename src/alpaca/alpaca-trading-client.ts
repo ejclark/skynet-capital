@@ -57,6 +57,10 @@ export interface AlpacaPosition {
   readonly asset_class?: string;
 }
 
+/** How many orders a recent-orders read returns — the broker window a boot read banks into the
+ *  journal, and so the span the capital-flow watch can bridge across a restart (#4563). */
+export const RECENT_ORDER_WINDOW = 15;
+
 /** Alpaca order payload (subset). */
 export interface AlpacaOrder {
   readonly id: string;
@@ -180,7 +184,7 @@ export class AlpacaTradingClient {
   }
 
   /** Most-recent orders (any status), newest first — the account's transaction history. */
-  getRecentOrders(limit = 15): Promise<AlpacaOrder[]> {
+  getRecentOrders(limit = RECENT_ORDER_WINDOW): Promise<AlpacaOrder[]> {
     return this.listOrders({ limit });
   }
 

@@ -1,7 +1,7 @@
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
 import {
-  activityFromMessage,
+  activitiesFromMessage,
   fillEventFromMessage,
   type TradeUpdateMessage,
 } from "./trade-updates-stream-events.js";
@@ -100,8 +100,7 @@ export class AlpacaTradeUpdatesStream {
       return;
     }
 
-    const record = activityFromMessage(message, this.config.participantId);
-    if (record) {
+    for (const record of activitiesFromMessage(message, this.config.participantId)) {
       this.config.onActivity?.(record);
     }
     const event = fillEventFromMessage(message, this.config.participantId);
