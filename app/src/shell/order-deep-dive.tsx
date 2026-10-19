@@ -184,8 +184,8 @@ function CashLine({ event }: { readonly event: DeskActivityEvent }): ReactElemen
   );
 }
 
-/** The owner's alone (#885; the home #5043 proposes for the retire rule): which playbook placed it,
- *  what it planned next, and what would retire it — the playbook's words, never a non-owner's. */
+/** The owner's alone (#885, #5043): which playbook placed it, what it planned next, what proves the
+ *  order wrong and what would retire the playbook — the playbook's words, never a non-owner's. */
 function PlaybookBlock({ why }: { readonly why: ActivityReasoning }): ReactElement {
   return (
     <section className="dd-section dd-playbook">
@@ -204,6 +204,8 @@ function PlaybookBlock({ why }: { readonly why: ActivityReasoning }): ReactEleme
           <span className="dd-sub">Proves it wrong</span> {why.invalidator}
         </p>
       ) : null}
+      {/* A whole sentence ("The playbook retires if its net P/L …"), so it takes no label. */}
+      {why.retireRule ? <p className="dd-retire-rule">{why.retireRule}</p> : null}
     </section>
   );
 }

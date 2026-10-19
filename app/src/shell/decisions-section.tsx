@@ -73,7 +73,7 @@ function ResultWords({
  *  (#885: "we do not show what playbooks others are using") — the server already withholds it
  *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. What
  *  the broker said about an order that never traded rides the same gate: a broker's message can
- *  name the account's specifics (#4650). */
+ *  name the account's specifics (#4650) — and so does the playbook's retire rule (#5043). */
 export function OutcomeLine({
   outcome,
   showPlaybook = true,
@@ -100,6 +100,14 @@ export function OutcomeLine({
             <span className="cycle-invalidator">
               {" "}
               — proves it wrong: {outcome.forecast.invalidator}
+            </span>
+          ) : null}
+          {/* The playbook's own falsifier, not the order's (#5043): the owner's, like its chip. A
+              sentence of its own ("The playbook retires if …"), so the order's ends first. */}
+          {showPlaybook && outcome.forecast?.retireRule ? (
+            <span className="cycle-retire-rule">
+              {/[.!?]$/.test(outcome.forecast.invalidator) ? " " : ". "}
+              {outcome.forecast.retireRule}
             </span>
           ) : null}
         </p>

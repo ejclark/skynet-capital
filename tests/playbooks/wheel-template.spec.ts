@@ -148,8 +148,8 @@ describe("wheel — the verdict comes from the pair row", () => {
     const playbook = wheel(CRWV_SETTING, withRow(moved));
     expect(playbook.evidence).toContain("below 0 on 2027-03-15");
     const [put] = playbook.decide?.(market("CRWV"), flat(), calendarFor("CRWV"), "standard") ?? [];
-    expect(put?.forecast?.invalidator).toContain("net P/L is below 0 on 2027-03-15");
-    expect(put?.forecast?.invalidator).not.toContain("2027-01-29");
+    expect(put?.forecast?.retireRule).toContain("net P/L is below 0 on 2027-03-15");
+    expect(put?.forecast?.retireRule).not.toContain("2027-01-29");
   });
 
   it("frames a ✓ pair as the house's research, dated by its shelf date, on its own ticker", () => {
@@ -178,7 +178,7 @@ describe("wheel — the verdict comes from the pair row", () => {
       /put to the bot\. Our study of AMZN: a test of what the data shows\.$/,
     );
     expect(put?.reason).not.toContain("CRWV");
-    expect(put?.forecast?.invalidator).toContain("below 0 on 2027-04-30");
+    expect(put?.forecast?.retireRule).toContain("below 0 on 2027-04-30");
   });
 });
 
