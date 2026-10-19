@@ -94,21 +94,26 @@ into separate lint, typecheck and per-suite calls (#5191).
 
 - **Present mode (Eric is here, dialoguing):** No. The foreground dispatches agents as ready work
   exists, reviews + merges results, and coordinates. The rails above are sufficient.
-- **Unattended continuous mode (Eric is "napping in the skies"):** Yes — a **Routine / scheduled
-  trigger** re-invokes the session to dispatch and review more work when the foreground is idle. That's a
-  larger autonomy step, so it's **governance-gated and built rails-first**, exactly like the
-  autonomous-issue system in [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md). Not enabled by default.
+- **Unattended continuous mode (Eric is "napping in the skies"):** Yes — something must re-invoke work
+  when the foreground is idle. That's a larger autonomy step, so it's **governance-gated and built
+  rails-first**, exactly like the autonomous-issue system in [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md).
+  It is enabled, event-driven rather than a Routine (Eric, 2026-08-19: *"cron jobs are generally
+  terrible … focus on event driven architecture"*, `docs/ROUTINES.md`): Moneypenny's lanes
+  ([`MONEYPENNY.md`](MONEYPENNY.md)) take a label, a comment or a merge to `main` as the tick.
 
 ## Expanding autonomous responsibility (the trust ladder)
 
 Autonomy widens by Eric's explicit decision, one rung at a time, after the prior rung has a track record:
 
-- **Rung 1 (current):** agents build cheap/reversible items → open PRs → Claude foreground verifies +
+- **Rung 1 (reached):** agents build cheap/reversible items → open PRs → Claude foreground verifies +
   merges. Eric watches.
-- **Rung 2:** agents' PRs that pass all nets auto-merge on green (Claude reviews post-hoc), for a
-  narrowed task class.
-- **Rung 3:** a Routine keeps the pipeline running unattended, within the bounded class, with Eric
-  reviewing a digest.
+- **Rung 2 (reached — CLAUDE.md → *Merge posture*, Eric, 2026-08-20):** agents' PRs that pass all nets
+  auto-merge on green (Claude reviews post-hoc), for a narrowed task class — everything but the
+  irreversible carve-outs, which board a held platter.
+- **Rung 3 (reached — CLAUDE.md → *Report at altitude*, Eric, 2026-08-15: _"the more autonomously
+  changes are getting in, the higher altitude of a report out/feedback i need"_):** the pipeline runs
+  unattended, within the bounded class, with Eric reviewing a digest. The re-invoker is Moneypenny's
+  event-driven lanes, not a Routine (see *Reliability* above).
 
 Every rung keeps the irreversible class Eric-gated and the overlapping nets intact. The ladder is how
 "confidence to expand autonomous responsibilities" is *earned*, not assumed.
