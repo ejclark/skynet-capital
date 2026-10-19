@@ -18,6 +18,7 @@ function bridgeClient(
     undefined,
     undefined,
     undefined,
+    undefined,
     LOADED_SUITE_BRIDGE_BUDGET,
   );
 }
@@ -127,6 +128,7 @@ describe("bot-controls bridge client", () => {
           // A real budget, so the healthy seeding fetch has ~1s of headroom and is never the
           // tight one; the stall then overshoots it by a fixed 500ms. A busy-wait blocks the loop,
           // and Node runs the overdue abort timer before it reads the reply.
+          undefined,
           { timeoutMs: 1_000 },
         );
         expect(await client.fetchOnce()).toEqual({ bots: { sauron: { suspended: true } } });

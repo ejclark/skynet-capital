@@ -3,7 +3,7 @@ import type { Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
 import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import type { ConvictionGateDeps } from "../../src/playbooks/with-conviction-gate.js";
-import { tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
+import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import {
   aContext,
@@ -12,6 +12,7 @@ import {
   aSubscription,
   withOptionQuotes,
 } from "../support/builders.js";
+import { aMemberConviction } from "../support/member-conviction.js";
 
 /**
  * #4469 criterion 12 on the live wiring: the gate sits inside `tradingRoster`, so the wheel's put
@@ -60,5 +61,58 @@ describe("tradingRoster — the conviction gate on the live path", () => {
     const r = roster(() => ({ realizedPl: -10, putsClosed: 0, putsAssigned: 0 }));
     expect(sold(r)).toEqual([]);
     expect(r.persona.optionDemand).toBeDefined();
+  });
+});
+
+/**
+ * #5482 slice 6c: a member's handed-over view reaches a bot as its roster's `convictionOf`, and the
+ * narrowing the roster was built with and the check the gate reads come from that one lookup.
+ */
+describe("a bot's rosters under a member's view", () => {
+  const view = aMemberConviction({ checkOn: "2026-11-18" });
+  const lookup = (id: string) => (id === view.id ? view : undefined);
+  const pointed = [aSubscription("sauron", "CRWV-WHEEL", { convictionId: view.id })];
+  const silence = { log: console.log, error: console.error, warn: console.warn };
+  beforeEach(() => {
+    console.log = () => undefined;
+    console.error = () => undefined;
+    console.warn = () => undefined;
+  });
+  afterEach(() => {
+    Object.assign(console, silence);
+  });
+
+  it("narrows the pair the view steers, and carries the lookup on the roster", () => {
+    const roster = resolveBotRoster(bot, [], pointed, undefined, lookup);
+    const [wheel] = roster.enabled;
+    expect(wheel?.playbook.id).toBe("CRWV-WHEEL");
+    expect(wheel?.playbook).not.toBe(CRWV_WHEEL);
+    expect(wheel?.exitsOnly).toBeUndefined();
+    expect(roster.convictionOf).toBe(lookup);
+  });
+
+  it("opens nothing on the pair while the view has not reached this bot", () => {
+    const roster = resolveBotRoster(bot, [], pointed);
+    expect(roster.enabled).toEqual([{ playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true }]);
+  });
+
+  it("stops new entries on the view's check day when the pair's book failed it", () => {
+    const unnarrowed = aMemberConviction({ checkOn: "2026-11-18", narrowings: [] });
+    const r = (realizedPl: number) =>
+      tradingRoster(
+        {
+          bot,
+          subscriptions: pointed,
+          enabled: [{ playbook: CRWV_WHEEL, mode: "standard" }],
+          convictionOf: (id) => (id === unnarrowed.id ? unnarrowed : undefined),
+        },
+        { maxPositionPct: 0.03 },
+        undefined,
+        { ledgerOf: () => ({ realizedPl, putsClosed: 0, putsAssigned: 0 }) },
+      );
+    const sold = (t: ReturnType<typeof r>) =>
+      t.persona.decide(market(), flat()).filter((i) => i.playbookId === "CRWV-WHEEL");
+    expect(sold(r(230))).toHaveLength(1);
+    expect(sold(r(-10))).toEqual([]);
   });
 });

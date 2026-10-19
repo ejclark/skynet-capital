@@ -58,6 +58,7 @@ describe("promoted plays over the bridge", () => {
         undefined,
         undefined,
         (wire) => holder.accept(wire),
+        undefined,
         LOADED_SUITE_BRIDGE_BUDGET,
       );
 
@@ -97,6 +98,7 @@ describe("promoted plays over the bridge", () => {
         undefined,
         undefined,
         (wire) => holder.accept(wire),
+        undefined,
         LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.fetchOnce();

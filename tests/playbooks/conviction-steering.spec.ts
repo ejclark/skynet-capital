@@ -435,11 +435,18 @@ describe("a subscription runs the playbook its conviction narrows", () => {
     expect(otherSub?.playbook).toBe(CRWV_WHEEL);
   });
 
-  it("leaves a pointer the store cannot honour alone: no record, or one that does not steer the pair", () => {
-    expect(
-      steeredBy(CRWV_WHEEL, aSubscription(ACCOUNT, "CRWV-WHEEL", { convictionId: "nope" }))
-        .playbook,
-    ).toBe(CRWV_WHEEL);
+  it("runs a pair exits-only while its pointer names a record these bots do not hold (#5482 slice 6c)", () => {
+    // A member's record arrives over the poll, and a pointer at one can be read before it is: its
+    // narrowings are unknown, so the pair opens nothing rather than trade wider than its owner set.
+    const sub = aSubscription(ACCOUNT, "CRWV-WHEEL", { convictionId: "nope" });
+    const reason = 'points at conviction "nope", which these bots do not hold';
+    expect(steeredBy(CRWV_WHEEL, sub)).toEqual({ playbook: CRWV_WHEEL, refused: reason });
+    const roster = subscriptionRoster([sub]);
+    expect(roster.enabled).toEqual([{ playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true }]);
+    expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
+  });
+
+  it("leaves a pointer at a record that does not steer the pair alone", () => {
     const lookup = () => ({ ...AI_DIP_2026_10, steers: ["CRWV-LONG-CALL"] });
     expect(steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookup).playbook).toBe(CRWV_WHEEL);
   });

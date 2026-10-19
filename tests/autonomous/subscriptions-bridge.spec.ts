@@ -68,6 +68,7 @@ describe("the Playbook Store bridge, end to end", () => {
           (snapshot) => sync.accept(snapshot),
           undefined,
           undefined,
+          undefined,
           LOADED_SUITE_BRIDGE_BUDGET,
         );
 
@@ -103,6 +104,7 @@ describe("the Playbook Store bridge, end to end", () => {
         (snapshot: SubscriptionsSnapshot) => sync.accept(snapshot),
         undefined,
         undefined,
+        undefined,
         LOADED_SUITE_BRIDGE_BUDGET,
       );
 
@@ -131,6 +133,7 @@ describe("the Playbook Store bridge, end to end", () => {
           (snapshot) => sync.accept(snapshot),
           undefined,
           undefined,
+          undefined,
           LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.fetchOnce();
@@ -146,6 +149,7 @@ describe("the Playbook Store bridge, end to end", () => {
       undefined,
       undefined,
       (snapshot) => sync.accept(snapshot),
+      undefined,
       undefined,
       undefined,
       LOADED_SUITE_BRIDGE_BUDGET,
