@@ -71,11 +71,18 @@ in code — only as a host secret, exactly like the Alpaca keys.
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
-   issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
-   label, the same retry path already documented in `scripts/moneypenny/index.mjs`. Deliberately
-   routed through this structured, envelope-bound lane rather than the free-form `claude.yml`
-   comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
-   against the member's own logged filings before anything posts.
+   issue body, which the build lane parses). On a filing that is already `ready` it also restarts
+   the build by removing and re-adding `ready` — the label that starts the claim since #3912, the
+   claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
+   and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
+   which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
+   rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
+   `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
+   and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
+   so someone can re-add it by hand. Deliberately routed through
+   this structured, envelope-bound lane rather than the free-form `claude.yml` comment-steering
+   lane — see `src/server/feedback-followup.ts` for why. Ownership is checked against the member's
+   own logged filings before anything posts.
 
 ## What the lane will build
 
