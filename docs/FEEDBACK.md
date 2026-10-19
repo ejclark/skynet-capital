@@ -72,7 +72,7 @@ in code — only as a host secret, exactly like the Alpaca keys.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
    issue body, which the build lane parses). On a filing that is already `ready` it also restarts
-   the build by removing and re-adding `ready` — the label that starts the claim since #3912, the
+   the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
    claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
    and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
    which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
@@ -100,7 +100,7 @@ until something applies `ready`: Eric's own call, or a triage pass's clear-path 
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
-fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
+fresh Claude session. What `ready` means, mechanically and for every puller — the six conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
 [`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in
