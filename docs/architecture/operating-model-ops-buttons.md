@@ -2,7 +2,7 @@
 
 **Technology:** GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environment (required reviewers)
 
-**Responsibility:** Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-beta-forcing, set-hardcore, set-cond-scout-universe), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)
+**Responsibility:** Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-beta-forcing), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)
 
 **Code roots:** `.github/workflows/autonomy-ops.yml` · `.github/workflows/fly-logs.yml` · `.github/workflows/companion-eval.yml`
 
@@ -17,4 +17,4 @@
 | From | To | What | How | Refuter |
 |---|---|---|---|---|
 | eric | ops_buttons | Approves and runs workflow_dispatch buttons | autonomy-ops Environment required reviewers | grounded — Relabel it as: eric → ops_buttons "Approves (required reviewer on the autonomy-ops Environment) and can dispatch autonomy-ops.yml / companion-eval.yml". Sessions may trigger the dispatch, but a run waits until Eric appro |
-| ops_buttons | bots | flip-mode, set-playbooks, set-hardcore, logs | flyctl secrets set -a skynet-capital-bots | grounded — Label the edge "GitHub Actions workflow_dispatch -> Fly API (flyctl secrets set / logs), gated by the autonomy-ops environment reviewers" rather than implying a direct call to bots. Optionally add set-beta-forcing, statu |
+| ops_buttons | bots | flip-mode, set-beta-forcing, logs | flyctl secrets set -a skynet-capital-bots | grounded — Label the edge "GitHub Actions workflow_dispatch -> Fly API (flyctl secrets set / logs), gated by the autonomy-ops environment reviewers" rather than implying a direct call to bots. Optionally add set-beta-forcing, statu |
