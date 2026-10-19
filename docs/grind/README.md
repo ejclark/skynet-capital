@@ -299,9 +299,7 @@ field, `{prev}` the whole JSON), so the chain ends with:
 
 A `done` with no branch on origin makes that command fail, which reports `blocked` — fail-closed.
 A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
-chore above that pushes a branch reports it and declares this command as its `outcomeCheck`; the
-chores whose deliverable is an issue comment check for that comment's marker instead (*Hazards*,
-below), and `haiku-eval-replay`, which edits nothing, declares none.
+chore above reports its branch and expects this trailing step; the four calling conventions say so.
 
 ### What a run reports back — print the ledger, don't rewrite it
 
