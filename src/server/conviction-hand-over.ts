@@ -1,7 +1,7 @@
 import { MAX_STEERED_ACCOUNTS, type WiredConviction } from "../autonomous/convictions-wire.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
-import { ConvictionStore } from "../playbooks/conviction-store.js";
+import { CONVICTIONS, ConvictionStore } from "../playbooks/conviction-store.js";
 import { findPair, pairName } from "../playbooks/pair-table.js";
 import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
@@ -62,11 +62,8 @@ export function handOverPlan(
   const steers = new Set(conviction.steers);
   const accounts = owned.filter((id) => (state[id] ?? []).some((s) => steers.has(s.playbookId)));
   const run = new Set(owned.flatMap((id) => (state[id] ?? []).map((s) => s.playbookId)));
-  const refused = new ConvictionStore([...SEEDED_CONVICTIONS, conviction]).refused.find(
-    (r) => r.id === conviction.id,
-  );
   const problems = [
-    ...(refused?.problems ?? []),
+    ...refusedNow(conviction),
     ...conviction.steers
       .filter((pair) => !run.has(pair))
       .map(
@@ -94,6 +91,13 @@ export function handOverPlan(
     : { ok: false, problems: ["none of your bots runs a pair this view steers"] };
 }
 
+/** What the store's rules refuse in this view today, over the seeded records — empty when it keeps
+ *  them. A playbook's bounds may have moved since the view was saved or handed over. */
+export function refusedNow(conviction: Conviction): readonly string[] {
+  const store = new ConvictionStore([...SEEDED_CONVICTIONS, conviction]);
+  return store.refused.find((r) => r.id === conviction.id)?.problems ?? [];
+}
+
 /** The pairs on these accounts whose subscription points at this view right now — what the row
  *  says it steers, read from the pointers rather than assumed from the status. */
 export function pointedPairs(
@@ -116,23 +120,23 @@ export interface TakeOver extends NamedPair {
 }
 
 /** What handing this view over would take over: the pairs it steers on these accounts that point
- *  at another view now (the seeded AI-dip view, say). */
+ *  at a seeded view now (the AI-dip view, say). A pair another view of the member's steers is not
+ *  listed: the hand-over refuses that one (`handOverPlan`), so promising it would be false. */
 export function takesOver(
   conviction: Conviction,
   owned: readonly string[],
   state: SubscriptionsState,
-  held: ConvictionStore,
+  seeded: ConvictionStore = CONVICTIONS,
 ): readonly TakeOver[] {
   const seen = new Map<string, TakeOver>();
   for (const account of owned) {
     for (const sub of state[account] ?? []) {
-      const from = sub.convictionId;
-      if (!(from && from !== conviction.id && conviction.steers.includes(sub.playbookId))) continue;
-      const record = held.get(from);
+      const record = sub.convictionId === undefined ? undefined : seeded.get(sub.convictionId);
+      if (!(record && conviction.steers.includes(sub.playbookId))) continue;
       seen.set(sub.playbookId, {
         pair: sub.playbookId,
         name: nameOf(sub.playbookId),
-        from: record ? titleOf(record) : from,
+        from: titleOf(record),
       });
     }
   }
@@ -151,8 +155,15 @@ export function heldConvictions(members: MemberConvictionStore | undefined): Con
 /**
  * Apply the pointer rule now, after a hand-over, take-back, edit or delete. `gone` names a view id
  * just removed from the store (deleted, or renamed by an edit): no longer in the store's ids, a
- * pointer at it would otherwise be kept, so it is named for this one pass.
+ * pointer at it would otherwise be kept, so it is named for this one pass — and, since no later
+ * poll can name it, the route refuses such a write while the subscriptions file cannot be read
+ * whole (`canRepoint`), rather than leave a pointer behind that nothing would drop.
  */
+/** The subscriptions file reads whole, so a pointer pass can rewrite it. */
+export function canRepoint(subscriptions: SubscriptionStore | undefined): boolean {
+  return subscriptions === undefined || subscriptions.loadIfReadable() !== undefined;
+}
+
 export function repoint(
   subscriptions: SubscriptionStore,
   members: MemberConvictionStore,

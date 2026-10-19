@@ -68,13 +68,17 @@ export function ConvictionSteer({
 
   if (view.status === "steering") {
     const pairs = (view.steering ?? []).map((p) => p.name);
+    const refused = view.refused ?? [];
     return (
       <div className="cvf-steer">
         <p className="cvf-steer-line">
-          {pairs.length > 0
-            ? `Your bots run ${joined(pairs)} inside its settings.`
-            : "Handed over. Your bots pick it up on their next check-in."}
+          {refused.length > 0
+            ? "Your bots can't steer by it now, so its pairs run as they did before. Take it back and change it."
+            : pairs.length > 0
+              ? `Your bots run ${joined(pairs)} inside its settings.`
+              : "Handed over. Your bots pick it up on their next check-in."}
         </p>
+        <Problems said={refused} />
         <button
           type="button"
           className="btn mc-btn"

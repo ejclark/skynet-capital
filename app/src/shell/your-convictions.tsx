@@ -58,7 +58,11 @@ function ViewRow({
           </span>
           <span className="pbl-meta">
             <span className="pbl-status">
-              {view.status === "steering" ? (
+              {view.status === "steering" && (view.refused?.length ?? 0) > 0 ? (
+                <>
+                  <span aria-hidden="true">✕</span> Handed over · can't steer now
+                </>
+              ) : view.status === "steering" ? (
                 <>
                   <span aria-hidden="true">●</span> Steering your bots ·{" "}
                   {pairsWord(view.steering?.length ?? 0)}

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,6 +12,7 @@ import { MemberConvictionStore } from "../../src/server/member-conviction-store.
 import {
   DRAFT_NOTE,
   STEERING_NOTE,
+  SUBSCRIPTIONS_UNREADABLE,
   serveMemberConvictionsApi,
   TOOK_BACK_NOTE,
 } from "../../src/server/member-convictions-api-routes.js";
@@ -238,5 +239,45 @@ describe("handing a member's view to their bots", () => {
     // Grace's bot is not steered by it, so her row shows no view of Ada's.
     const [onBanker] = withOwnSteering(rows, subs.load().banker ?? [], () => undefined);
     expect(onBanker?.pairs[0]).toEqual({ id: "CRWV-WHEEL" });
+  });
+
+  it("never promises to take over a pair another view of theirs steers, since that is refused", async () => {
+    await save({ draft: draft() });
+    await save({ draft: draft("CRWV second look") });
+    await handOver();
+    const mine = await call("/api/convictions/mine", get());
+    const second = mine.convictions.find(
+      (c: { conviction: { id: string } }) => c.conviction.id === "crwv-second-look-2026-10",
+    );
+    expect(second.takesOver).toBeUndefined();
+  });
+
+  it("stops pointing at a handed-over view the store's rules refuse today, and the row says why", async () => {
+    await save({ draft: draft() });
+    await handOver();
+    // A playbook's bounds moved under it: the record now asks for more than the wheel allows.
+    const memberKey = opaqueMemberId("ada@example.com");
+    const raw = JSON.parse(await readFile(join(dir, "member-convictions.json"), "utf8"));
+    raw[memberKey][0].conviction.narrowings = [
+      { pair: "CRWV-WHEEL", fromClaims: [], narrow: [{ kind: "dte", max: 400 }] },
+    ];
+    await writeFile(join(dir, "member-convictions.json"), JSON.stringify(raw));
+    expect(store.pointers().heldBy("sauron")).toEqual([]);
+    expect(pointConvictions(subs, NOW, store.pointers())).toEqual(["sauron/CRWV-WHEEL"]);
+    expect(pointer("sauron")).toBeUndefined();
+    const mine = await call("/api/convictions/mine", get());
+    expect(mine.convictions[0].refused.length).toBeGreaterThan(0);
+  });
+
+  it("refuses a delete or an edit while the subscriptions file can't be read whole, so no pointer is left behind", async () => {
+    await save({ draft: draft() });
+    await handOver();
+    await writeFile(join(dir, "subscriptions.json"), "{ torn");
+    const deleted = await call("/api/convictions/delete", post({ id: ID }));
+    expect(deleted).toEqual({ ok: false, error: SUBSCRIPTIONS_UNREADABLE });
+    const edited = await save({ draft: draft("CRWV floor, revised"), replaceId: ID });
+    // Refused either way: an unreadable file also reads as no subscription to the pair.
+    expect(edited.ok).toBe(false);
+    expect(store.handedOver().map((w) => w.conviction.id)).toEqual([ID]);
   });
 });

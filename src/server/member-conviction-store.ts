@@ -1,6 +1,8 @@
 import { parseSteeredAccounts, type WiredConviction } from "../autonomous/convictions-wire.js";
 import { parseStoredConviction } from "../playbooks/conviction-parse.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
+import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
+import { ConvictionStore } from "../playbooks/conviction-store.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
@@ -129,14 +131,21 @@ export class MemberConvictionStore {
     return handedOverIn(this.load());
   }
 
-  /** The pointer rule's read (`conviction-pointer.ts`): the views held per account, and every id.
-   *  One read of the file, so both halves describe the same moment. */
+  /**
+   * The pointer rule's read (`conviction-pointer.ts`): the views held per account, and every id.
+   * One read of the file, so both halves describe the same moment. A view is held only while the
+   * store's rules keep it — the bots' own judgment (`autonomous-convictions.ts`), so a view refused
+   * after a playbook's bounds moved stops being pointed at and the seeded match runs again, rather
+   * than leaving a pointer the bots cannot resolve.
+   */
   pointers(): MemberPointers {
     const state = this.load();
     const wired = handedOverIn(state);
+    const kept = new ConvictionStore([...SEEDED_CONVICTIONS, ...wired.map((w) => w.conviction)]);
+    const held = wired.filter((w) => kept.get(w.conviction.id) === w.conviction);
     return {
       heldBy: (accountId) =>
-        wired.filter((w) => w.accounts.includes(accountId)).map((w) => w.conviction),
+        held.filter((w) => w.accounts.includes(accountId)).map((w) => w.conviction),
       ids: new Set(Object.values(state).flatMap((records) => records.map((r) => r.conviction.id))),
     };
   }

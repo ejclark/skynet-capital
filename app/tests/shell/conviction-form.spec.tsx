@@ -317,4 +317,20 @@ describe("YourConvictions", () => {
       { url: "/api/convictions/take-back", body: { id: "crwv-floor-2026-10" } },
     ]);
   });
+
+  it("says plainly when a handed-over view can't steer now, and why", async () => {
+    const refused = {
+      ...SAVED,
+      status: "steering",
+      accounts: ["sauron"],
+      steering: [],
+      refused: ["narrows CRWV-WHEEL past its playbook's room"],
+    };
+    mine = { label: "SIM", note: "", convictions: [refused], steerable: [WHEEL] };
+    mount();
+    const row = await screen.findByRole("button", { name: "Change CRWV floor" });
+    expect(within(row).getByText(/Handed over · can't steer now/)).toBeTruthy();
+    expect(screen.getByText(/Your bots can't steer by it now/)).toBeTruthy();
+    expect(screen.getByText("narrows CRWV-WHEEL past its playbook's room")).toBeTruthy();
+  });
 });

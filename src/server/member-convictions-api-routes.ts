@@ -12,10 +12,11 @@ import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js"
 import type { Session } from "./auth/session.js";
 import { creditFor } from "./authored-plays-api-routes.js";
 import {
+  canRepoint,
   handOverPlan,
-  heldConvictions,
   type NamedPair,
   pointedPairs,
+  refusedNow,
   repoint,
   type TakeOver,
   takesOver,
@@ -78,6 +79,10 @@ export const STEERING_NOTE =
 export const TOOK_BACK_NOTE =
   "Saved as a draft, so your bots no longer steer by it. Hand it over again when it reads right.";
 
+/** Why a delete or an edit waits: the pointers at the old view could not be dropped safely. */
+export const SUBSCRIPTIONS_UNREADABLE =
+  "Your bots' playbook settings couldn't be read in full just now, so nothing was changed. Try again shortly.";
+
 /** Said on `/mine`: both states at once, for a screen that lists drafts and steering views. */
 export const MINE_NOTE =
   "A draft steers nothing and only you see it. A view you hand to your bots narrows the pairs it steers on them until you take it back.";
@@ -95,6 +100,9 @@ export interface MemberConvictionView extends MemberConvictionRecord {
   readonly card: ReturnType<typeof convictionCard>;
   /** A steering view: the pairs its owner's bots point at it right now. */
   readonly steering?: readonly NamedPair[];
+  /** A steering view the store's rules refuse today (a playbook's bounds moved): why, in words. The
+   *  bots do not steer by it, and its pairs run as they did before it was handed over. */
+  readonly refused?: readonly string[];
   /** A draft: the pairs handing it over would take over from another view. */
   readonly takesOver?: readonly TakeOver[];
 }
@@ -166,6 +174,10 @@ async function draftOrSave(
       sendJson(res, 400, { error: "malformed delete body" });
       return;
     }
+    if (!canRepoint(config.subscriptions)) {
+      sendJson(res, 200, { ok: false, error: SUBSCRIPTIONS_UNREADABLE });
+      return;
+    }
     const done = config.memberConvictions?.delete(opaqueMemberId(session.email), id);
     if (done?.ok) repointAfter(config, id);
     sendJson(res, 200, done && !done.ok ? { ok: false, error: done.reason } : { ok: true });
@@ -192,6 +204,10 @@ async function draftOrSave(
   const store = config.memberConvictions;
   if (!store) {
     sendJson(res, 200, { ok: false, error: "Convictions aren't wired in this deployment." });
+    return;
+  }
+  if (replaceId && !canRepoint(config.subscriptions)) {
+    sendJson(res, 200, { ok: false, label: "SIM", problems: [SUBSCRIPTIONS_UNREADABLE] });
     return;
   }
   const now = config.now?.() ?? new Date();
@@ -277,13 +293,14 @@ function mine(config: DashboardServerConfig, session: Session) {
   const records = config.memberConvictions?.list(opaqueMemberId(session.email)) ?? [];
   const owned = resolveOwnedIds(session, config);
   const state = config.subscriptions?.load() ?? {};
-  const held = heldConvictions(config.memberConvictions);
   const convictions: MemberConvictionView[] = records.map((record) => {
     const card = convictionCard(record.conviction);
     if (record.status === "steering") {
-      return { ...record, card, steering: pointedPairs(record.conviction.id, owned, state) };
+      const steering = pointedPairs(record.conviction.id, owned, state);
+      const refused = refusedNow(record.conviction);
+      return { ...record, card, steering, ...(refused.length > 0 ? { refused } : {}) };
     }
-    const over = takesOver(record.conviction, owned, state, held);
+    const over = takesOver(record.conviction, owned, state);
     return { ...record, card, ...(over.length > 0 ? { takesOver: over } : {}) };
   });
   const steerable = steerablePairs(config, session);
