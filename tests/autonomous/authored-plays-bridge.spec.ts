@@ -9,6 +9,7 @@ import { authoredPlaysHolder } from "../../src/scripts/autonomous-authored-plays
 import { AuthoredPlayStore } from "../../src/server/authored-play-store.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 import { aSpec } from "../support/authored-shadow.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 /**
  * THE PROMOTED PLAYS, ACROSS THE BRIDGE (#5457 slice 3), over a real socket: the app's store →
@@ -57,6 +58,7 @@ describe("promoted plays over the bridge", () => {
         undefined,
         undefined,
         (wire) => holder.accept(wire),
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
 
       await client.fetchOnce();
@@ -95,6 +97,7 @@ describe("promoted plays over the bridge", () => {
         undefined,
         undefined,
         (wire) => holder.accept(wire),
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.fetchOnce();
       expect(holder.rosterFor("futurist").plays).toHaveLength(1);
