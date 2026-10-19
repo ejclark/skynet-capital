@@ -52,8 +52,8 @@ and internal job id say `e2e`; `integration tests` is the CI display name alone.
 `webServer` builds the checked-out commit fresh and boots it as a throwaway local server against
 static `fixtures/offline/**` data, on both its CI triggers (pull request and push to `main`). It
 is always testing a candidate build, never the running Fly.dev deployment — `scripts/smoke.sh` in
-the `deploy` job is the only check that touches the real deployed app, and it runs separately,
-post-deploy.
+the `deploy` job and `scripts/smoke-bots.sh` in `deploy-bots` are the only checks that touch the
+real deployed apps, and they run separately, post-deploy.
 
 1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
    `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
