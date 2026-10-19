@@ -46,9 +46,10 @@ Two things this doc states rather than asserts, because the repo alone can't set
 - **Whether hardcore mode is currently armed.** `fly.bots.toml`'s checked-in `[env]` block does not
   set `SKYNET_HARDCORE_BOTS` at all — `run-autonomous.ts`'s own docblock claims "Currently: sauron,"
   but that's a comment in code, not a live read of the deployed process. Per that same docblock,
-  hardcore is "flip[ped] via autonomy-ops only," which sets a Fly secret; a Fly secret of the same
-  name outranks `[env]` and is invisible from this repo. This doc cannot say whether hardcore is
-  armed right now.
+  the owner's per-bot hardcore switch in Mission Control (`/controls`) wins over the env var and is
+  read at every `/controls` poll; that switch lives in the controls store, and a Fly secret of the
+  same name outranks `[env]` — neither is visible from this repo. This doc cannot say whether
+  hardcore is armed right now.
 - **Whether Sauron has ever traded live, beyond 2026-09-22.** The repo's checked-in default is
   `SKYNET_AUTONOMOUS_MODE = "observe"` (decide + log, place nothing) — but as with the hardcore
   flag, a Fly secret can override this and would not show up here. Separately from the repo: account-
