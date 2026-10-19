@@ -202,7 +202,10 @@ build**. A label plus a check-in closes it without new infrastructure:
    can build the remainder. It costs Eric nothing and never routes to him.
 2. **An interactive session polls it.** The check-in's whole first act is `gh issue list --label
    needs-session --state open`; an empty result ends the turn (ROUTINES.md, *no-op must be free* —
-   one `gh` call). Whatever comes back that is in-envelope, it builds.
+   one `gh` call). What comes back it builds through `/work-issues`, whose queue admits
+   `needs-session` for a live session under the same Ready rule as every other puller, in-envelope
+   only (`docs/ISSUES.md` → *Ready — the one definition*, `notPullableReason` in
+   `scripts/moneypenny/labels.mjs`).
 3. **Cadence follows what's in flight.** 15–20 minutes while any `feedback/*` build or
    `claim/feedback-*` lease is live, 60 otherwise, and **none when nothing is open**. Short beats
    long on cost as well as latency: within the plan's included usage the main conversation holds a
