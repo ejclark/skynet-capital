@@ -1,238 +1,121 @@
 /**
- * CLI: confirm forward-looking earnings-print dates against a live calendar source, and rewrite
- * `UPCOMING_PRINTS` in earnings-calendar.ts in place. This is the automated half of the manual
- * step done by hand for NVDA — closing docs/plans/trade-playbooks.md's
- * "how does research get applied automatically" gap without crossing the irreversible-class
- * boundary: this script only ever flips `estimate` → `confirmed` in a checked-in, reviewed table.
- * It never touches credentials, never places an order, and its output ships as an ordinary
- * auto-merge-on-green PR exactly like any other plumbing change (docs/COACHES.md doctrine).
+ * CLI: keep the forward earnings calendar current, rewriting `UPCOMING_PRINTS` in
+ * earnings-calendar.ts in place (#4479). Two jobs, both in `src/research/print-date-refresh.ts`:
+ *   - confirm a near estimate when Nasdaq's earnings-date page calls it the company's date (`CAL:`
+ *     source, one hop from the announcement — distinct from a hand-verified `IR:` citation), never
+ *     when it is Zacks' algorithmic guess;
+ *   - move an estimate to a company date off it (still an estimate, window over both days,
+ *     `ledgerId` kept) and report it — with every other company date it did not confirm — as
+ *     NEEDS IR;
+ *   - add a cadence estimate for a playbook symbol (S1-NVDA, G1-GOOG) with no print in ~100 days.
  *
- * SOURCE: Nasdaq's public earnings-calendar endpoint (api.nasdaq.com/api/calendar/earnings),
- * queried by DATE (not by symbol — there is no symbol-indexed lookup), so this fetches one
- * response per candidate date and cross-references every still-`estimate` symbol against it.
- * It is a third-party AGGREGATOR of company announcements, not the announcement itself — hence
- * the `CAL:` source prefix (distinct from a hand-verified `IR:` citation). Requires browser-like
- * headers and HTTP/1.1; a bare fetch gets an empty/blocked response (verified live, 2026-08-12).
+ * It only ever edits a checked-in, reviewed table — never credentials, never an order — and its
+ * output ships as an ordinary auto-merge-on-green PR, like any other plumbing change.
+ *
+ * SOURCE: api.nasdaq.com/api/analyst/<SYM>/earnings-date, one request per candidate symbol. It
+ * replaced the by-date calendar (api/calendar/earnings), which lists confirmed dates and Zacks'
+ * guesses alike — so on 2026-10-19 it would have "confirmed" NVDA's and CRWV's estimates. Wants
+ * browser-like headers (verified live 2026-08-12; Node's fetch answered 200 on 2026-10-19).
  *
  * Usage:
- *   tsx src/scripts/confirm-print-dates.ts            # confirms + rewrites the file
+ *   tsx src/scripts/confirm-print-dates.ts            # confirms/fills + rewrites the file
  *   tsx src/scripts/confirm-print-dates.ts --dry-run   # reports what WOULD change, writes nothing
  *
- * Scope discipline: only attempts confirmation for prints within CONFIRM_LOOKAHEAD_DAYS — mega-cap
- * IR rarely announces a call date more than ~4-5 weeks out, so scanning a name 10 weeks away just
- * burns requests for a near-certain miss. Already-`confirmed` entries are left untouched.
+ * Exit 2 when every fetch failed (nothing was checked); exit 3 when a playbook symbol's fetch
+ * failed (the print this exists for went unchecked). The last line is always `outcome: <word>`
+ * (`unreachable` · `needs-ir` · `found` · `none`), also written to `$GITHUB_OUTPUT` when a job runs it.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { G1_GOOG, S1_NVDA } from "../playbooks/registry.js";
+import {
+  cadenceFills,
+  fetchEarningsDate,
+  type NeedsIr,
+  refreshExitCode,
+  rewriteCalendar,
+  runConfirm,
+} from "../research/print-date-refresh.js";
 
 const CALENDAR_FILE = join(process.cwd(), "src", "domain", "earnings-calendar.ts");
-const CACHE = join(process.cwd(), "node_modules", ".cache", "confirm-print-dates");
-const CONFIRM_LOOKAHEAD_DAYS = 35;
-const SEARCH_WINDOW_DAYS = 7; // +/- around the current estimate
-
-interface NasdaqRow {
-  readonly symbol: string;
-  readonly time: string; // e.g. "time-after-hours" | "time-pre-market" | "time-not-supplied"
-}
-
-/** All calendar-day date strings from `date - window` to `date + window`, inclusive. */
-function datesAround(date: string, window: number): string[] {
-  const center = new Date(`${date}T00:00:00Z`);
-  const out: string[] = [];
-  for (let offset = -window; offset <= window; offset++) {
-    const d = new Date(center);
-    d.setUTCDate(d.getUTCDate() + offset);
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-}
+const PLAYBOOK_SYMBOLS = [...S1_NVDA.symbols, ...G1_GOOG.symbols];
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Nasdaq's calendar for one date, cached — a re-run of this script costs nothing extra.
- * Nasdaq's endpoint is flaky under back-to-back requests (verified live: a burst of ~8 rapid
- * calls drew a 503) — retried with backoff, and a persistent failure returns `[]` rather than
- * aborting the whole run: one date's outage should not block confirming every OTHER symbol.
- */
-async function fetchDay(date: string): Promise<NasdaqRow[]> {
-  mkdirSync(CACHE, { recursive: true });
-  const cachePath = join(CACHE, `${date}.json`);
-  if (existsSync(cachePath)) {
-    return JSON.parse(readFileSync(cachePath, "utf8"));
-  }
-  fetchOutcomes.attempts++;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch(`https://api.nasdaq.com/api/calendar/earnings?date=${date}`, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; skynet-capital research; ejclark83@gmail.com)",
-          Accept: "application/json, text/plain, */*",
-          Origin: "https://www.nasdaq.com",
-          Referer: "https://www.nasdaq.com/",
-        },
-      });
-      if (!res.ok) {
-        throw new Error(`${res.status} ${res.statusText}`);
-      }
-      const body = (await res.json()) as { data?: { rows?: NasdaqRow[] } };
-      const rows = body.data?.rows ?? [];
-      writeFileSync(cachePath, JSON.stringify(rows));
-      await sleep(300); // be polite between successful calls too
-      return rows;
-    } catch (error) {
-      console.warn(`[confirm-print-dates] ${date} attempt ${attempt} failed: ${error}`);
-      if (attempt < 3) {
-        await sleep(attempt * 1000);
-      }
-    }
-  }
-  console.warn(`[confirm-print-dates] ${date}: giving up after 3 attempts — treating as no data.`);
-  fetchOutcomes.failures++;
-  return [];
-}
-
-interface Confirmation {
-  readonly symbol: string;
-  readonly date: string;
-  readonly source: string;
-}
-
-/** Mutated by fetchDay — lets main() tell "the source was unreachable" apart from "checked,
- *  nothing new". A run that silently treated a block as an empty answer would be worse than one
- *  that fails loudly: a scheduled caller could mistake "Nasdaq is blocking us" for "all clear". */
-const fetchOutcomes = { attempts: 0, failures: 0 };
-
-/** For one estimate, scan its search window and return a confirmation if Nasdaq lists it. */
-async function confirm(print: EarningsPrint, today: string): Promise<Confirmation | undefined> {
-  for (const date of datesAround(print.date, SEARCH_WINDOW_DAYS)) {
-    const rows = await fetchDay(date);
-    const hit = rows.find((r) => r.symbol === print.symbol);
-    if (hit) {
-      return {
-        symbol: print.symbol,
-        date,
-        source: `CAL: Nasdaq earnings calendar (api.nasdaq.com/api/calendar/earnings), checked ${today} — ${hit.time.replace("time-", "").replace(/-/g, " ")}`,
-      };
-    }
-  }
-  return undefined;
-}
-
-/** Serialize one EarningsPrint back to the file's object-literal style; biome reformats after. */
-function serialize(p: EarningsPrint): string {
-  return `{ symbol: "${p.symbol}", date: "${p.date}", status: "${p.status}", source: "${p.source.replace(/"/g, '\\"')}" }`;
-}
-
-/**
- * Replace ONLY the changed entries inside the checked-in UPCOMING_PRINTS array literal,
- * leaving every other line of the file (comments, unrelated entries) byte-for-byte untouched.
- * A bracket-depth walk over the array body — safe here because entries are flat object literals
- * with no nested braces besides the entry's own `{...}`.
- */
-function rewriteFile(source: string, updates: ReadonlyMap<string, EarningsPrint>): string {
-  const marker = "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [";
-  const start = source.indexOf(marker);
-  if (start === -1) {
-    throw new Error(`could not find "${marker}" in ${CALENDAR_FILE}`);
-  }
-  const bodyStart = start + marker.length;
-  let depth = 1;
-  let i = bodyStart;
-  let entryStart = -1;
-  const entries: string[] = [];
-  while (depth > 0) {
-    const ch = source[i];
-    if (ch === "{") {
-      if (depth === 1) entryStart = i;
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 1) entries.push(source.slice(entryStart, i + 1));
-    } else if (ch === "[" && depth === 1) {
-      // the outer array's own opening bracket already counted; nested [] shouldn't occur, but
-      // guard depth math anyway by treating it like a brace for safety.
-      depth++;
-    } else if (ch === "]" && depth === 2) {
-      depth--;
-    }
-    i++;
-  }
-  const bodyEnd = i - 1; // position of the closing ']' of the array
-
-  const rewritten = entries
-    .map((entryText) => {
-      const symbolMatch = entryText.match(/symbol:\s*"([^"]+)"/);
-      const symbol = symbolMatch?.[1];
-      const replacement = symbol ? updates.get(symbol) : undefined;
-      return replacement ? serialize(replacement) : entryText;
-    })
-    .join(",\n  ");
-
-  return `${source.slice(0, bodyStart)}\n  ${rewritten},\n${source.slice(bodyEnd)}`;
-}
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes("--dry-run");
   const today = new Date().toISOString().slice(0, 10);
+  const log = (line: string): void => console.log(`[confirm-print-dates] ${line}`);
 
-  const candidates = UPCOMING_PRINTS.filter(
-    (p) =>
-      p.status === "estimate" && daysUntil(`${today}T00:00:00Z`, p.date) <= CONFIRM_LOOKAHEAD_DAYS,
+  const result = await runConfirm(UPCOMING_PRINTS, today, (symbol) =>
+    fetchEarningsDate(symbol, { fetch, sleep, log: (line) => console.warn(line) }),
   );
-  if (candidates.length === 0) {
-    console.log(`[confirm-print-dates] nothing within ${CONFIRM_LOOKAHEAD_DAYS}d to check.`);
-    return;
-  }
+  log(
+    result.checked.length === 0
+      ? "no estimate inside the confirm lookahead."
+      : `checked ${result.checked.map((p) => `${p.symbol} ${p.date}`).join(", ")}.`,
+  );
+  for (const { to } of result.updates)
+    if (to.status === "confirmed") log(`${to.symbol}: CONFIRMED ${to.date}.`);
+  for (const { print, said, why } of result.needsIr)
+    console.warn(
+      `[confirm-print-dates] NEEDS IR — ${print.symbol} ${print.date}: ${NEEDS_IR_WORDS[why](said)}`,
+    );
+  for (const symbol of result.failed)
+    console.warn(
+      `[confirm-print-dates] UNCHECKED — ${symbol}: no readable answer${PLAYBOOK_SYMBOLS.includes(symbol) ? " (a playbook symbol: this run is not a clean pass)" : ""}.`,
+    );
 
-  console.log(`[confirm-print-dates] checking ${candidates.map((c) => c.symbol).join(", ")}...`);
-  const updates = new Map<string, EarningsPrint>();
-  for (const print of candidates) {
-    const hit = await confirm(print, today);
-    if (!hit) {
-      console.log(`[confirm-print-dates] ${print.symbol}: no calendar hit near ${print.date} yet.`);
-      continue;
-    }
-    const drift = hit.date === print.date ? "unchanged" : `WAS ${print.date}, now ${hit.date}`;
-    console.log(`[confirm-print-dates] ${print.symbol}: CONFIRMED ${hit.date} (${drift})`);
-    updates.set(print.symbol, {
-      symbol: print.symbol,
-      date: hit.date,
-      status: "confirmed",
-      source: hit.source,
-    });
-  }
-
-  // The reliability finding this build surfaced (2026-08-12): Nasdaq's calendar endpoint can
-  // block the outbound proxy wholesale — every date fetch fails, not just some. That looks
-  // identical to "checked every candidate, confirmed nothing" unless distinguished explicitly.
-  if (fetchOutcomes.attempts > 0 && fetchOutcomes.failures === fetchOutcomes.attempts) {
+  const exitCode = refreshExitCode(result, PLAYBOOK_SYMBOLS);
+  if (result.outcome === "unreachable") {
     console.error(
-      `[confirm-print-dates] SOURCE UNREACHABLE — all ${fetchOutcomes.attempts} calendar fetches failed. ` +
-        "This is NOT the same as 'nothing to confirm yet' — nothing was actually checked. " +
-        "Do not treat this run as a clean pass.",
+      `[confirm-print-dates] SOURCE UNREACHABLE — all ${result.attempts} earnings-date fetches failed. ` +
+        "Nothing was checked; do not treat this run as a clean pass.",
     );
-    process.exitCode = 2;
+    finish(result.outcome, exitCode);
     return;
   }
 
-  if (updates.size === 0) {
-    console.log(
-      `[confirm-print-dates] no confirmations found this run (${fetchOutcomes.attempts - fetchOutcomes.failures}/${fetchOutcomes.attempts} date fetches succeeded).`,
-    );
-    return;
-  }
-  if (dryRun) {
-    console.log(
-      `[confirm-print-dates] --dry-run: would update ${updates.size} entr${updates.size === 1 ? "y" : "ies"}; nothing written.`,
-    );
-    return;
-  }
+  const fills = cadenceFills(UPCOMING_PRINTS, PLAYBOOK_SYMBOLS, today);
+  for (const f of fills)
+    log(`${f.symbol}: no print in ~100 days — ESTIMATED ${f.date} from cadence.`);
 
-  const original = readFileSync(CALENDAR_FILE, "utf8");
-  writeFileSync(CALENDAR_FILE, rewriteFile(original, updates));
-  console.log(`[confirm-print-dates] wrote ${updates.size} confirmation(s) to ${CALENDAR_FILE}.`);
+  const changes = result.updates.length + fills.length;
+  const answered = `${result.attempts - result.failures}/${result.attempts} symbol fetches answered`;
+  if (changes === 0) log(`nothing to change (${answered}).`);
+  else if (dryRun) log(`--dry-run: would change ${changes} row(s) (${answered}); nothing written.`);
+  else {
+    writeFileSync(
+      CALENDAR_FILE,
+      rewriteCalendar(readFileSync(CALENDAR_FILE, "utf8"), result.updates, fills),
+    );
+    execFileSync("npx", ["biome", "format", "--write", CALENDAR_FILE], { stdio: "inherit" });
+    log(`wrote ${changes} row(s) to ${CALENDAR_FILE} (${answered}).`);
+  }
+  finish(result.outcome, exitCode);
+}
+
+/** What each NEEDS IR line says, in words a reader acts on. */
+const NEEDS_IR_WORDS: Record<NeedsIr["why"], (said: string) => string> = {
+  moved: (said) =>
+    `the company's date is ${said}; moved there as an estimate, window over both days. An IR read confirms it.`,
+  held: (said) =>
+    `the company's date is still ${said}, where an earlier run moved it; one source does not confirm a move. An IR read confirms it.`,
+  far: (said) =>
+    `the company's date is ${said}, too far off to be this print; left alone. Read IR for which quarter it is.`,
+  past: (said) =>
+    `the company's date ${said} has passed while the estimate's window is still open; left alone. Read IR.`,
+};
+
+/** The last line a job reads: the outcome word, and the exit code that goes with it. */
+function finish(outcome: string, exitCode: number): void {
+  console.log(
+    `[confirm-print-dates] outcome: ${outcome}${exitCode !== 0 ? ` (exit ${exitCode})` : ""}`,
+  );
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `outcome=${outcome}\n`);
+  process.exitCode = exitCode;
 }
 
 main().catch((error) => {
