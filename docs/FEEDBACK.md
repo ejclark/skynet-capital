@@ -79,29 +79,33 @@ in code — only as a host secret, exactly like the Alpaca keys.
 ## What the lane will build
 
 **The backlog gate (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
-created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue does not
-build immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
+created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue no longer
+builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 `triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
 — the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
-self-readies, which keeps the near-zero-friction path for the common case. Everything else,
-including anything already `needs-eric`/`needs-info`, sits in **Backlog** on the Orchestration
+self-readies and keeps the old near-zero-friction path for the common case. So does a `bug` +
+`fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
+says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
+including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
-until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
+until something applies `ready`: Eric's own call, or a triage pass's clear-path flip
+([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
 fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
-[`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the self-ready above is the one case where a
+[`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in
 `.github/prompts/feedback-build.md`; what the lane may not touch lives in
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
-What is protected is [`envelope.json`](../envelope.json)'s list, not a paragraph here — run
-`node scripts/envelope-scan.mjs --list` for the live table with reasons. Everything else — including
-anything that merely *renders* trades, P/L, leaderboards, or bot cards, and the risk guards, order
-tickets, playbook definitions and broker clients the file opens on purpose (#928) — is ordinary
-buildable work.
+Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
+brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
+and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
+P/L, leaderboards, or bot cards — is ordinary buildable work.
+
+Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
 
 ### The four ways a build session ends
 
@@ -118,12 +122,12 @@ one queue — and the third would be buried under the first two.
 
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
-**The reply itself is the trigger** — an answer never sits on the thread waiting for someone to
-notice it and hand-clear the label. A comment from a repo member (`author_association` ∈
-`OWNER`/`MEMBER`/`COLLABORATOR`, the same gate the plan lane's ready-flip uses) claims the lease,
-clears `needs-info`, and starts a build session with that comment as its input. Its first visible
-act is a comment saying what it understood and what happens next, so the thread still reads as a
-complete record.
+`needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
+until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
+comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
+the plan lane's ready-flip uses) claims the lease, clears `needs-info`, and starts a build session
+with that comment as its input. Its first visible act is a comment saying what it understood and
+what happens next, so the thread still reads as a complete record.
 
 The board follows along without anyone touching it: clearing `needs-info` and applying
 `in-progress` are the two label events the Orchestration board's Status sync already listens to, so
