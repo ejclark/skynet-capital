@@ -25,8 +25,8 @@ do not write shader code, and you do not open PRs. You hand the next athlete a f
      *quality bar*, not a content match. Reference media (a screen recording, a screenshot) is almost
      always pointing at production polish — atmospheric depth, light falloff, grain, motion, color
      grading — not literal subject matter. Confirm which before spending a research pass on the wrong
-     question; `docs/art/EYE.md`'s addenda record this exact confusion and the corrections it took —
-     re-read them before you start.
+     question; a recent instance of this exact confusion is worth re-reading before you start
+     (`docs/art/EYE.md`'s addenda record the corrections a rebuild went through).
    - **A technique gap** ("how do I do volumetric fire in three.js", "what's the GPU particle budget"):
      the target is a specific mechanism. Research the mechanism, not the vibe.
 2. **If reference media was provided, extract before you theorize.** Video needs frames pulled with
