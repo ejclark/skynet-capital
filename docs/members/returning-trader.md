@@ -58,13 +58,14 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ### j1 — sell a covered call on a position I hold
 
-1. `/app/accounts` — the cockpit: the account switcher, Overview · Activity. **WHEN a member with
-   one linked account opens Profile, the app shall open that account's cockpit on Overview.**
+1. `/app/accounts` — the cockpit: the account's name (its menu holds the switcher), Overview ·
+   Balance · Ledger · Events. **WHEN a member with one linked account opens Profile, the app
+   shall open that account's cockpit on Overview.**
    Judge: can this reader tell what to do next in ten seconds?
-2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, Guidance on
-   the row (desktop). **WHEN the member opens Overview, the app shall show the held positions
-   with a way into each one's guidance, even when net worth cannot be read.** On a phone the
-   blotter is one card per position and EEM's card is the way in — it opens the position on
+2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, its guidance
+   line under the row (desktop). **WHEN the member opens Overview, the app shall show the held
+   positions with a way into each one's guidance, even when net worth cannot be read.** On a phone
+   the blotter is one card per position and EEM's card is the way in — it opens the position on
    Trade, where Guidance is a tab (`s2-phone`). Judge: can this reader tell which position to
    act on?
 3. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
@@ -91,9 +92,9 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    reader tell what to do next in ten seconds?
 2. `/app/activity` — the feed. **WHEN the member opens Activity, the app shall show the feed with
    the newest event first.** Judge: can the reader find today's fill?
-3. `/app/accounts?section=activity` — Profile → Activity: the orders on their own account, newest
+3. `/app/accounts?section=ledger` — Profile → Ledger: the orders on their own account, newest
    first, the EEM buy among them — the fill on their own book, not only in the league's feed.
-   **WHEN the member opens their Profile's Activity, the app shall list their own account's
+   **WHEN the member opens their Profile's Ledger, the app shall list their own account's
    orders, newest first.** Judge: can the reader find their own fill?
 
 ### j3 — my own desk, and back
