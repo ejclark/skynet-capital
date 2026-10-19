@@ -130,8 +130,8 @@ the same on every PR; a paragraph in a table cell; a question that makes him arb
 ## A member (invite-only, paper-trading)
 
 Reads the app, not the repo. Plain words first, jargon glossed in parentheses; never a coined name;
-honest `SIM` labels; positive reinforcement without distorting a loss. Mobile-first on the trading
-surfaces. Diagrams in-app must render there (the `/research` page renders no Mermaid today).
+honest `SIM` labels; positive reinforcement without distorting a loss. Mobile-first on every
+information surface (`CLAUDE.md` → *Mobile-first*). Diagrams in-app must render there (the `/research` page renders no Mermaid today).
 
 ## A zero-context build session
 
