@@ -339,6 +339,36 @@ does:
    inherited the red (a merge commit, never a rebase or force-push) so its checks run again.
 5. **Bank it.** `/retro`, ending in a `docs/LESSONS.md` entry that names the fixing sha.
 
+## Instruction files — one home, present tense
+
+An instruction file is anything a session or lane reads as orders, e.g. `CLAUDE.md`, a skill or a
+lane prompt; the one list is `scripts/instructions/scope.mjs`. Its reader has nothing but the text,
+takes every sentence as current, and cannot ask which of two copies is right. Write them by three
+rules:
+
+1. **One rule, one home.** State a rule in exactly one file; every other file that needs it links
+   to that home (`docs/ISSUES.md` → *Ready — the one definition*) instead of restating it. A fact
+   gets the same treatment: link the file that owns a count, a threshold or a label name (the
+   constant in the script, `work-mode.json`) rather than copying the value. Why: two copies drift
+   apart, because an edit reaches one and the reader of the other follows the old rule. Files that
+   disagree were the largest class in the 2026-10-04 instruction audit (its counts are in #5318),
+   67 of 275 raw findings.
+2. **Rules are in the present tense.** Write the rule as if it were the only version there ever
+   was: no "used to", "no longer" or "is now" measured against a version the reader never saw, and
+   no PR or incident story inside the rule. A pointer to where a mechanism lives (its plan issue,
+   the citation behind a number) stays; the story of how the rule got there belongs in the PR,
+   `docs/LESSONS.md` or `git log`. Why: the reader cannot see the old version, so the comparison
+   tells them nothing, and it turns false the next time the rule changes (52 of the audit's 275).
+3. **A quoted reason stays.** Eric's words with their date — `(Eric, 2026-09-06: "…")` — are the
+   rule's why, not its archaeology: they let a session carry his intent to a case the rule never
+   named. Rule 2 never strips them.
+
+Two checks hold these after the fact. `npm run agent-surface:scan` notes, as advice, history in a
+rule file (what it fires on: `scripts/instructions/history.mjs`). The instruction-drift chore
+([`docs/grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md)) is the
+model's read of every changed instruction file for files that disagree, stale facts and rules
+written as history; its check C has a before/after for rule 2.
+
 ## House gotchas (recurring traps)
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever

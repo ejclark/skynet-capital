@@ -11,13 +11,20 @@ import type { Playbook } from "./playbook.js";
  * house playbook is not steered by Eric's view.
  *
  * The result is one of three, and never an order:
- *  - `playbook` unchanged, nothing said: no pointer, or a pointer the record does not honour (the
+ *  - `playbook` unchanged, nothing said: no pointer, or a record that does not steer this pair (the
  *    check date's own fallback already says so), or a record that narrows nothing on this pair;
  *  - `playbook` narrowed, with `says` naming each fence for the boot log;
- *  - `refused`: the narrowing would widen a bound (or points at a study that is not attached).
- *    Refused WHOLE, with the reason, and the pair fails safe: the caller runs it exits-only, so what
- *    it holds still exits and nothing new opens. Running it unnarrowed instead would trade wider
- *    than its owner meant to.
+ *  - `refused`: the narrowing would widen a bound (or points at a study that is not attached), or
+ *    the pointer names a record this lookup does not hold. Refused WHOLE, with the reason, and the
+ *    pair fails safe: the caller runs it exits-only, so what it holds still exits and nothing new
+ *    opens. Running it unnarrowed instead would trade wider than its owner meant to.
+ *
+ * WHY A RECORD NOT HELD IS REFUSED (#5482 slice 6c). A seeded record ships with the build, so the
+ * bots always hold it. A member's record arrives over the controls poll (`convictions-wire.ts`), and
+ * a pointer at one can be read before the record is: a boot on the kept subscriptions while the
+ * dashboard is down, or a record whose owner's bot is not one it may steer. Its narrowings are
+ * unknown then, so the pair opens nothing until they are. The check date keeps its own fallback
+ * (`statedCheck`): an unresolved pointer neither stops nor clears a check; only steering fails safe.
  */
 export type SteeredPlaybook =
   | { readonly playbook: Playbook; readonly says: readonly string[] }
@@ -31,7 +38,13 @@ export function steeredBy(
   const unchanged = { playbook, says: [] } as const;
   if (sub.convictionId === undefined) return unchanged;
   const record = lookup(sub.convictionId);
-  if (!record?.steers.includes(sub.playbookId)) return unchanged;
+  if (!record) {
+    return {
+      playbook,
+      refused: `points at conviction "${sub.convictionId}", which these bots do not hold`,
+    };
+  }
+  if (!record.steers.includes(sub.playbookId)) return unchanged;
   const narrow = (record.narrowings ?? [])
     .filter((n) => n.pair === sub.playbookId)
     .flatMap((n) => n.narrow);

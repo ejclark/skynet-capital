@@ -19,6 +19,7 @@ import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-co
 import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-health-file.js";
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
+import type { ConvictionsWire } from "../autonomous/convictions-wire.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
@@ -40,6 +41,7 @@ import { withQuoteUniverse } from "../personas/universe-view.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
+import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -89,6 +91,9 @@ export async function bootMissionControl(
   // Fires on every poll carrying the members' PROMOTED plays (authored-plays-wire.ts) — specs only,
   // ahead of the subscriptions hook on the same poll.
   onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  // Fires on every poll carrying the members' handed-over convictions (convictions-wire.ts) —
+  // records only, ahead of the subscriptions hook on the same poll.
+  onConvictions?: (wire: ConvictionsWire) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -106,6 +111,7 @@ export async function bootMissionControl(
     onSubscriptions,
     onAuthoredShadow,
     onAuthoredPlays,
+    onConvictions,
   );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
@@ -265,6 +271,10 @@ export interface BotRoster {
   readonly bot: Bot;
   readonly subscriptions: readonly PlaybookSubscription[];
   readonly enabled: readonly EnabledPlaybook[];
+  /** The conviction records this bot's pointers resolve against (#5482 slice 6c): the seeded ones
+   *  plus its members' handed-over views. Absent, the build's seeded store. Carried on the roster
+   *  so the narrowing it was built with and the check `tradingRoster` gates on read the same set. */
+  readonly convictionOf?: ConvictionLookup;
 }
 
 /**
@@ -281,6 +291,8 @@ export function buildBotRosters(
   env: NodeJS.ProcessEnv,
   // Each bot's own promoted plays (#5457 slice 3), when the app has reported any.
   authoredFor?: (accountId: string) => AuthoredRoster,
+  // Each bot's conviction records (#5482 slice 6c), when the app has reported any.
+  convictionsFor?: (accountId: string) => ConvictionLookup,
 ): BotRoster[] {
   const subscriptionsByAccount = createSubscriptionStore(env).load();
   return bots.map((bot) =>
@@ -289,6 +301,7 @@ export function buildBotRosters(
       playbookRoster.enabled,
       subscriptionsByAccount[bot.persona.id] ?? [],
       authoredFor?.(bot.persona.id),
+      convictionsFor?.(bot.persona.id),
     ),
   );
 }
@@ -310,8 +323,11 @@ export function resolveBotRoster(
   // roster was compiled for resolves one (`subscriptionRoster`). Nothing persists a spec yet, so
   // both callers pass none and every `U-*` subscription is refused below, as before.
   authored?: AuthoredRoster,
+  // The records this bot's conviction pointers resolve against (#5482 slice 6c); the build's
+  // seeded store when absent. A pointer it cannot resolve runs its pair exits-only (`steeredBy`).
+  convictionOf?: ConvictionLookup,
 ): BotRoster {
-  const acctRoster = subscriptionRoster(subscriptions, authored);
+  const acctRoster = subscriptionRoster(subscriptions, authored, convictionOf);
   for (const bad of acctRoster.rejected) {
     console.error(
       `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
@@ -366,7 +382,12 @@ export function resolveBotRoster(
     held.has(e.playbook.id) ? e : { ...e, exitsOnly: true as const },
   );
   const merged = mergeRosters(house, [...acctRoster.enabled, ...paused]);
-  return { bot, subscriptions, enabled: ownedRoster(bot.persona.id, merged) };
+  return {
+    bot,
+    subscriptions,
+    enabled: ownedRoster(bot.persona.id, merged),
+    ...(convictionOf ? { convictionOf } : {}),
+  };
 }
 
 /** The two subscription-sensitive halves of a bot's trader config. */
@@ -443,6 +464,7 @@ export function tradingRoster(
               {
                 subscriptions: roster.subscriptions,
                 ...(ledgerOf ? { ledgerOf } : {}),
+                ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
                 log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
               },
             ),

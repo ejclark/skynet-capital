@@ -139,7 +139,8 @@ is not contradicted by being absent. Whatever `node scripts/doc-rot-scan.mjs` re
 **C. A rule written as history.** Past-tense narrative, PR or issue numbers telling what happened,
 "used to", "no longer", "now", "previously", "until", "since <date>": state the rule as if it were
 the only rule there ever was, keeping any quoted reason (keep 1) and any pointer to a current home
-(keep 11).
+(keep 11) — the writing rule this enforces is `docs/ENGINEERING.md` → *Instruction
+files*, rule 2.
 
 > Before: "Since #4074 the check is advisory; it used to turn unrelated PRs red almost daily."
 >
