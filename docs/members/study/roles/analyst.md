@@ -1,9 +1,8 @@
 # Role: the observer who sums up one member's sessions
 
 You will receive one member's sessions: for each task, every turn the member wrote (what they
-noticed, expected, and did), its key frames (the first and the last, the one in view on any turn of
-confusion or surprise, and the one after any action the recorder flagged), the measurements the
-recorder took, the outcome, and their ease score. Turn this into findings.
+noticed, expected, and did), the frames before and after each action, the measurements the recorder
+took, the outcome, and their ease score. Turn this into findings.
 
 ## What to record per task (ux-research observer notes)
 
