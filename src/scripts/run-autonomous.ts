@@ -25,8 +25,9 @@
  *                            see src/playbooks/beta-scout.ts — and only while the first bot is
  *                            subscribed to BETA-SCOUT in the Store: armed AND subscribed. "3+stage"
  *                            also lets the scout stage its picks after the close for Alpaca's next
- *                            open (holiday-aware) — see autonomous-scout-staging.ts. Flip via
- *                            autonomy-ops only.
+ *                            open (holiday-aware) — see autonomous-scout-staging.ts. The owner's
+ *                            after-close staging switch for the first bot (`betaStage`, read every
+ *                            staging pass, #4535 slice 4b) wins over the "+stage".
  *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
@@ -40,6 +41,7 @@ import type { TraderTuning } from "../autonomous/autonomous-trader.js";
 import {
   type ControlsState,
   effectiveBetaPicks,
+  effectiveBetaStage,
   effectiveMode,
 } from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
@@ -112,6 +114,7 @@ import {
   armScoutStaging,
   scoutSkipSymbols,
   watchScoutPicks,
+  watchScoutStaging,
 } from "./autonomous-scout-staging.js";
 import { resumeWorkingOrders, settlementBook } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
@@ -345,6 +348,14 @@ async function runLive(): Promise<void> {
       scoutHostId ? controls.betaPicks(scoutHostId) : undefined,
       betaForcing.maxPicks,
     );
+  // ...and whether it stages after the close is the owner's switch for that bot, read every staging
+  // pass (#4535 slice 4b), else the env's "+stage".
+  const scoutStages = () =>
+    effectiveBetaStage(
+      scoutHostId ? controls.betaStage(scoutHostId) : undefined,
+      betaForcing.stageAfterClose,
+      scoutPicks(),
+    );
   // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
   // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
   const intradayBars = intradayBarsFeed(currentCredentials);
@@ -421,10 +432,16 @@ async function runLive(): Promise<void> {
     botsStream.refresh();
   };
   optionLevels.follow(botRosters, swapIn);
-  onScoutPicksPolled = watchScoutPicks(scoutPicks, () => {
+  const scoutPicksPolled = watchScoutPicks(scoutPicks, () => {
     const host = botRosters[0];
     if (host) swapIn(0, host);
   });
+  // No broker on the host = no staging poll below, so a flip there is not announced as armed.
+  const scoutStagingPolled = traders[0]?.broker ? watchScoutStaging(scoutStages) : () => undefined;
+  onScoutPicksPolled = () => {
+    scoutPicksPolled();
+    scoutStagingPolled();
+  };
   // The owner's hardcore switch, live (#4535 slice 2c): the persona, its order cooldown and the
   // mode its readiness gate allows swap together, between cycles — no restart.
   onHardcorePolled = watchHardcore({
@@ -471,7 +488,10 @@ async function runLive(): Promise<void> {
   // the picks it holds are still sold on the next trading day. Armed, it still opens only while its
   // host bot is subscribed to BETA-SCOUT (#4642 slice 10).
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
-  announceScout({ ...betaForcing, maxPicks: scoutPicks() }, traders[0]?.personaName);
+  announceScout(
+    { maxPicks: scoutPicks(), stageAfterClose: scoutStages() },
+    traders[0]?.personaName,
+  );
   const managedSymbols = scoutSkipSymbols(botRosters[0]); // traders[0]'s account
 
   // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
@@ -630,9 +650,16 @@ async function runLive(): Promise<void> {
     log: console.log,
   });
   setInterval(() => cycleWatch.tick(), 60_000);
-  // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
-  if (betaForcing.stageAfterClose && scoutBroker) {
-    armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
+  // After-close staging (Eric, 2026-09-04) — each pass reads the owner's switch, else the env's
+  // "+stage" (#4535 slice 4b), so the poll always runs and is dark while staging is off.
+  if (scoutBroker) {
+    armScoutStaging({
+      clock: marketClock,
+      runner,
+      context: contextNow,
+      enabled: scoutStages,
+      log: console.log,
+    });
   }
 
   marketDataStream.start();

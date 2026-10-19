@@ -67,6 +67,40 @@ describe("BotSettingsPanel (#4535 slice 3b)", () => {
     ]);
   });
 
+  it("offers after-close staging on the pick's bot, and lists a change to it in words (slice 4b)", () => {
+    render(
+      <BotSettingsPanel
+        account={account(
+          settings({
+            betaPicks: 2,
+            betaStage: true,
+            changes: [
+              {
+                at: "2026-10-19T20:30:00.000Z",
+                setting: "betaStage",
+                before: null,
+                after: true,
+                proposedBy: "you",
+                approvedBy: "you",
+              },
+            ],
+          }),
+        )}
+        onChanged={() => undefined}
+      />,
+    );
+    const stage = screen.getByLabelText<HTMLSelectElement>("After-close staging");
+    expect(stage.value).toBe("true");
+    expect([...stage.options].map((o) => o.text)).toEqual([
+      "Use the operations setting",
+      "Off — market hours only",
+      "On — stage after the close",
+    ]);
+    expect(screen.getByRole("listitem").textContent).toContain(
+      "After-close staging the operations setting → on",
+    );
+  });
+
   it("refreshes after a saved change and shows the server's refusal in words", async () => {
     let changed = 0;
     nextResponse = { ok: true };

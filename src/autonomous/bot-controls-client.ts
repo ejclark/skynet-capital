@@ -44,6 +44,9 @@ export interface BotControlsClient {
   /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
    *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
   betaPicks(botId: string): number | undefined;
+  /** The owner's stored after-close staging flag for this bot, as of the last poll (#4535 slice
+   *  4b); undefined = none stored, so the env's `+stage` stands. Read at every staging pass. */
+  betaStage(botId: string): boolean | undefined;
   /**
    * Records one persona's boot-time readiness-gate verdict (#666) — merged by id and reported on
    * every subsequent poll, so the ops-status panel can show which personas are live vs pinned to
@@ -90,6 +93,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   stop: () => undefined,
   suspendedReason: () => null,
   betaPicks: () => undefined,
+  betaStage: () => undefined,
   reportPersonaGate: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
@@ -212,6 +216,7 @@ export function resolveBotControls(
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
     betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
+    betaStage: (botId) => snapshot.bots[botId]?.betaStage,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
     },

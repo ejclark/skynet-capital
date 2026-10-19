@@ -160,6 +160,18 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       expect(store.load().bots.sauron).toEqual({ betaPicks: 2 });
     });
 
+    it("stores and logs the after-close staging switch, and hands it back on null (slice 4b)", async () => {
+      store.setBot("sauron", { betaPicks: 2 }, OWNER, AT);
+      await change({ id: "sauron", betaStage: true });
+      expect(store.load().bots.sauron).toEqual({ betaPicks: 2, betaStage: true });
+      await change({ id: "sauron", betaStage: null });
+      expect(store.load().bots.sauron).toEqual({ betaPicks: 2 });
+      expect(log.list("sauron")).toEqual([
+        expect.objectContaining({ setting: "betaStage", before: true, after: null }),
+        expect.objectContaining({ setting: "betaStage", before: null, after: true }),
+      ]);
+    });
+
     it("records nothing when the value did not move", async () => {
       await change({ id: "sauron", hardcore: true });
       await change({ id: "sauron", hardcore: true });
@@ -192,6 +204,13 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       expect(String(answer.error)).toContain("this isn't it");
     });
 
+    it("refuses the after-close staging switch on any bot but the one the pick runs on", async () => {
+      owned = ["banker"];
+      const answer = await change({ id: "banker", betaStage: true });
+      expect(String(answer.error)).toContain("this isn't it");
+      expect(store.load().bots.banker).toBeUndefined();
+    });
+
     it("refuses a forced-pick count while the bots app has not said where the pick runs", async () => {
       roster = undefined;
       const answer = await change({ id: "sauron", betaPicks: 2 });
@@ -204,6 +223,7 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       { id: "sauron", betaPicks: -1 },
       { id: "sauron", betaPicks: 1.5 },
       { id: "sauron", betaPicks: MAX_BETA_PICKS + 1 },
+      { id: "sauron", betaStage: "on" },
       { hardcore: true },
     ])("answers 400 to a malformed body %j", async (body) => {
       expect(parseBotSettingsBody(JSON.stringify(body))).toBeUndefined();
@@ -220,11 +240,13 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       expect(byId.sauron).toMatchObject({
         hardcore: false,
         betaPicks: null,
+        betaStage: null,
         maxBetaPicks: MAX_BETA_PICKS,
         changes: [{ setting: "hardcore", before: null, after: false, proposedBy: "you" }],
       });
       expect(byId.banker).not.toHaveProperty("hardcore");
       expect(byId.banker).not.toHaveProperty("betaPicks");
+      expect(byId.banker).not.toHaveProperty("betaStage");
     });
 
     it("never sends an email: another owner's change reads as another owner", async () => {
