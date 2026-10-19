@@ -29,8 +29,9 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 - `bots/bot-broker.ts` — `createBotBroker(bot)` assembles transport → client → adapter and
   returns a live `BrokerPort` the engine can drive.
 - `alpaca/trading-transport.ts` — the network seam (key/secret header auth); fake it in tests.
-- `alpaca/alpaca-trading-client.ts` — typed `GET /v2/account`, `GET /v2/positions`,
-  `POST /v2/orders`.
+- `alpaca/alpaca-trading-client.ts` — typed calls for the account and its portfolio history
+  (`/v2/account`), positions (`/v2/positions`), orders — place, read, list, replace, cancel
+  (`/v2/orders`) — and the market clock (`/v2/clock`).
 - `adapters/alpaca-broker-adapter.ts` — maps Alpaca's string-typed payloads to the domain
   `Portfolio`, submits a share order as a market order, and hands an option order to
   `adapters/alpaca-option-order-flow.ts`, which places it as a DAY limit. A result is `filled`
