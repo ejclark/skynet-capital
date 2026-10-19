@@ -205,7 +205,7 @@ What round 1 of #5037 did, written down so the next round costs instructions, no
 4. **Comments pinned on a picture reach the live session** (ArtifactComments): answer each one,
    quote it on the issue at read-back (step 7 of the drill),
    and record each as `{ anchor, gist, applies_to, commitment }` beside the round — round 1's are
-   in the session scratchpad's `shapes/r1-feedback/` with `eric-verbatim.md` mapping them.
+   in the session scratchpad's `shapes/r1-feedback/` with eric-verbatim.md mapping them.
 5. **The next round is built from his words**: every More goes deeper (real states, edge cases,
    desktop), every Not is replaced by a new direction, every comment's commitment is honoured and
    cited, and a note that applies to all questions (round 1: "progressive reveal") shapes all of them.

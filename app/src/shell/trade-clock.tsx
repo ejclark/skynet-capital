@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
+import type { LaneGlyph } from "../live/book-lanes";
 import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
 import { fetchResearchCalendar } from "../live/research";
 import { describeSymbolEvent, type SymbolEvent, symbolEventsIn } from "../live/symbol-events";
+import { LaneGlyphIcon } from "./book-lanes";
 import { CalendarHead, headLine } from "./calendar-head";
 import { CalendarSheet } from "./calendar-sheet";
 
@@ -18,9 +20,11 @@ import { CalendarSheet } from "./calendar-sheet";
  *
  * What differs is the line: scoped to THE TICKET'S SYMBOL (`?symbol=`), not a book — tier 1 "on
  * <SYM>", the symbol's own dated events in range; tier 2 "market-wide", the Fed / CPI / jobs print
- * (`live/symbol-events.ts`). Each tier is a glyph AND a word (hue never alone), and the empty
- * states say the range: "Nothing dated on META Sep 28 – Oct 4" is the common week. No symbol yet
- * reads market-wide only.
+ * (`live/symbol-events.ts`). Each tier is a glyph AND a word (hue never alone), and the glyph is
+ * the Events lanes' own (`LaneGlyphIcon`, #5093): ⬢ for the symbol's dated events, hollow ⬡ when
+ * every one of them is an estimate, ○ market-wide — never ◆ / ◇, which mean Review and Not now on
+ * a position row. The empty states say the range: "Nothing dated on META Sep 28 – Oct 4" is the
+ * common week. No symbol yet reads market-wide only.
  *
  * NEVER AN EXPIRATION CONTROL. The chain owns expiry (#3407/#3523: `?exp=` is written by the
  * ticket's field and the chain's browse); this head neither selects nor presets one — an arrow
@@ -40,7 +44,7 @@ function Tier({
   word,
   events,
 }: {
-  readonly glyph: string;
+  readonly glyph: LaneGlyph;
   readonly word: string;
   readonly events: readonly SymbolEvent[];
 }): ReactElement {
@@ -48,10 +52,7 @@ function Tier({
   return (
     <>
       <span className="held-tier">
-        <i className="held-glyph" aria-hidden="true">
-          {glyph}
-        </i>{" "}
-        {word}
+        <LaneGlyphIcon glyph={glyph} /> {word}
       </span>{" "}
       {events.slice(0, SHOWN).map((event, i) => (
         <span key={event.id}>
@@ -86,7 +87,11 @@ export function SymbolEventsLine({
     symbol === "" ? null : on.length === 0 ? (
       `Nothing dated on ${symbol} ${when}`
     ) : (
-      <Tier glyph="◆" word={`on ${symbol}:`} events={on} />
+      <Tier
+        glyph={on.every((event) => event.estimated) ? "estimated" : "confirmed"}
+        word={`on ${symbol}:`}
+        events={on}
+      />
     );
   return (
     <p className="held-events">
@@ -94,7 +99,7 @@ export function SymbolEventsLine({
       {market.length > 0 ? (
         <>
           {own ? " · " : null}
-          <Tier glyph="○" word="market-wide:" events={market} />
+          <Tier glyph="market" word="market-wide:" events={market} />
         </>
       ) : symbol === "" ? (
         `Nothing market-wide dated ${when}`

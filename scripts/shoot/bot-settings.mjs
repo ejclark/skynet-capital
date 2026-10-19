@@ -1,6 +1,6 @@
 // Visual harness for a bot's own settings (#4535 slice 3b) — from the REAL built shell (app/dist)
-// over a stub API. One bot the owner holds, the forced pick's host with a hardcore build, so both
-// controls and the change log draw; the phone frame first (docs/PICTURES.md → Screenshots).
+// over a stub API. One bot the owner holds, the forced pick's host with a hardcore build, so every
+// control and the change log draw; the phone frame first (docs/PICTURES.md → Screenshots).
 // Usage: npm run build --prefix app && node scripts/shoot/bot-settings.mjs [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -20,8 +20,17 @@ const settings = {
       settings: {
         hardcore: true,
         betaPicks: 2,
+        betaStage: true,
         maxBetaPicks: 10,
         changes: [
+          {
+            at: "2026-10-18T21:05:00.000Z",
+            setting: "betaStage",
+            before: null,
+            after: true,
+            proposedBy: "you",
+            approvedBy: "you",
+          },
           {
             at: "2026-10-18T20:31:00.000Z",
             setting: "hardcore",

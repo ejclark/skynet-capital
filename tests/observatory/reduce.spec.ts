@@ -260,4 +260,70 @@ describe("reduceObservatory", () => {
       expect(state.participants[1]?.realizedPl).toBeUndefined();
     });
   });
+
+  // An option fill's price is per share; the book holds contracts (avgPrice per contract, as every
+  // broker read scales it). The reducer must count a contract as 100 shares, or a stream fill
+  // re-marks the position at 1/100 of its value until the next sync (#4563, the #4643 rule).
+  describe("option fills count a contract as 100 shares", () => {
+    const CALL = "SPY261218C00600000";
+    const optionBook = (): DashboardData => ({
+      generatedAt: "2026-07-24T15:00:00.000Z",
+      participants: [
+        {
+          id: "bot",
+          displayName: "Bot",
+          kind: "bot",
+          cash: 950_000,
+          equity: 1_000_000,
+          // 100 contracts at $5.00 a share = $500 a contract, $50,000 held.
+          positions: [{ symbol: CALL, quantity: 100, avgPrice: 500, marketValue: 50_000 }],
+        },
+      ],
+      collisions: [],
+    });
+    const fill = (side: "buy" | "sell", quantity: number, price: number): ObservatoryEvent => ({
+      type: "fill",
+      participantId: "bot",
+      symbol: CALL,
+      side,
+      quantity,
+      price,
+      at: "2026-07-24T15:02:00.000Z",
+    });
+
+    it("a trim at cost moves cash by the full notional and leaves equity where it was", () => {
+      const bot = reduceObservatory(optionBook(), fill("sell", 50, 5)).participants[0];
+      expect(bot?.cash).toBe(975_000);
+      expect(bot?.positions[0]).toMatchObject({ quantity: 50, marketValue: 25_000 });
+      expect(bot?.equity).toBe(1_000_000);
+      expect(bot?.realizedPl).toBe(0);
+    });
+
+    it("an add keeps the average per contract and re-marks the book at the fill", () => {
+      const bot = reduceObservatory(optionBook(), fill("buy", 100, 6)).participants[0];
+      expect(bot?.cash).toBe(890_000);
+      expect(bot?.positions[0]).toMatchObject({
+        quantity: 200,
+        avgPrice: 550,
+        marketValue: 120_000,
+      });
+      expect(bot?.equity).toBe(1_010_000); // the whole book re-marked at the $6 fill
+    });
+
+    it("books realized P/L per contract on a profitable close", () => {
+      const bot = reduceObservatory(optionBook(), fill("sell", 100, 6)).participants[0];
+      expect(bot?.realizedPl).toBe(10_000); // ($600 − $500) × 100 contracts
+      expect(bot?.positions).toHaveLength(0);
+    });
+
+    it("re-marks an option position on a per-share price tick", () => {
+      const state = reduceObservatory(optionBook(), {
+        type: "price",
+        symbol: CALL,
+        price: 4,
+        at: "2026-07-24T15:03:00.000Z",
+      });
+      expect(state.participants[0]?.positions[0]?.marketValue).toBe(40_000);
+    });
+  });
 });

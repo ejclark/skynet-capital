@@ -28,7 +28,7 @@ export type SettingValue = boolean | number | string | null;
 
 export interface SettingsChange {
   readonly at: string;
-  /** `suspended`, `hardcore`, `betaPicks` (the controls state), or a Store write's
+  /** `suspended`, `hardcore`, `betaPicks`, `betaStage` (the controls state), or a Store write's
    *  `subscription:<playbookId>` / `allocation:<strategy>` (slice 3c). */
   readonly setting: string;
   readonly before: SettingValue;
@@ -111,7 +111,7 @@ export class SettingsChangeLog {
   }
 }
 
-const LOGGED_SETTINGS = ["suspended", "hardcore", "betaPicks"] as const;
+const LOGGED_SETTINGS = ["suspended", "hardcore", "betaPicks", "betaStage"] as const;
 
 /** One log line per setting that moved between two stored entries. */
 export function controlsChanges(

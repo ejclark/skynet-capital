@@ -1,6 +1,7 @@
 import {
   EMPTY_CONTROLS,
   effectiveBetaPicks,
+  effectiveBetaStage,
   effectiveHardcoreIds,
   effectiveMode,
   MAX_BETA_PICKS,
@@ -131,6 +132,26 @@ describe("betaPicks — the owner's forced-pick count for the scout's host (#453
     expect(effectiveBetaPicks(undefined, 0)).toBe(0);
     expect(effectiveBetaPicks(3, 0)).toBe(3);
     expect(effectiveBetaPicks(0, 2)).toBe(0);
+  });
+});
+
+// #4535 slice 4b: the owner's after-close staging switch, read at every staging pass.
+describe("after-close staging (betaStage)", () => {
+  it("parses a stored boolean and reads anything else as unset, so the env's +stage stands", () => {
+    expect(parseControlsState({ bots: { sauron: { betaStage: false } } })?.bots.sauron).toEqual({
+      betaStage: false,
+    });
+    for (const bad of ["true", 1, null]) {
+      expect(parseControlsState({ bots: { sauron: { betaStage: bad } } })?.bots.sauron).toEqual({});
+    }
+  });
+
+  it("the store's flag wins in both directions, and nothing stages with no picks", () => {
+    expect(effectiveBetaStage(undefined, true, 2)).toBe(true);
+    expect(effectiveBetaStage(undefined, false, 2)).toBe(false);
+    expect(effectiveBetaStage(true, false, 2)).toBe(true);
+    expect(effectiveBetaStage(false, true, 2)).toBe(false);
+    expect(effectiveBetaStage(true, true, 0)).toBe(false);
   });
 });
 

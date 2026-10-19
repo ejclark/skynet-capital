@@ -97,7 +97,7 @@ rate rather than the size of the corpus.
 
 ## The keep list — binding on every role
 
-Items 1–10 are Anthropic's prompt-audit guide (the `claude-api` skill → `shared/prompt-audit.md`,
+Items 1–10 are Anthropic's prompt-audit guide (the `claude-api` skill → shared/prompt-audit.md,
 "What not to flag"); 11–12 are this repo's. What they cover is not a finding. The refuter cites
 them by number.
 

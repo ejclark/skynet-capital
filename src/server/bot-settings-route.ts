@@ -17,7 +17,8 @@ import {
  * only an ops workflow run (`set-hardcore`, `set-beta-forcing`) could change either, and each run
  * restarted the bots.
  *
- *   POST /api/settings/bot-settings { id, hardcore?: boolean | null, betaPicks?: number | null }
+ *   POST /api/settings/bot-settings
+ *     { id, hardcore?: boolean | null, betaPicks?: number | null, betaStage?: boolean | null }
  *
  * `null` clears the stored value, so the bots app's own setting (`SKYNET_HARDCORE_BOTS`,
  * `SKYNET_BETA_FORCING`) stands again. The one gate is ownership (#928: nobody changes an account
@@ -26,8 +27,9 @@ import {
  *
  *  - hardcore only on a persona that HAS a hardcore build — the bots refuse anything else loudly,
  *    so storing it would show a switch that does nothing;
- *  - the forced-pick count only on the scout's host, the first bot the bots app reported running
- *    (the house-roster report's order is `bots`', `run-autonomous.ts`) — no other bot reads it.
+ *  - the forced-pick count and its after-close staging switch (slice 4b) only on the scout's host,
+ *    the first bot the bots app reported running (the house-roster report's order is `bots`',
+ *    `run-autonomous.ts`) — no other bot reads them.
  *
  * Every change lands in the settings change log (`settings-change-log.ts`), suspend/resume included.
  */
@@ -38,7 +40,11 @@ interface BotSettingsBody {
   readonly id: string;
   readonly hardcore?: boolean | null;
   readonly betaPicks?: number | null;
+  readonly betaStage?: boolean | null;
 }
+
+const isFlag = (value: unknown): value is boolean | null | undefined =>
+  value === undefined || value === null || typeof value === "boolean";
 
 const isPickCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_BETA_PICKS;
@@ -48,15 +54,17 @@ export function parseBotSettingsBody(raw: string): BotSettingsBody | undefined {
   const body = parseJsonRecord(raw);
   const id = body ? boundedString(body.id, 100) : undefined;
   if (!(body && id)) return undefined;
-  const { hardcore, betaPicks } = body;
-  if (hardcore !== undefined && hardcore !== null && typeof hardcore !== "boolean")
-    return undefined;
+  const { hardcore, betaPicks, betaStage } = body;
+  if (!(isFlag(hardcore) && isFlag(betaStage))) return undefined;
   if (betaPicks !== undefined && betaPicks !== null && !isPickCount(betaPicks)) return undefined;
-  if (hardcore === undefined && betaPicks === undefined) return undefined;
+  if (hardcore === undefined && betaPicks === undefined && betaStage === undefined) {
+    return undefined;
+  }
   return {
     id,
     ...(hardcore !== undefined ? { hardcore } : {}),
     ...(betaPicks !== undefined ? { betaPicks } : {}),
+    ...(betaStage !== undefined ? { betaStage } : {}),
   };
 }
 
@@ -70,7 +78,8 @@ function settingsRefusal(body: BotSettingsBody, config: DashboardServerConfig): 
   if (body.hardcore !== undefined && !hasHardcoreBuild(body.id)) {
     return "This bot has no hardcore build to switch to.";
   }
-  if (body.betaPicks !== undefined && scoutHostId(config) !== body.id) {
+  const scoutSetting = body.betaPicks !== undefined || body.betaStage !== undefined;
+  if (scoutSetting && scoutHostId(config) !== body.id) {
     return scoutHostId(config) === undefined
       ? "The bots app hasn't said which bot runs the forced daily pick yet — try again in a minute."
       : "The forced daily pick runs on one bot only, and this isn't it.";
@@ -80,13 +89,15 @@ function settingsRefusal(body: BotSettingsBody, config: DashboardServerConfig): 
 
 /** `prev` with each named setting set, or removed when `null`. */
 function applySettings(prev: BotControls, body: BotSettingsBody): BotControls {
-  const { hardcore: _h, betaPicks: _b, ...rest } = prev;
+  const { hardcore: _h, betaPicks: _b, betaStage: _s, ...rest } = prev;
   const hardcore = body.hardcore === undefined ? prev.hardcore : body.hardcore;
   const betaPicks = body.betaPicks === undefined ? prev.betaPicks : body.betaPicks;
+  const betaStage = body.betaStage === undefined ? prev.betaStage : body.betaStage;
   return {
     ...rest,
     ...(typeof hardcore === "boolean" ? { hardcore } : {}),
     ...(typeof betaPicks === "number" ? { betaPicks } : {}),
+    ...(typeof betaStage === "boolean" ? { betaStage } : {}),
   };
 }
 
@@ -133,6 +144,8 @@ export interface BotSettingsView {
   readonly hardcore?: boolean | null;
   /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
   readonly betaPicks?: number | null;
+  /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
+  readonly betaStage?: boolean | null;
   readonly maxBetaPicks: number;
   /** The latest changes to this bot's settings, newest first — never an email. */
   readonly changes: ReadonlyArray<
@@ -160,7 +173,9 @@ export function botSettingsView(
       : "another owner";
   return {
     ...(hasHardcoreBuild(botId) ? { hardcore: stored.hardcore ?? null } : {}),
-    ...(scoutHostId(config) === botId ? { betaPicks: stored.betaPicks ?? null } : {}),
+    ...(scoutHostId(config) === botId
+      ? { betaPicks: stored.betaPicks ?? null, betaStage: stored.betaStage ?? null }
+      : {}),
     maxBetaPicks: MAX_BETA_PICKS,
     changes: (config.controls.changes?.list(botId, CHANGES_SHOWN) ?? []).map((c) => ({
       ...c,

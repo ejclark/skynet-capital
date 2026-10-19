@@ -10,6 +10,8 @@
  *    one poll interval — no restart, no deploy, and the decision audit records the halt honestly.
  *  - **Forced picks** (`betaPicks`, #4535 slice 2b) is DYNAMIC too: the scout reads the host bot's
  *    count at every scan, so a change applies on the next check — no restart.
+ *  - **After-close staging** (`betaStage`, #4535 slice 4b) is DYNAMIC: the staging poll reads the
+ *    host bot's flag at every pass, so a change applies from the next close — no restart.
  *  - **Hardcore** (#4535 slice 2c) is DYNAMIC: the poll swaps the bot's persona, its order cooldown
  *    and the mode its readiness gate allows in one step, re-running that gate on the build being
  *    swapped in — no restart.
@@ -45,6 +47,13 @@ export interface BotControls {
    * 0 disarms what the env armed. Whether the bot opens any is still its BETA-SCOUT subscription's.
    */
   readonly betaPicks?: number;
+  /**
+   * Whether the beta scout may stage its picks after the close for Alpaca's next open (dynamic —
+   * read at every staging pass). Only the scout's host bot reads it. Absent = the env's `+stage`
+   * (`SKYNET_BETA_FORCING`); false disarms what the env armed. Stages nothing while the effective
+   * pick count is 0.
+   */
+  readonly betaStage?: boolean;
   /** A fingerprint of the bot's CURRENT stored Alpaca credentials — never the credential itself.
    *  The bots process compares this against its own boot-time credential's fingerprint and, on a
    *  mismatch, pulls the real pair from the separate `/bot-credentials` endpoint. */
@@ -97,6 +106,7 @@ function parseBot(raw: unknown): BotControls | null {
     ...(mode ? { mode } : {}),
     ...(typeof raw.hardcore === "boolean" ? { hardcore: raw.hardcore } : {}),
     ...(betaPicks !== undefined ? { betaPicks } : {}),
+    ...(typeof raw.betaStage === "boolean" ? { betaStage: raw.betaStage } : {}),
     ...(credentialsVersion ? { credentialsVersion } : {}),
   };
 }
@@ -168,6 +178,19 @@ export function effectiveHardcoreIds(
  */
 export function effectiveBetaPicks(stored: number | undefined, envPicks: number): number {
   return stored ?? envPicks;
+}
+
+/**
+ * Whether the scout stages after the close: the owner's stored flag for the host bot when there is
+ * one (false disarms what the env's `+stage` armed), else the env's — and never with no picks to
+ * stage, the rule `parseBetaForcing` already holds for the env string (#4535 slice 4b).
+ */
+export function effectiveBetaStage(
+  stored: boolean | undefined,
+  envStage: boolean,
+  picks: number,
+): boolean {
+  return picks > 0 && (stored ?? envStage);
 }
 
 /**
