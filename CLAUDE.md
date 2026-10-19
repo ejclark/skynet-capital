@@ -596,9 +596,11 @@ common routes:
   normal, expected verdict, not a shortfall.
 - **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
   from `docs/BRAND.md` tokens).
-- **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
-  ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
-  go signal, exactly as `ready` is for a plan.
+- **A finished Claude Design session** → one of the two paths in [`docs/HANDOFFS.md`](docs/HANDOFFS.md)
+  — mark the canvas boards `build` and fire the design lane with one tap, or attach the session's
+  export to a Claude Code session with a one-line ask (Eric, 2026-09-24: "attaching the artifact
+  from the claude design session is enough for you to take it from here"). Either way Eric's own act
+  is the go signal; a saved canvas or an idle bundle triggers nothing.
 - **Drawing or reviewing any diagram** (a PR picture, an issue, a plan's lifecycle, an architecture
   page, a reply) → **`/mermaid`** — the type by story, the delta grammar, GitHub's actual renderer
   facts and one reference card per type, loaded only then (Eric, 2026-09-25: expert on demand, no
