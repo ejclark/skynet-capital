@@ -3,6 +3,25 @@ import type { ControlsState } from "../../src/autonomous/bot-controls.js";
 import { resolveBotControls } from "../../src/autonomous/bot-controls-client.js";
 import type { ControlsPollReport } from "../../src/autonomous/controls-poll-wire.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
+
+/** Every enabled client in this file polls a real listener in this worker (#4978). */
+function bridgeClient(
+  env: NodeJS.ProcessEnv,
+  onFetched?: (state: ControlsState) => void,
+  onDecisionsCursor?: (cursor: Readonly<Record<string, number>>) => void,
+) {
+  return resolveBotControls(
+    env,
+    onFetched,
+    onDecisionsCursor,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    LOADED_SUITE_BRIDGE_BUDGET,
+  );
+}
 
 /**
  * The bridge round trip: the app's internal listener serving `GET /controls` and the bots-side
@@ -38,7 +57,7 @@ describe("bot-controls bridge client", () => {
     await withBridge(
       () => state,
       async (base) => {
-        const client = resolveBotControls({
+        const client = bridgeClient({
           SKYNET_INSIGHTS_BRIDGE_URL: base,
         } as NodeJS.ProcessEnv);
         expect(client.enabled).toBe(true);
@@ -54,7 +73,7 @@ describe("bot-controls bridge client", () => {
     await withBridge(
       () => state,
       async (base) => {
-        const client = resolveBotControls({
+        const client = bridgeClient({
           SKYNET_INSIGHTS_BRIDGE_URL: base,
         } as NodeJS.ProcessEnv);
         expect(client.betaPicks("sauron")).toBeUndefined(); // nothing fetched yet = env count
@@ -75,7 +94,7 @@ describe("bot-controls bridge client", () => {
       () => ({ bots: { sauron: { suspended: true } } }),
       async (b) => {
         base = b;
-        const client = resolveBotControls({
+        const client = bridgeClient({
           SKYNET_INSIGHTS_BRIDGE_URL: base,
         } as NodeJS.ProcessEnv);
         await client.fetchOnce();
@@ -83,9 +102,41 @@ describe("bot-controls bridge client", () => {
       },
     );
     // Server is closed now: a fresh fetch fails, but a client holding a snapshot keeps it.
-    const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+    const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
     expect(await client.fetchOnce()).toBeNull();
     expect(client.suspendedReason("sauron")).toBeNull(); // never fetched = empty, never a throw
+  });
+
+  it("fails open to the last-known snapshot when a stalled bridge outlasts the budget", async () => {
+    let stallMs = 0;
+    await withBridge(
+      () => {
+        const until = Date.now() + stallMs;
+        while (Date.now() < until) {
+          // a starved event loop, made deterministic: the reply lands after the abort is due
+        }
+        return { bots: { sauron: { suspended: true } } };
+      },
+      async (base) => {
+        const client = resolveBotControls(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          // A real budget, so the healthy seeding fetch has ~1s of headroom and is never the
+          // tight one; the stall then overshoots it by a fixed 500ms. A busy-wait blocks the loop,
+          // and Node runs the overdue abort timer before it reads the reply.
+          undefined,
+          { timeoutMs: 1_000 },
+        );
+        expect(await client.fetchOnce()).toEqual({ bots: { sauron: { suspended: true } } });
+        stallMs = 1_500;
+        await expect(client.fetchOnce()).resolves.toBeNull(); // timed out, never a throw
+        expect(client.suspendedReason("sauron")).toBe("suspended by owner"); // last-known kept
+      },
+    );
   });
 
   it("the listener refuses /controls without the shared secret", async () => {
@@ -104,7 +155,7 @@ describe("bot-controls bridge client", () => {
       () => state,
       async (base) => {
         const seen: ControlsState[] = [];
-        const client = resolveBotControls(
+        const client = bridgeClient(
           { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
           (s) => seen.push(s),
         );
@@ -118,7 +169,7 @@ describe("bot-controls bridge client", () => {
     await withBridge(
       () => ({ bots: {} }),
       async (base) => {
-        const client = resolveBotControls(
+        const client = bridgeClient(
           { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
           () => {
             throw new Error("hook exploded");
@@ -139,7 +190,7 @@ describe("bot-controls bridge client", () => {
     const { port } = server.address() as AddressInfo;
     try {
       const seen: Record<string, number>[] = [];
-      const client = resolveBotControls(
+      const client = bridgeClient(
         { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` } as NodeJS.ProcessEnv,
         undefined,
         (cursor) => seen.push({ ...cursor }),
@@ -156,7 +207,7 @@ describe("bot-controls bridge client", () => {
       () => ({ bots: {} }),
       async (base) => {
         const seen: Record<string, number>[] = [];
-        const client = resolveBotControls(
+        const client = bridgeClient(
           { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
           undefined,
           (cursor) => seen.push({ ...cursor }),
@@ -171,7 +222,7 @@ describe("bot-controls bridge client", () => {
     await withBridge(
       () => ({ bots: {} }),
       async (base) => {
-        const client = resolveBotControls(
+        const client = bridgeClient(
           { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
           undefined,
           () => {
@@ -213,7 +264,7 @@ describe("the bots process's running commit on the controls poll", () => {
 
   it("carries GIT_SHA from the polling process to the app that serves the panel", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({
+      const client = bridgeClient({
         SKYNET_INSIGHTS_BRIDGE_URL: base,
         GIT_SHA: SHA,
       } as NodeJS.ProcessEnv);
@@ -224,7 +275,7 @@ describe("the bots process's running commit on the controls poll", () => {
 
   it("reports nothing when the process has no GIT_SHA — a rollback drops it (fly.toml)", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({
+      const client = bridgeClient({
         SKYNET_INSIGHTS_BRIDGE_URL: base,
       } as NodeJS.ProcessEnv);
       await client.fetchOnce();
@@ -234,7 +285,7 @@ describe("the bots process's running commit on the controls poll", () => {
 
   it("still serves the poll when the report is junk, rather than passing it on", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({
+      const client = bridgeClient({
         SKYNET_INSIGHTS_BRIDGE_URL: base,
         GIT_SHA: "not-a-commit",
       } as NodeJS.ProcessEnv);
@@ -253,7 +304,7 @@ describe("the bots process's running commit on the controls poll", () => {
 describe("the bots process's persona gate verdicts on the controls poll", () => {
   it("carries every reported persona's verdict to the app that serves the panel", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
       client.reportPersonaGate({ id: "sauron", ready: true, reason: "passed the readiness pack" });
       client.reportPersonaGate({ id: "banker", ready: false, reason: "not ready yet" });
       await client.fetchOnce();
@@ -270,7 +321,7 @@ describe("the bots process's persona gate verdicts on the controls poll", () => 
 
   it("merges a repeated report for the same persona rather than duplicating it", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
       client.reportPersonaGate({ id: "sauron", ready: false, reason: "first boot pass" });
       client.reportPersonaGate({ id: "sauron", ready: true, reason: "second boot pass" });
       await client.fetchOnce();
@@ -282,7 +333,7 @@ describe("the bots process's persona gate verdicts on the controls poll", () => 
 
   it("reports nothing when no persona has reported a verdict", async () => {
     await withReportingBridge(async (base, reports) => {
-      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
       await client.fetchOnce();
       expect(reports).toEqual([{}]);
     });

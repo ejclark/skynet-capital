@@ -9,6 +9,7 @@ import { buildSubscriptionsSnapshot } from "../../src/autonomous/subscriptions-w
 import { convictionsHolder } from "../../src/scripts/autonomous-convictions.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { aMemberConviction } from "../support/member-conviction.js";
 
 /**
@@ -85,6 +86,7 @@ describe("members' convictions over the bridge", () => {
             order.push("convictions");
             holder.accept(wire);
           },
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.fetchOnce();
         expect(order).toEqual(["convictions", "subscriptions"]);
@@ -110,6 +112,7 @@ describe("members' convictions over the bridge", () => {
         undefined,
         undefined,
         () => fired++,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.fetchOnce();
       expect(fired).toBe(0);
@@ -137,6 +140,7 @@ describe("members' convictions over the bridge", () => {
           () => {
             throw new Error("boom");
           },
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         expect(await client.fetchOnce()).toEqual(CONTROLS);
         expect(subscriptions).toBe(1);
@@ -166,6 +170,7 @@ describe("members' convictions over the bridge", () => {
             undefined,
             undefined,
             () => fired++,
+            LOADED_SUITE_BRIDGE_BUDGET,
           );
           await client.fetchOnce();
           expect(fired).toBe(0);
