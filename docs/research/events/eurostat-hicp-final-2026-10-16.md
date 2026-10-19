@@ -171,6 +171,7 @@ takes no position and this book has no instrument that would price one.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-10-13 | D-3 | Initial research banked (above); **canonical `src/domain/market-events/eurostat-hicp-final-2026-10-16.json` written this PR** over the single proposal `…from-ecb-decision-2026-10-29.json`, read first and now shadowed. **Date:** 2026-10-16 12:00 CEST — Eurostat's flash release ("scheduled for October 16, 2026") and the ECB calendar ("16/10/2026 12:00"), both fetched today; stays estimate. **Headline finding:** the complete release scores a kill pre-registered in `ecb-decision-2026-10-29` — services above Aug's 3.0% — and the flash already printed 3.2%, so the release adjudicates rather than reveals. **Database arithmetic** (`prc_hicp_minr`, EA, 2025=100): Sep-25 index 100.52, Aug-26 103.69, flash m/m +0.6 → headline **3.77%** (3.72–3.82); services 100.85 → 104.82 means ≤3.0% needs a ~0.15–0.2pp component revision, larger than any on record (5 months: 4 unrevised, Aug 3.3→3.2). Contributions precomputed at energy +1.71pp, services +1.50pp. **Four forward tests registered.** **Adjacency sweep — peers:** none, `symbols: []`. **Macro:** flash headline 3.8% vs 3.6% exp, core 2.5% in line; Germany Sep flash HICP 3.3%, services 2.7%; US CPI **10-14** is the next loud print; Fed Oct hike odds collapsed to ~14–20% after +29k payrolls (per the ECB ledger's row). **Vol:** VIX **15.21** (10-12 close). **Geopolitical/energy:** Brent ~105, EUR/USD ~1.118 (10-12/13). **Event tape:** 45 ids within ±5d recorded in `probe-ref`; ECB quiet period starts 10-21, so 10-20 is the last free-speech session; no dated event outside the calendar found. Fetch blocked: Destatis October press index 404. **No new dated event proposed.** | — (stance set: stand aside, one cell to read, no position, no play) | 2026-10-20 (low, 0–14d band: every 7d) — in practice the close-out on/after 2026-10-16 arrives first |
+| 2026-10-19 | D+3 | **Close-out.** Scanner marked `event-passed-unscored`; all four forward tests' score-by (10-19) had arrived, so no hold. Re-fetched the release itself (Eurostat `2-16102026-ap`, plus `prc_hicp_minr` updated 2026-10-16 23:00 CEST), cache busted (`symbols: []`, nothing to clear). **Headline 3.8% (unrevised), services 3.2% (unrevised), core 2.5%, energy 18.9% (flash 18.8), food 1.3% (flash 1.4); contributions energy +1.71pp, services +1.52pp. FT-1..4 all PASS** (detail in `## Outcome`). ECB supply-side kill stays fired. **Adjacency:** peers none; macro — US CPI 10-14 already in; **VIX 19.99 (10-16 close), +4.8 vs 15.21 at the last row** (a regime move on an opex day); semis sold off into the 10-16 close (CRWV −11.9%, MRVL −5.6%, AVGO −4.5%, NVDA −1.4%); no Bund series reachable. **No new dated event proposed.** | — (stance held: stand aside; this was a receipt) | — (assessment closed; reopens only for a registered forward test) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -187,3 +188,70 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-10-13
 <!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.destatis.de/EN/Press/2026/10/_node.html","status":"404 (slug guess for the Destatis October press index; Germany's Sep final was not read)","at":"2026-10-13"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-19, D+3 — inside `closeOutWithinDays: 6`; no hold under #2988, since all four forward
+tests' score-by, 2026-10-19, had arrived).** `symbols: []`, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) touched nothing. "Re-run
+instrument data" here means a fresh, direct fetch of the complete release, not the 10-13 forecast.
+**Date label:** the event stays **estimate** (no confirmed source prefix for a non-US statistical agency);
+nothing below licenses action.
+
+### The release, re-fetched from two views of Eurostat
+
+Eurostat's euro-indicator page `2-16102026-ap` (dated 16 October 2026) and the `prc_hicp_minr` database
+(updated 2026-10-16T23:00 CEST) agree. Euro-area annual HICP for September 2026: **3.8%** (Aug 3.2%, a year
+earlier 2.2%), m/m **+0.6%**, core (ex energy, food, alcohol & tobacco) **2.5%**. Components: services
+**3.2%** (m/m −0.7%), energy **18.9%**, non-energy industrial goods **1.1%**, food/alcohol/tobacco **1.3%**.
+Contributions: energy **+1.71pp**, services **+1.52pp**, NEIG **+0.29pp**, food **+0.25pp** (3.77pp against
+the 3.8% headline). Published weights: energy 90.3‰, services 468.2‰, NEIG 252.2‰, food 189.4‰ — within
+rounding of the implied 9.1 / 47.0 / 25.6 / 19.2%. Index arithmetic 104.31 ÷ 100.52 − 1 = **3.77%**, the
+registered point estimate to the hundredth.
+
+**What revised against the flash:** energy 18.8 → **18.9**, food/alcohol/tobacco 1.4 → **1.3**; headline,
+services and core did not. The headline now stands unrevised in five of six months of the run (April–July,
+September); August's −0.1pp remains the only headline revision.
+
+### Forward tests, scored
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| FT-…-1 — the date | Publishes **2026-10-16** | Published 2026-10-16 (page date and database update). Page metadata stamps 09:00Z = 11:00 CEST, not the 12:00 CEST the ECB calendar listed | **PASS** (date-only test; clock gap noted) |
+| FT-…-2 — the level | Headline in **3.7–3.9%** | **3.8%**, unrevised | **PASS** |
+| FT-…-3 — services | Services **≥3.1%** | **3.2%**, unrevised | **PASS** |
+| FT-…-4 — the table | Energy **≥+1.65pp**; services **+1.45 to +1.55pp** | Energy **+1.71pp**; services **+1.52pp** | **PASS**, both halves |
+
+No kill fires, so nothing moves to the sweep doc's kill list. The "services ≤3.0% is a ~0.15–0.2pp revision
+no month has produced" argument held: the flash's 3.2% was confirmed to the decimal.
+
+### Kill switches not registered as forward tests — final status
+
+- **ECB routing (done by omission, on purpose).** Services ≥3.1% means `ecb-decision-2026-10-29`'s supply-side
+  kill stays fired. That ledger's owner records it on its own next pulse; this file does not touch it.
+- **Channel kill — did not fire, with a wording caveat.** The kill reads "a tracked name moving >1% in the
+  06:00–09:30 ET window **that the tape attributes to this release**". From 5-minute bars (Yahoo chart
+  endpoint, fetched 2026-10-19), 05:55 → 09:25 ET: NVDA −0.47%, AVGO −1.36%, MRVL −1.79%, CRWV −2.68%. So
+  the *size* threshold was met by three names, but the *attribution* was not: neither candidate release
+  clock (09:00Z page stamp, 10:00Z ECB calendar) shows a step — NVDA, AVGO and CRWV are flat to −0.2% across
+  both — and the steps came at 09:20–09:30 ET (AVGO −0.85% and CRWV −1.1% in single bars), over three hours
+  after. The day closed with VIX **19.99** (16.46 the day before) and the four names at NVDA −1.4%, AVGO
+  −4.5%, MRVL −5.6%, CRWV −11.9% on an opex Friday, so Leg 7's "no price channel" claim survives. Limits:
+  pre-market bars are thin (MRVL has gaps) and no news-source attribution check was run.
+- **Tier kill, first half — unmeasured.** A Bund move >5bp in the 06:00–07:00 ET hour needs an intraday
+  Bund series. Yahoo returned 404 for `BUND10Y.DE` and stooq answered with a JavaScript challenge (both logged
+  in `probe-ref.blocked`); the US 10Y (`^TNX`) bars start at 08:20 ET and are not a Bund. A human would look
+  at the ECB data portal or a Bund-futures tick history for 2026-10-16. Nothing in the evidence above
+  suggests a move, but it is not measured.
+- **Tier kill, second half — open past this window.** The October flash (Eurostat, **2026-11-04**) printing
+  headline **≥4.2%** or core **≥2.8%**. No forward test carries it, so the scanner will not re-dispatch it;
+  the next Eurostat HICP entry's initial research should read it.
+
+**The stance holds unchanged: stand aside; this was a receipt, not a print.** `symbols: []` is correct and
+`low` impact is affirmed. The one durable finding is that the three Eurostat HICP entries now show the
+database arithmetic (flash m/m on the prior-year index) reproducing the published headline to within 0.03pp
+and the implied-weights table to within 0.02pp — a method worth reusing for the 11-04 flash, not a reason to
+reopen this document. This document goes quiet.
+
+**Last assessed:** 2026-10-19
+<!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://query1.finance.yahoo.com/v8/finance/chart/BUND10Y.DE","status":"404 (no Bund yield series on this endpoint; intraday 10-16 Bund move not measured)","at":"2026-10-19"},{"url":"https://stooq.com/q/d/l/?s=10ydey.b&i=d","status":"JavaScript proof-of-work challenge page instead of CSV (no Bund series read)","at":"2026-10-19"}]} -->
