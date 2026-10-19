@@ -222,6 +222,19 @@ describe("the zero-account door", () => {
     expect(LADDER_CARD_NO_ACCOUNT_NOTE).toContain(clause);
   });
 
+  it("gives LOCKED and WIP their own shapes: ◷ waits on you, ◌ is not built yet (#5093)", async () => {
+    mountAccounts("/accounts?section=milestones");
+    const ladder = await screen.findByRole("link", { name: /M·02/ });
+    const playbooks = await screen.findByRole("link", { name: /M·03/ });
+    // ◷ is the app's "waiting on you" (the ladder gate, the Store's locked door); ◌ is its "not
+    // live yet" (a draft, the Season-gated subscribe door). One glyph, one meaning, on one screen.
+    expect(ladder.querySelector(".mc-badge")).toHaveTextContent("◷ LOCKED");
+    expect(ladder.querySelector(".mc-gate")?.textContent).toMatch(/^◷ /);
+    expect(playbooks.querySelector(".mc-badge")).toHaveTextContent("◌ WIP · SEASON 1");
+    expect(playbooks.querySelector(".mc-gate")).toHaveTextContent("◌ WIP — Season 1 release");
+    expect(playbooks).not.toHaveTextContent("◷");
+  });
+
   it("leads with the steps and folds the milestones list one tap below them (#5256)", async () => {
     mountAccounts("/accounts");
     const welcome = await screen.findByRole("heading", { name: "Welcome to the league, Robin" });

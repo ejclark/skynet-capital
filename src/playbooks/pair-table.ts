@@ -169,7 +169,8 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
 };
 
 /** What the evidence says about one pair, as a glyph plus a word (criterion 10: hue never carries
- *  it alone, and neither does a glyph). */
+ *  it alone, and neither does a glyph). Can't run is ⊘, the heartbeat's Can't fire: a dash read
+ *  as "minus one" on the Store's counted fold ("– 1 can't run", #5093). */
 export type EvidenceStatus =
   | "researched"
   | "conviction"
@@ -186,7 +187,7 @@ export const EVIDENCE_STATUS: Readonly<
   screened: { glyph: "~", word: "screened" },
   "stand-aside": { glyph: "✗", word: "stand aside" },
   "not-studied": { glyph: "?", word: "not studied" },
-  "cant-run": { glyph: "–", word: "can't run" },
+  "cant-run": { glyph: "⊘", word: "can't run" },
 };
 
 export interface PairEvidence {

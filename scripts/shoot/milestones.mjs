@@ -86,6 +86,21 @@ const learn = {
   engagementCelebrating: [],
   pendingChecks: 0,
 };
+const unlinkedLearn = {
+  ...learn,
+  linked: false,
+  points: 0,
+  rank: "Observer",
+  courses: learn.courses.map((course) => ({
+    ...course,
+    locked: course.level !== 100,
+    done: 0,
+    milestones: course.milestones.map(({ earned: _earned, ...m }) => ({
+      ...m,
+      ticket: "/app/trade",
+    })),
+  })),
+};
 const onboarding = {
   linked: true,
   viewerName: "Eric",
@@ -147,9 +162,20 @@ const fresh = {
 const { page, origin, shoot, close } = await openShell({
   name: "milestones",
   stubs: {
-    "/api/learn": () => (linked ? learn : { ...learn, points: 0, rank: "Observer" }),
+    // No account linked reads as the server serves it (`learnJsonView(undefined)`): nothing earned,
+    // only the first level open, so M·02 says LOCKED at 0 / 8.
+    "/api/learn": () => (linked ? learn : unlinkedLearn),
     "/api/onboarding": () => (linked ? onboarding : fresh),
-    "/api/playbooks": playbooks,
+    // The same for M·03: no account has unlocked a playbook, so the frame never shows 1 / 4.
+    "/api/playbooks": () =>
+      linked
+        ? playbooks
+        : {
+            ...playbooks,
+            linked: false,
+            unlocked: 0,
+            playbooks: playbooks.playbooks.map((p) => ({ ...p, unlocked: false })),
+          },
     "/api/trade/plays": plays,
     "/api/join": { wired: true, canAddBots: false, classes: [], timezones: [] },
     "/api/feedback": {
@@ -188,6 +214,17 @@ for (const [width, suffix] of [
     await page.waitForTimeout(150);
     await shoot(`milestones-${tag}-top-${suffix}`);
   }
+  // The chapter cards themselves, every badge state on one frame: the door's M·02 is LOCKED (◷)
+  // beside M·03's WIP (◌) — two states, two shapes (#5093). A fold holds them under the steps.
+  linked = false;
+  await page.goto(`${origin}/app/accounts?section=milestones`);
+  await page.locator(".mc-grid").waitFor({ state: "attached" });
+  await page.evaluate(() => {
+    for (const fold of document.querySelectorAll("details.ms-toc-fold")) fold.open = true;
+    document.querySelector(".mc-grid")?.scrollIntoView({ block: "center" });
+  });
+  await page.waitForTimeout(250);
+  await shoot(`milestones-cards-${suffix}`);
   // The head's height with a viewer-level section open vs. the switcher — the same, by design.
   linked = true;
   const head = async (path) => {
@@ -207,7 +244,7 @@ for (const [width, suffix] of [
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts?section=milestones`);
-await page.getByText("Your milestones", { exact: true }).waitFor();
+await page.getByRole("heading", { name: "Your milestones" }).waitFor();
 await shoot("milestones-toc");
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=playbooks`);
 await page.getByText("Prove the play by hand, then arm it").waitFor();
