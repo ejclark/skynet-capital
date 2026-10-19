@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { BarsAnswer } from "../../src/live/bars";
 import type { EquityCurve, EquityCurveRange } from "../../src/live/equity-curve";
-import { HeroChart, HeroChartLegend } from "../../src/shell/hero-chart";
+import { HeroChart, HeroChartFlows, HeroChartLegend } from "../../src/shell/hero-chart";
 import type { OverlaySeries } from "../../src/shell/hero-chart-data";
 
 /**
@@ -125,5 +125,28 @@ describe("HeroChartLegend", () => {
     unmount();
     render(<HeroChartLegend overlay={overlay(0.0004, 0)} />);
     expect(screen.getAllByText("0.0%")[0]).toHaveClass("tone-flat");
+  });
+});
+
+describe("HeroChartFlows (#4563)", () => {
+  it("renders nothing when the curve carries no flow", () => {
+    const { container } = render(<HeroChartFlows flows={undefined} />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("names each flow under the chart and says the line is inferred", () => {
+    render(
+      <HeroChartFlows
+        flows={[
+          {
+            time: "2026-10-05" as never,
+            direction: "added",
+            label: "Capital added $300,000 on Oct 5 — not a gain",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Capital added $300,000 on Oct 5 — not a gain")).toBeTruthy();
+    expect(screen.getByText(/inferred from our own records/)).toBeTruthy();
   });
 });

@@ -1,6 +1,9 @@
 import { dirname, join } from "node:path";
 import type { ControlsPollReport } from "../autonomous/controls-poll-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
+import { hasHardcoreBuild } from "../personas/registry.js";
+import { COND_SCOUT_ID } from "../playbooks/cond-scout.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { type MemberPointers, pointAtRecords } from "../subscriptions/conviction-pointer.js";
@@ -11,11 +14,20 @@ import {
   parseSeedMarkers,
   type SeedMarkers,
   type SeedResult,
+  seedCondScout,
   seedFromHouseRoster,
   seedOwnRules,
 } from "../subscriptions/subscription-seed.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { createBotControlsStore } from "./bot-controls-store.js";
+import {
+  createEnvSettingsSeeder,
+  ENV_SEED_AUTHOR,
+  envSettingsMarkersPathFrom,
+} from "./env-settings-seed.js";
 import { createMemberConvictionStore } from "./member-conviction-store.js";
+import { createSettingsChangeLog, type SettingsChangeLog } from "./settings-change-log.js";
+import { subscriptionSummary } from "./subscription-changes.js";
 import {
   createSubscriptionStore,
   type SubscriptionStore,
@@ -72,6 +84,10 @@ export function seedMarkersPathFrom(subscriptionsPath: string): string {
 
 export function ownRulesSeedMarkersPathFrom(subscriptionsPath: string): string {
   return join(dirname(subscriptionsPath), "playbook-own-rules-seeds.json");
+}
+
+export function condScoutSeedMarkersPathFrom(subscriptionsPath: string): string {
+  return join(dirname(subscriptionsPath), "playbook-cond-scout-seeds.json");
 }
 
 /** Read markers, skip when settled, read subscriptions, plan purely, write subscriptions (only when
@@ -142,6 +158,58 @@ export function createOwnRulesSeeder(
 }
 
 /**
+ * The shadow scout's names seed (#4535 slice 4c, `seedCondScout`): the host subscribed once to
+ * COND-SCOUT on the env's names. The copy is a settings change, so it lands in the bot's change log
+ * as the Store's own subscribe would, authored as a copy of the operations setting.
+ */
+export function createCondScoutSeeder(
+  subscriptions: SubscriptionStore,
+  markersPath: string,
+  changes: SettingsChangeLog | undefined,
+  onReadError?: (message: string) => void,
+): SubscriptionSeeder {
+  const seed = markedSeed<HouseRosterReport>(
+    subscriptions,
+    markersPath,
+    (markers, report) => {
+      const host = report.accounts[0];
+      const pickable = (report.settings?.condScoutUniverse ?? []).some((s) =>
+        BOTS_UNIVERSE.includes(s),
+      );
+      // Never over a change log it could not read whole: the copy waits for the next poll.
+      return host !== undefined && !markers[host] && pickable && (!changes || changes.readable());
+    },
+    (state, markers, report, at) =>
+      seedCondScout(state, markers, report, COND_SCOUT_ID, BOTS_UNIVERSE, at),
+    onReadError,
+  );
+  return {
+    seed: (report, at = new Date()) => {
+      const write = seed(report, at);
+      for (const id of write.added) {
+        const sub = subscriptions.load()[id]?.find((s) => s.playbookId === COND_SCOUT_ID);
+        try {
+          changes?.record(id, [
+            {
+              at: at.toISOString(),
+              setting: `subscription:${COND_SCOUT_ID}`,
+              before: null,
+              after: subscriptionSummary(sub),
+              proposedBy: ENV_SEED_AUTHOR,
+              approvedBy: ENV_SEED_AUTHOR,
+            },
+          ]);
+        } catch {
+          // The subscription stands either way: it is the scout's behaviour today, and the poll's
+          // log line still says it was copied.
+        }
+      }
+      return write;
+    },
+  };
+}
+
+/**
  * A ◆ row's conviction onto every subscription to it that states none (#4469 slice 3c part 3,
  * `row-conviction.ts`). Unmarked on purpose — an invariant, re-read each poll, so a pair seeded
  * later gets it too — and as careful as the seeds: never over a file it could not read whole, and
@@ -204,6 +272,22 @@ export function pollSeedsFromEnv(
     registeredPlaybooks(),
     onReadError,
   );
+  // #4535 slice 4c: the bots app's other env settings, copied once before the bots stop reading them.
+  const changes = createSettingsChangeLog(env, onReadError);
+  const condScout = createCondScoutSeeder(
+    subscriptions,
+    condScoutSeedMarkersPathFrom(path),
+    changes,
+    onReadError,
+  );
+  const controlsPath = env.SKYNET_CONTROLS_FILE ?? "data/bot-controls.json";
+  const envSettings = createEnvSettingsSeeder(
+    createBotControlsStore(env, onReadError),
+    changes,
+    envSettingsMarkersPathFrom(controlsPath),
+    hasHardcoreBuild,
+    onReadError,
+  );
   return (report, at = new Date()) => {
     const bots = report.gate?.map((v) => v.id) ?? [];
     return [
@@ -217,6 +301,12 @@ export function pollSeedsFromEnv(
         "seeded each bot's own-rules playbook (standard, uncapped)",
         "marked for the own-rules seed, nothing added (already held)",
       ),
+      ...logLines(
+        report.houseRoster ? condScout.seed(report.houseRoster, at) : NOTHING,
+        "seeded the shadow scout's host on SKYNET_COND_SCOUT_UNIVERSE's names (COND-SCOUT, no budget)",
+        "marked for the shadow scout's names seed, nothing added (already held)",
+      ),
+      ...(report.houseRoster ? envSettings(report.houseRoster, at) : []),
       // After both seeds, so a ◆ pair one of them just added carries its row's conviction at once.
       ...lines(
         carryConvictions(subscriptions, at),

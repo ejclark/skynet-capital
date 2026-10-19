@@ -61,7 +61,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies);
+  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
