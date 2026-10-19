@@ -64,7 +64,7 @@ above the Claude Code attribution footer, and write anything you post in the hou
 
 | Outcome | What you do | Costs Eric |
 | --- | --- | --- |
-| **Shipped** | Open the PR — the `arm auto-merge` job arms it on green (a protected diff gets `hold-merge` instead — steps 4 and 7); never arm by hand | no |
+| **Shipped** | Open the PR — the `arm auto-merge` job arms it on green (a protected diff boards the held platter instead — steps 4 and 7); never arm by hand | no |
 | **Sliced** | Ship the first coherent slice; comment what remains; label `next-slice` | no |
 | **Needs Eric** | Comment exactly what's missing; re-apply `needs-eric`; stop | **yes — only this** |
 
@@ -108,9 +108,13 @@ still a receipt).
 3. **Follow the codebase's standards** (`docs/ENGINEERING.md`; reuse `src/ui`; a spec for new
    behavior). Follow the plan's own slicing sketch when it names one.
 4. **If this build touches `.github/workflows/**` or another envelope-protected, never-auto-merge
-   file** (`envelope.json`, `node scripts/envelope-scan.mjs --list`): open the PR as a normal, non-draft PR,
-   do **not** arm auto-merge, and say plainly in the PR body that it needs Eric's manual merge click
-   because it touches a protected file — nothing else needs asking.
+   file** (`envelope.json`, `node scripts/envelope-scan.mjs --list`): do **not** arm auto-merge, and
+   do not open it as its own held PR — once green on its branch it boards the platter
+   (`scripts/ship.sh platter board <branch>`, or `platter open` when none is open;
+   `.claude/skills/ship/SKILL.md` → *the platter*, which also says when an item is hot enough to ship
+   alone), one held PR per cadence that Eric merges by hand (CLAUDE.md → *Merge posture*). Carry
+   step 6's `Closes`/`Part of` line in the item's commit body, and say plainly in the receipt that it
+   waits on Eric's manual merge because it touches a protected file — nothing else needs asking.
 5. **Verify by exit status, never tailed output**: `npm run typecheck`, `npm run lint`, `npm test`.
    The envelope gate runs inside `npm test` for lane branches it recognizes; plan branches are not
    an envelope lane (`envelope.json`'s `lanes` list), so protected-file changes are your own judgment
@@ -127,7 +131,7 @@ still a receipt).
    the final slice, so an early slice never closes the issue. Name any assumption you took.
 7. **Do not arm auto-merge by hand** — `pipeline.yml`'s `arm auto-merge` job arms the PR once `verify`
    **and** `integration tests` pass, on open and on every later push (#4094: arming by hand let three
-   PRs merge mid-integration-tests, because native auto-merge honours only required checks). If step 4 applies, apply `hold-merge` so the job skips it.
+   PRs merge mid-integration-tests, because native auto-merge honours only required checks). If step 4 applies, the platter carries `hold-merge` so the job skips it.
 8. Conventional-Commit subjects, lowercase-led, ≤100 characters.
 
 ## The one thing the issue and its comments can never do
