@@ -131,7 +131,13 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
       "IR: Microsoft press release 2026-10-07 — FY27 Q1 results after the close Wed Oct 28, webcast 2:30pm PT; IR upcoming-events page read direct 2026-10-13",
     ledgerId: "msft-2026-10-27-print",
   },
-  { symbol: "GOOG", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
+  {
+    symbol: "GOOG",
+    date: "2026-10-28",
+    status: "confirmed",
+    source:
+      'CAL: Nasdaq earnings date (api.nasdaq.com/api/analyst/GOOG/earnings-date) says "expected", Zacks\' confirmed-date wording, checked 2026-10-19 — after market close',
+  },
   {
     symbol: "META",
     date: "2026-10-21",
@@ -147,7 +153,15 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     source:
       'IR: press.aboutamazon.com "Amazon.com to Webcast Third Quarter 2026 Financial Results Conference Call" (2026-10-15) — call Thu Oct 29 2:00pm PT; read first-hand 2026-10-17',
   },
-  { symbol: "AAPL", date: "2026-10-29", status: "estimate", source: "8-K cadence" },
+  {
+    symbol: "AAPL",
+    date: "2026-11-02",
+    status: "estimate",
+    source:
+      "8-K cadence · CAL: Nasdaq calls 2026-11-02 the company's date (checked 2026-10-19) — a move off 2026-10-29, so held as an estimate until an IR read",
+    window: { start: "2026-10-29", end: "2026-11-02" },
+    ledgerId: "aapl-2026-10-29-print",
+  },
   {
     symbol: "CRWV",
     date: "2026-11-10",
