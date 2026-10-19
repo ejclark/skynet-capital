@@ -561,11 +561,12 @@ milestones ToC" — the positive call for the fold; #1119's one-route-per-chapte
 Claude-derived fork it overturns, row cited) ◆.
 
 **Amendments applied (the red pass).**
-- ◆ **The zero-account door is drawn before any fold.** The Profile page's empty state **is** the
-  M·01 checklist: a member with no linked account gets `/accounts` opened on the Onboarding
-  chapter's connect guide (`accounts.tsx` → *THE ZERO-ACCOUNT DOOR*, #3807 slice 2b), never an
-  early return that links back to `/onboarding` — the loop the crawl's first-timer j1 s2/s4
-  found. `/onboarding` redirects into the chapter (`routes/onboarding.tsx`).
+- ◆ **The zero-account door is drawn before any fold.** `/accounts` returns early with "connect
+  one from onboarding" when `accounts[0]` is undefined (`accounts.tsx:166-174`), so
+  `/accounts?section=milestones&chapter=onboarding` loops a first-timer with no account. Either
+  the Profile page's empty state **is** the M·01 checklist, or `/onboarding` stays the route for a
+  member with no account and the section is its post-connect twin — the lift picks one and the
+  crawl's first-timer j1 s2/s4 is the proof.
 - ◆ **Onboarding under the sticky head reverses Eric's 2026-09-17 call** ("duplicating [account
   figures] here read as account-status content under a checklist heading") from the other
   direction: the cockpit head renders `AccountSwitcher` + `NetWorthCondensed` on every non-Overview
@@ -1017,9 +1018,10 @@ flowchart TD
     LEAGUE ==>|"week · playbook"| RD
 ```
 
-_Caption — the decision: seven groups, the page each one calls home, and the ten joints (thick
-edges, labelled with the key they share) that render on each other's pages as a row, a line or a
-link; drawn from §5 and §6 — §8.2 records which lifts have executed it._
+_Caption — the decision, not yet built: seven groups, the page each one calls home, and the
+ten joints (thick edges, labelled with the key they share) that render on each other's pages
+as a row, a line or a link; drawn from §5 and §6, sketch texture because nothing here is
+shipped._
 
 **The grouping, in one paragraph.** A signed-in member's information falls into seven groups,
 each with one key and one home. **The book** (key: account — everything an account holds, is
@@ -1037,12 +1039,11 @@ fill). **Me** (member — the Moneypenny thread and my filings) is the rail on e
 viewer-level Feedback section. **The league** (account across members — standing, everyone's
 fills, this week's council lines) stays outside Profile on Leaderboard + Activity, joined into
 the book by the league card and the viewer's own council line. Three every-route entities (the
-clock, the fleet's status line (#5037 round 2) and the rail) are the shell, not a group; the
-persona key is an eleventh key the lift names. The frame has no rail dimension on any
-non-Settings route (2a, #3807; `app/src/shell/frame.tsx`): a group's sub-nav is its home page's
-section switch and a view's controls are a row of its own full-width stage; the tower's column is
-§8.1's last row (#3977); the band and the phone face (§9 of the plan issue) are phase 3's question
-and are not decided here.
+clock, the fleet's status — one status line since #5037 round 2 — and the rail) are the shell, not a group; the persona key is an eleventh key
+the lift names. The rail dimension leaves the frame on every non-Settings route because every
+rail today carries either a group's sub-nav (which the group's home now holds as sections) or a
+control on a stage that is full width once the column is gone; the tower's form (the panel's
+band, §9 of the plan issue) is phase 3's question and is not decided here.
 
 **The copy rule** (#3729, #3186): every name in §5–§8 is a ledger name. What a member reads is
 the job — Overview · Positions · Activity · Playbooks · Thesis · Market calendar · Milestones ·
@@ -1051,12 +1052,11 @@ crest", "the workbench" never reach copy or an unglossed question to Eric.
 
 ### 8.1 The doctrine edits — `app/src/shell/frame.tsx`
 
-`frame.tsx` carries the amendments below as its doctrine (2a, #3807) and
-`tests/ui/page-sections.spec.ts` (*the rule the shell carries*) string-matches the amended lines,
-so a change to either lands with the other in the same PR — never routed around. Each row quotes
-the line it amended, states the amendment, and writes the observation that reverses it.
+`tests/ui/page-sections.spec.ts:49-62` string-matches the lines below, so every edit lands in
+slice 2a with the spec updated in the same PR — never routed around. Each row quotes the line
+it amends, states the amendment, and writes the observation that reverses it.
 
-| The line before 2a (`frame.tsx`) | The amendment | Falsifier (the dated observation) |
+| The line today (`frame.tsx`) | The amendment | Falsifier (the dated observation) |
 |---|---|---|
 | *"the TOPBAR is the app-level navigation dimension; the left rail is a second, per-view dimension — each route hands in its own sub-navigation or controls."* (header, `:4-6`) | **Two dimensions, topbar · stage.** The rail's two jobs are re-homed, never deleted: a group's sub-nav becomes its home page's section switch (the Profile page's Overview · Activity · Heartbeat · Thesis · Milestones · Feedback; the any-account page's Overview · Activity · Pulse · Heartbeat · Thesis); a view's controls sit at the top of its own stage (Activity's kinds, R&D's calendar head, Trade's folded switch). | Eric reading a control at the top of its stage as "plucked from the tiles it controls" (his own 2026-08-28 parked note, #738) → that control returns beside its tile, still on the stage; a Profile link that survives only in the rail (`/feedback`, `/learn` post-onboarding) found dead by the crawl after 2a → the plain link row stays until 2b lands |
 | *"the layout is three ordered dimensions — the TOPBAR is the first (app-level navigation), the LEFT RAIL the second (a view's sub-nav OR its controls — a control here drives the content beside it), and the VIEW CONTENT the third. Higher dimensions steer lower ones, never the reverse"* (`:8-12`) | **Two ordered dimensions.** The topbar is first; the page's own head is second — its identity (the standing on the Profile page), its section switch, and, only where a date key drives content, the calendar head; the content is third. Higher still steers lower: content never reconfigures the head, and the head never adds app-level destinations. | Eric reads the head (or the panel's band) as "a second topbar" on the live route by 2026-10-10 (the panel's falsifier) → the calendar head leaves the head for the stage's first row and the section switch alone stays. **Fired on the Profile page, 2026-10-10** (#5037 round 2, built by #5074): Eric read the row as chrome that drove nothing on most sections ("controls that do nothing is an oxy moron"), so its head carries no calendar on any section and the range heads the Events card, the one section it changes; R&D and Trade keep theirs leading their stage |
