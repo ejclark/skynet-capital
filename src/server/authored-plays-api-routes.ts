@@ -160,7 +160,7 @@ function isRunning(record: AuthoredPlayRecord, config: DashboardServerConfig): b
 }
 
 /** The credit line: the member's own name from the session, cut to the model's limit. */
-function creditFor(session: Session): string {
+export function creditFor(session: Session): string {
   const named = session.name?.trim() || session.email.split("@")[0] || "A member";
   return named.replace(/[\r\n]+/g, " ").slice(0, 40);
 }

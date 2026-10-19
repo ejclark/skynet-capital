@@ -33,6 +33,7 @@ import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { InviteDeps } from "./invite-form.js";
+import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
@@ -329,6 +330,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Nothing in it reaches a bot; a draft is not on any roster.
    */
   readonly authoredPlays?: AuthoredPlayStore;
+  /**
+   * MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states and keeps as drafts. Omit to
+   * disable (offline mode): the list answers empty and a save answers "not wired in this
+   * deployment." A draft steers nothing: no bot and no subscription reads this store.
+   */
+  readonly memberConvictions?: MemberConvictionStore;
   /**
    * THE AUTHORED-PLAY MILESTONE LEDGER (#5457 slice 5) — what the authored-plays routes write when a
    * test starts, passes, a play is promoted or paused. Omit and those events simply aren't posted.

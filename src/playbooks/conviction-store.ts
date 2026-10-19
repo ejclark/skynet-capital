@@ -6,15 +6,15 @@ import { findPair, type Pair } from "./pair-table.js";
 import { findPlaybook } from "./registry.js";
 
 /** The bounds a pair's playbook lets a conviction narrow, or undefined when it cannot be steered. */
-const playbookBounds = (pairId: string): SteerBounds | undefined =>
+export const playbookBounds = (pairId: string): SteerBounds | undefined =>
   findPlaybook(pairId)?.steerable?.bounds;
 
 /**
  * THE CONVICTION STORE (#5482 slice 2) — every conviction record, by id, and the pairs each one
  * steers. Read-only on purpose: the records are the seeded ones (`conviction-seeds.ts`), shipped
  * with the build, so the app that serves them and the bots that act on them read the same records
- * without a second wire. A file-backed store with a write route arrives with the slice that lets a
- * member state one (slice 6); it implements the same reads.
+ * without a second wire. A member's own views are kept apart as drafts (`member-conviction-store.ts`,
+ * slice 6a) and steer nothing; the step that hands one to the bots brings it here.
  *
  * A record's narrowings (#5482 slice 4) are judged here against the bounds of the playbook each
  * names: one that would widen a bound is refused with the whole record, never clamped.
