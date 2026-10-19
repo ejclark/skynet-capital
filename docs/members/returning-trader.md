@@ -20,7 +20,7 @@ the path from "my position" to "the order is in" to be four taps and a review.
 
 ## 3. What they are trying to do
 
-1. See the position (Cockpit → Overview).
+1. See the position (Cockpit → Positions).
 2. Read its guidance: is a covered call reasonable now, at which strike, until when.
 3. Draft the order on Trade, prefilled from the guidance.
 4. See the fill on Activity.
@@ -115,8 +115,7 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    opens the Profile's Playbooks chapter, the app shall relate it to the Playbook Store (one
    playbook system, not two).** _known gap — dead end 7._ Judge: does the reader know which
    Playbooks this is?
-2. `/app/research?section=playbooks` — the store; a + on each ready row opens the
-   viewer's own bots to subscribe as (`app/src/shell/playbooks-section.tsx`). **WHEN the member
+2. `/app/research?section=playbooks` — the store, "Subscribe as" in the rail. **WHEN the member
    opens R&D → Playbooks, the app shall show the store with a subscribe-as account picker.** Judge:
    does the reader know which Playbooks this is?
 
@@ -125,7 +124,7 @@ Journey map: [`maps.md`](maps.md#returning-trader). Findings: [`friction-ledger.
 ## 7. Feature seeds
 
 - **One "back" that remembers** — Trade's back link returns to the page the member arrived from
-  (cockpit or desk), never a fixed route. _(src: returning-trader · while: j1 s5)_
+  (cockpit or desk), never a fixed route. _(src: returning-trader · while: j1 s4)_
 - **The symbol input travels with the pane** — Chain, Chart and Guidance each carry the symbol
   field when they have no symbol, instead of pointing at the Ticket. _(src: returning-trader ·
   while: j2 s1)_
