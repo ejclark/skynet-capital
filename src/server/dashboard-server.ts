@@ -31,6 +31,7 @@ import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
+import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -154,7 +155,8 @@ async function servePlaybookReads(
   return serveConvictionsApi(req, res, path);
 }
 
-/** What a member does to playbooks: subscribe a bot to the house's (#885), or write their own (#5457). */
+/** What a member does to playbooks: subscribe a bot to the house's (#885), write their own (#5457),
+ *  or state a conviction that would steer them (#5482 slice 6a). */
 async function servePlaybookWrites(
   req: IncomingMessage,
   res: ServerResponse,
@@ -163,6 +165,7 @@ async function servePlaybookWrites(
   session: Session | undefined,
 ): Promise<boolean> {
   if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 

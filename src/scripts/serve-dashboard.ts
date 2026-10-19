@@ -213,6 +213,7 @@ async function main(): Promise<void> {
     subscriptions,
     savedPositions,
     authoredPlays,
+    memberConvictions,
     playMilestones,
     knownPersonaIds,
     auth,
@@ -320,6 +321,7 @@ async function main(): Promise<void> {
     subscriptions,
     savedPositions,
     authoredPlays,
+    memberConvictions,
     playMilestones,
     // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).
     readPlayMilestones: () => {
