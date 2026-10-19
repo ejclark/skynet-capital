@@ -320,7 +320,7 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
     · a gitGraph for a story about a button · the decision table above.
 11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
-    whole (house teal, or ink mode once promoted); never a hex chosen in flight, never two modes
+    whole (house teal, or ink mode); never a hex chosen in flight, never two modes
     in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
     outside a checked-in snippet.
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
