@@ -53,9 +53,8 @@ and the first button, never the rail. They skip anything that names a concept th
 0. `/login` — the sign-in page: the scene behind it, one button per provider, "Continue with
    Google" first (the server serves it the same with or without a session). **WHEN an invited
    visitor opens the sign-in page, the app shall show a way to sign in at every width.** Judge:
-   can this reader tell how to get in, in ten seconds? _(Added 2026-09-29, #3816 slice 9 — the
-   first page this member ever saw; a spectacle surface, so the phone frame checks its honest
-   fallback, not a curated layout.)_
+   can this reader tell how to get in, in ten seconds? _(The first page this member ever saw; a
+   spectacle surface, so the phone frame checks its honest fallback, not a curated layout.)_
 1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
    the Profile page, which opens on the connect guide for a member with no account. **WHEN a
    signed-in member with no linked account opens the app, the app shall keep a one-tap way into
@@ -90,7 +89,7 @@ and the first button, never the rail. They skip anything that names a concept th
    "Talk to Moneypenny", that opens her rail — where hello is said (goal 2); offline, a line that
    feedback is not switched on yet. **WHEN a member with no linked account opens Profile →
    Feedback, the app shall offer one control that opens Moneypenny.** Judge: can this reader tell
-   how to say hello, in ten seconds? _(Added 2026-09-29, #3816 slice 9.)_
+   how to say hello, in ten seconds?
 
 5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
    words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the
