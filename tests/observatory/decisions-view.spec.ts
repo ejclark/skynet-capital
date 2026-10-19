@@ -1,3 +1,4 @@
+import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import type { ConsiderationChip } from "../../src/observatory/considerations-view.js";
 import { decisionsFor } from "../../src/observatory/decisions-view.js";
 import { plainPosition } from "../../src/observatory/position-plain.js";
@@ -110,12 +111,22 @@ describe("decisionsFor", () => {
     });
 
     it("is the stock's own print for shares, flagged when the date is an estimate", () => {
-      // the real calendar: GOOG's Oct 28 is still a cadence estimate (MSFT's was confirmed 10-18)
-      const [d] = decisionsFor("eric", [held("GOOG", 10, 300, 3900)], []);
-      expect(d?.due).toEqual({
-        at: "2026-10-28",
+      // a pinned table: the real one refreshes itself every weekday (#4479)
+      const book: EarningsPrint[] = [
+        { symbol: "GOOG", date: "2026-10-28", status: "confirmed", source: "IR: fixture" },
+        { symbol: "NVDA", date: "2026-11-18", status: "estimate", source: "EST: fixture" },
+      ];
+      const pinned = (symbol: string) => {
+        const p = { symbol, quantity: 10, avgPrice: 300, marketValue: 3900 };
+        return { ...p, plain: plainPosition(p, now, book) };
+      };
+      const [goog] = decisionsFor("eric", [pinned("GOOG")], []);
+      expect(goog?.due).toEqual({ at: "2026-10-28", reason: "event", label: "Earnings Oct 28" });
+      const [nvda] = decisionsFor("eric", [pinned("NVDA")], []);
+      expect(nvda?.due).toEqual({
+        at: "2026-11-18",
         reason: "event",
-        label: "Earnings Oct 28",
+        label: "Earnings Nov 18",
         estimated: true,
       });
     });
