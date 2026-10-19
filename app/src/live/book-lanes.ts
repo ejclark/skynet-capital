@@ -13,8 +13,9 @@ import { held } from "./quantity";
  *
  *   ⧗ decide   a decision due on that position (a decision card's due day; an hourglass, since
  *              ▲ is Consider on the rows, #5083)
- *   ◆ confirmed  a dated event on what you hold — a print, an option's expiry, a named event
- *   ◇ estimated  the same, on a cadence estimate rather than a confirmed day
+ *   ⬢ confirmed  a dated event on what you hold — a print, an option's expiry, a named event
+ *   ⬡ estimated  the same, on a cadence estimate rather than a confirmed day (a hexagon, since
+ *                ◆ and ◇ are Review and Not now on the rows, #5093)
  *   ○ market   a headline macro print (the market-wide lane only)
  *
  * Which lane an event lands on: a decision or an expiry on the exact contract it names; an event

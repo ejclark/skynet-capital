@@ -18,7 +18,7 @@ import { Route } from "../../src/routes/accounts";
 /**
  * The Profile page's Events section (#3807 slice 2c; the calendar of what you hold, #5074):
  * `?section=events` is headed by the range — the page's only date control — over a lanes picture
- * of the book and the same dates as a list, in three tiers (⧗ decide by, ◆ on what you hold,
+ * of the book and the same dates as a list, in three tiers (⧗ decide by, ⬢ on what you hold,
  * ○ market-wide), over three offline fixtures: human-eric holds EEM (no print — the held tier is
  * honestly empty), sauron holds META (prints Oct 28), the day-trader holds AAPL (prints Oct 29;
  * the iPhone Duo goes on sale Oct 23). The page renders through a real memory-history router; the
