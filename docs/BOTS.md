@@ -32,19 +32,20 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 - `alpaca/alpaca-trading-client.ts` — typed `GET /v2/account`, `GET /v2/positions`,
   `POST /v2/orders`.
 - `adapters/alpaca-broker-adapter.ts` — maps Alpaca's string-typed payloads to the domain
-  `Portfolio` and submits market orders. A result is `filled` only on a fill the broker
-  confirmed; an order it took but never confirmed (queued after hours, or slower than the
-  sub-second poll) reads `working` (#4655).
+  `Portfolio`, submits a share order as a market order, and hands an option order to
+  `adapters/alpaca-option-order-flow.ts`, which places it as a DAY limit. A result is `filled`
+  only on a fill the broker confirmed; an order it took but never confirmed (queued after hours,
+  or slower than the sub-second poll) reads `working` (#4655).
 
 Because the engine depends only on `BrokerPort`, the exact same engine, personas, and risk
 guards run against the in-memory simulator or a live paper account with no code change.
 
 ## Run loop and dashboard
 
-- **Run loop** — `src/scripts/run-autonomous.ts` schedules decision cycles per bot and persists
-  each `CycleReport`.
-- **Dashboard** — `src/scripts/serve-dashboard.ts` and the `/u/:id` per-account views (activity,
-  decisions, pulse) are a centralized read on every bot's account.
+- **Run loop** — `src/scripts/run-autonomous.ts` schedules decision cycles per bot and records
+  each one as a `DecisionRecord`.
+- **Dashboard** — `src/scripts/serve-dashboard.ts` and the `/u/:id` per-account views (ledger,
+  playbooks, pulse) are a centralized read on every bot's account.
 
 Doctrine — a persona's own coded rules, graded honestly against the code and the tape — lives in a
 top-level `docs/BOTS-<PERSONA>.md` dossier per bot (see `docs/BOTS-SAURON.md` for the first one),
