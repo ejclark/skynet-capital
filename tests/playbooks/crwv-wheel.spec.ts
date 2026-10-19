@@ -14,7 +14,11 @@ import {
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import type { Persona } from "../../src/personas/persona.js";
 import { type EnabledPlaybook, playbookIntents } from "../../src/playbooks/playbook.js";
-import { CRWV_WHEEL, CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
+import {
+  CRWV_WHEEL,
+  CRWV_WHEEL_SETTING,
+  registeredPlaybooks,
+} from "../../src/playbooks/registry.js";
 import { WHEEL_DELTAS, wheel, wheelPhase } from "../../src/playbooks/wheel.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
@@ -261,12 +265,26 @@ describe("CRWV-WHEEL — selling a cash-secured put", () => {
         "Its owner runs this against the study, betting the market overprices CRWV's downside",
     );
     expect(put?.reason).not.toContain("underpays its moves");
+    // The order's own falsifier is everyone's; the playbook's retire rule is its owner's (#5043).
     expect(put?.forecast).toEqual({
       direction: "up",
-      invalidator:
-        "CRWV settles below $80 on 2026-12-31 — the wheel buys 100 shares at $80; the play retires " +
-        "if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money",
+      invalidator: "CRWV settles below $80 on 2026-12-31 — the bot buys 100 shares at $80",
+      retireRule:
+        "The playbook retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts " +
+        "finish in the money.",
     });
+  });
+
+  it("names no playbook in the words every member reads — the put's and the covered call's (#5043)", () => {
+    const [put] = decide(market());
+    const [call] = decide(market(), book(shares(100, 80)));
+    for (const order of [put, call]) {
+      const said = [order?.reason, order?.expectation, order?.forecast?.invalidator].join(" ");
+      expect(said.length).toBeGreaterThan(0);
+      for (const { id } of registeredPlaybooks()) expect(said).not.toContain(id);
+      expect(said).not.toMatch(/wheel|retires if/i);
+      expect(order?.forecast?.retireRule).toContain("retires if");
+    }
   });
 
   it("moves the strike and the price with the mode", () => {

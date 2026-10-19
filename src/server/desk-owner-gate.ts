@@ -1,3 +1,4 @@
+import type { OrderForecast } from "../domain/types.js";
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
 import type { CheckWeekView } from "../observatory/check-week-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
@@ -97,24 +98,42 @@ export function withoutLadderPlaybookIds(
 type Outcome = DecisionCycleView["outcomes"][number];
 type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
-/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag and the broker's
- *  words removed — and each refused idea's strategy tag and play. The tag is a playbook's own slug
- *  (`crwv-wheel-put`), so it names the playbook as plainly as the chip does (#4971). */
+/** An outcome's forecast as a non-owner reads it: the call and the order's own falsifier, never
+ *  the playbook's retire rule (#5043). */
+function withoutRetireRule({
+  retireRule: _r,
+  ...forecast
+}: OrderForecast): Omit<OrderForecast, "retireRule"> {
+  return forecast;
+}
+
+/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag, the broker's words
+ *  and its forecast's retire rule removed — and each refused idea's strategy tag and play. The tag
+ *  is a playbook's own slug (`crwv-wheel-put`), so it names the playbook as plainly as the chip
+ *  does (#4971); the retire rule is the playbook's own falsifier, never the order's (#5043). The
+ *  forecast's direction and the order's own invalidator stay. */
 export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
   "outcomes" | "refusedIntents"
 > & {
-  readonly outcomes: readonly Omit<
+  readonly outcomes: readonly (Omit<
     Outcome,
-    "playbook" | "playbookMode" | "strategy" | "brokerReason"
-  >[];
+    "playbook" | "playbookMode" | "strategy" | "brokerReason" | "forecast"
+  > & { readonly forecast?: Omit<OrderForecast, "retireRule"> })[];
   readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy" | "playbookId">[];
 })[] {
   return withoutPlaybookNames(
     cycles.map(({ refusedIntents, ...cycle }) => ({
       ...cycle,
       outcomes: cycle.outcomes.map(
-        ({ playbook: _p, playbookMode: _m, strategy: _s, brokerReason: _b, ...outcome }) => outcome,
+        ({
+          playbook: _p,
+          playbookMode: _m,
+          strategy: _s,
+          brokerReason: _b,
+          forecast,
+          ...outcome
+        }) => (forecast ? { ...outcome, forecast: withoutRetireRule(forecast) } : outcome),
       ),
       ...(refusedIntents
         ? {

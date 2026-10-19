@@ -36,7 +36,8 @@ const wheel: DeskActivityEvent = {
     playbookId: "CRWV-WHEEL",
     playbookMode: "aggressive",
     expectation: "Below it, the bot buys 100 shares at $80 and sells covered calls on them next.",
-    invalidator: "the play retires if its net P/L is below 0 on 2027-01-29",
+    invalidator: "CRWV settles below $80 on 2026-11-06 — the bot buys 100 shares at $80",
+    retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
     contract: "SELL 1 CRWV $80 PUT · 6 NOV 26 · limit $2.55",
     rawCount: 1,
     guardedCount: 1,
@@ -110,7 +111,14 @@ describe("OrderDeepDive — what it shows", () => {
     expect(screen.getByText("The playbook · only you see this")).toBeInTheDocument();
     expect(screen.getByText("CRWV-WHEEL")).toBeInTheDocument();
     expect(screen.getByText(/sells covered calls on them next/)).toBeInTheDocument();
-    expect(screen.getByText(/the play retires if/)).toBeInTheDocument();
+    expect(screen.getByText(/the bot buys 100 shares at \$80$/)).toBeInTheDocument();
+    // The playbook's own falsifier, in its own field since #5043 — the order's invalidator no
+    // longer carries it.
+    // A whole sentence under no label — never "Retires if The play retires if …".
+    expect(
+      screen.getByText("The playbook retires if its net P/L is below 0 on 2027-01-29."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Retires if")).not.toBeInTheDocument();
   });
 
   // #885 and #5043: a non-owner gets the contract's arithmetic and the reason — no playbook, no

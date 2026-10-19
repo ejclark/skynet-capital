@@ -9,7 +9,7 @@ export const PUT = "CRWV261113P00085000";
 export const LOW = "NVDA261113C00185000";
 export const HIGH = "NVDA261113C00200000";
 const RETIRE =
-  "the play retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money";
+  "The playbook retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money.";
 
 export const sold = {
   symbol: "CRWV",
@@ -25,7 +25,8 @@ export const sold = {
     "CRWV stays above $85 to 2026-11-13: the put expires and the premium is kept. Below it, the bot buys 100 shares at $85 and sells covered calls on them next.",
   forecast: {
     direction: "up",
-    invalidator: `CRWV settles below $85 on 2026-11-13 — the wheel buys 100 shares at $85; ${RETIRE}`,
+    invalidator: "CRWV settles below $85 on 2026-11-13 — the bot buys 100 shares at $85",
+    retireRule: RETIRE,
   },
   option: {
     effect: "open",
