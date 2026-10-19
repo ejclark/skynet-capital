@@ -35,7 +35,8 @@ what it means, or what its dials do.
    `prefers-reduced-motion` still holds.
 6. **Commit and push** (lowercase-led, e.g. `feat: weather the reactor dome's leeward face`), 4×
    backoff. Report: the layer, before/after shot paths, and the contract check. Then stop — one
-   layer per invocation. **You do not open the PR**: visual work waits for Eric's taste.
+   layer per invocation. **You do not open the PR**: the governor lands it; visual work is
+   taste-reviewed live post-merge (Eric, 2026-08-20) unless a taste fork holds it.
 
 ## Hard rules
 

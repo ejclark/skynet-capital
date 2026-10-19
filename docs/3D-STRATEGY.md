@@ -113,8 +113,10 @@ one green rep per athlete invocation**, with the register as the shared prompt e
    invocation (weathering, greebles, light behavior) on a shipped piece, never touching its
    contract, before/after screenshots.
 
-Merge policy: forge output is **visual work — it always waits for Eric's taste** (screenshots on the
-PR; no auto-merge), per the governor's carve-outs. The athletes report; they do not self-approve.
+Merge policy: forge output is visual work, and visual PRs auto-merge on green like everything else —
+Eric's taste review happens **live, post-merge** (Eric, 2026-08-20; CLAUDE.md → *Merge posture*,
+governor merge-policy table). Screenshots still go on the PR, and a specific taste fork worth his eyes
+first ships held (`--hold`). The athletes report; they do not self-approve.
 
 ## The AVOID set (documented pathologies, all off-brand here)
 

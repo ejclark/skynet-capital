@@ -44,8 +44,8 @@ screenshot against its vision passage. You do not choose the piece; the sheet's 
 6. **Commit and push** (Conventional Commit, lowercase-led, e.g. `feat: build the cooling-tower
    piece from the reactor build sheet`), 4× backoff on push. Report: the piece, its dials, the
    screenshot paths, which salient details the shots prove, and anything that missed the bar. Then
-   stop — one piece per invocation. **You do not open the PR**: forge output is visual work and
-   always waits for Eric's taste.
+   stop — one piece per invocation. **You do not open the PR**: the governor lands it; forge output is
+   visual work, taste-reviewed live post-merge (Eric, 2026-08-20) unless a taste fork holds it.
 
 ## Hard rules
 
