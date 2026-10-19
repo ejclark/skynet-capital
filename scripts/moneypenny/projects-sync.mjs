@@ -151,8 +151,9 @@ function readItemsFromGh() {
 // probe on the same token succeeded. Asked of `user(login)` directly, a GitHub fault keeps its own
 // words, which `isTransientGhError` already retries (#4675's "Something went wrong" included).
 // A token blind to the board gets `projectV2: null` + NOT_FOUND and gh exits non-zero — still loud.
-// `item-add` / `item-list` stay on `gh project`, behind #3914's retry and diagnosis: neither runs
-// on a sync whose issue is already on the board.
+// `item-list` stays on `gh project`, behind #3914's retry and diagnosis: it runs only on the
+// whole-board fallback. `item-add` left it in #5792 (see `addIssueToBoardFromGh`) — every brand-new
+// issue's first sync runs it, so "rarely runs" was never true of the add.
 const PROJECT_SHAPE_QUERY = `query($owner:String!,$project:Int!){
   user(login:$owner){ projectV2(number:$project){ id number
     fields(first:100){ nodes{
@@ -265,6 +266,45 @@ export function readIssueItemsFromGh(
 
 function readProjectFromGh() {
   return readProjectShapeFromGh().project;
+}
+
+// #5792 — THE ADD SKIPS gh's OWNER LOOKUP TOO. Run 39184644834 lost `gh project item-add 2 --owner
+// ejclark` for brand-new #5791 to the same masked `unknown owner type` #4933 took off the reads,
+// while the GraphQL probe on the same token succeeded. `item-add` is a thin wrapper over this one
+// mutation; asked directly with ids we already hold (the board's from `board.project()`, the issue's
+// `node_id` from its REST read), a GitHub fault keeps its own words for `isTransientGhError`, and a
+// second add still answers `Content already exists in this project` for `resolveBoardItem`.
+const ADD_ITEM_MUTATION = `mutation($project:ID!,$content:ID!){
+  addProjectV2ItemById(input:{projectId:$project,contentId:$content}){ item{ id } }
+}`;
+
+/**
+ * Put one issue on the board by id, shaped like the `item-list` row `findBoardItem` matches on, so
+ * `noteAdded` keeps a cached list honest. `gh` injected so the argv and the fail-closed parse are
+ * provable without a network call.
+ */
+export function addIssueToBoardFromGh(
+  { projectId, issue },
+  { gh = (argv) => runGh("`gh api graphql` (addProjectV2ItemById)", argv) } = {},
+) {
+  if (!projectId) throw new Error(`no project id for #${PROJECT_NUMBER} — cannot add to the board`);
+  if (!issue?.node_id) {
+    throw new Error(`issue ${issue?.html_url ?? "?"} has no node_id — cannot add it to the board`);
+  }
+  const out = gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${ADD_ITEM_MUTATION}`,
+    "-F",
+    `project=${projectId}`,
+    "-F",
+    `content=${issue.node_id}`,
+  ]);
+  const id = JSON.parse(out || "null")?.data?.addProjectV2ItemById?.item?.id;
+  if (!id)
+    throw new Error(`adding ${issue.html_url} to project #${PROJECT_NUMBER} returned no item`);
+  return { id, content: { type: "Issue", url: issue.html_url } };
 }
 
 /**
@@ -424,15 +464,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
   const { item, added } = resolveBoardItem({
     issueUrl: issue.html_url,
     cachedItems: board.itemsFor(issue),
-    addItem: () =>
-      ghProjectJson([
-        "item-add",
-        String(PROJECT_NUMBER),
-        "--owner",
-        OWNER,
-        "--url",
-        issue.html_url,
-      ]),
+    addItem: () => addIssueToBoardFromGh({ projectId: board.project().id, issue }),
     listItems: () => board.items({ refresh: true }),
   });
   if (added) board.noteAdded(item);
