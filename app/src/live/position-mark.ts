@@ -1,3 +1,4 @@
+import { EXIT_DTE } from "../../../src/playbooks/long-call-rules";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "./desk";
 import { held } from "./quantity";
@@ -11,6 +12,8 @@ import { held } from "./quantity";
  *  - **Consider** — on plan with a target met: the decision engine's own lock-in bars
  *    (`src/observatory/decisions-view.ts`: 50% on an option, 25% on shares), so the badge and the
  *    Map lens's cards never disagree about what "worth taking" means;
+ *    and a bought call inside the house long-call bot's time stop (`EXIT_DTE` days left, whatever
+ *    its return — `src/playbooks/long-call-rules.ts`), so the badge agrees with the card;
  *  - **On plan** — anything else, and the line shows the position's next date.
  * The marks are a filter and a sort too (`is:review` …, `sort:look`, in `desk.ts`'s grammar).
  * Pure: the stock's price for a sold option comes in from the option book the blotter reads.
@@ -143,6 +146,18 @@ export function pastLine(p: DeskPosition, mark: PositionMark, spot?: number): nu
   return Math.abs(percent(p.returnPct) ?? 0);
 }
 
+/** A bought call with the house's time stop reached — a fact, not a verdict: "38 days left". */
+function timeStop(p: DeskPosition): PositionMark | null {
+  const days = p.expiresInDays;
+  if (!p.isOption || days === undefined || days < 0 || days > EXIT_DTE) return null;
+  if (held(p.quantity).short || parseOccSymbol(p.symbol)?.type !== "call") return null;
+  return {
+    kind: "consider",
+    fact: `${days} day${days === 1 ? "" : "s"} left`,
+    said: `${days} day${days === 1 ? "" : "s"} left, the house sells its long calls at ${EXIT_DTE}`,
+  };
+}
+
 export function markOf(p: DeskPosition, spot?: number): PositionMark {
   const ret = percent(p.returnPct);
   const { short } = held(p.quantity);
@@ -158,5 +173,7 @@ export function markOf(p: DeskPosition, spot?: number): PositionMark {
       return { kind: "review", fact: short ? "above breakeven" : "below breakeven" };
     }
   }
+  const stop = timeStop(p);
+  if (stop) return stop;
   return { kind: "onplan", ...nextDate(p) };
 }

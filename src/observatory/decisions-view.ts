@@ -1,4 +1,4 @@
-import { EXIT_DTE, TAKE_PROFIT } from "../playbooks/long-call.js";
+import { EXIT_DTE, TAKE_PROFIT } from "../playbooks/long-call-rules.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
 import type { ConsiderationChip } from "./considerations-view.js";

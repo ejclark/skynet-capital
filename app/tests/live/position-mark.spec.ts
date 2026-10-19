@@ -168,6 +168,22 @@ describe("markOf — bought options and shares", () => {
     });
   });
 
+  it("marks a bought call inside the house's 45-day time stop Consider, whatever its return", () => {
+    const flat = markOf({ ...call, expiresInDays: 38, totalPlRaw: 20, returnPct: "+1.2%" });
+    expect(flat).toMatchObject({ kind: "consider", fact: "38 days left" });
+    expect(markOf({ ...call, expiresInDays: 1, totalPlRaw: 20, returnPct: "+1.2%" }).fact).toBe(
+      "1 day left",
+    );
+  });
+
+  it("leaves a call outside the time stop, a bought put and a sold call on their own marks", () => {
+    const far = { ...call, expiresInDays: 46, totalPlRaw: 20, returnPct: "+1.2%" };
+    expect(markOf(far).kind).toBe("onplan");
+    const put = { ...far, symbol: "AMD261120P00180000", expiresInDays: 30 };
+    expect(markOf(put).kind).toBe("onplan");
+    expect(markOf({ ...far, expiresInDays: 30, quantity: "-3" }).kind).toBe("onplan");
+  });
+
   it("marks shares up 25% or more Consider", () => {
     expect(markOf(pos({ totalPlRaw: 10520, returnPct: "+26.5%" }))).toEqual({
       kind: "consider",

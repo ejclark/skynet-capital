@@ -17,6 +17,7 @@ import {
   guidanceKey,
   guidanceQuery,
   heldStake,
+  longCallsOf,
   readSnapshot,
   readStake,
   writeSnapshot,
@@ -69,14 +70,29 @@ export function GuidanceSection({
     enabled: deskId !== "" && holdsOptions,
     staleTime: 30_000,
   });
-  const held = heldStake(desk.data, symbol, quotes.data);
+  const held = useMemo(
+    () => heldStake(desk.data, symbol, quotes.data),
+    [desk.data, symbol, quotes.data],
+  );
+  const heldCalls = useMemo(
+    () => longCallsOf(desk.data, symbol, quotes.data),
+    [desk.data, symbol, quotes.data],
+  );
   // A stake the member saved wins; with none, the paper position is the starting point (#3729
   // step 4 — the positions row links here with only the symbol, never the stake, in the URL).
   const [saved, setSaved] = useState<GuidanceStake>(() => readStake(symbol));
   const fromAccount = Object.keys(saved).length === 0 && held !== undefined;
   // Calls already open are a fact about the account, not a what-if: they ride on either stake.
   const base = fromAccount ? held : saved;
-  const stake = held?.openCalls ? { ...base, openCalls: held.openCalls } : base;
+  const openCalls = held?.openCalls;
+  const stake: GuidanceStake = useMemo(
+    () => ({
+      ...base,
+      ...(openCalls ? { openCalls } : {}),
+      ...(heldCalls.length ? { heldCalls } : {}),
+    }),
+    [base, openCalls, heldCalls],
+  );
   // This stake's PREVIOUS look — read once per symbol + stake, before this render's write lands.
   // Another stake's snapshot would report the stake's own effect as a market move (#3729).
   const stakeId = stakeFingerprint(stake);

@@ -1,6 +1,7 @@
 import { normalizeInputs } from "./position-guidance-inputs.js";
 import { buildLadder } from "./position-guidance-ladder.js";
 import { cashSecuredPutCall, coveredCallCall } from "./position-guidance-levers.js";
+import { longCallCalls } from "./position-guidance-long.js";
 import { manageCalls } from "./position-guidance-manage.js";
 import {
   atmIv,
@@ -215,6 +216,7 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
         : [...calls.rows, ...puts.rows],
     assumptions: assumptionLines(input, retiredWindow),
     manage: manageCalls(ctx),
+    longCalls: longCallCalls(ctx),
     disclosure: GUIDANCE_DISCLOSURE,
   };
 }
@@ -238,6 +240,7 @@ export function stakeFingerprint(stake: GuidanceStake): string {
     callsSold,
     premiumsCollected,
     long ? [long.type, long.strike, long.expiration, long.contracts] : null,
+    (stake.heldCalls ?? []).map((c) => `${c.strike}|${c.expiration}×${c.contracts}`).sort(),
     (stake.openCalls ?? []).map((c) => `${c.occ}×${c.contracts}`).sort(),
   ]);
 }
