@@ -62,9 +62,12 @@ into separate lint, typecheck and per-suite calls (#5191).
    a live session sweeping its own finished agents names them: `--only <dir-or-branch>`
    (repeatable) sweeps just those and waives their locks, nothing else. A spawned agent that ends its own
    session (`archive_session`) leaves its worktree to this sweep; it never removes one itself.
-3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
-   reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
-   typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
+3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge** —
+   nor arm a merge by hand. With no second engineer, the gates are the reviewer: `pipeline.yml`'s
+   `arm auto-merge` job squash-merges a PR only after `verify` and integration tests pass on it, and
+   Eric's taste review happens live, post-merge (`../CLAUDE.md` → *Merge posture*, Eric's
+   2026-08-20 call). A `hold-merge` PR and the irreversible carve-outs (the platter) still wait for
+   his merge. Nothing reaches `main` unverified.
 4. **Overlapping nets — no single check is the SPOF.** Agent's own tests/lint + reviewer re-verify + CI
    + later passes. Drift is caught by *some* net. (Proven live: a background agent's lint caught a format
    drift the foreground check had missed; the foreground then corrected it — Detect · Correct · Maintain.)
@@ -93,7 +96,8 @@ into separate lint, typecheck and per-suite calls (#5191).
 ## Reliability — do we need Routines to keep agents working?
 
 - **Present mode (Eric is here, dialoguing):** No. The foreground dispatches agents as ready work
-  exists, reviews + merges results, and coordinates. The rails above are sufficient.
+  exists, lets the pipeline merge green results (rail 3), and coordinates. The rails above are
+  sufficient.
 - **Unattended continuous mode (Eric is "napping in the skies"):** Yes — a **Routine / scheduled
   trigger** re-invokes the session to dispatch and review more work when the foreground is idle. That's a
   larger autonomy step, so it's **governance-gated and built rails-first**, exactly like the
@@ -103,10 +107,11 @@ into separate lint, typecheck and per-suite calls (#5191).
 
 Autonomy widens by Eric's explicit decision, one rung at a time, after the prior rung has a track record:
 
-- **Rung 1 (current):** agents build cheap/reversible items → open PRs → Claude foreground verifies +
+- **Rung 1:** agents build cheap/reversible items → open PRs → Claude foreground verifies +
   merges. Eric watches.
-- **Rung 2:** agents' PRs that pass all nets auto-merge on green (Claude reviews post-hoc), for a
-  narrowed task class.
+- **Rung 2 (current — Eric's 2026-08-20 merge posture, `../CLAUDE.md`):** agents' PRs that pass all
+  nets auto-merge on green (review is post-hoc), for a narrowed task class — everything outside the
+  irreversible carve-outs.
 - **Rung 3:** a Routine keeps the pipeline running unattended, within the bounded class, with Eric
   reviewing a digest.
 
