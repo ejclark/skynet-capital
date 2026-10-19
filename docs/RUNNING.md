@@ -6,17 +6,16 @@ machine is awake. Streams are in-the-moment — if the laptop sleeps, you miss t
 
 ## Node version
 
-This project targets **Node 24 (LTS)**, pinned in `mise.toml` — the file the remote session hook
-and local dev read. CI reads `.nvmrc`, because `actions/setup-node` cannot parse mise's TOML
-(`docs/LESSONS.md`). With [mise](https://mise.jdx.dev):
+This project targets **Node 24 (LTS)**, pinned in `mise.toml` — the single source of truth CI,
+the remote session hook, and local dev all read. With [mise](https://mise.jdx.dev):
 
 ```sh
 mise install    # reads mise.toml, installs + activates Node 24
 node --version  # v24.x
 ```
 
-No mise? `nvm install 24` also works. If the target version ever changes, bump `mise.toml` and
-`.nvmrc` together, and add no other version file.
+No mise? `nvm install 24` also works — just keep `mise.toml` the version you bump, never a
+second file, if the target version ever changes.
 
 ## Start the server
 
