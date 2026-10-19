@@ -24,7 +24,9 @@ import type { Narrowing, PairNarrowings } from "./conviction-steering.js";
 export const MAX_CLAIMS = 12;
 export const MAX_STEERS = 6;
 const MAX_NARROWINGS = 5;
-const MAX_TEXT = 600;
+/** The longest a claim's statement, evidence or falsifier may be, as a member types it. */
+export const MAX_TEXT = 600;
+export const MAX_TITLE = 80;
 /** Room for the number a record puts before each claim ("12. "): a stored statement may be this much
  *  longer than a member may type, so a draft at the limit still reads back whole. */
 const CLAIM_LABEL_ROOM = 4;
@@ -132,7 +134,7 @@ export function parseConvictionDraft(
   statementMax = MAX_TEXT,
 ): ConvictionDraftInput | undefined {
   if (!isRecord(raw)) return undefined;
-  const title = text(raw.title, 80);
+  const title = text(raw.title, MAX_TITLE);
   const checkOn = day(raw.checkOn);
   const claims = listOf(raw.claims, MAX_CLAIMS, (c) => parseClaim(c, statementMax));
   const steers = listOf(raw.steers, MAX_STEERS, (s) => text(s, MAX_ID));
