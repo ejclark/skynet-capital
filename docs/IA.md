@@ -260,6 +260,18 @@ redirects with its query and `#act-<orderId>` kept. The server path stays
 `/api/desk/:id/activity` (a contract other lanes read; members never see it). Wrong if, by
 2026-11-15, members or study runs still call this tab "activity" when they describe an order.
 
+*Settled after the rename landed (#5281 slices 3–4, 2026-10-18).* **The wire path is kept.** The
+route returns the server's `ActivityEvent` record, the same shape the league feed is built from,
+and dozens of call sites read it (study worlds, stability budgets, stubs, server specs); renaming
+it would split one record under two names to fix a word no member sees. **No bigger refactor is
+built now.** Of the three candidates, the two homes are already one (`AccountLedger` serves both
+the Profile section and `/u/$id/ledger`, #5165; "All accounts" stays a bounded merge on purpose),
+the shared row is a styling overlap, and pairing a sale with its buy (#5317) came out as a small
+join on the round-trip matcher (`roundTripLinks`), not a transaction model. A transaction model
+earns its build when a roll (close one contract, open the next, #5160 C) must read as one entry:
+that is the single trigger, and it has no issue yet. Wrong if, by 2026-12-15, a Ledger change
+needs the same join re-derived in a third place, or a roll is asked for: then file the model.
+
 **Balance — the book read as one system (#5493 slice 3, 2026-10-16).** A section of the Profile
 page, `?section=balance`, straight after Overview: one account's, bot or human, never "All
 accounts" (`sectionsFor`, `profile-sections.ts`). No new route — the history of homes for
