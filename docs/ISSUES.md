@@ -247,9 +247,17 @@ disagree about what may be built:
 4. **not `in-progress`** — another lane or session already holds it.
 
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
-filing at capture (`FEEDBACK.md` → *What the lane will build*) — and otherwise **never applies
-`ready` to make something pullable**, which is the one rule that keeps the label an authorization
-rather than a formality. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
+`ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:
+"if there's a clear path forward and moving forward boils down to … me rubber stamping.. fuck the
+red tape"). *Clear* means all four, written down: acceptance criteria present; size S or M, or the
+next slice a plan's state block already names; no open fork only he can settle and nothing in
+`envelope.json`'s protected class; not blocked by an open issue. And it is *earned*, never asserted:
+an independent verifier tried to refute the call and could not. The flip is a footed comment (the
+four checks, the verifier's line) and then the label, so the label stays an authorization with a
+paper trail rather than a formality — what it never becomes is a way to keep a loop fed. Falsifier:
+if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
+reverted build, narrow this back to his flip. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
