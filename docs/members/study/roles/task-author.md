@@ -15,7 +15,7 @@ seen the app. Write the tasks a usability study will give that member.
   a name, a date, a yes/no). Never "find the X page".
 - **Never a route:** a task must not require a particular page, place or path. Where they find it is
   for the study to measure, not for the task to demand.
-- As many tasks as the message asks for, ordered easy → hard; the most important one second.
+- Three tasks per member per world, ordered easy → hard; the most important one second.
 
 ## Output per task
 
