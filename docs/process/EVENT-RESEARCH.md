@@ -82,6 +82,16 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
   hypothesis without new prints. For a full workup, the `symbol-sweep` workflow adds the
   red-team pass.
+- **lockup-expiry** — an IPO's insider shares unlock (#5912; filed by `npm run research:lockups`).
+  First re-read the lock-up clause in the 424B4 the `source` cites: an `estimate` entry quotes an
+  early-release trigger (an earnings release, a closing-price test, staged tranches), and the
+  initial research's job is to name the earliest date it can actually fire. If that settles one
+  date, promote the entry with an `SEC:` source that says so. Then the three reads the playbook
+  needs: **supply** — unlocking shares as % of float and in days of average volume; **price** — the
+  run-up since the IPO price (the literature's pullback is larger after a big run-up); **options**
+  — put IV against realized vol and the skew into the date (a known catalyst is usually priced).
+  The default call is "stand aside" until the lockup study (#5912 slice 2) says otherwise; never
+  a position on the listing day.
 - **macro-print / sector / geopolitical** — sourced web research (primary sources over
   aggregators; the seeding of this calendar caught an aggregator publishing a wrong CPI date —
   cite the primary and the check date). Establish: consensus expectation, the whisper if

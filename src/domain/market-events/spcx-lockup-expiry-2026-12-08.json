@@ -1,0 +1,11 @@
+{
+  "id": "spcx-lockup-expiry-2026-12-08",
+  "kind": "lockup-expiry",
+  "title": "SPCX IPO lockup ends — Space Exploration Technologies, 180 days after its 2026-06-11 prospectus",
+  "date": "2026-12-08",
+  "status": "estimate",
+  "source": "EST: the filing states more than one lock-up period (180, 280, 340, 366 days; this date uses 180, the one its lock-up sentences name most); the lock-up has an early-release trigger, so shares can unlock before this date. 424B4 https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-11 (read from its cover); 180 days after it is 2026-12-08. Lock-up clause: \"Lock-up Agreements We have agreed with the underwriters that during the period of 180 days after the date of this prospectus (the \"lock- up period\"), without the prior written consent of Goldman Sachs & Co.\"",
+  "impact": "high",
+  "symbols": ["SPCX"],
+  "notes": "$75.0B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then. Early-release wording, read it before trusting the date: \"For those shares subject to the extended lock-up period (which does not include shares held by our founder), there are automatic early releases from the restrictions on Transfer commencing in the first quarter of 2027 as follows: a. on or after the second full trading day on Nasdaq immediately following the public r…\""
+}

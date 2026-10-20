@@ -1710,6 +1710,9 @@ leadership change. Carried as a ledger thread instead, which means the assessmen
 sees it. Worth deciding whether a `corporate` kind (CEO/CFO transitions, spin-offs, index adds,
 lockup expiries, shareholder votes) earns its place, or whether these belong outside the calendar
 by design — a research PR is the wrong place to widen a shared type either way.
+**Partly landed (2026-10-20, #5912):** lockup expiries got their own `lockup-expiry` kind rather than
+a shared `corporate` one — a playbook selects its events by kind, and a lockup has its own date rule
+(the 424B4's clause, early releases). CEO transitions, spin-offs and votes are still unslotted.
 _(src: Claude · while: the aapl-2026-10-29-print interval-elapsed pulse, 2026-08-30)_
 
 ### General-purpose "escape hatches" to drive process from a phone
