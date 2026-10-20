@@ -59,7 +59,11 @@ describe("review of 9a: his rules run once, even from a duplicated env roster", 
   // The env parser now refuses a repeat (round-3 check), so the duplicate is built by hand: this
   // pins withPlaybooks' own guard for any roster that reaches it with SAURON twice.
   it("a roster naming SAURON twice keeps the hardcore build exact, stamped by the first", () => {
-    const { personas } = applyHardcore([new SauronPersona()], { SKYNET_HARDCORE_BOTS: "sauron" });
+    const { personas } = applyHardcore(
+      [new SauronPersona()],
+      {},
+      { bots: { sauron: { hardcore: true } } },
+    );
     const hardcore = personas[0];
     if (!hardcore) throw new Error("no persona");
     const enabled: EnabledPlaybook[] = [

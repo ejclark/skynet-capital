@@ -9,9 +9,7 @@ import {
 
 const state = (bots: ControlsState["bots"]): ControlsState => ({ bots });
 
-function harness(
-  opts: { initial?: string[]; env?: string[]; ids?: string[]; wanted?: "live" | "observe" } = {},
-) {
+function harness(opts: { initial?: string[]; ids?: string[]; wanted?: "live" | "observe" } = {}) {
   const applied: Array<{ id: string; persona: Persona; tuning: unknown }> = [];
   const logs: string[] = [];
   const warns: string[] = [];
@@ -19,7 +17,6 @@ function harness(
   let failApply = false;
   const poll = watchHardcore({
     ids: opts.ids ?? ["sauron", "day-trader"],
-    envIds: new Set(opts.env ?? []),
     initial: new Set(opts.initial ?? []),
     wantedMode: () => opts.wanted ?? "live",
     report: (verdict) => gates.push({ id: verdict.id, ready: verdict.ready }),
@@ -74,12 +71,15 @@ describe("watchHardcore — the owner's hardcore switch, live (#4535 slice 2c)",
     expect(h.logs.join("\n")).toContain("disarmed: sauron");
   });
 
-  it("falls back to the env roster for a bot with no stored setting, as boot does", () => {
-    const h = harness({ initial: [], env: ["sauron"] });
-
+  it("treats a bot with no stored setting as standard, never as the env roster (#4535 slice 4c-2)", () => {
+    const h = harness({ initial: [] });
     h.poll(state({}));
+    expect(h.applied).toHaveLength(0);
 
-    expect(h.applied.map((a) => a.id)).toEqual(["sauron"]);
+    const inForce = harness({ initial: ["sauron"] });
+    inForce.poll(state({}));
+    expect(inForce.applied.map((a) => a.id)).toEqual(["sauron"]);
+    expect(inForce.logs.join("\n")).toContain("disarmed: sauron");
   });
 
   it("is quiet once applied — the same state next poll swaps nothing", () => {
