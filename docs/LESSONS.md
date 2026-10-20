@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: retry each ghRestAll page on a github 5xx
+- **SHA:** 7b8ca01   **DATE:** 2026-10-20   **STATUS:** closed
+- **COVERS:** f7efc4d
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [39441832513](https://github.com/ejclark/skynet-capital/actions/runs/39441832513) at 2026-10-20T14:43:25Z. Repair capsule #5918 filed 2026-10-20T14:45:13Z, closed 14m later by #5919.
+- **ROOT CAUSE:** `route --audit` died on `curl: (22) The requested URL returned error: 500` from `issues?state=open&per_page=100&page=2` (`openIssues` → `gatherDeps`). GitHub's 500 is transient, but the repo's handling of it was ours to fix. #5354 already taught `isTransientGhError` curl's wording of a 5xx. The retry itself, though, was added caller by caller: #5354 wrapped the relay's read. projects-reconcile wrapped its own read. Every other `ghRestAll` caller got one attempt, including `openIssues`, `rank.mjs`, `assignments` and `continuation`. This is the third time that pattern has bitten, so the retry moves to where the pages are read. Retrying each page also beats wrapping the whole list, because a r…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/gh.spec.ts` (#5919).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `sync project status` red on main: add new issues to the board without gh's owner lookup
 - **SHA:** 8046b4e   **DATE:** 2026-10-19   **STATUS:** closed
 - **COVERS:** 3c7fd3e
