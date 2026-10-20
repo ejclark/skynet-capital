@@ -120,7 +120,7 @@ for someone to remember, overdue work that goes quiet.
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
    oracle or kill rule can't be stated up front, the domain isn't ready for a loop yet; go research
-   it first (see `orient.md`'s Complex-domain routing).
+   it first (see `.claude/output-styles/orient.md` → *Route*, the Complex case).
 2. Open or reuse a plan issue (field 10) in the house capsule format (`docs/ISSUES.md`) — the
    loop's status lives in its state block. Add a row to the list below with a dated `Next check`.
 3. Run the thin slice. When it surfaces a weakness (it usually will — that's what a thin slice is
@@ -155,8 +155,8 @@ or end the loop. **Check results post to:** #5724
 |---|---|---|---|---|
 | Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
 | Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |
-| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run and post on #4061; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
-| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run and post on #4062; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
+| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
+| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
 | Bottleneck before/after | Does each `bottleneck` fix move the number it named? `npm run bottleneck:baseline` | #4063 | running | 2026-10-21 — re-run; recount #3926 for its After line; baseline 2026-09-30: 1 of 40 carry a Before number (#3926: 63 "Failed again" comments in 7 days, 4 fixes stuck 21–25 days) |
 | Readiness rubric | Do items the rubric flags deliver worse than unflagged ones? | #4056 | running | 2026-10-31 — kill everything but the parked check if flagged and unflagged land within 5pp |
 | Handoffs, not lanes, bind delivery | Is ownership of each handoff the limit, rather than build capacity? | #4056 | running | 2026-10-31 — wrong if ready items wait >24h median for a free lane while the ready queue is non-empty |
