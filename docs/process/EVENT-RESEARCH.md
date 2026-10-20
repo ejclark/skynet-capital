@@ -472,7 +472,8 @@ powered re-run waits on the OCC archive (#4832).
 
 ## The decision header is gated (`npm run research:lint`)
 
-The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+The gate reads `docs/research/events/`, `docs/research/weeks/` and `docs/research/convictions/` —
+one contract, one eye.
 A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
 apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
 wider, because a by-name sheet grows with the roster rather than with an author's prose.
