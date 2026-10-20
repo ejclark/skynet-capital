@@ -62,8 +62,13 @@ export function subscriptionRoster(
       rejected.push(sub.playbookId);
       continue;
     }
-    // A member's own authored play is never steered: a record steers house pairs.
-    const result = own ? { playbook: own, says: [] } : steeredBy(house, sub, convictionOf);
+    // A member's own authored play is never steered: a record steers house pairs. One carrying a
+    // pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
+    // pointed pair never reads its inline conviction (#5482 contract piece 2).
+    const result =
+      own && sub.convictionId === undefined
+        ? { playbook: own, says: [] }
+        : steeredBy(house, sub, convictionOf);
     if ("refused" in result) {
       steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
       enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });

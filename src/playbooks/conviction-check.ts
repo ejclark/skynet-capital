@@ -37,10 +37,12 @@ export interface PairLedger {
 }
 
 /** A pair the house did not mark ✓, whose owner has stated no conviction — neither its own nor a
- *  record's that steers it (#5482 slice 2). Authored plays and ids the pair table does not know are
- *  not pairs, so they are never labelled. */
+ *  record's that steers it (#5482 slice 2). A pointer is a stated view even where this build's store
+ *  cannot read it (a member's, held by the bots' own lookup): its pair is not unstated, and one the
+ *  bots cannot resolve runs exits-only and says so (`steeredBy`). Authored plays and ids the pair
+ *  table does not know are not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {
-  if (!sub.enabled || statedCheck(sub).checkOn) return false;
+  if (!sub.enabled || sub.convictionId !== undefined || statedCheck(sub).checkOn) return false;
   const pair = findPair(sub.playbookId);
   return pair !== undefined && pair.evidence.status !== "researched";
 }

@@ -234,13 +234,16 @@ describe("withConvictionGate, with a conviction record", () => {
     expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
   });
 
-  it("falls back to the subscription's own date, said once, when the record does not steer the pair", () => {
+  it("never reads the subscription's own date, said once, when the record does not steer the pair", () => {
+    // The contract step's piece 2: a pointed pair is checked on its pointer alone. One it cannot
+    // use gives no check day here; the roster runs that pair exits-only (`steeredBy`).
     const log = rstest.fn();
+    const persona = inner([put]);
     const pointed = aSubscription("sauron", "CRWV-WHEEL", {
       conviction,
       convictionId: "ai-dip-test",
     });
-    const gated = withConvictionGate(inner([put]), {
+    const gated = withConvictionGate(persona, {
       subscriptions: [pointed],
       convictionOf: lookup(["CRWV-LONG-CALL"]),
       log,
@@ -248,7 +251,21 @@ describe("withConvictionGate, with a conviction record", () => {
     });
     expect(log).toHaveBeenCalledTimes(1);
     expect(log.mock.calls[0]?.[0]).toContain("does not steer it");
-    expect(gated.decide(at(CHECK_DAY), book())).toEqual([]);
+    expect(log.mock.calls[0]?.[0]).toContain("its inline conviction is not read");
+    expect(gated).toBe(persona);
+  });
+
+  it("gates a pointed pair the same with or without its inline copy", () => {
+    const bare = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    for (const subscriptions of [[bare], [{ ...bare, conviction }]]) {
+      const gated = withConvictionGate(inner([put]), {
+        subscriptions,
+        convictionOf: lookup(["CRWV-WHEEL"]),
+        ...failing,
+      });
+      expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
+      expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
+    }
   });
 
   it("an unknown pointer with no conviction of its own gates nothing", () => {

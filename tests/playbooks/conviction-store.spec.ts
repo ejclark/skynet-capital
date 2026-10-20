@@ -118,20 +118,31 @@ describe("statedCheck", () => {
     });
   });
 
-  it("falls back to its own conviction, said, when the pointer names no stored record", () => {
+  // The contract step's piece 2, bots first: a pointed pair is checked one way, never both, so the
+  // app dropping the inline copy changes nothing. Steering holds an unusable pointer exits-only.
+  it("never reads its own conviction when the pointer names no stored record, and says so", () => {
     const sub = aSubscription("sauron", "CRWV-WHEEL", { conviction: own, convictionId: "gone" });
     expect(statedCheck(sub, lookup)).toEqual({
-      checkOn: "2027-04-30",
-      from: "subscription",
       note: 'CRWV-WHEEL points at conviction "gone", which is not stored',
     });
   });
 
-  it("falls back, said, when the record does not steer the pair", () => {
-    const sub = aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: "other-view" });
+  it("never reads its own conviction when the record does not steer the pair, and says so", () => {
+    const sub = aSubscription("sauron", "CRWV-LONG-CALL", {
+      conviction: own,
+      convictionId: "other-view",
+    });
     expect(statedCheck(sub, lookup)).toEqual({
       note: 'CRWV-LONG-CALL points at conviction "other-view", which does not steer it',
     });
+  });
+
+  it("checks a pointed subscription the same with or without its inline copy", () => {
+    for (const convictionId of ["other-view", "gone"]) {
+      const bare = aSubscription("sauron", "CRWV-WHEEL", { convictionId });
+      const withCopy = { ...bare, conviction: own };
+      expect(statedCheck(withCopy, lookup)).toEqual(statedCheck(bare, lookup));
+    }
   });
 
   it("reads the build's store by default", () => {

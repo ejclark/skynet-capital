@@ -364,8 +364,10 @@ export interface PlaybookSubscription {
    * A pointer at a conviction record (#5482 slice 2, `playbooks/conviction-record.ts`): one view
    * that steers several pairs, checked on one date. When the record steers this subscription's
    * pair, its check date replaces `conviction.checkOn` (`conviction-store.ts` `statedCheck`).
-   * Optional and additive: `conviction` keeps working exactly as before until a later slice
-   * removes it. Behavioral only on a `subscriptions.v3` snapshot, the first whose version names it.
+   * Once present it is the whole check: the bots never read `conviction` on a pointed subscription,
+   * and a pointer they cannot use runs the pair exits-only (`steeredBy`), so the app can drop the
+   * inline copy without changing a trade. Unpointed subscriptions keep `conviction` exactly as
+   * before. Behavioral only on a `subscriptions.v3` snapshot, the first whose version names it.
    */
   readonly convictionId?: string;
   /**

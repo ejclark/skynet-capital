@@ -87,6 +87,52 @@ describe("pointAtRecord — a missing pointer added, none ever replaced", () => 
   });
 });
 
+/**
+ * The contract step's piece 2: the bots read a pointed pair's check from its pointer alone and run
+ * it exits-only while the pointer is unusable, so a pointer no view can answer is dropped here
+ * rather than left to hold its pair shut after a build changes a record.
+ */
+describe("pointAtRecord — a stale pointer is dropped", () => {
+  const known = { held: [], ids: new Set<string>(["a-members-view"]) };
+
+  it("drops a pointer at a seeded record that no longer steers the pair, and re-matches", () => {
+    const narrowed = [view({ steers: ["CRWV-LONG-CALL"] })];
+    const s = sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" });
+    const next = pointAtRecord(s, narrowed);
+    expect(next).not.toHaveProperty("convictionId");
+    expect(next.conviction).toEqual(stated);
+    // Another seeded record that steers the pair on the same day is matched in its place.
+    const moved = [...narrowed, view({ id: "successor-view", steers: ["CRWV-WHEEL"] })];
+    expect(pointAtRecord(s, moved).convictionId).toBe("successor-view");
+  });
+
+  it("drops a pointer no record holds only where members' ids are known", () => {
+    const dangling = sub("CRWV-WHEEL", { conviction: stated, convictionId: "gone" });
+    expect(pointAtRecord(dangling, records, known)).toEqual({
+      ...sub("CRWV-WHEEL", { conviction: stated }),
+      convictionId: "ai-dip-test",
+    });
+    // Without them, "gone" could be a member's view the bots hold, so it stays.
+    expect(pointAtRecord(dangling, records)).toBe(dangling);
+  });
+
+  it("drops a stale pointer on the poll and reports the move", () => {
+    const input = { sauron: [sub("S1-NVDA", { convictionId: "ai-dip-test" })] };
+    const members = { heldBy: () => [], ids: new Set<string>() };
+    const { state, moves } = pointAtRecords(input, AT, records, members);
+    expect(state.sauron?.[0]).not.toHaveProperty("convictionId");
+    expect(moves).toEqual([{ accountId: "sauron", playbookId: "S1-NVDA", from: "ai-dip-test" }]);
+  });
+
+  it("keeps a pointer at a seeded record that steers the pair, whatever its inline copy says", () => {
+    const s = sub("CRWV-WHEEL", {
+      conviction: { ...stated, checkOn: "2027-04-30" },
+      convictionId: "ai-dip-test",
+    });
+    expect(pointAtRecord(s, records, known)).toBe(s);
+  });
+});
+
 describe("restated — a pointer never outlives the conviction it described", () => {
   it("drops the pointer when the new conviction states another day", () => {
     const s = sub("CRWV-WHEEL", {
@@ -216,7 +262,7 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
     expect(state.sauron?.[0]?.convictionId).toBeUndefined();
   });
 
-  it("is idempotent, and leaves a pointer it cannot place (an id no member holds) to the seeded rule", () => {
+  it("is idempotent, and drops a pointer no record or member holds (#5482 contract piece 2)", () => {
     const input = {
       sauron: [
         sub("CRWV-WHEEL", { convictionId: ada.id }),
@@ -224,8 +270,11 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
       ],
     };
     const run = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
-    expect(run.pointed).toEqual([]);
-    expect(run.state).toBe(input);
+    expect(run.pointed).toEqual(["sauron/S1-NVDA"]);
+    expect(run.state.sauron?.map((s) => s.convictionId)).toEqual([ada.id, undefined]);
+    const again = pointAtRecords(run.state, AT, records, members({ sauron: [ada] }));
+    expect(again.pointed).toEqual([]);
+    expect(again.state).toBe(run.state);
   });
 
   it("never decides between two of a member's views on one pair: it keeps the one already pointed", () => {

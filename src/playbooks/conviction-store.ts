@@ -79,9 +79,16 @@ export const lookupConviction: ConvictionLookup = (id) => CONVICTIONS.get(id);
 /**
  * The check a subscription is held to (#4469 criterion 12), and where it came from. A subscription
  * that points at a record steering its pair is checked on the record's date — one date for every
- * pair the view steers. Otherwise it is checked on its own conviction's date, exactly as before.
- * A pointer that resolves to nothing usable is said in `note`, never acted on: the subscription
- * falls back to its own conviction, so a dangling id can neither stop a pair nor clear a check.
+ * pair the view steers. A subscription with no pointer is checked on its own conviction's date,
+ * exactly as before.
+ *
+ * ONE WAY, NEVER BOTH (#5482 slice 2, the contract step's piece 2, bots first). A pointed
+ * subscription's inline conviction is never read, even when the pointer cannot be used: the pointer
+ * is the whole of its check, so the app dropping the inline copy changes nothing a bot does. A
+ * pointer that resolves to nothing usable — not held, or a record that does not steer the pair — is
+ * said in `note` and gives no check day; the pair is held safe by steering instead, which runs it
+ * exits-only until the pointer resolves (`steeredBy`). A dangling id can never clear a check by
+ * itself, because nothing new opens while it dangles.
  */
 export interface StatedCheck {
   readonly checkOn?: string;
@@ -94,20 +101,16 @@ export function statedCheck(
   sub: PlaybookSubscription,
   lookup: ConvictionLookup = lookupConviction,
 ): StatedCheck {
-  const own: StatedCheck = sub.conviction
-    ? { checkOn: sub.conviction.checkOn, from: "subscription" }
-    : {};
   const id = sub.convictionId;
-  if (id === undefined) return own;
+  if (id === undefined) {
+    return sub.conviction ? { checkOn: sub.conviction.checkOn, from: "subscription" } : {};
+  }
   const record = lookup(id);
   if (!record) {
-    return { ...own, note: `${sub.playbookId} points at conviction "${id}", which is not stored` };
+    return { note: `${sub.playbookId} points at conviction "${id}", which is not stored` };
   }
   if (!record.steers.includes(sub.playbookId)) {
-    return {
-      ...own,
-      note: `${sub.playbookId} points at conviction "${id}", which does not steer it`,
-    };
+    return { note: `${sub.playbookId} points at conviction "${id}", which does not steer it` };
   }
   return { checkOn: record.checkOn, from: "record", convictionId: id };
 }

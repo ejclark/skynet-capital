@@ -133,11 +133,16 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { conviction }))).toBe(false);
   });
 
-  it("counts a pointer at a record that steers the pair as stated (#5482 slice 2), and no other", () => {
+  it("counts a pointer at a record that steers the pair as stated (#5482 slice 2)", () => {
     expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "ai-dip-2026-10" }))).toBe(
       false,
     );
-    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "no-such-view" }))).toBe(true);
+  });
+
+  it("never labels a pointed pair, even one this build's store cannot read (#5482 contract piece 2)", () => {
+    // A member's view is held by the bots' own lookup, not this store; a pointer nothing resolves
+    // runs its pair exits-only (`steeredBy`), so "still trading" would be false of it either way.
+    expect(isConvictionNotStated(sub("CRWV-WHEEL", { convictionId: "no-such-view" }))).toBe(false);
   });
 
   it("is quiet for a house ✓ pair, a paused subscription, and an id that is no pair", () => {
