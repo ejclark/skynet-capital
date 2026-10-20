@@ -120,7 +120,7 @@ for someone to remember, overdue work that goes quiet.
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
    oracle or kill rule can't be stated up front, the domain isn't ready for a loop yet; go research
-   it first (see `.claude/output-styles/orient.md` → *Route*, the Complex case).
+   it first (see `orient.md`'s Complex-domain routing).
 2. Open or reuse a plan issue (field 10) in the house capsule format (`docs/ISSUES.md`) — the
    loop's status lives in its state block. Add a row to the list below with a dated `Next check`.
 3. Run the thin slice. When it surfaces a weakness (it usually will — that's what a thin slice is
