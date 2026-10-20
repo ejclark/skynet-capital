@@ -13,6 +13,17 @@ export function withRetry<T>(
   },
 ): T;
 export function ghRest(path: string, opts?: { token?: string }): unknown;
+/** Every page of a REST list; each page retried on a GitHub 5xx (#5918). */
+export function ghRestAll(
+  path: string,
+  opts?: {
+    perPage?: number;
+    maxPages?: number;
+    token?: string;
+    read?: (path: string, opts?: { token?: string }) => unknown;
+    sleep?: (ms: number) => void;
+  },
+): unknown[];
 /** Fill GH_TOKEN from `gh auth token` when no token is set (a live session's CLIs, #5056). */
 export function ensureGhToken(opts?: { run?: (cmd: string, args: string[]) => string }): void;
 
