@@ -1,0 +1,11 @@
+{
+  "id": "spcx-lockup-release-2026-10-22",
+  "kind": "lockup-expiry",
+  "title": "SPCX Q3-results lock-up release — ~1.3 billion shares (28% of the 180-day cohort) two trading days after Oct 20 results",
+  "date": "2026-10-22",
+  "status": "estimate",
+  "source": "EST: date derived, not read as a date. SEC: 424B4 (https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm, fetched 2026-10-20) releases 'up to 1.3 billion shares of Class A common stock, representing 28% of the shares subject to the 180-day lock-up period' on 'the second full trading day on Nasdaq immediately following the public release of our quarterly financial results for the quarter ended September 30, 2026'. NEWS: Yahoo Finance and Quartz report SpaceX set that release for 2026-10-20 after the close, which puts the second full trading day at Thursday 2026-10-22. Estimate because the release had not yet happened when this was filed; the same arithmetic gave 2026-08-06 for the Q2 release on 08-04",
+  "impact": "high",
+  "symbols": ["SPCX"],
+  "notes": "Discovered during the spcx-lockup-expiry-2026-12-08 initial research (2026-10-20). The lockup-discovery lane reads one date per IPO, so staged releases inside a lock-up are invisible to it; this is the largest stage left before 12-08 and it is two days out. The 10-24 stage (328.4M, 7%) falls on a Saturday, so its first trading session is Monday 10-26; that one is named in the 12-08 ledger instead of filed, as a smaller stage of the same schedule."
+}
