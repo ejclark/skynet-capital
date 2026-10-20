@@ -368,6 +368,19 @@ table("Stability — CAR[−10,−1] by era", eras, (e) => e.car.pre);
 table("Stability — CAR[−10,+10] by era", eras, (e) => e.car.full);
 table("Stability — run-in put spread at 1.25× RV by era", eras, (e) => e.putPre125);
 table("Stability — D+3 put spread at 1.25× RV by era", eras, (e) => e.putIv125);
+
+// The era halves and the one cut the playbook logs ($500M+ raised and run-up ≥ 50%: every live
+// calendar entry clears $500M), so the study's call sheet re-runs from this command alone.
+const hot = (e) => e.offeringUsd >= 500_000_000 && e.runUp >= 0.5;
+const halves = [
+  ["All, unlocks 2019–2021", before22],
+  ["All, unlocks 2022–2026", since22],
+  ["$500M+ and run-up ≥ 50%", events.filter(hot)],
+  ["$500M+ and run-up ≥ 50%, 2022–2026", since22.filter(hot)],
+];
+table("Era halves — CAR[−10,+3], the put trade's holding period", halves, (e) => e.car.putHold);
+table("Era halves — CAR[−10,+10]", halves, (e) => e.car.full);
+table("Era halves — D+3 put spread at trailing RV", halves, (e) => e.put);
 const flushed = events.filter((e) => e.flush <= -0.1);
 const flushedConf = conf.filter((e) => e.flush <= -0.1);
 const shapeB = [

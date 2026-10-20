@@ -1,6 +1,6 @@
 # IPO lockup expiries, 2019–2026: the pullback was real once, and it is gone
 
-**Kind:** event study (price, volume, EDGAR prospectuses) · **Date:** 2026-10-20 · **Symbols:** 355 US IPOs raising $100M+, unlocks 2019-07 → 2026-09 · **Impact:** medium
+**Kind:** event study (price, volume, EDGAR prospectuses) · **Date:** 2026-10-20 · **Symbols:** 355 US IPOs raising $100M+, unlocks 2019-08 → 2026-09 · **Impact:** medium
 **Last assessed:** 2026-10-20
 
 **Question (Eric, 2026-10-20, on [#5912](https://github.com/ejclark/skynet-capital/issues/5912)):**
