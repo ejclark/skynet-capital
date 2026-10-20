@@ -104,9 +104,12 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
   host bot) in the **Playbook Store**; the hardcore build, forced picks per day and after-close
   staging on the bot's **Settings** card. The bots obey none of `SKYNET_HARDCORE_BOTS`,
   `SKYNET_BETA_FORCING` or `SKYNET_COND_SCOUT_UNIVERSE` (#5875): each is parsed only to be
-  reported, and the dashboard copies it once into a bot with no stored setting. `SKYNET_PLAYBOOKS`
-  still names the house roster: a playbook it names that a bot is not subscribed to opens nothing
-  on that bot, and its exits still run. Eric unsets them with one `flyctl secrets unset` line.
+  reported, and the dashboard copies it once into a bot with no stored setting. Unset those three with one `flyctl secrets unset --stage` line: `--stage` holds the change
+  until the next bot-code deploy, so it never restarts the bots machine on its own.
+  **Keep `SKYNET_PLAYBOOKS`.** It still lists the playbooks the bots run for every account: one it
+  names that a bot is not subscribed to opens nothing on that bot, but it keeps managing the exits
+  of positions that playbook already holds. Removing it would leave those positions with nothing
+  watching their exits.
 
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 
