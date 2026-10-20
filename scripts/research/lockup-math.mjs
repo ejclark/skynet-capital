@@ -12,8 +12,9 @@
  *     line "Through and including <date> (the 25th day after the date of this prospectus)"), and
  *   - every lock-up sentence names ONE period, and
  *   - no lock-up sentence carries an early-release trigger (an earnings release, a closing-price
- *     test, staged tranches). Those can unlock shares before the stated period ends, so the stated
- *     end is not the date — the entry stays `estimate` with the clause quoted for a reader.
+ *     test, staged tranches, a blackout-period cut-off). Those can unlock shares before the stated
+ *     period ends, so the stated end is not the date — the entry stays `estimate` with the clause
+ *     quoted for a reader.
  * Anything short of that is an `estimate`, which may only widen caution, never open a position.
  *
  * PURE: no I/O, no clock, no network.
@@ -94,16 +95,26 @@ const EARLY = /earnings|closing price|early release|released early|earlier of|st
 // Parabilis, Accelevation and Cerebras 90 days early.
 const STATUTORY = /Rule (?:144|701)/;
 
+// "If at least 120 days have elapsed … and such lock-up period is scheduled to end during or within
+// five trading days prior to … a blackout period, such lock-up period will end ten trading days prior
+// to the commencement of such blackout period" (X-Energy). It names no period after the prospectus
+// date, so it is not one of the lock-up sentences below and EARLY never saw it: XE was filed
+// `confirmed` on its 180-day date while its lock-up had ended seven weeks earlier (#5920). The
+// blackout dates live in the insider trading policy, not the filing, so the date cannot be computed.
+const BLACKOUT = /black-?\s?out period/i;
+
+function sentencesOf(text) {
+  return text.split(/(?<=[.;])\s+(?=[A-Z•])/);
+}
+
 /** The lock-up sentences: the ones naming a lock-up (or market stand-off) and a period. */
 function lockupSentences(text) {
-  return text
-    .split(/(?<=[.;])\s+(?=[A-Z•])/)
-    .filter(
-      (s) =>
-        LOCKUP_WORD.test(s) &&
-        !STATUTORY.test(s) &&
-        /days (?:after|following|from) the date of/i.test(s),
-    );
+  return sentencesOf(text).filter(
+    (s) =>
+      LOCKUP_WORD.test(s) &&
+      !STATUTORY.test(s) &&
+      /days (?:after|following|from) the date of/i.test(s),
+  );
 }
 
 /**
@@ -150,7 +161,10 @@ export function parseProspectus(text) {
   const sentences = lockupSentences(text);
   const counts = lockupPeriods(sentences);
   const periods = [...counts.keys()].sort((a, b) => a - b);
-  const early = sentences.find((s) => EARLY.test(s));
+  const early =
+    sentences.find((s) => EARLY.test(s)) ??
+    sentencesOf(text).find((s) => LOCKUP_WORD.test(s) && BLACKOUT.test(s));
+  const trigger = early && (EARLY.exec(early) ?? BLACKOUT.exec(early));
   const price = /public offering price (?:of the [\w ]{2,30}? )?(?:is|of) (?:US)?\$([\d,.]+)/i.exec(
     text,
   );
@@ -171,7 +185,7 @@ export function parseProspectus(text) {
     lockupDays,
     periods,
     lockupQuote: stating && quote(stating),
-    earlyRelease: early && quote(early),
+    earlyRelease: early && quote(early, trigger.index),
     priceUsd,
     sharesOffered,
     offeringUsd: priceUsd && sharesOffered ? Math.round(priceUsd * sharesOffered) : undefined,
@@ -190,9 +204,13 @@ function titleCase(name) {
     : name;
 }
 
-function quote(sentence) {
+/** A long sentence is cut to 320 characters, keeping `from` (the trigger) in view. */
+function quote(sentence, from = 0) {
   const s = sentence.trim();
-  return s.length > 320 ? `${s.slice(0, 317)}…` : s;
+  if (s.length <= 320) return s;
+  const start = Math.max(0, Math.min(from - 160, s.length - 319));
+  if (start === 0) return `${s.slice(0, 317)}…`;
+  return start + 319 >= s.length ? `…${s.slice(start)}` : `…${s.slice(start, start + 318)}…`;
 }
 
 /** Impact by money raised — it sets the research cadence (`assessment-cadence.json`). A $5B+ listing

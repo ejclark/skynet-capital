@@ -13,6 +13,9 @@ import {
  *     whichever is earlier, beside a Rule 144 90-day affiliate resale line that is not a lock-up.
  *   - Space Exploration Technologies (SPCX), CIK 0001181412 — staged 180/366-day lock-ups with
  *     automatic earnings-linked early releases.
+ *   - X-Energy (XE), CIK 0002088896 — 180 days, cut to ten trading days before a blackout period
+ *     when it would end near one; its 8-K of 2026-06-04 moved the end from 2026-10-20 to 2026-09-01
+ *     (#5920).
  */
 
 const IAM = [
@@ -40,6 +43,13 @@ const SPCX = [
   "Musk has agreed with the underwriters, that during a period of 366 days after the date of this prospectus, all of the shares owned by him are subject to the lock-up restrictions.",
 ].join(" ");
 
+const XE = [
+  "Prospectus dated April 23, 2026.",
+  "Prior to this offering, there has been no public market for our Class A common stock.",
+  "We, our officers and directors, and substantially all of the holders of our securities have agreed with the underwriters that, for a period of 180 days after the date of this prospectus, we and they will not sell any lock-up securities.",
+  "Pursuant to the lock-up agreements with the underwriters, if (1) at least 120 days have elapsed since the date of this prospectus and (2) such lock-up period is scheduled to end during or within five trading days prior to a broadly applicable period during which trading in our securities would not be permitted under our insider trading policy, or a blackout period, such lock-up period will end ten trading days prior to the commencement of such blackout period.",
+].join(" ");
+
 const FOLLOW_ON =
   "Our executive officers and directors are subject to lock-up restrictions during the period ending 90 days after the date of this prospectus. Prospectus dated August 19, 2026.";
 
@@ -60,6 +70,12 @@ describe("parseProspectus", () => {
     expect(p.periods).toEqual([180]);
     expect(p.lockupDays).toBe(180);
     expect(p.earlyRelease).toMatch(/release of earnings/);
+  });
+
+  it("flags a blackout cut-off even though its sentence names no period after the prospectus", () => {
+    const p = parseProspectus(XE);
+    expect(p.lockupDays).toBe(180);
+    expect(p.earlyRelease).toMatch(/ten trading days prior to the commencement of such blackout/);
   });
 
   it("breaks a tie between staged periods toward the shorter one — the earlier supply", () => {
@@ -107,6 +123,12 @@ describe("lockupEvent", () => {
     expect(e).toMatchObject({ date: "2026-11-09", status: "estimate", impact: "high" });
     expect(e?.source).toMatch(/^EST: .*early-release trigger/);
     expect(e?.notes).toMatch(/release of earnings/);
+  });
+
+  it("never files a blackout-shortened lock-up as confirmed on its stated date", () => {
+    const e = event(XE, "XE");
+    expect(e).toMatchObject({ date: "2026-10-20", status: "estimate" });
+    expect(e?.notes).toMatch(/blackout period/);
   });
 
   it("files nothing for a follow-on", () => {
