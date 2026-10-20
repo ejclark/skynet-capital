@@ -84,6 +84,27 @@ describe("convictionsHolder", () => {
     expect(lines[1]).toMatch(/conviction "nvda-run-up" from the dashboard REFUSED — .*not a ◆/);
   });
 
+  it("holds a view stated on its one pair even when that pair is not ◆ (contract piece 3)", () => {
+    const { h, lines } = holder();
+    const onPair = aMemberConviction({
+      id: "s1-nvda-sauron",
+      scope: "pair",
+      steers: ["S1-NVDA"],
+      narrowings: [],
+    });
+    const wider = aMemberConviction({ id: "s1-nvda-two", scope: "pair", steers: ["S1-NVDA"] });
+    h.accept(
+      wire([
+        { conviction: onPair, accounts: ["sauron"] },
+        { conviction: wider, accounts: ["sauron"] },
+      ]),
+    );
+    expect(h.lookupFor("sauron")(onPair.id)).toEqual(onPair);
+    expect(h.lookupFor("dragon")(onPair.id)).toBeUndefined();
+    expect(h.lookupFor("sauron")(wider.id)).toBeUndefined();
+    expect(lines.join("\n")).toMatch(/"s1-nvda-two" .* REFUSED — .*narrows nothing/);
+  });
+
   it("never lets a member's record take a seeded id, nor a second record take a member's", () => {
     const { h, lines } = holder();
     const impostor = aMemberConviction({ id: AI_DIP_2026_10.id });
