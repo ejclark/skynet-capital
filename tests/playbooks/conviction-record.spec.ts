@@ -202,6 +202,12 @@ describe("convictionProblems", () => {
       ).toEqual(["a view stated on a pair narrows nothing"]);
     });
 
+    it("keeps its strategy's retire test: accepting assignment is more than an inline conviction says", () => {
+      expect(onPair("CRWV-WHEEL", { acceptsAssignment: true })).toEqual([
+        "a view stated on a pair keeps its strategy's retire test",
+      ]);
+    });
+
     it("keeps every other rule: a claim, a dated falsifier, a check after it was stated", () => {
       expect(onPair("S1-NVDA", { claims: [] })).toContain("a conviction needs at least one claim");
       expect(onPair("S1-NVDA", { checkOn: "2026-10-16" })).toContain(

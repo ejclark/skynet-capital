@@ -104,7 +104,8 @@ export interface Conviction {
   /**
    * `"pair"`: a view stated on the one pair it steers, by the subscribe or conviction form, in place
    * of the subscription's inline conviction (#5482 contract piece 3). It is that inline conviction
-   * as a record: one claim (the owner's reason, scored on the check day), one pair, no narrowings.
+   * as a record: one claim (the owner's reason, scored on the check day), one pair, no narrowings,
+   * and its strategy's retire test kept (no `acceptsAssignment`).
    * It is the one view that may steer a pair that is not ◆ — #4469 criterion 2 already lets an
    * owner take a stand-aside pair on their own labelled conviction, so this adds no power, and with
    * one claim and nothing narrowed there is no study to count twice (`pairScopeProblems`). Only the
@@ -170,7 +171,8 @@ function steerProblems(
 }
 
 /** The shape a view stated on its one pair must keep (`Conviction.scope`): exactly what the inline
- *  conviction it replaces could say — one reason, one pair, a day — and nothing that narrows. */
+ *  conviction it replaces could say — one reason, one pair, a day — and nothing that narrows or
+ *  loosens its check. */
 function pairScopeProblems(conviction: Conviction): readonly string[] {
   if (conviction.scope !== "pair") return [];
   const problems: string[] = [];
@@ -178,6 +180,10 @@ function pairScopeProblems(conviction: Conviction): readonly string[] {
   if (conviction.steers.length > 1) problems.push("a view stated on a pair steers only that pair");
   if ((conviction.narrowings?.length ?? 0) > 0) {
     problems.push("a view stated on a pair narrows nothing");
+  }
+  // Accepting assignment skips a strategy's retire test, which an inline conviction never could.
+  if (conviction.acceptsAssignment) {
+    problems.push("a view stated on a pair keeps its strategy's retire test");
   }
   return problems;
 }
