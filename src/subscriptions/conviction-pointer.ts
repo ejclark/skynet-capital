@@ -34,6 +34,10 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * applied on the hand-over itself and again on every poll, so a write that failed halfway heals on
  * the next poll instead of leaving a pair pointing at a view its owner took back.
  *
+ * Every pointer that moves is reported (`PointerMove`), and the dashboard writes each as a line in
+ * the bot's settings change log (`server/conviction-pointer-changes.ts`), so which view steers a pair
+ * is never changed unrecorded.
+ *
  * The inline `conviction` is never removed here — that is the contract step, after the bots are
  * confirmed reading these pointers.
  */
@@ -114,10 +118,36 @@ export function restated(
   return pointAtRecord(rest, records, members);
 }
 
+/** One subscription's pointer, before and after a pass; an absent id is no pointer. */
+export interface PointerMove {
+  readonly accountId: string;
+  readonly playbookId: string;
+  readonly from?: string;
+  readonly to?: string;
+}
+
 export interface Pointed {
   readonly state: SubscriptionsState;
   /** `account/playbookId`, one per subscription whose pointer changed. */
   readonly pointed: readonly string[];
+  /** The same subscriptions, with the pointer each had and has — what the change log records. */
+  readonly moves: readonly PointerMove[];
+}
+
+const optionalId = (key: "from" | "to", id: string | undefined) =>
+  id === undefined ? {} : { [key]: id };
+
+/** The move from `before` to `after`, or undefined when its pointer stayed put. */
+export function pointerMove(
+  accountId: string,
+  before: PlaybookSubscription | undefined,
+  after: PlaybookSubscription | undefined,
+): PointerMove | undefined {
+  const from = before?.convictionId;
+  const to = after?.convictionId;
+  const playbookId = after?.playbookId ?? before?.playbookId;
+  if (from === to || playbookId === undefined) return undefined;
+  return { accountId, playbookId, ...optionalId("from", from), ...optionalId("to", to) };
 }
 
 /**
@@ -134,6 +164,7 @@ export function pointAtRecords(
   members?: MemberPointers,
 ): Pointed {
   const pointed: string[] = [];
+  const moves: PointerMove[] = [];
   const next: Record<string, readonly PlaybookSubscription[]> = {};
   for (const [accountId, subs] of Object.entries(state)) {
     const here = heldHere(members, accountId);
@@ -141,8 +172,10 @@ export function pointAtRecords(
       const withPointer = pointAtRecord(sub, records, here);
       if (withPointer === sub) return sub;
       pointed.push(`${accountId}/${sub.playbookId}`);
+      const move = pointerMove(accountId, sub, withPointer);
+      if (move) moves.push(move);
       return { ...withPointer, updatedAt: at.toISOString() };
     });
   }
-  return pointed.length > 0 ? { state: next, pointed } : { state, pointed };
+  return pointed.length > 0 ? { state: next, pointed, moves } : { state, pointed, moves };
 }

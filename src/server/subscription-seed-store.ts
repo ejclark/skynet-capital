@@ -6,7 +6,11 @@ import { hasHardcoreBuild } from "../personas/registry.js";
 import { COND_SCOUT_ID } from "../playbooks/cond-scout.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
-import { type MemberPointers, pointAtRecords } from "../subscriptions/conviction-pointer.js";
+import {
+  type MemberPointers,
+  type PointerMove,
+  pointAtRecords,
+} from "../subscriptions/conviction-pointer.js";
 import { carryRowConvictions } from "../subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
@@ -20,6 +24,11 @@ import {
 } from "../subscriptions/subscription-seed.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { createBotControlsStore } from "./bot-controls-store.js";
+import {
+  convictionNames,
+  POINTER_RULE_AUTHOR,
+  recordPointerMoves,
+} from "./conviction-pointer-changes.js";
 import {
   createEnvSettingsSeeder,
   ENV_SEED_AUTHOR,
@@ -234,17 +243,20 @@ export function carryConvictions(
  * could not read whole, and no write when nothing needed a pointer — so a second poll, or a second
  * deploy, is one small read. With `members` (#5482 slice 6c) it applies members' handed-over views
  * too, so a hand-over or take-back whose own pointer write failed is finished by the next poll.
+ * `record` gets every pointer that moved, after the write (`conviction-pointer-changes.ts`).
  */
 export function pointConvictions(
   subscriptions: SubscriptionStore,
   at = new Date(),
   members?: MemberPointers,
+  record?: (moves: readonly PointerMove[]) => void,
 ): readonly string[] {
   const state = subscriptions.loadIfReadable();
   if (!state) return [];
-  const { state: next, pointed } = pointAtRecords(state, at, undefined, members);
+  const { state: next, pointed, moves } = pointAtRecords(state, at, undefined, members);
   if (pointed.length === 0) return [];
   subscriptions.replace(next);
+  if (moves.length > 0) record?.(moves);
   return pointed;
 }
 
@@ -314,7 +326,16 @@ export function pollSeedsFromEnv(
       ),
       // After the carry, so a conviction it just wrote is pointed at its record on the same poll.
       ...lines(
-        pointConvictions(subscriptions, at, memberConvictions.pointers()),
+        pointConvictions(subscriptions, at, memberConvictions.pointers(), (moves) =>
+          recordPointerMoves(
+            changes,
+            moves,
+            convictionNames(memberConvictions),
+            () => POINTER_RULE_AUTHOR,
+            at,
+            onReadError,
+          ),
+        ),
         "pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept)",
       ),
     ];

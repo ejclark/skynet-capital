@@ -30,7 +30,8 @@ export type SettingValue = boolean | number | string | null;
 export interface SettingsChange {
   readonly at: string;
   /** `suspended`, `hardcore`, `betaPicks`, `betaStage` (the controls state), or a Store write's
-   *  `subscription:<playbookId>` / `allocation:<strategy>` (slice 3c). */
+   *  `subscription:<playbookId>` / `allocation:<strategy>` (slice 3c), or which conviction view
+   *  steers a pair, `conviction:<playbookId>` (#5482, `conviction-pointer-changes.ts`). */
   readonly setting: string;
   readonly before: SettingValue;
   readonly after: SettingValue;

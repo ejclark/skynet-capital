@@ -3,9 +3,15 @@ import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
 import { CONVICTIONS, ConvictionStore } from "../playbooks/conviction-store.js";
 import { findPair, pairName } from "../playbooks/pair-table.js";
-import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
+import type { MemberPointers, PointerMove } from "../subscriptions/conviction-pointer.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import {
+  convictionNames,
+  POINTER_RULE_AUTHOR,
+  recordPointerMoves,
+} from "./conviction-pointer-changes.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { SettingsChangeLog } from "./settings-change-log.js";
 import { pointConvictions } from "./subscription-seed-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 
@@ -164,15 +170,40 @@ export function canRepoint(subscriptions: SubscriptionStore | undefined): boolea
   return subscriptions === undefined || subscriptions.loadIfReadable() !== undefined;
 }
 
+/** Who moves the pointers a member's own write moves: them on the bots they own, the pointer rule
+ *  on any other account the same pass heals (`conviction-pointer-changes.ts`). */
+export interface RepointLog {
+  readonly log: SettingsChangeLog | undefined;
+  readonly editor: string;
+  readonly owned: readonly string[];
+  /** The view a write just removed, by its title before it went, so its line reads by name. */
+  readonly goneTitle?: string;
+  /** Where a log that will not write is said. */
+  readonly onError?: (message: string) => void;
+}
+
 export function repoint(
   subscriptions: SubscriptionStore,
   members: MemberConvictionStore,
   at: Date,
   gone?: string,
+  changes?: RepointLog,
 ): readonly string[] {
   const read = members.pointers();
   const pointers: MemberPointers = gone
     ? { heldBy: read.heldBy, ids: new Set([...read.ids, gone]) }
     : read;
-  return pointConvictions(subscriptions, at, pointers);
+  const names = convictionNames(members);
+  const record = changes
+    ? (moves: readonly PointerMove[]) =>
+        recordPointerMoves(
+          changes.log,
+          moves,
+          (id) => names(id) ?? (id === gone ? changes.goneTitle : undefined),
+          (account) => (changes.owned.includes(account) ? changes.editor : POINTER_RULE_AUTHOR),
+          at,
+          changes.onError,
+        )
+    : undefined;
+  return pointConvictions(subscriptions, at, pointers, record);
 }
