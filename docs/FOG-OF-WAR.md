@@ -9,7 +9,7 @@ as one of the two reveal treatments he liked in the 2026-09-05 progressive-revea
 the zero-DTE rung. This doc turns those two calls into criteria a session can apply without asking.
 
 Provenance: the trade ladder (`src/domain/progression.ts`, #469), the locked-rung rule
-(#1461: *visible, disabled, explained*), the proposed 400/500 rungs (#1671), the research day
+(#1461: *visible, disabled, explained*), the 400/500 rungs (#1671), the research day
 lens (#1704). The portable version is the last section.
 
 ## The decision tree
@@ -30,7 +30,7 @@ _Caption — the five questions, in order; every fog shipped here should be trac
 
 ## The criteria, spelled out
 
-The articulated ones are Eric's; the rest are what the three shipped or planned instances have in
+The articulated ones are Eric's; the rest are what the instances in the ledger below have in
 common and nobody had written down.
 
 1. **Fog what accelerates risk, never what explains it.** The day lens is fogged; every call's *why*
@@ -42,11 +42,11 @@ common and nobody had written down.
    (`progression.ts`: "the order id IS the evidence") — never a checkbox, a timer, a quiz alone, or
    money. A fog that money lifts is a paywall wearing a costume.
 4. **The fog must cost the novice ~nothing.** Check before fogging: what does the hidden content say?
-   The research Today row reads "stand aside" on 268 of 272 ledgers — withholding it from a novice
-   loses them nothing they could act on safely. If the hidden content is what a novice needs to be
-   safe, it is a *default*, not a fog candidate.
+   The research Today row reads "stand aside" on 703 of 714 ledgers (2026-10-19) — withholding it
+   from a novice loses them nothing they could act on safely. If the hidden content is what a
+   novice needs to be safe, it is a *default*, not a fog candidate.
 5. **The gate names a rung that exists in the catalog.** A fog is honest only when its unlock is
-   earnable. Where the rung is not built yet (501 before #1671 lands), the fog says so in words —
+   earnable. Where the rung is not built yet, the fog says so in words —
    "a rung nobody can fill yet stays locked, honestly" (#1671) — and never implies progress is
    possible when it is not.
 6. **Reveal is progressive and adjacent.** The item that sharpens is the one *one step ahead* of the
@@ -69,11 +69,11 @@ common and nobody had written down.
 | Where | Fogged capability | Unlock | Status |
 |---|---|---|---|
 | `/trade` option ticket | option opens beyond the earned rung | the previous rung's fill | shipped (#469, #1461) |
-| R&D → Playbooks store (`/research?section=playbooks`) | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
-| `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker since #3407 P3, #3422) |
+| Milestones → Playbooks chapter (M·03, `/accounts?section=milestones&chapter=playbooks`) | a playbook's preview | the rung the card names (`unlocksAfter`) | shipped (#1119) |
+| `/trade` multi-leg builder | spread execution | rung 401 | shipped (#1671 slice 1 — the builder is 401's own ticket, the locked panel until earned; spreads reach the broker — #3407 P3, #3422) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | shipped (#1671 slice 2 — the zero-DTE gate at option review/submit) |
-| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4); rung 501 exists since #1671 slice 1, so the fog names an earnable rung |
-| R&D → Playbooks, the + on a play (was "Subscribe as" until #5442) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
+| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4); rung 501 is in the catalog (`src/domain/trade-types.ts`, #1671 slice 1), so the fog names an earnable rung |
+| R&D → Playbooks, the + on a play (#5442) | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
 | wheels-off button (both surfaces above) | ~~one-click self-serve bypass of every fog~~ removed | n/a — wheels off only by the seeding rule or a coach's hand | shipped (#1671 decision 1) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.
@@ -85,10 +85,10 @@ is gated today for reasons that are *not* fog, so the noise comes off the emergi
 
 | Surface | Today | Verdict | Route |
 |---|---|---|---|
-| `/trade` option rungs · R&D → Playbooks store | fogged behind fills | fog — textbook, shipped | ledger above |
+| `/trade` option rungs · Milestones → Playbooks chapter | fogged behind fills | fog — textbook, shipped | ledger above |
 | `/research` day lens | open (the Today row) | fog behind 501 | #1704 |
 | `/trade` multi-leg builder · same-day expiry | open, inexecutable / ungated | fog behind 401 / 501 | #1671 |
-| `/u/:id/playbooks` subscribe (delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | filed as its own issue |
+| R&D → Playbooks subscribe (on `/u/:id/playbooks` when audited; delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | #1707 — ledger above |
 | "say hello to Moneypenny" wall before the first stock buy | gated | **not a fog** — the unlock is engagement, not skill evidence (criterion 3); an onboarding gate, name it as one | leave; never call it fog |
 | R&D → Playbooks subscribe on a **human** account (2026-10-05) | refused: only bot accounts subscribe for now | **not a fog** — Q1 no: the runner reads subscriptions for bots only, so a human account's subscription moves no capital; and the unlock is an era (Eric's 2026-10-04 Era 1/Era 2 call), not skill evidence, which criterion 3 rules out. Labelled honestly instead: the door visible, named, disabled, never naming a rung; leaving stays open | #4610, built in #4649 |
 | Onboarding steps 2–3 before an account is connected (2026-10-12) | held as one counted line each ("Step 3 of 3 · Needs a connected account"); Open Trade withheld | **not a fog**: Q1 no, because nothing is withheld that the member could use (an order has no account to go to), and the unlock is account setup, not skill evidence (criterion 3). The door is drawn visible, named, disabled and counted for focus (Eric: "retain focus through account setup"). Moneypenny's step is ordered, never locked; its line keeps a way in | #5256 |
@@ -97,7 +97,7 @@ is gated today for reasons that are *not* fog, so the noise comes off the emergi
 | `/research` week · month · quarter lenses | — | open — long-horizon awareness lowers risk (Q1 no) | #1704 |
 | options chain greeks, every call's *why* / *proves it wrong*, P/L, `SIM` labels, the leaderboard | open | never fog — protective or shared-universe (criteria 1, 7) | — |
 | `/research` calendar days with no event | disabled | **noise, not fog** — nothing is behind the door; the lens/range model makes every day pickable | #1704 slice 2 |
-| `/outpost` · `/collections` catalogs | open, "named and visible, never quietly dropped" | open — browsing is not a capability | — |
+| `/outpost` · `/collections` catalogs (both retired into R&D → Playbooks, #3343, #3623) | open, "named and visible, never quietly dropped" | open — browsing is not a capability | — |
 | member-built bots (the north star) | not member-facing yet | future fog at a 400+ rung, when it exists | later |
 
 ## Anti-patterns

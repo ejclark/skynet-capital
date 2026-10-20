@@ -1,3 +1,7 @@
+import type { ChatConvictionDraft } from "../../../src/companion/companion-convictions";
+
+export type { ChatConvictionDraft };
+
 /**
  * Moneypenny's voice on the wire — the client half of `/api/companion` (server:
  * `src/server/companion-routes.ts`). One GET says whether the chat is switched on (the same
@@ -63,7 +67,8 @@ function parseFrame(frame: string): { readonly event: string; readonly data: str
 }
 
 /**
- * Stream one turn: `onText` fires per delta, `onHandoff` once if she drafted a filing; resolves on
+ * Stream one turn: `onText` fires per delta, `onHandoff` once if she drafted a filing,
+ * `onConviction` once if she drafted a view (#5482 criterion 9 — its card, for the member's tap); resolves on
  * `done`, rejects on an `error` frame, a non-stream answer (the "not switched on" / throttled
  * JSON), or a transport failure.
  */
@@ -71,6 +76,7 @@ export async function streamCompanionTurn(
   messages: readonly CompanionTurnMessage[],
   onText: (delta: string) => void,
   onHandoff?: (draft: CompanionDraft) => void,
+  onConviction?: (drafted: ChatConvictionDraft) => void,
 ): Promise<void> {
   const res = await fetch("/api/companion/chat", {
     method: "POST",
@@ -93,6 +99,8 @@ export async function streamCompanionTurn(
       if (text) onText(text);
     } else if (event === "handoff") {
       onHandoff?.(JSON.parse(data) as CompanionDraft);
+    } else if (event === "conviction") {
+      onConviction?.(JSON.parse(data) as ChatConvictionDraft);
     } else if (event === "error") {
       throw new Error((JSON.parse(data) as { error?: string }).error ?? "companion error");
     } else if (event === "done") return true;

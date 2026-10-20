@@ -5,7 +5,7 @@ Moneypenny's rail (✦), their filings listed on the Profile page's **Feedback**
 (`/app/accounts?section=feedback`; `/feedback` redirects there, #3807 slice 2b) — no GitHub
 account or repo access required. A single server-side bot token files a
 labelled issue on `ejclark/skynet-capital`, so friends and family never need collaborator access to
-the private repo.
+the repo.
 
 **The feature is token-gated.** Until `SKYNET_FEEDBACK_GITHUB_TOKEN` is set the form still renders,
 but a submission returns a friendly "feedback isn't switched on yet" message instead of filing an
@@ -63,29 +63,36 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
-5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the queue ·
-   Needs your input · Needs Eric's call · First slice shipped · Shipped) once
+5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the build queue ·
+   Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
+   built) once
    `SKYNET_FEEDBACK_GITHUB_TOKEN` is set — `resolveFeedbackStatus` in `src/server/feedback-status.ts`
    reads it straight off the issue's current state and triage label, so there's nothing local to
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
-   issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
-   label, the same retry path already documented in `scripts/moneypenny/index.mjs` (formerly
-   postmaster.mjs). Deliberately routed
-   through this structured, envelope-bound lane rather than the free-form `claude.yml`
-   comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
-   against the member's own logged filings before anything posts.
+   issue body, which the build lane parses). On a filing that is already `ready` it also restarts
+   the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
+   claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
+   and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
+   which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
+   rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
+   `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
+   and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
+   so someone can re-add it by hand. Deliberately routed through
+   this structured, envelope-bound lane rather than the free-form `claude.yml` comment-steering
+   lane — see `src/server/feedback-followup.ts` for why. Ownership is checked against the member's
+   own logged filings before anything posts.
 
 ## What the lane will build
 
 **The backlog gate (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
-created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue no longer
-builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
+created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue does not
+build immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 `triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
-— the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
-self-readies and keeps the old near-zero-friction path for the common case. So does a `bug` +
-`fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
+— the guided rail path already attaches `curated` + a `skynet-spec` block, per *The coach is what
+makes the wide envelope safe* below — self-readies and keeps the near-zero-friction path for the
+common case. So does a `bug` + `fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
 says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
 including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
@@ -93,7 +100,7 @@ until something applies `ready`: Eric's own call, or a triage pass's clear-path 
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
-fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
+fresh Claude session. What `ready` means, mechanically and for every puller — the six conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
 [`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in
@@ -101,18 +108,21 @@ session applies it to its own filing. The triage rules for *that* build session 
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
-Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
-brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
-and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
-P/L, leaderboards, or bot cards — is ordinary buildable work.
+Protected: workflow files and the lanes' own prompts, the envelope and its gate, auth and the invite
+gate, credentials (the env files and the two narrow gates that turn a broker credential into a usable
+client), the model dials that set the real per-token bill, spend caps and the spend breaker, hosting
+and deploy config, and new **runtime** dependencies. Everything else is ordinary buildable work —
+including the brokerage clients, order placement/sizing, the risk guards and playbook definitions,
+opened on purpose in #928 (`envelope.json` → `$openOnPurpose`), and anything that merely *renders*
+trades, P/L, leaderboards, or bot cards.
 
 Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
 
 ### The four ways a build session ends
 
-Three of the four cost Eric nothing. That split is the point: `needs-eric` used to be the only
-non-PR exit, so "too big", "unclear what the member meant", and "genuinely his call" all landed in
-one queue — and the third got buried under the first two.
+Three of the four cost Eric nothing. That split is the point: with `needs-eric` as the only
+non-PR exit, "too big", "unclear what the member meant", and "genuinely his call" would all land in
+one queue — and the third would be buried under the first two.
 
 | Outcome | Marker | Waits on |
 | --- | --- | --- |
@@ -123,19 +133,19 @@ one queue — and the third got buried under the first two.
 
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
-`needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
-until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
-comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
+Without a trigger, `needs-info` would be a one-way door: the lane would ask a question, and the
+answer would sit on the thread until someone noticed it and hand-cleared the label. **The reply
+itself is the trigger** — a comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
 the plan lane's ready-flip uses) claims the lease, clears `needs-info`, and starts a build session
 with that comment as its input. Its first visible act is a comment saying what it understood and
 what happens next, so the thread still reads as a complete record.
 
 The board follows along without anyone touching it: clearing `needs-info` and applying
 `in-progress` are the two label events the Orchestration board's Status sync already listens to, so
-the issue moves Blocked → In Progress as the build starts. A reply on an issue that is *also*
+the issue moves Blocked → Building now as the build starts. A reply on an issue that is *also*
 `needs-eric` does **not** resume — one reply answers one question, and the other still waits.
 
-**Slice 2 (#4301): any blocked lane.** The same door now serves `needs-eric` too, and a `plan`
+**Any blocked lane (#4301).** The same door serves `needs-eric` too, and a `plan`
 issue as well as a `feedback` one. The lane is read off the issue's own labels (`feedback` or
 `plan`) — nothing is recorded — and an issue with neither has no lane waiting, so a reply there
 stays a plain comment. A `feedback` reply builds in that run as above; a `plan` reply only takes the
@@ -179,7 +189,8 @@ The bot token can write issues, so the endpoint is protected in depth:
 - **Auth-gated** — behind the session gate, so only invite-only, signed-in members reach it.
 - **Per-email throttle** — max ~5 submissions per 10 minutes, returning a friendly slow-down
   message.
-- **1 MB body cap** — the same `readBody` guard used by `/add`.
+- **8 MB body cap** — `readBody`'s byte guard, sized so screenshots ride the same POST
+  (`SUBMIT_CAP_BYTES` in `src/server/feedback-api-routes.ts`; a follow-up gets 8 KB).
 
 ## Troubleshooting
 

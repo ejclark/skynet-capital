@@ -22,8 +22,9 @@ signal to trade once):
 The bots app reaches the dashboard's Mission Control bridge over the org's private 6PN network
 (`app.process.skynet-capital.internal:8788`) — org-wide DNS, so the split changes nothing on the
 wire. The one silent failure mode is that bridge going dark (the runner fails open to env-only
-controls); `scripts/smoke-bots.sh` greps the boot log's `[controls] bridge armed — controls
-fetched` line on every bots deploy as the tripwire.
+controls); `scripts/smoke-bots.sh` is the tripwire on every bots deploy: it reads the process's
+health stamp (`/data/health.json`, `bridge: "armed"` on the expected commit), with a grep of the
+boot log's `[controls] bridge armed — controls fetched` line as the fallback.
 
 Market-hours gating already lives in the runner (it only assesses when Alpaca reports the market
 open), and the readiness gate pins any un-vetted persona to observe regardless of the mode flag.
@@ -31,8 +32,8 @@ open), and the readiness gate pins any un-vetted persona to observe regardless o
 ## Eric's provisioning procedure (the credentialed / irreversible class)
 
 Everything below is Eric's — never self-authorized. Nothing places a real order until the go-live
-flip. One laptop command; every other step is a button (the cutover PR that removes the `bots`
-group from `fly.toml` merged 2026-08-26 — post-cutover, this is the whole list):
+flip. One laptop command; every other step is a button (`fly.toml` runs no `bots` group, so this
+is the whole list):
 
 1. `fly tokens create deploy -o personal` (laptop, once, ~30s) — the org-scoped deploy token.
    Copy the whole `FlyV1 fm2_...` string. **The only step that ever needs a terminal**: app
@@ -49,7 +50,7 @@ group from `fly.toml` merged 2026-08-26 — post-cutover, this is the whole list
    is `SKYNET_AUTONOMOUS_BOTS` in `fly.bots.toml`. Turn on Sauron's hardcore build on its
    Settings card if research mode is wanted (applies at the next poll, no restart). The `SKYNET_BOT_*` env credentials are break-glass only (a bot the bridge can't
    serve boots on them) and are set from a terminal with `flyctl secrets set`, never from a button —
-   the `set-*-credentials` actions were removed 2026-09-04 (#1180 slice F).
+   no autonomy-ops action sets credentials (#1180 slice F).
 5. Click **Actions → Pipeline → Run workflow → check `force_bots_deploy`** — stands the machine up
    in **observe** mode; the bots smoke verifies boot + the controls bridge automatically.
 6. Click **Autonomy ops → `flip-mode`, mode `live`** — during a market open, watching the logs.
@@ -67,7 +68,7 @@ the autonomy-ops Environment. Accepted deliberately (2026-08-26) to make ops pho
 narrow later, mint `fly tokens create deploy --app skynet-capital-bots` as `FLY_API_TOKEN_BOTS`
 (it takes precedence) and delete `FLY_ORG_TOKEN`.
 
-**The bots app owns its own volume** (`skynet_bots_data`, mounted at `/data` since #1264): the
+**The bots app owns its own volume** (`skynet_bots_data`, mounted at `/data`, #1264): the
 momentum/sentiment/cooldown windows, the scout's day-state, the decision audit and the health stamp
 survive a redeploy. Never share the dashboard's volume.
 
@@ -83,9 +84,9 @@ setup, both parts required before this actually gates anything:**
    environment → name it exactly `autonomy-ops` → **Required reviewers** → add the allowlisted
    accounts. Until this exists, referencing `environment: autonomy-ops` in the workflow auto-creates an
    *unprotected* one — the file alone does not enforce an allowlist, this UI step does.
-2. **Bot credentials are not repository secrets any more** — they are added and rotated in the app
-   (step 4 above), same path as a human member. The old `BOT_*_ALPACA_KEY/SECRET` repository secrets
-   can be deleted; nothing reads them.
+2. **Bot credentials are not repository secrets** — they are added and rotated in the app
+   (step 4 above), same path as a human member. No workflow reads a `BOT_*_ALPACA_KEY/SECRET`
+   repository secret, so any that exist can be deleted.
 
 Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 
@@ -130,10 +131,10 @@ fly secrets set -a skynet-capital-bots SKYNET_AUTONOMOUS_MODE=observe
 (Locally, `touch $SKYNET_HALT_FILE` halts instantly; the circuit breakers — daily-loss, order-rate,
 errors, data-gap — auto-halt in both.)
 
-## Known follow-up
+## Decision audit across the split
 
 A Fly volume attaches to a single machine, so the **bots** process doesn't share `/data` with the
-**dashboard**. Always-on trading and the board's fill reflection work fine across the split (both read
-Alpaca). The **decision-audit panel** (`/u/:id`) only shows a bot's reasoning when the audit JSONL is
-readable by the dashboard — i.e. when the runner is co-located or writes to shared storage. Wiring that
-(a shared store, or co-locating the loop) is P2.2 / a hosting follow-up; it doesn't block go-live.
+**dashboard**. Always-on trading and the board's fill reflection work across the split (both read
+Alpaca). A bot's decision audit reaches the dashboard over the bridge: the bots app replicates its
+decision rows to the dashboard's `/decisions` route on each controls poll
+(`src/autonomous/decision-wire.ts`, #2287), and the dashboard reads that replicated store.

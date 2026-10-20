@@ -1,7 +1,9 @@
 /**
  * After-close scout staging for `run-autonomous.ts` (Eric, 2026-09-04: "configuration that
  * nudges sauron to put in an after hours trade that is staged to be executed when the market
- * opens"). Armed by `SKYNET_BETA_FORCING=<n>+stage` (see `parseBetaForcing`); dark otherwise.
+ * opens"). Armed by the host bot owner's after-close staging switch on its Settings card, read at
+ * every pass (#4535 slice 4b), else by `SKYNET_BETA_FORCING=<n>+stage` (see `parseBetaForcing`);
+ * dark otherwise — and dark whenever the forced-pick count is 0.
  *
  * Mechanics, all borrowed rather than invented:
  *  - "When is the next session?" is Alpaca's `next_open` from `/v2/clock` — holiday-aware by
@@ -29,6 +31,8 @@ export interface ScoutStagingDeps {
   readonly runner: { stageScout(context: MarketContext, sessionDay: string): Promise<number> };
   /** The same context the in-hours cycle would evaluate — momentum + sentiment overlay, now. */
   readonly context: () => MarketContext;
+  /** Read at every pass, so the owner's switch applies from the next close with no restart. */
+  readonly enabled: () => boolean;
   readonly log?: (line: string) => void;
   readonly warn?: (line: string, error: unknown) => void;
 }
@@ -41,9 +45,10 @@ export function sessionDayOf(nextOpen: string | undefined): string | undefined {
   return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : undefined;
 }
 
-/** One staging attempt: no-op while the market is open or the clock has no `next_open` yet. */
+/** One staging attempt: no-op while the market is open, staging is off, or the clock has no
+ *  `next_open` yet. */
 export async function stageOnce(deps: ScoutStagingDeps): Promise<number> {
-  if (deps.clock.isOpen()) return 0;
+  if (deps.clock.isOpen() || !deps.enabled()) return 0;
   const nextOpen = deps.clock.nextOpen();
   const sessionDay = sessionDayOf(nextOpen);
   if (!(nextOpen && sessionDay)) return 0;
@@ -87,7 +92,7 @@ export function announceScout(
 ): void {
   if (betaForcing.maxPicks <= 0) return;
   if (!accountName) {
-    log.warn("[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.");
+    log.warn("[beta-scout] forced picks set but no bot account available — staying dark.");
     return;
   }
   log.log(
@@ -116,6 +121,29 @@ export function watchScoutPicks(
       `[beta-scout] forced picks per day ${seen} → ${now} (the owner's setting; applied with no restart)`,
     );
     seen = now;
+  };
+}
+
+/**
+ * The poll-time log of the owner's after-close staging switch (#4535 slice 4b): call the returned
+ * function after every `/controls` poll. The staging pass reads the switch itself, so this only says
+ * so in the log — in the boot line's own words, so a read of the logs at the next close can tell
+ * which way the bots took it. Quiet while it holds still.
+ */
+export function watchScoutStaging(
+  read: () => boolean,
+  log: (line: string) => void = console.log,
+): () => void {
+  let seen = read();
+  return () => {
+    const now = read();
+    if (now === seen) return;
+    seen = now;
+    log(
+      now
+        ? "[beta-scout] armed: after the close, picks stage for Alpaca's next open (the owner's setting; applied with no restart)"
+        : "[beta-scout] after-close staging off — picks wait for market hours (the owner's setting; applied with no restart)",
+    );
   };
 }
 

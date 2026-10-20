@@ -47,8 +47,8 @@ Playwright screenshots (`e2e/**`) are the suite's visual sense. Three rules, in 
 was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
 
 **The CI check is named "integration tests", not "e2e"** (#3333, 2026-09-19 — "e2e" reads as
-testing a live/deployed system, and misled a reader). The directory, npm scripts (`test:e2e*`),
-and internal job id still say `e2e` — only the CI display name changed. `playwright.config.ts`'s
+testing a live/deployed system, and misled a reader). The directory, npm scripts (`test:e2e*`)
+and internal job id say `e2e`; `integration tests` is the CI display name alone. `playwright.config.ts`'s
 `webServer` builds the checked-out commit fresh and boots it as a throwaway local server against
 static `fixtures/offline/**` data, on both its CI triggers (pull request and push to `main`). It
 is always testing a candidate build, never the running Fly.dev deployment — `scripts/smoke.sh` in
@@ -126,8 +126,9 @@ gap itself — that's a review habit, not a mechanical gate.
 suite runs whether or not anyone remembers:
 - **Pre-commit** (husky) auto-formats staged files; **pre-push** runs the full `npm run verify`
   (typecheck + lint + tests) and blocks a red push.
-- **CI** re-runs verify plus every ratchet gate (arch, dupe, clone, dead, dep-graph, spec-gap,
-  incidents, doc-rot) on each PR; auto-merge only fires on green.
+- **CI** re-runs verify on each PR; auto-merge only fires on green. The ratchet gates (arch, dupe,
+  clone, dead, dep-graph, spec-gap, incidents, doc-rot) run inside its test suite as advisory
+  reports that never turn it red (`tests/support/advisory-scan.ts`).
 - Shared test data lives in `tests/support/builders.ts` — specs state only the fields they care
   about. No copy-pasted fixtures.
 
@@ -259,7 +260,7 @@ picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scr
    trailing). Omitted entirely on the ordinary PR; present ⇒ open ready for review with
    auto-merge unarmed (`ship open --hold`) — never a draft, which skips `verify` and reads as
    unfinished work (Eric, 2026-09-04, #1304)
-   (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 6, Eric 2026-08-30).
+   (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 7, Eric 2026-08-30).
 4. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
    walkthrough, trade-offs (link an ADR for hard-to-reverse calls), verification, risk/rollback,
    follow-ups. The weeds are one click away; the top stays a ten-second read.
@@ -300,10 +301,10 @@ next version from the Conventional-Commit history, create the **git tag + GitHub
 `package.json` **in the runner's workspace** — which is the same workspace `flyctl deploy` then ships,
 so the deployed app reports the correct version (`src/server/auth/app-version.ts`).
 
-**It deliberately does NOT push the version bump back to `main`.** The `@semantic-release/git` plugin
-was removed because branch protection correctly rejects a direct push (`GH006: Changes must be made
-through a pull request. Required status check "verify" is expected.`) — which silently broke **every
-deploy** for several merges until it was caught. The version of record is the **git tag**, not the
+**It deliberately does NOT push the version bump back to `main`**, so `.releaserc.json` leaves out the
+`@semantic-release/git` plugin: branch protection correctly rejects a direct push (`GH006: Changes must
+be made through a pull request. Required status check "verify" is expected.`), and a release step that
+pushes to `main` fails **every deploy**. The version of record is the **git tag**, not the
 committed `package.json`, so the repo's `package.json` version will lag; that is expected.
 
 To restore the committed bump, the release identity needs a branch-protection bypass on `main` (an
@@ -369,7 +370,7 @@ rule file (what it fires on: `scripts/instructions/history.mjs`). The instructio
 model's read of every changed instruction file for files that disagree, stale facts and rules
 written as history; its check C has a before/after for rule 2.
 
-## House gotchas (recurring traps, moved from CLAUDE.md 2026-08-28)
+## House gotchas (recurring traps)
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
@@ -395,7 +396,7 @@ written as history; its check C has a before/after for rule 2.
   (`LayoutOptions.colorParsers`, `typings.d.ts`) — verified end to end (candles + a volume overlay +
   a second pane all construct, `chart.remove()` tears down clean). Prefer not mounting the chart in
   specs at all where possible — spec the pure data-mapping layer (bars → series data) instead; use
-  the `colorParsers` shim only for a deliberate mount smoke-test. (#2017 Phase 1 chart-section spike,
-  2026-09-08 — also corrects that plan's own assumption: the package's licence is **Apache-2.0**, not
-  MIT, which carries an attribution clause the library satisfies by default via `attributionLogo:
-  true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to remove it.)
+  the `colorParsers` shim only for a deliberate mount smoke-test. The package's licence is
+  **Apache-2.0**, not MIT, which carries an attribution clause the library satisfies by default via
+  `attributionLogo: true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to
+  remove it. (#2017 Phase 1 chart-section spike, 2026-09-08.)

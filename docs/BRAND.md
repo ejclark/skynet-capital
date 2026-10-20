@@ -131,9 +131,11 @@ engagement. It reflects portfolios, bots, news, economy, and politics as a place
 like the news. Everything below (the anchors, the palette, the motifs) serves this: they are how the
 living universe looks and feels. When a choice is unclear, ask what it does for the living world.
 
-## Identity anchors (Graphify god-nodes → where cohesion lives most vividly)
+## Identity anchors (where cohesion lives most vividly)
 
-Elements with rich backstory that *license overly-refined detail*. Depth compounds here.
+Elements with rich backstory that *license overly-refined detail*. Depth compounds here. Graphify's
+god-nodes are only candidates; these are the experience hubs judgment selected
+([`BCP-GRAPHIFY.md`](BCP-GRAPHIFY.md) → *Mapping rules*, rule 1).
 
 1. **The Eye of Sauron & its tower (Barad-dûr).** The order-imposer's watcher crowning a left-side
    empire tower; a lidded fiery Eye (layered iris, cat-slit pupil, flame corona, clawed prongs) that
@@ -165,11 +167,12 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
 - **Small marks get size before colour.** A 4px dot is invisible at any contrast; 6px with a 1.5px
   ring reads. Legend and helper text sit at ≥ 11.5px.
 - **A radio and a checkbox never look the same.** Two controls that share a style but not a
-  behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
-  (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
-  its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` — a ✓ and a ring, no bar;
-  every multi-select chip in the app is one, #5365). On a phone the group labels are
-  hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
+  behaviour are a hue-only signal in disguise. The controls row's **section switch** picks exactly
+  one (`.railctl-section`, an accent bar under the current item in the row, on its left in
+  Settings' ≥ 861 column); its **filter toggles** turn any number on (`FilterChip`, `app/src/ui` —
+  a ✓ and a ring, no bar; every multi-select chip in the app is one, #5365). The row hides the
+  group labels at every width, so the `<hr />` between them is a real vertical divider, not a
+  decoration (Settings' column shows the labels and turns the rule horizontal). The words those
   controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where
   low-contrast tones hide; light is where accent fills lose their text.
@@ -183,7 +186,7 @@ pieces to 1 piece per row/week."* The handles, so the next request can be one ph
 - **Encode at the granularity the data lives at.** A fact about a week gets one mark per week; a
   fact about a day stays on the day. Ask "what is this a fact *about*?" before drawing it.
 - **Common region** (Gestalt; Palmer 1992): items inside one bounded area read as a group. The
-  range on the rail is one band per row, the month lens one block around the grid — never seven
+  range on R&D's month grid is one band per row, the month lens one block around the grid — never seven
   outlined cells asking the eye to do the grouping.
 - **1 + 1 = 3** (Tufte, *Envisioning Information*): two adjacent bordered shapes create a third,
   unintended shape in the gap between them. Thirty bordered tiles make sixty phantom shapes. Fewer

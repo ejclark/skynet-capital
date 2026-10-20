@@ -14,8 +14,10 @@ import {
 } from "../../src/server/member-conviction-store.js";
 import {
   DRAFT_NOTE,
+  MINE_NOTE,
   serveMemberConvictionsApi,
 } from "../../src/server/member-convictions-api-routes.js";
+import { SubscriptionStore } from "../../src/server/subscription-store.js";
 
 /**
  * #5482 slice 6a — a member states a conviction: the owner and day come from the session and the
@@ -83,9 +85,14 @@ const DRAFT = {
 describe("serveMemberConvictionsApi", () => {
   let dir: string;
   let store: MemberConvictionStore;
+  let subs: SubscriptionStore;
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), "skynet-member-convictions-"));
     store = new MemberConvictionStore(join(dir, "member-convictions.json"));
+    subs = new SubscriptionStore(join(dir, "subscriptions.json"), undefined, () =>
+      store.pointers(),
+    );
+    subs.subscribe("sauron", { playbookId: "CRWV-WHEEL", mode: "standard", enabled: true }, NOW);
   });
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
@@ -96,12 +103,7 @@ describe("serveMemberConvictionsApi", () => {
       auth: { providerIds: ["google"] },
       resolveOwnerIds: (email: string) =>
         email === "ada@example.com" ? ["sauron"] : ["grace-bot"],
-      subscriptions: {
-        load: () => ({
-          sauron: [{ playbookId: "CRWV-WHEEL", mode: "standard", enabled: true }],
-          "grace-bot": [],
-        }),
-      },
+      subscriptions: subs,
       memberConvictions: store,
       now: () => NOW,
       ...over,
@@ -145,7 +147,7 @@ describe("serveMemberConvictionsApi", () => {
     expect(answer.body).toMatchObject({ ok: true, saved: true, note: DRAFT_NOTE });
     const listed = (await mine()).body;
     expect(listed.label).toBe("SIM");
-    expect(listed.note).toBe(DRAFT_NOTE);
+    expect(listed.note).toBe(MINE_NOTE);
     expect(listed.convictions).toHaveLength(1);
     expect(listed.convictions[0]).toMatchObject({
       status: "draft",

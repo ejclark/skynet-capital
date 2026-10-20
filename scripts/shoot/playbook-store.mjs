@@ -18,7 +18,7 @@
 //   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
 //                playbooks open (#4642 slice 10, #4652).
 //   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
-//                pairs first, tickers by evidence, ✗ ? – folded into one counted line.
+//                pairs first, tickers by evidence, ✗ ? ⊘ folded into one counted line.
 //   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
 //                disabled row's reason in words, and "Check first" stating one contract's cash.
 //   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the

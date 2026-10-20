@@ -38,7 +38,7 @@ full card per type.
 | A backlog snapshot (a digest) | `kanban` | generated from labels, never hand-kept |
 | The system, its containers, its components | `C4Context` → `C4Container` → `C4Component` | boundaries; `Rel` labels carry the technology |
 | A schema or a type change | `erDiagram` / `classDiagram` | cardinality glyphs; before/after namespaces |
-| A module split (decompose) | `treeView-beta` or `classDiagram` | the tree the PR adds or moves |
+| A module split (decompose) | `classDiagram` (`treeView-beta` draws black on GitHub's dark canvas — not shippable yet, `/mermaid` → config-on-github) | the tree the PR adds or moves |
 | Requirements ↔ specs ↔ PRs | `requirementDiagram` | `satisfies` / `verifies` per EARS line |
 | Where tokens, money or requests split | `sankey-beta` | generated from a ledger |
 | Layers or regions where position means something | `block-beta` | columns; the region a change touches |
@@ -70,12 +70,12 @@ Each is a row above and a card in `/mermaid`.
 ## Mermaid that renders on GitHub — any type 11.17.2 draws, and every block is parsed
 
 GitHub renders Mermaid natively in PR bodies, issues and `.md` files — on **Mermaid 11.17.2**
-(read from github.com's production renderer bundle, 2026-09-25; upstream is 12.0.0). **The gate is
+(read from github.com's production renderer bundle, 2026-09-25; upstream is on 12.x). **The gate is
 the parser, not a type list:** `npm run mermaid:lint` parses every ```` ```mermaid ```` block with
 that exact pinned version (`scripts/mermaid-lint.mjs`), and `ship.sh checkbody`, `issue:lint` and
-the CI corpus scan all run it — so a diagram that passes here draws there, and the fear that
-motivated the old "stable types only" rule (a syntax error as the opening frame) is caught before
-push. The type menu is therefore everything 11.17.2 draws: `flowchart`, `sequenceDiagram`,
+the CI corpus scan all run it — so a diagram that passes here draws there, and a syntax error can
+never be the opening frame: it is caught before push. The type menu is therefore everything
+11.17.2 draws: `flowchart`, `sequenceDiagram`,
 `stateDiagram-v2`, `erDiagram`, `classDiagram`, `gitGraph`, `quadrantChart`, `requirementDiagram`,
 `timeline`, `mindmap`, `kanban`, `pie`, `gantt`, and the beta family (`xychart-beta`, `sankey-beta`,
 `block-beta`, `architecture-beta`, `radar-beta`, `treemap-beta`, `packet-beta`, `C4Context` and
@@ -320,7 +320,7 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
     · a gitGraph for a story about a button · the decision table above.
 11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
-    whole (house teal, or ink mode once promoted); never a hex chosen in flight, never two modes
+    whole (house teal, or ink mode); never a hex chosen in flight, never two modes
     in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
     outside a checked-in snippet.
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
@@ -366,9 +366,8 @@ a colour alone (`BRAND.md` → *Accessibility*). Brand-styled mermaid is allowed
 contrast-verified snippet checked in here, never improvised per-PR (hand-picked hex that looks
 right in one theme breaks in the other — that exact drift already shipped once).
 
-**The one sanctioned colour snippet** (promised here on 2026-08-20, checked in 2026-09-25 — verified
-by `tests/ui/mermaid-classdef.spec.ts` against both of GitHub's canvases with the same formula the
-app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
+**The one sanctioned colour snippet** (verified by `tests/ui/mermaid-classdef.spec.ts` against both
+of GitHub's canvases with the same formula the app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
 theme; the 3px stroke carries the boundary in light mode and the fill carries it in dark; `removed`
 and `changed` live in the stroke alone. Copy it whole; never pick a hex in flight.
 
@@ -444,8 +443,8 @@ flowchart TD
   shoot:login`, `shoot:feedback`, `shoot:onboarding`, …), each just fixtures and frames over the
   shared harness in `scripts/shoot/lib.mjs` + `shell.mjs`. The harness carries the JPEG quality
   ceiling, so fix size problems there, not by hand-recompressing.
-- **A new `/app/*` surface needs a script, not a waiver.** Copy the shortest existing one
-  (`scripts/shoot/feedback.mjs`, ~50 lines), swap the stubs and the frames, add its `shoot:<name>`
+- **A new `/app/*` surface needs a script, not a waiver.** Copy an existing one
+  (`scripts/shoot/feedback.mjs`, ~115 lines), swap the stubs and the frames, add its `shoot:<name>`
   npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
   surface they changed — that is the cost this harness was built to remove (#1327).
 - **Before/after pairs of diagrams: `npm run shoot:mermaid-pairs -- <pairs.json> <outdir>`.** Use
@@ -485,9 +484,9 @@ though the PR body itself can't carry it.
 
 GitHub renders `> [!NOTE]` `> [!TIP]` `> [!IMPORTANT]` `> [!WARNING]` `> [!CAUTION]` as colored
 callouts. They break when indented or nested inside `<details>` — always top-level. Budget: **one
-per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (workflow files,
-credentials, spend, outward-facing). On a carve-out PR the WARNING comes **before** any
-accomplishment framing — blast radius first is the honest inversion of fanfare-first.
+per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (the list is
+`envelope.json` — `node scripts/envelope-scan.mjs --check <paths>` answers it). On a carve-out PR
+the WARNING comes **before** any accomplishment framing — blast radius first is the honest inversion of fanfare-first.
 
 ## The honesty rules — what no gate can replace
 
@@ -505,10 +504,10 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    about the diff. Match picture weight to change weight — or waive.
 5. **What lands, at the moment it is read:** a picture of a mechanism draws what the code and
    the platform actually do, as of when the reader sees it. A PR's opening picture draws the
-   choice; what landed is a second picture, generated after, in whichever ending is true. The
-   held-PR starter drew a merge commit for platters that squashed (#3754) until the design rounds
-   redrew it as the choice at open time and the record after landing; where a picture is
-   generated from the data beside it, it cannot drift.
+   choice; what landed is a second picture, generated after, in whichever ending is true: a
+   starter that draws one ending for a mechanism the button decides is false whenever the other
+   button lands it (the held PR, #3754); where a picture is generated from the data beside it, it
+   cannot drift.
 6. **Better is measured, on two axes, before a redraw ships** (Eric, 2026-09-26: "interrogate
    the decision to objectively measure better or worse"). The mechanical axis is rule 13's number,
    printed by the pair renderer for the old and the new drawing side by side; the second look may

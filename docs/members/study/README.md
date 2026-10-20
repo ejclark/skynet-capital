@@ -60,7 +60,7 @@ Every blind role first passes `roles/canary.md`.
 ## Rules that keep a study honest
 
 - **Packets are built by script.**
-  - Member cards are §1–4 of `docs/members/<member>.md`, only quotes dated before the study, with code spans and paths stripped.
+  - Member cards are §1, §3 and §4 of `docs/members/<member>.md` (§2, what they own, is the world's), only quotes dated before the study, with code spans and paths stripped.
   - §5–7 (known problems, journeys) and the journey JSON never enter.
   - **Only the members read the cards.** The experts and the words pass read the area's roles
     instead: one line per member in the area config (`roles`), saying who they are here and on
@@ -110,9 +110,10 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
   the header's icons, so each world also lists those destinations (`oneTap`,
   `worlds/shell-surfaces.mjs`) and parity proves them: a page stuck on a loading line, a service
   shown as "not wired", a bare error after Sign out is a MISS before the run, never a finding after.
-  The services production always wires behind sign-in (the feed, the Council, account management,
-  the fleet panel, feedback) are filled from the book (`worlds/league-services.mjs`); Sign out goes
-  through the real auth gate to a declared plain page.
+  The services production always wires behind sign-in (the feed, the Council and its replies,
+  filing comments, account management, the fleet panel, the milestones journey, feedback) are
+  filled from the book (`worlds/league-services.mjs`); Sign out goes through the real auth gate to
+  a declared plain page.
 - **Known world artifacts.** What a world still cannot show as production would (the sign-in
   page, the fund owner's cards, writes that never come back…) is declared once
   (`worlds/shell-artifacts.mjs`) and written to `<dir>/.study-run/<world>-artifacts.json` by
@@ -206,9 +207,8 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   `tiebreak.json`. Whatever a matcher leaves out is offered to it once more in a call of its own;
   anything still unlabelled is listed by id in `match/coverage.json` and the run exits 1, never
   filled in. Calls are recorded under `<round>/match/requests/`, so a re-run replays them free.
-  Round one's matchers ran from a prompt and a script kept only in one session, with the rubric
-  inside the sealed key. The rubric and the runner live here now, so every round grades by the
-  same one.
+  The rubric and the runner live in the repo, not in the sealed key or one session's prompt, so
+  every round grades by the same one.
 - **The key is read only from `--sealed`.** `gold.md` (lines starting `A1`… the main list, `B1`…
   known gaps, `S1`… defects only the readers found) and `primes.json` (member → the ids their card
   hints at). `grade.json` carries ids, never the key's wording; the readout shows wording only with
@@ -248,7 +248,7 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
 
 1. A picture: a member stuck, beside the owner's own screenshot.
 2. The headline counts.
-3. Structural findings first, uncapped.
+3. Structural findings first: the top ten ranked, the rest folded.
 4. The scorecard, with disputes marked.
 5. The battle-test.
 6. The job map.
@@ -441,9 +441,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   earns the most.
 - 2026-10-09 · the expert merge timed out at 10 minutes on both controls, and resuming re-paid for
   every answer. A resumed round now replays recorded answers, and the merge gets 30 minutes (#5010).
-  Resume with the same `--profile` path: the round compares the path, not its contents.
+  Resume with the same, unedited `--profile` path: the round compares the path and its hash.
 - 2026-10-09 · the generated readout printed all 66 structural findings with every frame (794 lines,
-  48MB) and had to be cut to a top ten by hand. Next: `readout.mjs` ranks and caps at ten, the rest folded.
+  48MB) and had to be cut to a top ten by hand. Done in #5845: `readout.mjs` ranks and shows ten, the rest folded.
 - 2026-10-09 · the experts read the member cards, so their finds are primed — but the grader
   counts an expert's find as unprimed, and every item came out "unprimed". Either give experts no
   cards or count card-exposed finds apart.

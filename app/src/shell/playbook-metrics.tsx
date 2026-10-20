@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { PlaybookFunnelRowView, PlaybookMetricsView } from "../live/playbook-performance";
 import { money } from "../live/ticket";
-import { EnvPill } from "../ui";
+import { EnvPill, signedPercent } from "../ui";
 import { signedMoney } from "./option-preview";
 
 /**
@@ -45,7 +45,7 @@ export function holdLabel(ms: number | null | undefined): string {
 }
 
 const signedPct = (value: number | null): string =>
-  value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+  value === null ? "—" : signedPercent(value, 1);
 
 /** "3 long · 1 short", "2 call · 2 put" — only the parts that happened, so a stock-only playbook
  *  never reads "0 call · 0 put". */

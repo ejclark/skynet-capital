@@ -1,7 +1,7 @@
 ---
 name: instruction-drift
 description: read one changed instruction file (or one skill's files) for the drift a scanner cannot see — two files ruling differently, a stale fact, a rule written as history — and land only the rewrites a refuter could not kill
-model: fable
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -11,8 +11,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the item list and the due check come from
 `scripts/instruction-drift-scan.mjs`. The chain is three roles of this one file, so write `steps`
-from the block below rather than from `grind-manifest.mjs --args`, which emits a single step; each
-role's tier still resolves from this front matter at dispatch unless the step overrides it.
+from the block below rather than from `grind-manifest.mjs --args`, which emits one `instructions`
+step plus the outcome check, never the three roles; each role's tier still resolves from this front
+matter at dispatch unless the step overrides it.
 
 ```bash
 git fetch origin main
@@ -40,8 +41,9 @@ instruction file becomes an item.
 }
 ```
 
-Tiers, per `docs/COMPUTE.md`: **check** is judgment across files (floor `opus`/`high`, rounded up
-to `fable` like this directory's other judgment chores); **refute** is adversarial (floor
+Tiers, per `docs/COMPUTE.md`: **check** is judgment across files (floor `opus`/`high`, and run at that
+floor: Eric, 2026-10-14, after a 58-agent Fable fan-out of this chore burned his weekly quota —
+Opus is the floor for this judgment work, not a step to round up from); **refute** is adversarial (floor
 `xhigh`); **apply** reverts what died and runs the gates, the mechanical-with-verification row
 (`sonnet`/`high`). `isolation: worktree` because every role commits to the item's branch.
 
@@ -95,7 +97,7 @@ rate rather than the size of the corpus.
 
 ## The keep list — binding on every role
 
-Items 1–10 are Anthropic's prompt-audit guide (the `claude-api` skill → `shared/prompt-audit.md`,
+Items 1–10 are Anthropic's prompt-audit guide (the `claude-api` skill → shared/prompt-audit.md,
 "What not to flag"); 11–12 are this repo's. What they cover is not a finding. The refuter cites
 them by number.
 

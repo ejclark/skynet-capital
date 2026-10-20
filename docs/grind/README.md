@@ -11,7 +11,7 @@ Maps onto the codification ladder in [`../COACHES.md`](../COACHES.md): a one-off
 
 ## Two ways to call grind
 
-**Single-stage** (unchanged, still the default for a one-off):
+**Single-stage** (the default for a one-off):
 
 ```json
 {
@@ -52,17 +52,17 @@ than a checklist that is easy to skip:
 **Honesty about what is actually enforced here, not just requested in prose** (a UX review of the
 first version of this section caught it overclaiming): of the four things worth settling before a
 call — item source, depth, width, outcome check — only **item source** and the **ceiling** on width
-are validated. Depth (`effort`/`model`) was already a plain, optional arg before any of this;
-nothing checks it is the right tier for the chore. Width has no arg — the right width for a batch is
-still judgment — but its upper bound is no longer: the work spigot refuses a run wider than the
+are validated. Depth (`effort`/`model`) is a plain, optional arg; nothing checks it is the right
+tier for the chore. Width has no arg — the right width for a batch is judgment — but its upper
+bound is not: the work spigot refuses a run wider than the
 current position allows (below). Outcome check (`verifyBranch`) is enforceable *if you set it*, but
 nothing forces you to. Read the list below as "here is what each dimension gets you," not "grind
 checks all four."
 
 - **`args.itemSource`** (required, 12+ characters) — a real description of where `items` came from:
-  a scan/query command, or the explicit reason none applies. The length floor exists because a
-  red-team pass on the first version landed exactly the rubber-stamp attack you would expect —
-  `"items"` or `"n/a"` satisfied a bare non-empty check while saying nothing. It is logged at run
+  a scan/query command, or the explicit reason none applies. The length floor rejects the
+  rubber-stamp answer a bare non-empty check would accept — `"items"` or `"n/a"` satisfies that
+  while saying nothing. It is logged at run
   start and included in the returned result, so a bad answer is at least visible after the fact,
   not just required and then discarded.
 - **The work spigot gates the run before anything dispatches** (#3960). One cheap agent runs
@@ -84,14 +84,13 @@ checks all four."
   `script` — `--check` always exits 0 and returns descriptive JSON, so the dispatched agent reads
   it and reports `blocked` on any `blocking: true` entry. For an item that is a JSON object (the
   `{doc, refs}` shape `fix-doc-rot` uses, for example) the agent is told to extract the real path
-  field itself rather than hand the raw JSON to the shell — an early version substituted `{item}`
-  straight into the command line, and a red-team pass showed the shell word-splitting
-  `{"doc":"envelope.json","refs":["a"]}` into fragments that matched nothing, silently passing a
-  protected-file edit. And when the item genuinely is not a file path (an issue number, a ticker,
-  a PR branch), the agent reports **`done`**, never `skipped` — the pipeline treats any non-`done`
-  status as "stop the chain for this item," so a `skipped` envelope step would silently no-op the
-  chore itself on every non-path grind call (the same red-team pass caught this against
-  `research-bottleneck`, whose items are issue numbers). Pass `skipEnvelopeCheck: '<reason>'` (a
+  field itself rather than hand the raw JSON to the shell: substituting `{item}` straight into
+  the command line word-splits `{"doc":"envelope.json","refs":["a"]}` into fragments that match
+  nothing, silently passing a protected-file edit. And when the item genuinely is not a file path
+  (an issue number, a ticker, a PR branch), the agent reports **`done`**, never `skipped` — the
+  pipeline treats any non-`done` status as "stop the chain for this item," so a `skipped` envelope
+  step would silently no-op the chore itself on every non-path grind call
+  (`research-bottleneck`'s items are issue numbers, for example). Pass `skipEnvelopeCheck: '<reason>'` (a
   non-empty string, not a bare boolean) to opt out entirely; say why.
   **What this does not close:** the check is agent judgment (a `prompt` step), not a hard
   exit-code gate. **And CI is not a backstop for every grind push** — `tests/arch/
@@ -104,10 +103,10 @@ checks all four."
   (below). If your `steps` chain already ends in the identical command (a checked-in chore's own
   `outcomeCheck` already does), grind detects the duplicate and skips appending a second one,
   logging a note rather than running the check twice.
-  **A real bug this caught:** `git ls-remote --exit-code --heads origin ""` — an *empty* branch
-  argument — lists every head on the remote and exits 0. A prior step that forgot to report
-  `branch` made this check pass vacuously, for `verifyBranch` and for every checked-in chore's own
-  `outcomeCheck` alike. Grind now checks, before dispatching any step whose command or template
+  **The hole beneath it:** `git ls-remote --exit-code --heads origin ""` — an *empty* branch
+  argument — lists every head on the remote and exits 0, so a prior step that forgets to report
+  `branch` would pass this check vacuously, for `verifyBranch` and for every checked-in chore's own
+  `outcomeCheck` alike. Grind checks, before dispatching any step whose command or template
   references `{prev.branch}`, whether the previous step actually reported one — if not, that step
   is reported `blocked` without ever running, instead of being handed an empty string and passing.
 
@@ -161,9 +160,9 @@ prose ("the target below") rather than trying to template inside the instruction
 ## Real, checked-in chores
 
 - **`/bury` and `/backfill`** (`.claude/skills/bury/SKILL.md`, `.claude/skills/backfill/SKILL.md`)
-  — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. They started life as two
-  hand-copied chore files here; #1326 hoisted them so the `mortician`/`test-backfiller` agents and
-  grind share one copy. Each skill's body carries its grind calling convention.
+  — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. The
+  `mortician`/`test-backfiller` agents and grind share that one copy (#1326). Each skill's body
+  carries its grind calling convention.
 - [`governor.instructions.md`](governor.instructions.md) — one coach's athlete rep: WIP check, the
   gate's own `--candidate`, the open-PR file-collision check, then the drill's `SKILL.md`. The
   dispatch half of `/governor`'s cycle (steps 3–4) expressed as a chore, with **one item per coach**
@@ -171,7 +170,7 @@ prose ("the target below") rather than trying to template inside the instruction
   (2026-10-03) is why: the four athlete agents ran once between them in 30 days while their gates
   carried real debt, so the dispatch layer is the part that was idle, not the drills. Landing the
   wave as one cycle PR stays the caller's job — a rep opens nothing.
-- [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
+- [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one doc's dead references
   flagged by `scripts/doc-rot-scan.mjs`.
 - [`instruction-drift.instructions.md`](instruction-drift.instructions.md) — read one instruction
   file changed since the last run (or one skill's files) for what that scan cannot see: two files
@@ -181,6 +180,13 @@ prose ("the target below") rather than trying to template inside the instruction
   is owed; `--release` makes it a full run at a model release.
 - [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
   file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
+- [`honest-degradation.instructions.md`](honest-degradation.instructions.md) — make one eye
+  (`scripts/*-scan.mjs`) degrade honestly: a missing or unreadable input is a named state it
+  prints, never a silent pass.
+- [`haiku-eval-replay.instructions.md`](haiku-eval-replay.instructions.md) — blind-replay one
+  sampled event's initial research assessment at a given model tier, for the Haiku/Sonnet
+  adequacy eval (#2946, #3264). Read-only: `isolation: none` and no `outcomeCheck`, because the
+  deliverable is the report back, not a branch.
 - [`split-into-sub-issues.instructions.md`](split-into-sub-issues.instructions.md) — split one
   open plan's slices into native sub-issues (shipped ones filed closed) so the board draws an
   honest progress bar; the backfill behind `docs/ISSUES.md` → *Slices as sub-issues*.
@@ -202,27 +208,25 @@ prose ("the target below") rather than trying to template inside the instruction
   label. The fan-out half of "interrogate before you comply" (CLAUDE.md); the Orient output
   style's step 2 is the in-session listener that routes here when an objection survives.
 
-Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
-see the PR that added them) against every gate this repo currently runs; several plausible-looking
-batch chores (fanning `/decompose` or `/dedupe`, renumbering forward-test IDs) were deliberately
-**not** codified here because they need cross-item context a fan-out can't safely give them — see
-each file's own header for why, when a reason applies.
+Plausible-looking batch chores that need cross-item context a fan-out can't safely give them
+(renumbering forward-test IDs, for example) are deliberately **not** codified here — see each
+file's own header for why, when a reason applies.
 
 ## Calling convention: the chore declares its tier, you generate the call
 
-`grind.js` still has no way to read an `*.instructions.md` file's contents before dispatching an
-agent to it — workflow scripts have no filesystem access, and that constraint is not going away.
-What changed (#1325) is who holds the tier: every checked-in chore declares it in YAML front
+`grind.js` has no way to read an `*.instructions.md` file's contents before dispatching an
+agent to it — workflow scripts have no filesystem access, and that constraint is not going away —
+so the chore holds its own tier (#1325): every checked-in chore declares it in YAML front
 matter, using the **same key names as `.claude/agents/*.md` frontmatter** so a chore that later
 graduates to a real subagent carries its header unchanged.
 
 ```yaml
 ---
 name: triage-comment-bloat
-description: triage one file's narration-only comments flagged by comment-bloat-scan
-effort: low                  # low | medium | high | xhigh | max
+description: triage one file's narration-only comments flagged by scripts/comment-bloat-scan.mjs
+effort: high                 # low | medium | high | xhigh | max
 isolation: worktree          # worktree | none — `none` is an explicit "this chore needs no checkout"
-model: fable                 # optional; alias only, never a pinned id. Omit to take grind's default.
+model: opus                  # optional; alias only, never a pinned id. Omit to take grind's default.
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 ---
 ```
@@ -239,7 +243,7 @@ node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' --item-
   "items": ["src/a.ts", "src/b.ts"],
   "itemSource": "comment-bloat-scan.mjs",
   "steps": [
-    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "high", "isolation": true },
+    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "high", "isolation": true, "model": "opus" },
     { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
   ]
 }
@@ -250,18 +254,18 @@ node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' --item-
 
 `npm run grind:manifest` (no flags) prints what every chore declares and **exits 1** if any of them
 fails to declare `name`, `description`, `effort`, or `isolation` — blocking in CI via
-`tests/arch/grind-manifest.spec.ts`. So the tier can no longer go undeclared; what is still on the
-caller is running the preflight rather than hand-writing the args.
+`tests/arch/grind-manifest.spec.ts`. So a tier cannot go undeclared; what is on the caller is
+running the preflight rather than hand-writing the args.
 
-**`grind.js` reads the manifest at dispatch (#1325's remaining half).** Before the pipeline runs,
+**`grind.js` reads the manifest at dispatch (#1325).** Before the pipeline runs,
 `grind.js` fetches each distinct `instructions`-step path's manifest through one cheap subagent
 (`node scripts/grind-manifest.mjs <path>`, effort `low`) and resolves each of effort/model/isolation
 as `explicit step field › explicit whole-run arg (args.effort/args.model/args.isolation) › the chore
 file › grind's default`, logging the resolved tier once per chore so a run narrates its own tier.
 A manifest fetch that fails — a bad path, a chore missing front matter — **throws** rather than
 falling back to the default; it never silently dispatches at a guessed tier. So a caller who
-hand-writes `steps` and skips the `--args` preflight is now tiered correctly anyway — the
-preflight remains the cheaper way to get the exact call (one command instead of remembering the
+hand-writes `steps` and skips the `--args` preflight is tiered correctly anyway — the
+preflight is the cheaper way to get the exact call (one command instead of remembering the
 resolution order), not the only way to get it right.
 
 **What front matter deliberately does NOT carry:** per-run grouping rules (per-doc, per-file,
@@ -292,8 +296,12 @@ field, `{prev}` the whole JSON), so the chain ends with:
 ```
 
 A `done` with no branch on origin makes that command fail, which reports `blocked` — fail-closed.
-A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
-chore above reports its branch and expects this trailing step; the four calling conventions say so.
+A missing `branch` field ends `blocked` too: grind refuses to run the check at all (the
+empty-argument hole, above). Every checked-in chore above that pushes a branch reports it and
+expects this trailing step — the chore files as their `outcomeCheck`, `/bury` and `/backfill` as
+`verifyBranch: true` in their calling conventions. `interrogate`, `research-bottleneck` and
+`split-into-sub-issues` push no branch and declare a `curl` check on the issue instead; read-only
+`haiku-eval-replay` declares none.
 
 ### What a run reports back — print the ledger, don't rewrite it
 
@@ -352,7 +360,7 @@ already printing is the free checkpoint, not a new one.
   `grep -q` exits at its first match and closes the pipe, so `curl` dies with exit 23 ("failure
   writing output") under `pipefail` — the check reports "blocked" on a comment that exists. And a
   prose word as the marker (`grep -q interrogation`) matches any comment that mentions the chore.
-  Both checked-in research chores now use `test "$(curl -sSf … | grep -c -- "!-- <marker> --")"
+  Both checked-in research chores use `test "$(curl -sSf … | grep -c -- "!-- <marker> --")"
   -gt 0`: `grep -c` reads the whole stream, `-f` fails on an HTTP error instead of grepping an
   error page, and the marker is the comment's literal first line as the API returns it (`<`
   arrives as `\u003c`, so match from `!--`).
@@ -366,9 +374,9 @@ appeared). Two consequences:
 
 - A script whose `export const meta` isn't a **pure literal** (no `+`, template strings,
   identifiers, calls, or spreads — the harness's own contract) is dropped from the registry
-  silently, with no error anywhere. That is how `/grind` shipped documented, routed from CLAUDE.md,
-  and un-invokable by name between #1306 and the fix. `npm run workflow:meta`
-  (`scripts/workflow-meta-scan.mjs`, blocking in `tests/arch/workflow-meta.spec.ts`) now refuses
+  silently, with no error anywhere. That is how a workflow ships documented, routed from CLAUDE.md,
+  and un-invokable by name (#1306). `npm run workflow:meta`
+  (`scripts/workflow-meta-scan.mjs`, blocking in `tests/arch/workflow-meta.spec.ts`) refuses
   that shape at CI.
 - Within the session that first built the registry, fixing the file changes nothing. Invoke by
   path instead — `Workflow({scriptPath: "<repo root>/.claude/workflows/grind.js",
@@ -385,7 +393,7 @@ appeared). Two consequences:
 - **Only a skill is reachable from a `skill` step, and only an interactive session can edit one.**
   `skill` steps reach `.claude/skills/*/SKILL.md`, so an agent's loop is fannable only once it lives
   in a skill. A copy pasted into a chore file drifts from the agent with nothing watching (the
-  athletes' loops now live in `/decompose`, `/dedupe`, `/bury`, `/backfill`). Fanning one over
+  athletes' loops live in `/decompose`, `/dedupe`, `/bury`, `/backfill`). Fanning one over
   its gate's own item list is not hand-picking: the gate's list *is* the gate picking. `.claude/` is a
   Claude Code protected directory: writes there are never auto-approved outside `bypassPermissions`,
   and `permissions.allow` does not override that. So an unattended lane cannot create or edit a

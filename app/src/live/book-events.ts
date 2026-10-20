@@ -37,7 +37,7 @@ import {
  *
  * AN ESTIMATE NEVER READS AS CONFIRMED (#5510): a corpus event carries the calendar's `estimated`
  * mark, and a held print the corpus already put on the day takes `nextPrint`'s estimate too — so
- * whichever source delivered the day, a cadence estimate is drawn ◇ and named in words.
+ * whichever source delivered the day, a cadence estimate is drawn ⬡ and named in words.
  *   expiry  an option's own expiration (#5074) — a held-tier row unless a decision is already due
  *           that day on that contract, so the calendar of what you hold never skips the one date
  *           every option carries.
@@ -89,7 +89,7 @@ export interface BookEvent {
   /** `YYYY-MM-DD`. */
   readonly date: string;
   readonly tier: "held" | "market" | "decide";
-  /** A cadence estimate, not a confirmed day — drawn hollow (◇) and said in words. */
+  /** A cadence estimate, not a confirmed day — drawn hollow (⬡) and said in words. */
   readonly estimated?: true;
   /** The few words a lane draws beside its glyph ("Expires", "Earnings"); the holding is the
    *  lane's own name. */
@@ -227,7 +227,7 @@ function backstop(
 /** " (estimated date)" when the day is a cadence estimate — said in words, never styled alone. */
 const estimateNote = (estimated: boolean): string => (estimated ? " (estimated date)" : "");
 
-/** An event marked as an estimate: drawn hollow (◇), and its list line says so in words. */
+/** An event marked as an estimate: drawn hollow (⬡), and its list line says so in words. */
 const estimate = (event: BookEvent): BookEvent => ({
   ...event,
   title: `${event.title}${estimateNote(true)}`,

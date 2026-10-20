@@ -24,8 +24,8 @@ Knobs:
 | `SKYNET_SENTIMENT_WINDOW` | `10` | Articles kept in the rolling sentiment window (same file, same both-apps rule) |
 
 Two live signals feed the personas: **momentum** (from the price stream) and **news sentiment**
-(from Alpaca news, scored and polled). That means the news-driven personas now act too — enable
-them by name, e.g.:
+(from Alpaca news, scored and polled). The news-driven personas act on the second — enable them
+by name, e.g.:
 
 ```sh
 SKYNET_AUTONOMOUS_BOTS=day-trader,rumor-trader,news-fader npm run run:autonomous

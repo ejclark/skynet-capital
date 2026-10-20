@@ -15,9 +15,9 @@ import {
 } from "../live/order-facts";
 import { orderPlay, playTitle } from "../live/order-play";
 import { quoteQuery } from "../live/quote-query";
+import { withMinus } from "../ui";
 import { BetGlyph } from "./bet-glyph";
 import { DaysLeft, PriceLine, Swatch, ThePlay } from "./order-pictures";
-import { withMinus } from "./position-row-spec";
 
 /**
  * AN ORDER'S FULL DETAIL — THE OPT-IN DEEP DIVE (#5101; #5037 round 2, R2-deep, Eric's pick). The

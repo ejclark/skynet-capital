@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import { curveFlows } from "../observatory/capital-flow-mark.js";
 import {
   EQUITY_CURVE_RANGES,
   type EquityCurveRange,
@@ -56,7 +57,10 @@ export async function serveEquityCurveJson(
     const history = period
       ? await client.getPortfolioHistory(period)
       : await client.getPortfolioHistoryByRange(range === "YTD" ? ytdStart(config) : "2000-01-01");
-    sendJson(res, 200, { range, ...equityCurveView(history) });
+    const view = equityCurveView(history);
+    // A recorded top-up or reset is annotated where it landed (#4563); none, no key at all.
+    const flows = curveFlows(config.capitalFlows?.flowsFor(id) ?? [], view.points);
+    sendJson(res, 200, { range, ...view, ...(flows.length > 0 ? { flows } : {}) });
   } catch {
     sendJson(res, 200, { range, points: [] });
   }

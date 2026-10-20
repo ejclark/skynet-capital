@@ -39,8 +39,8 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 - **6 (fixed, #3807 slices 2a + 2b + 2d + 2e)** — Trade's "← Back to account" and the rail's
   "← Leaderboard" are gone (2a), and the topbar's Profile tab always lands on the cockpit (2b).
   Their own account's page links the same account on their Profile page ("Open in your Accounts",
-  `app/src/shell/account-head.tsx`), and the Profile page links back ("Open as the league sees it",
-  `app/src/shell/cockpit-head.tsx`, 2e).
+  `app/src/shell/account-head.tsx`), and the Profile page links back from the account's name menu
+  ("<name> as the league sees it", `app/src/shell/account-menu.tsx`, 2e).
 - **9 (found by run 0; fixed)** — `/api/accounts/networth` answered 500 on the offline fixture
   (`h.equity.forEach`, `src/server/networth-api-routes.ts`, when the history read carried no
   equity series); the Overview said "Net worth is unreachable right now." and the positions
@@ -58,13 +58,14 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ### j1 — sell a covered call on a position I hold
 
-1. `/app/accounts` — the cockpit: the account switcher, Overview · Activity. **WHEN a member with
-   one linked account opens Profile, the app shall open that account's cockpit on Overview.**
+1. `/app/accounts` — the cockpit: the account's name (its menu holds the switcher), Overview ·
+   Balance · Ledger · Events. **WHEN a member with one linked account opens Profile, the app
+   shall open that account's cockpit on Overview.**
    Judge: can this reader tell what to do next in ten seconds?
-2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, Guidance on
-   the row (desktop). **WHEN the member opens Overview, the app shall show the held positions
-   with a way into each one's guidance, even when net worth cannot be read.** On a phone the
-   blotter is one card per position and EEM's card is the way in — it opens the position on
+2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, its guidance
+   line under the row (desktop). **WHEN the member opens Overview, the app shall show the held
+   positions with a way into each one's guidance, even when net worth cannot be read.** On a phone
+   the blotter is one card per position and EEM's card is the way in — it opens the position on
    Trade, where Guidance is a tab (`s2-phone`). Judge: can this reader tell which position to
    act on?
 3. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
@@ -91,16 +92,16 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    reader tell what to do next in ten seconds?
 2. `/app/activity` — the feed. **WHEN the member opens Activity, the app shall show the feed with
    the newest event first.** Judge: can the reader find today's fill?
-3. `/app/accounts?section=activity` — Profile → Activity: the orders on their own account, newest
+3. `/app/accounts?section=ledger` — Profile → Ledger: the orders on their own account, newest
    first, the EEM buy among them — the fill on their own book, not only in the league's feed.
-   **WHEN the member opens their Profile's Activity, the app shall list their own account's
-   orders, newest first.** Judge: can the reader find their own fill? _(Added 2026-09-29, #3816
-   slice 9.)_
+   **WHEN the member opens their Profile's Ledger, the app shall list their own account's
+   orders, newest first.** Judge: can the reader find their own fill?
 
 ### j3 — my own desk, and back
 
-1. `/app/accounts` — the head's "Open as the league sees it" opens the same account's page,
-   `/u/human-eric`. **WHEN the member is on their Profile page with one account picked, the app
+1. `/app/accounts` — the head's account name opens its menu, whose "<name> as the league sees it"
+   opens the same account's page, `/u/human-eric` (`app/src/shell/account-menu.tsx`). **WHEN the
+   member is on their Profile page with one account picked, the app
    shall link that account's page as the league sees it (`/u/:id`).** _Fixed — #3807 slice 2e._
    Judge: does the reader know there are two pages for one account?
 2. `/app/u/human-eric` — their own account's page: the head (name, HUMAN, SIM, "Open in your

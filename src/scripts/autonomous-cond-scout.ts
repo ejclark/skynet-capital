@@ -4,8 +4,9 @@
  *
  * DARK BY DEFAULT. The names it scans are its host bot's own setting (#4535 slice 2a): that bot's
  * COND-SCOUT subscription, read on every check, so the owner changes them with no restart and the
- * only gate is ownership (Eric, #928 — no approval step). `SKYNET_COND_SCOUT_UNIVERSE` serves only
- * a host holding no such subscription; with neither, nothing opens (`resolveCondScoutUniverse`).
+ * only gate is ownership (Eric, #928 — no approval step). A host holding no such subscription scans
+ * nothing, whatever `SKYNET_COND_SCOUT_UNIVERSE` says (#4535 slice 4c-2; the dashboard copied the
+ * env's names into the host's subscription once, slice 4c-1) — `resolveCondScoutUniverse`.
  * Even armed, the runner holds no broker: probes live on the shadow ledger only (Eric, 2026-09-30
  * — "keeps the information contained to the health dashboard").
  */
@@ -106,7 +107,7 @@ export interface CondScoutWiring {
   /** The bot account the scout runs beside — the one Heartbeat that shows its ledger. */
   readonly hostPersonaId?: string;
   /** The host bot's subscriptions as last received from the dashboard, asked on every check
-   *  (#4535 slice 2a). Absent = the env knob alone decides, as before. */
+   *  (#4535 slice 2a). Absent = the scout is not armed. */
   readonly hostSubscriptions?: () => readonly PlaybookSubscription[];
   /** Hands the app-bound snapshot getter to the bridge sender once there is a ledger to show. */
   readonly publish?: (get: () => CondScoutSnapshot) => void;
@@ -132,7 +133,6 @@ function followUniverse(
   return () => {
     const { wanted, source } = resolveCondScoutUniverse(
       wiring.hostSubscriptions?.() ?? [],
-      env.SKYNET_COND_SCOUT_UNIVERSE,
       wiring.streamed,
     );
     const key = `${source}:${wanted.join(",")}`;
@@ -149,10 +149,6 @@ function followUniverse(
       log.log(
         `[cond-scout] armed on the shadow ledger (no orders): ${universe.join(", ")}${from}.`,
       );
-    } else if (source === "env") {
-      log.warn(
-        "[cond-scout] SKYNET_COND_SCOUT_UNIVERSE set but nothing usable in it — staying dark.",
-      );
     } else if (source === "subscription") {
       log.warn(
         `[cond-scout] ${host}'s COND-SCOUT subscription names nothing the stream carries — staying dark.`,
@@ -162,8 +158,10 @@ function followUniverse(
         `[cond-scout] paused on ${host}'s COND-SCOUT subscription — no new probes; open ones still close.`,
       );
     } else if (last) {
-      log.log(
-        "[cond-scout] dark — no COND-SCOUT subscription and no SKYNET_COND_SCOUT_UNIVERSE; open probes still close.",
+      log.log("[cond-scout] dark — no COND-SCOUT subscription; open probes still close.");
+    } else if (env.SKYNET_COND_SCOUT_UNIVERSE) {
+      log.warn(
+        `[cond-scout] SKYNET_COND_SCOUT_UNIVERSE is no longer read — ${host} holds no COND-SCOUT subscription, so the scout stays dark. Subscribe it in the Playbook Store.`,
       );
     }
     last = { key, universe };
@@ -180,7 +178,7 @@ function buildCondScout(
   wiring: CondScoutWiring,
 ): { readonly runner: CondScoutRunner; readonly universe: () => readonly string[] } | undefined {
   const log = wiring.log ?? console;
-  if (!(env.SKYNET_COND_SCOUT_UNIVERSE || wiring.hostSubscriptions)) return undefined;
+  if (!wiring.hostSubscriptions) return undefined;
   const store = condScoutStore(wiring.botsStateDb);
   const universe = followUniverse(env, wiring, store);
   universe(); // the boot line: armed, dark-and-why, or (nothing ever set) silence

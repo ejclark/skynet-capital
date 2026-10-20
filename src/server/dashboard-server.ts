@@ -16,6 +16,7 @@ import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
+import { heldConvictions } from "./conviction-hand-over.js";
 import { serveConvictionsApi } from "./convictions-api-routes.js";
 import { serveCouncilApi } from "./council-api-routes.js";
 import { serveCouncilRepliesApi } from "./council-replies-api-routes.js";
@@ -60,7 +61,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies);
+  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
@@ -152,7 +153,10 @@ async function servePlaybookReads(
   session: Session | undefined,
 ): Promise<boolean> {
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
-  return serveConvictionsApi(req, res, path);
+  // The records the bots act on: the seeded ones and the members' views handed over (slice 6c).
+  return path === "/api/convictions"
+    ? serveConvictionsApi(req, res, path, heldConvictions(config.memberConvictions))
+    : false;
 }
 
 /** What a member does to playbooks: subscribe a bot to the house's (#885), write their own (#5457),

@@ -18,7 +18,8 @@ import { siblingPath } from "../storage/sibling-path.js";
  * there `null` means not subscribed.
  *
  * Who is the signed-in email, the same tier as the controls file's own `updatedBy`. It is never sent
- * to the browser: the settings API answers "you" or "another owner" (`settings-api-routes.ts`).
+ * to the browser: the settings API answers "you" or "another owner" (`settings-api-routes.ts`) — or,
+ * for a one-time copy of the bots app's own setting (`env-settings-seed.ts`), says so.
  *
  * Plain JSON beside bot-controls.json (no new env var, no `fly.toml` change — envelope-protected),
  * the `council-store.ts` posture. Newest last; each account keeps its latest `MAX_CHANGES_PER_ACCOUNT`.
@@ -28,7 +29,7 @@ export type SettingValue = boolean | number | string | null;
 
 export interface SettingsChange {
   readonly at: string;
-  /** `suspended`, `hardcore`, `betaPicks` (the controls state), or a Store write's
+  /** `suspended`, `hardcore`, `betaPicks`, `betaStage` (the controls state), or a Store write's
    *  `subscription:<playbookId>` / `allocation:<strategy>` (slice 3c). */
   readonly setting: string;
   readonly before: SettingValue;
@@ -94,6 +95,12 @@ export class SettingsChangeLog {
     });
   }
 
+  /** False when the file is there but did not read whole: an unattended writer (the env-settings
+   *  seed) skips its write then, since `record` would write the part it read over the rest. */
+  readable(): boolean {
+    return this.file.loadIfReadable() !== undefined;
+  }
+
   /** One account's changes, newest first, at most `limit`. */
   list(accountId: string, limit = MAX_CHANGES_PER_ACCOUNT): SettingsChange[] {
     const changes = this.file.load().accounts[accountId] ?? [];
@@ -111,7 +118,7 @@ export class SettingsChangeLog {
   }
 }
 
-const LOGGED_SETTINGS = ["suspended", "hardcore", "betaPicks"] as const;
+const LOGGED_SETTINGS = ["suspended", "hardcore", "betaPicks", "betaStage"] as const;
 
 /** One log line per setting that moved between two stored entries. */
 export function controlsChanges(

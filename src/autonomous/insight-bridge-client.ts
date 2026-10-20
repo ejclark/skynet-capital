@@ -31,17 +31,24 @@ const NOOP_CLIENT: InsightBridgeClient = {
  * worst case on any failure (network error, timeout, non-2xx response) is a dropped log line and
  * a console warning, never a crashed cycle.
  */
-export function resolveInsightBridge(env: NodeJS.ProcessEnv = process.env): InsightBridgeClient {
+export function resolveInsightBridge(
+  env: NodeJS.ProcessEnv = process.env,
+  /** The per-POST budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs a real listener on the same event loop as a loaded full suite passes a generous one, so
+   *  a starved loop is not mistaken for an unreachable bridge (#4978, #5823). */
+  options: { readonly timeoutMs?: number } = {},
+): InsightBridgeClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) {
     return NOOP_CLIENT;
   }
   const endpoint = `${url.replace(/\/+$/, "")}/insights`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
   return {
     recordInsight: async (entry) => {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const response = await fetchJson(
             "POST",

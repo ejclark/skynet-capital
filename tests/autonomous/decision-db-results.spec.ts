@@ -10,6 +10,7 @@ import { resolveDecisionReplication } from "../../src/autonomous/decision-replic
 import { type DecisionBatch, storeDecisionBatch } from "../../src/autonomous/decision-wire.js";
 import type { OrderIntent, OrderResult } from "../../src/domain/types.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /**
@@ -196,7 +197,7 @@ describe("the broker's words reaching the dashboard's copy of the store", () => 
     const { port } = server.address() as AddressInfo;
     try {
       const env = { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` };
-      await resolveDecisionReplication(env, () => bots).replicate({});
+      await resolveDecisionReplication(env, () => bots, LOADED_SUITE_BRIDGE_BUDGET).replicate({});
       // What crossed the bridge was read back out of the bots' SQLite, not the record in memory.
       expect(batches[0]?.records[0]?.outcomes.map((o) => o.result?.reason)).toEqual([
         CANCELED,

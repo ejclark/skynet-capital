@@ -195,6 +195,10 @@ await shoot("thesis-drawer-phone");
 await page.getByRole("heading", { name: "Buy the rumor, sell the news" }).scrollIntoViewIfNeeded();
 await shoot("thesis-play-phone");
 
+// The track-record chart's price axis (#5204): ticks in whole dollars with '$' and commas.
+await page.locator(".thesis-chart-canvas").scrollIntoViewIfNeeded();
+await shoot("thesis-equity-axis-phone");
+
 // The safeguard ladder sits below the call banner, so the drawer's own top-of-page frame cannot
 // show it — this one scrolls it into view (#3194 slice 6a).
 await page.getByText("Safeguards").scrollIntoViewIfNeeded();

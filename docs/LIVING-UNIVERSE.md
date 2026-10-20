@@ -130,8 +130,10 @@ celebrate what goes right loudly; render what goes wrong honestly but without pu
 > **Load-bearing dependency:** these are **transition** events — "*took* profit," "*deployed* capital,"
 > "*grew and reinvested*" — which by definition cannot be read from a single snapshot. They need the
 > **history / persistence layer** (realized-P/L on sells + equity samples over time). That backend is the
-> constraint that unlocks this entire ceremony vocabulary; until it exists, the city can show *state*
-> (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
+> constraint that unlocks this entire ceremony vocabulary. It records in production
+> (`src/observatory/history-store.ts`, `SKYNET_HISTORY_DIR` in `fly.toml`); reading it back is tracked in
+> [`plans/history-layer.md`](plans/history-layer.md), and until the city reads it, the city can show
+> *state* (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
 
 ### Landmarks that level up — power ∝ standing
 
@@ -194,13 +196,14 @@ about anyone's take.
 The same grammar renders at different zoom levels — and, like real geography, **the units of measure
 change with scale.** You measure a city by buildings and districts; you measure a nation by territory,
 output, and development. Metrics that dominate at one scale fall away at another. This maps directly onto
-the four observatory routes that already exist (Iteration 12), so the sim-city layer is a visual skin
-over data each view already computes — a per-view rendering spec, not new plumbing.
+the four observatory views that already exist (Iteration 12), on two routes: `/u/:id`, and `/leaderboard`,
+which carries the comparison, the ranked board and the bots-vs-humans match. So the sim-city layer is a
+visual skin over data each view already computes — a per-view rendering spec, not new plumbing.
 
 | View | Scale | You see | Units that apply |
 | --- | --- | --- | --- |
 | **Individual** (`/u/:id`) | a **city** — your empire | buildings = positions, districts = sectors, construction = pending bets, health = P/L | tower height, district density, lit windows, site footprint |
-| **Comparison** (`/?a=&b=`, inline on Standings) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
+| **Comparison** (`/leaderboard?a=&b=`, inline on the Leaderboard) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
 | **Leaderboard** | a **region / map of cities** | many empires ranked — prominence and size = standing; a skyline of skylines | rank, relative scale, growth trajectory |
 | **Bots vs Humans** | **country vs country** | each cohort aggregated into a nation; individual buildings fall away, territory and output emerge | landmass & GDP (aggregate equity), population & density (participation, breadth), infrastructure maturity (share in profit), specialization (sector concentration), growth rate (construction share), dispersion (inequality) |
 
@@ -214,7 +217,8 @@ spread, participation) — they *are* the country-scale units.
 ## The three-era arc (Eric, 2026-09-27) — where the phased roadmap is headed
 
 Eric's first pass at the multi-year shape, offered as a hedge ("I have yet to invest much thought
-on the longer term"), not a spec. Banked here rather than built — nothing below is a slice yet.
+on the longer term"), not a spec. Banked here rather than built — nothing below is a slice yet,
+save the one playbook decision already in code.
 
 **Naming collision worth one line, not a block:** `THE-GAME.md`'s "Season" is the repeating
 **quarterly** renown-reset unit (`docs/THE-GAME.md` line ~120); Eric's "season 1/2/3" here name
@@ -223,34 +227,36 @@ words (IDEAS.md already uses "season one" this way), so this doc calls them **Er
 keep the two scales apart in writing — rename back if that reads worse out loud than on the page.
 
 - **Era 1 — humans vs. Sauron (and other Eric-account bots); the only autonomous bots in the
-  system.** This *is* the roadmap's phases 1–3 above, already in flight (Sauron autonomous is
+  system.** This *is* the roadmap's phases 1–3 below, already in flight (Sauron autonomous is
   IDEAS.md's stated season-one premise). New goals from this pass, not yet slices:
   - **Competition rules, undefined.** What "winning" a quarter means beyond the renown ledger
     THE-GAME.md already scores — open, not decided here.
   - **Regular touch points to keep people engaged.** Partly served today by the weekly Friday Recap
     (`THE-GAME.md`); whether that cadence is enough is untested — no active members yet (#3818).
   - **Joyful trading UX across stocks, options, and other tradeable commodities.** Today's order
-    path is equities-only market orders (IDEAS.md's Sauron roadmap, steps 2–4); "any other
-    commodities" is new scope, not on that roadmap yet.
+    path covers equities as market orders and options as limit orders, one leg or a same-expiry
+    vertical (`src/domain/types.ts` → `OrderIntent`, `OptionOrderIntent`; IDEAS.md's Sauron
+    roadmap, steps 2–4); "any other commodities" is new scope, not on that roadmap yet.
   - **Performance dashboards that answer or nudge, not just report.** No existing doc owns this —
     closest relative is the judgment axis (phase 3) and the observatory views (`## Scale across the
-    four views` below); a dashboard that *nudges toward the process that answers a question* is a
+    four views` above); a dashboard that *nudges toward the process that answers a question* is a
     sharper bar than either currently states.
   - **AI position/opportunity guidance toward maximizing profit**, and **hypothetical-scenario
     guidance** ("what if I did X"). Both new — nearest existing thread is CLAUDE.md's "position
-    guidance" / the trade form's Guidance tab, which today is UI copy, not an advisory system.
+    guidance" / the trade form's Guidance tab, a deterministic, rule-cited engine
+    (`src/options/position-guidance.ts`, #3729), not an AI advisor.
   - **Only bot accounts subscribe to playbooks — decided** (Eric, 2026-10-04, #4610): *"For
     season 1, I'm only allowing bots to subscribe to playbooks. In season 2, playbook
     subscriptions will be enabled for all accounts. The intent is to have season one be 'bots vs
     humans' and season 2 enables users to adopt autonomous trading strategies. This approach buys
     us time to refine the autonomous trading process in season 1 in preparation for season 2."*
-    Built 2026-10-05 (#4649): the Store refuses a human account's subscribe and edit with one
-    sentence (`src/domain/playbook-bots-only.ts`), and leaving stays open on every account
+    The Store refuses a human account's subscribe and edit with one sentence
+    (`src/domain/playbook-bots-only.ts`, #4649), and leaving stays open on every account
     (unsubscribe, pause, resume). Member copy says "a later season", never "Season 2", which a
     member would read as `THE-GAME.md`'s next quarter. Not a fog: nothing earnable opens it
     (`docs/FOG-OF-WAR.md` audit).
 - **Era 2 — bots vs. bots; members create and configure their own bots' strategies.** This is
-  phase 4 of the roadmap above (**contributable personas**) under a sharper frame: *promoting
+  phase 4 of the roadmap below (**contributable personas**) under a sharper frame: *promoting
   Sauron's own capabilities to other users*, not just accepting outside contributions. Same
   mechanism (plugin architecture, tier-gated trading authority via the contribution ladder below).
   - **Playbook subscriptions open to every account** (the same 2026-10-04 decision): members

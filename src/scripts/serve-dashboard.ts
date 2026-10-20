@@ -23,6 +23,10 @@ import {
   publishingFeedback,
   publishingMergedPullRequests,
 } from "../observatory/activity-publishing.js";
+import { FLOWS_SHOWN_FROM } from "../observatory/capital-flow.js";
+import { CapitalFlowLedger } from "../observatory/capital-flow-ledger.js";
+import { createBootCapitalFlowStore } from "../observatory/capital-flow-store.js";
+import { CapitalFlowWatch, restartBaseline } from "../observatory/capital-flow-watch.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -30,6 +34,7 @@ import {
   rehydrateHistory,
   seedSampleRecorder,
 } from "../observatory/history-boot.js";
+import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
@@ -95,10 +100,11 @@ async function main(): Promise<void> {
   // history and write the baseline BEFORE the hub exists, so no live fill lands on an unseeded 0 and
   // no `realizedPl: 0` sample is recorded for the next boot to rehydrate.
   const history = createBootHistoryStore(process.env, dataSource.mode);
-  const { initial, baseline } = await rehydrateHistory(
-    history,
-    await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
-  );
+  const booted = await buildDashboardData(roster, { clientFactory: dataSource.clientFactory });
+  // The capital-flow watch compares across the restart gap, so it needs each participant's last
+  // sample from BEFORE the boot samples below are written (#4563).
+  const beforeBoot = await restartBaseline(history, booted.participants);
+  const { initial, baseline } = await rehydrateHistory(history, booted);
   warnAccountCollisions(initial.collisions);
 
   const hub = new ObservatoryHub(initial);
@@ -128,6 +134,33 @@ async function main(): Promise<void> {
     })
     .catch((e) => console.error("[activity] boot reconcile failed:", e));
 
+  // The capital-flow detector (#4563): a paper-balance top-up is recorded as an inferred flow, and
+  // the ledger can mark that member's standings row and equity curve (slice 2) — but only flows
+  // from FLOWS_SHOWN_FROM on, which holds every mark back until a week of shadow lines tunes the
+  // tolerance. Fire-and-forget, like every sample write. Seeded from before the restart and gated
+  // on the reconcile, so the boot samples are compared against the last ones from before it once
+  // the broker window's fills are in the journal. A ledger that cannot be read at boot marks
+  // nothing it has not seen this run.
+  const flowLedger = new CapitalFlowLedger(
+    createBootCapitalFlowStore(process.env, dataSource.mode),
+    { shownFrom: FLOWS_SHOWN_FROM },
+  );
+  await flowLedger.load().catch((e) => console.error("[flows] ledger load failed:", e));
+  const flowWatch = new CapitalFlowWatch({
+    activity,
+    flows: flowLedger,
+    baseline: beforeBoot,
+    ready: reconciled,
+  });
+  const observeFlow = (sample: EquitySample) => {
+    void flowWatch.observe(sample).then(
+      (flow) =>
+        flow &&
+        console.log(`[flows] inferred ${flow.direction} ${flow.amount} for ${flow.participantId}`),
+      (e) => console.error("[flows] watch failed:", e),
+    );
+  };
+  for (const sample of baseline) observeFlow(sample);
   startHistorySampler({
     getState: () => hub.getState(),
     store: history,
@@ -138,6 +171,7 @@ async function main(): Promise<void> {
     onTransitions: (transitions) => {
       for (const transition of transitions) ceremonies.emit(transition);
     },
+    onSample: observeFlow,
   });
 
   // The IV clock: one at-the-money IV sample per tracked underlying per trading day, so IV rank
@@ -313,6 +347,7 @@ async function main(): Promise<void> {
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
+    capitalFlows: flowLedger,
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),

@@ -43,8 +43,9 @@ import {
  * steers and how far, then the day it is checked. One column at 390px; a wide container gives the
  * claims and the pair settings two columns of fields each, no new fields.
  *
- * WHAT IT IS NOT. A saved view is a draft that steers nothing yet, said under the button and on the
- * card. It never subscribes a pair, never widens a bound and never places an order. Paper only:
+ * WHAT IT IS NOT. A saved view is a draft that steers nothing until its owner hands it over (slice
+ * 6c, `conviction-steer.tsx`), said under the button and on the card; saving a change to a view
+ * that steers takes it back. It never subscribes a pair, never widens a bound and never places an order. Paper only:
  * the card wears SIM.
  */
 
@@ -130,7 +131,8 @@ export function ConvictionForm({
   readonly steerable: readonly SteerablePairView[];
   /** The view being changed. Absent = a new one. */
   readonly editing?: MemberConvictionView;
-  readonly onSaved: (title: string) => void;
+  /** `tookBack`: the edit replaced a view that was steering, so it is a draft again. */
+  readonly onSaved: (title: string, tookBack: boolean) => void;
   readonly onCancel: () => void;
   readonly onDiscard?: (id: string) => void;
   readonly discarding?: boolean;
@@ -186,7 +188,7 @@ export function ConvictionForm({
   };
   const doSave = async () => {
     const answer = await ask(saveConvictionRequest);
-    if (answer) onSaved(answer.conviction.title ?? fields.title);
+    if (answer) onSaved(answer.conviction.title ?? fields.title, answer.tookBack === true);
   };
 
   const wheelSteered = steerable.some(
@@ -323,7 +325,9 @@ export function ConvictionForm({
         </button>
       </div>
       <p className="pba-hint">
-        A saved view is a draft: only you see it, and it steers nothing yet.
+        {editing?.status === "steering"
+          ? "Saving a change takes this view back from your bots; hand it over again once it reads right."
+          : "A saved view is a draft: only you see it, and it steers nothing until you hand it to your bots."}
       </p>
       {editing && onDiscard ? (
         <DiscardAsk

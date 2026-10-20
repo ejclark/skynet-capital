@@ -199,13 +199,15 @@ export function WeekLaneRow({
   );
 }
 
-/** The key to a lane's shapes, in the opened card — each swatch is the lane's own cell. */
-export function LaneKey(): ReactElement {
+/** The key to a lane's shapes, in the opened card — each swatch is the lane's own cell. A card
+ *  held by an estimated print (#4479) keys the same cell as no window open: its window is due and
+ *  only the date is missing, so "waiting for its window" would contradict the card above it. */
+export function LaneKey({ state }: { readonly state?: CardState } = {}): ReactElement {
   const rows: readonly [string, string][] = [
     ["tactical", "Trading on live signals"],
     ["long", "Wants to hold"],
     ["flat", "Wants out"],
-    ["no-window", "Waiting for its window"],
+    ["no-window", state === "unconfirmed" ? "No window open" : "Waiting for its window"],
     ["observing", "Observing, places nothing"],
     ["blocked", "Can't fire"],
   ];

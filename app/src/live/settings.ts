@@ -19,8 +19,9 @@ export interface OwnedAccount {
   readonly settings?: BotSettings;
 }
 
-/** Who made a change, as the server tells it — never an email. */
-export type ChangeAuthor = "you" | "another owner";
+/** Who made a change, as the server tells it — never an email: the viewer, another owner of the
+ *  bot, or the one-time copy of the bots app's own setting (#4535 slice 4c). */
+export type ChangeAuthor = "you" | "another owner" | "the operations setting, copied once";
 
 /** One recorded change to a bot's settings; `null` = not set here, the operations setting stands —
  *  or, on a Store line (`subscription:<playbookId>`), not subscribed. A subscription is a one-line
@@ -39,6 +40,8 @@ export interface BotSettings {
   readonly hardcore?: boolean | null;
   /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
   readonly betaPicks?: number | null;
+  /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
+  readonly betaStage?: boolean | null;
   readonly maxBetaPicks: number;
   readonly changes: readonly BotSettingChange[];
 }
@@ -104,11 +107,12 @@ export const botControlRequest = (input: {
 }): Promise<{ readonly ok: true; readonly suspended: boolean } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-control", input);
 
-/** Change your OWN bot's hardcore build or forced-pick count; `null` hands it back to the
- *  operations setting. Ownership is the server's check, same tier as the switch above. */
+/** Change your OWN bot's hardcore build, forced-pick count or after-close staging; `null` hands it
+ *  back to the operations setting. Ownership is the server's check, same tier as the switch above. */
 export const botSettingsRequest = (input: {
   readonly id: string;
   readonly hardcore?: boolean | null;
   readonly betaPicks?: number | null;
+  readonly betaStage?: boolean | null;
 }): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-settings", input);

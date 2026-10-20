@@ -15,6 +15,7 @@ import {
 import { parseOrderSettlement } from "../../src/autonomous/decision-wire-settlements.js";
 import type { OrderSettlement } from "../../src/domain/order-settlement.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /**
@@ -153,6 +154,7 @@ describe("a late fill reaching the dashboard's copy", () => {
       const client = resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
         () => bots,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
       await client.replicate({});
       expect(app.listByPersona("sauron")[0]?.outcomes[0]?.result?.status).toBe("working");
@@ -214,12 +216,12 @@ describe("a late fill reaching the dashboard's copy", () => {
     };
     try {
       const env = { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` };
-      const client = resolveDecisionReplication(env, () => bots);
+      const client = resolveDecisionReplication(env, () => bots, LOADED_SUITE_BRIDGE_BUDGET);
       for (let poll = 0; poll < 3; poll++) await client.replicate({});
       expect(new Set(stored())).toEqual(new Set(many.map((s) => s.orderId)));
 
       // A restarted bots process starts its cursor over; every settlement lands once.
-      await resolveDecisionReplication(env, () => bots).replicate({});
+      await resolveDecisionReplication(env, () => bots, LOADED_SUITE_BRIDGE_BUDGET).replicate({});
       expect(stored()).toHaveLength(130);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

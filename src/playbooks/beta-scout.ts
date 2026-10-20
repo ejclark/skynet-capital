@@ -16,7 +16,7 @@
  *
  * SUBSCRIBABLE (#4642 slice 10). The scout is a registry playbook (`BETA_SCOUT` below), so it opens
  * only where it is subscribed: the live cycle (`live-cycle.ts`) runs it on its one host bot while
- * its forced-pick count is above zero (the owner's stored count, else `SKYNET_BETA_FORCING`) AND
+ * its forced-pick count is above zero (the owner's stored count) AND
  * that bot is subscribed to it with the subscription on — armed and subscribed, both. Paused, it picks nothing new; unsubscribed, its
  * picks are refused `unsubscribed` and recorded once a day. Either way its exits still run.
  */
@@ -68,7 +68,8 @@ export const BETA_SCOUT: Playbook = {
 };
 
 /**
- * `SKYNET_BETA_FORCING` as set by the autonomy-ops `set-beta-forcing` button: a pick count,
+ * `SKYNET_BETA_FORCING` as set by the autonomy-ops `set-beta-forcing` button — parsed only to be
+ * reported, the bots no longer obey it (#4535 slice 4c-2): a pick count,
  * optionally followed by `+stage`. `"2"` = up to 2 forced picks/day, in-hours only (unchanged).
  * `"2+stage"` = the same, AND when the market is closed the scout may stage its picks for the
  * next session (Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours

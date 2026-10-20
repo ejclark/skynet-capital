@@ -19,6 +19,10 @@ export interface TradeActivityRecord extends ActivityView {
   readonly participantId: string;
   readonly side: "buy" | "sell";
   readonly source: ActivitySource;
+  /** Set on a multi-leg (`mleg`) spread's leg lines: the parent order the broker took as one. The
+   *  hub folds no spread fill until the next broker sync, so the capital-flow watch reads this to
+   *  leave a window with a spread in it alone (#4563). */
+  readonly parentOrderId?: string;
 }
 
 /** Where trade activity is kept. Interface-first (like `HistoryStore`) so tests stay I/O-free. */

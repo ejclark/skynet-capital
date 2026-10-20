@@ -239,6 +239,25 @@
   font-weight: 600;
   color: color-mix(in oklab, var(--ramp-hi) var(--g, 100%), var(--ramp-lo));
 }
+/* A recorded capital flow (#4563): its own line under the rank and the equity, full width, in the
+   row's quiet ink. Never a P/L tone and never a warning — the glyph, not hue, says added/removed.
+   Pinned to the second grid row, so the compare toggle keeps its first-row slot on a wide screen
+   and, on a phone, drops below this line (rank · equity · the mark · the toggle). */
+.rank-flow {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: -6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.rank-flow-glyph {
+  font-weight: 700;
+  color: var(--text);
+}
 
 .obs-foot {
   margin-top: 12px;

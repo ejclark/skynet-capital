@@ -10,15 +10,20 @@
  *    one poll interval — no restart, no deploy, and the decision audit records the halt honestly.
  *  - **Forced picks** (`betaPicks`, #4535 slice 2b) is DYNAMIC too: the scout reads the host bot's
  *    count at every scan, so a change applies on the next check — no restart.
+ *  - **After-close staging** (`betaStage`, #4535 slice 4b) is DYNAMIC: the staging poll reads the
+ *    host bot's flag at every pass, so a change applies from the next close — no restart.
  *  - **Hardcore** (#4535 slice 2c) is DYNAMIC: the poll swaps the bot's persona, its order cooldown
  *    and the mode its readiness gate allows in one step, re-running that gate on the build being
  *    swapped in — no restart.
  *  - **Mode** (observe/live) swaps the trader construction, so it applies at the next `bots` boot.
  *    The page says so on the control; nothing pretends otherwise.
  *
- * Env vars remain as break-glass defaults: a control absent from the store falls back to the env
- * (`SKYNET_AUTONOMOUS_MODE`, `SKYNET_HARDCORE_BOTS`, `SKYNET_BETA_FORCING`), so a lost volume or unreachable bridge can
- * never do worse than pre-GUI behavior.
+ * The behaviour settings (hardcore, forced picks, staging) are the OWNER'S alone since #4535 slice
+ * 4c-2: a bot with no stored value is off, whatever the env says — the dashboard copied each env
+ * value into the bot's stored settings once (slice 4c-1), so nothing running today changes, and a
+ * lost volume or unreachable bridge leaves a bot dark rather than on a server value nobody can see.
+ * Only the boot-applied mode still falls back to its env (`SKYNET_AUTONOMOUS_MODE`): live/observe is
+ * house-wide infrastructure, not one bot's behaviour.
  *
  * ONE NON-FLEET FIELD RIDES ALONG: `companionModel` (#1672 slice 4) — Moneypenny's rail isn't a
  * bot, but Mission Control is already the owner-only switchboard this app has, and the model dial
@@ -37,14 +42,20 @@ export interface BotControls {
   /** Trading mode override (boot-applied). */
   readonly mode?: "observe" | "live";
   /** Run the bot's hardcore research build (dynamic — applies on the next poll; only bots with a
-   *  hardcore build). Absent = the env roster (`SKYNET_HARDCORE_BOTS`). */
+   *  hardcore build). Absent = off. */
   readonly hardcore?: boolean;
   /**
    * How many forced picks the beta scout may place per day on this bot (dynamic — applies on the
-   * next scan). Only the scout's host bot reads it. Absent = the env count (`SKYNET_BETA_FORCING`);
-   * 0 disarms what the env armed. Whether the bot opens any is still its BETA-SCOUT subscription's.
+   * next scan). Only the scout's host bot reads it. Absent = 0 (off). Whether the bot opens any is
+   * still its BETA-SCOUT subscription's.
    */
   readonly betaPicks?: number;
+  /**
+   * Whether the beta scout may stage its picks after the close for Alpaca's next open (dynamic —
+   * read at every staging pass). Only the scout's host bot reads it. Absent = off. Stages nothing
+   * while the effective pick count is 0.
+   */
+  readonly betaStage?: boolean;
   /** A fingerprint of the bot's CURRENT stored Alpaca credentials — never the credential itself.
    *  The bots process compares this against its own boot-time credential's fingerprint and, on a
    *  mismatch, pulls the real pair from the separate `/bot-credentials` endpoint. */
@@ -97,6 +108,7 @@ function parseBot(raw: unknown): BotControls | null {
     ...(mode ? { mode } : {}),
     ...(typeof raw.hardcore === "boolean" ? { hardcore: raw.hardcore } : {}),
     ...(betaPicks !== undefined ? { betaPicks } : {}),
+    ...(typeof raw.betaStage === "boolean" ? { betaStage: raw.betaStage } : {}),
     ...(credentialsVersion ? { credentialsVersion } : {}),
   };
 }
@@ -145,29 +157,36 @@ export function effectiveMode(
 }
 
 /**
- * The hardcore roster, at boot and at every poll after: per bot, an explicit store boolean wins;
- * absent falls back to the env set — so the GUI can both arm AND disarm what an env var armed.
+ * The hardcore roster, at boot and at every poll after: the bots whose stored boolean is true. A
+ * bot with no stored value is not hardcore — the env roster no longer decides (#4535 slice 4c-2).
  */
 export function effectiveHardcoreIds(
   personaIds: readonly string[],
-  envIds: ReadonlySet<string>,
   state: ControlsState,
 ): Set<string> {
   const out = new Set<string>();
   for (const id of personaIds) {
-    const override = state.bots[id]?.hardcore;
-    if (override ?? envIds.has(id)) out.add(id);
+    if (state.bots[id]?.hardcore) out.add(id);
   }
   return out;
 }
 
 /**
- * The beta scout's forced-pick count: the owner's stored number for the host bot when there is one
- * (0 disarms what the env armed), else the env count — so an unreachable bridge or a lost volume can
- * never do worse than pre-GUI behavior (#4535 slice 2b).
+ * The beta scout's forced-pick count: the owner's stored number for the host bot, else 0 — dark, so
+ * an unreachable bridge or a lost volume never leaves forced picks running on a value nobody can
+ * see (#4535 slice 4c-2).
  */
-export function effectiveBetaPicks(stored: number | undefined, envPicks: number): number {
-  return stored ?? envPicks;
+export function effectiveBetaPicks(stored: number | undefined): number {
+  return stored ?? 0;
+}
+
+/**
+ * Whether the scout stages after the close: the owner's stored flag for the host bot, else off —
+ * and never with no picks to stage, the rule `parseBetaForcing` held for the env string (#4535
+ * slice 4b, 4c-2).
+ */
+export function effectiveBetaStage(stored: boolean | undefined, picks: number): boolean {
+  return picks > 0 && (stored ?? false);
 }
 
 /**

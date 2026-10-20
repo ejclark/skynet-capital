@@ -13,9 +13,7 @@ flowchart LR
   S2 -.->|"the run-up<br/>retraces"| G["the gave-back<br/>no twin yet"]
 ```
 
-- **14 acceptance lines, 3 of them known gaps** (`it.fails`), each turning red the day it is fixed.
-- **The biggest gap is scenario 2's:** a long call a member holds gets no verdict of its own, and
-  the house's bot exits the same call on a rule the member never hears.
+- **14 acceptance lines, 1 of them known gap** (`it.fails`), turning red the day it is fixed.
 - **Two engines disagree on one CRWV holding:** guidance says hold, the card says "cut it" (#4952).
 
 <details><summary><strong>How a scenario is written, and the ratchet</strong></summary>
@@ -91,9 +89,9 @@ falsifier) and one line of risk stance: assignment is accepted, not a failure. I
   past upswings from there peaked, so a take-profit can be planned before the bounce. _Needs: a
   peak-timing study (claim 12); the cycle study times the way back, not the next peak — #4952._
 - **His stance vs. the wheel's retire test — settled 2026-10-18.** The record says assignment is
-  fine, and the conviction check used to retire the CRWV wheel when more than 1 in 3 sold puts
-  were assigned. His call: stop it only if it is losing money overall. Done as `acceptsAssignment`
-  on the record (`src/playbooks/conviction-check.ts`).
+  fine, yet the wheel's own retire test stops it when more than 1 in 3 sold puts are assigned.
+  His call: stop it only if it is losing money overall. Done as `acceptsAssignment` on the record,
+  which skips that test (`src/playbooks/conviction-check.ts`).
 
 ## 2 — NVDA long calls: run-up, pullback, no exit plan
 
@@ -114,15 +112,14 @@ _src: Eric · 2026-10-18 · `tests/scenarios/nvda-long-calls.spec.ts`_
 | s1 | WHEN a long call is up past the lock-in bar on the run-up, the app shall raise a lock-in decision with its expiry and next print as clocks | passes (+50% bar) |
 | s2 | WHEN a long call expires after its own print, the card shall warn the print can shrink it even if the stock rises | passes |
 | s3 | WHEN cash is tied up and the member asks for a put to sell, the app shall say the cash is why nothing passes | passes — the cost of not cycling, in one line |
-| s4 | WHEN the member holds a long call, position guidance shall carry a call on that contract — take, trim, roll or hold — with the day it is next due | **known gap — #5709 slice 2** — `longOption` is forward guidance only; `manage` covers sold calls |
-| s5 | WHEN a member's long call reaches 45 days left, the app shall raise a decision naming the time stop, whatever its return | **known gap — #5709 slice 1** — the house's long-call bot exits at 45 days (`src/playbooks/long-call.ts`); the member hears about time only inside 21 |
+| s4 | WHEN the member holds a long call, position guidance shall carry a call on that contract — take, trim, roll or hold — with the day it is next due | passes — its own `longCalls` verdict, read from the bot's exit rules; `manage` covers sold calls |
+| s5 | WHEN a member's long call reaches 45 days left, the app shall raise a decision naming the time stop, whatever its return | passes — a time-stop card at 45 days, the house bot's rule (`src/playbooks/long-call-rules.ts`) |
 
 **What the scenario taught:** the house already *has* the exit plan he is asking for — the
-long-call playbook (#5482, two days old) sells at double the cost or 45 days left. A member
-holding the very same call gets a "consider locking some in" card at +50% that vanishes when the
-run-up retraces, and nothing about the clock until three weeks out. Same trade, two rule books.
-The ask is one rule book: the bot's exit rule, offered to the member when they buy, and carried on
-the position until it fires — planned in #5709.
+long-call playbook (#5482) sells at double the cost or 45 days left. The ask is one rule book:
+the bot's exit rule, offered to the member when they buy, and carried on the position until it
+fires (#5709). A member holding the same call hears both rules on the card and in position
+guidance, read from `src/playbooks/long-call-rules.ts`; offering them at purchase is the open part.
 
 **No twin yet** (each needs an input the engines don't take):
 

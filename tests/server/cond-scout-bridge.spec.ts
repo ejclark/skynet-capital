@@ -15,6 +15,7 @@ import type { ProbeRetro } from "../../src/playbooks/cond-scout-retro.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 /**
  * COND-SCOUT's bots→app bridge (#3651 slice 7a): the fail-closed snapshot parser, the private
@@ -251,6 +252,7 @@ describe("resolveCondScoutReplication", () => {
       await resolveCondScoutReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}/` },
         () => snapshot,
+        LOADED_SUITE_BRIDGE_BUDGET,
       ).send();
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

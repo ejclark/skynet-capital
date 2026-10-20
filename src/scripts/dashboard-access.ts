@@ -80,7 +80,14 @@ export function setupAccess(
   // Playbook Store subscriptions (issue #885), on the volume beside the other member data
   // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
   // account's own playbook picks and capital sub-allocations, not a secret.
-  const subscriptions = createSubscriptionStore(env, (m) => console.error(m));
+  // Members' convictions (#5482 slice 6a) — a member's stated views, a sibling file too. The
+  // subscriptions store reads the ones handed over, so a write never drops a pointer at one (6c).
+  const memberConvictions = createMemberConvictionStore(env, (m) => console.error(m));
+  const subscriptions = createSubscriptionStore(
+    env,
+    (m) => console.error(m),
+    () => memberConvictions.pointers(),
+  );
   // Saved positions (#3968) — a member's own typed-in, real-money-elsewhere positions, on the
   // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
   // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
@@ -88,8 +95,6 @@ export function setupAccess(
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
-  // Members' convictions (#5482 slice 6a) — drafts that steer nothing yet, a sibling file too.
-  const memberConvictions = createMemberConvictionStore(env, (m) => console.error(m));
   // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
   const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));

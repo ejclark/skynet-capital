@@ -38,11 +38,11 @@ and the first button, never the rail. They skip anything that names a concept th
 
 - **1 (fixed)** — the first sign-in landed on the leaderboard with no onboarding cue. The topbar's
   Profile tab now opens on the connect guide for a member with no account.
-- **2 (half fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
+- **2 (fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
   feedback filing", while the server says "the moment you say hello to Moneypenny"
-  (`src/domain/progression.ts`). Both now use one sentence (j1 s3). **One contradiction is still
-  open** (found 2026-10-18): with no account, the trading chapter's ladder list says "nothing is
-  locked" directly under the M·02 card that reads LOCKED (j1 s3, known gap).
+  (`src/domain/progression.ts`). Both now use one sentence (j1 s3). With no account, the trading
+  chapter's ladder list says the M·02 card's own "Locked" sentence, never "nothing is locked"
+  (j1 s3b).
 - **3 (fixed)** — `/trade` with no account said "No accounts are linked to your session yet." with
   nothing to click. The words are now the link (j1 s5).
 
@@ -53,9 +53,8 @@ and the first button, never the rail. They skip anything that names a concept th
 0. `/login` — the sign-in page: the scene behind it, one button per provider, "Continue with
    Google" first (the server serves it the same with or without a session). **WHEN an invited
    visitor opens the sign-in page, the app shall show a way to sign in at every width.** Judge:
-   can this reader tell how to get in, in ten seconds? _(Added 2026-09-29, #3816 slice 9 — the
-   first page this member ever saw; a spectacle surface, so the phone frame checks its honest
-   fallback, not a curated layout.)_
+   can this reader tell how to get in, in ten seconds? _(The first page this member ever saw; a
+   spectacle surface, so the phone frame checks its honest fallback, not a curated layout.)_
 1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
    the Profile page, which opens on the connect guide for a member with no account. **WHEN a
    signed-in member with no linked account opens the app, the app shall keep a one-tap way into
@@ -90,7 +89,7 @@ and the first button, never the rail. They skip anything that names a concept th
    "Talk to Moneypenny", that opens her rail — where hello is said (goal 2); offline, a line that
    feedback is not switched on yet. **WHEN a member with no linked account opens Profile →
    Feedback, the app shall offer one control that opens Moneypenny.** Judge: can this reader tell
-   how to say hello, in ten seconds? _(Added 2026-09-29, #3816 slice 9.)_
+   how to say hello, in ten seconds?
 
 5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
    words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the

@@ -61,8 +61,6 @@ export function gateBuild(
 export interface HardcoreWatchDeps {
   /** The bot accounts this process trades. */
   readonly ids: readonly string[];
-  /** The ids `SKYNET_HARDCORE_BOTS` names — the fallback for a bot with no stored setting. */
-  readonly envIds: ReadonlySet<string>;
   /** Who is running the hardcore build right now (the boot roster). Copied, not kept. */
   readonly initial: ReadonlySet<string>;
   /** The mode a bot wanted at boot, before any readiness gate narrowed it. */
@@ -114,7 +112,7 @@ export function watchHardcore(deps: HardcoreWatchDeps): (state: ControlsState) =
   };
 
   return (state) => {
-    const wanted = effectiveHardcoreIds(deps.ids, deps.envIds, state);
+    const wanted = effectiveHardcoreIds(deps.ids, state);
     for (const id of deps.ids) {
       const hardcore = wanted.has(id);
       if (hardcore === inForce.has(id)) {

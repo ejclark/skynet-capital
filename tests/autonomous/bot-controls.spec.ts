@@ -1,6 +1,7 @@
 import {
   EMPTY_CONTROLS,
   effectiveBetaPicks,
+  effectiveBetaStage,
   effectiveHardcoreIds,
   effectiveMode,
   MAX_BETA_PICKS,
@@ -89,7 +90,7 @@ describe("suspendedReason — the blockedReason seam", () => {
   });
 });
 
-describe("effective overrides — store wins, env is the fallback", () => {
+describe("effective overrides — the store decides; only mode keeps an env default", () => {
   it("mode: the store override narrows the env default in both directions", () => {
     expect(effectiveMode({ bots: { sauron: { mode: "observe" } } }, "sauron", "live")).toBe(
       "observe",
@@ -98,14 +99,11 @@ describe("effective overrides — store wins, env is the fallback", () => {
     expect(effectiveMode(EMPTY_CONTROLS, "sauron", "live")).toBe("live");
   });
 
-  it("hardcore: an explicit store boolean can both arm and DISARM the env", () => {
+  it("hardcore: only a stored true arms a bot — no stored setting is standard (#4535 slice 4c-2)", () => {
     const ids = ["sauron", "banker"];
-    const envArmed = new Set(["sauron"]);
-    expect(effectiveHardcoreIds(ids, envArmed, EMPTY_CONTROLS)).toEqual(new Set(["sauron"]));
-    expect(effectiveHardcoreIds(ids, envArmed, { bots: { sauron: { hardcore: false } } })).toEqual(
-      new Set(),
-    );
-    expect(effectiveHardcoreIds(ids, new Set(), { bots: { banker: { hardcore: true } } })).toEqual(
+    expect(effectiveHardcoreIds(ids, EMPTY_CONTROLS)).toEqual(new Set());
+    expect(effectiveHardcoreIds(ids, { bots: { sauron: { hardcore: false } } })).toEqual(new Set());
+    expect(effectiveHardcoreIds(ids, { bots: { banker: { hardcore: true } } })).toEqual(
       new Set(["banker"]),
     );
   });
@@ -120,17 +118,35 @@ describe("betaPicks — the owner's forced-pick count for the scout's host (#453
     }
   });
 
-  it("reads anything else as unset, so the env count stands", () => {
+  it("reads anything else as unset, which is off", () => {
     for (const bad of [-1, 1.5, MAX_BETA_PICKS + 1, "3", null, Number.NaN, true]) {
       expect(parseControlsState({ bots: { sauron: { betaPicks: bad } } })?.bots.sauron).toEqual({});
     }
   });
 
-  it("the store's number wins in both directions — 0 disarms what the env armed", () => {
-    expect(effectiveBetaPicks(undefined, 2)).toBe(2);
-    expect(effectiveBetaPicks(undefined, 0)).toBe(0);
-    expect(effectiveBetaPicks(3, 0)).toBe(3);
-    expect(effectiveBetaPicks(0, 2)).toBe(0);
+  it("is the stored number, and 0 (dark) with none", () => {
+    expect(effectiveBetaPicks(undefined)).toBe(0);
+    expect(effectiveBetaPicks(3)).toBe(3);
+    expect(effectiveBetaPicks(0)).toBe(0);
+  });
+});
+
+// #4535 slice 4b: the owner's after-close staging switch, read at every staging pass.
+describe("after-close staging (betaStage)", () => {
+  it("parses a stored boolean and reads anything else as unset, which is off", () => {
+    expect(parseControlsState({ bots: { sauron: { betaStage: false } } })?.bots.sauron).toEqual({
+      betaStage: false,
+    });
+    for (const bad of ["true", 1, null]) {
+      expect(parseControlsState({ bots: { sauron: { betaStage: bad } } })?.bots.sauron).toEqual({});
+    }
+  });
+
+  it("is the stored flag, off with none, and nothing stages with no picks", () => {
+    expect(effectiveBetaStage(undefined, 2)).toBe(false);
+    expect(effectiveBetaStage(true, 2)).toBe(true);
+    expect(effectiveBetaStage(false, 2)).toBe(false);
+    expect(effectiveBetaStage(true, 0)).toBe(false);
   });
 });
 

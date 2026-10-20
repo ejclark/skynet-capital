@@ -56,6 +56,18 @@ describe("mountThesisChart (smoke)", () => {
     container.remove();
   });
 
+  it("prints the equity axis in dollars with thousands commas, not a bare 1007500.00 (#5204)", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const mounted = mountThesisChart(container, equity, markers, readChartPalette(), shim);
+
+    expect(mounted.formatPrice(1_007_500)).toBe("$1,007,500");
+    expect(mounted.formatPrice(-1_200)).toBe("−$1,200");
+    mounted.dispose();
+    container.remove();
+  });
+
   it("mounts cleanly with no markers (no fills recorded yet)", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);

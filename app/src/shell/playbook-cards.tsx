@@ -177,7 +177,7 @@ function weekOf(
         lane={lane}
         trades={trades}
         state={card.state}
-        label={`${laneSummary(lane, trades, card.state === "blocked")}${ringed ? " The order you came from is ringed." : ""}`}
+        label={`${laneSummary(lane, trades, card.state)}${ringed ? " The order you came from is ringed." : ""}`}
         {...(ringed ? { ringAt: ringed } : {})}
       />
     ),
@@ -303,7 +303,7 @@ function PlaybookRow({
           hasWeek={drawn !== undefined}
         />
       ) : null}
-      {drawn ? <LaneKey /> : null}
+      {drawn ? <LaneKey state={card.state} /> : null}
       {fact.more ? <p className="pbb-why">{fact.more}</p> : null}
       {meta ? <p className="pbb-meta pbb-narrow">{meta}</p> : null}
       {card.playbookId ? (

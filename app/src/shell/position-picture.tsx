@@ -26,9 +26,9 @@ import {
   strikeBars,
   strikeMoney,
 } from "../live/price-context";
+import { MINUS, withMinus } from "../ui";
 import { ProjectionContent } from "./position-columns";
-import { isWritten, withMinus } from "./position-row-spec";
-import { MINUS } from "./quote-change";
+import { isWritten } from "./position-row-spec";
 
 /**
  * THE POSITION'S PICTURE, FIRST IN ITS OPENED GUIDANCE (#5070 slice 2; round 2 of #5037, R2's

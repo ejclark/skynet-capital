@@ -8,6 +8,7 @@ import {
 } from "../live/member-convictions";
 import { InlineResult } from "../ui";
 import { ConvictionForm } from "./conviction-form";
+import { ConvictionSteer } from "./conviction-steer";
 
 /**
  * YOUR CONVICTIONS (#5482 slice 6b) — the views a member has stated, and the door to state one, on
@@ -15,8 +16,9 @@ import { ConvictionForm } from "./conviction-form";
  * pairs it steers, no route of its own (#5482, "Home").
  *
  * One row per view, one tap to change it: its name, how many claims and which pairs, its check day,
- * and its standing as a glyph and words ("◌ Draft · steers nothing yet"). Until the slice that
- * hands members' views to the bots ships, every view is that draft, and the row says so.
+ * and its standing as a glyph and words ("◌ Draft · steers nothing yet", "● Steering your bots ·
+ * 2 pairs"). Under it, the door that hands it to the member's bots or takes it back (slice 6c,
+ * `conviction-steer.tsx`); the pair count is the server's read of what points at it.
  *
  * THE DOOR is always drawn. A view only steers a ◆ pair one of the member's bots already runs (it
  * never subscribes one), so with none it is disabled and says why in words: visible, named,
@@ -28,14 +30,20 @@ function claimsWord(n: number): string {
   return n === 1 ? "1 claim" : `${n} claims`;
 }
 
+function pairsWord(n: number): string {
+  return n === 1 ? "1 pair" : `${n} pairs`;
+}
+
 function ViewRow({
   view,
   names,
   onChange,
+  onSteered,
 }: {
   readonly view: MemberConvictionView;
   readonly names: ReadonlyMap<string, string>;
   readonly onChange: () => void;
+  readonly onSteered: (said: string) => void;
 }): ReactElement {
   const { conviction } = view;
   const title = conviction.title ?? conviction.id;
@@ -50,7 +58,20 @@ function ViewRow({
           </span>
           <span className="pbl-meta">
             <span className="pbl-status">
-              <span aria-hidden="true">◌</span> Draft · steers nothing yet
+              {view.status === "steering" && (view.refused?.length ?? 0) > 0 ? (
+                <>
+                  <span aria-hidden="true">✕</span> Handed over · can't steer now
+                </>
+              ) : view.status === "steering" ? (
+                <>
+                  <span aria-hidden="true">●</span> Steering your bots ·{" "}
+                  {pairsWord(view.steering?.length ?? 0)}
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">◌</span> Draft · steers nothing yet
+                </>
+              )}
             </span>
             <span className="pbl-trades">
               check <span className="num">{conviction.checkOn}</span>
@@ -61,6 +82,7 @@ function ViewRow({
           ›
         </span>
       </button>
+      <ConvictionSteer view={view} names={names} onDone={onSteered} />
     </li>
   );
 }
@@ -95,9 +117,13 @@ export function YourConvictions(): ReactElement | null {
             })
           }
           onCancel={() => setWriting(undefined)}
-          onSaved={(title) => {
+          onSaved={(title, tookBack) => {
             setWriting(undefined);
-            setSaid(`Saved ${title} as a draft. It steers nothing yet.`);
+            setSaid(
+              tookBack
+                ? `Saved ${title} as a draft, so your bots no longer steer by it. Hand it over again when it reads right.`
+                : `Saved ${title} as a draft. It steers nothing until you hand it to your bots.`,
+            );
             void refresh();
           }}
         />
@@ -113,6 +139,10 @@ export function YourConvictions(): ReactElement | null {
                   onChange={() => {
                     setSaid(undefined);
                     setWriting({ editing: view });
+                  }}
+                  onSteered={(text) => {
+                    setSaid(text);
+                    void refresh();
                   }}
                 />
               ))}

@@ -4,6 +4,7 @@ import {
   occStrikeLabel,
   parseOccSymbol,
 } from "../../../src/trading/option-symbols";
+import { MINUS } from "../ui/numbers";
 import type { DeskActivityEvent } from "./desk";
 import { expiryWords, priceOf, signedDollars } from "./order-facts";
 
@@ -23,7 +24,6 @@ import { expiryWords, priceOf, signedDollars } from "./order-facts";
  * "above / below what it paid", and no stop price, because an order for shares carries none.
  */
 
-const MINUS = "−";
 const money = (value: number): string =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 /** "$80" for a whole strike, "$77.45" otherwise — the strike's own style for any level. */
