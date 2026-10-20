@@ -446,9 +446,18 @@ describe("a subscription runs the playbook its conviction narrows", () => {
     expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
   });
 
-  it("leaves a pointer at a record that does not steer the pair alone", () => {
+  it("runs a pair exits-only while its pointer names a record that does not steer it (#5482 contract piece 2)", () => {
+    // A pointed pair never reads its inline conviction, so an unusable pointer leaves it no check
+    // day; trading it unnarrowed and unchecked is the one state no owner chose.
     const lookup = () => ({ ...AI_DIP_2026_10, steers: ["CRWV-LONG-CALL"] });
-    expect(steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookup).playbook).toBe(CRWV_WHEEL);
+    const reason = 'points at conviction "ai-dip-2026-10", which does not steer CRWV-WHEEL';
+    expect(steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookup)).toEqual({
+      playbook: CRWV_WHEEL,
+      refused: reason,
+    });
+    const roster = subscriptionRoster([aiDipSub("CRWV-WHEEL")], undefined, lookup);
+    expect(roster.enabled).toEqual([{ playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true }]);
+    expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
   });
 
   it("refuses a widening whole and runs the pair exits-only, saying why", () => {

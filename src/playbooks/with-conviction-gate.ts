@@ -41,10 +41,11 @@ import { pausedMayPlace } from "./playbook.js";
  * once, nothing is latched, and the next cycle reads it again.
  *
  * WHICH DATE (#5482 slice 2): a subscription that points at a conviction record steering its pair
- * is checked on the record's date, so one view gates every pair it steers on one day. Every other
- * subscription is checked on its own conviction's date, as before; a pointer the store cannot
- * resolve, or one at a record that does not steer the pair, is said once and falls back to that
- * (`statedCheck`).
+ * is checked on the record's date, so one view gates every pair it steers on one day. A subscription
+ * with no pointer is checked on its own conviction's date, as before. A pointed one never reads its
+ * own (the contract step's piece 2): a pointer the store cannot resolve, or one at a record that
+ * does not steer the pair, is said once and gives no check day, and the roster already runs that
+ * pair exits-only (`statedCheck`, `steeredBy`).
  *
  * WHICH READING (#5482 criterion 5): a subscription checked on a RECORD is judged with the other
  * pairs that record steers on this bot, together — their net P/L added up (`checkRecord`). When it
@@ -86,7 +87,9 @@ function checksOf(deps: ConvictionGateDeps, log: (line: string) => void): Checks
   for (const sub of deps.subscriptions) {
     const lookup = deps.convictionOf ?? lookupConviction;
     const check = statedCheck(sub, lookup);
-    if (sub.enabled && check.note) log(`${check.note} — checking its own conviction instead`);
+    if (sub.enabled && check.note) {
+      log(`${check.note} — no check day until it resolves; its inline conviction is not read`);
+    }
     if (!check.checkOn) continue;
     if (check.from === "record" && check.convictionId !== undefined) {
       const group = records.get(check.convictionId);
