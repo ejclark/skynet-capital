@@ -247,7 +247,10 @@ export function saySoOf(pair: PairRowView, mode?: string): SaySo {
     pair.status === "conviction"
       ? "◆ Your conviction"
       : pair.statusLabel.replace(/^(\S+\s)(\S)/, (_, g: string, c: string) => g + c.toUpperCase());
-  const checkOn = conviction?.checkOn ?? pair.checkOn;
+  // A subscription pointed at a view carries no inline conviction (#5482 contract step): the view's
+  // day is the one its bots check, so it comes before the row's.
+  const steeredOn = pair.subscription ? pair.steeredBy?.checkOn : undefined;
+  const checkOn = conviction?.checkOn ?? steeredOn ?? pair.checkOn;
   const dated = checkOn
     ? `Checked again ${dayText(checkOn)} — a failed check stops new entries; exits never stop`
     : pair.shelfOn && !pair.stale

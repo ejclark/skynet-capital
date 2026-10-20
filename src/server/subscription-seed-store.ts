@@ -336,7 +336,7 @@ export function pollSeedsFromEnv(
             onReadError,
           ),
         ),
-        "pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept)",
+        "pointed each subscription at the record that steers it, or at the member's view handed over to it (an inline copy beside the pointer dropped)",
       ),
     ];
   };

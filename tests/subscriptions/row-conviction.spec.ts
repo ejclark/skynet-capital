@@ -9,9 +9,15 @@ import {
 /**
  * A ◆ row's conviction rides on every subscription to it that states none (#4469 slice 3c part 3),
  * so the bots' check (criterion 12) applies to Eric's wheel on CRWV without anyone re-typing it.
+ * Since #5482's contract step only a row no single conviction record steers is carried onto; a row
+ * one record steers is reached by its pointer (`pointAtRecord`), so the cases below that carry pass
+ * no records.
  */
 
 const AT = new Date("2026-10-09T12:00:00.000Z");
+
+/** No conviction record steers any row: the carry's own ground. */
+const NO_RECORDS = [] as const;
 
 const sub = (
   playbookId: string,
@@ -51,6 +57,8 @@ describe("carryRowConvictions", () => {
     const { state, carried } = carryRowConvictions(
       { sauron: [sub("CRWV-WHEEL"), sub("S1-NVDA")] },
       AT,
+      findPair,
+      NO_RECORDS,
     );
     expect(carried).toEqual(["sauron/CRWV-WHEEL"]);
     const [wheel, runUp] = state.sauron ?? [];
@@ -62,7 +70,12 @@ describe("carryRowConvictions", () => {
   });
 
   it("carries onto a paused subscription too — it resumes under the same test", () => {
-    const { state } = carryRowConvictions({ sauron: [sub("CRWV-WHEEL", { enabled: false })] }, AT);
+    const { state } = carryRowConvictions(
+      { sauron: [sub("CRWV-WHEEL", { enabled: false })] },
+      AT,
+      findPair,
+      NO_RECORDS,
+    );
     expect(state.sauron?.[0]?.conviction?.checkOn).toBe("2027-01-29");
     expect(state.sauron?.[0]?.enabled).toBe(false);
   });
@@ -73,6 +86,19 @@ describe("carryRowConvictions", () => {
     const { state, carried } = carryRowConvictions(input, AT);
     expect(carried).toEqual([]);
     expect(state).toBe(input);
+  });
+
+  it("carries nothing onto a ◆ row one record steers: the pointer pass reaches it (#5482)", () => {
+    // The build's seeded AI-dip view steers the CRWV wheel.
+    const input = { sauron: [sub("CRWV-WHEEL")] };
+    const { state, carried } = carryRowConvictions(input, AT);
+    expect(carried).toEqual([]);
+    expect(state).toBe(input);
+  });
+
+  it("never carries a copy back beside a pointer, so a pointed pair is not rewritten every poll", () => {
+    const input = { sauron: [sub("CRWV-WHEEL", { convictionId: "a-members-view" })] };
+    expect(carryRowConvictions(input, AT, findPair, NO_RECORDS).state).toBe(input);
   });
 
   it("hands back the very state it was given when nothing is carried, so the caller writes nothing", () => {
