@@ -32,27 +32,68 @@ describe("condScoutUniverse", () => {
 });
 
 describe("armCondScout", () => {
-  it("is a silent no-op when the knob is unset", async () => {
+  const host = (subs: PlaybookSubscription[] = []) => ({
+    hostPersonaId: "sauron",
+    hostSubscriptions: () => subs,
+  });
+  const scoutOn = (symbols: string[]): PlaybookSubscription => ({
+    accountId: "sauron",
+    playbookId: "COND-SCOUT",
+    mode: "conservative",
+    enabled: true,
+    createdAt: "2026-10-18T00:00:00Z",
+    updatedAt: "2026-10-18T00:00:00Z",
+    symbols,
+  });
+
+  it("is a silent no-op with no host settings to follow", async () => {
     const log = sink();
     const pass = armCondScout({}, wiring(log));
     await expect(pass(aContext({ NVDA: { last: 100 } }))).resolves.toBeUndefined();
     expect(log.lines).toEqual([]);
   });
 
-  it("stays dark, and says so, when the knob names nothing the stream carries", () => {
+  it("ignores the env knob with no host settings to follow — it no longer arms anything", async () => {
     const log = sink();
-    armCondScout({ SKYNET_COND_SCOUT_UNIVERSE: "TSLA" }, wiring(log));
+    let fetches = 0;
+    const pass = armCondScout(
+      { SKYNET_COND_SCOUT_UNIVERSE: "NVDA" },
+      {
+        ...wiring(log),
+        closesFor: () => {
+          fetches++;
+          return Promise.resolve({});
+        },
+      },
+    );
+    await pass(aContext({ NVDA: { last: 100 } }));
+    expect(fetches).toBe(0);
+    expect(log.lines).toEqual([]);
+  });
+
+  it("says the env knob is no longer read when the host holds no subscription", () => {
+    const log = sink();
+    armCondScout({ SKYNET_COND_SCOUT_UNIVERSE: "NVDA" }, { ...wiring(log), ...host() });
+    expect(log.lines).toEqual([
+      "warn [cond-scout] SKYNET_COND_SCOUT_UNIVERSE is no longer read — sauron holds no COND-SCOUT subscription, so the scout stays dark. Subscribe it in the Playbook Store.",
+    ]);
+  });
+
+  it("stays dark, and says so, when the subscription names nothing the stream carries", () => {
+    const log = sink();
+    armCondScout({}, { ...wiring(log), ...host([scoutOn(["TSLA"])]) });
     expect(log.lines.at(-1)).toBe(
-      "warn [cond-scout] SKYNET_COND_SCOUT_UNIVERSE set but nothing usable in it — staying dark.",
+      "warn [cond-scout] sauron's COND-SCOUT subscription names nothing the stream carries — staying dark.",
     );
   });
 
   it("arms on the shadow ledger, warns when probes can't survive a restart, and never throws", async () => {
     const log = sink();
     const pass = armCondScout(
-      { SKYNET_COND_SCOUT_UNIVERSE: "NVDA" },
+      {},
       {
         ...wiring(log),
+        ...host([scoutOn(["NVDA"])]),
         blockedReason: () => {
           throw new Error("boom");
         },
@@ -61,7 +102,9 @@ describe("armCondScout", () => {
     expect(log.lines).toContain(
       "warn [cond-scout] no SKYNET_BOTS_DB_PATH — probes live in memory and vanish on restart.",
     );
-    expect(log.lines).toContain("log [cond-scout] armed on the shadow ledger (no orders): NVDA.");
+    expect(log.lines).toContain(
+      "log [cond-scout] armed on the shadow ledger (no orders): NVDA — from sauron's COND-SCOUT subscription.",
+    );
     await expect(pass(aContext({ NVDA: { last: 100 } }))).resolves.toBeUndefined();
     expect(log.lines.at(-1)).toBe("warn [cond-scout] pass failed:");
   });
@@ -71,9 +114,10 @@ describe("armCondScout", () => {
     let fetches = 0;
     let release: () => void = () => undefined;
     const pass = armCondScout(
-      { SKYNET_COND_SCOUT_UNIVERSE: "NVDA" },
+      {},
       {
         ...wiring(log),
+        ...host([scoutOn(["NVDA"])]),
         // The day's bars fetch hangs until released — the case that must not stack passes.
         closesFor: () => {
           fetches++;
@@ -137,11 +181,11 @@ describe("armCondScout — names from the host bot's own subscription (#4535 sli
     held.subs = [];
     await pass(context);
     expect(log.lines.at(-1)).toBe(
-      "log [cond-scout] dark — no COND-SCOUT subscription and no SKYNET_COND_SCOUT_UNIVERSE; open probes still close.",
+      "log [cond-scout] dark — no COND-SCOUT subscription; open probes still close.",
     );
   });
 
-  it("lets a paused subscription hold the scout dark even when the env knob names tickers", async () => {
+  it("lets a paused subscription hold the scout dark, whatever the env knob names", async () => {
     const log = sink();
     let fetches = 0;
     const pass = armCondScout(
