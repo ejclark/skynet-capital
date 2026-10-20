@@ -12,6 +12,7 @@ export const KINDS = [
   "sector",
   "rates",
   "opex",
+  "lockup-expiry",
   "geopolitical",
 ];
 export const TIERS = ["critical", "high", "medium", "low"];

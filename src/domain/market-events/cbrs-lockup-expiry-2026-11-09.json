@@ -1,0 +1,11 @@
+{
+  "id": "cbrs-lockup-expiry-2026-11-09",
+  "kind": "lockup-expiry",
+  "title": "CBRS IPO lockup ends — Cerebras Systems, 180 days after its 2026-05-13 prospectus",
+  "date": "2026-11-09",
+  "status": "estimate",
+  "source": "EST: the lock-up has an early-release trigger, so shares can unlock before this date. 424B4 https://www.sec.gov/Archives/edgar/data/2021728/000162828026035214/cerebras-424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-05-13 (read from its cover); 180 days after it is 2026-11-09. Lock-up clause: \"Eastern Time on the second trading day following our release of earnings for the quarter ending September 30, 2026 or (ii) 180 days after the date of this prospectus (the \"Lock-up Period\"), subject to certain customary exceptions and provision s that provide for the early release of certain of our securities during …\"",
+  "impact": "high",
+  "symbols": ["CBRS"],
+  "notes": "$5.5B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then. Early-release wording, read it before trusting the date: \"Eastern Time on the second trading day following our release of earnings for the quarter ending September 30, 2026 or (ii) 180 days after the date of this prospectus (the \"Lock-up Period\"), subject to certain customary exceptions and provision s that provide for the early release of certain of our securities during …\""
+}

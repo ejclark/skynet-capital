@@ -1,0 +1,11 @@
+{
+  "id": "xe-lockup-expiry-2026-10-20",
+  "kind": "lockup-expiry",
+  "title": "XE IPO lockup ends — X-Energy, 180 days after its 2026-04-23 prospectus",
+  "date": "2026-10-20",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2088896/000110465926049515/tm2527015-22_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-04-23 (read from its cover); 180 days after it is 2026-10-20. Lock-up clause: \"In addition to the restrictions contained in the lock-up agreements described above, we have entered into agreements with certain security holders that contain market standoff provisions imposing restrictions on the ability of such security holders to offer, sell, or transfer our equity securities for a period of 18…\"",
+  "impact": "medium",
+  "symbols": ["XE"],
+  "notes": "$1.0B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

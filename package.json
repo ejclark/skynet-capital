@@ -75,6 +75,7 @@
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
     "research:lint": "node scripts/research-lint.mjs",
+    "research:lockups": "node scripts/research/lockup-discovery.mjs",
     "research:claims": "tsx src/scripts/claim-studies.ts",
     "research:signals": "tsx src/scripts/signal-schedule.ts",
     "research:dossier": "tsx src/scripts/symbol-dossier.ts",
