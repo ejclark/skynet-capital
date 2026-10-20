@@ -129,6 +129,17 @@ describe("subscriptionRoster with an authored play", () => {
     ]);
   });
 
+  it("runs an authored play carrying a conviction pointer exits-only (#5482 contract piece 2)", () => {
+    // No record steers an authored play, so the pointer can never be used, and a pointed pair never
+    // reads its inline conviction: trading it unchecked is the one state no owner chose.
+    const pointed = { ...authoredSub, convictionId: "ai-dip-2026-10" };
+    const { enabled, steeringRefused } = subscriptionRoster([pointed], authored);
+    expect(enabled).toEqual([{ playbook: authored.plays[0], mode: "standard", exitsOnly: true }]);
+    expect(steeringRefused).toEqual([
+      'U-bot-1-earnings-runup: points at conviction "ai-dip-2026-10", which does not steer U-bot-1-earnings-runup',
+    ]);
+  });
+
   it("rejects an authored id when no authored roster was supplied — today's every caller", () => {
     expect(subscriptionRoster([authoredSub]).rejected).toEqual(["U-bot-1-earnings-runup"]);
   });

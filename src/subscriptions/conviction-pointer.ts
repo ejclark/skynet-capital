@@ -39,7 +39,9 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * is never changed unrecorded.
  *
  * The inline `conviction` is never removed here — that is the contract step, after the bots are
- * confirmed reading these pointers.
+ * confirmed reading these pointers. The bots already read a pointed pair's check from the pointer
+ * alone (piece 2, bots first), which is why a stale pointer is dropped here (`isStale`) rather than
+ * left to hold its pair exits-only.
  */
 
 /** Members' views as the pointer rule reads them: the ones handed to an account, and every id. */
@@ -69,10 +71,28 @@ export function recordFor(
 }
 
 /**
+ * A pointer no view can ever answer for this pair (the contract step's piece 2): one at a seeded
+ * record that does not steer it, or — only where members' ids are known, so a member's view is
+ * never mistaken for one — at an id no record holds. The bots read a pointed pair's check from its
+ * pointer alone and run it exits-only while the pointer is unusable (`statedCheck`, `steeredBy`),
+ * so a stale one left in place would hold its pair shut for good after a build changed a record.
+ */
+function isStale(
+  playbookId: string,
+  id: string,
+  records: readonly Conviction[] = CONVICTIONS.all(),
+  members?: HeldHere,
+): boolean {
+  const record = records.find((r) => r.id === id);
+  return record ? !record.steers.includes(playbookId) : members !== undefined;
+}
+
+/**
  * `sub`, pointed at its record when it has none yet and its conviction matches one. A pointer
  * already there is never replaced or dropped — except by a member's view (`members`): one handed to
  * this account that steers the pair is the pointer, and a pointer at a member's view that is not
  * (taken back, edited, deleted, or steering other pairs) is dropped before the seeded match runs.
+ * A stale pointer (`isStale`) is dropped the same way, so the pair returns to its own conviction.
  * `sub` itself is returned when nothing changes.
  */
 export function pointAtRecord(
@@ -86,7 +106,7 @@ export function pointAtRecord(
   if (only && own.length === 1) return id === only.id ? sub : { ...sub, convictionId: only.id };
   // Two of a member's views on one pair: the hand-over refuses that, so it is never decided here.
   if (id !== undefined && own.some((r) => r.id === id)) return sub;
-  if (id !== undefined && members?.ids.has(id)) {
+  if (id !== undefined && (members?.ids.has(id) || isStale(sub.playbookId, id, records, members))) {
     const { convictionId: _taken, ...rest } = sub;
     return pointAtRecord(rest, records);
   }
