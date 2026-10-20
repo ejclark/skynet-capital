@@ -124,8 +124,8 @@ as `src/playbooks/beta-scout.ts` (module name only — architecturally it is clo
   position.
 - **Enablement:** dark by default (`SKYNET_BETA_FORCING` unset = 0). The pick count is the host
   bot's own setting since plan #4535 slice 3b (its Settings card, where the only gate is ownership,
-  #928 — no approval step); the `autonomy-ops.yml` `set-beta-forcing` action stays only for the
-  `+stage` option, which has no Settings control yet.
+  #928 — no approval step), and so is after-close staging (slice 4b); the `autonomy-ops.yml`
+  `set-beta-forcing` action is retired (slice 4d).
 
 **Open fork (not yet answered):** should the dashboard visually distinguish forced beta-scout picks
 from evidence-gated playbook fills? Proposed default: yes, as a fast-follow once the mechanism has

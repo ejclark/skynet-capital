@@ -97,18 +97,14 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 - **`flip-mode`**, with `mode: live` — **the one genuinely irreversible step. Run it during a market
   open, watching the logs.** Bots begin placing real (paper) orders; fills show on the board.
 
-- **Bot behaviour is set in the app, not here** (#4535 slice 4, 2026-10-19: `set-playbooks`,
-  `set-hardcore` and `set-cond-scout-universe` removed). A bot's owner sets it, read by the bots at
-  every poll with no restart and logged with who, before and after: playbooks and the COND-SCOUT
-  shadow scout's names (a COND-SCOUT subscription on the host bot, the first the bots app runs) in
-  the **Playbook Store**; the hardcore build and forced picks per day on the bot's **Settings**
-  card. The `SKYNET_PLAYBOOKS`, `SKYNET_HARDCORE_BOTS` and `SKYNET_COND_SCOUT_UNIVERSE` secrets, if
-  still set, are only the fallback for a bot with no stored setting; they retire in the plan's next
-  slice.
-- **`set-beta-forcing`**, with `beta_forcing: 2` or `2+stage` — the one behaviour button left, kept
-  only because `+stage` (the scout may stage its picks after the close for Alpaca's next open) has
-  no Settings control yet. The count alone is the Settings card's, and a stored count wins over
-  this secret.
+- **Bot behaviour is set in the app, not here** (#4535 slice 4, 2026-10-19/20: `set-playbooks`,
+  `set-hardcore`, `set-cond-scout-universe` and `set-beta-forcing` removed). A bot's owner sets it,
+  read by the bots at every poll with no restart and logged with who, before and after: playbooks
+  and the COND-SCOUT shadow scout's names (a COND-SCOUT subscription on the host bot) in the
+  **Playbook Store**; the hardcore build, forced picks per day and after-close staging on the bot's
+  **Settings** card. The bots no longer read `SKYNET_PLAYBOOKS`, `SKYNET_HARDCORE_BOTS`,
+  `SKYNET_BETA_FORCING` or `SKYNET_COND_SCOUT_UNIVERSE` (#5875), so a leftover secret of those names
+  does nothing; Eric unsets them with one `flyctl secrets unset` line.
 
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 
