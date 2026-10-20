@@ -4,22 +4,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { controlsPollReport } from "../../src/autonomous/controls-poll-wire.js";
-import {
-  buildSubscriptionsSnapshot,
-  parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-} from "../../src/autonomous/subscriptions-wire.js";
+import { parseSubscriptionsSnapshot } from "../../src/autonomous/subscriptions-wire.js";
 import { statedCheck } from "../../src/playbooks/conviction-store.js";
 import { subscriptionsOnTheWire } from "../../src/scripts/dashboard-insights-bridge.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { carryConvictions, pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
+import { pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.js";
 
 /**
  * #5482 slice 2, the MIGRATE step, against a real store on a temp file: the app writes a pointer
  * when a conviction matches a record, the poll migrates the two live CRWV subscriptions once, the
- * bots receive it on `subscriptions.v3`, and a v2 reader keeps working off the inline convictions.
+ * bots receive it on `subscriptions.v3`. Since the contract step's piece 2 a pointed subscription
+ * carries no inline copy beside its pointer, so the bots check it on the record's day alone.
  */
 
 const session = { email: "eric@example.com", name: "Eric Clark" } as never;
@@ -84,7 +81,9 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
     it("writes the pointer when the conviction states the record's day on a pair it steers", async () => {
       expect((await subscribe("CRWV-WHEEL", { reason: "my call", checkOn: DAY })).ok).toBe(true);
       expect(held("CRWV-WHEEL")?.convictionId).toBe(VIEW);
-      expect(held("CRWV-WHEEL")?.conviction).toEqual({ reason: "my call", checkOn: DAY });
+      // The pointer is the whole check: no inline copy beside it (#5482 contract step).
+      expect(held("CRWV-WHEEL")?.conviction).toBeUndefined();
+      expect(statedCheck(held("CRWV-WHEEL") ?? ({} as never)).checkOn).toBe(DAY);
     });
 
     it("writes none for a conviction on another day, a pair the record does not steer, or no conviction", async () => {
@@ -102,13 +101,11 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       expect(wheel && statedCheck(wheel).checkOn).toBe("2027-04-30");
     });
 
-    it("a re-subscribe that states none keeps the conviction and the pointer it had", async () => {
+    it("a re-subscribe that states none keeps the pointer it had", async () => {
       await subscribe("CRWV-WHEEL", { reason: "my call", checkOn: DAY });
       await subscribe("CRWV-WHEEL");
-      expect(held("CRWV-WHEEL")).toMatchObject({
-        conviction: { reason: "my call", checkOn: DAY },
-        convictionId: VIEW,
-      });
+      expect(held("CRWV-WHEEL")).toMatchObject({ convictionId: VIEW });
+      expect(held("CRWV-WHEEL")?.conviction).toBeUndefined();
     });
 
     it("setting a new day drops the pointer, and setting the record's day again restores it", async () => {
@@ -153,6 +150,17 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
   });
 
   describe("on the poll, for the two live subscriptions", () => {
+    /** As both live pairs sat on disk before pointers: the inline conviction only. */
+    const written = (playbookId: string) => ({
+      accountId: "sauron",
+      playbookId,
+      mode: "aggressive" as const,
+      capitalAllocated: 75_000,
+      enabled: true,
+      createdAt: "2026-10-16T00:00:00.000Z",
+      updatedAt: "2026-10-16T00:00:00.000Z",
+      conviction: { reason: "written before pointers", checkOn: DAY },
+    });
     const livePair = (playbookId: string) =>
       store.subscribe("sauron", {
         playbookId,
@@ -161,10 +169,8 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
         enabled: true,
       });
 
-    it("points CRWV-WHEEL (carried from its row) and CRWV-LONG-CALL at the AI-dip record, once", () => {
-      livePair("CRWV-WHEEL");
-      livePair("CRWV-LONG-CALL");
-      carryConvictions(store, AT);
+    it("points CRWV-WHEEL and CRWV-LONG-CALL at the AI-dip record, once, and drops their inline copies", () => {
+      store.replace({ sauron: [written("CRWV-WHEEL"), written("CRWV-LONG-CALL")] });
       const before = store.load().sauron ?? [];
       const seed = pollSeedsFromEnv({
         SKYNET_SUBSCRIPTIONS_FILE: path,
@@ -176,10 +182,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       );
       const after = store.load().sauron ?? [];
       expect(after.map((s) => s.convictionId)).toEqual([VIEW, VIEW]);
-      // The inline convictions stay (contract is a later step) and nothing else moves.
-      expect(after.map((s) => s.conviction)).toEqual(before.map((s) => s.conviction));
+      // The inline convictions go (#5482 contract step) and nothing else moves.
+      expect(after.map((s) => s.conviction)).toEqual([undefined, undefined]);
       expect(after.map(({ convictionId: _p, updatedAt: _u, ...rest }) => rest)).toEqual(
-        before.map(({ updatedAt: _u, ...rest }) => rest),
+        before.map(({ updatedAt: _u, conviction: _c, ...rest }) => rest),
       );
       // Same check day before and after: pointing moves no check.
       expect(after.map((s) => statedCheck(s).checkOn)).toEqual(
@@ -243,28 +249,11 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       expect(read?.accounts.sauron?.[0]).toMatchObject({ convictionId: VIEW });
     });
 
-    it("a v2 reader still gets the inline conviction and checks on the same day, pointer or not", () => {
-      const v2 = parseSubscriptionsSnapshot(
-        JSON.parse(
-          JSON.stringify(
-            buildSubscriptionsSnapshot(
-              store.load(),
-              AT.getTime(),
-              store.loadAllocations(),
-              SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-            ),
-          ),
-        ),
-      );
-      const seen = v2?.accounts.sauron?.[0];
-      expect(seen?.convictionId).toBeUndefined();
-      expect(seen?.conviction).toEqual({ reason: "my call", checkOn: DAY });
-      const v3 = parseSubscriptionsSnapshot(
-        JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime()))),
-      );
-      expect(seen && statedCheck(seen).checkOn).toBe(
-        v3?.accounts.sauron?.[0] && statedCheck(v3.accounts.sauron[0]).checkOn,
-      );
+    it("sends a pointed pair with no inline copy, and the bots check it on the record's day", () => {
+      const sent = JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime())));
+      const seen = parseSubscriptionsSnapshot(sent)?.accounts.sauron?.[0];
+      expect(seen?.conviction).toBeUndefined();
+      expect(seen && statedCheck(seen)).toMatchObject({ checkOn: DAY, from: "record" });
     });
   });
 });

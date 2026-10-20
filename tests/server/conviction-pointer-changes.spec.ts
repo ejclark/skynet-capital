@@ -122,46 +122,56 @@ describe("a conviction pointer that moves is a line in the settings change log",
     expect((await views("save", { draft: draft() })).ok).toBe(true);
     expect((await views("hand-over", { id: ID })).ok).toBe(true);
     expect((await views("take-back", { id: ID })).ok).toBe(true);
+    // The ◆ wheel starts on the seeded view that steers it, and a take-back returns it there.
     expect(pointerLines()).toEqual([
-      { before: null, after: "CRWV floor", proposedBy: "you" },
-      { before: "CRWV floor", after: null, proposedBy: "you" },
-    ]);
-  });
-
-  it("WHEN a hand-over takes a pair over from the seeded view, the line names both views", async () => {
-    await store("conviction", {
-      id: "sauron",
-      playbookId: "CRWV-WHEEL",
-      conviction: { reason: "AI dip", checkOn: AI_DIP?.checkOn },
-    });
-    await views("save", { draft: draft() });
-    await views("hand-over", { id: ID });
-    await views("take-back", { id: ID });
-    expect(pointerLines()).toEqual([
-      { before: null, after: "AI-dip view", proposedBy: "you" },
       { before: "AI-dip view", after: "CRWV floor", proposedBy: "you" },
       { before: "CRWV floor", after: "AI-dip view", proposedBy: "you" },
     ]);
   });
 
-  it("WHEN a subscription write moves the pointer, its line rides beside the subscription's", async () => {
+  it("WHEN a take-back finds the pair was on its owner's own day, it returns to the seeded view", async () => {
+    // The owner's own day: no record states it, so the pointer goes.
     await store("conviction", {
       id: "sauron",
       playbookId: "CRWV-WHEEL",
-      conviction: { reason: "AI dip", checkOn: AI_DIP?.checkOn },
+      conviction: { reason: "later", checkOn: "2027-04-30" },
     });
-    // Newest first, as the card lists them: one write, two lines.
-    const settings = (botSettingsView(config, "sauron", ADA)?.changes ?? []).map((c) => c.setting);
-    expect(settings).toEqual(["conviction:CRWV-WHEEL", "subscription:CRWV-WHEEL"]);
+    await views("save", { draft: draft() });
+    await views("hand-over", { id: ID });
+    await views("take-back", { id: ID });
+    // A pointed pair keeps no inline copy (#5482 contract step), so the own day is not restored:
+    // the pair goes to the view that steers it — narrower, never wider — and the line says so.
+    expect(pointerLines()).toEqual([
+      { before: "AI-dip view", after: null, proposedBy: "you" },
+      { before: null, after: "CRWV floor", proposedBy: "you" },
+      { before: "CRWV floor", after: "AI-dip view", proposedBy: "you" },
+    ]);
+  });
+
+  it("WHEN a subscription write moves the pointer, its line rides beside the subscription's", async () => {
     // A conviction on a day no record holds points at nothing: the pointer goes, said so.
     await store("conviction", {
       id: "sauron",
       playbookId: "CRWV-WHEEL",
       conviction: { reason: "later", checkOn: "2027-04-30" },
     });
+    // Newest first, as the card lists them: one write, two lines.
+    const settings = (botSettingsView(config, "sauron", ADA)?.changes ?? []).map((c) => c.setting);
+    expect(settings).toEqual(["conviction:CRWV-WHEEL", "subscription:CRWV-WHEEL"]);
     expect(pointerLines().at(-1)).toEqual({
       before: "AI-dip view",
       after: null,
+      proposedBy: "you",
+    });
+    // The record's own day points it back.
+    await store("conviction", {
+      id: "sauron",
+      playbookId: "CRWV-WHEEL",
+      conviction: { reason: "AI dip", checkOn: AI_DIP?.checkOn },
+    });
+    expect(pointerLines().at(-1)).toEqual({
+      before: null,
+      after: "AI-dip view",
       proposedBy: "you",
     });
   });
@@ -170,13 +180,17 @@ describe("a conviction pointer that moves is a line in the settings change log",
     await views("save", { draft: draft() });
     await views("hand-over", { id: ID });
     expect(await views("delete", { id: ID })).toEqual({ ok: true });
-    expect(pointerLines().at(-1)).toEqual({ before: "CRWV floor", after: null, proposedBy: "you" });
+    expect(pointerLines().at(-1)).toEqual({
+      before: "CRWV floor",
+      after: "AI-dip view",
+      proposedBy: "you",
+    });
   });
 
   it("WHEN the poll moves a pointer on its own, the line is the app's", () => {
     // Written raw so no write path pointed it: the poll's seeded match is the only mover.
     subs.replace({
-      sauron: (subs.load().sauron ?? []).map((s) => ({
+      sauron: (subs.load().sauron ?? []).map(({ convictionId: _pointer, ...s }) => ({
         ...s,
         conviction: { reason: "AI dip", checkOn: AI_DIP?.checkOn ?? "" },
       })),

@@ -368,7 +368,8 @@ describe("SubscriptionStore", () => {
     }
 
     it("a re-subscribe keeps the conviction and newer fields on the record it replaces", async () => {
-      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+      // A day no record states, so the conviction is the pair's own check and stays inline.
+      const conviction = { reason: "Eric's call", checkOn: "2027-03-31" };
       await writeFile(path, JSON.stringify({ sauron: [{ ...newerField, conviction }] }), "utf8");
       const store = new SubscriptionStore(path);
 

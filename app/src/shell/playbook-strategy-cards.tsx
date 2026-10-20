@@ -141,6 +141,7 @@ export function StrategyCard({
             human={human}
             reduceOnly={delegation.locked}
             runsOnConviction={pair.status === "conviction" || pair.needsConviction === true}
+            {...(pair.steeredBy ? { steeredBy: pair.steeredBy } : {})}
             onChanged={onChanged}
           />
         </div>

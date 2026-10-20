@@ -3,11 +3,6 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import {
-  buildSubscriptionsSnapshot,
-  parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-} from "../../src/autonomous/subscriptions-wire.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { carryConvictions } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
@@ -94,17 +89,12 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
     await rm(dir, { recursive: true, force: true });
   });
 
-  describe("the ◆ row's conviction moves onto the CRWV wheel's subscription", () => {
-    it("is carried once, touches nothing else, and the next poll writes nothing", async () => {
-      const before = store.load().sauron ?? [];
-      expect(carryConvictions(store)).toEqual(["sauron/CRWV-WHEEL"]);
-      const after = store.load().sauron ?? [];
-      const wheel = after.find((s) => s.playbookId === "CRWV-WHEEL");
-      expect(wheel?.conviction?.checkOn).toBe("2027-01-29");
-      // Call 1 of the plan: id, mode, capital, compounding and pause state never move.
-      expect(after.map(({ conviction: _c, updatedAt: _u, ...rest }) => rest)).toEqual(
-        before.map(({ updatedAt: _u, ...rest }) => rest),
-      );
+  describe("the ◆ row's conviction reaches the CRWV wheel's subscription", () => {
+    it("by the pointer at the view that steers it: the carry copies nothing, and writes nothing", async () => {
+      // #5482's contract step: a ◆ row one view steers is reached by a pointer, not an inline copy.
+      const wheel = store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL");
+      expect(wheel?.convictionId).toBe("ai-dip-2026-10");
+      expect(wheel?.conviction).toBeUndefined();
       const onDisk = await readFile(path, "utf8");
       expect(carryConvictions(store)).toEqual([]);
       expect(await readFile(path, "utf8")).toBe(onDisk);
@@ -116,21 +106,6 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
       expect(JSON.parse(await readFile(path, "utf8"))).toEqual({
         sauron: [{ playbookId: "CRWV-WHEEL" }],
       });
-    });
-
-    it("still rides a v2 snapshot, which the bots keep reading for a rollback", () => {
-      carryConvictions(store);
-      const snapshot = buildSubscriptionsSnapshot(
-        store.load(),
-        TODAY().getTime(),
-        store.loadAllocations(),
-        SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-      );
-      const read = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-      expect(read?.kind).toBe(SUBSCRIPTIONS_SNAPSHOT_KIND_V2);
-      expect(read?.accounts.sauron?.find((s) => s.playbookId === "CRWV-WHEEL")?.conviction).toEqual(
-        store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL")?.conviction,
-      );
     });
   });
 
@@ -301,9 +276,10 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
       expect((await subscribe(75_000)).body.ok).toBe(false);
       const conviction = { reason: "Premium over the tail, my call.", checkOn: "2027-01-29" };
       expect((await subscribe(40_000, { conviction })).body).toEqual({ ok: true });
-      expect(store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL")?.conviction).toEqual(
-        conviction,
-      );
+      // Stated on the AI-dip view's own day, it is that view's: a pointer, no inline copy.
+      expect(store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL")).toMatchObject({
+        convictionId: "ai-dip-2026-10",
+      });
     });
 
     it("refuses a subscribe whose conviction is checked on a day that has come", async () => {
@@ -327,18 +303,23 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
         strategy: "wheel",
         capitalAllocated: 100_000,
       });
-      carryConvictions(store);
       const mine = await call(store, "/api/playbook-store", get("/api/playbook-store?id=sauron"));
       const strategies = mine.body.strategies as {
         strategy: string;
         allocation?: unknown;
-        pairs: { id: string; subscription?: { conviction?: { checkOn: string } } }[];
+        pairs: {
+          id: string;
+          steeredBy?: { checkOn: string; convictionId: string };
+          subscription?: { convictionId?: string; conviction?: unknown };
+        }[];
       }[];
       const wheel = strategies.find((card) => card.strategy === "wheel");
       expect(wheel?.allocation).toEqual({ capitalAllocated: 100_000, budgeted: 75_000 });
-      expect(
-        wheel?.pairs.find((p) => p.id === "CRWV-WHEEL")?.subscription?.conviction?.checkOn,
-      ).toBe("2027-01-29");
+      // A pointed pair's day is the view's it points at, and the owner's row says which view.
+      const row = wheel?.pairs.find((p) => p.id === "CRWV-WHEEL");
+      expect(row?.steeredBy?.checkOn).toBe("2027-01-29");
+      expect(row?.subscription?.convictionId).toBe(row?.steeredBy?.convictionId);
+      expect(row?.subscription?.conviction).toBeUndefined();
       const theirs = await call(store, "/api/playbook-store", get("/api/playbook-store?id=banker"));
       for (const card of theirs.body.strategies as { allocation?: unknown }[]) {
         expect(card.allocation).toBeUndefined();
