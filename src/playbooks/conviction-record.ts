@@ -82,7 +82,8 @@ export interface Conviction {
   /** `YYYY-MM-DD`: the day every pair it steers is checked (#4469 criterion 12). */
   readonly checkOn: string;
   readonly claims: readonly ConvictionClaim[];
-  /** The pair ids it steers. Each must be a ◆ conviction pair. */
+  /** The pair ids it steers. Each must be a ◆ conviction pair, except on a view stated on its one
+   *  pair (`scope`). */
   readonly steers: readonly string[];
   /**
    * What it narrows on the pairs it steers, as data (#5482 slice 4, criterion 3): per pair, a list
@@ -100,6 +101,16 @@ export interface Conviction {
    * assignment-count retire test (the wheel's 1 in 3), which would count that outcome against it.
    */
   readonly acceptsAssignment?: boolean;
+  /**
+   * `"pair"`: a view stated on the one pair it steers, by the subscribe or conviction form, in place
+   * of the subscription's inline conviction (#5482 contract piece 3). It is that inline conviction
+   * as a record: one claim (the owner's reason, scored on the check day), one pair, no narrowings.
+   * It is the one view that may steer a pair that is not ◆ — #4469 criterion 2 already lets an
+   * owner take a stand-aside pair on their own labelled conviction, so this adds no power, and with
+   * one claim and nothing narrowed there is no study to count twice (`pairScopeProblems`). Only the
+   * server sets it; a member's draft can never carry it (`parseConvictionDraft` does not read it).
+   */
+  readonly scope?: "pair";
 }
 
 const DAY_IN_TEXT = /\d{4}-\d{2}-\d{2}/g;
@@ -137,7 +148,11 @@ function claimProblems(claim: ConvictionClaim, n: number, statedOn: string): str
   return problems;
 }
 
-function steerProblems(steers: readonly string[], lookup: (id: string) => Pair | undefined) {
+function steerProblems(
+  steers: readonly string[],
+  lookup: (id: string) => Pair | undefined,
+  pairScoped: boolean,
+) {
   const problems: string[] = [];
   if (steers.length === 0) problems.push("steers no pair");
   if (new Set(steers).size !== steers.length) problems.push("steers a pair twice");
@@ -145,10 +160,24 @@ function steerProblems(steers: readonly string[], lookup: (id: string) => Pair |
     const pair = lookup(id);
     if (!pair) problems.push(`steers ${id}, which no pair row holds`);
     // A ✓ pair runs on its study; a conviction steering it would count the same result twice
-    // (the doc's claim 5 and S1-NVDA). Such a claim cites the pair; it does not steer it.
-    else if (pair.evidence.status !== "conviction") {
+    // (the doc's claim 5 and S1-NVDA). Such a claim cites the pair; it does not steer it. A view
+    // stated on its one pair is the exception: it is the owner's own day, not a second study.
+    else if (!pairScoped && pair.evidence.status !== "conviction") {
       problems.push(`steers ${id}, which is not a ◆ conviction pair (cite its study instead)`);
     }
+  }
+  return problems;
+}
+
+/** The shape a view stated on its one pair must keep (`Conviction.scope`): exactly what the inline
+ *  conviction it replaces could say — one reason, one pair, a day — and nothing that narrows. */
+function pairScopeProblems(conviction: Conviction): readonly string[] {
+  if (conviction.scope !== "pair") return [];
+  const problems: string[] = [];
+  if (conviction.claims.length > 1) problems.push("a view stated on a pair holds one claim");
+  if (conviction.steers.length > 1) problems.push("a view stated on a pair steers only that pair");
+  if ((conviction.narrowings?.length ?? 0) > 0) {
+    problems.push("a view stated on a pair narrows nothing");
   }
   return problems;
 }
@@ -172,7 +201,8 @@ function narrowedProblems(
 /**
  * Every rule a record breaks, in words; empty means it may be stored. A conviction needs at least
  * one claim (#5482 criterion 1), each tagged, bucketed, evidenced and falsifiable on a day; it is
- * checked after the day it was stated; and it steers at least one ◆ pair, each once.
+ * checked after the day it was stated; and it steers at least one ◆ pair, each once — or, stated on
+ * its one pair (`scope`), that pair whatever its row, on one claim and with nothing narrowed.
  */
 export function convictionProblems(
   conviction: Conviction,
@@ -194,7 +224,8 @@ export function convictionProblems(
   conviction.claims.forEach((claim, i) => {
     problems.push(...claimProblems(claim, i + 1, conviction.statedOn));
   });
-  problems.push(...steerProblems(conviction.steers, lookup));
+  problems.push(...steerProblems(conviction.steers, lookup, conviction.scope === "pair"));
+  problems.push(...pairScopeProblems(conviction));
   problems.push(
     ...(conviction.narrowings?.flatMap((n) => narrowedProblems(conviction, n, boundsOf)) ?? []),
   );

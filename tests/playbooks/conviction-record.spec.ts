@@ -165,4 +165,54 @@ describe("convictionProblems", () => {
       );
     });
   });
+
+  /**
+   * #5482 contract piece 3, the deciding question's default: a subscription's inline conviction
+   * becomes a view stated on its one pair, so that view may steer a pair that is not ◆ — and may
+   * say no more than the inline conviction could.
+   */
+  describe("a view stated on its one pair (scope: pair)", () => {
+    const onPair = (pair: string, over: Partial<Conviction> = {}) =>
+      problems({ scope: "pair", steers: [pair], ...over });
+
+    it("steers that pair whatever its row: ✓, not studied, or ◆", () => {
+      expect(findPair("SAURON")?.evidence.status).toBe("not-studied");
+      expect(onPair("S1-NVDA")).toEqual([]);
+      expect(onPair("SAURON")).toEqual([]);
+      expect(onPair("CRWV-WHEEL")).toEqual([]);
+    });
+
+    it("still steers only a pair the table holds", () => {
+      expect(onPair("CRWV-STRADDLE")).toContain("steers CRWV-STRADDLE, which no pair row holds");
+    });
+
+    it("holds one claim, steers one pair, and narrows nothing", () => {
+      expect(onPair("S1-NVDA", { claims: [claim(), claim()] })).toEqual([
+        "a view stated on a pair holds one claim",
+      ]);
+      expect(onPair("S1-NVDA", { steers: ["S1-NVDA", "CRWV-WHEEL"] })).toEqual([
+        "a view stated on a pair steers only that pair",
+      ]);
+      expect(
+        onPair("CRWV-WHEEL", {
+          narrowings: [
+            { pair: "CRWV-WHEEL", fromClaims: [], narrow: [{ kind: "contracts", max: 1 }] },
+          ],
+        }),
+      ).toEqual(["a view stated on a pair narrows nothing"]);
+    });
+
+    it("keeps every other rule: a claim, a dated falsifier, a check after it was stated", () => {
+      expect(onPair("S1-NVDA", { claims: [] })).toContain("a conviction needs at least one claim");
+      expect(onPair("S1-NVDA", { checkOn: "2026-10-16" })).toContain(
+        "checkOn must come after statedOn",
+      );
+    });
+
+    it("leaves the ◆ rule whole for every other view", () => {
+      expect(problems({ steers: ["S1-NVDA"] })).toContain(
+        "steers S1-NVDA, which is not a ◆ conviction pair (cite its study instead)",
+      );
+    });
+  });
 });
