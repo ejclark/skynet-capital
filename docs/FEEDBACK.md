@@ -8,8 +8,8 @@ labelled issue on `ejclark/skynet-capital`, so friends and family never need col
 the repo.
 
 **The feature is token-gated.** Until `SKYNET_FEEDBACK_GITHUB_TOKEN` is set the form still renders,
-but a submission returns a friendly "feedback isn't switched on yet" message instead of filing an
-issue. The instant the token is present, submissions go live — no code change, no redeploy beyond
+but a submission returns a friendly "Feedback isn't switched on in this deployment yet" message
+instead of filing an issue. The instant the token is present, submissions go live — no code change, no redeploy beyond
 picking up the new secret.
 
 ## One-time setup
@@ -196,7 +196,7 @@ The bot token can write issues, so the endpoint is protected in depth:
 
 | Symptom | Likely cause |
 | --- | --- |
-| "isn't switched on yet" still shows | The env var didn't reach the running process — check the secret name is exactly `SKYNET_FEEDBACK_GITHUB_TOKEN` and the machine rolled. |
+| "isn't switched on in this deployment yet" still shows | The env var didn't reach the running process — check the secret name is exactly `SKYNET_FEEDBACK_GITHUB_TOKEN` and the machine rolled. |
 | Result page: `GitHub responded 404` | Token can't see the repo — wrong resource owner, or the repo wasn't selected. |
 | `GitHub responded 403` | Token is missing **Issues: write** permission. |
 | `GitHub responded 401` | Token is invalid, revoked, or expired — regenerate and re-set the secret. |
