@@ -54,6 +54,9 @@ before it does.**
    2027; the S-1's early-release clause decides the exact date). If a double-digit unlock-driven
    flush prints, enter *after* supply clears on a pre-registered mechanical rule, small,
    pre-stated exit. Acceptable failure: strategic holders don't sell and it never triggers.
+   _2026-10-20, [`ipo-lockup-expiry.md`](ipo-lockup-expiry.md):_ across 355 unlocks, 2019–2026, a
+   double-digit flush into D+3 was followed by −1.5% vs sector over four weeks. No rebound to buy,
+   so this survivor now needs its own evidence before 2027.
 2. **GOOG S-1-disclosure event watch** (survived in two lenses independently): the public S-1
    must quantify related-party compute arrangements — the first audited external look at TPU
    economics. Activate only if the disclosure is material and unredacted (redaction is the base

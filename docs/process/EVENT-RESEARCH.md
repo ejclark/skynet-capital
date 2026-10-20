@@ -90,8 +90,10 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
   needs: **supply** — unlocking shares as % of float and in days of average volume; **price** — the
   run-up since the IPO price (the literature's pullback is larger after a big run-up); **options**
   — put IV against realized vol and the skew into the date (a known catalyst is usually priced).
-  The default call is "stand aside" until the lockup study (#5912 slice 2) says otherwise; never
-  a position on the listing day.
+  The default call is "stand aside": the lockup study ([`ipo-lockup-expiry.md`](../research/ipo-lockup-expiry.md),
+  #5912 slice 2) found the unlock drag was a 2019–21 effect, flat since 2022, and no trade shape
+  paid at a realistic option price. Log the three reads as the study's forward test; never a
+  position on the listing day.
 - **macro-print / sector / geopolitical** — sourced web research (primary sources over
   aggregators; the seeding of this calendar caught an aggregator publishing a wrong CPI date —
   cite the primary and the check date). Establish: consensus expectation, the whisper if

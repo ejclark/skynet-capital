@@ -74,6 +74,16 @@ describe("parseProspectus", () => {
     expect(p.offeringUsd).toBe(997_560_560);
   });
 
+  it("sizes the offering from the summary's 'offered by us' line when no sentence says it", () => {
+    // Alector (ALEC), 2019-02-06, verbatim: the first big share count was the 68M outstanding,
+    // which sized a $176M raise as $1.3B (#5912 slice 2).
+    const p = parseProspectus(
+      "The initial public offering price is $19.00 per share. 68,365,044 shares in total. THE OFFERING Common stock offered by us 9,250,000 shares Common stock to be outstanding immediately after this offering 68,365,044 shares",
+    );
+    expect(p.sharesOffered).toBe(9_250_000);
+    expect(p.offeringUsd).toBe(175_750_000);
+  });
+
   it("tells a follow-on from an IPO — no insider supply newly unlocks there", () => {
     expect(parseProspectus(FOLLOW_ON).isIpo).toBe(false);
   });
