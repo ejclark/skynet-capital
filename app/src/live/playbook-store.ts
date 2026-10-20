@@ -78,6 +78,9 @@ export interface SubscriptionView {
   /** The owner's conviction on this pair (#4469 slice 3c): why, and the market day it is checked.
    *  Absent = none stated. A failed check stops the pair's NEW entries; exits never stop. */
   readonly conviction?: ConvictionView;
+  /** The conviction view this subscription points at (#5482). A pointed subscription carries no
+   *  `conviction`: its check is the view's, read from the row's `steeredBy` when the ids match. */
+  readonly convictionId?: string;
 }
 
 /** An owner's conviction — mirrors `SubscriptionConviction` in `src/domain/types.ts`. */

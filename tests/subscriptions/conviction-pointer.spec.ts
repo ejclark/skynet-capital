@@ -10,7 +10,9 @@ import {
 
 /**
  * #5482 slice 2, the MIGRATE step: a subscription whose conviction a record states is pointed at
- * that record, once, and keeps its inline conviction. Everything else is left exactly as it was.
+ * that record, once. Since the contract step's piece 2 the inline copy goes wherever the pointer
+ * resolves, and a subscription stating none is pointed at the one record that steers its pair.
+ * Everything else is left exactly as it was.
  */
 
 const AT = new Date("2026-10-17T12:00:00.000Z");
@@ -69,16 +71,31 @@ describe("recordFor — when a conviction matches a record", () => {
 });
 
 describe("pointAtRecord — a missing pointer added, none ever replaced", () => {
-  it("adds the record's id and keeps the inline conviction", () => {
+  it("adds the record's id and drops the inline copy, since the pointer is the whole check", () => {
     const s = sub("CRWV-WHEEL", { conviction: stated });
-    expect(pointAtRecord(s, records)).toEqual({ ...s, convictionId: "ai-dip-test" });
+    expect(pointAtRecord(s, records)).toEqual({
+      ...sub("CRWV-WHEEL"),
+      convictionId: "ai-dip-test",
+    });
+  });
+
+  it("points a subscription that states none at the one record that steers its pair", () => {
+    expect(pointAtRecord(sub("CRWV-WHEEL"), records)).toEqual({
+      ...sub("CRWV-WHEEL"),
+      convictionId: "ai-dip-test",
+    });
+    // Two records steering one pair: which view it belongs to is not decided here.
+    expect(pointAtRecord(sub("CRWV-WHEEL"), [view(), view({ id: "another-view" })])).toEqual(
+      sub("CRWV-WHEEL"),
+    );
   });
 
   it("returns the very subscription when there is nothing to add", () => {
-    const noConviction = sub("CRWV-WHEEL");
     const redated = sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-04-30" } });
     const unsteered = sub("S1-NVDA", { conviction: stated });
-    for (const s of [noConviction, redated, unsteered]) expect(pointAtRecord(s, records)).toBe(s);
+    const bare = sub("S1-NVDA");
+    const pointed = sub("CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    for (const s of [redated, unsteered, bare, pointed]) expect(pointAtRecord(s, records)).toBe(s);
   });
 
   it("leaves a pointer already there alone, even one no record answers to", () => {
@@ -109,7 +126,7 @@ describe("pointAtRecord — a stale pointer is dropped", () => {
   it("drops a pointer no record holds only where members' ids are known", () => {
     const dangling = sub("CRWV-WHEEL", { conviction: stated, convictionId: "gone" });
     expect(pointAtRecord(dangling, records, known)).toEqual({
-      ...sub("CRWV-WHEEL", { conviction: stated }),
+      ...sub("CRWV-WHEEL"),
       convictionId: "ai-dip-test",
     });
     // Without them, "gone" could be a member's view the bots hold, so it stays.
@@ -124,12 +141,14 @@ describe("pointAtRecord — a stale pointer is dropped", () => {
     expect(moves).toEqual([{ accountId: "sauron", playbookId: "S1-NVDA", from: "ai-dip-test" }]);
   });
 
-  it("keeps a pointer at a seeded record that steers the pair, whatever its inline copy says", () => {
+  it("keeps a pointer at a seeded record that steers the pair, and drops whatever its inline copy says", () => {
     const s = sub("CRWV-WHEEL", {
       conviction: { ...stated, checkOn: "2027-04-30" },
       convictionId: "ai-dip-test",
     });
-    expect(pointAtRecord(s, records, known)).toBe(s);
+    expect(pointAtRecord(s, records, known)).toEqual(
+      sub("CRWV-WHEEL", { convictionId: "ai-dip-test" }),
+    );
   });
 });
 
@@ -169,12 +188,12 @@ describe("pointAtRecords — the migration", () => {
     expect(pointed).toEqual(["sauron/CRWV-WHEEL", "sauron/CRWV-LONG-CALL"]);
     const [wheel, call, nvda] = state.sauron ?? [];
     expect(wheel).toEqual({
-      ...sub("CRWV-WHEEL", { conviction: stated }),
+      ...sub("CRWV-WHEEL"),
       convictionId: "ai-dip-test",
       updatedAt: AT.toISOString(),
     });
     expect(call).toMatchObject({ mode: "aggressive", capitalAllocated: 75_000, enabled: true });
-    expect(call?.conviction).toEqual(stated);
+    expect(call?.conviction).toBeUndefined();
     expect(nvda).toEqual(sub("S1-NVDA"));
   });
 
@@ -188,11 +207,22 @@ describe("pointAtRecords — the migration", () => {
   it("keeps the inline conviction of a subscription no record states, and does not stamp it", () => {
     const input = {
       sauron: [sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-04-30" } })],
-      banker: [sub("CRWV-WHEEL")],
+      banker: [sub("S1-NVDA")],
     };
     const { state, pointed } = pointAtRecords(input, AT, records);
     expect(pointed).toEqual([]);
     expect(state).toBe(input);
+  });
+
+  it("drops the inline copy beside a pointer it resolves, and logs no move for it", () => {
+    const input = {
+      sauron: [sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" })],
+    };
+    const { state, pointed, moves } = pointAtRecords(input, AT, records);
+    expect(pointed).toEqual(["sauron/CRWV-WHEEL"]);
+    expect(moves).toEqual([]);
+    expect(state.sauron?.[0]).not.toHaveProperty("conviction");
+    expect(state.sauron?.[0]?.convictionId).toBe("ai-dip-test");
   });
 
   it("points a paused subscription too — it resumes under the same record", () => {
@@ -238,10 +268,10 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
       banker: [sub("CRWV-WHEEL")],
     };
     const { state, pointed } = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
-    expect(pointed).toEqual(["sauron/CRWV-WHEEL", "sauron/CRWV-LONG-CALL"]);
+    expect(pointed).toEqual(["sauron/CRWV-WHEEL", "sauron/CRWV-LONG-CALL", "banker/CRWV-WHEEL"]);
     expect(state.sauron?.map((s) => s.convictionId)).toEqual([ada.id, "ai-dip-test"]);
-    // Another member's bot is never steered by Ada's view.
-    expect(state.banker?.[0]?.convictionId).toBeUndefined();
+    // Another member's bot is never steered by Ada's view: it gets the seeded one that steers it.
+    expect(state.banker?.[0]?.convictionId).toBe("ai-dip-test");
   });
 
   it("takes over from a seeded record's pointer, and hands it back once taken back", () => {
@@ -256,10 +286,13 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
     expect(back.state.sauron?.[0]?.convictionId).toBe("ai-dip-test");
   });
 
-  it("drops a pointer at a member's view that no longer steers the pair, leaving none when nothing matches", () => {
+  it("drops a pointer at a member's view that no longer steers the pair, for the record that does", () => {
     const input = { sauron: [sub("CRWV-LONG-CALL", { convictionId: ada.id })] };
     const { state } = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
-    expect(state.sauron?.[0]?.convictionId).toBeUndefined();
+    expect(state.sauron?.[0]?.convictionId).toBe("ai-dip-test");
+    // With no record steering the pair either, it is left with none.
+    const alone = pointAtRecords(input, AT, [], members({ sauron: [ada] }));
+    expect(alone.state.sauron?.[0]?.convictionId).toBeUndefined();
   });
 
   it("is idempotent, and drops a pointer no record or member holds (#5482 contract piece 2)", () => {
@@ -292,6 +325,8 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
       here,
     );
     expect(next.convictionId).toBe(ada.id);
+    // The view is the whole check while it is handed over: no inline copy beside it.
+    expect(next).not.toHaveProperty("conviction");
     expect(pointAtRecord(sub("CRWV-WHEEL"), records, here).convictionId).toBe(ada.id);
   });
 });

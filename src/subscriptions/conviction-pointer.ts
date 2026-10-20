@@ -13,10 +13,10 @@ import type { SubscriptionsState } from "./subscription-state.js";
  *    at the record that view is (`restated`); an edit of anything else adds a missing pointer but
  *    never drops one (`pointAtRecord`).
  *  - ON THE POLL, for what was written before any of this existed (`pointAtRecords`): the live
- *    CRWV wheel carries the ◆ row's conviction (#4642) and CRWV-LONG-CALL carries its own, both
- *    checked 2027-01-29, the date the AI-dip record holds. Unmarked and idempotent, like the row
- *    carry beside it (`row-conviction.ts`): an invariant re-read each poll, no write when nothing
- *    needs a pointer.
+ *    CRWV wheel carried the ◆ row's conviction (#4642) and CRWV-LONG-CALL its own, both checked
+ *    2027-01-29, the date the AI-dip record holds. Unmarked and idempotent, like the row carry
+ *    beside it (`row-conviction.ts`): an invariant re-read each poll, no write when nothing needs
+ *    a pointer.
  *
  * WHEN A CONVICTION "MATCHES" A RECORD: the record steers the subscription's pair and states the
  * same check day. That is the whole test, and it is why pointing changes no check: the date the
@@ -30,7 +30,9 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * accounts it is the pointer of every subscription to a pair it steers — whatever day the inline
  * conviction states, and over a seeded record's pointer, because the hand-over is the owner saying
  * so (`MemberPointers`). Taken back, edited or deleted, it stops being held, and a pointer at it is
- * dropped and the seeded match above runs again, so a pair returns to how it ran before. One rule,
+ * dropped and the seeded match above runs again, so a pair returns to the seeded view that steers
+ * it. (An owner's own day from before the hand-over is not restored: no inline copy sits beside a
+ * held view, and the seeded view only ever narrows more.) One rule,
  * applied on the hand-over itself and again on every poll, so a write that failed halfway heals on
  * the next poll instead of leaving a pair pointing at a view its owner took back.
  *
@@ -38,10 +40,15 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * the bot's settings change log (`server/conviction-pointer-changes.ts`), so which view steers a pair
  * is never changed unrecorded.
  *
- * The inline `conviction` is never removed here — that is the contract step, after the bots are
- * confirmed reading these pointers. The bots already read a pointed pair's check from the pointer
- * alone (piece 2, bots first), which is why a stale pointer is dropped here (`isStale`) rather than
- * left to hold its pair exits-only.
+ * THE CONTRACT STEP, PIECE 2 (#5482). The bots read a pointed pair's check from the pointer alone
+ * (#5911, bots first), which is why a stale pointer is dropped here (`isStale`) rather than left to
+ * hold its pair exits-only. This half is the app's: a pointer this rule can resolve carries no
+ * inline copy, on a write and on the poll alike (`contracted`). With no copy to match by day, a
+ * subscription that states no conviction is pointed at the one record that steers its pair
+ * (`steeringRecord`) — how a ◆ row's new subscription reaches its view, and where a take-back
+ * returns. The inline conviction stays where it is the only check: an owner's own day that no
+ * record states (the resume after a failed check, #4469 criterion 12), and a pair no record steers
+ * (#4469 criterion 2). Which view steers a pair is decided once, by the pointer.
  */
 
 /** Members' views as the pointer rule reads them: the ones handed to an account, and every id. */
@@ -71,6 +78,28 @@ export function recordFor(
 }
 
 /**
+ * The one record that steers `playbookId`, whatever day it is checked, or undefined (none, or two).
+ * The pointer of a subscription that states no conviction and has no pointer (contract piece 2): a
+ * ◆ row's new subscription, or a pair whose member view was taken back. Both carried the row's or
+ * the old inline day before; with no inline copy left, "steers" is the only match there is.
+ */
+export function steeringRecord(
+  playbookId: string,
+  records: readonly Conviction[] = CONVICTIONS.all(),
+): Conviction | undefined {
+  const steering = records.filter((record) => record.steers.includes(playbookId));
+  return steering.length === 1 ? steering[0] : undefined;
+}
+
+/** `sub` without its inline conviction — the pointer is the whole check — or `sub` itself when it
+ *  carries none, so a pass that changed nothing still returns the very object. */
+function contracted(sub: PlaybookSubscription): PlaybookSubscription {
+  if (!sub.conviction) return sub;
+  const { conviction: _inline, ...rest } = sub;
+  return rest;
+}
+
+/**
  * A pointer no view can ever answer for this pair (the contract step's piece 2): one at a seeded
  * record that does not steer it, or — only where members' ids are known, so a member's view is
  * never mistaken for one — at an id no record holds. The bots read a pointed pair's check from its
@@ -88,12 +117,20 @@ function isStale(
 }
 
 /**
- * `sub`, pointed at its record when it has none yet and its conviction matches one. A pointer
- * already there is never replaced or dropped — except by a member's view (`members`): one handed to
- * this account that steers the pair is the pointer, and a pointer at a member's view that is not
- * (taken back, edited, deleted, or steering other pairs) is dropped before the seeded match runs.
- * A stale pointer (`isStale`) is dropped the same way, so the pair returns to its own conviction.
- * `sub` itself is returned when nothing changes.
+ * `sub`, pointed at its record when it has none yet: the record its conviction matches, or — when
+ * it states none — the one record that steers its pair (`steeringRecord`). A pointer already there
+ * is never replaced or dropped — except by a member's view (`members`): one handed to this account
+ * that steers the pair is the pointer, and a pointer at a member's view that is not (taken back,
+ * edited, deleted, or steering other pairs) is dropped before the seeded match runs. A stale pointer
+ * (`isStale`) is dropped the same way, so the pair returns to the record that steers it, or to its
+ * own conviction.
+ *
+ * A pointer this rule can resolve — a seeded record or a member's view held here, either steering
+ * the pair — leaves no inline conviction beside it (`contracted`, the contract step's piece 2): the
+ * bots never read one on a pointed pair, so a second copy could only drift. A pointer it cannot
+ * resolve (an id this build does not hold, with no members' ids to judge it by) keeps the inline
+ * copy, because that is the case where the app cannot tell what the pointer says. `sub` itself is
+ * returned when nothing changes.
  */
 export function pointAtRecord(
   sub: PlaybookSubscription,
@@ -103,16 +140,25 @@ export function pointAtRecord(
   const own = members?.held.filter((r) => r.steers.includes(sub.playbookId)) ?? [];
   const id = sub.convictionId;
   const [only] = own;
-  if (only && own.length === 1) return id === only.id ? sub : { ...sub, convictionId: only.id };
+  if (only && own.length === 1) {
+    return contracted(id === only.id ? sub : { ...sub, convictionId: only.id });
+  }
   // Two of a member's views on one pair: the hand-over refuses that, so it is never decided here.
   if (id !== undefined && own.some((r) => r.id === id)) return sub;
   if (id !== undefined && (members?.ids.has(id) || isStale(sub.playbookId, id, records, members))) {
     const { convictionId: _taken, ...rest } = sub;
     return pointAtRecord(rest, records);
   }
-  if (id !== undefined || !sub.conviction) return sub;
-  const record = recordFor(sub.playbookId, sub.conviction, records);
-  return record ? { ...sub, convictionId: record.id } : sub;
+  if (id !== undefined) {
+    const steers = (records ?? CONVICTIONS.all()).some(
+      (r) => r.id === id && r.steers.includes(sub.playbookId),
+    );
+    return steers ? contracted(sub) : sub;
+  }
+  const record = sub.conviction
+    ? recordFor(sub.playbookId, sub.conviction, records)
+    : steeringRecord(sub.playbookId, records);
+  return record ? contracted({ ...sub, convictionId: record.id }) : sub;
 }
 
 /** The members' views as one account reads them, or nothing when none were passed. */
@@ -171,11 +217,12 @@ export function pointerMove(
 }
 
 /**
- * Pure: `state` with a pointer on every subscription whose conviction matches a record and that
- * has none, and with members' views applied (`pointAtRecord`). A subscription with a seeded pointer
- * already (even one the store cannot resolve), with no conviction, or matching no record is
- * untouched. When nothing changes, `state` is the very object passed in, so a second run — or the
- * common poll — writes nothing. `pointed` names every subscription whose pointer changed.
+ * Pure: `state` with a pointer on every subscription that has none and whose conviction matches a
+ * record (or, stating none, whose pair one record steers), with members' views applied, and with
+ * the inline copy dropped wherever the pointer resolves (`pointAtRecord`). A subscription with an
+ * unresolvable seeded pointer, or matching no record, is untouched. When nothing changes, `state`
+ * is the very object passed in, so a second run — or the common poll — writes nothing. `pointed`
+ * names every subscription that changed; `moves`, those whose pointer did.
  */
 export function pointAtRecords(
   state: SubscriptionsState,

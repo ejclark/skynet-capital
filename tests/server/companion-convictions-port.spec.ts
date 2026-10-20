@@ -93,7 +93,10 @@ describe("companionConvictionsFor", () => {
       statedOn: "2026-10-19",
     });
     expect(drafted.drafted.card.pairs[0]?.changes.map((c) => c.setting)).toEqual(["Contracts"]);
-    expect(drafted.drafted.takesOver).toEqual([]);
+    // The ◆ wheel runs on the seeded view that steers it, so the card says what it takes over.
+    expect(drafted.drafted.takesOver).toEqual([
+      { pair: "CRWV-WHEEL", name: expect.any(String), from: "AI-dip view" },
+    ]);
     expect(store.list(opaqueMemberId("ada@example.com"))).toEqual([]);
   });
 
