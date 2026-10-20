@@ -65,7 +65,7 @@ Each slice is small, reversible, and rides an existing seam. The APIs below were
 | 8 | **Diegetic labels** | The telestrator, in-world | `@babylonjs/gui`: fullscreen ADT + `label.linkWithMesh(tower)` + a `Line` with `connectedControl` *is* the callout mechanic natively; `AdvancedDynamicTexture.CreateForMesh` for true in-world steles/banners (fog and DOF apply — a leaderboard as a monument plaza). |
 | 9 | **WebGPU snapshot mode** | Free speed on mostly-static city scenes | `WebGPUEngine.CreateAsync` behind a `navigator.gpu` check (API-compatible; `createStage` branches once); `engine.snapshotRendering` claims up to ~10× on static scenes — exactly a merged/thin-instanced city. Optional at our scale; WebGL2 stays the screenshot baseline. |
 
-**Phones:** the risk is not draw calls (the merged tower is ~6–10) but per-pixel spend. The scene
+**Phones:** the risk is not draw calls (the merged tower is ~20, `src/three/kit/bucket.ts`) but per-pixel spend. The scene
 has no post stack; `src/three/kit/quality.ts` sets its pixel-ratio cap, frame cap, shadow map and
 ember count. Levers, in order: `setHardwareScalingLevel`, `SceneOptimizer.OptimizeAsync` toward a
 target FPS, `freezeActiveMeshes`/`material.freeze` for static content. No official draw-call
