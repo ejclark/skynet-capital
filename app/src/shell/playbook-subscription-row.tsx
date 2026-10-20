@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { pointedView } from "../live/playbook-rule";
 import {
   type PlaybookStoreCardView,
+  type SteeredByView,
   type SubscriptionView,
   type SubscriptionWriteResult,
   setSubscriptionEnabledRequest,
@@ -83,6 +85,7 @@ export function SubscriptionRow({
   human,
   reduceOnly,
   runsOnConviction = false,
+  steeredBy,
   onChanged,
 }: {
   readonly accountId: string;
@@ -96,6 +99,8 @@ export function SubscriptionRow({
    *  conviction and its check day are drawn and can be re-dated here. Any pair that already holds a
    *  conviction shows it, whatever its evidence says. */
   readonly runsOnConviction?: boolean;
+  /** The conviction view the row shows as steering its pair (#5482). */
+  readonly steeredBy?: SteeredByView;
   readonly onChanged: () => void;
 }): ReactElement | null {
   const sub = card.subscription;
@@ -119,6 +124,8 @@ export function SubscriptionRow({
   };
   const ref = { id: accountId, playbookId: card.id };
   const state = stateOf(sub, human);
+  const pointed = sub.convictionId !== undefined;
+  const view = pointedView(sub, steeredBy);
 
   return (
     <div className="pb-subscription" data-state={state.key}>
@@ -136,11 +143,13 @@ export function SubscriptionRow({
         ))}
       </p>
       {!(human || sub.enabled) ? <p className="pb-form-note">{PAUSED_NOTE}</p> : null}
-      {!human && (runsOnConviction || sub.conviction) ? (
+      {!human && (runsOnConviction || sub.conviction || pointed) ? (
         <ConvictionPanel
           accountId={accountId}
           playbookId={card.id}
           {...(sub.conviction ? { conviction: sub.conviction } : {})}
+          {...(view ? { steeredBy: view } : {})}
+          pointed={pointed}
           onChanged={onChanged}
         />
       ) : null}

@@ -27,7 +27,9 @@ import type {
   PairRowView,
   PlaybookStoreCardView,
   PlaybookStoreView,
+  SteeredByView,
   StrategyCardView,
+  SubscriptionView,
 } from "./playbook-store";
 import { parseQuantity } from "./quantity";
 
@@ -241,16 +243,31 @@ export interface SaySo {
   readonly studyHref?: string;
 }
 
+/**
+ * The view a subscription's pointer names, when the row's steering view is that one — its whole
+ * check, since a pointed subscription carries no inline conviction (#5482 contract step). Undefined
+ * for an unpointed subscription, and for a pointer the row's view is not: the page then says less
+ * rather than show another view's day.
+ */
+export function pointedView(
+  sub: SubscriptionView | undefined,
+  steeredBy: SteeredByView | undefined,
+): SteeredByView | undefined {
+  const id = sub?.convictionId;
+  return id !== undefined && steeredBy?.convictionId === id ? steeredBy : undefined;
+}
+
 export function saySoOf(pair: PairRowView, mode?: string): SaySo {
   const conviction = pair.subscription?.conviction;
   const head =
     pair.status === "conviction"
       ? "◆ Your conviction"
       : pair.statusLabel.replace(/^(\S+\s)(\S)/, (_, g: string, c: string) => g + c.toUpperCase());
-  // A subscription pointed at a view carries no inline conviction (#5482 contract step): the view's
-  // day is the one its bots check, so it comes before the row's.
-  const steeredOn = pair.subscription ? pair.steeredBy?.checkOn : undefined;
-  const checkOn = conviction?.checkOn ?? steeredOn ?? pair.checkOn;
+  // A pointed subscription is checked on its view's day alone; with no view to read, no day.
+  const checkOn =
+    pair.subscription?.convictionId !== undefined
+      ? pointedView(pair.subscription, pair.steeredBy)?.checkOn
+      : (conviction?.checkOn ?? pair.checkOn);
   const dated = checkOn
     ? `Checked again ${dayText(checkOn)} — a failed check stops new entries; exits never stop`
     : pair.shelfOn && !pair.stale

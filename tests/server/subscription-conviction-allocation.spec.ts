@@ -307,14 +307,19 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
       const strategies = mine.body.strategies as {
         strategy: string;
         allocation?: unknown;
-        pairs: { id: string; steeredBy?: { checkOn: string } }[];
+        pairs: {
+          id: string;
+          steeredBy?: { checkOn: string; convictionId: string };
+          subscription?: { convictionId?: string; conviction?: unknown };
+        }[];
       }[];
       const wheel = strategies.find((card) => card.strategy === "wheel");
       expect(wheel?.allocation).toEqual({ capitalAllocated: 100_000, budgeted: 75_000 });
-      // A pointed pair's day is the view's that steers it.
-      expect(wheel?.pairs.find((p) => p.id === "CRWV-WHEEL")?.steeredBy?.checkOn).toBe(
-        "2027-01-29",
-      );
+      // A pointed pair's day is the view's it points at, and the owner's row says which view.
+      const row = wheel?.pairs.find((p) => p.id === "CRWV-WHEEL");
+      expect(row?.steeredBy?.checkOn).toBe("2027-01-29");
+      expect(row?.subscription?.convictionId).toBe(row?.steeredBy?.convictionId);
+      expect(row?.subscription?.conviction).toBeUndefined();
       const theirs = await call(store, "/api/playbook-store", get("/api/playbook-store?id=banker"));
       for (const card of theirs.body.strategies as { allocation?: unknown }[]) {
         expect(card.allocation).toBeUndefined();

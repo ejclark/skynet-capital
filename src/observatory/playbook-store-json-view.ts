@@ -47,6 +47,9 @@ interface SubscriptionView {
   readonly compoundAllocation?: boolean;
   /** The owner's conviction on this pair: why, and the market day it is checked (#4469 3c). */
   readonly conviction?: SubscriptionConviction;
+  /** The conviction view this subscription points at (#5482). A resolved pointer carries no
+   *  `conviction` beside it, so the row reads its check from the view (`steeredBy`) with this id. */
+  readonly convictionId?: string;
 }
 
 /** The account's allocation for a strategy, and what its tickers' budgets add up to inside it. */
@@ -137,6 +140,7 @@ function subscriptionView(sub: PlaybookSubscription): SubscriptionView {
     ...(sub.conviction
       ? { conviction: { reason: sub.conviction.reason, checkOn: sub.conviction.checkOn } }
       : {}),
+    ...(sub.convictionId !== undefined ? { convictionId: sub.convictionId } : {}),
   };
 }
 
