@@ -65,7 +65,8 @@ export function pointerChange(
   author: string,
   at: Date,
 ): SettingsChange {
-  const name = (id: string | undefined) => (id === undefined ? null : (names(id) ?? id));
+  // Bounded before comparing: two long titles alike up to the cut would otherwise read the same.
+  const name = (id: string | undefined) => (id === undefined ? null : bounded(names(id) ?? id));
   let before = name(move.from);
   let after = name(move.to);
   if (before !== null && before === after) {
@@ -75,8 +76,8 @@ export function pointerChange(
   return {
     at: at.toISOString(),
     setting: pointerSetting(move.playbookId),
-    before: before === null ? null : bounded(before),
-    after: after === null ? null : bounded(after),
+    before,
+    after,
     proposedBy: author,
     approvedBy: author,
   };
