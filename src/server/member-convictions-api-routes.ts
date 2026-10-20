@@ -191,8 +191,10 @@ async function draftOrSave(
       sendJson(res, 200, { ok: false, error: SUBSCRIPTIONS_UNREADABLE });
       return;
     }
-    const done = config.memberConvictions?.delete(opaqueMemberId(session.email), id);
-    if (done?.ok) repointAfter(config, id);
+    const memberKey = opaqueMemberId(session.email);
+    const title = titleBefore(config, memberKey, id);
+    const done = config.memberConvictions?.delete(memberKey, id);
+    if (done?.ok) repointAfter(config, session, id, title);
     sendJson(res, 200, done && !done.ok ? { ok: false, error: done.reason } : { ok: true });
     return;
   }
@@ -224,12 +226,14 @@ async function draftOrSave(
     return;
   }
   const now = config.now?.() ?? new Date();
-  const saved = store.save(opaqueMemberId(session.email), outcome.conviction, now, replaceId);
+  const memberKey = opaqueMemberId(session.email);
+  const title = replaceId ? titleBefore(config, memberKey, replaceId) : undefined;
+  const saved = store.save(memberKey, outcome.conviction, now, replaceId);
   if (!saved.ok) {
     sendJson(res, 200, { ok: false, label: "SIM", problems: [saved.reason] });
     return;
   }
-  if (replaceId) repointAfter(config, replaceId);
+  if (replaceId) repointAfter(config, session, replaceId, title);
   sendJson(res, 200, {
     ...outcome,
     label: "SIM",
@@ -239,12 +243,35 @@ async function draftOrSave(
   });
 }
 
+/** A member's view's title, read before a write that may remove it, so its log line keeps it. */
+function titleBefore(
+  config: DashboardServerConfig,
+  memberKey: string,
+  id: string,
+): string | undefined {
+  const record = config.memberConvictions?.list(memberKey).find((r) => r.conviction.id === id);
+  return record?.conviction.title;
+}
+
 /** The pointer rule, now, after a write that can change which views are held; `gone` is an id the
- *  write may have removed. Unwired stores point nothing; the next poll applies the same rule. */
-function repointAfter(config: DashboardServerConfig, gone?: string): void {
+ *  write may have removed, `goneTitle` its title before. Unwired stores point nothing; the next poll
+ *  applies the same rule. Every pointer it moves on this member's bots is a change log line of
+ *  theirs (`conviction-pointer-changes.ts`). */
+function repointAfter(
+  config: DashboardServerConfig,
+  session: Session,
+  gone?: string,
+  goneTitle?: string,
+): void {
   const { subscriptions, memberConvictions } = config;
   if (subscriptions && memberConvictions) {
-    repoint(subscriptions, memberConvictions, config.now?.() ?? new Date(), gone);
+    repoint(subscriptions, memberConvictions, config.now?.() ?? new Date(), gone, {
+      log: config.controls?.changes,
+      editor: session.email,
+      owned: resolveOwnedIds(session, config),
+      ...(goneTitle ? { goneTitle } : {}),
+      ...(config.logLine ? { onError: config.logLine } : {}),
+    });
   }
 }
 
@@ -272,7 +299,7 @@ async function handOverOrTakeBack(
   const now = config.now?.() ?? new Date();
   if (path === "/api/convictions/take-back") {
     const back = store.takeBack(memberKey, id, now);
-    if (back.ok) repointAfter(config);
+    if (back.ok) repointAfter(config, session);
     sendJson(
       res,
       200,
@@ -295,7 +322,7 @@ async function handOverOrTakeBack(
     sendJson(res, 200, { ok: false, label: "SIM", problems });
     return;
   }
-  repointAfter(config);
+  repointAfter(config, session);
   const steering = pointedPairs(id, owned, subscriptions.load());
   sendJson(res, 200, { ok: true, label: "SIM", steering, note: STEERING_NOTE });
 }

@@ -1,6 +1,8 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
+import { pointerMove } from "../subscriptions/conviction-pointer.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { convictionNames, pointerChange } from "./conviction-pointer-changes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import {
   MAX_SETTING_TEXT,
@@ -17,8 +19,10 @@ import {
  *
  * A subscription is logged as a one-line summary, not the record: the card shows it as written, the
  * log's parser keeps one bounded string type instead of a second schema to keep in step with
- * `PlaybookSubscription`, and an internal field (the conviction pointer, `updatedAt`) never makes a
- * line that reads as no change. `null` = not subscribed.
+ * `PlaybookSubscription`, and an internal field (`updatedAt`) never makes a line that reads as no
+ * change. `null` = not subscribed. The conviction pointer is not internal — which view steers the
+ * pair narrows what it may open — so a write that moves it adds its own `conviction:<playbookId>`
+ * line beside the subscription's (#5482, `conviction-pointer-changes.ts`).
  *
  * Both or neither, as the controls writes: a log that can't be written puts the account's
  * subscriptions back as they were and throws (`recordControlsChange`).
@@ -86,12 +90,20 @@ export function recordSubscriptionWrite<T>(
   const at = config.now?.() ?? new Date();
   const prior = store.load();
   const result = write();
-  const before = subscriptionSummary(held(prior, ref.id, ref.playbookId));
-  const after = subscriptionSummary(held(store.load(), ref.id, ref.playbookId));
+  const was = held(prior, ref.id, ref.playbookId);
+  const now = held(store.load(), ref.id, ref.playbookId);
+  const before = subscriptionSummary(was);
+  const after = subscriptionSummary(now);
+  const moved = pointerMove(ref.id, was, now);
   recordControlsChange(
     log,
     ref.id,
-    [change(`subscription:${ref.playbookId}`, before, after, editor, at)],
+    [
+      change(`subscription:${ref.playbookId}`, before, after, editor, at),
+      ...(moved
+        ? [pointerChange(moved, convictionNames(config.memberConvictions), editor, at)]
+        : []),
+    ],
     () => restoreAccount(store, ref.id, prior),
   );
   return result;

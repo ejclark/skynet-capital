@@ -166,7 +166,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       livePair("CRWV-LONG-CALL");
       carryConvictions(store, AT);
       const before = store.load().sauron ?? [];
-      const seed = pollSeedsFromEnv({ SKYNET_SUBSCRIPTIONS_FILE: path });
+      const seed = pollSeedsFromEnv({
+        SKYNET_SUBSCRIPTIONS_FILE: path,
+        SKYNET_CONTROLS_FILE: join(dir, "bot-controls.json"),
+      });
       const lines = seed(controlsPollReport({}), AT);
       expect(lines.join("\n")).toMatch(
         /pointed each subscription .*: sauron\/CRWV-WHEEL, sauron\/CRWV-LONG-CALL/,
@@ -186,7 +189,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
 
     it("is safe to run twice: the second poll writes nothing", async () => {
       livePair("CRWV-WHEEL");
-      const seed = pollSeedsFromEnv({ SKYNET_SUBSCRIPTIONS_FILE: path });
+      const seed = pollSeedsFromEnv({
+        SKYNET_SUBSCRIPTIONS_FILE: path,
+        SKYNET_CONTROLS_FILE: join(dir, "bot-controls.json"),
+      });
       seed(controlsPollReport({}), AT);
       const onDisk = await readFile(path, "utf8");
       const lines = seed(controlsPollReport({}), new Date("2026-10-18T09:00:00.000Z"));
@@ -197,7 +203,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
     it("keeps the inline conviction of a subscription no record states", () => {
       livePair("CRWV-WHEEL");
       store.setConviction("sauron", "CRWV-WHEEL", { reason: "later", checkOn: "2027-04-30" }, AT);
-      const seed = pollSeedsFromEnv({ SKYNET_SUBSCRIPTIONS_FILE: path });
+      const seed = pollSeedsFromEnv({
+        SKYNET_SUBSCRIPTIONS_FILE: path,
+        SKYNET_CONTROLS_FILE: join(dir, "bot-controls.json"),
+      });
       seed(controlsPollReport({}), AT);
       expect(held("CRWV-WHEEL")).toMatchObject({ conviction: { checkOn: "2027-04-30" } });
       expect(held("CRWV-WHEEL")?.convictionId).toBeUndefined();
@@ -205,7 +214,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
 
     it("leaves a file it cannot read whole alone", async () => {
       await writeFile(path, JSON.stringify({ sauron: [{ playbookId: "CRWV-WHEEL" }] }));
-      const seed = pollSeedsFromEnv({ SKYNET_SUBSCRIPTIONS_FILE: path });
+      const seed = pollSeedsFromEnv({
+        SKYNET_SUBSCRIPTIONS_FILE: path,
+        SKYNET_CONTROLS_FILE: join(dir, "bot-controls.json"),
+      });
       seed(controlsPollReport({}), AT);
       expect(JSON.parse(await readFile(path, "utf8"))).toEqual({
         sauron: [{ playbookId: "CRWV-WHEEL" }],
