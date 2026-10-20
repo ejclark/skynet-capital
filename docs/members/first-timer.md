@@ -75,11 +75,10 @@ and the first button, never the rail. They skip anything that names a concept th
 
 3b. `/app/accounts?section=milestones&chapter=trading` — the trading chapter under the same LOCKED
    card. **WHEN a member with no linked account opens the trading chapter, the card and the ladder
-   list shall agree on whether the next rung is locked.** _Fixed — #5731: the list said "Training
-   wheels off — … nothing is locked" under a card reading LOCKED (the server serves wheels off with
-   no account); it now says "Locked — link an account first, then it unlocks the moment you say
-   hello to Moneypenny." and offers Trade on no rung._ Judge: does this reader know whether trading
-   is open, in one sentence?
+   list shall agree on whether the next rung is locked.** _Fixed — #5731: with no account the list
+   says "Locked — link an account first, then it unlocks the moment you say hello to Moneypenny.",
+   never wheels-off's "nothing is locked" (the server serves wheels off with no account), and offers
+   Trade on no rung._ Judge: does this reader know whether trading is open, in one sentence?
 
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
